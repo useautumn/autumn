@@ -3,6 +3,7 @@ import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import type { BalanceWorkerState } from "../init/types/balanceWorkerState.js";
 import type { PartitionConsumerStatus } from "../partitions/types/partitions.js";
 import { partitionHealthLogFields } from "./partitionHealthLogFields.js";
+import type { ProcessStatsWindow } from "./processStats/createProcessStats.js";
 
 const HEALTH_REPORT_INTERVAL_MS = 10_000;
 
@@ -11,6 +12,8 @@ type WorkerHealthReporterContext = {
 	readPartitions(): OwnedPartitionHealth[];
 	readWorkerStatus(): BalanceWorkerState["status"];
 	readConsumer?(): PartitionConsumerStatus;
+	/** Where the process's CPU went since the last report; absent, reports carry no `process` block. */
+	readProcess?(): ProcessStatsWindow;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 };
 
@@ -37,6 +40,10 @@ export function createWorkerHealthReporter({
 				workerStatus: ctx.readWorkerStatus(),
 			};
 			const reportedAt = new Date().toISOString();
+			// One window per report, repeated on each partition line so a partition query sees its task's split.
+			const processStats = ctx.readProcess
+				? { process: ctx.readProcess() }
+				: {};
 			const partitionStatusCounts: Record<string, number> = {};
 			for (const partition of health) {
 				partitionStatusCounts[partition.status] =
@@ -52,6 +59,7 @@ export function createWorkerHealthReporter({
 						reportedPartitions: health.length,
 						partitionStatusCounts,
 						consumer: ctx.readConsumer?.() ?? null,
+						...processStats,
 					},
 				},
 				"Balance worker health",
@@ -72,7 +80,7 @@ export function createWorkerHealthReporter({
 						partition: number,
 						status,
 						failureReason,
-						data: { ...identity, reportedAt, ...rest },
+						data: { ...identity, reportedAt, ...rest, ...processStats },
 					},
 					"Balance worker partition health",
 				);

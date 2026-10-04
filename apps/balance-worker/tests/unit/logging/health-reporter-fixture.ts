@@ -1,11 +1,14 @@
 import type { OwnedPartitionHealth } from "../../../src/health/ownedPartitionHealth.js";
 import type { BalanceWorkerState } from "../../../src/init/types/balanceWorkerState.js";
 import { createWorkerHealthReporter } from "../../../src/logging/createWorkerHealthReporter.js";
+import type { ProcessStatsWindow } from "../../../src/logging/processStats/createProcessStats.js";
 
 export function createHealthReporterFixture({
 	enabled = true,
+	readProcess,
 }: {
 	enabled?: boolean;
+	readProcess?: () => ProcessStatsWindow;
 } = {}) {
 	const logs: unknown[][] = [];
 	const warnings: unknown[][] = [];
@@ -40,6 +43,7 @@ export function createHealthReporterFixture({
 			},
 			readWorkerStatus: () => health.status,
 			readConsumer: () => health.consumer,
+			...(readProcess && { readProcess }),
 			schedule: ({ intervalMs, run }) => {
 				const timer = { intervalMs, run, cancelled: false };
 				timers.push(timer);

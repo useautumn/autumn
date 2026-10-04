@@ -10,8 +10,8 @@ import { createStandbyPreparations } from "../blueGreen/createStandbyPreparation
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
-import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
@@ -24,6 +24,7 @@ import {
 	createKafkaRequestReporter,
 	kafkaRequestTimings,
 } from "../logging/kafkaRequestTimings.js";
+import { createProcessStats } from "../logging/processStats/createProcessStats.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
@@ -226,12 +227,19 @@ export async function createBalanceWorker({
 		function readWorkerStatus(): BalanceWorkerState["status"] {
 			return state.status;
 		}
+		const processStats =
+			process.env.NODE_ENV === "production"
+				? createProcessStats({
+						gcTotalsPath: process.env.BALANCE_WORKER_GC_TOTALS_PATH,
+					})
+				: undefined;
 		const healthReporter = createWorkerHealthReporter({
 			ctx: {
 				logger: dependencies.logger,
 				readPartitions: partitions.partitions,
 				readWorkerStatus,
 				readConsumer: partitions.consumer,
+				...(processStats && { readProcess: processStats.readWindow }),
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
@@ -320,6 +328,7 @@ export async function createBalanceWorker({
 			stallMonitor.stop();
 			slotHeartbeat?.stop();
 			healthReporter.stop();
+			processStats?.stop();
 		}
 		const ctx: WorkerLifecycleContext = {
 			partitions,
