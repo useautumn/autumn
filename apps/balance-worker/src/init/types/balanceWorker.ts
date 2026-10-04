@@ -1,5 +1,6 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { DynamoClient, IdempotencyKeyStore } from "@autumn/dynamodb";
+import type { StagingArm } from "@autumn/edge-config";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import type { CatalogInvalidationConsumer } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
@@ -43,6 +44,8 @@ export type BalanceWorkerConfig = {
 	env: BalanceWorkerEnv;
 	/** Overrides the STATE_BACKEND constant; tests exercise both backends. */
 	stateBackend?: StateBackend;
+	/** Pins the serial-decide arm instead of reading `variant()` at boot; tests exercise both layouts. */
+	serialDecideArm?: StagingArm;
 };
 
 export type WorkerAddress = { hostname: string; endpoint: string };
@@ -60,7 +63,7 @@ export type WorkerLifecycleContext = {
 	healthReporter?: { start(): void; stop(): void };
 	/** Drops an org's cached catalog rows when the server says they changed. */
 	catalogInvalidations?: Pick<CatalogInvalidationConsumer, "start" | "stop">;
-	listen(): WorkerListener;
+	listen(): WorkerListener | Promise<WorkerListener>;
 	settleResources(): Promise<void>;
 	closeStore(): void;
 };

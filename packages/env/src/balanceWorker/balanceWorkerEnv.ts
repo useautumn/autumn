@@ -49,6 +49,8 @@ const listener = z.object({
 		.min(0)
 		.max(1)
 		.default(BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE),
+	/** HTTP threads under the serial-decide arm (ATMN-602); the main thread only decides. */
+	BALANCE_WORKER_IO_WORKERS: positiveInteger.max(16).default(2),
 });
 
 const state = z.object({

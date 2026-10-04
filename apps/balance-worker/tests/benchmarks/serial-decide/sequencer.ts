@@ -12,13 +12,25 @@
  */
 import type { WorkerErrorResponse } from "@autumn/balance-worker-client/protocol";
 import { workerErrorOf } from "../../../src/http/handlers/errorHandler/workerErrorOf.js";
-import { pinFromEnv, threadId } from "./pin.ts";
-import { CMD_HEADER, FRAME, REC_HEADER, RES_HEADER, type SequencerInit } from "./protocol.ts";
-import { Doorbell, RingConsumer, RingProducer } from "./ring.ts";
+import { pinFromEnv, threadId } from "./pin.js";
+import {
+	CMD_HEADER,
+	FRAME,
+	REC_HEADER,
+	RES_HEADER,
+	type SequencerInit,
+} from "./protocol.js";
+import { Doorbell, RingConsumer, RingProducer } from "./ring.js";
 
 declare var self: Worker;
 
-export type Command = { kind: number; reqId: number; io: number; budgetMs: number; text: string };
+export type Command = {
+	kind: number;
+	reqId: number;
+	io: number;
+	budgetMs: number;
+	text: string;
+};
 
 /** What a core gives back for one command; `seq` is 0 when nothing was recorded or the reply is already durable. */
 export type Outcome = { status: number; body: string; seq: number };
@@ -33,7 +45,10 @@ export type Core = {
 
 /** Shared by both cores: records go out with a seq each; the promise resolves on the batch's ack. */
 export type RecordAppender = {
-	append(params: { records: { key: Buffer; value: Buffer }[] }): { lastSeq: number; committed: Promise<bigint> };
+	append(params: { records: { key: Buffer; value: Buffer }[] }): {
+		lastSeq: number;
+		committed: Promise<bigint>;
+	};
 	/** Seq for a record emitted directly (lean core). */
 	emit(params: { key: Buffer; value: Buffer }): number;
 	flush(): void;
@@ -43,7 +58,11 @@ export type RecordAppender = {
 	pumpAcks(): void;
 };
 
-if (typeof self !== "undefined" && (self as unknown as { postMessage?: unknown }).postMessage && !process.env.SEQUENCER_ON_MAIN) {
+if (
+	typeof self !== "undefined" &&
+	(self as unknown as { postMessage?: unknown }).postMessage &&
+	!process.env.SEQUENCER_ON_MAIN
+) {
 	self.onmessage = (event: MessageEvent) => {
 		void start(event.data as SequencerInit, (message) => postMessage(message));
 	};
@@ -54,14 +73,24 @@ export type Report = (message: Record<string, unknown>) => void;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-export async function start(init: SequencerInit, report: Report): Promise<void> {
+export async function start(
+	init: SequencerInit,
+	report: Report,
+): Promise<void> {
 	const cpus = pinFromEnv({ role: "sequencer" });
 	const bell = new Doorbell(init.sequencerBell);
 	const commands = init.commandRings.map((layout) => new RingConsumer(layout));
 	const results = init.resultRings.map(
-		(layout, index) => new RingProducer(layout, new Doorbell(init.resultBells[index] as SharedArrayBuffer)),
+		(layout, index) =>
+			new RingProducer(
+				layout,
+				new Doorbell(init.resultBells[index] as SharedArrayBuffer),
+			),
 	);
-	const records = new RingProducer(init.recordRing, new Doorbell(init.recordBell));
+	const records = new RingProducer(
+		init.recordRing,
+		new Doorbell(init.recordBell),
+	);
 	const acks = new RingConsumer(init.ackRing);
 	const stats = {
 		drains: 0,
@@ -75,10 +104,17 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 	};
 
 	let seq = 0;
-	const awaiting: { lastSeq: number; resolve(offset: bigint): void; reject(error: Error): void }[] = [];
+	const awaiting: {
+		lastSeq: number;
+		resolve(offset: bigint): void;
+		reject(error: Error): void;
+	}[] = [];
 	function writeRecord({ key, value }: { key: Buffer; value: Buffer }): number {
 		const next = seq + 1;
-		const at = records.claim({ type: FRAME.REC, maxLength: REC_HEADER + key.length + value.length });
+		const at = records.claim({
+			type: FRAME.REC,
+			maxLength: REC_HEADER + key.length + value.length,
+		});
 		if (at < 0) {
 			stats.recordRingFull++;
 			throw new Error("record ring full");
@@ -110,8 +146,12 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 	let core: Core | null = null;
 	const coreReady =
 		init.core === "lean"
-			? import("./coreLean.ts").then((m) => m.createLeanCore({ appender, logRate: init.logRate }))
-			: import("./coreProcessor.ts").then((m) => m.createProcessorCore({ appender, appenderMode: init.appender }));
+			? import("./coreLean.js").then((m) =>
+					m.createLeanCore({ appender, logRate: init.logRate }),
+				)
+			: import("./coreProcessor.js").then((m) =>
+					m.createProcessorCore({ appender, appenderMode: init.appender }),
+				);
 	coreReady.then(
 		(ready) => {
 			core = ready;
@@ -123,7 +163,15 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 		},
 	);
 
-	function writeResult({ io, reqId, outcome }: { io: number; reqId: number; outcome: Outcome }): void {
+	function writeResult({
+		io,
+		reqId,
+		outcome,
+	}: {
+		io: number;
+		reqId: number;
+		outcome: Outcome;
+	}): void {
 		const ring = results[io] as RingProducer;
 		const maxLength = RES_HEADER + outcome.body.length * 3;
 		const at = ring.claim({ type: FRAME.RES, maxLength });
@@ -134,7 +182,10 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 		ring.payloadView.setUint32(at, reqId, true);
 		ring.payloadView.setUint32(at + 4, outcome.seq, true);
 		ring.payloadView.setUint16(at + 8, outcome.status, true);
-		const { written } = encoder.encodeInto(outcome.body, ring.payload.subarray(at + RES_HEADER, at + maxLength));
+		const { written } = encoder.encodeInto(
+			outcome.body,
+			ring.payload.subarray(at + RES_HEADER, at + maxLength),
+		);
 		ring.publish({ length: RES_HEADER + written });
 		dirty[io] = 1;
 	}
@@ -152,16 +203,30 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 			acks.advance();
 			n++;
 			core?.onAck({ from, to, baseOffset });
-			while (awaiting.length > 0 && (awaiting[0] as { lastSeq: number }).lastSeq <= to) {
+			while (
+				awaiting.length > 0 &&
+				(awaiting[0] as { lastSeq: number }).lastSeq <= to
+			) {
 				const waiter = awaiting.shift() as (typeof awaiting)[number];
 				if (baseOffset >= 0n) waiter.resolve(baseOffset);
-				else waiter.reject(new Error(`batch ${from}..${to} failed (${baseOffset})`));
+				else
+					waiter.reject(
+						new Error(`batch ${from}..${to} failed (${baseOffset})`),
+					);
 			}
 		}
 		if (n > 0) acks.release();
 	}
 
-	function settle({ io, reqId, outcome }: { io: number; reqId: number; outcome: Outcome }): void {
+	function settle({
+		io,
+		reqId,
+		outcome,
+	}: {
+		io: number;
+		reqId: number;
+		outcome: Outcome;
+	}): void {
 		writeResult({ io, reqId, outcome });
 		if (deferredFlush) return;
 		// Outcomes that resolve from promise callbacks (processor core) are flushed once per turn.
@@ -184,7 +249,8 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 		while (n < max) {
 			const frame = ring.next();
 			if (!frame) break;
-			if (frame.type !== FRAME.CMD) throw new Error(`sequencer: unexpected frame ${frame.type}`);
+			if (frame.type !== FRAME.CMD)
+				throw new Error(`sequencer: unexpected frame ${frame.type}`);
 			const view = ring.payloadView;
 			const reqId = view.getUint32(frame.offset, true);
 			const kind = ring.payload[frame.offset + 4] as number;
@@ -214,7 +280,10 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 		return n;
 	}
 
-	setInterval(() => report({ stats: { ...stats, ...(core?.stats() ?? {}), seq } }), 5000).unref();
+	setInterval(
+		() => report({ stats: { ...stats, ...(core?.stats() ?? {}), seq } }),
+		5000,
+	).unref();
 
 	const MAX_PER_RING = 256;
 	let iterations = 0;
@@ -241,7 +310,9 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 		}
 		stats.sleeps++;
 		await bell.sleep({
-			hasWork: () => acks.hasWork() || (core !== null && commands.some((ring) => ring.hasWork())),
+			hasWork: () =>
+				acks.hasWork() ||
+				(core !== null && commands.some((ring) => ring.hasWork())),
 			timeoutMs: 10,
 		});
 	}
@@ -249,5 +320,9 @@ export async function start(init: SequencerInit, report: Report): Promise<void> 
 
 function errorOutcome(cause: unknown): Outcome {
 	const { status, error } = workerErrorOf({ cause: cause as Error });
-	return { status, body: JSON.stringify({ error } satisfies WorkerErrorResponse), seq: 0 };
+	return {
+		status,
+		body: JSON.stringify({ error } satisfies WorkerErrorResponse),
+		seq: 0,
+	};
 }

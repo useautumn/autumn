@@ -58,6 +58,10 @@ type RequestLine = {
 /** One line per request, whichever path answered it; a logging failure never turns into an HTTP error. */
 export function logWorkerRequest(line: RequestLine): void {
 	try {
+		line.ctx.requestLatencies?.record({
+			path: line.path,
+			durationMs: performance.now() - line.startedAt,
+		});
 		timeSync({ label: "request.log" }, () => logRequestResult(line));
 	} catch (cause) {
 		console.error("Balance worker request logging failed", cause);

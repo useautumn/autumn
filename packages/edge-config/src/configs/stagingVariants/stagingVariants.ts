@@ -59,6 +59,9 @@ export function activeArmsOf({
 	return valid ? (arms as StagingArm[]) : [];
 }
 
+/** The window index a task-scoped experiment hashes with: the same for every window, so the arm never moves. */
+export const TASK_SCOPE_WINDOW_INDEX = -1;
+
 /** Hashed, not round-robin: a fixed A/B/A/B cycle aliases with periodic customer bursts. */
 export function armForWindow({
 	identity,
@@ -107,7 +110,9 @@ function currentArms(): LiveArms | null {
 		if (!active.length) continue;
 		arms[experiment] = armForWindow({
 			identity: binding.identity,
-			windowIndex,
+			// A task-scoped experiment keeps one arm per task: the identity alone decides it.
+			windowIndex:
+				entry.scope === "task" ? TASK_SCOPE_WINDOW_INDEX : windowIndex,
 			experiment,
 			arms: active,
 		});

@@ -1,4 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
+import type { LatencyWindow } from "../requestLatencies.js";
 import {
 	type CpuCounters,
 	cpuWindowOf,
@@ -45,6 +46,8 @@ export function createEventLoopStallMonitor({
 		wallNow?: () => number;
 		/** Each live staging experiment's arm, read as a window opens: every report is one window's. */
 		variants?: () => Readonly<Record<string, string>> | null;
+		/** The window's request latency percentiles; drained once per report. */
+		latencies?: () => LatencyWindow;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
@@ -130,6 +133,7 @@ export function createEventLoopStallMonitor({
 			]),
 		);
 		const windowMs = round(tickedAt - lastReportAt);
+		const latencies = ctx.latencies?.() ?? {};
 		const currentCpu = cpu();
 		const cpuWindow = lastCpu
 			? cpuWindowOf({ previous: lastCpu, current: currentCpu, windowMs })
@@ -148,6 +152,7 @@ export function createEventLoopStallMonitor({
 					cpuModel: config.cpuModel,
 					...(windowVariants && { variants: windowVariants }),
 					...cpuWindow,
+					...latencies,
 					sections,
 				},
 			},
