@@ -12,6 +12,7 @@ import {
 import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { drainFinishedRequestCount } from "./inFlightRequests.js";
+import { SERVER_PHASE_CPU_EXPERIMENT } from "./phaseCpu/getServerCpuSampler.js";
 
 type CpuUsage = { user: number; system: number };
 
@@ -82,7 +83,7 @@ export const startServerEventLoopMonitor = ({
 	let windowStartedAt = performance.now();
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let stopped = false;
-	let phaseCpuArm = variant("server-phase-cpu");
+	let phaseCpuArm = variant(SERVER_PHASE_CPU_EXPERIMENT);
 	drainFinishedRequestCount();
 	phaseCpuSampler?.startWindow();
 
@@ -113,7 +114,7 @@ export const startServerEventLoopMonitor = ({
 			// Telemetry must never disturb the process it is measuring.
 		}
 		if (stopped) return;
-		phaseCpuArm = variant("server-phase-cpu");
+		phaseCpuArm = variant(SERVER_PHASE_CPU_EXPERIMENT);
 		phaseCpuSampler?.startWindow();
 		scheduleNext();
 	};
