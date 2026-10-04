@@ -46,6 +46,7 @@ test.concurrent("local development needs no balance worker settings", () => {
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC: "local-catalog-invalidations",
 		BALANCE_WORKER_PARTITION_COUNT: 4,
 		BALANCE_WORKER_CHECK_LEASES: true,
+		BALANCE_WORKER_SHARED_CHECK_LEASES: true,
 	});
 });
 
@@ -62,6 +63,15 @@ test.concurrent("check leases are on unless switched off", () => {
 			BALANCE_WORKER_CHECK_LEASES: "off",
 		}),
 	).toThrow("BALANCE_WORKER_CHECK_LEASES must be true or false");
+	expect(
+		createBalanceWorkerClientEnv({
+			...localEnv,
+			BALANCE_WORKER_SHARED_CHECK_LEASES: "false",
+		}),
+	).toMatchObject({
+		BALANCE_WORKER_CHECK_LEASES: true,
+		BALANCE_WORKER_SHARED_CHECK_LEASES: false,
+	});
 });
 
 test.concurrent("the ownership topic derives from the deployment", () => {

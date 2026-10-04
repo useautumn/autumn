@@ -4,6 +4,7 @@ import {
 	createKafkaBalanceWorkerClient,
 	createProxyBalanceWorkerClient,
 	type KafkaBalanceWorkerClientConfig,
+	type SharedCheckLeases,
 } from "@autumn/balance-worker-client";
 import { getAutumnEnv } from "@autumn/env";
 import {
@@ -16,12 +17,14 @@ import {
 	BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { hasMiscRedisConfig } from "@/external/redis/initUtils/redisConfig.js";
 import { readBalanceWorkerKafkaConfig } from "./balanceWorkerKafkaConfig.js";
 import {
 	startCheckLeaseStats,
 	stopCheckLeaseStats,
 } from "./checkLeaseStats.js";
 import { getBalanceWorkerRolloutOverride } from "./getBalanceWorkerRolloutEnabled.js";
+import { sharedCheckLeasesOnMiscRedis } from "./sharedCheckLeases.js";
 
 const rolloutOverrideLabel = (): string => {
 	const override = getBalanceWorkerRolloutOverride();
@@ -58,6 +61,17 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 	};
 }
 
+/** Servers share leased check replies through the misc Redis when it is configured and sharing is on. */
+function sharedCheckLeasesOf(): SharedCheckLeases | undefined {
+	const env = getBalanceWorkerClientEnv();
+	if (
+		!env.BALANCE_WORKER_CHECK_LEASES ||
+		!env.BALANCE_WORKER_SHARED_CHECK_LEASES
+	)
+		return undefined;
+	return hasMiscRedisConfig ? sharedCheckLeasesOnMiscRedis : undefined;
+}
+
 /** Outside the VPC (Trigger, prod scripts) every call goes through the API's own client. */
 function createProxyClient(): BalanceWorkerClient {
 	const secret = getBalanceWorkerTransportEnv().BALANCE_WORKER_PROXY_SECRET;
@@ -79,7 +93,7 @@ function createClientForTransport(): BalanceWorkerClient {
 	if (getBalanceWorkerTransportEnv().BALANCE_WORKER_TRANSPORT === "proxy")
 		return createProxyClient();
 	return createKafkaBalanceWorkerClient({
-		ctx: { logger },
+		ctx: { logger, sharedCheckLeases: sharedCheckLeasesOf() },
 		config: balanceWorkerClientConfig(),
 	});
 }

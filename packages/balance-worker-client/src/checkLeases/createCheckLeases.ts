@@ -4,9 +4,16 @@ import type {
 	CheckLeaseCounters,
 	CheckLeases,
 	CheckLeasesConfig,
+	SharedCheckLeases,
 } from "./types/checkLeases.js";
 
 const DEFAULT_MAX_TTL_MS = 1_000;
+const SHARED_KEY_PREFIX = "bw:check-lease:v1:";
+/** Servers' clocks may disagree by this much: another server's lease must have been sent this long after our last write. */
+const SHARED_CLOCK_SKEW_MS = 100;
+
+/** What a server publishes: the reply and when it asked the owner, on its own clock. */
+type SharedLease = { sentAt: number; reply: CheckReply };
 
 type HeldLease = {
 	reply: CheckReply;
@@ -40,26 +47,32 @@ function leaseKeyOf({ command }: { command: CheckCommand }): string | null {
 	]);
 }
 
-/** Owner-issued check leases held on this server: a bounded LRU of replies, each until its lease or `maxTtlMs` lapses. */
+/**
+ * Owner-issued check leases held on this server: a bounded LRU of replies, each until its lease or `maxTtlMs`
+ * lapses. With a shared store, a reply one server leased answers every server until the same deadline.
+ */
 export function createCheckLeases({
 	ctx = {},
 	config,
 }: {
-	ctx?: { now?: () => number };
+	ctx?: { now?: () => number; shared?: SharedCheckLeases };
 	config: CheckLeasesConfig;
 }): CheckLeases {
 	const now = ctx.now ?? Date.now;
+	const shared = ctx.shared;
 	const maxTtlMs = config.maxTtlMs ?? DEFAULT_MAX_TTL_MS;
 	// Both maps are in recency order: re-inserting moves a key to the end.
 	const held = new Map<string, HeldLease>();
 	const invalidatedAt = new Map<string, number>();
 	const counters: Omit<CheckLeaseCounters, "size"> = {
 		leaseHit: 0,
+		leaseSharedHit: 0,
 		leaseMiss: 0,
 		leaseIssued: 0,
 		leaseBypassDenied: 0,
 		leaseWithheld: 0,
 		leaseEvicted: 0,
+		leaseSharedErrors: 0,
 	};
 
 	function invalidatedSince({
@@ -81,7 +94,7 @@ export function createCheckLeases({
 		);
 	}
 
-	function read({ key }: { key: string }): CheckReply | null {
+	function readHeld({ key }: { key: string }): CheckReply | null {
 		const lease = held.get(key);
 		if (!lease) return null;
 		held.delete(key);
@@ -99,7 +112,75 @@ export function createCheckLeases({
 		}
 	}
 
-	function hold({
+	/** Holds the lease if it is still good; true when held. */
+	function holdLease({
+		key,
+		lease,
+	}: {
+		key: string;
+		lease: HeldLease;
+	}): boolean {
+		const at = now();
+		if (!isGood({ lease, at })) return false;
+		dropLapsedOldest({ at });
+		held.delete(key);
+		held.set(key, lease);
+		if (held.size > config.maxEntries) {
+			const oldest = held.keys().next().value;
+			if (oldest !== undefined) {
+				held.delete(oldest);
+				counters.leaseEvicted++;
+			}
+		}
+		return true;
+	}
+
+	function leaseOf({
+		command,
+		reply,
+		sentAt,
+		expiresAt,
+	}: {
+		command: CheckCommand;
+		reply: CheckReply;
+		sentAt: number;
+		expiresAt: number;
+	}): HeldLease {
+		return {
+			reply,
+			expiresAt,
+			sentAt,
+			customerKey: customerKeyOf(command.identity),
+			orgKey: orgKeyOf(command.identity),
+		};
+	}
+
+	async function publish({
+		key,
+		reply,
+		sentAt,
+		expiresAt,
+	}: {
+		key: string;
+		reply: CheckReply;
+		sentAt: number;
+		expiresAt: number;
+	}): Promise<void> {
+		if (!shared) return;
+		const ttlMs = Math.floor(expiresAt - now());
+		if (ttlMs <= 0) return;
+		try {
+			await shared.write({
+				key: SHARED_KEY_PREFIX + key,
+				value: JSON.stringify({ sentAt, reply } satisfies SharedLease),
+				ttlMs,
+			});
+		} catch {
+			counters.leaseSharedErrors++;
+		}
+	}
+
+	function holdOwnerReply({
 		key,
 		command,
 		reply,
@@ -114,31 +195,48 @@ export function createCheckLeases({
 			counters.leaseBypassDenied++;
 			return;
 		}
-		const at = now();
-		const lease: HeldLease = {
-			reply,
-			// The owner's clock bounds the answer's age; ours bounds it if the clocks disagree.
-			expiresAt: Math.min(
-				reply.lease?.expiresAt ?? Number.NEGATIVE_INFINITY,
-				sentAt + maxTtlMs,
-			),
-			sentAt,
-			customerKey: customerKeyOf(command.identity),
-			orgKey: orgKeyOf(command.identity),
-		};
-		if (!isGood({ lease, at })) {
+		// The owner's clock bounds the answer's age; ours bounds it if the clocks disagree.
+		const expiresAt = Math.min(
+			reply.lease?.expiresAt ?? Number.NEGATIVE_INFINITY,
+			sentAt + maxTtlMs,
+		);
+		const lease = leaseOf({ command, reply, sentAt, expiresAt });
+		if (!holdLease({ key, lease })) {
 			counters.leaseWithheld++;
 			return;
 		}
-		dropLapsedOldest({ at });
-		held.delete(key);
-		held.set(key, lease);
 		counters.leaseIssued++;
-		if (held.size <= config.maxEntries) return;
-		const oldest = held.keys().next().value;
-		if (oldest === undefined) return;
-		held.delete(oldest);
-		counters.leaseEvicted++;
+		void publish({ key, reply, sentAt, expiresAt });
+	}
+
+	/** Another server's lease for this key, held here until the same deadline; null on a miss or a store failure. */
+	async function readShared({
+		key,
+		command,
+	}: {
+		key: string;
+		command: CheckCommand;
+	}): Promise<CheckReply | null> {
+		if (!shared) return null;
+		const readAt = now();
+		let found: { value: string; ttlMs: number } | null;
+		try {
+			found = await shared.read({ key: SHARED_KEY_PREFIX + key });
+		} catch {
+			counters.leaseSharedErrors++;
+			return null;
+		}
+		if (!found || found.ttlMs <= 0) return null;
+		const { sentAt, reply } = JSON.parse(found.value) as SharedLease;
+		if (!reply.result.allowed) return null;
+		// Asked before a write this server sent (or within clock skew of it): the owner may have answered without it.
+		const lease = leaseOf({
+			command,
+			reply,
+			sentAt: sentAt - SHARED_CLOCK_SKEW_MS,
+			expiresAt: readAt + Math.min(found.ttlMs, maxTtlMs),
+		});
+		return holdLease({ key, lease }) ? reply : null;
 	}
 
 	async function answer({
@@ -149,15 +247,22 @@ export function createCheckLeases({
 		send: () => Promise<CheckReply>;
 	}): Promise<CheckReply> {
 		const key = leaseKeyOf({ command });
-		const leased = key === null ? null : read({ key });
-		if (leased) {
-			counters.leaseHit++;
-			return leased;
+		if (key !== null) {
+			const local = readHeld({ key });
+			if (local) {
+				counters.leaseHit++;
+				return local;
+			}
+			const fromShared = await readShared({ key, command });
+			if (fromShared) {
+				counters.leaseSharedHit++;
+				return fromShared;
+			}
 		}
 		counters.leaseMiss++;
 		const sentAt = now();
 		const reply = await send();
-		if (key !== null) hold({ key, command, reply, sentAt });
+		if (key !== null) holdOwnerReply({ key, command, reply, sentAt });
 		return reply;
 	}
 

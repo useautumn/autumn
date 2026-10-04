@@ -16,11 +16,13 @@ const deltaOf = ({
 	previous: CheckLeaseCounters;
 }) => ({
 	leaseHit: current.leaseHit - previous.leaseHit,
+	leaseSharedHit: current.leaseSharedHit - previous.leaseSharedHit,
 	leaseMiss: current.leaseMiss - previous.leaseMiss,
 	leaseIssued: current.leaseIssued - previous.leaseIssued,
 	leaseBypassDenied: current.leaseBypassDenied - previous.leaseBypassDenied,
 	leaseWithheld: current.leaseWithheld - previous.leaseWithheld,
 	leaseEvicted: current.leaseEvicted - previous.leaseEvicted,
+	leaseSharedErrors: current.leaseSharedErrors - previous.leaseSharedErrors,
 });
 
 /** One `balance_worker_check_leases` line per interval with traffic: counts since the last line, so Axiom sums them. */
@@ -37,14 +39,15 @@ export const startCheckLeaseStats = ({
 		if (!current || !previous) return;
 		const delta = deltaOf({ current, previous });
 		previous = current;
-		const checks = delta.leaseHit + delta.leaseMiss;
+		const answered = delta.leaseHit + delta.leaseSharedHit;
+		const checks = answered + delta.leaseMiss;
 		if (checks === 0) return;
 		logger.info("balance_worker_check_leases", {
 			type: "balance_worker_check_leases",
 			pid: process.pid,
 			intervalMs: CHECK_LEASE_STATS_INTERVAL_MS,
 			...delta,
-			leaseHitShare: delta.leaseHit / checks,
+			leaseHitShare: answered / checks,
 			size: current.size,
 		});
 	}, CHECK_LEASE_STATS_INTERVAL_MS);
