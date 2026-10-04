@@ -24,7 +24,20 @@ export type CheckAdmission = {
 		behind: boolean;
 		lagMs: number;
 	};
+	/** What happened since the last call, for the task's periodic health line; each call starts a new interval. */
+	takeInterval(): CheckAdmissionInterval;
 	stop(): void;
+};
+
+export type CheckAdmissionInterval = {
+	admitted: number;
+	shed: number;
+	/** Distinct customers that had at least one check shed. */
+	shedCustomers: number;
+	/** Smoothed loop lag now, and the highest it reached in the interval. */
+	lagMs: number;
+	maxLagMs: number;
+	behind: boolean;
 };
 
 /**
@@ -48,12 +61,15 @@ export function createCheckAdmission({
 	let previous: Window | null = null;
 	let admitted = 0;
 	let shed = 0;
+	let interval = { admitted: 0, shed: 0, maxLagMs: 0 };
+	let shedCustomers = new Set<string>();
 
 	function probe(): void {
 		const at = now();
 		const late = Math.max(0, at - lastProbeAt - PROBE_INTERVAL_MS);
 		lastProbeAt = at;
 		lagMs = lagMs * (1 - LAG_SMOOTHING) + late * LAG_SMOOTHING;
+		interval.maxLagMs = Math.max(interval.maxLagMs, lagMs);
 	}
 	const cancel = schedule({ intervalMs: PROBE_INTERVAL_MS, run: probe });
 
@@ -80,9 +96,12 @@ export function createCheckAdmission({
 		const overShare = mine > MIN_PER_WINDOW && mine > total * MAX_SHARE;
 		if (overShare && isBehind(at)) {
 			shed += 1;
+			interval.shed += 1;
+			shedCustomers.add(customerKey);
 			return false;
 		}
 		admitted += 1;
+		interval.admitted += 1;
 		return true;
 	}
 
@@ -90,7 +109,19 @@ export function createCheckAdmission({
 		return { admitted, shed, behind: isBehind(now()), lagMs };
 	}
 
-	return { admit, readCounters, stop: cancel };
+	function takeInterval(): CheckAdmissionInterval {
+		const taken = {
+			...interval,
+			shedCustomers: shedCustomers.size,
+			lagMs,
+			behind: isBehind(now()),
+		};
+		interval = { admitted: 0, shed: 0, maxLagMs: lagMs };
+		shedCustomers = new Set();
+		return taken;
+	}
+
+	return { admit, readCounters, takeInterval, stop: cancel };
 }
 
 function scheduleProbe({
@@ -118,4 +149,9 @@ let checkAdmission: CheckAdmission | undefined;
 export function getCheckAdmission(): CheckAdmission {
 	checkAdmission ??= createCheckAdmission();
 	return checkAdmission;
+}
+
+/** The interval since the last health line, or null on a task that never started admission (arm A). */
+export function takeCheckAdmissionInterval(): CheckAdmissionInterval | null {
+	return checkAdmission ? checkAdmission.takeInterval() : null;
 }

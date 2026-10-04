@@ -1,6 +1,7 @@
 import type { OwnedPartitionHealth } from "../../../src/health/ownedPartitionHealth.js";
 import type { BalanceWorkerState } from "../../../src/init/types/balanceWorkerState.js";
 import { createWorkerHealthReporter } from "../../../src/logging/createWorkerHealthReporter.js";
+import type { CheckAdmissionInterval } from "../../../src/runtime/deadlineShed/checkAdmission.js";
 
 export function createHealthReporterFixture({
 	enabled = true,
@@ -17,6 +18,7 @@ export function createHealthReporterFixture({
 			status: "joined" | "rejoining";
 			rejoinAttempts: number;
 		},
+		checkAdmission: null as CheckAdmissionInterval | null,
 		readFailure: false,
 		logFailure: false,
 		reads: 0,
@@ -40,6 +42,7 @@ export function createHealthReporterFixture({
 			},
 			readWorkerStatus: () => health.status,
 			readConsumer: () => health.consumer,
+			readCheckAdmission: () => health.checkAdmission,
 			schedule: ({ intervalMs, run }) => {
 				const timer = { intervalMs, run, cancelled: false };
 				timers.push(timer);

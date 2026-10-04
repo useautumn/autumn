@@ -35,6 +35,7 @@ import {
 } from "../logging/kafkaRequestTimings.js";
 import { createRequestLatencies } from "../logging/requestLatencies.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
+import { takeCheckAdmissionInterval } from "../runtime/deadlineShed/checkAdmission.js";
 import { createIoWorkerPool } from "../serialDecide/createIoWorkerPool.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
@@ -282,6 +283,7 @@ export async function createBalanceWorker({
 				readWorkerStatus,
 				readConsumer: partitions.consumer,
 				readBootArms: serialDecide.bootArms,
+				readCheckAdmission: takeCheckAdmissionInterval,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
