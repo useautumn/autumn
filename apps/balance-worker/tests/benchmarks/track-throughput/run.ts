@@ -1,6 +1,7 @@
 import { performance } from "node:perf_hooks";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
+import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
 import {
@@ -55,15 +56,19 @@ for (const [i, identity] of identities.entries()) {
 const runtime: BalanceWorkerRequestContext["runtime"] = {
 	process: (run) => run(bench.processor),
 };
-const app = createBalanceWorkerApp({
-	ctx: {
-		ownership: { findRuntime: () => runtime },
-		partitionResolver: { partitionForIdentity: () => 0 },
-		logger: getBalanceWorkerLogger(),
-	},
-});
+
+/** Production samples successful request lines; the default here logs every one. */
+const logRate = args.logRate === undefined ? undefined : Number(args.logRate);
+const appContext = {
+	ownership: { findRuntime: () => runtime },
+	partitionResolver: { partitionForIdentity: () => 0 },
+	logger: getBalanceWorkerLogger(),
+	...(logRate === undefined ? {} : { requestLog: { successSampleRate: logRate } }),
+};
+const app = createBalanceWorkerApp({ ctx: appContext });
+const fastFetch = createBalanceWorkerFetch({ ctx: appContext, app });
 const trackOverHttp = async (command: TrackCommand) => {
-	const response = await app.request("/v1/track", {
+	const request = new Request("http://worker/v1/track", {
 		method: "POST",
 		headers: { "content-type": "application/json" },
 		body: JSON.stringify({
@@ -71,6 +76,9 @@ const trackOverHttp = async (command: TrackCommand) => {
 			command,
 		}),
 	});
+	const response = await (mode === "fast"
+		? fastFetch(request)
+		: app.fetch(request));
 	if (response.status !== 200)
 		throw new Error(`track ${response.status}: ${await response.text()}`);
 	return response.json();
@@ -100,7 +108,7 @@ const run = async ({ count }: { count: number }) => {
 			const command = commands[cursor++];
 			if (!command) return;
 			const started = performance.now();
-			if (mode === "hono") await trackOverHttp(command);
+			if (mode === "hono" || mode === "fast") await trackOverHttp(command);
 			else await bench.processor.track({ command });
 			latencies.push(performance.now() - started);
 		}
