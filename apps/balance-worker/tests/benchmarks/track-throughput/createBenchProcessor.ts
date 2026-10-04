@@ -3,8 +3,12 @@ import { createCommitterStateStore } from "../../../src/committer/createCommitte
 import type { Committer } from "../../../src/committer/types/committer.js";
 import { timeSync } from "../../../src/logging/eventLoopStalls/syncSections.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
+import type { PartitionProcessorDependencies } from "../../../src/processor/types/partitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
-import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
+import type {
+	CommittedOutcomeAppender,
+	PartitionWriterLimits,
+} from "../../../src/processor/writer/types/partitionWriter.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
 import {
 	createSyntheticWorkerDb,
@@ -13,6 +17,11 @@ import {
 import type { Scenario } from "./scenarios.js";
 
 type BenchLatency = { appendMs: number; applyMs: number };
+
+type BenchPorts = {
+	appender: CommittedOutcomeAppender;
+	stateStore: PartitionProcessorDependencies["stateStore"];
+};
 
 const sleep = (ms: number) =>
 	ms <= 0 ? Promise.resolve() : new Promise((r) => setTimeout(r, ms));
@@ -24,6 +33,8 @@ export const createBenchProcessor = async ({
 	latency,
 	serialize,
 	db = createSyntheticWorkerDb(),
+	limits = {},
+	instrument,
 }: {
 	scenario: Scenario;
 	partition: number;
@@ -31,6 +42,10 @@ export const createBenchProcessor = async ({
 	serialize: boolean;
 	/** Postgres stand-in for cold loads; entity benches answer their entities from it. */
 	db?: WorkerDb;
+	/** Overrides the bench's writer limits, e.g. the worker's own linger and batch size. */
+	limits?: Partial<PartitionWriterLimits>;
+	/** Wraps the ports the writer commits and flushes through, as the worker's commit logging does. */
+	instrument?: (ports: BenchPorts) => BenchPorts;
 }) => {
 	const topic = "bench-metering";
 	let appended = 0;
@@ -92,17 +107,23 @@ export const createBenchProcessor = async ({
 		maxBatchSize: 100,
 		maxPendingCommands: 1_000_000,
 		maxPendingCommandsPerCustomer: 1_000_000,
+		...limits,
 	};
+	const ports: BenchPorts = {
+		appender,
+		stateStore: {
+			...stateStore,
+			readCommandNextOffset: () => null,
+			advanceCommandNextOffset: async () => undefined,
+		},
+	};
+	const instrumented = instrument ? instrument(ports) : ports;
 	const processor = createPartitionProcessor({
 		ctx: {
-			stateStore: {
-				...stateStore,
-				readCommandNextOffset: () => null,
-				advanceCommandNextOffset: async () => undefined,
-			},
+			stateStore: instrumented.stateStore,
 			catalogCache,
 			db,
-			appender,
+			appender: instrumented.appender,
 			receiptPolicy,
 			recentCommands,
 			assertCanRead: () => undefined,
