@@ -1,11 +1,15 @@
 import { expect, test } from "bun:test";
-import { overrideVariant } from "../../../src/experiments/variant.js";
+import { COMMIT_PIPELINE_EXPERIMENT } from "../../../src/experiments/commitPipeline.js";
 import {
 	COMMIT_SUMMARY_INTERVAL_MS,
 	createPartitionCommitLogging,
 } from "../../../src/logging/createPartitionCommitLogging.js";
 import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
 import type { DurableMutationRecord } from "../../../src/state/types/durableMutation.js";
+import {
+	clearStagingArms,
+	forceStagingArm,
+} from "../../fixtures/stagingArms.js";
 import {
 	closeStoreFixture,
 	createMutation,
@@ -24,7 +28,7 @@ test("D: successful commits and applies become one summary per partition; failur
 	const timers: { delayMs: number; run(): void }[] = [];
 	let now = 0;
 	let failNext = false;
-	overrideVariant(() => "D");
+	forceStagingArm({ experiment: COMMIT_PIPELINE_EXPERIMENT, arm: "D" });
 	try {
 		const { appender, stateStore } = createPartitionCommitLogging({
 			ctx: {
@@ -109,7 +113,7 @@ test("D: successful commits and applies become one summary per partition; failur
 		timers[0]?.run();
 		expect(info).toHaveLength(1);
 	} finally {
-		overrideVariant(null);
+		clearStagingArms();
 		closeStoreFixture(fixture);
 	}
 });
