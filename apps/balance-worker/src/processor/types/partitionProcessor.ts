@@ -33,6 +33,7 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type { TrackRuns } from "../runs/createTrackRuns.js";
 import type {
 	SubjectDecisionCounters,
 	SubjectDecisions,
@@ -123,6 +124,8 @@ export type PartitionProcessorConfig = {
 	writerLimits: PartitionWriterLimits;
 	/** Off decides every track on a fresh view with every effect: the reference the carried path must equal. */
 	carriesTrackContexts?: boolean;
+	/** Off decides every sync track alone: the reference a run of tracks must equal. */
+	decidesTrackRuns?: boolean;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };
@@ -149,4 +152,6 @@ export type PartitionProcessorScope = {
 	ctx: PartitionProcessorContext;
 	accepted: AcceptedCommands;
 	customerPlans: CustomerPlans;
+	/** Absent, every sync track is decided alone. */
+	trackRuns?: TrackRuns;
 };

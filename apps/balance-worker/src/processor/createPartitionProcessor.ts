@@ -46,6 +46,7 @@ import {
 	settleAcceptedCommands,
 } from "./common/acceptedCommands.js";
 import { executeCommand } from "./execution/executeCommand.js";
+import { createTrackRuns } from "./runs/createTrackRuns.js";
 import { createSubjectHydrator } from "./subject/createSubjectHydrator.js";
 import { createSubjectDecisions } from "./subject/subjectDecisions/createSubjectDecisions.js";
 import type { DeferredLogSink } from "./types/deferredLogSink.js";
@@ -104,6 +105,8 @@ export function createPartitionProcessor({
 		accepted: createAcceptedCommands(),
 		customerPlans: createCustomerPlans(),
 	};
+	if (config.decidesTrackRuns !== false)
+		scope.trackRuns = createTrackRuns({ scope });
 
 	return createProcessor({ scope });
 }
