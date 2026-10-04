@@ -6,13 +6,18 @@
  *   C  I/O worker pool + Kafka worker thread
  *   D  C + hot track frames: lean decide, replies released by commit position, hashed dedup window
  * Every arm runs the real processor, writer, pool, Kafka worker and hot decider; only the fixtures are synthetic.
+ * SPIKE_MIX=1 adds a many-customer population (see `mixPopulation`): warm residents, residents with a reset due,
+ * and customers Postgres serves on first touch after SPIKE_MIX_DB_MS.
  */
+
+import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import {
 	createKafkaClient,
 	createKafkaTransport,
 	createProducerSession,
 	type KafkaProducerFactory,
 } from "@autumn/kafka";
+import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { Kafka } from "kafkajs";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
@@ -34,13 +39,16 @@ import { createHotDecider } from "../../../src/serialDecide/createHotDecider.js"
 import { createIoWorkerPool } from "../../../src/serialDecide/createIoWorkerPool.js";
 import { createRemoteKafkaProducers } from "../../../src/serialDecide/createRemoteKafkaProducers.js";
 import { createPositionBoard } from "../../../src/serialDecide/positionBoard.js";
+import type { WorkerDb } from "../../../src/types/workerDb.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
+	entitySubjectRowsFrom,
 } from "../../fixtures/catalog.js";
 import {
 	createInitializeRequest,
 	testIdentity,
+	testOccurredAt,
 } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
 
@@ -49,6 +57,49 @@ const fixedClock = process.env.SPIKE_FIXED_CLOCK;
 if (fixedClock) Date.now = () => Number(fixedClock);
 
 export type Arm = "A" | "B" | "C" | "D";
+
+/** The mixed population: `cus_w<i>` warm and `cus_r<i>` reset-due residents, `cus_c<i>` served by Postgres. */
+export const mixPopulation = {
+	enabled: process.env.SPIKE_MIX === "1",
+	warm: Number(process.env.SPIKE_MIX_WARM ?? 2_000),
+	resetDue: Number(process.env.SPIKE_MIX_RESET ?? 2_500),
+	dbMs: Number(process.env.SPIKE_MIX_DB_MS ?? 3),
+};
+
+const identityOf = (customerId: string): MeteringIdentity => ({
+	...testIdentity,
+	customerId,
+});
+
+/** A resident whose cycles ended a minute before the requests' clock: its first command advances them. */
+function resetDueState(state: SubjectState): SubjectState {
+	const endedAt = testOccurredAt - 60_000;
+	return {
+		...state,
+		customerEntitlements: state.customerEntitlements.map((row) => ({
+			...row,
+			next_reset_at: endedAt,
+			reset_cycle_anchor: endedAt - 30 * 86_400_000,
+		})),
+	};
+}
+
+/** The rows Postgres would hand back for a customer: the state's own rows, after the configured latency. */
+function envelopeOf(state: SubjectState): SubjectRowsEnvelope {
+	return {
+		customer: state.customer,
+		customer_products: state.customerProducts,
+		customer_prices: state.customerPrices,
+		customer_entitlements: state.customerEntitlements,
+		rollovers: state.rollovers,
+		replaceables: state.replaceables,
+		usage_windows: state.usageWindows,
+		open_locks: state.openLocks,
+		pooled_balances: state.pooledBalances,
+		customer_licenses: state.customerLicenses,
+		entity: state.entity,
+	} as unknown as SubjectRowsEnvelope;
+}
 export const SPIKE_TOPIC = process.env.SPIKE_TOPIC ?? "bw-spike-metering";
 export const SPIKE_BROKERS = ["127.0.0.1:19092"];
 const PARTITION = 0;
@@ -147,7 +198,9 @@ export async function createArmWorker({
 		nextOffset: 0n,
 	});
 	const positions = createPositionBoard({ config: { partitionCount: 1 } });
-	const db = createSyntheticWorkerDb();
+	const db: WorkerDb = mixPopulation.enabled
+		? mixDb({ stateFor: scenario.stateFor })
+		: createSyntheticWorkerDb();
 	const dedupWindow = { windowMs: 600_000, now: () => Date.now() };
 	const processor = createPartitionProcessor({
 		ctx: {
@@ -178,6 +231,8 @@ export async function createArmWorker({
 				commitLingerMs: 5,
 				commitPipelineDepth: 2,
 			},
+			// Staging runs with check leases off (prod parity).
+			issuesCheckLeases: process.env.SPIKE_CHECK_LEASES === "true",
 		},
 	});
 	await processor.initialize({
@@ -187,6 +242,29 @@ export async function createArmWorker({
 			requestId: "req_init_0",
 		}),
 	});
+	if (mixPopulation.enabled) {
+		const residents = [
+			...Array.from({ length: mixPopulation.warm }, (_, i) => {
+				const identity = identityOf(`cus_w${i}`);
+				return scenario.stateFor({ identity });
+			}),
+			...Array.from({ length: mixPopulation.resetDue }, (_, i) =>
+				resetDueState(scenario.stateFor({ identity: identityOf(`cus_r${i}`) })),
+			),
+		];
+		for (let at = 0; at < residents.length; at += 500)
+			await Promise.all(
+				residents.slice(at, at + 500).map((state, i) =>
+					processor.initialize({
+						request: createInitializeRequest({
+							state,
+							commandId: `init_mix_${at + i}`,
+							requestId: `req_init_mix_${at + i}`,
+						}),
+					}),
+				),
+			);
+	}
 
 	const runtime: BalanceWorkerRequestContext["runtime"] = {
 		process: (run) => run(processor),
@@ -253,6 +331,7 @@ export async function createArmWorker({
 	function readStats(): Record<string, unknown> {
 		return {
 			arm,
+			counters: processor.readCounters(),
 			...(pool && { pool: pool.readStats() }),
 			...(remote && { kafka: remote.readStats() }),
 			commitPos: positions.readCommitPos({ partition: PARTITION }),
@@ -260,4 +339,26 @@ export async function createArmWorker({
 	}
 
 	return { listen, readStats };
+}
+
+/** Postgres for the mixed population: any customer exists, after the configured read latency. */
+function mixDb({
+	stateFor,
+}: {
+	stateFor: (params: { identity: MeteringIdentity }) => SubjectState;
+}): WorkerDb {
+	const synthetic = createSyntheticWorkerDb();
+	async function getSubjectRows({
+		identity,
+	}: {
+		identity: MeteringIdentity;
+	}): Promise<SubjectRowsEnvelope | null> {
+		if (mixPopulation.dbMs > 0) await Bun.sleep(mixPopulation.dbMs);
+		return envelopeOf(stateFor({ identity }));
+	}
+	return {
+		...synthetic,
+		getSubjectRows,
+		getEntitySubjectRows: entitySubjectRowsFrom({ getSubjectRows }),
+	};
 }

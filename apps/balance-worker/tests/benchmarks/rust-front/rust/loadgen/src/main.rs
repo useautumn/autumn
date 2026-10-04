@@ -1,5 +1,7 @@
 //! Closed-loop HTTP load for one hot customer: `conns` keep-alive connections, one track in flight each.
 //! Reports tracks/s and, for each `--pids` process, CPU µs per track split by thread (schedstat, ns).
+//! `--mix <file>` replays a request mix instead (one `path<TAB>body` per line, `__ID__` made unique), and
+//! `--rate <rps>` paces the whole run to that rate (a connection waits for its request's slot).
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -34,6 +36,38 @@ impl Template {
         }
         Bytes::from(out)
     }
+}
+
+/// Request classes a mix reports separately: tracks, checks, and anything else.
+const CLASSES: [&str; 3] = ["track", "check", "other"];
+
+fn class_of(path: &str) -> usize {
+    match path.split('?').next().unwrap_or(path) {
+        "/v1/track" => 0,
+        "/v1/check" => 1,
+        _ => 2,
+    }
+}
+
+struct MixLine {
+    path: String,
+    class: usize,
+    template: Template,
+}
+
+fn load_mix(path: &str) -> Vec<MixLine> {
+    let text = std::fs::read_to_string(path).expect("mix");
+    text.lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let (path, body) = line.split_once('\t').expect("mix line: path<TAB>body");
+            MixLine {
+                path: path.to_string(),
+                class: class_of(path),
+                template: Template { parts: body.split("__ID__").map(String::from).collect() },
+            }
+        })
+        .collect()
 }
 
 /// ns on CPU per thread of a process, keyed by "tid:comm".
@@ -132,7 +166,17 @@ async fn load(args: &[String]) {
                 .collect()
         })
         .unwrap_or_default();
-    let template = Arc::new(Template::load(&arg(args, "--template").expect("--template")));
+    let mix: Option<Arc<Vec<MixLine>>> = arg(args, "--mix").map(|p| Arc::new(load_mix(&p)));
+    let template = Arc::new(match &mix {
+        Some(_) => Template { parts: vec![String::new()] },
+        None => Template::load(&arg(args, "--template").expect("--template")),
+    });
+    let rate: f64 = arg(args, "--rate").and_then(|v| v.parse().ok()).unwrap_or(0.0);
+    let t0: Arc<std::sync::OnceLock<Instant>> = Arc::new(std::sync::OnceLock::new());
+    let connected = Arc::new(AtomicU64::new(0));
+    let window_errors = Arc::new(AtomicU64::new(0));
+    let by_class: Arc<[AtomicU64; 3]> = Arc::new([AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)]);
+    let class_latencies = Arc::new(std::sync::Mutex::new(vec![Vec::<u32>::new(), Vec::new(), Vec::new()]));
 
     let counter = Arc::new(AtomicU64::new(0));
     let completed = Arc::new(AtomicU64::new(0));
@@ -145,16 +189,48 @@ async fn load(args: &[String]) {
         let (addr, path, template, prefix) = (addr.clone(), path.clone(), template.clone(), prefix.clone());
         let (counter, completed, errors, measuring, stop, latencies) =
             (counter.clone(), completed.clone(), errors.clone(), measuring.clone(), stop.clone(), latencies.clone());
+        let (mix, by_class, class_latencies) = (mix.clone(), by_class.clone(), class_latencies.clone());
+        let (t0, connected, window_errors) = (t0.clone(), connected.clone(), window_errors.clone());
         handles.push(tokio::spawn(async move {
             let mut sender = connect(&addr).await;
+            connected.fetch_add(1, Ordering::Relaxed);
+            // The schedule starts once every connection is open, so connecting never builds a backlog.
+            let t0 = loop {
+                if let Some(t) = t0.get() {
+                    break *t;
+                }
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            };
             let mut local = Vec::with_capacity(1 << 14);
+            let mut local_by_class: [Vec<u32>; 3] = [Vec::new(), Vec::new(), Vec::new()];
             while !stop.load(Ordering::Relaxed) {
                 let n = counter.fetch_add(1, Ordering::Relaxed);
-                let started = Instant::now();
-                let response = match sender.send_request(request(&addr, &path, template.body(&format!("{prefix}_{n}")))).await {
+                // Paced runs time a request from its slot, not its send, so a backlog shows as latency.
+                let mut due = None;
+                if rate > 0.0 {
+                    let slot = t0 + Duration::from_secs_f64(n as f64 / rate);
+                    let now = Instant::now();
+                    if slot > now {
+                        tokio::time::sleep(slot - now).await;
+                    }
+                    due = Some(slot);
+                }
+                let id = format!("{prefix}_{n}");
+                let (req_path, class, body) = match &mix {
+                    Some(lines) => {
+                        let line = &lines[(n as usize) % lines.len()];
+                        (line.path.as_str(), line.class, line.template.body(&id))
+                    }
+                    None => (path.as_str(), 0usize, template.body(&id)),
+                };
+                let started = due.unwrap_or_else(Instant::now);
+                let response = match sender.send_request(request(&addr, req_path, body)).await {
                     Ok(r) => r,
                     Err(_) => {
                         errors.fetch_add(1, Ordering::Relaxed);
+                        if measuring.load(Ordering::Relaxed) {
+                            window_errors.fetch_add(1, Ordering::Relaxed);
+                        }
                         sender = connect(&addr).await;
                         continue;
                     }
@@ -162,6 +238,9 @@ async fn load(args: &[String]) {
                 let ok = response.status().as_u16() == 200;
                 let body = response.into_body().collect().await;
                 if !ok || body.is_err() {
+                    if measuring.load(Ordering::Relaxed) {
+                        window_errors.fetch_add(1, Ordering::Relaxed);
+                    }
                     if errors.fetch_add(1, Ordering::Relaxed) < 3 {
                         if let Ok(b) = body {
                             eprintln!("error reply: {}", String::from_utf8_lossy(&b.to_bytes()));
@@ -171,12 +250,23 @@ async fn load(args: &[String]) {
                 }
                 if measuring.load(Ordering::Relaxed) {
                     completed.fetch_add(1, Ordering::Relaxed);
-                    local.push(started.elapsed().as_micros() as u32);
+                    by_class[class].fetch_add(1, Ordering::Relaxed);
+                    let us = started.elapsed().as_micros() as u32;
+                    local.push(us);
+                    local_by_class[class].push(us);
                 }
             }
             latencies.lock().unwrap().extend(local);
+            let mut shared = class_latencies.lock().unwrap();
+            for (class, values) in local_by_class.into_iter().enumerate() {
+                shared[class].extend(values);
+            }
         }));
     }
+    while connected.load(Ordering::Relaxed) < conns as u64 {
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    let _ = t0.set(Instant::now());
     tokio::time::sleep(Duration::from_secs_f64(warmup)).await;
     let cpu_before: Vec<_> = pids.iter().map(|(_, pid)| (thread_cpu(*pid), user_sys(*pid))).collect();
     let started = Instant::now();
@@ -190,6 +280,19 @@ async fn load(args: &[String]) {
         let _ = handle.await;
     }
     let count = completed.load(Ordering::Relaxed);
+    let mut classes = serde_json::Map::new();
+    for (class, values) in class_latencies.lock().unwrap().iter_mut().enumerate() {
+        let n = by_class[class].load(Ordering::Relaxed);
+        if n == 0 {
+            continue;
+        }
+        values.sort_unstable();
+        let at = |p: f64| values.get(((values.len() as f64 * p) as usize).min(values.len().saturating_sub(1))).copied().unwrap_or(0) as f64 / 1000.0;
+        classes.insert(
+            CLASSES[class].to_string(),
+            serde_json::json!({ "count": n, "perSec": (n as f64 / elapsed).round(), "p50Ms": at(0.5), "p99Ms": at(0.99) }),
+        );
+    }
     let mut lat = latencies.lock().unwrap().clone();
     lat.sort_unstable();
     let pct = |p: f64| lat.get(((lat.len() as f64 * p) as usize).min(lat.len().saturating_sub(1))).copied().unwrap_or(0) as f64 / 1000.0;
@@ -226,8 +329,11 @@ async fn load(args: &[String]) {
             "tracks": count,
             "tracksPerSec": (count as f64 / elapsed).round(),
             "errors": errors.load(Ordering::Relaxed),
+            "windowErrors": window_errors.load(Ordering::Relaxed),
             "p50Ms": pct(0.5),
             "p99Ms": pct(0.99),
+            "rate": rate,
+            "byClass": classes,
             "procs": procs,
         })
     );
