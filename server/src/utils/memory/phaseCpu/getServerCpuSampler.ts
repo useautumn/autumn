@@ -9,6 +9,8 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 
 let sampler: Promise<ServerCpuSampler> | undefined;
 
+export const SERVER_PHASE_CPU_EXPERIMENT = "server-phase-cpu";
+
 async function createSampler() {
 	const bucket = getAdminS3Config().bucket;
 	const bound = stagingVariantsBound();
@@ -20,7 +22,7 @@ async function createSampler() {
 			bucket,
 			bound,
 			backend: getServerCpuBackend(),
-			shouldSample: () => variant("server-phase-cpu") === "B",
+			shouldSample: () => variant(SERVER_PHASE_CPU_EXPERIMENT) === "B",
 		});
 	} catch {
 		logger.warn("Server phase CPU profiler unavailable", {
