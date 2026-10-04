@@ -10,7 +10,8 @@ export type DatabaseQueryKind =
 	| "claim_customer"
 	| "pooled_balances"
 	| "partition_progress"
-	| "flush";
+	| "flush"
+	| "flush_single";
 
 type Distribution = { count: number; p50: number; p99: number; max: number };
 

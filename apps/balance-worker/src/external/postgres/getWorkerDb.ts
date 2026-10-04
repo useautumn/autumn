@@ -15,6 +15,7 @@ import {
 	readPartitionProgress,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
+import { flushRoundTrips } from "../../experiments/flushRtt.js";
 import {
 	type DatabaseTimings,
 	timeQuery,
@@ -195,17 +196,21 @@ export const createCommitterDb = ({
 			run: () =>
 				claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 		}),
-	flush: (request) =>
-		timeQuery({
+	flush: (request) => {
+		// Timed under its own kind so each task's database report compares the two shapes side by side.
+		const roundTrips = flushRoundTrips();
+		return timeQuery({
 			ctx,
-			kind: "flush",
+			kind: roundTrips === "single" ? "flush_single" : "flush",
 			run: () =>
 				commitFlush({
 					ctx: { db: ctx.postgres.db, timing: timeFlushSection },
 					request,
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
+					roundTrips,
 				}),
-		}),
+		});
+	},
 });
 
 /** The flush's synchronous work shows up in the stall sections beside the request path's. */
