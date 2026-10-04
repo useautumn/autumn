@@ -1,7 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createIoWorkerPool } from "../../../src/serialDecide/createIoWorkerPool.js";
+import {
+	FRAME,
+	type IoWorkerInit,
+} from "../../../src/serialDecide/ioProtocol.js";
+import { Doorbell, RingProducer } from "../../../src/serialDecide/ring.js";
 
 const logger = { info() {}, warn() {}, error() {} };
+const noFatal = ({ cause }: { cause: unknown }) => {
+	throw new Error(`unexpected pool failure: ${String(cause)}`);
+};
 
 async function freePort(): Promise<number> {
 	const reservation = Bun.serve({
@@ -46,7 +54,7 @@ describe("I/O worker pool", () => {
 	beforeAll(async () => {
 		port = await freePort();
 		pool = createIoWorkerPool({
-			ctx: { fetch: echo, logger },
+			ctx: { fetch: echo, logger, onFatal: noFatal },
 			config: {
 				hostname: "127.0.0.1",
 				port,
@@ -151,7 +159,7 @@ describe("I/O worker pool back-pressure", () => {
 	test("while the main thread is stalled the command ring fills and later requests get OVERLOADED at once", async () => {
 		const port = await freePort();
 		const pool = createIoWorkerPool({
-			ctx: { fetch: async () => new Response("ok"), logger },
+			ctx: { fetch: async () => new Response("ok"), logger, onFatal: noFatal },
 			// 16 KiB of commands: about 18 of these 700 B requests fill it while the main thread is away.
 			config: {
 				hostname: "127.0.0.1",
@@ -186,5 +194,105 @@ describe("I/O worker pool back-pressure", () => {
 		} finally {
 			await listener.stop();
 		}
+	});
+});
+
+/** Spawns the pool while `Worker` is wrapped, so the test holds each thread and the init it was handed. */
+async function listenWithSpiedWorkers({
+	onFatal,
+}: {
+	onFatal: (failure: { cause: unknown }) => void;
+}) {
+	const port = await freePort();
+	const workers: Worker[] = [];
+	const inits: IoWorkerInit[] = [];
+	const RealWorker = globalThis.Worker;
+	globalThis.Worker = class extends RealWorker {
+		constructor(url: string | URL, options?: WorkerOptions) {
+			super(url, options);
+			workers.push(this);
+		}
+		postMessage(
+			message: unknown,
+			transferOrOptions?: Transferable[] | StructuredSerializeOptions,
+		): void {
+			if (message && typeof message === "object" && "commandRing" in message)
+				inits.push(message as IoWorkerInit);
+			super.postMessage(message, transferOrOptions as Transferable[]);
+		}
+	} as typeof Worker;
+	try {
+		const pool = createIoWorkerPool({
+			ctx: { fetch: async () => new Response("ok"), logger, onFatal },
+			config: {
+				hostname: "127.0.0.1",
+				port,
+				maxRequestBodySize: 1 << 20,
+				workers: 2,
+				commandRingBytes: 1 << 16,
+				resultRingBytes: 1 << 16,
+			},
+		});
+		const listener = await pool.listen();
+		return { port, workers, inits, listener };
+	} finally {
+		globalThis.Worker = RealWorker;
+	}
+}
+
+/** Collects what the pool reports as fatal; `stop()` afterwards must not throw even with a dead worker. */
+async function fatalCauses({
+	run,
+}: {
+	run: (spied: Awaited<ReturnType<typeof listenWithSpiedWorkers>>) => void;
+}): Promise<string[]> {
+	const causes: string[] = [];
+	const spied = await listenWithSpiedWorkers({
+		onFatal: ({ cause }) => causes.push(String(cause)),
+	});
+	try {
+		run(spied);
+		const deadline = Date.now() + 2_000;
+		while (causes.length === 0 && Date.now() < deadline) await Bun.sleep(10);
+		await Bun.sleep(100);
+		return causes;
+	} finally {
+		await spied.listener.stop();
+	}
+}
+
+describe("I/O worker pool failures", () => {
+	test("an I/O worker crashing after listen is reported once as fatal, so the task is replaced", async () => {
+		const causes = await fatalCauses({
+			// A message the worker cannot read throws inside its onmessage: an uncaught error on that thread.
+			run: ({ workers }) => workers[1]?.postMessage(null),
+		});
+		expect(causes).toHaveLength(1);
+		expect(causes[0]).toContain("I/O worker 1 failed");
+	});
+
+	test("an I/O worker that exits without an error is fatal too", async () => {
+		const causes = await fatalCauses({
+			run: ({ workers }) => workers[0]?.terminate(),
+		});
+		expect(causes).toHaveLength(1);
+		expect(causes[0]).toContain("I/O worker 0 exited");
+	});
+
+	test("a frame the dispatch loop cannot read is fatal rather than silently ending dispatch", async () => {
+		const causes = await fatalCauses({
+			run: ({ inits }) => {
+				const init = inits[0];
+				if (!init) throw new Error("no worker init captured");
+				const commands = new RingProducer(
+					init.commandRing,
+					new Doorbell(init.commandBell),
+				);
+				commands.write({ type: FRAME.RES, payload: new Uint8Array(8) });
+				commands.flush();
+			},
+		});
+		expect(causes).toHaveLength(1);
+		expect(causes[0]).toContain("unexpected frame 2");
 	});
 });
