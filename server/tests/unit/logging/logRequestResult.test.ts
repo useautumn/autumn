@@ -9,6 +9,8 @@ import {
 } from "bun:test";
 import {
 	bindStagingVariants,
+	STAGING_VARIANTS_BUCKET,
+	type StagingVariantsConfig,
 	stagingVariantsEdgeConfig,
 	variant,
 } from "@autumn/edge-config";
@@ -109,6 +111,7 @@ afterEach(() => {
 	bindStagingVariants({
 		read: stagingVariantsEdgeConfig.defaultValue,
 		identity: "",
+		bucket: STAGING_VARIANTS_BUCKET,
 	});
 	_setMiscellaneousEdgeConfigForTesting({
 		config: MiscellaneousEdgeConfigSchema.parse({}),
@@ -756,7 +759,7 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("labels the request line with each live staging experiment's arm, and only while one is live", async () => {
+	test("labels the request line with each live staging experiment's arm, only while one is live on the staging bucket", async () => {
 		const live = await captureJsonResponse({
 			path: "/v1/customers.get",
 			durationMs: 20,
@@ -766,12 +769,28 @@ describe("logRequestResult", () => {
 			"variants",
 		);
 
+		const liveConfig = (): StagingVariantsConfig => ({
+			experiments: { slice: { arms: ["A", "B", "C"] } },
+			updatedAt: new Date().toISOString(),
+		});
 		bindStagingVariants({
-			read: () => ({
-				experiments: { slice: { arms: ["A", "B", "C"] } },
-				updatedAt: new Date().toISOString(),
-			}),
+			read: liveConfig,
 			identity: "arn:aws:ecs:us-east-1:1:task/c/abc",
+			bucket: "autumn-prod-server",
+		});
+		const prod = await captureJsonResponse({
+			path: "/v1/customers.get",
+			durationMs: 20,
+			responseBody: { id: "cus_123" },
+		});
+		expect(mergeLoggedObjects(prod.captured[0]?.args ?? [])).not.toHaveProperty(
+			"variants",
+		);
+
+		bindStagingVariants({
+			read: liveConfig,
+			identity: "arn:aws:ecs:us-east-1:1:task/c/abc",
+			bucket: STAGING_VARIANTS_BUCKET,
 		});
 		const labelled = await captureJsonResponse({
 			path: "/v1/customers.get",

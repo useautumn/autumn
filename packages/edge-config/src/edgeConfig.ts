@@ -37,7 +37,9 @@ export {
 	armForWindow,
 	bindStagingVariants,
 	STAGING_VARIANT_WINDOW_MS,
+	STAGING_VARIANTS_BUCKET,
 	type StagingArm,
+	stagingVariantsEnabled,
 	variant,
 	variants,
 } from "./configs/stagingVariants/stagingVariants.js";

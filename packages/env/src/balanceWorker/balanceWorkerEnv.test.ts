@@ -20,21 +20,6 @@ describe("Balance worker environment", () => {
 		expect(env.BALANCE_WORKER_ENDPOINT).toBe("http://127.0.0.1:8082");
 		expect(env.BALANCE_WORKER_PARTITION_COUNT).toBe(4);
 	});
-	test("runs staging variants only when the environment says it is staging", () => {
-		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_STAGING_VARIANTS).toBe(
-			false,
-		);
-		expect(
-			createBalanceWorkerEnv({
-				...valid,
-				STAGING_ENVIRONMENT: "false",
-			}).BALANCE_WORKER_STAGING_VARIANTS,
-		).toBe(false);
-		expect(
-			createBalanceWorkerEnv({ ...valid, STAGING_ENVIRONMENT: "true" })
-				.BALANCE_WORKER_STAGING_VARIANTS,
-		).toBe(true);
-	});
 	test("routes over the deployment's configured partition count", () => {
 		expect(
 			createBalanceWorkerEnv({
