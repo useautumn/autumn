@@ -202,10 +202,16 @@ export const createSubjectMap = ({
 			unindex({ subjectKey, customerKey: entry.customerKey });
 	};
 
-	const unpin = ({ subjectKey }: { subjectKey: string }) => {
+	const unpin = ({
+		subjectKey,
+		count = 1,
+	}: {
+		subjectKey: string;
+		count?: number;
+	}) => {
 		const entry = entries.get(subjectKey);
 		if (!entry || entry.pins === 0) return;
-		entry.pins -= 1;
+		entry.pins = Math.max(0, entry.pins - count);
 		if (entry.pins === 0 && entry.evictOnUnpin)
 			dropState({ subjectKey, entry });
 	};

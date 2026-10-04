@@ -3,6 +3,10 @@ import { createCommitterStateStore } from "../../src/committer/createCommitterSt
 import { createPartitionProcessor } from "../../src/processor/createPartitionProcessor.js";
 import type { PartitionProcessorConfig } from "../../src/processor/types/partitionProcessor.js";
 import { createRecentCommands } from "../../src/processor/writer/recentCommands/createRecentCommands.js";
+import type {
+	CommittedOutcomeAppender,
+	PositionSink,
+} from "../../src/processor/writer/types/partitionWriter.js";
 import { createSyntheticWorkerDb, createTestCatalogCache } from "./catalog.js";
 import { createInitializeRequest, testOccurredAt } from "./mutations.js";
 
@@ -21,17 +25,28 @@ export const residentIdentityOf = ({
 export const createResidentProcessor = async ({
 	states,
 	config = {},
+	appender,
+	positions,
+	committer,
 }: {
 	states: SubjectState[];
 	config?: Partial<PartitionProcessorConfig>;
+	/** Replaces the default appender (offsets counted up); gets every batch's records. */
+	appender?: CommittedOutcomeAppender;
+	positions?: PositionSink;
+	/** Runs before the default committer applies a batch, so a test can hold the store back. */
+	committer?: { beforeApply?: () => Promise<void> };
 }) => {
 	const stateStore = createCommitterStateStore({
 		ctx: {
 			committer: {
-				apply: async ({ records, expectedOffset }) => ({
-					nextOffset:
-						(records.at(-1)?.position.offset ?? expectedOffset - 1n) + 1n,
-				}),
+				apply: async ({ records, expectedOffset }) => {
+					await committer?.beforeApply?.();
+					return {
+						nextOffset:
+							(records.at(-1)?.position.offset ?? expectedOffset - 1n) + 1n,
+					};
+				},
 				drain: async () => undefined,
 				stop: () => undefined,
 			},
@@ -57,7 +72,7 @@ export const createResidentProcessor = async ({
 			},
 			catalogCache: createTestCatalogCache(),
 			db: createSyntheticWorkerDb(),
-			appender: {
+			appender: appender ?? {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = appended;
 					appended += BigInt(outcomes.length);
@@ -66,6 +81,7 @@ export const createResidentProcessor = async ({
 			},
 			receiptPolicy: { retentionMs: 86_400_000, now: () => testOccurredAt },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+			positions,
 			assertCanRead: () => undefined,
 		},
 		config: {

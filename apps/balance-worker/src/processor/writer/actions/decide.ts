@@ -10,6 +10,7 @@ import {
 	pendingCommitsFor,
 	pendingKeyOf,
 	projectPending,
+	settlementOf,
 } from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
@@ -153,8 +154,10 @@ function decideOn<Reply>({
 			decided: decidedWith<Reply>({
 				state,
 				kind: "duplicate",
-				committed: inFlight.settlement.join({ kind: "duplicate" }),
-				stored: inFlight.settlement.waitForStore(),
+				committed: settlementOf({ pending: inFlight }).join({
+					kind: "duplicate",
+				}),
+				stored: settlementOf({ pending: inFlight }).waitForStore(),
 			}),
 		};
 	}
@@ -181,11 +184,11 @@ function decideOn<Reply>({
 		};
 	}
 	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
-	const remembered = ctx.recentCommands.read({ identity, commandId });
-	if (remembered) {
-		assertSameRequest({ commandId, fingerprint, record: remembered });
+	const recalled = ctx.recentCommands.recall({ key: pendingKey, fingerprint });
+	if (recalled === "different")
+		throw new PartitionWriterCommandConflictError({ commandId });
+	if (recalled === "same")
 		throw new PartitionWriterDuplicateCommandError({ commandId });
-	}
 
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")
@@ -227,8 +230,8 @@ function decideOn<Reply>({
 		decided: decidedWith<Reply>({
 			state,
 			kind: "write",
-			committed: pending.settlement.join({ kind: "new" }),
-			stored: pending.settlement.waitForStore(),
+			committed: settlementOf({ pending }).join({ kind: "new" }),
+			stored: settlementOf({ pending }).waitForStore(),
 		}),
 		wrote: { pending, projectedStates: result.projectedStates },
 	};

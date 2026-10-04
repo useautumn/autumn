@@ -15,7 +15,10 @@ import type { PartitionOwnershipPublication } from "../../partitions/types/parti
 import type { PartitionLoad } from "../../processor/writer/partitionLoad/createPartitionLoad.js";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
-import type { PartitionWriterLimits } from "../../processor/writer/types/partitionWriter.js";
+import type {
+	PartitionWriterLimits,
+	PositionSink,
+} from "../../processor/writer/types/partitionWriter.js";
 import type {
 	PartitionBootstrapper,
 	PartitionBootstrapRetryPolicy,
@@ -73,6 +76,8 @@ export type PartitionRuntimeFactoryContext = {
 	partitionLoad?: PartitionLoad;
 	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */
 	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
+	/** Serial-decide arm D: the position sink a partition's writer publishes to. */
+	positionsFor?: (params: { partition: number }) => PositionSink | undefined;
 };
 
 export type PartitionRuntimeFactoryConfig = {

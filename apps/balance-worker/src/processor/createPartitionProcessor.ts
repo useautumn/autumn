@@ -37,6 +37,7 @@ import {
 	decideTrack as decideTrackPartition,
 	track as trackPartition,
 } from "./commands/track.js";
+import { trackHot as trackHotPartition } from "./commands/trackHot.js";
 import {
 	decideUpdateBalance as decideUpdateBalancePartition,
 	updateBalance as updateBalancePartition,
@@ -73,6 +74,7 @@ export function createPartitionProcessor({
 			appender: dependencies.appender,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
+			positions: dependencies.positions,
 			logger: dependencies.logger,
 			onStateAdvanced: (advanced) => {
 				subjectHydrator.inheritCatalog(advanced);
@@ -134,6 +136,10 @@ function createProcessor({
 			accepted: scope.accepted,
 			operation: trackPartition({ scope, command }),
 		});
+	}
+
+	function trackHot({ command }: { command: TrackCommand }) {
+		return trackHotPartition({ scope, command });
 	}
 
 	function decideTrack({ command }: { command: TrackCommand }) {
@@ -365,6 +371,7 @@ function createProcessor({
 			}),
 		}),
 		track,
+		trackHot,
 		decideTrack,
 		check,
 		applyBillingPlan,

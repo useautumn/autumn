@@ -39,6 +39,8 @@ export type WorkerPartitionsContext = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
+	/** Which dedup window a new partition gets; read when the partition is assigned. Defaults to the map. */
+	readDedupStore?: () => "map" | "hashed";
 	served?: PartitionsDependencies["served"];
 	ownershipLink?: PartitionsDependencies["ownershipLink"];
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];

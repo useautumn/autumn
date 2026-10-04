@@ -38,6 +38,22 @@ type Pending = {
 	path: string;
 };
 
+const COMMAND_KEY = '},"command":';
+
+/**
+ * Byte offset of the `command` value in a `{"route":{...},"command":{...}}` body, or 0 when the body is
+ * not that exact shape. The route is flat ASCII, so the string index is the byte offset; the sequencer
+ * splices these bytes into the record instead of re-encoding the command it parsed from them.
+ */
+function commandValueAt(body: string): number {
+	if (!body.startsWith('{"route":{') || !body.endsWith("}}")) return 0;
+	const routeEnd = body.indexOf("}");
+	if (!body.startsWith(COMMAND_KEY, routeEnd)) return 0;
+	const at = routeEnd + COMMAND_KEY.length;
+	for (let i = 0; i < at; i++) if (body.charCodeAt(i) > 0x7f) return 0;
+	return body.charCodeAt(at) === 0x7b ? at : 0;
+}
+
 self.onmessage = (event: MessageEvent) => {
 	const init = event.data as IoWorkerInit;
 	start(init);
@@ -192,6 +208,7 @@ function start(init: IoWorkerInit): void {
 		view.setUint32(at, reqId, true);
 		commands.payload[at + 4] = kind;
 		view.setUint32(at + 5, budgetMs, true);
+		view.setUint32(at + 9, commandValueAt(body), true);
 		const { written } = encoder.encodeInto(
 			body,
 			commands.payload.subarray(at + CMD_HEADER, at + maxLength),

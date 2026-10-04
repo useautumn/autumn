@@ -8,11 +8,21 @@ import {
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
+import { decideLean as decideLeanMutation } from "./actions/decideLean.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
-import { createPartitionWriterState, hurryApply } from "./pendingMutations.js";
-import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
+import {
+	allStored,
+	createPartitionWriterState,
+	hurryApply,
+} from "./pendingMutations.js";
+import type {
+	DecidedMutation,
+	LeanDecision,
+	LeanSubmission,
+	MutationSubmission,
+} from "./types/mutation.js";
 import type {
 	PartitionWriter,
 	PartitionWriterConfig,
@@ -66,6 +76,18 @@ export function createPartitionWriter({
 			run: () =>
 				timeSync({ label: "writer.decide" }, () =>
 					decideMutation({ scope, submission }),
+				),
+		});
+	}
+
+	function decideLean<Reply>(
+		submission: LeanSubmission<Reply>,
+	): LeanDecision<Reply> | null {
+		return slowDecides.measure({
+			command: submission.command,
+			run: () =>
+				timeSync({ label: "writer.decide" }, () =>
+					decideLeanMutation({ scope, submission }),
 				),
 		});
 	}
@@ -125,7 +147,7 @@ export function createPartitionWriter({
 	}
 
 	function waitForStore() {
-		return scope.state.storeCompletion;
+		return allStored({ state: scope.state });
 	}
 
 	/** Every batch handed to the store so far, applied or failed; never rejects. */
@@ -142,6 +164,7 @@ export function createPartitionWriter({
 		waitForApplies,
 		hurryStore,
 		decide,
+		decideLean,
 		decideRun,
 		log,
 		flushDeferredLogs,

@@ -16,6 +16,7 @@ import type {
 	PartitionWriterState,
 	PendingMutation,
 	PendingSettlement,
+	StoreWaiter,
 } from "./types/partitionWriter.js";
 import {
 	PartitionWriterCapacityError,
@@ -34,6 +35,11 @@ export function createPartitionWriterState({
 		queue: [],
 		draining: false,
 		storeCompletion: Promise.resolve(),
+		nextSeq: 1,
+		lastRowSeq: 0,
+		commitPos: 0,
+		storedSeq: 0,
+		storeWaiters: [],
 		inFlight: [],
 		pipeWake: null,
 		unapplied: [],
@@ -182,6 +188,7 @@ export function enqueueMutation({
 	effects,
 	defersCommit = false,
 	projects = true,
+	lean = false,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
@@ -195,6 +202,8 @@ export function enqueueMutation({
 	defersCommit?: boolean;
 	/** False inside a run: only the run's last write projects its rows, once, with `projectPending`. */
 	projects?: boolean;
+	/** A lean write: no settlement; its reply waits on the commit position. */
+	lean?: boolean;
 }): PendingMutation {
 	const { state, config } = scope;
 	const customerPending =
@@ -217,10 +226,11 @@ export function enqueueMutation({
 			bytes: encodedBytes,
 			maxBatchBytes,
 		});
-	const settlement = createPendingSettlement();
+	const settlement = lean ? null : createPendingSettlement();
 	const pending: PendingMutation = {
 		pendingKey,
 		customerKey,
+		seq: state.nextSeq++,
 		projectedSubjectKeys: [],
 		mutation,
 		nextState,
@@ -245,7 +255,10 @@ export function enqueueMutation({
 	if (defersCommit) state.deferredQueued += 1;
 	// A log-only record lands no rows, so nothing that re-reads Postgres waits for it:
 	// an evict behind it enqueues its own record straight away and shares the next commit.
-	if (nextState) state.storeCompletion = settlement.waitForStore();
+	// A lean write is waited on by position instead (`allStored`).
+	if (nextState) state.lastRowSeq = pending.seq;
+	if (nextState && settlement)
+		state.storeCompletion = settlement.waitForStore();
 	// A lingering commit loop has what it was waiting for.
 	if (state.lingerWake && state.queue.length >= config.limits.maxBatchSize) {
 		state.lingerWake();
@@ -289,6 +302,66 @@ const projectedStatesOf = ({ state }: { state: SubjectState }) => {
 	return states.entity ? [states.customer, states.entity] : [states.customer];
 };
 
+/** A classic caller waiting on a lean write gets a settlement after all; the commit settles it like any other. */
+export function settlementOf({
+	pending,
+}: {
+	pending: PendingMutation;
+}): PendingSettlement {
+	pending.settlement ??= createPendingSettlement();
+	return pending.settlement;
+}
+
+/** Resolves once the store holds every write up to `seq`; rejects if the writer fails before then. */
+export function awaitStored({
+	state,
+	seq,
+}: {
+	state: PartitionWriterState;
+	seq: number;
+}): Promise<void> {
+	if (state.storedSeq >= seq) return Promise.resolve();
+	if (state.recoveryError) return Promise.reject(state.recoveryError);
+	return new Promise<void>((resolve, reject) => {
+		state.storeWaiters.push({ seq, resolve, reject });
+	});
+}
+
+/** Every row-landing write handed out so far, classic or lean, is in the store; rejects if the writer fails first. */
+export function allStored({
+	state,
+}: {
+	state: PartitionWriterState;
+}): Promise<void> {
+	const stored = Promise.all([
+		state.storeCompletion,
+		awaitStored({ state, seq: state.lastRowSeq }),
+	]).then(noop);
+	// Taken eagerly by callers that may never wait on it; the failure still reaches those that do.
+	void stored.catch(noop);
+	return stored;
+}
+
+function noop(): void {}
+
+/** The store now holds every write up to `seq`. */
+export function advanceStored({
+	state,
+	seq,
+}: {
+	state: PartitionWriterState;
+	seq: number;
+}): void {
+	if (seq <= state.storedSeq) return;
+	state.storedSeq = seq;
+	const kept: StoreWaiter[] = [];
+	for (const waiter of state.storeWaiters) {
+		if (waiter.seq <= seq) waiter.resolve();
+		else kept.push(waiter);
+	}
+	state.storeWaiters = kept;
+}
+
 /** Snapshot at call time: mutations enqueued later must not extend the wait. */
 export function pendingCommitsFor({
 	state,
@@ -301,7 +374,7 @@ export function pendingCommitsFor({
 	if (!customerPending) return [];
 	const commits: Promise<void>[] = [];
 	for (const pending of customerPending)
-		if (pending.nextState) commits.push(pending.settlement.waitForLog());
+		if (pending.nextState) commits.push(settlementOf({ pending }).waitForLog());
 	return commits;
 }
 
@@ -334,10 +407,14 @@ export function rejectAllPending({
 	error: Error;
 }): void {
 	for (const pending of state.pendingByKey.values()) {
-		pending.settlement.reject({ error });
+		pending.settlement?.reject({ error });
 	}
 	// Log-acknowledged writes have left pendingByKey but still own an unfinished store milestone.
-	for (const pending of batch) pending.settlement.reject({ error });
+	for (const pending of batch) pending.settlement?.reject({ error });
+	for (const waiter of state.storeWaiters) waiter.reject(error);
+	state.storeWaiters = [];
+	// Nothing dropped here will ever be stored: later store waits cover only what is written from now on.
+	state.lastRowSeq = state.storedSeq;
 	state.queue.length = 0;
 	state.inFlight.length = 0;
 	state.deferredQueued = 0;
