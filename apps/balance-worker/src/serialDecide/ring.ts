@@ -1,7 +1,8 @@
 /**
  * One-producer one-consumer byte ring on a SharedArrayBuffer, the shape of Agrona's OneToOneRingBuffer.
  * Frames are `[u32 length][u8 type][payload]`; a frame that would straddle the end leaves a padding marker
- * and wraps. Positions grow without bound and index the ring through the capacity mask.
+ * and wraps. Positions are u32 and wrap at 2^32 on both sides (the shared header holds 32 bits), so every
+ * step and distance is taken mod 2^32; they index the ring through the capacity mask.
  */
 const HEADER_BYTES = 64;
 const TAIL = 0;
@@ -99,6 +100,7 @@ export class RingProducer {
 		this.mask = capacity - 1;
 		this.capacity = capacity;
 		this.tail = Atomics.load(this.header, TAIL) >>> 0;
+		this.cachedHead = Atomics.load(this.header, HEAD) >>> 0;
 	}
 
 	/** The largest payload one frame can carry. */
@@ -107,9 +109,10 @@ export class RingProducer {
 	}
 
 	private free(needed: number): boolean {
-		if (this.capacity - (this.tail - this.cachedHead) >= needed) return true;
+		if (this.capacity - ((this.tail - this.cachedHead) >>> 0) >= needed)
+			return true;
 		this.cachedHead = Atomics.load(this.header, HEAD) >>> 0;
-		return this.capacity - (this.tail - this.cachedHead) >= needed;
+		return this.capacity - ((this.tail - this.cachedHead) >>> 0) >= needed;
 	}
 
 	/** Reserves up to `maxLength` payload bytes; the payload offset, or -1 when the ring cannot take it now. */
@@ -122,7 +125,7 @@ export class RingProducer {
 		if (toEnd < total) {
 			if (!this.free(toEnd + total)) return -1;
 			if (toEnd >= 4) this.payloadView.setUint32(index, PADDING, true);
-			this.tail += toEnd;
+			this.tail = (this.tail + toEnd) >>> 0;
 			index = 0;
 		} else if (!this.free(total)) return -1;
 		this.payload[index + 4] = type;
@@ -133,7 +136,7 @@ export class RingProducer {
 	/** Publishes the claimed frame with its actual payload length (at most what was claimed). */
 	publish({ length }: { length: number }): void {
 		this.payloadView.setUint32(this.claimedAt, length, true);
-		this.tail += FRAME_HEADER_BYTES + length;
+		this.tail = (this.tail + FRAME_HEADER_BYTES + length) >>> 0;
 		this.claimedAt = -1;
 	}
 
@@ -169,6 +172,7 @@ export class RingConsumer {
 		this.mask = capacity - 1;
 		this.capacity = capacity;
 		this.head = Atomics.load(this.header, HEAD) >>> 0;
+		this.cachedTail = this.head;
 	}
 
 	hasWork(): boolean {
@@ -186,7 +190,7 @@ export class RingConsumer {
 			toEnd < FRAME_HEADER_BYTES ||
 			this.payloadView.getUint32(index, true) === PADDING
 		) {
-			this.head += toEnd;
+			this.head = (this.head + toEnd) >>> 0;
 			index = 0;
 			if (!this.hasWork()) return null;
 		}
@@ -203,7 +207,7 @@ export class RingConsumer {
 	}
 
 	advance(): void {
-		this.head += this.pendingAdvance;
+		this.head = (this.head + this.pendingAdvance) >>> 0;
 		this.pendingAdvance = 0;
 	}
 
