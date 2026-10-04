@@ -5,6 +5,13 @@ const EXPERIMENT_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 export type StagingArm = (typeof ARMS)[number];
 
+/** Only the staging admin bucket can turn variants on; prod and dev buckets always run A. */
+export const STAGING_VARIANTS_BUCKET = "autumn-staging";
+
+export function stagingVariantsEnabled({ bucket }: { bucket: string }) {
+	return bucket === STAGING_VARIANTS_BUCKET;
+}
+
 /** Every service hashes the same wall-clock 10 s windows, so their logs line up per window. */
 export const STAGING_VARIANT_WINDOW_MS = 10_000;
 
@@ -69,18 +76,21 @@ export function armForWindow({
 	];
 }
 
-/** Call once at boot with the process's polled store; until then every experiment runs A. */
+/** Call once at boot with the process's polled store; outside the staging bucket it stays unbound, so A. */
 export function bindStagingVariants({
 	read,
 	identity,
+	bucket,
 	now = Date.now,
 }: {
 	read: () => StagingVariantsConfig;
 	identity: string;
+	bucket: string;
 	now?: () => number;
-}): void {
-	binding = { read, identity, now };
+}): boolean {
 	snapshot = null;
+	binding = stagingVariantsEnabled({ bucket }) ? { read, identity, now } : null;
+	return binding !== null;
 }
 
 /** The config is read once per window, so a change lands at the next boundary and no window mixes arms. */

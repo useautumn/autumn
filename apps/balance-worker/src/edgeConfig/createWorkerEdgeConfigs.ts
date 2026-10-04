@@ -10,6 +10,7 @@ import {
 	type EdgeConfigStore,
 	type StagingVariantsConfig,
 	stagingVariantsEdgeConfig,
+	stagingVariantsEnabled,
 } from "@autumn/edge-config";
 import {
 	type ActiveSlotEdgeConfig,
@@ -76,7 +77,8 @@ export const createWorkerEdgeConfigs = ({
 	async function start(): Promise<void> {
 		await registry.start({ logger: ctx.logger });
 		await activeSlot.startPolling({ logger: ctx.logger });
-		await stagingVariants.startPolling({ logger: ctx.logger });
+		if (stagingVariantsEnabled({ bucket: config.location.bucket }))
+			await stagingVariants.startPolling({ logger: ctx.logger });
 	}
 
 	function stop(): void {
