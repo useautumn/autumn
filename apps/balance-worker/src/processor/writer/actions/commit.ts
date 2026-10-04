@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
+import { commitPipelineDepthOf } from "../../../experiments/commitDepth.js";
 import { commitPipelineArm } from "../../../experiments/commitPipeline.js";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
@@ -16,7 +17,9 @@ import {
 	writerNowOf,
 } from "../pendingMutations.js";
 import type {
+	AppendOutcome,
 	CommitWaits,
+	InFlightAppend,
 	PartitionWriterScope,
 	PendingMutation,
 } from "../types/partitionWriter.js";
@@ -111,7 +114,12 @@ function releaseDeferredRecords({
 
 /** Kafka commit → answer log callers → hand the batch to the store, then straight
  *  on to the next batch. The store applies behind the log in order; the loop only
- *  waits for it when too many batches are still unapplied. */
+ *  waits for it when too many batches are still unapplied.
+ *
+ *  With a pipeline depth above one the next batch goes out while earlier ones are
+ *  still waiting for the broker: appends leave in order on one connection, the
+ *  broker's sequence check keeps that order in the log, and they settle here
+ *  oldest first. */
 async function commitOutcomes({
 	scope,
 }: {
@@ -121,10 +129,27 @@ async function commitOutcomes({
 	if (state.draining || state.recoveryError) return;
 	state.draining = true;
 	try {
-		while (state.queue.length > 0 && !state.recoveryError) {
-			if (holdsOnlyDeferredRecords({ state }) && !state.deferredCommitDue) {
-				scheduleDeferredCommit({ scope });
-				return;
+		while (
+			(state.queue.length > 0 || state.inFlight.length > 0) &&
+			!state.recoveryError
+		) {
+			// Answered appends settle first, oldest first, so no caller waits on a later batch.
+			while (state.inFlight[0]?.done) {
+				if (!(await settleOldestAppend({ scope }))) return;
+			}
+			if (state.recoveryError) return;
+			// Read every pass: the arm may change at a window boundary while batches are in flight.
+			const depth = commitPipelineDepthOf({ limits: config.limits });
+			const pipeFull = state.inFlight.length >= depth;
+			const onlyDeferred =
+				holdsOnlyDeferredRecords({ state }) && !state.deferredCommitDue;
+			if (state.queue.length === 0 || pipeFull || onlyDeferred) {
+				if (state.inFlight.length === 0) {
+					if (onlyDeferred) scheduleDeferredCommit({ scope });
+					return;
+				}
+				await awaitPipe({ state, untilEnqueue: !pipeFull && !onlyDeferred });
+				continue;
 			}
 			const storeWaitStartedAt = writerNowOf({ scope });
 			while (
@@ -138,14 +163,18 @@ async function commitOutcomes({
 				if (state.recoveryError) return;
 			}
 			const lingerStartedAt = writerNowOf({ scope });
-			await lingerForBatch({ scope });
+			// Lingering only pays while an append is already on the wire: with the pipe
+			// empty it would idle the broker, and the next batch gathers while this one flies.
+			if (depth === 1 || state.inFlight.length > 0)
+				await lingerForBatch({ scope });
 			if (state.recoveryError) return;
+			if (state.queue.length === 0) continue;
 			const batch = takeBatch({ scope });
 			const takenAt = writerNowOf({ scope });
 			releaseDeferredRecords({ state, batch });
 			state.lastBatchSize = batch.length;
 			state.lastCommitStartedAt = takenAt;
-			const baseOffset = await appendBatch({
+			sendBatch({
 				scope,
 				batch,
 				waits: {
@@ -154,13 +183,79 @@ async function commitOutcomes({
 					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
 				},
 			});
-			if (baseOffset === null) return;
-			settleAppended({ scope, batch });
-			queueApply({ scope, batch, baseOffset });
 		}
 	} finally {
 		state.draining = false;
 	}
+}
+
+/** Starts the append and records it as in flight; its answer wakes the loop. */
+function sendBatch({
+	scope,
+	batch,
+	waits,
+}: {
+	scope: PartitionWriterScope;
+	batch: PendingMutation[];
+	waits: CommitWaits;
+}): void {
+	const { state } = scope;
+	const entry: InFlightAppend = {
+		batch,
+		done: false,
+		result: appendBatch({ scope, batch, waits }),
+	};
+	function markDone(): void {
+		entry.done = true;
+		state.pipeWake?.();
+	}
+	entry.result.then(markDone, markDone);
+	state.inFlight.push(entry);
+}
+
+/** Waits for the oldest append to answer, or for an enqueue too when the pipe still has room. */
+function awaitPipe({
+	state,
+	untilEnqueue,
+}: {
+	state: PartitionWriterScope["state"];
+	untilEnqueue: boolean;
+}): Promise<void> {
+	const head = state.inFlight[0];
+	if (!head || head.done) return Promise.resolve();
+	if (!untilEnqueue) return head.result.then(noop, noop);
+	return new Promise<void>((resolve) => {
+		state.pipeWake = () => {
+			state.pipeWake = null;
+			resolve();
+		};
+	});
+}
+
+function noop(): void {}
+
+/** Answers the oldest append's callers, or fails them in log order: a batch is judged only
+ *  once every batch before it has been settled, so a later refusal never rejects an earlier
+ *  success the broker already answered. False when the loop must stop. */
+async function settleOldestAppend({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<boolean> {
+	const { state } = scope;
+	const head = state.inFlight[0];
+	if (!head) return true;
+	const outcome = await head.result;
+	// Recovery empties the pipe underneath an awaiting loop.
+	if (state.recoveryError) return false;
+	if (state.inFlight[0] === head) state.inFlight.shift();
+	if ("failed" in outcome) {
+		failAppend({ scope, batch: head.batch, cause: outcome.failed });
+		return false;
+	}
+	settleAppended({ scope, batch: head.batch });
+	queueApply({ scope, batch: head.batch, baseOffset: outcome.baseOffset });
+	return true;
 }
 
 /**
@@ -292,7 +387,7 @@ async function holdForCoalescing({
 	});
 }
 
-/** Returns null when draining must stop: proven no-commit rejects, anything else is recovery. */
+/** Never rejects: the verdict is handed back for the loop to apply in log order. */
 async function appendBatch({
 	scope,
 	batch,
@@ -301,8 +396,8 @@ async function appendBatch({
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 	waits: CommitWaits;
-}): Promise<bigint | null> {
-	const { ctx, config, state } = scope;
+}): Promise<AppendOutcome> {
+	const { ctx, config } = scope;
 	try {
 		const { baseOffset } = await ctx.appender.appendCommitted({
 			topic: config.topic,
@@ -313,25 +408,40 @@ async function appendBatch({
 		if (typeof baseOffset !== "bigint" || baseOffset < 0n) {
 			throw new RangeError("Invalid appended Kafka offset");
 		}
-		return baseOffset;
+		return { baseOffset };
 	} catch (cause) {
-		// Clearing speculative state is only safe when every committed batch is
-		// already in the store; otherwise memory holds rows the store lacks, so the
-		// partition rebuilds from the log instead.
-		const provenUncommitted =
-			cause instanceof MutationBatchNotCommittedError &&
-			state.unapplied.length === 0;
-		if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
-			rejectAllPending({
-				state,
-				batch,
-				error: new MutationBatchAppendError({ cause }),
-			});
-			state.storeCompletion = Promise.resolve();
-		} else {
-			enterRecovery({ scope, batch, cause });
-		}
-		return null;
+		return { failed: cause };
+	}
+}
+
+/** A proven no-commit rejects its own batch; anything else is recovery. */
+function failAppend({
+	scope,
+	batch,
+	cause,
+}: {
+	scope: PartitionWriterScope;
+	batch: PendingMutation[];
+	cause: unknown;
+}): void {
+	const { state } = scope;
+	// Clearing speculative state is only safe when every committed batch is
+	// already in the store and no later append was decided on this one;
+	// otherwise memory holds rows the store lacks, so the partition rebuilds
+	// from the log instead.
+	const provenUncommitted =
+		cause instanceof MutationBatchNotCommittedError &&
+		state.unapplied.length === 0 &&
+		state.inFlight.length === 0;
+	if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
+		rejectAllPending({
+			state,
+			batch,
+			error: new MutationBatchAppendError({ cause }),
+		});
+		state.storeCompletion = Promise.resolve();
+	} else {
+		enterRecovery({ scope, batch, cause });
 	}
 }
 
