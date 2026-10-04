@@ -52,6 +52,17 @@ export const createTrackDecisions = ({
 		);
 	}
 
+	/** A context the event's properties shaped serves only the property-free selection it was carried for. */
+	function servesProperties({
+		decision,
+		selection,
+	}: {
+		decision: TrackDecision;
+		selection: DeductionRequest["selection"];
+	}): boolean {
+		return !decision.context.readsProperties || selection.properties === null;
+	}
+
 	function readTrackDecision({
 		state,
 		identity,
@@ -69,7 +80,11 @@ export const createTrackDecisions = ({
 		const selectionKey = deductionSelectionToKey({ selection });
 		const key = `${identity.entityId ?? ""}|${selectionKey}`;
 		const known = decisionsByState.get(state)?.get(key);
-		if (known && isCurrent({ decision: known, catalog, now: selection.now })) {
+		if (
+			known &&
+			isCurrent({ decision: known, catalog, now: selection.now }) &&
+			servesProperties({ decision: known, selection })
+		) {
 			counters.trackContextHits++;
 			// The rows are the same until `validUntil`; the draw stamps the request's own clock.
 			return { ...known, context: { ...known.context, selection } };
@@ -87,9 +102,9 @@ export const createTrackDecisions = ({
 		};
 		// Gates and windowed caps read more than the rows' balances, so their contexts are never carried.
 		const carries =
-			selectionKey !== null &&
 			context.allocationGates.size === 0 &&
-			context.usageWindowLimits.length === 0;
+			context.usageWindowLimits.length === 0 &&
+			(selection.properties === null || !context.readsProperties);
 		if (carries) remember({ state, key, decision });
 		return decision;
 	}

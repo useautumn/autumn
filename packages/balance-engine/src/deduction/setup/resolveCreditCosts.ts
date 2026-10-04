@@ -1,8 +1,12 @@
 import {
 	type CreditRateCard,
+	type CreditSchemaItem,
 	entitlementToCreditSystem,
+	type Feature,
 	getCreditCost,
 	getCreditRateCard,
+	hasCreditDimensionRules,
+	isAnyCreditSystem,
 	isInvoiceCreditCustomerEntitlement,
 	isUnlimitedCustomerEntitlement,
 	RecaseError,
@@ -16,6 +20,25 @@ export type CreditCost = {
 	rateCard: CreditRateCard | null;
 	/** A zero rate is free usage: rollovers are left untouched and the main balance charges one credit per unit, as the Lua fallback does. */
 	skipsRollovers: boolean;
+	/** The credit system prices this feature by the event's properties (dimensions or multipliers). */
+	readsProperties: boolean;
+};
+
+/** Whether the credit system's rate for this feature depends on the event's properties. */
+const pricesByProperties = ({
+	featureId,
+	creditSystem,
+}: {
+	featureId: string;
+	creditSystem: Feature;
+}): boolean => {
+	if (!isAnyCreditSystem(creditSystem.type) || featureId === creditSystem.id)
+		return false;
+	const schema: CreditSchemaItem[] = creditSystem.config?.schema ?? [];
+	return schema.some(
+		(item) =>
+			item.metered_feature_id === featureId && hasCreditDimensionRules(item),
+	);
 };
 
 /** `computeCreditCosts` for one row: credits per tracked unit under the row's effective schema, and the rate card if usage is attributed. */
@@ -58,6 +81,7 @@ export const resolveCreditCost = ({
 			creditCost: creditCost === 0 ? 1 : creditCost,
 			rateCard,
 			skipsRollovers: creditCost === 0 && rateCard === null,
+			readsProperties: pricesByProperties({ featureId, creditSystem }),
 		};
 	} catch (error) {
 		if (error instanceof RecaseError)

@@ -219,7 +219,10 @@ describe("usage windows", () => {
 					value: 10,
 					properties: { model: "other" },
 				}),
-			).toMatchObject({ appliedValue: 10 });
+			).toMatchObject({ appliedValue: 10, context: { readsProperties: true } });
+			expect(
+				deductFrom({ customerEntitlements: rows, value: 10 }),
+			).toMatchObject({ context: { readsProperties: false } });
 		},
 	);
 
