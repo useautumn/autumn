@@ -114,6 +114,7 @@ export function createPartitionRuntimeFactory({
 					now: Date.now,
 				},
 				recentCommands,
+				positions: ctx.positionsFor?.({ partition }),
 			},
 			config: {
 				topic,

@@ -14,7 +14,8 @@ export type SubjectMap = {
 	}): void;
 	/** Held while a mutation is pending for the subject; released after commit. */
 	pin(params: { subjectKey: string }): void;
-	unpin(params: { subjectKey: string }): void;
+	/** Releases `count` pins (default 1) at once; a settled batch releases a subject by its total. */
+	unpin(params: { subjectKey: string; count?: number }): void;
 	/** Drops the customer's resident rows, entities included. A pinned subject goes when its last pin is released. */
 	evictCustomer(params: { customerKey: string }): void;
 	clear(): void;

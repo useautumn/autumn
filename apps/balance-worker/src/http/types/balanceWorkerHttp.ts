@@ -24,7 +24,8 @@ import type {
 } from "../../runtime/types/partitionRuntime.js";
 
 export type BalanceWorkerRequestContext = {
-	runtime: Pick<PartitionRuntime, "process">;
+	runtime: Pick<PartitionRuntime, "process"> &
+		Partial<Pick<PartitionRuntime, "processHot">>;
 };
 
 export type BalanceWorkerHttpEnv = {
