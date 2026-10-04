@@ -21,11 +21,13 @@ describe("server CPU sampler", () => {
 			while (performance.now() < until) value += Math.sqrt(Math.random());
 			await new Promise((resolve) => setTimeout(resolve, 180));
 			const window = await sampler.finishWindow();
+			if (!window)
+				throw new Error("The native profiler did not return a window");
 			expect(value).toBeGreaterThan(0);
 			expect(window?.samples).toBeGreaterThan(0);
 			expect(window?.mainThreadCpuMs).toBeGreaterThan(0);
-			expect(window!.mainThreadCpuMs).toBeLessThan(
-				window!.profiledWindowMs - 100,
+			expect(window.mainThreadCpuMs).toBeLessThan(
+				window.profiledWindowMs - 100,
 			);
 			expect(window?.sampleIntervalUs).toBe(50_000);
 		},
