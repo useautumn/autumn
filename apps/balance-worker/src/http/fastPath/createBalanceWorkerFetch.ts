@@ -8,7 +8,11 @@ import {
 	type WorkerRequest,
 } from "@autumn/balance-worker-client/protocol";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
-import { isDeadlineShed } from "../../runtime/deadlineShed/deadlineShedErrors.js";
+import {
+	isDeadlineShed,
+	RequestAbandonedError,
+} from "../../runtime/deadlineShed/deadlineShedErrors.js";
+import { isPastCallerDeadline } from "../../runtime/deadlineShed/isPastCallerDeadline.js";
 import {
 	looksLikeCheckCommand,
 	looksLikeTrackCommand,
@@ -95,7 +99,34 @@ export function createBalanceWorkerFetch({
 			return app.fetch(request);
 		const path = pathOf(request.url);
 		if (!isFastPath(path)) return app.fetch(request);
+		if (isPastCallerDeadline({ headers: request.headers }))
+			return answerAbandoned({ request, path });
 		return answerFast({ request, path });
+	}
+
+	/** Arm B: the caller gave up before the worker read the request, so its body is never read. */
+	function answerAbandoned({
+		request,
+		path,
+	}: {
+		request: Request;
+		path: FastPath;
+	}): Response {
+		const requestLog: BalanceWorkerRequestLog = { id: nextRequestLogId() };
+		const response = errorResponseOf({
+			cause: new RequestAbandonedError(),
+			requestLog,
+		});
+		logWorkerRequest({
+			ctx,
+			requestLog,
+			statusCode: response.status,
+			method: request.method,
+			path,
+			route: undefined,
+			startedAt: performance.now(),
+		});
+		return response;
 	}
 
 	async function answerFast({

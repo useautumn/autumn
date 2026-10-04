@@ -10,7 +10,10 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
-import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
+import {
+	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
+} from "../src/protocol.js";
 
 const baseCommand: TrackCommand = {
 	schemaVersion: 1,
@@ -88,6 +91,7 @@ const replacement: PartitionOwner = {
 
 type PendingRequest = {
 	budget?: string;
+	deadline?: string;
 	url: string;
 	body: { route: unknown; commands: TrackCommand[] };
 	signal: AbortSignal;
@@ -129,6 +133,7 @@ function createFixture({
 			url: request.url,
 			body: structuredClone(request.body) as PendingRequest["body"],
 			budget: request.headers?.[WORKER_REQUEST_BUDGET_HEADER],
+			deadline: request.headers?.[WORKER_REQUEST_DEADLINE_HEADER],
 			signal: request.signal,
 			respond: response.resolve,
 			fail: response.reject,
@@ -538,6 +543,9 @@ test("a batch tells the worker how long its most impatient item will wait", asyn
 	expect(budget).toMatch(/^\d+$/);
 	expect(Number(budget)).toBeGreaterThan(900);
 	expect(Number(budget)).toBeLessThanOrEqual(1000);
+	const deadline = Number(fixture.requests[0].deadline);
+	expect(deadline).toBeGreaterThan(Date.now() + 800);
+	expect(deadline).toBeLessThanOrEqual(Date.now() + 1001);
 	fixture.requests[0].respond(okResults(["a"]));
 	expect(await pending).toEqual(replyFor("a"));
 });

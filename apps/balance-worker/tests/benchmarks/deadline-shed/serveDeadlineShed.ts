@@ -70,12 +70,17 @@ const fetch = createBalanceWorkerFetch({
 	app: createBalanceWorkerApp({ ctx }),
 });
 
-const server = Bun.serve({
-	port: 0,
-	idleTimeout: 0,
-	fetch: (request) =>
-		new URL(request.url).pathname === "/bench-stats"
-			? Response.json(arm === "B" ? getCheckAdmission().readCounters() : null)
-			: fetch(request),
-});
+/** Responses by status: a drop answers after its caller has gone, so only the server can count it. */
+const statuses: Record<number, number> = {};
+async function serve(request: Request): Promise<Response> {
+	if (new URL(request.url).pathname === "/bench-stats")
+		return Response.json({
+			statuses,
+			admission: arm === "B" ? getCheckAdmission().readCounters() : null,
+		});
+	const response = await fetch(request);
+	statuses[response.status] = (statuses[response.status] ?? 0) + 1;
+	return response;
+}
+const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: serve });
 console.error(`READY ${server.port}`);

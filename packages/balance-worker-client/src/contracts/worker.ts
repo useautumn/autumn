@@ -150,6 +150,34 @@ export function requestBudgetHeaderValue({
 	return String(Math.max(0, Math.floor(expiresAt - now)));
 }
 
+/** When the caller gives up, in epoch ms: unlike the budget, it also counts time the request spent before the worker read it. */
+export const WORKER_REQUEST_DEADLINE_HEADER = "x-request-deadline-at";
+
+/** The header's value for a request that expires at `expiresAt` (a performance.now() time), rounded up so it is never early. */
+export function requestDeadlineHeaderValue({
+	expiresAt,
+	now = performance.now(),
+	epochNow = Date.now(),
+}: {
+	expiresAt: number;
+	now?: number;
+	epochNow?: number;
+}): string {
+	return String(Math.ceil(epochNow + Math.max(0, expiresAt - now)));
+}
+
+/** Undefined for a missing or malformed header: the worker then ignores it. */
+export function readRequestDeadlineHeader({
+	value,
+}: {
+	value: string | null | undefined;
+}): number | undefined {
+	if (value === null || value === undefined) return undefined;
+	const trimmed = value.trim();
+	if (!/^\d{1,15}$/.test(trimmed)) return undefined;
+	return Number(trimmed);
+}
+
 /** Undefined for a missing or malformed header: the worker then waits its fixed default. */
 export function readRequestBudgetHeader({
 	value,

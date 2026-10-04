@@ -4,7 +4,9 @@ import type { TrackReply } from "../contracts/track.js";
 import type { TrackBatchItemResult } from "../contracts/trackBatch.js";
 import {
 	requestBudgetHeaderValue,
+	requestDeadlineHeaderValue,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
 } from "../contracts/worker.js";
 import {
 	type HttpResponse,
@@ -287,6 +289,10 @@ export function createTrackBatcher({
 					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
 						expiresAt: earliestDeadline({ items }).expiresAt,
 					}),
+					// The attempt is abandoned only once its most patient item gives up.
+					[WORKER_REQUEST_DEADLINE_HEADER]: requestDeadlineHeaderValue({
+						expiresAt: latestExpiresAt({ items }),
+					}),
 				},
 				signal: batchAttempt.controller.signal,
 			});
@@ -508,6 +514,12 @@ function isLive(item: TrackItem): boolean {
 }
 
 /** The soonest any item in the batch expires: a hold at the worker must end before it. */
+function latestExpiresAt({ items }: { items: TrackItem[] }): number {
+	let latest = 0;
+	for (const item of items) latest = Math.max(latest, item.deadline.expiresAt);
+	return latest;
+}
+
 function earliestDeadline({ items }: { items: TrackItem[] }): RequestDeadline {
 	let earliest: RequestDeadline | undefined;
 	for (const item of items)

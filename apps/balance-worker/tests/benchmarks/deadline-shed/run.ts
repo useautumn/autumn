@@ -1,6 +1,9 @@
 import { performance } from "node:perf_hooks";
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import { WORKER_REQUEST_BUDGET_HEADER } from "@autumn/balance-worker-client/protocol";
+import {
+	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_REQUEST_DEADLINE_HEADER,
+} from "@autumn/balance-worker-client/protocol";
 import { createTrackCommand, testIdentity } from "../../fixtures/mutations.js";
 import { createBenchCheckCommand } from "../check-throughput/createCheckBench.js";
 import { scenarios } from "../track-throughput/scenarios.js";
@@ -31,6 +34,8 @@ const seconds = Number(args.seconds ?? 12);
 const burstFrom = Number(args.burstFrom ?? 2) * 1_000;
 const burstTo = Number(args.burstTo ?? 8) * 1_000;
 const runs = Number(args.runs ?? 3);
+/** Whether requests carry the caller's absolute deadline as well as its budget, as the client now does. */
+const sendsDeadline = args.deadlineHeader !== "false";
 const arms = (args.arms ?? "A,B").split(",");
 const serverCore = args.serverCore ?? "1";
 const clientCores = args.clientCores ?? "0";
@@ -131,6 +136,13 @@ const runOnce = async ({ arm }: { arm: string }) => {
 			headers: {
 				"content-type": "application/json",
 				[WORKER_REQUEST_BUDGET_HEADER]: String(Math.floor(remainingMs)),
+				...(sendsDeadline
+					? {
+							[WORKER_REQUEST_DEADLINE_HEADER]: String(
+								Math.ceil(Date.now() + remainingMs),
+							),
+						}
+					: {}),
 			},
 			body: JSON.stringify({
 				route: { partition: 0, routeEpoch: "1" },
@@ -213,7 +225,7 @@ const runOnce = async ({ arm }: { arm: string }) => {
 	const drainBy = performance.now() + budgetMs + 5_000;
 	while (samples.length < sentTotal && performance.now() < drainBy)
 		await Bun.sleep(50);
-	const admission = await fetch(`http://127.0.0.1:${port}/bench-stats`)
+	const serverStats = await fetch(`http://127.0.0.1:${port}/bench-stats`)
 		.then((response) => response.json())
 		.catch(() => null);
 	server.kill();
@@ -238,7 +250,7 @@ const runOnce = async ({ arm }: { arm: string }) => {
 		),
 		hotChecks: summarise(samples.filter((s) => s.hot && s.kind === "check")),
 		hotTracks: summarise(samples.filter((s) => s.hot && s.kind === "track")),
-		admission,
+		serverStats,
 	};
 };
 
@@ -296,6 +308,8 @@ const table = arms.map((arm) => {
 		quietTrackP99Ms: median(mine.map((r) => r.quietTracksInBurst.p99Ms)),
 		quietAfterP99Ms: median(mine.map((r) => r.quietAfterBurst.p99Ms)),
 		hotCheckOkPct: median(mine.map((r) => 100 - r.hotChecks.failOpenPct)),
+		dropped503: median(mine.map((r) => r.serverStats?.statuses?.[503] ?? 0)),
+		shed429: median(mine.map((r) => r.serverStats?.statuses?.[429] ?? 0)),
 		hotTrackOkPct: median(mine.map((r) => 100 - r.hotTracks.failOpenPct)),
 	};
 });
@@ -310,6 +324,7 @@ console.error(
 			hotTracksPerSecond,
 			burst: [burstFrom / 1_000, burstTo / 1_000],
 			runs,
+			sendsDeadline,
 		},
 		table,
 	}),

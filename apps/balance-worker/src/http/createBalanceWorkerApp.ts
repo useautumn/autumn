@@ -15,6 +15,7 @@ import { receiveReset } from "./handlers/receiveReset.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
 import { receiveTrackBatch } from "./handlers/receiveTrackBatch.js";
 import { receiveUpdateBalance } from "./handlers/receiveUpdateBalance.js";
+import { callerDeadlineMiddleware } from "./middlewares/callerDeadlineMiddleware.js";
 import { requestLoggingMiddleware } from "./middlewares/requestLoggingMiddleware.js";
 import { requestValidationMiddleware } from "./middlewares/requestValidationMiddleware.js";
 import { runtimeRoutingMiddleware } from "./middlewares/runtimeRouting/runtimeRoutingMiddleware.js";
@@ -29,7 +30,7 @@ export function createBalanceWorkerApp({
 	ctx: BalanceWorkerHttpContext;
 }) {
 	const app = new Hono<BalanceWorkerHttpEnv>();
-	app.use(requestLoggingMiddleware({ ctx }));
+	app.use(requestLoggingMiddleware({ ctx }), callerDeadlineMiddleware);
 	app.onError(createWorkerErrorHandler());
 	app.get("/health", receiveHealth);
 	// Parses its own envelope and checks ownership once, so it sits outside the per-command middleware.

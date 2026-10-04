@@ -14,6 +14,7 @@ import {
 } from "@autumn/balance-worker-client/protocol";
 import { Hono } from "hono";
 import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
+import { DEADLINE_SHED_EXPERIMENT } from "../../../src/experiments/deadlineShed.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import { requestValidationMiddleware } from "../../../src/http/middlewares/requestValidationMiddleware.js";
@@ -40,6 +41,10 @@ import {
 	createCustomerEntitlement,
 	createSubjectFor,
 } from "../../fixtures/mutations.js";
+import {
+	clearStagingArms,
+	forceStagingArm,
+} from "../../fixtures/stagingArms.js";
 import { createTestRuntimeResources } from "../kafka/kafka-test-fixtures.js";
 
 const command = parseTrackCommand({
@@ -642,6 +647,55 @@ describe("Balance worker HTTP", () => {
 			(await postWithHeaders({ "x-request-budget-ms": "soon" })).status,
 		).toBe(200);
 		expect(budgets).toEqual([750, undefined, 640, 640, undefined]);
+	});
+	test("deadline-shed B answers a request past its caller's deadline without reading it; A, no header and the skew margin run as today", async () => {
+		const { app, postWithHeaders, postBatch, budgets } = fixture();
+		const passed = { "x-request-deadline-at": String(Date.now() - 1_000) };
+		const withinSkew = { "x-request-deadline-at": String(Date.now() - 20) };
+		/** Posts the track with a body that records whether the worker ever read it. */
+		const postWatched = async () => {
+			const watched = { read: false };
+			const body = new ReadableStream(
+				{
+					pull(controller) {
+						watched.read = true;
+						controller.enqueue(
+							new TextEncoder().encode(JSON.stringify(request)),
+						);
+						controller.close();
+					},
+				},
+				{ highWaterMark: 0 },
+			);
+			const response = await app.request("/v1/track", {
+				method: "POST",
+				headers: { "content-type": "application/json", ...passed },
+				body,
+				duplex: "half",
+			} as RequestInit);
+			return { response, read: watched.read };
+		};
+		const served = await postWatched();
+		expect(served.response.status).toBe(200);
+		expect(served.read).toBe(true);
+		expect(budgets).toHaveLength(1);
+
+		forceStagingArm({ experiment: DEADLINE_SHED_EXPERIMENT, arm: "B" });
+		try {
+			const dropped = await postWatched();
+			expect(dropped.response.status).toBe(503);
+			expect((await dropped.response.json()).error.code).toBe("NOT_READY");
+			expect(dropped.read).toBe(false);
+			const batch = await postBatch({ route, commands: [command] }, passed);
+			expect(batch.status).toBe(503);
+			expect(budgets).toHaveLength(1);
+
+			expect((await postWithHeaders(withinSkew)).status).toBe(200);
+			expect((await postWithHeaders({})).status).toBe(200);
+			expect(budgets).toHaveLength(3);
+		} finally {
+			clearStagingArms();
+		}
 	});
 	test("maps runtime readiness races centrally", async () => {
 		const { post } = fixture({

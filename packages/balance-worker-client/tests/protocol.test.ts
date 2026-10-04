@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { Glob } from "bun";
 import ts from "typescript";
+import { requestDeadlineHeaderValue } from "../src/contracts/worker.js";
 import {
 	parseWorkerRequest,
 	readRequestBudgetHeader,
+	readRequestDeadlineHeader,
 	WorkerProtocolError,
 } from "../src/protocol.js";
 
@@ -189,4 +191,22 @@ test("the request budget header reads as a whole number of milliseconds or nothi
 		"1234567890",
 	])
 		expect(readRequestBudgetHeader({ value })).toBeUndefined();
+});
+
+test("the request deadline header is the caller's give-up time in epoch ms, never early", () => {
+	expect(
+		requestDeadlineHeaderValue({
+			expiresAt: 1_500.2,
+			now: 1_000,
+			epochNow: 1_700_000_000_000,
+		}),
+	).toBe("1700000000501");
+	expect(
+		requestDeadlineHeaderValue({ expiresAt: 900, now: 1_000, epochNow: 5 }),
+	).toBe("5");
+	expect(readRequestDeadlineHeader({ value: "1700000000501" })).toBe(
+		1_700_000_000_501,
+	);
+	for (const value of [null, undefined, "", "soon", "-1", "1.5", "1e12"])
+		expect(readRequestDeadlineHeader({ value })).toBeUndefined();
 });
