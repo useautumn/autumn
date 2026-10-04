@@ -23,43 +23,83 @@ import type {
 	CommittedMutation,
 	DecidedMutation,
 	MutationResult,
+	MutationSubmission,
 } from "../writer/types/mutation.js";
 
-/** Every track, sync or queued, deducts here: serialized by the partition writer. */
-export async function decideTrack({
+/** What the writer decides for a track: the deduction against the freshest state, recording what it read. */
+function trackSubmissionOf({
 	scope,
 	command,
+	customerKey,
+	decidedAgainst,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
+	customerKey: string;
+	decidedAgainst: DecidedAgainst;
+}): MutationSubmission<never> {
+	return {
+		command,
+		// A finalize finds its lock by reading Postgres, so the caller hears of a lock only once its row is there.
+		durability: command.lock ? "store" : "log",
+		mutate: ({ state }) =>
+			timeSync({ label: "track.decide" }, () =>
+				mutateTrack({ scope, state, customerKey, command, decidedAgainst }),
+			),
+	};
+}
+
+/** A lone track: ensured, then decided synchronously against the freshest state, retried once if its rows left. */
+function decideTrackAlone({
+	scope,
+	command,
+	customerKey,
+	submission,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+	customerKey: string;
+	submission: MutationSubmission<never>;
+}): Promise<DecidedMutation<never>> {
+	return withResidentSubject({
+		customerKey,
+		ensure: () => ensureSubjectCurrent({ scope, command }),
+		attempt: () => scope.ctx.writer.decide<never>(submission),
+	});
+}
+
+/** Every track, sync or queued, deducts here, in its subject's arrival order: a sync track joins its subject's run. */
+export async function decideTrack({
+	scope,
+	command,
+	joinsRun = false,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+	joinsRun?: boolean;
 }): Promise<DecidedTrack> {
-	const { ctx } = scope;
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});
 	// Filled by the decision, the only place that knows its rows and effects; a retry never runs it.
 	const decidedAgainst: DecidedAgainst = {};
-	// Synchronous once ensured: `mutate` runs against the freshest state and the mutation is enqueued before it returns.
-	const decided = await withResidentSubject({
+	const submission = trackSubmissionOf({
+		scope,
+		command,
 		customerKey,
-		ensure: () => ensureSubjectCurrent({ scope, command }),
-		attempt: () =>
-			ctx.writer.decide<never>({
-				command,
-				// A finalize finds its lock by reading Postgres, so the caller hears of a lock only once its row is there.
-				durability: command.lock ? "store" : "log",
-				mutate: ({ state }) =>
-					timeSync({ label: "track.decide" }, () =>
-						mutateTrack({
-							scope,
-							state,
-							customerKey,
-							command,
-							decidedAgainst,
-						}),
-					),
-			}),
+		decidedAgainst,
 	});
+	function decideAlone(): Promise<DecidedMutation<never>> {
+		return decideTrackAlone({ scope, command, customerKey, submission });
+	}
+	const decided = scope.trackRuns
+		? await scope.trackRuns.submit({
+				command,
+				submission,
+				decideAlone,
+				solo: !joinsRun,
+			})
+		: await decideAlone();
 	return { ...decided, decidedAgainst };
 }
 
@@ -71,7 +111,7 @@ export async function track({
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
 }): Promise<TrackReply> {
-	const decided = await decideTrack({ scope, command });
+	const decided = await decideTrack({ scope, command, joinsRun: true });
 	const committed = await decided.waitForCommit();
 	return toTrackReply({
 		scope,
