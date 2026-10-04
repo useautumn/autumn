@@ -20,6 +20,10 @@ import { createStandbyPreparations } from "../blueGreen/createStandbyPreparation
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import {
+	bindEngineAllocExperiment,
+	forcedEngineAllocArmFromEnv,
+} from "../experiments/engineAlloc.js";
+import {
 	createSerialDecideMode,
 	forcedSerialDecideArmFromEnv,
 } from "../experiments/serialDecide.js";
@@ -128,6 +132,7 @@ export async function createBalanceWorker({
 	const serialDecide = createSerialDecideMode({
 		force: config.serialDecideArm ?? forcedSerialDecideArmFromEnv(),
 	});
+	bindEngineAllocExperiment({ force: forcedEngineAllocArmFromEnv() });
 	try {
 		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
 		const slotGate = resources.edgeConfigs

@@ -5,6 +5,8 @@ import type {
 } from "../models/mutation/rowChange.js";
 import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
 import { incrementRow } from "../mutation/incrementRow.js";
+import { engineDiet } from "../utils/engineDiet/engineDiet.js";
+import { advanceDeductionContextLean } from "./advanceDeductionContextLean.js";
 import type { DeductionContext } from "./types/deductionContext.js";
 import type { DeductionRow } from "./types/deductionRow.js";
 
@@ -68,6 +70,8 @@ export const advanceDeductionContext = ({
 	context: DeductionContext;
 	changes: RowChange[];
 }): DeductionContext | null => {
+	if (engineDiet().advanceContext)
+		return advanceDeductionContextLean({ context, changes });
 	if (!changes.every(isBalanceIncrement)) return null;
 	// A gate shares out the remaining balance, so it is resolved against the rows as they stood.
 	if (changes.length > 0 && context.allocationGates.size > 0) return null;

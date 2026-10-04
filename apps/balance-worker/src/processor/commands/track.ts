@@ -3,6 +3,7 @@ import {
 	type Catalog,
 	computeTrackDecision,
 	type DeductionDecision,
+	engineDiet,
 	type MutationEffect,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
@@ -261,10 +262,11 @@ function decideOnCarriedContext({
 	command: TrackCommand;
 	readView: (viewed: SubjectState) => WorkerFullSubject;
 }): { decision: DeductionDecision; alwaysDecidesEffects: boolean } {
+	const request = trackCommandToDeductionRequest({ command });
 	const carried = scope.ctx.subjectDecisions.readTrackDecision({
 		state,
 		identity: command.identity,
-		request: trackCommandToDeductionRequest({ command }),
+		request,
 		catalog,
 		join: () => readView(state),
 	});
@@ -274,6 +276,7 @@ function decideOnCarriedContext({
 			command,
 			context: carried.context,
 			revision: state.revision,
+			...(engineDiet().requestOnce ? { request } : {}),
 		}),
 		alwaysDecidesEffects: carried.alwaysDecidesEffects,
 	};
