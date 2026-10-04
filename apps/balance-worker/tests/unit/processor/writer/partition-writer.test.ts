@@ -22,6 +22,7 @@ import type {
 } from "@autumn/balance-worker-client/protocol";
 import type { StagingArm } from "@autumn/edge-config";
 import type { MeteringRecord } from "@autumn/kafka";
+import { forceAdaptiveLingerArm } from "../../../../src/experiments/adaptiveLinger.js";
 import { COMMIT_PIPELINE_EXPERIMENT } from "../../../../src/experiments/commitPipeline.js";
 import { createCustomerPlans } from "../../../../src/processor/commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
@@ -1139,6 +1140,54 @@ describe("partition writer", () => {
 			closeFixture(fixture);
 		}
 	});
+
+	for (const arm of ["A", "B"] as const)
+		test(`adaptive-linger ${arm}: after a multi-record batch the next commit ${arm === "B" ? "goes at once with the pipe idle" : "waits the linger"}`, async () => {
+			const fixture = createFixture();
+			forceAdaptiveLingerArm({ arm });
+			try {
+				const appender = new ControlledCommittedAppender();
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender,
+					limits: { ...defaultLimits, commitLingerMs: 40 },
+				});
+				const first = writer.submitTrack({
+					command: createCommand({ commandId: "linger_1", value: 1 }),
+				});
+				await waitForBatch();
+				// Two more gather behind the append in flight: the next batch holds two, so A lingers after it.
+				const second = writer.submitTrack({
+					command: createCommand({ commandId: "linger_2", value: 1 }),
+				});
+				const third = writer.submitTrack({
+					command: createCommand({ commandId: "linger_3", value: 1 }),
+				});
+				await waitForBatch();
+				appender.resolve({ baseOffset: 0n });
+				await waitForBatch();
+				await new Promise((resolve) => setTimeout(resolve, 60));
+				appender.resolve({ baseOffset: 1n });
+				await Promise.all([first, second, third]);
+				const fourth = writer.submitTrack({
+					command: createCommand({ commandId: "linger_4", value: 1 }),
+				});
+				await waitForBatch();
+				// A's linger is 40 ms here; by 60 ms both arms have sent the third batch.
+				await new Promise((resolve) => setTimeout(resolve, 60));
+				expect(appender.batches.length).toBe(3);
+				appender.resolve({ baseOffset: 3n });
+				await fourth;
+				const waited = appender.waits[2]?.lingerMs ?? -1;
+				if (arm === "B") expect(waited).toBeLessThan(5);
+				else expect(waited).toBeGreaterThanOrEqual(35);
+			} finally {
+				forceAdaptiveLingerArm({ arm: undefined });
+				closeFixture(fixture);
+			}
+		});
 
 	test("a commit reports how long its oldest record waited, including behind the commit in flight", async () => {
 		const fixture = createFixture();

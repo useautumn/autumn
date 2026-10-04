@@ -2,12 +2,17 @@ import {
 	createKafkaClient,
 	createKafkaTransport,
 	createProducerSession,
+	type KafkaProducerFactory,
 	type MeteringRecord,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
+import {
+	adaptiveLingerArm,
+	forceAdaptiveLingerArm,
+} from "../../../src/experiments/adaptiveLinger.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
@@ -18,6 +23,7 @@ import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLog
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
+import { createRemoteKafkaProducers } from "../../../src/serialDecide/createRemoteKafkaProducers.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -35,8 +41,9 @@ if (fixedClock) Date.now = () => Number(fixedClock);
 export const SPIKE_TOPIC = process.env.SPIKE_TOPIC ?? "bw-spike-metering";
 export const SPIKE_BROKERS = ["127.0.0.1:19092"];
 
-/** Where the partition's records go: a stub that only encodes, kafkajs on this loop, or the Rust front. */
-export type AppenderMode = "sim" | "kafkajs" | "remote";
+/** Where the partition's records go: a stub that only encodes, kafkajs on this loop, the Kafka worker thread
+ *  (serial-decide arm C's producers), or the Rust front. */
+export type AppenderMode = "sim" | "kafkajs" | "kafka-worker" | "remote";
 
 export type RemoteAppend = (params: {
 	topic: string;
@@ -51,22 +58,60 @@ const producerLimits = {
 	maxRetryTimeMs: 1000,
 };
 
-async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
-	const kafka = new Kafka(
-		createKafkaClient({
-			clientId: `bw-spike-${process.pid}`,
-			brokers: SPIKE_BROKERS,
-			transport: createKafkaTransport({ authMode: "none" }),
-			limits: {
-				connectionTimeoutMs: 5000,
-				requestTimeoutMs: 30000,
-				retryCount: 2,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 1000,
+const clientLimits = {
+	connectionTimeoutMs: 5000,
+	requestTimeoutMs: 30000,
+	retryCount: 2,
+	initialRetryTimeMs: 100,
+	maxRetryTimeMs: 1000,
+};
+
+/** Arm C's producers: the same session and publisher, with `kafka.producer()` answered by the Kafka worker thread. */
+async function kafkaWorkerFactory(): Promise<KafkaProducerFactory> {
+	const remote = createRemoteKafkaProducers({
+		ctx: {
+			logger: {
+				info: console.error,
+				warn: console.error,
+				error: console.error,
 			},
-		}),
-	);
-	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as "transactional" | "idempotent";
+			onFatal: ({ cause }) => {
+				console.error(`FATAL kafka worker ${String(cause)}`);
+				process.exit(1);
+			},
+		},
+		config: {
+			clientId: `bw-spike-kw-${process.pid}`,
+			brokers: SPIKE_BROKERS,
+			authMode: "none",
+			region: "us-east-1",
+			limits: clientLimits,
+		},
+	});
+	await remote.start();
+	return remote;
+}
+
+async function kafkajsAppender({
+	onWorker,
+}: {
+	onWorker: boolean;
+}): Promise<CommittedOutcomeAppender> {
+	const kafka: KafkaProducerFactory = onWorker
+		? await kafkaWorkerFactory()
+		: new Kafka(
+				createKafkaClient({
+					clientId: `bw-spike-${process.pid}`,
+					brokers: SPIKE_BROKERS,
+					transport: createKafkaTransport({ authMode: "none" }),
+					limits: clientLimits,
+				}),
+			);
+	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as
+		| "transactional"
+		| "idempotent";
+	if (onWorker && mode !== "idempotent")
+		throw new Error("the Kafka worker speaks idempotent commits only");
 	const session = createProducerSession({
 		ctx: { kafka },
 		config: createWorkerProducerConfig({
@@ -133,9 +178,15 @@ export async function createSpikeWorker({
 }) {
 	const scenario = scenarios[process.env.SPIKE_SCENARIO ?? "typical"];
 	if (!scenario) throw new Error("scenario");
+	// The bench pins the adaptive-linger arm whatever NODE_ENV is; the equality run compares A with B.
+	const lingerArm = process.env.SPIKE_ADAPTIVE_LINGER_ARM;
+	forceAdaptiveLingerArm({
+		arm: lingerArm === "A" || lingerArm === "B" ? lingerArm : undefined,
+	});
+	console.error(`ADAPTIVE_LINGER_ARM ${adaptiveLingerArm()}`);
 	const base =
-		appenderMode === "kafkajs"
-			? await kafkajsAppender()
+		appenderMode === "kafkajs" || appenderMode === "kafka-worker"
+			? await kafkajsAppender({ onWorker: appenderMode === "kafka-worker" })
 			: appenderMode === "remote"
 				? remoteAppender(
 						remoteAppend ??
