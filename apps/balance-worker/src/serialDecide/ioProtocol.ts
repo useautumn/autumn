@@ -44,8 +44,13 @@ export type IoWorkerInit = {
 	resultBell: SharedArrayBuffer;
 	/** `LANE_STAT_SLOTS` float64 counters this worker keeps. */
 	stats: SharedArrayBuffer;
-	/** Serial-decide arm D: hot routes cross as HOT frames and their replies are held on these commit positions (BigInt64 per partition). */
-	hot?: { cells: SharedArrayBuffer; partitionCount: number };
+	/** Serial-decide arm D: hot routes cross as HOT frames and their replies are held on these commit positions
+	 *  (BigInt64 per partition); `failGenerations` counts each partition's failures (Int32 per partition). */
+	hot?: {
+		cells: SharedArrayBuffer;
+		failGenerations: SharedArrayBuffer;
+		partitionCount: number;
+	};
 };
 
 /** Requests and replies too big for a ring frame. */

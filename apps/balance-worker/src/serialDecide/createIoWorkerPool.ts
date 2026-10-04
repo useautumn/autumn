@@ -713,6 +713,7 @@ export function createIoWorkerPool({
 			stats: laneStats,
 			hot: ctx.hot && {
 				cells: ctx.hot.positions.cells,
+				failGenerations: ctx.hot.positions.failGenerations,
 				partitionCount: ctx.hot.decider.partitionCount,
 			},
 		};

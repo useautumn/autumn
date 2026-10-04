@@ -87,10 +87,16 @@ function start(init: IoWorkerInit): void {
 	const stats = new Float64Array(init.stats);
 	const hot = init.hot && {
 		positions: new BigInt64Array(init.hot.cells),
+		failures: new Int32Array(init.hot.failGenerations),
 		/** Per partition, the replies held for its commit position, in seq order. */
 		held: Array.from({ length: init.hot.partitionCount }, () => [] as Held[]),
 		/** The partitions holding at least one reply. */
 		holding: new Set<number>(),
+		/** FAIL frames seen per partition; failures published before this worker existed concern nothing it holds. */
+		failuresSeen: Array.from(
+			new Int32Array(init.hot.failGenerations),
+			(count) => count,
+		),
 	};
 	// Bodies near the ring's size go by postMessage; the ring is for the hot, small requests.
 	const oversizedThreshold = Math.min(
@@ -172,9 +178,18 @@ function start(init: IoWorkerInit): void {
 		return Number(Atomics.load(hot.positions, partition));
 	}
 
+	/** A FAIL the main thread has published but this lane has not read yet may cover a held reply the position already passed. */
+	function failPending({ partition }: { partition: number }): boolean {
+		if (!hot) return false;
+		return (
+			Atomics.load(hot.failures, partition) !== hot.failuresSeen[partition]
+		);
+	}
+
 	function releasable(): boolean {
 		if (!hot) return false;
 		for (const partition of hot.holding) {
+			if (failPending({ partition })) continue;
 			const head = hot.held[partition]?.[0];
 			if (head && positionOf({ partition }) >= head.seq) return true;
 		}
@@ -185,6 +200,7 @@ function start(init: IoWorkerInit): void {
 	function releaseHeld(): void {
 		if (!hot) return;
 		for (const partition of hot.holding) {
+			if (failPending({ partition })) continue;
 			const queue = queueOf({ partition });
 			const position = positionOf({ partition });
 			let n = 0;
@@ -216,6 +232,7 @@ function start(init: IoWorkerInit): void {
 		body: string;
 	}): void {
 		const queue = queueOf({ partition });
+		if (hot) hot.failuresSeen[partition]++;
 		const from = indexAbove({ queue, seq: aboveSeq });
 		const to = indexAbove({ queue, seq: lastSeq });
 		const failed = queue.splice(from, to - from);

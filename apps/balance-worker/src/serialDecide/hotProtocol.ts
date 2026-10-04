@@ -18,7 +18,9 @@
  * replies in seq order. Sequence numbers are f64 on the wire and 64-bit in the cells, so they never wrap, and
  * the board numbers a partition across its writers, so a rebuilt writer never reuses a held reply's number.
  * HOT_RES and FAIL frames reach a worker in the order the main thread produced them, and a reply the ring
- * cannot carry is held on the main thread instead, so a FAIL never overtakes a reply it covers.
+ * cannot carry is held on the main thread instead, so a FAIL never overtakes a reply it covers. The cell can
+ * overtake a FAIL still queued behind a full ring, so the board counts failures per partition in shared memory
+ * and a worker releases nothing on a partition until it has read as many FAIL frames as were published.
  */
 export const HOT_KIND = { TRACK: 1, TRACK_BATCH: 2, CHECK: 3 } as const;
 export type HotKind = (typeof HOT_KIND)[keyof typeof HOT_KIND];

@@ -359,6 +359,38 @@ describe("I/O worker pool hot path", () => {
 		expect((held.response as Response).status).toBe(200);
 	});
 
+	test("a position that overtakes a FAIL still in the ring releases nothing until the FAIL has been read", async () => {
+		// The main thread counts a failure in shared memory before its FAIL frames queue; a frame stuck behind a
+		// full ring is simulated by counting without a frame, and the count is taken back once the point is made.
+		const failures = new Int32Array(board.failGenerations);
+		const sink = board.sinkFor({ partition: 3 });
+		sink.committed({ seq: 20 });
+		const held = watch(post({ script: { partition: 3, seq: 21 } }));
+		await until(() => laneTotal(pool, "held") === 1, "the reply held");
+		Atomics.add(failures, 3, 1);
+		sink.committed({ seq: 21 });
+		await Bun.sleep(200);
+		expect(held.settled).toBe(false);
+		Atomics.sub(failures, 3, 1);
+		await until(
+			() => held.settled,
+			"the reply released once no FAIL is pending",
+		);
+		expect((held.response as Response).status).toBe(200);
+		// A real failure counts and frames together, so the lane catches up and keeps releasing.
+		const next = watch(post({ script: { partition: 3, seq: 23 } }));
+		await until(() => laneTotal(pool, "held") === 1, "the next reply held");
+		sink.failedAbove({
+			seq: 21,
+			lastSeq: 22,
+			cause: new PartitionWriterCapacityError(),
+		});
+		sink.committed({ seq: 23 });
+		await until(() => next.settled, "the next reply released after the FAIL");
+		expect((next.response as Response).status).toBe(200);
+		expect(laneTotal(pool, "held")).toBe(0);
+	});
+
 	test("a writer that goes away fails what it held above the position and leaves its successor's replies held", async () => {
 		const gone = board.sinkFor({ partition: 2 });
 		gone.committed({ seq: 10 });
@@ -477,7 +509,7 @@ describe("I/O worker pool hot path", () => {
 			hot: decider.calls.length,
 			hotFallback: 1,
 			hotErrors: 1,
-			hotFailed: 5,
+			hotFailed: 6,
 			hotHeldHere: 2,
 		});
 		expect(laneTotal(pool, "hot")).toBe(decider.calls.length);

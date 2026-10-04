@@ -4,6 +4,9 @@
  * a batch. The board also numbers each partition's writes, so a writer rebuilt after a recovery or a re-acquire
  * continues above everything its predecessor issued and a held reply can never match a later writer's number.
  * A failure moves nothing: it names the range of sequence numbers whose held replies must be answered with it.
+ * Its FAIL frames travel behind whatever each lane's ring already holds while the cell is read at once, so the
+ * board also counts failures per partition in shared memory: a worker releases nothing on a partition until it
+ * has seen as many FAIL frames as the board has issued.
  */
 import type { PositionSink } from "../processor/writer/types/partitionWriter.js";
 
@@ -19,6 +22,8 @@ export type FailedPosition = {
 export type PositionBoard = {
 	/** BigInt64 per partition index: the latest sequence number the log acknowledged. */
 	readonly cells: SharedArrayBuffer;
+	/** Int32 per partition index: how many failures the partition has published. */
+	readonly failGenerations: SharedArrayBuffer;
 	sinkFor(params: { partition: number }): PositionSink;
 	readCommitPos(params: { partition: number }): number;
 	onCommitted(listener: (position: CommittedPosition) => void): () => void;
@@ -38,6 +43,8 @@ export function createPositionBoard({
 		config.partitionCount * POSITION_CELL_BYTES,
 	);
 	const positions = new BigInt64Array(cells);
+	const failGenerations = new SharedArrayBuffer(config.partitionCount * 4);
+	const failures = new Int32Array(failGenerations);
 	// The last sequence number handed out per partition, across every writer it has had.
 	const issued = new Array<number>(config.partitionCount).fill(0);
 	const committedListeners = new Set<(position: CommittedPosition) => void>();
@@ -84,6 +91,8 @@ export function createPositionBoard({
 			lastSeq: number;
 			cause: unknown;
 		}): void {
+			// Counted before the listeners queue the frames, so no worker releases past a FAIL still in its ring.
+			Atomics.add(failures, partition, 1);
 			for (const listener of failedListeners)
 				listener({ partition, seq, lastSeq, cause });
 		}
@@ -117,5 +126,12 @@ export function createPositionBoard({
 		};
 	}
 
-	return { cells, sinkFor, readCommitPos, onCommitted, onFailedAbove };
+	return {
+		cells,
+		failGenerations,
+		sinkFor,
+		readCommitPos,
+		onCommitted,
+		onFailedAbove,
+	};
 }
