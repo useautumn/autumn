@@ -242,6 +242,7 @@ export {
 	meteringIdentityToSubjectKey,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
+export { isExactInteger } from "./utils/numberUtils/exactIntegerUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,

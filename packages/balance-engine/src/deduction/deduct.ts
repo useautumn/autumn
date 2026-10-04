@@ -1,6 +1,7 @@
 import { Decimal } from "decimal.js";
 import { allocationCountersToRowChanges } from "../allocations/allocationDraw.js";
 import type { WorkerFullSubject } from "../models/subject/workerFullSubject.js";
+import { integerDrawOutcome } from "./integerDrawOutcome.js";
 import { setupDeductionContext } from "./setup/setupDeductionContext.js";
 import type { DeductionContext } from "./types/deductionContext.js";
 import type { DeductionOutcome } from "./types/deductionOutcome.js";
@@ -88,12 +89,19 @@ export const deduct = ({
 export const deductWithContext = ({
 	context,
 	request,
+	lean = false,
 }: {
 	context: DeductionContext;
 	request: DeductionRequest;
+	/** Builds a whole integer draw's outcome in plain numbers: the same outcome, a fraction of the garbage. */
+	lean?: boolean;
 }): DeductionOutcome => {
 	if (isIntegerDraw({ context, request })) {
 		const { remaining, deltas } = drawIntegersFromBuckets({ context, request });
+		const plain = lean
+			? integerDrawOutcome({ context, request, remaining, deltas })
+			: null;
+		if (plain) return plain;
 		return deductionStateToOutcome({
 			context,
 			deductionState: {

@@ -1,7 +1,17 @@
-import type { MeteringIdentity, TrackCommand } from "@autumn/balance-engine";
+import {
+	advanceDeductionContext,
+	applyMutation,
+	computeTrackDecision,
+	type MeteringIdentity,
+	setupDeductionContext,
+	type TrackCommand,
+	trackCommandToDeductionRequest,
+} from "@autumn/balance-engine";
 import { parseWorkerRequest } from "@autumn/balance-worker-client/protocol";
 import type { StagingArm } from "@autumn/edge-config";
 import { type MeteringRecord, serializeMeteringRecord } from "@autumn/kafka";
+import { deltasToUsageEventFields } from "../../../../../packages/balance-engine/src/common/usageEvent/deltasToUsageEventFields.js";
+import { deductWithContext } from "../../../../../packages/balance-engine/src/deduction/deduct.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { TRACK_ALLOC_EXPERIMENT } from "../../../src/experiments/trackAlloc.js";
 import { looksLikeTrackCommand } from "../../../src/http/commands/looksLikeCommands.js";
@@ -42,7 +52,7 @@ const iterations = Number(iterationsArg);
 forceStagingArm({ experiment: TRACK_ALLOC_EXPERIMENT, arm: arm as StagingArm });
 const scenario = scenarios.typical;
 if (!scenario) throw new Error("scenario");
-const CUSTOMERS = 100;
+const CUSTOMERS = 10;
 
 const records: MeteringRecord[] = [];
 const committedReplies: {
@@ -185,7 +195,7 @@ async function decideAndCommit(commands: TrackCommand[]) {
 }
 
 // Warm the JIT and the carried contexts on the same path the loop runs.
-await decideAndCommit(commandsOf(3_000));
+await decideAndCommit(commandsOf(1_000));
 records.length = 0;
 committedReplies.length = 0;
 const ring: unknown[] = new Array(64);
@@ -248,6 +258,114 @@ switch (stage) {
 					decidedAgainst: {},
 				});
 				sink(index, serializeSubjectReply({ reply }));
+			}
+		};
+		break;
+	}
+	case "mutate": {
+		// mutateTrack alone, on one resident state: what the decide costs before the writer records and enqueues it.
+		const identity = identities[0] ?? testIdentity;
+		const state = writer.readFreshestState({ identity });
+		if (!state) throw new Error("state");
+		const commands = commandsOf(iterations).map((command) => ({
+			...command,
+			identity,
+		}));
+		run = () => {
+			for (let index = 0; index < commands.length; index++) {
+				const command = commands[index];
+				if (!command) continue;
+				const { submission } = trackDecisionOf({ scope, command });
+				sink(index, submission.mutate({ state }));
+			}
+		};
+		break;
+	}
+	case "deduct":
+	case "usage":
+	case "view":
+	case "compute":
+	case "apply":
+	case "advance": {
+		// The engine steps of one decide, on a hot customer's resident state and a set-up context.
+		const identity = identities[0] ?? testIdentity;
+		const state = writer.readFreshestState({ identity });
+		if (!state) throw new Error("state");
+		const catalog = subjectHydrator.readCatalog({ state });
+		const fullSubject = subjectHydrator.readSubjectWith({
+			state,
+			catalog,
+			identity,
+		});
+		const commands = commandsOf(iterations).map((command) => ({
+			...command,
+			identity,
+		}));
+		const first = commands[0];
+		if (!first) throw new Error("commands");
+		const context = setupDeductionContext({
+			fullSubject,
+			selection: trackCommandToDeductionRequest({ command: first }).selection,
+		});
+		const decisions = commands.map((command) =>
+			computeTrackDecision({
+				fullSubject,
+				command,
+				context,
+				revision: state.revision,
+				lean: arm === "B",
+			}),
+		);
+		run = () => {
+			for (let index = 0; index < commands.length; index++) {
+				const command = commands[index];
+				const decision = decisions[index];
+				if (!command || !decision) continue;
+				if (stage === "deduct")
+					sink(
+						index,
+						deductWithContext({
+							context,
+							request: trackCommandToDeductionRequest({ command }),
+							lean: arm === "B",
+						}),
+					);
+				else if (stage === "usage")
+					sink(
+						index,
+						deltasToUsageEventFields({
+							fullSubject,
+							deltas: decision.outcome.deltas,
+							lean: arm === "B",
+						}),
+					);
+				else if (stage === "view")
+					sink(
+						index,
+						subjectHydrator.readSubjectWith({ state, catalog, identity }),
+					);
+				else if (stage === "compute")
+					sink(
+						index,
+						computeTrackDecision({
+							fullSubject,
+							command,
+							context,
+							revision: state.revision,
+							lean: arm === "B",
+						}),
+					);
+				else if (stage === "apply")
+					sink(index, applyMutation({ state, mutation: decision.mutation }));
+				else
+					sink(
+						index,
+						advanceDeductionContext({
+							context,
+							changes: decision.mutation.changes,
+							lean: arm === "B",
+						}),
+					);
 			}
 		};
 		break;

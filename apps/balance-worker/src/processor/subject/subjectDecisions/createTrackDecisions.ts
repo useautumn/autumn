@@ -10,6 +10,7 @@ import {
 	setupDeductionContext,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
+import { cutsTrackAllocation } from "../../../experiments/trackAlloc.js";
 import { subjectAlwaysDecidesEffects } from "../../effects/shouldDecideEffects.js";
 import type {
 	SubjectDecisionCounters,
@@ -138,10 +139,12 @@ export const createTrackDecisions = ({
 		const decisions = from && decisionsByState.get(from);
 		if (!decisions) return;
 		const advanced = new Map<string, TrackDecision>();
+		const lean = cutsTrackAllocation();
 		for (const [key, decision] of decisions) {
 			const context = advanceDeductionContext({
 				context: decision.context,
 				changes,
+				lean,
 			});
 			if (!context) return;
 			advanced.set(key, { ...decision, context });

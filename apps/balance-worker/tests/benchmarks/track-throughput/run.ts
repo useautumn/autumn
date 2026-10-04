@@ -1,5 +1,7 @@
 import { performance } from "node:perf_hooks";
 import type { TrackCommand } from "@autumn/balance-engine";
+import type { StagingArm } from "@autumn/edge-config";
+import { TRACK_ALLOC_EXPERIMENT } from "../../../src/experiments/trackAlloc.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
@@ -9,6 +11,7 @@ import {
 	createTrackCommand,
 	testIdentity,
 } from "../../fixtures/mutations.js";
+import { forceStagingArm } from "../../fixtures/stagingArms.js";
 import { createBenchProcessor } from "./createBenchProcessor.js";
 import { scenarios } from "./scenarios.js";
 
@@ -30,6 +33,13 @@ const applyMs = Number(args.applyMs ?? 0);
 const serialize = args.serialize !== "false";
 /** http: callers race each other; queued: the command consumer, one record awaited at a time per partition. */
 const mode = args.mode ?? "http";
+
+// Runs one track-alloc arm in every window: A is today's path, B the allocation cuts.
+if (args.trackAlloc)
+	forceStagingArm({
+		experiment: TRACK_ALLOC_EXPERIMENT,
+		arm: args.trackAlloc as StagingArm,
+	});
 
 const bench = await createBenchProcessor({
 	scenario,

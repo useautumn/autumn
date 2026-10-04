@@ -13,12 +13,14 @@ export const trackOutcomeToMutation = ({
 	outcome,
 	fullSubject,
 	revision,
+	lean = false,
 }: {
 	command: TrackCommand;
 	outcome: DeductionOutcome;
 	fullSubject: WorkerFullSubject;
 	/** The revision the mutation applies to. */
 	revision: number;
+	lean?: boolean;
 }): SubjectStateMutation => {
 	const { rejected, changes } = outcome;
 	const revisionBefore = revision;
@@ -43,7 +45,8 @@ export const trackOutcomeToMutation = ({
 		subject: fullSubjectToMutationSubject({ fullSubject }),
 		revision: { before: revisionBefore, after: revisionBefore + 1 },
 		command,
-		changes: [...changes, ...lockChanges],
+		changes:
+			lean && lockChanges.length === 0 ? changes : [...changes, ...lockChanges],
 		result: {
 			type: "track",
 			status: rejected ? "rejected" : "applied",
@@ -52,6 +55,7 @@ export const trackOutcomeToMutation = ({
 			...deltasToUsageEventFields({
 				fullSubject,
 				deltas: rejected ? [] : outcome.deltas,
+				lean,
 			}),
 			fundingFeatureId: fundingRow?.featureId ?? command.featureId,
 			fundingCreditCost: fundingRow?.creditCost ?? 1,

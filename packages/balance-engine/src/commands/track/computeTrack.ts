@@ -3,6 +3,7 @@ import { setupDeductionContext } from "../../deduction/setup/setupDeductionConte
 import type { DeductionContext } from "../../deduction/types/deductionContext.js";
 import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
+import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
 import {
 	LockAlreadyExistsError,
@@ -30,9 +31,15 @@ export const computeTrackDecision = ({
 	command,
 	context,
 	revision = fullSubject.revision,
+	lean = false,
+	request = trackCommandToDeductionRequest({ command }),
 }: {
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
+	/** Plain-number paths for integer draws: the same decision with far less garbage. */
+	lean?: boolean;
+	/** The command's request, when the caller already built it. */
+	request?: DeductionRequest;
 	/** Set up (or advanced) for this command's selection on the state being decided; set up here when absent. */
 	context?: DeductionContext;
 	/** The state's revision, when `fullSubject` is an earlier view of it that differs only in balances. */
@@ -47,12 +54,12 @@ export const computeTrackDecision = ({
 	);
 	if (lockId && holdsLock) throw new LockAlreadyExistsError({ lockId });
 
-	const request = trackCommandToDeductionRequest({ command });
 	const outcome = deductWithContext({
 		context:
 			context ??
 			setupDeductionContext({ fullSubject, selection: request.selection }),
 		request,
+		lean,
 	});
 	// A plain track nothing funds applies as a no-op, as on legacy, so its usage event is still recorded.
 	if (fundsNothing({ outcome }) && isDeductingCheck({ command })) {
@@ -70,6 +77,7 @@ export const computeTrackDecision = ({
 			outcome,
 			fullSubject,
 			revision,
+			lean,
 		}),
 		outcome,
 	};

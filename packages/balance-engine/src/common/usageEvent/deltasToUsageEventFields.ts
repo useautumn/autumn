@@ -9,6 +9,7 @@ import type {
 	WorkerFullCustomerEntitlementWithProduct,
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
+import { isExactInteger } from "../../utils/numberUtils/exactIntegerUtils.js";
 import { fullSubjectToHeldRows } from "../../utils/subjectUtils/convertSubjectUtils.js";
 
 /** The row a delta moved: a customer entitlement directly, or the one that owns the rollover. */
@@ -47,13 +48,98 @@ export type UsageEventFields = {
 	internalProductId: string | null;
 };
 
+type RowFields = Pick<TrackDeduction, "feature_id" | "plan_id" | "reset">;
+
+// A held row is one object per subject view, and its plan and reset never depend on its balance.
+const rowFieldsByRow = new WeakMap<
+	WorkerFullCustomerEntitlementWithProduct,
+	RowFields
+>();
+
+const rowFieldsOf = ({
+	row,
+}: {
+	row: WorkerFullCustomerEntitlementWithProduct;
+}): RowFields => {
+	let fields = rowFieldsByRow.get(row);
+	if (!fields) {
+		fields = {
+			feature_id: row.entitlement.feature.id,
+			plan_id: cusEntsToPlanId({ cusEnts: [row] }),
+			reset: resetOf({ row }),
+		};
+		rowFieldsByRow.set(row, fields);
+	}
+	return fields;
+};
+
+/** `deltasToUsageEventFields` for integer deltas, in plain numbers with each row's plan and reset read once. */
+const integerUsageEventFields = ({
+	rows,
+	deltas,
+}: {
+	rows: WorkerFullCustomerEntitlementWithProduct[];
+	deltas: DeductionDelta[];
+}): UsageEventFields => {
+	const deductions: TrackDeduction[] = [];
+	const tables: DeductionDelta["table"][] = [];
+	let internalProductId: string | null = null;
+	let mostMoved = 0;
+	const movedByProduct = new Map<string, number>();
+	for (const delta of deltas) {
+		if (delta.balanceDelta === 0) continue;
+		const row = rowOf({ delta, rows });
+		if (!row) continue;
+		const consumed = -delta.balanceDelta;
+		let existing: TrackDeduction | undefined;
+		for (let index = 0; index < deductions.length; index++)
+			if (
+				deductions[index]?.balance_id === delta.id &&
+				tables[index] === delta.table
+			)
+				existing = deductions[index];
+		if (existing) existing.value = consumed + existing.value;
+		else {
+			const { feature_id, plan_id, reset } = rowFieldsOf({ row });
+			deductions.push({
+				balance_id: delta.id,
+				feature_id,
+				plan_id,
+				reset,
+				value: consumed,
+			});
+			tables.push(delta.table);
+		}
+		const productId = row.customer_product?.internal_product_id;
+		if (!productId) continue;
+		movedByProduct.set(
+			productId,
+			Math.abs(consumed) + (movedByProduct.get(productId) ?? 0),
+		);
+	}
+	for (const [candidate, moved] of movedByProduct) {
+		if (moved <= mostMoved) continue;
+		mostMoved = moved;
+		internalProductId = candidate;
+	}
+	return { deductions, internalProductId };
+};
+
 export const deltasToUsageEventFields = ({
 	fullSubject,
 	deltas,
+	lean = false,
 }: {
 	fullSubject: WorkerFullSubject;
 	deltas: DeductionDelta[];
+	/** Integer deltas take the plain-number path; the fields are the same. */
+	lean?: boolean;
 }): UsageEventFields => {
+	if (lean && deltas.every((delta) => isExactInteger(delta.balanceDelta)))
+		return integerUsageEventFields({
+			rows: fullSubjectToHeldRows({ fullSubject }),
+			deltas,
+		});
 	const rows = fullSubjectToHeldRows({ fullSubject });
 	const deductions = new Map<string, TrackDeduction>();
 	const movedByProduct = new Map<string, Decimal>();

@@ -11,6 +11,7 @@ import {
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import { cutsTrackAllocation } from "../../experiments/trackAlloc.js";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { withResidentSubject } from "../actions/withResidentSubject.js";
@@ -204,6 +205,7 @@ export function mutateTrack({
 	command: TrackCommand;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
+	const lean = cutsTrackAllocation();
 	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
 	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
 	decidedAgainst.catalog = catalog;
@@ -220,10 +222,18 @@ export function mutateTrack({
 					decision: computeTrackDecision({
 						fullSubject: readView(state),
 						command,
+						lean,
 					}),
 					alwaysDecidesEffects: true,
 				}
-			: decideOnCarriedContext({ scope, state, catalog, command, readView });
+			: decideOnCarriedContext({
+					scope,
+					state,
+					catalog,
+					command,
+					readView,
+					lean,
+				});
 	const { mutation } = decision;
 	scope.ctx.subjectDecisions.recordDraws({
 		changes: mutation.changes,
@@ -234,6 +244,7 @@ export function mutateTrack({
 		command,
 		decision,
 		alwaysDecides: alwaysDecidesEffects,
+		lean,
 	});
 	scope.ctx.subjectDecisions.countEffects({ decided: decidesEffects });
 	const effects = decidesEffects
@@ -254,17 +265,20 @@ function decideOnCarriedContext({
 	catalog,
 	command,
 	readView,
+	lean,
 }: {
 	scope: PartitionProcessorScope;
 	state: SubjectState;
 	catalog: Catalog;
 	command: TrackCommand;
 	readView: (viewed: SubjectState) => WorkerFullSubject;
+	lean: boolean;
 }): { decision: DeductionDecision; alwaysDecidesEffects: boolean } {
+	const request = trackCommandToDeductionRequest({ command });
 	const carried = scope.ctx.subjectDecisions.readTrackDecision({
 		state,
 		identity: command.identity,
-		request: trackCommandToDeductionRequest({ command }),
+		request,
 		catalog,
 		join: () => readView(state),
 	});
@@ -274,6 +288,8 @@ function decideOnCarriedContext({
 			command,
 			context: carried.context,
 			revision: state.revision,
+			lean,
+			...(lean && { request }),
 		}),
 		alwaysDecidesEffects: carried.alwaysDecidesEffects,
 	};

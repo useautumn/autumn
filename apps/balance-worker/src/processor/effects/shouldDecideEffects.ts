@@ -1,6 +1,7 @@
 import {
 	type DeductionDecision,
 	deductionRowToCurrentBalance,
+	isExactInteger,
 	type TrackCommand,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
@@ -31,6 +32,33 @@ const orgConfiguresAlerts = ({ command }: { command: TrackCommand }): boolean =>
 			? command.org.config.sandbox_usage_alerts
 			: command.org.config.usage_alerts,
 	);
+
+/** `drewRowDry` in plain numbers, for a row and deltas that are all exact integers; null otherwise. */
+const drewIntegerRowDry = ({
+	decision,
+}: {
+	decision: DeductionDecision;
+}): boolean | null => {
+	const { context, deltas } = decision.outcome;
+	for (const delta of deltas)
+		if (!isExactInteger(delta.balanceDelta)) return null;
+	for (const rows of [context.rows, context.rolloverRows])
+		for (const row of rows) {
+			if (!isExactInteger(row.balance)) return null;
+			let after = row.balance;
+			for (const delta of deltas)
+				if (
+					delta.table === row.table &&
+					delta.id === row.id &&
+					delta.entityKey === row.entityKey
+				)
+					after += delta.balanceDelta;
+			if (after === row.balance) continue;
+			if (row.balance > 0 && after <= 0) return true;
+			if (row.minBalance !== null && after <= row.minBalance) return true;
+		}
+	return false;
+};
 
 /** A drawn row ran out: at or below zero from above it, or down to its overage floor. */
 const drewRowDry = ({ decision }: { decision: DeductionDecision }): boolean => {
@@ -67,10 +95,13 @@ export const shouldDecideEffects = ({
 	command,
 	decision,
 	alwaysDecides,
+	lean = false,
 }: {
 	command: TrackCommand;
 	decision: DeductionDecision;
 	alwaysDecides: boolean;
+	/** Reads whether a row ran dry in plain numbers when it can. */
+	lean?: boolean;
 }): boolean => {
 	const { outcome } = decision;
 	return (
@@ -80,6 +111,7 @@ export const shouldDecideEffects = ({
 		outcome.rejected ||
 		outcome.limitType !== null ||
 		isBoundedByControls({ decision }) ||
-		drewRowDry({ decision })
+		((lean ? drewIntegerRowDry({ decision }) : null) ??
+			drewRowDry({ decision }))
 	);
 };

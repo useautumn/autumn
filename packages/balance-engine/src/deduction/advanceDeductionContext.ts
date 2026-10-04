@@ -39,6 +39,33 @@ const isBalanceIncrement = (change: RowChange): change is BalanceIncrement => {
 	);
 };
 
+const keysWithin = (record: object, allowed: readonly string[]): boolean => {
+	for (const key of Object.keys(record))
+		if (!allowed.includes(key)) return false;
+	return true;
+};
+
+/** `isBalanceIncrement` without the intermediate arrays. */
+const isLeanBalanceIncrement = (
+	change: RowChange,
+): change is BalanceIncrement => {
+	if (change.table !== "customerEntitlements" && change.table !== "rollovers")
+		return false;
+	if (change.op !== "increment" || change.guard) return false;
+	const counters = MOVED_COUNTERS[change.table];
+	if (!keysWithin(change.add, counters.add)) return false;
+	const entries = change.addEntries;
+	if (!entries) return true;
+	if (!keysWithin(entries, counters.entries)) return false;
+	const entities = (entries as { entities?: Record<string, object> }).entities;
+	if (!entities) return true;
+	for (const key of Object.keys(entities)) {
+		const entry = entities[key];
+		if (entry && !keysWithin(entry, counters.add)) return false;
+	}
+	return true;
+};
+
 const applyIncrements = <Row extends { id: string }>({
 	row,
 	changes,
@@ -64,11 +91,15 @@ const applyIncrements = <Row extends { id: string }>({
 export const advanceDeductionContext = ({
 	context,
 	changes,
+	lean = false,
 }: {
 	context: DeductionContext;
 	changes: RowChange[];
+	/** Checks the changes without allocating; the same answer. */
+	lean?: boolean;
 }): DeductionContext | null => {
-	if (!changes.every(isBalanceIncrement)) return null;
+	if (!changes.every(lean ? isLeanBalanceIncrement : isBalanceIncrement))
+		return null;
 	// A gate shares out the remaining balance, so it is resolved against the rows as they stood.
 	if (changes.length > 0 && context.allocationGates.size > 0) return null;
 	const increments = changes as BalanceIncrement[];
