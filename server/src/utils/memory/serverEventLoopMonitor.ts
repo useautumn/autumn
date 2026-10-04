@@ -3,6 +3,7 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 import {
 	STAGING_VARIANT_WINDOW_MS,
 	stagingVariantsBound,
+	variant,
 } from "@autumn/edge-config";
 import {
 	type ServerCpuSampler,
@@ -81,6 +82,7 @@ export const startServerEventLoopMonitor = ({
 	let windowStartedAt = performance.now();
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let stopped = false;
+	let phaseCpuArm = variant("server-phase-cpu");
 	drainFinishedRequestCount();
 	phaseCpuSampler?.startWindow();
 
@@ -105,12 +107,13 @@ export const startServerEventLoopMonitor = ({
 			if (stopped) return;
 			logger.info("Server event loop", {
 				event: "server.event_loop",
-				data: { ...data, cpuPhases },
+				data: { ...data, phaseCpuArm, cpuPhases },
 			});
 		} catch {
 			// Telemetry must never disturb the process it is measuring.
 		}
 		if (stopped) return;
+		phaseCpuArm = variant("server-phase-cpu");
 		phaseCpuSampler?.startWindow();
 		scheduleNext();
 	};

@@ -28,7 +28,7 @@ export function getServerCpuBackend(): ServerCpuBackend {
 		return performance.now();
 	}
 	function capture(run: () => Promise<void>) {
-		return profile(run, 1_000);
+		return profile(run, 50_000);
 	}
 	backend = { readThreadCpuNs, readProcessCpuUs, now, capture };
 	return backend;
