@@ -15,7 +15,13 @@ test("only the staging primary pins fork count and every initial/recycled worker
 	expect(boot).toMatch(
 		/if \(!stagingVariantsEnabled\([\s\S]*?return getServerForkCount\(\);/,
 	);
-	expect(boot).toContain('const forks = arm === "B" ? 6 : 4;');
+	expect(boot).toContain(
+		'if (arm === "B") process.env.SERVER_FORK_COUNT = "6";',
+	);
+	expect(boot).toMatch(
+		/process\.env\.SERVER_FORK_VARIANT_ARM = arm;\s*return getServerForkCount\(\);/,
+	);
+	expect(boot).not.toContain('const forks = arm === "B" ? 6 : 4;');
 	expect(boot.indexOf("return getServerForkCount();")).toBeLessThan(
 		boot.indexOf("process.env.SERVER_FORK_COUNT ="),
 	);
