@@ -6,14 +6,30 @@ import type { RingLayout } from "./ring.js";
  *  REQ  io → main  [u32 reqId][u32 metaLen][meta json][body]      meta = { m, u, h }
  *  RES  main → io  [u32 reqId][u16 status][u32 metaLen][meta json][body]   meta = { h }
  *
- * A frame the ring cannot carry (a body near the ring's size) travels by `postMessage` with the same ids.
+ * The hot frames (HOT, HOT_RES, FAIL) are laid out in hotProtocol.ts. A frame too big for its ring (over an
+ * eighth of it) travels by `postMessage` with the same ids.
  */
-export const FRAME = { REQ: 1, RES: 2 } as const;
+export const FRAME = { REQ: 1, RES: 2, HOT: 3, HOT_RES: 4, FAIL: 5 } as const;
 export const REQ_HEADER_BYTES = 8;
 export const RES_HEADER_BYTES = 10;
 
 export type RequestMeta = { m: string; u: string; h: [string, string][] };
 export type ResponseMeta = { h: [string, string][] };
+
+/** Slots of a lane's live counters: a Float64Array the worker alone writes and the main thread reads any time. */
+export const LANE_STAT = {
+	requests: 0,
+	ringFull: 1,
+	oversized: 2,
+	wakes: 3,
+	pending: 4,
+	hot: 5,
+	hotHeld: 6,
+	hotReleased: 7,
+	hotFailed: 8,
+	held: 9,
+} as const;
+export const LANE_STAT_SLOTS = Object.keys(LANE_STAT).length;
 
 export type IoWorkerInit = {
 	index: number;
@@ -24,8 +40,12 @@ export type IoWorkerInit = {
 	resultRing: RingLayout;
 	/** Rung by the I/O worker when it publishes commands; the main thread sleeps on it. */
 	commandBell: SharedArrayBuffer;
-	/** Rung by the main thread when it publishes results; this worker sleeps on it. */
+	/** Rung by the main thread when it publishes results or a commit position moves; this worker sleeps on it. */
 	resultBell: SharedArrayBuffer;
+	/** `LANE_STAT_SLOTS` float64 counters this worker keeps. */
+	stats: SharedArrayBuffer;
+	/** Serial-decide arm D: hot routes cross as HOT frames and their replies are held on these commit positions. */
+	hot?: { cells: SharedArrayBuffer; partitionCount: number };
 };
 
 /** Requests and replies too big for a ring frame. */
@@ -41,13 +61,14 @@ export type OversizedResponse = {
 	status: number;
 	meta: ResponseMeta;
 	body: ArrayBuffer;
+	/** A hot reply: held on its partition's commit position like a HOT_RES frame. */
+	hot?: { partition: number; seq: number };
 };
 
 export type IoWorkerMessage =
 	| { kind: "ready"; index: number; port: number }
 	| { kind: "stopped"; index: number }
 	| { kind: "error"; index: number; message: string }
-	| { kind: "stats"; index: number; stats: Record<string, number> }
 	| OversizedRequest;
 
 export type MainMessage = { kind: "stop" } | OversizedResponse;

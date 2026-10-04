@@ -2,13 +2,28 @@
  * The main thread's side of the I/O worker pool: spawns the workers, drains their command rings into
  * the worker's own `fetch` (the thin fast path and the Hono app, unchanged), and writes each
  * Response's bytes back to the worker that owns the connection. The main thread never accepts a socket.
+ *
+ * Under serial-decide arm D a HOT frame is decided here synchronously by the hot decider; its reply goes
+ * back with the sequence number the I/O worker holds it on, the worker is woken as commit positions move,
+ * and a failed append fails every held reply above the position on every lane. A request the decider
+ * declines takes the ordinary fetch path, rebuilt from the same bytes a REQ frame carries.
  */
 import type { AutumnLogger } from "@autumn/logging";
-import type { HotDecider } from "./hotProtocol.js";
+import { workerErrorOf } from "../http/handlers/errorHandler/workerErrorOf.js";
+import {
+	FAIL_HEADER_BYTES,
+	HOT_HEADER_BYTES,
+	HOT_RES_HEADER_BYTES,
+	type HotDecider,
+	type HotKind,
+	type HotOutcome,
+} from "./hotProtocol.js";
 import {
 	FRAME,
 	type IoWorkerInit,
 	type IoWorkerMessage,
+	LANE_STAT,
+	LANE_STAT_SLOTS,
 	type MainMessage,
 	type OversizedRequest,
 	REQ_HEADER_BYTES,
@@ -40,14 +55,48 @@ type Fetch = (request: Request) => Response | Promise<Response>;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const MAX_FRAMES_PER_DRAIN = 512;
+const JSON_CONTENT_TYPE: [string, string] = [
+	"content-type",
+	"application/json",
+];
+
+type HotPosition = { partition: number; seq: number };
+
+/** A frame bound for a lane's result ring, kept until the ring has room for it. */
+type ResultFrame =
+	| {
+			type: typeof FRAME.RES;
+			reqId: number;
+			status: number;
+			meta: string;
+			body: Uint8Array;
+	  }
+	| ({
+			type: typeof FRAME.HOT_RES;
+			reqId: number;
+			status: number;
+			meta: string;
+			body: Uint8Array;
+	  } & HotPosition)
+	| {
+			type: typeof FRAME.FAIL;
+			partition: number;
+			aboveSeq: number;
+			status: number;
+			body: Uint8Array;
+	  };
 
 type Lane = {
 	index: number;
 	worker: Worker;
 	commands: RingConsumer;
 	results: RingProducer;
+	resultBell: Doorbell;
+	stats: Float64Array;
+	/** Result frames in production order; a head the full ring cannot take yet holds the rest behind it. */
+	outbox: ResultFrame[];
+	retry: ReturnType<typeof setTimeout> | undefined;
 	dirty: boolean;
-	stats: Record<string, number>;
 };
 
 export function createIoWorkerPool({
@@ -66,8 +115,18 @@ export function createIoWorkerPool({
 }): IoWorkerPool {
 	if (!Number.isSafeInteger(config.workers) || config.workers < 1)
 		throw new RangeError("ioWorkers must be a positive integer");
+	if (
+		ctx.hot &&
+		ctx.hot.positions.cells.byteLength < ctx.hot.decider.partitionCount * 4
+	)
+		throw new RangeError(
+			"the position board has fewer cells than the hot decider's partitions",
+		);
 	const commandRingBytes = config.commandRingBytes ?? 4 << 20;
 	const resultRingBytes = config.resultRingBytes ?? 16 << 20;
+	// Like the command side: a frame over an eighth of the ring could need more contiguous room than the ring
+	// can ever free (a wrap costs the tail), and a frame the ring never takes would hold the lane's outbox for good.
+	const maxResultFrameBytes = resultRingBytes >>> 3;
 	const commandBell = new Doorbell();
 	const lanes: Lane[] = [];
 	const stats = {
@@ -76,6 +135,10 @@ export function createIoWorkerPool({
 		oversized: 0,
 		resultRingWaits: 0,
 		sleeps: 0,
+		hot: 0,
+		hotFallback: 0,
+		hotErrors: 0,
+		hotFailed: 0,
 	};
 	let stopping = false;
 	let failed = false;
@@ -107,39 +170,121 @@ export function createIoWorkerPool({
 		setImmediate(flushDirty);
 	}
 
-	function writeResult({
+	function frameBytes(frame: ResultFrame): number {
+		if (frame.type === FRAME.FAIL) return FAIL_HEADER_BYTES + frame.body.length;
+		const headerBytes =
+			frame.type === FRAME.RES ? RES_HEADER_BYTES : HOT_RES_HEADER_BYTES;
+		return headerBytes + frame.meta.length * 3 + frame.body.length;
+	}
+
+	/** Writes one frame to the lane's result ring; false when the ring has no room for it right now. */
+	function writeFrame({
+		lane,
+		frame,
+	}: {
+		lane: Lane;
+		frame: ResultFrame;
+	}): boolean {
+		const maxLength = frameBytes(frame);
+		const at = lane.results.claim({ type: frame.type, maxLength });
+		if (at < 0) return false;
+		const view = lane.results.payloadView;
+		const payload = lane.results.payload;
+		if (frame.type === FRAME.FAIL) {
+			view.setUint16(at, frame.partition, true);
+			view.setUint32(at + 2, frame.aboveSeq, true);
+			view.setUint16(at + 6, frame.status, true);
+			payload.set(frame.body, at + FAIL_HEADER_BYTES);
+			lane.results.publish({ length: FAIL_HEADER_BYTES + frame.body.length });
+		} else {
+			const headerBytes =
+				frame.type === FRAME.RES ? RES_HEADER_BYTES : HOT_RES_HEADER_BYTES;
+			view.setUint32(at, frame.reqId, true);
+			view.setUint16(at + 4, frame.status, true);
+			if (frame.type === FRAME.HOT_RES) {
+				view.setUint16(at + 6, frame.partition, true);
+				view.setUint32(at + 8, frame.seq, true);
+			}
+			const { written } = encoder.encodeInto(
+				frame.meta,
+				payload.subarray(at + headerBytes, at + maxLength - frame.body.length),
+			);
+			view.setUint32(at + headerBytes - 4, written, true);
+			payload.set(frame.body, at + headerBytes + written);
+			lane.results.publish({
+				length: headerBytes + written + frame.body.length,
+			});
+		}
+		lane.dirty = true;
+		scheduleFlush();
+		return true;
+	}
+
+	function pump(lane: Lane): void {
+		while (lane.outbox.length > 0) {
+			if (writeFrame({ lane, frame: lane.outbox[0] })) {
+				lane.outbox.shift();
+				continue;
+			}
+			if (stopping) return;
+			// A full result ring means the worker is behind on reads; it drains continuously, so wait a turn.
+			stats.resultRingWaits++;
+			flushDirty();
+			lane.retry = setTimeout(() => {
+				lane.retry = undefined;
+				pump(lane);
+			}, 1);
+			return;
+		}
+	}
+
+	/** Queues a frame on the lane's result ring behind everything queued before it. */
+	function send({ lane, frame }: { lane: Lane; frame: ResultFrame }): void {
+		lane.outbox.push(frame);
+		if (lane.outbox.length === 1) pump(lane);
+	}
+
+	function reply({
 		lane,
 		reqId,
 		status,
-		meta,
+		headers,
 		body,
+		hot,
 	}: {
 		lane: Lane;
 		reqId: number;
 		status: number;
-		meta: string;
+		headers: [string, string][];
 		body: Uint8Array;
-	}): boolean {
-		const maxLength = RES_HEADER_BYTES + meta.length * 3 + body.length;
-		if (maxLength > lane.results.maxFrameBytes) return false;
-		const at = lane.results.claim({ type: FRAME.RES, maxLength });
-		if (at < 0) return false;
-		const view = lane.results.payloadView;
-		view.setUint32(at, reqId, true);
-		view.setUint16(at + 4, status, true);
-		const { written } = encoder.encodeInto(
-			meta,
-			lane.results.payload.subarray(
-				at + RES_HEADER_BYTES,
-				at + maxLength - body.length,
-			),
+		hot?: HotPosition;
+	}): void {
+		const meta = JSON.stringify({ h: headers } satisfies ResponseMeta);
+		const frame: ResultFrame = hot
+			? { type: FRAME.HOT_RES, reqId, status, meta, body, ...hot }
+			: { type: FRAME.RES, reqId, status, meta, body };
+		if (frameBytes(frame) <= maxResultFrameBytes) {
+			send({ lane, frame });
+			return;
+		}
+		// Transferred, so the bytes must be a whole buffer of their own.
+		const buffer =
+			body.buffer instanceof ArrayBuffer &&
+			body.byteOffset === 0 &&
+			body.byteLength === body.buffer.byteLength
+				? body.buffer
+				: body.slice().buffer;
+		lane.worker.postMessage(
+			{
+				kind: "response",
+				reqId,
+				status,
+				meta: { h: headers },
+				body: buffer,
+				hot,
+			} satisfies MainMessage,
+			[buffer],
 		);
-		view.setUint32(at + 6, written, true);
-		lane.results.payload.set(body, at + RES_HEADER_BYTES + written);
-		lane.results.publish({ length: RES_HEADER_BYTES + written + body.length });
-		lane.dirty = true;
-		scheduleFlush();
-		return true;
 	}
 
 	async function answer({
@@ -156,31 +301,7 @@ export function createIoWorkerPool({
 		response.headers.forEach((value, name) => {
 			headers.push([name, value]);
 		});
-		const meta = JSON.stringify({ h: headers } satisfies ResponseMeta);
-		// A full result ring means the worker is behind on reads; it drains continuously, so wait a turn.
-		for (let attempt = 0; ; attempt++) {
-			if (writeResult({ lane, reqId, status: response.status, meta, body }))
-				return;
-			if (
-				RES_HEADER_BYTES + meta.length * 3 + body.length >
-				lane.results.maxFrameBytes
-			) {
-				lane.worker.postMessage(
-					{
-						kind: "response",
-						reqId,
-						status: response.status,
-						meta: { h: headers },
-						body: body.buffer,
-					} satisfies MainMessage,
-					[body.buffer],
-				);
-				return;
-			}
-			stats.resultRingWaits++;
-			flushDirty();
-			await Bun.sleep(attempt < 10 ? 1 : 5);
-		}
+		reply({ lane, reqId, status: response.status, headers, body });
 	}
 
 	function requestOf({
@@ -225,14 +346,127 @@ export function createIoWorkerPool({
 		}
 	}
 
+	function answerHot({
+		lane,
+		reqId,
+		outcome,
+	}: {
+		lane: Lane;
+		reqId: number;
+		outcome: HotOutcome;
+	}): void {
+		try {
+			reply({
+				lane,
+				reqId,
+				status: outcome.status,
+				headers: [JSON_CONTENT_TYPE, ...(outcome.headers ?? [])],
+				body:
+					typeof outcome.body === "string"
+						? encoder.encode(outcome.body)
+						: outcome.body,
+				hot: { partition: outcome.partition, seq: outcome.seq },
+			});
+		} catch (cause) {
+			fatal({ cause });
+		}
+	}
+
+	/** A decider failure is answered like a fetch failure: a bare 500, released at once. */
+	function answerHotFailure({
+		lane,
+		reqId,
+		cause,
+	}: {
+		lane: Lane;
+		reqId: number;
+		cause: unknown;
+	}): void {
+		stats.hotErrors++;
+		ctx.logger.error({ error: cause }, "Hot decide failed on the main thread");
+		try {
+			reply({ lane, reqId, status: 500, headers: [], body: new Uint8Array(0) });
+		} catch (cause) {
+			fatal({ cause });
+		}
+	}
+
+	function decideHot({
+		lane,
+		reqId,
+		kind,
+		budgetMs,
+		deadlineAt,
+		meta,
+		body,
+	}: {
+		lane: Lane;
+		reqId: number;
+		kind: HotKind;
+		budgetMs: number;
+		deadlineAt: number;
+		meta: RequestMeta;
+		body: Uint8Array;
+	}): void {
+		if (!ctx.hot)
+			throw new Error("I/O pool: a HOT frame without a hot decider");
+		stats.hot++;
+		let outcome: HotOutcome | Promise<HotOutcome> | null;
+		try {
+			outcome = ctx.hot.decider.decide({
+				kind,
+				body,
+				budgetMs: budgetMs > 0 ? budgetMs : undefined,
+				deadlineAt: deadlineAt > 0 ? deadlineAt : undefined,
+			});
+		} catch (cause) {
+			answerHotFailure({ lane, reqId, cause });
+			return;
+		}
+		if (outcome === null) {
+			stats.hotFallback++;
+			void serve({ lane, reqId, request: requestOf({ meta, body }) });
+			return;
+		}
+		if (outcome instanceof Promise) {
+			void outcome.then(
+				(settled) => answerHot({ lane, reqId, outcome: settled }),
+				(cause) => answerHotFailure({ lane, reqId, cause }),
+			);
+			return;
+		}
+		answerHot({ lane, reqId, outcome });
+	}
+
 	function drainLane(lane: Lane): number {
 		let n = 0;
 		while (n < MAX_FRAMES_PER_DRAIN) {
 			const frame = lane.commands.next();
 			if (!frame) break;
+			const view = lane.commands.payloadView;
+			if (frame.type === FRAME.HOT) {
+				const reqId = view.getUint32(frame.offset, true);
+				const kind = view.getUint8(frame.offset + 4) as HotKind;
+				const budgetMs = view.getUint32(frame.offset + 5, true);
+				const deadlineAt = view.getFloat64(frame.offset + 9, true);
+				const metaLength = view.getUint32(frame.offset + 17, true);
+				const meta = JSON.parse(
+					decoder.decode(
+						frame.bytes.subarray(
+							HOT_HEADER_BYTES,
+							HOT_HEADER_BYTES + metaLength,
+						),
+					),
+				) as RequestMeta;
+				// The decider keeps the body, so it is copied out of the ring before the slot is released.
+				const body = frame.bytes.slice(HOT_HEADER_BYTES + metaLength);
+				lane.commands.advance();
+				n++;
+				decideHot({ lane, reqId, kind, budgetMs, deadlineAt, meta, body });
+				continue;
+			}
 			if (frame.type !== FRAME.REQ)
 				throw new Error(`I/O pool: unexpected frame ${frame.type}`);
-			const view = lane.commands.payloadView;
 			const reqId = view.getUint32(frame.offset, true);
 			const metaLength = view.getUint32(frame.offset + 4, true);
 			const meta = JSON.parse(
@@ -284,6 +518,26 @@ export function createIoWorkerPool({
 		});
 	}
 
+	/** Every lane learns that nothing above `seq` reached the log; the worker answers its held replies above it. */
+	function failHeldAbove({
+		partition,
+		seq,
+		cause,
+	}: {
+		partition: number;
+		seq: number;
+		cause: unknown;
+	}): void {
+		stats.hotFailed++;
+		const { status, error } = workerErrorOf({ cause });
+		const body = encoder.encode(JSON.stringify({ error }));
+		for (const lane of lanes)
+			send({
+				lane,
+				frame: { type: FRAME.FAIL, partition, aboveSeq: seq, status, body },
+			});
+	}
+
 	function spawn({ index }: { index: number }): {
 		lane: Lane;
 		ready: Promise<void>;
@@ -291,6 +545,7 @@ export function createIoWorkerPool({
 		const commandRing = allocateRing({ capacity: commandRingBytes });
 		const resultRing = allocateRing({ capacity: resultRingBytes });
 		const resultBell = new Doorbell();
+		const laneStats = new SharedArrayBuffer(LANE_STAT_SLOTS * 8);
 		const worker = new Worker(new URL("./ioWorker.ts", import.meta.url).href, {
 			name: `balance-worker-io-${index}`,
 		});
@@ -299,8 +554,11 @@ export function createIoWorkerPool({
 			worker,
 			commands: new RingConsumer(commandRing),
 			results: new RingProducer(resultRing, resultBell),
+			resultBell,
+			stats: new Float64Array(laneStats),
+			outbox: [],
+			retry: undefined,
 			dirty: false,
-			stats: {},
 		};
 		const ready = Promise.withResolvers<void>();
 		let listening = false;
@@ -317,9 +575,6 @@ export function createIoWorkerPool({
 							`I/O worker ${index} could not listen: ${message.message}`,
 						),
 					);
-					return;
-				case "stats":
-					lane.stats = message.stats;
 					return;
 				case "request":
 					onOversized({ lane, message });
@@ -350,6 +605,11 @@ export function createIoWorkerPool({
 			resultRing,
 			commandBell: commandBell.sab,
 			resultBell: resultBell.sab,
+			stats: laneStats,
+			hot: ctx.hot && {
+				cells: ctx.hot.positions.cells,
+				partitionCount: ctx.hot.decider.partitionCount,
+			},
 		};
 		worker.postMessage(init);
 		return { lane, ready: ready.promise };
@@ -369,8 +629,19 @@ export function createIoWorkerPool({
 		}
 		// A frame the loop cannot read means a broken ring; nothing downstream could recover from that.
 		drainLoop().catch((cause) => fatal({ cause }));
+		const unsubscribe = ctx.hot
+			? [
+					// The worker reads the position itself; the bell only wakes it to look.
+					ctx.hot.positions.onCommitted(() => {
+						for (const lane of lanes) lane.resultBell.ring();
+					}),
+					ctx.hot.positions.onFailedAbove(failHeldAbove),
+				]
+			: [];
 		async function stop(): Promise<void> {
 			stopping = true;
+			for (const off of unsubscribe) off();
+			for (const lane of lanes) clearTimeout(lane.retry);
 			await Promise.all(
 				lanes.map(
 					(lane) =>
@@ -404,7 +675,12 @@ export function createIoWorkerPool({
 
 	function readStats(): Record<string, Record<string, number>> {
 		const out: Record<string, Record<string, number>> = { main: { ...stats } };
-		for (const lane of lanes) out[`io${lane.index}`] = lane.stats;
+		for (const lane of lanes) {
+			const counters: Record<string, number> = {};
+			for (const [name, slot] of Object.entries(LANE_STAT))
+				counters[name] = lane.stats[slot];
+			out[`io${lane.index}`] = counters;
+		}
 		return out;
 	}
 
