@@ -1,9 +1,15 @@
-import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import {
+	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
+} from "@autumn/balance-engine";
 import { enqueueMutation, pendingKeyOf } from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type { LeanDecision, LeanSubmission } from "../types/mutation.js";
-import type { PartitionWriterScope } from "../types/partitionWriter.js";
+import type {
+	LeanBlocker,
+	PartitionWriterScope,
+} from "../types/partitionWriter.js";
 import {
 	PartitionWriterCommandConflictError,
 	PartitionWriterDuplicateCommandError,
@@ -122,4 +128,41 @@ function hasClassicCommandInFlight({
 	for (const pending of customerPending)
 		if (pending.settlement !== null) return true;
 	return false;
+}
+
+/** Why `decideLean` would not write this command itself: a classic write owns the customer's order, or the retry's reply is another write's. */
+export function leanBlockerOf({
+	scope,
+	identity,
+	commandId,
+}: {
+	scope: PartitionWriterScope;
+	identity: MeteringIdentity;
+	commandId: string;
+}): LeanBlocker | null {
+	const customerKey = meteringIdentityToPartitionKey({ identity });
+	if (hasClassicCommandInFlight({ scope, customerKey }))
+		return "classic_in_flight";
+	if (scope.state.pendingByKey.has(pendingKeyOf({ customerKey, commandId })))
+		return "retry_in_flight";
+	return null;
+}
+
+/** Every lean write `decide` enqueues shares one group, and `takeBatch` keeps a group in one append. */
+export function decideLeanGroup<Result>({
+	scope,
+	decide,
+}: {
+	scope: PartitionWriterScope;
+	decide: () => Result;
+}): Result {
+	const { state } = scope;
+	if (state.leanGroup !== null) return decide();
+	state.lastLeanGroup += 1;
+	state.leanGroup = state.lastLeanGroup;
+	try {
+		return decide();
+	} finally {
+		state.leanGroup = null;
+	}
 }

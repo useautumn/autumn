@@ -650,7 +650,28 @@ function takeBatch({
 		bytes += pending.encodedBytes;
 		count++;
 	}
-	return state.queue.splice(0, count);
+	return state.queue.splice(
+		0,
+		keepLeanGroupWhole({ queue: state.queue, count }),
+	);
+}
+
+/** A lean group never straddles two appends: cut before it, or take all of it when it leads the batch. */
+function keepLeanGroupWhole({
+	queue,
+	count,
+}: {
+	queue: PendingMutation[];
+	count: number;
+}): number {
+	const group = queue[count - 1]?.leanGroup;
+	if (group === undefined || queue[count]?.leanGroup !== group) return count;
+	let start = count - 1;
+	while (start > 0 && queue[start - 1]?.leanGroup === group) start--;
+	if (start > 0) return start;
+	let end = count;
+	while (queue[end]?.leanGroup === group) end++;
+	return end;
 }
 
 function mutationOf(pending: PendingMutation): MeteringRecord {

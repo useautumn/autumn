@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { readCpuCounters } from "../../../src/logging/eventLoopStalls/cpuCounters.js";
+import {
+	cpuWindowOf,
+	readCpuCounters,
+} from "../../../src/logging/eventLoopStalls/cpuCounters.js";
 
 const PROC_STAT = `cpu  4705 150 1120 16250 520 30 45 90 7 0
 cpu0 4705 150 1120 16250 520 30 45 90 7 0
@@ -20,7 +23,26 @@ describe("cpu counters", () => {
 			processMicros: 500,
 			host: { stealTicks: 90, iowaitTicks: 520, totalTicks: 22_910 },
 			throttledMicros: null,
+			mainThreadMicros: null,
 		});
+	});
+
+	test("the JS thread's own time comes from its task stat, apart from GC helpers and worker threads", () => {
+		const stat =
+			"4242 (bun worker) S 1 4242 4242 0 -1 4194304 794 0 166 0 1234 56 0 0 20 0 9 0 64";
+		const counters = readCpuCounters({
+			readFile: readerOf({
+				files: { [`/proc/self/task/${process.pid}/stat`]: stat },
+			}),
+			processUsage: () => ({ user: 0, system: 0 }),
+		});
+		expect(counters.mainThreadMicros).toBe((1234 + 56) * 10_000);
+		const window = cpuWindowOf({
+			previous: { ...counters, mainThreadMicros: 0 },
+			current: { ...counters, mainThreadMicros: 6_500_000 },
+			windowMs: 10_000,
+		});
+		expect(window.mainCpuPct).toBe(65);
 	});
 
 	test("throttling comes from cgroup v2, falling back to v1 in nanoseconds", () => {
@@ -58,6 +80,7 @@ describe("cpu counters", () => {
 			processMicros: 15,
 			host: null,
 			throttledMicros: null,
+			mainThreadMicros: null,
 		});
 	});
 });

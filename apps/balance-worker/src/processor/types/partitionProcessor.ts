@@ -34,6 +34,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { HotCheckOutcome } from "../commands/checkHot.js";
+import type { HotTrackBatchOutcome } from "../commands/trackBatchHot.js";
 import type { HotTrackOutcome } from "../commands/trackHot.js";
 import type { TrackRunCounters, TrackRuns } from "../runs/createTrackRuns.js";
 import type {
@@ -63,6 +64,8 @@ export type PartitionProcessor = {
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
 	/** Serial-decide arm D: a sync track decided and answered without a settlement; null falls back to `track`. */
 	trackHot(params: { command: TrackCommand }): HotTrackOutcome | null;
+	/** Serial-decide arm D: a track batch decided whole on the hot path, or refused whole for `track` per command. */
+	trackBatchHot(params: { commands: TrackCommand[] }): HotTrackBatchOutcome;
 	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */
 	decideTrack(params: {
 		command: TrackCommand;

@@ -60,6 +60,10 @@ import {
 	createRemoteKafkaProducers,
 	type RemoteKafkaProducers,
 } from "../serialDecide/createRemoteKafkaProducers.js";
+import type {
+	HotDecider,
+	HotDeciderStats,
+} from "../serialDecide/hotProtocol.js";
 import { listenWithWorkers } from "../serialDecide/listenWithWorkers.js";
 import { createPositionBoard } from "../serialDecide/positionBoard.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
@@ -292,6 +296,8 @@ export async function createBalanceWorker({
 			},
 		});
 		const requestLatencies = createRequestLatencies();
+		// Set once the arm-D pool starts: the event-loop report drains its counts every window.
+		let hotDecider: HotDecider | undefined;
 		const appContext = {
 			ownership: partitions,
 			partitionResolver: resources.partitionResolver,
@@ -323,23 +329,19 @@ export async function createBalanceWorker({
 			function stopAfterIoPoolFailure({ cause }: { cause: unknown }): void {
 				dependencies.onServiceStopped?.({ cause, scope: "io-pool" });
 			}
+			if (mode.arm === "D")
+				hotDecider = createHotDecider({
+					ctx: appContext,
+					config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
+				});
 			const pool = createIoWorkerPool({
 				ctx: {
 					fetch,
 					logger: dependencies.logger,
 					onFatal: stopAfterIoPoolFailure,
-					hot:
-						mode.arm === "D"
-							? {
-									decider: createHotDecider({
-										ctx: appContext,
-										config: {
-											partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
-										},
-									}),
-									positions: positionBoard,
-								}
-							: undefined,
+					hot: hotDecider
+						? { decider: hotDecider, positions: positionBoard }
+						: undefined,
 				},
 				config: {
 					hostname: address.hostname,
@@ -454,12 +456,16 @@ export async function createBalanceWorker({
 			if (!boot) return window;
 			return { ...window, ...boot };
 		}
+		function drainHotStats(): HotDeciderStats | null {
+			return hotDecider?.drainStats?.() ?? null;
+		}
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,
 				recorder: syncSections,
 				variants: variantsWithBootArms,
 				latencies: requestLatencies.drain,
+				hot: drainHotStats,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,

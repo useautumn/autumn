@@ -15,11 +15,13 @@ function createFixture({
 	reportEveryMs = 1_000,
 	cpu = () => idleCpu,
 	variants,
+	hot,
 	startAt = 1_000,
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
 	variants?: () => Readonly<Record<string, string>> | null;
+	hot?: () => Readonly<Record<string, unknown>> | null;
 	startAt?: number;
 } = {}) {
 	let clock = startAt;
@@ -44,6 +46,7 @@ function createFixture({
 			cpu,
 			wallNow: now,
 			variants,
+			hot,
 			schedule: ({ run }) => {
 				tick = run;
 				return () => {
@@ -299,4 +302,40 @@ test("outside a staging experiment no report carries variants", () => {
 	monitor.start();
 	elapse({ elapsedMs: 1_000 });
 	expect(eventLoopReports(infos)[0]?.data).not.toHaveProperty("variants");
+});
+
+test("under arm D each report carries what the hot decider answered and declined in its window, and the decide thread's own CPU", () => {
+	let window = 0;
+	const samples: CpuCounters[] = [
+		{
+			processMicros: 0,
+			host: null,
+			throttledMicros: null,
+			mainThreadMicros: 0,
+		},
+		{
+			processMicros: 900_000,
+			host: null,
+			throttledMicros: null,
+			mainThreadMicros: 550_000,
+		},
+	];
+	const { monitor, infos, elapse } = createFixture({
+		cpu: () => samples.shift() ?? idleCpu,
+		hot: () => ({ trackBatches: ++window, fallbackBatches: { lock: 1 } }),
+	});
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+	expect(eventLoopReports(infos)[0]?.data).toMatchObject({
+		cpuPct: 90,
+		mainCpuPct: 55,
+		hot: { trackBatches: 1, fallbackBatches: { lock: 1 } },
+	});
+});
+
+test("without a hot decider no report carries hot counts", () => {
+	const { monitor, infos, elapse } = createFixture({ hot: () => null });
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+	expect(eventLoopReports(infos)[0]?.data).not.toHaveProperty("hot");
 });

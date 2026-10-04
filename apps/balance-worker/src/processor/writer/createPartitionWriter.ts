@@ -8,7 +8,11 @@ import {
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
-import { decideLean as decideLeanMutation } from "./actions/decideLean.js";
+import {
+	decideLean as decideLeanMutation,
+	decideLeanGroup as decideLeanMutationGroup,
+	leanBlockerOf,
+} from "./actions/decideLean.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
@@ -99,6 +103,14 @@ export function createPartitionWriter({
 		});
 	}
 
+	function decideLeanGroup<Result>(decide: () => Result): Result {
+		return decideLeanMutationGroup({ scope, decide });
+	}
+
+	function leanBlocker(params: Parameters<PartitionWriter["leanBlocker"]>[0]) {
+		return leanBlockerOf({ scope, ...params });
+	}
+
 	function decideRun<Reply>({
 		identity,
 		submissions,
@@ -172,6 +184,8 @@ export function createPartitionWriter({
 		hurryStore,
 		decide,
 		decideLean,
+		decideLeanGroup,
+		leanBlocker,
 		decideRun,
 		log,
 		flushDeferredLogs,

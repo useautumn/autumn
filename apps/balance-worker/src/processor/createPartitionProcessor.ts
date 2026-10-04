@@ -43,6 +43,7 @@ import {
 	decideTrack as decideTrackPartition,
 	track as trackPartition,
 } from "./commands/track.js";
+import { trackBatchHot as trackBatchHotPartition } from "./commands/trackBatchHot.js";
 import { trackHot as trackHotPartition } from "./commands/trackHot.js";
 import {
 	decideUpdateBalance as decideUpdateBalancePartition,
@@ -147,6 +148,10 @@ function createProcessor({
 
 	function trackHot({ command }: { command: TrackCommand }) {
 		return trackHotPartition({ scope, command });
+	}
+
+	function trackBatchHot({ commands }: { commands: TrackCommand[] }) {
+		return trackBatchHotPartition({ scope, commands });
 	}
 
 	function decideTrack({ command }: { command: TrackCommand }) {
@@ -411,6 +416,7 @@ function createProcessor({
 		}),
 		track,
 		trackHot,
+		trackBatchHot,
 		decideTrack,
 		check,
 		checkHot,

@@ -52,8 +52,21 @@ export type HotOutcome = {
  * command in flight), in which case the pool answers it through the ordinary fetch path. Synchronous on
  * purpose: a reply produced after its partition failed would be held on a number the log already gave up.
  */
+/** What the decider answered and declined since the last drain; batch fallbacks are counted by reason. */
+export type HotDeciderStats = {
+	tracks: number;
+	checks: number;
+	trackBatches: number;
+	batchItems: number;
+	fallbackTracks: number;
+	fallbackChecks: number;
+	fallbackBatches: Record<string, number>;
+};
+
 export type HotDecider = {
 	decide(request: HotRequest): HotOutcome | null;
+	/** Counts since the last call; the event-loop report drains it once per window. */
+	drainStats?(): HotDeciderStats;
 	/** Partition count, so the pool can size the position cells. */
 	partitionCount: number;
 };

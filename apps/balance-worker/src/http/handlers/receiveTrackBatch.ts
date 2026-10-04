@@ -114,7 +114,7 @@ async function runTrack({
 }
 
 /** Failures are counted by code; only one unexpected cause is kept, so a bad batch costs one stack. */
-function recordBatch({
+export function recordBatch({
 	requestLog,
 	route,
 	commands,
@@ -124,7 +124,7 @@ function recordBatch({
 	requestLog: BalanceWorkerRequestLog;
 	route: PartitionRoute;
 	commands: unknown[];
-	results: TrackBatchItemResult[];
+	results: ({ ok: true } | Extract<TrackBatchItemResult, { ok: false }>)[];
 	causes: unknown[];
 }): void {
 	const batch: BalanceWorkerBatchLog = {

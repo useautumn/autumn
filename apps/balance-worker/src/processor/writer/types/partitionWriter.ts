@@ -39,6 +39,13 @@ export type PartitionWriter = {
 	decideLean<Reply>(
 		submission: LeanSubmission<Reply>,
 	): LeanDecision<Reply> | null;
+	/** Runs `decide` with every lean write it enqueues kept in one append, so they all commit or none does. */
+	decideLeanGroup<Result>(decide: () => Result): Result;
+	/** Why a lean decide could not answer this command alone: the customer's order or the retry's reply belongs to another write. */
+	leanBlocker(params: {
+		identity: MeteringIdentity;
+		commandId: string;
+	}): LeanBlocker | null;
 	/** One subject's submissions decided in order in one critical section, as consecutive `decide`s would. */
 	decideRun<Reply>(params: {
 		identity: MeteringIdentity;
@@ -185,6 +192,8 @@ export type PendingSettlement = {
 	reject(params: { error: unknown }): void;
 };
 
+export type LeanBlocker = "classic_in_flight" | "retry_in_flight";
+
 export type PendingMutation = {
 	pendingKey: string;
 	customerKey: string;
@@ -205,6 +214,8 @@ export type PendingMutation = {
 	settlement: PendingSettlement | null;
 	/** A lean write's reply, kept for a retry while it is in flight. */
 	replyBody?: string;
+	/** Lean writes of one group never split across appends (`decideLeanGroup`). */
+	leanGroup?: number;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
@@ -226,6 +237,9 @@ export type PartitionWriterState = {
 	storedSeq: number;
 	/** Callers waiting for the store to reach a sequence number; lean writes have no settlement to wait on. */
 	storeWaiters: StoreWaiter[];
+	/** The open lean group, if any; numbers only ever grow. */
+	leanGroup: number | null;
+	lastLeanGroup: number;
 	/** Appends sent and not yet answered, oldest first; always settled in this order. */
 	inFlight: InFlightAppend[];
 	/** Set while the loop idles with room in the pipe; an enqueue or an answered append rings it. */

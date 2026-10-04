@@ -352,4 +352,45 @@ describe("serial-decide arm D end to end", () => {
 		);
 		expect(heldOnLanes()).toBe(0);
 	});
+
+	test("a track batch through the I/O workers is held until its one append is acknowledged, then answered per command", async () => {
+		// The owner before went into recovery; a rebuilt one serves the customer.
+		current.processor.dispose();
+		current = await owner({ board });
+		const before = committed.length;
+		const statsBefore = pool.readStats().main;
+		current.gate.hold();
+		const reply = watch(
+			fetch(`http://127.0.0.1:${port}/v1/track-batch`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					route,
+					commands: ["cmd_b1", "cmd_b2"].map((commandId) =>
+						createTrackCommand({ identity: customer, commandId, value: 1 }),
+					),
+				}),
+			}),
+		);
+		await until(() => heldOnLanes() === 1, "the batch reply to be held");
+		await Bun.sleep(50);
+		expect(reply.settled).toBe(false);
+		expect(pool.readStats().main).toMatchObject({
+			hot: statsBefore.hot + 1,
+			hotFallback: statsBefore.hotFallback,
+		});
+		current.gate.open();
+		await until(() => reply.settled, "the batch reply to be released");
+		const response = reply.response as Response;
+		expect(response.status).toBe(200);
+		const { results } = (await response.json()) as {
+			results: { ok: boolean; reply: { result: { status: string } } }[];
+		};
+		expect(results.map((result) => result.reply.result.status)).toEqual([
+			"applied",
+			"applied",
+		]);
+		expect(committed).toHaveLength(before + 1);
+		expect(heldOnLanes()).toBe(0);
+	});
 });

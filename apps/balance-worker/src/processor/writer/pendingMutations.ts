@@ -43,6 +43,8 @@ export function createPartitionWriterState({
 		commitPos: start?.commitPos ?? 0,
 		storedSeq: 0,
 		storeWaiters: [],
+		leanGroup: null,
+		lastLeanGroup: 0,
 		inFlight: [],
 		pipeWake: null,
 		unapplied: [],
@@ -247,6 +249,7 @@ export function enqueueMutation({
 		encodedBytes,
 		defersCommit,
 		queuedAt: writerNowOf({ scope }),
+		...(lean && state.leanGroup !== null && { leanGroup: state.leanGroup }),
 	};
 	if (projects)
 		projectPending({

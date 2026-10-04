@@ -48,6 +48,8 @@ export function createEventLoopStallMonitor({
 		variants?: () => Readonly<Record<string, string>> | null;
 		/** The window's request latency percentiles; drained once per report. */
 		latencies?: () => LatencyWindow;
+		/** Serial-decide arm D: what the hot decider answered and declined this window; drained once per report. */
+		hot?: () => Readonly<Record<string, unknown>> | null;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
@@ -134,6 +136,7 @@ export function createEventLoopStallMonitor({
 		);
 		const windowMs = round(tickedAt - lastReportAt);
 		const latencies = ctx.latencies?.() ?? {};
+		const hot = ctx.hot?.() ?? null;
 		const currentCpu = cpu();
 		const cpuWindow = lastCpu
 			? cpuWindowOf({ previous: lastCpu, current: currentCpu, windowMs })
@@ -153,6 +156,7 @@ export function createEventLoopStallMonitor({
 					...(windowVariants && { variants: windowVariants }),
 					...cpuWindow,
 					...latencies,
+					...(hot && { hot }),
 					sections,
 				},
 			},

@@ -19,12 +19,39 @@ export type HotTrackOutcome = {
 	seq: number;
 };
 
+/** Why a track cannot be decided synchronously here; the ordinary path's ensure or queue handles it. */
+export type HotTrackRefusal =
+	| "lock"
+	| "track_run"
+	| "not_resident"
+	| "reset_due";
+
+/**
+ * A lock needs store durability, tracks queued in a run decide in turn behind it, and rows not resident or
+ * a reset due need the asynchronous ensure first.
+ */
+export function hotTrackRefusalOf({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+}): HotTrackRefusal | null {
+	if (command.lock) return "lock";
+	const { identity } = command;
+	if (scope.trackRuns?.whenDecided({ identity })) return "track_run";
+	const resident = scope.ctx.writer.readFreshestState({ identity });
+	if (!resident) return "not_resident";
+	if (resetMayBeDue({ state: resident, asOf: command.occurredAt }))
+		return "reset_due";
+	return null;
+}
+
 /**
  * The hot track (serial-decide arm D): decided synchronously against a resident, current subject with
  * the writer's lean decide, the reply built here and released by commit position. Null hands the
- * command to the ordinary path: a lock (store durability), a subject with tracks queued in a run, rows
- * not resident or a reset due (the ensure that follows is asynchronous), or a classic command of the
- * customer in flight. Errors are the same ones `track` raises; the caller renders them as it does there.
+ * command to the ordinary path: any `hotTrackRefusalOf` reason, or a classic command of the customer in
+ * flight. Errors are the same ones `track` raises; the caller renders them as it does there.
  */
 export function trackHot({
 	scope,
@@ -33,13 +60,21 @@ export function trackHot({
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
 }): HotTrackOutcome | null {
-	if (command.lock) return null;
-	const { identity } = command;
-	if (scope.trackRuns?.whenDecided({ identity })) return null;
-	const resident = scope.ctx.writer.readFreshestState({ identity });
-	if (!resident || resetMayBeDue({ state: resident, asOf: command.occurredAt }))
-		return null;
-	const customerKey = meteringIdentityToPartitionKey({ identity });
+	if (hotTrackRefusalOf({ scope, command })) return null;
+	return decideTrackLean({ scope, command });
+}
+
+/** The lean decide itself, for a command already cleared by `hotTrackRefusalOf`. */
+export function decideTrackLean({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+}): HotTrackOutcome | null {
+	const customerKey = meteringIdentityToPartitionKey({
+		identity: command.identity,
+	});
 	const decidedAgainst: DecidedAgainst = {};
 	let reply: TrackReply | undefined;
 	const decision = scope.ctx.writer.decideLean<never>({
