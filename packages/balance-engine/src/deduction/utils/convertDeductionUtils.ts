@@ -1,5 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { RowChange } from "../../models/mutation/rowChange.js";
+import { isExactInteger } from "../../utils/numberUtils/exactIntegerUtils.js";
 import type { DeductionContext } from "../types/deductionContext.js";
 import type { DeductionDelta } from "../types/deductionDelta.js";
 import type { DeductionSelection } from "../types/deductionRequest.js";
@@ -21,6 +22,20 @@ const deltasOn = ({
 
 const sumOf = (values: number[]): Decimal =>
 	values.reduce((total, value) => total.plus(value), new Decimal(0));
+
+/** `sumOf(values).toNumber()`, in plain numbers when every value is an exact integer. */
+const sumToNumber = (values: number[]): number => {
+	if (!values.every(isExactInteger)) return sumOf(values).toNumber();
+	let total = 0;
+	for (const value of values) total += value;
+	return total;
+};
+
+/** The sum, or undefined when it nets to zero. */
+const nonZeroSum = (values: number[]): number | undefined => {
+	const total = sumToNumber(values);
+	return total === 0 ? undefined : total;
+};
 
 /** The row's balance as the buckets so far have left it: stored plus every delta on it. */
 export const deductionRowToCurrentBalance = ({
@@ -89,9 +104,6 @@ const sumByEntityKey = ({
 			.map(([key, total]) => [key, total.toNumber()]),
 	);
 };
-
-const nonZero = (value: Decimal): number | undefined =>
-	value.isZero() ? undefined : value.toNumber();
 
 const definedEntries = <Value>(record: Record<string, Value | undefined>) =>
 	Object.fromEntries(
@@ -172,12 +184,10 @@ export const deltasToRowChanges = ({
 			id,
 			deltas,
 		});
-		const balance = nonZero(
-			sumOf(
-				rowDeltas
-					.filter((delta) => delta.entityKey === null)
-					.map((delta) => delta.balanceDelta),
-			),
+		const balance = nonZeroSum(
+			rowDeltas
+				.filter((delta) => delta.entityKey === null)
+				.map((delta) => delta.balanceDelta),
 		);
 		const entities = Object.fromEntries(
 			Object.entries(
@@ -211,8 +221,8 @@ export const deltasToRowChanges = ({
 		if (rowDeltas.length === 0) continue;
 		const own = rowDeltas.filter((delta) => delta.entityKey === null);
 		const add = definedEntries({
-			balance: nonZero(sumOf(own.map((delta) => delta.balanceDelta))),
-			usage: nonZero(sumOf(own.map((delta) => delta.usageDelta))),
+			balance: nonZeroSum(own.map((delta) => delta.balanceDelta)),
+			usage: nonZeroSum(own.map((delta) => delta.usageDelta)),
 		});
 		const balances = sumByEntityKey({
 			deltas: rowDeltas,
