@@ -412,3 +412,111 @@ index bc675e372222ecb8439f2f7ead0153fda594a88e..0855aec9b880e2330b80c488cfacfc44
        const topics = topicMessages.map(({ topic }) => topic)
        await cluster.addMultipleTargetTopics(topics)
  
+diff --git a/src/protocol/encoder.js b/src/protocol/encoder.js
+index 290bb97..804b001 100644
+--- a/src/protocol/encoder.js
++++ b/src/protocol/encoder.js
+@@ -65,7 +65,7 @@ module.exports = class Encoder {
+    * @param {number} [initialSize] initial size
+    */
+   constructor(initialSize = 511) {
+-    this.buf = Buffer.alloc(Encoder.nextPowerOfTwo(initialSize))
++    this.buf = Buffer.allocUnsafe(Encoder.nextPowerOfTwo(initialSize))
+     this.offset = 0
+   }
+ 
+@@ -82,7 +82,7 @@ module.exports = class Encoder {
+   ensureAvailable(length) {
+     if (this.offset + length > this.buf.length) {
+       const newLength = Encoder.nextPowerOfTwo(this.offset + length)
+-      const newBuffer = Buffer.alloc(newLength)
++      const newBuffer = Buffer.allocUnsafe(newLength)
+       this.buf.copy(newBuffer, 0, 0, this.offset)
+       this.buf = newBuffer
+     }
+diff --git a/src/protocol/recordBatch/record/v0/index.js b/src/protocol/recordBatch/record/v0/index.js
+index 2d0a8b3..66225ce 100644
+--- a/src/protocol/recordBatch/record/v0/index.js
++++ b/src/protocol/recordBatch/record/v0/index.js
+@@ -22,7 +22,7 @@ const Header = require('../../header/v0')
+  * @param value {Buffer}
+  * @param [headers={}] {Object}
+  */
+-module.exports = ({ offsetDelta = 0, timestampDelta = 0, key, value, headers = {} }) => {
++module.exports = ({ offsetDelta = 0, timestampDelta = 0, key, value, headers = {}, target }) => {
+   const headersArray = Object.keys(headers).flatMap(headerKey =>
+     !Array.isArray(headers[headerKey])
+       ? [{ key: headerKey, value: headers[headerKey] }]
+@@ -37,14 +37,17 @@ module.exports = ({ offsetDelta = 0, timestampDelta = 0, key, value, headers = {
+     Encoder.sizeOfVarIntBytes(value) +
+     sizeOfHeaders(headersArray)
+ 
+-  return new Encoder()
++  const encoder = (target || new Encoder(sizeOfBody + 5))
+     .writeVarInt(sizeOfBody)
+     .writeInt8(0) // no used record attributes at the moment
+     .writeVarLong(timestampDelta)
+     .writeVarInt(offsetDelta)
+     .writeVarIntBytes(key)
+     .writeVarIntBytes(value)
+-    .writeVarIntArray(headersArray.map(Header))
++  if (!target) return encoder.writeVarIntArray(headersArray.map(Header))
++  encoder.writeVarInt(headersArray.length)
++  for (const header of headersArray) encoder.writeVarIntString(header.key).writeVarIntBytes(header.value)
++  return encoder
+ }
+ 
+ const sizeOfHeaders = headersArray => {
+diff --git a/src/protocol/recordBatch/v0/index.js b/src/protocol/recordBatch/v0/index.js
+index 599a940..8421ff8 100644
+--- a/src/protocol/recordBatch/v0/index.js
++++ b/src/protocol/recordBatch/v0/index.js
+@@ -80,6 +80,7 @@ const RecordBatch = async ({
+ 
+ const compressRecords = async (compression, records) => {
+   const codec = lookupCodec(compression)
++  if (records.prebuilt) return codec.compress(records.prebuilt)
+   const recordsEncoder = new Encoder()
+ 
+   recordsEncoder.writeEncoderArray(records)
+diff --git a/src/protocol/requests/produce/v3/request.js b/src/protocol/requests/produce/v3/request.js
+index 9b81e0f..5aabf6e 100644
+--- a/src/protocol/requests/produce/v3/request.js
++++ b/src/protocol/requests/produce/v3/request.js
+@@ -92,13 +92,29 @@ const partitionsEncoder = compression => async ({
+   const firstTimestamp = timestamps[0]
+   const maxTimestamp = timestamps[timestamps.length - 1]
+ 
+-  const records = messages.map((message, i) =>
+-    Record({
+-      ...message,
+-      offsetDelta: i,
+-      timestampDelta: (message.timestamp || dateNow) - firstTimestamp,
+-    })
+-  )
++  let records
++  if (compression) {
++    let size = 0
++    for (const message of messages) size += (message.value ? message.value.length : 0) + (message.key ? message.key.length : 0) + 64
++    const target = new Encoder(size)
++    messages.forEach((message, i) =>
++      Record({
++        ...message,
++        offsetDelta: i,
++        timestampDelta: (message.timestamp || dateNow) - firstTimestamp,
++        target,
++      })
++    )
++    records = { prebuilt: target, length: messages.length }
++  } else {
++    records = messages.map((message, i) =>
++      Record({
++        ...message,
++        offsetDelta: i,
++        timestampDelta: (message.timestamp || dateNow) - firstTimestamp,
++      })
++    )
++  }
+ 
+   const recordBatch = await RecordBatch({
+     compression,

@@ -214,7 +214,7 @@ async fn load(args: &[String]) {
                 "userUsPerTrack": round((u1 - u0) * 1e6 / count.max(1) as f64),
                 "sysUsPerTrack": round((s1 - s0) * 1e6 / count.max(1) as f64),
                 "cpuUtil": round(total * count as f64 / elapsed / 1e6 * 100.0),
-                "threads": threads.iter().take(6).map(|(k, us)| serde_json::json!([k, round(*us)])).collect::<Vec<_>>(),
+                "threads": threads.iter().take(40).map(|(k, us)| serde_json::json!([k, round(*us)])).collect::<Vec<_>>(),
             }),
         );
     }
