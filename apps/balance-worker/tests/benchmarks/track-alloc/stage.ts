@@ -186,6 +186,8 @@ async function decideAndCommit(commands: TrackCommand[]) {
 
 // Warm the JIT and the carried contexts on the same path the loop runs.
 await decideAndCommit(commandsOf(3_000));
+records.length = 0;
+committedReplies.length = 0;
 const ring: unknown[] = new Array(64);
 const sink = (index: number, value: unknown) => {
 	ring[index & 63] = value;

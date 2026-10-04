@@ -1,7 +1,7 @@
 /**
  * Bytes and CPU per sync-track stage, per track-alloc arm. Each stage runs in its own process under
- * `BUN_JSC_logGC=1`, at n and 2n iterations; the difference of the logged allocation divided by n
- * cancels the unlogged tail of the last cycle.
+ * `BUN_JSC_logGC=1` with a small eden, so the loop's allocation is logged a MiB or so at a time; n and 2n iterations
+ * are differenced so the unlogged tail of the last cycle cancels.
  */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
@@ -11,7 +11,7 @@ const args = Object.fromEntries(
 );
 const stages = (args.stages ?? "parse,decide,encode,reply").split(",");
 const arms = (args.arms ?? "A,B").split(",");
-const iterations = Number(args.iterations ?? 20_000);
+const iterations = Number(args.iterations ?? 5_000);
 const ALLOCATED = /bytes allocated this cycle: (\d+)/g;
 
 async function measure({
@@ -33,7 +33,16 @@ async function measure({
 			arm,
 		],
 		{
-			env: { ...process.env, NODE_ENV: "production", BUN_JSC_logGC: "1" },
+			env: {
+				...process.env,
+				NODE_ENV: "production",
+				BUN_JSC_logGC: "1",
+				BUN_JSC_largeHeapSize: "1048576",
+				// Eden stays ~2% of the live heap whatever its size, so short loops still log.
+				BUN_JSC_smallHeapGrowthFactor: "1.02",
+				BUN_JSC_mediumHeapGrowthFactor: "1.02",
+				BUN_JSC_largeHeapGrowthFactor: "1.02",
+			},
 			stdout: "ignore",
 			stderr: "pipe",
 		},
