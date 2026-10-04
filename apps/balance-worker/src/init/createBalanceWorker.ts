@@ -20,6 +20,10 @@ import { createStandbyPreparations } from "../blueGreen/createStandbyPreparation
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import {
+	forceAdaptiveLingerArm,
+	forcedAdaptiveLingerArmFromEnv,
+} from "../experiments/adaptiveLinger.js";
+import {
 	bindEngineAllocExperiment,
 	forcedEngineAllocArmFromEnv,
 } from "../experiments/engineAlloc.js";
@@ -128,6 +132,8 @@ export async function createBalanceWorker({
 			identity: address.endpoint,
 			bucket: env.S3_BUCKET,
 		});
+	// Dev and tests only: production reads the adaptive-linger arm from the window.
+	forceAdaptiveLingerArm({ arm: forcedAdaptiveLingerArmFromEnv() });
 	// Read once, at listen time (after the variants config has loaded); the task keeps its layout for life.
 	const serialDecide = createSerialDecideMode({
 		force: config.serialDecideArm ?? forcedSerialDecideArmFromEnv(),
