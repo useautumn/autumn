@@ -8,6 +8,7 @@ import {
 	type WorkerRequest,
 } from "@autumn/balance-worker-client/protocol";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
+import { isDeadlineShed } from "../../runtime/deadlineShed/deadlineShedErrors.js";
 import {
 	looksLikeCheckCommand,
 	looksLikeTrackCommand,
@@ -183,7 +184,8 @@ function errorResponseOf({
 }): Response {
 	const { status, error } = workerErrorOf({ cause: cause as Error });
 	// Overload arrives in floods; a stack per rejection cost more than accepting the request did.
-	if (error.code !== "OVERLOADED") requestLog.error = cause as Error;
+	if (isDeadlineShed(cause)) requestLog.shed = true;
+	else if (error.code !== "OVERLOADED") requestLog.error = cause as Error;
 	requestLog.errorCode = error.code;
 	return new Response(JSON.stringify({ error } satisfies WorkerErrorResponse), {
 		status,

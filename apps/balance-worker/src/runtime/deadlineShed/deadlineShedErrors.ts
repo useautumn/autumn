@@ -15,3 +15,11 @@ export class CustomerCheckShedError extends Error {
 		this.name = "CustomerCheckShedError";
 	}
 }
+
+/** Shed and dropped requests come in floods: logged without a stack and sampled like successes. */
+export function isDeadlineShed(cause: unknown): boolean {
+	return (
+		cause instanceof RequestAbandonedError ||
+		cause instanceof CustomerCheckShedError
+	);
+}

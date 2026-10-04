@@ -223,7 +223,7 @@ describe("check admission", () => {
 
 	test("running late, the customer holding most checks is shed down to half; the others are not", () => {
 		const { admission, advance } = admissionAt();
-		advance({ ms: 100, lateMs: 200 });
+		advance({ ms: 100, lateMs: 400 });
 		const cold = offer({ admission, customerKey: "cold_1", count: 20 });
 		const hot = offer({ admission, customerKey: "hot", count: 400 });
 		const cold2 = offer({ admission, customerKey: "cold_2", count: 20 });
@@ -235,12 +235,16 @@ describe("check admission", () => {
 			shed: 400 - hot,
 			behind: true,
 		});
+		advance({ ms: 200 });
+		expect(admission.readCounters().behind).toBe(false);
+		expect(offer({ admission, customerKey: "hot", count: 400 })).toBe(400);
 	});
 
 	test("a customer below the minimum is never shed, even alone on a late task", () => {
 		const { admission, advance } = admissionAt();
-		advance({ ms: 100, lateMs: 200 });
+		advance({ ms: 100, lateMs: 400 });
 		expect(offer({ admission, customerKey: "alone", count: 25 })).toBe(25);
+		expect(admission.readCounters().behind).toBe(true);
 	});
 
 	test("only B's checks are counted by admission; A's never reach it", async () => {

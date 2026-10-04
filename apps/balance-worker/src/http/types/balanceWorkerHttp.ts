@@ -58,6 +58,8 @@ export type BalanceWorkerRequestLog = {
 		| RecalculateBalanceReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
+	/** Shed or dropped by deadline-shed B: its line is sampled like a success. */
+	shed?: true;
 	/** A track batch logs once: its size and failures counted by code, never one line per command. */
 	batch?: BalanceWorkerBatchLog;
 };

@@ -1,6 +1,6 @@
 /** How often the loop is probed for lateness, and how much lateness counts as the task falling behind. */
 const PROBE_INTERVAL_MS = 10;
-const BEHIND_LAG_MS = 25;
+const BEHIND_LAG_MS = 50;
 /** Lateness is smoothed over a few probes, so one slow turn does not shed anyone. */
 const LAG_SMOOTHING = 0.3;
 /** Shares are counted over this window, and a customer may hold this much of it while the task is behind. */
