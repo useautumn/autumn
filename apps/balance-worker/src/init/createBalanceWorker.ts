@@ -278,10 +278,10 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
-		initBuildVariant({
-			endpoint: address.endpoint,
-			readConfiguredArms: () => resources.edgeConfigs?.arms.get().arms ?? [],
-		});
+		function readConfiguredArms(): string[] {
+			return resources.edgeConfigs?.arms.get().arms ?? [];
+		}
+		initBuildVariant({ endpoint: address.endpoint, readConfiguredArms });
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,
