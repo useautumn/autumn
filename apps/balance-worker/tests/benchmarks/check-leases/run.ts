@@ -6,6 +6,7 @@ import {
 	createBalanceWorkerClient,
 	type HttpRequest,
 	type HttpResponse,
+	type SharedCheckLeases,
 } from "@autumn/balance-worker-client";
 import { testOrg } from "../../fixtures/mutations.js";
 import {
@@ -22,6 +23,8 @@ import { scenarios } from "../track-throughput/scenarios.js";
  *   --mode=open    each lane offers `--rate` checks/s for `--seconds` (prod: 40 lanes × ~20/s)
  *   --mode=closed  each lane keeps `--concurrency` checks in flight for `--seconds`
  *   --trackShare   that fraction of each lane's operations are tracks (value 1), which end the lane's leases
+ *   --keys         checks spread over this many entities (staging's long tail: most keys ask 2–8 times a second)
+ *   --shared       on: lanes share leased replies through one in-memory store, as servers do through Redis
  */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
@@ -41,7 +44,11 @@ const trackShare = Number(args.trackShare ?? 0);
 const leases = (args.leases ?? "on") === "on";
 const serverCore = args.serverCore ?? "1";
 const clientCores = args.clientCores ?? "2,3";
-const identity = benchIdentityOf({ entityId: args.entity ?? "ent_0" });
+const keys = Number(args.keys ?? 1);
+const sharesLeases = (args.shared ?? "off") === "on";
+const identities = Array.from({ length: keys }, (_, i) =>
+	benchIdentityOf({ entityId: `ent_${i}` }),
+);
 const featureId = scenario.features[0];
 if (!featureId) throw new Error("bench fixture");
 
@@ -97,6 +104,20 @@ async function postJson(request: HttpRequest): Promise<HttpResponse> {
 	return { status: response.status, body: await response.json() };
 }
 
+/** Redis stand-in: values with a remaining life, read and written after a sub-millisecond hop. */
+const sharedEntries = new Map<string, { value: string; expiresAt: number }>();
+const sharedStore: SharedCheckLeases = {
+	read: async ({ key }) => {
+		await Bun.sleep(0.3);
+		const entry = sharedEntries.get(key);
+		if (!entry || entry.expiresAt <= Date.now()) return null;
+		return { value: entry.value, ttlMs: entry.expiresAt - Date.now() };
+	},
+	write: async ({ key, value, ttlMs }) => {
+		sharedEntries.set(key, { value, expiresAt: Date.now() + ttlMs });
+	},
+};
+
 const owner = {
 	partition: 0,
 	routeEpoch: "1",
@@ -107,6 +128,7 @@ const clients: BalanceWorkerClient[] = Array.from({ length: lanes }, () =>
 		ctx: {
 			owners: { findOwner: () => owner, refresh: async () => undefined },
 			http: { postJson },
+			...(sharesLeases && { sharedCheckLeases: sharedStore }),
 		},
 		config: {
 			partitionCount: 1,
@@ -118,10 +140,22 @@ const clients: BalanceWorkerClient[] = Array.from({ length: lanes }, () =>
 );
 
 let sequence = 0;
-const checkCommand = (): CheckCommand =>
-	createBenchCheckCommand({ identity, featureId, sequence: sequence++ });
+const randomIdentity = () => {
+	const identity = identities[Math.floor(Math.random() * identities.length)];
+	if (!identity) throw new Error("bench fixture");
+	return identity;
+};
+const checkCommand = (): CheckCommand => {
+	const n = sequence++;
+	return createBenchCheckCommand({
+		identity: randomIdentity(),
+		featureId,
+		sequence: n,
+	});
+};
 const trackCommand = (): TrackCommand => {
 	const n = sequence++;
+	const identity = randomIdentity();
 	return {
 		schemaVersion: 1,
 		type: "track",
@@ -194,7 +228,7 @@ async function runPhase({ ms }: { ms: number }): Promise<void> {
 }
 
 // Warm the owner's subject, entity and JIT before measuring.
-await runPhase({ ms: 2_000 });
+await runPhase({ ms: 3_000 });
 latencies.length = 0;
 answered.check = 0;
 answered.track = 0;
@@ -218,7 +252,11 @@ const leaseTotals = clients.reduce(
 		const now = client.readCheckLeaseCounters?.();
 		const before = leaseBefore[index];
 		if (!now || !before) return sum;
-		sum.hit += now.leaseHit - before.leaseHit;
+		sum.hit +=
+			now.leaseHit -
+			before.leaseHit +
+			now.leaseSharedHit -
+			before.leaseSharedHit;
 		sum.miss += now.leaseMiss - before.leaseMiss;
 		return sum;
 	},
@@ -229,6 +267,8 @@ console.error(
 	JSON.stringify({
 		mode,
 		leases,
+		shared: sharesLeases,
+		keys,
 		lanes,
 		...(mode === "open" ? { ratePerLane: rate } : { concurrency }),
 		trackShare,

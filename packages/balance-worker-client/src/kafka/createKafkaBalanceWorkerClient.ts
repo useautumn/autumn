@@ -1,3 +1,4 @@
+import type { SharedCheckLeases } from "../checkLeases/types/checkLeases.js";
 import { createBalanceWorkerClient } from "../createBalanceWorkerClient.js";
 import type { BalanceWorkerClient } from "../types/balanceWorkerClient.js";
 import { createBalanceWorkerKafka } from "./createBalanceWorkerKafka.js";
@@ -16,7 +17,11 @@ export function createKafkaBalanceWorkerClient({
 	config,
 }: {
 	/** `kafka` is for tests; a process lets the config build the real connection. */
-	ctx: { logger?: ClientLogger; kafka?: BalanceWorkerKafka };
+	ctx: {
+		logger?: ClientLogger;
+		kafka?: BalanceWorkerKafka;
+		sharedCheckLeases?: SharedCheckLeases;
+	};
 	config: KafkaBalanceWorkerClientConfig;
 }): BalanceWorkerClient {
 	const kafka = ctx.kafka ?? createBalanceWorkerKafka(config.kafka);
@@ -72,6 +77,7 @@ export function createKafkaBalanceWorkerClient({
 			commandLog,
 			catalogInvalidations,
 			lifecycle: { start, stop },
+			sharedCheckLeases: ctx.sharedCheckLeases,
 		},
 		config: {
 			partitionCount: config.partitionCount,

@@ -89,7 +89,10 @@ export function createBalanceWorkerClient({
 
 	// Absent, every check asks the owner and no write pays for invalidation.
 	const checkLeases = config.checkLeases
-		? createCheckLeases({ config: config.checkLeases })
+		? createCheckLeases({
+				ctx: { shared: dependencies.sharedCheckLeases },
+				config: config.checkLeases,
+			})
 		: undefined;
 
 	function check(params: CheckParams) {
