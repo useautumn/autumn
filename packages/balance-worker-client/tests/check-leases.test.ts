@@ -17,11 +17,13 @@ import {
 	type TrackReply,
 } from "../src/balanceWorkerClient.js";
 import { createCheckLeases } from "../src/checkLeases/createCheckLeases.js";
+import type { SharedCheckLeases } from "../src/checkLeases/types/checkLeases.js";
 import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
 
+const SKEW_MS = 100;
 const identity = {
 	orgId: "org",
 	env: "sandbox",
@@ -175,11 +177,13 @@ describe("check leases at the server", () => {
 		expect(fixture.checksSent()).toBe(1);
 		expect(fixture.client.readCheckLeaseCounters?.()).toEqual({
 			leaseHit: 1,
+			leaseSharedHit: 0,
 			leaseMiss: 1,
 			leaseIssued: 1,
 			leaseBypassDenied: 0,
 			leaseWithheld: 0,
 			leaseEvicted: 0,
+			leaseSharedErrors: 0,
 			size: 1,
 		});
 	});
@@ -399,5 +403,150 @@ describe("createCheckLeases", () => {
 		expect(
 			await answerWith({ leases, reply: replyOf(), command: commandOf(2) }),
 		).not.toBe(two);
+	});
+});
+
+describe("leases shared across servers", () => {
+	/** A Redis stand-in on a clock the servers share: values with a remaining life. */
+	const createStore = ({ now }: { now: () => number }) => {
+		const entries = new Map<string, { value: string; expiresAt: number }>();
+		let reads = 0;
+		const store: SharedCheckLeases = {
+			read: async ({ key }) => {
+				reads++;
+				const entry = entries.get(key);
+				if (!entry || entry.expiresAt <= now()) return null;
+				return { value: entry.value, ttlMs: entry.expiresAt - now() };
+			},
+			write: async ({ key, value, ttlMs }) => {
+				entries.set(key, { value, expiresAt: now() + ttlMs });
+			},
+		};
+		return { store, entries, reads: () => reads };
+	};
+	const createClock = (start = 1_000_000) => {
+		let at = start;
+		return {
+			now: () => at,
+			advance: (ms: number) => {
+				at += ms;
+			},
+		};
+	};
+	const serversOn = ({
+		clock,
+		store,
+		count = 2,
+	}: {
+		clock: ReturnType<typeof createClock>;
+		store: SharedCheckLeases;
+		count?: number;
+	}) =>
+		Array.from({ length: count }, () =>
+			createCheckLeases({
+				ctx: { now: clock.now, shared: store },
+				config: { maxEntries: 10 },
+			}),
+		);
+	const leasedReply = (clock: ReturnType<typeof createClock>) =>
+		replyOf({ lease: { expiresAt: clock.now() + 1_000 } });
+	const owner = (reply: CheckReply) => {
+		let calls = 0;
+		return {
+			send: async () => {
+				calls++;
+				return reply;
+			},
+			calls: () => calls,
+		};
+	};
+
+	test("one owner call answers every server until the owner's deadline", async () => {
+		const clock = createClock();
+		const { store } = createStore({ now: clock.now });
+		const [a, b] = serversOn({ clock, store });
+		if (!a || !b) throw new Error("servers");
+		const fromOwner = owner(leasedReply(clock));
+		const first = await a.answer({ command: checkOf(), send: fromOwner.send });
+		clock.advance(400);
+		const onB = await b.answer({ command: checkOf(), send: fromOwner.send });
+		expect(fromOwner.calls()).toBe(1);
+		// The same body the owner sent, through the store.
+		expect(JSON.stringify(onB)).toBe(JSON.stringify(first));
+		expect(b.readCounters()).toMatchObject({ leaseSharedHit: 1, leaseMiss: 0 });
+		// B now holds it locally, until the owner's deadline and no later.
+		clock.advance(599);
+		await b.answer({ command: checkOf(), send: fromOwner.send });
+		expect(b.readCounters()).toMatchObject({ leaseHit: 1 });
+		clock.advance(1);
+		await b.answer({ command: checkOf(), send: fromOwner.send });
+		expect(fromOwner.calls()).toBe(2);
+	});
+
+	test("a server that wrote to the customer does not answer from a lease asked before its write", async () => {
+		const clock = createClock();
+		const { store } = createStore({ now: clock.now });
+		const [a, b] = serversOn({ clock, store });
+		if (!a || !b) throw new Error("servers");
+		const fromOwner = owner(leasedReply(clock));
+		await a.answer({ command: checkOf(), send: fromOwner.send });
+		clock.advance(200);
+		await b.invalidating({
+			identities: [identity],
+			run: async () => undefined,
+		});
+		clock.advance(50);
+		await b.answer({ command: checkOf(), send: fromOwner.send });
+		expect(fromOwner.calls()).toBe(2);
+		// B's fresh answer is published; A, which wrote nothing, reads its own.
+		expect(a.readCounters()).toMatchObject({ leaseHit: 0 });
+		const [c] = serversOn({ clock, store, count: 1 });
+		clock.advance(SKEW_MS + 1);
+		await c?.answer({ command: checkOf(), send: fromOwner.send });
+		expect(fromOwner.calls()).toBe(2);
+	});
+
+	test("a refusal is never published, and a store failure goes to the owner", async () => {
+		const clock = createClock();
+		const { store, entries } = createStore({ now: clock.now });
+		const [a] = serversOn({ clock, store, count: 1 });
+		const refused = owner(replyOf({ allowed: false }));
+		await a?.answer({ command: checkOf(), send: refused.send });
+		expect(entries.size).toBe(0);
+
+		const broken: SharedCheckLeases = {
+			read: async () => {
+				throw new Error("redis down");
+			},
+			write: async () => {
+				throw new Error("redis down");
+			},
+		};
+		const [down] = serversOn({ clock, store: broken, count: 1 });
+		const fromOwner = owner(leasedReply(clock));
+		await down?.answer({ command: checkOf(), send: fromOwner.send });
+		await Promise.resolve();
+		expect(fromOwner.calls()).toBe(1);
+		expect(down?.readCounters()).toMatchObject({
+			leaseMiss: 1,
+			leaseIssued: 1,
+			leaseSharedErrors: 2,
+		});
+	});
+
+	test("a published lease never outlives the owner's deadline on a reader that took it late", async () => {
+		const clock = createClock();
+		const { store } = createStore({ now: clock.now });
+		const [a, b] = serversOn({ clock, store });
+		if (!a || !b) throw new Error("servers");
+		const fromOwner = owner(
+			replyOf({ lease: { expiresAt: clock.now() + 300 } }),
+		);
+		await a.answer({ command: checkOf(), send: fromOwner.send });
+		clock.advance(250);
+		await b.answer({ command: checkOf(), send: fromOwner.send });
+		clock.advance(50);
+		await b.answer({ command: checkOf(), send: fromOwner.send });
+		expect(fromOwner.calls()).toBe(2);
 	});
 });

@@ -1,6 +1,7 @@
 export type {
 	CheckLeaseCounters,
 	CheckLeasesConfig,
+	SharedCheckLeases,
 } from "./checkLeases/types/checkLeases.js";
 export type { ApplyBillingPlanReply } from "./contracts/applyBillingPlan.js";
 export type { CheckLease, CheckReply } from "./contracts/check.js";

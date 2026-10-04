@@ -37,16 +37,18 @@ function readProxySecret({
 	return secret;
 }
 
-/** Check leases are on unless BALANCE_WORKER_CHECK_LEASES=false; the switch that turns them off fleet-wide. */
-function readCheckLeasesEnabled({
+/** On unless set to false: BALANCE_WORKER_CHECK_LEASES turns leases off fleet-wide, BALANCE_WORKER_SHARED_CHECK_LEASES only their sharing. */
+function readOnUnlessFalse({
 	runtimeEnv,
+	name,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
+	name: "BALANCE_WORKER_CHECK_LEASES" | "BALANCE_WORKER_SHARED_CHECK_LEASES";
 }): boolean {
-	const value = runtimeEnv.BALANCE_WORKER_CHECK_LEASES?.trim();
+	const value = runtimeEnv[name]?.trim();
 	if (value === undefined || value === "" || value === "true") return true;
 	if (value === "false") return false;
-	throw new Error("BALANCE_WORKER_CHECK_LEASES must be true or false");
+	throw new Error(`${name} must be true or false`);
 }
 
 export {
@@ -80,7 +82,14 @@ export function createBalanceWorkerClientEnv(
 		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
 			runtimeEnv,
 		}),
-		BALANCE_WORKER_CHECK_LEASES: readCheckLeasesEnabled({ runtimeEnv }),
+		BALANCE_WORKER_CHECK_LEASES: readOnUnlessFalse({
+			runtimeEnv,
+			name: "BALANCE_WORKER_CHECK_LEASES",
+		}),
+		BALANCE_WORKER_SHARED_CHECK_LEASES: readOnUnlessFalse({
+			runtimeEnv,
+			name: "BALANCE_WORKER_SHARED_CHECK_LEASES",
+		}),
 	};
 }
 
