@@ -7,17 +7,24 @@ import {
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
+import { decideLean as decideLeanMutation } from "./actions/decideLean.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
-import { createPartitionWriterState } from "./pendingMutations.js";
-import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
+import { allStored, createPartitionWriterState } from "./pendingMutations.js";
+import type {
+	DecidedMutation,
+	LeanDecision,
+	LeanSubmission,
+	MutationSubmission,
+} from "./types/mutation.js";
 import type {
 	PartitionWriter,
 	PartitionWriterConfig,
 	PartitionWriterContext,
 	PartitionWriterScope,
 } from "./types/partitionWriter.js";
+import { PartitionWriterDisposedError } from "./writerErrors.js";
 
 export function createPartitionWriter({
 	ctx,
@@ -37,6 +44,7 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			start: ctx.positions?.open(),
 		}),
 	};
 
@@ -55,6 +63,11 @@ export function createPartitionWriter({
 	function dispose(): void {
 		budgetShare?.leave();
 		scope.state.subjects.clear();
+		// A drained writer holds nothing; one stopped mid-flight still owes its held replies an answer.
+		scope.ctx.positions?.closed({
+			lastSeq: scope.state.lastSeq,
+			cause: new PartitionWriterDisposedError(),
+		});
 	}
 
 	function decide<Reply>(
@@ -65,6 +78,18 @@ export function createPartitionWriter({
 			run: () =>
 				timeSync({ label: "writer.decide" }, () =>
 					decideMutation({ scope, submission }),
+				),
+		});
+	}
+
+	function decideLean<Reply>(
+		submission: LeanSubmission<Reply>,
+	): LeanDecision<Reply> | null {
+		return slowDecides.measure({
+			command: submission.command,
+			run: () =>
+				timeSync({ label: "writer.decide" }, () =>
+					decideLeanMutation({ scope, submission }),
 				),
 		});
 	}
@@ -104,7 +129,7 @@ export function createPartitionWriter({
 	}
 
 	function waitForStore() {
-		return scope.state.storeCompletion;
+		return allStored({ state: scope.state });
 	}
 
 	/** Every batch handed to the store so far, applied or failed; never rejects. */
@@ -116,6 +141,7 @@ export function createPartitionWriter({
 		waitForStore,
 		waitForApplies,
 		decide,
+		decideLean,
 		log,
 		flushDeferredLogs,
 		waitForPendingCommits,

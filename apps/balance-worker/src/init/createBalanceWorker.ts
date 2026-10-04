@@ -8,15 +8,23 @@ import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
-import type { KafkaOffsetCommit } from "@autumn/kafka";
+import type {
+	KafkaOffsetCommit,
+	KafkaProducerClient,
+	KafkaTokenInfo,
+} from "@autumn/kafka";
+import type { ProducerConfig } from "kafkajs";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import {
+	createSerialDecideMode,
+	forcedSerialDecideArmFromEnv,
+} from "../experiments/serialDecide.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
-import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
@@ -30,6 +38,14 @@ import {
 	kafkaRequestTimings,
 } from "../logging/kafkaRequestTimings.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
+import { createHotDecider } from "../serialDecide/createHotDecider.js";
+import { createIoWorkerPool } from "../serialDecide/createIoWorkerPool.js";
+import {
+	createRemoteKafkaProducers,
+	type RemoteKafkaProducers,
+} from "../serialDecide/createRemoteKafkaProducers.js";
+import { listenWithWorkers } from "../serialDecide/listenWithWorkers.js";
+import { createPositionBoard } from "../serialDecide/positionBoard.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -53,7 +69,11 @@ import {
 	createWorkerConsumerConfig,
 	workerConsumerGroupIdOf,
 } from "./workerConfig.js";
-import { openWorkerResources } from "./workerResources.js";
+import {
+	logWorkerKafkaToken,
+	openWorkerResources,
+	WORKER_KAFKA_CLIENT_LIMITS,
+} from "./workerResources.js";
 
 export async function createBalanceWorker({
 	ctx: dependencies,
@@ -101,6 +121,10 @@ export async function createBalanceWorker({
 			identity: address.endpoint,
 			bucket: env.S3_BUCKET,
 		});
+	// Read once, at listen time (after the variants config has loaded); the task keeps its layout for life.
+	const serialDecide = createSerialDecideMode({
+		force: config.serialDecideArm ?? forcedSerialDecideArmFromEnv(),
+	});
 	try {
 		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
 		const slotGate = resources.edgeConfigs
@@ -143,11 +167,28 @@ export async function createBalanceWorker({
 				producerLimits: runtimeConfig.producerLimits,
 			},
 		});
+		// Under arm D each partition's writer publishes its commit position here; the I/O workers release held replies by it.
+		const positionBoard = createPositionBoard({
+			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
+		});
+		function positionsForArm({ partition }: { partition: number }) {
+			return serialDecide.read().arm === "D"
+				? positionBoard.sinkFor({ partition })
+				: undefined;
+		}
+		// Under arms C and D the partition producers live on the Kafka worker thread; listen() starts it before any partition runs.
+		let remoteKafka: RemoteKafkaProducers | null = null;
+		function partitionProducer(config: ProducerConfig): KafkaProducerClient {
+			return remoteKafka
+				? remoteKafka.producer(config)
+				: resources.kafka.producer(config);
+		}
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
 				logger: dependencies.logger,
-				kafka: resources.kafka,
+				kafka: { producer: partitionProducer },
+				positionsFor: positionsForArm,
 				ownershipOffsets: resources.admin,
 				ownershipHandoff,
 				stateStore: resources.stateStore,
@@ -209,29 +250,104 @@ export async function createBalanceWorker({
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},
 		});
-		const app = createBalanceWorkerApp({
-			ctx: {
-				ownership: partitions,
-				partitionResolver: resources.partitionResolver,
-				logger: dependencies.logger,
-				requestLog: {
-					successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
-				},
+		const appContext = {
+			ownership: partitions,
+			partitionResolver: resources.partitionResolver,
+			logger: dependencies.logger,
+			requestLog: {
+				successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
 			},
-		});
+		};
+		const app = createBalanceWorkerApp({ ctx: appContext });
 
-		function listen(): WorkerListener {
-			const listener = Bun.serve({
-				hostname: address.hostname,
-				port: env.BALANCE_WORKER_PORT,
-				maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
-				fetch: app.fetch,
-				idleTimeout: 0,
+		async function listen(): Promise<WorkerListener> {
+			const fetch = app.fetch;
+			const mode = serialDecide.read();
+			if (!mode.ioWorkersEnabled) {
+				const listener = Bun.serve({
+					hostname: address.hostname,
+					port: env.BALANCE_WORKER_PORT,
+					maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
+					fetch,
+					idleTimeout: 0,
+				});
+				dependencies.logger.info(
+					`Balance worker listening at ${address.endpoint}; partition admission follows recovery`,
+				);
+				return listener;
+			}
+			// A dead I/O thread leaves a task that still answers health checks: end it like a stopped partition service.
+			function stopAfterIoPoolFailure({ cause }: { cause: unknown }): void {
+				dependencies.onServiceStopped?.({ cause, scope: "io-pool" });
+			}
+			const pool = createIoWorkerPool({
+				ctx: {
+					fetch,
+					logger: dependencies.logger,
+					onFatal: stopAfterIoPoolFailure,
+					hot:
+						mode.arm === "D"
+							? {
+									decider: createHotDecider({
+										ctx: appContext,
+										config: {
+											partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
+										},
+									}),
+									positions: positionBoard,
+								}
+							: undefined,
+				},
+				config: {
+					hostname: address.hostname,
+					port: env.BALANCE_WORKER_PORT,
+					maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
+					workers: env.BALANCE_WORKER_IO_WORKERS,
+				},
 			});
+			const runsKafkaWorker =
+				mode.kafkaWorkerEnabled &&
+				env.BALANCE_WORKER_COMMIT_MODE === "idempotent";
+			if (mode.kafkaWorkerEnabled && !runsKafkaWorker)
+				dependencies.logger.warn(
+					`Serial-decide arm ${mode.arm} keeps its producers on the main thread: the Kafka worker speaks idempotent commits only`,
+				);
+			const listener = await listenWithWorkers({
+				ctx: {
+					listenPool: pool.listen,
+					startKafkaWorker: runsKafkaWorker ? startKafkaWorker : undefined,
+				},
+			});
+			remoteKafka = listener.kafkaWorker;
 			dependencies.logger.info(
-				`Balance worker listening at ${address.endpoint}; partition admission follows recovery`,
+				`Balance worker listening at ${address.endpoint} through ${env.BALANCE_WORKER_IO_WORKERS} I/O workers (serial-decide arm ${mode.arm}${remoteKafka ? ", producers on the Kafka worker thread" : ""}); partition admission follows recovery`,
 			);
 			return listener;
+		}
+
+		function stopAfterKafkaWorkerFailure({ cause }: { cause: unknown }): void {
+			dependencies.onServiceStopped?.({ cause, scope: "kafka-worker" });
+		}
+		function logKafkaWorkerToken(info: KafkaTokenInfo): void {
+			logWorkerKafkaToken({ logger: dependencies.logger, info });
+		}
+		async function startKafkaWorker(): Promise<RemoteKafkaProducers> {
+			const remote = createRemoteKafkaProducers({
+				ctx: {
+					logger: dependencies.logger,
+					onFatal: stopAfterKafkaWorkerFailure,
+					onToken: logKafkaWorkerToken,
+				},
+				config: {
+					clientId: `balance-worker-kafka-${crypto.randomUUID()}`,
+					brokers: env.KAFKA_BROKERS,
+					authMode: env.KAFKA_AUTH_MODE,
+					region: env.AWS_REGION,
+					limits: WORKER_KAFKA_CLIENT_LIMITS,
+				},
+			});
+			await remote.start();
+			return remote;
 		}
 
 		const state: BalanceWorkerState = { status: "created" };
@@ -244,6 +360,7 @@ export async function createBalanceWorker({
 				readPartitions: partitions.partitions,
 				readWorkerStatus,
 				readConsumer: partitions.consumer,
+				readBootArms: serialDecide.bootArms,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
@@ -286,11 +403,18 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
+		// Window arms plus the arms fixed at boot, so a task's layout is on every event-loop line.
+		function variantsWithBootArms(): Readonly<Record<string, string>> | null {
+			const window = variants();
+			const boot = serialDecide.bootArms();
+			if (!boot) return window;
+			return { ...window, ...boot };
+		}
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,
 				recorder: syncSections,
-				variants,
+				variants: variantsWithBootArms,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,

@@ -9,6 +9,7 @@ import {
 	enqueueMutation,
 	pendingCommitsFor,
 	pendingKeyOf,
+	settlementOf,
 } from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
@@ -54,8 +55,10 @@ export function decide<Reply>({
 		});
 		return decidedWith<Reply>({
 			kind: "duplicate",
-			committed: inFlight.settlement.join({ kind: "duplicate" }),
-			stored: inFlight.settlement.waitForStore(),
+			committed: settlementOf({ pending: inFlight }).join({
+				kind: "duplicate",
+			}),
+			stored: settlementOf({ pending: inFlight }).waitForStore(),
 		});
 	}
 
@@ -121,8 +124,8 @@ export function decide<Reply>({
 	scheduleCommit({ scope });
 	return decidedWith<Reply>({
 		kind: "write",
-		committed: pending.settlement.join({ kind: "new" }),
-		stored: pending.settlement.waitForStore(),
+		committed: settlementOf({ pending }).join({ kind: "new" }),
+		stored: settlementOf({ pending }).waitForStore(),
 	});
 }
 

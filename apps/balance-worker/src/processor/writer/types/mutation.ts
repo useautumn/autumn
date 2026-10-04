@@ -70,3 +70,23 @@ export type DecidedMutation<Reply> = {
 	/** Resolves once this write's batch is stored (or durably refused); replies wait for preceding writes. */
 	waitForStore(): Promise<void>;
 };
+
+/**
+ * A lean submission (serial-decide arm D): decided and answered without a settlement. The reply is built
+ * at decide time from the record and the projected rows, and the I/O thread holds it until the
+ * partition's commit position passes the record's sequence number.
+ */
+export type LeanSubmission<Reply> = Pick<
+	MutationSubmission<Reply>,
+	"command" | "mutate"
+> & {
+	/** The reply the caller gets for this write, or for a retry of it while it is still in flight. */
+	replyOf: (committed: CommittedMutation) => string;
+};
+
+export type LeanDecision<Reply> =
+	/** Appended: the reply may be released once the partition's commit position reaches `seq`. */
+	| { kind: "write"; seq: number; body: string }
+	/** A retry: of a write still in flight (its seq) or of one already stored (seq 0: release now). */
+	| { kind: "duplicate"; seq: number; body: string }
+	| { kind: "reply"; reply: Reply };

@@ -62,3 +62,11 @@ export class PartitionWriterRecoveryRequiredError extends Error {
 		this.name = "PartitionWriterRecoveryRequiredError";
 	}
 }
+
+/** The writer was taken down with lean writes still unanswered: their fate in the log is unknown here. */
+export class PartitionWriterDisposedError extends Error {
+	constructor() {
+		super("Partition writer stopped before the command was acknowledged");
+		this.name = "PartitionWriterDisposedError";
+	}
+}

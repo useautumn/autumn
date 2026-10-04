@@ -17,6 +17,10 @@ export interface PartitionRuntimePort {
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 	): Promise<Decision>;
+	/** Serial-decide arm D: a synchronous command on a ready runtime; absent on a port that cannot offer one. */
+	processHot?<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 }
 
 export type Unsubscribe = () => void;
@@ -159,10 +163,10 @@ export type PartitionsDependencies = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 };
 
-/** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
+/** Why the service stopped for good: the failure, and whether it was one partition's, the shared consumer's or a worker thread's. */
 export type PartitionServiceStopReason = {
 	cause: unknown;
-	scope: "consumer" | "partition" | "retirement";
+	scope: "consumer" | "partition" | "retirement" | "io-pool" | "kafka-worker";
 };
 
 export type PartitionConsumerStatus = {

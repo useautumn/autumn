@@ -18,6 +18,8 @@ import type { SubjectMapBudget } from "../subjectMap/types/subjectMapBudget.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
+	LeanDecision,
+	LeanSubmission,
 	MutationDurability,
 	MutationSubmission,
 } from "./mutation.js";
@@ -29,6 +31,11 @@ export type PartitionWriter = {
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** Serial-decide arm D: decides without a settlement, the reply released by commit position. Null when the
+	 *  customer has a classic command in flight, so log order per customer stays the writer's. */
+	decideLean<Reply>(
+		submission: LeanSubmission<Reply>,
+	): LeanDecision<Reply> | null;
 	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
 	log(params: {
 		command: MutatingCommand;
@@ -105,6 +112,8 @@ export type PartitionWriterContext = {
 		to: SubjectState;
 		changes: RowChange[];
 	}) => void;
+	/** Where lean replies are held (serial-decide arm D): the commit position moves forward, or every held reply past it fails. */
+	positions?: PositionSink;
 	now?: () => number;
 	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
@@ -151,6 +160,8 @@ export type PendingMutation = {
 	pendingKey: string;
 	customerKey: string;
 	/** The subjects this mutation projected; pinned in the map until it commits. */
+	/** Position in this partition's log order, from 1; the commit position is the latest acknowledged one. */
+	seq: number;
 	projectedSubjectKeys: string[];
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied; null for a log-only record. */
@@ -161,7 +172,10 @@ export type PendingMutation = {
 	effects?: MutationEffect[];
 	/** The record the log gets, built once: the appender measured this object and sends this object. */
 	loggedRecord: MeteringRecord;
-	settlement: PendingSettlement;
+	/** Null for a lean write until a classic caller needs to wait on it; the reply is released by position instead. */
+	settlement: PendingSettlement | null;
+	/** A lean write's reply, kept for a retry while it is in flight. */
+	replyBody?: string;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
@@ -176,6 +190,13 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
+	/** Sequence numbers: the last handed out, the latest that projected rows, the latest acknowledged by the log, the latest the store holds. */
+	lastSeq: number;
+	lastRowSeq: number;
+	commitPos: number;
+	storedSeq: number;
+	/** Callers waiting for the store to reach a sequence number; lean writes have no settlement to wait on. */
+	storeWaiters: StoreWaiter[];
 	/** Batches Kafka has but the store has not applied yet, oldest first. */
 	unapplied: UnappliedBatch[];
 	/** Resolves once every batch handed to the store so far has been applied, in log order. */
@@ -191,6 +212,25 @@ export type PartitionWriterState = {
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
+};
+
+export type StoreWaiter = {
+	seq: number;
+	resolve(): void;
+	reject(cause: unknown): void;
+};
+
+export type PositionSink = {
+	/** Where a writer of the partition begins: the log's position and the last sequence number any writer issued. */
+	open(): { commitPos: number; lastSeq: number };
+	/** The next sequence number of the partition; never one an earlier writer handed out. */
+	nextSeq(): number;
+	/** Every record with a sequence number up to `seq` is in the log; held replies up to it may go out. */
+	committed(params: { seq: number }): void;
+	/** Nothing in (`seq`, `lastSeq`] reached the log: every held reply in that range is answered with this failure. */
+	failedAbove(params: { seq: number; lastSeq: number; cause: unknown }): void;
+	/** The writer is gone: whatever it issued above the commit position never reaches the log. */
+	closed(params: { lastSeq: number; cause: unknown }): void;
 };
 
 export type UnappliedBatch = {
