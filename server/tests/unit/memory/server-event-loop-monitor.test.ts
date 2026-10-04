@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+	bindStagingVariants,
+	defaultStagingVariantsConfig,
+} from "@autumn/edge-config";
+import {
 	drainFinishedRequestCount,
 	registerInFlightRequest,
 } from "@/utils/memory/inFlightRequests.js";
@@ -63,10 +67,28 @@ describe("startServerEventLoopMonitor gate", () => {
 		expect(startServerEventLoopMonitor({ bucket }).started).toBe(false);
 	});
 
-	test("starts on the staging edge-config bucket", () => {
+	test("starts on the staging edge-config bucket once staging variants are bound, and not before", () => {
+		bindStagingVariants({
+			read: defaultStagingVariantsConfig,
+			identity: "task",
+			bucket: "autumn-prod-server",
+		});
+		expect(
+			startServerEventLoopMonitor({ bucket: "autumn-staging" }).started,
+		).toBe(false);
+		bindStagingVariants({
+			read: defaultStagingVariantsConfig,
+			identity: "task",
+			bucket: "autumn-staging",
+		});
 		const monitor = startServerEventLoopMonitor({ bucket: "autumn-staging" });
 		monitor.stop();
 		expect(monitor.started).toBe(true);
+		bindStagingVariants({
+			read: defaultStagingVariantsConfig,
+			identity: "task",
+			bucket: "autumn-prod-server",
+		});
 	});
 });
 
