@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { flushSql } from "../../../src/flush/repos/flushSql.js";
+import {
+	FLUSH_ROLLBACK_MARKER,
+	flushSql,
+	singleStatementFlushSql,
+} from "../../../src/flush/repos/flushSql.js";
 
 const dialect = new PgDialect();
 const flatten = (sql: string) => sql.replace(/\s+/g, " ").trim();
@@ -182,5 +186,49 @@ describe("flushSql", () => {
 			}),
 		);
 		expect(flatten(query.sql)).toContain("SELECT '[]'::json AS applied");
+	});
+});
+
+describe("singleStatementFlushSql", () => {
+	test("the same CTEs, with a CASE that casts the counts to integer when a bookmark or row did not move", () => {
+		const query = dialect.sqlToQuery(
+			singleStatementFlushSql({
+				changes: [
+					{
+						op: "update",
+						table: "customerEntitlements",
+						id: "ce_1",
+						set: {},
+						add: { balance: -5 },
+						addEntries: {},
+						guard: {},
+					},
+					{
+						op: "promote",
+						table: "pooledContributions",
+						pooledBalanceId: "pb_1",
+						dueBy: 10,
+					},
+				],
+				bookmarks: [
+					{
+						topic: "metering",
+						partition: 3,
+						expectedOffset: 40n,
+						nextOffset: 42n,
+					},
+				],
+			}),
+		);
+		const sql = flatten(query.sql);
+		expect(
+			sql.startsWith('WITH "u0" AS ( UPDATE "customer_entitlements"'),
+		).toBe(true);
+		expect(sql).toContain("b AS ( UPDATE partition_progress p");
+		expect(sql).toContain(
+			'WHERE CASE WHEN (SELECT count(*) FROM b) = $14::bigint AND (SELECT count(*) FROM "u0") = 1 THEN true ELSE ($15::text || (SELECT count(*) FROM b) || \':\' || array_to_string(ARRAY[(SELECT count(*) FROM "u0"), (SELECT count(*) FROM "u1")], \',\'))::integer IS NULL END',
+		);
+		expect(query.params.slice(-2)).toEqual([1, FLUSH_ROLLBACK_MARKER]);
+		expect(sql).not.toContain("BEGIN");
 	});
 });
