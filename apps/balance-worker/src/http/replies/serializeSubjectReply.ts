@@ -1,4 +1,7 @@
-import type { TrackBatchItemResult } from "@autumn/balance-worker-client/protocol";
+import type {
+	CheckReply,
+	TrackBatchItemResult,
+} from "@autumn/balance-worker-client/protocol";
 
 // State rows, tables and slimmed catalogs are copy-on-write: a write replaces what it changes and keeps
 // every other object, so an object's JSON is computed once and reused by every later reply carrying it.
@@ -116,4 +119,15 @@ export function serializeTrackBatchReply({
 			: JSON.stringify(result);
 	}
 	return `${json}]}`;
+}
+
+/** A memoised check reply is one object per (subject view, selection, second), so its body is serialised once. */
+const checkReplyJson = new WeakMap<CheckReply, string>();
+
+export function serializeCheckReply({ reply }: { reply: CheckReply }): string {
+	const known = checkReplyJson.get(reply);
+	if (known !== undefined) return known;
+	const json = serializeSubjectReply({ reply });
+	checkReplyJson.set(reply, json);
+	return json;
 }
