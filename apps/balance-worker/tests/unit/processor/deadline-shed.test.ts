@@ -156,6 +156,17 @@ describe("check admission", () => {
 			shed: 400 - hot,
 			behind: true,
 		});
+		expect(admission.takeInterval()).toMatchObject({
+			admitted: 40 + hot,
+			shed: 400 - hot,
+			shedCustomers: 1,
+			behind: true,
+		});
+		expect(admission.takeInterval()).toMatchObject({
+			admitted: 0,
+			shed: 0,
+			shedCustomers: 0,
+		});
 		advance({ ms: 200 });
 		expect(admission.readCounters().behind).toBe(false);
 		expect(offer({ admission, customerKey: "hot", count: 400 })).toBe(400);
