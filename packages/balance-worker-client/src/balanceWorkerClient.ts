@@ -1,5 +1,9 @@
+export type {
+	CheckLeaseCounters,
+	CheckLeasesConfig,
+} from "./checkLeases/types/checkLeases.js";
 export type { ApplyBillingPlanReply } from "./contracts/applyBillingPlan.js";
-export type { CheckReply } from "./contracts/check.js";
+export type { CheckLease, CheckReply } from "./contracts/check.js";
 export type { InitializeReply } from "./contracts/initialize.js";
 export type { ReadSubjectStateReply } from "./contracts/readSubjectState.js";
 export type { TrackReply } from "./contracts/track.js";
