@@ -33,10 +33,9 @@ export async function pinServerForkVariantAtBoot() {
 	if (!stagingVariantsEnabled({ bucket: getAdminS3Config().bucket }))
 		return getServerForkCount();
 	const arm = await getBootVariant().read();
-	const forks = arm === "B" ? 6 : 4;
-	process.env.SERVER_FORK_COUNT = String(forks);
+	if (arm === "B") process.env.SERVER_FORK_COUNT = "6";
 	process.env.SERVER_FORK_VARIANT_ARM = arm;
-	return forks;
+	return getServerForkCount();
 }
 
 export function getServerForkBootArm(): "A" | "B" | null {
