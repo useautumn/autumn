@@ -7,6 +7,7 @@ import {
 	createBalanceWorkerKafka,
 	createKafkaBalanceWorkerClient,
 } from "../src/balanceWorkerClient.js";
+import { createOwnersFromKafka } from "../src/kafka/createOwnersFromKafka.js";
 
 const owner = { partition: 0, routeEpoch: "1", endpoint: "http://worker-a" };
 
@@ -85,7 +86,29 @@ function createFakeKafka({
 			connectProducersOnStart,
 		},
 	});
-	return { client, events, sent, logs, createConsumer };
+	return { client, kafka, events, sent, logs, createConsumer };
+}
+
+function createOwners() {
+	const fixture = createFakeKafka();
+	const logs: string[] = [];
+	function log(payload: object | string, message?: string): void {
+		logs.push(message ?? String(payload));
+	}
+	const owners = createOwnersFromKafka({
+		ctx: { kafka: fixture.kafka, logger: { info: log, warn: log, error: log } },
+		config: {
+			topic: "local-ownership",
+			groupIdPrefix: "test-owners",
+			startRetryDelaysMs: [1],
+		},
+	});
+	function failConsumer({ index }: { index: number }): void {
+		fixture.createConsumer.mock.calls[index]?.[0].ctx.onFailed?.({
+			cause: new Error("refused"),
+		});
+	}
+	return { ...fixture, owners, logs, failConsumer };
 }
 
 const command = {
@@ -130,6 +153,43 @@ test("owners answer nothing until the ownership log is read through; start retri
 		expect(fixture.logs.at(-1)).toMatch(/ready; initial catch-up complete/);
 		await fixture.client.stop();
 		expect(fixture.events.at(-1)).toBe("stop:3");
+	} finally {
+		fixture.createConsumer.mockRestore();
+	}
+});
+
+test("an ownership consumer that fails after catching up is replaced, and owners answer nothing until the new one has", async () => {
+	const fixture = createOwners();
+	try {
+		await fixture.owners.start();
+		expect(fixture.owners.findOwner({ partition: 0 })).toEqual(owner);
+
+		fixture.failConsumer({ index: 0 });
+		expect(fixture.owners.findOwner({ partition: 0 })).toBeUndefined();
+		expect(fixture.logs).toContain(
+			"[balance-worker] Kafka ownership consumer failed; rebuilding it",
+		);
+
+		while (!fixture.events.includes("start:2")) await Bun.sleep(1);
+		await Bun.sleep(1);
+		expect(fixture.events).toEqual(["start:1", "stop:1", "start:2"]);
+		expect(fixture.owners.findOwner({ partition: 0 })).toEqual(owner);
+
+		await fixture.owners.stop();
+		expect(fixture.events.at(-1)).toBe("stop:2");
+	} finally {
+		fixture.createConsumer.mockRestore();
+	}
+});
+
+test("a failure reported after the client stopped rebuilds nothing", async () => {
+	const fixture = createOwners();
+	try {
+		await fixture.owners.start();
+		await fixture.owners.stop();
+		fixture.failConsumer({ index: 0 });
+		await Bun.sleep(5);
+		expect(fixture.events).toEqual(["start:1", "stop:1"]);
 	} finally {
 		fixture.createConsumer.mockRestore();
 	}
