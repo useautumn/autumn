@@ -83,4 +83,16 @@ async function serve(request: Request): Promise<Response> {
 	return response;
 }
 const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: serve });
+
+/** One synchronous stall of the loop, as a long GC or a blocked task does, `stallAtMs` after the client says go. */
+const stallMs = Number(process.env.DEADLINE_SHED_STALL_MS ?? 0);
+const stallAtMs = Number(process.env.DEADLINE_SHED_STALL_AT_MS ?? 0);
+function stallLoop(): void {
+	const until = performance.now() + stallMs;
+	while (performance.now() < until) {}
+}
+if (stallMs > 0)
+	process.on("SIGUSR2", function scheduleStall() {
+		setTimeout(stallLoop, stallAtMs);
+	});
 console.error(`READY ${server.port}`);

@@ -34,6 +34,9 @@ const seconds = Number(args.seconds ?? 12);
 const burstFrom = Number(args.burstFrom ?? 2) * 1_000;
 const burstTo = Number(args.burstTo ?? 8) * 1_000;
 const runs = Number(args.runs ?? 3);
+/** A one-off synchronous stall of the worker's loop (a long GC or blocked task), `stallAt` s into the run. */
+const stallMs = Number(args.stallMs ?? 0);
+const stallAtMs = Number(args.stallAt ?? 3) * 1_000;
 /** Whether requests carry the caller's absolute deadline as well as its budget, as the client now does. */
 const sendsDeadline = args.deadlineHeader !== "false";
 const arms = (args.arms ?? "A,B").split(",");
@@ -84,6 +87,8 @@ const startServer = async ({ arm }: { arm: string }) => {
 				NODE_ENV: "production",
 				DEADLINE_SHED_ARM: arm,
 				DEADLINE_SHED_QUIET: String(quietCustomers),
+				DEADLINE_SHED_STALL_MS: String(stallMs),
+				DEADLINE_SHED_STALL_AT_MS: String(stallAtMs),
 			},
 			stdout: "ignore",
 			stderr: "pipe",
@@ -198,6 +203,7 @@ const runOnce = async ({ arm }: { arm: string }) => {
 		),
 	];
 
+	if (stallMs > 0) server.kill("SIGUSR2");
 	const startedAt = performance.now();
 	/** Sends every request whose time has come, stamped with its scheduled time, not with when it went. */
 	function pump(): void {
@@ -325,6 +331,8 @@ console.error(
 			burst: [burstFrom / 1_000, burstTo / 1_000],
 			runs,
 			sendsDeadline,
+			stallMs,
+			stallAtMs,
 		},
 		table,
 	}),
