@@ -1,14 +1,14 @@
 import {
-	armForWindow,
 	bindStagingVariants,
 	defaultStagingVariantsConfig,
 	type StagingArm,
+	variant,
 } from "@autumn/edge-config";
 
 /** Variants only go live on the staging admin bucket. */
 const STAGING_BUCKET = "autumn-staging";
 
-/** Binds the staging variants so `experiment` runs `arm` in every window: an identity whose hash picks it, a frozen clock. */
+/** Binds the staging variants task-scoped, as a rung runs them, under an identity whose arm for `experiment` is `arm`. */
 export function forceStagingArm({
 	experiment,
 	arm,
@@ -17,25 +17,20 @@ export function forceStagingArm({
 	arm: StagingArm;
 }): void {
 	const arms: StagingArm[] = arm === "A" ? ["A", "B"] : ["A", arm];
-	let identity = 0;
-	while (
-		armForWindow({
-			identity: `t${identity}`,
-			windowIndex: 0,
-			experiment,
-			arms,
-		}) !== arm
-	)
-		identity++;
-	bindStagingVariants({
-		read: () => ({
+	function read() {
+		return {
 			...defaultStagingVariantsConfig(),
-			experiments: { [experiment]: { arms } },
-		}),
-		identity: `t${identity}`,
-		bucket: STAGING_BUCKET,
-		now: () => 0,
-	});
+			experiments: { [experiment]: { arms, scope: "task" as const } },
+		};
+	}
+	for (let identity = 0; ; identity++) {
+		bindStagingVariants({
+			read,
+			identity: `t${identity}`,
+			bucket: STAGING_BUCKET,
+		});
+		if (variant(experiment) === arm) return;
+	}
 }
 
 /** No experiment live: every `variant()` is A again. */

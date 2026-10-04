@@ -60,7 +60,7 @@ const nearLimit = ({
 	};
 };
 
-const valueOf = (random: () => number): number => {
+const trackValueOf = (random: () => number): number => {
 	const roll = random();
 	if (roll < 0.6) return 1 + Math.floor(random() * 8);
 	if (roll < 0.7) return -(1 + Math.floor(random() * 5));
@@ -120,7 +120,7 @@ async function runArm({
 			commandId: `t_${index}`,
 			featureId:
 				scenario.features[Math.floor(random() * scenario.features.length)],
-			value: valueOf(random),
+			value: trackValueOf(random),
 			overageBehavior: BEHAVIORS[Math.floor(random() * 3)],
 			occurredAt: 1_700_000_000_000 + index * 7,
 		});
