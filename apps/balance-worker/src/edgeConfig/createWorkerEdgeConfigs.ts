@@ -8,6 +8,8 @@ import {
 	type EdgeConfigLogger,
 	type EdgeConfigS3Client,
 	type EdgeConfigStore,
+	type StagingVariantsConfig,
+	stagingVariantsEdgeConfig,
 } from "@autumn/edge-config";
 import {
 	type ActiveSlotEdgeConfig,
@@ -21,6 +23,8 @@ export type WorkerEdgeConfigs = {
 	dbControl: EdgeConfigStore<DbControlEdgeConfig>;
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
+	/** Staging A/B experiments, read through `variant()`; polled on its own timer like the slot. */
+	stagingVariants: EdgeConfigStore<StagingVariantsConfig>;
 	/** The same bucket and client the stores read, for objects the worker writes itself. */
 	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
@@ -59,20 +63,32 @@ export const createWorkerEdgeConfigs = ({
 		// The default names no service and would open the gate; a read error must keep the last record instead.
 		retainOnError: true,
 	});
+	const stagingVariants = createEdgeConfigStore({
+		ctx: edgeConfigContext,
+		s3Key: stagingVariantsEdgeConfig.key,
+		schema: stagingVariantsEdgeConfig.schema,
+		defaultValue: stagingVariantsEdgeConfig.defaultValue,
+		pollIntervalMs: stagingVariantsEdgeConfig.pollIntervalMs,
+		// A blip must not switch a running experiment off mid-rung.
+		retainOnError: true,
+	});
 
 	async function start(): Promise<void> {
 		await registry.start({ logger: ctx.logger });
 		await activeSlot.startPolling({ logger: ctx.logger });
+		await stagingVariants.startPolling({ logger: ctx.logger });
 	}
 
 	function stop(): void {
 		activeSlot.stopPolling();
+		stagingVariants.stopPolling();
 		registry.stop();
 	}
 
 	return {
 		dbControl,
 		activeSlot,
+		stagingVariants,
 		adminBucket: { s3Client, location: config.location },
 		start,
 		stop,
