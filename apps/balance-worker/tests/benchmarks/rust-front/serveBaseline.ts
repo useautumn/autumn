@@ -1,4 +1,8 @@
-import { type AppenderMode, createSpikeWorker } from "./createSpikeWorker.js";
+import {
+	type AppenderMode,
+	createSpikeWorker,
+	summarizeAppends,
+} from "./createSpikeWorker.js";
 
 /** (a) today's worker: Bun.serve with the thin fast path in front of the partition processor. */
 const appenderMode = (process.env.SPIKE_APPENDER ?? "kafkajs") as AppenderMode;
@@ -13,4 +17,7 @@ Bun.serve({
 });
 console.error(`baseline listening on ${port} (appender ${appenderMode})`);
 
-process.on("SIGTERM", () => process.exit(0));
+process.on("SIGTERM", () => {
+	console.log(JSON.stringify({ appendStats: summarizeAppends() }));
+	process.exit(0);
+});

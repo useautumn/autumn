@@ -34,6 +34,9 @@ export function createPartitionWriterState({
 		queue: [],
 		draining: false,
 		storeCompletion: Promise.resolve(),
+		inFlight: [],
+		maxInFlightSeen: 0,
+		pipeWake: null,
 		unapplied: [],
 		applyTail: Promise.resolve(),
 		applying: false,
@@ -244,6 +247,8 @@ export function enqueueMutation({
 	if (state.lingerWake && state.queue.length >= config.limits.maxBatchSize) {
 		state.lingerWake();
 	}
+	// A loop idling with room in the pipe has something to send.
+	state.pipeWake?.();
 	return pending;
 }
 
@@ -331,6 +336,7 @@ export function rejectAllPending({
 	// Log-acknowledged writes have left pendingByKey but still own an unfinished store milestone.
 	for (const pending of batch) pending.settlement.reject({ error });
 	state.queue.length = 0;
+	state.inFlight.length = 0;
 	state.deferredQueued = 0;
 	if (state.deferredCommitTimer) clearTimeout(state.deferredCommitTimer);
 	state.deferredCommitTimer = null;

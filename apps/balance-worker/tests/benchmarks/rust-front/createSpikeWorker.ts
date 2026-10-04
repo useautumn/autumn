@@ -44,12 +44,58 @@ export type RemoteAppend = (params: {
 	records: { key: Buffer; value: Buffer }[];
 }) => Promise<bigint>;
 
+/** Commit mode and pipeline shape for the run: transactional (dev default) or idempotent (staging), depth 1 = stop-and-wait. */
+export const SPIKE_COMMIT_MODE = (process.env.SPIKE_COMMIT_MODE ??
+	"transactional") as "transactional" | "idempotent";
+export const SPIKE_PIPELINE_DEPTH = Number(
+	process.env.SPIKE_PIPELINE_DEPTH ?? 1,
+);
+export const SPIKE_LINGER_MS = Number(process.env.SPIKE_LINGER_MS ?? 5);
+export const SPIKE_MAX_BATCH = Number(process.env.SPIKE_MAX_BATCH ?? 500);
+
 const producerLimits = {
 	transactionTimeoutMs: 30_000,
+	maxInFlightRequests: Math.max(1, SPIKE_PIPELINE_DEPTH),
 	retryCount: 8,
 	initialRetryTimeMs: 5,
 	maxRetryTimeMs: 1000,
 };
+
+/** Per-append timings for the run summary, printed on SIGTERM. */
+export const appendStats = {
+	appends: 0,
+	records: 0,
+	durationsMs: [] as number[],
+	queuedMs: [] as number[],
+	lingerMs: [] as number[],
+};
+
+function percentile(values: number[], p: number): number {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	return (
+		sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0
+	);
+}
+
+export function summarizeAppends(): Record<string, number | string> {
+	const s = appendStats;
+	return {
+		commitMode: SPIKE_COMMIT_MODE,
+		depth: SPIKE_PIPELINE_DEPTH,
+		lingerMs: SPIKE_LINGER_MS,
+		appends: s.appends,
+		records: s.records,
+		recordsPerAppend: s.appends
+			? Math.round((s.records / s.appends) * 10) / 10
+			: 0,
+		appendP50Ms: Math.round(percentile(s.durationsMs, 0.5) * 100) / 100,
+		appendP99Ms: Math.round(percentile(s.durationsMs, 0.99) * 100) / 100,
+		queuedP50Ms: Math.round(percentile(s.queuedMs, 0.5) * 100) / 100,
+		queuedP99Ms: Math.round(percentile(s.queuedMs, 0.99) * 100) / 100,
+		lingerP50Ms: Math.round(percentile(s.lingerMs, 0.5) * 100) / 100,
+	};
+}
 
 async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
 	const kafka = new Kafka(
@@ -73,15 +119,37 @@ async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
 			topic: SPIKE_TOPIC,
 			partition: 0,
 			limits: producerLimits,
+			mode: SPIKE_COMMIT_MODE,
 		}),
 	});
 	await session.connect();
-	await session.fence();
+	// Idempotent mode fences with an owner record stamped with the epoch; the spike is epoch 1.
+	const ownerEpoch = () =>
+		SPIKE_COMMIT_MODE === "idempotent" ? "1" : undefined;
 	const producer = createWorkerProducer({
-		ctx: { session },
+		ctx: { session, ownerEpoch },
 		config: { topic: SPIKE_TOPIC, partition: 0 },
 	});
-	return createMutationPublisher({ ctx: { producer } });
+	await producer.fence();
+	const publisher = createMutationPublisher({
+		ctx: { producer, commit: { mode: SPIKE_COMMIT_MODE }, ownerEpoch },
+	});
+	return {
+		...publisher,
+		async appendCommitted(params) {
+			const startedAt = performance.now();
+			const appended = await publisher.appendCommitted(params);
+			appendStats.appends += 1;
+			appendStats.records += params.outcomes.length;
+			appendStats.durationsMs.push(performance.now() - startedAt);
+			if (params.waits) {
+				if (params.waits.queuedMs !== null)
+					appendStats.queuedMs.push(params.waits.queuedMs);
+				appendStats.lingerMs.push(params.waits.lingerMs);
+			}
+			return appended;
+		},
+	};
 }
 
 /** The writer's contract unchanged: records leave as the bytes `serializeMeteringRecord` gives, the base offset comes back. */
@@ -196,10 +264,11 @@ export async function createSpikeWorker({
 			topic: SPIKE_TOPIC,
 			partition: 0,
 			writerLimits: {
-				maxBatchSize: 500,
+				maxBatchSize: SPIKE_MAX_BATCH,
 				maxPendingCommands: 4000,
 				maxPendingCommandsPerCustomer: 1000,
-				commitLingerMs: 5,
+				commitLingerMs: SPIKE_LINGER_MS,
+				commitPipelineDepth: SPIKE_PIPELINE_DEPTH,
 			},
 		},
 	});

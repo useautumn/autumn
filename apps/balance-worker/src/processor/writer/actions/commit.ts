@@ -15,6 +15,7 @@ import {
 } from "../pendingMutations.js";
 import type {
 	CommitWaits,
+	InFlightAppend,
 	PartitionWriterScope,
 	PendingMutation,
 } from "../types/partitionWriter.js";
@@ -105,7 +106,12 @@ function releaseDeferredRecords({
 
 /** Kafka commit → answer log callers → hand the batch to the store, then straight
  *  on to the next batch. The store applies behind the log in order; the loop only
- *  waits for it when too many batches are still unapplied. */
+ *  waits for it when too many batches are still unapplied.
+ *
+ *  With a pipeline depth above one, the next batch goes out while earlier ones
+ *  are still waiting for the broker: appends leave in order on one connection,
+ *  the broker's sequence check keeps that order in the log, and they are settled
+ *  here oldest first. */
 async function commitOutcomes({
 	scope,
 }: {
@@ -114,11 +120,30 @@ async function commitOutcomes({
 	const { state, config } = scope;
 	if (state.draining || state.recoveryError) return;
 	state.draining = true;
+	const depth = Math.max(1, config.limits.commitPipelineDepth ?? 1);
 	try {
-		while (state.queue.length > 0 && !state.recoveryError) {
-			if (holdsOnlyDeferredRecords({ state }) && !state.deferredCommitDue) {
-				scheduleDeferredCommit({ scope });
-				return;
+		while (
+			(state.queue.length > 0 || state.inFlight.length > 0) &&
+			!state.recoveryError
+		) {
+			// Answered appends settle first, oldest first, so callers never wait on a later batch.
+			while (state.inFlight[0]?.done) {
+				if (!(await settleOldestAppend({ scope }))) return;
+			}
+			if (state.recoveryError) return;
+			const pipeFull = state.inFlight.length >= depth;
+			const onlyDeferred =
+				holdsOnlyDeferredRecords({ state }) && !state.deferredCommitDue;
+			if (state.queue.length === 0 || pipeFull || onlyDeferred) {
+				if (state.inFlight.length === 0) {
+					if (onlyDeferred) scheduleDeferredCommit({ scope });
+					return;
+				}
+				// Room in the pipe but nothing to send: the next record may arrive before the head answers.
+				if (pipeFull || onlyDeferred) await headAnswered({ state });
+				else
+					await Promise.race([headAnswered({ state }), nextEnqueue({ state })]);
+				continue;
 			}
 			const storeWaitStartedAt = writerNowOf({ scope });
 			while (
@@ -131,28 +156,84 @@ async function commitOutcomes({
 				if (state.recoveryError) return;
 			}
 			const lingerStartedAt = writerNowOf({ scope });
-			await lingerForBatch({ scope });
+			// A linger only pays while an append is already on the wire: the pipe is
+			// busy anyway, so waiting gathers records without idling it.
+			if (depth === 1 || state.inFlight.length > 0)
+				await lingerForBatch({ scope });
 			if (state.recoveryError) return;
+			if (state.queue.length === 0) continue;
 			const batch = takeBatch({ scope });
 			const takenAt = writerNowOf({ scope });
 			releaseDeferredRecords({ state, batch });
 			state.lastBatchSize = batch.length;
-			const baseOffset = await appendBatch({
-				scope,
+			const entry: InFlightAppend = {
 				batch,
-				waits: {
-					queuedMs: queuedMsOf({ batch, takenAt }),
-					lingerMs: takenAt - lingerStartedAt,
-					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
-				},
-			});
-			if (baseOffset === null) return;
-			settleAppended({ scope, batch });
-			queueApply({ scope, batch, baseOffset });
+				done: false,
+				result: appendBatch({
+					scope,
+					batch,
+					waits: {
+						queuedMs: queuedMsOf({ batch, takenAt }),
+						lingerMs: takenAt - lingerStartedAt,
+						storeWaitMs: lingerStartedAt - storeWaitStartedAt,
+					},
+				}),
+			};
+			entry.result.then(markDone, markDone);
+			function markDone(): void {
+				entry.done = true;
+				state.pipeWake?.();
+			}
+			state.inFlight.push(entry);
+			state.maxInFlightSeen = Math.max(
+				state.maxInFlightSeen,
+				state.inFlight.length,
+			);
 		}
 	} finally {
 		state.draining = false;
 	}
+}
+
+/** Resolves once the oldest in-flight append has answered (either way). */
+function headAnswered({
+	state,
+}: {
+	state: PartitionWriterScope["state"];
+}): Promise<unknown> {
+	const head = state.inFlight[0];
+	return head ? head.result.catch(() => undefined) : Promise.resolve();
+}
+
+/** Resolves when a record joins the queue or an in-flight append answers; enqueue and markDone both ring it. */
+function nextEnqueue({
+	state,
+}: {
+	state: PartitionWriterScope["state"];
+}): Promise<void> {
+	return new Promise<void>((resolve) => {
+		state.pipeWake = () => {
+			state.pipeWake = null;
+			resolve();
+		};
+	});
+}
+
+/** Answers the oldest append's callers; false when the loop must stop (recovery or a refused batch). */
+async function settleOldestAppend({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<boolean> {
+	const { state } = scope;
+	const head = state.inFlight[0];
+	if (!head) return true;
+	const baseOffset = await head.result;
+	state.inFlight.shift();
+	if (baseOffset === null) return false;
+	settleAppended({ scope, batch: head.batch });
+	queueApply({ scope, batch: head.batch, baseOffset });
+	return true;
 }
 
 /**
@@ -260,9 +341,12 @@ async function appendBatch({
 		// Clearing speculative state is only safe when every committed batch is
 		// already in the store; otherwise memory holds rows the store lacks, so the
 		// partition rebuilds from the log instead.
+		// Batches sent behind this one are numbered after it: once one is refused the
+		// producer is spent and the partition rebuilds from the log.
 		const provenUncommitted =
 			cause instanceof MutationBatchNotCommittedError &&
-			state.unapplied.length === 0;
+			state.unapplied.length === 0 &&
+			state.inFlight.length <= 1;
 		if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
 			rejectAllPending({
 				state,

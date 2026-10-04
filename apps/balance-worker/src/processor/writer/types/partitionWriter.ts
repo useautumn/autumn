@@ -131,6 +131,8 @@ export type PartitionWriterLimits = {
 	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
+	/** Appends allowed on the wire at once; unset or 1 waits for each before sending the next. */
+	commitPipelineDepth?: number;
 	deferredCommitMs?: number;
 };
 
@@ -184,6 +186,11 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
+	/** Batches sent to Kafka and not yet answered, oldest first; settled in this order. */
+	inFlight: InFlightAppend[];
+	maxInFlightSeen: number;
+	/** Set while the loop waits with room in the pipe; enqueue rings it. */
+	pipeWake: (() => void) | null;
 	/** Batches Kafka has but the store has not applied yet, oldest first. */
 	unapplied: UnappliedBatch[];
 	/** Resolves once every batch handed to the store so far has been applied, in log order. */
@@ -204,6 +211,14 @@ export type PartitionWriterState = {
 export type UnappliedBatch = {
 	batch: PendingMutation[];
 	baseOffset: bigint;
+};
+
+export type InFlightAppend = {
+	batch: PendingMutation[];
+	/** Set once `result` has settled, so the loop can settle answered heads without awaiting. */
+	done: boolean;
+	/** Null once the append failed: the failure path has already rejected or entered recovery. */
+	result: Promise<bigint | null>;
 };
 
 export type PartitionWriterScope = {

@@ -1,0 +1,180 @@
+diff -ru kafkajs-pristine/src/broker/index.js wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/broker/index.js
+--- kafkajs-pristine/src/broker/index.js	2026-10-04 11:32:43.066080444 +0000
++++ wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/broker/index.js	2026-10-04 11:34:02.941707439 +0000
+@@ -236,19 +236,20 @@
+     acks = -1,
+     timeout = 30000,
+     compression = Compression.None,
++    onRequestQueued,
+   }) {
+     const produce = this.lookupRequest(apiKeys.Produce, requests.Produce)
+-    return await this[PRIVATE.SEND_REQUEST](
+-      produce({
+-        acks,
+-        timeout,
+-        compression,
+-        topicData,
+-        transactionalId,
+-        producerId,
+-        producerEpoch,
+-      })
+-    )
++    const protocolRequest = produce({
++      acks,
++      timeout,
++      compression,
++      topicData,
++      transactionalId,
++      producerId,
++      producerEpoch,
++    })
++    if (onRequestQueued) protocolRequest.onRequestQueued = onRequestQueued
++    return await this[PRIVATE.SEND_REQUEST](protocolRequest)
+   }
+ 
+   /**
+diff -ru kafkajs-pristine/src/index.js wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/index.js
+--- kafkajs-pristine/src/index.js	2026-10-04 11:32:43.050080519 +0000
++++ wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/index.js	2026-10-04 11:34:02.949707402 +0000
+@@ -129,6 +129,7 @@
+       transactionalId,
+       transactionTimeout,
+       instrumentationEmitter,
++      maxInFlightRequests,
+     })
+   }
+ 
+diff -ru kafkajs-pristine/src/network/connection.js wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/network/connection.js
+--- kafkajs-pristine/src/network/connection.js	2026-10-04 11:32:43.066080444 +0000
++++ wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/network/connection.js	2026-10-04 11:34:02.941707439 +0000
+@@ -376,7 +376,7 @@
+    * @param {boolean} [protocol.logResponseError=true] Whether to log errors
+    * @returns {Promise<data>} where data is the return of "response#parse"
+    */
+-  async send({ request, response, requestTimeout = null, logResponseError = true }) {
++  async send({ request, response, requestTimeout = null, logResponseError = true, onRequestQueued }) {
+     if (!this.isAuthenticated() && isAuthenticatedRequest(request)) {
+       await this[PRIVATE.AUTHENTICATE]()
+     }
+@@ -409,6 +409,8 @@
+               this.socket.write(requestPayload.buffer, 'binary')
+             },
+           })
++          // Written or FIFO-pending behind what was written: its place on the wire is fixed.
++          if (onRequestQueued) onRequestQueued()
+         } catch (e) {
+           reject(e)
+         }
+diff -ru kafkajs-pristine/src/producer/index.js wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/producer/index.js
+--- kafkajs-pristine/src/producer/index.js	2026-10-04 11:32:43.066080444 +0000
++++ wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/producer/index.js	2026-10-04 11:34:02.941707439 +0000
+@@ -38,8 +38,13 @@
+   transactionalId,
+   transactionTimeout,
+   instrumentationEmitter: rootInstrumentationEmitter,
++  maxInFlightRequests,
+ }) => {
+   let connectionStatus = CONNECTION_STATUS.DISCONNECTED
++  // More than one in-flight request on an idempotent producer pipelines its produces:
++  // the per-broker lock is held only until the request is on the wire (sequence order
++  // fixed), not until the response. Transactions never pipeline.
++  const pipelined = Boolean(idempotent && maxInFlightRequests > 1)
+   retry = retry || { retries: idempotent ? Number.MAX_SAFE_INTEGER : 5 }
+ 
+   if (idempotent && retry.retries < 1) {
+@@ -73,6 +78,7 @@
+     idempotent,
+     retrier,
+     getConnectionStatus: () => connectionStatus,
++    pipelined,
+   })
+ 
+   let transactionalEosManager
+diff -ru kafkajs-pristine/src/producer/messageProducer.js wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/producer/messageProducer.js
+--- kafkajs-pristine/src/producer/messageProducer.js	2026-10-04 11:32:43.066080444 +0000
++++ wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/producer/messageProducer.js	2026-10-04 11:34:02.953707383 +0000
+@@ -10,6 +10,7 @@
+   idempotent,
+   retrier,
+   getConnectionStatus,
++  pipelined = false,
+ }) => {
+   const sendMessages = createSendMessages({
+     logger,
+@@ -17,6 +18,7 @@
+     retrier,
+     partitioner,
+     eosManager,
++    pipelined,
+   })
+ 
+   const validateConnectionStatus = () => {
+diff -ru kafkajs-pristine/src/producer/sendMessages.js wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/producer/sendMessages.js
+--- kafkajs-pristine/src/producer/sendMessages.js	2026-10-04 11:32:43.066080444 +0000
++++ wt/node_modules/.bun/kafkajs@2.2.4/node_modules/kafkajs/src/producer/sendMessages.js	2026-10-04 11:34:02.941707439 +0000
+@@ -1,4 +1,4 @@
+-const { KafkaJSMetadataNotLoaded } = require('../errors')
++const { KafkaJSMetadataNotLoaded, KafkaJSNonRetriableError } = require('../errors')
+ const { staleMetadata } = require('../protocol/error')
+ const groupMessagesPerPartition = require('./groupMessagesPerPartition')
+ const createTopicData = require('./createTopicData')
+@@ -14,8 +14,13 @@
+  * @param {import("./eosManager").EosManager} options.eosManager
+  * @param {import("../retry").Retrier} options.retrier
+  */
+-module.exports = ({ logger, cluster, partitioner, eosManager, retrier }) => {
++module.exports = ({ logger, cluster, partitioner, eosManager, retrier, pipelined = false }) => {
++  // A pipelined producer whose produce failed can no longer trust its sequence
++  // numbers: later in-flight batches were numbered after the failed one. It is
++  // poisoned until recreated, and the owner recovers the partition from the log.
++  let poisoned = null
+   return async ({ acks, timeout, compression, topicMessages }) => {
++    if (poisoned) throw poisoned
+     /** @type {Map<import("../../types").Broker, any[]>} */
+     const responsePerBroker = new Map()
+ 
+@@ -76,7 +81,14 @@
+ 
+         const topicData = createTopicData(topicDataForBroker)
+ 
++        const pipelining = pipelined && !eosManager.isTransactional() && eosManager.isInitialized()
+         await eosManager.acquireBrokerLock(broker)
++        let released = false
++        const releaseLock = () => {
++          if (released) return
++          released = true
++          eosManager.releaseBrokerLock(broker)
++        }
+         try {
+           if (eosManager.isTransactional()) {
+             await eosManager.addPartitionsToTransaction(topicData)
+@@ -101,8 +113,20 @@
+               timeout,
+               compression,
+               topicData,
++              // Once the request is queued on the connection its order on the wire is
++              // fixed, so the next batch may take its sequence numbers and go.
++              onRequestQueued: pipelining ? releaseLock : undefined,
+             })
+           } catch (e) {
++            if (pipelining) {
++              // Later batches already hold the sequences after this one; rolling back
++              // would reuse them. Nothing more may be sent on this producer.
++              poisoned = new KafkaJSNonRetriableError(
++                `Pipelined idempotent produce failed; producer must be recreated: ${e.message}`
++              )
++              poisoned.cause = e
++              throw poisoned
++            }
+             topicData.forEach(({ topic, partitions }) => {
+               partitions.forEach(entry => {
+                 eosManager.updateSequence(topic, entry.partition, -entry.messages.length)
+@@ -119,7 +143,7 @@
+           responsePerBroker.delete(broker)
+           throw e
+         } finally {
+-          await eosManager.releaseBrokerLock(broker)
++          releaseLock()
+         }
+       })
+     }
