@@ -85,6 +85,35 @@ describe("track computation", () => {
 		});
 	});
 
+	test.concurrent(
+		"a run of tracks on one view reports each draw's own deductions, never sharing an object between records",
+		() => {
+			const fullSubject = createSubjectFor({
+				state: createState({ balance: 100 }),
+			});
+			const [first, second] = [5, 7].map(
+				(value) =>
+					trackResultOf({
+						mutation: computeTrackMutation({
+							fullSubject,
+							command: createTrackCommand({ value, overageBehavior: "cap" }),
+						}),
+					}).deductions,
+			);
+			expect(first).toEqual([
+				{
+					balance_id: "messages_monthly",
+					feature_id: "messages",
+					plan_id: "pro",
+					reset: { interval: ResetInterval.Month, resets_at: null },
+					value: 5,
+				},
+			]);
+			expect(second?.[0]).toEqual({ ...first?.[0], value: 7 });
+			expect(second?.[0]?.reset).not.toBe(first?.[0]?.reset);
+		},
+	);
+
 	test.concurrent("caps at the available balance", () => {
 		const mutation = trackMutation({
 			state: createState({ balance: 3 }),

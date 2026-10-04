@@ -39,6 +39,30 @@ const resetOf = ({
 		: { ...rest, interval_count: intervalCount };
 };
 
+type RowFields = Pick<TrackDeduction, "feature_id" | "plan_id" | "reset">;
+
+// A row object is never changed once built, and a run of tracks draws from the same rows: its fields are read once.
+const rowFieldsByRow = new WeakMap<
+	WorkerFullCustomerEntitlementWithProduct,
+	RowFields
+>();
+
+const rowFieldsOf = ({
+	row,
+}: {
+	row: WorkerFullCustomerEntitlementWithProduct;
+}): RowFields => {
+	const known = rowFieldsByRow.get(row);
+	if (known) return known;
+	const fields: RowFields = {
+		feature_id: row.entitlement.feature.id,
+		plan_id: cusEntsToPlanId({ cusEnts: [row] }),
+		reset: resetOf({ row }),
+	};
+	rowFieldsByRow.set(row, fields);
+	return fields;
+};
+
 /** What a usage event says about the balances behind it; read here because only the decision has the rows. */
 export type UsageEventFields = {
 	/** One entry per balance drawn from, consumed amounts positive. */
@@ -69,11 +93,12 @@ export const deltasToUsageEventFields = ({
 		if (existing) {
 			existing.value = consumed.plus(existing.value).toNumber();
 		} else {
+			const { feature_id, plan_id, reset } = rowFieldsOf({ row });
 			deductions.set(key, {
 				balance_id: delta.id,
-				feature_id: row.entitlement.feature.id,
-				plan_id: cusEntsToPlanId({ cusEnts: [row] }),
-				reset: resetOf({ row }),
+				feature_id,
+				plan_id,
+				reset: reset && { ...reset },
 				value: consumed.toNumber(),
 			});
 		}

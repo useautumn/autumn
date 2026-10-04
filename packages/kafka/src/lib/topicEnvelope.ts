@@ -40,6 +40,21 @@ export function readTopicEnvelope({
 	return { schemaVersion: 1, type: envelope.type, payload: envelope.payload };
 }
 
+const KEY_BUFFERS_KEPT = 4_096;
+
+// A partition's records share a handful of customer keys; their bytes are encoded once and only ever read.
+const keyBuffers = new Map<string, Buffer>();
+
+function keyBufferOf(key: string): Buffer {
+	const known = keyBuffers.get(key);
+	if (known) return known;
+	if (keyBuffers.size >= KEY_BUFFERS_KEPT) keyBuffers.clear();
+	const buffer = Buffer.from(key, "utf8");
+	keyBuffers.set(key, buffer);
+	return buffer;
+}
+
+/** Exactly `JSON.stringify({ schemaVersion: 1, type, payload: record })`, without building the envelope object. */
 export function serializeTopicRecord({
 	key,
 	record,
@@ -48,9 +63,9 @@ export function serializeTopicRecord({
 	record: { type: string };
 }): { key: Buffer; value: Buffer } {
 	return {
-		key: Buffer.from(key, "utf8"),
+		key: keyBufferOf(key),
 		value: Buffer.from(
-			JSON.stringify({ schemaVersion: 1, type: record.type, payload: record }),
+			`{"schemaVersion":1,"type":${JSON.stringify(record.type)},"payload":${JSON.stringify(record)}}`,
 			"utf8",
 		),
 	};
