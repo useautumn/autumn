@@ -8,6 +8,10 @@ import type { DeductionRequest } from "./types/deductionRequest.js";
 import type { DeductionState } from "./types/deductionState.js";
 import { deltasToRowChanges } from "./utils/convertDeductionUtils.js";
 import { deductFromBucket } from "./utils/draw/deductFromBucket.js";
+import {
+	drawIntegersFromBuckets,
+	isIntegerDraw,
+} from "./utils/draw/integerDraw.js";
 import { deductionStateToLimitType } from "./utils/limits/deductionStateToLimitType.js";
 import { usageWindowsToRowChanges } from "./utils/limits/usageWindows.js";
 
@@ -88,6 +92,19 @@ export const deductWithContext = ({
 	context: DeductionContext;
 	request: DeductionRequest;
 }): DeductionOutcome => {
+	if (isIntegerDraw({ context, request })) {
+		const { remaining, deltas } = drawIntegersFromBuckets({ context, request });
+		return deductionStateToOutcome({
+			context,
+			deductionState: {
+				remaining: new Decimal(remaining),
+				terms: request.terms,
+				deltas,
+				usageWindowConsumed: new Map(),
+			},
+			request,
+		});
+	}
 	const deductionState: DeductionState = {
 		remaining: new Decimal(request.value),
 		terms: request.terms,
