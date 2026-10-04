@@ -129,10 +129,12 @@ function createFixture({
 	leases?: boolean;
 } = {}) {
 	const paths: string[] = [];
+	const leaseAsks: (string | undefined)[] = [];
 	async function postJson(request: HttpRequest): Promise<HttpResponse> {
 		const path = new URL(request.url).pathname;
 		paths.push(path);
 		if (path === "/v1/check") {
+			leaseAsks.push(request.headers?.["x-check-lease"]);
 			const { command } = request.body as { command: CheckCommand };
 			return { status: 200, body: answer(command) };
 		}
@@ -164,10 +166,20 @@ function createFixture({
 		},
 	});
 	const checksSent = () => paths.filter((path) => path === "/v1/check").length;
-	return { client, checksSent, published };
+	return { client, checksSent, published, leaseAsks };
 }
 
 describe("check leases at the server", () => {
+	test("only a server holding leases asks the owner for one; without the config no check asks", async () => {
+		const leasing = createFixture();
+		await leasing.client.check({ command: checkOf() });
+		expect(leasing.leaseAsks).toEqual(["1"]);
+		const plain = createFixture({ leases: false });
+		await plain.client.check({ command: checkOf() });
+		await plain.client.check({ command: checkOf() });
+		expect(plain.leaseAsks).toEqual([undefined, undefined]);
+	});
+
 	test("a lease hit returns the owner's reply without asking the owner again", async () => {
 		const fixture = createFixture();
 		const fromOwner = await fixture.client.check({ command: checkOf() });

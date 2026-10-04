@@ -66,7 +66,10 @@ export type PartitionProcessor = {
 	decideTrack(params: {
 		command: TrackCommand;
 	}): Promise<DecidedMutation<never>>;
-	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	check(params: {
+		command: CheckCommand;
+		requestsLease?: boolean;
+	}): Promise<CheckReply>;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	/** What the partition counted since it started; partition health reports them. */

@@ -45,18 +45,18 @@ test.concurrent("local development needs no balance worker settings", () => {
 		BALANCE_WORKER_COMMAND_TOPIC: "local-commands",
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC: "local-catalog-invalidations",
 		BALANCE_WORKER_PARTITION_COUNT: 4,
-		BALANCE_WORKER_CHECK_LEASES: true,
-		BALANCE_WORKER_SHARED_CHECK_LEASES: true,
+		BALANCE_WORKER_CHECK_LEASES: false,
+		BALANCE_WORKER_SHARED_CHECK_LEASES: false,
 	});
 });
 
-test.concurrent("check leases are on unless switched off", () => {
+test.concurrent("check leases are off unless switched on, as in prod", () => {
 	expect(
 		createBalanceWorkerClientEnv({
 			...localEnv,
-			BALANCE_WORKER_CHECK_LEASES: "false",
+			BALANCE_WORKER_CHECK_LEASES: "true",
 		}).BALANCE_WORKER_CHECK_LEASES,
-	).toBe(false);
+	).toBe(true);
 	expect(() =>
 		createBalanceWorkerClientEnv({
 			...localEnv,
@@ -66,10 +66,21 @@ test.concurrent("check leases are on unless switched off", () => {
 	expect(
 		createBalanceWorkerClientEnv({
 			...localEnv,
-			BALANCE_WORKER_SHARED_CHECK_LEASES: "false",
+			BALANCE_WORKER_CHECK_LEASES: "true",
+			BALANCE_WORKER_SHARED_CHECK_LEASES: "true",
 		}),
 	).toMatchObject({
 		BALANCE_WORKER_CHECK_LEASES: true,
+		BALANCE_WORKER_SHARED_CHECK_LEASES: true,
+	});
+	expect(
+		createBalanceWorkerClientEnv({
+			...localEnv,
+			BALANCE_WORKER_CHECK_LEASES: "",
+			BALANCE_WORKER_SHARED_CHECK_LEASES: "false",
+		}),
+	).toMatchObject({
+		BALANCE_WORKER_CHECK_LEASES: false,
 		BALANCE_WORKER_SHARED_CHECK_LEASES: false,
 	});
 });

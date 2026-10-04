@@ -66,6 +66,7 @@ export type {
 	WorkerRouteSuccessor,
 } from "./contracts/worker.js";
 export {
+	CHECK_LEASE_REQUEST_HEADER,
 	PARTITION_RECOVERY_REASON,
 	parseWorkerRequest,
 	readRequestBudgetHeader,

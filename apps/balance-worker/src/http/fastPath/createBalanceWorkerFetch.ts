@@ -1,5 +1,6 @@
 import type { TrackReply } from "@autumn/balance-worker-client";
 import {
+	CHECK_LEASE_REQUEST_HEADER,
 	type CheckReply,
 	parseWorkerRequest,
 	readRequestBudgetHeader,
@@ -37,7 +38,11 @@ type FastReply = TrackReply | CheckReply;
 
 type FastRoute = {
 	accepts(input: unknown): boolean;
-	run(processor: PartitionProcessor, command: unknown): Promise<FastReply>;
+	run(
+		processor: PartitionProcessor,
+		command: unknown,
+		request: Request,
+	): Promise<FastReply>;
 	serialize(reply: FastReply): string;
 };
 
@@ -51,8 +56,11 @@ const FAST_ROUTES: Record<"/v1/track" | "/v1/check", FastRoute> = {
 	},
 	"/v1/check": {
 		accepts: looksLikeCheckCommand,
-		run: (processor: PartitionProcessor, command: unknown) =>
-			processor.check({ command: command as never }),
+		run: (processor: PartitionProcessor, command: unknown, request: Request) =>
+			processor.check({
+				command: command as never,
+				requestsLease: request.headers.get(CHECK_LEASE_REQUEST_HEADER) === "1",
+			}),
 		serialize: (reply) => serializeCheckReply({ reply: reply as CheckReply }),
 	},
 };
@@ -133,7 +141,7 @@ export function createBalanceWorkerFetch({
 			});
 			requestLog.command = parsed.command as BalanceWorkerRequestLog["command"];
 			const reply = await runtime.process<FastReply>((processor) =>
-				route.run(processor, parsed.command),
+				route.run(processor, parsed.command, request),
 			);
 			requestLog.response = reply;
 			response = new Response(route.serialize(reply), {

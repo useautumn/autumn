@@ -14,9 +14,12 @@ import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 export async function check({
 	scope,
 	command,
+	requestsLease = false,
 }: {
 	scope: PartitionProcessorScope;
 	command: CheckCommand;
+	/** Only a server that holds leases asks; without it the reply is today's, with no lease. */
+	requestsLease?: boolean;
 }): Promise<CheckReply> {
 	const { state, catalog } = await readCurrentSubject({ scope, command });
 	return timeSync({ label: "check.compute" }, () => {
@@ -38,7 +41,7 @@ export async function check({
 						featureId: command.featureId,
 					}),
 					lease:
-						scope.ctx.config.issuesCheckLeases === false
+						!requestsLease || scope.ctx.config.issuesCheckLeases === false
 							? null
 							: scope.ctx.subjectDecisions.leaseCheck({
 									fullSubject,

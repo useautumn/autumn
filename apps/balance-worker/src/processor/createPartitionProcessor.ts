@@ -155,14 +155,20 @@ function createProcessor({
 		});
 	}
 
-	function check({ command }: { command: CheckCommand }) {
+	function check({
+		command,
+		requestsLease,
+	}: {
+		command: CheckCommand;
+		requestsLease?: boolean;
+	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
 			operation: shedsHotCustomerChecks()
 				? shedCheck({ command })
 				: inTurn({
 						identity: command.identity,
-						run: () => checkPartition({ scope, command }),
+						run: () => checkPartition({ scope, command, requestsLease }),
 					}),
 		});
 	}

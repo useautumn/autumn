@@ -163,9 +163,10 @@ describe("track and check fast path", () => {
 		const viaApp = await servers();
 		const viaFast = await servers();
 		// The first check starts the owner's warm-up; one past it is leased.
+		const asks = { "x-check-lease": "1" };
 		const sent: Sent[] = [
-			{ path: "/v1/check", body: envelope(checkOf(0)) },
-			{ path: "/v1/check", body: envelope(checkOf(3_000)) },
+			{ path: "/v1/check", body: envelope(checkOf(0)), headers: asks },
+			{ path: "/v1/check", body: envelope(checkOf(3_000)), headers: asks },
 		];
 		const leases: unknown[] = [];
 		for (const request of sent) {
@@ -179,6 +180,22 @@ describe("track and check fast path", () => {
 			null,
 			{ expiresAt: 1_700_000_000_000 + 3_000 + 1_000 },
 		]);
+	});
+
+	test("a check that does not ask for a lease gets none, on both paths, as in prod", async () => {
+		const viaApp = await servers();
+		const viaFast = await servers();
+		const sent: Sent[] = [
+			{ path: "/v1/check", body: envelope(checkOf(0)) },
+			{ path: "/v1/check", body: envelope(checkOf(3_000)) },
+		];
+		for (const request of sent) {
+			const fast = await answerOf(await viaFast.fast(requestOf(request)));
+			expect(fast).toEqual(
+				await answerOf(await viaApp.app.fetch(requestOf(request))),
+			);
+			expect(JSON.parse(fast.body).lease).toBeNull();
+		}
 	});
 
 	test("a refusal answers the same error body and status", async () => {

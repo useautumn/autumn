@@ -47,7 +47,10 @@ const warmProcessorWith = async (
 	params: Parameters<typeof processorWith>[0] = {},
 ) => {
 	const processor = await processorWith(params);
-	await processor.check({ command: checkOf({ at: SECOND_START - 10_000 }) });
+	await processor.check({
+		requestsLease: true,
+		command: checkOf({ at: SECOND_START - 10_000 }),
+	});
 	return processor;
 };
 
@@ -98,12 +101,28 @@ const trackAt = async ({
 	});
 
 describe("check leases on the owner", () => {
+	test("a check that does not ask for a lease gets none, whatever its room", async () => {
+		const processor = await warmProcessorWith();
+		expect((await processor.check({ command: checkOf() })).lease).toBeNull();
+		expect(
+			(
+				await processor.check({
+					command: checkOf({ at: SECOND_START + 2_000 }),
+				})
+			).lease,
+		).toBeNull();
+	});
+
 	test("a quiet balance with room leases for the full second", async () => {
 		const processor = await warmProcessorWith();
-		const reply = await processor.check({ command: checkOf() });
+		const reply = await processor.check({
+			requestsLease: true,
+			command: checkOf(),
+		});
 		expect(reply.lease).toEqual({ expiresAt: SECOND_START + 1_000 });
 		// A memo hit is the same reply, so the lease keeps the deciding check's clock.
 		const again = await processor.check({
+			requestsLease: true,
 			command: checkOf({ at: SECOND_START + 600 }),
 		});
 		expect(again.lease).toEqual({ expiresAt: SECOND_START + 1_000 });
@@ -116,18 +135,26 @@ describe("check leases on the owner", () => {
 
 	test("a new owner leases only what no draw can refuse until it has watched the draws", async () => {
 		const quiet = await processorWith();
-		expect((await quiet.check({ command: checkOf() })).lease).toBeNull();
+		expect(
+			(await quiet.check({ requestsLease: true, command: checkOf() })).lease,
+		).toBeNull();
 		const overage = await processorWith({
 			customerEntitlements: [
 				{ ...createCustomerEntitlement({ balance: 0 }), usage_allowed: true },
 			],
 		});
-		expect((await overage.check({ command: checkOf() })).lease).toEqual({
+		expect(
+			(await overage.check({ requestsLease: true, command: checkOf() })).lease,
+		).toEqual({
 			expiresAt: SECOND_START + 1_000,
 		});
 		expect(
-			(await quiet.check({ command: checkOf({ at: SECOND_START + 2_000 }) }))
-				.lease,
+			(
+				await quiet.check({
+					requestsLease: true,
+					command: checkOf({ at: SECOND_START + 2_000 }),
+				})
+			).lease,
 		).toEqual({ expiresAt: SECOND_START + 3_000 });
 	});
 
@@ -136,6 +163,7 @@ describe("check leases on the owner", () => {
 		await trackAt({ processor, at: SECOND_START, value: 2 });
 		// 28 left; the draw rate is ~2 units/s, so a lease needs 1 + 20 fundable.
 		const roomy = await processor.check({
+			requestsLease: true,
 			command: checkOf({ at: SECOND_START + 1 }),
 		});
 		expect(roomy.result.allowed).toBe(true);
@@ -143,6 +171,7 @@ describe("check leases on the owner", () => {
 		await trackAt({ processor, at: SECOND_START + 2, value: 10 });
 		// 18 left; ~12 units/s needs 121 fundable: still allowed, but no longer leased.
 		const tight = await processor.check({
+			requestsLease: true,
 			command: checkOf({ at: SECOND_START + 3 }),
 		});
 		expect(tight.result.allowed).toBe(true);
@@ -156,7 +185,10 @@ describe("check leases on the owner", () => {
 		const tracks = Array.from({ length: 10 }, () =>
 			trackAt({ processor, at, value: 1 }),
 		);
-		const checked = processor.check({ command: checkOf({ at: at + 1 }) });
+		const checked = processor.check({
+			requestsLease: true,
+			command: checkOf({ at: at + 1 }),
+		});
 		await Promise.all(tracks);
 		const reply = await checked;
 		expect(processor.readCounters()).toMatchObject({ trackRunMax: 10 });
@@ -172,7 +204,10 @@ describe("check leases on the owner", () => {
 		const tracks = Array.from({ length: 5 }, () =>
 			trackAt({ processor, at: SECOND_START, value: 1 }),
 		);
-		const checked = processor.check({ command: checkOf({ at: SECOND_START }) });
+		const checked = processor.check({
+			requestsLease: true,
+			command: checkOf({ at: SECOND_START }),
+		});
 		await Promise.all(tracks);
 		const reply = await checked;
 		expect(balanceIn(reply)).toBe(1_000_000 - 5);
@@ -183,10 +218,12 @@ describe("check leases on the owner", () => {
 		const processor = await warmProcessorWith({ balance: 200 });
 		await trackAt({ processor, at: SECOND_START, value: 50 });
 		const during = await processor.check({
+			requestsLease: true,
 			command: checkOf({ at: SECOND_START + 1 }),
 		});
 		expect(during.lease).toBeNull();
 		const later = await processor.check({
+			requestsLease: true,
 			command: checkOf({ at: SECOND_START + 10_000 }),
 		});
 		expect(later.lease).toEqual({ expiresAt: SECOND_START + 11_000 });
@@ -201,6 +238,7 @@ describe("check leases on the owner", () => {
 		const drawn = await trackAt({ processor, at: SECOND_START, value: 500 });
 		expect(drawn.result.status).toBe("applied");
 		const reply = await processor.check({
+			requestsLease: true,
 			command: checkOf({ at: SECOND_START + 1 }),
 		});
 		expect(reply.result.allowed).toBe(true);
@@ -216,7 +254,9 @@ describe("check leases on the owner", () => {
 				},
 			],
 		});
-		expect((await resets.check({ command: checkOf() })).lease).toEqual({
+		expect(
+			(await resets.check({ requestsLease: true, command: checkOf() })).lease,
+		).toEqual({
 			expiresAt: SECOND_START + 300,
 		});
 		const expires = await warmProcessorWith({
@@ -227,7 +267,9 @@ describe("check leases on the owner", () => {
 				},
 			],
 		});
-		expect((await expires.check({ command: checkOf() })).lease).toEqual({
+		expect(
+			(await expires.check({ requestsLease: true, command: checkOf() })).lease,
+		).toEqual({
 			expiresAt: SECOND_START + 200,
 		});
 	});
@@ -235,11 +277,13 @@ describe("check leases on the owner", () => {
 	test("refused answers, event properties and a disabled owner never lease", async () => {
 		const processor = await warmProcessorWith({ balance: 5 });
 		const refused = await processor.check({
+			requestsLease: true,
 			command: checkOf({ requiredBalance: 10 }),
 		});
 		expect(refused.result.allowed).toBe(false);
 		expect(refused.lease).toBeNull();
 		const withProperties = await processor.check({
+			requestsLease: true,
 			command: checkOf({ properties: { model: "large" } }),
 		});
 		expect(withProperties.result.allowed).toBe(true);
@@ -252,6 +296,8 @@ describe("check leases on the owner", () => {
 		const disabled = await processorWith({
 			config: { issuesCheckLeases: false },
 		});
-		expect((await disabled.check({ command: checkOf() })).lease).toBeNull();
+		expect(
+			(await disabled.check({ requestsLease: true, command: checkOf() })).lease,
+		).toBeNull();
 	});
 });

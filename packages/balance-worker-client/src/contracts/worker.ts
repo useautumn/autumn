@@ -138,6 +138,8 @@ export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
  *  activating the partition holds the request for that long instead of a fixed wait,
  *  so a handoff to an idle successor costs the caller latency, not a fail-open. */
 export const WORKER_REQUEST_BUDGET_HEADER = "x-request-budget-ms";
+/** Set by a server that holds check leases: only then does the owner compute one for the reply. */
+export const CHECK_LEASE_REQUEST_HEADER = "x-check-lease";
 
 /** The header's value for a request that expires at `expiresAt` (a performance.now() time). */
 export function requestBudgetHeaderValue({

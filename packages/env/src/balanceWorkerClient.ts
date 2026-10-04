@@ -37,8 +37,8 @@ function readProxySecret({
 	return secret;
 }
 
-/** On unless set to false: BALANCE_WORKER_CHECK_LEASES turns leases off fleet-wide, BALANCE_WORKER_SHARED_CHECK_LEASES only their sharing. */
-function readOnUnlessFalse({
+/** Off unless set to true, as in prod: BALANCE_WORKER_CHECK_LEASES turns leases on, BALANCE_WORKER_SHARED_CHECK_LEASES their sharing. */
+function readOffUnlessTrue({
 	runtimeEnv,
 	name,
 }: {
@@ -46,8 +46,8 @@ function readOnUnlessFalse({
 	name: "BALANCE_WORKER_CHECK_LEASES" | "BALANCE_WORKER_SHARED_CHECK_LEASES";
 }): boolean {
 	const value = runtimeEnv[name]?.trim();
-	if (value === undefined || value === "" || value === "true") return true;
-	if (value === "false") return false;
+	if (value === undefined || value === "" || value === "false") return false;
+	if (value === "true") return true;
 	throw new Error(`${name} must be true or false`);
 }
 
@@ -82,11 +82,11 @@ export function createBalanceWorkerClientEnv(
 		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
 			runtimeEnv,
 		}),
-		BALANCE_WORKER_CHECK_LEASES: readOnUnlessFalse({
+		BALANCE_WORKER_CHECK_LEASES: readOffUnlessTrue({
 			runtimeEnv,
 			name: "BALANCE_WORKER_CHECK_LEASES",
 		}),
-		BALANCE_WORKER_SHARED_CHECK_LEASES: readOnUnlessFalse({
+		BALANCE_WORKER_SHARED_CHECK_LEASES: readOffUnlessTrue({
 			runtimeEnv,
 			name: "BALANCE_WORKER_SHARED_CHECK_LEASES",
 		}),

@@ -97,7 +97,11 @@ export function createBalanceWorkerClient({
 
 	function check(params: CheckParams) {
 		function send() {
-			return sendCheck({ ctx, ...params });
+			return sendCheck({
+				ctx,
+				...params,
+				requestLease: checkLeases !== undefined,
+			});
 		}
 		if (!checkLeases) return send();
 		return checkLeases.answer({ command: params.command, send });

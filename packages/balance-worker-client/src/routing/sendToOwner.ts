@@ -35,9 +35,11 @@ export async function sendToOwner<Response>({
 	command,
 	payload,
 	signal,
+	headers,
 }: {
 	ctx: RoutingContext;
 	path: string;
+	headers?: Record<string, string>;
 	command: RoutedCommand;
 	payload?: unknown;
 	signal?: AbortSignal;
@@ -106,6 +108,7 @@ export async function sendToOwner<Response>({
 							: { payload: payloadSnapshot }),
 					},
 					headers: {
+						...headers,
 						[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
 							expiresAt: deadline.expiresAt,
 						}),
