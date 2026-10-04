@@ -1,4 +1,4 @@
-import { hurryApply } from "../pendingMutations.js";
+import { allStored, hurryApply } from "../pendingMutations.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
 
 /** Drops the customer's resident rows; a subject pinned by an in-flight commit goes when that commit releases it. */
@@ -11,6 +11,6 @@ export async function evict({
 }): Promise<void> {
 	// The next command re-reads Postgres, so the worker's own writes must be there first.
 	hurryApply({ state: scope.state });
-	await scope.state.storeCompletion;
+	await allStored({ state: scope.state });
 	scope.state.subjects.evictCustomer({ customerKey });
 }

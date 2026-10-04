@@ -3,18 +3,20 @@ import type { Doorbell, RingLayout } from "./ring.js";
 /**
  * Frame types on the rings. Every frame is `[u32 len][u8 type][payload]` (see ring.ts).
  *
- *  CMD   io → sequencer   [u32 reqId][u8 kind][u32 budgetMs][utf8 request json]
+ *  CMD   io → sequencer   [u32 reqId][u8 kind][u32 budgetMs][u32 commandAt][utf8 request json]
+ *                          commandAt = byte offset of the `command` value inside the json (0 = not sliced)
  *  RES   sequencer → io   [u32 reqId][u32 seq][u16 status][utf8 body]      seq 0 = release at once
  *  REC   sequencer → kafka[u32 seq][u32 keyLen][key][value]                 one Kafka record
+ *  SPLICE sequencer → kafka[u32 seq][u32 decisionLen][decision][command]    one record, joined by the Kafka worker
  *  ACK   kafka → sequencer[u32 fromSeq][u32 toSeq][i64 baseOffset]          baseOffset < 0 = failed (code)
  *
  * `commitPos` (one Int32 cell) is Aeron's commit position: the highest seq Kafka has acknowledged.
  * I/O workers release held replies with seq ≤ commitPos; the sequencer finishes its bookkeeping for them.
  */
-export const FRAME = { CMD: 1, RES: 2, REC: 3, ACK: 4 } as const;
+export const FRAME = { CMD: 1, RES: 2, REC: 3, ACK: 4, SPLICE: 5 } as const;
 export const KIND = { TRACK: 1, CHECK: 2 } as const;
 
-export const CMD_HEADER = 9;
+export const CMD_HEADER = 13;
 export const RES_HEADER = 10;
 export const REC_HEADER = 8;
 export const ACK_BYTES = 16;

@@ -82,6 +82,18 @@ describe("createSubjectMap", () => {
 		expect(map.sizeBytes()).toBe(0);
 	});
 
+	test("a settled batch releases a subject's pins by their total", () => {
+		const map = createSubjectMap();
+		const state = createState();
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		for (let i = 0; i < 3; i++) map.pin({ subjectKey: customerKey });
+		map.evictCustomer({ customerKey });
+		map.unpin({ subjectKey: customerKey, count: 2 });
+		expect(map.readState({ subjectKey: customerKey })).toEqual(state);
+		map.unpin({ subjectKey: customerKey, count: 5 });
+		expect(map.readState({ subjectKey: customerKey })).toBeNull();
+	});
+
 	test("a replaced row is weighed by itself, never by serialising the whole state again", () => {
 		const map = createSubjectMap();
 		const state = createState({ balance: 100 });

@@ -33,6 +33,7 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type { HotTrackOutcome } from "../commands/trackHot.js";
 import type { TrackRunCounters, TrackRuns } from "../runs/createTrackRuns.js";
 import type {
 	SubjectDecisionCounters,
@@ -46,6 +47,7 @@ import type {
 	PartitionWriter,
 	PartitionWriterContext,
 	PartitionWriterLimits,
+	PositionSink,
 } from "../writer/types/partitionWriter.js";
 import type { DeferredLogSink } from "./deferredLogSink.js";
 import type { ReceiptPolicy } from "./receiptPolicy.js";
@@ -58,6 +60,8 @@ export type PartitionProcessor = {
 		deferredLogs?: DeferredLogSink;
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
+	/** Serial-decide arm D: a sync track decided and answered without a settlement; null falls back to `track`. */
+	trackHot(params: { command: TrackCommand }): HotTrackOutcome | null;
 	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */
 	decideTrack(params: {
 		command: TrackCommand;
@@ -114,6 +118,7 @@ export type PartitionProcessorDependencies = {
 	appender: CommittedOutcomeAppender;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
+	positions?: PositionSink;
 	assertCanRead(): void;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };

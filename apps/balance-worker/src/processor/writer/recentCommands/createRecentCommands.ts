@@ -1,8 +1,8 @@
-import {
-	type MeteringIdentity,
-	meteringIdentityToPartitionKey,
-} from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type {
+	CommandAddress,
+	CommandRecall,
+	ReadableRecentCommands,
 	RecentCommands,
 	RememberedCommand,
 } from "./types/recentCommands.js";
@@ -14,13 +14,7 @@ type Generations = {
 };
 
 /** Two customers may reuse the same idempotency key, so the customer is part of the key. */
-const commandKeyOf = ({
-	identity,
-	commandId,
-}: {
-	identity: MeteringIdentity;
-	commandId: string;
-}): string =>
+const commandKeyOf = ({ identity, commandId }: CommandAddress): string =>
 	JSON.stringify([meteringIdentityToPartitionKey({ identity }), commandId]);
 
 /** A whole generation is dropped at once, so forgetting costs nothing per command. */
@@ -48,33 +42,45 @@ export const createRecentCommands = ({
 }: {
 	windowMs: number;
 	now(): number;
-}): RecentCommands => {
+}): ReadableRecentCommands => {
 	const generations: Generations = {
 		current: new Map(),
 		previous: new Map(),
 		currentStartedAt: now(),
 	};
 
-	const remember = ({
-		mutation,
-	}: Parameters<RecentCommands["remember"]>[0]) => {
+	const remember = (params: Parameters<RecentCommands["remember"]>[0]) => {
 		rotateGenerations({ generations, windowMs, now: now() });
-		const commandKey = commandKeyOf({
-			identity: mutation.identity,
-			commandId: mutation.id,
-		});
+		const commandKey =
+			"key" in params
+				? params.key
+				: commandKeyOf({
+						identity: params.mutation.identity,
+						commandId: params.mutation.id,
+					});
+		const fingerprint =
+			"key" in params
+				? params.fingerprint
+				: params.mutation.receipt.fingerprint;
 		generations.previous.delete(commandKey);
-		generations.current.set(commandKey, {
-			fingerprint: mutation.receipt.fingerprint,
-		});
+		generations.current.set(commandKey, { fingerprint });
 	};
 
-	const read = ({
-		identity,
-		commandId,
-	}: Parameters<RecentCommands["read"]>[0]): RememberedCommand | null => {
+	const rememberAll = ({
+		commands,
+	}: Parameters<RecentCommands["rememberAll"]>[0]) => {
 		rotateGenerations({ generations, windowMs, now: now() });
-		const commandKey = commandKeyOf({ identity, commandId });
+		for (const { key, fingerprint } of commands) {
+			generations.previous.delete(key);
+			generations.current.set(key, { fingerprint });
+		}
+	};
+
+	const read = (
+		params: Parameters<ReadableRecentCommands["read"]>[0],
+	): RememberedCommand | null => {
+		rotateGenerations({ generations, windowMs, now: now() });
+		const commandKey = "key" in params ? params.key : commandKeyOf(params);
 		return (
 			generations.current.get(commandKey) ??
 			generations.previous.get(commandKey) ??
@@ -82,7 +88,19 @@ export const createRecentCommands = ({
 		);
 	};
 
+	const recall = ({
+		key,
+		fingerprint,
+	}: {
+		key: string;
+		fingerprint: string;
+	}): CommandRecall => {
+		const remembered = read({ key });
+		if (!remembered) return "unknown";
+		return remembered.fingerprint === fingerprint ? "same" : "different";
+	};
+
 	const size = () => generations.current.size + generations.previous.size;
 
-	return { remember, read, size };
+	return { keyOf: commandKeyOf, recall, remember, rememberAll, read, size };
 };

@@ -4,6 +4,7 @@
  * Response's bytes back to the worker that owns the connection. The main thread never accepts a socket.
  */
 import type { AutumnLogger } from "@autumn/logging";
+import type { HotDecider } from "./hotProtocol.js";
 import {
 	FRAME,
 	type IoWorkerInit,
@@ -15,6 +16,7 @@ import {
 	type RequestMeta,
 	type ResponseMeta,
 } from "./ioProtocol.js";
+import type { PositionBoard } from "./positionBoard.js";
 import { allocateRing, Doorbell, RingConsumer, RingProducer } from "./ring.js";
 
 export type IoWorkerPoolConfig = {
@@ -57,6 +59,8 @@ export function createIoWorkerPool({
 		logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 		/** A worker thread died or the dispatch loop broke: the pool cannot serve on its own again, so the task must be replaced. */
 		onFatal(failure: { cause: unknown }): void;
+		/** Serial-decide arm D: hot tracks are decided here and their replies held on the I/O thread by commit position. */
+		hot?: { decider: HotDecider; positions: PositionBoard };
 	};
 	config: IoWorkerPoolConfig;
 }): IoWorkerPool {

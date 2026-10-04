@@ -23,6 +23,7 @@ import type {
 	Partitions,
 } from "../../partitions/types/partitions.js";
 import { createProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
+import { createHashedRecentCommands } from "../../processor/writer/recentCommands/createHashedRecentCommands.js";
 import { createRecentCommands } from "../../processor/writer/recentCommands/createRecentCommands.js";
 import type {
 	WorkerPartitionHighWatermarks,
@@ -115,10 +116,17 @@ export function createWorkerPartitions({
 		partition: number;
 	}): PartitionRuntimeResources {
 		// One per partition: the writer and the log replay both remember into it, decide reads it.
-		const recentCommands = createRecentCommands({
-			windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
-			now: Date.now,
-		});
+		// Serial-decide arm D keeps the window in typed-array tables, so the GC never walks it.
+		const recentCommands =
+			ctx.readDedupStore?.() === "hashed"
+				? createHashedRecentCommands({
+						windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
+						now: Date.now,
+					})
+				: createRecentCommands({
+						windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
+						now: Date.now,
+					});
 		// Also one per runtime: the writer remembers what it produced, the replay passes those records unread.
 		const producedOffsets = createProducedOffsets();
 		// The claim's epoch, written by the runtime, read by its follower to spot a fence from a later owner.

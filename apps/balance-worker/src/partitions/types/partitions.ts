@@ -17,6 +17,10 @@ export interface PartitionRuntimePort {
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 	): Promise<Decision>;
+	/** Serial-decide arm D: a synchronous command on a ready runtime; absent on a port that cannot offer one. */
+	processHot?<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 }
 
 export type Unsubscribe = () => void;

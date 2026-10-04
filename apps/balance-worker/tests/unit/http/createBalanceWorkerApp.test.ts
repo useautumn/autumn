@@ -118,6 +118,7 @@ const fixture = ({
 	const lookups: PartitionRoute[] = [];
 	const processor: PartitionProcessor = {
 		execute: ({ run }) => run(processor),
+		trackHot: () => null,
 		dispose: () => undefined,
 		readCounters: () => ({
 			checkMemoHits: 0,

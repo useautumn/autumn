@@ -5,6 +5,8 @@
  * and the ack finishes the bookkeeping (dedup window, pins) for a whole range at once.
  *
  * Same fixtures as the baseline (`createSpikeWorker`): one hot customer, `typical` catalog, prod limits.
+ * The sequencer cuts are switchable through DIET (see below) so one build measures each of them;
+ * SPIKE_DEDUP_WINDOW_MS shrinks the dedup window to see what the window's memory costs the thread.
  */
 import {
 	type Catalog,
@@ -21,7 +23,12 @@ import type {
 	CheckReply,
 	WorkerErrorResponse,
 } from "@autumn/balance-worker-client/protocol";
-import { serializeMeteringRecord } from "@autumn/kafka";
+import {
+	meteringPayloadJson,
+	meteringRecordJson,
+	serializeMeteringRecord,
+	splitMeteringRecord,
+} from "@autumn/kafka";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
 import {
@@ -53,7 +60,9 @@ import {
 } from "../../../src/processor/writer/pendingMutations.js";
 import { commandToFingerprint } from "../../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../../src/processor/writer/receipt/mutationToRecord.js";
+import { createHashedRecentCommands } from "../../../src/processor/writer/recentCommands/createHashedRecentCommands.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import type { ReadableRecentCommands } from "../../../src/processor/writer/recentCommands/types/recentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
 import {
 	PartitionWriterCapacityError,
@@ -87,14 +96,29 @@ const LIMITS = {
 const INVALID = JSON.stringify({
 	error: { code: "INVALID_REQUEST", message: "Invalid request" },
 } satisfies WorkerErrorResponse);
+/** The sequencer cuts, as bits of DIET (default 62 = 2+4+8+16+32): 1 record splice, 2 dedup by pending key, 4 batched ack-time
+ *  forget, 8 encode the record once as text straight into the ring (no per-object cache, no Buffers; overrides 1),
+ *  16 the dedup window as typed-array hash tables instead of a Map (implies 2), 32 plumbing allocation cuts
+ *  (no view or key-list objects per command, the record laid down as head + payload + tail without a rope). */
+const DIET = Number(process.env.DIET ?? 62);
+const diet = {
+	splice: (DIET & 1) !== 0 && (DIET & 8) === 0,
+	dedupKey: (DIET & 2) !== 0 || (DIET & 16) !== 0,
+	batchedForget: (DIET & 4) !== 0,
+	encodeOnce: (DIET & 8) !== 0,
+	hashedDedup: (DIET & 16) !== 0,
+	leanAlloc: (DIET & 32) !== 0,
+};
 
 /** A decided, not yet acknowledged, record: what the ack needs to finish (dedup window, pins) and what a duplicate re-reads. */
 type InFlight = {
 	seq: number;
-	pendingKey: string;
+	/** The writer's pending key, which is also the dedup window's key. */
+	key: string;
 	customerKey: string;
 	fingerprint: string;
-	mutation: MutationRecord;
+	/** Only the identity-keyed `remember` (no dedup-key cut) still needs the record at ack time. */
+	mutation: MutationRecord | null;
 	body: string;
 	subjectKeys: string[];
 };
@@ -146,10 +170,13 @@ export async function createLeanCore({
 	});
 	const db = createSyntheticWorkerDb();
 	const receiptPolicy = { retentionMs: 86_400_000, now: () => Date.now() };
-	const recentCommands = createRecentCommands({
-		windowMs: 600_000,
+	const dedupWindow = {
+		windowMs: Number(process.env.SPIKE_DEDUP_WINDOW_MS ?? 600_000),
 		now: () => Date.now(),
-	});
+	};
+	const recentCommands = diet.hashedDedup
+		? createHashedRecentCommands({ ...dedupWindow, expectedCommands: 1 << 17 })
+		: createRecentCommands(dedupWindow);
 	const subjectDecisions = createSubjectDecisions();
 	const fullStateStore = {
 		...stateStore,
@@ -221,6 +248,7 @@ export async function createLeanCore({
 		overloaded: 0,
 		acked: 0,
 		resetsAwaited: 0,
+		spliced: 0,
 	};
 	// Phase timers (ns): what the sequencer spends per track, by phase. `Bun.nanoseconds` costs ~30 ns a call.
 	const phase = {
@@ -237,9 +265,8 @@ export async function createLeanCore({
 
 	function decideTrack(
 		command: TrackCommand,
-		text: string,
+		commandBytes: Uint8Array | null,
 	): Outcome | Promise<Outcome> {
-		void text;
 		if (recoveryError) throw recoveryError;
 		const { identity } = command;
 		const customerKey = meteringIdentityToPartitionKey({ identity });
@@ -251,20 +278,28 @@ export async function createLeanCore({
 				state = writer.readFreshestState({ identity });
 				if (!state)
 					throw new PartitionProcessorStateNotFoundError({ customerKey });
-				return decideResident({ command, state, customerKey });
+				// The command ring slot may be reused by now: the record is re-encoded.
+				return decideResident({
+					command,
+					state,
+					customerKey,
+					commandBytes: null,
+				});
 			});
 		}
-		return decideResident({ command, state, customerKey });
+		return decideResident({ command, state, customerKey, commandBytes });
 	}
 
 	function decideResident({
 		command,
 		state,
 		customerKey,
+		commandBytes,
 	}: {
 		command: TrackCommand;
 		state: SubjectState;
 		customerKey: string;
+		commandBytes: Uint8Array | null;
 	}): Outcome {
 		const { identity, commandId } = command;
 		let t = now();
@@ -277,11 +312,22 @@ export async function createLeanCore({
 			stats.duplicates++;
 			return { status: 200, body: dup.body, seq: dup.seq };
 		}
-		const remembered = recentCommands.read({ identity, commandId });
-		if (remembered) {
-			if (remembered.fingerprint !== fingerprint)
+		if (diet.dedupKey) {
+			const recalled = recentCommands.recall({ key: pendingKey, fingerprint });
+			if (recalled === "different")
 				throw new PartitionWriterCommandConflictError({ commandId });
-			throw new PartitionWriterDuplicateCommandError({ commandId });
+			if (recalled === "same")
+				throw new PartitionWriterDuplicateCommandError({ commandId });
+		} else {
+			const remembered = (recentCommands as ReadableRecentCommands).read({
+				identity,
+				commandId,
+			});
+			if (remembered) {
+				if (remembered.fingerprint !== fingerprint)
+					throw new PartitionWriterCommandConflictError({ commandId });
+				throw new PartitionWriterDuplicateCommandError({ commandId });
+			}
 		}
 		let perCustomer = inFlightPerCustomer.get(customerKey) ?? 0;
 		if (
@@ -338,7 +384,27 @@ export async function createLeanCore({
 			receiptPolicy,
 		});
 		const logged = loggedRecordOf({ mutation, effects: result.effects });
-		const seq = appender.emit(serializeMeteringRecord({ record: logged }));
+		if (diet.splice && commandBytes) stats.spliced++;
+		let seq: number;
+		if (diet.splice && commandBytes)
+			seq = appender.emitSplit({
+				split: splitMeteringRecord({
+					record: logged,
+					partitionKey: customerKey,
+				}),
+				commandBytes,
+			});
+		else if (diet.encodeOnce && diet.leanAlloc)
+			seq = appender.emitEnveloped({
+				key: customerKey,
+				payloadJson: meteringPayloadJson({ record: logged }),
+			});
+		else if (diet.encodeOnce)
+			seq = appender.emitText({
+				key: customerKey,
+				value: meteringRecordJson({ record: logged }),
+			});
+		else seq = appender.emit(serializeMeteringRecord({ record: logged }));
 		t2 = now();
 		phase.record += t2 - t;
 		t = t2;
@@ -378,10 +444,10 @@ export async function createLeanCore({
 		});
 		const entry: InFlight = {
 			seq,
-			pendingKey,
+			key: pendingKey,
 			customerKey,
 			fingerprint,
-			mutation,
+			mutation: diet.dedupKey ? null : mutation,
 			body,
 			subjectKeys,
 		};
@@ -413,10 +479,18 @@ export async function createLeanCore({
 			parsed = undefined;
 		}
 		const input = parsed?.command;
+		// The I/O worker sliced `{"route":{...},"command":{...}}`; a third member would make its slice wrong.
+		const commandBytes =
+			diet.splice &&
+			command.commandBytes &&
+			parsed &&
+			Object.keys(parsed).length === 2
+				? command.commandBytes
+				: null;
 		phase.parse += now() - t;
 		try {
 			if (command.kind === KIND.TRACK && looksLikeTrackCommand(input))
-				return wrapErrors(decideTrack(input as TrackCommand, command.text));
+				return wrapErrors(decideTrack(input as TrackCommand, commandBytes));
 			if (command.kind === KIND.CHECK && looksLikeCheckCommand(input))
 				return wrapErrors(decideCheck(input as CheckCommand));
 		} catch (cause) {
@@ -483,24 +557,70 @@ export async function createLeanCore({
 			return;
 		}
 		let n = 0;
-		while (
-			n < inFlightBySeq.length &&
-			(inFlightBySeq[n] as InFlight).seq <= to
-		) {
-			const entry = inFlightBySeq[n] as InFlight;
-			recentCommands.remember({ mutation: entry.mutation });
+		while (n < inFlightBySeq.length && (inFlightBySeq[n] as InFlight).seq <= to)
+			n++;
+		if (n === 0) return;
+		if (diet.batchedForget) forgetSettledRange({ count: n });
+		else forgetSettledEach({ count: n });
+		inFlightBySeq.splice(0, n);
+		stats.acked += n;
+	}
+
+	function forgetSettledEach({ count }: { count: number }): void {
+		for (let i = 0; i < count; i++) {
+			const entry = inFlightBySeq[i] as InFlight;
+			if (entry.mutation) recentCommands.remember({ mutation: entry.mutation });
+			else
+				recentCommands.remember({
+					key: entry.key,
+					fingerprint: entry.fingerprint,
+				});
 			for (const subjectKey of entry.subjectKeys)
 				subjects.unpin({ subjectKey });
-			inFlight.delete(entry.pendingKey);
+			inFlight.delete(entry.key);
 			const left = (inFlightPerCustomer.get(entry.customerKey) ?? 1) - 1;
 			if (left <= 0) inFlightPerCustomer.delete(entry.customerKey);
 			else inFlightPerCustomer.set(entry.customerKey, left);
-			n++;
 		}
-		if (n > 0) {
-			inFlightBySeq.splice(0, n);
-			stats.acked += n;
+	}
+
+	/** One pass for the whole acked range: the dedup window takes the batch under one clock read, pins and
+	 *  per-customer counts are released by their totals rather than entry by entry. */
+	function forgetSettledRange({ count }: { count: number }): void {
+		const settled = inFlightBySeq.slice(0, count);
+		recentCommands.rememberAll({ commands: settled });
+		let lastCustomer: string | null = null;
+		let perCustomer = 0;
+		const unpins = new Map<string, number>();
+		for (const entry of settled) {
+			inFlight.delete(entry.key);
+			for (const subjectKey of entry.subjectKeys)
+				unpins.set(subjectKey, (unpins.get(subjectKey) ?? 0) + 1);
+			if (entry.customerKey === lastCustomer) {
+				perCustomer++;
+				continue;
+			}
+			if (lastCustomer !== null)
+				releaseCustomer({ customerKey: lastCustomer, count: perCustomer });
+			lastCustomer = entry.customerKey;
+			perCustomer = 1;
 		}
+		if (lastCustomer !== null)
+			releaseCustomer({ customerKey: lastCustomer, count: perCustomer });
+		for (const [subjectKey, count] of unpins)
+			subjects.unpin({ subjectKey, count });
+	}
+
+	function releaseCustomer({
+		customerKey,
+		count,
+	}: {
+		customerKey: string;
+		count: number;
+	}): void {
+		const left = (inFlightPerCustomer.get(customerKey) ?? count) - count;
+		if (left <= 0) inFlightPerCustomer.delete(customerKey);
+		else inFlightPerCustomer.set(customerKey, left);
 	}
 
 	function phaseStats(): Record<string, number> {

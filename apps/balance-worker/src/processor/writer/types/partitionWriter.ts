@@ -18,6 +18,8 @@ import type { SubjectMapBudget } from "../subjectMap/types/subjectMapBudget.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
+	LeanDecision,
+	LeanSubmission,
 	MutationDurability,
 	MutationSubmission,
 	RunOutcome,
@@ -32,6 +34,11 @@ export type PartitionWriter = {
 	hurryStore(): void;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** Serial-decide arm D: decides without a settlement, the reply released by commit position. Null when the
+	 *  customer has a classic command in flight, so log order per customer stays the writer's. */
+	decideLean<Reply>(
+		submission: LeanSubmission<Reply>,
+	): LeanDecision<Reply> | null;
 	/** One subject's submissions decided in order in one critical section, as consecutive `decide`s would. */
 	decideRun<Reply>(params: {
 		identity: MeteringIdentity;
@@ -117,9 +124,18 @@ export type PartitionWriterContext = {
 		to: SubjectState;
 		changes: RowChange[];
 	}) => void;
+	/** Where lean replies are held (serial-decide arm D): the commit position moves forward, or every held reply past it fails. */
+	positions?: PositionSink;
 	now?: () => number;
 	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
+};
+
+export type PositionSink = {
+	/** Every record with a sequence number up to `seq` is in the log; held replies up to it may go out. */
+	committed(params: { seq: number }): void;
+	/** Nothing past `seq` reached the log: every held reply above it is answered with this failure. */
+	failedAbove(params: { seq: number; cause: unknown }): void;
 };
 
 export type PartitionWriterLimits = {
@@ -164,6 +180,8 @@ export type PendingSettlement = {
 export type PendingMutation = {
 	pendingKey: string;
 	customerKey: string;
+	/** Position in this writer's log order, from 1; the commit position is the latest acknowledged one. */
+	seq: number;
 	/** The subjects this mutation projected; pinned in the map until it commits. */
 	projectedSubjectKeys: string[];
 	mutation: MutationRecord;
@@ -175,7 +193,10 @@ export type PendingMutation = {
 	effects?: MutationEffect[];
 	/** The record the log gets, built once: the appender measured this object and sends this object. */
 	loggedRecord: MeteringRecord;
-	settlement: PendingSettlement;
+	/** Null for a lean write until a classic caller needs to wait on it; the reply is released by position instead. */
+	settlement: PendingSettlement | null;
+	/** A lean write's reply, kept for a retry while it is in flight. */
+	replyBody?: string;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
@@ -190,6 +211,13 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
+	/** Sequence numbers: the next to hand out, the latest that projected rows, the latest acknowledged by the log, the latest the store holds. */
+	nextSeq: number;
+	lastRowSeq: number;
+	commitPos: number;
+	storedSeq: number;
+	/** Callers waiting for the store to reach a sequence number; lean writes have no settlement to wait on. */
+	storeWaiters: StoreWaiter[];
 	/** Appends sent and not yet answered, oldest first; always settled in this order. */
 	inFlight: InFlightAppend[];
 	/** Set while the loop idles with room in the pipe; an enqueue or an answered append rings it. */
@@ -216,6 +244,12 @@ export type PartitionWriterState = {
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
+};
+
+export type StoreWaiter = {
+	seq: number;
+	resolve(): void;
+	reject(cause: unknown): void;
 };
 
 export type UnappliedBatch = {

@@ -1,5 +1,6 @@
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import { createPartitionProcessor } from "../processor/createPartitionProcessor.js";
+import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import { getRuntimeHealth } from "./getRuntimeHealth.js";
 import { fenceRuntime } from "./lifecycle/fenceRuntime.js";
 import {
@@ -12,7 +13,11 @@ import {
 	stopRuntime,
 	waitForRuntimeQuiescence,
 } from "./lifecycle/stopRuntime.js";
-import { type ProcessorRun, processCommand } from "./processCommand.js";
+import {
+	type ProcessorRun,
+	processCommand,
+	processHotCommand,
+} from "./processCommand.js";
 import type {
 	PartitionRuntime,
 	PartitionRuntimeConfig,
@@ -46,6 +51,7 @@ export function createPartitionRuntime({
 				catalogCache: dependencies.catalogCache,
 				receiptPolicy: dependencies.receiptPolicy,
 				recentCommands: dependencies.recentCommands,
+				positions: dependencies.positions,
 				assertCanRead,
 				logger: dependencies.logger,
 			},
@@ -95,6 +101,12 @@ export function createPartitionRuntime({
 		return processCommand({ ctx, state, run, budgetMs: options?.budgetMs });
 	}
 
+	function processHot<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null {
+		return processHotCommand({ ctx, state, run });
+	}
+
 	function getStatus(): PartitionRuntimeStatus {
 		return state.status;
 	}
@@ -122,6 +134,7 @@ export function createPartitionRuntime({
 		stop,
 		waitForQuiescence,
 		process,
+		processHot,
 		getStatus,
 		getHealth,
 		subscribeUnavailable,

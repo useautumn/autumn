@@ -13,6 +13,7 @@ import type {
 	CommittedOutcomeAppender,
 	PartitionWriterContext,
 	PartitionWriterLimits,
+	PositionSink,
 } from "../../processor/writer/types/partitionWriter.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
@@ -85,6 +86,8 @@ export type PartitionRuntimeDependencies = {
 	receiptPolicy: ReceiptPolicy;
 	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;
+	/** Serial-decide arm D: where the writer publishes its commit position and failures for held replies. */
+	positions?: PositionSink;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 
@@ -125,6 +128,11 @@ export type PartitionRuntime = {
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 		options?: ProcessOptions,
 	): Promise<Decision>;
+	/** Serial-decide arm D: one synchronous processor command on a ready runtime, with the same
+	 *  recovery mapping; null when the runtime is not ready, so the caller takes the gated path. */
+	processHot<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 };
 
 export type ProcessOptions = { budgetMs?: number };

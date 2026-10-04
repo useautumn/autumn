@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { MutationRecord } from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import { pendingKeyOf } from "../../../../src/processor/writer/pendingMutations.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import {
 	createState,
@@ -71,6 +73,47 @@ describe("createRecentCommands", () => {
 		const { clock, commands } = createClockedCommands();
 		commands.remember({ mutation: recordOf({ commandId: "cmd_1" }) });
 		clock.now = 5 * WINDOW_MS;
+		expect(commands.read(readOf("cmd_1"))).toBeNull();
+	});
+
+	test("the key is the writer's pending key, so a caller holding one reads and remembers by it", () => {
+		const { commands } = createClockedCommands();
+		const mutation = recordOf({ commandId: "cmd_1" });
+		const key = commands.keyOf({ identity: testIdentity, commandId: "cmd_1" });
+		expect(key).toBe(
+			pendingKeyOf({
+				customerKey: meteringIdentityToPartitionKey({ identity: testIdentity }),
+				commandId: "cmd_1",
+			}),
+		);
+		commands.remember({ key, fingerprint: mutation.receipt.fingerprint });
+		expect(commands.read({ key })).toEqual({
+			fingerprint: mutation.receipt.fingerprint,
+		});
+		expect(commands.read(readOf("cmd_1"))).toEqual({
+			fingerprint: mutation.receipt.fingerprint,
+		});
+		commands.remember({ mutation: recordOf({ commandId: "cmd_2" }) });
+		expect(
+			commands.read({ key: commands.keyOf(readOf("cmd_2")) }),
+		).not.toBeNull();
+	});
+
+	test("a settled batch is remembered at once and each command restarts its window", () => {
+		const { clock, commands } = createClockedCommands();
+		commands.remember({ mutation: recordOf({ commandId: "cmd_1" }) });
+		clock.now = WINDOW_MS;
+		commands.rememberAll({
+			commands: [
+				{ key: commands.keyOf(readOf("cmd_1")), fingerprint: "fp_1" },
+				{ key: commands.keyOf(readOf("cmd_2")), fingerprint: "fp_2" },
+			],
+		});
+		expect(commands.size()).toBe(2);
+		clock.now = 2 * WINDOW_MS;
+		expect(commands.read(readOf("cmd_1"))).toEqual({ fingerprint: "fp_1" });
+		expect(commands.read(readOf("cmd_2"))).toEqual({ fingerprint: "fp_2" });
+		clock.now = 3 * WINDOW_MS;
 		expect(commands.read(readOf("cmd_1"))).toBeNull();
 	});
 

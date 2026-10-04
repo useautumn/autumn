@@ -150,7 +150,7 @@ export async function track({
 	});
 }
 
-function toTrackReply({
+export function toTrackReply({
 	scope,
 	command,
 	committed,
@@ -181,7 +181,7 @@ function toTrackReply({
 	};
 }
 
-type DecidedAgainst = {
+export type DecidedAgainst = {
 	catalog?: Catalog;
 	effects?: MutationEffect[];
 };

@@ -40,11 +40,13 @@ import {
 } from "../logging/kafkaRequestTimings.js";
 import { createRequestLatencies } from "../logging/requestLatencies.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
+import { createHotDecider } from "../serialDecide/createHotDecider.js";
 import { createIoWorkerPool } from "../serialDecide/createIoWorkerPool.js";
 import {
 	createRemoteKafkaProducers,
 	type RemoteKafkaProducers,
 } from "../serialDecide/createRemoteKafkaProducers.js";
+import { createPositionBoard } from "../serialDecide/positionBoard.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -166,6 +168,15 @@ export async function createBalanceWorker({
 				producerLimits: runtimeConfig.producerLimits,
 			},
 		});
+		// Under arm D each partition's writer publishes its commit position here; the I/O workers release held replies by it.
+		const positionBoard = createPositionBoard({
+			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
+		});
+		function positionsForArm({ partition }: { partition: number }) {
+			return serialDecide.read().arm === "D"
+				? positionBoard.sinkFor({ partition })
+				: undefined;
+		}
 		// Under arms C and D the partition producers live on the Kafka worker thread; listen() starts it before any partition runs.
 		let remoteKafka: RemoteKafkaProducers | null = null;
 		function partitionProducer(config: ProducerConfig): KafkaProducerClient {
@@ -178,6 +189,7 @@ export async function createBalanceWorker({
 				partitionLoad,
 				logger: dependencies.logger,
 				kafka: { producer: partitionProducer },
+				positionsFor: positionsForArm,
 				ownershipOffsets: resources.admin,
 				ownershipHandoff,
 				stateStore: resources.stateStore,
@@ -215,9 +227,13 @@ export async function createBalanceWorker({
 			return { runtime: resources.registerRuntime(runtime), publication };
 		}
 
+		function readDedupStore(): "map" | "hashed" {
+			return serialDecide.read().arm === "D" ? "hashed" : "map";
+		}
 		const partitions = createWorkerPartitions({
 			ctx: {
 				consumer,
+				readDedupStore,
 				partitionOffsets: resources.kafka.admin(),
 				commandTopicOffsets: resources.kafka.admin(),
 				stateStore: resources.stateStore,
@@ -276,6 +292,18 @@ export async function createBalanceWorker({
 					fetch,
 					logger: dependencies.logger,
 					onFatal: stopAfterIoPoolFailure,
+					hot:
+						mode.arm === "D"
+							? {
+									decider: createHotDecider({
+										ctx: appContext,
+										config: {
+											partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
+										},
+									}),
+									positions: positionBoard,
+								}
+							: undefined,
 				},
 				config: {
 					hostname: address.hostname,

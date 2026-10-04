@@ -51,6 +51,31 @@ export async function processCommand<Decision>({
 	}
 }
 
+/** The hot path's gate (serial-decide arm D): synchronous, and only on a ready runtime; anything else
+ *  is the gated path's to hold or refuse. Recovery is mapped exactly as `processCommand` maps it. */
+export function processHotCommand<Decision>({
+	ctx,
+	state,
+	run,
+}: PartitionRuntimeScope & {
+	run: (processor: PartitionProcessor) => Decision | null;
+}): Decision | null {
+	if (state.status !== "ready" || state.terminalError) return null;
+	try {
+		return run(ctx.processor);
+	} catch (cause) {
+		if (state.terminalError) throw state.terminalError;
+		if (
+			cause instanceof PartitionWriterRecoveryRequiredError ||
+			cause instanceof OwnedPartitionProducerFencedError
+		) {
+			void enterRuntimeRecovery({ ctx, state, cause });
+			throw state.terminalError;
+		}
+		throw cause;
+	}
+}
+
 /** A request the API resent to a freshly named owner waits for its fence and catch-up: for as
  *  long as the caller said it can wait, less a margin so the answer lands first, or a fixed
  *  moment when it did not say. Holding for the caller's budget is what lets a handoff to an
