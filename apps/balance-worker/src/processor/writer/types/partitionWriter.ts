@@ -126,6 +126,8 @@ export type PartitionWriterContext = {
 	}) => void;
 	/** Where lean replies are held (serial-decide arm D): the commit position moves forward, or every held reply past it fails. */
 	positions?: PositionSink;
+	/** Sequencer-diet arm B: a committed batch is remembered for dedup in one call, by the keys the writer already holds. */
+	batchedForget?: () => boolean;
 	now?: () => number;
 	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;

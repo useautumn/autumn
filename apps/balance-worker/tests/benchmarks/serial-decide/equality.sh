@@ -20,19 +20,32 @@ seq_run() { # label out
 	taskset -c 0,1 "$loadgen" seq --addr 127.0.0.1:$port --path /v1/track --count "$count" --template "$rf/track-template.json" --out "$file" --prefix eq
 }
 
-SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ADAPTIVE_LINGER_ARM=A \
-	setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/a.log" 2>&1 </dev/null &
+if [ "${EQ_MODE:-lean}" = "diet-arms" ]; then
+	# Sequencer-diet A against B, both on today's worker behind the I/O pool with the Kafka worker (serial-decide C).
+	SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafka-worker SPIKE_COMMIT_MODE=idempotent SPIKE_LOG_RATE=0 IO_WORKERS=2 SPIKE_ADAPTIVE_LINGER_ARM=A SPIKE_SEQUENCER_DIET_ARM=A \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/servePool.ts" >"$out/a.log" 2>&1 </dev/null &
+else
+	SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ADAPTIVE_LINGER_ARM=A SPIKE_SEQUENCER_DIET_ARM=A \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/a.log" 2>&1 </dev/null &
+fi
 seq_run a "$out/a.bin"
 kill "$(ss -ltnp | grep ":$port " | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)"
 for _ in $(seq 1 50); do ss -ltn | grep -q ":$port " || break; sleep 0.1; done
 
 if [ "${EQ_MODE:-lean}" = "linger-arms" ]; then
 	# Adaptive-linger arm B against arm A, both on today's worker: batching may differ, bytes may not.
-	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ADAPTIVE_LINGER_ARM=B \
+	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ADAPTIVE_LINGER_ARM=B SPIKE_SEQUENCER_DIET_ARM=A \
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/lean.log" 2>&1 </dev/null &
 elif [ "${EQ_MODE:-lean}" = "pool" ]; then
 	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 IO_WORKERS=2 \
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/servePool.ts" >"$out/lean.log" 2>&1 </dev/null &
+elif [ "${EQ_MODE:-lean}" = "diet-arms" ]; then
+	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafka-worker SPIKE_COMMIT_MODE=idempotent SPIKE_LOG_RATE=0 IO_WORKERS=2 SPIKE_ADAPTIVE_LINGER_ARM=A SPIKE_SEQUENCER_DIET_ARM=B \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/servePool.ts" >"$out/lean.log" 2>&1 </dev/null &
+elif [ "${EQ_MODE:-lean}" = "diet-inert" ]; then
+	# B forced on today's layout (no Kafka worker) must be byte-identical and log itself inert.
+	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ADAPTIVE_LINGER_ARM=A SPIKE_SEQUENCER_DIET_ARM=B \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/lean.log" 2>&1 </dev/null &
 else
 	SPIKE_TOPIC="eq-lean-$stamp" PORT=$port IO_WORKERS=2 CORE=lean APPENDER=kafka LOG_RATE=0 \
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serve.ts" >"$out/lean.log" 2>&1 </dev/null &

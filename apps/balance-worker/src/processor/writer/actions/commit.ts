@@ -482,9 +482,11 @@ function settleAppended({
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 }): void {
+	const batched = scope.ctx.batchedForget?.() === true;
+	if (batched) rememberBatch({ scope, batch });
 	for (const pending of batch) {
 		if (pending.durability !== "log") continue;
-		settlePending({ scope, pending });
+		settlePending({ scope, pending, remembered: batched });
 	}
 	// Bookkeeping first, position last: a reply released by it may bring the next command at once.
 	const last = batch[batch.length - 1];
@@ -494,16 +496,36 @@ function settleAppended({
 	}
 }
 
-/** Remember the command for dedup, unpin the subjects, answer the caller. */
+/** Every "log" record of the batch into the dedup window at once, under one clock read, by its pending key. */
+function rememberBatch({
+	scope,
+	batch,
+}: {
+	scope: PartitionWriterScope;
+	batch: PendingMutation[];
+}): void {
+	const commands: { key: string; fingerprint: string }[] = [];
+	for (const pending of batch)
+		if (pending.durability === "log")
+			commands.push({
+				key: pending.pendingKey,
+				fingerprint: pending.mutation.receipt.fingerprint,
+			});
+	if (commands.length > 0) scope.ctx.recentCommands.rememberAll({ commands });
+}
+
+/** Remember the command for dedup (unless the batch already did), unpin the subjects, answer the caller. */
 function settlePending({
 	scope,
 	pending,
+	remembered = false,
 }: {
 	scope: PartitionWriterScope;
 	pending: PendingMutation;
+	remembered?: boolean;
 }): void {
 	const { mutation } = pending;
-	scope.ctx.recentCommands.remember({ mutation });
+	if (!remembered) scope.ctx.recentCommands.remember({ mutation });
 	removePendingMutation({ state: scope.state, pending });
 	pending.settlement?.settle({ mutation, state: pending.nextState });
 }
