@@ -2,11 +2,11 @@ import {
 	type CheckCommand,
 	checkCommandToDeductionRequest,
 	computeCheck,
-	slimSubjectForFeatures,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { readCurrentSubject } from "../actions/readCurrentSubject.js";
+import { slimReplySubject } from "../replies/slimReplySubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
 /** A read of the subject made current (due resets advanced), then the check decided on it, once per view and second. */
@@ -29,10 +29,10 @@ export async function check({
 			// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 			answer: ({ context }) => ({
 				result: computeCheck({ fullSubject, command, context }),
-				...slimSubjectForFeatures({
+				...slimReplySubject({
 					state,
 					catalog,
-					featureIds: [command.featureId],
+					featureId: command.featureId,
 				}),
 			}),
 		});

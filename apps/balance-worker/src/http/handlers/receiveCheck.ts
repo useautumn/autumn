@@ -2,6 +2,7 @@ import type { CheckCommand } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
+import { serializeSubjectReply } from "../replies/serializeSubjectReply.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 
 /** A memoised reply is one object per (subject view, selection, second), so its body is serialised once. */
@@ -10,7 +11,7 @@ const serializedReplies = new WeakMap<CheckReply, string>();
 function serializedReplyOf({ reply }: { reply: CheckReply }): string {
 	const known = serializedReplies.get(reply);
 	if (known !== undefined) return known;
-	const body = JSON.stringify(reply);
+	const body = serializeSubjectReply({ reply });
 	serializedReplies.set(reply, body);
 	return body;
 }
