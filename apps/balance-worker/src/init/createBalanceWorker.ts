@@ -247,8 +247,16 @@ export async function createBalanceWorker({
 				);
 				return listener;
 			}
+			// A dead I/O thread leaves a task that still answers health checks: end it like a stopped partition service.
+			function stopAfterIoPoolFailure({ cause }: { cause: unknown }): void {
+				dependencies.onServiceStopped?.({ cause, scope: "io-pool" });
+			}
 			const pool = createIoWorkerPool({
-				ctx: { fetch, logger: dependencies.logger },
+				ctx: {
+					fetch,
+					logger: dependencies.logger,
+					onFatal: stopAfterIoPoolFailure,
+				},
 				config: {
 					hostname: address.hostname,
 					port: env.BALANCE_WORKER_PORT,

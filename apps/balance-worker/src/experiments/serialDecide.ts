@@ -33,9 +33,9 @@ export function createSerialDecideMode({
 		mode = { arm, ioWorkersEnabled: arm !== "A" };
 		return mode;
 	}
-	/** The arm this task booted with, for every health and event-loop line; null before boot and under A. */
+	/** The arm this task booted with, for every health and event-loop line; null before boot and under A, so a task on today's layout (prod, dev) adds no label. */
 	function bootArms(): Record<string, StagingArm> | null {
-		if (!mode) return null;
+		if (!mode || mode.arm === "A") return null;
 		return { [SERIAL_DECIDE_EXPERIMENT]: mode.arm };
 	}
 	return { read, bootArms };
