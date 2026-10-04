@@ -1,3 +1,4 @@
+import { variants } from "@autumn/edge-config";
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -204,6 +205,7 @@ export const logRequestResult = async ({
 			}
 		}
 
+		const liveVariants = variants();
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;
 		const statusColor = isSuccess ? chalk.green : chalk.yellow;
 
@@ -216,6 +218,7 @@ export const logRequestResult = async ({
 					? {}
 					: { req: ctx.requestLogContext }),
 				res: finalResponseBody ?? null,
+				...(liveVariants && { variants: liveVariants }),
 			},
 		);
 
