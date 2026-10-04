@@ -23,6 +23,9 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	/** Kill switch for the MotherDuck balance-cache refresh cron. Refresh runs
 	 *  by default wherever the RW token exists; flip this to stop it. */
 	disableMotherduckCacheRefresh: z.boolean().default(false),
+	/** Kill switch for the one-off cleanup cron, whose candidate query scans
+	 *  customer_products every 10 min. Runs by default; flip this to stop it. */
+	disableOneOffCleanup: z.boolean().default(false),
 	/** Global switch for Axiom response-body compaction and size caps. */
 	axiomResponseBodyReduction: z.boolean().default(true),
 	/** Deletes loose purchase grants (metadata.source set) whose expires_at has
