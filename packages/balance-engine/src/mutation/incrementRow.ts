@@ -4,6 +4,7 @@ import {
 	entrySeedOf,
 	prunesAtZero,
 } from "../models/mutation/rowIncrement.js";
+import { isExactInteger } from "../utils/numberUtils/exactIntegerUtils.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
@@ -14,8 +15,11 @@ const plus = ({
 }: {
 	current: unknown;
 	delta: number;
-}): number =>
-	new Decimal(typeof current === "number" ? current : 0).plus(delta).toNumber();
+}): number => {
+	const base = typeof current === "number" ? current : 0;
+	if (isExactInteger(base) && isExactInteger(delta)) return base + delta;
+	return new Decimal(base).plus(delta).toNumber();
+};
 
 /** One map entry with its counters moved; null when the column prunes and every counter reached zero. */
 const incrementEntry = ({
