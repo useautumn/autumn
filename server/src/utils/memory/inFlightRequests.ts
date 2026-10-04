@@ -14,6 +14,7 @@ type InFlightRequest = {
 };
 
 const inFlightRequests = new Set<InFlightRequest>();
+let finishedRequestCount = 0;
 
 /** Returns a release function; callers must invoke it in a `finally`. */
 export const registerInFlightRequest = ({
@@ -32,7 +33,15 @@ export const registerInFlightRequest = ({
 
 	return () => {
 		inFlightRequests.delete(request);
+		finishedRequestCount++;
 	};
+};
+
+/** Requests finished since the last drain, for the per-window server.event_loop line. */
+export const drainFinishedRequestCount = () => {
+	const count = finishedRequestCount;
+	finishedRequestCount = 0;
+	return count;
 };
 
 export const listInFlightRequests = ({
