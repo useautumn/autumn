@@ -91,11 +91,11 @@ export function createServerCpuSampler({
 			const samples = stackTraces.traces.length;
 			for (const phase of Object.keys(phases) as ServerCpuPhase[])
 				phases[phase].estimatedCpuMs =
-					samples > 0
+					phases[phase].samples > 0
 						? (mainThreadCpuMs * phases[phase].samples) / samples
-						: phase === "unattributed"
+						: phase === "unattributed" && samples === 0
 							? mainThreadCpuMs
-							: 0;
+							: null;
 			return {
 				estimator: "jsc-sample-share-times-main-thread-cpu",
 				profiledWindowMs,

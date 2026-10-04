@@ -30,7 +30,10 @@ export type ServerCpuWindow = {
 	gcCpuMs: null;
 	sampleIntervalUs: number;
 	samples: number;
-	phases: Record<ServerCpuPhase, { samples: number; estimatedCpuMs: number }>;
+	phases: Record<
+		ServerCpuPhase,
+		{ samples: number; estimatedCpuMs: number | null }
+	>;
 };
 
 export type ServerCpuSampler = {

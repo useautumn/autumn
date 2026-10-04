@@ -4,6 +4,57 @@ import { createServerCpuSampler } from "../../src/profiling/serverCpu/createServ
 import type { ServerCpuBackend } from "../../src/profiling/serverCpu/types/serverCpuProfile.js";
 
 describe("server CPU sampler", () => {
+	test.skipIf(process.platform !== "linux")(
+		"real thread CPU excludes an awaited idle period",
+		async () => {
+			const { getServerCpuBackend } = await import(
+				"../../src/profiling/serverCpu/serverCpuRuntime.js"
+			);
+			const sampler = createServerCpuSampler({
+				bucket: "autumn-staging",
+				bound: true,
+				backend: getServerCpuBackend(),
+			});
+			sampler.startWindow();
+			const until = performance.now() + 120;
+			let value = 0;
+			while (performance.now() < until) value += Math.sqrt(Math.random());
+			await new Promise((resolve) => setTimeout(resolve, 180));
+			const window = await sampler.finishWindow();
+			expect(value).toBeGreaterThan(0);
+			expect(window?.samples).toBeGreaterThan(0);
+			expect(window?.mainThreadCpuMs).toBeGreaterThan(0);
+			expect(window!.mainThreadCpuMs).toBeLessThan(
+				window!.profiledWindowMs - 100,
+			);
+			expect(window?.sampleIntervalUs).toBe(50_000);
+		},
+	);
+	test("a failed closing clock still releases the profiler", async () => {
+		let failed = false;
+		let released = false;
+		const sampler = createServerCpuSampler({
+			bucket: "autumn-staging",
+			bound: true,
+			backend: {
+				readThreadCpuNs: () => {
+					if (failed) throw new Error("clock failed");
+					return 0;
+				},
+				readProcessCpuUs: () => 0,
+				now: () => 0,
+				capture: async (run) => {
+					await run();
+					released = true;
+					return { stackTraces: { interval: 0.001, traces: [] } };
+				},
+			},
+		});
+		sampler.startWindow();
+		failed = true;
+		expect(await sampler.finishWindow()).toBeNull();
+		expect(released).toBe(true);
+	});
 	test("profiler failures cannot escape telemetry or retry on the hot path", async () => {
 		let attempts = 0;
 		const sampler = createServerCpuSampler({
@@ -113,6 +164,7 @@ describe("server CPU sampler", () => {
 		const window = await sampler.finishWindow();
 		expect(window?.phases.auth.estimatedCpuMs).toBe(10);
 		expect(window?.phases.logging.estimatedCpuMs).toBe(10);
+		expect(window?.phases.serialization.estimatedCpuMs).toBeNull();
 		expect(window?.otherThreadCpuMs).toBe(20);
 		expect(window?.profiledWindowMs).toBe(10_000);
 		expect(window?.gcCpuMs).toBeNull();
