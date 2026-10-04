@@ -325,6 +325,42 @@ describe("remote Kafka producers", () => {
 		});
 	});
 
+	test("a send after disconnect rejects at once as disconnected, and one racing the disconnect is answered rather than left pending", async () => {
+		await withRemote({
+			sendRingBytes: 4096,
+			run: async (remote) => {
+				const producer = remote.producer({ idempotent: true });
+				await producer.connect();
+				const record = {
+					topic: "t",
+					messages: [{ key: "k", value: Buffer.alloc(900, 1), partition: 0 }],
+				};
+				// Enough sends to leave some waiting on the message port when the disconnect lands.
+				const racing = Array.from({ length: 12 }, () =>
+					senderOf(producer)(record).then(
+						() => "ok",
+						(cause: Error) => `rejected: ${cause.message}`,
+					),
+				);
+				const disconnected = producer.disconnect();
+				const late = (await rejectionOf(senderOf(producer)(record))) as Error;
+				expect(late).toBeInstanceOf(KafkaJSError);
+				expect(late.message).toBe("The producer is disconnected");
+				await disconnected;
+				const outcomes = await Promise.race([
+					Promise.all(racing),
+					Bun.sleep(2_000).then(() => "TIMEOUT" as const),
+				]);
+				expect(outcomes).not.toBe("TIMEOUT");
+				for (const outcome of outcomes as string[])
+					expect(outcome === "ok" || outcome.startsWith("rejected:")).toBe(
+						true,
+					);
+				expect(remote.readStats().pending).toBe(0);
+			},
+		});
+	});
+
 	test("a producer cannot be created before the worker is started, and transactions are refused", async () => {
 		const remote = createRemoteKafkaProducers({
 			ctx: { logger, onFatal: noFatal },

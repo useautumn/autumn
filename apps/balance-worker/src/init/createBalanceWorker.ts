@@ -46,6 +46,7 @@ import {
 	createRemoteKafkaProducers,
 	type RemoteKafkaProducers,
 } from "../serialDecide/createRemoteKafkaProducers.js";
+import { listenWithWorkers } from "../serialDecide/listenWithWorkers.js";
 import { createPositionBoard } from "../serialDecide/positionBoard.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
@@ -312,26 +313,24 @@ export async function createBalanceWorker({
 					workers: env.BALANCE_WORKER_IO_WORKERS,
 				},
 			});
-			const listener = await pool.listen();
-			dependencies.logger.info(
-				`Balance worker listening at ${address.endpoint} through ${env.BALANCE_WORKER_IO_WORKERS} I/O workers (serial-decide arm ${mode.arm}); partition admission follows recovery`,
-			);
-			if (!mode.kafkaWorkerEnabled) return listener;
-			if (env.BALANCE_WORKER_COMMIT_MODE !== "idempotent") {
+			const runsKafkaWorker =
+				mode.kafkaWorkerEnabled &&
+				env.BALANCE_WORKER_COMMIT_MODE === "idempotent";
+			if (mode.kafkaWorkerEnabled && !runsKafkaWorker)
 				dependencies.logger.warn(
 					`Serial-decide arm ${mode.arm} keeps its producers on the main thread: the Kafka worker speaks idempotent commits only`,
 				);
-				return listener;
-			}
-			remoteKafka = await startKafkaWorker();
-			async function stopListenerAndKafkaWorker(): Promise<void> {
-				try {
-					await listener.stop();
-				} finally {
-					await remoteKafka?.stop();
-				}
-			}
-			return { stop: stopListenerAndKafkaWorker };
+			const listener = await listenWithWorkers({
+				ctx: {
+					listenPool: pool.listen,
+					startKafkaWorker: runsKafkaWorker ? startKafkaWorker : undefined,
+				},
+			});
+			remoteKafka = listener.kafkaWorker;
+			dependencies.logger.info(
+				`Balance worker listening at ${address.endpoint} through ${env.BALANCE_WORKER_IO_WORKERS} I/O workers (serial-decide arm ${mode.arm}${remoteKafka ? ", producers on the Kafka worker thread" : ""}); partition admission follows recovery`,
+			);
+			return listener;
 		}
 
 		function stopAfterKafkaWorkerFailure({ cause }: { cause: unknown }): void {
@@ -356,9 +355,6 @@ export async function createBalanceWorker({
 				},
 			});
 			await remote.start();
-			dependencies.logger.info(
-				"Partition producers run on the Kafka worker thread (serial-decide arm C/D)",
-			);
 			return remote;
 		}
 
