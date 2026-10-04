@@ -1,5 +1,7 @@
 import type {
 	Catalog,
+	CheckCommand,
+	CheckResult,
 	DeductionContext,
 	DeductionRequest,
 	MeteringIdentity,
@@ -7,7 +9,10 @@ import type {
 	SubjectState,
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
-import type { CheckReply } from "@autumn/balance-worker-client/protocol";
+import type {
+	CheckLease,
+	CheckReply,
+} from "@autumn/balance-worker-client/protocol";
 
 /** What a subject view decided for one selection within one second; replaced, never edited. */
 export type SubjectDecision = {
@@ -52,6 +57,15 @@ export type SubjectDecisions = {
 		request: DeductionRequest;
 		answer: (params: { context: DeductionContext }) => CheckReply;
 	}): CheckReply;
+	/** Feeds the per-row draw rate a check lease's headroom is measured against. */
+	recordDraws(params: { changes: RowChange[]; at: number }): void;
+	/** The lease a server may answer this allowed check from, or null when a second of tracks could change it. */
+	leaseCheck(params: {
+		fullSubject: WorkerFullSubject;
+		command: CheckCommand;
+		context: DeductionContext;
+		result: CheckResult;
+	}): CheckLease | null;
 	readCounters(): SubjectDecisionCounters;
 };
 
@@ -65,4 +79,7 @@ export type SubjectDecisionCounters = {
 	trackContextMisses: number;
 	effectsRun: number;
 	effectsSkipped: number;
+	/** Check replies decided with a lease for the servers, or without one (refused, near the limit, guarded). */
+	checkLeasesIssued: number;
+	checkLeasesWithheld: number;
 };

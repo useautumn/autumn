@@ -128,6 +128,8 @@ export type PartitionProcessorConfig = {
 	decidesTrackRuns?: boolean;
 	/** On, a run's replies share the subject as the run left it rather than as each track left it. */
 	sharesRunSnapshot?: boolean;
+	/** Off answers every check without a lease, so servers ask the owner each time. */
+	issuesCheckLeases?: boolean;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };

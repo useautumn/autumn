@@ -37,6 +37,18 @@ function readProxySecret({
 	return secret;
 }
 
+/** Check leases are on unless BALANCE_WORKER_CHECK_LEASES=false; the switch that turns them off fleet-wide. */
+function readCheckLeasesEnabled({
+	runtimeEnv,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}): boolean {
+	const value = runtimeEnv.BALANCE_WORKER_CHECK_LEASES?.trim();
+	if (value === undefined || value === "" || value === "true") return true;
+	if (value === "false") return false;
+	throw new Error("BALANCE_WORKER_CHECK_LEASES must be true or false");
+}
+
 export {
 	balanceWorkerDeploymentToKafkaNames,
 	getBalanceWorkerDeployment,
@@ -68,6 +80,7 @@ export function createBalanceWorkerClientEnv(
 		BALANCE_WORKER_PARTITION_COUNT: getBalanceWorkerPartitionCount({
 			runtimeEnv,
 		}),
+		BALANCE_WORKER_CHECK_LEASES: readCheckLeasesEnabled({ runtimeEnv }),
 	};
 }
 
