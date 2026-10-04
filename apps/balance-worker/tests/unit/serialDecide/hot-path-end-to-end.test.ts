@@ -4,6 +4,7 @@
  * refused, when the owner goes away mid-flight, and when a rebuilt owner takes the customer back.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { PARTITION_RECOVERY_REASON } from "@autumn/balance-worker-client/protocol";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import { workerErrorOf } from "../../../src/http/handlers/errorHandler/workerErrorOf.js";
@@ -11,11 +12,11 @@ import type {
 	BalanceWorkerHttpContext,
 	BalanceWorkerRequestContext,
 } from "../../../src/http/types/balanceWorkerHttp.js";
-import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import {
 	MutationBatchAppendError,
 	MutationBatchNotCommittedError,
 	PartitionWriterDisposedError,
+	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
 import { createHotDecider } from "../../../src/serialDecide/createHotDecider.js";
 import { createIoWorkerPool } from "../../../src/serialDecide/createIoWorkerPool.js";
@@ -186,7 +187,7 @@ describe("serial-decide arm D end to end", () => {
 		expect(body.result.status).toBe("applied");
 		expect(balanceOf(body)).toBe(99);
 		expect(committed).toHaveLength(before + 1);
-		expect(board.readCommitPos({ partition: 0 })).toBe(committed.at(-1));
+		expect(board.readCommitPos({ partition: 0 })).toBe(committed.at(-1) ?? -1);
 		expect(heldOnLanes()).toBe(0);
 	});
 
@@ -261,6 +262,28 @@ describe("serial-decide arm D end to end", () => {
 		expect(balanceOf(await served.json())).toBe(99);
 		expect(board.readCommitPos({ partition: 0 })).toBeGreaterThan(
 			positionBefore + 1,
+		);
+		expect(heldOnLanes()).toBe(0);
+	});
+
+	test("an append of unknown fate answers the held reply as the classic path reports a recovery: INTERNAL with the recovery reason", async () => {
+		current.gate.hold();
+		const reply = watch(track({ commandId: "cmd_7" }));
+		await until(() => heldOnLanes() === 1, "the reply to be held");
+		current.gate.releaseNext(new Error("socket closed"));
+		await until(() => reply.settled, "the reply to be failed");
+		const response = reply.response as Response;
+		expect(response.status).toBe(500);
+		expect(await response.json()).toEqual({
+			error: {
+				code: "INTERNAL",
+				message:
+					"The partition went into recovery with this command in flight; it may have landed",
+				reason: PARTITION_RECOVERY_REASON,
+			},
+		});
+		expect(failed.at(-1)?.cause).toBeInstanceOf(
+			PartitionWriterRecoveryRequiredError,
 		);
 		expect(heldOnLanes()).toBe(0);
 	});

@@ -26,6 +26,7 @@ import {
 	PartitionWriterDisposedError,
 	PartitionWriterDuplicateCommandError,
 	PartitionWriterRecordTooLargeError,
+	PartitionWriterRecoveryRequiredError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
 import {
@@ -179,6 +180,14 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 		cause instanceof OwnedPartitionRecoveryRequiredError &&
 		!cause.notSubmitted
 	) {
+		error = {
+			code: "INTERNAL",
+			message:
+				"The partition went into recovery with this command in flight; it may have landed",
+			reason: PARTITION_RECOVERY_REASON,
+		};
+	} else if (cause instanceof PartitionWriterRecoveryRequiredError) {
+		// A lean write answered by its partition's failure, not through the runtime: the same answer as above.
 		error = {
 			code: "INTERNAL",
 			message:
