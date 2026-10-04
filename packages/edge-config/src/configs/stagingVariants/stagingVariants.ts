@@ -48,18 +48,23 @@ function hashOf({ text }: { text: string }) {
 	return hash >>> 0;
 }
 
-/** A first, then one to three more distinct arms from A–D; anything else runs no experiment. */
+/** A first, then one to three more distinct arms from A–D; a task-scoped experiment may also pin every task to one arm. Anything else runs no experiment. */
 export function activeArmsOf({
 	arms,
+	scope,
 }: {
 	arms: readonly string[];
+	scope?: string;
 }): StagingArm[] {
+	const known = arms.every((arm) => (ARMS as readonly string[]).includes(arm));
+	const wholeFleet = scope === "task" && arms.length === 1 && arms[0] !== "A";
 	const valid =
-		arms.length >= 2 &&
-		arms.length <= ARMS.length &&
-		arms[0] === "A" &&
-		new Set(arms).size === arms.length &&
-		arms.every((arm) => (ARMS as readonly string[]).includes(arm));
+		known &&
+		(wholeFleet ||
+			(arms.length >= 2 &&
+				arms.length <= ARMS.length &&
+				arms[0] === "A" &&
+				new Set(arms).size === arms.length));
 	return valid ? (arms as StagingArm[]) : [];
 }
 
@@ -84,7 +89,7 @@ export function createTaskVariantAtBoot({
 		if (!stagingVariantsEnabled({ bucket })) return "A";
 		const entry = (await readConfig()).experiments[experiment];
 		if (entry?.scope !== "task") return "A";
-		const arms = activeArmsOf({ arms: entry.arms });
+		const arms = activeArmsOf({ arms: entry.arms, scope: entry.scope });
 		if (!arms.length || arms.some((arm) => !allowedArms.includes(arm)))
 			return "A";
 		const task = await identity();
@@ -147,7 +152,7 @@ function currentArms(): LiveArms | null {
 		binding.read().experiments,
 	)) {
 		if (!EXPERIMENT_NAME.test(experiment)) continue;
-		const active = activeArmsOf({ arms: entry.arms });
+		const active = activeArmsOf({ arms: entry.arms, scope: entry.scope });
 		if (!active.length) continue;
 		arms[experiment] = armForWindow({
 			identity: binding.identity,
