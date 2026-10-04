@@ -43,8 +43,9 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		fullSubject: WorkerFullSubject;
 		selection: DeductionSelection;
 	}): SubjectDecision | null {
+		// A check reply carries no context to vouch for its properties, so a check with any is decided afresh.
+		if (selection.properties !== null) return null;
 		const key = deductionSelectionToKey({ selection });
-		if (key === null) return null;
 		const second = Math.floor(selection.now / DECISION_SECOND_MS);
 		let decisions = decisionsByView.get(fullSubject);
 		if (!decisions) {

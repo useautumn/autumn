@@ -158,6 +158,7 @@ describe("credit systems", () => {
 
 		expect(run({ state, value: 5 })).toMatchObject({
 			deltas: [expect.objectContaining({ balanceDelta: -5 })],
+			context: { readsProperties: true },
 		});
 		expect(
 			run({ state, value: 5, properties: { size: "large" } }),

@@ -20,6 +20,38 @@ export const resolveUsageWindowLimits = ({
 	fullSubject: WorkerFullSubject;
 	selection: DeductionSelection;
 	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
+}): {
+	usageWindowLimits: UsageWindowLimit[];
+	/** A cap filtered on event properties applies or not by the event's properties. */
+	filtersByProperties: boolean;
+} => {
+	const limits = selectionUsageWindowLimits({
+		fullSubject,
+		selection,
+		customerEntitlements,
+	});
+	return {
+		usageWindowLimits: limits.filter((limit) =>
+			usageLimitFilterMatchesProperties({
+				filterProperties: limit.filter_properties,
+				eventProperties: selection.properties ?? undefined,
+			}),
+		),
+		filtersByProperties: limits.some((limit) =>
+			Boolean(limit.filter_properties),
+		),
+	};
+};
+
+/** Every cap on the selection's features, whatever the event's properties. */
+const selectionUsageWindowLimits = ({
+	fullSubject,
+	selection,
+	customerEntitlements,
+}: {
+	fullSubject: WorkerFullSubject;
+	selection: DeductionSelection;
+	customerEntitlements: WorkerFullCustomerEntitlementWithProduct[];
 }): UsageWindowLimit[] => {
 	if (!selection.countsUsageWindows) return [];
 	if (
@@ -45,10 +77,5 @@ export const resolveUsageWindowLimits = ({
 		features,
 		now: selection.now,
 		inStatuses: selection.inStatuses,
-	}).filter((limit) =>
-		usageLimitFilterMatchesProperties({
-			filterProperties: limit.filter_properties,
-			eventProperties: selection.properties ?? undefined,
-		}),
-	);
+	});
 };
