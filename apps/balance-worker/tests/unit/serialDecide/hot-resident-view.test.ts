@@ -1,7 +1,7 @@
 /**
  * Serial-decide arm D: the hot path decides only on a view the ordinary path would have decided on. A command
- * whose entity rows are not resident goes to the ordinary path, which loads them; afterwards the hot answer and
- * the records it appends are the ordinary path's.
+ * whose entity rows or catalog rows are not resident goes to the ordinary path, which loads them; afterwards
+ * the hot answer and the records it appends are the ordinary path's.
  */
 import { describe, expect, test } from "bun:test";
 import type {
@@ -9,6 +9,7 @@ import type {
 	TrackCommand,
 	WorkerEntity,
 } from "@autumn/balance-engine";
+import type { CatalogCache } from "@autumn/catalog-lru";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
@@ -25,7 +26,10 @@ import {
 } from "../../../src/serialDecide/hotProtocol.js";
 import { createPositionBoard } from "../../../src/serialDecide/positionBoard.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
-import { createSyntheticWorkerDb } from "../../fixtures/catalog.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
 import {
 	createCustomerEntitlement,
 	createState,
@@ -108,6 +112,38 @@ const entityDb = (): WorkerDb => ({
 			: [],
 });
 
+/** A catalog cache whose entitlement rows can be dropped, as the LRU's byte bound drops them; a load brings them back. */
+function evictableCatalogOf({ db }: { db: WorkerDb }) {
+	const base = createTestCatalogCache({ db });
+	let evicted = false;
+	let moves = 0;
+	const cache: CatalogCache = {
+		...base,
+		read: (params) =>
+			base.read(
+				evicted
+					? {
+							...params,
+							keys: params.keys.filter((key) => key.table !== "entitlements"),
+						}
+					: params,
+			),
+		load: (params) => {
+			evicted = false;
+			moves++;
+			return base.load(params);
+		},
+		changeCount: () => base.changeCount() + moves,
+	};
+	return {
+		cache,
+		evict() {
+			evicted = true;
+			moves++;
+		},
+	};
+}
+
 async function settled(): Promise<void> {
 	for (let i = 0; i < 20; i++)
 		await new Promise((resolve) => setImmediate(resolve));
@@ -154,11 +190,13 @@ async function workerOf() {
 	const log = recordingAppender();
 	const board = createPositionBoard({ config: { partitionCount: 1 } });
 	const db = entityDb();
+	const catalog = evictableCatalogOf({ db });
 	const processor = await createResidentProcessor({
 		states: [createState({ identity: testIdentity, balance: 100 })],
 		appender: log.appender,
 		positions: board.sinkFor({ partition: 0 }),
 		db,
+		catalogCache: catalog.cache,
 	});
 	await settled();
 	log.appends.length = 0;
@@ -187,7 +225,7 @@ async function workerOf() {
 	function viaHot({ kind, body }: { kind: HotKind; body: string }) {
 		return decider.decide({ kind, body: encoder.encode(body) });
 	}
-	return { log, decider, viaClassic, viaHot };
+	return { log, decider, viaClassic, viaHot, evictCatalog: catalog.evict };
 }
 
 function checkBody({
@@ -278,6 +316,41 @@ describe("hot path decides only on a resident view", () => {
 		);
 
 		const second = batchBody({ commands: [seats({ commandId: "t2" })] });
+		const hotSecond = hot.viaHot({ kind: HOT_KIND.TRACK_BATCH, body: second });
+		expect(hotSecond?.status).toBe(200);
+		expect(hotSecond?.body).toBe(
+			await classic.viaClassic({ path: "/v1/track-batch", body: second }),
+		);
+		await settled();
+		expect(hot.log.appends.flat()).toEqual(classic.log.appends.flat());
+		expect(hot.log.appends.flat()).toHaveLength(2);
+	});
+
+	test("a track batch whose catalog rows left the cache goes to the ordinary path whole, which loads them back", async () => {
+		const classic = await workerOf();
+		const hot = await workerOf();
+		classic.evictCatalog();
+		hot.evictCatalog();
+		const first = batchBody({
+			commands: [createTrackCommand({ commandId: "c1", value: 5 })],
+		});
+		const classicFirst = await classic.viaClassic({
+			path: "/v1/track-batch",
+			body: first,
+		});
+		expect(JSON.parse(classicFirst).results[0].ok).toBe(true);
+
+		expect(hot.viaHot({ kind: HOT_KIND.TRACK_BATCH, body: first })).toBeNull();
+		expect(hot.decider.drainStats?.().fallbackBatches).toEqual({
+			catalog_evicted: 1,
+		});
+		expect(await hot.viaClassic({ path: "/v1/track-batch", body: first })).toBe(
+			classicFirst,
+		);
+
+		const second = batchBody({
+			commands: [createTrackCommand({ commandId: "c2", value: 5 })],
+		});
 		const hotSecond = hot.viaHot({ kind: HOT_KIND.TRACK_BATCH, body: second });
 		expect(hotSecond?.status).toBe(200);
 		expect(hotSecond?.body).toBe(

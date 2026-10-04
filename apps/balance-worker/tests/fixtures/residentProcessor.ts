@@ -1,4 +1,5 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import type { CatalogCache } from "@autumn/catalog-lru";
 import { createCommitterStateStore } from "../../src/committer/createCommitterStateStore.js";
 import { createPartitionProcessor } from "../../src/processor/createPartitionProcessor.js";
 import type { PartitionProcessorConfig } from "../../src/processor/types/partitionProcessor.js";
@@ -30,6 +31,7 @@ export const createResidentProcessor = async ({
 	positions,
 	committer,
 	db = createSyntheticWorkerDb(),
+	catalogCache = createTestCatalogCache({ db }),
 }: {
 	states: SubjectState[];
 	config?: Partial<PartitionProcessorConfig>;
@@ -40,6 +42,7 @@ export const createResidentProcessor = async ({
 	committer?: { beforeApply?: () => Promise<void> };
 	/** Postgres as the worker sees it; the default knows no customers. */
 	db?: WorkerDb;
+	catalogCache?: CatalogCache;
 }) => {
 	const stateStore = createCommitterStateStore({
 		ctx: {
@@ -74,7 +77,7 @@ export const createResidentProcessor = async ({
 				readCommandNextOffset: () => null,
 				advanceCommandNextOffset: async () => undefined,
 			},
-			catalogCache: createTestCatalogCache({ db }),
+			catalogCache,
 			db,
 			appender: appender ?? {
 				appendCommitted: async ({ outcomes }) => {

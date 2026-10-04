@@ -1,11 +1,13 @@
 import {
 	meteringIdentityToPartitionKey,
+	type SubjectState,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { serializeSubjectReply } from "../../http/replies/serializeSubjectReply.js";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { resetMayBeDue } from "../actions/ensureSubjectCurrent/earliestResetAt.js";
+import { isGoneMidRequest } from "../actions/withResidentSubject.js";
 import { viewHasEntity } from "../subject/actions/ensureSubject/ensureSubjectState.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
@@ -25,11 +27,12 @@ export type HotTrackRefusal =
 	| "lock"
 	| "track_run"
 	| "not_resident"
-	| "reset_due";
+	| "reset_due"
+	| "catalog_evicted";
 
 /**
  * A lock needs store durability, tracks queued in a run decide in turn behind it, and rows not resident (an
- * entity's included) or a reset due need the asynchronous ensure first.
+ * entity's included), a reset due or catalog rows gone from the cache need the asynchronous ensure first.
  */
 export function hotTrackRefusalOf({
 	scope,
@@ -46,7 +49,25 @@ export function hotTrackRefusalOf({
 		return "not_resident";
 	if (resetMayBeDue({ state: resident, asOf: command.occurredAt }))
 		return "reset_due";
+	if (!hasResidentCatalog({ scope, state: resident })) return "catalog_evicted";
 	return null;
+}
+
+/** The decision joins the state's catalog rows synchronously; the join is kept, so the decide reuses it. */
+function hasResidentCatalog({
+	scope,
+	state,
+}: {
+	scope: PartitionProcessorScope;
+	state: SubjectState;
+}): boolean {
+	try {
+		scope.ctx.subjectHydrator.readCatalog({ state });
+		return true;
+	} catch (cause) {
+		if (isGoneMidRequest(cause)) return false;
+		throw cause;
+	}
 }
 
 /**
