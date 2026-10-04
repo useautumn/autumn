@@ -159,6 +159,28 @@ describe("track and check fast path", () => {
 			);
 	});
 
+	test("a leased check carries its lease in the same bytes", async () => {
+		const viaApp = await servers();
+		const viaFast = await servers();
+		// The first check starts the owner's warm-up; one past it is leased.
+		const sent: Sent[] = [
+			{ path: "/v1/check", body: envelope(checkOf(0)) },
+			{ path: "/v1/check", body: envelope(checkOf(3_000)) },
+		];
+		const leases: unknown[] = [];
+		for (const request of sent) {
+			const fast = await answerOf(await viaFast.fast(requestOf(request)));
+			expect(fast).toEqual(
+				await answerOf(await viaApp.app.fetch(requestOf(request))),
+			);
+			leases.push(JSON.parse(fast.body).lease);
+		}
+		expect(leases).toEqual([
+			null,
+			{ expiresAt: 1_700_000_000_000 + 3_000 + 1_000 },
+		]);
+	});
+
 	test("a refusal answers the same error body and status", async () => {
 		const viaApp = await servers({ refuses: true });
 		const viaFast = await servers({ refuses: true });
