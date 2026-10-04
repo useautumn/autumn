@@ -39,6 +39,11 @@ export type OwnedPartitionRequestCounters = {
 	/** Check replies leased to the servers, or decided without a lease. */
 	checkLeasesIssued: number;
 	checkLeasesWithheld: number;
+	/** Track grants given to server lanes or withheld, and granted tracks applied against a live grant or late. */
+	trackGrantsIssued: number;
+	trackGrantsWithheld: number;
+	trackGrantedApplied: number;
+	trackGrantedLate: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<

@@ -248,6 +248,17 @@ const run = async ({ count }: { count: number }) => {
 	};
 };
 
+// A new owner grants nothing for its first ttl + hold of command clock; start that clock before the warmup.
+if (mode === "grants")
+	await bench.processor.track({
+		command: createTrackCommand({
+			identity: identities[0] ?? testIdentity,
+			commandId: "trk_owner_clock",
+			featureId: scenario.features[0],
+			value: 1,
+			occurredAt: 1_700_000_000_000 - 10_000,
+		}),
+	});
 await run({ count: warmup });
 const result = await run({ count: total });
 console.log(
