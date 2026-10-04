@@ -156,6 +156,10 @@ function mutateTrack({
 				}
 			: decideOnCarriedContext({ scope, state, catalog, command, readView });
 	const { mutation } = decision;
+	scope.ctx.subjectDecisions.recordDraws({
+		changes: mutation.changes,
+		at: command.occurredAt,
+	});
 	const nextState = applyMutation({ state, mutation });
 	const decidesEffects = shouldDecideEffects({
 		command,

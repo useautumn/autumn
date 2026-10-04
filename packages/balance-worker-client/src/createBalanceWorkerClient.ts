@@ -1,4 +1,12 @@
 import { createCatalogInvalidations } from "./catalog/createCatalogInvalidations.js";
+import { createCheckLeases } from "./checkLeases/createCheckLeases.js";
+import {
+	commandIdentityOf,
+	commandsIdentitiesOf,
+	invalidatesCheckLeases,
+	invalidatesOrgCheckLeases,
+	requestIdentityOf,
+} from "./checkLeases/invalidatesCheckLeases.js";
 import { sendApplyBillingPlan } from "./commands/sendApplyBillingPlan.js";
 import { sendCheck } from "./commands/sendCheck.js";
 import { sendConfirmExpiredLock } from "./commands/sendConfirmExpiredLock.js";
@@ -79,8 +87,17 @@ export function createBalanceWorkerClient({
 		return sendTrack({ ctx, ...params });
 	}
 
+	// Absent, every check asks the owner and no write pays for invalidation.
+	const checkLeases = config.checkLeases
+		? createCheckLeases({ config: config.checkLeases })
+		: undefined;
+
 	function check(params: CheckParams) {
-		return sendCheck({ ctx, ...params });
+		function send() {
+			return sendCheck({ ctx, ...params });
+		}
+		if (!checkLeases) return send();
+		return checkLeases.answer({ command: params.command, send });
 	}
 
 	function readSubjectState(params: ReadSubjectStateParams) {
@@ -131,6 +148,18 @@ export function createBalanceWorkerClient({
 		return enqueueCommands({ ctx: queue, ...params });
 	}
 
+	const commandQueue = createCommandQueue({ ctx: queue });
+	const catalog = createCatalogInvalidations({
+		ctx: {
+			publisher: dependencies.catalogInvalidations,
+			timeoutMs: appendTimeoutMs,
+		},
+	});
+
+	function readCheckLeaseCounters() {
+		return checkLeases?.readCounters() ?? null;
+	}
+
 	async function start(): Promise<void> {
 		await dependencies.lifecycle?.start();
 	}
@@ -139,28 +168,101 @@ export function createBalanceWorkerClient({
 		await dependencies.lifecycle?.stop();
 	}
 
+	const leases = checkLeases;
+	// A write this server sends ends its check leases on the customers it names.
 	return {
-		track,
+		track: invalidatesCheckLeases({
+			leases,
+			send: track,
+			identitiesOf: commandIdentityOf,
+		}),
 		check,
 		readSubjectState,
-		initialize,
-		applyBillingPlan,
-		evict,
-		flush,
-		finalize,
-		confirmExpiredLock,
-		reset,
-		updateBalance,
-		deleteBalance,
-		recalculateBalance,
-		queue: createCommandQueue({ ctx: queue }),
-		enqueue,
-		catalog: createCatalogInvalidations({
-			ctx: {
-				publisher: dependencies.catalogInvalidations,
-				timeoutMs: appendTimeoutMs,
-			},
+		initialize: invalidatesCheckLeases({
+			leases,
+			send: initialize,
+			identitiesOf: requestIdentityOf,
 		}),
+		applyBillingPlan: invalidatesCheckLeases({
+			leases,
+			send: applyBillingPlan,
+			identitiesOf: requestIdentityOf,
+		}),
+		evict: invalidatesCheckLeases({
+			leases,
+			send: evict,
+			identitiesOf: commandIdentityOf,
+		}),
+		flush,
+		finalize: invalidatesCheckLeases({
+			leases,
+			send: finalize,
+			identitiesOf: commandIdentityOf,
+		}),
+		confirmExpiredLock: invalidatesCheckLeases({
+			leases,
+			send: confirmExpiredLock,
+			identitiesOf: commandIdentityOf,
+		}),
+		reset: invalidatesCheckLeases({
+			leases,
+			send: reset,
+			identitiesOf: commandIdentityOf,
+		}),
+		updateBalance: invalidatesCheckLeases({
+			leases,
+			send: updateBalance,
+			identitiesOf: commandIdentityOf,
+		}),
+		deleteBalance: invalidatesCheckLeases({
+			leases,
+			send: deleteBalance,
+			identitiesOf: commandIdentityOf,
+		}),
+		recalculateBalance: invalidatesCheckLeases({
+			leases,
+			send: recalculateBalance,
+			identitiesOf: commandIdentityOf,
+		}),
+		queue: {
+			track: invalidatesCheckLeases({
+				leases,
+				send: commandQueue.track,
+				identitiesOf: commandsIdentitiesOf,
+			}),
+			reset: invalidatesCheckLeases({
+				leases,
+				send: commandQueue.reset,
+				identitiesOf: commandsIdentitiesOf,
+			}),
+			updateBalance: invalidatesCheckLeases({
+				leases,
+				send: commandQueue.updateBalance,
+				identitiesOf: commandsIdentitiesOf,
+			}),
+			evict: invalidatesCheckLeases({
+				leases,
+				send: commandQueue.evict,
+				identitiesOf: commandsIdentitiesOf,
+			}),
+			finalize: invalidatesCheckLeases({
+				leases,
+				send: commandQueue.finalize,
+				identitiesOf: commandsIdentitiesOf,
+			}),
+		},
+		enqueue: invalidatesCheckLeases({
+			leases,
+			send: enqueue,
+			identitiesOf: commandsIdentitiesOf,
+		}),
+		catalog: {
+			invalidateOrgCatalog: invalidatesOrgCheckLeases({
+				leases,
+				send: catalog.invalidateOrgCatalog,
+			}),
+		},
+		readCheckLeaseCounters,
 		start,
 		stop,
 	};

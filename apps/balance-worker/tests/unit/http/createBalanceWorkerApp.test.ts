@@ -126,6 +126,8 @@ const fixture = ({
 			trackContextMisses: 0,
 			effectsRun: 0,
 			effectsSkipped: 0,
+			checkLeasesIssued: 0,
+			checkLeasesWithheld: 0,
 		}),
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");

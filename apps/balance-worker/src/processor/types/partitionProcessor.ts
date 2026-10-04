@@ -123,6 +123,8 @@ export type PartitionProcessorConfig = {
 	writerLimits: PartitionWriterLimits;
 	/** Off decides every track on a fresh view with every effect: the reference the carried path must equal. */
 	carriesTrackContexts?: boolean;
+	/** Off answers every check without a lease, so servers ask the owner each time. */
+	issuesCheckLeases?: boolean;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };

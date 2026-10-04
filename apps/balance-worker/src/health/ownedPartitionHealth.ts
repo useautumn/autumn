@@ -32,6 +32,9 @@ export type OwnedPartitionRequestCounters = {
 	/** Tracks whose effects were decided, or skipped because no draw could have called for one. */
 	effectsRun: number;
 	effectsSkipped: number;
+	/** Check replies leased to the servers, or decided without a lease. */
+	checkLeasesIssued: number;
+	checkLeasesWithheld: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<
