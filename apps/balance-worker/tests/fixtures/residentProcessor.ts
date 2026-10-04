@@ -7,6 +7,7 @@ import type {
 	CommittedOutcomeAppender,
 	PositionSink,
 } from "../../src/processor/writer/types/partitionWriter.js";
+import type { WorkerDb } from "../../src/types/workerDb.js";
 import { createSyntheticWorkerDb, createTestCatalogCache } from "./catalog.js";
 import { createInitializeRequest, testOccurredAt } from "./mutations.js";
 
@@ -28,6 +29,7 @@ export const createResidentProcessor = async ({
 	appender,
 	positions,
 	committer,
+	db = createSyntheticWorkerDb(),
 }: {
 	states: SubjectState[];
 	config?: Partial<PartitionProcessorConfig>;
@@ -36,6 +38,8 @@ export const createResidentProcessor = async ({
 	positions?: PositionSink;
 	/** Runs before the default committer applies a batch, so a test can hold the store back. */
 	committer?: { beforeApply?: () => Promise<void> };
+	/** Postgres as the worker sees it; the default knows no customers. */
+	db?: WorkerDb;
 }) => {
 	const stateStore = createCommitterStateStore({
 		ctx: {
@@ -70,8 +74,8 @@ export const createResidentProcessor = async ({
 				readCommandNextOffset: () => null,
 				advanceCommandNextOffset: async () => undefined,
 			},
-			catalogCache: createTestCatalogCache(),
-			db: createSyntheticWorkerDb(),
+			catalogCache: createTestCatalogCache({ db }),
+			db,
 			appender: appender ?? {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = appended;

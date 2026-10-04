@@ -8,7 +8,8 @@ import type { SubjectScope } from "../../types/subject.js";
 import { awaitLoadWithinDeadline } from "./awaitLoadWithinDeadline.js";
 import { loadSubjectState } from "./loadSubjectState.js";
 
-const viewHasEntity = ({
+/** The view holds the identity's own entity rows, not only its customer's: a decision needs both. */
+export const viewHasEntity = ({
 	state,
 	identity,
 }: {

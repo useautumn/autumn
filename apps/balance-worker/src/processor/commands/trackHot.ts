@@ -6,6 +6,7 @@ import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { serializeSubjectReply } from "../../http/replies/serializeSubjectReply.js";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { resetMayBeDue } from "../actions/ensureSubjectCurrent/earliestResetAt.js";
+import { viewHasEntity } from "../subject/actions/ensureSubject/ensureSubjectState.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
 
@@ -27,8 +28,8 @@ export type HotTrackRefusal =
 	| "reset_due";
 
 /**
- * A lock needs store durability, tracks queued in a run decide in turn behind it, and rows not resident or
- * a reset due need the asynchronous ensure first.
+ * A lock needs store durability, tracks queued in a run decide in turn behind it, and rows not resident (an
+ * entity's included) or a reset due need the asynchronous ensure first.
  */
 export function hotTrackRefusalOf({
 	scope,
@@ -41,7 +42,8 @@ export function hotTrackRefusalOf({
 	const { identity } = command;
 	if (scope.trackRuns?.whenDecided({ identity })) return "track_run";
 	const resident = scope.ctx.writer.readFreshestState({ identity });
-	if (!resident) return "not_resident";
+	if (!resident || !viewHasEntity({ state: resident, identity }))
+		return "not_resident";
 	if (resetMayBeDue({ state: resident, asOf: command.occurredAt }))
 		return "reset_due";
 	return null;
