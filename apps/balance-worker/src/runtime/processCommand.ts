@@ -3,9 +3,11 @@ import {
 	BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS,
 	BALANCE_WORKER_ACTIVATION_WAIT_MS,
 } from "@autumn/env/balanceWorkerConstants";
+import { shedsDeadlines } from "../experiments/deadlineShed.js";
 import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import { PartitionWriterRecoveryRequiredError } from "../processor/writer/writerErrors.js";
 import { runWithAnswerDeadline } from "./answerDeadline.js";
+import { assertNotAbandoned } from "./deadlineShed/assertNotAbandoned.js";
 import { assertRuntimeReady } from "./getRuntimeHealth.js";
 import { enterRuntimeRecovery } from "./lifecycle/enterRuntimeRecovery.js";
 import { OwnedPartitionProducerFencedError } from "./runtimeErrors.js";
@@ -27,16 +29,24 @@ export async function processCommand<Decision>({
 	budgetMs?: number;
 }): Promise<Decision> {
 	const answerBy = answerDeadlineOf({ budgetMs });
+	const abandonedAt = shedsDeadlines()
+		? abandonedAtOf({ budgetMs })
+		: undefined;
 	if (state.status === "activating")
 		await waitForActivation({ ctx, state, budgetMs });
 	assertRuntimeReady({ state });
 	function runOnProcessor(): Promise<Decision> {
+		assertNotAbandoned();
 		return run(ctx.processor);
 	}
 	try {
 		return await (answerBy === undefined
 			? runOnProcessor()
-			: runWithAnswerDeadline({ expiresAt: answerBy, run: runOnProcessor }));
+			: runWithAnswerDeadline({
+					expiresAt: answerBy,
+					abandonedAt,
+					run: runOnProcessor,
+				}));
 	} catch (cause) {
 		if (state.terminalError) throw state.terminalError;
 		if (
@@ -90,6 +100,16 @@ function activationWaitMsOf({
 		Math.max(budgetMs - BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS, 0),
 		BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS,
 	);
+}
+
+/** When the caller stops waiting: its whole budget, counted from when the worker took the request. */
+function abandonedAtOf({
+	budgetMs,
+}: {
+	budgetMs?: number;
+}): number | undefined {
+	if (budgetMs === undefined || !Number.isFinite(budgetMs)) return undefined;
+	return performance.now() + budgetMs;
 }
 
 function answerDeadlineOf({

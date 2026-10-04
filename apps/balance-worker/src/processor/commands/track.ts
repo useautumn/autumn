@@ -12,6 +12,7 @@ import {
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
+import { readAbandonedAt } from "../../runtime/answerDeadline.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
@@ -142,7 +143,13 @@ export async function track({
 		});
 	}
 	if (scope.trackRuns)
-		return scope.trackRuns.track({ command, submission, decideAlone, answer });
+		return scope.trackRuns.track({
+			command,
+			submission,
+			decideAlone,
+			answer,
+			abandonedAt: readAbandonedAt(),
+		});
 	const decided = await decideAlone();
 	return answer({
 		committed: (await decided.waitForCommit()) as CommittedMutation,

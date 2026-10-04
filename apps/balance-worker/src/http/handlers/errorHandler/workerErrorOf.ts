@@ -28,6 +28,10 @@ import {
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
 import {
+	CustomerCheckShedError,
+	RequestAbandonedError,
+} from "../../../runtime/deadlineShed/deadlineShedErrors.js";
+import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
@@ -195,6 +199,19 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 			code: "RECORD_TOO_LARGE",
 			message:
 				"This customer's state is too large to write in one record; nothing was applied",
+		};
+	} else if (cause instanceof RequestAbandonedError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message: "The caller's deadline passed before this ran; nothing ran",
+		};
+	} else if (cause instanceof CustomerCheckShedError) {
+		status = 429;
+		error = {
+			code: "OVERLOADED",
+			message:
+				"This customer's checks are shed while the worker catches up; retry with backoff",
 		};
 	} else if (cause instanceof PartitionWriterCapacityError) {
 		status = 429;

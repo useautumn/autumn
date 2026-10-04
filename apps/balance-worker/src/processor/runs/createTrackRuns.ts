@@ -6,6 +6,8 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import { shedsDeadlines } from "../../experiments/deadlineShed.js";
+import { RequestAbandonedError } from "../../runtime/deadlineShed/deadlineShedErrors.js";
 import { resetMayBeDue } from "../actions/ensureSubjectCurrent/earliestResetAt.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { isGoneMidRequest } from "../actions/withResidentSubject.js";
@@ -25,6 +27,8 @@ type QueuedTrackBase = {
 
 /** A sync track: answered from its run once its record commits. */
 export type SyncTrack = QueuedTrackBase & {
+	/** When its caller stops waiting; arm B drops it from its run once that has passed. */
+	abandonedAt?: number;
 	answer(params: {
 		committed: CommittedMutation;
 		/** The subject after the whole run, for a reply that shares one snapshot per run. */
@@ -215,10 +219,11 @@ export const createTrackRuns = ({
 	}
 
 	async function decideRun({
-		run,
+		run: queued,
 	}: {
 		run: SyncTrackWaiting[];
 	}): Promise<void> {
+		const run = shedsDeadlines() ? withoutAbandoned({ run: queued }) : queued;
 		const [first] = run;
 		if (!first) return;
 		counters.trackRuns++;
@@ -299,3 +304,19 @@ export const createTrackRuns = ({
 };
 
 type SyncTrackWaiting = Extract<WaitingTrack, { kind: "sync" }>;
+
+/** Tracks whose callers have given up are rejected before anything is decided; the rest keep their order. */
+function withoutAbandoned({
+	run,
+}: {
+	run: SyncTrackWaiting[];
+}): SyncTrackWaiting[] {
+	const now = performance.now();
+	const live: SyncTrackWaiting[] = [];
+	for (const track of run) {
+		if (track.abandonedAt !== undefined && now >= track.abandonedAt)
+			track.reject(new RequestAbandonedError());
+		else live.push(track);
+	}
+	return live;
+}

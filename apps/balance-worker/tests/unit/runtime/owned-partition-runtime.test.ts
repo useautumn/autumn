@@ -21,6 +21,7 @@ import {
 import { Glob } from "bun";
 import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import ts from "typescript";
+import { DEADLINE_SHED_EXPERIMENT } from "../../../src/experiments/deadlineShed.js";
 import { workerErrorOf } from "../../../src/http/handlers/errorHandler/workerErrorOf.js";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
@@ -33,7 +34,10 @@ import {
 	MutationBatchAppendError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
-import { readAnswerDeadline } from "../../../src/runtime/answerDeadline.js";
+import {
+	readAbandonedAt,
+	readAnswerDeadline,
+} from "../../../src/runtime/answerDeadline.js";
 import { PartitionBootstrapRefusedError } from "../../../src/runtime/bootstrap/partitionBootstrapErrors.js";
 import type {
 	PartitionBootstrapper as OwnedPartitionBootstrapPort,
@@ -60,6 +64,10 @@ import {
 	createState as createSubjectState,
 	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
+import {
+	clearStagingArms,
+	forceStagingArm,
+} from "../../fixtures/stagingArms.js";
 import * as preparationFixtures from "../kafka/kafka-test-fixtures.js";
 
 const topic = "metering-events-v1";
@@ -1932,6 +1940,29 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					await f.runtime.process(async () => readAnswerDeadline()),
 				).toBeUndefined();
 			} finally {
+				await f.cleanup();
+			}
+		});
+		test("only deadline-shed B carries when the caller gives up into the run; A carries exactly the base deadline", async () => {
+			const f = createFixture();
+			try {
+				await f.runtime.prepare();
+				await f.runtime.activate();
+				expect(
+					await f.runtime.process(async () => readAbandonedAt(), {
+						budgetMs: 800,
+					}),
+				).toBeUndefined();
+				forceStagingArm({ experiment: DEADLINE_SHED_EXPERIMENT, arm: "B" });
+				const startedAt = performance.now();
+				const abandonedAt = await f.runtime.process(
+					async () => readAbandonedAt(),
+					{ budgetMs: 800 },
+				);
+				expect(abandonedAt).toBeGreaterThan(startedAt + 790);
+				expect(abandonedAt).toBeLessThanOrEqual(performance.now() + 800);
+			} finally {
+				clearStagingArms();
 				await f.cleanup();
 			}
 		});

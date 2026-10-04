@@ -15,6 +15,12 @@ import type {
 	TrackCommand,
 	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import type { CheckReply } from "@autumn/balance-worker-client/protocol";
+import { shedsDeadlines } from "../experiments/deadlineShed.js";
+import { assertNotAbandoned } from "../runtime/deadlineShed/assertNotAbandoned.js";
+import { getCheckAdmission } from "../runtime/deadlineShed/checkAdmission.js";
+import { CustomerCheckShedError } from "../runtime/deadlineShed/deadlineShedErrors.js";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
@@ -146,11 +152,32 @@ function createProcessor({
 	function check({ command }: { command: CheckCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: inTurn({
+			operation: shedsDeadlines()
+				? shedCheck({ command })
+				: inTurn({
+						identity: command.identity,
+						run: () => checkPartition({ scope, command }),
+					}),
+		});
+	}
+
+	/** Arm B: a hot customer's check is shed while the task is behind, and one whose caller gave up in its turn is dropped. */
+	async function shedCheck({
+		command,
+	}: {
+		command: CheckCommand;
+	}): Promise<CheckReply> {
+		const admitted = getCheckAdmission().admit({
+			customerKey: meteringIdentityToPartitionKey({
 				identity: command.identity,
-				run: () => checkPartition({ scope, command }),
 			}),
 		});
+		if (!admitted) throw new CustomerCheckShedError();
+		function checkInTurn(): Promise<CheckReply> {
+			assertNotAbandoned();
+			return checkPartition({ scope, command });
+		}
+		return inTurn({ identity: command.identity, run: checkInTurn });
 	}
 
 	function readSubjectState({ command }: { command: ReadSubjectStateCommand }) {
