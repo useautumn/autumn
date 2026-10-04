@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
+import { skipsIdleLinger } from "../../../experiments/adaptiveLinger.js";
 import { commitPipelineDepthOf } from "../../../experiments/commitDepth.js";
 import { commitPipelineArm } from "../../../experiments/commitPipeline.js";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
@@ -165,9 +166,12 @@ async function commitOutcomes({
 				if (state.recoveryError) return;
 			}
 			const lingerStartedAt = writerNowOf({ scope });
-			// Lingering only pays while an append is already on the wire: with the pipe
-			// empty it would idle the broker, and the next batch gathers while this one flies.
-			if (depth === 1 || state.inFlight.length > 0)
+			// Lingering only pays behind an append on the wire (the next batch gathers while it
+			// flies); adaptive-linger B applies that at depth one too, A keeps today's wait there.
+			if (
+				(depth === 1 || state.inFlight.length > 0) &&
+				!skipsIdleLinger({ inFlight: state.inFlight.length })
+			)
 				await lingerForBatch({ scope });
 			if (state.recoveryError) return;
 			if (state.queue.length === 0) continue;

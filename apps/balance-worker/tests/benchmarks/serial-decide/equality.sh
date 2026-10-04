@@ -25,7 +25,7 @@ if [ "${EQ_MODE:-lean}" = "arm" ]; then
 	ARM=A SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_LOG_RATE=0 IO_WORKERS=2 \
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serveArm.ts" >"$out/a.log" 2>&1 </dev/null &
 else
-SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ENGINE_ALLOC_ARM=A \
+SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ENGINE_ALLOC_ARM=A SPIKE_ADAPTIVE_LINGER_ARM=A \
 	setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/a.log" 2>&1 </dev/null &
 fi
 seq_run a "$out/a.bin"
@@ -37,7 +37,11 @@ if [ "${EQ_MODE:-lean}" = "arm" ]; then
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serveArm.ts" >"$out/lean.log" 2>&1 </dev/null &
 elif [ "${EQ_MODE:-lean}" = "engine-arms" ]; then
 	# Arm B of the engine-alloc experiment against arm A, both on today's worker.
-	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ENGINE_ALLOC_ARM=B \
+	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ENGINE_ALLOC_ARM=B SPIKE_ADAPTIVE_LINGER_ARM=A \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/lean.log" 2>&1 </dev/null &
+elif [ "${EQ_MODE:-lean}" = "linger-arms" ]; then
+	# Adaptive-linger arm B against arm A, both on today's worker: batching may differ, bytes may not.
+	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 SPIKE_ENGINE_ALLOC_ARM=A SPIKE_ADAPTIVE_LINGER_ARM=B \
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/lean.log" 2>&1 </dev/null &
 elif [ "${EQ_MODE:-lean}" = "pool" ]; then
 	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 IO_WORKERS=2 \
