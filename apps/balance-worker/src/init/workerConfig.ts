@@ -93,6 +93,9 @@ export function createWorkerConsumerConfig({
 	};
 }
 
+/** Appends the pipelined commit arm keeps on the wire per partition; the broker keeps order for up to five. */
+export const PARTITION_COMMIT_PIPELINE_DEPTH = 2;
+
 export function createWorkerProducerConfig({
 	deploymentEnvironment,
 	topic,
@@ -113,7 +116,11 @@ export function createWorkerProducerConfig({
 			topic,
 			partition,
 		}),
-		limits,
+		// Only the partition's own producer may pipeline; a transaction is one at a time by protocol.
+		limits:
+			mode === "idempotent"
+				? { ...limits, maxInFlightRequests: PARTITION_COMMIT_PIPELINE_DEPTH }
+				: limits,
 		...(mode === undefined ? {} : { mode }),
 	};
 }
@@ -159,6 +166,12 @@ export function balanceWorkerEnvToRuntimeConfig({
 			}),
 			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
 			commitLingerMs: 5,
+			// The commit-depth arm B keeps this many appends in flight; one broker round trip per
+			// append is what makes it worth it, so transactional commits stay stop-and-wait.
+			commitPipelineDepth:
+				env.BALANCE_WORKER_COMMIT_MODE === "idempotent"
+					? PARTITION_COMMIT_PIPELINE_DEPTH
+					: 1,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {

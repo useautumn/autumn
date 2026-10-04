@@ -94,7 +94,8 @@ export function createIdempotentProducerConfig({
 
 	return {
 		idempotent: true,
-		maxInFlightRequests: 1,
+		// Above one, the patched kafkajs pipelines produces: the sequence numbers fix their order on the wire.
+		maxInFlightRequests: limits.maxInFlightRequests ?? 1,
 		retry: {
 			retries: limits.retryCount,
 			initialRetryTime: limits.initialRetryTimeMs,
