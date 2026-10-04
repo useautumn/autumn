@@ -6,9 +6,11 @@ import {
 	createEdgeConfigStore,
 	type EdgeConfigS3Client,
 	STAGING_VARIANT_WINDOW_MS,
+	STAGING_VARIANTS_BUCKET,
 	type StagingArm,
 	type StagingVariantsConfig,
 	stagingVariantsEdgeConfig,
+	stagingVariantsEnabled,
 	variant,
 	variants,
 } from "../../src/edgeConfig.js";
@@ -45,7 +47,11 @@ const createS3 = () => {
 	return { s3, client };
 };
 
-const createBoundStore = () => {
+const createBoundStore = ({
+	bucket = STAGING_VARIANTS_BUCKET,
+}: {
+	bucket?: string;
+} = {}) => {
 	const { s3, client } = createS3();
 	const store = createEdgeConfigStore({
 		ctx: {
@@ -58,9 +64,10 @@ const createBoundStore = () => {
 		retainOnError: true,
 	});
 	const clock = { now: 1_000 * STAGING_VARIANT_WINDOW_MS };
-	bindStagingVariants({
+	const bound = bindStagingVariants({
 		read: store.get,
 		identity: IDENTITY,
+		bucket,
 		now: () => clock.now,
 	});
 	const nextWindow = () => {
@@ -70,7 +77,7 @@ const createBoundStore = () => {
 		await store.writeToSource({ config: configWith(experiments) });
 		await store.refresh();
 	};
-	return { s3, store, write, nextWindow, clock };
+	return { s3, store, write, nextWindow, clock, bound };
 };
 
 const armsOver = ({
@@ -91,6 +98,7 @@ afterEach(() => {
 	bindStagingVariants({
 		read: stagingVariantsEdgeConfig.defaultValue,
 		identity: "",
+		bucket: STAGING_VARIANTS_BUCKET,
 	});
 });
 
@@ -101,6 +109,7 @@ describe("variant()", () => {
 				throw new Error("unbound");
 			},
 			identity: IDENTITY,
+			bucket: STAGING_VARIANTS_BUCKET,
 		});
 		expect(variant("slice")).toBe("A");
 		expect(variants()).toBeNull();
@@ -226,4 +235,43 @@ test("arms must start with A and hold 2–4 distinct arms from A–D", () => {
 	]);
 	for (const arms of [[], ["A"], ["B", "A"], ["A", "A"], ["A", "E"]])
 		expect(activeArmsOf({ arms })).toEqual([]);
+});
+
+describe("the staging-only gate", () => {
+	test("only the staging admin bucket can turn variants on", () => {
+		expect(stagingVariantsEnabled({ bucket: "autumn-staging" })).toBe(true);
+		for (const bucket of [
+			"autumn-prod-server",
+			"autumn-dev-server",
+			"autumn-staging-copy",
+			"",
+		])
+			expect(stagingVariantsEnabled({ bucket })).toBe(false);
+	});
+
+	for (const bucket of ["autumn-prod-server", "autumn-dev-server"])
+		test(`a live config on ${bucket} never binds, so every arm is A`, async () => {
+			const { bound, write, nextWindow } = createBoundStore({ bucket });
+			expect(bound).toBe(false);
+			await write({
+				slice: { arms: ["A", "B", "C", "D"] },
+				aa: { arms: ["A", "B"] },
+			});
+			for (const experiment of ["slice", "aa"])
+				expect(
+					new Set(armsOver({ experiment, windows: 50, nextWindow })),
+				).toEqual(new Set<StagingArm>(["A"]));
+			expect(variants()).toBeNull();
+		});
+
+	test("the staging bucket binds and runs every live arm", async () => {
+		const { bound, write, nextWindow } = createBoundStore({
+			bucket: "autumn-staging",
+		});
+		expect(bound).toBe(true);
+		await write({ slice: { arms: ["A", "B"] } });
+		expect(
+			new Set(armsOver({ experiment: "slice", windows: 30, nextWindow })),
+		).toEqual(new Set<StagingArm>(["A", "B"]));
+	});
 });
