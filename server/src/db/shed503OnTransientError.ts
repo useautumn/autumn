@@ -1,4 +1,5 @@
 import { RecaseError } from "@autumn/shared";
+import { withPoolReason } from "@/db/poolAttribution/poolAttribution.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { balanceWorkerFailOpenReasonOf } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
@@ -39,7 +40,10 @@ export const shed503OnTransientError = async <T>({
 					type: `${source}_redis_fallback`,
 					error,
 				});
-				return await fallbackOnRedisUnavailable(error);
+				return await withPoolReason({
+					reason: "dragonfly-fallback",
+					fn: () => fallbackOnRedisUnavailable(error),
+				});
 			} catch (fallbackError) {
 				const fallbackFailedTransiently =
 					isTransientDbError({ error: fallbackError }) ||

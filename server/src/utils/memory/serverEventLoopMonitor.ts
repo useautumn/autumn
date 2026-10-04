@@ -6,6 +6,10 @@ import {
 	variants,
 } from "@autumn/edge-config";
 import { summarizeProcessCpuWindow } from "@autumn/logging";
+import {
+	drainPoolAttribution,
+	enablePoolAttribution,
+} from "@/db/poolAttribution/poolAttribution.js";
 import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { getServerForkCount } from "./forkRecycling/recyclePolicy.js";
@@ -67,6 +71,7 @@ export const startServerEventLoopMonitor = ({
 		return { started: false, stop: () => {} };
 	}
 
+	enablePoolAttribution();
 	const cpuModel = cpus()[0]?.model;
 	const forkArm = getServerForkBootArm();
 	const forkCount = getServerForkCount();
@@ -100,6 +105,7 @@ export const startServerEventLoopMonitor = ({
 					...data,
 					forkArm,
 					forkCount,
+					poolAttribution: drainPoolAttribution(),
 					variants: forkArm
 						? { ...variants(), [SERVER_FORK_EXPERIMENT]: forkArm }
 						: variants(),

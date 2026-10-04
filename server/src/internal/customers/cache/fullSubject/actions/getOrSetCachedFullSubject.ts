@@ -1,14 +1,15 @@
-import { usesSubjectCache } from "../usesSubjectCache.js";
 import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
+import { withPoolReason } from "@/db/poolAttribution/poolAttribution.js";
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterDrainedLooseEntitlements } from "../filterDrainedLooseEntitlements.js";
 import { isReplicaSourced } from "../subjectProvenance.js";
+import { usesSubjectCache } from "../usesSubjectCache.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { rehydrateWithLiveBalances } from "./rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
@@ -62,13 +63,17 @@ export const getOrSetCachedFullSubject = async ({
 		`[getOrSetCachedFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
 
-	const result = await getFullSubjectNormalized({
-		ctx,
-		customerId,
-		entityId,
-		runLazyResets,
-		readFrom,
-		routeSource: source,
+	const result = await withPoolReason({
+		reason: useRedis ? "subject-cache-miss" : "subject-uncached",
+		fn: () =>
+			getFullSubjectNormalized({
+				ctx,
+				customerId,
+				entityId,
+				runLazyResets,
+				readFrom,
+				routeSource: source,
+			}),
 	});
 
 	if (!result) {

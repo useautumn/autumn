@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { startPoolAcquire } from "./poolAttribution/poolAttribution.js";
 
 type RegisteredPool = {
 	pool: Pool;
@@ -106,27 +107,25 @@ const timeAcquires = ({ pool, name }: { pool: Pool; name: string }): void => {
 	const original = pool.connect.bind(pool);
 	const timed = (callback?: ConnectCallback) => {
 		const startedAt = performance.now();
+		const attribute = startPoolAcquire({ pool: name });
+		const settle = (error?: Error | null) => {
+			const durationMs = performance.now() - startedAt;
+			recordAcquire({ name, durationMs, error });
+			attribute?.({ waitMs: durationMs, failed: Boolean(error) });
+		};
 		if (callback) {
 			return original((err, client, done) => {
-				recordAcquire({
-					name,
-					durationMs: performance.now() - startedAt,
-					error: err,
-				});
+				settle(err);
 				callback(err, client, done);
 			});
 		}
 		return original().then(
 			(client) => {
-				recordAcquire({ name, durationMs: performance.now() - startedAt });
+				settle();
 				return client;
 			},
 			(error: Error) => {
-				recordAcquire({
-					name,
-					durationMs: performance.now() - startedAt,
-					error,
-				});
+				settle(error);
 				throw error;
 			},
 		);
