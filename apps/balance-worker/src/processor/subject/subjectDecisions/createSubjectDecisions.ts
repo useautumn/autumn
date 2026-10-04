@@ -7,6 +7,7 @@ import {
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
+import { createCheckLeases } from "./createCheckLeases.js";
 import { createTrackDecisions } from "./createTrackDecisions.js";
 import type {
 	SubjectDecision,
@@ -32,8 +33,11 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		trackContextMisses: 0,
 		effectsRun: 0,
 		effectsSkipped: 0,
+		checkLeasesIssued: 0,
+		checkLeasesWithheld: 0,
 	};
 	const trackDecisions = createTrackDecisions({ counters });
+	const checkLeases = createCheckLeases({ counters });
 
 	/** One entry per selection: a new second replaces it, so a view read for hours holds no history. */
 	function decisionOf({
@@ -97,5 +101,5 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		return { ...counters };
 	}
 
-	return { readCheckReply, ...trackDecisions, readCounters };
+	return { readCheckReply, ...trackDecisions, ...checkLeases, readCounters };
 };

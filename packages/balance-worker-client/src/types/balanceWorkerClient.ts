@@ -14,6 +14,10 @@ import type {
 	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import type { CatalogInvalidations } from "../catalog/types/catalogInvalidations.js";
+import type {
+	CheckLeaseCounters,
+	CheckLeasesConfig,
+} from "../checkLeases/types/checkLeases.js";
 import type { ApplyBillingPlanReply } from "../contracts/applyBillingPlan.js";
 import type { CheckReply } from "../contracts/check.js";
 import type { ConfirmExpiredLockReply } from "../contracts/confirmExpiredLock.js";
@@ -104,6 +108,8 @@ export type BalanceWorkerClient = {
 	enqueue(params: EnqueueParams): Promise<void>;
 	/** Tells every worker and herald that an org's catalog changed, so their cached rows are dropped. */
 	catalog: CatalogInvalidations;
+	/** Null when this client holds no check leases; a client that never could leaves it out. */
+	readCheckLeaseCounters?(): CheckLeaseCounters | null;
 	/** Reads the ownership log through, retrying until it does; routing answers nothing before. */
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -134,4 +140,6 @@ export type BalanceWorkerClientConfig = {
 	batchTracks?: boolean;
 	/** Most tracks one batch carries; defaults to 100. */
 	maxTrackBatchSize?: number;
+	/** Answers repeat checks from owner-issued leases; absent, every check asks the owner. */
+	checkLeases?: CheckLeasesConfig;
 };
