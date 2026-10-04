@@ -45,16 +45,16 @@ describe("Balance worker environment", () => {
 			}),
 		).toThrow();
 	});
-	test("commits transactionally unless a deployment opts into the one-trip commit", () => {
+	test("commits idempotently unless a deployment names a mode", () => {
 		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_COMMIT_MODE).toBe(
-			"transactional",
+			"idempotent",
 		);
 		expect(
 			createBalanceWorkerEnv({
 				...valid,
-				BALANCE_WORKER_COMMIT_MODE: "idempotent",
+				BALANCE_WORKER_COMMIT_MODE: "transactional",
 			}).BALANCE_WORKER_COMMIT_MODE,
-		).toBe("idempotent");
+		).toBe("transactional");
 		expect(() =>
 			createBalanceWorkerEnv({ ...valid, BALANCE_WORKER_COMMIT_MODE: "fast" }),
 		).toThrow();
