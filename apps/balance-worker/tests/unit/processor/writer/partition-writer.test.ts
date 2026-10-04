@@ -42,6 +42,7 @@ import {
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
 import { RECORD_OVERHEAD_BYTES } from "../../../../src/processor/writer/pendingMutations.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import type { RecentCommands } from "../../../../src/processor/writer/recentCommands/types/recentCommands.js";
 import type {
 	MutateParams,
 	MutationResult,
@@ -298,6 +299,8 @@ const createPartitionTrackWriter = ({
 	limits,
 	receiptPolicy = defaultReceiptPolicy,
 	now,
+	recentCommands = createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+	batchedForget,
 }: {
 	topic: string;
 	partition: number;
@@ -306,13 +309,18 @@ const createPartitionTrackWriter = ({
 	limits: PartitionWriterLimits;
 	receiptPolicy?: ReceiptPolicy;
 	now?: () => number;
+	recentCommands?: RecentCommands;
+	batchedForget?: () => boolean;
 }): TestWriter => {
-	const recentCommands = createRecentCommands({
-		windowMs: 600_000,
-		now: () => 0,
-	});
 	const writer = createPartitionWriterCore({
-		ctx: { stateStore, appender, receiptPolicy, recentCommands, now },
+		ctx: {
+			stateStore,
+			appender,
+			receiptPolicy,
+			recentCommands,
+			now,
+			batchedForget,
+		},
 		config: { topic, partition, limits },
 	});
 	const db = createSyntheticWorkerDb();
@@ -780,6 +788,62 @@ describe("partition writer", () => {
 	 *  waiting out a store apply that adds nothing to the reply. The balance the
 	 *  caller reads was computed at decide time, and the apply echoes back the very
 	 *  mutation it was handed, so nothing in the response comes from the store. */
+	test("sequencer-diet: a committed batch is remembered for dedup in one call, and retries still dedupe", async () => {
+		const fixture = createFixture();
+		try {
+			const store = createRecentCommands({ windowMs: 600_000, now: () => 0 });
+			const calls: string[] = [];
+			const recentCommands: RecentCommands = {
+				...store,
+				remember: (params) => {
+					calls.push("remember");
+					store.remember(params);
+				},
+				rememberAll: (params) => {
+					const commands = [...params.commands];
+					calls.push(`rememberAll:${commands.length}`);
+					store.rememberAll({ commands });
+				},
+			};
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender: new RecordingCommittedAppender(),
+				limits: defaultLimits,
+				recentCommands,
+				batchedForget: () => true,
+			});
+			const first = createCommand({ commandId: "diet_1" });
+			const second = createCommand({ commandId: "diet_2" });
+			await Promise.all([
+				writer.submitTrack({ command: first }),
+				writer.submitTrack({ command: second }),
+			]);
+			await writer.waitForStore();
+			expect(calls).toEqual(["rememberAll:2"]);
+			expect(
+				store.recall({
+					key: recentCommands.keyOf({
+						identity: firstIdentity,
+						commandId: "diet_1",
+					}),
+					fingerprint: "other",
+				}),
+			).toBe("different");
+			// The fixture's store keeps receipts, so a retry is answered as a duplicate; the window still backs it.
+			const retry = await writer.submitTrack({ command: first });
+			expect(retry).toMatchObject({ state: { revision: 2 } });
+			await expect(
+				writer.submitTrack({
+					command: createCommand({ commandId: "diet_1", value: 9 }),
+				}),
+			).rejects.toBeInstanceOf(PartitionWriterCommandConflictError);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("settles the caller once Kafka has the batch, without waiting for the store", async () => {
 		const fixture = createFixture();
 		try {

@@ -88,6 +88,8 @@ export type PartitionRuntimeDependencies = {
 	recentCommands: RecentCommands;
 	/** Serial-decide arm D: where the writer publishes its commit position and failures for held replies. */
 	positions?: PositionSink;
+	/** Sequencer-diet arm B: committed batches are remembered for dedup in one call. */
+	batchedForget?: () => boolean;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 

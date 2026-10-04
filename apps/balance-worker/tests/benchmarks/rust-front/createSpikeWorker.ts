@@ -27,7 +27,6 @@ import { createMutationPublisher } from "../../../src/kafka/createMutationPublis
 import { createWorkerProducer } from "../../../src/kafka/createWorkerProducer.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
-import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
 import { createRemoteKafkaProducers } from "../../../src/serialDecide/createRemoteKafkaProducers.js";
 import {
@@ -39,6 +38,7 @@ import {
 	testIdentity,
 } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
+import { spikeSequencerDiet } from "./spikeSequencerDiet.js";
 
 // The equality test pins the wall clock so two runs of the same requests build the same records.
 const fixedClock = process.env.SPIKE_FIXED_CLOCK;
@@ -247,6 +247,9 @@ export async function createSpikeWorker({
 	console.error(
 		`ENGINE_ALLOC_ARM ${engineAllocArm ?? "A (unforced)"} lean=${engineDiet().rowChanges}`,
 	);
+	const diet = spikeSequencerDiet({
+		kafkaWorker: appenderMode === "kafka-worker",
+	});
 	const processor = createPartitionProcessor({
 		ctx: {
 			stateStore: {
@@ -258,10 +261,8 @@ export async function createSpikeWorker({
 			db,
 			appender,
 			receiptPolicy: { retentionMs: 86_400_000, now: () => Date.now() },
-			recentCommands: createRecentCommands({
-				windowMs: 600_000,
-				now: () => Date.now(),
-			}),
+			recentCommands: diet.recentCommands,
+			batchedForget: diet.batchedForget,
 			assertCanRead: () => undefined,
 		},
 		config: {
