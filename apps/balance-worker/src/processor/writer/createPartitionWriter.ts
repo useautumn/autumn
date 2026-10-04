@@ -4,6 +4,7 @@ import { adopt as adoptState } from "./actions/adopt.js";
 import { flushDeferredLogs as flushDeferred } from "./actions/commit.js";
 import {
 	decide as decideMutation,
+	decideRun as decideMutationRun,
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
@@ -69,6 +70,26 @@ export function createPartitionWriter({
 		});
 	}
 
+	function decideRun<Reply>({
+		identity,
+		submissions,
+		stopsRun,
+	}: Parameters<PartitionWriter["decideRun"]>[0] & {
+		submissions: MutationSubmission<Reply>[];
+	}) {
+		return decideMutationRun<Reply>({
+			scope,
+			identity,
+			submissions,
+			stopsRun,
+			measure: ({ submission, run }) =>
+				slowDecides.measure({
+					command: submission.command,
+					run: () => timeSync({ label: "writer.decide" }, run),
+				}),
+		});
+	}
+
 	function log(params: Parameters<PartitionWriter["log"]>[0]): Promise<void> {
 		return logMutation({ scope, ...params });
 	}
@@ -116,6 +137,7 @@ export function createPartitionWriter({
 		waitForStore,
 		waitForApplies,
 		decide,
+		decideRun,
 		log,
 		flushDeferredLogs,
 		waitForPendingCommits,
