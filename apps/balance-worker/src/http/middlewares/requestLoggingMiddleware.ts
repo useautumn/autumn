@@ -81,8 +81,9 @@ function logRequestResult({
 	// A batch answers 200 around its commands' failures; the worst of them sets the level.
 	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
 	// Decided before the line is built: what is skipped costs nothing but this comparison.
-	if (severity < 400 && !(batch && batch.failed > 0) && !sampleSuccess({ ctx }))
-		return;
+	const sampled =
+		(severity < 400 && !(batch && batch.failed > 0)) || requestLog.shed;
+	if (sampled && !sampleSuccess({ ctx })) return;
 	const identity = command?.identity ?? batch?.identity;
 	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
 	const event = {
