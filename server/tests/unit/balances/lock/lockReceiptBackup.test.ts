@@ -5,7 +5,8 @@
  *   - the backup expires with the receipt, so it never revives one past its TTL
  *   - a backup deleted mid-restore (a concurrent finalize settled the lock) revives nothing
  *   - a Redis failure while fetching or restoring is a retryable error, not "Lock not found"
- *   - a lookup that fails or misses gives back the claim it took
+ *   - a lookup that fails or misses gives back the claim it took, even when the claim's reply was
+ *     lost, and never another finalize's claim
  */
 import { beforeEach, describe, expect, test } from "bun:test";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
@@ -19,6 +20,8 @@ class FakeRedis {
 	store = new Map<string, Entry>();
 	failExec = false;
 	getReplyError: Error | null = null;
+	/** Applies the SET but loses its reply, like a socket dropping mid-pipeline. */
+	loseSetReply = false;
 	onExists?: () => void;
 
 	private live(key: string): Entry | undefined {
@@ -64,6 +67,12 @@ class FakeRedis {
 		return removed;
 	}
 
+	/** Only the claim release script: delete the key while it holds the token. */
+	async eval(_script: string, _keyCount: number, key: string, token: string) {
+		if ((await this.get(key)) !== token) return 0;
+		return this.del(key);
+	}
+
 	async exists(key: string) {
 		this.onExists?.();
 		return this.live(key) ? 1 : 0;
@@ -84,7 +93,15 @@ class FakeRedis {
 				return chain;
 			},
 			set: (key: string, value: string, ...args: (string | number)[]) => {
-				commands.push(() => this.set(key, value, ...args));
+				commands.push(async () => {
+					await this.set(key, value, ...args);
+					if (this.loseSetReply) {
+						throw Object.assign(new Error("read ECONNRESET"), {
+							code: "ECONNRESET",
+						});
+					}
+					return "OK";
+				});
 				return chain;
 			},
 			exec: async () => {
@@ -202,6 +219,7 @@ beforeEach(() => {
 	cacheRedis.failExec = false;
 	miscRedis.failExec = false;
 	cacheRedis.getReplyError = null;
+	cacheRedis.loseSetReply = false;
 	miscRedis.onExists = undefined;
 });
 
@@ -215,7 +233,7 @@ describe("lock receipt backup", () => {
 		expect(fetched.claimed).toBe(true);
 		expect(fetched.receipt.customer_id).toBe("cus_123");
 		expect(await cacheRedis.get(lockReceiptKey)).toBe(JSON.stringify(receipt));
-		expect(await cacheRedis.get(claimMarkerKey)).toBe("1");
+		expect(await cacheRedis.get(claimMarkerKey)).toBeTruthy();
 	});
 
 	test("the backup expires with the receipt, so it never revives one past its TTL", async () => {
@@ -277,5 +295,30 @@ describe("lock receipt backup", () => {
 		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
 			RedisUnavailableError,
 		);
+	});
+
+	test("a claim whose reply was lost is given back, so the retry can claim", async () => {
+		await takeLock();
+		cacheRedis.loseSetReply = true;
+
+		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
+			RedisUnavailableError,
+		);
+		expect(await cacheRedis.get(claimMarkerKey)).toBeNull();
+
+		cacheRedis.loseSetReply = false;
+		const retried = await fetchLockReceipt({ ctx, lockId });
+		expect(retried.claimed).toBe(true);
+	});
+
+	test("giving back a claim never removes another finalize's claim", async () => {
+		await takeLock();
+		await cacheRedis.set(claimMarkerKey, "other-finalize", "EX", 3600);
+		cacheRedis.loseSetReply = true;
+
+		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
+			RedisUnavailableError,
+		);
+		expect(await cacheRedis.get(claimMarkerKey)).toBe("other-finalize");
 	});
 });
