@@ -1,5 +1,10 @@
 import { cpus } from "node:os";
 import {
+	bindStagingVariants,
+	STAGING_VARIANT_WINDOW_MS,
+	variants,
+} from "@autumn/edge-config";
+import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
@@ -9,10 +14,6 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
-import {
-	initBuildVariant,
-	startVariantWindow,
-} from "../experiments/buildVariant.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
@@ -94,6 +95,11 @@ export async function createBalanceWorker({
 			checkpointSource: dependencies.checkpointSource,
 		},
 	});
+	if (resources.edgeConfigs)
+		bindStagingVariants({
+			read: resources.edgeConfigs.stagingVariants.get,
+			identity: address.endpoint,
+		});
 	try {
 		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
 		const slotGate = resources.edgeConfigs
@@ -278,15 +284,11 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
-		function readConfiguredArms(): string[] {
-			return resources.edgeConfigs?.arms.get().arms ?? [];
-		}
-		initBuildVariant({ endpoint: address.endpoint, readConfiguredArms });
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,
 				recorder: syncSections,
-				startVariantWindow,
+				variants,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
@@ -294,7 +296,7 @@ export async function createBalanceWorker({
 				intervalMs: 10,
 				stallThresholdMs: 20,
 				logStallMs: 50,
-				reportEveryMs: 10_000,
+				reportEveryMs: STAGING_VARIANT_WINDOW_MS,
 				cpuModel: cpus()[0]?.model,
 			},
 		});

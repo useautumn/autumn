@@ -14,15 +14,15 @@ const idleCpu: CpuCounters = {
 function createFixture({
 	reportEveryMs = 1_000,
 	cpu = () => idleCpu,
-	startVariantWindow,
+	variants,
+	startAt = 1_000,
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
-	startVariantWindow?: (params: {
-		windowIndex: number;
-	}) => { variant: string; arms: string[] } | null;
+	variants?: () => Record<string, string>;
+	startAt?: number;
 } = {}) {
-	let clock = 1_000;
+	let clock = startAt;
 	const now = () => clock;
 	const infos: Log[] = [];
 	const warns: Log[] = [];
@@ -42,7 +42,8 @@ function createFixture({
 			recorder,
 			now,
 			cpu,
-			startVariantWindow,
+			wallNow: now,
+			variants,
 			schedule: ({ run }) => {
 				tick = run;
 				return () => {
@@ -252,46 +253,50 @@ test("a timed section returns its value and still records when it throws", () =>
 	expect(recorder.drainTotals()["subject.read"]?.count).toBe(2);
 });
 
-test("an A/B build labels each report with the variant that ran during it, then opens the next window", () => {
-	const opened: number[] = [];
-	const { monitor, infos, elapse } = createFixture({
-		startVariantWindow: ({ windowIndex }) => {
-			opened.push(windowIndex);
-			return {
-				variant: windowIndex % 3 === 1 ? "B" : "A",
-				arms: ["A", "B"],
-			};
-		},
-	});
-	monitor.start();
-	for (let report = 0; report < 3; report++) elapse({ elapsedMs: 1_000 });
-	const labels = infos
-		.filter(
-			([fields]) =>
-				(fields as { event?: string }).event === "balance_worker.event_loop",
+const eventLoopReports = (infos: Log[]) =>
+	infos
+		.map(
+			([fields]) => fields as { event?: string; data: Record<string, unknown> },
 		)
-		.map(([fields]) => {
-			const { variant, arms } = (
-				fields as { data: { variant?: string; arms?: string[] } }
-			).data;
-			return { variant, arms };
-		});
-	expect(opened).toEqual([0, 1, 2, 3]);
-	expect(labels).toEqual([
-		{ variant: "A", arms: ["A", "B"] },
-		{ variant: "B", arms: ["A", "B"] },
-		{ variant: "A", arms: ["A", "B"] },
+		.filter(({ event }) => event === "balance_worker.event_loop");
+
+test("reports close on wall-clock window boundaries, even when the monitor starts mid-window", () => {
+	const { monitor, infos, elapse } = createFixture({ startAt: 1_600 });
+	monitor.start();
+	elapse({ elapsedMs: 300 });
+	expect(eventLoopReports(infos)).toHaveLength(0);
+	elapse({ elapsedMs: 110 });
+	elapse({ elapsedMs: 980 });
+	expect(eventLoopReports(infos)).toHaveLength(1);
+	elapse({ elapsedMs: 20 });
+	expect(eventLoopReports(infos).map(({ data }) => data.windowMs)).toEqual([
+		410, 1_000,
 	]);
 });
 
-test("outside an A/B build no report carries a variant", () => {
-	const { monitor, infos, elapse } = createFixture();
+test("each report carries the staging variants read as its window opened", () => {
+	const opened: number[] = [];
+	let clockAtOpen = 0;
+	const { monitor, infos, elapse } = createFixture({
+		variants: () => {
+			opened.push(clockAtOpen++);
+			return opened.length === 2
+				? { slice: "B", aa: "A" }
+				: { slice: "A", aa: "B" };
+		},
+	});
+	monitor.start();
+	for (let report = 0; report < 2; report++) elapse({ elapsedMs: 1_000 });
+	expect(eventLoopReports(infos).map(({ data }) => data.variants)).toEqual([
+		{ slice: "A", aa: "B" },
+		{ slice: "B", aa: "A" },
+	]);
+	expect(opened).toHaveLength(3);
+});
+
+test("outside a staging experiment no report carries variants", () => {
+	const { monitor, infos, elapse } = createFixture({ variants: () => ({}) });
 	monitor.start();
 	elapse({ elapsedMs: 1_000 });
-	const summary = infos.find(
-		([fields]) =>
-			(fields as { event?: string }).event === "balance_worker.event_loop",
-	)?.[0] as { data: Record<string, unknown> };
-	expect(summary.data).not.toHaveProperty("variant");
-	expect(summary.data).not.toHaveProperty("arms");
+	expect(eventLoopReports(infos)[0]?.data).not.toHaveProperty("variants");
 });

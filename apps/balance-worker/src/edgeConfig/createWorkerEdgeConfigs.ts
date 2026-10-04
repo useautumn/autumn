@@ -8,26 +8,23 @@ import {
 	type EdgeConfigLogger,
 	type EdgeConfigS3Client,
 	type EdgeConfigStore,
+	type StagingVariantsConfig,
+	stagingVariantsEdgeConfig,
 } from "@autumn/edge-config";
 import {
 	type ActiveSlotEdgeConfig,
 	activeSlotEdgeConfig,
 } from "./activeSlotEdgeConfig.js";
-import {
-	type BalanceWorkerArmsEdgeConfig,
-	balanceWorkerArmsEdgeConfig,
-} from "./balanceWorkerArmsEdgeConfig.js";
 
 const ACTIVE_SLOT_POLL_INTERVAL_MS = 2_000;
-const ARMS_POLL_INTERVAL_MS = 5_000;
 
 /** The edge configs a worker polls; one registry drives them all. */
 export type WorkerEdgeConfigs = {
 	dbControl: EdgeConfigStore<DbControlEdgeConfig>;
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
-	/** The A/B arms live on staging, polled on its own timer so a switch lands within a window or two. */
-	arms: EdgeConfigStore<BalanceWorkerArmsEdgeConfig>;
+	/** Staging A/B experiments, read through `variant()`; polled on its own timer like the slot. */
+	stagingVariants: EdgeConfigStore<StagingVariantsConfig>;
 	/** The same bucket and client the stores read, for objects the worker writes itself. */
 	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
@@ -66,32 +63,32 @@ export const createWorkerEdgeConfigs = ({
 		// The default names no service and would open the gate; a read error must keep the last record instead.
 		retainOnError: true,
 	});
-	const arms = createEdgeConfigStore({
+	const stagingVariants = createEdgeConfigStore({
 		ctx: edgeConfigContext,
-		s3Key: balanceWorkerArmsEdgeConfig.key,
-		schema: balanceWorkerArmsEdgeConfig.schema,
-		defaultValue: balanceWorkerArmsEdgeConfig.defaultValue,
-		pollIntervalMs: ARMS_POLL_INTERVAL_MS,
-		// A blip must not flip a running experiment off mid-rung.
+		s3Key: stagingVariantsEdgeConfig.key,
+		schema: stagingVariantsEdgeConfig.schema,
+		defaultValue: stagingVariantsEdgeConfig.defaultValue,
+		pollIntervalMs: stagingVariantsEdgeConfig.pollIntervalMs,
+		// A blip must not switch a running experiment off mid-rung.
 		retainOnError: true,
 	});
 
 	async function start(): Promise<void> {
 		await registry.start({ logger: ctx.logger });
 		await activeSlot.startPolling({ logger: ctx.logger });
-		await arms.startPolling({ logger: ctx.logger });
+		await stagingVariants.startPolling({ logger: ctx.logger });
 	}
 
 	function stop(): void {
 		activeSlot.stopPolling();
-		arms.stopPolling();
+		stagingVariants.stopPolling();
 		registry.stop();
 	}
 
 	return {
 		dbControl,
 		activeSlot,
-		arms,
+		stagingVariants,
 		adminBucket: { s3Client, location: config.location },
 		start,
 		stop,

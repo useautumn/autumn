@@ -97,7 +97,9 @@ const runBatch = async ({
 	const first = batch[0];
 	if (!first) return;
 	const occurredAt = scope.ctx.receiptPolicy.now();
-	let envelopes: Awaited<ReturnType<SubjectScope["ctx"]["db"]["getEntitySubjectRows"]>>;
+	let envelopes: Awaited<
+		ReturnType<SubjectScope["ctx"]["db"]["getEntitySubjectRows"]>
+	>;
 	try {
 		envelopes = await scope.ctx.db.getEntitySubjectRows({
 			identity: { ...first.identity, entityId: null },
@@ -162,7 +164,9 @@ export const createEntityLoads = ({
 			while (queue.waiting.size > 0) {
 				const batch = [...queue.waiting.values()].slice(0, maxEntitiesPerLoad);
 				for (const waiting of batch)
-					queue.waiting.delete(meteringIdentityToSubjectKey({ identity: waiting.identity }));
+					queue.waiting.delete(
+						meteringIdentityToSubjectKey({ identity: waiting.identity }),
+					);
 				await runBatch({ scope: scopeOf(), batch });
 			}
 		} finally {

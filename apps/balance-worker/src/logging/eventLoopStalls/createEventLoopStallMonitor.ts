@@ -41,23 +41,25 @@ export function createEventLoopStallMonitor({
 		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
 		memory?: () => { heapUsed: number; rss: number };
 		cpu?: () => CpuCounters;
-		/** An A/B build switches variant as each report window opens, so every window is one variant's. */
-		startVariantWindow?: (params: {
-			windowIndex: number;
-		}) => { variant: string; arms: string[] } | null;
+		/** Reports close on wall-clock `reportEveryMs` boundaries, the staging-variant windows. */
+		wallNow?: () => number;
+		/** Each live staging experiment's arm, read as a window opens: every report is one window's. */
+		variants?: () => Record<string, string>;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
 	const now = ctx.now ?? (() => performance.now());
 	const memory = ctx.memory ?? (() => process.memoryUsage());
 	const cpu = ctx.cpu ?? (() => readCpuCounters());
+	const wallNow = ctx.wallNow ?? Date.now;
+	const windowOf = () => Math.floor(wallNow() / config.reportEveryMs);
 	let lastCpu: CpuCounters | undefined;
 	let cancel: (() => void) | undefined;
 	let lastTickAt = 0;
 	let lastReportAt = 0;
 	let window = emptyWindow();
 	let windowIndex = 0;
-	let variantWindow: { variant: string; arms: string[] } | null = null;
+	let windowVariants: Record<string, string> = {};
 
 	function tick(): void {
 		try {
@@ -67,7 +69,7 @@ export function createEventLoopStallMonitor({
 			if (lagMs >= config.stallThresholdMs) {
 				recordStall({ tickedAt, lagMs });
 			}
-			if (tickedAt - lastReportAt >= config.reportEveryMs) {
+			if (windowOf() !== windowIndex) {
 				report({ tickedAt });
 			}
 		} catch {
@@ -144,7 +146,9 @@ export function createEventLoopStallMonitor({
 					stalledMs: round(window.stalledMs),
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
-					...(variantWindow ?? {}),
+					...(Object.keys(windowVariants).length
+						? { variants: windowVariants }
+						: {}),
 					...cpuWindow,
 					sections,
 				},
@@ -153,8 +157,12 @@ export function createEventLoopStallMonitor({
 		);
 		lastReportAt = tickedAt;
 		window = emptyWindow();
-		windowIndex += 1;
-		variantWindow = ctx.startVariantWindow?.({ windowIndex }) ?? null;
+		openWindow();
+	}
+
+	function openWindow(): void {
+		windowIndex = windowOf();
+		windowVariants = ctx.variants?.() ?? {};
 	}
 
 	function start(): void {
@@ -163,7 +171,7 @@ export function createEventLoopStallMonitor({
 		lastReportAt = lastTickAt;
 		lastCpu = cpu();
 		ctx.recorder.drainTotals();
-		variantWindow = ctx.startVariantWindow?.({ windowIndex }) ?? null;
+		openWindow();
 		cancel = (ctx.schedule ?? scheduleProbe)({
 			intervalMs: config.intervalMs,
 			run: tick,
