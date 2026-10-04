@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { MeteringRecord } from "@autumn/kafka";
 import { serializeSubjectReply } from "../../../src/http/replies/serializeSubjectReply.js";
 import {
 	MutationBatchAppendError,
@@ -9,6 +8,7 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
 import { createPositionBoard } from "../../../src/serialDecide/positionBoard.js";
+import { gatedAppender } from "../../fixtures/gatedAppender.js";
 import {
 	createInitializeRequest,
 	createState,
@@ -36,52 +36,6 @@ function recordingBoard() {
 		positions.failed.push({ seq, lastSeq, cause }),
 	);
 	return { board, positions };
-}
-
-/** An appender whose batches a test releases by hand, recording what it was given. */
-function gatedAppender() {
-	const batches: {
-		outcomes: readonly MeteringRecord[];
-		release: (outcome?: unknown) => void;
-	}[] = [];
-	let appended = 0n;
-	let held = true;
-	return {
-		batches,
-		hold() {
-			held = true;
-		},
-		open() {
-			held = false;
-			for (const batch of batches.splice(0)) batch.release();
-		},
-		releaseNext(outcome?: unknown) {
-			batches.shift()?.release(outcome);
-		},
-		appender: {
-			appendCommitted: ({
-				outcomes,
-			}: {
-				outcomes: readonly MeteringRecord[];
-			}) =>
-				new Promise<{ baseOffset: bigint }>((resolve, reject) => {
-					function release(outcome?: unknown): void {
-						if (outcome instanceof Error) {
-							reject(outcome);
-							return;
-						}
-						const baseOffset = appended;
-						appended += BigInt(outcomes.length);
-						resolve({ baseOffset });
-					}
-					if (!held) {
-						release();
-						return;
-					}
-					batches.push({ outcomes, release });
-				}),
-		},
-	};
 }
 
 async function residentWithPositions({
