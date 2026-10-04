@@ -35,6 +35,10 @@ import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { TrackRunCounters, TrackRuns } from "../runs/createTrackRuns.js";
 import type {
+	QueuedTrackEntry,
+	QueuedTrackOutcome,
+} from "../runs/executeQueuedTrackRun.js";
+import type {
 	SubjectDecisionCounters,
 	SubjectDecisions,
 } from "../subject/subjectDecisions/types/subjectDecisions.js";
@@ -63,6 +67,10 @@ export type PartitionProcessor = {
 		command: TrackCommand;
 	}): Promise<DecidedMutation<never>>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	/** Consecutive queued tracks for one subject, decided as one run; the ones it could not decide come back to apply alone. */
+	executeQueuedTracks(params: {
+		entries: QueuedTrackEntry[];
+	}): Promise<QueuedTrackOutcome[]>;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	/** What the partition counted since it started; partition health reports them. */

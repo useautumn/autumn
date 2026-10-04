@@ -47,7 +47,10 @@ export const createCommandPipeline = ({
 	failAppendAt,
 	heldAppend,
 	states = [],
+	decidesQueuedTrackRuns = true,
 }: {
+	/** Off applies every queued track alone: the reference runs must equal. */
+	decidesQueuedTrackRuns?: boolean;
 	/** Subjects resident beside the default customers. */
 	states?: SubjectState[];
 	/** The nth commit (0-based) the broker refuses outright. */
@@ -148,6 +151,7 @@ export const createCommandPipeline = ({
 		ctx: {
 			findOwnedRuntime: () => runtime,
 			readCommandNextOffset: () => bookmark,
+			decidesQueuedTrackRuns,
 			idempotencyKeys: createFakeIdempotencyKeys().keys,
 			logger: {
 				info: (...args: unknown[]) => logs.push(`info:${args[0]}`),
@@ -170,19 +174,28 @@ export const createCommandPipeline = ({
 		/** Runs before each record is handed over, as another request arriving on the partition would. */
 		beforeEach?: (params: { index: number }) => void;
 	}): Promise<void> {
-		for (const [index, record] of commands.entries()) {
+		const messages = commands.map((record, index) => ({
+			offset: String(firstOffset + index),
+			...serializeCommandRecord({ record }),
+		}));
+		for (let index = 0; index < messages.length; ) {
 			beforeEach?.({ index });
-			await handler.applyRecord({
-				topic,
-				partition,
-				message: {
-					offset: String(firstOffset + index),
-					...serializeCommandRecord({ record }),
-				},
-			});
+			// As the topic consumer does: the handler may take several records from here as one run.
+			const length =
+				handler.runLength?.({ topic, partition, messages, start: index }) ?? 1;
+			const message = messages[index];
+			if (!message) break;
+			if (length > 1 && handler.applyRun)
+				await handler.applyRun({
+					topic,
+					partition,
+					messages: messages.slice(index, index + length),
+				});
+			else await handler.applyRecord({ topic, partition, message });
 			if (parked.length > 0) return;
 			// The consumer's heartbeat between records is where the writer's commit loop gets its turn.
 			await new Promise<void>((resolve) => setImmediate(resolve));
+			index += Math.max(1, length);
 		}
 		await handler.settleBatch?.({ topic, partition });
 	}

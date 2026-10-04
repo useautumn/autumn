@@ -77,6 +77,8 @@ export type {
 	TopicRecord,
 	TopicRecordHandler,
 	TopicRecordResult,
+	TopicRecordRun,
+	TopicRecordRunStart,
 	TopicRecordSlice,
 	TopicRecordsHandler,
 	TopicResumePosition,

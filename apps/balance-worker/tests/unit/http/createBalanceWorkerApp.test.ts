@@ -149,6 +149,9 @@ const fixture = ({
 		decideTrack: async () => {
 			throw new Error("Queued tracks are not configured in this fixture");
 		},
+		executeQueuedTracks: async () => {
+			throw new Error("Queued tracks are not configured in this fixture");
+		},
 		check: async ({ command }) => ({
 			result: computeCheck({
 				fullSubject: createSubjectFor({ state }),

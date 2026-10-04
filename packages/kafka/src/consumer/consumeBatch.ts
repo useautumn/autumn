@@ -11,6 +11,7 @@ import {
 	type TopicConsumerContext,
 	type TopicConsumerState,
 	type TopicRecord,
+	type TopicRecordHandler,
 } from "./types/consumer.js";
 
 const DEFAULT_RECORDS_PER_SLICE = 500;
@@ -88,13 +89,27 @@ async function applyBatch({
 		return;
 	}
 
-	for (const message of messages) {
+	for (let start = 0; start < messages.length; ) {
 		if (
 			!payload.isRunning() ||
 			!hasCurrentBatchGeneration({ state, payload, generation })
 		)
 			return;
-		const application = ctx.handler.applyRecord({ topic, partition, message });
+		const run = recordRunAt({
+			handler: ctx.handler,
+			topic,
+			partition,
+			messages,
+			start,
+		});
+		const application =
+			run.length > 1 && ctx.handler.applyRun
+				? ctx.handler.applyRun({ topic, partition, messages: run })
+				: ctx.handler.applyRecord({
+						topic,
+						partition,
+						message: messages[start] as TopicRecord["message"],
+					});
 		const result =
 			application instanceof Promise ? await application : application;
 		// A handler may withdraw the partition while applying; nothing of that record is resolved then.
@@ -103,7 +118,8 @@ async function applyBatch({
 			!hasCurrentBatchGeneration({ state, payload, generation })
 		)
 			return;
-		const recordOffset = parseKafkaOffset({ offset: message.offset });
+		const last = run.at(-1) as TopicRecord["message"];
+		const recordOffset = parseKafkaOffset({ offset: last.offset });
 		if (result && result.nextOffset > recordOffset + 1n) {
 			await ctx.handler.settleBatch?.({ topic, partition });
 			await reconcilePartitionOffset({
@@ -115,8 +131,9 @@ async function applyBatch({
 			});
 			return;
 		}
-		payload.resolveOffset(message.offset);
+		payload.resolveOffset(last.offset);
 		await payload.heartbeat();
+		start += run.length;
 	}
 
 	await ctx.handler.settleBatch?.({ topic, partition });
@@ -168,4 +185,23 @@ function readOffsetOrNull({ offset }: { offset: string }): bigint | null {
 	} catch {
 		return null;
 	}
+}
+
+/** The records from `start` the handler takes as one run: at least the one record, never past the batch. */
+function recordRunAt({
+	handler,
+	topic,
+	partition,
+	messages,
+	start,
+}: {
+	handler: TopicRecordHandler;
+	topic: string;
+	partition: number;
+	messages: TopicRecord["message"][];
+	start: number;
+}): TopicRecord["message"][] {
+	const length =
+		handler.runLength?.({ topic, partition, messages, start }) ?? 1;
+	return messages.slice(start, start + Math.max(1, length));
 }

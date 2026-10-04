@@ -195,7 +195,8 @@ describe("queued commit batching", () => {
 	});
 
 	test("sync and queued tracks for the same customer decide in the order they arrive", async () => {
-		const pipeline = createCommandPipeline();
+		// Records handed over one at a time, so a sync track can arrive between any two of them.
+		const pipeline = createCommandPipeline({ decidesQueuedTrackRuns: false });
 		try {
 			const queued = Array.from({ length: 10 }, (_, index) =>
 				trackOf({ customerId: "cus_1", commandId: `queued_${index}` }),

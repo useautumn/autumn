@@ -1,3 +1,7 @@
+import {
+	meteringIdentityToSubjectKey,
+	type TrackCommand,
+} from "@autumn/balance-engine";
 import { BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT } from "@autumn/env/balanceWorkerConstants";
 import {
 	type CommandRecord,
@@ -6,6 +10,8 @@ import {
 	type TopicRecord,
 	type TopicRecordHandler,
 	type TopicRecordResult,
+	type TopicRecordRun,
+	type TopicRecordRunStart,
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import { consumeEvict } from "../../consume/consumeEvict.js";
@@ -20,6 +26,7 @@ import {
 import type { QueuedCommand } from "../../consume/types/queuedCommand.js";
 import { isPartitionRestartableCause } from "../../partitions/health/partitionRestartableCauses.js";
 import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
+import type { QueuedTrackOutcome } from "../../processor/runs/executeQueuedTrackRun.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { CommittedMutation } from "../../processor/writer/types/mutation.js";
 import { CommandPartitionUnavailableError } from "./commandConsumerErrors.js";
@@ -33,6 +40,12 @@ const isCommittedMutation = (
 	typeof committed === "object" &&
 	committed !== null &&
 	"mutation" in committed;
+
+/** Bounds one run's critical section and how far its records run ahead of their commits. */
+const MAX_QUEUED_TRACK_RUN = Math.min(
+	100,
+	BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT,
+);
 
 /** Where a record sits on the command topic, as its log lines report it. */
 type RecordPosition = { topic: string; partition: number; offset: string };
@@ -133,7 +146,9 @@ export function createCommandRecordHandler({
 	}): Promise<{ command: CommandRecord; queued: QueuedCommand } | null> {
 		let command: CommandRecord;
 		try {
-			command = parseCommandRecord({ key: message.key, value: message.value });
+			command =
+				parsedByMessage.get(message) ??
+				parseCommandRecord({ key: message.key, value: message.value });
 		} catch (cause) {
 			// A record nobody can read must not take the partition down with it.
 			ctx.logger?.warn("Queued command skipped: unreadable", {
@@ -242,5 +257,115 @@ export function createCommandRecordHandler({
 		return undefined;
 	}
 
-	return { readResumeOffset, applyRecord, settleBatch };
+	// A record parsed to size a run is not parsed again to apply it.
+	const parsedByMessage = new WeakMap<
+		TopicRecord["message"],
+		CommandRecord | null
+	>();
+
+	function parsedOf(message: TopicRecord["message"]): CommandRecord | null {
+		if (parsedByMessage.has(message))
+			return parsedByMessage.get(message) ?? null;
+		let command: CommandRecord | null = null;
+		try {
+			command = parseCommandRecord({ key: message.key, value: message.value });
+		} catch {
+			command = null;
+		}
+		parsedByMessage.set(message, command);
+		return command;
+	}
+
+	/** A track that can join a run: no idempotency claim to take first, which a lone record awaits on its own. */
+	function runnableTrackOf(
+		message: TopicRecord["message"] | undefined,
+	): TrackCommand | null {
+		if (!message) return null;
+		const command = parsedOf(message);
+		return command?.type === "track" && !command.idempotency ? command : null;
+	}
+
+	/** Consecutive queued tracks for the first one's subject, none of them behind the bookmark. */
+	function runLength({
+		partition,
+		messages,
+		start,
+	}: TopicRecordRunStart): number {
+		if (ctx.decidesQueuedTrackRuns === false) return 1;
+		const first = messages[start];
+		const firstTrack = runnableTrackOf(first);
+		if (!first || !firstTrack) return 1;
+		const bookmark = ctx.readCommandNextOffset({ partition });
+		if (
+			bookmark !== null &&
+			parseKafkaOffset({ offset: first.offset }) < bookmark
+		)
+			return 1;
+		const subjectKey = meteringIdentityToSubjectKey({
+			identity: firstTrack.identity,
+		});
+		let length = 1;
+		while (length < MAX_QUEUED_TRACK_RUN && start + length < messages.length) {
+			const track = runnableTrackOf(messages[start + length]);
+			if (
+				!track ||
+				meteringIdentityToSubjectKey({ identity: track.identity }) !==
+					subjectKey
+			)
+				break;
+			length++;
+		}
+		return length;
+	}
+
+	/** Decides the run in one go; whatever it could not decide is applied alone, in order, as any record is. */
+	async function applyRun({
+		topic,
+		partition,
+		messages,
+	}: TopicRecordRun): Promise<TopicRecordResult> {
+		const runtime = ctx.findOwnedRuntime({ partition });
+		if (!runtime)
+			throw new CommandPartitionUnavailableError({ topic, partition });
+		const deferredLogs = deferredLogsOf({ partition, runtime });
+		await deferredLogs.waitForRoom();
+		const entries = messages.map((message) => ({
+			command: runnableTrackOf(message) as TrackCommand,
+			source: {
+				commandOffset: parseKafkaOffset({ offset: message.offset }).toString(),
+			},
+		}));
+		let outcomes: QueuedTrackOutcome[];
+		try {
+			outcomes = await runtime.process((processor) =>
+				processor.executeQueuedTracks({ entries }),
+			);
+		} catch (cause) {
+			const [first] = messages;
+			parkOrRethrow({
+				topic,
+				partition,
+				offset: first && parseKafkaOffset({ offset: first.offset }),
+				cause,
+			});
+			return;
+		}
+		for (const [index, message] of messages.entries()) {
+			const outcome = outcomes[index];
+			const entry = entries[index];
+			if (outcome?.kind === "decided" && entry) {
+				deferredLogs.add(
+					settleCommit({
+						command: entry.command,
+						queued: { decided: outcome.decided },
+					}),
+				);
+				continue;
+			}
+			const result = await applyRecord({ topic, partition, message });
+			if (result) return result;
+		}
+	}
+
+	return { readResumeOffset, applyRecord, runLength, applyRun, settleBatch };
 }

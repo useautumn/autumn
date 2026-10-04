@@ -9,6 +9,8 @@ export type CommandConsumerContext = {
 	}): PartitionRuntimePort | undefined;
 	/** How far the partition's commands are decided, from Postgres; null before the bookmark exists. */
 	readCommandNextOffset(position: { partition: number }): bigint | null;
+	/** Off applies every queued track alone: the reference a run of them must equal. */
+	decidesQueuedTrackRuns?: boolean;
 	idempotencyKeys: IdempotencyKeyStore;
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	/** Parks the partition behind a command whose batch the broker refused: withdrawn from the

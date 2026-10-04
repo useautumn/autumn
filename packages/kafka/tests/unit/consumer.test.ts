@@ -14,6 +14,8 @@ import type {
 	KafkaConsumerClient,
 	TopicRecord,
 	TopicRecordResult,
+	TopicRecordRun,
+	TopicRecordRunStart,
 	TopicResumePosition,
 } from "../../src/consumer/types/consumer.js";
 import { InvalidRecordError } from "../../src/lib/recordErrors.js";
@@ -1333,4 +1335,52 @@ test("after kafkajs gave up on the group, restart joins it again on the same lis
 		config: { topic },
 	});
 	await expect(fresh.restart()).rejects.toThrow("not started");
+});
+
+test("a handler that takes records as a run applies them together and resolves the run's last offset", async () => {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function runLength({ messages, start }: TopicRecordRunStart): number {
+		return messages[start]?.offset === "1" ? 2 : 1;
+	}
+	async function applyRun({ messages }: TopicRecordRun): Promise<undefined> {
+		fixture.events.push(
+			`run:${messages.map(({ offset }) => offset).join(",")}`,
+		);
+		return undefined;
+	}
+	function applyRecord({ message }: TopicRecord): undefined {
+		fixture.events.push(`apply:${message.offset}`);
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord, runLength, applyRun },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		await fixture.deliverBatch({
+			records: ["0", "1", "2", "3"].map(createRecord),
+			lastOffset: "3",
+		});
+		expect(
+			fixture.events
+				.filter((event) => !event.startsWith("heartbeat"))
+				.slice(-7),
+		).toEqual([
+			"apply:0",
+			"resolve:0",
+			"run:1,2",
+			"resolve:2",
+			"apply:3",
+			"resolve:3",
+			"commit",
+		]);
+		expect(fixture.commits).toEqual([[{ topic, partition, offset: "4" }]]);
+	} finally {
+		await consumer.stop();
+	}
 });

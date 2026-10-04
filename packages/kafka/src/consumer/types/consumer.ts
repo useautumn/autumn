@@ -43,8 +43,20 @@ export type TopicRecordHandler = {
 	applyRecord(
 		record: TopicRecord,
 	): TopicRecordResult | Promise<TopicRecordResult>;
+	/** How many records from `start` the handler decides together; absent or 1 applies them one at a time. */
+	runLength?(run: TopicRecordRunStart): number;
+	/** Applies records `runLength` grouped, in order, as one; a nextOffset past the last skips forward as `applyRecord`'s does. */
+	applyRun?(run: TopicRecordRun): Promise<TopicRecordResult>;
 	settleBatch?(position: { topic: string; partition: number }): Promise<void>;
 };
+
+export type TopicRecordRun = {
+	topic: string;
+	partition: number;
+	messages: TopicRecord["message"][];
+};
+
+export type TopicRecordRunStart = TopicRecordRun & { start: number };
 
 /** One partition's records, in order, sized by `recordsPerSlice`; the handler heartbeats through a long apply. */
 export type TopicRecordSlice = {

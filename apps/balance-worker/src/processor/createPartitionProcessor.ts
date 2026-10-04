@@ -48,6 +48,10 @@ import {
 } from "./common/acceptedCommands.js";
 import { executeCommand } from "./execution/executeCommand.js";
 import { createTrackRuns } from "./runs/createTrackRuns.js";
+import {
+	executeQueuedTrackRun,
+	type QueuedTrackEntry,
+} from "./runs/executeQueuedTrackRun.js";
 import { createSubjectHydrator } from "./subject/createSubjectHydrator.js";
 import { createSubjectDecisions } from "./subject/subjectDecisions/createSubjectDecisions.js";
 import type { DeferredLogSink } from "./types/deferredLogSink.js";
@@ -352,8 +356,16 @@ function createProcessor({
 		});
 	}
 
+	function executeQueuedTracks({ entries }: { entries: QueuedTrackEntry[] }) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: executeQueuedTrackRun({ scope, entries }),
+		});
+	}
+
 	return {
 		execute,
+		executeQueuedTracks,
 		dispose: () => scope.ctx.writer.dispose(),
 		readCounters: () => ({
 			...scope.ctx.subjectDecisions.readCounters(),
