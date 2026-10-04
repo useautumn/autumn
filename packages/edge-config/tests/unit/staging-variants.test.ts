@@ -272,6 +272,14 @@ test("arms must start with A and hold 2–4 distinct arms from A–D", () => {
 		expect(activeArmsOf({ arms })).toEqual([]);
 });
 
+test("a task-scoped experiment can pin the whole fleet to one arm other than A", () => {
+	expect(activeArmsOf({ arms: ["D"], scope: "task" })).toEqual(["D"]);
+	expect(activeArmsOf({ arms: ["D"] })).toEqual([]);
+	expect(activeArmsOf({ arms: ["D"], scope: "window" })).toEqual([]);
+	for (const arms of [["A"], ["E"], []])
+		expect(activeArmsOf({ arms, scope: "task" })).toEqual([]);
+});
+
 describe("the staging-only gate", () => {
 	test("only the staging admin bucket can turn variants on", () => {
 		expect(stagingVariantsEnabled({ bucket: "autumn-staging" })).toBe(true);
