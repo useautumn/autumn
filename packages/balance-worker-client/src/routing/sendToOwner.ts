@@ -1,6 +1,7 @@
 import {
 	requestBudgetHeaderValue,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_TRACK_GRANT_LANE_HEADER,
 } from "../contracts/worker.js";
 import {
 	type HttpResponse,
@@ -109,6 +110,9 @@ export async function sendToOwner<Response>({
 						[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
 							expiresAt: deadline.expiresAt,
 						}),
+						...(ctx.trackGrantLane === undefined
+							? {}
+							: { [WORKER_TRACK_GRANT_LANE_HEADER]: ctx.trackGrantLane }),
 					},
 					signal: deadline.signal,
 				});

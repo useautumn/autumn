@@ -6,7 +6,7 @@ export type { ApplyBillingPlanReply } from "./contracts/applyBillingPlan.js";
 export type { CheckLease, CheckReply } from "./contracts/check.js";
 export type { InitializeReply } from "./contracts/initialize.js";
 export type { ReadSubjectStateReply } from "./contracts/readSubjectState.js";
-export type { TrackReply } from "./contracts/track.js";
+export type { TrackGrant, TrackReply } from "./contracts/track.js";
 export { createBalanceWorkerClient } from "./createBalanceWorkerClient.js";
 export type {
 	HttpClient,
@@ -46,6 +46,10 @@ export type {
 	PartitionOwner,
 	PartitionOwners,
 } from "./routing/types/routing.js";
+export type {
+	TrackGrantCounters,
+	TrackGrantsConfig,
+} from "./trackGrants/types/trackGrants.js";
 export type {
 	ApplyBillingPlanParams,
 	BalanceWorkerClient,

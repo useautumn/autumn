@@ -9,6 +9,7 @@ import {
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import { createCheckLeases } from "./createCheckLeases.js";
 import { createTrackDecisions } from "./createTrackDecisions.js";
+import { createTrackGrants } from "./createTrackGrants.js";
 import type {
 	SubjectDecision,
 	SubjectDecisionCounters,
@@ -35,9 +36,14 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		effectsSkipped: 0,
 		checkLeasesIssued: 0,
 		checkLeasesWithheld: 0,
+		trackGrantsIssued: 0,
+		trackGrantsWithheld: 0,
+		trackGrantedApplied: 0,
+		trackGrantedLate: 0,
 	};
 	const trackDecisions = createTrackDecisions({ counters });
 	const checkLeases = createCheckLeases({ counters });
+	const trackGrants = createTrackGrants({ counters });
 
 	/** One entry per selection: a new second replaces it, so a view read for hours holds no history. */
 	function decisionOf({
@@ -101,5 +107,11 @@ export const createSubjectDecisions = (): SubjectDecisions => {
 		return { ...counters };
 	}
 
-	return { readCheckReply, ...trackDecisions, ...checkLeases, readCounters };
+	return {
+		readCheckReply,
+		...trackDecisions,
+		...checkLeases,
+		...trackGrants,
+		readCounters,
+	};
 };

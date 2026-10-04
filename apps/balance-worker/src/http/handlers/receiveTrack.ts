@@ -1,5 +1,8 @@
 import type { TrackCommand } from "@autumn/balance-engine";
-import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import {
+	type TrackReply,
+	WORKER_TRACK_GRANT_LANE_HEADER,
+} from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { serializeSubjectReply } from "../replies/serializeSubjectReply.js";
@@ -13,8 +16,10 @@ export async function receiveTrack(context: Context<BalanceWorkerHttpEnv>) {
 	const requestLog = context.get("requestLog");
 	requestLog.command = trackCommand;
 
+	const grantLane = context.req.header(WORKER_TRACK_GRANT_LANE_HEADER);
+
 	function runTrack(processor: PartitionProcessor) {
-		return processor.track({ command: trackCommand });
+		return processor.track({ command: trackCommand, grantLane });
 	}
 
 	const response = await ctx.runtime.process(runTrack);

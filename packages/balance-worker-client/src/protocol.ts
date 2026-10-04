@@ -45,6 +45,7 @@ export type {
 } from "./contracts/reset.js";
 export type {
 	BalanceWorkerTrackRequest,
+	TrackGrant,
 	TrackReply,
 } from "./contracts/track.js";
 export {
@@ -70,5 +71,6 @@ export {
 	parseWorkerRequest,
 	readRequestBudgetHeader,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_TRACK_GRANT_LANE_HEADER,
 	WorkerProtocolError,
 } from "./contracts/worker.js";

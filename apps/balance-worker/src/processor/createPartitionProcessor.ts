@@ -133,10 +133,16 @@ function createProcessor({
 		return turn ? turn.then(run) : run();
 	}
 
-	function track({ command }: { command: TrackCommand }) {
+	function track({
+		command,
+		grantLane,
+	}: {
+		command: TrackCommand;
+		grantLane?: string;
+	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: trackPartition({ scope, command }),
+			operation: trackPartition({ scope, command, grantLane }),
 		});
 	}
 

@@ -1,3 +1,4 @@
+import type { TrackCommand } from "@autumn/balance-engine";
 import { createCatalogInvalidations } from "./catalog/createCatalogInvalidations.js";
 import { createCheckLeases } from "./checkLeases/createCheckLeases.js";
 import {
@@ -26,6 +27,7 @@ import { enqueueCommands } from "./queue/enqueueCommands.js";
 import type { EnqueueParams } from "./queue/types/queue.js";
 import { createRouteHints } from "./routing/createRouteHints.js";
 import { createTrackBatcher } from "./routing/createTrackBatcher.js";
+import { createTrackGrants } from "./trackGrants/createTrackGrants.js";
 import type {
 	ApplyBillingPlanParams,
 	BalanceWorkerClient,
@@ -68,6 +70,7 @@ export function createBalanceWorkerClient({
 		partitionCount: config.partitionCount,
 		timeoutMs: config.timeoutMs,
 		routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
+		...(config.trackGrants ? { trackGrantLane: config.trackGrants.lane } : {}),
 	};
 	const appendTimeoutMs = config.appendTimeoutMs ?? DEFAULT_APPEND_TIMEOUT_MS;
 	const queue = {
@@ -82,9 +85,29 @@ export function createBalanceWorkerClient({
 			? undefined
 			: createTrackBatcher({ ctx, maxBatchSize: config.maxTrackBatchSize });
 
-	function track(params: TrackParams) {
+	function sendTrackToOwner(params: TrackParams) {
 		if (trackBatcher) return trackBatcher.track(params);
 		return sendTrack({ ctx, ...params });
+	}
+
+	// Absent, every track asks the owner and no request names a lane.
+	const trackGrants = config.trackGrants
+		? createTrackGrants({ config: config.trackGrants })
+		: undefined;
+
+	function track(params: TrackParams) {
+		if (!trackGrants) return sendTrackToOwner(params);
+		function send() {
+			return sendTrackToOwner(params);
+		}
+		function append(command: TrackCommand) {
+			return enqueueCommands({
+				ctx: queue,
+				commands: [command],
+				signal: params.signal,
+			});
+		}
+		return trackGrants.answer({ command: params.command, send, append });
 	}
 
 	// Absent, every check asks the owner and no write pays for invalidation.
@@ -158,6 +181,10 @@ export function createBalanceWorkerClient({
 
 	function readCheckLeaseCounters() {
 		return checkLeases?.readCounters() ?? null;
+	}
+
+	function readTrackGrantCounters() {
+		return trackGrants?.readCounters() ?? null;
 	}
 
 	async function start(): Promise<void> {
@@ -263,6 +290,7 @@ export function createBalanceWorkerClient({
 			}),
 		},
 		readCheckLeaseCounters,
+		readTrackGrantCounters,
 		start,
 		stop,
 	};

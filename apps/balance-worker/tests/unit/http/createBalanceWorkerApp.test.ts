@@ -132,6 +132,10 @@ const fixture = ({
 			trackRunMax: 0,
 			checkLeasesIssued: 0,
 			checkLeasesWithheld: 0,
+			trackGrantsIssued: 0,
+			trackGrantsWithheld: 0,
+			trackGrantedApplied: 0,
+			trackGrantedLate: 0,
 		}),
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
@@ -445,6 +449,18 @@ describe("Balance worker HTTP", () => {
 		expect(response.status).toBe(200);
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([{ command: sent }]);
+	});
+	test("a server's grant lane reaches the processor from /v1/track and /v1/track-batch", async () => {
+		const { postWithHeaders, postBatch, submitted } = fixture();
+		const lane = { "x-track-grant-lane": "server_1:42" };
+		expect((await postWithHeaders(lane)).status).toBe(200);
+		expect((await postBatch({ route, commands: [command] }, lane)).status).toBe(
+			200,
+		);
+		expect(submitted).toEqual([
+			{ command, grantLane: "server_1:42" },
+			{ command, grantLane: "server_1:42" },
+		]);
 	});
 	test("rejects malformed and empty JSON before routing", async () => {
 		const { app, submitted, lookups } = fixture();

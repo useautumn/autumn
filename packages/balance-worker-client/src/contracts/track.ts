@@ -22,4 +22,11 @@ export type TrackReply = {
 	catalog: Catalog;
 	/** What the decision caused elsewhere; empty on a retry, which never re-decides. Absent from older workers. */
 	effects?: MutationEffect[];
+	/** Units this server may answer alone until `expiresAt`; absent unless it asked for grants and the owner gave one. */
+	grant?: TrackGrant;
+	/** Answered at this server inside a grant: the balance omits what other servers spent since the grant. */
+	approximate?: true;
 };
+
+/** On the granting track's clock; each track answered inside it is queued with its `leaseId` for the owner to apply. */
+export type TrackGrant = { leaseId: string; units: number; expiresAt: number };

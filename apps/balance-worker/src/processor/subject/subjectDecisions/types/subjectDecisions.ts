@@ -3,15 +3,18 @@ import type {
 	CheckCommand,
 	CheckResult,
 	DeductionContext,
+	DeductionDelta,
 	DeductionRequest,
 	MeteringIdentity,
 	RowChange,
 	SubjectState,
+	TrackCommand,
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type {
 	CheckLease,
 	CheckReply,
+	TrackGrant,
 } from "@autumn/balance-worker-client/protocol";
 
 /** What a subject view decided for one selection within one second; replaced, never edited. */
@@ -66,6 +69,20 @@ export type SubjectDecisions = {
 		context: DeductionContext;
 		result: CheckResult;
 	}): CheckLease | null;
+	/** The context with every outstanding grant on the key reserved; a granted track first releases its own units. */
+	reserveTrackGrants(params: {
+		customerKey: string;
+		command: TrackCommand;
+		context: DeductionContext;
+	}): DeductionContext;
+	/** Units the lane may answer alone after this sync track, or null near the limit, for a guarded key, or a new owner. */
+	grantTrack(params: {
+		customerKey: string;
+		command: TrackCommand;
+		context: DeductionContext;
+		deltas: DeductionDelta[];
+		lane: string;
+	}): TrackGrant | null;
 	readCounters(): SubjectDecisionCounters;
 };
 
@@ -82,4 +99,10 @@ export type SubjectDecisionCounters = {
 	/** Check replies decided with a lease for the servers, or without one (refused, near the limit, guarded). */
 	checkLeasesIssued: number;
 	checkLeasesWithheld: number;
+	/** Track grants given to a lane after its sync track, or withheld (near the limit, guarded, a new owner). */
+	trackGrantsIssued: number;
+	trackGrantsWithheld: number;
+	/** Granted tracks applied against their grant, or after it lapsed or from a predecessor's. */
+	trackGrantedApplied: number;
+	trackGrantedLate: number;
 };

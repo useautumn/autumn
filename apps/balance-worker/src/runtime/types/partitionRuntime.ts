@@ -93,6 +93,8 @@ export type PartitionRuntimeConfig = {
 	partition: number;
 	writerLimits: PartitionWriterLimits;
 	recoveryDrainTimeoutMs: number;
+	/** Passed to the processor: grants servers track units to answer alone. */
+	grantsTracks?: boolean;
 	/** How long a command waits for an activating runtime before it is refused. */
 	activationWaitMs?: number;
 };

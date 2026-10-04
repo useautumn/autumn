@@ -76,6 +76,10 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export {
+	decideGrantedTrack,
+	type GrantedTrackDecision,
+} from "./commands/track/decideGrantedTrack.js";
 export { trackCommandToDeductionRequest } from "./commands/track/trackCommandToDeductionRequest.js";
 export type {
 	OverageBehavior,
@@ -97,6 +101,7 @@ export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest
 // deduction
 export { advanceDeductionContext } from "./deduction/advanceDeductionContext.js";
 export { deduct } from "./deduction/deduct.js";
+export { reserveDeductionContext } from "./deduction/reserveDeductionContext.js";
 export { setupDeductionContext } from "./deduction/setup/setupDeductionContext.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
 export type { DeductionDecision } from "./deduction/types/deductionDecision.js";

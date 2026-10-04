@@ -584,6 +584,10 @@ describe("owned partition runtime", () => {
 					trackRunMax: 0,
 					checkLeasesIssued: 0,
 					checkLeasesWithheld: 0,
+					trackGrantsIssued: 0,
+					trackGrantsWithheld: 0,
+					trackGrantedApplied: 0,
+					trackGrantedLate: 0,
 				},
 			});
 			await expect(

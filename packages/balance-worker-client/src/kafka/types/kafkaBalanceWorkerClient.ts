@@ -2,6 +2,7 @@ import type { KafkaSender, OwnershipKafka } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import type { CheckLeasesConfig } from "../../checkLeases/types/checkLeases.js";
 import type { PartitionOwners } from "../../routing/types/routing.js";
+import type { TrackGrantsConfig } from "../../trackGrants/types/trackGrants.js";
 
 export type BalanceWorkerProducer = KafkaSender & {
 	connect(): Promise<void>;
@@ -54,6 +55,7 @@ export type KafkaBalanceWorkerClientConfig = {
 	batchTracks?: boolean;
 	maxTrackBatchSize?: number;
 	checkLeases?: CheckLeasesConfig;
+	trackGrants?: TrackGrantsConfig;
 	catchUpTimeoutMs?: number;
 	startRetryDelaysMs?: readonly number[];
 	/** A process that queues or publishes connects its producers at start, so no first call pays the connect. Off for one that never appends. */

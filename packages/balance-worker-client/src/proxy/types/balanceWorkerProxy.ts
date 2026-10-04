@@ -9,7 +9,12 @@ import type {
 /** The client's calls as the proxy names them; the catalog's one call is flattened. */
 type ProxiedCalls = Omit<
 	BalanceWorkerClient,
-	"queue" | "catalog" | "start" | "stop" | "readCheckLeaseCounters"
+	| "queue"
+	| "catalog"
+	| "start"
+	| "stop"
+	| "readCheckLeaseCounters"
+	| "readTrackGrantCounters"
 > & {
 	invalidateOrgCatalog: BalanceWorkerClient["catalog"]["invalidateOrgCatalog"];
 };

@@ -4,6 +4,7 @@ import {
 	parseWorkerRequest,
 	readRequestBudgetHeader,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_TRACK_GRANT_LANE_HEADER,
 	type WorkerErrorResponse,
 	type WorkerRequest,
 } from "@autumn/balance-worker-client/protocol";
@@ -36,7 +37,11 @@ type FastReply = TrackReply | CheckReply;
 
 type FastRoute = {
 	accepts(input: unknown): boolean;
-	run(processor: PartitionProcessor, command: unknown): Promise<FastReply>;
+	run(
+		processor: PartitionProcessor,
+		command: unknown,
+		grantLane: string | undefined,
+	): Promise<FastReply>;
 	serialize(reply: FastReply): string;
 };
 
@@ -44,8 +49,11 @@ type FastRoute = {
 const FAST_ROUTES: Record<"/v1/track" | "/v1/check", FastRoute> = {
 	"/v1/track": {
 		accepts: looksLikeTrackCommand,
-		run: (processor: PartitionProcessor, command: unknown) =>
-			processor.track({ command: command as never }),
+		run: (
+			processor: PartitionProcessor,
+			command: unknown,
+			grantLane: string | undefined,
+		) => processor.track({ command: command as never, grantLane }),
 		serialize: (reply) => serializeSubjectReply({ reply }),
 	},
 	"/v1/check": {
@@ -131,8 +139,10 @@ export function createBalanceWorkerFetch({
 				}),
 			});
 			requestLog.command = parsed.command as BalanceWorkerRequestLog["command"];
+			const grantLane =
+				request.headers.get(WORKER_TRACK_GRANT_LANE_HEADER) ?? undefined;
 			const reply = await runtime.process<FastReply>((processor) =>
-				route.run(processor, parsed.command),
+				route.run(processor, parsed.command, grantLane),
 			);
 			requestLog.response = reply;
 			response = new Response(route.serialize(reply), {

@@ -62,6 +62,8 @@ export const trackCommandSchema = mutatingCommandSchema
 		overageBehavior: overageBehaviorSchema,
 		properties: propertiesSchema,
 		lock: trackLockSchema.optional(),
+		/** Answered at a server inside an owner's track grant; the owner releases that many units of the grant as it applies it. */
+		leaseId: nonEmptyStringSchema.optional(),
 		/** A check that deducts honours the org's overdue block, as a plain check does; a plain track does not. */
 		enforceOverdueBlock: z.boolean().optional(),
 		idempotency: trackIdempotencySchema.optional(),

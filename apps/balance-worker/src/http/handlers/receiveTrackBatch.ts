@@ -5,6 +5,7 @@ import {
 	type TrackBatchItemResult,
 	type TrackBatchReply,
 	type TrackReply,
+	WORKER_TRACK_GRANT_LANE_HEADER,
 } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -53,8 +54,10 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 			budgetMs: readRequestBudget(context),
 		});
 
+		const grantLane = context.req.header(WORKER_TRACK_GRANT_LANE_HEADER);
+
 		function runCommand(input: unknown): Promise<TrackReply> {
-			return runTrack({ ctx, runtime, input, route });
+			return runTrack({ ctx, runtime, input, route, grantLane });
 		}
 
 		const settled = await Promise.allSettled(commands.map(runCommand));
@@ -93,11 +96,13 @@ async function runTrack({
 	runtime,
 	input,
 	route,
+	grantLane,
 }: {
 	ctx: BalanceWorkerHttpContext;
 	runtime: Runtime;
 	input: unknown;
 	route: { partition: number };
+	grantLane?: string;
 }): Promise<TrackReply> {
 	// Our server builds and validates each command; re-parsing them here is pure cost, the same as on /v1/track.
 	// A command that is not even shaped like a track fails alone, as its schema failure did.
@@ -108,7 +113,7 @@ async function runTrack({
 	});
 	if (partition !== route.partition) throw new PartitionRouteMismatchError();
 	function track(processor: PartitionProcessor) {
-		return processor.track({ command });
+		return processor.track({ command, grantLane });
 	}
 	return runtime.process(track);
 }

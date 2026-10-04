@@ -5,6 +5,7 @@ import type { TrackBatchItemResult } from "../contracts/trackBatch.js";
 import {
 	requestBudgetHeaderValue,
 	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_TRACK_GRANT_LANE_HEADER,
 } from "../contracts/worker.js";
 import {
 	type HttpResponse,
@@ -287,6 +288,9 @@ export function createTrackBatcher({
 					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
 						expiresAt: earliestDeadline({ items }).expiresAt,
 					}),
+					...(ctx.trackGrantLane === undefined
+						? {}
+						: { [WORKER_TRACK_GRANT_LANE_HEADER]: ctx.trackGrantLane }),
 				},
 				signal: batchAttempt.controller.signal,
 			});

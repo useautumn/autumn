@@ -19,6 +19,8 @@ export type RoutingContext = {
 	 *  request gives up on it. Keeps a rebalance from costing callers the whole
 	 *  deadline. Unset means the refresh may use whatever budget is left. */
 	routeRefreshTimeoutMs?: number;
+	/** Sent on every request so owners may grant this server track units; absent, they grant none. */
+	trackGrantLane?: string;
 };
 export type RoutedCommand = { identity: MeteringIdentity };
 export type ResolvedCommandRoute = { endpoint: string; route: PartitionRoute };

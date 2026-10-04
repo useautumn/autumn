@@ -144,6 +144,7 @@ export function trackOutcomesToApiResponse({
 		...postgres.fundingBalances,
 	];
 	const balances = { ...worker.balances, ...postgres.balances };
+	const approximate = replies.some(({ reply }) => reply.approximate);
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		ctx,
@@ -155,6 +156,7 @@ export function trackOutcomesToApiResponse({
 			balance: fundingBalances.length === 1 ? fundingBalances[0] : null,
 			balances: Object.keys(balances).length < 2 ? undefined : balances,
 			deductions: [...worker.deductions, ...postgres.deductions],
+			...(approximate ? { approximate: true } : {}),
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,

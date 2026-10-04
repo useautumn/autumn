@@ -61,7 +61,11 @@ export type PartitionProcessor = {
 		run: (processor: PartitionProcessor) => Promise<Decision>;
 		deferredLogs?: DeferredLogSink;
 	}): Promise<Decision>;
-	track(params: { command: TrackCommand }): Promise<TrackReply>;
+	/** `grantLane` names the server task asking for a track grant; absent, none is given. */
+	track(params: {
+		command: TrackCommand;
+		grantLane?: string;
+	}): Promise<TrackReply>;
 	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */
 	decideTrack(params: {
 		command: TrackCommand;
@@ -138,6 +142,8 @@ export type PartitionProcessorConfig = {
 	sharesRunSnapshot?: boolean;
 	/** Off answers every check without a lease, so servers ask the owner each time. */
 	issuesCheckLeases?: boolean;
+	/** On, a sync track from a lane may carry a grant to answer the key's next tracks at the server; off by default. */
+	grantsTracks?: boolean;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };

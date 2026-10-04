@@ -10,7 +10,10 @@ import type {
 	HttpRequest,
 	HttpResponse,
 } from "../src/http/types/httpClient.js";
-import { WORKER_REQUEST_BUDGET_HEADER } from "../src/protocol.js";
+import {
+	WORKER_REQUEST_BUDGET_HEADER,
+	WORKER_TRACK_GRANT_LANE_HEADER,
+} from "../src/protocol.js";
 
 const baseCommand: TrackCommand = {
 	schemaVersion: 1,
@@ -659,4 +662,41 @@ test("a queued command is snapshotted before the caller can mutate it", async ()
 	expect(fixture.requests[1].body.commands).toEqual([commandFor("b")]);
 	fixture.requests[1].respond(okResults(["b"]));
 	await pending;
+});
+
+test("a client asking for track grants names its lane on every batch; one that doesn't sends no lane", async () => {
+	for (const lane of [undefined, "server_1:42"]) {
+		const headers: Record<string, string>[] = [];
+		const client = createBalanceWorkerClient({
+			ctx: {
+				owners: {
+					findOwner: ({ partition }) => ({ ...initialOwner, partition }),
+					refresh: async () => undefined,
+				},
+				http: {
+					postJson: async (request) => {
+						headers.push(request.headers ?? {});
+						return okResults(["a"]);
+					},
+				},
+			},
+			config: {
+				partitionCount: 1,
+				timeoutMs: 1000,
+				...(lane && {
+					trackGrants: { lane, maxEntries: 10, decide: () => null },
+				}),
+			},
+		});
+		await client.track({ command: commandFor("a") });
+		expect(headers).toHaveLength(1);
+		expect(
+			headers[0]?.[WORKER_TRACK_GRANT_LANE_HEADER] as string | undefined,
+		).toBe(lane as string);
+		expect(Object.keys(headers[0] ?? {})).toEqual(
+			lane
+				? [WORKER_REQUEST_BUDGET_HEADER, WORKER_TRACK_GRANT_LANE_HEADER]
+				: [WORKER_REQUEST_BUDGET_HEADER],
+		);
+	}
 });

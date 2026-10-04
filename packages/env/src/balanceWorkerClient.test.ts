@@ -46,7 +46,23 @@ test.concurrent("local development needs no balance worker settings", () => {
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC: "local-catalog-invalidations",
 		BALANCE_WORKER_PARTITION_COUNT: 4,
 		BALANCE_WORKER_CHECK_LEASES: true,
+		BALANCE_WORKER_TRACK_GRANTS: false,
 	});
+});
+
+test.concurrent("track grants are off unless switched on", () => {
+	expect(
+		createBalanceWorkerClientEnv({
+			...localEnv,
+			BALANCE_WORKER_TRACK_GRANTS: "true",
+		}).BALANCE_WORKER_TRACK_GRANTS,
+	).toBe(true);
+	expect(() =>
+		createBalanceWorkerClientEnv({
+			...localEnv,
+			BALANCE_WORKER_TRACK_GRANTS: "on",
+		}),
+	).toThrow("BALANCE_WORKER_TRACK_GRANTS must be true or false");
 });
 
 test.concurrent("check leases are on unless switched off", () => {

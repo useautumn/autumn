@@ -119,6 +119,7 @@ export function createPartitionRuntimeFactory({
 				topic,
 				partition,
 				writerLimits: config.writerLimits,
+				...(config.grantsTracks ? { grantsTracks: true } : {}),
 				recoveryDrainTimeoutMs: config.timings.recoveryDrainTimeoutMs,
 			},
 		});

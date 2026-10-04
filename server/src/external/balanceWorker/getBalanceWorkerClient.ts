@@ -1,4 +1,5 @@
 import { hostname } from "node:os";
+import { decideGrantedTrack } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
 	createKafkaBalanceWorkerClient,
@@ -33,6 +34,8 @@ let balanceWorkerClient: BalanceWorkerClient | undefined;
 
 /** Leased check replies one server holds; a hot key holds one, so this bounds a fleet of cold ones. */
 const CHECK_LEASE_MAX_ENTRIES = 10_000;
+/** Track grants one server holds, one per hot (customer, feature). */
+const TRACK_GRANT_MAX_ENTRIES = 10_000;
 
 function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 	const env = getBalanceWorkerClientEnv();
@@ -54,6 +57,13 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 		connectProducersOnStart: true,
 		...(env.BALANCE_WORKER_CHECK_LEASES && {
 			checkLeases: { maxEntries: CHECK_LEASE_MAX_ENTRIES },
+		}),
+		...(env.BALANCE_WORKER_TRACK_GRANTS && {
+			trackGrants: {
+				lane: `${hostname()}:${process.pid}`,
+				maxEntries: TRACK_GRANT_MAX_ENTRIES,
+				decide: decideGrantedTrack,
+			},
 		}),
 	};
 }

@@ -53,6 +53,7 @@ export function createPartitionRuntime({
 				topic: config.topic,
 				partition: config.partition,
 				writerLimits: config.writerLimits,
+				...(config.grantsTracks ? { grantsTracks: true } : {}),
 			},
 		}),
 	};

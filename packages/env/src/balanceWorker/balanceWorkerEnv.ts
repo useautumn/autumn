@@ -34,6 +34,8 @@ const kafka = z.object({
 	BALANCE_WORKER_FETCH_MAX_WAIT_MS: positiveInteger.default(
 		BALANCE_WORKER_FETCH_MAX_WAIT_MS,
 	),
+	/** Gives servers that ask track grants (escrowed units they answer alone); off unless "true". */
+	BALANCE_WORKER_GRANTS_TRACKS: booleanFlag,
 });
 
 const listener = z.object({

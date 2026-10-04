@@ -81,6 +81,7 @@ export function createKafkaBalanceWorkerClient({
 			batchTracks: config.batchTracks,
 			maxTrackBatchSize: config.maxTrackBatchSize,
 			checkLeases: config.checkLeases,
+			trackGrants: config.trackGrants,
 		},
 	});
 }

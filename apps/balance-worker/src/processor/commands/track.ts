@@ -10,7 +10,10 @@ import {
 	trackCommandToDeductionRequest,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
-import type { TrackReply } from "@autumn/balance-worker-client/protocol";
+import type {
+	TrackGrant,
+	TrackReply,
+} from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
 import { withResidentSubject } from "../actions/withResidentSubject.js";
@@ -32,11 +35,13 @@ function trackSubmissionOf({
 	command,
 	customerKey,
 	decidedAgainst,
+	grantLane,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
 	customerKey: string;
 	decidedAgainst: DecidedAgainst;
+	grantLane?: string;
 }): MutationSubmission<never> {
 	return {
 		command,
@@ -44,7 +49,14 @@ function trackSubmissionOf({
 		durability: command.lock ? "store" : "log",
 		mutate: ({ state }) =>
 			timeSync({ label: "track.decide" }, () =>
-				mutateTrack({ scope, state, customerKey, command, decidedAgainst }),
+				mutateTrack({
+					scope,
+					state,
+					customerKey,
+					command,
+					decidedAgainst,
+					grantLane,
+				}),
 			),
 	};
 }
@@ -72,9 +84,11 @@ function decideTrackAlone({
 export function trackDecisionOf({
 	scope,
 	command,
+	grantLane,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
+	grantLane?: string;
 }) {
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
@@ -86,6 +100,7 @@ export function trackDecisionOf({
 		command,
 		customerKey,
 		decidedAgainst,
+		grantLane,
 	});
 	function decideAlone(): Promise<DecidedMutation<never>> {
 		return decideTrackAlone({ scope, command, customerKey, submission });
@@ -115,13 +130,16 @@ export async function decideTrack({
 export async function track({
 	scope,
 	command,
+	grantLane,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
+	grantLane?: string;
 }): Promise<TrackReply> {
 	const { decidedAgainst, submission, decideAlone } = trackDecisionOf({
 		scope,
 		command,
+		grantLane,
 	});
 	function answer({
 		committed,
@@ -178,12 +196,14 @@ function toTrackReply({
 			featureId: command.featureId,
 		}),
 		effects: decidedAgainst.effects ?? [],
+		...(decidedAgainst.grant ? { grant: decidedAgainst.grant } : {}),
 	};
 }
 
 type DecidedAgainst = {
 	catalog?: Catalog;
 	effects?: MutationEffect[];
+	grant?: TrackGrant;
 };
 
 /** The deduction, enqueued in order; what it was decided against shapes the sync reply. */
@@ -196,12 +216,14 @@ function mutateTrack({
 	customerKey,
 	command,
 	decidedAgainst,
+	grantLane,
 }: {
 	scope: PartitionProcessorScope;
 	state: SubjectState | null;
 	customerKey: string;
 	decidedAgainst: DecidedAgainst;
 	command: TrackCommand;
+	grantLane?: string;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
 	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
@@ -223,7 +245,16 @@ function mutateTrack({
 					}),
 					alwaysDecidesEffects: true,
 				}
-			: decideOnCarriedContext({ scope, state, catalog, command, readView });
+			: decideOnCarriedContext({
+					scope,
+					state,
+					catalog,
+					command,
+					readView,
+					customerKey,
+					grantLane,
+					decidedAgainst,
+				});
 	const { mutation } = decision;
 	scope.ctx.subjectDecisions.recordDraws({
 		changes: mutation.changes,
@@ -254,27 +285,55 @@ function decideOnCarriedContext({
 	catalog,
 	command,
 	readView,
+	customerKey,
+	grantLane,
+	decidedAgainst,
 }: {
 	scope: PartitionProcessorScope;
 	state: SubjectState;
 	catalog: Catalog;
 	command: TrackCommand;
 	readView: (viewed: SubjectState) => WorkerFullSubject;
+	customerKey: string;
+	grantLane?: string;
+	decidedAgainst: DecidedAgainst;
 }): { decision: DeductionDecision; alwaysDecidesEffects: boolean } {
-	const carried = scope.ctx.subjectDecisions.readTrackDecision({
+	const { subjectDecisions } = scope.ctx;
+	const carried = subjectDecisions.readTrackDecision({
 		state,
 		identity: command.identity,
 		request: trackCommandToDeductionRequest({ command }),
 		catalog,
 		join: () => readView(state),
 	});
-	return {
-		decision: computeTrackDecision({
-			fullSubject: carried.fullSubject,
+	const grantsTracks = scope.ctx.config.grantsTracks === true;
+	const decision = computeTrackDecision({
+		fullSubject: carried.fullSubject,
+		command,
+		// Units granted to the servers are spoken for: no other decision may draw them.
+		context: grantsTracks
+			? subjectDecisions.reserveTrackGrants({
+					customerKey,
+					command,
+					context: carried.context,
+				})
+			: carried.context,
+		revision: state.revision,
+	});
+	if (
+		grantsTracks &&
+		grantLane !== undefined &&
+		decision.mutation.result.type === "track" &&
+		decision.mutation.result.status === "applied"
+	) {
+		const grant = subjectDecisions.grantTrack({
+			customerKey,
 			command,
 			context: carried.context,
-			revision: state.revision,
-		}),
-		alwaysDecidesEffects: carried.alwaysDecidesEffects,
-	};
+			deltas: decision.outcome.deltas,
+			lane: grantLane,
+		});
+		if (grant) decidedAgainst.grant = grant;
+	}
+	return { decision, alwaysDecidesEffects: carried.alwaysDecidesEffects };
 }

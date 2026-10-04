@@ -61,6 +61,10 @@ export const TrackResponseV3Schema = z.object({
 		description:
 			"Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.",
 	}),
+	approximate: z.boolean().optional().meta({
+		description:
+			"True when the balance was answered without waiting for usage tracked concurrently elsewhere; the deduction itself is recorded exactly.",
+	}),
 });
 
 export type TrackResponseV3 = z.infer<typeof TrackResponseV3Schema>;

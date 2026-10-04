@@ -38,6 +38,10 @@ import type {
 	EnqueueParams,
 } from "../queue/types/queue.js";
 import type { PartitionOwners } from "../routing/types/routing.js";
+import type {
+	TrackGrantCounters,
+	TrackGrantsConfig,
+} from "../trackGrants/types/trackGrants.js";
 
 export type TrackParams = { command: TrackCommand; signal?: AbortSignal };
 export type CheckParams = { command: CheckCommand; signal?: AbortSignal };
@@ -110,6 +114,8 @@ export type BalanceWorkerClient = {
 	catalog: CatalogInvalidations;
 	/** Null when this client holds no check leases; a client that never could leaves it out. */
 	readCheckLeaseCounters?(): CheckLeaseCounters | null;
+	/** Null when this client holds no track grants. */
+	readTrackGrantCounters?(): TrackGrantCounters | null;
 	/** Reads the ownership log through, retrying until it does; routing answers nothing before. */
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -142,4 +148,6 @@ export type BalanceWorkerClientConfig = {
 	maxTrackBatchSize?: number;
 	/** Answers repeat checks from owner-issued leases; absent, every check asks the owner. */
 	checkLeases?: CheckLeasesConfig;
+	/** Asks owners for track grants and answers tracks inside them here; absent, every track goes to the owner. */
+	trackGrants?: TrackGrantsConfig;
 };

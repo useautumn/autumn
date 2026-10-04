@@ -83,6 +83,8 @@ export type PartitionRuntimeFactoryConfig = {
 	checkpointRetryPolicy: PartitionBootstrapRetryPolicy;
 	writerLimits: PartitionWriterLimits;
 	trackReceiptRetentionMs: number;
+	/** Owners grant servers track units to answer alone; off by default. */
+	grantsTracks?: boolean;
 	producerLimits: KafkaProducerLimits;
 	/** Defaults to transactional. */
 	commit?: { mode: KafkaCommitMode };

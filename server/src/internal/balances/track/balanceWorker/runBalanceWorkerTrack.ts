@@ -157,8 +157,11 @@ const fireReplyThresholdsReached = ({
 	body: TrackParams;
 	outcomes: FeatureTrackOutcome[];
 }): void => {
+	// A track answered inside a grant fires its thresholds when the owner applies it.
 	const replies = outcomes.flatMap((outcome) =>
-		outcome.engine === "worker" ? [outcome.reply] : [],
+		outcome.engine === "worker" && !outcome.reply.approximate
+			? [outcome.reply]
+			: [],
 	);
 	fireThresholdsReached({ ctx, body, replies }).catch((error) => {
 		ctx.logger.error(`[runBalanceWorkerTrack] fireThresholdsReached: ${error}`);

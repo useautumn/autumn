@@ -49,6 +49,18 @@ function readCheckLeasesEnabled({
 	throw new Error("BALANCE_WORKER_CHECK_LEASES must be true or false");
 }
 
+/** Track grants are off unless BALANCE_WORKER_TRACK_GRANTS=true: tracks answered at the server report an approximate balance. */
+function readTrackGrantsEnabled({
+	runtimeEnv,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}): boolean {
+	const value = runtimeEnv.BALANCE_WORKER_TRACK_GRANTS?.trim();
+	if (value === undefined || value === "" || value === "false") return false;
+	if (value === "true") return true;
+	throw new Error("BALANCE_WORKER_TRACK_GRANTS must be true or false");
+}
+
 export {
 	balanceWorkerDeploymentToKafkaNames,
 	getBalanceWorkerDeployment,
@@ -81,6 +93,7 @@ export function createBalanceWorkerClientEnv(
 			runtimeEnv,
 		}),
 		BALANCE_WORKER_CHECK_LEASES: readCheckLeasesEnabled({ runtimeEnv }),
+		BALANCE_WORKER_TRACK_GRANTS: readTrackGrantsEnabled({ runtimeEnv }),
 	};
 }
 

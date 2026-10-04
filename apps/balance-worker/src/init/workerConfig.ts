@@ -161,6 +161,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			commitLingerMs: 5,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
+		...(env.BALANCE_WORKER_GRANTS_TRACKS ? { grantsTracks: true } : {}),
 		producerLimits: {
 			// How long the coordinator lets a transaction stay open before it aborts
 			// it and fences the producer. Callers fail open in a couple of seconds

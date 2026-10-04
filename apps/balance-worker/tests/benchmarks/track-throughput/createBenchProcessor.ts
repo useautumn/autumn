@@ -3,6 +3,7 @@ import { createCommitterStateStore } from "../../../src/committer/createCommitte
 import type { Committer } from "../../../src/committer/types/committer.js";
 import { timeSync } from "../../../src/logging/eventLoopStalls/syncSections.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
+import type { PartitionProcessorConfig } from "../../../src/processor/types/partitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
@@ -25,6 +26,7 @@ export const createBenchProcessor = async ({
 	serialize,
 	db = createSyntheticWorkerDb(),
 	onAppended,
+	config = {},
 }: {
 	scenario: Scenario;
 	partition: number;
@@ -34,6 +36,7 @@ export const createBenchProcessor = async ({
 	db?: WorkerDb;
 	/** Sees every batch the writer appends, as the log would. */
 	onAppended?: (outcomes: readonly MeteringRecord[]) => void;
+	config?: Partial<PartitionProcessorConfig>;
 }) => {
 	const topic = "bench-metering";
 	let appended = 0;
@@ -111,7 +114,7 @@ export const createBenchProcessor = async ({
 			recentCommands,
 			assertCanRead: () => undefined,
 		},
-		config: { topic, partition, writerLimits },
+		config: { topic, partition, writerLimits, ...config },
 	});
 
 	return {
