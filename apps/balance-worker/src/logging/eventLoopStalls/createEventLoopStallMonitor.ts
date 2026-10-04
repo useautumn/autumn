@@ -18,6 +18,8 @@ type EventLoopStallMonitorConfig = {
 	logStallMs: number;
 	reportEveryMs: number;
 	cpuModel?: string;
+	/** The task's A/B variant; absent outside an experiment build. */
+	variant?: string | null;
 };
 
 const MAX_STALL_LOGS_PER_REPORT = 20;
@@ -138,6 +140,7 @@ export function createEventLoopStallMonitor({
 					stalledMs: round(window.stalledMs),
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
+					...(config.variant ? { variant: config.variant } : {}),
 					...cpuWindow,
 					sections,
 				},
