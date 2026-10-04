@@ -43,7 +43,7 @@ const fixture = ({
 					calls.push("drained");
 				},
 			},
-			listen: () => {
+			listen: async () => {
 				calls.push("listen");
 				return {
 					stop: async () => {
@@ -100,7 +100,7 @@ describe("Balance worker process lifecycle", () => {
 						calls.push("withdraw");
 					},
 				},
-				listen: () => ({
+				listen: async () => ({
 					stop: () => {
 						calls.push("http-stop");
 					},

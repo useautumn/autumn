@@ -162,7 +162,7 @@ export type PartitionsDependencies = {
 /** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
 export type PartitionServiceStopReason = {
 	cause: unknown;
-	scope: "consumer" | "partition" | "retirement";
+	scope: "consumer" | "partition" | "retirement" | "http-workers";
 };
 
 export type PartitionConsumerStatus = {
