@@ -133,8 +133,8 @@ function loggedBatchOf({
 }: {
 	batch: NonNullable<BalanceWorkerRequestLog["batch"]>;
 }) {
-	const { count, succeeded, failed, errorCodes } = batch;
-	return { count, succeeded, failed, errorCodes };
+	const { count, succeeded, failed, errorCodes, errorMessages } = batch;
+	return { count, succeeded, failed, errorCodes, errorMessages };
 }
 
 /** A 4xx is the caller's answer, not a fault: its name and message say everything, the stack is noise. */

@@ -7,6 +7,7 @@ import {
 	createSubjectState,
 	parseCheckCommand,
 	parseTrackCommand,
+	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import {
 	PARTITION_RECOVERY_REASON,
@@ -1046,6 +1047,30 @@ describe("Track batches", () => {
 		expect(logs[0][0]).toMatchObject({
 			error: first,
 			data: { batch: { failed: 2, errorCodes: { INTERNAL: 2 } } },
+		});
+	});
+
+	test("names what each failure code answered, so a batch of caller errors still logs why", async () => {
+		const { postBatch, logs } = fixture({
+			causeFor: {
+				a: new UnsupportedCommandError({ reason: "entity_not_found" }),
+				b: new UnsupportedCommandError({ reason: "subject_mismatch" }),
+			},
+		});
+		await postBatch({ route, commands: ["a", "b", "c"].map(commandWithId) });
+		expect(logs).toHaveLength(1);
+		const [event] = logs[0] as [Record<string, unknown>, string];
+		expect(event).toMatchObject({
+			data: {
+				batch: {
+					failed: 2,
+					errorCodes: { UNSUPPORTED_COMMAND: 2 },
+					errorMessages: {
+						UNSUPPORTED_COMMAND:
+							"The worker cannot decide this command: entity_not_found",
+					},
+				},
+			},
 		});
 	});
 });

@@ -127,12 +127,14 @@ export function recordBatch({
 	results: ({ ok: true } | Extract<TrackBatchItemResult, { ok: false }>)[];
 	causes: unknown[];
 }): void {
+	const errorMessages: NonNullable<BalanceWorkerBatchLog["errorMessages"]> = {};
 	const batch: BalanceWorkerBatchLog = {
 		route,
 		count: results.length,
 		succeeded: 0,
 		failed: 0,
 		errorCodes: {},
+		errorMessages,
 		worstStatus: 200,
 		...identityOf({ commands }),
 	};
@@ -144,6 +146,7 @@ export function recordBatch({
 		batch.failed++;
 		batch.errorCodes[result.error.code] =
 			(batch.errorCodes[result.error.code] ?? 0) + 1;
+		errorMessages[result.error.code] ??= result.error.message;
 		batch.worstStatus = Math.max(batch.worstStatus, result.status);
 	}
 	requestLog.batch = batch;

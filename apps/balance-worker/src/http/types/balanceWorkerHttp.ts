@@ -71,6 +71,8 @@ export type BalanceWorkerBatchLog = {
 	succeeded: number;
 	failed: number;
 	errorCodes: Partial<Record<WorkerErrorCode, number>>;
+	/** The first answer's message per code: a batch of caller errors keeps no cause, so this is its why. */
+	errorMessages?: Partial<Record<WorkerErrorCode, string>>;
 	/** The worst status any command was answered with, so the line logs at that level. */
 	worstStatus: number;
 	/** Org of the first command; customer and entity only when every command shares them. */
