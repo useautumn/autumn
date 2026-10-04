@@ -42,7 +42,9 @@ export function createEventLoopStallMonitor({
 		memory?: () => { heapUsed: number; rss: number };
 		cpu?: () => CpuCounters;
 		/** An A/B build switches variant as each report window opens, so every window is one variant's. */
-		startVariantWindow?: (params: { windowIndex: number }) => string | null;
+		startVariantWindow?: (params: {
+			windowIndex: number;
+		}) => { variant: string; arms: string[] } | null;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
@@ -55,7 +57,7 @@ export function createEventLoopStallMonitor({
 	let lastReportAt = 0;
 	let window = emptyWindow();
 	let windowIndex = 0;
-	let variant: string | null = null;
+	let variantWindow: { variant: string; arms: string[] } | null = null;
 
 	function tick(): void {
 		try {
@@ -142,7 +144,7 @@ export function createEventLoopStallMonitor({
 					stalledMs: round(window.stalledMs),
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
-					...(variant ? { variant } : {}),
+					...(variantWindow ?? {}),
 					...cpuWindow,
 					sections,
 				},
@@ -152,7 +154,7 @@ export function createEventLoopStallMonitor({
 		lastReportAt = tickedAt;
 		window = emptyWindow();
 		windowIndex += 1;
-		variant = ctx.startVariantWindow?.({ windowIndex }) ?? null;
+		variantWindow = ctx.startVariantWindow?.({ windowIndex }) ?? null;
 	}
 
 	function start(): void {
@@ -161,7 +163,7 @@ export function createEventLoopStallMonitor({
 		lastReportAt = lastTickAt;
 		lastCpu = cpu();
 		ctx.recorder.drainTotals();
-		variant = ctx.startVariantWindow?.({ windowIndex }) ?? null;
+		variantWindow = ctx.startVariantWindow?.({ windowIndex }) ?? null;
 		cancel = (ctx.schedule ?? scheduleProbe)({
 			intervalMs: config.intervalMs,
 			run: tick,

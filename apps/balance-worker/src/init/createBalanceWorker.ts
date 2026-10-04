@@ -64,7 +64,6 @@ export async function createBalanceWorker({
 	const { env } = config;
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
-	initBuildVariant({ endpoint: address.endpoint });
 	const identity = await resolveTaskIdentity({
 		ctx: { logger: dependencies.logger },
 		env,
@@ -279,6 +278,10 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
+		initBuildVariant({
+			endpoint: address.endpoint,
+			readConfiguredArms: () => resources.edgeConfigs?.arms.get().arms ?? [],
+		});
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,

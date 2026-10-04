@@ -18,7 +18,9 @@ function createFixture({
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
-	startVariantWindow?: (params: { windowIndex: number }) => string | null;
+	startVariantWindow?: (params: {
+		windowIndex: number;
+	}) => { variant: string; arms: string[] } | null;
 } = {}) {
 	let clock = 1_000;
 	const now = () => clock;
@@ -255,19 +257,31 @@ test("an A/B build labels each report with the variant that ran during it, then 
 	const { monitor, infos, elapse } = createFixture({
 		startVariantWindow: ({ windowIndex }) => {
 			opened.push(windowIndex);
-			return windowIndex % 3 === 1 ? "B" : "A";
+			return {
+				variant: windowIndex % 3 === 1 ? "B" : "A",
+				arms: ["A", "B"],
+			};
 		},
 	});
 	monitor.start();
 	for (let report = 0; report < 3; report++) elapse({ elapsedMs: 1_000 });
-	const variants = infos
+	const labels = infos
 		.filter(
 			([fields]) =>
 				(fields as { event?: string }).event === "balance_worker.event_loop",
 		)
-		.map(([fields]) => (fields as { data: { variant?: string } }).data.variant);
+		.map(([fields]) => {
+			const { variant, arms } = (
+				fields as { data: { variant?: string; arms?: string[] } }
+			).data;
+			return { variant, arms };
+		});
 	expect(opened).toEqual([0, 1, 2, 3]);
-	expect(variants).toEqual(["A", "B", "A"]);
+	expect(labels).toEqual([
+		{ variant: "A", arms: ["A", "B"] },
+		{ variant: "B", arms: ["A", "B"] },
+		{ variant: "A", arms: ["A", "B"] },
+	]);
 });
 
 test("outside an A/B build no report carries a variant", () => {
@@ -279,4 +293,5 @@ test("outside an A/B build no report carries a variant", () => {
 			(fields as { event?: string }).event === "balance_worker.event_loop",
 	)?.[0] as { data: Record<string, unknown> };
 	expect(summary.data).not.toHaveProperty("variant");
+	expect(summary.data).not.toHaveProperty("arms");
 });

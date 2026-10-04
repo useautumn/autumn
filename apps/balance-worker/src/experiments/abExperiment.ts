@@ -1,8 +1,7 @@
+import type { BuildVariant } from "./buildVariant.js";
+
 /**
- * A paired A/B experiment: one staging build carries every arm's code path and each task hashes its
- * 10 s windows across A (control) and B..D, so each arm sees the same workload. Branches flip `enabled`.
+ * The arms this image carries; A is the control and always built. The staging arms edge config
+ * picks which built arms run, so an experiment branch only adds arms here and guards their code.
  */
-export const AB_EXPERIMENT: { enabled: boolean; arms: 2 | 3 | 4 } = {
-	enabled: false,
-	arms: 2,
-};
+export const AB_EXPERIMENT: { arms: readonly BuildVariant[] } = { arms: ["A"] };

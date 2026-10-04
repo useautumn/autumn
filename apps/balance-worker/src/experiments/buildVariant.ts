@@ -3,11 +3,11 @@ import { AB_EXPERIMENT } from "./abExperiment.js";
 const VARIANTS = ["A", "B", "C", "D"] as const;
 
 export type BuildVariant = (typeof VARIANTS)[number];
-export type ArmCount = (typeof AB_EXPERIMENT)["arms"];
+export type VariantWindow = { variant: BuildVariant; arms: BuildVariant[] };
 
-let enabled = false;
-let arms: ArmCount = 2;
 let endpoint = "";
+let builtArms: readonly BuildVariant[] = ["A"];
+let readConfiguredArms: () => readonly string[] = () => [];
 let current: BuildVariant | null = null;
 
 /** FNV-1a: deterministic, so a window's variant can be recomputed from its task and index. */
@@ -20,6 +20,23 @@ function fnv1a({ text }: { text: string }) {
 	return hash >>> 0;
 }
 
+/** Canonical A..D order whatever the config's order, so every task hashes onto the same list. */
+export function activeArmsOf({
+	configured,
+	built,
+}: {
+	configured: readonly string[];
+	built: readonly BuildVariant[];
+}): BuildVariant[] {
+	const treatments = VARIANTS.filter(
+		(variant) =>
+			variant !== "A" &&
+			built.includes(variant) &&
+			configured.includes(variant),
+	);
+	return treatments.length ? ["A", ...treatments] : [];
+}
+
 /** Hashed, not round-robin: a fixed A/B/A/B cycle aliases with periodic customer bursts. */
 export function variantForWindow({
 	endpoint,
@@ -28,35 +45,41 @@ export function variantForWindow({
 }: {
 	endpoint: string;
 	windowIndex: number;
-	arms: ArmCount;
+	arms: readonly BuildVariant[];
 }): BuildVariant {
-	return VARIANTS[fnv1a({ text: `${endpoint}#${windowIndex}` }) % arms];
+	return arms[fnv1a({ text: `${endpoint}#${windowIndex}` }) % arms.length];
 }
 
-/** Set once at boot. Every task runs every arm, so each one is compared against its own workload. */
+/** Set once at boot; the arms config is re-read as each window opens. */
 export function initBuildVariant({
 	endpoint: taskEndpoint,
-	enabled: on = AB_EXPERIMENT.enabled,
-	arms: armCount = AB_EXPERIMENT.arms,
+	readConfiguredArms: read,
+	builtArms: built = AB_EXPERIMENT.arms,
 }: {
 	endpoint: string;
-	enabled?: boolean;
-	arms?: ArmCount;
-}): BuildVariant | null {
-	enabled = on;
-	arms = armCount;
+	readConfiguredArms: () => readonly string[];
+	builtArms?: readonly BuildVariant[];
+}): void {
 	endpoint = taskEndpoint;
-	return startVariantWindow({ windowIndex: 0 });
+	readConfiguredArms = read;
+	builtArms = built;
+	current = null;
 }
 
-/** Called as each 10 s event-loop report window opens; returns the variant it will run. */
+/** Called as each 10 s event-loop report window opens; fewer than two live arms runs no experiment. */
 export function startVariantWindow({
 	windowIndex,
 }: {
 	windowIndex: number;
-}): BuildVariant | null {
-	current = enabled ? variantForWindow({ endpoint, windowIndex, arms }) : null;
-	return current;
+}): VariantWindow | null {
+	const arms = activeArmsOf({
+		configured: readConfiguredArms(),
+		built: builtArms,
+	});
+	current = arms.length
+		? variantForWindow({ endpoint, windowIndex, arms })
+		: null;
+	return current ? { variant: current, arms } : null;
 }
 
 export function getBuildVariant(): BuildVariant | null {
