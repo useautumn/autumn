@@ -45,7 +45,12 @@ export function startProducerLoop({
 		nextSeq: new Map(),
 		held: new Map(),
 		ackQueue: [],
-		state: { pumpingAcks: false, stopping: false },
+		inFlight: new Set(),
+		state: {
+			pumpingAcks: false,
+			ackPump: Promise.resolve(),
+			stopping: false,
+		},
 	};
 
 	function receive(message: DecideToProducerMessage): void {

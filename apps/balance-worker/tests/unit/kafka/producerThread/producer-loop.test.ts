@@ -32,7 +32,7 @@ const decoder = new TextDecoder();
 
 type Sent = { config: ProducerConfig; record: ProducerRecord };
 
-/** The producer loop on this thread with a scripted client: topic "refuse" is a broker refusal, "hang" never settles. */
+/** The producer loop on this thread with a scripted client: topic "refuse" is a broker refusal, "gated" settles on `release`. */
 function loopHarness() {
 	const sent: Sent[] = [];
 	const posted: ProducerToDecideMessage[] = [];
@@ -44,6 +44,7 @@ function loopHarness() {
 	const sends = createRingWriter({ ring: sendRing, signal: sendSignal });
 	const acks = createRingReader({ ring: ackRing });
 	const received: { reqId: number; ack: SendAck }[] = [];
+	const gate = Promise.withResolvers<void>();
 
 	function producer(config: ProducerConfig): KafkaProducerClient {
 		return {
@@ -57,7 +58,7 @@ function loopHarness() {
 			},
 			async send(record: ProducerRecord): Promise<RecordMetadata[]> {
 				sent.push({ config, record });
-				if (record.topic === "hang") return new Promise(() => {});
+				if (record.topic === "gated") await gate.promise;
 				if (record.topic === "refuse")
 					throw new KafkaJSProtocolError(
 						Object.assign(new Error("invalid topic"), {
@@ -189,6 +190,7 @@ function loopHarness() {
 		acksFor,
 		postedOf,
 		open,
+		release: () => gate.resolve(),
 	};
 }
 
@@ -326,21 +328,63 @@ describe("producer loop", () => {
 		h.loop.receive({ kind: "stop" });
 	});
 
-	test("stop disconnects every producer, even with a send still in flight, then reports stopped", async () => {
+	test("stop flushes first: a send still on the ring is sent, a send in flight is acked, and only then are producers disconnected", async () => {
 		const h = loopHarness();
 		await h.open({ producerId: 1 });
 		await h.open({ producerId: 2 });
 		h.viaRing(
 			h.frameOf({
 				reqId: 3,
-				meta: { producerId: 1, seq: 0, topic: "hang" },
-				values: ["x"],
+				meta: { producerId: 1, seq: 0, topic: "gated" },
+				values: ["in-flight"],
 			}),
 		);
 		while (h.sent.length === 0) await Bun.sleep(1);
-		expect(h.connected.size).toBe(2);
+		h.viaRing(
+			h.frameOf({
+				reqId: 4,
+				meta: { producerId: 2, seq: 0, topic: "outcomes" },
+				values: ["on-the-ring"],
+			}),
+		);
 		h.loop.receive({ kind: "stop" });
+		await Bun.sleep(5);
+		expect(h.posted.some((message) => message.kind === "stopped")).toBe(false);
+		expect(h.connected.size).toBe(2);
+		h.release();
 		expect(await h.postedOf("stopped")).toEqual([{ kind: "stopped" }]);
 		expect(h.connected.size).toBe(0);
+		const acks = await h.acksFor(2);
+		expect(
+			acks
+				.map(({ reqId, ack }) => ({ reqId, ok: ack.ok }))
+				.sort((a, b) => a.reqId - b.reqId),
+		).toEqual([
+			{ reqId: 3, ok: true },
+			{ reqId: 4, ok: true },
+		]);
+	});
+
+	test("stop answers a frame still waiting for an earlier sequence number as disconnected", async () => {
+		const h = loopHarness();
+		await h.open({ producerId: 1 });
+		h.viaPort(
+			h.frameOf({
+				reqId: 9,
+				meta: { producerId: 1, seq: 1, topic: "outcomes" },
+				values: ["held"],
+			}),
+		);
+		h.loop.receive({ kind: "stop" });
+		await h.postedOf("stopped");
+		const [ack] = await h.acksFor(1);
+		expect(ack).toMatchObject({
+			reqId: 9,
+			ack: {
+				ok: false,
+				error: { message: expect.stringContaining("disconnected") },
+			},
+		});
+		expect(h.sent).toEqual([]);
 	});
 });

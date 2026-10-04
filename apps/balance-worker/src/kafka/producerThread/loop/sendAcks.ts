@@ -36,8 +36,9 @@ export function sendAck({
 	reqId: number;
 	ack: SendAck;
 }): void {
+	const { state } = scope;
 	scope.ackQueue.push(encodeAckFrame({ reqId, ack }));
-	if (!scope.state.pumpingAcks) void pumpAcks({ scope });
+	if (!state.pumpingAcks) state.ackPump = pumpAcks({ scope });
 }
 
 export function answerDisconnected({
