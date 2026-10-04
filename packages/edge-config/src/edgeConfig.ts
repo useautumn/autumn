@@ -36,6 +36,7 @@ export {
 	activeArmsOf,
 	armForWindow,
 	bindStagingVariants,
+	createTaskVariantAtBoot,
 	STAGING_VARIANT_WINDOW_MS,
 	STAGING_VARIANTS_BUCKET,
 	type StagingArm,

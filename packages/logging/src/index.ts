@@ -29,6 +29,7 @@ export {
 	resolveDeployment,
 	resolveLoggerOptions,
 } from "./logger/resolveLoggerOptions.js";
+export { summarizeProcessCpuWindow } from "./metrics/summarizeProcessCpuWindow.js";
 export { asAxiomMap } from "./payload/asAxiomMap.js";
 export {
 	type GuardLogPayloadOptions,

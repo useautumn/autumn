@@ -40,3 +40,5 @@ export const startStagingVariants = async ({
 };
 
 export const stopStagingVariants = () => store.stopPolling();
+
+export const readStagingVariantsAtBoot = () => store.readFromSource();

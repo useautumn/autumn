@@ -86,7 +86,7 @@ import {
 	attachPrimaryForkRecycling,
 	startWorkerForkRecycling,
 } from "./utils/memory/forkRecycling/attachForkRecycling.js";
-import { getServerForkCount } from "./utils/memory/forkRecycling/recyclePolicy.js";
+import { pinServerForkVariantAtBoot } from "./utils/memory/forkRecycling/serverForkVariant.js";
 import { listInFlightRequests } from "./utils/memory/inFlightRequests.js";
 import {
 	startMemorySpikeProbe,
@@ -221,7 +221,7 @@ if (process.env.NODE_ENV === "development") {
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
-		const numWorkers = getServerForkCount();
+		const numWorkers = await pinServerForkVariantAtBoot();
 		console.log(`Forking ${numWorkers} workers`);
 
 		for (let i = 0; i < numWorkers; i++) {
