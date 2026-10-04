@@ -80,10 +80,10 @@ export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
  *  trip: the batch goes out with acks=all and the acknowledgement is the
  *  commit, while the owner's epoch travels in a record header for readers to
  *  judge by. Tracks wait on a commit twice over (the one in flight, then their
- *  own), so the mode sets the track tail directly. The default is the
- *  broker-fenced mode; a deployment opts into the one-trip commit with
- *  BALANCE_WORKER_COMMIT_MODE=idempotent once its fence has been exercised. */
-export const BALANCE_WORKER_COMMIT_MODE = "transactional" as const;
+ *  own), so the mode sets the track tail directly. The producer thread speaks
+ *  idempotent commits only, so that is the default and the worker refuses to
+ *  boot in transactional mode. */
+export const BALANCE_WORKER_COMMIT_MODE = "idempotent" as const;
 
 /** Share of successful requests the worker logs a line for. Every failure is
  *  logged whatever this says; the API keeps a line per request either way.

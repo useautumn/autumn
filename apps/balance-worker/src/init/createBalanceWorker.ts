@@ -4,7 +4,12 @@ import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
-import type { KafkaOffsetCommit } from "@autumn/kafka";
+import type {
+	KafkaOffsetCommit,
+	KafkaProducerClient,
+	KafkaTokenInfo,
+} from "@autumn/kafka";
+import type { ProducerConfig } from "kafkajs";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
@@ -12,8 +17,8 @@ import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
-import { createHttpWorkerPool } from "../http/workerThreads/createHttpWorkerPool.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
+import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
 	createDatabaseReporter,
@@ -28,9 +33,11 @@ import {
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
+import { listenThroughThreads } from "./construction/listenThroughThreads.js";
 import { startWorker } from "./lifecycle/startWorker.js";
 import { stopWorker } from "./lifecycle/stopWorker.js";
 import { resolveWorkerAddress } from "./resolveWorkerAddress.js";
+import { assertIdempotentCommits } from "./rules/assertIdempotentCommits.js";
 import type {
 	BalanceWorker,
 	BalanceWorkerConfig,
@@ -49,7 +56,14 @@ import {
 	createWorkerConsumerConfig,
 	workerConsumerGroupIdOf,
 } from "./workerConfig.js";
-import { openWorkerResources } from "./workerResources.js";
+import {
+	logWorkerKafkaToken,
+	openWorkerResources,
+	WORKER_KAFKA_CLIENT_LIMITS,
+} from "./workerResources.js";
+
+/** Acks are small; the ring only needs room for a burst of them while the decide thread is busy. */
+const PRODUCER_ACK_RING_BYTES = 1 << 20;
 
 export async function createBalanceWorker({
 	ctx: dependencies,
@@ -59,6 +73,7 @@ export async function createBalanceWorker({
 	config: BalanceWorkerConfig;
 }): Promise<BalanceWorker> {
 	const { env } = config;
+	assertIdempotentCommits({ mode: env.BALANCE_WORKER_COMMIT_MODE });
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
 	const identity = await resolveTaskIdentity({
@@ -133,11 +148,22 @@ export async function createBalanceWorker({
 				producerLimits: runtimeConfig.producerLimits,
 			},
 		});
+		// The producer thread starts with the listener, before any partition runtime asks for a producer.
+		let producers: ThreadedProducers | null = null;
+		function partitionProducer(
+			producerConfig: ProducerConfig,
+		): KafkaProducerClient {
+			if (!producers)
+				throw new Error(
+					"Partition producers live on the producer thread, which starts with the listener",
+				);
+			return producers.producer(producerConfig);
+		}
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
 				logger: dependencies.logger,
-				kafka: resources.kafka,
+				kafka: { producer: partitionProducer },
 				ownershipOffsets: resources.admin,
 				ownershipHandoff,
 				stateStore: resources.stateStore,
@@ -210,35 +236,57 @@ export async function createBalanceWorker({
 			},
 		});
 
-		/** A thread that died leaves a pool that cannot serve again; the task is replaced. */
-		function stopForHttpWorkers({ cause }: { cause: unknown }): void {
-			dependencies.onServiceStopped?.({ cause, scope: "http-workers" });
+		/** A thread that died leaves the worker unable to serve or commit; the task is replaced. */
+		function stopForThreads({
+			cause,
+			scope,
+		}: {
+			cause: unknown;
+			scope: "http-workers" | "producer-thread";
+		}): void {
+			dependencies.onServiceStopped?.({ cause, scope });
+		}
+
+		function logProducerThreadToken(info: KafkaTokenInfo): void {
+			logWorkerKafkaToken({ logger: dependencies.logger, info });
 		}
 
 		async function listen(): Promise<WorkerListener> {
 			const threads =
 				resources.edgeConfigs?.balanceWorkerThreads.get() ??
 				defaultBalanceWorkerThreadsEdgeConfig();
-			const pool = createHttpWorkerPool({
+			const started = await listenThroughThreads({
 				ctx: {
 					fetch: app.fetch,
 					logger: dependencies.logger,
-					onFatal: stopForHttpWorkers,
+					onFatal: stopForThreads,
+					onToken: logProducerThreadToken,
 				},
 				config: {
-					hostname: address.hostname,
-					port: env.BALANCE_WORKER_PORT,
-					maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
-					threads: threads.httpWorkers,
-					requestRingBytes: threads.requestRingBytes,
-					replyRingBytes: threads.replyRingBytes,
+					http: {
+						hostname: address.hostname,
+						port: env.BALANCE_WORKER_PORT,
+						maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
+						threads: threads.httpWorkers,
+						requestRingBytes: threads.requestRingBytes,
+						replyRingBytes: threads.replyRingBytes,
+					},
+					producers: {
+						clientId: `balance-worker-producers-${crypto.randomUUID()}`,
+						brokers: env.KAFKA_BROKERS,
+						authMode: env.KAFKA_AUTH_MODE,
+						region: env.AWS_REGION,
+						limits: WORKER_KAFKA_CLIENT_LIMITS,
+						sendRingBytes: threads.sendRingBytes,
+						ackRingBytes: PRODUCER_ACK_RING_BYTES,
+					},
 				},
 			});
-			const listener = await pool.listen();
+			producers = started.producers;
 			dependencies.logger.info(
-				`Balance worker listening at ${address.endpoint} through ${threads.httpWorkers} HTTP worker threads; partition admission follows recovery`,
+				`Balance worker listening at ${address.endpoint} through ${threads.httpWorkers} HTTP worker threads, partition producers on the producer thread; partition admission follows recovery`,
 			);
-			return listener;
+			return started.listener;
 		}
 
 		const state: BalanceWorkerState = { status: "created" };
