@@ -26,8 +26,13 @@ seq_run a "$out/a.bin"
 kill "$(ss -ltnp | grep ":$port " | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)"
 for _ in $(seq 1 50); do ss -ltn | grep -q ":$port " || break; sleep 0.1; done
 
-SPIKE_TOPIC="eq-lean-$stamp" PORT=$port IO_WORKERS=2 CORE=lean APPENDER=kafka LOG_RATE=0 \
-	setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serve.ts" >"$out/lean.log" 2>&1 </dev/null &
+if [ "${EQ_MODE:-lean}" = "pool" ]; then
+	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 IO_WORKERS=2 \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/servePool.ts" >"$out/lean.log" 2>&1 </dev/null &
+else
+	SPIKE_TOPIC="eq-lean-$stamp" PORT=$port IO_WORKERS=2 CORE=lean APPENDER=kafka LOG_RATE=0 \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serve.ts" >"$out/lean.log" 2>&1 </dev/null &
+fi
 seq_run lean "$out/lean.bin"
 kill "$(ss -ltnp | grep ":$port " | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)"
 for _ in $(seq 1 50); do ss -ltn | grep -q ":$port " || break; sleep 0.1; done

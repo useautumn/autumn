@@ -1,0 +1,190 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { createIoWorkerPool } from "../../../src/serialDecide/createIoWorkerPool.js";
+
+const logger = { info() {}, warn() {}, error() {} };
+
+async function freePort(): Promise<number> {
+	const reservation = Bun.serve({
+		port: 0,
+		hostname: "127.0.0.1",
+		fetch: () => new Response(),
+	});
+	const port = reservation.port;
+	await reservation.stop(true);
+	if (port === undefined) throw new Error("no port");
+	return port;
+}
+
+/** Echoes what the main thread saw, so the test can check the request crossed the ring intact. */
+async function echo(request: Request): Promise<Response> {
+	const body = await request.text();
+	const headers: Record<string, string> = {};
+	request.headers.forEach((value, name) => {
+		headers[name] = value;
+	});
+	if (new URL(request.url).pathname === "/boom") throw new Error("boom");
+	return new Response(
+		JSON.stringify({
+			method: request.method,
+			path: new URL(request.url).pathname + new URL(request.url).search,
+			headers,
+			bodyLength: body.length,
+			bodyHead: body.slice(0, 16),
+		}),
+		{
+			status: request.method === "POST" ? 201 : 200,
+			headers: { "content-type": "application/json", "x-echo": "1" },
+		},
+	);
+}
+
+describe("I/O worker pool", () => {
+	let port: number;
+	let listener: { stop(): Promise<void> };
+	let pool: ReturnType<typeof createIoWorkerPool>;
+
+	beforeAll(async () => {
+		port = await freePort();
+		pool = createIoWorkerPool({
+			ctx: { fetch: echo, logger },
+			config: {
+				hostname: "127.0.0.1",
+				port,
+				maxRequestBodySize: 4 << 20,
+				workers: 2,
+			},
+		});
+		listener = await pool.listen();
+	});
+
+	afterAll(async () => {
+		await listener.stop();
+	});
+
+	test("a POST crosses the ring with its method, path, query, headers and body, and the reply with status and headers", async () => {
+		const response = await fetch(`http://127.0.0.1:${port}/v1/track?x=1`, {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				"x-request-budget-ms": "900",
+			},
+			body: JSON.stringify({ hello: "world" }),
+		});
+		expect(response.status).toBe(201);
+		expect(response.headers.get("content-type")).toBe("application/json");
+		expect(response.headers.get("x-echo")).toBe("1");
+		const seen = (await response.json()) as {
+			method: string;
+			path: string;
+			headers: Record<string, string>;
+			bodyLength: number;
+			bodyHead: string;
+		};
+		expect(seen.method).toBe("POST");
+		expect(seen.path).toBe("/v1/track?x=1");
+		expect(seen.headers["content-type"]).toBe("application/json");
+		expect(seen.headers["x-request-budget-ms"]).toBe("900");
+		expect(seen.bodyLength).toBe(17);
+		expect(seen.bodyHead).toBe('{"hello":"world"');
+	});
+
+	test("a GET health check is forwarded without a body", async () => {
+		const response = await fetch(`http://127.0.0.1:${port}/health`);
+		expect(response.status).toBe(200);
+		const seen = (await response.json()) as {
+			method: string;
+			path: string;
+			bodyLength: number;
+		};
+		expect(seen).toMatchObject({
+			method: "GET",
+			path: "/health",
+			bodyLength: 0,
+		});
+	});
+
+	test("a body too big for a ring frame still arrives, and a big reply still returns", async () => {
+		const big = "x".repeat(2 << 20);
+		const response = await fetch(`http://127.0.0.1:${port}/v1/initialize`, {
+			method: "POST",
+			body: big,
+		});
+		expect(response.status).toBe(201);
+		expect(((await response.json()) as { bodyLength: number }).bodyLength).toBe(
+			big.length,
+		);
+	});
+
+	test("a handler failure answers 500 rather than hanging the connection", async () => {
+		const response = await fetch(`http://127.0.0.1:${port}/boom`, {
+			method: "POST",
+			body: "{}",
+		});
+		expect(response.status).toBe(500);
+	});
+
+	test("500 concurrent requests all come back to the right caller", async () => {
+		const replies = await Promise.all(
+			Array.from({ length: 500 }, (_, i) =>
+				fetch(`http://127.0.0.1:${port}/v1/check`, {
+					method: "POST",
+					body: `{"i":${i}}`,
+				}).then(async (r) => ({
+					status: r.status,
+					bodyHead: ((await r.json()) as { bodyHead: string }).bodyHead,
+					i,
+				})),
+			),
+		);
+		for (const reply of replies) {
+			expect(reply.status).toBe(201);
+			expect(reply.bodyHead).toBe(`{"i":${reply.i}}`);
+		}
+		const stats = pool.readStats();
+		expect(
+			(stats.main?.requests ?? 0) + (stats.main?.oversized ?? 0),
+		).toBeGreaterThanOrEqual(500);
+	});
+});
+
+describe("I/O worker pool back-pressure", () => {
+	test("while the main thread is stalled the command ring fills and later requests get OVERLOADED at once", async () => {
+		const port = await freePort();
+		const pool = createIoWorkerPool({
+			ctx: { fetch: async () => new Response("ok"), logger },
+			// 16 KiB of commands: about 18 of these 700 B requests fill it while the main thread is away.
+			config: {
+				hostname: "127.0.0.1",
+				port,
+				maxRequestBodySize: 1 << 20,
+				workers: 1,
+				commandRingBytes: 16384,
+				resultRingBytes: 1 << 16,
+			},
+		});
+		const listener = await pool.listen();
+		try {
+			// A separate thread fires the requests, because this thread is about to block.
+			const client = new Worker(
+				new URL("./burstClient.ts", import.meta.url).href,
+			);
+			const statuses = new Promise<number[]>((resolve) => {
+				client.onmessage = (event: MessageEvent<number[]>) =>
+					resolve(event.data);
+			});
+			client.postMessage({ port, count: 60, body: "y".repeat(700) });
+			// Stall this thread as a long decide would; the burst lands on the I/O worker meanwhile.
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 700);
+			const result = await statuses;
+			client.terminate();
+			const overloaded = result.filter((status) => status === 429).length;
+			const ok = result.filter((status) => status === 200).length;
+			expect(ok).toBeGreaterThan(0);
+			expect(overloaded).toBeGreaterThan(0);
+			expect(ok + overloaded).toBe(60);
+			expect(ok).toBeLessThanOrEqual(24);
+		} finally {
+			await listener.stop();
+		}
+	});
+});

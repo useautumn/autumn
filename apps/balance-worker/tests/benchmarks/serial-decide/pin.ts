@@ -23,14 +23,23 @@ export function pinThread({ cpus }: { cpus: number[] }): boolean {
 	if (cpus.length === 0) return true;
 	const mask = new Uint8Array(128);
 	for (const cpu of cpus) mask[cpu >> 3] |= 1 << (cpu & 7);
-	return libc.symbols.sched_setaffinity(0, BigInt(mask.length), ptr(mask)) === 0;
+	return (
+		libc.symbols.sched_setaffinity(0, BigInt(mask.length), ptr(mask)) === 0
+	);
 }
 
 /** `PIN_<ROLE>=2,3` env vars name a CPU set per role; unset means inherit the process affinity (taskset). */
-export function pinFromEnv({ role, index }: { role: string; index?: number }): number[] | null {
+export function pinFromEnv({
+	role,
+	index,
+}: {
+	role: string;
+	index?: number;
+}): number[] | null {
 	const spec =
-		(index !== undefined ? process.env[`PIN_${role.toUpperCase()}${index}`] : undefined) ??
-		process.env[`PIN_${role.toUpperCase()}`];
+		(index !== undefined
+			? process.env[`PIN_${role.toUpperCase()}${index}`]
+			: undefined) ?? process.env[`PIN_${role.toUpperCase()}`];
 	if (!spec) return null;
 	const cpus = spec
 		.split(",")

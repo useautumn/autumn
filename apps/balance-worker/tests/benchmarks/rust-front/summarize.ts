@@ -1,3 +1,4 @@
+export {};
 // Summarises matrix jsonl: per configuration, the median of reps for throughput and CPU per track.
 const file = process.argv[2];
 if (!file) throw new Error("usage: summarize.ts results.jsonl");

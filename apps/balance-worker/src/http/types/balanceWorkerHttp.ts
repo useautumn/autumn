@@ -17,6 +17,7 @@ import type {
 	WorkerRouteSuccessor,
 } from "@autumn/balance-worker-client/protocol";
 import type { AutumnLogger } from "@autumn/logging";
+import type { RequestLatencies } from "../../logging/requestLatencies.js";
 import type {
 	MeteringPartitionResolver,
 	PartitionRuntime,
@@ -89,4 +90,6 @@ export type BalanceWorkerHttpContext = {
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 	/** Absent, every request is logged; failures always are. */
 	requestLog?: { successSampleRate: number };
+	/** Every track and check's in-worker duration, for the event-loop report's percentiles. */
+	requestLatencies?: Pick<RequestLatencies, "record">;
 };

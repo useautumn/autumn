@@ -11,6 +11,8 @@ type WorkerHealthReporterContext = {
 	readPartitions(): OwnedPartitionHealth[];
 	readWorkerStatus(): BalanceWorkerState["status"];
 	readConsumer?(): PartitionConsumerStatus;
+	/** Arms fixed at boot (a thread layout cannot follow the 10 s windows), on every health line. */
+	readBootArms?(): Readonly<Record<string, string>> | null;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 };
 
@@ -32,9 +34,11 @@ export function createWorkerHealthReporter({
 		if (status !== "active") return;
 		try {
 			const health = ctx.readPartitions();
+			const bootArms = ctx.readBootArms?.() ?? null;
 			const metadata = {
 				workerDeployment: config.deployment,
 				workerStatus: ctx.readWorkerStatus(),
+				...(bootArms && { bootVariants: bootArms }),
 			};
 			const reportedAt = new Date().toISOString();
 			const partitionStatusCounts: Record<string, number> = {};

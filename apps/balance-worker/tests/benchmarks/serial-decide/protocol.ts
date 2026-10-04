@@ -1,4 +1,4 @@
-import { type Doorbell, type RingLayout } from "./ring.ts";
+import type { Doorbell, RingLayout } from "./ring.js";
 
 /**
  * Frame types on the rings. Every frame is `[u32 len][u8 type][payload]` (see ring.ts).

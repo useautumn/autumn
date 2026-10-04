@@ -4,6 +4,8 @@
  * result ring once the record's seq is at or below the commit position. Everything here scales
  * with cores; nothing here touches balance state.
  */
+
+import { pinFromEnv, threadId } from "./pin.js";
 import {
 	CELL_COMMIT,
 	CELL_FAILED_FROM,
@@ -13,21 +15,28 @@ import {
 	type IoWorkerInit,
 	KIND,
 	RES_HEADER,
-} from "./protocol.ts";
-import { pinFromEnv, threadId } from "./pin.ts";
-import { Doorbell, RingConsumer, RingProducer } from "./ring.ts";
+} from "./protocol.js";
+import { Doorbell, RingConsumer, RingProducer } from "./ring.js";
 
 declare var self: Worker;
 
 const JSON_HEADERS = { "content-type": "application/json" };
 const OVERLOADED = new TextEncoder().encode(
-	JSON.stringify({ error: { code: "OVERLOADED", message: "Command ring full" } }),
+	JSON.stringify({
+		error: { code: "OVERLOADED", message: "Command ring full" },
+	}),
 );
 const NOT_COMMITTED = new TextEncoder().encode(
-	JSON.stringify({ error: { code: "NOT_COMMITTED", message: "Batch did not commit" } }),
+	JSON.stringify({
+		error: { code: "NOT_COMMITTED", message: "Batch did not commit" },
+	}),
 );
 
-type Pending = { resolve(response: Response): void; startedAt: number; path: string };
+type Pending = {
+	resolve(response: Response): void;
+	startedAt: number;
+	path: string;
+};
 
 self.onmessage = (event: MessageEvent) => {
 	const init = event.data as IoWorkerInit;
@@ -36,16 +45,32 @@ self.onmessage = (event: MessageEvent) => {
 
 function start(init: IoWorkerInit): void {
 	const cpus = pinFromEnv({ role: "io", index: init.index });
-	const commands = new RingProducer(init.commandRing, new Doorbell(init.sequencerBell));
+	const commands = new RingProducer(
+		init.commandRing,
+		new Doorbell(init.sequencerBell),
+	);
 	const results = new RingConsumer(init.resultRing);
 	const resultBell = new Doorbell(init.resultBell);
 	const cells = new Int32Array(init.cells);
 	const encoder = new TextEncoder();
 	const pending = new Map<number, Pending>();
 	// Replies decided but not yet durable, in seq order (the sequencer assigns seqs monotonically).
-	const held: { reqId: number; seq: number; status: number; body: Uint8Array }[] = [];
+	const held: {
+		reqId: number;
+		seq: number;
+		status: number;
+		body: Uint8Array;
+	}[] = [];
 	let nextReqId = 1;
-	const stats = { requests: 0, overloaded: 0, held: 0, released: 0, wakes: 0, failed: 0, logged: 0 };
+	const stats = {
+		requests: 0,
+		overloaded: 0,
+		held: 0,
+		released: 0,
+		wakes: 0,
+		failed: 0,
+		logged: 0,
+	};
 
 	function pathOf(url: string): string {
 		const start = url.indexOf("/", url.indexOf("//") + 2);
@@ -76,7 +101,9 @@ function start(init: IoWorkerInit): void {
 					msg: "balance_worker.request",
 					path: waiting.path,
 					status,
-					durationMs: Number((performance.now() - waiting.startedAt).toFixed(3)),
+					durationMs: Number(
+						(performance.now() - waiting.startedAt).toFixed(3),
+					),
 					io: init.index,
 				}),
 			);
@@ -86,7 +113,8 @@ function start(init: IoWorkerInit): void {
 	function releaseHeld(): void {
 		const commitPos = Atomics.load(cells, CELL_COMMIT) >>> 0;
 		let n = 0;
-		while (n < held.length && (held[n] as { seq: number }).seq <= commitPos) n++;
+		while (n < held.length && (held[n] as { seq: number }).seq <= commitPos)
+			n++;
 		for (let i = 0; i < n; i++) {
 			const entry = held[i] as (typeof held)[number];
 			respond({ reqId: entry.reqId, status: entry.status, body: entry.body });
@@ -111,7 +139,8 @@ function start(init: IoWorkerInit): void {
 		for (;;) {
 			const frame = results.next();
 			if (!frame) break;
-			if (frame.type !== FRAME.RES) throw new Error(`io: unexpected frame ${frame.type}`);
+			if (frame.type !== FRAME.RES)
+				throw new Error(`io: unexpected frame ${frame.type}`);
 			const view = results.payloadView;
 			const reqId = view.getUint32(frame.offset, true);
 			const seq = view.getUint32(frame.offset + 4, true);
@@ -138,7 +167,9 @@ function start(init: IoWorkerInit): void {
 			await resultBell.sleep({
 				hasWork: () =>
 					results.hasWork() ||
-					(held.length > 0 && (held[0] as { seq: number }).seq <= (Atomics.load(cells, CELL_COMMIT) >>> 0)),
+					(held.length > 0 &&
+						(held[0] as { seq: number }).seq <=
+							Atomics.load(cells, CELL_COMMIT) >>> 0),
 				timeoutMs: 20,
 			});
 		}
@@ -161,7 +192,10 @@ function start(init: IoWorkerInit): void {
 		view.setUint32(at, reqId, true);
 		commands.payload[at + 4] = kind;
 		view.setUint32(at + 5, budgetMs, true);
-		const { written } = encoder.encodeInto(body, commands.payload.subarray(at + CMD_HEADER, at + maxLength));
+		const { written } = encoder.encodeInto(
+			body,
+			commands.payload.subarray(at + CMD_HEADER, at + maxLength),
+		);
 		commands.publish({ length: CMD_HEADER + written });
 		stats.requests++;
 		const { promise, resolve } = Promise.withResolvers<Response>();
@@ -177,7 +211,8 @@ function start(init: IoWorkerInit): void {
 		idleTimeout: 0,
 		maxRequestBodySize: 1_000_000,
 		fetch(request) {
-			if (request.method !== "POST") return new Response("not found", { status: 404 });
+			if (request.method !== "POST")
+				return new Response("not found", { status: 404 });
 			const path = pathOf(request.url);
 			if (path !== "/v1/track" && path !== "/v1/check")
 				return new Response("not found", { status: 404 });
@@ -185,6 +220,19 @@ function start(init: IoWorkerInit): void {
 		},
 	});
 	void resultLoop();
-	postMessage({ ready: true, role: "io", index: init.index, tid: threadId(), cpus, port: server.port });
-	setInterval(() => postMessage({ stats: { ...stats, pending: pending.size, heldNow: held.length } }), 5000).unref();
+	postMessage({
+		ready: true,
+		role: "io",
+		index: init.index,
+		tid: threadId(),
+		cpus,
+		port: server.port,
+	});
+	setInterval(
+		() =>
+			postMessage({
+				stats: { ...stats, pending: pending.size, heldNow: held.length },
+			}),
+		5000,
+	).unref();
 }

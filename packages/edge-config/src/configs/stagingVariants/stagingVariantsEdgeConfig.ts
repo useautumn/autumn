@@ -3,7 +3,14 @@ import { STAGING_VARIANTS_CONFIG_KEY } from "../../keys.js";
 
 /** Loose on purpose: one malformed experiment falls back to A alone instead of failing the whole file. */
 export const StagingVariantsConfigSchema = z.object({
-	experiments: z.record(z.string(), z.object({ arms: z.array(z.string()) })),
+	experiments: z.record(
+		z.string(),
+		z.object({
+			arms: z.array(z.string()),
+			/** `task`: one arm per task for its whole life (a thread layout cannot follow the windows); default `window`. */
+			scope: z.enum(["window", "task"]).optional(),
+		}),
+	),
 	updatedAt: z.string(),
 	updatedBy: z.string().optional(),
 	reason: z.string().optional(),

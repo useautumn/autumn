@@ -1,3 +1,4 @@
+export {};
 // Buckets a Bun .cpuprofile's main-thread samples into plumbing vs decide: each sample goes to the first
 // categorised frame walking from the leaf to the root. Proportions only (the profiler inflates absolute time).
 const file = process.argv[2];
