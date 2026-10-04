@@ -17,13 +17,22 @@ import {
 	splitSubjectState,
 	type TrackCommand,
 } from "@autumn/balance-engine";
-import type { CheckReply, WorkerErrorResponse } from "@autumn/balance-worker-client/protocol";
+import type {
+	CheckReply,
+	WorkerErrorResponse,
+} from "@autumn/balance-worker-client/protocol";
 import { serializeMeteringRecord } from "@autumn/kafka";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
-import { looksLikeCheckCommand, looksLikeTrackCommand } from "../../../src/http/commands/looksLikeCommands.js";
+import {
+	looksLikeCheckCommand,
+	looksLikeTrackCommand,
+} from "../../../src/http/commands/looksLikeCommands.js";
 import { workerErrorOf } from "../../../src/http/handlers/errorHandler/workerErrorOf.js";
-import { serializeCheckReply, serializeSubjectReply } from "../../../src/http/replies/serializeSubjectReply.js";
+import {
+	serializeCheckReply,
+	serializeSubjectReply,
+} from "../../../src/http/replies/serializeSubjectReply.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
 import { resetMayBeDue } from "../../../src/processor/actions/ensureSubjectCurrent/earliestResetAt.js";
 import { ensureSubjectCurrent } from "../../../src/processor/actions/ensureSubjectCurrent/ensureSubjectCurrent.js";
@@ -38,7 +47,10 @@ import { createSubjectHydrator } from "../../../src/processor/subject/createSubj
 import { createSubjectDecisions } from "../../../src/processor/subject/subjectDecisions/createSubjectDecisions.js";
 import type { PartitionProcessorScope } from "../../../src/processor/types/partitionProcessor.js";
 import { createPartitionWriter } from "../../../src/processor/writer/createPartitionWriter.js";
-import { loggedRecordOf, pendingKeyOf } from "../../../src/processor/writer/pendingMutations.js";
+import {
+	loggedRecordOf,
+	pendingKeyOf,
+} from "../../../src/processor/writer/pendingMutations.js";
 import { commandToFingerprint } from "../../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../../src/processor/writer/receipt/mutationToRecord.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
@@ -49,19 +61,32 @@ import {
 	PartitionWriterDuplicateCommandError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
-import { createSyntheticWorkerDb, createTestCatalogCache } from "../../fixtures/catalog.js";
-import { createInitializeRequest, testIdentity } from "../../fixtures/mutations.js";
+import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
+	createInitializeRequest,
+	testIdentity,
+} from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
-import { KIND } from "./protocol.ts";
-import type { Command, Core, Outcome, RecordAppender } from "./sequencer.ts";
+import { KIND } from "./protocol.js";
+import type { Command, Core, Outcome, RecordAppender } from "./sequencer.js";
 
 // The equality run pins the wall clock (a Worker has its own Date, so the baseline's patch does not reach here).
 const fixedClock = process.env.SPIKE_FIXED_CLOCK;
 if (fixedClock) Date.now = () => Number(fixedClock);
 
 const TOPIC = process.env.SPIKE_TOPIC ?? "bw-spike-metering";
-const LIMITS = { maxBatchSize: 500, maxPendingCommands: 4000, maxPendingCommandsPerCustomer: 1000, commitLingerMs: 5 };
-const INVALID = JSON.stringify({ error: { code: "INVALID_REQUEST", message: "Invalid request" } } satisfies WorkerErrorResponse);
+const LIMITS = {
+	maxBatchSize: 500,
+	maxPendingCommands: 4000,
+	maxPendingCommandsPerCustomer: 1000,
+	commitLingerMs: 5,
+};
+const INVALID = JSON.stringify({
+	error: { code: "INVALID_REQUEST", message: "Invalid request" },
+} satisfies WorkerErrorResponse);
 
 /** A decided, not yet acknowledged, record: what the ack needs to finish (dedup window, pins) and what a duplicate re-reads. */
 type InFlight = {
@@ -74,7 +99,12 @@ type InFlight = {
 	subjectKeys: string[];
 };
 
-export async function createLeanCore({ appender }: { appender: RecordAppender; logRate: number }): Promise<Core> {
+export async function createLeanCore({
+	appender,
+}: {
+	appender: RecordAppender;
+	logRate: number;
+}): Promise<Core> {
 	const scenario = scenarios[process.env.SPIKE_SCENARIO ?? "typical"];
 	if (!scenario) throw new Error("scenario");
 
@@ -85,7 +115,9 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 			return key.length + value.length;
 		},
 		async appendCommitted({ outcomes }) {
-			const records = outcomes.map((record) => serializeMeteringRecord({ record }));
+			const records = outcomes.map((record) =>
+				serializeMeteringRecord({ record }),
+			);
 			return { baseOffset: await appender.append({ records }).committed };
 		},
 	};
@@ -107,12 +139,23 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 			},
 		},
 	});
-	await stateStore.initializePartition({ topic: TOPIC, partition: 0, nextOffset: 0n });
+	await stateStore.initializePartition({
+		topic: TOPIC,
+		partition: 0,
+		nextOffset: 0n,
+	});
 	const db = createSyntheticWorkerDb();
 	const receiptPolicy = { retentionMs: 86_400_000, now: () => Date.now() };
-	const recentCommands = createRecentCommands({ windowMs: 600_000, now: () => Date.now() });
+	const recentCommands = createRecentCommands({
+		windowMs: 600_000,
+		now: () => Date.now(),
+	});
 	const subjectDecisions = createSubjectDecisions();
-	const fullStateStore = { ...stateStore, readCommandNextOffset: () => null, advanceCommandNextOffset: async () => undefined };
+	const fullStateStore = {
+		...stateStore,
+		readCommandNextOffset: () => null,
+		advanceCommandNextOffset: async () => undefined,
+	};
 	const writer = createPartitionWriter({
 		ctx: {
 			stateStore: fullStateStore,
@@ -169,15 +212,36 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 	const inFlightBySeq: InFlight[] = [];
 	const inFlightPerCustomer = new Map<string, number>();
 	let recoveryError: Error | null = null;
-	const stats = { tracks: 0, checks: 0, duplicates: 0, invalid: 0, failed: 0, overloaded: 0, acked: 0, resetsAwaited: 0 };
+	const stats = {
+		tracks: 0,
+		checks: 0,
+		duplicates: 0,
+		invalid: 0,
+		failed: 0,
+		overloaded: 0,
+		acked: 0,
+		resetsAwaited: 0,
+	};
 	// Phase timers (ns): what the sequencer spends per track, by phase. `Bun.nanoseconds` costs ~30 ns a call.
-	const phase = { parse: 0, readDedup: 0, mutate: 0, advance: 0, record: 0, project: 0, reply: 0, ack: 0 };
+	const phase = {
+		parse: 0,
+		readDedup: 0,
+		mutate: 0,
+		advance: 0,
+		record: 0,
+		project: 0,
+		reply: 0,
+		ack: 0,
+	};
 	const now = Bun.nanoseconds;
 
-	function decideTrack(command: TrackCommand, text: string): Outcome | Promise<Outcome> {
+	function decideTrack(
+		command: TrackCommand,
+		text: string,
+	): Outcome | Promise<Outcome> {
 		void text;
 		if (recoveryError) throw recoveryError;
-		const { identity, commandId } = command;
+		const { identity } = command;
 		const customerKey = meteringIdentityToPartitionKey({ identity });
 		let state = writer.readFreshestState({ identity });
 		// Rare paths (not resident, a reset due) go through the processor's own ensure, off this synchronous path.
@@ -185,7 +249,8 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 			stats.resetsAwaited++;
 			return ensureSubjectCurrent({ scope, command }).then(() => {
 				state = writer.readFreshestState({ identity });
-				if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
+				if (!state)
+					throw new PartitionProcessorStateNotFoundError({ customerKey });
 				return decideResident({ command, state, customerKey });
 			});
 		}
@@ -207,43 +272,71 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 		const pendingKey = pendingKeyOf({ customerKey, commandId });
 		const dup = inFlight.get(pendingKey);
 		if (dup) {
-			if (dup.fingerprint !== fingerprint) throw new PartitionWriterCommandConflictError({ commandId });
+			if (dup.fingerprint !== fingerprint)
+				throw new PartitionWriterCommandConflictError({ commandId });
 			stats.duplicates++;
 			return { status: 200, body: dup.body, seq: dup.seq };
 		}
 		const remembered = recentCommands.read({ identity, commandId });
 		if (remembered) {
-			if (remembered.fingerprint !== fingerprint) throw new PartitionWriterCommandConflictError({ commandId });
+			if (remembered.fingerprint !== fingerprint)
+				throw new PartitionWriterCommandConflictError({ commandId });
 			throw new PartitionWriterDuplicateCommandError({ commandId });
 		}
 		let perCustomer = inFlightPerCustomer.get(customerKey) ?? 0;
-		if (inFlight.size >= LIMITS.maxPendingCommands || perCustomer >= LIMITS.maxPendingCommandsPerCustomer) {
+		if (
+			inFlight.size >= LIMITS.maxPendingCommands ||
+			perCustomer >= LIMITS.maxPendingCommandsPerCustomer
+		) {
 			appender.pumpAcks();
 			perCustomer = inFlightPerCustomer.get(customerKey) ?? 0;
-			if (inFlight.size >= LIMITS.maxPendingCommands || perCustomer >= LIMITS.maxPendingCommandsPerCustomer) {
+			if (
+				inFlight.size >= LIMITS.maxPendingCommands ||
+				perCustomer >= LIMITS.maxPendingCommandsPerCustomer
+			) {
 				stats.overloaded++;
 				throw new PartitionWriterCapacityError();
 			}
 		}
 
-		const decidedAgainst: { catalog?: Catalog; effects?: MutationEffect[] } = {};
+		const decidedAgainst: { catalog?: Catalog; effects?: MutationEffect[] } =
+			{};
 		let t2 = now();
 		phase.readDedup += t2 - t;
 		t = t2;
-		const result = mutateTrack({ scope, state, customerKey, command, decidedAgainst });
-		if (result.kind === "reply") return { status: 200, body: JSON.stringify(result.reply), seq: 0 };
+		const result = mutateTrack({
+			scope,
+			state,
+			customerKey,
+			command,
+			decidedAgainst,
+		});
+		if (result.kind === "reply")
+			return { status: 200, body: JSON.stringify(result.reply), seq: 0 };
 		t2 = now();
 		phase.mutate += t2 - t;
 		t = t2;
 
 		// What the writer's onStateAdvanced does: the hydrator inherits the catalog, the memos move with the revision.
-		subjectHydrator.inheritCatalog({ from: state, to: result.nextState, changes: result.mutation.changes });
-		subjectDecisions.advance({ from: state, to: result.nextState, changes: result.mutation.changes });
+		subjectHydrator.inheritCatalog({
+			from: state,
+			to: result.nextState,
+			changes: result.mutation.changes,
+		});
+		subjectDecisions.advance({
+			from: state,
+			to: result.nextState,
+			changes: result.mutation.changes,
+		});
 		t2 = now();
 		phase.advance += t2 - t;
 		t = t2;
 
-		const mutation = mutationToRecord({ mutation: result.mutation, fingerprint, receiptPolicy });
+		const mutation = mutationToRecord({
+			mutation: result.mutation,
+			fingerprint,
+			receiptPolicy,
+		});
 		const logged = loggedRecordOf({ mutation, effects: result.effects });
 		const seq = appender.emit(serializeMeteringRecord({ record: logged }));
 		t2 = now();
@@ -252,10 +345,14 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 
 		// Project: the next decision for this subject reads these rows. Pinned until the ack.
 		const parts = splitSubjectState({ state: result.nextState });
-		const projected = parts.entity ? [parts.customer, parts.entity] : [parts.customer];
+		const projected = parts.entity
+			? [parts.customer, parts.entity]
+			: [parts.customer];
 		const subjectKeys: string[] = [];
 		for (const part of projected) {
-			const subjectKey = meteringIdentityToSubjectKey({ identity: part.identity });
+			const subjectKey = meteringIdentityToSubjectKey({
+				identity: part.identity,
+			});
 			subjects.pin({ subjectKey });
 			subjects.setState({ subjectKey, customerKey, state: part });
 			subjectKeys.push(subjectKey);
@@ -264,16 +361,30 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 		t2 = now();
 		phase.project += t2 - t;
 		t = t2;
-		const catalog = decidedAgainst.catalog ?? subjectHydrator.readCatalog({ state: result.nextState });
+		const catalog =
+			decidedAgainst.catalog ??
+			subjectHydrator.readCatalog({ state: result.nextState });
 		const body = serializeSubjectReply({
 			reply: {
 				result: mutation.result,
 				changes: mutation.changes,
-				...slimReplySubject({ state: result.nextState, catalog, featureId: command.featureId }),
+				...slimReplySubject({
+					state: result.nextState,
+					catalog,
+					featureId: command.featureId,
+				}),
 				effects: decidedAgainst.effects ?? [],
 			} as never,
 		});
-		const entry: InFlight = { seq, pendingKey, customerKey, fingerprint, mutation, body, subjectKeys };
+		const entry: InFlight = {
+			seq,
+			pendingKey,
+			customerKey,
+			fingerprint,
+			mutation,
+			body,
+			subjectKeys,
+		};
 		inFlight.set(pendingKey, entry);
 		inFlightBySeq.push(entry);
 		inFlightPerCustomer.set(customerKey, perCustomer + 1);
@@ -286,7 +397,11 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 		if (recoveryError) throw recoveryError;
 		stats.checks++;
 		const reply = await checkPartition({ scope, command });
-		return { status: 200, body: serializeCheckReply({ reply: reply as CheckReply }), seq: 0 };
+		return {
+			status: 200,
+			body: serializeCheckReply({ reply: reply as CheckReply }),
+			seq: 0,
+		};
 	}
 
 	function decide(command: Command): Outcome | Promise<Outcome> {
@@ -311,7 +426,9 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 		return { status: 400, body: INVALID, seq: 0 };
 	}
 
-	function wrapErrors(outcome: Outcome | Promise<Outcome>): Outcome | Promise<Outcome> {
+	function wrapErrors(
+		outcome: Outcome | Promise<Outcome>,
+	): Outcome | Promise<Outcome> {
 		if (outcome instanceof Promise) return outcome.catch(errorOutcomeOf);
 		return outcome;
 	}
@@ -319,11 +436,23 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 	function errorOutcomeOf(cause: unknown): Outcome {
 		stats.failed++;
 		const { status, error } = workerErrorOf({ cause: cause as Error });
-		return { status, body: JSON.stringify({ error } satisfies WorkerErrorResponse), seq: 0 };
+		return {
+			status,
+			body: JSON.stringify({ error } satisfies WorkerErrorResponse),
+			seq: 0,
+		};
 	}
 
 	/** The ack finishes a whole range: remember for dedup, release pins, forget the in-flight entry. */
-	function onAck({ from, to, baseOffset }: { from: number; to: number; baseOffset: bigint }): void {
+	function onAck({
+		from,
+		to,
+		baseOffset,
+	}: {
+		from: number;
+		to: number;
+		baseOffset: bigint;
+	}): void {
 		const t = now();
 		try {
 			onAckInner({ from, to, baseOffset });
@@ -332,20 +461,36 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 		}
 	}
 
-	function onAckInner({ from, to, baseOffset }: { from: number; to: number; baseOffset: bigint }): void {
+	function onAckInner({
+		from,
+		to,
+		baseOffset,
+	}: {
+		from: number;
+		to: number;
+		baseOffset: bigint;
+	}): void {
 		if (baseOffset < 0n) {
-			recoveryError = new PartitionWriterRecoveryRequiredError({ cause: new Error(`batch ${from}..${to} failed`) });
-			for (const entry of inFlightBySeq) for (const subjectKey of entry.subjectKeys) subjects.unpin({ subjectKey });
+			recoveryError = new PartitionWriterRecoveryRequiredError({
+				cause: new Error(`batch ${from}..${to} failed`),
+			});
+			for (const entry of inFlightBySeq)
+				for (const subjectKey of entry.subjectKeys)
+					subjects.unpin({ subjectKey });
 			inFlightBySeq.length = 0;
 			inFlight.clear();
 			inFlightPerCustomer.clear();
 			return;
 		}
 		let n = 0;
-		while (n < inFlightBySeq.length && (inFlightBySeq[n] as InFlight).seq <= to) {
+		while (
+			n < inFlightBySeq.length &&
+			(inFlightBySeq[n] as InFlight).seq <= to
+		) {
 			const entry = inFlightBySeq[n] as InFlight;
 			recentCommands.remember({ mutation: entry.mutation });
-			for (const subjectKey of entry.subjectKeys) subjects.unpin({ subjectKey });
+			for (const subjectKey of entry.subjectKeys)
+				subjects.unpin({ subjectKey });
 			inFlight.delete(entry.pendingKey);
 			const left = (inFlightPerCustomer.get(entry.customerKey) ?? 1) - 1;
 			if (left <= 0) inFlightPerCustomer.delete(entry.customerKey);
@@ -361,9 +506,14 @@ export async function createLeanCore({ appender }: { appender: RecordAppender; l
 	function phaseStats(): Record<string, number> {
 		const tracks = Math.max(1, stats.tracks);
 		const out: Record<string, number> = {};
-		for (const [name, ns] of Object.entries(phase)) out[`us_${name}`] = Math.round(ns / tracks / 10) / 100;
+		for (const [name, ns] of Object.entries(phase))
+			out[`us_${name}`] = Math.round(ns / tracks / 10) / 100;
 		return out;
 	}
 
-	return { decide, onAck, stats: () => ({ ...stats, inFlight: inFlight.size, ...phaseStats() }) };
+	return {
+		decide,
+		onAck,
+		stats: () => ({ ...stats, inFlight: inFlight.size, ...phaseStats() }),
+	};
 }

@@ -14,7 +14,7 @@ import {
 import { Kafka } from "kafkajs";
 import { createWorkerProducerConfig } from "../../../src/init/workerConfig.js";
 import { createWorkerProducer } from "../../../src/kafka/createWorkerProducer.js";
-import { pinFromEnv, threadId } from "./pin.ts";
+import { pinFromEnv, threadId } from "./pin.js";
 import {
 	ACK_BYTES,
 	ACK_FAILED_UNCOMMITTED,
@@ -26,8 +26,8 @@ import {
 	FRAME,
 	type KafkaWorkerInit,
 	REC_HEADER,
-} from "./protocol.ts";
-import { Doorbell, RingConsumer, RingProducer } from "./ring.ts";
+} from "./protocol.js";
+import { Doorbell, RingConsumer, RingProducer } from "./ring.js";
 
 declare var self: Worker;
 
@@ -35,13 +35,23 @@ const TOPIC = process.env.SPIKE_TOPIC ?? "bw-spike-metering";
 const BROKERS = ["127.0.0.1:19092"];
 const PARTITION = 0;
 
-type Queued = { seq: number; key: Buffer; value: Buffer; bytes: number; queuedAt: number };
+type Queued = {
+	seq: number;
+	key: Buffer;
+	value: Buffer;
+	bytes: number;
+	queuedAt: number;
+};
 
 self.onmessage = (event: MessageEvent) => {
 	void start(event.data as KafkaWorkerInit);
 };
 
-async function connectProducer({ commitMode }: { commitMode: "transactional" | "idempotent" }) {
+async function connectProducer({
+	commitMode,
+}: {
+	commitMode: "transactional" | "idempotent";
+}) {
 	const kafka = new Kafka(
 		createKafkaClient({
 			clientId: `bw-serial-${process.pid}`,
@@ -103,22 +113,34 @@ async function start(init: KafkaWorkerInit): Promise<void> {
 		queuedMs: 0,
 	};
 
-	const producer = init.appender === "kafka" ? await connectProducer({ commitMode: init.commitMode }) : null;
+	const producer =
+		init.appender === "kafka"
+			? await connectProducer({ commitMode: init.commitMode })
+			: null;
 
 	function drainRing(): number {
 		let n = 0;
 		for (;;) {
 			const frame = records.next();
 			if (!frame) break;
-			if (frame.type !== FRAME.REC) throw new Error(`kafka: unexpected frame ${frame.type}`);
+			if (frame.type !== FRAME.REC)
+				throw new Error(`kafka: unexpected frame ${frame.type}`);
 			const view = records.payloadView;
 			const seq = view.getUint32(frame.offset, true);
 			const keyLength = view.getUint32(frame.offset + 4, true);
 			// Copies: the ring slot is reused once we advance, and kafkajs keeps the buffers until the send.
-			const key = Buffer.from(frame.bytes.subarray(REC_HEADER, REC_HEADER + keyLength));
+			const key = Buffer.from(
+				frame.bytes.subarray(REC_HEADER, REC_HEADER + keyLength),
+			);
 			const value = Buffer.from(frame.bytes.subarray(REC_HEADER + keyLength));
 			records.advance();
-			queue.push({ seq, key, value, bytes: key.length + value.length + 256, queuedAt: performance.now() });
+			queue.push({
+				seq,
+				key,
+				value,
+				bytes: key.length + value.length + 256,
+				queuedAt: performance.now(),
+			});
 			n++;
 		}
 		if (n > 0) records.release();
@@ -145,12 +167,23 @@ async function start(init: KafkaWorkerInit): Promise<void> {
 		while (queue.length < init.maxBatchSize) {
 			const left = until - performance.now();
 			if (left <= 0) break;
-			await recordBell.sleep({ hasWork: () => records.hasWork(), timeoutMs: Math.max(1, Math.ceil(left)) });
+			await recordBell.sleep({
+				hasWork: () => records.hasWork(),
+				timeoutMs: Math.max(1, Math.ceil(left)),
+			});
 			drainRing();
 		}
 	}
 
-	function ack({ from, to, baseOffset }: { from: number; to: number; baseOffset: bigint }): void {
+	function ack({
+		from,
+		to,
+		baseOffset,
+	}: {
+		from: number;
+		to: number;
+		baseOffset: bigint;
+	}): void {
 		const at = acks.claim({ type: FRAME.ACK, maxLength: ACK_BYTES });
 		if (at < 0) throw new Error("ack ring full");
 		acks.payloadView.setUint32(at, from, true);
@@ -200,17 +233,27 @@ async function start(init: KafkaWorkerInit): Promise<void> {
 			stats.failed++;
 			console.error("kafka worker: batch failed", String(cause));
 			const unknown = String((cause as Error)?.name ?? "").includes("Unknown");
-			ack({ from, to, baseOffset: unknown ? ACK_FAILED_UNKNOWN : ACK_FAILED_UNCOMMITTED });
+			ack({
+				from,
+				to,
+				baseOffset: unknown ? ACK_FAILED_UNKNOWN : ACK_FAILED_UNCOMMITTED,
+			});
 		}
 	}
 
 	postMessage({ ready: true, role: "kafka", tid: threadId(), cpus });
-	setInterval(() => postMessage({ stats: { ...stats, queue: queue.length } }), 5000).unref();
+	setInterval(
+		() => postMessage({ stats: { ...stats, queue: queue.length } }),
+		5000,
+	).unref();
 
 	for (;;) {
 		drainRing();
 		if (queue.length === 0) {
-			await recordBell.sleep({ hasWork: () => records.hasWork(), timeoutMs: 50 });
+			await recordBell.sleep({
+				hasWork: () => records.hasWork(),
+				timeoutMs: 50,
+			});
 			continue;
 		}
 		if (Atomics.load(cells, CELL_RECOVERY) === 1) {

@@ -73,6 +73,12 @@ describe("Real balance worker HTTP service", () => {
 					replicationFactor: 1,
 					configEntries: [{ name: "cleanup.policy", value: "compact" }],
 				},
+				// The worker validates this one at startup; a strict broker (no auto-create) must have it.
+				{
+					topic: `${id}-catalog-invalidations`,
+					numPartitions: 1,
+					replicationFactor: 1,
+				},
 			],
 		});
 		const state = createState({

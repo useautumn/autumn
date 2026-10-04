@@ -1,52 +1,54 @@
 /**
- * Single-producer single-consumer byte ring on a SharedArrayBuffer (Agrona's OneToOneRingBuffer shape).
- * Frames are `[u32 length][u8 type][payload]`; a frame that would straddle the end writes a padding
- * frame and wraps. Positions grow without bound; the index is the position masked by the capacity.
- *
- * Wake-ups go through a `Doorbell`: a producer rings it only when the consumer has declared itself
- * asleep, so a busy consumer costs the producer one atomic store per flush and no syscall.
+ * One-producer one-consumer byte ring on a SharedArrayBuffer, the shape of Agrona's OneToOneRingBuffer.
+ * Frames are `[u32 length][u8 type][payload]`; a frame that would straddle the end leaves a padding marker
+ * and wraps. Positions grow without bound and index the ring through the capacity mask.
  */
 const HEADER_BYTES = 64;
 const TAIL = 0;
 const HEAD = 1;
 const PADDING = 0xffffffff;
-export const FRAME_HEADER = 5;
+export const FRAME_HEADER_BYTES = 5;
 
 export type RingLayout = { sab: SharedArrayBuffer; capacity: number };
 
 export function allocateRing({ capacity }: { capacity: number }): RingLayout {
-	if ((capacity & (capacity - 1)) !== 0)
-		throw new Error("ring capacity must be a power of two");
+	if ((capacity & (capacity - 1)) !== 0 || capacity < 4096)
+		throw new RangeError(
+			"ring capacity must be a power of two of at least 4 KiB",
+		);
 	return { sab: new SharedArrayBuffer(HEADER_BYTES + capacity), capacity };
 }
 
 export type RingFrame = {
 	type: number;
-	/** A view into the ring: valid until the next `advance`. */
+	/** Aliases the ring until `advance`; copy out anything kept. */
 	bytes: Uint8Array;
-	/** Offset of the payload inside `view`. */
 	offset: number;
 	length: number;
 };
 
-/** A shared wake-up cell: producers ring it, one consumer sleeps on it. Several ringers are fine. */
+/** A wake-up cell: any number of producers ring it, one consumer sleeps on it. */
 export class Doorbell {
 	readonly cells: Int32Array;
+
 	constructor(sab?: SharedArrayBuffer) {
 		this.cells = new Int32Array(sab ?? new SharedArrayBuffer(16));
 	}
+
 	get sab(): SharedArrayBuffer {
 		return this.cells.buffer as SharedArrayBuffer;
 	}
-	/** Producer side: rings only if the consumer is asleep. Returns true when it rang. */
+
+	/** Rings only when the consumer declared itself asleep, so a busy consumer costs producers one atomic load. */
 	ring(): boolean {
 		if (Atomics.load(this.cells, 1) !== 1) return false;
 		Atomics.add(this.cells, 0, 1);
 		Atomics.notify(this.cells, 0);
 		return true;
 	}
-	/** Consumer side: `hasWork` is re-checked after declaring sleep, so a publish between the last poll and
-	 *  the wait is never missed (the producer sees SLEEPING=1 and rings, or we see its tail). */
+
+	/** `hasWork` is re-checked after declaring sleep: a publish between the last poll and the wait either
+	 *  shows in that check or finds SLEEPING set and rings. */
 	async sleep({
 		hasWork,
 		timeoutMs,
@@ -60,13 +62,14 @@ export class Doorbell {
 			Atomics.store(this.cells, 1, 0);
 			return true;
 		}
+		// Bun implements Atomics.waitAsync; the repo's TS lib predates it.
 		const waited = (
 			Atomics as unknown as {
 				waitAsync(
-					c: Int32Array,
-					i: number,
-					v: number,
-					t: number,
+					cells: Int32Array,
+					index: number,
+					value: number,
+					timeout: number,
 				): { async: boolean; value: Promise<string> | string };
 			}
 		).waitAsync(this.cells, 0, bell, timeoutMs);
@@ -77,24 +80,30 @@ export class Doorbell {
 }
 
 export class RingProducer {
-	private readonly header: Int32Array;
 	readonly payload: Uint8Array;
 	readonly payloadView: DataView;
+	private readonly header: Int32Array;
 	private readonly mask: number;
 	private readonly capacity: number;
-	private tail = 0;
+	private tail: number;
 	private cachedHead = 0;
 	private claimedAt = -1;
-	readonly doorbell: Doorbell;
 
-	constructor({ sab, capacity }: RingLayout, doorbell: Doorbell) {
+	constructor(
+		{ sab, capacity }: RingLayout,
+		private readonly doorbell: Doorbell,
+	) {
 		this.header = new Int32Array(sab, 0, HEADER_BYTES / 4);
 		this.payload = new Uint8Array(sab, HEADER_BYTES, capacity);
 		this.payloadView = new DataView(sab, HEADER_BYTES, capacity);
 		this.mask = capacity - 1;
 		this.capacity = capacity;
 		this.tail = Atomics.load(this.header, TAIL) >>> 0;
-		this.doorbell = doorbell;
+	}
+
+	/** The largest payload one frame can carry. */
+	get maxFrameBytes(): number {
+		return this.capacity - FRAME_HEADER_BYTES;
 	}
 
 	private free(needed: number): boolean {
@@ -103,10 +112,11 @@ export class RingProducer {
 		return this.capacity - (this.tail - this.cachedHead) >= needed;
 	}
 
-	/** Reserves up to `maxLength` payload bytes; returns the payload offset, or -1 when the ring is full. */
+	/** Reserves up to `maxLength` payload bytes; the payload offset, or -1 when the ring cannot take it now. */
 	claim({ type, maxLength }: { type: number; maxLength: number }): number {
-		const total = FRAME_HEADER + maxLength;
-		if (total > this.capacity) throw new Error("frame larger than ring");
+		const total = FRAME_HEADER_BYTES + maxLength;
+		if (total > this.capacity)
+			throw new RangeError("frame larger than the ring");
 		let index = this.tail & this.mask;
 		const toEnd = this.capacity - index;
 		if (toEnd < total) {
@@ -117,17 +127,17 @@ export class RingProducer {
 		} else if (!this.free(total)) return -1;
 		this.payload[index + 4] = type;
 		this.claimedAt = index;
-		return index + FRAME_HEADER;
+		return index + FRAME_HEADER_BYTES;
 	}
 
-	/** Publishes the claimed frame with its actual payload length (≤ the claimed maximum). */
+	/** Publishes the claimed frame with its actual payload length (at most what was claimed). */
 	publish({ length }: { length: number }): void {
 		this.payloadView.setUint32(this.claimedAt, length, true);
-		this.tail += FRAME_HEADER + length;
+		this.tail += FRAME_HEADER_BYTES + length;
 		this.claimedAt = -1;
 	}
 
-	/** Makes published frames visible and wakes a sleeping consumer. Once per batch. */
+	/** Makes published frames visible and wakes a sleeping consumer; once per batch. */
 	flush(): boolean {
 		Atomics.store(this.header, TAIL, this.tail | 0);
 		return this.doorbell.ring();
@@ -140,20 +150,15 @@ export class RingProducer {
 		this.publish({ length: payload.length });
 		return true;
 	}
-
-	/** Bytes published but not yet consumed, for stats and back-pressure. */
-	backlogBytes(): number {
-		return (this.tail - (Atomics.load(this.header, HEAD) >>> 0)) >>> 0;
-	}
 }
 
 export class RingConsumer {
-	private readonly header: Int32Array;
 	readonly payload: Uint8Array;
 	readonly payloadView: DataView;
+	private readonly header: Int32Array;
 	private readonly mask: number;
 	private readonly capacity: number;
-	private head = 0;
+	private head: number;
 	private cachedTail = 0;
 	private pendingAdvance = 0;
 
@@ -166,20 +171,19 @@ export class RingConsumer {
 		this.head = Atomics.load(this.header, HEAD) >>> 0;
 	}
 
-	/** True when a published frame is waiting (reads the producer's tail). */
 	hasWork(): boolean {
 		if (this.head !== this.cachedTail) return true;
 		this.cachedTail = Atomics.load(this.header, TAIL) >>> 0;
 		return this.head !== this.cachedTail;
 	}
 
-	/** The next frame, or null when empty. The bytes alias the ring until `advance`. */
+	/** The next frame, or null when empty; its bytes alias the ring until `advance`. */
 	next(): RingFrame | null {
 		if (!this.hasWork()) return null;
 		let index = this.head & this.mask;
 		const toEnd = this.capacity - index;
 		if (
-			toEnd < FRAME_HEADER ||
+			toEnd < FRAME_HEADER_BYTES ||
 			this.payloadView.getUint32(index, true) === PADDING
 		) {
 			this.head += toEnd;
@@ -188,8 +192,8 @@ export class RingConsumer {
 		}
 		const length = this.payloadView.getUint32(index, true);
 		const type = this.payload[index + 4] as number;
-		const offset = index + FRAME_HEADER;
-		this.pendingAdvance = FRAME_HEADER + length;
+		const offset = index + FRAME_HEADER_BYTES;
+		this.pendingAdvance = FRAME_HEADER_BYTES + length;
 		return {
 			type,
 			bytes: this.payload.subarray(offset, offset + length),
@@ -203,12 +207,8 @@ export class RingConsumer {
 		this.pendingAdvance = 0;
 	}
 
-	/** Publishes the consumed position so the producer can reuse the space. Once per batch. */
+	/** Publishes the consumed position so the producer can reuse the space; once per batch. */
 	release(): void {
 		Atomics.store(this.header, HEAD, this.head | 0);
-	}
-
-	backlogBytes(): number {
-		return ((Atomics.load(this.header, TAIL) >>> 0) - this.head) >>> 0;
 	}
 }

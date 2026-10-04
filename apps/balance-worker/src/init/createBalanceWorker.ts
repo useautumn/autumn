@@ -14,6 +14,10 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import {
+	createSerialDecideMode,
+	forcedSerialDecideArmFromEnv,
+} from "../experiments/serialDecide.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
@@ -29,7 +33,9 @@ import {
 	createKafkaRequestReporter,
 	kafkaRequestTimings,
 } from "../logging/kafkaRequestTimings.js";
+import { createRequestLatencies } from "../logging/requestLatencies.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
+import { createIoWorkerPool } from "../serialDecide/createIoWorkerPool.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -101,6 +107,10 @@ export async function createBalanceWorker({
 			identity: address.endpoint,
 			bucket: env.S3_BUCKET,
 		});
+	// Read once, at listen time (after the variants config has loaded); the task keeps its layout for life.
+	const serialDecide = createSerialDecideMode({
+		force: config.serialDecideArm ?? forcedSerialDecideArmFromEnv(),
+	});
 	try {
 		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
 		const slotGate = resources.edgeConfigs
@@ -209,6 +219,7 @@ export async function createBalanceWorker({
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},
 		});
+		const requestLatencies = createRequestLatencies();
 		const appContext = {
 			ownership: partitions,
 			partitionResolver: resources.partitionResolver,
@@ -216,19 +227,38 @@ export async function createBalanceWorker({
 			requestLog: {
 				successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
 			},
+			requestLatencies,
 		};
 		const app = createBalanceWorkerApp({ ctx: appContext });
 
-		function listen(): WorkerListener {
-			const listener = Bun.serve({
-				hostname: address.hostname,
-				port: env.BALANCE_WORKER_PORT,
-				maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
-				fetch: createBalanceWorkerFetch({ ctx: appContext, app }),
-				idleTimeout: 0,
+		async function listen(): Promise<WorkerListener> {
+			const fetch = createBalanceWorkerFetch({ ctx: appContext, app });
+			const mode = serialDecide.read();
+			if (!mode.ioWorkersEnabled) {
+				const listener = Bun.serve({
+					hostname: address.hostname,
+					port: env.BALANCE_WORKER_PORT,
+					maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
+					fetch,
+					idleTimeout: 0,
+				});
+				dependencies.logger.info(
+					`Balance worker listening at ${address.endpoint}; partition admission follows recovery`,
+				);
+				return listener;
+			}
+			const pool = createIoWorkerPool({
+				ctx: { fetch, logger: dependencies.logger },
+				config: {
+					hostname: address.hostname,
+					port: env.BALANCE_WORKER_PORT,
+					maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
+					workers: env.BALANCE_WORKER_IO_WORKERS,
+				},
 			});
+			const listener = await pool.listen();
 			dependencies.logger.info(
-				`Balance worker listening at ${address.endpoint}; partition admission follows recovery`,
+				`Balance worker listening at ${address.endpoint} through ${env.BALANCE_WORKER_IO_WORKERS} I/O workers (serial-decide arm ${mode.arm}); partition admission follows recovery`,
 			);
 			return listener;
 		}
@@ -243,6 +273,7 @@ export async function createBalanceWorker({
 				readPartitions: partitions.partitions,
 				readWorkerStatus,
 				readConsumer: partitions.consumer,
+				readBootArms: serialDecide.bootArms,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
@@ -285,11 +316,19 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
+		// Window arms plus the arms fixed at boot, so a task's layout is on every event-loop line.
+		function variantsWithBootArms(): Readonly<Record<string, string>> | null {
+			const window = variants();
+			const boot = serialDecide.bootArms();
+			if (!boot) return window;
+			return { ...window, ...boot };
+		}
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,
 				recorder: syncSections,
-				variants,
+				variants: variantsWithBootArms,
+				latencies: requestLatencies.drain,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,

@@ -17,7 +17,7 @@ import {
 
 const IDENTITY = "http://10.192.11.9:8082";
 const configWith = (
-	experiments: Record<string, { arms: string[] }>,
+	experiments: Record<string, { arms: string[]; scope?: "window" | "task" }>,
 ): StagingVariantsConfig => ({
 	experiments,
 	updatedAt: new Date().toISOString(),
@@ -201,6 +201,41 @@ describe("variant()", () => {
 				arms: ["A", "B", "C"],
 			}),
 		);
+	});
+
+	test("a task-scoped experiment keeps one arm per task across every window, and splits tasks", () => {
+		let now = 0;
+		const read = () =>
+			configWith({
+				layout: { arms: ["A", "B"], scope: "task" },
+				knob: { arms: ["A", "B"] },
+			});
+		bindStagingVariants({
+			read,
+			identity: IDENTITY,
+			bucket: STAGING_VARIANTS_BUCKET,
+			now: () => now,
+		});
+		const first = variant("layout");
+		const knobArms = new Set<StagingArm>();
+		for (let window = 0; window < 200; window++) {
+			now = window * STAGING_VARIANT_WINDOW_MS;
+			expect(variant("layout")).toBe(first);
+			knobArms.add(variant("knob"));
+		}
+		// The window-scoped experiment beside it still moves.
+		expect(knobArms.size).toBe(2);
+		const taskArms = new Set<StagingArm>();
+		for (let task = 0; task < 40; task++) {
+			bindStagingVariants({
+				read,
+				identity: `http://10.192.11.${task}:8082`,
+				bucket: STAGING_VARIANTS_BUCKET,
+				now: () => now,
+			});
+			taskArms.add(variant("layout"));
+		}
+		expect(taskArms.size).toBe(2);
 	});
 
 	test("a config change lands at the next window boundary, not mid-window", async () => {
