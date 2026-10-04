@@ -15,6 +15,7 @@ import {
 import { Hono } from "hono";
 import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
+import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import { requestValidationMiddleware } from "../../../src/http/middlewares/requestValidationMiddleware.js";
 import { runtimeRoutingMiddleware } from "../../../src/http/middlewares/runtimeRouting/runtimeRoutingMiddleware.js";
 import type {
@@ -217,7 +218,14 @@ const fixture = ({
 			error: recordLog,
 		},
 	};
-	const app = createBalanceWorkerApp({ ctx });
+	// The worker serves through the fast path, which hands everything but plain track and check to the app.
+	const routedApp = createBalanceWorkerApp({ ctx });
+	const fetch = createBalanceWorkerFetch({ ctx, app: routedApp });
+	const app = {
+		fetch,
+		request: async (path: string, init?: RequestInit) =>
+			fetch(new Request(new URL(path, "http://localhost"), init)),
+	};
 	const post = (body: unknown = request) =>
 		app.request("/v1/track", {
 			method: "POST",
