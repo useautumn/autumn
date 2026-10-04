@@ -8,6 +8,7 @@ import {
 	PartitionWriterCommandConflictError,
 	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
+import { createPositionBoard } from "../../../src/serialDecide/positionBoard.js";
 import {
 	createInitializeRequest,
 	createState,
@@ -23,8 +24,19 @@ const cus2 = residentIdentityOf({ customerId: "cus_2" });
 
 type Positions = {
 	committed: number[];
-	failed: { seq: number; cause: unknown }[];
+	failed: { seq: number; lastSeq: number; cause: unknown }[];
 };
+
+/** The production board for one partition, with what it published recorded for the assertions. */
+function recordingBoard() {
+	const board = createPositionBoard({ config: { partitionCount: 1 } });
+	const positions: Positions = { committed: [], failed: [] };
+	board.onCommitted(({ seq }) => positions.committed.push(seq));
+	board.onFailedAbove(({ seq, lastSeq, cause }) =>
+		positions.failed.push({ seq, lastSeq, cause }),
+	);
+	return { board, positions };
+}
 
 /** An appender whose batches a test releases by hand, recording what it was given. */
 function gatedAppender() {
@@ -77,13 +89,16 @@ async function residentWithPositions({
 	gated = false,
 	beforeApply,
 	maxPendingCommandsPerCustomer = 1_000,
+	board = recordingBoard(),
 }: {
 	balance?: number;
 	gated?: boolean;
 	beforeApply?: () => Promise<void>;
 	maxPendingCommandsPerCustomer?: number;
+	/** A board an earlier writer of the partition already used. */
+	board?: ReturnType<typeof recordingBoard>;
 } = {}) {
-	const positions: Positions = { committed: [], failed: [] };
+	const { positions } = board;
 	const gate = gatedAppender();
 	// The initializations commit through an open gate; a gated test holds the appends that follow.
 	gate.open();
@@ -93,10 +108,7 @@ async function residentWithPositions({
 			createState({ identity: cus2, balance }),
 		],
 		appender: gate.appender,
-		positions: {
-			committed: ({ seq }) => positions.committed.push(seq),
-			failedAbove: ({ seq, cause }) => positions.failed.push({ seq, cause }),
-		},
+		positions: board.board.sinkFor({ partition: 0 }),
 		committer: { beforeApply },
 		config: {
 			writerLimits: {
@@ -109,7 +121,7 @@ async function residentWithPositions({
 	await settled();
 	positions.committed.length = 0;
 	if (gated) gate.hold();
-	return { processor, positions, gate };
+	return { processor, positions, gate, board };
 }
 
 async function settled(): Promise<void> {
@@ -279,8 +291,9 @@ describe("lean track (serial-decide arm D)", () => {
 		);
 		await settled();
 		expect(positions.failed).toHaveLength(1);
-		// Everything the initializations committed stands; the position names the last of them.
+		// Everything the initializations committed stands; the position names the last of them, the range ends at the refused write.
 		expect(positions.failed[0]?.seq).toBe(firstSeq - 1);
+		expect(positions.failed[0]?.lastSeq).toBe(firstSeq);
 		expect(positions.failed[0]?.cause).toBeInstanceOf(MutationBatchAppendError);
 		// The dropped projection leaves no rows resident, so the hot path steps aside; once the customer is
 		// resident again the healthy writer commits under the next sequence numbers.
@@ -394,5 +407,47 @@ describe("lean track (serial-decide arm D)", () => {
 		holdStore.resolve();
 		await evict;
 		expect(evicted).toBe(true);
+	});
+
+	test("a writer rebuilt on the partition numbers its writes above everything its predecessor issued", async () => {
+		const first = await residentWithPositions({ gated: true });
+		const held = first.processor.trackHot({
+			command: createTrackCommand({
+				identity: cus1,
+				commandId: "cmd_1",
+				value: 1,
+			}),
+		});
+		const heldSeq = held?.seq ?? 0;
+		expect(heldSeq).toBeGreaterThan(0);
+		const commitPos = first.board.board.readCommitPos({ partition: 0 });
+		expect(commitPos).toBe(heldSeq - 1);
+		// The predecessor goes away with its write still in flight: a recovery, a revoke, a stop that could not drain.
+		first.processor.dispose();
+		expect(first.positions.failed).toEqual([
+			{
+				seq: commitPos,
+				lastSeq: heldSeq,
+				cause: expect.objectContaining({
+					name: "PartitionWriterDisposedError",
+				}),
+			},
+		]);
+		// The successor's initializations and first hot write all land above the predecessor's last number, so a
+		// reply still held on `heldSeq` can never be mistaken for one of them.
+		const second = await residentWithPositions({ board: first.board });
+		const next = second.processor.trackHot({
+			command: createTrackCommand({
+				identity: cus1,
+				commandId: "cmd_2",
+				value: 1,
+			}),
+		});
+		expect(next?.seq).toBe(heldSeq + 3);
+		await settled();
+		expect(second.positions.committed).toEqual([heldSeq + 3]);
+		expect(second.board.board.readCommitPos({ partition: 0 })).toBe(
+			heldSeq + 3,
+		);
 	});
 });

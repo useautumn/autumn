@@ -7,7 +7,7 @@ import type { RingLayout } from "./ring.js";
  *  RES  main → io  [u32 reqId][u16 status][u32 metaLen][meta json][body]   meta = { h }
  *
  * The hot frames (HOT, HOT_RES, FAIL) are laid out in hotProtocol.ts. A frame too big for its ring (over an
- * eighth of it) travels by `postMessage` with the same ids.
+ * eighth of it) travels by `postMessage` with the same ids; a hot reply that big is released by the main thread.
  */
 export const FRAME = { REQ: 1, RES: 2, HOT: 3, HOT_RES: 4, FAIL: 5 } as const;
 export const REQ_HEADER_BYTES = 8;
@@ -44,7 +44,7 @@ export type IoWorkerInit = {
 	resultBell: SharedArrayBuffer;
 	/** `LANE_STAT_SLOTS` float64 counters this worker keeps. */
 	stats: SharedArrayBuffer;
-	/** Serial-decide arm D: hot routes cross as HOT frames and their replies are held on these commit positions. */
+	/** Serial-decide arm D: hot routes cross as HOT frames and their replies are held on these commit positions (BigInt64 per partition). */
 	hot?: { cells: SharedArrayBuffer; partitionCount: number };
 };
 
@@ -61,8 +61,6 @@ export type OversizedResponse = {
 	status: number;
 	meta: ResponseMeta;
 	body: ArrayBuffer;
-	/** A hot reply: held on its partition's commit position like a HOT_RES frame. */
-	hot?: { partition: number; seq: number };
 };
 
 export type IoWorkerMessage =

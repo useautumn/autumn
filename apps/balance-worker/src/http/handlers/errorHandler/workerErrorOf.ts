@@ -23,6 +23,7 @@ import {
 import {
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
+	PartitionWriterDisposedError,
 	PartitionWriterDuplicateCommandError,
 	PartitionWriterRecordTooLargeError,
 	PartitionWriterStateNotFoundError,
@@ -166,6 +167,13 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 		error = {
 			code: "NOT_READY",
 			message: "Partition cannot accept this request",
+		};
+	} else if (cause instanceof PartitionWriterDisposedError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message:
+				"Partition owner stopped before this command was acknowledged; it may have landed, retry",
 		};
 	} else if (
 		cause instanceof OwnedPartitionRecoveryRequiredError &&

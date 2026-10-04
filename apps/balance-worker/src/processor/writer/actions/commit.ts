@@ -438,7 +438,11 @@ function failAppend({
 	if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
 		const error = new MutationBatchAppendError({ cause });
 		rejectAllPending({ state, batch, error });
-		scope.ctx.positions?.failedAbove({ seq: state.commitPos, cause: error });
+		scope.ctx.positions?.failedAbove({
+			seq: state.commitPos,
+			lastSeq: state.lastSeq,
+			cause: error,
+		});
 		state.storeCompletion = Promise.resolve();
 	} else {
 		enterRecovery({ scope, batch, cause });
@@ -586,6 +590,7 @@ function enterRecovery({
 	rejectAllPending({ state: scope.state, batch: [...owed], error });
 	scope.ctx.positions?.failedAbove({
 		seq: scope.state.commitPos,
+		lastSeq: scope.state.lastSeq,
 		cause: error,
 	});
 }

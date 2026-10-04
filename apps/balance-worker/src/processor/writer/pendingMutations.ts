@@ -25,8 +25,11 @@ import {
 
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
+	start,
 }: {
 	subjectMapMaxBytes?: number | (() => number);
+	/** Where an earlier writer of the partition left its sequence numbers; a fresh partition starts at 0. */
+	start?: { commitPos: number; lastSeq: number };
 } = {}): PartitionWriterState {
 	return {
 		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),
@@ -35,9 +38,9 @@ export function createPartitionWriterState({
 		queue: [],
 		draining: false,
 		storeCompletion: Promise.resolve(),
-		nextSeq: 1,
+		lastSeq: start?.lastSeq ?? 0,
 		lastRowSeq: 0,
-		commitPos: 0,
+		commitPos: start?.commitPos ?? 0,
 		storedSeq: 0,
 		storeWaiters: [],
 		inFlight: [],
@@ -227,10 +230,13 @@ export function enqueueMutation({
 			maxBatchBytes,
 		});
 	const settlement = lean ? null : createPendingSettlement();
+	// The sink numbers a partition across its writers; without one the writer counts alone.
+	const seq = scope.ctx.positions?.nextSeq() ?? state.lastSeq + 1;
+	state.lastSeq = seq;
 	const pending: PendingMutation = {
 		pendingKey,
 		customerKey,
-		seq: state.nextSeq++,
+		seq,
 		projectedSubjectKeys: [],
 		mutation,
 		nextState,

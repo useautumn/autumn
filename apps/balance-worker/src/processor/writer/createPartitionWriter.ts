@@ -29,6 +29,7 @@ import type {
 	PartitionWriterContext,
 	PartitionWriterScope,
 } from "./types/partitionWriter.js";
+import { PartitionWriterDisposedError } from "./writerErrors.js";
 
 export function createPartitionWriter({
 	ctx,
@@ -48,6 +49,7 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			start: ctx.positions?.open(),
 		}),
 	};
 
@@ -66,6 +68,11 @@ export function createPartitionWriter({
 	function dispose(): void {
 		budgetShare?.leave();
 		scope.state.subjects.clear();
+		// A drained writer holds nothing; one stopped mid-flight still owes its held replies an answer.
+		scope.ctx.positions?.closed({
+			lastSeq: scope.state.lastSeq,
+			cause: new PartitionWriterDisposedError(),
+		});
 	}
 
 	function decide<Reply>(

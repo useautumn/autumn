@@ -86,7 +86,7 @@ function start(init: IoWorkerInit): void {
 	let nextReqId = 1;
 	const stats = new Float64Array(init.stats);
 	const hot = init.hot && {
-		positions: new Int32Array(init.hot.cells),
+		positions: new BigInt64Array(init.hot.cells),
 		/** Per partition, the replies held for its commit position, in seq order. */
 		held: Array.from({ length: init.hot.partitionCount }, () => [] as Held[]),
 		/** The partitions holding at least one reply. */
@@ -167,12 +167,16 @@ function start(init: IoWorkerInit): void {
 		stats[LANE_STAT.held]++;
 	}
 
+	function positionOf({ partition }: { partition: number }): number {
+		if (!hot) return 0;
+		return Number(Atomics.load(hot.positions, partition));
+	}
+
 	function releasable(): boolean {
 		if (!hot) return false;
 		for (const partition of hot.holding) {
 			const head = hot.held[partition]?.[0];
-			if (head && Atomics.load(hot.positions, partition) >= head.seq)
-				return true;
+			if (head && positionOf({ partition }) >= head.seq) return true;
 		}
 		return false;
 	}
@@ -182,7 +186,7 @@ function start(init: IoWorkerInit): void {
 		if (!hot) return;
 		for (const partition of hot.holding) {
 			const queue = queueOf({ partition });
-			const position = Atomics.load(hot.positions, partition);
+			const position = positionOf({ partition });
 			let n = 0;
 			for (const entry of queue) {
 				if (entry.seq > position) break;
@@ -197,20 +201,24 @@ function start(init: IoWorkerInit): void {
 		}
 	}
 
-	/** Answers every held reply of the partition above `aboveSeq` with the failure; the rest wait for the position. */
+	/** Answers every held reply of the partition in (`aboveSeq`, `lastSeq`] with the failure; the rest wait for the position. */
 	function failAbove({
 		partition,
 		aboveSeq,
+		lastSeq,
 		status,
 		body,
 	}: {
 		partition: number;
 		aboveSeq: number;
+		lastSeq: number;
 		status: number;
 		body: string;
 	}): void {
 		const queue = queueOf({ partition });
-		const failed = queue.splice(indexAbove({ queue, seq: aboveSeq }));
+		const from = indexAbove({ queue, seq: aboveSeq });
+		const to = indexAbove({ queue, seq: lastSeq });
+		const failed = queue.splice(from, to - from);
 		for (const entry of failed)
 			entry.resolve(new Response(body, { status, headers: JSON_HEADERS }));
 		stats[LANE_STAT.hotFailed] += failed.length;
@@ -248,8 +256,8 @@ function start(init: IoWorkerInit): void {
 					const reqId = view.getUint32(frame.offset, true);
 					const status = view.getUint16(frame.offset + 4, true);
 					const partition = view.getUint16(frame.offset + 6, true);
-					const seq = view.getUint32(frame.offset + 8, true);
-					const metaLength = view.getUint32(frame.offset + 12, true);
+					const seq = view.getFloat64(frame.offset + 8, true);
+					const metaLength = view.getUint32(frame.offset + 16, true);
 					const meta = JSON.parse(
 						decoder.decode(
 							frame.bytes.subarray(
@@ -267,12 +275,13 @@ function start(init: IoWorkerInit): void {
 				}
 				case FRAME.FAIL: {
 					const partition = view.getUint16(frame.offset, true);
-					const aboveSeq = view.getUint32(frame.offset + 2, true);
-					const status = view.getUint16(frame.offset + 6, true);
+					const aboveSeq = view.getFloat64(frame.offset + 2, true);
+					const lastSeq = view.getFloat64(frame.offset + 10, true);
+					const status = view.getUint16(frame.offset + 18, true);
 					const body = decoder.decode(frame.bytes.subarray(FAIL_HEADER_BYTES));
 					results.advance();
 					n++;
-					failAbove({ partition, aboveSeq, status, body });
+					failAbove({ partition, aboveSeq, lastSeq, status, body });
 					break;
 				}
 				default:
@@ -380,18 +389,6 @@ function start(init: IoWorkerInit): void {
 
 	onMainMessage = (message) => {
 		if (message.kind === "response") {
-			if (message.hot && message.hot.seq > 0) {
-				hold({
-					reqId: message.reqId,
-					status: message.status,
-					meta: message.meta,
-					body: message.body,
-					partition: message.hot.partition,
-					seq: message.hot.seq,
-				});
-				releaseHeld();
-				return;
-			}
 			respond({
 				reqId: message.reqId,
 				status: message.status,

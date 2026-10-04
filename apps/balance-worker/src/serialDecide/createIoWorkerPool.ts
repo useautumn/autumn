@@ -5,8 +5,9 @@
  *
  * Under serial-decide arm D a HOT frame is decided here synchronously by the hot decider; its reply goes
  * back with the sequence number the I/O worker holds it on, the worker is woken as commit positions move,
- * and a failed append fails every held reply above the position on every lane. A request the decider
- * declines takes the ordinary fetch path, rebuilt from the same bytes a REQ frame carries.
+ * and a failed append fails every held reply in its range on every lane. A hot reply too big for the ring
+ * is held here instead, released or failed by the same positions. A request the decider declines takes the
+ * ordinary fetch path, rebuilt from the same bytes a REQ frame carries.
  */
 import type { AutumnLogger } from "@autumn/logging";
 import { workerErrorOf } from "../http/handlers/errorHandler/workerErrorOf.js";
@@ -32,6 +33,7 @@ import {
 	type ResponseMeta,
 } from "./ioProtocol.js";
 import type { PositionBoard } from "./positionBoard.js";
+import { POSITION_CELL_BYTES } from "./positionBoard.js";
 import { allocateRing, Doorbell, RingConsumer, RingProducer } from "./ring.js";
 
 export type IoWorkerPoolConfig = {
@@ -82,9 +84,19 @@ type ResultFrame =
 			type: typeof FRAME.FAIL;
 			partition: number;
 			aboveSeq: number;
+			lastSeq: number;
 			status: number;
 			body: Uint8Array;
 	  };
+
+/** A hot reply the ring could not carry, waiting on its partition's position on this thread. */
+type HeldOversized = HotPosition & {
+	lane: Lane;
+	reqId: number;
+	status: number;
+	headers: [string, string][];
+	body: ArrayBuffer;
+};
 
 type Lane = {
 	index: number;
@@ -117,7 +129,8 @@ export function createIoWorkerPool({
 		throw new RangeError("ioWorkers must be a positive integer");
 	if (
 		ctx.hot &&
-		ctx.hot.positions.cells.byteLength < ctx.hot.decider.partitionCount * 4
+		ctx.hot.positions.cells.byteLength <
+			ctx.hot.decider.partitionCount * POSITION_CELL_BYTES
 	)
 		throw new RangeError(
 			"the position board has fewer cells than the hot decider's partitions",
@@ -139,9 +152,12 @@ export function createIoWorkerPool({
 		hotFallback: 0,
 		hotErrors: 0,
 		hotFailed: 0,
+		hotHeldHere: 0,
 	};
 	let stopping = false;
 	let failed = false;
+	// Per partition, in seq order; only replies over an eighth of the ring land here.
+	const heldOversized = new Map<number, HeldOversized[]>();
 	let deferredFlush = false;
 
 	// A crash raises both `error` and `close`; the first cause is the one worth reporting.
@@ -192,8 +208,9 @@ export function createIoWorkerPool({
 		const payload = lane.results.payload;
 		if (frame.type === FRAME.FAIL) {
 			view.setUint16(at, frame.partition, true);
-			view.setUint32(at + 2, frame.aboveSeq, true);
-			view.setUint16(at + 6, frame.status, true);
+			view.setFloat64(at + 2, frame.aboveSeq, true);
+			view.setFloat64(at + 10, frame.lastSeq, true);
+			view.setUint16(at + 18, frame.status, true);
 			payload.set(frame.body, at + FAIL_HEADER_BYTES);
 			lane.results.publish({ length: FAIL_HEADER_BYTES + frame.body.length });
 		} else {
@@ -203,7 +220,7 @@ export function createIoWorkerPool({
 			view.setUint16(at + 4, frame.status, true);
 			if (frame.type === FRAME.HOT_RES) {
 				view.setUint16(at + 6, frame.partition, true);
-				view.setUint32(at + 8, frame.seq, true);
+				view.setFloat64(at + 8, frame.seq, true);
 			}
 			const { written } = encoder.encodeInto(
 				frame.meta,
@@ -274,17 +291,102 @@ export function createIoWorkerPool({
 			body.byteLength === body.buffer.byteLength
 				? body.buffer
 				: body.slice().buffer;
+		if (hot && hot.seq > 0) {
+			holdOversized({ ...hot, lane, reqId, status, headers, body: buffer });
+			return;
+		}
+		postResponse({ lane, reqId, status, headers, body: buffer });
+	}
+
+	function postResponse({
+		lane,
+		reqId,
+		status,
+		headers,
+		body,
+	}: {
+		lane: Lane;
+		reqId: number;
+		status: number;
+		headers: [string, string][];
+		body: ArrayBuffer;
+	}): void {
 		lane.worker.postMessage(
 			{
 				kind: "response",
 				reqId,
 				status,
 				meta: { h: headers },
-				body: buffer,
-				hot,
+				body,
 			} satisfies MainMessage,
-			[buffer],
+			[body],
 		);
+	}
+
+	/** Holds a big hot reply here until the partition's position reaches its seq, or answers it now when it already has. */
+	function holdOversized(held: HeldOversized): void {
+		if (!ctx.hot)
+			throw new Error("I/O pool: a hot reply without a hot decider");
+		if (
+			ctx.hot.positions.readCommitPos({ partition: held.partition }) >= held.seq
+		) {
+			postResponse(held);
+			return;
+		}
+		const queue = heldOversized.get(held.partition) ?? [];
+		let at = queue.length;
+		while (at > 0 && queue[at - 1].seq > held.seq) at--;
+		queue.splice(at, 0, held);
+		heldOversized.set(held.partition, queue);
+		stats.hotHeldHere++;
+	}
+
+	function releaseOversized({
+		partition,
+		seq,
+	}: {
+		partition: number;
+		seq: number;
+	}): void {
+		const queue = heldOversized.get(partition);
+		if (!queue) return;
+		let n = 0;
+		while (n < queue.length && queue[n].seq <= seq) n++;
+		for (const held of queue.splice(0, n)) postResponse(held);
+		if (queue.length === 0) heldOversized.delete(partition);
+	}
+
+	function failOversized({
+		partition,
+		aboveSeq,
+		lastSeq,
+		status,
+		body,
+	}: {
+		partition: number;
+		aboveSeq: number;
+		lastSeq: number;
+		status: number;
+		body: Uint8Array;
+	}): void {
+		const queue = heldOversized.get(partition);
+		if (!queue) return;
+		const kept: HeldOversized[] = [];
+		for (const held of queue) {
+			if (held.seq <= aboveSeq || held.seq > lastSeq) {
+				kept.push(held);
+				continue;
+			}
+			postResponse({
+				lane: held.lane,
+				reqId: held.reqId,
+				status,
+				headers: [JSON_CONTENT_TYPE],
+				body: body.slice().buffer,
+			});
+		}
+		if (kept.length === 0) heldOversized.delete(partition);
+		else heldOversized.set(partition, kept);
 	}
 
 	async function answer({
@@ -411,7 +513,7 @@ export function createIoWorkerPool({
 		if (!ctx.hot)
 			throw new Error("I/O pool: a HOT frame without a hot decider");
 		stats.hot++;
-		let outcome: HotOutcome | Promise<HotOutcome> | null;
+		let outcome: HotOutcome | null;
 		try {
 			outcome = ctx.hot.decider.decide({
 				kind,
@@ -426,13 +528,6 @@ export function createIoWorkerPool({
 		if (outcome === null) {
 			stats.hotFallback++;
 			void serve({ lane, reqId, request: requestOf({ meta, body }) });
-			return;
-		}
-		if (outcome instanceof Promise) {
-			void outcome.then(
-				(settled) => answerHot({ lane, reqId, outcome: settled }),
-				(cause) => answerHotFailure({ lane, reqId, cause }),
-			);
 			return;
 		}
 		answerHot({ lane, reqId, outcome });
@@ -518,14 +613,16 @@ export function createIoWorkerPool({
 		});
 	}
 
-	/** Every lane learns that nothing above `seq` reached the log; the worker answers its held replies above it. */
+	/** Every lane learns that nothing in (`seq`, `lastSeq`] reached the log; the worker answers its held replies in that range. */
 	function failHeldAbove({
 		partition,
 		seq,
+		lastSeq,
 		cause,
 	}: {
 		partition: number;
 		seq: number;
+		lastSeq: number;
 		cause: unknown;
 	}): void {
 		stats.hotFailed++;
@@ -534,8 +631,16 @@ export function createIoWorkerPool({
 		for (const lane of lanes)
 			send({
 				lane,
-				frame: { type: FRAME.FAIL, partition, aboveSeq: seq, status, body },
+				frame: {
+					type: FRAME.FAIL,
+					partition,
+					aboveSeq: seq,
+					lastSeq,
+					status,
+					body,
+				},
 			});
+		failOversized({ partition, aboveSeq: seq, lastSeq, status, body });
 	}
 
 	function spawn({ index }: { index: number }): {
@@ -632,8 +737,9 @@ export function createIoWorkerPool({
 		const unsubscribe = ctx.hot
 			? [
 					// The worker reads the position itself; the bell only wakes it to look.
-					ctx.hot.positions.onCommitted(() => {
+					ctx.hot.positions.onCommitted((position) => {
 						for (const lane of lanes) lane.resultBell.ring();
+						releaseOversized(position);
 					}),
 					ctx.hot.positions.onFailedAbove(failHeldAbove),
 				]

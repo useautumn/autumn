@@ -132,10 +132,16 @@ export type PartitionWriterContext = {
 };
 
 export type PositionSink = {
+	/** Where a writer of the partition begins: the log's position and the last sequence number any writer issued. */
+	open(): { commitPos: number; lastSeq: number };
+	/** The next sequence number of the partition; never one an earlier writer handed out. */
+	nextSeq(): number;
 	/** Every record with a sequence number up to `seq` is in the log; held replies up to it may go out. */
 	committed(params: { seq: number }): void;
-	/** Nothing past `seq` reached the log: every held reply above it is answered with this failure. */
-	failedAbove(params: { seq: number; cause: unknown }): void;
+	/** Nothing in (`seq`, `lastSeq`] reached the log: every held reply in that range is answered with this failure. */
+	failedAbove(params: { seq: number; lastSeq: number; cause: unknown }): void;
+	/** The writer is gone: whatever it issued above the commit position never reaches the log. */
+	closed(params: { lastSeq: number; cause: unknown }): void;
 };
 
 export type PartitionWriterLimits = {
@@ -211,8 +217,8 @@ export type PartitionWriterState = {
 	queue: PendingMutation[];
 	draining: boolean;
 	storeCompletion: Promise<void>;
-	/** Sequence numbers: the next to hand out, the latest that projected rows, the latest acknowledged by the log, the latest the store holds. */
-	nextSeq: number;
+	/** Sequence numbers: the last handed out, the latest that projected rows, the latest acknowledged by the log, the latest the store holds. */
+	lastSeq: number;
 	lastRowSeq: number;
 	commitPos: number;
 	storedSeq: number;

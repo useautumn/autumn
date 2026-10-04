@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { PartitionWriterCapacityError } from "../../../src/processor/writer/writerErrors.js";
+import {
+	PartitionWriterCapacityError,
+	PartitionWriterDisposedError,
+} from "../../../src/processor/writer/writerErrors.js";
 import { createIoWorkerPool } from "../../../src/serialDecide/createIoWorkerPool.js";
 import {
 	HOT_KIND,
@@ -65,7 +68,6 @@ type Script = {
 	headers?: [string, string][];
 	null?: true;
 	throw?: true;
-	promise?: true;
 	pad?: string;
 	/** Pads the decided body to this many bytes. */
 	replyBytes?: number;
@@ -94,7 +96,7 @@ function fakeDecider({
 			const script = JSON.parse(decoder.decode(request.body)) as Script;
 			if (script.null) return null;
 			if (script.throw) throw new Error("decider boom");
-			const outcome: HotOutcome = {
+			return {
 				status: script.status ?? 200,
 				headers: script.headers,
 				body: JSON.stringify({
@@ -107,8 +109,7 @@ function fakeDecider({
 				} satisfies Decided),
 				partition: script.partition ?? 0,
 				seq: script.seq ?? 0,
-			};
-			return script.promise ? Promise.resolve(outcome) : outcome;
+			} satisfies HotOutcome;
 		},
 	};
 }
@@ -210,10 +211,7 @@ describe("I/O worker pool hot path", () => {
 		});
 	});
 
-	test("a promised outcome is awaited; a decider that throws answers 500 like a fetch failure", async () => {
-		const promised = await post({ script: { partition: 0, promise: true } });
-		expect(promised.status).toBe(200);
-		expect((await promised.json()) as Decided).toMatchObject({ decided: true });
+	test("a decider that throws answers 500 like a fetch failure", async () => {
 		const thrown = await post({ script: { throw: true } });
 		expect(thrown.status).toBe(500);
 	});
@@ -258,14 +256,16 @@ describe("I/O worker pool hot path", () => {
 			).toMatchObject({ partition: 2, seq: index + 1 });
 	});
 
-	test("a failure above a position answers the held replies above it and keeps the rest for the position", async () => {
+	test("a failure above a position answers the held replies in its range and keeps the rest for the position", async () => {
 		const replies = [1, 2, 3, 4].map((seq) =>
 			watch(post({ script: { partition: 3, seq } })),
 		);
 		await until(() => laneTotal(pool, "held") === 4, "four held replies");
-		board
-			.sinkFor({ partition: 3 })
-			.failedAbove({ seq: 2, cause: new PartitionWriterCapacityError() });
+		board.sinkFor({ partition: 3 }).failedAbove({
+			seq: 2,
+			lastSeq: 4,
+			cause: new PartitionWriterCapacityError(),
+		});
 		await until(
 			() => replies[2].settled && replies[3].settled,
 			"seq 3 and 4 to be failed",
@@ -299,18 +299,101 @@ describe("I/O worker pool hot path", () => {
 		expect(laneTotal(pool, "held")).toBe(0);
 	});
 
-	test("a reply too big for the result ring is held and released like any other", async () => {
+	test("a reply too big for the result ring is held on the main thread, released by the position and failed by a range covering it", async () => {
+		const heldHere = () => pool.readStats().main.hotHeldHere;
+		const before = heldHere();
 		const held = watch(
 			post({ script: { partition: 1, seq: 8, replyBytes: 3 << 20 } }),
 		);
-		await until(() => laneTotal(pool, "held") === 1, "the big reply held");
+		await until(() => heldHere() === before + 1, "the big reply held here");
 		await Bun.sleep(50);
 		expect(held.settled).toBe(false);
+		expect(laneTotal(pool, "held")).toBe(0);
 		board.sinkFor({ partition: 1 }).committed({ seq: 8 });
 		await until(() => held.settled, "the big reply released");
 		const response = held.response as Response;
 		expect(response.status).toBe(200);
 		expect(((await response.json()) as Decided).pad).toHaveLength(3 << 20);
+		// A big reply and a ring-sized one on the same partition: one failure answers both, nothing is held elsewhere.
+		const big = watch(
+			post({ script: { partition: 1, seq: 10, replyBytes: 3 << 20 } }),
+		);
+		const small = watch(post({ script: { partition: 1, seq: 9 } }));
+		await until(
+			() => heldHere() === before + 2 && laneTotal(pool, "held") === 1,
+			"both replies held",
+		);
+		board.sinkFor({ partition: 1 }).failedAbove({
+			seq: 8,
+			lastSeq: 10,
+			cause: new PartitionWriterCapacityError(),
+		});
+		await until(() => big.settled && small.settled, "both replies failed");
+		expect((big.response as Response).status).toBe(429);
+		expect((small.response as Response).status).toBe(429);
+		expect(await (big.response as Response).json()).toEqual(
+			await (small.response as Response).json(),
+		);
+		expect(laneTotal(pool, "held")).toBe(0);
+	});
+
+	test("a rebuilt writer numbers from above its predecessor, and its first held reply waits for its own commit", async () => {
+		const first = board.sinkFor({ partition: 1 });
+		// The predecessor committed up to 500 and left; the cell keeps 500.
+		while (first.nextSeq() < 500);
+		first.committed({ seq: 500 });
+		first.closed({ lastSeq: 500, cause: new PartitionWriterDisposedError() });
+		const second = board.sinkFor({ partition: 1 });
+		expect(second.open()).toEqual({ commitPos: 500, lastSeq: 500 });
+		const seq = second.nextSeq();
+		expect(seq).toBe(501);
+		const held = watch(post({ script: { partition: 1, seq } }));
+		await until(
+			() => laneTotal(pool, "held") === 1,
+			"the successor's reply held",
+		);
+		await Bun.sleep(200);
+		expect(held.settled).toBe(false);
+		second.committed({ seq });
+		await until(() => held.settled, "the successor's reply released");
+		expect((held.response as Response).status).toBe(200);
+	});
+
+	test("a writer that goes away fails what it held above the position and leaves its successor's replies held", async () => {
+		const gone = board.sinkFor({ partition: 2 });
+		gone.committed({ seq: 10 });
+		const orphans = [11, 12].map((seq) =>
+			watch(post({ script: { partition: 2, seq } })),
+		);
+		await until(() => laneTotal(pool, "held") === 2, "the orphans held");
+		gone.closed({ lastSeq: 12, cause: new PartitionWriterDisposedError() });
+		await until(
+			() => orphans.every((orphan) => orphan.settled),
+			"the orphans answered",
+		);
+		for (const orphan of orphans) {
+			const response = orphan.response as Response;
+			expect(response.status).toBe(503);
+			expect(await response.json()).toEqual({
+				error: {
+					code: "NOT_READY",
+					message:
+						"Partition owner stopped before this command was acknowledged; it may have landed, retry",
+				},
+			});
+		}
+		const successor = watch(post({ script: { partition: 2, seq: 13 } }));
+		await until(
+			() => laneTotal(pool, "held") === 1,
+			"the successor's reply held",
+		);
+		// A late close of the old writer covers only its own numbers.
+		gone.closed({ lastSeq: 12, cause: new PartitionWriterDisposedError() });
+		await Bun.sleep(100);
+		expect(successor.settled).toBe(false);
+		board.sinkFor({ partition: 2 }).committed({ seq: 13 });
+		await until(() => successor.settled, "the successor's reply released");
+		expect((successor.response as Response).status).toBe(200);
 		expect(laneTotal(pool, "held")).toBe(0);
 	});
 
@@ -394,11 +477,12 @@ describe("I/O worker pool hot path", () => {
 			hot: decider.calls.length,
 			hotFallback: 1,
 			hotErrors: 1,
-			hotFailed: 1,
+			hotFailed: 5,
+			hotHeldHere: 2,
 		});
 		expect(laneTotal(pool, "hot")).toBe(decider.calls.length);
-		expect(laneTotal(pool, "hotHeld")).toBeGreaterThanOrEqual(10);
-		expect(laneTotal(pool, "hotFailed")).toBe(2);
+		expect(laneTotal(pool, "hotHeld")).toBeGreaterThanOrEqual(12);
+		expect(laneTotal(pool, "hotFailed")).toBe(5);
 		expect(laneTotal(pool, "hotReleased")).toBe(
 			laneTotal(pool, "hotHeld") - laneTotal(pool, "hotFailed"),
 		);
