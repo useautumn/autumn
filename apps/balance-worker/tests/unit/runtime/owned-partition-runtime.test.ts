@@ -579,6 +579,9 @@ describe("owned partition runtime", () => {
 					trackContextMisses: 0,
 					effectsRun: 0,
 					effectsSkipped: 0,
+					trackRuns: 0,
+					trackRunTracks: 0,
+					trackRunMax: 0,
 				},
 			});
 			await expect(

@@ -148,4 +148,37 @@ describe("track durability", () => {
 		openGate();
 		expect((await reply).result.status).toBe("applied");
 	});
+
+	test("a run's lock track waits for the store alone; the plain tracks before it answer at the log", async () => {
+		const plain = [1, 2].map((index) =>
+			processor.track({
+				command: createTrackCommand({ commandId: `plain_${index}`, value: 1 }),
+			}),
+		);
+		const locked = processor.track({
+			command: {
+				...createTrackCommand({ commandId: "locked", value: 2 }),
+				lock: {
+					id: "lock_row_1",
+					lockId: "lock_1",
+					expiresAt: 1_700_086_400_000,
+					expiryAction: "confirm" as const,
+				},
+			},
+		});
+
+		expect(
+			await settlesWithin({
+				promise: Promise.all(plain),
+				ms: SETTLE_WINDOW_MS,
+			}),
+		).toBe(true);
+		expect(await settlesWithin({ promise: locked, ms: SETTLE_WINDOW_MS })).toBe(
+			false,
+		);
+		expect(processor.readCounters().trackRunMax).toBe(3);
+
+		openGate();
+		expect((await locked).result.status).toBe("applied");
+	});
 });

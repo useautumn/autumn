@@ -33,7 +33,7 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
-import type { TrackRuns } from "../runs/createTrackRuns.js";
+import type { TrackRunCounters, TrackRuns } from "../runs/createTrackRuns.js";
 import type {
 	SubjectDecisionCounters,
 	SubjectDecisions,
@@ -66,7 +66,7 @@ export type PartitionProcessor = {
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	/** What the partition counted since it started; partition health reports them. */
-	readCounters(): SubjectDecisionCounters;
+	readCounters(): SubjectDecisionCounters & TrackRunCounters;
 	readSubjectState(params: {
 		command: ReadSubjectStateCommand;
 	}): Promise<ReadSubjectStateReply>;
@@ -126,6 +126,8 @@ export type PartitionProcessorConfig = {
 	carriesTrackContexts?: boolean;
 	/** Off decides every sync track alone: the reference a run of tracks must equal. */
 	decidesTrackRuns?: boolean;
+	/** On, a run's replies share the subject as the run left it rather than as each track left it. */
+	sharesRunSnapshot?: boolean;
 	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };

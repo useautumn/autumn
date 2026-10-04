@@ -32,6 +32,10 @@ export type OwnedPartitionRequestCounters = {
 	/** Tracks whose effects were decided, or skipped because no draw could have called for one. */
 	effectsRun: number;
 	effectsSkipped: number;
+	/** Runs of sync tracks decided together, the tracks in them, and the largest. */
+	trackRuns: number;
+	trackRunTracks: number;
+	trackRunMax: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<

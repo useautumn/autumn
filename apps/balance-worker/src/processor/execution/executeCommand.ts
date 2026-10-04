@@ -1,7 +1,11 @@
 import type { MutationSource } from "@autumn/balance-engine";
+import type { SyncTrack, TrackRuns } from "../runs/createTrackRuns.js";
 import type { DeferredLogSink } from "../types/deferredLogSink.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
-import type { MutationSubmission } from "../writer/types/mutation.js";
+import type {
+	CommittedMutation,
+	MutationSubmission,
+} from "../writer/types/mutation.js";
 import type { PartitionWriter } from "../writer/types/partitionWriter.js";
 import { completeCommand } from "./completeCommand.js";
 
@@ -39,12 +43,8 @@ export async function executeCommand<Decision>({
 
 	const result = await run({
 		...scope,
-		// Its tracks keep their turn behind a subject's waiting run, but decide alone, on this writer, stamped.
-		trackRuns: scope.trackRuns && {
-			submit: (track) =>
-				scope.trackRuns?.submit({ ...track, solo: true }) ??
-				track.decideAlone(),
-		},
+		// Its tracks take their turn behind a subject's waiting run, but decide alone, on this writer, stamped.
+		trackRuns: scope.trackRuns && soloTrackRuns({ trackRuns: scope.trackRuns }),
 		ctx: {
 			...scope.ctx,
 			writer: { ...scope.ctx.writer, decide, log },
@@ -59,4 +59,13 @@ export async function executeCommand<Decision>({
 		await completeCommand({ scope, source });
 	}
 	return result;
+}
+
+function soloTrackRuns({ trackRuns }: { trackRuns: TrackRuns }): TrackRuns {
+	async function track(track: SyncTrack) {
+		const decided = await trackRuns.decideInTurn(track);
+		const committed = (await decided.waitForCommit()) as CommittedMutation;
+		return track.answer({ committed, runState: null });
+	}
+	return { ...trackRuns, track };
 }

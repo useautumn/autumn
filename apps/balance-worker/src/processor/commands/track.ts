@@ -68,16 +68,14 @@ function decideTrackAlone({
 	});
 }
 
-/** Every track, sync or queued, deducts here, in its subject's arrival order: a sync track joins its subject's run. */
-export async function decideTrack({
+/** A track's submission and lone decision, built once: a retry or a run never rebuilds them. */
+function trackDecisionOf({
 	scope,
 	command,
-	joinsRun = false,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
-	joinsRun?: boolean;
-}): Promise<DecidedTrack> {
+}) {
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});
@@ -92,18 +90,28 @@ export async function decideTrack({
 	function decideAlone(): Promise<DecidedMutation<never>> {
 		return decideTrackAlone({ scope, command, customerKey, submission });
 	}
+	return { decidedAgainst, submission, decideAlone };
+}
+
+/** Every queued track deducts here, in its subject's turn: serialized by the partition writer. */
+export async function decideTrack({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+}): Promise<DecidedTrack> {
+	const { decidedAgainst, submission, decideAlone } = trackDecisionOf({
+		scope,
+		command,
+	});
 	const decided = scope.trackRuns
-		? await scope.trackRuns.submit({
-				command,
-				submission,
-				decideAlone,
-				solo: !joinsRun,
-			})
+		? await scope.trackRuns.decideInTurn({ command, submission, decideAlone })
 		: await decideAlone();
 	return { ...decided, decidedAgainst };
 }
 
-/** Sync: decide, then answer once the deduction is committed. */
+/** Sync: decided in its subject's run, answered once the deduction is committed. */
 export async function track({
 	scope,
 	command,
@@ -111,13 +119,34 @@ export async function track({
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
 }): Promise<TrackReply> {
-	const decided = await decideTrack({ scope, command, joinsRun: true });
-	const committed = await decided.waitForCommit();
-	return toTrackReply({
+	const { decidedAgainst, submission, decideAlone } = trackDecisionOf({
 		scope,
 		command,
+	});
+	function answer({
 		committed,
-		decidedAgainst: decided.decidedAgainst,
+		runState,
+	}: {
+		committed: CommittedMutation;
+		runState: SubjectState | null;
+	}): TrackReply {
+		const sharesRunSnapshot =
+			scope.ctx.config.sharesRunSnapshot === true && runState !== null;
+		return toTrackReply({
+			scope,
+			command,
+			committed: sharesRunSnapshot
+				? { ...committed, state: runState }
+				: committed,
+			decidedAgainst,
+		});
+	}
+	if (scope.trackRuns)
+		return scope.trackRuns.track({ command, submission, decideAlone, answer });
+	const decided = await decideAlone();
+	return answer({
+		committed: (await decided.waitForCommit()) as CommittedMutation,
+		runState: null,
 	});
 }
 
