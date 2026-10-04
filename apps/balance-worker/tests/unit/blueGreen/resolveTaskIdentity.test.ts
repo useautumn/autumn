@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../../../src/blueGreen/resolveTaskIdentity.js";
 
 const metadataUri = "http://169.254.170.2/v4/abc";
@@ -88,6 +89,33 @@ describe("ECS task identity", () => {
 		expect(harness.calls).toHaveLength(5);
 		expect(harness.waits).toEqual([500, 1_000, 2_000, 4_000]);
 		expect(harness.warnings).toHaveLength(4);
+	});
+
+	test("on ECS-EC2 the bare cluster name takes region and account from the task ARN, giving the same service ARN and fleet", async () => {
+		const ec2Cluster = "fc-balance-workers-ec2-dyl-xr2l4";
+		const harness = createHarness({
+			responses: [
+				Response.json({
+					Cluster: ec2Cluster,
+					ServiceName: ec2Cluster,
+					TaskARN: `arn:aws:ecs:us-east-1:001092881874:task/${ec2Cluster}/dfcd49e9a0074c7f8774ac6cbc55d11d`,
+				}),
+			],
+		});
+		const identity = await resolveTaskIdentity({
+			ctx: {
+				logger: harness.logger,
+				fetch: harness.fetch,
+				sleep: harness.sleep,
+			},
+			env: { ECS_CONTAINER_METADATA_URI_V4: metadataUri },
+		});
+		expect(identity.serviceArn).toBe(
+			`arn:aws:ecs:us-east-1:001092881874:service/${ec2Cluster}/${ec2Cluster}`,
+		);
+		expect(fleetIdOf({ serviceArn: identity.serviceArn as string })).toBe(
+			"4a70cfdc",
+		);
 	});
 
 	test("metadata without a parseable cluster ARN is not retried, and refuses to start", async () => {
