@@ -6,7 +6,6 @@ import {
 	type MutationEffect,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
-	slimSubjectForFeatures,
 	type TrackCommand,
 	trackCommandToDeductionRequest,
 	type WorkerFullSubject,
@@ -18,6 +17,7 @@ import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
 import { shouldDecideEffects } from "../effects/shouldDecideEffects.js";
+import { slimReplySubject } from "../replies/slimReplySubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type {
 	CommittedMutation,
@@ -103,10 +103,10 @@ function toTrackReply({
 	return {
 		result: mutation.result,
 		changes: mutation.changes,
-		...slimSubjectForFeatures({
+		...slimReplySubject({
 			state,
 			catalog,
-			featureIds: [command.featureId],
+			featureId: command.featureId,
 		}),
 		effects: decidedAgainst.effects ?? [],
 	};
