@@ -2,7 +2,11 @@
  * A request crossing from an HTTP worker to the decide thread:
  * `[u32 reqId][u32 metaLength][meta json][body]`, meta = { method, path, headers }.
  */
-import type { RingFrame, RingReader, RingWriter } from "../../../threads/ring/types/ring.js";
+import type {
+	RingFrame,
+	RingReader,
+	RingWriter,
+} from "../../../threads/ring/types/ring.js";
 
 export const REQUEST_FRAME = 1;
 const HEADER_BYTES = 8;
@@ -16,7 +20,11 @@ export type RequestMeta = {
 	headers: [string, string][];
 };
 
-export type RequestFrame = { reqId: number; meta: RequestMeta; body: Uint8Array };
+export type RequestFrame = {
+	reqId: number;
+	meta: RequestMeta;
+	body: Uint8Array;
+};
 
 /** The most ring bytes the request can take: a UTF-16 unit of meta encodes to at most three bytes. */
 export const requestFrameMaxLength = ({
@@ -64,7 +72,9 @@ export const readRequestFrame = ({
 	const reqId = reader.view.getUint32(frame.offset, true);
 	const metaLength = reader.view.getUint32(frame.offset + 4, true);
 	const meta = JSON.parse(
-		decoder.decode(frame.bytes.subarray(HEADER_BYTES, HEADER_BYTES + metaLength)),
+		decoder.decode(
+			frame.bytes.subarray(HEADER_BYTES, HEADER_BYTES + metaLength),
+		),
 	) as RequestMeta;
 	return { reqId, meta, body: frame.bytes.slice(HEADER_BYTES + metaLength) };
 };

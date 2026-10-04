@@ -5,5 +5,8 @@ export type RingSignal = {
 	wake(): boolean;
 	/** `hasWork` is re-checked after declaring sleep: a publish in between either shows there or finds the
 	 *  reader asleep and wakes it. Resolves false on timeout. */
-	sleep(params: { hasWork: () => boolean; timeoutMs: number }): Promise<boolean>;
+	sleep(params: {
+		hasWork: () => boolean;
+		timeoutMs: number;
+	}): Promise<boolean>;
 };

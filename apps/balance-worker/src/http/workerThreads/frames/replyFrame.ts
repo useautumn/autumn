@@ -2,7 +2,11 @@
  * A reply crossing from the decide thread back to the HTTP worker that holds the connection:
  * `[u32 reqId][u16 status][u32 metaLength][meta json][body]`, meta = { headers }.
  */
-import type { RingFrame, RingReader, RingWriter } from "../../../threads/ring/types/ring.js";
+import type {
+	RingFrame,
+	RingReader,
+	RingWriter,
+} from "../../../threads/ring/types/ring.js";
 
 export const REPLY_FRAME = 2;
 const HEADER_BYTES = 10;
@@ -65,7 +69,9 @@ export const readReplyFrame = ({
 	const status = reader.view.getUint16(frame.offset + 4, true);
 	const metaLength = reader.view.getUint32(frame.offset + 6, true);
 	const { headers } = JSON.parse(
-		decoder.decode(frame.bytes.subarray(HEADER_BYTES, HEADER_BYTES + metaLength)),
+		decoder.decode(
+			frame.bytes.subarray(HEADER_BYTES, HEADER_BYTES + metaLength),
+		),
 	) as { headers: [string, string][] };
 	return {
 		reqId,
