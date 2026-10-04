@@ -7,6 +7,14 @@ import type { Ring, RingFrame, RingReader, RingWriter } from "./types/ring.js";
 import type { RingSignal } from "./types/ringSignal.js";
 
 const HEADER_BYTES = 64;
+type WaitAsync = (
+	cells: Int32Array,
+	index: number,
+	value: number,
+	timeout?: number,
+) => { async: boolean; value: Promise<string> | string };
+// Bun implements Atomics.waitAsync; the repo's TS lib predates it.
+const waitAsync = (Atomics as unknown as { waitAsync: WaitAsync }).waitAsync;
 const TAIL = 0;
 const HEAD = 1;
 const PADDING = 0xffffffff;
@@ -73,6 +81,22 @@ export const createRingWriter = ({
 		claimedAt = -1;
 	}
 
+	/** Resolves once the reader has freed `maxLength` payload bytes; the reader's release wakes it. */
+	async function waitForRoom({
+		maxLength,
+	}: {
+		maxLength: number;
+	}): Promise<void> {
+		const needed = 2 * (FRAME_HEADER_BYTES + maxLength);
+		for (;;) {
+			const head = Atomics.load(header, HEAD);
+			cachedHead = head >>> 0;
+			if (capacity - ((tail - cachedHead) >>> 0) >= needed) return;
+			const waited = waitAsync(header, HEAD, head);
+			if (waited.async) await waited.value;
+		}
+	}
+
 	function flush(): boolean {
 		Atomics.store(header, TAIL, tail | 0);
 		return signal.wake();
@@ -100,6 +124,7 @@ export const createRingWriter = ({
 		publish,
 		flush,
 		write,
+		waitForRoom,
 	};
 };
 
@@ -147,6 +172,7 @@ export const createRingReader = ({ ring }: { ring: Ring }): RingReader => {
 
 	function release(): void {
 		Atomics.store(header, HEAD, head | 0);
+		Atomics.notify(header, HEAD);
 	}
 
 	return { bytes, view, hasWork, next, advance, release };
