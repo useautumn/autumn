@@ -4,6 +4,26 @@ import { createServerCpuSampler } from "../../src/profiling/serverCpu/createServ
 import type { ServerCpuBackend } from "../../src/profiling/serverCpu/types/serverCpuProfile.js";
 
 describe("server CPU sampler", () => {
+	test("profiler failures cannot escape telemetry or retry on the hot path", async () => {
+		let attempts = 0;
+		const sampler = createServerCpuSampler({
+			bucket: "autumn-staging",
+			bound: true,
+			backend: {
+				readThreadCpuNs: () => 0,
+				readProcessCpuUs: () => 0,
+				now: () => 0,
+				capture: () => {
+					attempts++;
+					throw new Error("profiler failed");
+				},
+			},
+		});
+		expect(() => sampler.startWindow()).not.toThrow();
+		expect(await sampler.finishWindow()).toBeNull();
+		sampler.startWindow();
+		expect(attempts).toBe(1);
+	});
 	for (const [bucket, bound] of [
 		["autumn", true],
 		["autumn-staging", false],
