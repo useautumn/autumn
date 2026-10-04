@@ -2,7 +2,11 @@ import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TaskIdentity } from "./types/taskIdentity.js";
 
-type TaskMetadata = { ServiceName?: string; Cluster?: string };
+type TaskMetadata = {
+	ServiceName?: string;
+	Cluster?: string;
+	TaskARN?: string;
+};
 type MetadataFetch = (
 	url: string,
 	init: { signal: AbortSignal },
@@ -12,17 +16,25 @@ const METADATA_ATTEMPTS = 5;
 const METADATA_FIRST_BACKOFF_MS = 500;
 const METADATA_TIMEOUT_MS = 2_000;
 
-/** arn:aws:ecs:<region>:<account>:cluster/<cluster> + a service name → the service ARN. */
+/** Fargate reports Cluster as an ARN, ECS-EC2 as a bare name; the task ARN carries region and account either way. */
 function serviceArnOf({
-	clusterArn,
+	cluster,
+	taskArn,
 	serviceName,
 }: {
-	clusterArn: string;
+	cluster: string;
+	taskArn: string | undefined;
 	serviceName: string;
 }): string | null {
-	const match = clusterArn.match(/^arn:aws:ecs:([^:]+):([^:]+):cluster\/(.+)$/);
-	if (!match) return null;
-	const [, region, accountId, clusterName] = match;
+	const clusterArn = cluster.match(
+		/^arn:aws:ecs:([^:]+):([^:]+):cluster\/(.+)$/,
+	);
+	const taskOwner = taskArn?.match(/^arn:aws:ecs:([^:]+):([^:]+):task\//);
+	const [region, accountId] =
+		clusterArn?.slice(1, 3) ?? taskOwner?.slice(1, 3) ?? [];
+	const clusterName = clusterArn ? clusterArn[3] : cluster;
+	if (!region || !accountId || !clusterName || clusterName.includes(":"))
+		return null;
 	return `arn:aws:ecs:${region}:${accountId}:service/${clusterName}/${serviceName}`;
 }
 
@@ -93,7 +105,8 @@ export async function resolveTaskIdentity({
 		typeof metadata.ServiceName === "string" &&
 		typeof metadata.Cluster === "string"
 			? serviceArnOf({
-					clusterArn: metadata.Cluster,
+					cluster: metadata.Cluster,
+					taskArn: metadata.TaskARN,
 					serviceName: metadata.ServiceName,
 				})
 			: null;
