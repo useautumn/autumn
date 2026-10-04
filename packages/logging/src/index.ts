@@ -34,6 +34,15 @@ export {
 	type GuardLogPayloadOptions,
 	guardLogPayload,
 } from "./payload/guardLogPayload.js";
+export {
+	createServerCpuSampler,
+	serverCpuTelemetryAllowed,
+} from "./profiling/serverCpu/createServerCpuSampler.js";
+export type {
+	ServerCpuBackend,
+	ServerCpuSampler,
+	ServerCpuWindow,
+} from "./profiling/serverCpu/types/serverCpuProfile.js";
 export type {
 	AutumnLogger,
 	ConsoleLogger,

@@ -4,6 +4,8 @@ await import("./sentry.js");
 import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
+import { stagingVariantsEnabled } from "@autumn/edge-config";
+import { resolveServerForkConfig } from "@autumn/env";
 import { flushErrorReports } from "@autumn/errors";
 import { getRequestListener } from "@hono/node-server";
 import {
@@ -23,6 +25,7 @@ import {
 	startReplicaRoutingProber,
 	stopReplicaRoutingProber,
 } from "./db/replicaRoutingState.js";
+import { getAdminS3Config } from "./external/aws/s3/adminS3Config.js";
 import {
 	startBalanceShadow,
 	stopBalanceShadow,
@@ -92,6 +95,7 @@ import {
 	startMemorySpikeProbe,
 	stopMemorySpikeProbe,
 } from "./utils/memory/memorySpikeProbe.js";
+import { getServerCpuSampler } from "./utils/memory/phaseCpu/getServerCpuSampler.js";
 import { startServerEventLoopMonitor } from "./utils/memory/serverEventLoopMonitor.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
@@ -141,6 +145,7 @@ const init = async ({
 
 	await startAllEdgeConfigPolling({ logger });
 	await startStagingVariants({ logger });
+	const phaseCpuSampler = await getServerCpuSampler();
 	// Ownership discovery must not gate the HTTP listener: start() waits for the
 	// initial catch-up, and the load balancer kills the task long before a slow or
 	// failing Kafka connect finishes. Routing refreshes on its own afterwards.
@@ -201,7 +206,7 @@ const init = async ({
 				`Server running on port ${PORT} (${startupDurationMs}ms startup)`,
 			);
 			startMemoryMonitor("server", 60_000);
-			startServerEventLoopMonitor();
+			startServerEventLoopMonitor({ phaseCpuSampler });
 			startMemorySpikeProbe({ label: "server" });
 			resolve();
 		});
@@ -222,6 +227,12 @@ if (process.env.NODE_ENV === "development") {
 		console.log("Number of CPUs", numCPUs);
 
 		const numWorkers = getServerForkCount();
+		if (stagingVariantsEnabled({ bucket: getAdminS3Config().bucket })) {
+			logger.info("Server forks at boot", {
+				event: "server.forks.boot",
+				data: resolveServerForkConfig({ value: process.env.SERVER_FORK_COUNT }),
+			});
+		}
 		console.log(`Forking ${numWorkers} workers`);
 
 		for (let i = 0; i < numWorkers; i++) {

@@ -26,6 +26,10 @@ type Snapshot = { windowIndex: number; arms: LiveArms | null };
 let binding: Binding | null = null;
 let snapshot: Snapshot | null = null;
 
+export function stagingVariantsBound(): boolean {
+	return binding !== null;
+}
+
 /**
  * FNV-1a with murmur3's finalizer: raw FNV's low bits are a parity of the input's low bits,
  * so `% 2` nearly alternates as the window index counts up and two experiments' arms coincide.

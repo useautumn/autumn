@@ -2,8 +2,12 @@ import { cpus } from "node:os";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import {
 	STAGING_VARIANT_WINDOW_MS,
-	stagingVariantsEnabled,
+	stagingVariantsBound,
 } from "@autumn/edge-config";
+import {
+	type ServerCpuSampler,
+	serverCpuTelemetryAllowed,
+} from "@autumn/logging";
 import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { drainFinishedRequestCount } from "./inFlightRequests.js";
@@ -61,10 +65,12 @@ export const summarizeServerEventLoopWindow = ({
 /** Staging admin bucket only; returns whether the emitter started. */
 export const startServerEventLoopMonitor = ({
 	bucket = getAdminS3Config().bucket,
+	phaseCpuSampler,
 }: {
 	bucket?: string;
+	phaseCpuSampler?: ServerCpuSampler;
 } = {}): { started: boolean; stop: () => void } => {
-	if (!stagingVariantsEnabled({ bucket })) {
+	if (!serverCpuTelemetryAllowed({ bucket, bound: stagingVariantsBound() })) {
 		return { started: false, stop: () => {} };
 	}
 
@@ -74,9 +80,11 @@ export const startServerEventLoopMonitor = ({
 	let previousCpu = process.cpuUsage();
 	let windowStartedAt = performance.now();
 	let timer: ReturnType<typeof setTimeout> | undefined;
+	let stopped = false;
 	drainFinishedRequestCount();
+	phaseCpuSampler?.startWindow();
 
-	const report = () => {
+	const report = async () => {
 		try {
 			const currentCpu = process.cpuUsage();
 			const now = performance.now();
@@ -93,10 +101,17 @@ export const startServerEventLoopMonitor = ({
 			lag.reset();
 			previousCpu = currentCpu;
 			windowStartedAt = now;
-			logger.info("Server event loop", { event: "server.event_loop", data });
+			const cpuPhases = (await phaseCpuSampler?.finishWindow()) ?? null;
+			if (stopped) return;
+			logger.info("Server event loop", {
+				event: "server.event_loop",
+				data: { ...data, cpuPhases },
+			});
 		} catch {
 			// Telemetry must never disturb the process it is measuring.
 		}
+		if (stopped) return;
+		phaseCpuSampler?.startWindow();
 		scheduleNext();
 	};
 
@@ -112,8 +127,10 @@ export const startServerEventLoopMonitor = ({
 	return {
 		started: true,
 		stop: () => {
+			stopped = true;
 			clearTimeout(timer);
 			lag.disable();
+			void phaseCpuSampler?.finishWindow().catch(() => {});
 		},
 	};
 };

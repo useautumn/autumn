@@ -39,6 +39,7 @@ export {
 	STAGING_VARIANT_WINDOW_MS,
 	STAGING_VARIANTS_BUCKET,
 	type StagingArm,
+	stagingVariantsBound,
 	stagingVariantsEnabled,
 	variant,
 	variants,
