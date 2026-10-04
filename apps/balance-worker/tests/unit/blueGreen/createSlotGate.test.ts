@@ -69,7 +69,10 @@ describe("the worker's active slot store", () => {
 		};
 		const edgeConfigs = createWorkerEdgeConfigs({
 			ctx: { s3Client },
-			config: { location: { bucket: "test", region: "us-east-2" } },
+			config: {
+				location: { bucket: "test", region: "us-east-2" },
+				pollStagingVariants: false,
+			},
 		});
 		await edgeConfigs.activeSlot.writeToSource({
 			config: record({ flightcontrolBlueArn: theirs }),

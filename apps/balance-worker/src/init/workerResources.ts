@@ -134,7 +134,10 @@ export async function openWorkerResources({
 				logger: dependencies.logger,
 				s3Client: dependencies.edgeConfigS3Client,
 			},
-			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
+			config: {
+				location: { bucket: env.S3_BUCKET, region: env.S3_REGION },
+				pollStagingVariants: env.BALANCE_WORKER_STAGING_VARIANTS,
+			},
 		});
 		function readCommitterControl() {
 			return edgeConfigs.dbControl.get().balanceCommitter;

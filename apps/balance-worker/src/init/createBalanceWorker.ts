@@ -95,7 +95,7 @@ export async function createBalanceWorker({
 			checkpointSource: dependencies.checkpointSource,
 		},
 	});
-	if (resources.edgeConfigs)
+	if (resources.edgeConfigs && env.BALANCE_WORKER_STAGING_VARIANTS)
 		bindStagingVariants({
 			read: resources.edgeConfigs.stagingVariants.get,
 			identity: address.endpoint,

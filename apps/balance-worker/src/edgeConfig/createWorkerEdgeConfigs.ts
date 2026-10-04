@@ -36,7 +36,7 @@ export const createWorkerEdgeConfigs = ({
 	config,
 }: {
 	ctx: { logger?: EdgeConfigLogger; s3Client?: EdgeConfigS3Client };
-	config: { location: EdgeConfigLocation };
+	config: { location: EdgeConfigLocation; pollStagingVariants: boolean };
 }): WorkerEdgeConfigs => {
 	const s3Client =
 		ctx.s3Client ??
@@ -76,7 +76,8 @@ export const createWorkerEdgeConfigs = ({
 	async function start(): Promise<void> {
 		await registry.start({ logger: ctx.logger });
 		await activeSlot.startPolling({ logger: ctx.logger });
-		await stagingVariants.startPolling({ logger: ctx.logger });
+		if (config.pollStagingVariants)
+			await stagingVariants.startPolling({ logger: ctx.logger });
 	}
 
 	function stop(): void {
