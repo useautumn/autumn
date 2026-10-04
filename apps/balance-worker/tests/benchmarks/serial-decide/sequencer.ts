@@ -13,6 +13,7 @@
 import type { WorkerErrorResponse } from "@autumn/balance-worker-client/protocol";
 import {
 	encodeDecisionInto,
+	METERING_ENVELOPE,
 	maxDecisionBytes,
 	type SplitMeteringRecord,
 } from "@autumn/kafka";
@@ -60,6 +61,8 @@ export type RecordAppender = {
 	emit(params: { key: Buffer; value: Buffer }): number;
 	/** Seq for a record whose key and value are encoded straight into the ring (no Buffers). */
 	emitText(params: { key: string; value: string }): number;
+	/** Seq for a record laid down as envelope head + payload JSON + tail, with no concatenation. */
+	emitEnveloped(params: { key: string; payloadJson: string }): number;
 	/** Seq for a record emitted as its decision plus the command's own bytes; the Kafka worker joins them. */
 	emitSplit(params: {
 		split: SplitMeteringRecord;
@@ -86,6 +89,12 @@ export type Report = (message: Record<string, unknown>) => void;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const ENVELOPE_HEAD_BYTES = encoder.encode(METERING_ENVELOPE.head);
+const ENVELOPE_TAIL_BYTE = METERING_ENVELOPE.tail.charCodeAt(0);
+/** DIET bits the sequencer itself acts on: 1 splice (off under 8), 32 plumbing allocation cuts (see coreLean). */
+const DIET = Number(process.env.DIET ?? 62);
+const spliceOn = (DIET & 1) !== 0 && (DIET & 8) === 0;
+const leanAlloc = (DIET & 32) !== 0;
 
 export async function start(
 	init: SequencerInit,
@@ -94,6 +103,13 @@ export async function start(
 	const cpus = pinFromEnv({ role: "sequencer" });
 	const bell = new Doorbell(init.sequencerBell);
 	const commands = init.commandRings.map((layout) => new RingConsumer(layout));
+	const ringBuffers = commands.map((ring) =>
+		Buffer.from(
+			ring.payload.buffer,
+			ring.payload.byteOffset,
+			ring.payload.length,
+		),
+	);
 	const results = init.resultRings.map(
 		(layout, index) =>
 			new RingProducer(
@@ -171,6 +187,43 @@ export async function start(
 		seq = next;
 		return next;
 	}
+	function writeEnvelopedRecord({
+		key,
+		payloadJson,
+	}: {
+		key: string;
+		payloadJson: string;
+	}): number {
+		const next = seq + 1;
+		const maxLength =
+			REC_HEADER +
+			3 * (key.length + payloadJson.length) +
+			ENVELOPE_HEAD_BYTES.length +
+			1;
+		const at = records.claim({ type: FRAME.REC, maxLength });
+		if (at < 0) {
+			stats.recordRingFull++;
+			throw new Error("record ring full");
+		}
+		const payload = records.payload;
+		const keyLength = encoder.encodeInto(
+			key,
+			payload.subarray(at + REC_HEADER, at + maxLength),
+		).written;
+		let cursor = at + REC_HEADER + keyLength;
+		payload.set(ENVELOPE_HEAD_BYTES, cursor);
+		cursor += ENVELOPE_HEAD_BYTES.length;
+		cursor += encoder.encodeInto(
+			payloadJson,
+			payload.subarray(cursor, at + maxLength),
+		).written;
+		payload[cursor++] = ENVELOPE_TAIL_BYTE;
+		records.payloadView.setUint32(at, next, true);
+		records.payloadView.setUint32(at + 4, keyLength, true);
+		records.publish({ length: cursor - at });
+		seq = next;
+		return next;
+	}
 	function writeSplitRecord({
 		split,
 		commandBytes,
@@ -204,6 +257,7 @@ export async function start(
 	const appender: RecordAppender = {
 		emit: writeRecord,
 		emitText: writeTextRecord,
+		emitEnveloped: writeEnvelopedRecord,
 		emitSplit: writeSplitRecord,
 		append({ records: batch }) {
 			let last = 0;
@@ -333,11 +387,18 @@ export async function start(
 			const budgetMs = view.getUint32(frame.offset + 5, true);
 			const commandAt = view.getUint32(frame.offset + 9, true);
 			const decodeStart = Bun.nanoseconds();
-			const text = decoder.decode(frame.bytes.subarray(CMD_HEADER));
+			// Lean: no view object per command; the ring's Buffer decodes a range in place.
+			const text = leanAlloc
+				? (ringBuffers[io] as Buffer).toString(
+						"utf8",
+						frame.offset + CMD_HEADER,
+						frame.offset + frame.length,
+					)
+				: decoder.decode(frame.bytes.subarray(CMD_HEADER));
 			decodeNs += Bun.nanoseconds() - decodeStart;
 			// The slot is not reused before `release`, so the alias outlives a synchronous decide.
 			const commandBytes =
-				commandAt > 0
+				spliceOn && commandAt > 0
 					? frame.bytes.subarray(CMD_HEADER + commandAt, frame.length - 1)
 					: null;
 			ring.advance();

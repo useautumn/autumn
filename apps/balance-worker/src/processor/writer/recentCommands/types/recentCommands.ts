@@ -5,6 +5,9 @@ export type RememberedCommand = { fingerprint: string };
 
 export type CommandAddress = { identity: MeteringIdentity; commandId: string };
 
+/** Unseen inside the window, seen with this fingerprint (a retry), or seen with another (a conflict). */
+export type CommandRecall = "unknown" | "same" | "different";
+
 /**
  * One partition's memory of the commands that landed, kept for one to two windows.
  * The writer's commits and the records replayed from the log both feed it.
@@ -12,13 +15,18 @@ export type CommandAddress = { identity: MeteringIdentity; commandId: string };
  */
 export type RecentCommands = {
 	keyOf(params: CommandAddress): string;
+	recall(params: { key: string; fingerprint: string }): CommandRecall;
 	remember(
 		params: { mutation: MutationRecord } | { key: string; fingerprint: string },
 	): void;
-	/** A settled batch under one clock read. */
+	/** A settled batch under one clock read: commands that were recalled unknown when decided. */
 	rememberAll(params: {
 		commands: Iterable<{ key: string; fingerprint: string }>;
 	}): void;
-	read(params: CommandAddress | { key: string }): RememberedCommand | null;
 	size(): number;
+};
+
+/** The map-backed memory also hands back the fingerprint it holds. */
+export type ReadableRecentCommands = RecentCommands & {
+	read(params: CommandAddress | { key: string }): RememberedCommand | null;
 };

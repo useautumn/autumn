@@ -181,11 +181,11 @@ function decideOn<Reply>({
 		};
 	}
 	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
-	const remembered = ctx.recentCommands.read({ identity, commandId });
-	if (remembered) {
-		assertSameRequest({ commandId, fingerprint, record: remembered });
+	const recalled = ctx.recentCommands.recall({ key: pendingKey, fingerprint });
+	if (recalled === "different")
+		throw new PartitionWriterCommandConflictError({ commandId });
+	if (recalled === "same")
 		throw new PartitionWriterDuplicateCommandError({ commandId });
-	}
 
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")

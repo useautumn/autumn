@@ -24,6 +24,7 @@ import type {
 	WorkerErrorResponse,
 } from "@autumn/balance-worker-client/protocol";
 import {
+	meteringPayloadJson,
 	meteringRecordJson,
 	serializeMeteringRecord,
 	splitMeteringRecord,
@@ -59,7 +60,9 @@ import {
 } from "../../../src/processor/writer/pendingMutations.js";
 import { commandToFingerprint } from "../../../src/processor/writer/receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../../../src/processor/writer/receipt/mutationToRecord.js";
+import { createHashedRecentCommands } from "../../../src/processor/writer/recentCommands/createHashedRecentCommands.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import type { ReadableRecentCommands } from "../../../src/processor/writer/recentCommands/types/recentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
 import {
 	PartitionWriterCapacityError,
@@ -93,14 +96,18 @@ const LIMITS = {
 const INVALID = JSON.stringify({
 	error: { code: "INVALID_REQUEST", message: "Invalid request" },
 } satisfies WorkerErrorResponse);
-/** The sequencer cuts, as bits of DIET (default: all): 1 record splice, 2 dedup by pending key, 4 batched ack-time
- *  forget, 8 encode the record once as text straight into the ring (no per-object cache, no Buffers; overrides 1). */
-const DIET = Number(process.env.DIET ?? 7);
+/** The sequencer cuts, as bits of DIET (default 62 = 2+4+8+16+32): 1 record splice, 2 dedup by pending key, 4 batched ack-time
+ *  forget, 8 encode the record once as text straight into the ring (no per-object cache, no Buffers; overrides 1),
+ *  16 the dedup window as typed-array hash tables instead of a Map (implies 2), 32 plumbing allocation cuts
+ *  (no view or key-list objects per command, the record laid down as head + payload + tail without a rope). */
+const DIET = Number(process.env.DIET ?? 62);
 const diet = {
 	splice: (DIET & 1) !== 0 && (DIET & 8) === 0,
-	dedupKey: (DIET & 2) !== 0,
+	dedupKey: (DIET & 2) !== 0 || (DIET & 16) !== 0,
 	batchedForget: (DIET & 4) !== 0,
 	encodeOnce: (DIET & 8) !== 0,
+	hashedDedup: (DIET & 16) !== 0,
+	leanAlloc: (DIET & 32) !== 0,
 };
 
 /** A decided, not yet acknowledged, record: what the ack needs to finish (dedup window, pins) and what a duplicate re-reads. */
@@ -163,10 +170,13 @@ export async function createLeanCore({
 	});
 	const db = createSyntheticWorkerDb();
 	const receiptPolicy = { retentionMs: 86_400_000, now: () => Date.now() };
-	const recentCommands = createRecentCommands({
+	const dedupWindow = {
 		windowMs: Number(process.env.SPIKE_DEDUP_WINDOW_MS ?? 600_000),
 		now: () => Date.now(),
-	});
+	};
+	const recentCommands = diet.hashedDedup
+		? createHashedRecentCommands({ ...dedupWindow, expectedCommands: 1 << 17 })
+		: createRecentCommands(dedupWindow);
 	const subjectDecisions = createSubjectDecisions();
 	const fullStateStore = {
 		...stateStore,
@@ -302,13 +312,22 @@ export async function createLeanCore({
 			stats.duplicates++;
 			return { status: 200, body: dup.body, seq: dup.seq };
 		}
-		const remembered = diet.dedupKey
-			? recentCommands.read({ key: pendingKey })
-			: recentCommands.read({ identity, commandId });
-		if (remembered) {
-			if (remembered.fingerprint !== fingerprint)
+		if (diet.dedupKey) {
+			const recalled = recentCommands.recall({ key: pendingKey, fingerprint });
+			if (recalled === "different")
 				throw new PartitionWriterCommandConflictError({ commandId });
-			throw new PartitionWriterDuplicateCommandError({ commandId });
+			if (recalled === "same")
+				throw new PartitionWriterDuplicateCommandError({ commandId });
+		} else {
+			const remembered = (recentCommands as ReadableRecentCommands).read({
+				identity,
+				commandId,
+			});
+			if (remembered) {
+				if (remembered.fingerprint !== fingerprint)
+					throw new PartitionWriterCommandConflictError({ commandId });
+				throw new PartitionWriterDuplicateCommandError({ commandId });
+			}
 		}
 		let perCustomer = inFlightPerCustomer.get(customerKey) ?? 0;
 		if (
@@ -374,6 +393,11 @@ export async function createLeanCore({
 					partitionKey: customerKey,
 				}),
 				commandBytes,
+			});
+		else if (diet.encodeOnce && diet.leanAlloc)
+			seq = appender.emitEnveloped({
+				key: customerKey,
+				payloadJson: meteringPayloadJson({ record: logged }),
 			});
 		else if (diet.encodeOnce)
 			seq = appender.emitText({
@@ -457,7 +481,10 @@ export async function createLeanCore({
 		const input = parsed?.command;
 		// The I/O worker sliced `{"route":{...},"command":{...}}`; a third member would make its slice wrong.
 		const commandBytes =
-			command.commandBytes && parsed && Object.keys(parsed).length === 2
+			diet.splice &&
+			command.commandBytes &&
+			parsed &&
+			Object.keys(parsed).length === 2
 				? command.commandBytes
 				: null;
 		phase.parse += now() - t;

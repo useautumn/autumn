@@ -16,6 +16,19 @@ const DECISION_HEADER = 6;
 const ENVELOPE_HEAD = '{"schemaVersion":1,"type":"mutation","payload":';
 const encoder = new TextEncoder();
 
+/** The envelope around a metering payload, for a writer that lays the three pieces down itself. */
+export const METERING_ENVELOPE = { head: ENVELOPE_HEAD, tail: "}" } as const;
+
+/** The payload JSON `serializeMeteringRecord` wraps in the envelope. */
+export function meteringPayloadJson({
+	record,
+}: {
+	record: MeteringRecord;
+}): string {
+	if (record.type !== "mutation") throw new InvalidRecordError();
+	return JSON.stringify(record);
+}
+
 export type SplitMeteringRecord = { key: string; head: string; tail: string };
 
 /** The record's value as `serializeMeteringRecord` encodes it, as text and without its per-object cache. */
@@ -24,8 +37,7 @@ export function meteringRecordJson({
 }: {
 	record: MeteringRecord;
 }): string {
-	if (record.type !== "mutation") throw new InvalidRecordError();
-	return `${ENVELOPE_HEAD}${JSON.stringify(record)}}`;
+	return `${ENVELOPE_HEAD}${meteringPayloadJson({ record })}}`;
 }
 
 /** The key and the record's JSON on each side of its command, as strings. */

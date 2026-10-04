@@ -1,6 +1,8 @@
 import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type {
 	CommandAddress,
+	CommandRecall,
+	ReadableRecentCommands,
 	RecentCommands,
 	RememberedCommand,
 } from "./types/recentCommands.js";
@@ -40,7 +42,7 @@ export const createRecentCommands = ({
 }: {
 	windowMs: number;
 	now(): number;
-}): RecentCommands => {
+}): ReadableRecentCommands => {
 	const generations: Generations = {
 		current: new Map(),
 		previous: new Map(),
@@ -75,7 +77,7 @@ export const createRecentCommands = ({
 	};
 
 	const read = (
-		params: Parameters<RecentCommands["read"]>[0],
+		params: Parameters<ReadableRecentCommands["read"]>[0],
 	): RememberedCommand | null => {
 		rotateGenerations({ generations, windowMs, now: now() });
 		const commandKey = "key" in params ? params.key : commandKeyOf(params);
@@ -86,7 +88,19 @@ export const createRecentCommands = ({
 		);
 	};
 
+	const recall = ({
+		key,
+		fingerprint,
+	}: {
+		key: string;
+		fingerprint: string;
+	}): CommandRecall => {
+		const remembered = read({ key });
+		if (!remembered) return "unknown";
+		return remembered.fingerprint === fingerprint ? "same" : "different";
+	};
+
 	const size = () => generations.current.size + generations.previous.size;
 
-	return { keyOf: commandKeyOf, remember, rememberAll, read, size };
+	return { keyOf: commandKeyOf, recall, remember, rememberAll, read, size };
 };
