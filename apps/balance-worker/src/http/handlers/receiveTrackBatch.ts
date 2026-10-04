@@ -8,6 +8,7 @@ import {
 } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { serializeTrackBatchReply } from "../../processor/replies/serializeSubjectReply.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import { readJsonRequestBody } from "../middlewares/requestValidationMiddleware.js";
 import {
@@ -74,7 +75,11 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 			results,
 			causes,
 		});
-		return context.json({ results } satisfies TrackBatchReply);
+		return context.body(
+			serializeTrackBatchReply({ results } satisfies TrackBatchReply),
+			200,
+			{ "content-type": "application/json" },
+		);
 	}
 	return respond;
 }

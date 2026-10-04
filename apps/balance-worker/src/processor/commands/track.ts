@@ -5,7 +5,6 @@ import {
 	type MutationEffect,
 	meteringIdentityToPartitionKey,
 	type SubjectState,
-	slimSubjectForFeatures,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
@@ -14,6 +13,7 @@ import { ensureSubjectCurrent } from "../actions/ensureSubjectCurrent/ensureSubj
 import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
+import { slimReplySubject } from "../replies/slimReplySubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type {
 	CommittedMutation,
@@ -99,10 +99,10 @@ export function toTrackReply({
 	return {
 		result: mutation.result,
 		changes: mutation.changes,
-		...slimSubjectForFeatures({
+		...slimReplySubject({
 			state,
 			catalog,
-			featureIds: [command.featureId],
+			featureId: command.featureId,
 		}),
 		effects: decidedAgainst.effects ?? [],
 	};

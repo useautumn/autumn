@@ -8,6 +8,7 @@ import {
 	type ResidentViewRefusal,
 	residentViewRefusalOf,
 } from "../actions/residentViewRefusalOf.js";
+import { serializeSubjectReply } from "../replies/serializeSubjectReply.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { HeldBlocker } from "../writer/types/partitionWriter.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
@@ -76,7 +77,7 @@ export function decideTrackHeld({
 		committed: Parameters<typeof toTrackReply>[0]["committed"],
 	): string {
 		reply = toTrackReply({ scope, command, committed, decidedAgainst });
-		return JSON.stringify(reply);
+		return serializeSubjectReply({ reply });
 	}
 	const decision = scope.ctx.writer.decideHeld<never>({
 		command,
@@ -88,6 +89,6 @@ export function decideTrackHeld({
 	});
 	if (!decision) return null;
 	if (decision.kind === "reply")
-		return { body: JSON.stringify(decision.reply), seq: 0 };
+		return { body: serializeSubjectReply({ reply: decision.reply }), seq: 0 };
 	return { body: decision.body, reply, seq: decision.seq };
 }

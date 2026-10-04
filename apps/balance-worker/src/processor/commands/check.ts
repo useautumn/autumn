@@ -2,11 +2,11 @@ import {
 	type CheckCommand,
 	checkCommandToDeductionRequest,
 	computeCheck,
-	slimSubjectForFeatures,
 } from "@autumn/balance-engine";
 import type { CheckReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { readCurrentSubject } from "../actions/readCurrentSubject.js";
+import { slimReplySubject } from "../replies/slimReplySubject.js";
 import type { Subject } from "../subject/types/subject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
@@ -43,10 +43,10 @@ export function checkReplyOf({
 			// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 			answer: ({ context }) => ({
 				result: computeCheck({ fullSubject, command, context }),
-				...slimSubjectForFeatures({
+				...slimReplySubject({
 					state,
 					catalog,
-					featureIds: [command.featureId],
+					featureId: command.featureId,
 				}),
 			}),
 		});
