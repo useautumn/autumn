@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -21,6 +21,10 @@ import type {
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { MeteringRecord } from "@autumn/kafka";
+import {
+	overrideVariant,
+	type Variant,
+} from "../../../../src/experiments/variant.js";
 import { createCustomerPlans } from "../../../../src/processor/commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
 import { track } from "../../../../src/processor/commands/track.js";
@@ -32,6 +36,10 @@ import { createSubjectDecisions } from "../../../../src/processor/subject/subjec
 import { SubjectNotFoundError } from "../../../../src/processor/subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../../src/processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../../../src/processor/types/receiptPolicy.js";
+import {
+	ADAPTIVE_COMMIT_INTERVAL_MS,
+	COALESCED_APPLY_INTERVAL_MS,
+} from "../../../../src/processor/writer/actions/commit.js";
 import { createPartitionWriter as createPartitionWriterCore } from "../../../../src/processor/writer/createPartitionWriter.js";
 import { RECORD_OVERHEAD_BYTES } from "../../../../src/processor/writer/pendingMutations.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
@@ -267,6 +275,7 @@ const defaultReceiptPolicy = {
 
 type TestWriter = {
 	waitForStore(): Promise<void>;
+	hurryStore(): void;
 	completeCommand(params: { source: { commandOffset: string } }): Promise<void>;
 	submitTrack(params: {
 		command: TrackCommand;
@@ -331,6 +340,7 @@ const createPartitionTrackWriter = ({
 	};
 	return {
 		waitForStore: () => writer.waitForApplies(),
+		hurryStore: () => writer.hurryStore(),
 		completeCommand: ({ source }) =>
 			executeCommand({ scope, source, run: async () => undefined }),
 		submitTrack: ({ command, source }) =>
@@ -2542,4 +2552,160 @@ test("a record is measured by the appender once and sent as the same object", as
 	} finally {
 		closeFixture(fixture);
 	}
+});
+
+describe("commit-pipeline arms", () => {
+	const later = (ms: number) =>
+		new Promise<void>((resolve) => setTimeout(resolve, ms));
+	const withArm = async (arm: Variant, run: () => Promise<void>) => {
+		overrideVariant(() => arm);
+		try {
+			await run();
+		} finally {
+			overrideVariant(null);
+		}
+	};
+
+	test("B: a busy partition commits at most once per interval; a quiet one still commits at once", () =>
+		withArm("B", async () => {
+			const fixture = createFixture();
+			try {
+				const appender = new RecordingCommittedAppender();
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender,
+					limits: { ...defaultLimits, commitLingerMs: 5 },
+				});
+				// The first track loads the subject; time only warm ones.
+				await writer.submitTrack({
+					command: createCommand({ commandId: "warm" }),
+				});
+				await later(ADAPTIVE_COMMIT_INTERVAL_MS + 5);
+				const quietAt = performance.now();
+				await writer.submitTrack({
+					command: createCommand({ commandId: "q_1" }),
+				});
+				expect(performance.now() - quietAt).toBeLessThan(
+					ADAPTIVE_COMMIT_INTERVAL_MS,
+				);
+				// Right behind a commit: these wait out the interval and share one commit.
+				const busyAt = performance.now();
+				const second = writer.submitTrack({
+					command: createCommand({ commandId: "b_1" }),
+				});
+				await later(5);
+				await Promise.all([
+					second,
+					writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
+				]);
+				expect(performance.now() - busyAt).toBeGreaterThanOrEqual(
+					ADAPTIVE_COMMIT_INTERVAL_MS - 8,
+				);
+				// A gap longer than the interval leaves nothing to wait for.
+				await later(ADAPTIVE_COMMIT_INTERVAL_MS + 5);
+				const afterGap = performance.now();
+				await writer.submitTrack({
+					command: createCommand({ commandId: "q_2" }),
+				});
+				expect(performance.now() - afterGap).toBeLessThan(
+					ADAPTIVE_COMMIT_INTERVAL_MS,
+				);
+				expect(appender.batches.map((batch) => batch.length)).toEqual([
+					1, 1, 2, 1,
+				]);
+			} finally {
+				closeFixture(fixture);
+			}
+		}));
+
+	test("C: commits keep their pace, while the store takes them in at most one flush per interval", () =>
+		withArm("C", async () => {
+			const fixture = createFixture();
+			const applies = spyOn(fixture.store, "applyDurableMutations");
+			try {
+				const appender = new RecordingCommittedAppender();
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender,
+					limits: defaultLimits,
+				});
+				for (let index = 0; index < 5; index++)
+					await writer.submitTrack({
+						command: createCommand({ commandId: `c_${index}` }),
+					});
+				expect(appender.batches).toHaveLength(5);
+				await writer.waitForStore();
+				// The first flush goes at once; the other four wait out the interval together.
+				expect(applies).toHaveBeenCalledTimes(2);
+				expect(applies.mock.calls[1]?.[0].records).toHaveLength(4);
+			} finally {
+				applies.mockRestore();
+				closeFixture(fixture);
+			}
+		}));
+
+	test("C: a caller about to wait on the store ends the hold", () =>
+		withArm("C", async () => {
+			const fixture = createFixture();
+			const applies = spyOn(fixture.store, "applyDurableMutations");
+			try {
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender: new RecordingCommittedAppender(),
+					limits: defaultLimits,
+				});
+				await writer.submitTrack({
+					command: createCommand({ commandId: "h_1" }),
+				});
+				await writer.submitTrack({
+					command: createCommand({ commandId: "h_2" }),
+				});
+				const waitedAt = performance.now();
+				writer.hurryStore();
+				await writer.waitForStore();
+				expect(performance.now() - waitedAt).toBeLessThan(
+					COALESCED_APPLY_INTERVAL_MS / 2,
+				);
+				expect(applies).toHaveBeenCalledTimes(2);
+			} finally {
+				applies.mockRestore();
+				closeFixture(fixture);
+			}
+		}));
+
+	test("A: no arm changes the control's commits or flushes", () =>
+		withArm("A", async () => {
+			const fixture = createFixture();
+			const applies = spyOn(fixture.store, "applyDurableMutations");
+			try {
+				const appender = new RecordingCommittedAppender();
+				const writer = createPartitionTrackWriter({
+					topic,
+					partition,
+					stateStore: fixture.store,
+					appender,
+					limits: { ...defaultLimits, commitLingerMs: 40 },
+				});
+				const startedAt = performance.now();
+				for (let index = 0; index < 3; index++)
+					await writer.submitTrack({
+						command: createCommand({ commandId: `a_${index}` }),
+					});
+				await writer.waitForStore();
+				expect(performance.now() - startedAt).toBeLessThan(40);
+				expect(appender.batches.map((batch) => batch.length)).toEqual([
+					1, 1, 1,
+				]);
+				expect(applies).toHaveBeenCalledTimes(3);
+			} finally {
+				applies.mockRestore();
+				closeFixture(fixture);
+			}
+		}));
 });

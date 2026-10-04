@@ -11,7 +11,7 @@ import {
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
-import { createPartitionWriterState } from "./pendingMutations.js";
+import { createPartitionWriterState, hurryApply } from "./pendingMutations.js";
 import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
 	PartitionWriter,
@@ -133,9 +133,14 @@ export function createPartitionWriter({
 		return scope.state.applyTail.catch(() => undefined);
 	}
 
+	function hurryStore(): void {
+		hurryApply({ state: scope.state });
+	}
+
 	return {
 		waitForStore,
 		waitForApplies,
+		hurryStore,
 		decide,
 		decideRun,
 		log,

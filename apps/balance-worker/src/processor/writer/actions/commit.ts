@@ -1,12 +1,14 @@
 import { isDeepStrictEqual } from "node:util";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
+import { commitPipelineArm } from "../../../experiments/commitPipeline.js";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import {
+	hurryApply,
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
@@ -26,6 +28,10 @@ import {
 
 /** Bounds one store flush; the committer writes a flush as a single statement. */
 const MAX_BATCHES_PER_FLUSH = 16;
+/** Arm B: a busy partition commits at most once per interval, so commits/s stays bounded whatever arrives. */
+export const ADAPTIVE_COMMIT_INTERVAL_MS = 25;
+/** Arm C: at most ten store flushes a second per partition while nobody waits on the store. */
+export const COALESCED_APPLY_INTERVAL_MS = 100;
 
 export function scheduleCommit({
 	scope,
@@ -125,6 +131,7 @@ async function commitOutcomes({
 				state.unapplied.length >=
 				maxUnappliedBatchesOf({ limits: config.limits })
 			) {
+				hurryApply({ state });
 				await state.unapplied[0]?.batch[0]?.settlement
 					.waitForStore()
 					.catch(() => undefined);
@@ -137,6 +144,7 @@ async function commitOutcomes({
 			const takenAt = writerNowOf({ scope });
 			releaseDeferredRecords({ state, batch });
 			state.lastBatchSize = batch.length;
+			state.lastCommitStartedAt = takenAt;
 			const baseOffset = await appendBatch({
 				scope,
 				batch,
@@ -171,8 +179,11 @@ async function lingerForBatch({
 	scope: PartitionWriterScope;
 }): Promise<void> {
 	const { state, config } = scope;
-	const lingerMs = config.limits.commitLingerMs ?? 0;
-	if (lingerMs <= 0 || state.lastBatchSize <= 1) return;
+	const lingerMs =
+		commitPipelineArm() === "B"
+			? adaptiveLingerMsOf({ scope })
+			: fixedLingerMsOf({ scope });
+	if (lingerMs <= 0) return;
 	if (state.queue.length >= config.limits.maxBatchSize) return;
 	await new Promise<void>((resolve) => {
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -184,6 +195,21 @@ async function lingerForBatch({
 		state.lingerWake = wake;
 		timer = setTimeout(wake, lingerMs);
 	});
+}
+
+function fixedLingerMsOf({ scope }: { scope: PartitionWriterScope }): number {
+	const lingerMs = scope.config.limits.commitLingerMs ?? 0;
+	return scope.state.lastBatchSize <= 1 ? 0 : lingerMs;
+}
+
+/** Whatever is left of the interval since the last commit began: nothing for a quiet partition, up to the interval for a busy one. */
+function adaptiveLingerMsOf({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): number {
+	const since = writerNowOf({ scope }) - scope.state.lastCommitStartedAt;
+	return Math.max(0, ADAPTIVE_COMMIT_INTERVAL_MS - since);
 }
 
 /** Hands a committed batch to the store. One flush runs at a time, and each takes
@@ -201,6 +227,8 @@ function queueApply({
 }): void {
 	const { state } = scope;
 	state.unapplied.push({ batch, baseOffset });
+	if (batch.some((pending) => pending.durability === "store"))
+		hurryApply({ state });
 	if (state.applying) return;
 	state.applying = true;
 	state.applyTail = applyQueued({ scope });
@@ -214,6 +242,10 @@ async function applyQueued({
 	const { state } = scope;
 	try {
 		while (state.unapplied.length > 0 && !state.recoveryError) {
+			await holdForCoalescing({ scope });
+			if (state.recoveryError) return;
+			state.applyHurried = false;
+			state.lastApplyStartedAt = writerNowOf({ scope });
 			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
 			const batch = taken.flatMap((entry) => entry.batch);
 			const records = timeSync({ label: "writer.apply.build" }, () =>
@@ -232,6 +264,31 @@ async function applyQueued({
 	} finally {
 		state.applying = false;
 	}
+}
+
+/** Arm C: a flush waits out the interval since the last one began, unless someone waits on the store or it is full. */
+async function holdForCoalescing({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> {
+	const { state } = scope;
+	if (commitPipelineArm() !== "C") return;
+	if (state.applyHurried) return;
+	if (state.unapplied.length >= MAX_BATCHES_PER_FLUSH) return;
+	const holdMs =
+		COALESCED_APPLY_INTERVAL_MS -
+		(writerNowOf({ scope }) - state.lastApplyStartedAt);
+	if (holdMs <= 0) return;
+	await new Promise<void>((resolve) => {
+		const timer = setTimeout(wake, holdMs);
+		function wake(): void {
+			clearTimeout(timer);
+			state.applyWake = null;
+			resolve();
+		}
+		state.applyWake = wake;
+	});
 }
 
 /** Returns null when draining must stop: proven no-commit rejects, anything else is recovery. */
@@ -403,6 +460,7 @@ function enterRecovery({
 }): void {
 	const error = new PartitionWriterRecoveryRequiredError({ cause });
 	scope.state.recoveryError = error;
+	scope.state.applyWake?.();
 	const owed = new Set<PendingMutation>(batch);
 	for (const unapplied of scope.state.unapplied)
 		for (const pending of unapplied.batch) owed.add(pending);

@@ -1,4 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { commitPipelineArm } from "../experiments/commitPipeline.js";
 import type {
 	CommittedOutcomeAppender,
 	CommitWaits,
@@ -21,6 +22,25 @@ type CommitLog = {
 	| { phase: "store_apply"; result: "applied" | "failed" }
 );
 
+/** Arm D folds successful commit lines into one summary per partition this often. */
+export const COMMIT_SUMMARY_INTERVAL_MS = 10_000;
+
+type PhaseTotals = {
+	count: number;
+	records: number;
+	totalMs: number;
+	maxMs: number;
+	lingerMs: number;
+	storeWaitMs: number;
+};
+
+type CommitSummary = {
+	topic: string;
+	partition: number;
+	startedAt: number;
+	phases: Partial<Record<CommitLog["phase"], PhaseTotals>>;
+};
+
 export function createPartitionCommitLogging({
 	ctx,
 	config,
@@ -28,8 +48,11 @@ export function createPartitionCommitLogging({
 	ctx: {
 		appender: CommittedOutcomeAppender;
 		stateStore: PartitionRuntimeDependencies["stateStore"];
-		logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
+		logger?: Pick<AutumnLogger, "debug"> &
+			Partial<Pick<AutumnLogger, "error" | "info">>;
 		monotonicNow?: () => number;
+		/** Arm D's summary timer; tests drive it by hand. */
+		scheduleSummary?: (params: { delayMs: number; run(): void }) => void;
 	};
 	config: { deployment: string; endpoint: string };
 }): {
@@ -39,6 +62,82 @@ export function createPartitionCommitLogging({
 	const { logger } = ctx;
 	if (!logger) return { appender: ctx.appender, stateStore: ctx.stateStore };
 	const now = ctx.monotonicNow ?? (() => performance.now());
+	const scheduleSummary = ctx.scheduleSummary ?? scheduleOnce;
+	let summary: CommitSummary | null = null;
+
+	/** One line for every successful commit and apply since the last; the timer starts with the first. */
+	function count({
+		topic,
+		partition,
+		phase,
+		batchSize,
+		durationMs,
+		waits,
+	}: {
+		topic: string;
+		partition: number;
+		phase: CommitLog["phase"];
+		batchSize: number;
+		durationMs: number;
+		waits?: CommitWaits;
+	}): void {
+		if (!summary) {
+			summary = { topic, partition, startedAt: now(), phases: {} };
+			scheduleSummary({
+				delayMs: COMMIT_SUMMARY_INTERVAL_MS,
+				run: emitSummary,
+			});
+		}
+		const totals = summary.phases[phase] ?? {
+			count: 0,
+			records: 0,
+			totalMs: 0,
+			maxMs: 0,
+			lingerMs: 0,
+			storeWaitMs: 0,
+		};
+		summary.phases[phase] = totals;
+		totals.count += 1;
+		totals.records += batchSize;
+		totals.totalMs += durationMs;
+		totals.maxMs = Math.max(totals.maxMs, durationMs);
+		totals.lingerMs += waits?.lingerMs ?? 0;
+		totals.storeWaitMs += waits?.storeWaitMs ?? 0;
+	}
+
+	function emitSummary(): void {
+		const ended = summary;
+		summary = null;
+		if (!ended) return;
+		try {
+			const phases: Record<string, PhaseTotals> = {};
+			for (const [phase, totals] of Object.entries(ended.phases))
+				phases[phase] = {
+					count: totals.count,
+					records: totals.records,
+					totalMs: roundMs(totals.totalMs),
+					maxMs: roundMs(totals.maxMs),
+					lingerMs: roundMs(totals.lingerMs),
+					storeWaitMs: roundMs(totals.storeWaitMs),
+				};
+			(logger?.info ?? logger?.debug)?.call(
+				logger,
+				{
+					event: "balance_worker.commit_summary",
+					data: {
+						topic: ended.topic,
+						partition: ended.partition,
+						workerEndpoint: config.endpoint,
+						windowMs: roundMs(now() - ended.startedAt),
+						...phases,
+					},
+				},
+				"Balance worker commit summary",
+			);
+		} catch {
+			// Telemetry cannot turn a durable commit into a failed request.
+		}
+	}
 
 	function report({
 		startedAt,
@@ -49,6 +148,19 @@ export function createPartitionCommitLogging({
 		...fields
 	}: CommitLog): void {
 		try {
+			const succeeded =
+				fields.result === "committed" || fields.result === "applied";
+			if (succeeded && commitPipelineArm() === "D") {
+				count({
+					topic: fields.topic,
+					partition: fields.partition,
+					phase: fields.phase,
+					batchSize,
+					durationMs: now() - startedAt,
+					waits,
+				});
+				return;
+			}
 			const event = {
 				event: "balance_worker.commit",
 				durationMs: Math.round((now() - startedAt) * 100) / 100,
@@ -64,7 +176,7 @@ export function createPartitionCommitLogging({
 			// Per-batch telemetry stays at debug; a failure surfaces through the request log.
 			logger?.debug(
 				event,
-				fields.result === "committed" || fields.result === "applied"
+				succeeded
 					? "Balance worker commit phase completed"
 					: "Balance worker commit phase failed",
 			);
@@ -209,6 +321,16 @@ function waitFieldsOf({ waits }: { waits?: CommitWaits }) {
 		lingerMs: roundMs(waits.lingerMs),
 		storeWaitMs: roundMs(waits.storeWaitMs),
 	};
+}
+
+function scheduleOnce({
+	delayMs,
+	run,
+}: {
+	delayMs: number;
+	run(): void;
+}): void {
+	setTimeout(run, delayMs).unref?.();
 }
 
 function roundMs(ms: number): number {
