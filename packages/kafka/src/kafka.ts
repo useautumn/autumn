@@ -174,6 +174,15 @@ export type {
 	MeteringReader,
 } from "./topics/metering/consumer/types/meteringReader.js";
 export {
+	assembleRecord,
+	encodeDecision,
+	encodeDecisionInto,
+	maxDecisionBytes,
+	meteringRecordJson,
+	type SplitMeteringRecord,
+	splitMeteringRecord,
+} from "./topics/metering/meteringRecordSplice.js";
+export {
 	meteringTopic,
 	parseMeteringRecord,
 	serializeMeteringRecord,

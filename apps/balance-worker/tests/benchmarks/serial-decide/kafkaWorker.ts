@@ -5,6 +5,7 @@
  * run here, never on the sequencer.
  */
 import {
+	assembleRecord,
 	createKafkaClient,
 	createKafkaTransport,
 	createProducerSession,
@@ -123,16 +124,29 @@ async function start(init: KafkaWorkerInit): Promise<void> {
 		for (;;) {
 			const frame = records.next();
 			if (!frame) break;
-			if (frame.type !== FRAME.REC)
+			if (frame.type !== FRAME.REC && frame.type !== FRAME.SPLICE)
 				throw new Error(`kafka: unexpected frame ${frame.type}`);
 			const view = records.payloadView;
 			const seq = view.getUint32(frame.offset, true);
-			const keyLength = view.getUint32(frame.offset + 4, true);
+			const firstLength = view.getUint32(frame.offset + 4, true);
 			// Copies: the ring slot is reused once we advance, and kafkajs keeps the buffers until the send.
-			const key = Buffer.from(
-				frame.bytes.subarray(REC_HEADER, REC_HEADER + keyLength),
-			);
-			const value = Buffer.from(frame.bytes.subarray(REC_HEADER + keyLength));
+			const { key, value } =
+				frame.type === FRAME.REC
+					? {
+							key: Buffer.from(
+								frame.bytes.subarray(REC_HEADER, REC_HEADER + firstLength),
+							),
+							value: Buffer.from(
+								frame.bytes.subarray(REC_HEADER + firstLength),
+							),
+						}
+					: assembleRecord({
+							decisionBytes: frame.bytes.subarray(
+								REC_HEADER,
+								REC_HEADER + firstLength,
+							),
+							commandBytes: frame.bytes.subarray(REC_HEADER + firstLength),
+						});
 			records.advance();
 			queue.push({
 				seq,
