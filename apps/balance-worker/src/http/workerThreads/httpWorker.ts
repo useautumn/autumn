@@ -156,8 +156,9 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		return null;
 	}
 
+	/** Graceful: requests already accepted are answered before the thread says it stopped. */
 	async function stop(): Promise<void> {
-		await server.stop(true);
+		await server.stop();
 		report({ kind: "stopped" });
 	}
 

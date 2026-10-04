@@ -151,6 +151,41 @@ describe("HTTP worker pool", () => {
 	});
 });
 
+describe("HTTP worker pool stop", () => {
+	test("a request in flight when the pool stops is answered, not reset", async () => {
+		const port = await freePort();
+		const pool = createHttpWorkerPool({
+			ctx: {
+				fetch: async () => {
+					await Bun.sleep(300);
+					return new Response("done");
+				},
+				logger,
+				onFatal: noFatal,
+			},
+			config: {
+				hostname: "127.0.0.1",
+				port,
+				maxRequestBodySize: 1 << 20,
+				threads: 1,
+				requestRingBytes: 1 << 16,
+				replyRingBytes: 1 << 16,
+			},
+		});
+		const listener = await pool.listen();
+		const inFlight = fetch(`http://127.0.0.1:${port}/v1/track`, {
+			method: "POST",
+			body: "{}",
+		}).then(
+			async (response) => `${response.status} ${await response.text()}`,
+			(cause: Error) => cause.message,
+		);
+		await Bun.sleep(50);
+		await listener.stop();
+		expect(await inFlight).toBe("200 done");
+	});
+});
+
 describe("HTTP worker pool back-pressure", () => {
 	test("while the main thread is stalled the request ring fills and later requests get OVERLOADED at once", async () => {
 		const port = await freePort();

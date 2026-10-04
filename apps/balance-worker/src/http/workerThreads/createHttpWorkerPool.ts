@@ -304,9 +304,11 @@ export function createHttpWorkerPool({
 		return { lane, ready: ready.promise };
 	}
 
-	/** Each thread closes its server and says so; a thread that already exited is not waited for. */
+	/**
+	 * Each thread stops taking connections and finishes the requests it has, which this thread keeps answering
+	 * until every thread says it is done; a thread that already exited is not waited for.
+	 */
 	async function stop(): Promise<void> {
-		stopping = true;
 		for (const lane of lanes) {
 			try {
 				lane.thread.postMessage({ kind: "stop" } satisfies DecideThreadMessage);
@@ -315,6 +317,7 @@ export function createHttpWorkerPool({
 			}
 		}
 		await Promise.all(lanes.map((lane) => lane.stopped));
+		stopping = true;
 		for (const lane of lanes) lane.thread.terminate();
 	}
 
