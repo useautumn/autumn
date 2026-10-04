@@ -8,6 +8,7 @@ import {
 	createKafkaClient,
 	createKafkaTransport,
 	createProducerSession,
+	sendIdempotentBatch,
 	sendTransactionalBatch,
 } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
@@ -72,12 +73,14 @@ async function connectProducer({ commitMode }: { commitMode: "transactional" | "
 			mode: commitMode,
 		},
 	});
-	await session.connect();
-	await session.fence();
-	return createWorkerProducer({
+	const producer = createWorkerProducer({
 		ctx: { session, ownerEpoch: () => "1" },
 		config: { topic: TOPIC, partition: PARTITION },
 	});
+	await producer.connect();
+	// Transactional: begins and aborts a transaction to bump the epoch. Idempotent: writes the owner fence record.
+	await producer.fence();
+	return producer;
 }
 
 async function start(init: KafkaWorkerInit): Promise<void> {
@@ -175,12 +178,21 @@ async function start(init: KafkaWorkerInit): Promise<void> {
 				baseOffset = simOffset;
 				simOffset += BigInt(batch.length);
 			} else {
-				({ baseOffset } = await sendTransactionalBatch({
-					producer,
-					topic: TOPIC,
-					partition: PARTITION,
-					messages: batch,
-				}));
+				({ baseOffset } =
+					init.commitMode === "idempotent"
+						? await sendIdempotentBatch({
+								sender: producer,
+								topic: TOPIC,
+								partition: PARTITION,
+								messages: batch,
+								ownerEpoch: "1",
+							})
+						: await sendTransactionalBatch({
+								producer,
+								topic: TOPIC,
+								partition: PARTITION,
+								messages: batch,
+							}));
 			}
 			stats.commitMs += performance.now() - startedAt;
 			ack({ from, to, baseOffset });

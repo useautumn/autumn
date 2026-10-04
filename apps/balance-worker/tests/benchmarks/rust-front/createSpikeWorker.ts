@@ -66,6 +66,7 @@ async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
 			},
 		}),
 	);
+	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as "transactional" | "idempotent";
 	const session = createProducerSession({
 		ctx: { kafka },
 		config: createWorkerProducerConfig({
@@ -73,15 +74,19 @@ async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
 			topic: SPIKE_TOPIC,
 			partition: 0,
 			limits: producerLimits,
+			mode,
 		}),
 	});
-	await session.connect();
-	await session.fence();
 	const producer = createWorkerProducer({
-		ctx: { session },
+		ctx: { session, ownerEpoch: () => "1" },
 		config: { topic: SPIKE_TOPIC, partition: 0 },
 	});
-	return createMutationPublisher({ ctx: { producer } });
+	await producer.connect();
+	// Transactional: begins and aborts a transaction to bump the epoch. Idempotent: writes the owner fence record.
+	await producer.fence();
+	return createMutationPublisher({
+		ctx: { producer, commit: { mode }, ownerEpoch: () => "1" },
+	});
 }
 
 /** The writer's contract unchanged: records leave as the bytes `serializeMeteringRecord` gives, the base offset comes back. */
