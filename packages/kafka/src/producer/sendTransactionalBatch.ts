@@ -1,5 +1,4 @@
 import {
-	CompressionTypes,
 	KafkaJSError,
 	KafkaJSNumberOfRetriesExceeded,
 	KafkaJSProtocolError,
@@ -15,6 +14,7 @@ import type {
 	KafkaTransaction,
 } from "../client/types/kafkaClient.js";
 import { assertNonEmpty } from "../lib/assert.js";
+import { compressionFor } from "./compressionFor.js";
 import { sendIdempotentBatch } from "./sendIdempotentBatch.js";
 
 async function abortTransaction({
@@ -152,7 +152,7 @@ export async function sendTransactionalBatch({
 			topic,
 			messages: partitionMessages,
 			acks: -1,
-			compression: CompressionTypes.GZIP,
+			compression: compressionFor({ records: partitionMessages.length }),
 		});
 		const baseOffset = metadataToBaseOffset({ metadata, topic, partition });
 		if (offsets) await transaction.sendOffsets(offsets);

@@ -1,4 +1,4 @@
-import { CompressionTypes, KafkaJSProtocolError } from "kafkajs";
+import { KafkaJSProtocolError } from "kafkajs";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -6,6 +6,7 @@ import {
 import { metadataToBaseOffset } from "../client/kafkaOffsetUtils.js";
 import type { KafkaSender } from "../client/types/kafkaClient.js";
 import { assertNonEmpty } from "../lib/assert.js";
+import { compressionFor } from "./compressionFor.js";
 
 /** The record header that names the ownership epoch a batch was written under. */
 export const OWNER_EPOCH_HEADER = "ownerEpoch";
@@ -63,7 +64,7 @@ export async function sendIdempotentBatch({
 			topic,
 			messages: partitionMessages,
 			acks: -1,
-			compression: CompressionTypes.GZIP,
+			compression: compressionFor({ records: partitionMessages.length }),
 		});
 	} catch (cause) {
 		if (cause instanceof KafkaJSProtocolError) {

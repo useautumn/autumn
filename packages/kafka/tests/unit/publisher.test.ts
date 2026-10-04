@@ -96,7 +96,7 @@ function transactionalBatchTests(): void {
 					{ ...second, partition },
 				],
 				acks: -1,
-				compression: CompressionTypes.GZIP,
+				compression: CompressionTypes.None,
 			},
 		]);
 	}
@@ -564,7 +564,7 @@ function meteringPublisherTests(): void {
 		expect(fake.records[0]).toEqual({
 			topic,
 			acks: -1,
-			compression: CompressionTypes.GZIP,
+			compression: CompressionTypes.None,
 			messages: expectedMessages,
 		});
 	}

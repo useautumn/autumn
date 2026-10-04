@@ -101,6 +101,10 @@ export {
 } from "./lib/recordErrors.js";
 export type { TopicSchema } from "./lib/types/topicSchema.js";
 export { meteringIdentityToPartition } from "./partitioning/meteringIdentityToPartition.js";
+export {
+	compressionFor,
+	GZIP_MIN_RECORDS_PER_BATCH,
+} from "./producer/compressionFor.js";
 export { createProducerSession } from "./producer/createProducerSession.js";
 export {
 	createIdempotentProducerConfig,
