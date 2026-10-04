@@ -36,7 +36,7 @@ function send({
 		answerDisconnected({ scope, reqId, producerId: meta.producerId });
 		return;
 	}
-	producer.send(recordOf({ meta, records })).then(
+	const work = producer.send(recordOf({ meta, records })).then(
 		function sent(metadata) {
 			sendAck({ scope, reqId, ack: { ok: true, metadata } });
 		},
@@ -48,6 +48,10 @@ function send({
 			});
 		},
 	);
+	scope.inFlight.add(work);
+	work.finally(function settled() {
+		scope.inFlight.delete(work);
+	});
 }
 
 export function dispatchSend({
@@ -80,7 +84,7 @@ export function dispatchSend({
 	dispatchSend({ scope, bytes: next });
 }
 
-function drainSends({ scope }: { scope: ProducerLoopScope }): number {
+export function drainSends({ scope }: { scope: ProducerLoopScope }): number {
 	const { sends } = scope;
 	let read = 0;
 	for (;;) {
@@ -104,7 +108,11 @@ export async function sendLoop({
 	scope: ProducerLoopScope;
 }): Promise<void> {
 	while (!scope.state.stopping) {
-		if (drainSends({ scope }) > 0) continue;
+		if (drainSends({ scope }) > 0) {
+			// Let the dispatched sends run before the next batch, so a flood cannot starve their acks.
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			continue;
+		}
 		await scope.sendSignal.sleep({
 			hasWork: scope.sends.hasWork,
 			timeoutMs: 50,

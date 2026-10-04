@@ -4,6 +4,7 @@ import type { ProducerConfig } from "kafkajs";
 import { readSendFrame } from "../frames/sendFrame.js";
 import type { ProducerLoopScope } from "../types/producerLoopScope.js";
 import type { ProducerConfigSnapshot } from "../types/producerThreadMessages.js";
+import { drainSends } from "./dispatchSends.js";
 import { answerControl, answerDisconnected } from "./sendAcks.js";
 
 export function createProducer({
@@ -83,15 +84,31 @@ export function disconnectProducer({
 	});
 }
 
+/**
+ * Flushes before it disconnects: every send already published is dispatched, every send in flight is
+ * acked, and a frame still waiting for an earlier sequence number is answered disconnected.
+ */
 export async function stopProducers({
 	scope,
 }: {
 	scope: ProducerLoopScope;
 }): Promise<void> {
-	scope.state.stopping = true;
+	const { producers, held, state } = scope;
+	state.stopping = true;
+	drainSends({ scope });
+	for (const [producerId, waiting] of held)
+		for (const bytes of waiting.values())
+			answerDisconnected({
+				scope,
+				reqId: readSendFrame({ bytes }).reqId,
+				producerId,
+			});
+	held.clear();
+	await Promise.allSettled(scope.inFlight);
+	await state.ackPump;
 	await Promise.allSettled(
-		[...scope.producers.values()].map((producer) => producer.disconnect()),
+		[...producers.values()].map((producer) => producer.disconnect()),
 	);
-	scope.producers.clear();
+	producers.clear();
 	scope.ctx.post({ kind: "stopped" });
 }
