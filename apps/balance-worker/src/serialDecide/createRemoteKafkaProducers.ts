@@ -401,6 +401,7 @@ export function createRemoteKafkaProducers({
 			);
 		const producerId = nextProducerId++;
 		let nextSeq = 0;
+		let closed = false;
 		post({
 			kind: "create",
 			producerId,
@@ -412,6 +413,8 @@ export function createRemoteKafkaProducers({
 		}
 
 		function disconnect(): Promise<void> {
+			// Closed before the worker hears of it: a send racing the disconnect is still answered, a later one throws at once.
+			closed = true;
 			requestListeners.delete(producerId);
 			return control({ kind: "disconnect", producerId, reqId: nextReqId++ });
 		}
@@ -424,6 +427,10 @@ export function createRemoteKafkaProducers({
 				key: bytesOf({ field: message.key }),
 				value: bytesOf({ field: message.value }),
 			}));
+			if (closed)
+				throw new KafkaJSError("The producer is disconnected", {
+					retriable: false,
+				});
 			if (failed)
 				throw new KafkaJSError("Kafka worker failed", { retriable: false });
 			const reqId = nextReqId++;

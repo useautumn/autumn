@@ -145,8 +145,34 @@ export function startKafkaWorker({
 		ackPump ??= pumpAcks();
 	}
 
+	function noProducerAck({
+		reqId,
+		producerId,
+	}: {
+		reqId: number;
+		producerId: number;
+	}): void {
+		ack({
+			reqId,
+			ack: {
+				ok: false,
+				error: {
+					kind: "other",
+					name: "KafkaJSError",
+					message: `The producer is disconnected (no producer ${producerId} on the Kafka worker)`,
+					retriable: false,
+				},
+			},
+		});
+	}
+
 	function dispatch({ bytes }: { bytes: Uint8Array }): void {
 		const { reqId, meta, records } = readSend({ bytes });
+		// A send that reaches the worker after its producer's disconnect is answered, never held.
+		if (!producers.has(meta.producerId)) {
+			noProducerAck({ reqId, producerId: meta.producerId });
+			return;
+		}
 		const expected = nextSeq.get(meta.producerId) ?? 0;
 		if (meta.seq !== expected) {
 			let waiting = held.get(meta.producerId);
@@ -177,18 +203,7 @@ export function startKafkaWorker({
 	}): void {
 		const producer = producers.get(meta.producerId);
 		if (!producer?.send) {
-			ack({
-				reqId,
-				ack: {
-					ok: false,
-					error: {
-						kind: "other",
-						name: "Error",
-						message: `Kafka worker: no producer ${meta.producerId}`,
-						retriable: false,
-					},
-				},
-			});
+			noProducerAck({ reqId, producerId: meta.producerId });
 			return;
 		}
 		producer.send(recordOf({ meta, records })).then(
@@ -254,6 +269,11 @@ export function startKafkaWorker({
 				const producer = producers.get(message.producerId);
 				producers.delete(message.producerId);
 				nextSeq.delete(message.producerId);
+				// Payloads still waiting for an earlier sequence number will never see it: answer them now.
+				for (const bytes of held.get(message.producerId)?.values() ?? []) {
+					const { reqId } = readSend({ bytes });
+					noProducerAck({ reqId, producerId: message.producerId });
+				}
 				held.delete(message.producerId);
 				settle({
 					reqId: message.reqId,
