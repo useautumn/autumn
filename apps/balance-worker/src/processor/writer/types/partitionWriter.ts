@@ -20,6 +20,7 @@ import type {
 	DecidedMutation,
 	MutationDurability,
 	MutationSubmission,
+	RunOutcome,
 } from "./mutation.js";
 
 export type PartitionWriter = {
@@ -29,6 +30,13 @@ export type PartitionWriter = {
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** One subject's submissions decided in order in one critical section, as consecutive `decide`s would. */
+	decideRun<Reply>(params: {
+		identity: MeteringIdentity;
+		submissions: MutationSubmission<Reply>[];
+		/** A failure the caller retries whole: it and every later submission come back undecided. */
+		stopsRun: (cause: unknown) => boolean;
+	}): RunOutcome<Reply>[];
 	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
 	log(params: {
 		command: MutatingCommand;

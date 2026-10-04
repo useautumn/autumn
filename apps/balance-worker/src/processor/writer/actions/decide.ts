@@ -8,6 +8,7 @@ import {
 	enqueueMutation,
 	pendingCommitsFor,
 	pendingKeyOf,
+	projectPending,
 } from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
@@ -16,8 +17,12 @@ import type {
 	DecidedMutation,
 	MutationDurability,
 	MutationSubmission,
+	RunOutcome,
 } from "../types/mutation.js";
-import type { PartitionWriterScope } from "../types/partitionWriter.js";
+import type {
+	PartitionWriterScope,
+	PendingMutation,
+} from "../types/partitionWriter.js";
 import {
 	PartitionWriterCommandConflictError,
 	PartitionWriterDuplicateCommandError,
@@ -37,8 +42,98 @@ export function decide<Reply>({
 	scope: PartitionWriterScope;
 	submission: MutationSubmission<Reply>;
 }): DecidedMutation<Reply> {
+	if (scope.state.recoveryError) throw scope.state.recoveryError;
+	// A null state is legal here: initialize is the command that creates one.
+	const currentState = readFreshestState({
+		scope,
+		identity: submission.command.identity,
+	});
+	const { decided, wrote } = decideOn({
+		scope,
+		submission,
+		currentState,
+		projects: true,
+	});
+	if (wrote) scheduleCommit({ scope });
+	return decided;
+}
+
+/**
+ * Decides one subject's queued submissions in order in one critical section, each on the state the
+ * one before it left, exactly as one `decide` after another would. Records, dedup and replies stay per
+ * submission; the run reads the projection once and projects (pins and weighs) its last write once.
+ */
+export function decideRun<Reply>({
+	scope,
+	identity,
+	submissions,
+	stopsRun,
+	measure,
+}: {
+	scope: PartitionWriterScope;
+	identity: MeteringIdentity;
+	submissions: MutationSubmission<Reply>[];
+	/** A failure the caller retries whole (the rows left mid-run): this and every later submission go back undecided. */
+	stopsRun: (cause: unknown) => boolean;
+	measure: <Value>(params: {
+		submission: MutationSubmission<Reply>;
+		run: () => Value;
+	}) => Value;
+}): RunOutcome<Reply>[] {
+	if (scope.state.recoveryError) throw scope.state.recoveryError;
+	const outcomes: RunOutcome<Reply>[] = [];
+	let currentState = readFreshestState({ scope, identity });
+	let lastWrite: PendingMutation | null = null;
+	let lastProjectedStates: SubjectState[] | undefined;
+	for (const [index, submission] of submissions.entries()) {
+		try {
+			const { decided, wrote } = measure({
+				submission,
+				run: () =>
+					decideOn({ scope, submission, currentState, projects: false }),
+			});
+			if (wrote) {
+				currentState = wrote.pending.nextState;
+				lastWrite = wrote.pending;
+				lastProjectedStates = wrote.projectedStates;
+			}
+			outcomes.push({ kind: "decided", decided });
+		} catch (cause) {
+			if (!stopsRun(cause)) {
+				outcomes.push({ kind: "failed", cause });
+				continue;
+			}
+			for (let rest = index; rest < submissions.length; rest++)
+				outcomes.push({ kind: "undecided" });
+			break;
+		}
+	}
+	if (lastWrite) {
+		projectPending({
+			scope,
+			pending: lastWrite,
+			projectedStates: lastProjectedStates,
+		});
+		scheduleCommit({ scope });
+	}
+	return outcomes;
+}
+
+function decideOn<Reply>({
+	scope,
+	submission,
+	currentState,
+	projects,
+}: {
+	scope: PartitionWriterScope;
+	submission: MutationSubmission<Reply>;
+	currentState: SubjectState | null;
+	projects: boolean;
+}): {
+	decided: DecidedMutation<Reply>;
+	wrote?: { pending: PendingMutation; projectedStates?: SubjectState[] };
+} {
 	const { ctx, state } = scope;
-	if (state.recoveryError) throw state.recoveryError;
 	const { command, baseline } = submission;
 	const { identity, commandId } = command;
 	const fingerprint = commandToFingerprint({ command, baseline });
@@ -52,15 +147,15 @@ export function decide<Reply>({
 			fingerprint,
 			record: inFlight.mutation.receipt,
 		});
-		return decidedWith<Reply>({
-			kind: "duplicate",
-			committed: inFlight.settlement.join({ kind: "duplicate" }),
-			stored: inFlight.settlement.waitForStore(),
-		});
+		return {
+			decided: decidedWith<Reply>({
+				kind: "duplicate",
+				committed: inFlight.settlement.join({ kind: "duplicate" }),
+				stored: inFlight.settlement.waitForStore(),
+			}),
+		};
 	}
 
-	// A null state is legal here: initialize is the command that creates one.
-	const currentState = readFreshestState({ scope, identity });
 	const receipt = ctx.stateStore.readReceipt({
 		identity,
 		mutationId: commandId,
@@ -69,15 +164,17 @@ export function decide<Reply>({
 		assertSameRequest({ commandId, fingerprint, record: receipt.receipt });
 		if (!currentState)
 			throw new PartitionWriterStateNotFoundError({ customerKey });
-		return decidedWith<Reply>({
-			kind: "duplicate",
-			stored: Promise.resolve(),
-			committed: Promise.resolve({
+		return {
+			decided: decidedWith<Reply>({
 				kind: "duplicate",
-				mutation: receipt,
-				state: currentState,
+				stored: Promise.resolve(),
+				committed: Promise.resolve({
+					kind: "duplicate",
+					mutation: receipt,
+					state: currentState,
+				}),
 			}),
-		});
+		};
 	}
 	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
 	const remembered = ctx.recentCommands.read({ identity, commandId });
@@ -88,11 +185,13 @@ export function decide<Reply>({
 
 	const result = submission.mutate({ state: currentState });
 	if (result.kind === "reply")
-		return decidedWith<Reply>({
-			kind: "reply",
-			committed: Promise.resolve(result.reply),
-			stored: state.storeCompletion,
-		});
+		return {
+			decided: decidedWith<Reply>({
+				kind: "reply",
+				committed: Promise.resolve(result.reply),
+				stored: state.storeCompletion,
+			}),
+		};
 
 	ctx.onStateAdvanced?.({
 		from: currentState,
@@ -117,13 +216,16 @@ export function decide<Reply>({
 			requested: submission.durability ?? "log",
 		}),
 		effects: result.effects,
+		projects,
 	});
-	scheduleCommit({ scope });
-	return decidedWith<Reply>({
-		kind: "write",
-		committed: pending.settlement.join({ kind: "new" }),
-		stored: pending.settlement.waitForStore(),
-	});
+	return {
+		decided: decidedWith<Reply>({
+			kind: "write",
+			committed: pending.settlement.join({ kind: "new" }),
+			stored: pending.settlement.waitForStore(),
+		}),
+		wrote: { pending, projectedStates: result.projectedStates },
+	};
 }
 
 /** A write decided on one the store has not taken yet waits for the store too: if that one is refused, this one sits on rows that never landed. */

@@ -70,3 +70,9 @@ export type DecidedMutation<Reply> = {
 	/** Resolves once this write's batch is stored (or durably refused); replies wait for preceding writes. */
 	waitForStore(): Promise<void>;
 };
+
+/** One submission of a run: decided, refused on its own, or left for the caller when the run had to stop. */
+export type RunOutcome<Reply> =
+	| { kind: "decided"; decided: DecidedMutation<Reply> }
+	| { kind: "failed"; cause: unknown }
+	| { kind: "undecided" };
