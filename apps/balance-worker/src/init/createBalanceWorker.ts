@@ -1,4 +1,5 @@
 import { cpus } from "node:os";
+import { defaultBalanceWorkerThreadsEdgeConfig } from "@autumn/edge-config";
 import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
@@ -11,6 +12,7 @@ import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import { createHttpWorkerPool } from "../http/workerThreads/createHttpWorkerPool.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
@@ -208,16 +210,33 @@ export async function createBalanceWorker({
 			},
 		});
 
-		function listen(): WorkerListener {
-			const listener = Bun.serve({
-				hostname: address.hostname,
-				port: env.BALANCE_WORKER_PORT,
-				maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
-				fetch: app.fetch,
-				idleTimeout: 0,
+		/** A thread that died leaves a pool that cannot serve again; the task is replaced. */
+		function stopForHttpWorkers({ cause }: { cause: unknown }): void {
+			dependencies.onServiceStopped?.({ cause, scope: "http-workers" });
+		}
+
+		async function listen(): Promise<WorkerListener> {
+			const threads =
+				resources.edgeConfigs?.balanceWorkerThreads.get() ??
+				defaultBalanceWorkerThreadsEdgeConfig();
+			const pool = createHttpWorkerPool({
+				ctx: {
+					fetch: app.fetch,
+					logger: dependencies.logger,
+					onFatal: stopForHttpWorkers,
+				},
+				config: {
+					hostname: address.hostname,
+					port: env.BALANCE_WORKER_PORT,
+					maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
+					threads: threads.httpWorkers,
+					requestRingBytes: threads.requestRingBytes,
+					replyRingBytes: threads.replyRingBytes,
+				},
 			});
+			const listener = await pool.listen();
 			dependencies.logger.info(
-				`Balance worker listening at ${address.endpoint}; partition admission follows recovery`,
+				`Balance worker listening at ${address.endpoint} through ${threads.httpWorkers} HTTP worker threads; partition admission follows recovery`,
 			);
 			return listener;
 		}
