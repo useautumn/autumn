@@ -8,7 +8,12 @@ import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
-import type { KafkaOffsetCommit } from "@autumn/kafka";
+import type {
+	KafkaOffsetCommit,
+	KafkaProducerClient,
+	KafkaTokenInfo,
+} from "@autumn/kafka";
+import type { ProducerConfig } from "kafkajs";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
@@ -36,6 +41,10 @@ import {
 import { createRequestLatencies } from "../logging/requestLatencies.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import { createIoWorkerPool } from "../serialDecide/createIoWorkerPool.js";
+import {
+	createRemoteKafkaProducers,
+	type RemoteKafkaProducers,
+} from "../serialDecide/createRemoteKafkaProducers.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorker } from "./lifecycle/startWorker.js";
@@ -59,7 +68,11 @@ import {
 	createWorkerConsumerConfig,
 	workerConsumerGroupIdOf,
 } from "./workerConfig.js";
-import { openWorkerResources } from "./workerResources.js";
+import {
+	logWorkerKafkaToken,
+	openWorkerResources,
+	WORKER_KAFKA_CLIENT_LIMITS,
+} from "./workerResources.js";
 
 export async function createBalanceWorker({
 	ctx: dependencies,
@@ -153,11 +166,18 @@ export async function createBalanceWorker({
 				producerLimits: runtimeConfig.producerLimits,
 			},
 		});
+		// Under arms C and D the partition producers live on the Kafka worker thread; listen() starts it before any partition runs.
+		let remoteKafka: RemoteKafkaProducers | null = null;
+		function partitionProducer(config: ProducerConfig): KafkaProducerClient {
+			return remoteKafka
+				? remoteKafka.producer(config)
+				: resources.kafka.producer(config);
+		}
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
 				logger: dependencies.logger,
-				kafka: resources.kafka,
+				kafka: { producer: partitionProducer },
 				ownershipOffsets: resources.admin,
 				ownershipHandoff,
 				stateStore: resources.stateStore,
@@ -268,7 +288,50 @@ export async function createBalanceWorker({
 			dependencies.logger.info(
 				`Balance worker listening at ${address.endpoint} through ${env.BALANCE_WORKER_IO_WORKERS} I/O workers (serial-decide arm ${mode.arm}); partition admission follows recovery`,
 			);
-			return listener;
+			if (!mode.kafkaWorkerEnabled) return listener;
+			if (env.BALANCE_WORKER_COMMIT_MODE !== "idempotent") {
+				dependencies.logger.warn(
+					`Serial-decide arm ${mode.arm} keeps its producers on the main thread: the Kafka worker speaks idempotent commits only`,
+				);
+				return listener;
+			}
+			remoteKafka = await startKafkaWorker();
+			async function stopListenerAndKafkaWorker(): Promise<void> {
+				try {
+					await listener.stop();
+				} finally {
+					await remoteKafka?.stop();
+				}
+			}
+			return { stop: stopListenerAndKafkaWorker };
+		}
+
+		function stopAfterKafkaWorkerFailure({ cause }: { cause: unknown }): void {
+			dependencies.onServiceStopped?.({ cause, scope: "kafka-worker" });
+		}
+		function logKafkaWorkerToken(info: KafkaTokenInfo): void {
+			logWorkerKafkaToken({ logger: dependencies.logger, info });
+		}
+		async function startKafkaWorker(): Promise<RemoteKafkaProducers> {
+			const remote = createRemoteKafkaProducers({
+				ctx: {
+					logger: dependencies.logger,
+					onFatal: stopAfterKafkaWorkerFailure,
+					onToken: logKafkaWorkerToken,
+				},
+				config: {
+					clientId: `balance-worker-kafka-${crypto.randomUUID()}`,
+					brokers: env.KAFKA_BROKERS,
+					authMode: env.KAFKA_AUTH_MODE,
+					region: env.AWS_REGION,
+					limits: WORKER_KAFKA_CLIENT_LIMITS,
+				},
+			});
+			await remote.start();
+			dependencies.logger.info(
+				"Partition producers run on the Kafka worker thread (serial-decide arm C/D)",
+			);
+			return remote;
 		}
 
 		const state: BalanceWorkerState = { status: "created" };
