@@ -36,6 +36,9 @@ export type OwnedPartitionRequestCounters = {
 	trackRuns: number;
 	trackRunTracks: number;
 	trackRunMax: number;
+	/** Check replies leased to the servers, or decided without a lease. */
+	checkLeasesIssued: number;
+	checkLeasesWithheld: number;
 };
 
 export type OwnedPartitionFollowerProgress = Pick<

@@ -17,6 +17,10 @@ import {
 } from "@autumn/env/balanceWorkerConstants";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { readBalanceWorkerKafkaConfig } from "./balanceWorkerKafkaConfig.js";
+import {
+	startCheckLeaseStats,
+	stopCheckLeaseStats,
+} from "./checkLeaseStats.js";
 import { getBalanceWorkerRolloutOverride } from "./getBalanceWorkerRolloutEnabled.js";
 
 const rolloutOverrideLabel = (): string => {
@@ -26,6 +30,9 @@ const rolloutOverrideLabel = (): string => {
 };
 
 let balanceWorkerClient: BalanceWorkerClient | undefined;
+
+/** Leased check replies one server holds; a hot key holds one, so this bounds a fleet of cold ones. */
+const CHECK_LEASE_MAX_ENTRIES = 10_000;
 
 function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 	const env = getBalanceWorkerClientEnv();
@@ -45,6 +52,9 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 		catchUpTimeoutMs: BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
 		// Every server evicts and publishes, so the connect is paid at boot, not by the first request's append.
 		connectProducersOnStart: true,
+		...(env.BALANCE_WORKER_CHECK_LEASES && {
+			checkLeases: { maxEntries: CHECK_LEASE_MAX_ENTRIES },
+		}),
 	};
 }
 
@@ -88,10 +98,12 @@ export async function startBalanceWorkerClient(): Promise<void> {
 	logger.info(
 		`[balance-worker] Client starting; rollout ${rolloutOverrideLabel()}`,
 	);
+	startCheckLeaseStats({ client: getBalanceWorkerClient() });
 	await getBalanceWorkerClient().start();
 }
 
 export async function stopBalanceWorkerClient(): Promise<void> {
+	stopCheckLeaseStats();
 	const running = balanceWorkerClient;
 	balanceWorkerClient = undefined;
 	await running?.stop();

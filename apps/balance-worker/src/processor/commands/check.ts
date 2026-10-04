@@ -9,7 +9,8 @@ import { readCurrentSubject } from "../actions/readCurrentSubject.js";
 import { slimReplySubject } from "../replies/slimReplySubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/** A read of the subject made current (due resets advanced), then the check decided on it, once per view and second. */
+/** A read of the subject made current (due resets advanced), then the check decided on it, once per view and second;
+ *  the reply carries the lease servers may answer repeats from. */
 export async function check({
 	scope,
 	command,
@@ -27,14 +28,26 @@ export async function check({
 			fullSubject,
 			request: checkCommandToDeductionRequest({ command }),
 			// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
-			answer: ({ context }) => ({
-				result: computeCheck({ fullSubject, command, context }),
-				...slimReplySubject({
-					state,
-					catalog,
-					featureId: command.featureId,
-				}),
-			}),
+			answer: ({ context }) => {
+				const result = computeCheck({ fullSubject, command, context });
+				return {
+					result,
+					...slimReplySubject({
+						state,
+						catalog,
+						featureId: command.featureId,
+					}),
+					lease:
+						scope.ctx.config.issuesCheckLeases === false
+							? null
+							: scope.ctx.subjectDecisions.leaseCheck({
+									fullSubject,
+									command,
+									context,
+									result,
+								}),
+				};
+			},
 		});
 	});
 }

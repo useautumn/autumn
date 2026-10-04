@@ -4,6 +4,7 @@ export type {
 } from "./contracts/applyBillingPlan.js";
 export type {
 	BalanceWorkerCheckRequest,
+	CheckLease,
 	CheckReply,
 } from "./contracts/check.js";
 export type {
