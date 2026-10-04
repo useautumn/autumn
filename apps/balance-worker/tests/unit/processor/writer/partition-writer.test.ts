@@ -20,11 +20,9 @@ import type {
 	InitializeReply,
 	TrackReply,
 } from "@autumn/balance-worker-client/protocol";
+import type { StagingArm } from "@autumn/edge-config";
 import type { MeteringRecord } from "@autumn/kafka";
-import {
-	overrideVariant,
-	type Variant,
-} from "../../../../src/experiments/variant.js";
+import { COMMIT_PIPELINE_EXPERIMENT } from "../../../../src/experiments/commitPipeline.js";
 import { createCustomerPlans } from "../../../../src/processor/commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { initialize } from "../../../../src/processor/commands/initialize.js";
 import { track } from "../../../../src/processor/commands/track.js";
@@ -75,6 +73,10 @@ import {
 	restoreSubjectStates,
 	testOrg,
 } from "../../../fixtures/mutations.js";
+import {
+	clearStagingArms,
+	forceStagingArm,
+} from "../../../fixtures/stagingArms.js";
 
 const topic = "metering-events-v1";
 const partition = 0;
@@ -2557,16 +2559,16 @@ test("a record is measured by the appender once and sent as the same object", as
 describe("commit-pipeline arms", () => {
 	const later = (ms: number) =>
 		new Promise<void>((resolve) => setTimeout(resolve, ms));
-	const withArm = async (arm: Variant, run: () => Promise<void>) => {
-		overrideVariant(() => arm);
+	const withArm = async (arm: StagingArm, run: () => Promise<void>) => {
+		forceStagingArm({ experiment: COMMIT_PIPELINE_EXPERIMENT, arm });
 		try {
 			await run();
 		} finally {
-			overrideVariant(null);
+			clearStagingArms();
 		}
 	};
 
-	test("B: a busy partition commits at most once per interval; a quiet one still commits at once", () =>
+	test("B: a busy partition commits at most once per interval; a quiet one, or a lone track after a gap, commits at once", () =>
 		withArm("B", async () => {
 			const fixture = createFixture();
 			try {
@@ -2590,15 +2592,21 @@ describe("commit-pipeline arms", () => {
 				expect(performance.now() - quietAt).toBeLessThan(
 					ADAPTIVE_COMMIT_INTERVAL_MS,
 				);
-				// Right behind a commit: these wait out the interval and share one commit.
+				// A burst shares a commit and marks the partition busy.
+				await Promise.all(
+					["b_1", "b_2", "b_3"].map((commandId) =>
+						writer.submitTrack({ command: createCommand({ commandId }) }),
+					),
+				);
+				// Right behind that commit: these wait out the interval and share the next one.
 				const busyAt = performance.now();
 				const second = writer.submitTrack({
-					command: createCommand({ commandId: "b_1" }),
+					command: createCommand({ commandId: "b_4" }),
 				});
 				await later(5);
 				await Promise.all([
 					second,
-					writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
+					writer.submitTrack({ command: createCommand({ commandId: "b_5" }) }),
 				]);
 				expect(performance.now() - busyAt).toBeGreaterThanOrEqual(
 					ADAPTIVE_COMMIT_INTERVAL_MS - 8,
@@ -2613,7 +2621,7 @@ describe("commit-pipeline arms", () => {
 					ADAPTIVE_COMMIT_INTERVAL_MS,
 				);
 				expect(appender.batches.map((batch) => batch.length)).toEqual([
-					1, 1, 2, 1,
+					1, 1, 3, 2, 1,
 				]);
 			} finally {
 				closeFixture(fixture);
