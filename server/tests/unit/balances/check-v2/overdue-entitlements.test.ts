@@ -418,6 +418,13 @@ test("overdue access: rejected lock deductions release the claim; unknown failur
 		"@/internal/balances/utils/lockV2/releaseLockClaimMarker.js",
 		() => ({ releaseLockClaimMarker: releaseClaim }),
 	);
+	await mockModuleWithRestore(
+		"@/internal/balances/utils/lockV2/lockReceiptBackup.js",
+		() => ({
+			deleteLockReceiptBackupOrThrow: async () => {},
+			copyLockReceiptToBackup: async () => {},
+		}),
+	);
 	const { RedisDeductionError, RedisDeductionErrorCode } = await import(
 		"@/internal/balances/utils/types/redisDeductionError.js"
 	);

@@ -1,5 +1,7 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
@@ -86,9 +88,27 @@ export const fetchAndClaimLockReceiptV2 = async ({
 		redisInstance,
 	);
 
-	if (!execResult) return { found: false };
+	// A Redis that could not answer has not said the lock is gone. Reporting "Lock not found" here
+	// tells the caller to stop retrying a lock that may still be open.
+	if (!execResult) {
+		throw new RedisUnavailableError({
+			source: "fetchAndClaimLockReceiptV2",
+			reason: "other",
+		});
+	}
 
 	const [getReply, setReply] = execResult;
+	const replyError = [getReply?.[0], setReply?.[0]].find(
+		(error) => error && isTransientRedisError({ error }),
+	);
+	if (replyError) {
+		throw new RedisUnavailableError({
+			source: "fetchAndClaimLockReceiptV2",
+			reason: "other",
+			cause: replyError,
+		});
+	}
+
 	const getErr = getReply?.[0];
 	const setErr = setReply?.[0];
 	if (getErr || setErr) return { found: false };
@@ -96,7 +116,17 @@ export const fetchAndClaimLockReceiptV2 = async ({
 	const raw = getReply?.[1] as string | null | undefined;
 	const claimResult = setReply?.[1] as "OK" | null | undefined;
 
-	if (!raw) return { found: false };
+	if (!raw) {
+		// The claim was taken for a receipt that is not here; holding it would block the finalize
+		// that restores the receipt from its backup.
+		if (claimResult === "OK") {
+			await tryRedisWrite(
+				() => redisInstance.del(claimMarkerKey),
+				redisInstance,
+			);
+		}
+		return { found: false };
+	}
 
 	const receipt = JSON.parse(raw) as LockReceipt;
 
