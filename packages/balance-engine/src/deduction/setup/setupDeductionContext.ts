@@ -27,7 +27,7 @@ export const setupDeductionContext = ({
 			featureId: selection.featureId,
 			customerEntitlements,
 		});
-	const usageWindowLimits = resolveUsageWindowLimits({
+	const { usageWindowLimits, filtersByProperties } = resolveUsageWindowLimits({
 		fullSubject,
 		selection,
 		customerEntitlements,
@@ -39,15 +39,20 @@ export const setupDeductionContext = ({
 			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
 	);
 	const entityId = fullSubject.entity?.id ?? null;
-	const rows = customerEntitlements.flatMap((customerEntitlement) =>
-		customerEntitlementToDeductionRows({
+	const creditCosts = customerEntitlements.map((customerEntitlement) =>
+		resolveCreditCost({ customerEntitlement, selection }),
+	);
+	const rows = customerEntitlements.flatMap((customerEntitlement, index) => {
+		const creditCost = creditCosts[index];
+		if (!creditCost) return [];
+		return customerEntitlementToDeductionRows({
 			customerEntitlement,
 			entityId,
-			creditCost: resolveCreditCost({ customerEntitlement, selection }),
+			creditCost,
 			overageAllowedByFeatureId,
 			nativeOverageFeatureIds,
-		}),
-	);
+		});
+	});
 	const ownersOf = (customerEntitlementId: string) =>
 		rows.filter(
 			(row) => row.id === customerEntitlementId && !row.skipsRollovers,
@@ -77,5 +82,11 @@ export const setupDeductionContext = ({
 					})
 				: new Map(),
 		overdueBlocked,
+		readsProperties:
+			filtersByProperties ||
+			creditCosts.some(
+				(creditCost) =>
+					creditCost.readsProperties || creditCost.rateCard !== null,
+			),
 	};
 };

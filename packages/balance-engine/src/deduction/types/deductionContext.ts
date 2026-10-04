@@ -29,4 +29,6 @@ export type DeductionContext = {
 	allocationGates: Map<string, AllocationGate>;
 	/** Past-due products were dropped from the selection; with no rows left, the value is refused, not unsupported. */
 	overdueBlocked: boolean;
+	/** The event's properties shaped it (a filtered cap, a dimensioned rate, a rate card): it serves only its own properties. */
+	readsProperties: boolean;
 };

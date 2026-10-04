@@ -43,9 +43,25 @@ const drewRowDry = ({ decision }: { decision: DeductionDecision }): boolean => {
 	});
 };
 
+/** A windowed cap, an allocation gate or a spend limit can close the feature on a draw that was applied in full. */
+const isBoundedByControls = ({
+	decision,
+}: {
+	decision: DeductionDecision;
+}): boolean => {
+	const { context } = decision.outcome;
+	return (
+		context.usageWindowLimits.length > 0 ||
+		context.allocationGates.size > 0 ||
+		context.rows.some(
+			(row) => context.spendLimitByFeatureId[row.featureId] !== undefined,
+		)
+	);
+};
+
 /**
  * Whether a track's effects need deciding: without alerts, top-ups or threshold billing the only effect is a
- * limit reached, and a draw can only reach a limit by running a row dry, being refused, or hitting a cap.
+ * limit reached, and a draw can only reach a limit by running a row dry, being refused, or under a control.
  */
 export const shouldDecideEffects = ({
 	command,
@@ -63,6 +79,7 @@ export const shouldDecideEffects = ({
 		command.value < 0 ||
 		outcome.rejected ||
 		outcome.limitType !== null ||
+		isBoundedByControls({ decision }) ||
 		drewRowDry({ decision })
 	);
 };
