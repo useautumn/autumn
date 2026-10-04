@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
+import { runWithPoolRoute } from "@/db/poolAttribution/poolAttribution.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -196,7 +197,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// childLogger.info(`${method} ${path}`);
 
-	await next();
+	await runWithPoolRoute({ route: requestLogContext.route, fn: next });
 
 	if (subjectReadTrace?.source) {
 		c.res.headers.set("x-subject-source", subjectReadTrace.source);

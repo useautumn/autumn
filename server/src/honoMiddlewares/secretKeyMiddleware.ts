@@ -7,6 +7,7 @@ import {
 } from "@autumn/auth";
 import { AuthType, ErrCode, RecaseError, sortFeatures } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import { withPoolReason } from "@/db/poolAttribution/poolAttribution.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { verifyKey } from "@/internal/dev/apiKeys/actions/verifyKey.js";
 import { handleOAuthMiddleware } from "./authMiddlewares/handleOAuthMiddleware.js";
@@ -90,11 +91,15 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	// Step 4: Verify the API key
-	const data = await verifyKey({
-		db: ctx.db,
-		key: bearerToken,
-		requestId: ctx.id,
-		skipL1: isCatalogWriteRequest(c),
+	const data = await withPoolReason({
+		reason: "auth",
+		fn: () =>
+			verifyKey({
+				db: ctx.db,
+				key: bearerToken,
+				requestId: ctx.id,
+				skipL1: isCatalogWriteRequest(c),
+			}),
 	});
 
 	if (!data) {
