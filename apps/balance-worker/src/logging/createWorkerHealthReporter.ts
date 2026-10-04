@@ -2,6 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import type { BalanceWorkerState } from "../init/types/balanceWorkerState.js";
 import type { PartitionConsumerStatus } from "../partitions/types/partitions.js";
+import type { CheckAdmissionInterval } from "../runtime/deadlineShed/checkAdmission.js";
 import { partitionHealthLogFields } from "./partitionHealthLogFields.js";
 
 const HEALTH_REPORT_INTERVAL_MS = 10_000;
@@ -13,6 +14,8 @@ type WorkerHealthReporterContext = {
 	readConsumer?(): PartitionConsumerStatus;
 	/** Arms fixed at boot (a thread layout cannot follow the 10 s windows), on every health line. */
 	readBootArms?(): Readonly<Record<string, string>> | null;
+	/** deadline-shed B's check admission since the last line; null while the task has none. */
+	readCheckAdmission?(): CheckAdmissionInterval | null;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 };
 
@@ -41,6 +44,7 @@ export function createWorkerHealthReporter({
 				...(bootArms && { bootVariants: bootArms }),
 			};
 			const reportedAt = new Date().toISOString();
+			const checkAdmission = ctx.readCheckAdmission?.() ?? null;
 			const partitionStatusCounts: Record<string, number> = {};
 			for (const partition of health) {
 				partitionStatusCounts[partition.status] =
@@ -56,6 +60,7 @@ export function createWorkerHealthReporter({
 						reportedPartitions: health.length,
 						partitionStatusCounts,
 						consumer: ctx.readConsumer?.() ?? null,
+						...(checkAdmission && { checkAdmission }),
 					},
 				},
 				"Balance worker health",

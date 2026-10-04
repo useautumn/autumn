@@ -205,3 +205,29 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	"the health line carries deadline-shed's check admission for the interval, and nothing on a task without it",
+	() => {
+		const { reporter, health, logs, timers } = createHealthReporterFixture();
+		try {
+			reporter.start();
+			expect(logs[0][0]).not.toHaveProperty("data.checkAdmission");
+			health.checkAdmission = {
+				admitted: 900,
+				shed: 120,
+				shedCustomers: 1,
+				lagMs: 61.5,
+				maxLagMs: 140,
+				behind: true,
+			};
+			timers[0].run();
+			expect(logs[1][0]).toMatchObject({
+				event: "balance_worker.health",
+				data: { checkAdmission: health.checkAdmission },
+			});
+		} finally {
+			reporter.stop();
+		}
+	},
+);
