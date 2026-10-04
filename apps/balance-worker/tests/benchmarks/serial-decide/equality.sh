@@ -20,13 +20,22 @@ seq_run() { # label out
 	taskset -c 0,1 "$loadgen" seq --addr 127.0.0.1:$port --path /v1/track --count "$count" --template "$rf/track-template.json" --out "$file" --prefix eq
 }
 
+if [ "${EQ_MODE:-lean}" = "arm" ]; then
+	# Both sides through the production arms: A against ARM (default D), same harness, same fixtures.
+	ARM=A SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_LOG_RATE=0 IO_WORKERS=2 \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serveArm.ts" >"$out/a.log" 2>&1 </dev/null &
+else
 SPIKE_TOPIC="eq-a-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 \
 	setsid taskset -c 2,3 bun "$bw/tests/benchmarks/rust-front/serveBaseline.ts" >"$out/a.log" 2>&1 </dev/null &
+fi
 seq_run a "$out/a.bin"
 kill "$(ss -ltnp | grep ":$port " | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)"
 for _ in $(seq 1 50); do ss -ltn | grep -q ":$port " || break; sleep 0.1; done
 
-if [ "${EQ_MODE:-lean}" = "pool" ]; then
+if [ "${EQ_MODE:-lean}" = "arm" ]; then
+	ARM=${ARM:-D} SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_LOG_RATE=0 IO_WORKERS=2 \
+		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/serveArm.ts" >"$out/lean.log" 2>&1 </dev/null &
+elif [ "${EQ_MODE:-lean}" = "pool" ]; then
 	SPIKE_TOPIC="eq-lean-$stamp" SPIKE_PORT=$port SPIKE_APPENDER=kafkajs SPIKE_LOG_RATE=0 IO_WORKERS=2 \
 		setsid taskset -c 2,3 bun "$bw/tests/benchmarks/serial-decide/servePool.ts" >"$out/lean.log" 2>&1 </dev/null &
 else
