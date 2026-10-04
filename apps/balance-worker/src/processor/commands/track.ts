@@ -69,7 +69,7 @@ function decideTrackAlone({
 }
 
 /** A track's submission and lone decision, built once: a retry or a run never rebuilds them. */
-function trackDecisionOf({
+export function trackDecisionOf({
 	scope,
 	command,
 }: {
@@ -150,7 +150,7 @@ export async function track({
 	});
 }
 
-function toTrackReply({
+export function toTrackReply({
 	scope,
 	command,
 	committed,
