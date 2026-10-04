@@ -12,7 +12,10 @@ import type {
 	BalanceWorkerRequestContext,
 } from "../../../src/http/types/balanceWorkerHttp.js";
 import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
-import { createHotDecider } from "../../../src/serialDecide/createHotDecider.js";
+import {
+	createHotDecider,
+	MAX_HOT_BATCH_BODY_BYTES,
+} from "../../../src/serialDecide/createHotDecider.js";
 import { HOT_KIND } from "../../../src/serialDecide/hotProtocol.js";
 import { createPositionBoard } from "../../../src/serialDecide/positionBoard.js";
 import { createState, createTrackCommand } from "../../fixtures/mutations.js";
@@ -220,6 +223,18 @@ describe("hot track batch (serial-decide arm D)", () => {
 			fallbackBatches: { lock: 1, not_resident: 1, malformed: 1 },
 		});
 		expect(decider.drainStats?.().trackBatches).toBe(0);
+	});
+
+	test("a batch whose body is too large for one append goes to the ordinary path, which may split it", async () => {
+		const { viaHot, decider, hotLog } = await classicAndHot();
+		const padded = {
+			...track({ identity: cus1, commandId: "cmd_big", value: 1 }),
+			properties: { note: "x".repeat(MAX_HOT_BATCH_BODY_BYTES) },
+		};
+		expect(viaHot([padded])).toBeNull();
+		await settled();
+		expect(hotLog.appends.flat()).toHaveLength(0);
+		expect(decider.drainStats?.().fallbackBatches).toEqual({ too_large: 1 });
 	});
 
 	test("a batch's writes go out in one append even past the writer's batch size, and never share one with an earlier cut", async () => {

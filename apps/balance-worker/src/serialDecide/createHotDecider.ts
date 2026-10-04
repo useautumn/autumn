@@ -40,6 +40,8 @@ import {
 } from "./hotProtocol.js";
 
 const decoder = new TextDecoder();
+/** A hot batch goes out as one append, which may pass the writer's byte cut; half that cut keeps it far under Kafka's 1 MiB message cap. */
+export const MAX_HOT_BATCH_BODY_BYTES = 400_000;
 
 type HotCommand =
 	| { kind: typeof HOT_KIND.TRACK; path: "/v1/track"; command: TrackCommand }
@@ -81,6 +83,8 @@ export function createHotDecider({
 	}
 
 	function decideBatch(request: HotRequest): HotOutcome | null {
+		if (request.body.byteLength > MAX_HOT_BATCH_BODY_BYTES)
+			return fallBack("too_large");
 		const parsed = parseBatch({ body: request.body });
 		if (!parsed) return fallBack("malformed");
 		const { route, commands } = parsed;
