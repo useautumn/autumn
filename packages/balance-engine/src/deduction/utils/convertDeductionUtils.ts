@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { RowChange } from "../../models/mutation/rowChange.js";
 import type { DeductionContext } from "../types/deductionContext.js";
 import type { DeductionDelta } from "../types/deductionDelta.js";
+import type { DeductionSelection } from "../types/deductionRequest.js";
 import type { DeductionRow } from "../types/deductionRow.js";
 
 const deltasOn = ({
@@ -241,4 +242,25 @@ export const deltasToRowChanges = ({
 	}
 
 	return changes;
+};
+
+/** Everything that picks and bounds a selection's rows except its clock, so selections a moment apart share
+ *  one key. Null when the event carries properties: filtered caps and dimensioned rates read them. */
+export const deductionSelectionToKey = ({
+	selection,
+}: {
+	selection: DeductionSelection;
+}): string | null => {
+	if (selection.properties !== null) return null;
+	return JSON.stringify([
+		selection.featureId,
+		selection.internalFeatureId,
+		selection.includesCreditSystems,
+		selection.countsUsageWindows,
+		selection.countsAllocations,
+		selection.customerEntitlementFilters ?? null,
+		selection.inStatuses,
+		selection.reverseOrder,
+		selection.blocksOverdue,
+	]);
 };
