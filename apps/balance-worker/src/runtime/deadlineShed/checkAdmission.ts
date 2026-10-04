@@ -32,7 +32,7 @@ export type CheckAdmission = {
  * task's recent checks is shed while the loop runs late, and admitted as usual once it catches up.
  */
 export function createCheckAdmission({
-	now = () => performance.now(),
+	now = readClock,
 	schedule = scheduleProbe,
 }: {
 	now?: () => number;
@@ -102,7 +102,14 @@ function scheduleProbe({
 }): () => void {
 	const timer = setInterval(run, intervalMs);
 	timer.unref();
-	return () => clearInterval(timer);
+	function cancel(): void {
+		clearInterval(timer);
+	}
+	return cancel;
+}
+
+function readClock(): number {
+	return performance.now();
 }
 
 let checkAdmission: CheckAdmission | undefined;
