@@ -95,6 +95,8 @@ export function createRemoteKafkaProducers({
 	let nextProducerId = 1;
 	let stopping = false;
 	let failed = false;
+	/** The thread is gone: a stop has nothing to drain, and posting to it is silently dropped. */
+	let exited = false;
 	let stopped: ReturnType<typeof Promise.withResolvers<void>> | null = null;
 
 	function fatal({ cause }: { cause: unknown }): void {
@@ -245,6 +247,8 @@ export function createRemoteKafkaProducers({
 			died(new Error(`Kafka worker failed: ${event.message}`));
 		};
 		thread.addEventListener("close", (event) => {
+			exited = true;
+			stopped?.resolve();
 			if (stopping) return;
 			const { code } = event as CloseEvent;
 			died(new Error(`Kafka worker exited with code ${code}`));
@@ -274,6 +278,7 @@ export function createRemoteKafkaProducers({
 	async function stop(): Promise<void> {
 		if (!worker || stopping) return;
 		stopping = true;
+		if (exited) return;
 		stopped = Promise.withResolvers<void>();
 		const timer = setTimeout(() => stopped?.resolve(), 5_000);
 		try {
