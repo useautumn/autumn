@@ -52,7 +52,12 @@ export function createIoWorkerPool({
 	ctx,
 	config,
 }: {
-	ctx: { fetch: Fetch; logger: Pick<AutumnLogger, "info" | "warn" | "error"> };
+	ctx: {
+		fetch: Fetch;
+		logger: Pick<AutumnLogger, "info" | "warn" | "error">;
+		/** A worker thread died or the dispatch loop broke: the pool cannot serve on its own again, so the task must be replaced. */
+		onFatal(failure: { cause: unknown }): void;
+	};
 	config: IoWorkerPoolConfig;
 }): IoWorkerPool {
 	if (!Number.isSafeInteger(config.workers) || config.workers < 1)
@@ -69,7 +74,19 @@ export function createIoWorkerPool({
 		sleeps: 0,
 	};
 	let stopping = false;
+	let failed = false;
 	let deferredFlush = false;
+
+	// A crash raises both `error` and `close`; the first cause is the one worth reporting.
+	function fatal({ cause }: { cause: unknown }): void {
+		if (failed || stopping) return;
+		failed = true;
+		ctx.logger.error(
+			{ error: cause },
+			"I/O worker pool failed; the task must be replaced",
+		);
+		ctx.onFatal({ cause });
+	}
 
 	function flushDirty(): void {
 		deferredFlush = false;
@@ -196,7 +213,12 @@ export function createIoWorkerPool({
 			);
 			response = new Response(null, { status: 500 });
 		}
-		await answer({ lane, reqId, response });
+		try {
+			await answer({ lane, reqId, response });
+		} catch (cause) {
+			// Only a dead worker refuses a reply (postMessage on a terminated thread).
+			fatal({ cause });
+		}
 	}
 
 	function drainLane(lane: Lane): number {
@@ -277,10 +299,12 @@ export function createIoWorkerPool({
 			stats: {},
 		};
 		const ready = Promise.withResolvers<void>();
+		let listening = false;
 		worker.onmessage = (event: MessageEvent<IoWorkerMessage>) => {
 			const message = event.data;
 			switch (message.kind) {
 				case "ready":
+					listening = true;
 					ready.resolve();
 					return;
 				case "error":
@@ -300,11 +324,19 @@ export function createIoWorkerPool({
 					return;
 			}
 		};
+		function died(error: Error): void {
+			if (!listening) ready.reject(error);
+			else fatal({ cause: error });
+		}
 		worker.onerror = (event) => {
-			const error = new Error(`I/O worker ${index} failed: ${event.message}`);
-			ready.reject(error);
-			ctx.logger.error({ error }, "I/O worker failed");
+			died(new Error(`I/O worker ${index} failed: ${event.message}`));
 		};
+		// A worker that exits on its own (uncaught error, process.exit) closes without being asked.
+		worker.addEventListener("close", (event) => {
+			if (stopping) return;
+			const { code } = event as CloseEvent;
+			died(new Error(`I/O worker ${index} exited with code ${code}`));
+		});
 		const init: IoWorkerInit = {
 			index,
 			hostname: config.hostname,
@@ -327,10 +359,12 @@ export function createIoWorkerPool({
 		try {
 			await Promise.all(spawned.map(({ ready }) => ready));
 		} catch (cause) {
+			stopping = true;
 			for (const { lane } of spawned) lane.worker.terminate();
 			throw cause;
 		}
-		void drainLoop();
+		// A frame the loop cannot read means a broken ring; nothing downstream could recover from that.
+		drainLoop().catch((cause) => fatal({ cause }));
 		async function stop(): Promise<void> {
 			stopping = true;
 			await Promise.all(
@@ -347,7 +381,15 @@ export function createIoWorkerPool({
 									resolve();
 								} else previous?.call(lane.worker, event);
 							};
-							lane.worker.postMessage({ kind: "stop" } satisfies MainMessage);
+							try {
+								lane.worker.postMessage({
+									kind: "stop",
+								} satisfies MainMessage);
+							} catch {
+								// Already dead: nothing to drain.
+								clearTimeout(timer);
+								resolve();
+							}
 						}),
 				),
 			);

@@ -38,11 +38,30 @@ describe("serial-decide boot arm", () => {
 		}
 		expect(["A", "B"]).toContain(first.arm);
 		expect(first.ioWorkersEnabled).toBe(first.arm !== "A");
-		expect(mode.bootArms()).toEqual({ [SERIAL_DECIDE_EXPERIMENT]: first.arm });
+		expect(mode.bootArms()).toEqual(
+			first.arm === "A" ? null : { [SERIAL_DECIDE_EXPERIMENT]: first.arm },
+		);
 	});
 
 	test("reports no boot arm before the layout is chosen", () => {
 		expect(createSerialDecideMode().bootArms()).toBeNull();
+	});
+
+	test("under A no boot arm is reported, so prod and dev lines carry no experiment label", () => {
+		bindStagingVariants({
+			read: () => config(["A", "B"]),
+			identity: "task-1",
+			bucket: "autumn-prod-server",
+		});
+		const prod = createSerialDecideMode();
+		expect(prod.read().arm).toBe("A");
+		expect(prod.bootArms()).toBeNull();
+		const forcedA = createSerialDecideMode({ force: "A" });
+		forcedA.read();
+		expect(forcedA.bootArms()).toBeNull();
+		const forcedB = createSerialDecideMode({ force: "B" });
+		forcedB.read();
+		expect(forcedB.bootArms()).toEqual({ [SERIAL_DECIDE_EXPERIMENT]: "B" });
 	});
 
 	test("outside the staging bucket the arm is A whatever the config says", () => {

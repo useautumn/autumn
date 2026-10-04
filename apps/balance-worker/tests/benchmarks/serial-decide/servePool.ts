@@ -13,6 +13,10 @@ const pool = createIoWorkerPool({
 	ctx: {
 		fetch: worker.fetch,
 		logger: { info: console.error, warn: console.error, error: console.error },
+		onFatal: ({ cause }) => {
+			console.error(`FATAL ${String(cause)}`);
+			process.exit(1);
+		},
 	},
 	config: {
 		hostname: "127.0.0.1",

@@ -159,10 +159,10 @@ export type PartitionsDependencies = {
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 };
 
-/** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
+/** Why the service stopped for good: the failure, and whether it was one partition's, the shared consumer's or the I/O worker pool's. */
 export type PartitionServiceStopReason = {
 	cause: unknown;
-	scope: "consumer" | "partition" | "retirement";
+	scope: "consumer" | "partition" | "retirement" | "io-pool";
 };
 
 export type PartitionConsumerStatus = {
