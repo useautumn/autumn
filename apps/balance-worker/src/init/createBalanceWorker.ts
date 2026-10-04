@@ -99,6 +99,7 @@ export async function createBalanceWorker({
 		bindStagingVariants({
 			read: resources.edgeConfigs.stagingVariants.get,
 			identity: address.endpoint,
+			bucket: env.S3_BUCKET,
 		});
 	try {
 		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
