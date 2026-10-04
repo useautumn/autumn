@@ -10,8 +10,10 @@ export type CheckLeasesConfig = {
 
 /** Since the client started; a server's periodic stats log diffs them. */
 export type CheckLeaseCounters = {
-	/** Checks answered from a held lease, never reaching the owner. */
+	/** Checks answered from a lease held in this process, never reaching the owner. */
 	leaseHit: number;
+	/** Checks answered from a lease another server published, never reaching the owner. */
+	leaseSharedHit: number;
 	/** Checks sent to the owner. */
 	leaseMiss: number;
 	/** Owner replies held as a lease. */
@@ -22,8 +24,19 @@ export type CheckLeaseCounters = {
 	leaseWithheld: number;
 	/** Leases dropped to keep within `maxEntries`. */
 	leaseEvicted: number;
+	/** Shared store reads or writes that failed or timed out; the check went to the owner. */
+	leaseSharedErrors: number;
 	/** Leases currently held. */
 	size: number;
+};
+
+/** Where servers share leased replies, so one owner call per key answers the fleet until its deadline. */
+export type SharedCheckLeases = {
+	/** The stored value and its remaining life; null when absent. */
+	read(params: {
+		key: string;
+	}): Promise<{ value: string; ttlMs: number } | null>;
+	write(params: { key: string; value: string; ttlMs: number }): Promise<void>;
 };
 
 export type CheckLeases = {

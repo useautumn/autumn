@@ -17,6 +17,7 @@ import type { CatalogInvalidations } from "../catalog/types/catalogInvalidations
 import type {
 	CheckLeaseCounters,
 	CheckLeasesConfig,
+	SharedCheckLeases,
 } from "../checkLeases/types/checkLeases.js";
 import type { ApplyBillingPlanReply } from "../contracts/applyBillingPlan.js";
 import type { CheckReply } from "../contracts/check.js";
@@ -126,6 +127,8 @@ export type BalanceWorkerClientDependencies = {
 	commandLog?: CommandLog;
 	catalogInvalidations?: CatalogInvalidations;
 	lifecycle?: ClientLifecycle;
+	/** Shares leased check replies across servers; absent, each process holds only its own. */
+	sharedCheckLeases?: SharedCheckLeases;
 };
 export type BalanceWorkerClientConfig = {
 	partitionCount: number;
