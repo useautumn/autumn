@@ -94,13 +94,13 @@ class FakeRedis {
 			},
 			set: (key: string, value: string, ...args: (string | number)[]) => {
 				commands.push(async () => {
-					await this.set(key, value, ...args);
+					const result = await this.set(key, value, ...args);
 					if (this.loseSetReply) {
 						throw Object.assign(new Error("read ECONNRESET"), {
 							code: "ECONNRESET",
 						});
 					}
-					return "OK";
+					return result;
 				});
 				return chain;
 			},
@@ -319,6 +319,16 @@ describe("lock receipt backup", () => {
 		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
 			RedisUnavailableError,
 		);
+		expect(await cacheRedis.get(claimMarkerKey)).toBe("other-finalize");
+	});
+
+	test("a receipt another finalize already claimed is found but not claimed", async () => {
+		await takeLock();
+		await cacheRedis.set(claimMarkerKey, "other-finalize", "EX", 3600);
+
+		const fetched = await fetchLockReceipt({ ctx, lockId });
+
+		expect(fetched.claimed).toBe(false);
 		expect(await cacheRedis.get(claimMarkerKey)).toBe("other-finalize");
 	});
 });
