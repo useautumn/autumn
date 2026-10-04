@@ -254,14 +254,13 @@ export const deltasToRowChanges = ({
 	return changes;
 };
 
-/** Everything that picks and bounds a selection's rows except its clock, so selections a moment apart share
- *  one key. Null when the event carries properties: filtered caps and dimensioned rates read them. */
+/** Everything that picks and bounds a selection's rows except its clock and the event's properties, so selections
+ *  a moment apart share one key. A context with `readsProperties` must not serve other properties under it. */
 export const deductionSelectionToKey = ({
 	selection,
 }: {
 	selection: DeductionSelection;
-}): string | null => {
-	if (selection.properties !== null) return null;
+}): string => {
 	return JSON.stringify([
 		selection.featureId,
 		selection.internalFeatureId,

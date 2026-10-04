@@ -38,11 +38,11 @@ describe("deduction selection key", () => {
 			expect(deductionSelectionToKey({ selection: other })).not.toBe(base);
 	});
 
-	test("a selection with event properties has no key: its rows can depend on them", () => {
+	test("event properties leave the key alone: a context they shaped says so itself", () => {
 		expect(
 			deductionSelectionToKey({
 				selection: selectionOf({ properties: { model: "large" } }),
 			}),
-		).toBeNull();
+		).toBe(deductionSelectionToKey({ selection: selectionOf() }));
 	});
 });
