@@ -32,12 +32,30 @@ export {
 	SHADOW_ATOM_SETTLE_MS,
 	scheduleOrgPercent,
 } from "./configs/shadowAtom/shadowAtomRollout.js";
+export {
+	activeArmsOf,
+	armForWindow,
+	bindStagingVariants,
+	STAGING_VARIANT_WINDOW_MS,
+	STAGING_VARIANTS_BUCKET,
+	type StagingArm,
+	stagingVariantsEnabled,
+	variant,
+	variants,
+} from "./configs/stagingVariants/stagingVariants.js";
+export {
+	defaultStagingVariantsConfig,
+	type StagingVariantsConfig,
+	StagingVariantsConfigSchema,
+	stagingVariantsEdgeConfig,
+} from "./configs/stagingVariants/stagingVariantsEdgeConfig.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
 export {
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,
 	MISC_REDIS_CONFIG_KEY,
 	SHADOW_ATOM_CONFIG_KEY,
+	STAGING_VARIANTS_CONFIG_KEY,
 } from "./keys.js";
 export {
 	createEdgeConfigRegistry,
