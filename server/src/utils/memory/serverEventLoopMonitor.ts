@@ -3,9 +3,16 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 import {
 	STAGING_VARIANT_WINDOW_MS,
 	stagingVariantsEnabled,
+	variants,
 } from "@autumn/edge-config";
+import { summarizeProcessCpuWindow } from "@autumn/logging";
 import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { getServerForkCount } from "./forkRecycling/recyclePolicy.js";
+import {
+	getServerForkBootArm,
+	SERVER_FORK_EXPERIMENT,
+} from "./forkRecycling/serverForkVariant.js";
 import { drainFinishedRequestCount } from "./inFlightRequests.js";
 
 type CpuUsage = { user: number; system: number };
@@ -34,24 +41,16 @@ export const summarizeServerEventLoopWindow = ({
 	lagP99Ns: number;
 	lagMaxNs: number;
 }) => {
-	const cpuUserMs = Math.round(currentCpu.user - previousCpu.user) / 1_000;
-	const cpuSystemMs =
-		Math.round(currentCpu.system - previousCpu.system) / 1_000;
-	const cpuMs =
-		Math.round(
-			currentCpu.user +
-				currentCpu.system -
-				previousCpu.user -
-				previousCpu.system,
-		) / 1_000;
+	const cpu = summarizeProcessCpuWindow({
+		previous: previousCpu,
+		current: currentCpu,
+		windowMs,
+	});
 	return {
 		pid,
 		cpuModel,
 		windowMs: round(windowMs),
-		cpuMs,
-		cpuUserMs,
-		cpuSystemMs,
-		cpuPct: windowMs > 0 ? round((cpuMs / windowMs) * 100) : 0,
+		...cpu,
 		requests,
 		eventLoopLagP99Ms: round(lagP99Ns / NS_PER_MS),
 		eventLoopLagMaxMs: round(lagMaxNs / NS_PER_MS),
@@ -69,6 +68,8 @@ export const startServerEventLoopMonitor = ({
 	}
 
 	const cpuModel = cpus()[0]?.model;
+	const forkArm = getServerForkBootArm();
+	const forkCount = getServerForkCount();
 	const lag = monitorEventLoopDelay({ resolution: 10 });
 	lag.enable();
 	let previousCpu = process.cpuUsage();
@@ -93,7 +94,17 @@ export const startServerEventLoopMonitor = ({
 			lag.reset();
 			previousCpu = currentCpu;
 			windowStartedAt = now;
-			logger.info("Server event loop", { event: "server.event_loop", data });
+			logger.info("Server event loop", {
+				event: "server.event_loop",
+				data: {
+					...data,
+					forkArm,
+					forkCount,
+					variants: forkArm
+						? { ...variants(), [SERVER_FORK_EXPERIMENT]: forkArm }
+						: variants(),
+				},
+			});
 		} catch {
 			// Telemetry must never disturb the process it is measuring.
 		}

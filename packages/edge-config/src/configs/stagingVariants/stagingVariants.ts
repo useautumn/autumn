@@ -62,6 +62,43 @@ export function activeArmsOf({
 /** The window index a task-scoped experiment hashes with: the same for every window, so the arm never moves. */
 export const TASK_SCOPE_WINDOW_INDEX = -1;
 
+export function createTaskVariantAtBoot({
+	bucket,
+	experiment,
+	allowedArms,
+	read: readConfig,
+	identity,
+}: {
+	bucket: string;
+	experiment: string;
+	allowedArms: readonly StagingArm[];
+	read: () => StagingVariantsConfig | Promise<StagingVariantsConfig>;
+	identity: () => string | null | Promise<string | null>;
+}) {
+	let captured: Promise<StagingArm> | null = null;
+	const select = async (): Promise<StagingArm> => {
+		if (!stagingVariantsEnabled({ bucket })) return "A";
+		const entry = (await readConfig()).experiments[experiment];
+		if (entry?.scope !== "task") return "A";
+		const arms = activeArmsOf({ arms: entry.arms });
+		if (!arms.length || arms.some((arm) => !allowedArms.includes(arm)))
+			return "A";
+		const task = await identity();
+		if (!task) return "A";
+		return armForWindow({
+			identity: task,
+			windowIndex: TASK_SCOPE_WINDOW_INDEX,
+			experiment,
+			arms,
+		});
+	};
+	const read = () => {
+		captured ??= select().catch(() => "A" as const);
+		return captured;
+	};
+	return { read };
+}
+
 /** Hashed, not round-robin: a fixed A/B/A/B cycle aliases with periodic customer bursts. */
 export function armForWindow({
 	identity,

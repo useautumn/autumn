@@ -29,6 +29,7 @@ describe("summarizeServerEventLoopWindow", () => {
 			cpuUserMs: 3_250.5,
 			cpuSystemMs: 750.25,
 			cpuPct: 40.01,
+			cpuCoreEquivalents: 0.400057,
 			requests: 1_234,
 			eventLoopLagP99Ms: 12.35,
 			eventLoopLagMaxMs: 98.77,
