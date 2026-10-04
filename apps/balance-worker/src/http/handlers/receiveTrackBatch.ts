@@ -9,6 +9,7 @@ import {
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
+import { looksLikeTrackCommand } from "../commands/looksLikeCommands.js";
 import { readJsonRequestBody } from "../middlewares/requestValidationMiddleware.js";
 import {
 	PartitionRouteMismatchError,
@@ -110,24 +111,6 @@ async function runTrack({
 		return processor.track({ command });
 	}
 	return runtime.process(track);
-}
-
-function looksLikeTrackCommand(input: unknown): input is TrackCommand {
-	if (typeof input !== "object" || input === null) return false;
-	const command = input as Partial<TrackCommand>;
-	const identity = command.identity as
-		| Partial<TrackCommand["identity"]>
-		| undefined;
-	return (
-		command.schemaVersion === 1 &&
-		command.type === "track" &&
-		typeof command.commandId === "string" &&
-		typeof identity === "object" &&
-		identity !== null &&
-		typeof identity.orgId === "string" &&
-		typeof identity.env === "string" &&
-		typeof identity.customerId === "string"
-	);
 }
 
 /** Failures are counted by code; only one unexpected cause is kept, so a bad batch costs one stack. */

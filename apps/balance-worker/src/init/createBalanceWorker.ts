@@ -10,6 +10,7 @@ import { createStandbyPreparations } from "../blueGreen/createStandbyPreparation
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
+import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
@@ -197,23 +198,22 @@ export async function createBalanceWorker({
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},
 		});
-		const app = createBalanceWorkerApp({
-			ctx: {
-				ownership: partitions,
-				partitionResolver: resources.partitionResolver,
-				logger: dependencies.logger,
-				requestLog: {
-					successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
-				},
+		const appContext = {
+			ownership: partitions,
+			partitionResolver: resources.partitionResolver,
+			logger: dependencies.logger,
+			requestLog: {
+				successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
 			},
-		});
+		};
+		const app = createBalanceWorkerApp({ ctx: appContext });
 
 		function listen(): WorkerListener {
 			const listener = Bun.serve({
 				hostname: address.hostname,
 				port: env.BALANCE_WORKER_PORT,
 				maxRequestBodySize: env.BALANCE_WORKER_MAX_REQUEST_BYTES,
-				fetch: app.fetch,
+				fetch: createBalanceWorkerFetch({ ctx: appContext, app }),
 				idleTimeout: 0,
 			});
 			dependencies.logger.info(
