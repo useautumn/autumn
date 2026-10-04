@@ -202,12 +202,13 @@ function fixedLingerMsOf({ scope }: { scope: PartitionWriterScope }): number {
 	return scope.state.lastBatchSize <= 1 ? 0 : lingerMs;
 }
 
-/** Whatever is left of the interval since the last commit began: nothing for a quiet partition, up to the interval for a busy one. */
+/** On a busy partition, whatever is left of the interval since the last commit began; a quiet one never waits. */
 function adaptiveLingerMsOf({
 	scope,
 }: {
 	scope: PartitionWriterScope;
 }): number {
+	if (scope.state.lastBatchSize <= 1) return 0;
 	const since = writerNowOf({ scope }) - scope.state.lastCommitStartedAt;
 	return Math.max(0, ADAPTIVE_COMMIT_INTERVAL_MS - since);
 }

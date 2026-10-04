@@ -63,7 +63,9 @@ const appContext = {
 	ownership: { findRuntime: () => runtime },
 	partitionResolver: { partitionForIdentity: () => 0 },
 	logger: getBalanceWorkerLogger(),
-	...(logRate === undefined ? {} : { requestLog: { successSampleRate: logRate } }),
+	...(logRate === undefined
+		? {}
+		: { requestLog: { successSampleRate: logRate } }),
 };
 const app = createBalanceWorkerApp({ ctx: appContext });
 const fastFetch = createBalanceWorkerFetch({ ctx: appContext, app });
