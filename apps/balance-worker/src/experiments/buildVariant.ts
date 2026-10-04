@@ -1,8 +1,12 @@
 import { AB_EXPERIMENT } from "./abExperiment.js";
 
-export type BuildVariant = "A" | "B";
+const VARIANTS = ["A", "B", "C", "D"] as const;
+
+export type BuildVariant = (typeof VARIANTS)[number];
+export type ArmCount = (typeof AB_EXPERIMENT)["arms"];
 
 let enabled = false;
+let arms: ArmCount = 2;
 let endpoint = "";
 let current: BuildVariant | null = null;
 
@@ -16,26 +20,31 @@ function fnv1a({ text }: { text: string }) {
 	return hash >>> 0;
 }
 
-/** Hashed, not alternating: strict A/B/A/B aliases with periodic customer bursts. */
+/** Hashed, not round-robin: a fixed A/B/A/B cycle aliases with periodic customer bursts. */
 export function variantForWindow({
 	endpoint,
 	windowIndex,
+	arms,
 }: {
 	endpoint: string;
 	windowIndex: number;
+	arms: ArmCount;
 }): BuildVariant {
-	return fnv1a({ text: `${endpoint}#${windowIndex}` }) % 2 === 0 ? "A" : "B";
+	return VARIANTS[fnv1a({ text: `${endpoint}#${windowIndex}` }) % arms];
 }
 
-/** Set once at boot. Every task runs both variants, so each one is compared against its own workload. */
+/** Set once at boot. Every task runs every arm, so each one is compared against its own workload. */
 export function initBuildVariant({
 	endpoint: taskEndpoint,
 	enabled: on = AB_EXPERIMENT.enabled,
+	arms: armCount = AB_EXPERIMENT.arms,
 }: {
 	endpoint: string;
 	enabled?: boolean;
+	arms?: ArmCount;
 }): BuildVariant | null {
 	enabled = on;
+	arms = armCount;
 	endpoint = taskEndpoint;
 	return startVariantWindow({ windowIndex: 0 });
 }
@@ -46,7 +55,7 @@ export function startVariantWindow({
 }: {
 	windowIndex: number;
 }): BuildVariant | null {
-	current = enabled ? variantForWindow({ endpoint, windowIndex }) : null;
+	current = enabled ? variantForWindow({ endpoint, windowIndex, arms }) : null;
 	return current;
 }
 
@@ -54,7 +63,7 @@ export function getBuildVariant(): BuildVariant | null {
 	return current;
 }
 
-/** The experiment's guard: the changed code path runs only in variant B windows. */
-export function isVariantB(): boolean {
-	return current === "B";
+/** The experiment's guard: an arm's changed code path runs only in that arm's windows. */
+export function isVariant({ variant }: { variant: BuildVariant }): boolean {
+	return current === variant;
 }
