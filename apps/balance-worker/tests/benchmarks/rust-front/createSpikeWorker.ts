@@ -1,3 +1,4 @@
+import { engineDiet } from "@autumn/balance-engine";
 import {
 	createKafkaClient,
 	createKafkaTransport,
@@ -8,6 +9,10 @@ import {
 import { Kafka } from "kafkajs";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
+import {
+	bindEngineAllocExperiment,
+	forcedEngineAllocArmFromEnv,
+} from "../../../src/experiments/engineAlloc.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createBalanceWorkerFetch } from "../../../src/http/fastPath/createBalanceWorkerFetch.js";
 import type { BalanceWorkerRequestContext } from "../../../src/http/types/balanceWorkerHttp.js";
@@ -66,7 +71,9 @@ async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
 			},
 		}),
 	);
-	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as "transactional" | "idempotent";
+	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as
+		| "transactional"
+		| "idempotent";
 	const session = createProducerSession({
 		ctx: { kafka },
 		config: createWorkerProducerConfig({
@@ -180,6 +187,16 @@ export async function createSpikeWorker({
 		nextOffset: 0n,
 	});
 	const db = createSyntheticWorkerDb();
+	// SPIKE_ENGINE_ALLOC_ARM forces the arm for the bench whatever NODE_ENV is; the equality run compares A with B.
+	const spikeArm = process.env.SPIKE_ENGINE_ALLOC_ARM;
+	const engineAllocArm =
+		spikeArm === "A" || spikeArm === "B"
+			? spikeArm
+			: forcedEngineAllocArmFromEnv();
+	bindEngineAllocExperiment({ force: engineAllocArm });
+	console.error(
+		`ENGINE_ALLOC_ARM ${engineAllocArm ?? "A (unforced)"} lean=${engineDiet().rowChanges}`,
+	);
 	const processor = createPartitionProcessor({
 		ctx: {
 			stateStore: {

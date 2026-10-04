@@ -3,6 +3,7 @@ import { setupDeductionContext } from "../../deduction/setup/setupDeductionConte
 import type { DeductionContext } from "../../deduction/types/deductionContext.js";
 import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import type { DeductionOutcome } from "../../deduction/types/deductionOutcome.js";
+import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import { isPaidAllocatedV1Deduction } from "../../deduction/utils/classifyDeductionUtils.js";
 import {
 	LockAlreadyExistsError,
@@ -30,6 +31,7 @@ export const computeTrackDecision = ({
 	command,
 	context,
 	revision = fullSubject.revision,
+	request = trackCommandToDeductionRequest({ command }),
 }: {
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
@@ -37,6 +39,8 @@ export const computeTrackDecision = ({
 	context?: DeductionContext;
 	/** The state's revision, when `fullSubject` is an earlier view of it that differs only in balances. */
 	revision?: number;
+	/** The command's request when the caller already built it (to read a carried context). */
+	request?: DeductionRequest;
 }): DeductionDecision => {
 	assertCommandSupported({ fullSubject, command });
 
@@ -47,7 +51,6 @@ export const computeTrackDecision = ({
 	);
 	if (lockId && holdsLock) throw new LockAlreadyExistsError({ lockId });
 
-	const request = trackCommandToDeductionRequest({ command });
 	const outcome = deductWithContext({
 		context:
 			context ??

@@ -236,6 +236,12 @@ export {
 	filterCatalogForState,
 	filterCatalogKeysMissingFrom,
 } from "./utils/catalogUtils/filterCatalogUtils.js";
+export {
+	BASELINE_ENGINE_DIET,
+	bindEngineDiet,
+	type EngineDietFlags,
+	engineDiet,
+} from "./utils/engineDiet/engineDiet.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,
