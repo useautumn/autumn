@@ -14,7 +14,7 @@ import type { PartitionServiceStopReason } from "./partitions/types/partitions.j
 async function main(): Promise<void> {
 	try {
 		await initInfisical();
-		initErrorReporting();
+		initErrorReporting({ tracesRequests: false });
 		const env = getBalanceWorkerEnv();
 		const worker = await createBalanceWorker({
 			ctx: {
