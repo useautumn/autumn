@@ -106,7 +106,7 @@ describe("command topic", () => {
 		expect(sent[0]).toMatchObject({
 			topic: "local-commands",
 			acks: -1,
-			compression: CompressionTypes.GZIP,
+			compression: CompressionTypes.None,
 		});
 		expect(sent[0]?.messages.map((message) => message.partition)).toEqual([
 			3, 5,

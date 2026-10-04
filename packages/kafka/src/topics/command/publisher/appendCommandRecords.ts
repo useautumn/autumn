@@ -1,4 +1,4 @@
-import { CompressionTypes } from "kafkajs";
+import { compressionFor } from "../../../producer/compressionFor.js";
 import { serializeCommandRecord } from "../commandTopic.js";
 import type {
 	CommandAppend,
@@ -15,7 +15,9 @@ export async function appendCommandRecords({
 		throw new RangeError("Command record batch cannot be empty");
 	}
 	const messages: { key: Buffer; value: Buffer; partition: number }[] = [];
+	const partitions = new Set<number>();
 	for (const { partition, command } of records) {
+		partitions.add(partition);
 		messages.push({
 			...serializeCommandRecord({ record: command }),
 			partition,
@@ -26,6 +28,9 @@ export async function appendCommandRecords({
 		topic: ctx.topic,
 		messages,
 		acks: -1,
-		compression: CompressionTypes.GZIP,
+		compression: compressionFor({
+			records: messages.length,
+			partitions: partitions.size,
+		}),
 	});
 }

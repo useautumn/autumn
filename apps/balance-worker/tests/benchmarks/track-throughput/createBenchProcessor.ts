@@ -1,4 +1,4 @@
-import { serializeMeteringRecord } from "@autumn/kafka";
+import { type MeteringRecord, serializeMeteringRecord } from "@autumn/kafka";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
 import { timeSync } from "../../../src/logging/eventLoopStalls/syncSections.js";
@@ -24,6 +24,7 @@ export const createBenchProcessor = async ({
 	latency,
 	serialize,
 	db = createSyntheticWorkerDb(),
+	onAppended,
 }: {
 	scenario: Scenario;
 	partition: number;
@@ -31,6 +32,8 @@ export const createBenchProcessor = async ({
 	serialize: boolean;
 	/** Postgres stand-in for cold loads; entity benches answer their entities from it. */
 	db?: WorkerDb;
+	/** Sees every batch the writer appends, as the log would. */
+	onAppended?: (outcomes: readonly MeteringRecord[]) => void;
 }) => {
 	const topic = "bench-metering";
 	let appended = 0;
@@ -45,6 +48,7 @@ export const createBenchProcessor = async ({
 				}
 			: undefined,
 		async appendCommitted({ outcomes }) {
+			onAppended?.(outcomes);
 			if (serialize) {
 				for (const record of outcomes) {
 					serializedBytes += serializeMeteringRecord({ record }).value.length;
