@@ -1,7 +1,10 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
-import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import {
+	isConnectionLevelRedisError,
+	isTransientRedisError,
+} from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
@@ -98,10 +101,32 @@ export const fetchAndClaimLockReceiptV2 = async ({
 	}
 
 	const [getReply, setReply] = execResult;
+	const claimResult = setReply?.[1] as "OK" | null | undefined;
+
+	// A claim taken for a receipt this call will not hand back would block the next finalize,
+	// including the one that restores the receipt from its backup, so give it back first.
+	const releaseOwnClaim = async () => {
+		if (claimResult !== "OK") return;
+		const released = await tryRedisWrite(
+			() => redisInstance.del(claimMarkerKey),
+			redisInstance,
+		);
+		if (released === null) {
+			throw new RedisUnavailableError({
+				source: "fetchAndClaimLockReceiptV2:releaseClaimMarker",
+				reason: "other",
+			});
+		}
+	};
+
 	const replyError = [getReply?.[0], setReply?.[0]].find(
-		(error) => error && isTransientRedisError({ error }),
+		(error) =>
+			error &&
+			(isTransientRedisError({ error }) ||
+				isConnectionLevelRedisError({ error })),
 	);
 	if (replyError) {
+		await releaseOwnClaim();
 		throw new RedisUnavailableError({
 			source: "fetchAndClaimLockReceiptV2",
 			reason: "other",
@@ -114,17 +139,9 @@ export const fetchAndClaimLockReceiptV2 = async ({
 	if (getErr || setErr) return { found: false };
 
 	const raw = getReply?.[1] as string | null | undefined;
-	const claimResult = setReply?.[1] as "OK" | null | undefined;
 
 	if (!raw) {
-		// The claim was taken for a receipt that is not here; holding it would block the finalize
-		// that restores the receipt from its backup.
-		if (claimResult === "OK") {
-			await tryRedisWrite(
-				() => redisInstance.del(claimMarkerKey),
-				redisInstance,
-			);
-		}
+		await releaseOwnClaim();
 		return { found: false };
 	}
 

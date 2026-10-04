@@ -100,11 +100,12 @@ describe("runFinalizeLockV2 with a receipt backup", () => {
 		await expect(runFinalizeLockV2(args)).rejects.toBeInstanceOf(
 			InsufficientBalanceError,
 		);
+		// Backed up while the claim is still held, and only once.
 		expect(calls).toEqual([
 			"deleteBackup",
 			"settle",
-			"releaseClaim",
 			"copyBackup",
+			"releaseClaim",
 		]);
 	});
 

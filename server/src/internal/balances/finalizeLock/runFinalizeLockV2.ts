@@ -77,6 +77,7 @@ export const runFinalizeLockV2 = async ({
 	}
 
 	let settled = false;
+	let backedUpAgain = false;
 	try {
 		const finalizeLockContext = await buildFinalizeLockContextV2({
 			ctx,
@@ -94,6 +95,14 @@ export const runFinalizeLockV2 = async ({
 			}
 		} catch (error) {
 			if (!isBalanceRejection(error)) throw error;
+			// Back up again while still holding the claim: once it is released another finalize may
+			// settle the receipt, and a copy written after that would bring it back.
+			await copyLockReceiptToBackup({
+				ctx,
+				lockReceiptKey,
+				redisInstance: lockRedisInstance,
+			});
+			backedUpAgain = true;
 			await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
 			// The caller's refusal, not a 500: the lock stays open for a finalize that fits.
 			if (error instanceof InsufficientBalanceError) throw error;
@@ -118,8 +127,9 @@ export const runFinalizeLockV2 = async ({
 
 		await deleteLockReceiptV2({ lockReceiptKey, redisInstance });
 	} catch (error) {
-		// Not settled, so the lock is still open and needs its backup again.
-		if (!settled) {
+		// Not settled, so the lock is still open and needs its backup again. The claim is still held
+		// here (only a balance rejection releases it, and that path backed up already).
+		if (!settled && !backedUpAgain) {
 			await copyLockReceiptToBackup({
 				ctx,
 				lockReceiptKey,

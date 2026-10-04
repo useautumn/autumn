@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { runRedisOp, tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
@@ -29,6 +30,10 @@ const lockIdToReceiptKey = ({
 		lockKey: Bun.hash(lockId).toString(),
 	});
 
+/** A check's debit has already landed by the time it backs up the receipt; a slow backup store
+ *  must not turn that into a timed-out request. */
+const LOCK_RECEIPT_BACKUP_TIMEOUT_MS = 200;
+
 /** Copies the receipt as it stands, expiry included, so the backup never outlives it. */
 export const copyLockReceiptToBackup = async ({
 	ctx,
@@ -44,6 +49,7 @@ export const copyLockReceiptToBackup = async ({
 			redis.pipeline().get(lockReceiptKey).pttl(lockReceiptKey).exec(),
 		source: "copyLockReceiptToBackup:read",
 		redisInstance,
+		timeoutMs: LOCK_RECEIPT_BACKUP_TIMEOUT_MS,
 	});
 	const raw = current?.[0]?.[1] as string | null | undefined;
 	const remainingMs = current?.[1]?.[1] as number | null | undefined;
@@ -53,6 +59,7 @@ export const copyLockReceiptToBackup = async ({
 		operation: (redis) => redis.set(lockReceiptKey, raw, "PX", remainingMs),
 		source: "copyLockReceiptToBackup:write",
 		redisInstance: getMiscRedis(),
+		timeoutMs: LOCK_RECEIPT_BACKUP_TIMEOUT_MS,
 	});
 	if (result !== "OK") {
 		ctx.logger.warn(
@@ -89,12 +96,21 @@ export const restoreLockReceiptFromBackup = async ({
 	const lockReceiptKey = lockIdToReceiptKey({ ctx, lockId });
 	const miscRedis = getMiscRedis();
 
-	const backup = await tryRedisOp({
+	// Required, not best-effort: an outage here must not read as "Lock not found".
+	const backup = await runRedisOp({
 		operation: (redis) =>
 			redis.pipeline().get(lockReceiptKey).pttl(lockReceiptKey).exec(),
 		source: "restoreLockReceiptFromBackup:read",
 		redisInstance: miscRedis,
 	});
+	const backupError = backup?.find(([error]) => error)?.[0];
+	if (backupError) {
+		throw new RedisUnavailableError({
+			source: "restoreLockReceiptFromBackup:read",
+			reason: "other",
+			cause: backupError,
+		});
+	}
 	const raw = backup?.[0]?.[1] as string | null | undefined;
 	const remainingMs = backup?.[1]?.[1] as number | null | undefined;
 	if (!raw || !remainingMs || remainingMs <= 0) return false;

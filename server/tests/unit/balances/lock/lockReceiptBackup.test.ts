@@ -4,9 +4,11 @@
  *   - an evicted receipt is restored from its backup and claimed
  *   - the backup expires with the receipt, so it never revives one past its TTL
  *   - a backup deleted mid-restore (a concurrent finalize settled the lock) revives nothing
- *   - a Redis failure while fetching is a retryable error, not "Lock not found"
+ *   - a Redis failure while fetching or restoring is a retryable error, not "Lock not found"
+ *   - a lookup that fails or misses gives back the claim it took
  */
 import { beforeEach, describe, expect, test } from "bun:test";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 type Entry = { value: string; expiresAtMs: number | null };
@@ -16,6 +18,7 @@ class FakeRedis {
 	status = "ready";
 	store = new Map<string, Entry>();
 	failExec = false;
+	getReplyError: Error | null = null;
 	onExists?: () => void;
 
 	private live(key: string): Entry | undefined {
@@ -70,7 +73,10 @@ class FakeRedis {
 		const commands: (() => Promise<unknown>)[] = [];
 		const chain = {
 			get: (key: string) => {
-				commands.push(() => this.get(key));
+				commands.push(async () => {
+					if (this.getReplyError) throw this.getReplyError;
+					return this.get(key);
+				});
 				return chain;
 			},
 			pttl: (key: string) => {
@@ -83,8 +89,15 @@ class FakeRedis {
 			},
 			exec: async () => {
 				if (this.failExec) throw new Error("Connection is closed.");
-				const replies: [null, unknown][] = [];
-				for (const command of commands) replies.push([null, await command()]);
+				// Like ioredis, a failed command resolves as an error tuple rather than rejecting exec.
+				const replies: [Error | null, unknown][] = [];
+				for (const command of commands) {
+					try {
+						replies.push([null, await command()]);
+					} catch (error) {
+						replies.push([error as Error, null]);
+					}
+				}
 				return replies;
 			},
 		};
@@ -109,6 +122,22 @@ await mockModuleWithRestore(
 	() => ({ getRedisV2LockReceiptCandidates: () => [cacheRedis] }),
 );
 await mockModuleWithRestore("@/external/redis/utils/runRedisOp.js", () => ({
+	// Like the real one: a connection failure surfaces as RedisUnavailableError.
+	runRedisOp: async ({
+		operation,
+		redisInstance,
+		source,
+	}: {
+		operation: (redis: unknown) => Promise<unknown>;
+		redisInstance: unknown;
+		source: string;
+	}) => {
+		try {
+			return await operation(redisInstance);
+		} catch (cause) {
+			throw new RedisUnavailableError({ source, reason: "connection", cause });
+		}
+	},
 	tryRedisOp: async ({
 		operation,
 		redisInstance,
@@ -124,7 +153,6 @@ await mockModuleWithRestore("@/external/redis/utils/runRedisOp.js", () => ({
 	},
 }));
 
-import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import {
@@ -172,6 +200,8 @@ beforeEach(() => {
 	cacheRedis.store.clear();
 	miscRedis.store.clear();
 	cacheRedis.failExec = false;
+	miscRedis.failExec = false;
+	cacheRedis.getReplyError = null;
 	miscRedis.onExists = undefined;
 });
 
@@ -221,6 +251,28 @@ describe("lock receipt backup", () => {
 	test("a Redis failure while fetching is retryable, not Lock not found", async () => {
 		await takeLock();
 		cacheRedis.failExec = true;
+
+		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
+			RedisUnavailableError,
+		);
+	});
+
+	test("a dropped connection on the lookup is retryable and gives back the claim it took", async () => {
+		await takeLock();
+		cacheRedis.getReplyError = Object.assign(new Error("read ECONNRESET"), {
+			code: "ECONNRESET",
+		});
+
+		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
+			RedisUnavailableError,
+		);
+		expect(await cacheRedis.get(claimMarkerKey)).toBeNull();
+	});
+
+	test("a misc Redis outage while restoring is retryable, not Lock not found", async () => {
+		await takeLock();
+		await cacheRedis.del(lockReceiptKey);
+		miscRedis.failExec = true;
 
 		await expect(fetchLockReceipt({ ctx, lockId })).rejects.toBeInstanceOf(
 			RedisUnavailableError,
