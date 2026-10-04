@@ -61,6 +61,8 @@ export type PartitionWriter = {
 	adopt(params: { state: SubjectState }): SubjectState;
 	/** Releases the partition's share of the worker's budget and drops its resident rows. */
 	dispose(): void;
+	/** Spike only (bw-spike/serial-decide): the writer's state for a sequencer that projects without settlements. */
+	readScope(): PartitionWriterScope;
 };
 
 export type CommitWaits = {

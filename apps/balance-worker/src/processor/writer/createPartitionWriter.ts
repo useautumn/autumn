@@ -151,6 +151,7 @@ export function createPartitionWriter({
 		evict,
 		adopt,
 		dispose,
+		readScope: () => scope,
 	};
 }
 

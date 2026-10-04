@@ -190,7 +190,7 @@ type DecidedAgainst = {
 type DecidedTrack = DecidedMutation<never> & { decidedAgainst: DecidedAgainst };
 
 /** Runs inside the writer's critical section: no await, no I/O. */
-function mutateTrack({
+export function mutateTrack({
 	scope,
 	state,
 	customerKey,
