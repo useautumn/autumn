@@ -20,6 +20,8 @@ export const BalanceWorkerThreadsEdgeConfigSchema = z
 		requestRingBytes: ringBytes.default(4 * MiB),
 		/** Bytes per HTTP worker: replies on their way back. */
 		replyRingBytes: ringBytes.default(16 * MiB),
+		/** Bytes of send frames from the partition writers to the producer thread. */
+		sendRingBytes: ringBytes.default(4 * MiB),
 	})
 	.strict();
 
@@ -32,6 +34,7 @@ export const defaultBalanceWorkerThreadsEdgeConfig =
 		httpWorkers: 1,
 		requestRingBytes: 4 * MiB,
 		replyRingBytes: 16 * MiB,
+		sendRingBytes: 4 * MiB,
 	});
 
 export const balanceWorkerThreadsEdgeConfig = {

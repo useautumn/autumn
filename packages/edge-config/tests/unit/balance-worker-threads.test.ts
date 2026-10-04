@@ -2,11 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { BalanceWorkerThreadsEdgeConfigSchema } from "../../src/edgeConfig.js";
 
 describe("balance worker threads edge config", () => {
-	test("an empty file lays out one HTTP worker with 4 MiB request and 16 MiB reply rings", () => {
+	test("an empty file lays out one HTTP worker with 4 MiB request and 16 MiB reply rings, and a 4 MiB send ring", () => {
 		expect(BalanceWorkerThreadsEdgeConfigSchema.parse({})).toEqual({
 			httpWorkers: 1,
 			requestRingBytes: 4 << 20,
 			replyRingBytes: 16 << 20,
+			sendRingBytes: 4 << 20,
 		});
 	});
 
