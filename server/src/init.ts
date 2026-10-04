@@ -92,6 +92,7 @@ import {
 	startMemorySpikeProbe,
 	stopMemorySpikeProbe,
 } from "./utils/memory/memorySpikeProbe.js";
+import { startServerEventLoopMonitor } from "./utils/memory/serverEventLoopMonitor.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
@@ -200,6 +201,7 @@ const init = async ({
 				`Server running on port ${PORT} (${startupDurationMs}ms startup)`,
 			);
 			startMemoryMonitor("server", 60_000);
+			startServerEventLoopMonitor();
 			startMemorySpikeProbe({ label: "server" });
 			resolve();
 		});
