@@ -13,7 +13,8 @@ type Binding = {
 	identity: string;
 	now: () => number;
 };
-type Snapshot = { windowIndex: number; arms: Record<string, StagingArm> };
+type LiveArms = Readonly<Record<string, StagingArm>>;
+type Snapshot = { windowIndex: number; arms: LiveArms | null };
 
 let binding: Binding | null = null;
 let snapshot: Snapshot | null = null;
@@ -83,8 +84,8 @@ export function bindStagingVariants({
 }
 
 /** The config is read once per window, so a change lands at the next boundary and no window mixes arms. */
-function currentArms(): Record<string, StagingArm> {
-	if (!binding) return {};
+function currentArms(): LiveArms | null {
+	if (!binding) return null;
 	const windowIndex = Math.floor(binding.now() / STAGING_VARIANT_WINDOW_MS);
 	if (snapshot?.windowIndex === windowIndex) return snapshot.arms;
 	const arms: Record<string, StagingArm> = {};
@@ -101,24 +102,25 @@ function currentArms(): Record<string, StagingArm> {
 			arms: active,
 		});
 	}
-	snapshot = { windowIndex, arms };
-	return arms;
+	const live = Object.keys(arms).length ? Object.freeze(arms) : null;
+	snapshot = { windowIndex, arms: live };
+	return live;
 }
 
 /** This window's arm of `experiment`; A whenever the experiment isn't live. Never throws. */
 export function variant(experiment: string): StagingArm {
 	try {
-		return currentArms()[experiment] ?? "A";
+		return currentArms()?.[experiment] ?? "A";
 	} catch {
 		return "A";
 	}
 }
 
-/** Every live experiment's arm for this window, for logs. */
-export function variants(): Record<string, StagingArm> {
+/** Every live experiment's arm for this window, for logs; null when none is live, so callers allocate nothing. */
+export function variants(): LiveArms | null {
 	try {
-		return { ...currentArms() };
+		return currentArms();
 	} catch {
-		return {};
+		return null;
 	}
 }

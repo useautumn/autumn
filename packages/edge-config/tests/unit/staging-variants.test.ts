@@ -103,14 +103,14 @@ describe("variant()", () => {
 			identity: IDENTITY,
 		});
 		expect(variant("slice")).toBe("A");
-		expect(variants()).toEqual({});
+		expect(variants()).toBeNull();
 
 		const { store, nextWindow } = createBoundStore();
 		await store.refresh();
 		expect(store.getStatus().healthy).toBe(true);
 		nextWindow();
 		expect(variant("slice")).toBe("A");
-		expect(variants()).toEqual({});
+		expect(variants()).toBeNull();
 	});
 
 	test("an invalid experiment runs A alone and leaves valid ones live", async () => {
@@ -125,7 +125,7 @@ describe("variant()", () => {
 			five: { arms: ["A", "B", "C", "D", "D"] },
 		});
 		nextWindow();
-		expect(Object.keys(variants())).toEqual(["slice"]);
+		expect(Object.keys(variants() ?? {})).toEqual(["slice"]);
 		for (const experiment of [
 			"Bad Name",
 			"b-first",
@@ -149,6 +149,7 @@ describe("variant()", () => {
 			expect(count).toBeLessThanOrEqual(70);
 		}
 		expect(variants()).toEqual({ slice: variant("slice"), aa: variant("aa") });
+		expect(variants()).toBe(variants());
 	});
 
 	test("experiments hash independently, so two experiments don't share their windows", async () => {
@@ -199,7 +200,7 @@ describe("variant()", () => {
 		nextWindow();
 		expect(variant("slice")).toBe("A");
 		await write({ slice: { arms: ["A", "B"] } });
-		expect(variants()).toEqual({});
+		expect(variants()).toBeNull();
 		const seen = armsOver({ experiment: "slice", windows: 30, nextWindow });
 		expect(new Set(seen)).toEqual(new Set<StagingArm>(["A", "B"]));
 	});

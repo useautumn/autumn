@@ -44,7 +44,7 @@ export function createEventLoopStallMonitor({
 		/** Reports close on wall-clock `reportEveryMs` boundaries, the staging-variant windows. */
 		wallNow?: () => number;
 		/** Each live staging experiment's arm, read as a window opens: every report is one window's. */
-		variants?: () => Record<string, string>;
+		variants?: () => Readonly<Record<string, string>> | null;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
@@ -59,7 +59,7 @@ export function createEventLoopStallMonitor({
 	let lastReportAt = 0;
 	let window = emptyWindow();
 	let windowIndex = 0;
-	let windowVariants: Record<string, string> = {};
+	let windowVariants: Readonly<Record<string, string>> | null = null;
 
 	function tick(): void {
 		try {
@@ -146,9 +146,7 @@ export function createEventLoopStallMonitor({
 					stalledMs: round(window.stalledMs),
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
-					...(Object.keys(windowVariants).length
-						? { variants: windowVariants }
-						: {}),
+					...(windowVariants && { variants: windowVariants }),
 					...cpuWindow,
 					sections,
 				},
@@ -162,7 +160,7 @@ export function createEventLoopStallMonitor({
 
 	function openWindow(): void {
 		windowIndex = windowOf();
-		windowVariants = ctx.variants?.() ?? {};
+		windowVariants = ctx.variants?.() ?? null;
 	}
 
 	function start(): void {

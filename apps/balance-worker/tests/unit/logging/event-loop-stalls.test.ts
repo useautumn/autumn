@@ -19,7 +19,7 @@ function createFixture({
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
-	variants?: () => Record<string, string>;
+	variants?: () => Readonly<Record<string, string>> | null;
 	startAt?: number;
 } = {}) {
 	let clock = startAt;
@@ -295,7 +295,7 @@ test("each report carries the staging variants read as its window opened", () =>
 });
 
 test("outside a staging experiment no report carries variants", () => {
-	const { monitor, infos, elapse } = createFixture({ variants: () => ({}) });
+	const { monitor, infos, elapse } = createFixture({ variants: () => null });
 	monitor.start();
 	elapse({ elapsedMs: 1_000 });
 	expect(eventLoopReports(infos)[0]?.data).not.toHaveProperty("variants");
