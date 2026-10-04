@@ -175,6 +175,7 @@ export function enqueueMutation({
 	durability,
 	effects,
 	defersCommit = false,
+	projects = true,
 }: {
 	scope: PartitionWriterScope;
 	pendingKey: string;
@@ -186,6 +187,8 @@ export function enqueueMutation({
 	durability: MutationDurability;
 	effects?: MutationEffect[];
 	defersCommit?: boolean;
+	/** False inside a run: only the run's last write projects its rows, once, with `projectPending`. */
+	projects?: boolean;
 }): PendingMutation {
 	const { state, config } = scope;
 	const customerPending =
@@ -209,15 +212,10 @@ export function enqueueMutation({
 			maxBatchBytes,
 		});
 	const settlement = createPendingSettlement();
-	const projectedStates =
-		explicitProjectedStates ??
-		(nextState ? projectedStatesOf({ state: nextState }) : []);
 	const pending: PendingMutation = {
 		pendingKey,
 		customerKey,
-		projectedSubjectKeys: projectedStates.map((projected) =>
-			meteringIdentityToSubjectKey({ identity: projected.identity }),
-		),
+		projectedSubjectKeys: [],
 		mutation,
 		nextState,
 		durability,
@@ -228,12 +226,12 @@ export function enqueueMutation({
 		defersCommit,
 		queuedAt: writerNowOf({ scope }),
 	};
-	for (const [index, projected] of projectedStates.entries()) {
-		const subjectKey = pending.projectedSubjectKeys[index];
-		if (!subjectKey) continue;
-		state.subjects.pin({ subjectKey });
-		state.subjects.setState({ subjectKey, customerKey, state: projected });
-	}
+	if (projects)
+		projectPending({
+			scope,
+			pending,
+			projectedStates: explicitProjectedStates,
+		});
 	state.pendingByKey.set(pendingKey, pending);
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
@@ -247,6 +245,34 @@ export function enqueueMutation({
 		state.lingerWake();
 	}
 	return pending;
+}
+
+/** Makes the pending's rows the subjects' resident state, pinned until it commits. */
+export function projectPending({
+	scope,
+	pending,
+	projectedStates: explicitProjectedStates,
+}: {
+	scope: PartitionWriterScope;
+	pending: PendingMutation;
+	projectedStates?: SubjectState[];
+}): void {
+	const projectedStates =
+		explicitProjectedStates ??
+		(pending.nextState ? projectedStatesOf({ state: pending.nextState }) : []);
+	pending.projectedSubjectKeys = projectedStates.map((projected) =>
+		meteringIdentityToSubjectKey({ identity: projected.identity }),
+	);
+	for (const [index, projected] of projectedStates.entries()) {
+		const subjectKey = pending.projectedSubjectKeys[index];
+		if (!subjectKey) continue;
+		scope.state.subjects.pin({ subjectKey });
+		scope.state.subjects.setState({
+			subjectKey,
+			customerKey: pending.customerKey,
+			state: projected,
+		});
+	}
 }
 
 /** The customer's part, and the part of the entity the state names. */

@@ -39,6 +39,12 @@ export async function executeCommand<Decision>({
 
 	const result = await run({
 		...scope,
+		// Its tracks keep their turn behind a subject's waiting run, but decide alone, on this writer, stamped.
+		trackRuns: scope.trackRuns && {
+			submit: (track) =>
+				scope.trackRuns?.submit({ ...track, solo: true }) ??
+				track.decideAlone(),
+		},
 		ctx: {
 			...scope.ctx,
 			writer: { ...scope.ctx.writer, decide, log },
