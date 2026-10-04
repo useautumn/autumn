@@ -56,34 +56,40 @@ const seededRandom = (seed: number) => {
 	};
 };
 
-/** Bursts of tracks over three customers; some resend an earlier command, a few reuse its id for another value. */
+/** 800 tracks in bursts over three customers; some resend an earlier command, a few reuse its id for another value. */
 const randomBursts = ({ seed }: { seed: number }): TrackCommand[][] => {
 	const random = seededRandom(seed);
 	const integer = (min: number, max: number) =>
 		min + Math.floor(random() * (max - min + 1));
 	const sent: TrackCommand[] = [];
-	return Array.from({ length: 30 }, (_, burst) =>
-		Array.from({ length: integer(1, 12) }, (_, index) => {
-			const earlier = sent[integer(0, sent.length - 1)];
-			const roll = random();
-			if (earlier && roll < 0.08) return earlier;
-			const command = createTrackCommand({
-				identity: residentIdentityOf({
-					customerId: customers[integer(0, customers.length - 1)] ?? "",
-				}),
-				commandId:
-					earlier && roll < 0.11
-						? earlier.commandId
-						: `trk_${seed}_${burst}_${index}`,
-				featureId: random() < 0.5 ? "messages" : "words",
-				value: integer(-3, 6),
-				overageBehavior: random() < 0.3 ? "cap" : "reject",
-				occurredAt: testOccurredAt + burst * 1_000 + index,
-			});
-			sent.push(command);
-			return command;
-		}),
-	);
+	const bursts: TrackCommand[][] = [];
+	for (let burst = 0; sent.length < 800; burst++)
+		bursts.push(
+			Array.from(
+				{ length: Math.min(integer(1, 12), 800 - sent.length) },
+				(_, index) => {
+					const earlier = sent[integer(0, sent.length - 1)];
+					const roll = random();
+					if (earlier && roll < 0.08) return earlier;
+					const command = createTrackCommand({
+						identity: residentIdentityOf({
+							customerId: customers[integer(0, customers.length - 1)] ?? "",
+						}),
+						commandId:
+							earlier && roll < 0.11
+								? earlier.commandId
+								: `trk_${seed}_${burst}_${index}`,
+						featureId: random() < 0.5 ? "messages" : "words",
+						value: integer(-3, 6),
+						overageBehavior: random() < 0.3 ? "cap" : "reject",
+						occurredAt: testOccurredAt + burst * 1_000 + index,
+					});
+					sent.push(command);
+					return command;
+				},
+			),
+		);
+	return bursts;
 };
 
 type Answer = { reply: string } | { error: string };
@@ -98,13 +104,15 @@ const answerOf = (settled: PromiseSettledResult<object>): Answer =>
 const answersOf = async ({
 	decidesTrackRuns,
 	bursts,
+	sharesRunSnapshot = false,
 }: {
 	decidesTrackRuns: boolean;
 	bursts: TrackCommand[][];
+	sharesRunSnapshot?: boolean;
 }): Promise<Answer[]> => {
 	const processor = await createResidentProcessor({
 		states: customers.map((customerId) => stateOf({ customerId })),
-		config: { decidesTrackRuns },
+		config: { decidesTrackRuns, sharesRunSnapshot },
 	});
 	const answers: Answer[] = [];
 	for (const burst of bursts) {
@@ -129,4 +137,39 @@ describe("track runs", () => {
 				alone.filter((answer) => "reply" in answer).length,
 			).toBeGreaterThan(bursts.flat().length / 2);
 		});
+
+	test("a shared run snapshot answers each track's own result and changes, with the subject as the run left it", async () => {
+		const burst = Array.from({ length: 6 }, (_, index) =>
+			createTrackCommand({
+				identity: residentIdentityOf({ customerId: "cus_1" }),
+				commandId: `trk_shared_${index}`,
+				featureId: "words",
+				value: 1,
+				occurredAt: testOccurredAt + index,
+			}),
+		);
+		const parse = (answers: Answer[]) =>
+			answers.map((answer) =>
+				"reply" in answer ? JSON.parse(answer.reply) : answer,
+			);
+		const exact = parse(
+			await answersOf({ decidesTrackRuns: true, bursts: [burst] }),
+		);
+		const shared = parse(
+			await answersOf({
+				decidesTrackRuns: true,
+				bursts: [burst],
+				sharesRunSnapshot: true,
+			}),
+		);
+
+		expect(shared.map(({ result, changes }) => ({ result, changes }))).toEqual(
+			exact.map(({ result, changes }) => ({ result, changes })),
+		);
+		const last = exact.at(-1)?.state;
+		expect(
+			shared.every((reply) => reply.state.revision === last.revision),
+		).toBe(true);
+		expect(exact[0].state.revision).toBeLessThan(last.revision);
+	});
 });

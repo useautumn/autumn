@@ -7,6 +7,7 @@ import type {
 	FinalizeCommand,
 	FlushCommand,
 	InitializeRequest,
+	MeteringIdentity,
 	MutationSource,
 	ReadSubjectStateCommand,
 	RecalculateBalanceCommand,
@@ -116,6 +117,18 @@ function createProcessor({
 }: {
 	scope: PartitionProcessorScope;
 }): PartitionProcessor {
+	/** Anything but a track waits for the tracks queued before it for the customer, as it would have decided after them. */
+	function inTurn<Result>({
+		identity,
+		run,
+	}: {
+		identity: MeteringIdentity;
+		run: () => Promise<Result>;
+	}): Promise<Result> {
+		const turn = scope.trackRuns?.whenDecided({ identity });
+		return turn ? turn.then(run) : run();
+	}
+
 	function track({ command }: { command: TrackCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -133,49 +146,70 @@ function createProcessor({
 	function check({ command }: { command: CheckCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: checkPartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => checkPartition({ scope, command }),
+			}),
 		});
 	}
 
 	function readSubjectState({ command }: { command: ReadSubjectStateCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: readSubjectStatePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => readSubjectStatePartition({ scope, command }),
+			}),
 		});
 	}
 
 	function applyBillingPlan({ request }: { request: ApplyBillingPlanRequest }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: applyBillingPlanPartition({ scope, request }),
+			operation: inTurn({
+				identity: request.command.identity,
+				run: () => applyBillingPlanPartition({ scope, request }),
+			}),
 		});
 	}
 
 	function evict({ command }: { command: EvictCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: evictPartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => evictPartition({ scope, command }),
+			}),
 		});
 	}
 
 	function flush({ command }: { command: FlushCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: flushPartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => flushPartition({ scope, command }),
+			}),
 		});
 	}
 
 	function finalize({ command }: { command: FinalizeCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: finalizePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => finalizePartition({ scope, command }),
+			}),
 		});
 	}
 
 	function decideFinalize({ command }: { command: FinalizeCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: decideFinalizePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => decideFinalizePartition({ scope, command }),
+			}),
 		});
 	}
 
@@ -186,21 +220,30 @@ function createProcessor({
 	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: confirmExpiredLockPartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => confirmExpiredLockPartition({ scope, command }),
+			}),
 		});
 	}
 
 	function reset({ command }: { command: ResetCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: resetPartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => resetPartition({ scope, command }),
+			}),
 		});
 	}
 
 	function decideReset({ command }: { command: ResetCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: decideResetPartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => decideResetPartition({ scope, command }),
+			}),
 		});
 	}
 
@@ -210,21 +253,30 @@ function createProcessor({
 	function updateBalance({ command }: { command: UpdateBalanceCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: updateBalancePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => updateBalancePartition({ scope, command }),
+			}),
 		});
 	}
 
 	function decideUpdateBalance({ command }: { command: UpdateBalanceCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: decideUpdateBalancePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => decideUpdateBalancePartition({ scope, command }),
+			}),
 		});
 	}
 
 	function deleteBalance({ command }: { command: DeleteBalanceCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: deleteBalancePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => deleteBalancePartition({ scope, command }),
+			}),
 		});
 	}
 
@@ -235,7 +287,10 @@ function createProcessor({
 	}) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: recalculateBalancePartition({ scope, command }),
+			operation: inTurn({
+				identity: command.identity,
+				run: () => recalculateBalancePartition({ scope, command }),
+			}),
 		});
 	}
 
@@ -269,7 +324,10 @@ function createProcessor({
 	function initialize({ request }: { request: InitializeRequest }) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: initializePartition({ scope, request }),
+			operation: inTurn({
+				identity: request.command.identity,
+				run: () => initializePartition({ scope, request }),
+			}),
 		});
 	}
 
@@ -297,7 +355,14 @@ function createProcessor({
 	return {
 		execute,
 		dispose: () => scope.ctx.writer.dispose(),
-		readCounters: () => scope.ctx.subjectDecisions.readCounters(),
+		readCounters: () => ({
+			...scope.ctx.subjectDecisions.readCounters(),
+			...(scope.trackRuns?.readCounters() ?? {
+				trackRuns: 0,
+				trackRunTracks: 0,
+				trackRunMax: 0,
+			}),
+		}),
 		track,
 		decideTrack,
 		check,
