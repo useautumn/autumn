@@ -119,6 +119,8 @@ export type PartitionProcessorDependencies = {
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	positions?: PositionSink;
+	/** Sequencer-diet arm B: committed batches are remembered for dedup in one call. */
+	batchedForget?: () => boolean;
 	assertCanRead(): void;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };

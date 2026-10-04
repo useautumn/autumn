@@ -115,6 +115,7 @@ export function createPartitionRuntimeFactory({
 				},
 				recentCommands,
 				positions: ctx.positionsFor?.({ partition }),
+				batchedForget: ctx.batchedForget,
 			},
 			config: {
 				topic,

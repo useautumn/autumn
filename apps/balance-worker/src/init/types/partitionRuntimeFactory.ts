@@ -78,6 +78,8 @@ export type PartitionRuntimeFactoryContext = {
 	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 	/** Serial-decide arm D: the position sink a partition's writer publishes to. */
 	positionsFor?: (params: { partition: number }) => PositionSink | undefined;
+	/** Sequencer-diet arm B: committed batches are remembered for dedup in one call. */
+	batchedForget?: () => boolean;
 };
 
 export type PartitionRuntimeFactoryConfig = {

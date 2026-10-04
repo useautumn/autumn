@@ -2,6 +2,7 @@ import {
 	createKafkaClient,
 	createKafkaTransport,
 	createProducerSession,
+	type KafkaProducerFactory,
 	type MeteringRecord,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
@@ -16,8 +17,8 @@ import { createMutationPublisher } from "../../../src/kafka/createMutationPublis
 import { createWorkerProducer } from "../../../src/kafka/createWorkerProducer.js";
 import { getBalanceWorkerLogger } from "../../../src/logging/getBalanceWorkerLogger.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
-import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
+import { createRemoteKafkaProducers } from "../../../src/serialDecide/createRemoteKafkaProducers.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -27,6 +28,7 @@ import {
 	testIdentity,
 } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
+import { spikeSequencerDiet } from "./spikeSequencerDiet.js";
 
 // The equality test pins the wall clock so two runs of the same requests build the same records.
 const fixedClock = process.env.SPIKE_FIXED_CLOCK;
@@ -35,8 +37,9 @@ if (fixedClock) Date.now = () => Number(fixedClock);
 export const SPIKE_TOPIC = process.env.SPIKE_TOPIC ?? "bw-spike-metering";
 export const SPIKE_BROKERS = ["127.0.0.1:19092"];
 
-/** Where the partition's records go: a stub that only encodes, kafkajs on this loop, or the Rust front. */
-export type AppenderMode = "sim" | "kafkajs" | "remote";
+/** Where the partition's records go: a stub that only encodes, kafkajs on this loop, the Kafka worker thread
+ *  (serial-decide arm C's producers), or the Rust front. */
+export type AppenderMode = "sim" | "kafkajs" | "kafka-worker" | "remote";
 
 export type RemoteAppend = (params: {
 	topic: string;
@@ -51,22 +54,60 @@ const producerLimits = {
 	maxRetryTimeMs: 1000,
 };
 
-async function kafkajsAppender(): Promise<CommittedOutcomeAppender> {
-	const kafka = new Kafka(
-		createKafkaClient({
-			clientId: `bw-spike-${process.pid}`,
-			brokers: SPIKE_BROKERS,
-			transport: createKafkaTransport({ authMode: "none" }),
-			limits: {
-				connectionTimeoutMs: 5000,
-				requestTimeoutMs: 30000,
-				retryCount: 2,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 1000,
+const clientLimits = {
+	connectionTimeoutMs: 5000,
+	requestTimeoutMs: 30000,
+	retryCount: 2,
+	initialRetryTimeMs: 100,
+	maxRetryTimeMs: 1000,
+};
+
+/** Arm C's producers: the same session and publisher, with `kafka.producer()` answered by the Kafka worker thread. */
+async function kafkaWorkerFactory(): Promise<KafkaProducerFactory> {
+	const remote = createRemoteKafkaProducers({
+		ctx: {
+			logger: {
+				info: console.error,
+				warn: console.error,
+				error: console.error,
 			},
-		}),
-	);
-	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as "transactional" | "idempotent";
+			onFatal: ({ cause }) => {
+				console.error(`FATAL kafka worker ${String(cause)}`);
+				process.exit(1);
+			},
+		},
+		config: {
+			clientId: `bw-spike-kw-${process.pid}`,
+			brokers: SPIKE_BROKERS,
+			authMode: "none",
+			region: "us-east-1",
+			limits: clientLimits,
+		},
+	});
+	await remote.start();
+	return remote;
+}
+
+async function kafkajsAppender({
+	onWorker,
+}: {
+	onWorker: boolean;
+}): Promise<CommittedOutcomeAppender> {
+	const kafka: KafkaProducerFactory = onWorker
+		? await kafkaWorkerFactory()
+		: new Kafka(
+				createKafkaClient({
+					clientId: `bw-spike-${process.pid}`,
+					brokers: SPIKE_BROKERS,
+					transport: createKafkaTransport({ authMode: "none" }),
+					limits: clientLimits,
+				}),
+			);
+	const mode = (process.env.SPIKE_COMMIT_MODE ?? "transactional") as
+		| "transactional"
+		| "idempotent";
+	if (onWorker && mode !== "idempotent")
+		throw new Error("the Kafka worker speaks idempotent commits only");
 	const session = createProducerSession({
 		ctx: { kafka },
 		config: createWorkerProducerConfig({
@@ -134,8 +175,8 @@ export async function createSpikeWorker({
 	const scenario = scenarios[process.env.SPIKE_SCENARIO ?? "typical"];
 	if (!scenario) throw new Error("scenario");
 	const base =
-		appenderMode === "kafkajs"
-			? await kafkajsAppender()
+		appenderMode === "kafkajs" || appenderMode === "kafka-worker"
+			? await kafkajsAppender({ onWorker: appenderMode === "kafka-worker" })
 			: appenderMode === "remote"
 				? remoteAppender(
 						remoteAppend ??
@@ -180,6 +221,9 @@ export async function createSpikeWorker({
 		nextOffset: 0n,
 	});
 	const db = createSyntheticWorkerDb();
+	const diet = spikeSequencerDiet({
+		kafkaWorker: appenderMode === "kafka-worker",
+	});
 	const processor = createPartitionProcessor({
 		ctx: {
 			stateStore: {
@@ -191,10 +235,8 @@ export async function createSpikeWorker({
 			db,
 			appender,
 			receiptPolicy: { retentionMs: 86_400_000, now: () => Date.now() },
-			recentCommands: createRecentCommands({
-				windowMs: 600_000,
-				now: () => Date.now(),
-			}),
+			recentCommands: diet.recentCommands,
+			batchedForget: diet.batchedForget,
 			assertCanRead: () => undefined,
 		},
 		config: {

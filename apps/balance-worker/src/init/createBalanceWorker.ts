@@ -2,6 +2,7 @@ import { cpus } from "node:os";
 import {
 	bindStagingVariants,
 	STAGING_VARIANT_WINDOW_MS,
+	type StagingArm,
 	variants,
 } from "@autumn/edge-config";
 import {
@@ -19,6 +20,10 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import {
+	createSequencerDietMode,
+	forcedSequencerDietArmFromEnv,
+} from "../experiments/sequencerDiet.js";
 import {
 	createSerialDecideMode,
 	forcedSerialDecideArmFromEnv,
@@ -127,6 +132,18 @@ export async function createBalanceWorker({
 	const serialDecide = createSerialDecideMode({
 		force: config.serialDecideArm ?? forcedSerialDecideArmFromEnv(),
 	});
+	// Inert unless serial-decide runs the Kafka worker (C or D); read once with the layout.
+	const sequencerDiet = createSequencerDietMode({
+		serialDecide: serialDecide.read,
+		force: forcedSequencerDietArmFromEnv(),
+	});
+	/** The arms this task booted with, for health and event-loop lines; null when every one is A. */
+	function bootArms(): Record<string, StagingArm> | null {
+		const layout = serialDecide.bootArms();
+		const diet = sequencerDiet.bootArms();
+		if (!layout && !diet) return null;
+		return { ...layout, ...diet };
+	}
 	try {
 		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
 		const slotGate = resources.edgeConfigs
@@ -185,12 +202,16 @@ export async function createBalanceWorker({
 				? remoteKafka.producer(config)
 				: resources.kafka.producer(config);
 		}
+		function batchedForget(): boolean {
+			return sequencerDiet.read().batchedForget;
+		}
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
 				logger: dependencies.logger,
 				kafka: { producer: partitionProducer },
 				positionsFor: positionsForArm,
+				batchedForget,
 				ownershipOffsets: resources.admin,
 				ownershipHandoff,
 				stateStore: resources.stateStore,
@@ -229,7 +250,9 @@ export async function createBalanceWorker({
 		}
 
 		function readDedupStore(): "map" | "hashed" {
-			return serialDecide.read().arm === "D" ? "hashed" : "map";
+			return serialDecide.read().arm === "D" || sequencerDiet.read().hashedDedup
+				? "hashed"
+				: "map";
 		}
 		const partitions = createWorkerPartitions({
 			ctx: {
@@ -368,7 +391,7 @@ export async function createBalanceWorker({
 				readPartitions: partitions.partitions,
 				readWorkerStatus,
 				readConsumer: partitions.consumer,
-				readBootArms: serialDecide.bootArms,
+				readBootArms: bootArms,
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
@@ -414,7 +437,7 @@ export async function createBalanceWorker({
 		// Window arms plus the arms fixed at boot, so a task's layout is on every event-loop line.
 		function variantsWithBootArms(): Readonly<Record<string, string>> | null {
 			const window = variants();
-			const boot = serialDecide.bootArms();
+			const boot = bootArms();
 			if (!boot) return window;
 			return { ...window, ...boot };
 		}
