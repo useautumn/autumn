@@ -33,6 +33,7 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type { HotCheckOutcome } from "../commands/checkHot.js";
 import type { HotTrackOutcome } from "../commands/trackHot.js";
 import type { TrackRunCounters, TrackRuns } from "../runs/createTrackRuns.js";
 import type {
@@ -67,6 +68,8 @@ export type PartitionProcessor = {
 		command: TrackCommand;
 	}): Promise<DecidedMutation<never>>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	/** Serial-decide arm D: a sync check on a resident, current subject; null falls back to `check`. */
+	checkHot(params: { command: CheckCommand }): HotCheckOutcome | null;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	/** What the partition counted since it started; partition health reports them. */

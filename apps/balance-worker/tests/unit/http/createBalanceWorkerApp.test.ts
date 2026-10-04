@@ -119,6 +119,7 @@ const fixture = ({
 	const processor: PartitionProcessor = {
 		execute: ({ run }) => run(processor),
 		trackHot: () => null,
+		checkHot: () => null,
 		dispose: () => undefined,
 		readCounters: () => ({
 			checkMemoHits: 0,

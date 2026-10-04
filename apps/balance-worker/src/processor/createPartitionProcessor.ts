@@ -18,6 +18,7 @@ import type {
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
+import { checkHot as checkHotPartition } from "./commands/checkHot.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { deleteBalance as deleteBalancePartition } from "./commands/deleteBalance.js";
 import { evict as evictPartition } from "./commands/evict.js";
@@ -157,6 +158,10 @@ function createProcessor({
 				run: () => checkPartition({ scope, command }),
 			}),
 		});
+	}
+
+	function checkHot({ command }: { command: CheckCommand }) {
+		return checkHotPartition({ scope, command });
 	}
 
 	function readSubjectState({ command }: { command: ReadSubjectStateCommand }) {
@@ -374,6 +379,7 @@ function createProcessor({
 		trackHot,
 		decideTrack,
 		check,
+		checkHot,
 		applyBillingPlan,
 		readSubjectState,
 		initialize,

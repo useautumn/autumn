@@ -211,6 +211,20 @@ describe("I/O worker pool hot path", () => {
 		});
 	});
 
+	test("a check crosses as its own kind and its reply goes out at once", async () => {
+		const before = decider.calls.length;
+		const response = await post({
+			script: { partition: 1, seq: 0, status: 200 },
+			path: "/v1/check",
+		});
+		expect(response.status).toBe(200);
+		expect((await response.json()) as Decided).toMatchObject({
+			decided: true,
+			kind: HOT_KIND.CHECK,
+		});
+		expect(decider.calls[before]?.kind).toBe(HOT_KIND.CHECK);
+	});
+
 	test("a decider that throws answers 500 like a fetch failure", async () => {
 		const thrown = await post({ script: { throw: true } });
 		expect(thrown.status).toBe(500);
