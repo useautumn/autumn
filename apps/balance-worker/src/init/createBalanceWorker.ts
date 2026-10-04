@@ -9,10 +9,13 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
-import { initBuildVariant } from "../experiments/buildVariant.js";
+import {
+	initBuildVariant,
+	startVariantWindow,
+} from "../experiments/buildVariant.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
-import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import { createBalanceWorkerFetch } from "../http/fastPath/createBalanceWorkerFetch.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
@@ -61,7 +64,7 @@ export async function createBalanceWorker({
 	const { env } = config;
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
-	const variant = initBuildVariant({ endpoint: address.endpoint });
+	initBuildVariant({ endpoint: address.endpoint });
 	const identity = await resolveTaskIdentity({
 		ctx: { logger: dependencies.logger },
 		env,
@@ -239,7 +242,6 @@ export async function createBalanceWorker({
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
 				enabled: process.env.NODE_ENV === "production",
 				endpoint: address.endpoint,
-				variant,
 			},
 		});
 		const reportsHealth = process.env.NODE_ENV === "production";
@@ -278,7 +280,11 @@ export async function createBalanceWorker({
 			await resources.postgres.client`select 1`;
 		}
 		const stallMonitor = createEventLoopStallMonitor({
-			ctx: { logger: dependencies.logger, recorder: syncSections },
+			ctx: {
+				logger: dependencies.logger,
+				recorder: syncSections,
+				startVariantWindow,
+			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
 				endpoint: address.endpoint,
@@ -287,7 +293,6 @@ export async function createBalanceWorker({
 				logStallMs: 50,
 				reportEveryMs: 10_000,
 				cpuModel: cpus()[0]?.model,
-				variant,
 			},
 		});
 		const kafkaRequestReporter = createKafkaRequestReporter({

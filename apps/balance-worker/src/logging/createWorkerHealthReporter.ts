@@ -19,17 +19,11 @@ export function createWorkerHealthReporter({
 	config,
 }: {
 	ctx: WorkerHealthReporterContext;
-	config: {
-		deployment: string;
-		enabled: boolean;
-		endpoint: string;
-		variant?: string | null;
-	};
+	config: { deployment: string; enabled: boolean; endpoint: string };
 }): { start(): void; stop(): void } {
 	const identity = {
 		workerEndpoint: config.endpoint,
 		workerInstanceId: crypto.randomUUID(),
-		...(config.variant ? { variant: config.variant } : {}),
 	};
 	let status: "created" | "active" | "stopped" = "created";
 	let cancel: (() => void) | undefined;

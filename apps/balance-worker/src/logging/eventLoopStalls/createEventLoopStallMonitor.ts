@@ -18,8 +18,6 @@ type EventLoopStallMonitorConfig = {
 	logStallMs: number;
 	reportEveryMs: number;
 	cpuModel?: string;
-	/** The task's A/B variant; absent outside an experiment build. */
-	variant?: string | null;
 };
 
 const MAX_STALL_LOGS_PER_REPORT = 20;
@@ -43,6 +41,8 @@ export function createEventLoopStallMonitor({
 		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
 		memory?: () => { heapUsed: number; rss: number };
 		cpu?: () => CpuCounters;
+		/** An A/B build switches variant as each report window opens, so every window is one variant's. */
+		startVariantWindow?: (params: { windowIndex: number }) => string | null;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
@@ -54,6 +54,8 @@ export function createEventLoopStallMonitor({
 	let lastTickAt = 0;
 	let lastReportAt = 0;
 	let window = emptyWindow();
+	let windowIndex = 0;
+	let variant: string | null = null;
 
 	function tick(): void {
 		try {
@@ -140,7 +142,7 @@ export function createEventLoopStallMonitor({
 					stalledMs: round(window.stalledMs),
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
-					...(config.variant ? { variant: config.variant } : {}),
+					...(variant ? { variant } : {}),
 					...cpuWindow,
 					sections,
 				},
@@ -149,6 +151,8 @@ export function createEventLoopStallMonitor({
 		);
 		lastReportAt = tickedAt;
 		window = emptyWindow();
+		windowIndex += 1;
+		variant = ctx.startVariantWindow?.({ windowIndex }) ?? null;
 	}
 
 	function start(): void {
@@ -157,6 +161,7 @@ export function createEventLoopStallMonitor({
 		lastReportAt = lastTickAt;
 		lastCpu = cpu();
 		ctx.recorder.drainTotals();
+		variant = ctx.startVariantWindow?.({ windowIndex }) ?? null;
 		cancel = (ctx.schedule ?? scheduleProbe)({
 			intervalMs: config.intervalMs,
 			run: tick,

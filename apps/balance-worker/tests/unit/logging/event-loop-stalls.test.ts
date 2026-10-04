@@ -14,11 +14,11 @@ const idleCpu: CpuCounters = {
 function createFixture({
 	reportEveryMs = 1_000,
 	cpu = () => idleCpu,
-	variant,
+	startVariantWindow,
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
-	variant?: string | null;
+	startVariantWindow?: (params: { windowIndex: number }) => string | null;
 } = {}) {
 	let clock = 1_000;
 	const now = () => clock;
@@ -40,6 +40,7 @@ function createFixture({
 			recorder,
 			now,
 			cpu,
+			startVariantWindow,
 			schedule: ({ run }) => {
 				tick = run;
 				return () => {
@@ -55,7 +56,6 @@ function createFixture({
 			logStallMs: 50,
 			reportEveryMs,
 			cpuModel: "Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz",
-			variant,
 		},
 	});
 	/** Advance the clock by `elapsedMs`, doing `work` in that time, then fire the timer. */
@@ -250,16 +250,33 @@ test("a timed section returns its value and still records when it throws", () =>
 	expect(recorder.drainTotals()["subject.read"]?.count).toBe(2);
 });
 
-test("an A/B build's summary names the task's variant; any other build's never does", () => {
-	const summaryOf = ({ variant }: { variant?: string | null }) => {
-		const { monitor, infos, elapse } = createFixture({ variant });
-		monitor.start();
-		elapse({ elapsedMs: 1_000 });
-		return infos.find(
+test("an A/B build labels each report with the variant that ran during it, then opens the next window", () => {
+	const opened: number[] = [];
+	const { monitor, infos, elapse } = createFixture({
+		startVariantWindow: ({ windowIndex }) => {
+			opened.push(windowIndex);
+			return windowIndex % 3 === 1 ? "B" : "A";
+		},
+	});
+	monitor.start();
+	for (let report = 0; report < 3; report++) elapse({ elapsedMs: 1_000 });
+	const variants = infos
+		.filter(
 			([fields]) =>
 				(fields as { event?: string }).event === "balance_worker.event_loop",
-		)?.[0] as { data: Record<string, unknown> };
-	};
-	expect(summaryOf({ variant: "B" }).data.variant).toBe("B");
-	expect(summaryOf({ variant: null }).data).not.toHaveProperty("variant");
+		)
+		.map(([fields]) => (fields as { data: { variant?: string } }).data.variant);
+	expect(opened).toEqual([0, 1, 2, 3]);
+	expect(variants).toEqual(["A", "B", "A"]);
+});
+
+test("outside an A/B build no report carries a variant", () => {
+	const { monitor, infos, elapse } = createFixture();
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+	const summary = infos.find(
+		([fields]) =>
+			(fields as { event?: string }).event === "balance_worker.event_loop",
+	)?.[0] as { data: Record<string, unknown> };
+	expect(summary.data).not.toHaveProperty("variant");
 });
