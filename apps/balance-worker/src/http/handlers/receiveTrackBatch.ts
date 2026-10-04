@@ -18,6 +18,7 @@ import {
 	readRequestBudget,
 	withRequestBudget,
 } from "../middlewares/runtimeRouting/withRequestBudget.js";
+import { serializeTrackBatchReply } from "../replies/serializeSubjectReply.js";
 import type {
 	BalanceWorkerBatchLog,
 	BalanceWorkerHttpContext,
@@ -74,7 +75,11 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 			results,
 			causes,
 		});
-		return context.json({ results } satisfies TrackBatchReply);
+		return context.body(
+			serializeTrackBatchReply({ results } satisfies TrackBatchReply),
+			200,
+			{ "content-type": "application/json" },
+		);
 	}
 	return respond;
 }
