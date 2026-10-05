@@ -1,7 +1,8 @@
 /**
  * set_plans unscheduled_plans with a future phases[0].starts_at run from now, not from the start:
  * - a running add-on keeps its row and subscription while the main plan ends now and its successor waits;
- * - a new add-on is attached and invoiced now while the phase plan waits for the start.
+ * - a new add-on is attached and invoiced now while the phase plan waits for the start;
+ * - without a card, that new add-on still goes through Checkout.
  */
 
 import { expect, test } from "bun:test";
@@ -122,5 +123,26 @@ test.concurrent(
 			count: 1,
 			latestTotal: preview.total,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans starts_at: without a card, a new paid ongoing add-on still returns a Checkout URL while the first phase starts later")}`,
+	async () => {
+		const { pro, addOn } = startsAtProducts();
+		const { customerId, autumnV2_2, advancedTo } = await initScenario({
+			customerId: "set-plans-future-start-ongoing-no-card",
+			setup: [s.customer({}), s.products({ list: [pro, addOn] })],
+			actions: [],
+		});
+		const startsAt = addDays(advancedTo, 7).getTime();
+
+		const response = await autumnV2_2.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: startsAt, plans: [{ plan_id: pro.id }] }],
+			unscheduled_plans: [{ plan_id: addOn.id }],
+		});
+
+		expect(response.payment_url).toContain("checkout.stripe.com");
 	},
 );
