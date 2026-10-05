@@ -8,7 +8,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { applyTrialContextToPatchedCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct/applyTrialContextToPatchedCustomerProduct";
+import { startsInFuture } from "../../timeline/timelineGuards";
 import type {
+	ResolvedSegment,
 	TimelineDiff,
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
@@ -28,11 +31,18 @@ export type SetPlansCustomerProductChanges = {
 	scheduledInsertCustomerProducts: FullCusProduct[];
 	updateCustomerProducts: CustomerProductUpdate[];
 	patchCustomerProducts: CustomerProductPatch[];
+	/** Kept rows a requested trial starts on, as they were and as they run on. */
+	trialStartedCustomerProducts: TrialStartedCustomerProduct[];
 	deleteCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	keptCustomerProducts: FullCusProduct[];
 	/** The row each resolved segment runs on once the plan executes. */
 	customerProductIdBySegmentId: Map<string, string>;
+};
+
+export type TrialStartedCustomerProduct = {
+	customerProduct: FullCusProduct;
+	trialingCustomerProduct: FullCusProduct;
 };
 
 type OperationOf<Type extends TimelineOperation["type"]> = Extract<
@@ -142,6 +152,37 @@ const isOnReplacedSchedule = ({
 const isLiveRow = (customerProduct: FullCusProduct) =>
 	customerProduct.status !== CusProductStatus.Scheduled;
 
+/** A live row the request declares now starts its explicit trial in place, keeping its balances. */
+const keptRowTrialStart = ({
+	billingContext,
+	customerProduct,
+	segment,
+	now,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	customerProduct: FullCusProduct;
+	segment?: ResolvedSegment;
+	now: number;
+}) => {
+	const isDeclaredNow =
+		segment?.origin === "declared" && !startsInFuture({ segment, now });
+	const startsTrial =
+		Boolean(billingContext.trialContext?.customFreeTrial) &&
+		isLiveRow(customerProduct) &&
+		isDeclaredNow;
+	if (!startsTrial) return undefined;
+
+	const trialingCustomerProduct = { ...customerProduct };
+	const updates = applyTrialContextToPatchedCustomerProduct({
+		customerProduct: trialingCustomerProduct,
+		trialContext: billingContext.trialContext,
+	});
+	return {
+		updates,
+		trialStarted: { customerProduct, trialingCustomerProduct },
+	};
+};
+
 /** The links a kept row drops to leave a replaced subscription; a backdate recreate also moves its scheduled rows and schedule. */
 const replacedLinkResets = ({
 	billingContext,
@@ -171,19 +212,36 @@ const replacedLinkResets = ({
 	};
 };
 
-/** A kept row takes its new end, and moves off a replaced subscription onto the new one, from its backdated start if any. */
+/** A kept row takes its new end and trial, and moves off a replaced subscription onto the new one, from its backdated start if any. */
 const keptRowUpdate = ({
 	billingContext,
 	customerProduct,
+	segment,
+	now,
 	retime,
 	backdatedStartsAt,
 }: {
 	billingContext: CreateScheduleBillingContext;
 	customerProduct: FullCusProduct;
+	segment?: ResolvedSegment;
+	now: number;
 	retime?: OperationOf<"retime">;
 	backdatedStartsAt?: number;
-}): { update?: CustomerProductUpdate; patch?: CustomerProductPatch } => {
-	const update: CustomerProductUpdate = { customerProduct, updates: {} };
+}): {
+	update?: CustomerProductUpdate;
+	patch?: CustomerProductPatch;
+	trialStarted?: TrialStartedCustomerProduct;
+} => {
+	const trialStart = keptRowTrialStart({
+		billingContext,
+		customerProduct,
+		segment,
+		now,
+	});
+	const update: CustomerProductUpdate = {
+		customerProduct,
+		updates: { ...trialStart?.updates },
+	};
 	if (retime && isLiveRow(customerProduct)) {
 		applyScheduleTimingToCustomerProductPlan({
 			result: { updateCustomerProduct: update },
@@ -207,6 +265,7 @@ const keptRowUpdate = ({
 	return {
 		update: Object.keys(update.updates).length > 0 ? update : undefined,
 		patch: linkResets ? emptyPatch(customerProduct) : undefined,
+		trialStarted: trialStart?.trialStarted,
 	};
 };
 
@@ -235,6 +294,9 @@ export const diffToCustomerProducts = ({
 	};
 	const customerProductIdBySegmentId = new Map<string, string>();
 	const operations = groupOperations(diff.operations);
+	const segmentsById = new Map(
+		diff.timeline.map((segment) => [segment.id, segment]),
+	);
 
 	const expired = operations.expire;
 	const outgoingCustomerProducts = expired.map(({ customerProductId }) =>
@@ -248,10 +310,8 @@ export const diffToCustomerProducts = ({
 		);
 	const patchCustomerProducts: CustomerProductPatch[] = [];
 	const keptCustomerProducts: FullCusProduct[] = [];
+	const trialStartedCustomerProducts: TrialStartedCustomerProduct[] = [];
 
-	const segmentsById = new Map(
-		diff.timeline.map((segment) => [segment.id, segment]),
-	);
 	const backdatedStartsAtFor = (segmentId: string) => {
 		if (!isBackdateRecreate({ billingContext })) return undefined;
 		const declared = segmentsById.get(segmentId)?.origin === "declared";
@@ -265,9 +325,11 @@ export const diffToCustomerProducts = ({
 		}
 		if (isLiveRow(customerProduct)) keptCustomerProducts.push(customerProduct);
 
-		const { update, patch } = keptRowUpdate({
+		const { update, patch, trialStarted } = keptRowUpdate({
 			billingContext,
 			customerProduct,
+			segment: segmentsById.get(keep.segmentId),
+			now: diff.now,
 			retime: retimes.find(
 				({ customerProductId }) => customerProductId === customerProduct.id,
 			),
@@ -275,6 +337,7 @@ export const diffToCustomerProducts = ({
 		});
 		if (update) updateCustomerProducts.push(update);
 		if (patch) patchCustomerProducts.push(patch);
+		if (trialStarted) trialStartedCustomerProducts.push(trialStarted);
 	}
 
 	const immediateInsertCustomerProducts: FullCusProduct[] = [];
@@ -302,6 +365,7 @@ export const diffToCustomerProducts = ({
 		scheduledInsertCustomerProducts,
 		updateCustomerProducts,
 		patchCustomerProducts,
+		trialStartedCustomerProducts,
 		deleteCustomerProducts: operations.delete.map(({ customerProductId }) =>
 			customerProductFor(customerProductId),
 		),

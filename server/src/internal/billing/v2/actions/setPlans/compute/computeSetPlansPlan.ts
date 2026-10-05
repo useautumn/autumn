@@ -100,6 +100,18 @@ export const computeSetPlansPlan = ({
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
 	});
 
+	const { trialStartedCustomerProducts } = customerProductChanges;
+	const { allLineItems: trialStartLineItems } = buildAutumnLineItems({
+		ctx,
+		newCustomerProducts: trialStartedCustomerProducts.map(
+			({ trialingCustomerProduct }) => trialingCustomerProduct,
+		),
+		deletedCustomerProducts: trialStartedCustomerProducts.map(
+			({ customerProduct }) => customerProduct,
+		),
+		billingContext,
+	});
+
 	const oneOffPrepaidCarryOvers = cusProductsToOneOffPrepaidCarryOvers({
 		currentCustomerProducts: outgoingCustomerProducts,
 		fullCustomer: billingContext.fullCustomer,
@@ -159,6 +171,7 @@ export const computeSetPlansPlan = ({
 		customerLicenseTransitions,
 		lineItems: [
 			...allLineItems,
+			...trialStartLineItems,
 			...backdateGapLineItems({ ctx, billingContext, customerProductChanges }),
 		],
 		updateCustomerEntitlements,
