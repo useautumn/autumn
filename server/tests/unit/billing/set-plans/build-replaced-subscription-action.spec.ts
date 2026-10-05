@@ -37,7 +37,7 @@ describe("buildReplacedSubscriptionAction", () => {
 		});
 	});
 
-	test("a scheduled subscription replaced for a backdate releases its schedule first", () => {
+	test("a scheduled subscription replaced for a backdate is cancelled outright, its schedule with it", () => {
 		expect(
 			buildReplacedSubscriptionAction({
 				replacedStripeSubscription: {
@@ -49,7 +49,6 @@ describe("buildReplacedSubscriptionAction", () => {
 		).toEqual({
 			type: "cancel",
 			stripeSubscriptionId: "sub_active",
-			stripeSubscriptionScheduleId: "sub_sched_live",
 			reason: "backdate",
 		});
 	});

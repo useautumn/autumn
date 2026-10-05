@@ -112,26 +112,17 @@ const scheduleActionToProcessorChanges = ({
 	}
 };
 
-/** Stripe won't cancel a subscription its schedule still manages, so the schedule is released first. */
 const replacedSubscriptionToProcessorChanges = ({
 	replacedSubscriptionAction,
-}: StripeBillingPlan): ProcessorChange[] => {
-	if (!replacedSubscriptionAction) return [];
-
-	const { stripeSubscriptionId, stripeSubscriptionScheduleId } =
-		replacedSubscriptionAction;
-	return [
-		...(stripeSubscriptionScheduleId
-			? [
-					scheduleChange({
-						id: stripeSubscriptionScheduleId,
-						action: "released",
-					}),
-				]
-			: []),
-		subscriptionChange({ id: stripeSubscriptionId, action: "canceled" }),
-	];
-};
+}: StripeBillingPlan): ProcessorChange[] =>
+	replacedSubscriptionAction
+		? [
+				subscriptionChange({
+					id: replacedSubscriptionAction.stripeSubscriptionId,
+					action: "canceled",
+				}),
+			]
+		: [];
 
 export const stripeBillingPlanToProcessorChanges = ({
 	stripeBillingPlan,

@@ -57,13 +57,7 @@ const ctx = {
 	},
 } as unknown as AutumnContext;
 
-const cancelReplaced = ({
-	reason,
-	stripeSubscriptionScheduleId,
-}: {
-	reason?: "backdate";
-	stripeSubscriptionScheduleId?: string;
-} = {}) =>
+const cancelReplaced = ({ reason }: { reason?: "backdate" } = {}) =>
 	executeStripeReplacedSubscriptionAction({
 		ctx,
 		fullCustomer: {
@@ -73,7 +67,6 @@ const cancelReplaced = ({
 		replacedSubscriptionAction: {
 			type: "cancel",
 			stripeSubscriptionId: "sub_old",
-			stripeSubscriptionScheduleId,
 			reason,
 		},
 	});
@@ -142,31 +135,14 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 		});
 	});
 
-	test("a scheduled subscription recreated for a backdate has its schedule released before it is cancelled", async () => {
+	test("a scheduled subscription recreated for a backdate is cancelled without releasing its schedule", async () => {
 		stripeState.retrievedStatus = "active";
 		stripeState.retrievedSchedule = "sub_sched_old";
 
-		await cancelReplaced({
-			reason: "backdate",
-			stripeSubscriptionScheduleId: "sub_sched_old",
-		});
-
-		expect(stripeState.calls).toEqual([
-			"release sub_sched_old",
-			"cancel sub_old",
-		]);
-		expect(loggedErrors).toEqual([]);
-	});
-
-	test("a schedule a retry already released is not released again", async () => {
-		stripeState.retrievedStatus = "active";
-
-		await cancelReplaced({
-			reason: "backdate",
-			stripeSubscriptionScheduleId: "sub_sched_old",
-		});
+		await cancelReplaced({ reason: "backdate" });
 
 		expect(stripeState.calls).toEqual(["cancel sub_old"]);
+		expect(loggedErrors).toEqual([]);
 	});
 
 	test("a cancel Stripe rejects outright is not retried", async () => {
