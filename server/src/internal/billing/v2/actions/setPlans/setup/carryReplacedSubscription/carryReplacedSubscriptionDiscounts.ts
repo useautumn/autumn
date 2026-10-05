@@ -1,8 +1,8 @@
 import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { isStripeResourceAlreadyExists } from "@/external/stripe/common/utils/isStripeResourceAlreadyExists";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { generateId } from "@/utils/genUtils";
 import { replacedSubscriptionPeriodEndMs } from "../../utils/replacedSubscriptionPeriodEndMs";
 import {
 	remainingDiscountMonths,
@@ -45,24 +45,35 @@ const remainingCoupon = ({
 	duration_in_months: months,
 });
 
+/** One copy per replaced subscription and remaining months, so a retried recreate reuses it. */
 const createCouponCopy = async ({
 	ctx,
 	coupon,
+	replacedStripeSubscription,
 }: {
 	ctx: AutumnContext;
 	coupon: Stripe.Coupon;
-}) =>
-	createStripeCli({ org: ctx.org, env: ctx.env }).coupons.create({
-		id: `${coupon.id}_${generateId("roll")}`,
-		name: coupon.name ?? undefined,
-		percent_off: coupon.percent_off ?? undefined,
-		amount_off: coupon.amount_off ?? undefined,
-		currency: coupon.currency ?? undefined,
-		duration: coupon.duration,
-		duration_in_months: coupon.duration_in_months ?? undefined,
-		applies_to: coupon.applies_to ?? undefined,
-		metadata: coupon.metadata ?? undefined,
-	});
+	replacedStripeSubscription: Stripe.Subscription;
+}) => {
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const id = `${coupon.id}_${replacedStripeSubscription.id}_${coupon.duration_in_months}m`;
+	try {
+		return await stripeCli.coupons.create({
+			id,
+			name: coupon.name ?? undefined,
+			percent_off: coupon.percent_off ?? undefined,
+			amount_off: coupon.amount_off ?? undefined,
+			currency: coupon.currency ?? undefined,
+			duration: coupon.duration,
+			duration_in_months: coupon.duration_in_months ?? undefined,
+			applies_to: coupon.applies_to ?? undefined,
+			metadata: coupon.metadata ?? undefined,
+		});
+	} catch (error) {
+		if (!isStripeResourceAlreadyExists(error)) throw error;
+		return await stripeCli.coupons.retrieve(id);
+	}
+};
 
 const carryDiscount = async ({
 	ctx,
@@ -101,7 +112,13 @@ const carryDiscount = async ({
 	if (preview) return { source: { coupon: carriedCoupon } };
 
 	return {
-		source: { coupon: await createCouponCopy({ ctx, coupon: carriedCoupon }) },
+		source: {
+			coupon: await createCouponCopy({
+				ctx,
+				coupon: carriedCoupon,
+				replacedStripeSubscription,
+			}),
+		},
 	};
 };
 
