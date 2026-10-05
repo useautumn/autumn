@@ -6,7 +6,11 @@ import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js"
 import { subjectRowChangeLanded } from "../../subjects/types/subjectRowChange.js";
 import type { PostgresDb } from "../../types/postgresClient.js";
 import type { FlushRequest, FlushResult } from "../types/flush.js";
-import { flushSql } from "./flushSql.js";
+import {
+	FLUSH_ROLLBACK_MARKER,
+	flushSql,
+	singleStatementFlushSql,
+} from "./flushSql.js";
 
 /** A bookmark that no longer holds the offset the caller saw: another writer moved the partition. */
 export class FlushBookmarkConflictError extends Error {
@@ -36,19 +40,27 @@ class FlushRolledBack extends Error {
 	}
 }
 
-/** BEGIN · SET LOCAL statement_timeout · one statement · COMMIT, or ROLLBACK when a bookmark or a guarded row did not move. */
+/** How a flush reaches Postgres: four round trips in an explicit transaction, or one autocommit statement. */
+export type FlushRoundTrips = "transaction" | "single";
+
+/**
+ * BEGIN · SET LOCAL statement_timeout · one statement · COMMIT, or ROLLBACK when a bookmark or a guarded row did not move.
+ * `single` sends only the statement; it lands or aborts whole, but carries no server-side statement timeout.
+ */
 export const commitFlush = async ({
 	ctx,
 	request,
 	statementTimeoutMs,
+	roundTrips = "transaction",
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "transaction">;
+		db: Pick<PostgresDb, "transaction" | "execute">;
 		/** Times the synchronous parts (folding the changes, building the statement) so a stall can be attributed to them. */
 		timing?: <Value>(label: string, run: () => Value) => Value;
 	};
 	request: FlushRequest;
 	statementTimeoutMs: number;
+	roundTrips?: FlushRoundTrips;
 }): Promise<FlushResult> => {
 	const time = ctx.timing ?? ((_label, run) => run());
 	const { folded, foldedIndexOf } = time("flush.fold", () =>
@@ -57,12 +69,19 @@ export const commitFlush = async ({
 	if (request.bookmarks.length === 0)
 		return { applied: foldedIndexOf.map(() => true) };
 
-	const outcome = await runFlushTransaction({
-		ctx: { db: ctx.db, timing: time },
-		request,
-		folded,
-		statementTimeoutMs,
-	});
+	const outcome =
+		roundTrips === "single"
+			? await runFlushStatement({
+					ctx: { db: ctx.db, timing: time },
+					request,
+					folded,
+				})
+			: await runFlushTransaction({
+					ctx: { db: ctx.db, timing: time },
+					request,
+					folded,
+					statementTimeoutMs,
+				});
 	const landed = folded.map((change, index) =>
 		subjectRowChangeLanded({ change, touched: outcome.applied[index] ?? 0 }),
 	);
@@ -73,6 +92,96 @@ export const commitFlush = async ({
 			(index) => index === null || landed[index] === true,
 		),
 	};
+};
+
+type FlushOutcome = z.infer<typeof outcomeSchema>;
+
+const parseOutcome = ({ row }: { row: unknown }): FlushOutcome => {
+	const parsed = outcomeSchema.safeParse(row);
+	if (!parsed.success) {
+		throw new RowsInvalidError({
+			table: "flush",
+			issues: parsed.error.issues,
+		});
+	}
+	return parsed.data;
+};
+
+const assertBookmarksAdvanced = ({
+	request,
+	outcome,
+}: {
+	request: FlushRequest;
+	outcome: FlushOutcome;
+}) => {
+	if (outcome.bookmarks !== request.bookmarks.length) {
+		throw new FlushBookmarkConflictError({
+			expected: request.bookmarks.length,
+			advanced: outcome.bookmarks,
+		});
+	}
+};
+
+const guardMissed = ({
+	folded,
+	outcome,
+}: {
+	folded: readonly SubjectRowChange[];
+	outcome: FlushOutcome;
+}) =>
+	folded.some(
+		(change, index) =>
+			!subjectRowChangeLanded({
+				change,
+				touched: outcome.applied[index] ?? 0,
+			}),
+	);
+
+const ROLLBACK_COUNTS = new RegExp(`${FLUSH_ROLLBACK_MARKER}(\\d+):([\\d,]*)`);
+
+/** The counts a single-statement flush aborted with, or null when the error is anything else. */
+const rolledBackOutcomeOf = ({
+	error,
+}: {
+	error: unknown;
+}): FlushOutcome | null => {
+	for (let cause = error; cause instanceof Error; cause = cause.cause) {
+		const match = ROLLBACK_COUNTS.exec(cause.message);
+		if (!match) continue;
+		return {
+			bookmarks: Number(match[1]),
+			applied: match[2] ? match[2].split(",").map(Number) : [],
+		};
+	}
+	return null;
+};
+
+/** One autocommit statement: a stale bookmark or guarded row aborts it in Postgres, and the same errors as the transaction come out. */
+const runFlushStatement = async ({
+	ctx,
+	request,
+	folded,
+}: {
+	ctx: {
+		db: Pick<PostgresDb, "execute">;
+		timing: <Value>(label: string, run: () => Value) => Value;
+	};
+	request: FlushRequest;
+	folded: readonly SubjectRowChange[];
+}): Promise<FlushOutcome> => {
+	const statement = ctx.timing("flush.sql", () =>
+		singleStatementFlushSql({ changes: folded, bookmarks: request.bookmarks }),
+	);
+	let rows: unknown[];
+	try {
+		rows = await ctx.db.execute(statement);
+	} catch (error) {
+		const outcome = rolledBackOutcomeOf({ error });
+		if (!outcome) throw error;
+		assertBookmarksAdvanced({ request, outcome });
+		return outcome;
+	}
+	return parseOutcome({ row: rows[0] });
 };
 
 /** The whole flush is one decision: a row whose guard no longer matches rolls back every row and the bookmarks with it. */
@@ -89,7 +198,7 @@ const runFlushTransaction = async ({
 	request: FlushRequest;
 	folded: readonly SubjectRowChange[];
 	statementTimeoutMs: number;
-}): Promise<z.infer<typeof outcomeSchema>> => {
+}): Promise<FlushOutcome> => {
 	try {
 		return await ctx.db.transaction(async (tx) => {
 			await tx.execute(
@@ -99,28 +208,11 @@ const runFlushTransaction = async ({
 				flushSql({ changes: folded, bookmarks: request.bookmarks }),
 			);
 			const rows = await tx.execute(statement);
-			const parsed = outcomeSchema.safeParse(rows[0]);
-			if (!parsed.success) {
-				throw new RowsInvalidError({
-					table: "flush",
-					issues: parsed.error.issues,
-				});
-			}
-			if (parsed.data.bookmarks !== request.bookmarks.length) {
-				throw new FlushBookmarkConflictError({
-					expected: request.bookmarks.length,
-					advanced: parsed.data.bookmarks,
-				});
-			}
-			const guardMissed = folded.some(
-				(change, index) =>
-					!subjectRowChangeLanded({
-						change,
-						touched: parsed.data.applied[index] ?? 0,
-					}),
-			);
-			if (guardMissed) throw new FlushRolledBack({ outcome: parsed.data });
-			return parsed.data;
+			const outcome = parseOutcome({ row: rows[0] });
+			assertBookmarksAdvanced({ request, outcome });
+			if (guardMissed({ folded, outcome }))
+				throw new FlushRolledBack({ outcome });
+			return outcome;
 		});
 	} catch (cause) {
 		if (cause instanceof FlushRolledBack) return cause.outcome;

@@ -6,7 +6,8 @@ import { createDatabaseTimings } from "../../../src/logging/databaseTimings.js";
 
 const dialect = new PgDialect();
 
-/** A drizzle stand-in: records every statement, which executor ran it, and how each transaction ended. */
+/** A drizzle stand-in: records every statement, which executor ran it, and how each transaction ended.
+ *  A flush whose guarded row did not move aborts as Postgres does, on the rollback marker's integer cast. */
 function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 	const statements: { via: "pool" | "tx"; sql: string; params: unknown[] }[] =
 		[];
@@ -16,6 +17,10 @@ function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 			execute: async (query: SQL) => {
 				const { sql, params } = dialect.sqlToQuery(query);
 				statements.push({ via, sql, params });
+				if (sql.includes("AS bookmarks") && applied.includes(0))
+					throw new Error(
+						`invalid input syntax for type integer: "flush_rolled_back:1:${applied.join(",")}"`,
+					);
 				return sql.includes("AS bookmarks")
 					? [{ applied, bookmarks: 1 }]
 					: [{ topic: "metering" }];
@@ -58,7 +63,7 @@ const bookmark = {
 };
 
 describe("createCommitterDb", () => {
-	test("a flush is one transaction: the statement timeout, one statement, and the counts read back", async () => {
+	test("a flush is one autocommit statement on the pool, its counts read back", async () => {
 		const fake = createFakePostgres();
 		const committerDb = createCommitterDb({
 			ctx: {
@@ -80,17 +85,15 @@ describe("createCommitterDb", () => {
 		expect(result).toEqual({ applied: [true] });
 		expect(fake.statements.map((statement) => statement.via)).toEqual([
 			"pool",
-			"tx",
-			"tx",
+			"pool",
 		]);
-		expect(fake.statements[1]?.sql).toBe("SET LOCAL statement_timeout = 2000");
-		expect(fake.statements[2]?.sql).toContain('WITH "u0" AS (');
-		expect(fake.statements[2]?.sql).toContain('UPDATE "customer_entitlements"');
-		expect(fake.statements[2]?.sql).toContain("UPDATE partition_progress");
-		expect(fake.transactions).toEqual(["committed"]);
+		expect(fake.statements[1]?.sql).toContain('WITH "u0" AS (');
+		expect(fake.statements[1]?.sql).toContain('UPDATE "customer_entitlements"');
+		expect(fake.statements[1]?.sql).toContain("UPDATE partition_progress");
+		expect(fake.transactions).toEqual([]);
 	});
 
-	test("a guarded row that no longer matches rolls the whole flush back: no row and no bookmark lands", async () => {
+	test("a guarded row that no longer matches aborts the whole statement: no row and no bookmark lands", async () => {
 		const fake = createFakePostgres({ applied: [1, 0] });
 		const committerDb = createCommitterDb({
 			ctx: {
@@ -105,6 +108,7 @@ describe("createCommitterDb", () => {
 		});
 
 		expect(result).toEqual({ applied: [true, false] });
-		expect(fake.transactions).toEqual(["rolled_back"]);
+		expect(fake.statements.map((statement) => statement.via)).toEqual(["pool"]);
+		expect(fake.transactions).toEqual([]);
 	});
 });
