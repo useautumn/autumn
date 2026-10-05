@@ -9,6 +9,7 @@ import type {
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../processor/types/receiptPolicy.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
+import type { CommitPositionSink } from "../../processor/writer/types/commitPositionSink.js";
 import type {
 	CommittedOutcomeAppender,
 	PartitionWriterContext,
@@ -85,6 +86,8 @@ export type PartitionRuntimeDependencies = {
 	receiptPolicy: ReceiptPolicy;
 	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;
+	/** Where the partition's writer publishes its commit position. */
+	commitPositions?: CommitPositionSink;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 
@@ -125,6 +128,10 @@ export type PartitionRuntime = {
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 		options?: ProcessOptions,
 	): Promise<Decision>;
+	/** One synchronous processor command on a ready runtime, same recovery mapping; null when not ready. */
+	processInline<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 };
 
 export type ProcessOptions = { budgetMs?: number };

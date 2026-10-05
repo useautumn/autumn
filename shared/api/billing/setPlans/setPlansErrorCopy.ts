@@ -2,10 +2,15 @@ import {
 	formatMs,
 	formatMsToDate,
 } from "../../../utils/common/formatUtils/formatUnix";
-import type { SetPlansErrorDetails } from "./setPlansErrorDetails";
+import type {
+	SetPlansBackdateConflict,
+	SetPlansErrorDetails,
+	SetPlansFutureStartConflict,
+} from "./setPlansErrorDetails";
 import {
 	boldText,
 	plainText,
+	punctuationText,
 	type SetPlansTextPart,
 	textPartsToText,
 } from "./setPlansTextParts";
@@ -40,6 +45,7 @@ const formatDatePair = ({
 
 const plain = plainText;
 const bold = boldText;
+const punctuation = punctuationText;
 
 const DATE_LABELS: Record<
 	Extract<SetPlansErrorDetails, { type: "date_order" }>["date"],
@@ -67,6 +73,89 @@ const BOUNDARY_COPY: Record<
 	},
 };
 
+type StartDateConflictCopy = { subject: string; hint: string };
+
+/** A start date conflict reads as its subject, then the date, then what to do. */
+const startDateConflictCopy = ({
+	copy,
+	startsAt,
+}: {
+	copy: StartDateConflictCopy;
+	startsAt: number;
+}): SetPlansErrorCopy => ({
+	line: [plain(copy.subject), bold(formatMsToDate(startsAt)), punctuation(".")],
+	hint: { text: copy.hint },
+});
+
+const FUTURE_START_CONFLICT_COPY: Record<
+	SetPlansFutureStartConflict,
+	StartDateConflictCopy
+> = {
+	free_trial: {
+		subject: "A free trial can't start on",
+		hint: "Start the first phase now, or remove the trial.",
+	},
+	invoice_mode: {
+		subject: "Invoice mode can't be used when the first phase starts on",
+		hint: "Start the first phase now, or turn off invoice mode.",
+	},
+	billing_cycle_anchor: {
+		subject:
+			"The billing cycle anchor can't be set when the first phase starts on",
+		hint: "Billing is anchored to that date, so remove the anchor.",
+	},
+};
+
+const BACKDATE_CONFLICT_COPY: Record<
+	Exclude<SetPlansBackdateConflict, "plan_outside_request">,
+	StartDateConflictCopy
+> = {
+	free_trial: {
+		subject: "A trial can't be backdated to",
+		hint: "End the trial first, or start the first phase now.",
+	},
+	stripe_checkout: {
+		subject: "Stripe Checkout can't backdate the subscription to",
+		hint: "Add a payment method, or start the first phase now.",
+	},
+	period_ended: {
+		subject:
+			"The subscription's paid period has already ended, so it can't be backdated to",
+		hint: "Collect the overdue invoice first, or start the first phase now.",
+	},
+	billing_cycle_anchor: {
+		subject: "The billing cycle anchor can't change when backdating to",
+		hint: "Remove it to keep the current cycle, or restart the cycle on the backdated start instead.",
+	},
+	too_far_back: {
+		subject: "Stripe can't backdate the subscription this far, to",
+		hint: "The first invoice would have more than 250 line items. Pick a later date.",
+	},
+};
+
+const backdateConflictCopy = (
+	details: Extract<SetPlansErrorDetails, { type: "backdate_conflict" }>,
+): SetPlansErrorCopy => {
+	if (details.conflict === "plan_outside_request") {
+		return {
+			line: [
+				bold(details.plan_name ?? "A plan"),
+				plain(
+					"is on the subscription but not in this request, so it can't be backdated to",
+				),
+				bold(formatMsToDate(details.starts_at)),
+				punctuation("."),
+			],
+			hint: { text: "Include every plan on the subscription in the request." },
+		};
+	}
+
+	return startDateConflictCopy({
+		copy: BACKDATE_CONFLICT_COPY[details.conflict],
+		startsAt: details.starts_at,
+	});
+};
+
 /** The one place every Set Plans error is worded, for the API message and the dashboard alike. */
 export const setPlansErrorCopy = (
 	details: SetPlansErrorDetails,
@@ -80,7 +169,8 @@ export const setPlansErrorCopy = (
 								plain("Adding"),
 								bold(details.requested_plan_name),
 								plain("would replace"),
-								bold(`${details.conflicting_plan_name},`),
+								bold(details.conflicting_plan_name),
+								punctuation(","),
 								plain("which is billed on another subscription."),
 							]
 						: [
@@ -124,9 +214,11 @@ export const setPlansErrorCopy = (
 					plain("The"),
 					bold(details.subscription_plan_name),
 					plain("subscription bills in"),
-					bold(`${details.subscription_currency.toUpperCase()},`),
+					bold(details.subscription_currency.toUpperCase()),
+					punctuation(","),
 					plain("but these plans bill in"),
-					bold(`${details.requested_currency.toUpperCase()}.`),
+					bold(details.requested_currency.toUpperCase()),
+					punctuation("."),
 				],
 				hint: { text: "Plans on one subscription must share a currency." },
 			};
@@ -163,7 +255,8 @@ export const setPlansErrorCopy = (
 					plain("This schedule needs"),
 					bold(String(details.phase_count)),
 					plain("phases, but Stripe allows at most"),
-					bold(`${details.max_phases}.`),
+					bold(String(details.max_phases)),
+					punctuation("."),
 				],
 				hint: { text: "Remove or merge some phases." },
 			};
@@ -171,7 +264,8 @@ export const setPlansErrorCopy = (
 			return {
 				line: [
 					plain("Connect Stripe to schedule a change from"),
-					bold(`${details.plan_name}.`),
+					bold(details.plan_name),
+					punctuation("."),
 				],
 				hint: { text: "Autumn runs the schedule on a $0 Stripe subscription." },
 			};
@@ -186,11 +280,31 @@ export const setPlansErrorCopy = (
 					plain(DATE_LABELS[details.date]),
 					bold(dates.first),
 					plain(boundary.relation),
-					bold(`${dates.second}.`),
+					bold(dates.second),
+					punctuation("."),
 				],
 				hint: { text: boundary.hint },
 			};
 		}
+		case "future_start_conflict":
+			return startDateConflictCopy({
+				copy: FUTURE_START_CONFLICT_COPY[details.conflict],
+				startsAt: details.starts_at,
+			});
+		case "plan_cannot_start_later":
+			return {
+				line: [
+					bold(details.plan_name),
+					plain("can't start on a later date,"),
+					bold(formatMsToDate(details.starts_at)),
+					punctuation("."),
+				],
+				hint: {
+					text: "Stripe has nothing to start it then. Start the first phase now, or turn on early access.",
+				},
+			};
+		case "backdate_conflict":
+			return backdateConflictCopy(details);
 	}
 };
 

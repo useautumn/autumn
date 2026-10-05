@@ -6,9 +6,9 @@ import {
 	findFeatureById,
 	type LineItem,
 	notNullish,
-	type ProcessorChange,
 	type ProcessorItem,
 	plainText,
+	punctuationText,
 	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
@@ -33,6 +33,7 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_subscription",
 	"past_due_invoice_open",
 	"other_subscriptions_unaffected",
+	"billing_starts_later",
 ];
 
 /** Unmanaged live items that the immediate phase's end state no longer holds. */
@@ -61,18 +62,6 @@ const priceCreatingItems = (items: ProcessorItem[]) =>
 						other.display_name === item.display_name,
 				) === index,
 		);
-
-const SCHEDULE_REPLACING_ACTIONS: ProcessorChange["action"][] = [
-	"released",
-	"canceled",
-];
-
-const replacesExistingSchedule = (processorChanges: ProcessorChange[]) =>
-	processorChanges.some(
-		(processorChange) =>
-			processorChange.type === "subscription_schedule" &&
-			SCHEDULE_REPLACING_ACTIONS.includes(processorChange.action),
-	);
 
 const USAGE_RESTARTING_BEHAVIORS: SetPlansPreviewBalanceChange["behavior"][] = [
 	"reset",
@@ -103,7 +92,6 @@ const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>
 export const setPlansPreviewToWarnings = ({
 	phases,
 	liveProcessorItems,
-	processorChanges,
 	withdrawnCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
@@ -114,11 +102,11 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices,
 	liveOpenInvoices,
 	unbilledUsageLineItems = [],
+	lineItems = [],
 	stripeSubscriptionScope,
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
-	processorChanges: ProcessorChange[];
 	/** Saved scheduled plans the request withdraws; a re-timed or updated plan isn't one. */
 	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
@@ -130,6 +118,8 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices: Stripe.Invoice[];
 	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
+	/** The line items the immediate invoice bills. */
+	lineItems?: LineItem[];
 	stripeSubscriptionScope?: StripeSubscriptionScope;
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
@@ -141,6 +131,7 @@ export const setPlansPreviewToWarnings = ({
 			stripeBillingPlan,
 			replacedOpenInvoices,
 			liveOpenInvoices,
+			lineItems,
 		}),
 		...liveSubscriptionChangeWarnings({
 			stripeSubscription: billingContext.stripeSubscription,
@@ -164,7 +155,8 @@ export const setPlansPreviewToWarnings = ({
 			type: "new_stripe_price_created" as const,
 			...warningText([
 				plainText("A new Stripe price will be created for"),
-				boldText(`${item.display_name}.`),
+				boldText(item.display_name),
+				punctuationText("."),
 			]),
 		})),
 		...requestedResetFeatureIds(balanceChanges).map((featureId) => ({
@@ -175,15 +167,6 @@ export const setPlansPreviewToWarnings = ({
 				plainText("restarts from zero."),
 			]),
 		})),
-		...(replacesExistingSchedule(processorChanges)
-			? [
-					{
-						type: "existing_schedule_replaced" as const,
-						message:
-							"Edits made directly to the Stripe schedule will be overwritten.",
-					},
-				]
-			: []),
 		...withdrawnCustomerProducts.map((customerProduct) => ({
 			type: "future_phase_removed" as const,
 			...warningText([

@@ -29,11 +29,15 @@ export const stripeScheduleMatchesPhases = ({
 			phaseEndSeconds(phases.at(-1)?.end_date);
 	if (!endsWhereRequested) return false;
 
+	// Once a schedule starts, Stripe fixes its current phase's start; before that, it can still move.
+	const firstStartIsFixed = schedule.status === "active";
+
 	return phases.every((phase, index) => {
 		const openPhase = openPhases[index];
 		if (!openPhase) return false;
-		// The current phase's start is fixed by Stripe; only future starts can move.
-		const sameStart = index === 0 || openPhase.start_date === phase.start_date;
+		const sameStart =
+			(index === 0 && firstStartIsFixed) ||
+			openPhase.start_date === phase.start_date;
 		return (
 			sameStart &&
 			schedulePhaseItemShape(openPhase) ===

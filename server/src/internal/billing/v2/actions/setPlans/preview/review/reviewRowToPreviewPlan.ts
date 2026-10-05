@@ -72,10 +72,10 @@ const pricesOf = ({
 	}));
 };
 
-/** One review row; a removed plan expires at the phase start, the others when their segment ends. */
+/** One review row; a removed plan expires at endsAt, the others when their segment ends. */
 export const reviewRowToPreviewPlan = ({
 	row,
-	phaseStartsAt,
+	endsAt,
 	lookup,
 	creditLineItems,
 	entities,
@@ -84,7 +84,7 @@ export const reviewRowToPreviewPlan = ({
 	ongoingContext,
 }: {
 	row: ReviewPlanRow;
-	phaseStartsAt: number;
+	endsAt: number;
 	lookup: ReviewRowLookup;
 	creditLineItems: LineItem[];
 	entities: Entity[];
@@ -107,9 +107,7 @@ export const reviewRowToPreviewPlan = ({
 		custom: customerProduct.is_custom,
 		ongoing: isOngoingReviewSegment({ reviewSegment, ongoingContext }),
 		expires_at:
-			row.status === "ends"
-				? phaseStartsAt
-				: (customerProduct.ended_at ?? null),
+			row.status === "ends" ? endsAt : (customerProduct.ended_at ?? null),
 		trial_ends_at: customerProduct.trial_ends_at ?? null,
 		credit: replacedPlanCredit({ row, creditLineItems }),
 		prices: pricesOf({ customerProduct, currency, org }),

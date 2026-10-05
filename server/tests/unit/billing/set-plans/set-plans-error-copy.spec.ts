@@ -3,6 +3,7 @@ import {
 	type SetPlansErrorDetails,
 	setPlansErrorCopy,
 	setPlansErrorCopyToText,
+	textPartsToText,
 } from "@autumn/shared";
 
 const NOV_1_2026 = new Date(2026, 10, 1, 12).getTime();
@@ -92,6 +93,14 @@ const EVERY_ERROR: [SetPlansErrorDetails, string][] = [
 		},
 		"The billing cycle anchor 01 Jan 2026 12:00:00 is after the end date 01 Jan 2026 09:00:00. Move it before the end date.",
 	],
+	[
+		{
+			type: "future_start_conflict",
+			conflict: "free_trial",
+			starts_at: NOV_1_2026,
+		},
+		"A free trial can't start on 01 Nov 2026. Start the first phase now, or remove the trial.",
+	],
 ];
 
 test("every Set Plans error reads as one sentence from the shared copy", () => {
@@ -107,10 +116,25 @@ test("only the names are bold, and links carry the action the dashboard runs", (
 
 	expect(line.filter(({ bold }) => bold).map(({ text }) => text)).toEqual([
 		"Free",
-		"Pro,",
+		"Pro",
 	]);
 	expect(hint?.link?.action).toEqual({
 		type: "open_subscription",
 		stripeSubscriptionId: "sub_b",
 	});
+});
+
+test("a name's own full stop stays bold, and the sentence's full stop follows it without a space", () => {
+	const { line } = setPlansErrorCopy({
+		type: "free_plan_needs_stripe",
+		plan_name: "Acme Inc.",
+	});
+
+	expect(line.slice(-2)).toEqual([
+		{ text: "Acme Inc.", bold: true },
+		{ text: ".", attach: true },
+	]);
+	expect(textPartsToText(line)).toBe(
+		"Connect Stripe to schedule a change from Acme Inc..",
+	);
 });

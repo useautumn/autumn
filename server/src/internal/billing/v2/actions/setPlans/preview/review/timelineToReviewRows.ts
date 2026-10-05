@@ -21,6 +21,7 @@ import { withoutCarriedOverRows } from "./withoutCarriedOverRows";
 export type ReviewRows = {
 	phases: {
 		at: number;
+		endsAt: number;
 		comparison: ReviewPhaseComparison;
 		rows: ReviewPlanRow[];
 	}[];
@@ -58,6 +59,17 @@ const isLostWithRemovedPhase = ({
 	row.status === "ends" &&
 	!isOngoingReviewSegment({ reviewSegment: row.before, ongoingContext });
 
+/** Ongoing plans run through every phase, so only the first phase lists them. */
+const continuesOngoing = ({
+	row,
+	ongoingContext,
+}: {
+	row: ReviewPlanRow;
+	ongoingContext: OngoingContext;
+}) =>
+	"after" in row &&
+	isOngoingReviewSegment({ reviewSegment: row.after, ongoingContext });
+
 /** Each request phase against its matched saved self, or the phase before it when it is new. */
 export const timelineToReviewRows = ({
 	saved,
@@ -73,6 +85,7 @@ export const timelineToReviewRows = ({
 		phases: withoutCarriedOverRows(
 			matches.phases.map((phase, phaseIndex) => ({
 				at: phase.at,
+				endsAt: phase.endsAt,
 				comparison: phase.comparison,
 				rows: phasePlanRows({
 					contents: resolvedContentsAt({
@@ -86,7 +99,10 @@ export const timelineToReviewRows = ({
 						previousPhase: matches.phases[phaseIndex - 1],
 					}),
 					showsEnds: phase.comparison.type === "saved",
-				}),
+				}).filter(
+					(row) =>
+						phaseIndex === 0 || !continuesOngoing({ row, ongoingContext }),
+				),
 			})),
 		),
 		removedPhases: matches.removedPhaseStarts.map((at) => ({

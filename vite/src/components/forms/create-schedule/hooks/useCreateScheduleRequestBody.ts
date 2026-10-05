@@ -20,6 +20,7 @@ import {
 	resolveBillingCycleAnchor,
 } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
+import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function buildCreateScheduleRequestBody({
 	customerId,
@@ -34,6 +35,7 @@ export function buildCreateScheduleRequestBody({
 	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
+	enablePlanImmediately,
 	stripeSubscriptionId,
 }: {
 	customerId: string | undefined;
@@ -48,12 +50,14 @@ export function buildCreateScheduleRequestBody({
 	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
+	enablePlanImmediately?: boolean;
 	stripeSubscriptionId?: string | null;
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
+	const startsLater = firstPhaseStartsLater({ phases, nowMs: now });
 
 	const toApiPlan = (plan: CustomerStatePlan) =>
 		customerStatePlanToApiPlan({ plan, products, features });
@@ -63,11 +67,15 @@ export function buildCreateScheduleRequestBody({
 		if (index === 0) {
 			const hasStarted =
 				phase.persistedStartsAt != null && phase.persistedStartsAt <= now;
-			if (allowFirstPhaseBackdate) startsAt = phase.startsAt ?? now;
+			if (allowFirstPhaseBackdate || startsLater)
+				startsAt = phase.startsAt ?? now;
 			else if (phase.persistedStartsAt == null) startsAt = now;
 			else
 				startsAt = hasStarted
-					? phase.persistedStartsAt
+					? Math.min(
+							phase.startsAt ?? phase.persistedStartsAt,
+							phase.persistedStartsAt,
+						)
 					: (phase.startsAt ?? phase.persistedStartsAt);
 		}
 		if (startsAt === null) return null;
@@ -114,6 +122,7 @@ export function buildCreateScheduleRequestBody({
 	};
 
 	if (billingBehavior) body.proration_behavior = billingBehavior;
+	if (enablePlanImmediately && startsLater) body.enable_plan_immediately = true;
 	if (stripeSubscriptionId) body.stripe_subscription_id = stripeSubscriptionId;
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
 		body.ends_at = endDate;
@@ -136,6 +145,19 @@ export function buildCreateScheduleRequestBody({
 	return body as SetPlansParamsV0;
 }
 
+/** A submit body: the form's request plus what its billing stage chose, never a stale form-only flag. */
+export function buildCreateScheduleStageRequestBody({
+	stageParams = {},
+	...params
+}: Parameters<typeof buildCreateScheduleRequestBody>[0] & {
+	stageParams?: BillingStageParams;
+}): SetPlansParamsV0 | null {
+	return applyMultiPlanStageParams({
+		...stageParams,
+		requestBody: buildCreateScheduleRequestBody(params),
+	});
+}
+
 export function useCreateScheduleRequestBody({
 	customerId,
 	phases,
@@ -149,6 +171,7 @@ export function useCreateScheduleRequestBody({
 	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
+	enablePlanImmediately,
 	stripeSubscriptionId,
 }: {
 	customerId: string | undefined;
@@ -163,6 +186,7 @@ export function useCreateScheduleRequestBody({
 	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
+	enablePlanImmediately?: boolean;
 	stripeSubscriptionId?: string | null;
 }) {
 	return useMemo(
@@ -180,6 +204,7 @@ export function useCreateScheduleRequestBody({
 				billingCycleAnchorDate,
 				endDate,
 				allowFirstPhaseBackdate,
+				enablePlanImmediately,
 				stripeSubscriptionId,
 			}),
 		[
@@ -195,6 +220,7 @@ export function useCreateScheduleRequestBody({
 			billingCycleAnchorDate,
 			endDate,
 			allowFirstPhaseBackdate,
+			enablePlanImmediately,
 			stripeSubscriptionId,
 		],
 	);
@@ -232,8 +258,9 @@ export function useBuildCreateScheduleRequestBody({
 }) {
 	return useMemo(
 		() =>
-			(stageParams: BillingStageParams = {}): SetPlansParamsV0 | null => {
-				const requestBody = buildCreateScheduleRequestBody({
+			(stageParams: BillingStageParams = {}): SetPlansParamsV0 | null =>
+				buildCreateScheduleStageRequestBody({
+					stageParams,
 					customerId,
 					phases: getPhases(),
 					unscheduledPlans: getUnscheduledPlans?.(),
@@ -244,19 +271,9 @@ export function useBuildCreateScheduleRequestBody({
 					resetBillingCycle: getResetBillingCycle?.() ?? false,
 					...getBillingCycleAnchorAndEndDate?.(),
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
+					enablePlanImmediately: getEnablePlanImmediately?.() ?? false,
 					stripeSubscriptionId,
-				});
-
-				if (!requestBody) return null;
-
-				return applyMultiPlanStageParams({
-					...stageParams,
-					requestBody,
-					enableProductImmediately:
-						stageParams.enableProductImmediately ??
-						(getEnablePlanImmediately?.() || undefined),
-				});
-			},
+				}),
 		[
 			customerId,
 			products,

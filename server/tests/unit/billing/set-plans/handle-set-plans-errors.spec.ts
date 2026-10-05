@@ -25,14 +25,22 @@ const buildContext = ({
 	immediateStartsAt,
 	currentEpochMs,
 	existingSchedule,
+	existingSubscription,
 	fullProducts = [],
 	checkoutMode,
+	trialEndsAt,
+	invoiceMode,
+	requestedBillingCycleAnchor,
 }: {
 	immediateStartsAt: number;
 	currentEpochMs: number;
 	existingSchedule?: Stripe.SubscriptionSchedule;
+	existingSubscription?: Stripe.Subscription;
 	fullProducts?: FullProduct[];
 	checkoutMode?: "stripe_checkout";
+	trialEndsAt?: number;
+	invoiceMode?: CreateScheduleBillingContext["invoiceMode"];
+	requestedBillingCycleAnchor?: number | "now";
 }) =>
 	({
 		currentEpochMs,
@@ -40,8 +48,13 @@ const buildContext = ({
 			starts_at: immediateStartsAt,
 			plans: [{ plan_id: "plan" }],
 		},
+		stripeSubscription: existingSubscription,
 		stripeSubscriptionSchedule: existingSchedule,
 		checkoutMode,
+		trialContext: trialEndsAt ? { trialEndsAt } : undefined,
+		invoiceMode,
+		requestedBillingCycleAnchor,
+		futurePhases: [],
 		productContexts: [],
 		scheduledPhaseContexts: [],
 		fullProducts,
@@ -178,7 +191,7 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 		).resolves.toBeUndefined();
 	});
 
-	test("rejects creation when the immediate phase is far in the future", async () => {
+	test("allows a first phase that starts in the future", async () => {
 		const now = Date.now();
 
 		await expect(
@@ -186,12 +199,52 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 				ctx,
 				params: {},
 				billingContext: buildContext({
-					immediateStartsAt: now + ms.hours(1),
+					immediateStartsAt: now + ms.days(7),
 					currentEpochMs: now,
 				}),
 			}),
-		).rejects.toThrow("The first phase must start immediately");
+		).resolves.toBeUndefined();
 	});
+
+	test.each([
+		[
+			"a free trial",
+			{ trialEndsAt: Date.now() + ms.days(14) },
+			"A free trial can't start on",
+		],
+		[
+			"invoice mode",
+			{
+				invoiceMode: {
+					finalizeInvoice: false,
+					enableProductImmediately: true,
+				},
+			},
+			"Invoice mode can't be used when the first phase starts on",
+		],
+		[
+			"a requested billing cycle anchor",
+			{ requestedBillingCycleAnchor: "now" as const },
+			"The billing cycle anchor can't be set when the first phase starts on",
+		],
+	])(
+		"rejects a future first phase with %s",
+		async (_label, overrides, message) => {
+			const now = Date.now();
+
+			await expect(
+				handleSetPlansErrorsFromContext({
+					ctx,
+					params: {},
+					billingContext: buildContext({
+						immediateStartsAt: now + ms.days(7),
+						currentEpochMs: now,
+						...overrides,
+					}),
+				}),
+			).rejects.toThrow(message);
+		},
+	);
 
 	test("skips the immediate-start guard on updates (existing schedule)", async () => {
 		// Regression: when editing an existing schedule, the frontend preserves
@@ -210,6 +263,25 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 					existingSchedule: {
 						id: "sub_sched_existing",
 					} as unknown as Stripe.SubscriptionSchedule,
+				}),
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("skips the past-start guards when a re-save keeps the live subscription", async () => {
+		const now = Date.now();
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.days(30),
+					currentEpochMs: now,
+					existingSubscription: {
+						id: "sub_existing",
+						status: "active",
+					} as unknown as Stripe.Subscription,
 				}),
 			}),
 		).resolves.toBeUndefined();

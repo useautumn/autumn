@@ -1504,6 +1504,8 @@ test("quiescence remains pending after recovery disposal until accepted apply se
 				command: createTrackCommand({ commandId: "quiescence" }),
 			}),
 		);
+		// Disposal answers the caller at once; quiescence still waits for its append.
+		void track.catch(() => undefined);
 		await waitForTurn();
 		follower.emitUnavailable({ cause: new Error("lost follower") });
 		expect(unavailable).toBe(true);

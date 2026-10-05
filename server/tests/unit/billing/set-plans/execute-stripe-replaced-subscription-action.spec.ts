@@ -9,15 +9,20 @@ type StripeErrorFields = { code?: string; type?: string; statusCode?: number };
 const stripeState = {
 	cancelErrors: [] as Error[],
 	cancelCalls: 0,
+	cancelParams: undefined as Stripe.SubscriptionCancelParams | undefined,
 	retrievedStatus: "incomplete" as Stripe.Subscription.Status,
+	retrievedSchedule: null as string | null,
+	calls: [] as string[],
 };
 const loggedErrors: string[] = [];
 
 await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		subscriptions: {
-			cancel: async (id: string) => {
+			cancel: async (id: string, params?: Stripe.SubscriptionCancelParams) => {
 				stripeState.cancelCalls++;
+				stripeState.cancelParams = params;
+				stripeState.calls.push(`cancel ${id}`);
 				const cancelError = stripeState.cancelErrors.shift();
 				if (cancelError) throw cancelError;
 				return { id, status: "canceled" };
@@ -25,7 +30,15 @@ await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 			retrieve: async (id: string) => ({
 				id,
 				status: stripeState.retrievedStatus,
+				schedule: stripeState.retrievedSchedule,
 			}),
+		},
+		subscriptionSchedules: {
+			release: async (id: string) => {
+				stripeState.calls.push(`release ${id}`);
+				stripeState.retrievedSchedule = null;
+				return { id, status: "released" };
+			},
 		},
 	}),
 }));
@@ -44,7 +57,7 @@ const ctx = {
 	},
 } as unknown as AutumnContext;
 
-const cancelReplaced = () =>
+const cancelReplaced = ({ reason }: { reason?: "backdate" } = {}) =>
 	executeStripeReplacedSubscriptionAction({
 		ctx,
 		fullCustomer: {
@@ -54,6 +67,7 @@ const cancelReplaced = () =>
 		replacedSubscriptionAction: {
 			type: "cancel",
 			stripeSubscriptionId: "sub_old",
+			reason,
 		},
 	});
 
@@ -67,7 +81,10 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 	beforeEach(() => {
 		stripeState.cancelErrors = [];
 		stripeState.cancelCalls = 0;
+		stripeState.cancelParams = undefined;
 		stripeState.retrievedStatus = "incomplete";
+		stripeState.retrievedSchedule = null;
+		stripeState.calls = [];
 		loggedErrors.length = 0;
 	});
 
@@ -104,6 +121,27 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 		await cancelReplaced();
 
 		expect(stripeState.cancelCalls).toBe(2);
+		expect(loggedErrors).toEqual([]);
+	});
+
+	test("a subscription recreated for a backdate is cancelled without proration or a final invoice", async () => {
+		stripeState.retrievedStatus = "active";
+
+		await cancelReplaced({ reason: "backdate" });
+
+		expect(stripeState.cancelParams).toEqual({
+			prorate: false,
+			invoice_now: false,
+		});
+	});
+
+	test("a scheduled subscription recreated for a backdate is cancelled without releasing its schedule", async () => {
+		stripeState.retrievedStatus = "active";
+		stripeState.retrievedSchedule = "sub_sched_old";
+
+		await cancelReplaced({ reason: "backdate" });
+
+		expect(stripeState.calls).toEqual(["cancel sub_old"]);
 		expect(loggedErrors).toEqual([]);
 	});
 

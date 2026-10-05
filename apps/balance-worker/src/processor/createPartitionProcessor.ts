@@ -17,6 +17,7 @@ import type {
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
+import { checkInline as checkInlineCommand } from "./commands/checkInline.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
 import { deleteBalance as deleteBalancePartition } from "./commands/deleteBalance.js";
 import { evict as evictPartition } from "./commands/evict.js";
@@ -36,6 +37,8 @@ import {
 	decideTrack as decideTrackPartition,
 	track as trackPartition,
 } from "./commands/track.js";
+import { trackBatchInline as trackBatchInlineCommand } from "./commands/trackBatchInline.js";
+import { trackInline as trackInlineCommand } from "./commands/trackInline.js";
 import {
 	decideUpdateBalance as decideUpdateBalancePartition,
 	updateBalance as updateBalancePartition,
@@ -69,6 +72,7 @@ export function createPartitionProcessor({
 			appender: dependencies.appender,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
+			commitPositions: dependencies.commitPositions,
 			logger: dependencies.logger,
 			onStateAdvanced: (advanced) => subjectHydrator.inheritCatalog(advanced),
 		},
@@ -109,11 +113,23 @@ function createProcessor({
 		});
 	}
 
+	function trackInline({ command }: { command: TrackCommand }) {
+		return trackInlineCommand({ scope, command });
+	}
+
+	function trackBatchInline({ commands }: { commands: TrackCommand[] }) {
+		return trackBatchInlineCommand({ scope, commands });
+	}
+
 	function decideTrack({ command }: { command: TrackCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
 			operation: decideTrackPartition({ scope, command }),
 		});
+	}
+
+	function checkInline({ command }: { command: CheckCommand }) {
+		return checkInlineCommand({ scope, command });
 	}
 
 	function check({ command }: { command: CheckCommand }) {
@@ -284,6 +300,9 @@ function createProcessor({
 		execute,
 		dispose: () => scope.ctx.writer.dispose(),
 		track,
+		trackInline,
+		trackBatchInline,
+		checkInline,
 		decideTrack,
 		check,
 		applyBillingPlan,

@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
 
-const scheduleSubscriptionId = (
+export const scheduleSubscriptionId = (
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule,
 ) => {
 	const subscription = stripeSubscriptionSchedule?.subscription;

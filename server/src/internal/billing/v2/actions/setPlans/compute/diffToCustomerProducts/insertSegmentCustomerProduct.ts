@@ -1,4 +1,5 @@
 import type {
+	AttachBillingContext,
 	CreateScheduleBillingContext,
 	FullCusProduct,
 } from "@autumn/shared";
@@ -7,7 +8,10 @@ import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/a
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initScheduledCustomerProduct";
+import { firstPhaseStartsInFuture } from "../../setup/classifyFirstPhaseStart";
+import { startsInFuture } from "../../timeline/timelineGuards";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
+import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 
 const findProductContext = ({
 	billingContext,
@@ -34,7 +38,29 @@ const findProductContext = ({
 	throw new Error(`set_plans cannot find the requested plan for ${segment.id}`);
 };
 
-/** A plan starting now is attached like any immediate plan, carrying over the row it replaces. */
+/** A plan starting later waits like a scheduled one unless early access opens it; an ongoing one under a later first phase runs from now. */
+const firstPhaseTiming = ({
+	billingContext,
+	startsLater,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	startsLater: boolean;
+}): Partial<AttachBillingContext> => {
+	if (startsLater) {
+		return billingContext.accessStartsAt === undefined
+			? { planTiming: "end_of_cycle" }
+			: {};
+	}
+	if (!firstPhaseStartsInFuture({ billingContext })) return {};
+
+	return {
+		billingStartsAt: undefined,
+		accessStartsAt: undefined,
+		resetCycleAnchorMs: "now",
+	};
+};
+
+/** A first-phase plan is attached like any immediate plan, carrying over the row it replaces. */
 const insertImmediateCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -48,19 +74,28 @@ const insertImmediateCustomerProduct = ({
 	segment: ResolvedSegment;
 	replacedCustomerProduct?: FullCusProduct;
 }): FullCusProduct => {
-	const attachBillingContext = productContextToAttachBillingContext({
-		billingContext,
-		productContext,
-		currentCustomerProductOverride: replacedCustomerProduct,
+	const startsLater = startsInFuture({
+		segment,
+		now: billingContext.currentEpochMs,
 	});
+	const attachBillingContext: AttachBillingContext = {
+		...productContextToAttachBillingContext({
+			billingContext,
+			productContext,
+			currentCustomerProductOverride: replacedCustomerProduct,
+		}),
+		...firstPhaseTiming({ billingContext, startsLater }),
+	};
 	const customerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
 		params: { no_billing_changes: billingContext.skipBillingChanges },
 	});
 
-	if (replacedCustomerProduct) {
-		customerProduct.starts_at = replacedCustomerProduct.starts_at;
+	if (replacedCustomerProduct && !startsLater) {
+		customerProduct.starts_at = isBackdateRecreate({ billingContext })
+			? (billingContext.subscriptionBackdateStartMs ?? segment.startsAt)
+			: replacedCustomerProduct.starts_at;
 	}
 	applyScheduleTimingToCustomerProductPlan({
 		result: { insertCustomerProduct: customerProduct },

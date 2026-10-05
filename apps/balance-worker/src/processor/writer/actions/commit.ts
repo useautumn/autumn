@@ -7,10 +7,13 @@ import type {
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import {
+	advanceStored,
+	awaitStored,
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
 	removePendingMutation,
+	settlementOf,
 	writerNowOf,
 } from "../pendingMutations.js";
 import type {
@@ -71,7 +74,7 @@ export function flushDeferredLogs({
 	const { state } = scope;
 	const logs: Promise<void>[] = [];
 	for (const pending of state.pendingByKey.values())
-		if (pending.defersCommit) logs.push(pending.settlement.waitForLog());
+		if (pending.defersCommit) logs.push(settlementOf({ pending }).waitForLog());
 	if (logs.length === 0) return Promise.resolve();
 	if (state.deferredQueued > 0) {
 		state.deferredCommitDue = true;
@@ -125,9 +128,10 @@ async function commitOutcomes({
 				state.unapplied.length >=
 				maxUnappliedBatchesOf({ limits: config.limits })
 			) {
-				await state.unapplied[0]?.batch[0]?.settlement
-					.waitForStore()
-					.catch(() => undefined);
+				await awaitStored({
+					state,
+					seq: state.unapplied[0]?.batch.at(-1)?.seq ?? 0,
+				}).catch(() => undefined);
 				if (state.recoveryError) return;
 			}
 			const lingerStartedAt = writerNowOf({ scope });
@@ -146,7 +150,7 @@ async function commitOutcomes({
 					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
 				},
 			});
-			if (baseOffset === null) return;
+			if (baseOffset === null || state.recoveryError) return;
 			settleAppended({ scope, batch });
 			queueApply({ scope, batch, baseOffset });
 		}
@@ -246,12 +250,17 @@ async function appendBatch({
 }): Promise<bigint | null> {
 	const { ctx, config, state } = scope;
 	try {
-		const { baseOffset } = await ctx.appender.appendCommitted({
+		const appended = ctx.appender.appendCommitted({
 			topic: config.topic,
 			partition: config.partition,
 			outcomes: batch.map(mutationOf),
 			waits,
 		});
+		state.appending = appended.then(
+			() => undefined,
+			() => undefined,
+		);
+		const { baseOffset } = await appended;
 		if (typeof baseOffset !== "bigint" || baseOffset < 0n) {
 			throw new RangeError("Invalid appended Kafka offset");
 		}
@@ -264,12 +273,12 @@ async function appendBatch({
 			cause instanceof MutationBatchNotCommittedError &&
 			state.unapplied.length === 0;
 		if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
-			rejectAllPending({
-				state,
-				batch,
-				error: new MutationBatchAppendError({ cause }),
-			});
+			const error = new MutationBatchAppendError({ cause });
+			rejectAllPending({ state, batch, error });
+			failAboveSettled({ scope, cause: error });
 			state.storeCompletion = Promise.resolve();
+			// Nothing is unapplied and nothing dropped will be stored: later waits cover only new writes.
+			state.lastRowSeq = state.storedSeq;
 		} else {
 			enterRecovery({ scope, batch, cause });
 		}
@@ -314,6 +323,29 @@ function settleAppended({
 		if (pending.durability !== "log") continue;
 		settlePending({ scope, pending });
 	}
+	// Bookkeeping first, position last: a reply released by it may bring the next command at once.
+	const last = batch.at(-1);
+	if (!last || last.seq <= scope.state.settledSeq) return;
+	scope.state.settledSeq = last.seq;
+	scope.ctx.commitPositions?.committed({ seq: last.seq });
+}
+
+/** Nothing this writer issued past what it already settled will reach the log. */
+export function failAboveSettled({
+	scope,
+	cause,
+}: {
+	scope: PartitionWriterScope;
+	cause: unknown;
+}): void {
+	const { state } = scope;
+	if (state.lastSeq <= state.settledSeq) return;
+	scope.ctx.commitPositions?.failedAbove({
+		seq: state.settledSeq,
+		lastSeq: state.lastSeq,
+		cause,
+	});
+	state.settledSeq = state.lastSeq;
 }
 
 /** Remember the command for dedup, unpin the subjects, answer the caller. */
@@ -327,7 +359,7 @@ function settlePending({
 	const { mutation } = pending;
 	scope.ctx.recentCommands.remember({ mutation });
 	removePendingMutation({ state: scope.state, pending });
-	pending.settlement.settle({ mutation, state: pending.nextState });
+	pending.settlement?.settle({ mutation, state: pending.nextState });
 }
 
 /** A committed batch that cannot be applied leaves the writer in recovery. */
@@ -358,7 +390,7 @@ async function applyBatch({
 			if (result.kind === "failed") {
 				firstFailure ??= result.cause;
 				if (waiting) removePendingMutation({ state: scope.state, pending });
-				pending.settlement.rejectCommit({ error: result.cause });
+				pending.settlement?.rejectCommit({ error: result.cause });
 				continue;
 			}
 			// Refused by the store, not broken: the customer's rows are dropped because
@@ -369,7 +401,7 @@ async function applyBatch({
 				});
 				if (waiting) {
 					removePendingMutation({ state: scope.state, pending });
-					pending.settlement.rejectCommit({ error: result.cause });
+					pending.settlement?.rejectCommit({ error: result.cause });
 				}
 				continue;
 			}
@@ -382,7 +414,9 @@ async function applyBatch({
 			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
-		for (const pending of batch) pending.settlement.settleStore();
+		for (const pending of batch) pending.settlement?.settleStore();
+		const last = batch.at(-1);
+		if (last) advanceStored({ state: scope.state, seq: last.seq });
 		return true;
 	} catch (cause) {
 		enterRecovery({ scope, batch, cause });
@@ -407,6 +441,7 @@ function enterRecovery({
 	for (const unapplied of scope.state.unapplied)
 		for (const pending of unapplied.batch) owed.add(pending);
 	rejectAllPending({ state: scope.state, batch: [...owed], error });
+	failAboveSettled({ scope, cause: error });
 }
 
 // Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.
@@ -438,7 +473,28 @@ function takeBatch({
 		bytes += pending.encodedBytes;
 		count++;
 	}
-	return state.queue.splice(0, count);
+	return state.queue.splice(
+		0,
+		keepHeldGroupWhole({ queue: state.queue, count }),
+	);
+}
+
+/** A held group never straddles two appends: cut before it, or take all of it when it leads the batch. */
+function keepHeldGroupWhole({
+	queue,
+	count,
+}: {
+	queue: PendingMutation[];
+	count: number;
+}): number {
+	const group = queue[count - 1]?.heldGroup;
+	if (group === undefined || queue[count]?.heldGroup !== group) return count;
+	let start = count - 1;
+	while (start > 0 && queue[start - 1]?.heldGroup === group) start--;
+	if (start > 0) return start;
+	let end = count;
+	while (queue[end]?.heldGroup === group) end++;
+	return end;
 }
 
 function mutationOf(pending: PendingMutation): MeteringRecord {

@@ -8,7 +8,7 @@ import type { SubjectScope } from "../../types/subject.js";
 import { awaitLoadWithinDeadline } from "./awaitLoadWithinDeadline.js";
 import { loadSubjectState } from "./loadSubjectState.js";
 
-const viewHasEntity = ({
+export const viewHasEntity = ({
 	state,
 	identity,
 }: {

@@ -5,11 +5,16 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/types/schedulePhasePlan";
+import {
+	classifyFirstPhaseStart,
+	firstPhaseStartsInFuture,
+} from "../setup/classifyFirstPhaseStart";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { savedComparisonCustomers } from "./balances/savedComparisonCustomers";
 import { buildSetPlansPhaseCustomers } from "./buildSetPlansPhaseCustomers";
 import { checkoutSessionActionToProcessorItems } from "./processorItems/checkoutSessionActionToProcessorItems";
 import { liveScheduleAsUpdateAction } from "./processorItems/liveScheduleAsUpdateAction";
+import { scheduleActionToParams } from "./processorItems/scheduleActionToParams";
 import {
 	phasesEndingSubscription,
 	scheduleActionToProcessorItems,
@@ -57,6 +62,7 @@ export const buildSetPlansPreviewPhases = async ({
 		fullCustomer,
 		autumnBillingPlan,
 		phases,
+		firstPhaseStartsLater: firstPhaseStartsInFuture({ billingContext }),
 	});
 	const matches = matchReviewPhases({
 		saved: timeline.saved,
@@ -96,37 +102,45 @@ export const buildSetPlansPreviewPhases = async ({
 		phases,
 	});
 
-	const processorItemsByPhase = [
-		[
-			...subscriptionActionToProcessorItems({
-				subscriptionAction: stripeBillingPlan.subscriptionAction,
-				stripeSubscription,
-				context: processorItemContext,
-			}),
-			...checkoutSessionActionToProcessorItems({
-				checkoutSessionAction: stripeBillingPlan.checkoutSessionAction,
-				context: processorItemContext,
-			}),
-		],
-		...scheduleActionToProcessorItems({
-			subscriptionScheduleAction:
-				stripeBillingPlan.subscriptionScheduleAction ??
-				(billingContext.stripeSubscriptionSchedule
-					? liveScheduleAsUpdateAction(
-							billingContext.stripeSubscriptionSchedule,
-						)
-					: undefined),
-			phases,
-			context: processorItemContext,
-		}),
-	];
+	const subscriptionScheduleAction =
+		stripeBillingPlan.subscriptionScheduleAction ??
+		(billingContext.stripeSubscriptionSchedule
+			? liveScheduleAsUpdateAction(billingContext.stripeSubscriptionSchedule)
+			: undefined);
+	const firstPhaseOnSchedule =
+		firstPhaseStartsInFuture({ billingContext }) &&
+		scheduleActionToParams(subscriptionScheduleAction) !== undefined;
+	const scheduledPhaseItems = scheduleActionToProcessorItems({
+		subscriptionScheduleAction,
+		phases: firstPhaseOnSchedule ? phases : phases.slice(1),
+		context: processorItemContext,
+	});
+	const processorItemsByPhase = firstPhaseOnSchedule
+		? scheduledPhaseItems
+		: [
+				[
+					...subscriptionActionToProcessorItems({
+						subscriptionAction: stripeBillingPlan.subscriptionAction,
+						stripeSubscription,
+						context: processorItemContext,
+					}),
+					...checkoutSessionActionToProcessorItems({
+						checkoutSessionAction: stripeBillingPlan.checkoutSessionAction,
+						context: processorItemContext,
+					}),
+				],
+				...scheduledPhaseItems,
+			];
 
 	return {
 		phases: phases.map((phase, phaseIndex) => ({
 			starts_at: phase.startsAt,
 			starts_now:
 				phaseIndex === 0 &&
-				billingContext.subscriptionBackdateStartMs === undefined,
+				classifyFirstPhaseStart({
+					startsAt: billingContext.immediatePhase.starts_at,
+					currentEpochMs: billingContext.currentEpochMs,
+				}) === "now",
 			ends_subscription: endsSubscription[phaseIndex],
 			plans: review.phases[phaseIndex]?.plans ?? [],
 			plan_changes: review.phases[phaseIndex]?.planChanges ?? [],

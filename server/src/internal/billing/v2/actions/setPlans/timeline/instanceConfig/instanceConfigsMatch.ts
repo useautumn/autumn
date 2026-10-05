@@ -144,10 +144,10 @@ export const instanceConfigsMatch = ({
 		return false;
 	}
 
-	const { itemsSame, freeTrialsSame } = productsAreSame({
+	const { itemsSame } = productsAreSame({
 		newProductV1: second.fullProduct,
 		curProductV1: first.fullProduct,
 		features,
 	});
-	return itemsSame && freeTrialsSame;
+	return itemsSame;
 };

@@ -26,6 +26,7 @@ import {
 } from "../utils/unscheduledProductContexts";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
+import { handleFutureStartActivationErrors } from "./handleFutureStartActivationErrors";
 import { handleSetPlansBillingCycleAnchorErrors } from "./handleSetPlansBillingCycleAnchorErrors";
 import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
@@ -79,7 +80,7 @@ export const handleSetPlansErrors = async ({
 		});
 	}
 
-	handleFirstPhaseStartDateErrors({ billingContext, preview });
+	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
 	assertNoBillingCycleAnchorWithTrial({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,
@@ -121,6 +122,7 @@ export const handleSetPlansComputeErrors = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	immediatePhaseTransition: ImmediatePhaseTransition;
 }) => {
+	handleFutureStartActivationErrors({ billingContext, autumnBillingPlan });
 	handleFreePhaseStripeConnectionErrors({
 		ctx,
 		billingContext,

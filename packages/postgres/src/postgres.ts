@@ -29,6 +29,7 @@ export type {
 export {
 	commitFlush,
 	FlushBookmarkConflictError,
+	type FlushRoundTrips,
 } from "./flush/repos/commitFlush.js";
 export type {
 	FlushBookmark,

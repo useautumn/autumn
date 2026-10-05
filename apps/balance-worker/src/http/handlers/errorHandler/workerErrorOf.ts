@@ -23,10 +23,13 @@ import {
 import {
 	PartitionWriterCapacityError,
 	PartitionWriterCommandConflictError,
+	PartitionWriterDisposedError,
 	PartitionWriterDuplicateCommandError,
 	PartitionWriterRecordTooLargeError,
+	PartitionWriterRecoveryRequiredError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
+import { CommitPositionsOverlapError } from "../../../runtime/commitPositions/errors.js";
 import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
@@ -161,6 +164,12 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 			message: "Route is not admitted by this worker",
 			...(cause.successor && { successor: cause.successor }),
 		};
+	} else if (cause instanceof CommitPositionsOverlapError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message: "The partition's writer is being replaced; nothing ran, retry",
+		};
 	} else if (cause instanceof OwnedPartitionNotReadyError) {
 		status = 503;
 		error = {
@@ -168,8 +177,10 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 			message: "Partition cannot accept this request",
 		};
 	} else if (
-		cause instanceof OwnedPartitionRecoveryRequiredError &&
-		!cause.notSubmitted
+		(cause instanceof OwnedPartitionRecoveryRequiredError &&
+			!cause.notSubmitted) ||
+		cause instanceof PartitionWriterRecoveryRequiredError ||
+		cause instanceof PartitionWriterDisposedError
 	) {
 		error = {
 			code: "INTERNAL",

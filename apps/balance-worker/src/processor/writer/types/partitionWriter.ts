@@ -15,9 +15,12 @@ import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
 import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
 import type { SubjectMapBudget } from "../subjectMap/types/subjectMapBudget.js";
+import type { CommitPositionSink } from "./commitPositionSink.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
+	HeldDecision,
+	HeldSubmission,
 	MutationDurability,
 	MutationSubmission,
 } from "./mutation.js";
@@ -29,6 +32,29 @@ export type PartitionWriter = {
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** Decides without a settlement: the reply goes out once the commit position reaches its `seq`. Null hands it back. */
+	decideHeld<Reply>(
+		submission: HeldSubmission<Reply>,
+	): HeldDecision<Reply> | null;
+	/** Every held write `decide` makes lands in one append when the group fits the byte budget; past it, the ordinary cut splits them.
+	 *  The members' subjects stay pinned while `decide` runs. */
+	decideHeldGroup<Result>(params: {
+		identities: MeteringIdentity[];
+		decide: () => Result;
+	}): {
+		result: Result;
+		fitsOneAppend: boolean;
+	};
+	/** A held write's commit, for a caller that must answer per write; resolves at once if it already settled. */
+	waitForHeldCommit(params: {
+		identity: MeteringIdentity;
+		commandId: string;
+	}): Promise<void>;
+	/** Why `decideHeld` would hand this command back, or null when it would decide it. */
+	heldBlocker(params: {
+		identity: MeteringIdentity;
+		commandId: string;
+	}): HeldBlocker | null;
 	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
 	log(params: {
 		command: MutatingCommand;
@@ -105,6 +131,8 @@ export type PartitionWriterContext = {
 		to: SubjectState;
 		changes: RowChange[];
 	}) => void;
+	/** Where the partition's commit position is published; without one the writer numbers its writes alone. */
+	commitPositions?: CommitPositionSink;
 	now?: () => number;
 	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
@@ -149,6 +177,8 @@ export type PendingSettlement = {
 
 export type PendingMutation = {
 	pendingKey: string;
+	/** The partition's sequence number for this write, in decide order. */
+	seq: number;
 	customerKey: string;
 	/** The subjects this mutation projected; pinned in the map until it commits. */
 	projectedSubjectKeys: string[];
@@ -161,7 +191,12 @@ export type PendingMutation = {
 	effects?: MutationEffect[];
 	/** The record the log gets, built once: the appender measured this object and sends this object. */
 	loggedRecord: MeteringRecord;
-	settlement: PendingSettlement;
+	/** Null for a held write: nobody awaits it, its reply waits on the commit position. */
+	settlement: PendingSettlement | null;
+	/** A held write's reply, kept for a retry that arrives while it is in flight. */
+	replyBody?: string;
+	/** Held writes decided together; one append carries all of them. */
+	heldGroup?: number;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
@@ -178,6 +213,8 @@ export type PartitionWriterState = {
 	storeCompletion: Promise<void>;
 	/** Batches Kafka has but the store has not applied yet, oldest first. */
 	unapplied: UnappliedBatch[];
+	/** Settles once the append in flight, if any, has its answer; never rejects. */
+	appending: Promise<void>;
 	/** Resolves once every batch handed to the store so far has been applied, in log order. */
 	applyTail: Promise<void>;
 	/** Whether a store flush is running; the next one takes everything queued by then. */
@@ -191,6 +228,25 @@ export type PartitionWriterState = {
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
+	/** The last sequence number this writer handed out. */
+	lastSeq: number;
+	/** The last sequence number whose outcome is published: in the log, or failed. */
+	settledSeq: number;
+	/** The last write that lands rows, and the last one the store holds; a held write is waited on by these. */
+	lastRowSeq: number;
+	storedSeq: number;
+	storeWaiters: StoreWaiter[];
+	/** The group held writes join while `decideHeldGroup` runs. */
+	heldGroup: number | null;
+	lastHeldGroup: number;
+	/** Encoded bytes of the group being decided. */
+	heldGroupBytes: number;
+};
+
+export type StoreWaiter = {
+	seq: number;
+	resolve(): void;
+	reject(error: unknown): void;
 };
 
 export type UnappliedBatch = {
@@ -203,3 +259,5 @@ export type PartitionWriterScope = {
 	config: PartitionWriterConfig;
 	state: PartitionWriterState;
 };
+
+export type HeldBlocker = "settled_write_in_flight" | "retry_in_flight";

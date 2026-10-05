@@ -43,7 +43,7 @@ const fixture = ({
 					calls.push("drained");
 				},
 			},
-			listen: () => {
+			listen: async () => {
 				calls.push("listen");
 				return {
 					stop: async () => {
@@ -79,6 +79,16 @@ describe("Balance worker process lifecycle", () => {
 		await process.stop();
 		expect(calls.filter((call) => call === "store-close")).toHaveLength(1);
 	});
+	test("the HTTP threads stop only once every partition has drained, so held replies have had their commit or failure", async () => {
+		const { process, calls, finishDrain } = fixture();
+		await process.start();
+		const stopping = process.stop();
+		await Bun.sleep(10);
+		expect(calls).not.toContain("http-stop");
+		finishDrain();
+		await stopping;
+		expect(calls.indexOf("drained")).toBeLessThan(calls.indexOf("http-stop"));
+	});
 	test("failed startup cleans up the listener and resources", async () => {
 		const { process, calls, finishDrain } = fixture({ failStart: true });
 		finishDrain();
@@ -100,7 +110,7 @@ describe("Balance worker process lifecycle", () => {
 						calls.push("withdraw");
 					},
 				},
-				listen: () => ({
+				listen: async () => ({
 					stop: () => {
 						calls.push("http-stop");
 					},

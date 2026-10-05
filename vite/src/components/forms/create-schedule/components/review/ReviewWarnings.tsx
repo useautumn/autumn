@@ -2,19 +2,20 @@ import type { SetPlansPreviewWarning, SetPlansTextPart } from "@autumn/shared";
 import { Alert, StatusChipIcon } from "@autumn/ui";
 import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextLine";
 
-/** Changes that remove or lose something, or charge now, get a banner; the review sections already show the rest. */
+/** Changes that remove or lose something, charge now, or move when billing starts get a banner; the review sections already show the rest. */
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"subscription_replaced",
 	"open_invoice_not_collected",
 	"discount_not_carried",
 	"usage_not_billed",
 	"unmanaged_stripe_item_removed",
-	"existing_schedule_replaced",
 	"future_phase_removed",
 	"pending_quantity_change_dropped",
 	"trial_ended",
 	"interval_change_invoices_now",
 	"past_due_invoice_open",
+	"billing_starts_later",
+	"subscription_recreated_backdated",
 ]);
 
 type BannerLine = {

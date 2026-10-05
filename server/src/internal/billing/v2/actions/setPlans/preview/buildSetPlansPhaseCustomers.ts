@@ -9,14 +9,27 @@ export const buildSetPlansPhaseCustomers = ({
 	fullCustomer,
 	autumnBillingPlan,
 	phases,
+	firstPhaseStartsLater = false,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	autumnBillingPlan: AutumnBillingPlan;
 	phases: SchedulePhasePlan[];
+	firstPhaseStartsLater?: boolean;
 }): FullCustomer[] => {
+	const billedCustomer = applyAutumnBillingPlanToFullCustomer({
+		fullCustomer,
+		autumnBillingPlan,
+	});
+	const [firstPhase] = phases;
 	const phaseCustomers = [
-		applyAutumnBillingPlanToFullCustomer({ fullCustomer, autumnBillingPlan }),
+		firstPhaseStartsLater && firstPhase
+			? applySchedulePhaseToFullCustomer({
+					ctx,
+					fullCustomer: billedCustomer,
+					phase: firstPhase,
+				})
+			: billedCustomer,
 	];
 
 	for (const phase of phases.slice(1)) {

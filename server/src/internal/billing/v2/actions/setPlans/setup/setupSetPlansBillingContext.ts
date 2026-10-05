@@ -1,11 +1,11 @@
 import {
 	type CreateScheduleBillingContext,
 	isPastStartDate,
+	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
-import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialSetPlansPhase,
 	normalizeSetPlansPhases,
@@ -15,8 +15,16 @@ import { filterCustomerProductsInStripeSubscriptionScope } from "../subscription
 import { setupStripeSubscriptionScope } from "../subscriptionScope/setupStripeSubscriptionScope";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
+import {
+	classifyFirstPhaseStart,
+	firstPhaseBillingStartsAt,
+	firstPhaseStartsInFuture,
+} from "./classifyFirstPhaseStart";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
+import { replaceLiveSubscriptionForBackdate } from "./replaceLiveSubscriptionForBackdate";
+import { replaceLiveSubscriptionForFutureStart } from "./replaceLiveSubscriptionForFutureStart";
+import { setupFutureStartTiming } from "./setupFutureStartTiming";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 import { setupSetPlansBillingCycleAnchor } from "./setupSetPlansBillingCycleAnchor";
@@ -52,6 +60,13 @@ export const setupSetPlansBillingContext = async ({
 		...SET_PLANS_IMMEDIATE_SETUP_OPTIONS,
 	});
 
+	const initialPhaseStartsInFuture =
+		phaseHasNumericStart(initialPhase) &&
+		classifyFirstPhaseStart({
+			startsAt: initialPhase.starts_at,
+			currentEpochMs: initialBillingContext.currentEpochMs,
+		}) === "future";
+
 	const stripeSubscriptionScope = setupStripeSubscriptionScope({
 		fullCustomer: initialBillingContext.fullCustomer,
 		stripeSubscriptionId: params.stripe_subscription_id,
@@ -62,10 +77,12 @@ export const setupSetPlansBillingContext = async ({
 		phases: normalizeSetPlansPhases({
 			phases: params.phases,
 			currentEpochMs: initialBillingContext.currentEpochMs,
-			cycleBoundaryMs: setupSetPlansCycleBoundaryMs({
-				billingContext: initialBillingContext,
-				params,
-			}),
+			cycleBoundaryMs: initialPhaseStartsInFuture
+				? undefined
+				: setupSetPlansCycleBoundaryMs({
+						billingContext: initialBillingContext,
+						params,
+					}),
 		}),
 		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
 			stripeSubscriptionScope,
@@ -74,15 +91,31 @@ export const setupSetPlansBillingContext = async ({
 		currentEpochMs: initialBillingContext.currentEpochMs,
 	});
 
-	const { billingContext, immediatePhase, futurePhases } =
-		await setupSetPlansImmediatePhase({
-			ctx,
-			params,
-			preview,
-			billingContext: initialBillingContext,
-			normalizedPhases,
+	const {
+		billingContext: immediateBillingContext,
+		immediatePhase,
+		futurePhases,
+	} = await setupSetPlansImmediatePhase({
+		ctx,
+		params,
+		preview,
+		billingContext: initialBillingContext,
+		normalizedPhases,
+		stripeSubscriptionScope,
+	});
+	const billingContext = {
+		...immediateBillingContext,
+		...replaceLiveSubscriptionForBackdate({
+			billingContext: immediateBillingContext,
+			immediatePhase,
 			stripeSubscriptionScope,
-		});
+		}),
+	};
+
+	const firstPhaseContext = {
+		immediatePhase,
+		currentEpochMs: billingContext.currentEpochMs,
+	};
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
@@ -102,14 +135,20 @@ export const setupSetPlansBillingContext = async ({
 		checkoutMode: setupSetPlansCheckoutMode({
 			billingContext,
 			redirectMode: params.redirect_mode,
+			startsInFuture: firstPhaseStartsInFuture({
+				billingContext: firstPhaseContext,
+			}),
 		}),
 		requestedProrationBehavior: params.proration_behavior,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		billingStartsAt: immediatePhase.starts_at,
+		billingStartsAt: firstPhaseBillingStartsAt({
+			startsAt: immediatePhase.starts_at,
+			currentEpochMs: billingContext.currentEpochMs,
+		}),
 		subscriptionBackdateStartMs: isPastStartDate(
 			immediatePhase.starts_at,
 			billingContext.currentEpochMs,
-			FIRST_PHASE_TOLERANCE_MS,
+			SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 		)
 			? immediatePhase.starts_at
 			: undefined,
@@ -118,6 +157,7 @@ export const setupSetPlansBillingContext = async ({
 		scheduledPhaseContexts,
 		endsAt: params.ends_at,
 		stripeSubscriptionScope,
+		...setupFutureStartTiming({ billingContext: firstPhaseContext, params }),
 	};
 
 	const timeline = setupSetPlansTimeline({
@@ -126,10 +166,18 @@ export const setupSetPlansBillingContext = async ({
 		params,
 	});
 
-	const keptCycleBillingContext: CreateScheduleBillingContext = {
+	const liveSubscriptionBillingContext: CreateScheduleBillingContext = {
 		...scheduleBillingContext,
-		...setupKeptSubscriptionCycle({
+		...replaceLiveSubscriptionForFutureStart({
 			billingContext: scheduleBillingContext,
+			operations: timeline.diff.operations,
+		}),
+	};
+
+	const keptCycleBillingContext: CreateScheduleBillingContext = {
+		...liveSubscriptionBillingContext,
+		...setupKeptSubscriptionCycle({
+			billingContext: liveSubscriptionBillingContext,
 			timeline,
 			requestedProrationBehavior: params.proration_behavior,
 		}),

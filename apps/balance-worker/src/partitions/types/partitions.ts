@@ -17,6 +17,10 @@ export interface PartitionRuntimePort {
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 	): Promise<Decision>;
+	/** Synchronous, on a ready runtime only; null hands the command to `process`. */
+	processInline?<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 }
 
 export type Unsubscribe = () => void;
@@ -162,7 +166,12 @@ export type PartitionsDependencies = {
 /** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
 export type PartitionServiceStopReason = {
 	cause: unknown;
-	scope: "consumer" | "partition" | "retirement";
+	scope:
+		| "consumer"
+		| "partition"
+		| "retirement"
+		| "http-workers"
+		| "producer-thread";
 };
 
 export type PartitionConsumerStatus = {

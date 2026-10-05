@@ -151,7 +151,7 @@ export const requestedPhasesToDesiredTimeline = ({
 				configHash,
 				lifetime: isOneOffProduct({ product: plan.fullProduct }),
 				paidRecurring: isProductPaidAndRecurring(plan.fullProduct),
-				startsAt: phaseIndex === 0 ? now : phase.startsAt,
+				startsAt: plan.ongoing ? now : phase.startsAt,
 				endsAt: segmentEndsAt({ plan, nextPhaseStartsAt, endsAt }),
 				source: plan.source,
 			};

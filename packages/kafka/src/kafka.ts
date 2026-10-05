@@ -105,6 +105,7 @@ export { createProducerSession } from "./producer/createProducerSession.js";
 export {
 	createIdempotentProducerConfig,
 	createProducerConfig,
+	explicitPartitioner,
 	partitionProducerTransactionalIdOf,
 } from "./producer/producerConfig.js";
 export { isKafkaProducerFencingCause } from "./producer/producerErrors.js";
