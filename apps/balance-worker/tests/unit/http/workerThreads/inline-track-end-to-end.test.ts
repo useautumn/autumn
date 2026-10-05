@@ -178,8 +178,14 @@ afterEach(async () => {
 });
 
 /** Counts the tracks the processor decided inline, so a test knows which path answered. */
-async function setUp({ inline }: { inline: boolean }) {
-	const worker = await residentFixture();
+async function setUp({
+	inline,
+	nextResetAt,
+}: {
+	inline: boolean;
+	nextResetAt?: number;
+}) {
+	const worker = await residentFixture({ nextResetAt });
 	cleanups.push(() => worker.close());
 	const decideInline = worker.processor.trackInline;
 	const counts = { inlined: 0, batchesInlined: 0, checksInlined: 0 };
@@ -334,6 +340,24 @@ describe("inline track end to end, through HTTP worker threads", () => {
 			inline.counts.checksInlined,
 			ordinary.counts.checksInlined,
 		]).toEqual([1, 0]);
+	});
+
+	test("a check past a due reset is answered by the ordinary route on the reset balance, byte for byte", async () => {
+		const resetAt = 1_700_000_500_000;
+		const inline = await setUp({ inline: true, nextResetAt: resetAt });
+		const ordinary = await setUp({ inline: false, nextResetAt: resetAt });
+		const drain = trackCommand({ commandId: "drain", value: 99 });
+		for (const { worker, http } of [inline, ordinary])
+			await answerReleasing({ worker, answer: http.post(drain) });
+		const command = checkCommand({ occurredAt: resetAt + 1 });
+		const inlineAnswer = await inline.http.postCheck(command);
+		const ordinaryAnswer = await ordinary.http.postCheck(command);
+		expect(inline.counts.checksInlined).toBe(0);
+		expect(
+			(JSON.parse(inlineAnswer.text) as { result: { allowed: boolean } }).result
+				.allowed,
+		).toBe(true);
+		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
 	});
 
 	test("a check for a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {

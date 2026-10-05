@@ -53,4 +53,27 @@ describe("inline checks", () => {
 			f.close();
 		}
 	});
+
+	test("a check past a due reset falls through to the ordinary check, which answers on the reset balance", async () => {
+		const resetAt = 1_700_000_500_000;
+		const f = await residentFixture({ nextResetAt: resetAt });
+		try {
+			const drained = f.processor.track({
+				command: trackCommand({ commandId: "drain", value: 99 }),
+			});
+			await waitForAppend();
+			f.appender.release();
+			await drained;
+			const beforeReset = checkCommand({ occurredAt: resetAt });
+			const afterReset = checkCommand({ occurredAt: resetAt + 1 });
+			expect(
+				f.processor.checkInline({ command: beforeReset })?.result.allowed,
+			).toBe(false);
+			expect(f.processor.checkInline({ command: afterReset })).toBeNull();
+			const ordinary = await f.processor.check({ command: afterReset });
+			expect(ordinary.result.allowed).toBe(true);
+		} finally {
+			f.close();
+		}
+	});
 });
