@@ -24,11 +24,8 @@ import {
 
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
-	start,
 }: {
 	subjectMapMaxBytes?: number | (() => number);
-	/** Where an earlier writer of the partition left its sequence numbers; a fresh partition starts at 0. */
-	start?: { lastSeq: number };
 } = {}): PartitionWriterState {
 	return {
 		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes }),
@@ -47,8 +44,8 @@ export function createPartitionWriterState({
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
-		lastSeq: start?.lastSeq ?? 0,
-		settledSeq: start?.lastSeq ?? 0,
+		lastSeq: 0,
+		settledSeq: 0,
 	};
 }
 
