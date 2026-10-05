@@ -239,7 +239,11 @@ const transferProducts = async ({
 			});
 			continue;
 		}
-		if (curMainProduct && !cusProduct.product.is_add_on)
+		if (
+			curMainProduct &&
+			!cusProduct.product.is_add_on &&
+			!replacedOnDestination.some(({ id }) => id === curMainProduct.id)
+		)
 			replacedOnDestination.push(curMainProduct);
 		movable.push(cusProduct);
 	}
