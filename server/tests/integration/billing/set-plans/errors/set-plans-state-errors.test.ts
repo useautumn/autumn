@@ -148,8 +148,13 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
-					billing_cycle_anchor: "now",
-					phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
+					phases: [
+						{
+							starts_at: "now",
+							billing_cycle_anchor: "phase_start",
+							plans: [{ plan_id: proTrial.id }],
+						},
+					],
 				}),
 		});
 	},
