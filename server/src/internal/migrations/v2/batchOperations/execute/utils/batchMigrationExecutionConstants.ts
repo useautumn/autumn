@@ -56,11 +56,11 @@ export const BATCH_MIGRATION_PAGE_TIMEOUT_MS = 5 * 60_000;
 /** How often a chunk with no page progress logs where it is stuck. */
 export const BATCH_MIGRATION_STALL_LOG_INTERVAL_MS = 30_000;
 
-/** Kept free at the end of a chunk's deadline: one deferred-op drain, one
- * bounded checkpoint write, and slack for logging and the return. */
+/** Kept free at the end of a chunk's deadline: one deferred-op drain, two
+ * bounded recovery writes (failed-page cache bust + claim release), and slack. */
 export const BATCH_MIGRATION_CHUNK_FINALIZE_RESERVE_MS =
 	BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS +
-	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS +
+	2 * BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS +
 	30_000;
 
 /** Below this much remaining budget a chunk yields `slice_complete` instead
