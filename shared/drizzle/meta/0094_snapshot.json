@@ -1,5 +1,5 @@
 {
-  "id": "9b26f87b-f31c-49de-b678-b1075f0cb2a2",
+  "id": "d07830b9-5e11-465c-a57e-6589da0f2cbb",
   "prevId": "968bcbc7-b292-4fb1-9150-f03167e5dd09",
   "version": "7",
   "dialect": "postgresql",
@@ -3100,12 +3100,6 @@
         "billing_cycle_anchor_resets_at": {
           "name": "billing_cycle_anchor_resets_at",
           "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phase_proration_behavior": {
-          "name": "phase_proration_behavior",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -10384,6 +10378,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'"
+        },
+        "proration_behavior": {
+          "name": "proration_behavior",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

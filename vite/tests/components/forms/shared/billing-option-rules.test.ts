@@ -13,18 +13,7 @@ describe("schedule billing cycle reset rule", () => {
 		});
 	});
 
-	test("disables the reset for a new schedule opening with several plans", () => {
-		expect(
-			scheduleResetRule({ hasMultipleImmediatePlans: true }),
-		).toMatchObject({ visible: true, disabled: true });
-	});
-
-	test("hides the reset for a saved schedule, whose later phases pick their own", () => {
-		expect(
-			scheduleResetRule({
-				hasPersistedSchedule: true,
-				hasMultipleImmediatePlans: true,
-			}).visible,
-		).toBe(false);
+	test("allows the reset when the first phase has several plans", () => {
+		expect(scheduleResetRule({})).toMatchObject({ disabled: false });
 	});
 });

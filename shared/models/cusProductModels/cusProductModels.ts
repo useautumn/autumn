@@ -1,4 +1,3 @@
-import { PhaseProrationBehaviorSchema } from "@api/billing/common/billingBehavior.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { BillingVersion } from "@models/billingModels/context/billingContext.js";
 import { ProcessorType } from "@models/genModels/genEnums.js";
@@ -54,7 +53,6 @@ export const CusProductSchema = z.object({
 	trial_ends_at: z.number().optional().nullable(),
 	billing_cycle_anchor: z.number().optional().nullable(),
 	billing_cycle_anchor_resets_at: z.number().optional().nullable(),
-	phase_proration_behavior: PhaseProrationBehaviorSchema.nullish(),
 	canceled_at: z.number().optional().nullable(),
 	ended_at: z.number().optional().nullable(),
 

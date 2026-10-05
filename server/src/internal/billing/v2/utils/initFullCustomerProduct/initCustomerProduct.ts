@@ -36,7 +36,6 @@ export const initCustomerProduct = ({
 		apiSemver,
 		externalId,
 		billingCycleAnchorResetsAt,
-		phaseProrationBehavior,
 		accessStartsAt,
 		previousCustomerProductId,
 		onTrialEnd,
@@ -121,7 +120,6 @@ export const initCustomerProduct = ({
 		trial_ends_at: trialEndsAt,
 		billing_cycle_anchor: billingCycleAnchor,
 		billing_cycle_anchor_resets_at: billingCycleAnchorResetsAt,
-		phase_proration_behavior: phaseProrationBehavior ?? null,
 		free_trial_id: freeTrial?.id,
 
 		options: featureQuantities,

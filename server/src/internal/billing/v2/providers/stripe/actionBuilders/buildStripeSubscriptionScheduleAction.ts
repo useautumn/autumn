@@ -20,6 +20,7 @@ import {
 import type Stripe from "stripe";
 import { stripeScheduleMatchesPhases } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/stripeScheduleMatchesPhases";
 import { getPatchCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import type { SchedulePhaseProration } from "../setup/resolveSchedulePhaseProrations";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -271,12 +272,14 @@ export const buildStripeSubscriptionScheduleAction = ({
 	autumnBillingPlan,
 	finalCustomerProducts,
 	trialEndsAt,
+	phaseProrations = [],
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
+	phaseProrations?: SchedulePhaseProration[];
 }): StripeSubscriptionScheduleResult => {
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
 	const insertedCustomerProductIds = new Set(
@@ -342,6 +345,7 @@ export const buildStripeSubscriptionScheduleAction = ({
 		customerProducts,
 		trialEndsAt,
 		useFreePhaseStripeProduct: isCreateSchedule,
+		phaseProrations,
 	});
 
 	const scheduledPhases = filterEmptyPhases(phases);

@@ -51,9 +51,9 @@ const backdateLivePro = async ({
 	const backdatedStart = live.startMs - ms.days(daysBeforeLiveStart);
 	const params: SetPlansParamsV0Input = {
 		customer_id: customerId,
-		proration_behavior: prorationBehavior,
 		phases: [
 			{
+				proration_behavior: prorationBehavior,
 				starts_at: backdatedStart,
 				plans: [{ plan_id: scenario.pro.id }],
 				...(restartsCycle ? { billing_cycle_anchor: "phase_start" } : {}),
@@ -215,9 +215,12 @@ test.concurrent(
 		});
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
-			proration_behavior: "prorate_immediately",
 			phases: [
-				{ starts_at: backdatedStart, plans: [{ plan_id: proAnnual.id }] },
+				{
+					proration_behavior: "prorate_immediately",
+					starts_at: backdatedStart,
+					plans: [{ plan_id: proAnnual.id }],
+				},
 			],
 		};
 

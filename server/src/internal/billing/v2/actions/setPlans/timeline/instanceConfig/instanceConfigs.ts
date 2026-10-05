@@ -4,7 +4,6 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
-	type PhaseProrationBehavior,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import type {
@@ -44,18 +43,6 @@ const resetsBillingCycleAtStart = ({
 	) === truncateMsToSecondPrecision(customerProduct.starts_at) &&
 	customerProduct.starts_at > now;
 
-/** How the row's future start bills; a start already past no longer matters. */
-const prorationBehaviorAtStart = ({
-	customerProduct,
-	now,
-}: {
-	customerProduct: FullCusProduct;
-	now: number;
-}) =>
-	customerProduct.starts_at > now
-		? (customerProduct.phase_proration_behavior ?? null)
-		: null;
-
 export const customerProductToInstanceConfig = ({
 	customerProduct,
 	now,
@@ -74,7 +61,6 @@ export const customerProductToInstanceConfig = ({
 	},
 	planQuantity: customerProduct.quantity ?? DEFAULT_PLAN_QUANTITY,
 	resetsBillingCycle: resetsBillingCycleAtStart({ customerProduct, now }),
-	prorationBehavior: prorationBehaviorAtStart({ customerProduct, now }),
 });
 
 /** An omitted license list keeps what the instance already holds, or grants the included seats. */
@@ -84,14 +70,12 @@ export const requestedPlanToInstanceConfig = ({
 	customerLicenseQuantities,
 	omittedLicenses,
 	resetsBillingCycle,
-	prorationBehavior,
 }: {
 	fullProduct: FullProduct;
 	featureQuantities: FeatureOptions[];
 	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	omittedLicenses: LicenseConfig;
 	resetsBillingCycle: boolean;
-	prorationBehavior: PhaseProrationBehavior | null;
 }): InstanceConfig => ({
 	fullProduct,
 	featureQuantities,
@@ -100,5 +84,4 @@ export const requestedPlanToInstanceConfig = ({
 		: omittedLicenses,
 	planQuantity: DEFAULT_PLAN_QUANTITY,
 	resetsBillingCycle,
-	prorationBehavior,
 });

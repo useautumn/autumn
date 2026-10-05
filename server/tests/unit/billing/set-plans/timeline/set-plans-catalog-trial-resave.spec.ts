@@ -94,7 +94,6 @@ describe(chalk.yellowBright("set_plans catalog trial re-save"), () => {
 					featureQuantities: [],
 					omittedLicenses: { type: "granted", licenses: [] },
 					resetsBillingCycle: false,
-					prorationBehavior: null,
 				}),
 			}),
 		).toBe(true);

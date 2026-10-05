@@ -23,8 +23,6 @@ export function useCustomerStateForm({
 		],
 		unscheduledPlans: [],
 		resetBillingCycle: false,
-		billingCycleAnchorMode: "now",
-		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
 	};

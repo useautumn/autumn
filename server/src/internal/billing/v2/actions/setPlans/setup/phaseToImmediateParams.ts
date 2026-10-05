@@ -2,6 +2,7 @@ import type { SetPlansParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import type { ImmediateMultiProductParams } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import { immediatePhaseProrationBehavior } from "../utils/immediatePhaseBilling";
 
 const resolveNoBillingChanges = ({
 	ctx,
@@ -12,7 +13,7 @@ const resolveNoBillingChanges = ({
 }) =>
 	params.no_billing_changes === true ||
 	(!isStripeConnected({ org: ctx.org, env: ctx.env }) &&
-		params.proration_behavior === "none" &&
+		immediatePhaseProrationBehavior({ params }) === "none" &&
 		params.redirect_mode === "never");
 
 /** The multi-attach params that bill one phase's plans now. */

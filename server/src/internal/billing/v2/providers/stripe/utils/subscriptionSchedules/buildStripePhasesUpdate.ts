@@ -15,6 +15,7 @@ import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/provider
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
 import { customerProductsToPhaseInvoiceItems } from "./customerProductsToPhaseInvoiceItems";
+import type { SchedulePhaseProration } from "../../setup/resolveSchedulePhaseProrations";
 import { logTransitionPoints } from "./logBuildPhaseHelpers";
 import { normalizeCustomerProductTimestamps } from "./normalizeCustomerProductTimestamps";
 import { resolveStripePhaseProrationBehavior } from "./resolveStripePhaseProrationBehavior";
@@ -256,6 +257,7 @@ export const buildStripePhasesUpdate = ({
 	customerProducts,
 	trialEndsAt,
 	useFreePhaseStripeProduct = false,
+	phaseProrations = [],
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
@@ -263,6 +265,7 @@ export const buildStripePhasesUpdate = ({
 	trialEndsAt?: number;
 	/** Only create_schedule places free-phase placeholders on the free plan's own product. */
 	useFreePhaseStripeProduct?: boolean;
+	phaseProrations?: SchedulePhaseProration[];
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	// Normalize all timestamps to second-level precision for Stripe compatibility.
 	// This is done once at the entry point so downstream functions work with clean data.
@@ -404,7 +407,7 @@ export const buildStripePhasesUpdate = ({
 				? "phase_start"
 				: undefined,
 			proration_behavior: resolveStripePhaseProrationBehavior({
-				phaseCustomerProducts: activeCustomerProducts,
+				phaseProrations,
 				phaseStartMs: startMs,
 				isBillingCycleAnchorResetPhase,
 				changesCustomerProducts,

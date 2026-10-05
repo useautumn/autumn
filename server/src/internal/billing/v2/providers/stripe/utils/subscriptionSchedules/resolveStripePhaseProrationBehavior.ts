@@ -1,29 +1,28 @@
-import type { FullCusProduct } from "@autumn/shared";
+import { truncateMsToSecondPrecision } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { SchedulePhaseProration } from "../../setup/resolveSchedulePhaseProrations";
 import { phaseProrationBehaviorToStripe } from "./phaseProrationBehaviorToStripe";
 
 const findRequestedProrationBehavior = ({
-	phaseCustomerProducts,
+	phaseProrations,
 	phaseStartMs,
 }: {
-	phaseCustomerProducts: FullCusProduct[];
+	phaseProrations: SchedulePhaseProration[];
 	phaseStartMs: number;
 }) =>
-	phaseCustomerProducts.find(
-		(customerProduct) =>
-			customerProduct.starts_at === phaseStartMs &&
-			customerProduct.phase_proration_behavior,
-	)?.phase_proration_behavior;
+	phaseProrations.find(
+		({ startsAt }) => truncateMsToSecondPrecision(startsAt) === phaseStartMs,
+	)?.prorationBehavior;
 
-/** The proration a plan starting with the phase asked for, else the default rule. */
+/** The proration the schedule phase starting here asked for, else the default rule. */
 export const resolveStripePhaseProrationBehavior = ({
-	phaseCustomerProducts,
+	phaseProrations,
 	phaseStartMs,
 	isBillingCycleAnchorResetPhase,
 	changesCustomerProducts,
 	invoicesPhaseStart,
 }: {
-	phaseCustomerProducts: FullCusProduct[];
+	phaseProrations: SchedulePhaseProration[];
 	phaseStartMs: number;
 	isBillingCycleAnchorResetPhase: boolean;
 	changesCustomerProducts: boolean;
@@ -32,7 +31,7 @@ export const resolveStripePhaseProrationBehavior = ({
 	| Stripe.SubscriptionScheduleUpdateParams.Phase.ProrationBehavior
 	| undefined => {
 	const requestedProrationBehavior = findRequestedProrationBehavior({
-		phaseCustomerProducts,
+		phaseProrations,
 		phaseStartMs,
 	});
 	if (requestedProrationBehavior) {

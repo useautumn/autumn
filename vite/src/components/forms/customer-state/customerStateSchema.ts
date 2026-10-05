@@ -66,19 +66,6 @@ export function hasPersistedCreateSchedule({
 	return phases[0]?.persistedStartsAt != null;
 }
 
-export function hasMultipleImmediateSchedulePlans({
-	phases,
-}: {
-	phases: CustomerStatePhase[];
-}) {
-	const immediatePhase = phases.find((phase) =>
-		phase.plans.some((plan) => plan.productId),
-	);
-	return (
-		(immediatePhase?.plans.filter((plan) => plan.productId).length ?? 0) > 1
-	);
-}
-
 export function getCurrentCreateSchedulePhaseIndex({
 	phases,
 	nowMs = Date.now(),
@@ -216,8 +203,6 @@ export const CustomerStateFormSchema = z
 		/** Billed with the first phase, then left alone by the schedule. */
 		unscheduledPlans: z.array(CustomerStatePlanSchema),
 		resetBillingCycle: z.boolean(),
-		billingCycleAnchorMode: z.enum(["now", "custom"]),
-		billingCycleAnchorDate: z.number().nullable(),
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),
 	})

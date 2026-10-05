@@ -66,7 +66,6 @@ export const placeRequestedPlan = ({
 				customerLicenseQuantities: plan.customerLicenseQuantities,
 				omittedLicenses: omittedLicensesFor({ slot, isOpeningPhase }),
 				resetsBillingCycle: !isOpeningPhase && phase.resetsBillingCycle,
-				prorationBehavior: isOpeningPhase ? null : phase.prorationBehavior,
 			}),
 		);
 

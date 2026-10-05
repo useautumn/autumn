@@ -4,7 +4,6 @@ import type {
 	FreeTrial,
 	TrialOnEnd,
 } from "@models/productModels/freeTrialModels/freeTrialModels";
-import type { PhaseProrationBehavior } from "../../../api/billing/common/billingBehavior";
 import type { ApiVersion } from "../../../api/versionUtils/ApiVersion";
 import type { Entity } from "../../cusModels/entityModels/entityModels";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
@@ -90,7 +89,6 @@ export interface InitFullCustomerProductOptions {
 	collectionMethod?: CollectionMethod;
 	externalId?: string;
 	billingCycleAnchorResetsAt?: number | null;
-	phaseProrationBehavior?: PhaseProrationBehavior | null;
 
 	/** When true, preserve subscription_ids even for non-paid-recurring products (used by sync). */
 	keepSubscriptionIds?: boolean;

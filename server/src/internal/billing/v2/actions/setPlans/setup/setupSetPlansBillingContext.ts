@@ -14,6 +14,10 @@ import {
 import { filterCustomerProductsInStripeSubscriptionScope } from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 import { setupStripeSubscriptionScope } from "../subscriptionScope/setupStripeSubscriptionScope";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import {
+	immediatePhaseBillingCycleAnchor,
+	immediatePhaseProrationBehavior,
+} from "../utils/immediatePhaseBilling";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import {
 	classifyFirstPhaseStart,
@@ -81,7 +85,10 @@ export const setupSetPlansBillingContext = async ({
 				? undefined
 				: setupSetPlansCycleBoundaryMs({
 						billingContext: initialBillingContext,
-						params,
+						requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
+							params,
+							currentEpochMs: initialBillingContext.currentEpochMs,
+						}),
 					}),
 		}),
 		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
@@ -139,8 +146,11 @@ export const setupSetPlansBillingContext = async ({
 				billingContext: firstPhaseContext,
 			}),
 		}),
-		requestedProrationBehavior: params.proration_behavior,
-		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedProrationBehavior: immediatePhaseProrationBehavior({ params }),
+		requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
+			params,
+			currentEpochMs: billingContext.currentEpochMs,
+		}),
 		billingStartsAt: firstPhaseBillingStartsAt({
 			startsAt: immediatePhase.starts_at,
 			currentEpochMs: billingContext.currentEpochMs,
@@ -179,7 +189,8 @@ export const setupSetPlansBillingContext = async ({
 		...setupKeptSubscriptionCycle({
 			billingContext: liveSubscriptionBillingContext,
 			timeline,
-			requestedProrationBehavior: params.proration_behavior,
+			requestedProrationBehavior:
+				liveSubscriptionBillingContext.requestedProrationBehavior,
 		}),
 	};
 
@@ -189,7 +200,6 @@ export const setupSetPlansBillingContext = async ({
 			...setupSetPlansBillingCycleAnchor({
 				billingContext: keptCycleBillingContext,
 				timeline,
-				params,
 			}),
 		},
 		timeline,

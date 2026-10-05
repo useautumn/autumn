@@ -1,9 +1,9 @@
 import { expect } from "bun:test";
 import {
-	CusProductStatus,
 	ms,
 	type PhaseProrationBehavior,
 	type SetPlansParamsV0Input,
+	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -11,8 +11,8 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
+import { getCustomerSchedulesByScope } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 
 const LATER_PHASE_OFFSET_DAYS = 10;
 
@@ -35,12 +35,17 @@ export const setupPhaseProrationScenario = async ({
 			items.monthlyPrice({ price: 50 }),
 		],
 	});
+	const addOn = products.base({
+		id: `${customerId}-addon`,
+		isAddOn: true,
+		items: [items.monthlyPrice({ price: 10 })],
+	});
 
 	const scenario = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium] }),
+			s.products({ list: [pro, premium, addOn] }),
 		],
 		actions: [],
 	});
@@ -49,37 +54,44 @@ export const setupPhaseProrationScenario = async ({
 		...scenario,
 		pro,
 		premium,
+		addOn,
 		laterPhaseStartsAt: scenario.advancedTo + ms.days(LATER_PHASE_OFFSET_DAYS),
 	};
 };
 
-/** Pro now, premium from the later phase: an upgrade mid-cycle. */
-export const proThenPremiumParams = ({
+/** Opening plans now, then the later phase's plans: an upgrade or a removal mid-cycle. */
+export const twoPhaseParams = ({
 	customerId,
 	laterPhaseStartsAt,
-	proPlanId,
-	premiumPlanId,
+	openingPlanIds,
+	laterPlanIds,
 	billingCycleAnchor,
 	prorationBehavior,
 }: {
 	customerId: string;
 	laterPhaseStartsAt: number;
-	proPlanId: string;
-	premiumPlanId: string;
+	openingPlanIds: string[];
+	laterPlanIds: string[];
 	billingCycleAnchor?: "phase_start";
 	prorationBehavior?: PhaseProrationBehavior;
 }): SetPlansParamsV0Input => ({
 	customer_id: customerId,
 	phases: [
-		{ starts_at: "now", plans: [{ plan_id: proPlanId }] },
+		{
+			starts_at: "now",
+			plans: openingPlanIds.map((planId) => ({ plan_id: planId })),
+		},
 		{
 			starts_at: laterPhaseStartsAt,
-			plans: [{ plan_id: premiumPlanId }],
+			plans: laterPlanIds.map((planId) => ({ plan_id: planId })),
 			...(billingCycleAnchor && { billing_cycle_anchor: billingCycleAnchor }),
 			...(prorationBehavior && { proration_behavior: prorationBehavior }),
 		},
 	],
 });
+
+const sameSecond = (first: number, second: number) =>
+	truncateMsToSecondPrecision(first) === truncateMsToSecondPrecision(second);
 
 export const stripeSchedulePhaseStartingAt = async ({
 	ctx,
@@ -101,46 +113,45 @@ export const stripeSchedulePhaseStartingAt = async ({
 			: subscription.schedule?.id;
 	if (!scheduleId) throw new Error(`${customerId} has no Stripe schedule`);
 
-	const schedule =
-		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
-	const phase = schedule.phases.find(
-		(candidate) =>
-			Math.abs(candidate.start_date * 1000 - startsAt) < ms.minutes(1),
+	const schedule = await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	const phase = schedule.phases.find((candidate) =>
+		sameSecond(candidate.start_date * 1000, startsAt),
 	);
 	if (!phase) throw new Error(`No Stripe phase starts at ${startsAt}`);
 	return phase;
 };
 
-/** What reopening the Set Plans sheet reads: the scheduled row's saved proration. */
-export const expectScheduledPhaseProrationSaved = async ({
+/** What reopening the Set Plans sheet reads: the saved schedule phase's proration. */
+export const expectSavedPhaseProration = async ({
 	ctx,
 	customerId,
-	productId,
+	startsAt,
 	prorationBehavior,
 }: {
 	ctx: TestContext;
 	customerId: string;
-	productId: string;
+	startsAt: number;
 	prorationBehavior: PhaseProrationBehavior | null;
 }) => {
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
-	const scheduled = fullCustomer.customer_products.find(
-		(customerProduct) =>
-			customerProduct.status === CusProductStatus.Scheduled &&
-			customerProduct.product.id === productId,
-	);
-	expect(scheduled).toBeDefined();
-	expect(scheduled?.phase_proration_behavior ?? null).toBe(prorationBehavior);
+	const { customerSchedule, entitySchedules } =
+		await getCustomerSchedulesByScope({
+			ctx,
+			internalCustomerId: fullCustomer.internal_id,
+		});
+	const savedPhase = [customerSchedule, ...Object.values(entitySchedules)]
+		.flatMap((schedule) => schedule?.phases ?? [])
+		.find((phase) => sameSecond(phase.starts_at, startsAt));
+
+	expect(savedPhase).toBeDefined();
+	expect(savedPhase?.proration_behavior ?? null).toBe(prorationBehavior);
 };
 
-const isProrationLine = (line: Stripe.InvoiceLineItem) =>
-	line.parent?.subscription_item_details?.proration === true;
-
-/** Advances past the later phase's start and returns the proration lines Stripe invoiced for it. */
-export const advancePastPhaseStartAndGetProrationLines = async ({
+/** Advances past the later phase's start and returns the Stripe invoices raised at it, lines included. */
+export const advancePastPhaseStartAndGetInvoices = async ({
 	ctx,
 	customerId,
 	testClockId,
@@ -163,11 +174,14 @@ export const advancePastPhaseStartAndGetProrationLines = async ({
 		waitForSeconds: 30,
 	});
 
-	const invoices = await ctx.stripeCli.invoices.list({
+	const { data } = await ctx.stripeCli.invoices.list({
 		subscription: subscription.id,
 		created: { gte: Math.floor(laterPhaseStartsAt / 1000) - 60 },
 	});
-	return invoices.data.flatMap((invoice) =>
-		invoice.lines.data.filter(isProrationLine),
+	return await Promise.all(
+		data.map((invoice) => ctx.stripeCli.invoices.retrieve(invoice.id!)),
 	);
 };
+
+export const invoicesTotal = (invoices: { total: number }[]) =>
+	invoices.reduce((total, invoice) => total + invoice.total, 0);

@@ -1,1 +1,0 @@
-ALTER TABLE "customer_products" ADD COLUMN "phase_proration_behavior" text;

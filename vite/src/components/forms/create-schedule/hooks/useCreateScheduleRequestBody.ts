@@ -6,14 +6,9 @@ import {
 	type CustomerStatePhase,
 	type CustomerStatePlan,
 	getCreateSchedulePhaseTimingError,
-	hasPersistedCreateSchedule,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
-import {
-	type BillingCycleAnchorMode,
-	resolveBillingCycleAnchor,
-} from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 import { phaseToBillingCycleAnchor } from "../utils/phaseBillingCycleAnchor";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
@@ -26,8 +21,6 @@ export function buildCreateScheduleRequestBody({
 	features,
 	nowMs,
 	resetBillingCycle,
-	billingCycleAnchorMode,
-	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
@@ -40,8 +33,6 @@ export function buildCreateScheduleRequestBody({
 	features: Feature[];
 	nowMs?: number;
 	resetBillingCycle?: boolean;
-	billingCycleAnchorMode?: BillingCycleAnchorMode;
-	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
@@ -50,7 +41,6 @@ export function buildCreateScheduleRequestBody({
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
-	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 	const startsLater = firstPhaseStartsLater({ phases, nowMs: now });
 
 	const toApiPlan = (plan: CustomerStatePlan) =>
@@ -92,23 +82,28 @@ export function buildCreateScheduleRequestBody({
 	);
 	if (validPhases.length === 0) return null;
 
-	const hasMultipleImmediatePlans = (validPhases[0]?.plans.length ?? 0) > 1;
+	// The form's first phase owns the request's first-phase billing, even when it has no plans.
 	const requestPhases = validPhases.map(
-		({ keepsCycleAnchor, prorationBehavior, ...apiPhase }, index) => {
+		(
+			{ keepsCycleAnchor, prorationBehavior: ownProration, ...apiPhase },
+			index,
+		) => {
 			const isFirstPhase = index === 0;
+			const prorationBehavior = isFirstPhase
+				? phases[0]?.prorationBehavior
+				: ownProration;
 			const billingCycleAnchor = phaseToBillingCycleAnchor({
 				phase: { keepsCycleAnchor },
 				isFirstPhase,
+				resetBillingCycle: !!resetBillingCycle,
 			});
 			return {
 				...apiPhase,
 				...(billingCycleAnchor && { billing_cycle_anchor: billingCycleAnchor }),
-				...(!isFirstPhase &&
-					prorationBehavior && { proration_behavior: prorationBehavior }),
+				...(prorationBehavior && { proration_behavior: prorationBehavior }),
 			};
 		},
 	);
-	const firstPhaseProrationBehavior = phases[0]?.prorationBehavior;
 
 	const apiUnscheduledPlans = unscheduledPlans.flatMap((plan) =>
 		plan.productId ? [toApiPlan(plan)] : [],
@@ -122,26 +117,10 @@ export function buildCreateScheduleRequestBody({
 			: {}),
 	};
 
-	if (firstPhaseProrationBehavior)
-		body.proration_behavior = firstPhaseProrationBehavior;
 	if (enablePlanImmediately && startsLater) body.enable_plan_immediately = true;
 	if (stripeSubscriptionId) body.stripe_subscription_id = stripeSubscriptionId;
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
 		body.ends_at = endDate;
-	}
-
-	// Anchor resets aren't supported when the immediate phase is a multi-attach.
-	const billingCycleAnchor = resolveBillingCycleAnchor({
-		resetBillingCycle: !!resetBillingCycle,
-		billingCycleAnchorMode: billingCycleAnchorMode ?? "now",
-		billingCycleAnchorDate: billingCycleAnchorDate ?? null,
-	});
-	if (
-		!hasMultipleImmediatePlans &&
-		!hasPersistedSchedule &&
-		billingCycleAnchor !== undefined
-	) {
-		body.billing_cycle_anchor = billingCycleAnchor;
 	}
 	return body as SetPlansParamsV0;
 }
@@ -167,8 +146,6 @@ export function useCreateScheduleRequestBody({
 	features,
 	nowMs,
 	resetBillingCycle,
-	billingCycleAnchorMode,
-	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
@@ -181,8 +158,6 @@ export function useCreateScheduleRequestBody({
 	features: Feature[];
 	nowMs?: number;
 	resetBillingCycle?: boolean;
-	billingCycleAnchorMode?: BillingCycleAnchorMode;
-	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
@@ -198,8 +173,6 @@ export function useCreateScheduleRequestBody({
 				features,
 				nowMs,
 				resetBillingCycle,
-				billingCycleAnchorMode,
-				billingCycleAnchorDate,
 				endDate,
 				allowFirstPhaseBackdate,
 				enablePlanImmediately,
@@ -213,8 +186,6 @@ export function useCreateScheduleRequestBody({
 			features,
 			nowMs,
 			resetBillingCycle,
-			billingCycleAnchorMode,
-			billingCycleAnchorDate,
 			endDate,
 			allowFirstPhaseBackdate,
 			enablePlanImmediately,
@@ -231,7 +202,7 @@ export function useBuildCreateScheduleRequestBody({
 	getPhases,
 	getUnscheduledPlans,
 	getResetBillingCycle,
-	getBillingCycleAnchorAndEndDate,
+	getEndDate,
 	getEnablePlanImmediately,
 	getAllowFirstPhaseBackdate,
 	stripeSubscriptionId,
@@ -243,10 +214,7 @@ export function useBuildCreateScheduleRequestBody({
 	getPhases: () => CustomerStatePhase[];
 	getUnscheduledPlans?: () => CustomerStatePlan[];
 	getResetBillingCycle?: () => boolean;
-	getBillingCycleAnchorAndEndDate?: () => Pick<
-		CustomerStateForm,
-		"billingCycleAnchorMode" | "billingCycleAnchorDate" | "endDate"
-	>;
+	getEndDate?: () => CustomerStateForm["endDate"];
 	getEnablePlanImmediately?: () => boolean;
 	getAllowFirstPhaseBackdate?: () => boolean;
 	stripeSubscriptionId?: string | null;
@@ -263,7 +231,7 @@ export function useBuildCreateScheduleRequestBody({
 					features,
 					nowMs,
 					resetBillingCycle: getResetBillingCycle?.() ?? false,
-					...getBillingCycleAnchorAndEndDate?.(),
+					endDate: getEndDate?.(),
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
 					enablePlanImmediately: getEnablePlanImmediately?.() ?? false,
 					stripeSubscriptionId,
@@ -276,7 +244,7 @@ export function useBuildCreateScheduleRequestBody({
 			getPhases,
 			getUnscheduledPlans,
 			getResetBillingCycle,
-			getBillingCycleAnchorAndEndDate,
+			getEndDate,
 			getEnablePlanImmediately,
 			getAllowFirstPhaseBackdate,
 			stripeSubscriptionId,

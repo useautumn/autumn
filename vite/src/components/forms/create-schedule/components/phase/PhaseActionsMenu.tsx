@@ -1,4 +1,3 @@
-import { PhaseProrationBehaviorSchema } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -20,10 +19,8 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
-import { PRORATION_BEHAVIOR_LABELS } from "@/components/forms/shared/ProrationBehaviorConfigRow";
+import { LATER_PHASE_PRORATION_OPTIONS } from "@/components/forms/shared/utils/prorationBehaviorOptions";
 import { isImmediatePhase } from "../../utils/schedulePhaseTiming";
-
-const PHASE_PRORATION_BEHAVIORS = PhaseProrationBehaviorSchema.options;
 
 export function PhaseActionsMenu({
 	phaseIndex,
@@ -77,15 +74,20 @@ export function PhaseActionsMenu({
 							onValueChange={(value) =>
 								form.setFieldValue(
 									`phases[${phaseIndex}].prorationBehavior`,
-									PhaseProrationBehaviorSchema.parse(value),
+									LATER_PHASE_PRORATION_OPTIONS.find(
+										(option) => option.value === value,
+									)?.value ?? prorationBehavior,
 								)
 							}
 						>
-							{PHASE_PRORATION_BEHAVIORS.map((behavior) => (
-								<DropdownMenuRadioItem key={behavior} value={behavior}>
-									{PRORATION_BEHAVIOR_LABELS[behavior]}
-								</DropdownMenuRadioItem>
-							))}
+							{LATER_PHASE_PRORATION_OPTIONS.map(
+								({ value, label, icon: Icon }) => (
+									<DropdownMenuRadioItem key={value} value={value}>
+										<Icon className="size-4" />
+										{label}
+									</DropdownMenuRadioItem>
+								),
+							)}
 						</DropdownMenuRadioGroup>
 					</DropdownMenuSubContent>
 				</DropdownMenuSub>

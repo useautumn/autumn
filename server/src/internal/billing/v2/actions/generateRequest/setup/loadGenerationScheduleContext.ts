@@ -49,22 +49,13 @@ export const loadGenerationScheduleContext = async ({
 				: [],
 		),
 	);
-	const phaseProrationBehavior = ({
-		customerProductIds,
-	}: {
-		customerProductIds: string[];
-	}) => {
-		const prorationBehavior = customerProductIds
-			.map((id) => customerProductById.get(id)?.phase_proration_behavior)
-			.find(Boolean);
-		return prorationBehavior ? { proration_behavior: prorationBehavior } : {};
-	};
 	const compactSchedule = (
 		schedule: FullCustomerSchedule,
 		entityId?: string,
 	) => ({
 		...(entityId ? { entity_id: entityId } : {}),
-		phases: schedule.phases.map(({ starts_at, customer_product_ids }) => ({
+		phases: schedule.phases.map(
+			({ starts_at, customer_product_ids, proration_behavior }) => ({
 			starts_at,
 			customer_product_ids,
 			...(customer_product_ids.some((id) =>
@@ -76,8 +67,9 @@ export const loadGenerationScheduleContext = async ({
 			)
 				? { billing_cycle_anchor: "phase_start" as const }
 				: {}),
-			...phaseProrationBehavior({ customerProductIds: customer_product_ids }),
-		})),
+			...(proration_behavior ? { proration_behavior } : {}),
+		}),
+		),
 	});
 
 	return {

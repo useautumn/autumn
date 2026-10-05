@@ -223,11 +223,10 @@ export function CreateScheduleFormProvider({
 		[form.store, backdatesLiveSubscription],
 	);
 
-	const getBillingCycleAnchorAndEndDate = useCallback(() => {
-		const { billingCycleAnchorMode, billingCycleAnchorDate, endDate } =
-			form.store.state.values;
-		return { billingCycleAnchorMode, billingCycleAnchorDate, endDate };
-	}, [form.store]);
+	const getEndDate = useCallback(
+		() => form.store.state.values.endDate,
+		[form.store],
+	);
 
 	const getEnablePlanImmediately = useCallback(
 		() => form.store.state.values.enablePlanImmediately ?? false,
@@ -247,7 +246,7 @@ export function CreateScheduleFormProvider({
 		getPhases,
 		getUnscheduledPlans,
 		getResetBillingCycle,
-		getBillingCycleAnchorAndEndDate,
+		getEndDate,
 		getEnablePlanImmediately,
 		getAllowFirstPhaseBackdate,
 		stripeSubscriptionId,
@@ -262,8 +261,6 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		resetBillingCycle:
 			formValues.resetBillingCycle && !backdatesLiveSubscription,
-		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
-		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,

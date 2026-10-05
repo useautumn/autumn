@@ -11,7 +11,6 @@ import type {
 	CustomerStatePlan,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
-	anchorOverridesFrom,
 	type FieldReaders,
 	overridesFromRequest,
 	readArray,
@@ -57,7 +56,6 @@ const planFrom = (value: unknown): CustomerStatePlan | undefined => {
 	};
 };
 
-/** The first phase's proration is the request's own; a later phase's bills its start. */
 const prorationBehaviorFrom = (value: unknown): BillingBehavior | null =>
 	BillingBehaviorSchema.safeParse(value).data ?? null;
 
@@ -129,20 +127,22 @@ export const scheduleFormFromRequestBody = (
 					isFirstPhase: index === 0,
 				}),
 				prorationBehavior: prorationBehaviorFrom(
-					index === 0 ? request.proration_behavior : phase.proration_behavior,
+					phase.proration_behavior ??
+						(index === 0 ? request.billing_behavior : undefined),
 				),
 				...(persistedStartsAt != null ? { persistedStartsAt } : {}),
 			},
 		];
 	});
 	if (!phases.length) return undefined;
-	const anchorOverrides = anchorOverridesFrom(request.billing_cycle_anchor);
+	const firstPhase = requestRecord(request.phases[0]);
 	return {
 		enablePlanImmediately: request.enable_plan_immediately === true,
 		endDate: readNumber("ends_at")(request) ?? null,
 		phases,
-		...anchorOverrides,
-		resetBillingCycle: anchorOverrides.resetBillingCycle === true,
+		resetBillingCycle:
+			(firstPhase?.billing_cycle_anchor ?? request.billing_cycle_anchor) !==
+			undefined,
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
 	};
 };
