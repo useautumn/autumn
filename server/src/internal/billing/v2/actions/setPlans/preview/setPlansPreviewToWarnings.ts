@@ -6,7 +6,6 @@ import {
 	findFeatureById,
 	type LineItem,
 	notNullish,
-	type ProcessorChange,
 	type ProcessorItem,
 	plainText,
 	punctuationText,
@@ -64,18 +63,6 @@ const priceCreatingItems = (items: ProcessorItem[]) =>
 				) === index,
 		);
 
-const SCHEDULE_REPLACING_ACTIONS: ProcessorChange["action"][] = [
-	"released",
-	"canceled",
-];
-
-const replacesExistingSchedule = (processorChanges: ProcessorChange[]) =>
-	processorChanges.some(
-		(processorChange) =>
-			processorChange.type === "subscription_schedule" &&
-			SCHEDULE_REPLACING_ACTIONS.includes(processorChange.action),
-	);
-
 const USAGE_RESTARTING_BEHAVIORS: SetPlansPreviewBalanceChange["behavior"][] = [
 	"reset",
 	"updated",
@@ -105,7 +92,6 @@ const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>
 export const setPlansPreviewToWarnings = ({
 	phases,
 	liveProcessorItems,
-	processorChanges,
 	withdrawnCustomerProducts,
 	outgoingCustomerProducts,
 	requestedProrationBehavior,
@@ -121,7 +107,6 @@ export const setPlansPreviewToWarnings = ({
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
-	processorChanges: ProcessorChange[];
 	/** Saved scheduled plans the request withdraws; a re-timed or updated plan isn't one. */
 	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
@@ -182,15 +167,6 @@ export const setPlansPreviewToWarnings = ({
 				plainText("restarts from zero."),
 			]),
 		})),
-		...(replacesExistingSchedule(processorChanges)
-			? [
-					{
-						type: "existing_schedule_replaced" as const,
-						message:
-							"Edits made directly to the Stripe schedule will be overwritten.",
-					},
-				]
-			: []),
 		...withdrawnCustomerProducts.map((customerProduct) => ({
 			type: "future_phase_removed" as const,
 			...warningText([

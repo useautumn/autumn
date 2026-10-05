@@ -71,7 +71,6 @@ test.concurrent(
 				"Its saved schedule is replaced.",
 			],
 		});
-		expectPreviewWarning({ preview, type: "existing_schedule_replaced" });
 		expect(
 			preview.processor_changes.map(({ type, id, action }) => [
 				type,

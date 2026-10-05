@@ -86,7 +86,6 @@ export const buildSetPlansPreview = async ({
 				stripeSubscription: billingContext.stripeSubscription,
 				context: processorItemContext,
 			}),
-			processorChanges,
 			withdrawnCustomerProducts: review.withdrawnStarts,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,

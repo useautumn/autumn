@@ -155,8 +155,6 @@ test.concurrent(
 			["subscription_schedule", "released"],
 			["subscription_schedule", "created"],
 		]);
-		expect(preview.warnings.map((warning) => warning.type)).toEqual([
-			"existing_schedule_replaced",
-		]);
+		expect(preview.warnings).toEqual([]);
 	},
 );

@@ -9,7 +9,6 @@ const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"discount_not_carried",
 	"usage_not_billed",
 	"unmanaged_stripe_item_removed",
-	"existing_schedule_replaced",
 	"future_phase_removed",
 	"pending_quantity_change_dropped",
 	"trial_ended",

@@ -21,7 +21,7 @@ import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 import { findStripeSubscriptionByStatus } from "../utils/subscriptionStateUtils";
 
-const REBUILD_WARNINGS = ["existing_schedule_replaced", "future_phase_removed"];
+const REBUILD_WARNINGS = ["future_phase_removed"];
 
 /** Row ids per plan and status, so a resubmit can be compared row for row. */
 const customerProductIdsByPlan = async ({

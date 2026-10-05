@@ -66,7 +66,6 @@ const resetMessages = ({
 });
 
 const MESSAGE_ONLY_WARNING_TYPES: SetPlansPreviewWarning["type"][] = [
-	"existing_schedule_replaced",
 	"proration_disabled",
 ];
 
@@ -90,13 +89,6 @@ describe("setPlansPreviewToWarnings", () => {
 				liveProcessorItems: [
 					processorItem({ price_id: "price_base" }),
 					processorItem({ price_id: "price_old_pro" }),
-				],
-				processorChanges: [
-					{
-						type: "subscription",
-						id: null,
-						action: "created",
-					},
 				],
 				withdrawnCustomerProducts: [],
 				outgoingCustomerProducts: [],
@@ -137,13 +129,6 @@ describe("setPlansPreviewToWarnings", () => {
 					plan_id: null,
 				}),
 			],
-			processorChanges: [
-				{
-					type: "subscription_schedule",
-					id: "sub_sched_old",
-					action: "released",
-				},
-			],
 			withdrawnCustomerProducts: [scheduledEnterprise],
 			outgoingCustomerProducts: [outgoingPro],
 			requestedProrationBehavior: "none",
@@ -155,7 +140,6 @@ describe("setPlansPreviewToWarnings", () => {
 			"unmanaged_stripe_item_removed",
 			"new_stripe_price_created",
 			"usage_reset",
-			"existing_schedule_replaced",
 			"future_phase_removed",
 			"pending_quantity_change_dropped",
 			"proration_disabled",
@@ -166,13 +150,12 @@ describe("setPlansPreviewToWarnings", () => {
 			"warning",
 			"warning",
 			"warning",
-			"warning",
 			"info",
 		]);
 		expect(warnings[0].message).toContain("Support add-on");
-		expect(warnings[4].message).toContain("enterprise");
+		expect(warnings[3].message).toContain("enterprise");
 		expect(
-			warnings[4].parts?.filter((part) => part.bold).map((part) => part.text),
+			warnings[3].parts?.filter((part) => part.bold).map((part) => part.text),
 		).toEqual([scheduledEnterprise.product.name]);
 		const warningsWithParts = warnings.filter(
 			(warning) => !MESSAGE_ONLY_WARNING_TYPES.includes(warning.type),
@@ -188,7 +171,6 @@ describe("setPlansPreviewToWarnings", () => {
 		const warnings = setPlansPreviewToWarnings({
 			phases: [phase({}), phase({ balance_changes: [resetMessages()] })],
 			liveProcessorItems: [],
-			processorChanges: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
 			features: [],
@@ -206,7 +188,6 @@ describe("setPlansPreviewToWarnings", () => {
 				}),
 			],
 			liveProcessorItems: [],
-			processorChanges: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
 			features: [],
@@ -228,7 +209,6 @@ describe("setPlansPreviewToWarnings", () => {
 				phase({ balance_changes: [resetMessages()] }),
 			],
 			liveProcessorItems: [],
-			processorChanges: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
 			features: [],
@@ -238,26 +218,6 @@ describe("setPlansPreviewToWarnings", () => {
 		expect(
 			warnings.filter((warning) => warning.type === "usage_reset"),
 		).toHaveLength(1);
-	});
-
-	test("updating a standalone schedule in place doesn't warn about replacing it", () => {
-		expect(
-			setPlansPreviewToWarnings({
-				phases: [phase({})],
-				liveProcessorItems: [],
-				processorChanges: [
-					{
-						type: "subscription_schedule",
-						id: "sub_sched_standalone",
-						action: "updated",
-					},
-				],
-				withdrawnCustomerProducts: [],
-				outgoingCustomerProducts: [],
-				features: [],
-				...noSubscriptionState,
-			}),
-		).toEqual([]);
 	});
 });
 
@@ -301,7 +261,6 @@ const stateWarnings = (
 	setPlansPreviewToWarnings({
 		phases: [phase({})],
 		liveProcessorItems: [],
-		processorChanges: [],
 		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
 		features: [],
@@ -547,35 +506,6 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		expect(backdateRecreateMessage({ schedule: "sub_sched_live" })).toBe(
 			"The current subscription will be cancelled and recreated from 20 Aug 2026. Its saved schedule is replaced. The time before 30 Aug 2026 isn't billed. Billing then continues on 11 Oct 2026.",
 		);
-	});
-
-	test("a backdate over a scheduled subscription also warns that Stripe schedule edits are overwritten", () => {
-		const warningTypes = stateWarnings({
-			processorChanges: [
-				{ type: "subscription", id: null, action: "created" },
-				{
-					type: "subscription_schedule",
-					id: "sub_sched_live",
-					action: "released",
-				},
-				{ type: "subscription", id: "sub_live", action: "canceled" },
-				{ type: "subscription_schedule", id: null, action: "created" },
-			],
-			billingContext: {
-				currentEpochMs: NOON_UTC,
-				subscriptionBackdateStartMs: NOON_UTC - 40 * DAY_MS,
-				billingCycleAnchorMs: NOON_UTC + 12 * DAY_MS,
-				replacedStripeSubscription: stripeSubscription({
-					id: "sub_live",
-					status: "active",
-					schedule: "sub_sched_live",
-				}),
-				stripeDiscounts: [],
-			},
-		}).map(({ type }) => type);
-
-		expect(warningTypes).toContain("subscription_recreated_backdated");
-		expect(warningTypes).toContain("existing_schedule_replaced");
 	});
 
 	test("a backdate that restarts the cycle says when the restarted cycle renews", () => {
