@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { CheckCommand, TrackCommand } from "@autumn/balance-engine";
 import { PARTITION_RECOVERY_REASON } from "@autumn/balance-worker-client/protocol";
 import { createBalanceWorkerApp } from "../../../../src/http/createBalanceWorkerApp.js";
 import { workerErrorOf } from "../../../../src/http/handlers/errorHandler/workerErrorOf.js";
@@ -16,6 +16,7 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../../../../src/processor/writer/writerErrors.js";
 import {
+	checkCommand,
 	identity,
 	partition,
 	residentFixture,
@@ -55,6 +56,7 @@ async function serve({
 	postBatch(
 		commands: TrackCommand[],
 	): Promise<{ status: number; text: string }>;
+	postCheck(command: CheckCommand): Promise<{ status: number; text: string }>;
 	stop(): Promise<void>;
 }> {
 	const runtime = {
@@ -113,19 +115,25 @@ async function serve({
 	function post(command: TrackCommand) {
 		return send("/v1/track", { route, command });
 	}
-	async function postBatch(commands: TrackCommand[]) {
-		const response = await fetch(`http://127.0.0.1:${port}/v1/track-batch`, {
+	async function sendText(path: string, body: object) {
+		const response = await fetch(`http://127.0.0.1:${port}${path}`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ route, commands }),
+			body: JSON.stringify(body),
 		});
 		return { status: response.status, text: await response.text() };
+	}
+	function postBatch(commands: TrackCommand[]) {
+		return sendText("/v1/track-batch", { route, commands });
+	}
+	function postCheck(command: CheckCommand) {
+		return sendText("/v1/check", { route, command });
 	}
 	async function stop(): Promise<void> {
 		await listener.stop();
 		disconnect();
 	}
-	return { post, postBatch, stop };
+	return { post, postBatch, postCheck, stop };
 }
 
 async function pendingFor<T>(promise: Promise<T>, ms: number) {
@@ -175,11 +183,23 @@ afterEach(async () => {
 });
 
 /** Counts the tracks the processor decided inline, so a test knows which path answered. */
-async function setUp({ inline }: { inline: boolean }) {
-	const worker = await residentFixture();
+async function setUp({
+	inline,
+	nextResetAt,
+}: {
+	inline: boolean;
+	nextResetAt?: number;
+}) {
+	const worker = await residentFixture({ nextResetAt });
 	cleanups.push(() => worker.close());
 	const decideInline = worker.processor.trackInline;
-	const counts = { inlined: 0, batchesInlined: 0 };
+	const counts = { inlined: 0, batchesInlined: 0, checksInlined: 0 };
+	const decideCheckInline = worker.processor.checkInline;
+	worker.processor.checkInline = (params) => {
+		const reply = decideCheckInline(params);
+		if (reply) counts.checksInlined++;
+		return reply;
+	};
 	const decideBatchInline = worker.processor.trackBatchInline;
 	worker.processor.trackBatchInline = (params) => {
 		const outcome = decideBatchInline(params);
@@ -309,6 +329,48 @@ describe("inline track end to end, through HTTP worker threads", () => {
 				(row) => row.id === "messages_monthly",
 			)?.balance;
 		expect(balance).toBe(100 - 1 - commands.length);
+	});
+
+	test("a check is answered inline at once, byte for byte what the ordinary check route answers", async () => {
+		const inline = await setUp({ inline: true });
+		const ordinary = await setUp({ inline: false });
+		const command = checkCommand({ requiredBalance: 5 });
+		const [inlineAnswer, ordinaryAnswer] = await Promise.all([
+			inline.http.postCheck(command),
+			ordinary.http.postCheck(command),
+		]);
+		expect(inlineAnswer.status).toBe(200);
+		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
+		expect([
+			inline.counts.checksInlined,
+			ordinary.counts.checksInlined,
+		]).toEqual([1, 0]);
+	});
+
+	test("a check past a due reset is answered by the ordinary route on the reset balance, byte for byte", async () => {
+		const resetAt = 1_700_000_500_000;
+		const inline = await setUp({ inline: true, nextResetAt: resetAt });
+		const ordinary = await setUp({ inline: false, nextResetAt: resetAt });
+		const drain = trackCommand({ commandId: "drain", value: 99 });
+		for (const { worker, http } of [inline, ordinary])
+			await answerReleasing({ worker, answer: http.post(drain) });
+		const command = checkCommand({ occurredAt: resetAt + 1 });
+		const inlineAnswer = await inline.http.postCheck(command);
+		const ordinaryAnswer = await ordinary.http.postCheck(command);
+		expect(inline.counts.checksInlined).toBe(0);
+		expect(
+			(JSON.parse(inlineAnswer.text) as { result: { allowed: boolean } }).result
+				.allowed,
+		).toBe(true);
+		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
+	});
+
+	test("a check for a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {
+		const { http, counts } = await setUp({ inline: true });
+		const cold = { ...identity, customerId: "cus_cold" };
+		const answer = http.postCheck(checkCommand({ who: cold }));
+		expect((await answer).status).toBe(404);
+		expect(counts.checksInlined).toBe(0);
 	});
 
 	test("a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {

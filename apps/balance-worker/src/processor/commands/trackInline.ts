@@ -4,8 +4,10 @@ import {
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
-import { resetMayBeDue } from "../actions/ensureSubjectCurrent/earliestResetAt.js";
-import { viewHasEntity } from "../subject/actions/ensureSubject/ensureSubjectState.js";
+import {
+	type ResidentViewRefusal,
+	residentViewRefusalOf,
+} from "../actions/residentViewRefusalOf.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
 
@@ -19,13 +21,8 @@ export type InlineTrackOutcome = {
 };
 
 /** Why a track needs the ordinary path: a lock waits for the store, and the rest need the asynchronous ensure. */
-export type InlineTrackRefusal =
-	| "lock"
-	| "not_resident"
-	| "reset_due"
-	| "catalog_stale";
+export type InlineTrackRefusal = "lock" | ResidentViewRefusal;
 
-/** The ensure's own view, checked without awaiting: the rows (an entity's included), current resets and catalog. */
 export function inlineTrackRefusalOf({
 	scope,
 	command,
@@ -34,15 +31,11 @@ export function inlineTrackRefusalOf({
 	command: TrackCommand;
 }): InlineTrackRefusal | null {
 	if (command.lock) return "lock";
-	const { identity } = command;
-	const resident = scope.ctx.writer.readFreshestState({ identity });
-	if (!resident || !viewHasEntity({ state: resident, identity }))
-		return "not_resident";
-	if (resetMayBeDue({ state: resident, asOf: command.occurredAt }))
-		return "reset_due";
-	if (!scope.ctx.subjectHydrator.peekCatalog({ state: resident }))
-		return "catalog_stale";
-	return null;
+	return residentViewRefusalOf({
+		scope,
+		identity: command.identity,
+		asOf: command.occurredAt,
+	});
 }
 
 /**
