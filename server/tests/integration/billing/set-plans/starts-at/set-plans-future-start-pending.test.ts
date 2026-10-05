@@ -177,7 +177,10 @@ test.concurrent(
 			startsAt: "now",
 		});
 		const undoPreview = await autumnV2_4.billing.previewSetPlans(undoParams);
-		expect(undoPreview.total).toBe(PRO_MONTHLY_PRICE);
+		expect(undoPreview.subtotal).toBe(PRO_MONTHLY_PRICE);
+		expect(undoPreview.total).toBe(
+			Math.max(PRO_MONTHLY_PRICE + futureStartPreview.total, 0),
+		);
 		await autumnV2_4.billing.setPlans(undoParams);
 
 		await expectCustomerProducts({

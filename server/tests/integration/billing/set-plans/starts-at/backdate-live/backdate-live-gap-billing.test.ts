@@ -155,8 +155,8 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			autumn: autumnV1,
-			count: 2,
-			latestTotal: 0,
+			count: 1,
+			latestTotal: PRO_MONTHLY_PRICE,
 		});
 		await expectReplacedSubscriptionCancelledQuietly({
 			ctx,

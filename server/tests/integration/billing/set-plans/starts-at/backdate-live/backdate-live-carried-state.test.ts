@@ -87,7 +87,9 @@ test.concurrent(
 			duration: "repeating",
 			duration_in_months: REMAINING_COUPON_MONTHS,
 		});
-		expect(carriedCoupon?.id.startsWith(`${coupon.id}_roll_`)).toBe(true);
+		expect(carriedCoupon?.id).toBe(
+			`${coupon.id}_${live.subscription.id}_${REMAINING_COUPON_MONTHS}m`,
+		);
 	},
 );
 
