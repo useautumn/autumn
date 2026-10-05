@@ -265,7 +265,7 @@ export const CreateInvoicePreviewSchema = z.object({
 			total: z.number(),
 			amount_inclusive: z.number(),
 			amount_exclusive: z.number(),
-			status: z.enum(["complete", "incomplete"]),
+			status: z.enum(["complete", "incomplete", "requires_location"]),
 		})
 		.nullable(),
 	total: z.number(),
