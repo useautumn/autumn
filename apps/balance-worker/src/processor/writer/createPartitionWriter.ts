@@ -41,7 +41,6 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
-			start: ctx.commitPositions?.open(),
 		}),
 	};
 

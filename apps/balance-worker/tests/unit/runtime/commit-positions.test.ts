@@ -15,6 +15,7 @@ import {
 	PartitionWriterDisposedError,
 } from "../../../src/processor/writer/writerErrors.js";
 import { createCommitPositions } from "../../../src/runtime/commitPositions/createCommitPositions.js";
+import { CommitPositionsOverlapError } from "../../../src/runtime/commitPositions/errors.js";
 import type {
 	CommitPositions,
 	FailedPosition,
@@ -278,6 +279,55 @@ describe("commit positions", () => {
 		} finally {
 			stalled.resolve({ baseOffset: 0n });
 			first.close();
+		}
+	});
+
+	test("a second writer cannot issue while the first has unconfirmed writes; once it may, the first is retired and its failures cover only its own", async () => {
+		const positions = createCommitPositions({ config: { partitionCount: 4 } });
+		const failed = failuresOf({ positions });
+		const stalled = Promise.withResolvers<{ baseOffset: bigint }>();
+		const first = processorOn({
+			positions,
+			appender: { appendCommitted: () => stalled.promise },
+		});
+		const second = processorOn({
+			positions,
+			appender: recordingAppender({
+				failFirst: () =>
+					new MutationBatchNotCommittedError({ cause: new Error("refused") }),
+			}),
+		});
+		try {
+			const inFlight = track({ processor: first.processor, commandId: "a" });
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			const overlapping = await Promise.allSettled([
+				track({ processor: second.processor, commandId: "b" }),
+			]);
+			expect(overlapping[0]).toMatchObject({
+				status: "rejected",
+				reason: expect.any(CommitPositionsOverlapError),
+			});
+			stalled.resolve({ baseOffset: 0n });
+			await inFlight;
+			expect(positions.readCommitPosition({ partition })).toBe(1);
+			const refused = await Promise.allSettled([
+				track({ processor: second.processor, commandId: "c" }),
+			]);
+			expect(refused[0]?.status).toBe("rejected");
+			expect(failed).toEqual([
+				{ partition, seq: 1, lastSeq: 2, cause: expect.any(Error) },
+			]);
+			const retired = await Promise.allSettled([
+				track({ processor: first.processor, commandId: "d" }),
+			]);
+			expect(retired[0]).toMatchObject({
+				status: "rejected",
+				reason: expect.any(CommitPositionsOverlapError),
+			});
+		} finally {
+			stalled.resolve({ baseOffset: 0n });
+			first.close();
+			second.close();
 		}
 	});
 

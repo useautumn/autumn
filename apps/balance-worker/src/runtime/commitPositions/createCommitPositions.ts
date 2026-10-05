@@ -1,11 +1,21 @@
-/** Each partition's commit position as a forward-only 64-bit cell in shared memory, plus its failure count;
- *  sequence numbers continue across a partition's writers, so a held reply never matches a later writer's. */
+/** Each partition's commit position as a forward-only 64-bit cell in shared memory, plus its failure count. One
+ *  writer at a time issues sequence numbers, in one unbroken block, so a reported range only covers its own. */
 import type { CommitPositionSink } from "../../processor/writer/types/commitPositionSink.js";
+import { CommitPositionsOverlapError } from "./errors.js";
 import type {
 	CommitPositions,
 	CommittedPosition,
 	FailedPosition,
 } from "./types/commitPositions.js";
+
+type IssuingSink = {
+	firstSeq: number;
+	lastSeq: number;
+	/** Everything up to here is committed or reported failed. */
+	settledSeq: number;
+	/** Closed, or replaced by a later writer: it issues nothing more and its reports are ignored. */
+	retired: boolean;
+};
 
 const CELL_BYTES = 8;
 const COUNT_BYTES = 4;
@@ -24,6 +34,7 @@ export function createCommitPositions({
 	const failures = new Int32Array(failureCounts);
 	// The last sequence number handed out per partition, across every writer it has had.
 	const issued = new Array<number>(partitionCount).fill(0);
+	const issuing = new Array<IssuingSink | null>(partitionCount).fill(null);
 	const committedListeners = new Set<(position: CommittedPosition) => void>();
 	const failedListeners = new Set<(position: FailedPosition) => void>();
 
@@ -45,20 +56,42 @@ export function createCommitPositions({
 
 	function sinkFor({ partition }: { partition: number }): CommitPositionSink {
 		assertPartition({ partition });
-		let isOpen = true;
+		const sink: IssuingSink = {
+			firstSeq: 0,
+			lastSeq: 0,
+			settledSeq: 0,
+			retired: false,
+		};
 
-		function open(): { lastSeq: number } {
-			return { lastSeq: issued[partition] as number };
+		function claimIssuing(): void {
+			const current = issuing[partition];
+			if (current === sink) return;
+			const unconfirmed =
+				current !== null &&
+				!current.retired &&
+				current.lastSeq > current.settledSeq;
+			if (sink.retired || unconfirmed)
+				throw new CommitPositionsOverlapError({ partition });
+			if (current) current.retired = true;
+			issuing[partition] = sink;
 		}
 
 		function nextSeq(): number {
+			claimIssuing();
 			const seq = (issued[partition] as number) + 1;
 			issued[partition] = seq;
+			if (sink.firstSeq === 0) {
+				sink.firstSeq = seq;
+				sink.settledSeq = seq - 1;
+			}
+			sink.lastSeq = seq;
 			return seq;
 		}
 
 		function committed({ seq }: { seq: number }): void {
-			if (!isOpen || seq <= readCommitPosition({ partition })) return;
+			if (sink.retired) return;
+			sink.settledSeq = Math.max(sink.settledSeq, seq);
+			if (seq <= readCommitPosition({ partition })) return;
 			Atomics.store(positions, partition, BigInt(seq));
 			for (const listener of committedListeners) listener({ partition, seq });
 		}
@@ -72,18 +105,23 @@ export function createCommitPositions({
 			lastSeq: number;
 			cause: unknown;
 		}): void {
-			if (!isOpen || lastSeq <= seq) return;
+			if (sink.retired) return;
+			// Only this writer's own block: an earlier writer's numbers are not its to fail.
+			const from = Math.max(seq, sink.firstSeq - 1);
+			if (lastSeq <= from) return;
+			sink.settledSeq = Math.max(sink.settledSeq, lastSeq);
 			// Counted before any listener queues the failure, so a reader never releases past one still on its way.
 			Atomics.add(failures, partition, 1);
 			for (const listener of failedListeners)
-				listener({ partition, seq, lastSeq, cause });
+				listener({ partition, seq: from, lastSeq, cause });
 		}
 
 		function closed(): void {
-			isOpen = false;
+			sink.retired = true;
+			sink.settledSeq = sink.lastSeq;
 		}
 
-		return { open, nextSeq, committed, failedAbove, closed };
+		return { nextSeq, committed, failedAbove, closed };
 	}
 
 	function onCommitted(
