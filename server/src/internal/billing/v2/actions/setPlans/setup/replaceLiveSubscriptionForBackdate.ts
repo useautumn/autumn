@@ -2,18 +2,14 @@ import type {
 	MultiAttachBillingContext,
 	StripeSubscriptionScope,
 } from "@autumn/shared";
-import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
-import {
-	startsBeforeLivePlans,
-	startsWithLivePlans,
-} from "../utils/startsBeforeLivePlans";
+import { replaysLiveStart } from "../utils/replaysLiveStart";
 import { classifyFirstPhaseStart } from "./classifyFirstPhaseStart";
 import {
 	type LiveSubscriptionFields,
 	replaceStripeSubscription,
 } from "./replaceStripeSubscription";
 
-/** A backdated first phase can't move a live subscription's start, so the subscription and its schedule are recreated from it. */
+/** A past start away from the live start can't move a live subscription, so the subscription and its schedule are recreated from it. */
 export const replaceLiveSubscriptionForBackdate = ({
 	billingContext,
 	immediatePhase,
@@ -39,16 +35,17 @@ export const replaceLiveSubscriptionForBackdate = ({
 		}) === "past";
 	if (!backdatesFirstPhase) return {};
 
-	const livePlansStart = {
-		startsAt: immediatePhase.starts_at,
-		fullCustomer: billingContext.fullCustomer,
-		stripeSubscriptionScope,
-	};
-	const replaysScheduledStart =
-		isExistingScheduleUpdate({
-			billingContext: { ...billingContext, stripeSubscriptionScope },
-		}) && !startsBeforeLivePlans(livePlansStart);
-	if (replaysScheduledStart || startsWithLivePlans(livePlansStart)) return {};
+	if (
+		replaysLiveStart({
+			startsAt: immediatePhase.starts_at,
+			fullCustomer: billingContext.fullCustomer,
+			stripeSubscription,
+			stripeSubscriptionSchedule,
+			stripeSubscriptionScope,
+		})
+	) {
+		return {};
+	}
 
 	return replaceStripeSubscription({
 		stripeSubscription,

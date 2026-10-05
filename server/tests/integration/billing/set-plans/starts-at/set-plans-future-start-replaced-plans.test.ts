@@ -1,6 +1,6 @@
 /**
  * What a future phases[0].starts_at does to the plans the customer has now:
- * - an auto-attached free default plan keeps running until the start, then the paid plan replaces it;
+ * - an auto-attached free default plan is undeclared, so it ends now and the paid plan starts on its date;
  * - a plan canceling at period end still ends now, credited its unused time exactly once.
  */
 
@@ -30,7 +30,7 @@ import {
 const PRO_MONTHLY_PRICE = 20;
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans starts_at: a free default plan runs until the future start, then the paid plan replaces it")}`,
+	`${chalk.yellowBright("set-plans starts_at: a free default plan ends now, and the paid plan starts on the future date")}`,
 	async () => {
 		const { pro } = startsAtProducts();
 		const free = products.base({
@@ -62,8 +62,8 @@ test.concurrent(
 		await expectCustomerProducts({
 			customerId,
 			autumn: autumnV2_4,
-			active: [free.id],
 			scheduled: [pro.id],
+			notPresent: [free.id],
 		});
 		await expectCustomerInvoiceCorrect({
 			customerId,

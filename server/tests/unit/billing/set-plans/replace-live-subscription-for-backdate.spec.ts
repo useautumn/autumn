@@ -1,4 +1,4 @@
-/** A backdated first phase recreates a healthy live subscription and its schedule; a start now, a later start, or a re-save of the live start keeps it. */
+/** A past start away from the live start recreates a healthy subscription and its schedule; a start now, a future start, or a re-save of the live start keeps it. */
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -19,10 +19,17 @@ const planStart = currentEpochMs - ms.days(20);
 const subscriptionWithStatus = (status: Stripe.Subscription.Status) =>
 	({ id: "sub_live", status }) as Stripe.Subscription;
 
-const liveSchedule = {
-	id: "sub_sched_live",
-	subscription: "sub_live",
-} as Stripe.SubscriptionSchedule;
+const scheduleWithCurrentPhaseFrom = (phaseStartMs: number) =>
+	({
+		id: "sub_sched_live",
+		subscription: "sub_live",
+		current_phase: {
+			start_date: Math.floor(phaseStartMs / 1000),
+			end_date: Math.floor((phaseStartMs + ms.days(30)) / 1000),
+		},
+	}) as Stripe.SubscriptionSchedule;
+
+const liveSchedule = scheduleWithCurrentPhaseFrom(planStart);
 
 const proOnLiveSubscription = ({
 	scheduledIds = [],
@@ -135,6 +142,47 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 				startsAt: earlierThanPlans,
 				stripeSubscription: active,
 				rows: [proOnLiveSubscription({ scheduledIds: ["sub_sched_live"] })],
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: active,
+		});
+	});
+
+	test("a past start later than a scheduled subscription's current phase moves it and its schedule aside", () => {
+		const active = subscriptionWithStatus("active");
+
+		expect(
+			replace({
+				startsAt: backdatedStart + ms.days(10),
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: liveSchedule,
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: active,
+		});
+	});
+
+	test("a re-saved schedule replays its current phase's start, even when that phase began after its plans", () => {
+		const phaseStart = planStart + ms.days(10);
+		const active = subscriptionWithStatus("active");
+		const schedule = scheduleWithCurrentPhaseFrom(phaseStart);
+
+		expect(
+			replace({
+				startsAt: phaseStart,
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: schedule,
+			}),
+		).toEqual({});
+		expect(
+			replace({
+				startsAt: planStart,
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: schedule,
 			}),
 		).toEqual({
 			stripeSubscription: undefined,
