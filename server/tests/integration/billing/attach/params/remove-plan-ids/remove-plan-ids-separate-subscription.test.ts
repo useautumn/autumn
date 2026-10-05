@@ -39,6 +39,7 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addDays } from "date-fns";
 
 const marketingPlan = () =>
 	products.base({
@@ -443,6 +444,57 @@ test.concurrent(
 					plan_id: enterprise.id,
 					remove_plan_ids: [marketing.id],
 					plan_schedule: "end_of_cycle",
+					redirect_mode: "if_required",
+				}),
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer,
+			active: [marketing.id, transactional.id],
+			notPresent: [enterprise.id],
+		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: A future starts_at swap cannot remove plans
+//
+// Plan timing stays "immediate", but the new plan only starts at starts_at, so
+// the removed plan would expire now and leave a gap. Rejected like test 5.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("remove-plan-ids separate sub 6: a future starts_at swap cannot remove plans")}`,
+	async () => {
+		const customerId = "remove-plan-ids-separate-sub-6";
+		const marketing = marketingPlan();
+		const transactional = transactionalPlan();
+		const enterprise = enterprisePlan();
+
+		const { autumnV1, autumnV2_2, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [marketing, transactional, enterprise] }),
+			],
+			actions: [
+				s.billing.attach({ productId: transactional.id }),
+				s.billing.attach({
+					productId: marketing.id,
+					newBillingSubscription: true,
+				}),
+			],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: enterprise.id,
+					remove_plan_ids: [marketing.id],
+					starts_at: addDays(advancedTo, 7).getTime(),
 					redirect_mode: "if_required",
 				}),
 		});

@@ -6,6 +6,7 @@ import {
 	cp,
 	ErrCode,
 	findActiveCustomerProductById,
+	isFutureStartDate,
 	RecaseError,
 } from "@autumn/shared";
 
@@ -40,9 +41,14 @@ export const computeAttachRemovals = ({
 	];
 	if (removePlanIds.length === 0) return [];
 
-	// Removals expire now, but a scheduled attach only starts the new plan at the
-	// end of the cycle, so the customer would lose access in between, uncredited.
-	if (planTiming !== "immediate") {
+	// Removals expire now, but a scheduled attach (end of cycle, or a future
+	// starts_at without immediate access) only starts the new plan later, so the
+	// customer would lose access in between, uncredited.
+	const newPlanStartsLater =
+		planTiming !== "immediate" ||
+		(isFutureStartDate(params.starts_at, currentEpochMs) &&
+			params.enable_plan_immediately !== true);
+	if (newPlanStartsLater) {
 		throw new RecaseError({
 			code: ErrCode.InvalidRequest,
 			message:
