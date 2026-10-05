@@ -144,7 +144,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
 		createStripeCustomerIfMissing:
-			!preview && params.no_billing_changes !== true,
+			!preview &&
+			params.no_billing_changes !== true &&
+			billingRelatedFields.length > 0,
 	});
 
 	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];
