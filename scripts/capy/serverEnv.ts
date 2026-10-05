@@ -29,11 +29,13 @@ function forceSslVerifyFull(url: string): string {
 }
 
 export function capyEnvFiles({
+	machineId,
 	databaseUrl,
 	secrets,
 	triggerSecretKey,
 	triggerAccessToken,
 }: {
+	machineId: string;
 	databaseUrl: string;
 	secrets: CapySecrets;
 	triggerSecretKey: string;
@@ -51,6 +53,8 @@ export function capyEnvFiles({
 	const sqsBase = `http://localhost:${FAKECLOUD_PORT}/${FAKECLOUD_ACCOUNT_ID}`;
 
 	const serverEnv: Record<string, string> = {
+		// scripts/preload-env.ts ignores these files on any other machine.
+		CAPY_MACHINE_ID: machineId,
 		SERVER_PORT: String(SERVER_PORT),
 		// server/src/utils/initUtils.ts::checkEnvVars exits if any of these are
 		// missing; legacy writeAgentEnv.ts handled the same set. Re-minted only
