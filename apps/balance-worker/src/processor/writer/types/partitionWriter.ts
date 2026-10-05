@@ -36,8 +36,16 @@ export type PartitionWriter = {
 	decideHeld<Reply>(
 		submission: HeldSubmission<Reply>,
 	): HeldDecision<Reply> | null;
-	/** Every held write `decide` makes lands in one append, so they commit or fail together. */
-	decideHeldGroup<Result>(decide: () => Result): Result;
+	/** Every held write `decide` makes lands in one append when the group fits the byte budget; past it, the ordinary cut splits them. */
+	decideHeldGroup<Result>(decide: () => Result): {
+		result: Result;
+		fitsOneAppend: boolean;
+	};
+	/** A held write's commit, for a caller that must answer per write; resolves at once if it already settled. */
+	waitForHeldCommit(params: {
+		identity: MeteringIdentity;
+		commandId: string;
+	}): Promise<void>;
 	/** Why `decideHeld` would hand this command back, or null when it would decide it. */
 	heldBlocker(params: {
 		identity: MeteringIdentity;
@@ -227,6 +235,8 @@ export type PartitionWriterState = {
 	/** The group held writes join while `decideHeldGroup` runs. */
 	heldGroup: number | null;
 	lastHeldGroup: number;
+	/** Encoded bytes of the group being decided. */
+	heldGroupBytes: number;
 };
 
 export type StoreWaiter = {
