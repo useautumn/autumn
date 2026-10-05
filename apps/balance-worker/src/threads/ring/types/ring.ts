@@ -23,6 +23,8 @@ export type RingWriter = {
 	/** Makes published frames visible and wakes a sleeping reader; once per batch. */
 	flush(): boolean;
 	write(params: { type: number; payload: Uint8Array }): boolean;
+	/** Resolves once a `claim` of `maxLength` can succeed wherever the frame lands, wrap included. */
+	waitForRoom(params: { maxLength: number }): Promise<void>;
 };
 
 /** The one thread that reads frames out of a ring. */
@@ -33,6 +35,6 @@ export type RingReader = {
 	/** The next frame, or null when empty; its bytes alias the ring until `advance`. */
 	next(): RingFrame | null;
 	advance(): void;
-	/** Publishes the consumed position so the writer can reuse the space; once per batch. */
+	/** Publishes the consumed position and wakes a writer waiting for room; once per batch. */
 	release(): void;
 };

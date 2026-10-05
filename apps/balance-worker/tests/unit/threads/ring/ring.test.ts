@@ -171,4 +171,26 @@ describe("SAB ring framing", () => {
 			producer.claim({ type: 1, maxLength: producer.maxFrameBytes + 1 }),
 		).toThrow("frame larger than half the ring");
 	});
+
+	test("a writer waiting for room on a full ring resumes once the reader releases, not before", async () => {
+		const ring = createRing({ capacity: 4096 });
+		const producer = createRingWriter({ ring, signal: createRingSignal() });
+		const consumer = createRingReader({ ring });
+		const payload = new Uint8Array(1000);
+		while (producer.write({ type: 1, payload })) producer.flush();
+		let resumed = false;
+		const waiting = producer
+			.waitForRoom({ maxLength: payload.length })
+			.then(() => {
+				resumed = true;
+			});
+		consumer.next();
+		consumer.advance();
+		await Bun.sleep(20);
+		expect(resumed).toBe(false);
+		while (consumer.next()) consumer.advance();
+		consumer.release();
+		await waiting;
+		expect(producer.write({ type: 1, payload })).toBe(true);
+	});
 });
