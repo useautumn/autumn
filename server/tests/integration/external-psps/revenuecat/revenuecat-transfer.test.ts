@@ -85,6 +85,7 @@ test.concurrent(
 		expect(afterRenewal.filter((cp) => cp.product.id === plan.id)).toHaveLength(
 			1,
 		);
+		expect(cusProductMessagesBalance({ cusProduct: afterRenewal[0] })).toBe(70);
 		expect(
 			await findActiveCusProduct({
 				customerId: customerA,
