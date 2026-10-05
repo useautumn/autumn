@@ -1,6 +1,7 @@
 import { Tinybird } from "@chronark/zod-bird";
 import { createAggregateDeductionsPipe } from "./pipes/aggregateDeductionsPipe.js";
 import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
+import { createAggregateGroupableTopGroupsPipe } from "./pipes/aggregateGroupableTopGroupsPipe.js";
 import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
 import { createEstimatedMrrPipe } from "./pipes/estimatedMrrPipe.js";
@@ -48,6 +49,8 @@ export const tinybirdPipes = tinybirdClient
 			aggregate: createAggregatePipe(tinybirdClient),
 			aggregateSimple: createAggregateSimplePipe(tinybirdClient),
 			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
+			aggregateGroupableTopGroups:
+				createAggregateGroupableTopGroupsPipe(tinybirdClient),
 			aggregateDeductions: createAggregateDeductionsPipe(tinybirdClient),
 			estimatedMrr: createEstimatedMrrPipe(tinybirdClient),
 			listEventNames: createListEventNamesPipe(tinybirdClient),

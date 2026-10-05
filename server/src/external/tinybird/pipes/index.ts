@@ -13,6 +13,12 @@ export {
 	createAggregateGroupablePipe,
 } from "./aggregateGroupablePipe.js";
 export {
+	type AggregateGroupableTopGroupsPipeRow,
+	aggregateGroupableTopGroupsPipeParamsSchema,
+	aggregateGroupableTopGroupsPipeResponseSchema,
+	createAggregateGroupableTopGroupsPipe,
+} from "./aggregateGroupableTopGroupsPipe.js";
+export {
 	type AggregatePipeParams,
 	type AggregatePipeRow,
 	aggregatePipeParamsSchema,

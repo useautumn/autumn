@@ -17,8 +17,8 @@ DESCRIPTION >
     N is controlled by the max_groups parameter (default 9).
     group_ranking picks where the top N is ranked: 'bin' (default) ranks each bin on its own,
     'window' ranks once over the whole window so every bin keeps the same groups.
-    Org-wide customer_id grouping with group_ranking='window' ranks customers first and builds
-    per-period series only for the top N, so every customer is never grouped by period.
+    top_event_names/top_customer_ids (server-set, parallel arrays from aggregate_groupable_top_groups)
+    build per-period series only for those customers, with AUTUMN_RESERVED as org total minus them.
     Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
 
 TOKEN "aggregate_groupable_read" READ
@@ -641,78 +641,18 @@ SQL >
     FROM base
     {% end %}
 
-NODE group_totals
-DESCRIPTION >
-    Window total per customer: complete UTC days from the daily rollup, remaining full hours from
-    the org dimension rollup, and the partial hours at either edge from raw events.
-SQL >
-    %
-    WITH
-        toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
-        toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
-        if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
-        toStartOfHour(window_end) AS full_hours_end,
-        if(full_hours_start = toStartOfDay(full_hours_start), toStartOfDay(full_hours_start), addDays(toStartOfDay(full_hours_start), 1)) AS full_days_start,
-        toStartOfDay(full_hours_end) AS full_days_end
-    SELECT event_name, group_value, sum(value) AS total
-    FROM (
-        SELECT event_name, customer_id AS group_value, sumMerge(total_value) AS value
-        FROM events_customer_daily_mv
-        WHERE
-            org_id = {{ String(org_id, '') }}
-            AND env = {{ String(env, 'test') }}
-            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND day >= full_days_start
-            AND day < full_days_end
-        GROUP BY event_name, group_value
-
-        UNION ALL
-
-        SELECT event_name, group_value, sumMerge(total_value) AS value
-        FROM events_org_dimension_hourly_mv
-        WHERE
-            org_id = {{ String(org_id, '') }}
-            AND env = {{ String(env, 'test') }}
-            AND dimension = 'customer_id'
-            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND hour >= full_hours_start
-            AND hour < full_hours_end
-            AND NOT (hour >= full_days_start AND hour < full_days_end)
-        GROUP BY event_name, group_value
-
-        UNION ALL
-
-        SELECT event_name, customer_id AS group_value, sum(toFloat64(coalesce(value, 1))) AS value
-        FROM events
-        WHERE
-            org_id = {{ String(org_id, '') }}
-            AND env = {{ String(env, 'test') }}
-            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND timestamp >= window_start
-            AND timestamp <= window_end
-            AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
-        GROUP BY event_name, group_value
-    )
-    GROUP BY event_name, group_value
-
-NODE top_groups
-SQL >
-    %
-    SELECT event_name, group_value
-    FROM group_totals
-    ORDER BY event_name, total DESC, group_value ASC
-    LIMIT {{ Int32(max_groups, 9) }} BY event_name
-
 NODE period_totals
 DESCRIPTION >
-    Per-period totals for the top customers (kind = 'top') and for the whole org (kind = 'org').
+    Per-period totals for the server-ranked top customers (kind = 'top') and the whole org (kind = 'org').
 SQL >
     %
     WITH
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
         toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
         if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
-        toStartOfHour(window_end) AS full_hours_end
+        window_end >= now() - INTERVAL 30 SECOND AS end_is_live,
+        if(end_is_live, addHours(toStartOfHour(window_end), 1), toStartOfHour(window_end)) AS full_hours_end,
+        arrayZip({{ Array(top_event_names, 'String', default='') }}, {{ Array(top_customer_ids, 'String', default='') }}) AS top_pairs
     SELECT kind, period, event_name, group_value, sum(value) AS total_value, sum(count) AS event_count
     FROM (
         SELECT
@@ -735,7 +675,8 @@ SQL >
             org_id = {{ String(org_id, '') }}
             AND env = {{ String(env, 'test') }}
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND (event_name, customer_id) IN (SELECT event_name, group_value FROM top_groups)
+            AND customer_id IN {{ Array(top_customer_ids, 'String', default='') }}
+            AND has(top_pairs, (event_name, customer_id))
             AND hour >= full_hours_start
             AND hour < full_hours_end
 
@@ -786,10 +727,14 @@ SQL >
             org_id = {{ String(org_id, '') }}
             AND env = {{ String(env, 'test') }}
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND (event_name, customer_id) IN (SELECT event_name, group_value FROM top_groups)
+            AND customer_id IN {{ Array(top_customer_ids, 'String', default='') }}
+            AND has(top_pairs, (event_name, customer_id))
             AND timestamp >= window_start
             AND timestamp <= window_end
-            AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+            AND (
+                (window_start < full_hours_start AND timestamp < full_hours_start)
+                OR (NOT end_is_live AND timestamp >= full_hours_end)
+            )
 
         UNION ALL
 
@@ -815,7 +760,10 @@ SQL >
             AND event_name IN {{ Array(event_names, 'String', default='[]') }}
             AND timestamp >= window_start
             AND timestamp <= window_end
-            AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+            AND (
+                (window_start < full_hours_start AND timestamp < full_hours_start)
+                OR (NOT end_is_live AND timestamp >= full_hours_end)
+            )
     )
     GROUP BY kind, period, event_name, group_value
 
@@ -848,9 +796,7 @@ NODE endpoint
 TYPE endpoint
 SQL >
     %
-    {% set no_property_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
-    {% set rank_first = String(group_column, 'property') == 'customer_id' and String(group_ranking, 'bin') == 'window' and defined(use_org_dimension_rollup) and String(use_org_dimension_rollup, '0') == '1' and (not defined(customer_id) or String(customer_id, '') == '') and (not defined(entity_id) or String(entity_id, '') == '') and no_property_filters %}
-    {% if rank_first %}
+    {% if defined(top_customer_ids) %}
     SELECT period, event_name, group_value, total_value, event_count, _truncated
     FROM rank_first_rows
     ORDER BY period, event_name, group_value

@@ -26,6 +26,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 import {
+	shouldRankGroupsFirst,
 	shouldUseMonthlyRollup,
 	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
@@ -40,6 +41,7 @@ import {
 	propertyRollupCoverageUnderReports,
 	reportsMoreThan,
 } from "./propertyRollupCompleteness.js";
+import { rankTopGroups } from "./rankTopGroups.js";
 
 /** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
 const buildFilterParams = ({
@@ -521,7 +523,32 @@ export const aggregate = async ({
 				: undefined,
 		};
 
-		let result = await pipes.aggregateGroupable(pipeParams);
+		const topGroupParams = shouldRankGroupsFirst({
+			groupColumn,
+			useOrgDimensionRollup,
+			groupRanking: params.group_ranking,
+		})
+			? await rankTopGroups({
+					orgId: org.id,
+					env,
+					eventNames: params.event_names,
+					startDate,
+					endDate,
+					maxGroups: params.max_groups,
+				}).catch((error: unknown) => {
+					// Ranking is an optimization; fall back to the single-query path if it fails.
+					ctx.logger.warn("Top-group ranking failed; using full grouping", {
+						orgId: org.id,
+						error: error instanceof Error ? error.message : String(error),
+					});
+					return undefined;
+				})
+			: undefined;
+
+		let result = await pipes.aggregateGroupable({
+			...pipeParams,
+			...topGroupParams,
+		});
 
 		// Only this query shape reads the gated property rollup.
 		const readsGatedRollup =
