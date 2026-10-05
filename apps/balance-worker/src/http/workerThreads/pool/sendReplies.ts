@@ -59,6 +59,7 @@ async function pump({
 				continue;
 			}
 			flushDirtyLanes({ scope });
+			scope.state.health.ringFullWaits += 1;
 			await lane.replies.waitForRoom({ maxLength: lengthOf(pending) });
 		}
 	} finally {
@@ -124,6 +125,7 @@ export function replyToLane({
 	partition?: number;
 	heldUntilSeq?: number;
 }): void {
+	if (heldUntilSeq > 0) scope.state.health.heldReplies += 1;
 	const metaText = JSON.stringify({ headers });
 	// A reply over an eighth of the ring could need more contiguous room than the ring can ever free.
 	if (
@@ -191,6 +193,7 @@ export function failHeld({
 }): void {
 	// Without inline routes nothing is held, and a thread treats a FAIL frame it can't hold as fatal.
 	if (!scope.config.inline) return;
+	scope.state.health.failRanges += 1;
 	const { partition, aboveSeq, lastSeq, status } = failure;
 	const body = encoder.encode(failure.body);
 	for (const lane of scope.state.lanes)

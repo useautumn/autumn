@@ -35,6 +35,7 @@ export function createHttpWorkerPool({
 			failed: false,
 			flushScheduled: false,
 			heldOnDecideThread: [],
+			health: emptyHealth(),
 		},
 	};
 
@@ -51,6 +52,15 @@ export function createHttpWorkerPool({
 		failHeld({ scope, failure });
 	}
 
+	function drainHealth() {
+		const counts = scope.state.health;
+		scope.state.health = emptyHealth();
+		return {
+			...counts,
+			heldOnDecideThread: scope.state.heldOnDecideThread.length,
+		};
+	}
+
 	async function listen(): Promise<HttpWorkerListener> {
 		const spawned = Array.from({ length: config.threads }, (_, index) =>
 			spawnHttpWorker({ scope, index }),
@@ -64,8 +74,17 @@ export function createHttpWorkerPool({
 			throw cause;
 		}
 		startDispatchLoop({ scope });
-		return { stop, commitPositionMoved: positionMoved, failHeld: fail };
+		return {
+			stop,
+			commitPositionMoved: positionMoved,
+			failHeld: fail,
+			drainHealth,
+		};
 	}
 
 	return { listen };
+}
+
+function emptyHealth() {
+	return { ringFullWaits: 0, heldReplies: 0, failRanges: 0 };
 }

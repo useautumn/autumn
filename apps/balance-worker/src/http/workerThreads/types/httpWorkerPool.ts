@@ -1,3 +1,4 @@
+import type { HttpWorkerHealthCounts } from "./httpWorkerPoolScope.js";
 import type { HeldFailure, InlineHandler } from "./inlineHandler.js";
 
 export type HttpWorkerPoolConfig = {
@@ -23,6 +24,8 @@ export type HttpWorkerListener = {
 	/** A partition's commit position moved: held replies it reached may go out. */
 	commitPositionMoved(params: { partition: number; seq: number }): void;
 	failHeld(failure: HeldFailure): void;
+	/** The window's counts, reset by the read; `heldOnDecideThread` is a gauge. */
+	drainHealth(): HttpWorkerHealthCounts & { heldOnDecideThread: number };
 };
 
 export type HttpWorkerPool = {

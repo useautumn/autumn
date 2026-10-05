@@ -53,6 +53,7 @@ export function createThreadedProducers({
 			nextProducerId: 1,
 			stopping: false,
 			failed: false,
+			sendsOverPort: 0,
 		},
 	};
 
@@ -68,5 +69,11 @@ export function createThreadedProducers({
 		return createThreadProducer({ scope, producerConfig });
 	}
 
-	return { start, stop, producer };
+	function drainHealth() {
+		const sendsOverPort = scope.state.sendsOverPort;
+		scope.state.sendsOverPort = 0;
+		return { sendsAwaitingAck: scope.pending.size, sendsOverPort };
+	}
+
+	return { start, stop, producer, drainHealth };
 }

@@ -9,6 +9,7 @@ import {
 	residentViewRefusalOf,
 } from "../actions/residentViewRefusalOf.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
+import type { HeldBlocker } from "../writer/types/partitionWriter.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
 
 /** A track answered inline: its reply bytes, released once the partition's commit position reaches `seq`. */
@@ -38,19 +39,24 @@ export function inlineTrackRefusalOf({
 	});
 }
 
-/**
- * A track decided synchronously against a resident, current subject, with its reply held by commit position.
- * Null hands it to the ordinary path; errors are the ones `track` raises.
- */
+/** Decided now, reply held by commit position; refused hands it to `track`, saying why. */
+export type InlineTrackDecision =
+	| ({ kind: "decided" } & InlineTrackOutcome)
+	| { kind: "refused"; reason: InlineTrackRefusal | HeldBlocker };
+
+/** A track decided synchronously against a resident, current subject; errors are the ones `track` raises. */
 export function trackInline({
 	scope,
 	command,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
-}): InlineTrackOutcome | null {
-	if (inlineTrackRefusalOf({ scope, command })) return null;
-	return decideTrackHeld({ scope, command });
+}): InlineTrackDecision {
+	const reason = inlineTrackRefusalOf({ scope, command });
+	if (reason) return { kind: "refused", reason };
+	const outcome = decideTrackHeld({ scope, command });
+	if (!outcome) return { kind: "refused", reason: "settled_write_in_flight" };
+	return { kind: "decided", ...outcome };
 }
 
 /** The held decide itself, for a command `inlineTrackRefusalOf` already cleared. */
