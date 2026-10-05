@@ -3,6 +3,7 @@ import { pluralize } from "../rowView/chipView";
 import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
 import {
 	CellHoverCard,
+	ChipList,
 	CountChip,
 	PopoverHeading,
 	PopoverRow,
@@ -47,9 +48,11 @@ export function MigrationFilterCell({ view }: { view: MigrationRowView }) {
 						{groupIndex > 0 && <OrDivider />}
 						{group.map((row, rowIndex) => (
 							<PopoverRow key={`${row.label}-${rowIndex}`} label={row.label}>
-								{row.chips.map((chip) => (
-									<ViewChip key={chip.label} chip={chip} />
-								))}
+								<ChipList
+									chips={row.chips}
+									moreCount={row.moreCount}
+									className="justify-end"
+								/>
 							</PopoverRow>
 						))}
 					</Fragment>

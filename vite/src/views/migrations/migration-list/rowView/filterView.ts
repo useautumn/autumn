@@ -6,13 +6,15 @@ import {
 	parsePlanKey,
 } from "../../migration/filters/filterRowTypes";
 import {
+	type CappedChips,
 	type ChipView,
+	capChips,
 	type MigrationCatalog,
 	pluralize,
 	withoutTile,
 } from "./chipView";
 
-type FilterRowView = { label: string; chips: ChipView[] };
+type FilterRowView = { label: string } & CappedChips;
 
 export type FilterView = {
 	head: ChipView;
@@ -201,7 +203,7 @@ export const deriveFilterView = ({
 		groups: ruleGroups.map((group, groupIndex) =>
 			group.map((rule, ruleIndex) => ({
 				label: rowLabel({ subject: rule.subject, groupIndex, ruleIndex }),
-				chips: rule.chips,
+				...capChips(rule.chips),
 			})),
 		),
 	};

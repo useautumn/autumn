@@ -6,6 +6,7 @@ import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
 import type { ModificationView } from "../rowView/operationsView";
 import {
 	CellHoverCard,
+	ChipList,
 	CountChip,
 	PopoverHeading,
 	PopoverRow,
@@ -54,6 +55,12 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 			}
 		>
 			<PopoverHeading title="Operations" subtitle={operations.subtitle} />
+			{operations.targets.chips.length > 0 && (
+				<ChipList
+					chips={operations.targets.chips}
+					moreCount={operations.targets.moreCount}
+				/>
+			)}
 			<PopoverSeparator />
 			<div className="flex flex-col gap-2.5">
 				{operations.modifications.map((modification, index) => (

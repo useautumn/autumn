@@ -1,4 +1,3 @@
-import { StatusChip } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
 import { BAR_TRACKS, SEGMENTS, type StatusView } from "../rowView/statusView";
@@ -26,20 +25,17 @@ function SegmentedBar({ bar }: { bar: StatusView["bar"] }) {
 	);
 }
 
-function StatusCard({ card }: { card: StatusView["card"] }) {
+export function StatusCard({ status }: { status: StatusView }) {
+	const { card, ring } = status;
 	return (
 		<>
-			<div className="flex items-center gap-2">
-				<StatusChip tone={card.tone} glyph={card.glyph}>
-					<span className="shrink-0">{card.label}</span>
-					{card.detail && (
-						<span className="font-[450] text-tertiary-foreground">
-							{card.detail}
-						</span>
-					)}
-				</StatusChip>
-				<span className="truncate text-tertiary-foreground">{card.when}</span>
+			<div className="flex flex-col items-start gap-1.5">
+				<ViewChip chip={card.chip} ring={ring} />
+				<span className="text-tertiary-foreground">{card.when}</span>
 			</div>
+			{card.note && (
+				<span className="text-tertiary-foreground">{card.note}</span>
+			)}
 			{card.error && (
 				<span className="text-[13px] leading-[18px] font-medium text-foreground">
 					{card.error}
@@ -80,7 +76,7 @@ export function MigrationStatusCell({ view }: { view: MigrationRowView }) {
 	return (
 		<div className="flex w-full min-w-0 items-center gap-2.5 pr-2">
 			<CellHoverCard trigger={pill}>
-				<StatusCard card={status.card} />
+				<StatusCard status={status} />
 			</CellHoverCard>
 			<SegmentedBar bar={status.bar} />
 		</div>

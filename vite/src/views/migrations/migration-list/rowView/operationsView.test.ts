@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import type { Operations } from "@autumn/shared";
-import { fixtureCatalog as catalog } from "../preview/migrationListFixtures";
+import {
+	fixtureCatalog as catalog,
+	fixtureMigrations,
+} from "../preview/migrationListFixtures";
 import { deriveOperationsView } from "./operationsView";
 
 const view = (customer: unknown[], noBillingChanges: boolean | null = null) =>
@@ -27,7 +30,8 @@ test("a version-only update shows the target with its version and nothing inline
 		head: { label: "Starter", details: ["→ v2"] },
 		inline: null,
 		extraCount: 0,
-		subtitle: "Update plan Starter",
+		subtitle: "Update 1 plan",
+		targets: { chips: [{ label: "Starter" }], moreCount: 0 },
 		modifications: [
 			{
 				sign: "change",
@@ -185,6 +189,7 @@ test("an add plan alone leads with the new plan and is not repeated inline", () 
 		inline: null,
 		extraCount: 0,
 		subtitle: "Add plan Hobby",
+		targets: { chips: [], moreCount: 0 },
 		modifications: [
 			{
 				sign: "add",
@@ -228,14 +233,108 @@ test("multiple operations keep the version out of the inline slot and count the 
 	).toEqual(["change", "change", "add", "remove", "add"]);
 });
 
-test("updating several plans names every target in the subtitle", () => {
+test("updating several plans counts them and lists each as a chip", () => {
+	const result = view([
+		{
+			type: "update_plan",
+			plan_filter: { plan_id: { $in: ["team", "business"] } },
+			customize: { add_items: [{ feature_id: "seats", included: 5 }] },
+		},
+	]);
+	expect(result?.subtitle).toBe("Update 2 plans");
+	expect(result?.targets).toEqual({
+		chips: [{ label: "Team" }, { label: "Business" }],
+		moreCount: 0,
+	});
+});
+
+const planVariantsOperations = () => {
+	const fixture = fixtureMigrations.find(
+		(candidate) => candidate.id === "migration-plan-variants",
+	);
+	if (!fixture?.operations) throw new Error("plan variants fixture missing");
+	return deriveOperationsView({
+		operations: fixture.operations,
+		noBillingChanges: fixture.no_billing_changes,
+		catalog,
+	});
+};
+
+test("an added boolean feature shows its name with no amount", () => {
+	const narration = planVariantsOperations()?.modifications.find(
+		({ chip }) => chip.label === "Narration",
+	);
+	expect(narration?.chip.details).toBeUndefined();
+});
+
+test("a boolean update shows no included amount", () => {
 	expect(
 		view([
 			{
 				type: "update_plan",
-				plan_filter: { plan_id: { $in: ["team", "business"] } },
-				customize: { add_items: [{ feature_id: "seats", included: 5 }] },
+				plan_filter: { plan_id: "pro" },
+				customize: {
+					update_items: [{ filter: { feature_id: "sso" }, included: 0 }],
+				},
 			},
-		])?.subtitle,
-	).toBe("Update plans Team, Business");
+		])?.modifications.map(({ chip }) => chip.details),
+	).toEqual([["updated"]]);
+});
+
+test("a one-off reset reads with a space before one-off", () => {
+	const credits = planVariantsOperations()?.modifications.find(
+		({ chip }) => chip.label === "Credits",
+	);
+	expect(credits?.chip.details).toEqual(["+ 0 one-off"]);
+});
+
+test("every reset interval reads with a separator", () => {
+	const detailFor = (interval: string) =>
+		view([
+			{
+				type: "update_plan",
+				plan_filter: { plan_id: "pro" },
+				customize: {
+					add_items: [
+						{ feature_id: "api_calls", included: 5, reset: { interval } },
+					],
+				},
+			},
+		])?.modifications[0].chip.details?.[0];
+	expect(
+		[
+			"one_off",
+			"minute",
+			"hour",
+			"day",
+			"week",
+			"month",
+			"quarter",
+			"semi_annual",
+			"year",
+		].map(detailFor),
+	).toEqual([
+		"+ 5 one-off",
+		"+ 5 / minute",
+		"+ 5 / hour",
+		"+ 5/day",
+		"+ 5/wk",
+		"+ 5/mo",
+		"+ 5/qtr",
+		"+ 5 / half year",
+		"+ 5/yr",
+	]);
+});
+
+test("ten target plans become a count subtitle over a capped chip list", () => {
+	const result = planVariantsOperations();
+	expect(result?.subtitle).toBe("Update 10 plans");
+	expect(result?.targets).toEqual({
+		chips: [
+			{ label: "Hobby" },
+			{ label: "Hobby (10k credits/month)" },
+			{ label: "Hobby (25k credits/month)" },
+		],
+		moreCount: 7,
+	});
 });

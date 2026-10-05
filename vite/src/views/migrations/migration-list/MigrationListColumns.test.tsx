@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { Row } from "@tanstack/react-table";
 import { renderToStaticMarkup } from "react-dom/server";
+import { MigrationStatusCell, StatusCard } from "./cells/MigrationStatusCell";
 import { createMigrationListColumns } from "./MigrationListColumns";
 import { fixtureRows } from "./preview/migrationListFixtures";
 import type { MigrationListRow } from "./rowView/deriveMigrationRowView";
@@ -31,4 +32,21 @@ test("list cells render the derived filter, operations and status text", () => {
 	expect(renderCell({ id: "migration-a7k", header: "Filter" })).toBe(
 		"No filter",
 	);
+});
+
+const firstIcon = (markup: string) => markup.match(/<svg[\s\S]*?<\/svg>/)?.[0];
+
+test("the status card badge draws the same icon as the row badge", () => {
+	const row = fixtureRows.find(
+		(candidate) => candidate.id === "migration-plan-variants",
+	);
+	if (!row) throw new Error("plan variants fixture missing");
+	const rowIcon = firstIcon(
+		renderToStaticMarkup(<MigrationStatusCell view={row.view} />),
+	);
+	const cardIcon = firstIcon(
+		renderToStaticMarkup(<StatusCard status={row.view.status} />),
+	);
+	expect(rowIcon).toBeDefined();
+	expect(cardIcon).toBe(rowIcon);
 });

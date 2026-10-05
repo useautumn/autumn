@@ -5,7 +5,7 @@ import type {
 	MigrationRunStatus,
 	MigrationStatus,
 } from "@autumn/shared";
-import type { StatusGlyph, StatusTone } from "@autumn/ui";
+import type { StatusTone } from "@autumn/ui";
 import { format, formatDistanceStrict } from "date-fns";
 import { STATUS_INDICATORS } from "../../migration/shared/migrationStatus";
 import type { ChipView } from "./chipView";
@@ -56,11 +56,9 @@ export type StatusView = {
 	chip: ChipView;
 	bar: { track: keyof typeof BAR_TRACKS; segments: Segment[] };
 	card: {
-		tone: StatusTone;
-		glyph: StatusGlyph;
-		label: string;
-		detail: string | undefined;
+		chip: ChipView;
 		when: string;
+		note: string | null;
 		error: string | null;
 		legend: Segment[];
 	};
@@ -82,16 +80,26 @@ const EMPTY_COUNTS: MigrationListItemCounts = {
 	failed: 0,
 };
 
-/** Claims land page by page, so the filter count keeps the bar from reading
- * complete against the customers claimed so far. */
-const runProgress = (summary: MigrationListSummary): RunProgress => {
+const FINISHED_RUN_STATUSES: MigrationStatus[] = ["run", "no_changes"];
+
+/** Claims land page by page, so an unfinished run measures against the filter
+ * count; a finished run claimed every match, so it measures against its claims. */
+const runProgress = ({
+	summary,
+	isFinished,
+}: {
+	summary: MigrationListSummary;
+	isFinished: boolean;
+}): RunProgress => {
 	const counts = summary.latest_run?.counts ?? EMPTY_COUNTS;
 	const completed =
 		counts.succeeded +
 		counts.no_updates_needed +
 		counts.ineligible +
 		counts.failed;
-	const denominator = Math.max(counts.total, summary.customer_count ?? 0);
+	const denominator = isFinished
+		? counts.total
+		: Math.max(counts.total, summary.customer_count ?? 0);
 	const fraction = denominator > 0 ? Math.min(completed / denominator, 1) : 0;
 	return {
 		counts,
@@ -246,6 +254,14 @@ const describeWhen = ({
 	return `${verb ? `${verb} ${date}` : date}${ranFor}`;
 };
 
+/** Customers that started matching the filter after a finished run claimed its matches. */
+const laterMatchesNote = (summary: MigrationListSummary): string | null => {
+	const claimed = summary.latest_run?.counts.total ?? 0;
+	const laterMatches = (summary.customer_count ?? 0) - claimed;
+	if (laterMatches <= 0) return null;
+	return `${laterMatches.toLocaleString("en-US")} more customers match the filter now than this run covered`;
+};
+
 export const deriveStatusView = ({
 	status,
 	summary,
@@ -255,7 +271,8 @@ export const deriveStatusView = ({
 	summary: MigrationListSummary;
 	now: number;
 }): StatusView => {
-	const progress = runProgress(summary);
+	const isFinished = FINISHED_RUN_STATUSES.includes(status);
+	const progress = runProgress({ summary, isFinished });
 	const indicator = STATUS_INDICATORS[status];
 	const {
 		label,
@@ -268,17 +285,19 @@ export const deriveStatusView = ({
 	const segments =
 		track === "preview" ? draftSegments(summary) : progress.segments;
 	const visibleSegments = segments.filter((segment) => segment.value > 0);
+	const chipWith = (text: string | undefined): ChipView => ({
+		label,
+		details: text === undefined ? undefined : [text],
+	});
 
 	return {
 		ring: { tone, fraction },
-		chip: { label, details: detail === undefined ? undefined : [detail] },
+		chip: chipWith(detail),
 		bar: { track, segments: visibleSegments },
 		card: {
-			tone,
-			glyph: indicator.glyph,
-			label,
-			detail: cardDetail ?? detail,
+			chip: chipWith(cardDetail ?? detail),
 			when: describeWhen({ summary, now }),
+			note: isFinished ? laterMatchesNote(summary) : null,
 			error:
 				status === "failed"
 					? (summary.latest_run?.error_message ?? null)

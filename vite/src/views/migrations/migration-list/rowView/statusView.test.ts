@@ -62,11 +62,9 @@ test("draft badges stay plain; the card names the dry run or sample", () => {
 		segments: [],
 	});
 	expect(statusOf("migration-a7k").card).toEqual({
-		tone: "neutral",
-		glyph: "pencil",
-		label: "Draft",
-		detail: undefined,
+		chip: { label: "Draft", details: undefined },
 		when: "Created Sep 27, 10:00",
+		note: null,
 		error: null,
 		legend: [],
 	});
@@ -74,7 +72,7 @@ test("draft badges stay plain; the card names the dry run or sample", () => {
 
 	const dry = statusOf("migration-starter-dry");
 	expect(pill("migration-starter-dry").detail).toBeUndefined();
-	expect(dry.card?.detail).toBe("· dry run");
+	expect(dry.card.chip.details).toEqual(["· dry run"]);
 	expect(dry.bar.segments).toEqual([
 		{ kind: "would_change", value: 57 },
 		{ kind: "would_fail", value: 3 },
@@ -82,7 +80,7 @@ test("draft badges stay plain; the card names the dry run or sample", () => {
 
 	const sample = statusOf("migration-hobby-backfill");
 	expect(pill("migration-hobby-backfill").detail).toBeUndefined();
-	expect(sample.card?.detail).toBe("· sample");
+	expect(sample.card.chip.details).toEqual(["· sample"]);
 	expect(sample.bar.segments).toEqual([
 		{ kind: "sampled", value: 10 },
 		{ kind: "untouched", value: 3110 },
@@ -136,7 +134,7 @@ test("a failed latest dry run reads as failed, not done", () => {
 		now: FIXTURE_NOW,
 	});
 	expect(view.chip).toEqual({ label: "Draft", details: undefined });
-	expect(view.card?.detail).toBe("· dry run failed");
+	expect(view.card.chip.details).toEqual(["· dry run failed"]);
 });
 
 test("completed is green when clean and amber with the failed count", () => {
@@ -150,6 +148,18 @@ test("completed is green when clean and amber with the failed count", () => {
 		label: "Completed",
 		detail: "· 2 failed",
 	});
+});
+
+test("a completed run with later filter matches reports them instead of not reached", () => {
+	const view = statusOf("migration-plan-variants");
+	expect(view.bar.segments).toEqual([
+		{ kind: "migrated", value: 884 },
+		{ kind: "skipped", value: 1 },
+		{ kind: "failed", value: 1 },
+	]);
+	expect(view.card.note).toBe(
+		"245 more customers match the filter now than this run covered",
+	);
 });
 
 test("no changes is a full neutral ring over an up-to-date bar", () => {
@@ -170,11 +180,9 @@ test("failed and canceled report where they stopped and what was not reached", (
 		detail: "at 80%",
 	});
 	expect(failed.card).toEqual({
-		tone: "red",
-		glyph: "x",
-		label: "Failed",
-		detail: "at 80%",
+		chip: { label: "Failed", details: ["at 80%"] },
 		when: "Sep 15, 14:32 · after 18 minutes",
+		note: null,
 		error: "Stripe rate limit exceeded",
 		legend: [
 			{ kind: "migrated", value: 798 },

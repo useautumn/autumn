@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import type { MigrationFilter } from "@autumn/shared";
-import { fixtureCatalog as catalog } from "../preview/migrationListFixtures";
+import {
+	fixtureCatalog as catalog,
+	TEN_PLAN_VARIANTS,
+} from "../preview/migrationListFixtures";
 import { deriveFilterView } from "./filterView";
 
 const view = (filter: MigrationFilter | null) =>
@@ -20,6 +23,7 @@ test("a single plan is a plain chip with no extras", () => {
 				{
 					label: "Where plan is",
 					chips: [{ label: "Starter" }],
+					moreCount: 0,
 				},
 			],
 		],
@@ -48,6 +52,7 @@ test("versions fold into one chip per plan, extra plans count inside the head", 
 			{ label: "Pro", details: ["v1, v2"] },
 			{ label: "Pro Annual", details: ["v1"] },
 		],
+		moreCount: 0,
 	});
 });
 
@@ -66,6 +71,7 @@ test("has no plan is a plain cell chip and a neutral prohibit tile on hover", ()
 			chips: [
 				{ label: "No plan", tile: { tone: "neutral", glyph: "prohibit" } },
 			],
+			moreCount: 0,
 		},
 	]);
 });
@@ -92,6 +98,7 @@ test("customer in and not in become person chips, exclusions sort last", () => {
 				details: ["excluded"],
 			},
 		],
+		moreCount: 0,
 	});
 });
 
@@ -107,12 +114,14 @@ test("plan properties map to coloured condition chips", () => {
 			chips: [
 				{ label: "Not custom", tile: { tone: "purple", glyph: "wrench" } },
 			],
+			moreCount: 0,
 		},
 		{
 			label: "And plan is",
 			chips: [
 				{ label: "Free", tile: { tone: "amber", glyph: "currencyDollar" } },
 			],
+			moreCount: 0,
 		},
 		{
 			label: "And plan is",
@@ -122,6 +131,7 @@ test("plan properties map to coloured condition chips", () => {
 					tile: { tone: "blue", glyph: "arrowsClockwise" },
 				},
 			],
+			moreCount: 0,
 		},
 		{
 			label: "And base price",
@@ -131,6 +141,7 @@ test("plan properties map to coloured condition chips", () => {
 					tile: { tone: "amber", glyph: "currencyCircleDollar" },
 				},
 			],
+			moreCount: 0,
 		},
 	]);
 	expect(result?.extraCount).toBe(3);
@@ -149,5 +160,25 @@ test("OR groups keep their own rows and count toward the extras", () => {
 	expect(result?.groups.map((group) => group.map((row) => row.label))).toEqual([
 		["Where plan is", "And plan is"],
 		["Plan"],
+	]);
+});
+
+test("a plan filter on ten plans caps its chips and counts the rest", () => {
+	const result = view({
+		customer: { plan: { plan_id: { $in: TEN_PLAN_VARIANTS } } },
+	});
+	expect(result?.head).toEqual({ label: "Hobby", details: ["+9"] });
+	expect(result?.groups).toEqual([
+		[
+			{
+				label: "Where plan in",
+				chips: [
+					{ label: "Hobby" },
+					{ label: "Hobby (10k credits/month)" },
+					{ label: "Hobby (25k credits/month)" },
+				],
+				moreCount: 7,
+			},
+		],
 	]);
 });

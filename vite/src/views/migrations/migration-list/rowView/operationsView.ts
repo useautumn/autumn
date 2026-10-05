@@ -1,8 +1,10 @@
 import {
 	type AddPlanOp,
 	BillingMethod,
+	FeatureType,
 	formatInterval,
 	type Operations,
+	ResetInterval,
 	type UpdatePlanOp,
 } from "@autumn/shared";
 import {
@@ -10,7 +12,14 @@ import {
 	isAbbreviatedInterval,
 } from "@/utils/formatUtils/intervalSuffix";
 import { planIdsFromFilter } from "../../migration/operations/UpdatePlanOpForm";
-import { type ChipView, type MigrationCatalog, withoutTile } from "./chipView";
+import {
+	type CappedChips,
+	type ChipView,
+	capChips,
+	type MigrationCatalog,
+	pluralize,
+	withoutTile,
+} from "./chipView";
 
 export type ModificationView = {
 	sign: "add" | "change" | "remove";
@@ -23,6 +32,7 @@ export type OperationsView = {
 	inline: ChipView | null;
 	extraCount: number;
 	subtitle: string;
+	targets: CappedChips;
 	modifications: ModificationView[];
 	billing: "autumn" | "stripe";
 };
@@ -57,26 +67,43 @@ const itemFilterLabel = (filter: ItemFilter): string => {
 	return parts.join(" · ");
 };
 
-const updateItemDetail = (item: UpdateItem): string => {
-	const parts = [
-		item.included === undefined
-			? null
-			: `→ ${item.included.toLocaleString("en-US")} included`,
-		item.interval ? `resets ${item.interval}` : null,
-	].filter((part) => part !== null);
+const updateItemDetail = ({
+	item,
+	isBoolean,
+}: {
+	item: UpdateItem;
+	isBoolean: boolean;
+}): string => {
+	const parts = isBoolean
+		? []
+		: [
+				item.included === undefined
+					? null
+					: `→ ${item.included.toLocaleString("en-US")} included`,
+				item.interval ? `resets ${item.interval}` : null,
+			].filter((part) => part !== null);
 	return parts.length > 0 ? parts.join(", ") : "updated";
 };
 
 const perInterval = (interval: string | undefined): string => {
 	if (!interval) return "";
 	if (isAbbreviatedInterval(interval)) return intervalSuffix({ interval });
-	return formatInterval({
+	const formatted = formatInterval({
 		interval: interval as Parameters<typeof formatInterval>[0]["interval"],
 		prefix: " / ",
 	});
+	return interval === ResetInterval.OneOff ? ` ${formatted}` : formatted;
 };
 
-const addItemDetail = (item: AddItem): string => {
+/** Boolean features grant access, not an amount, so they carry no detail. */
+const addItemDetail = ({
+	item,
+	isBoolean,
+}: {
+	item: AddItem;
+	isBoolean: boolean;
+}): string | null => {
+	if (isBoolean) return null;
 	if (item.unlimited) return "+ unlimited";
 	if (item.included === undefined) return "added";
 	const amount = item.included.toLocaleString("en-US");
@@ -135,12 +162,14 @@ const updatePlanModifications = ({
 	catalog: MigrationCatalog;
 }): ModificationView[] => {
 	const customize = op.customize;
-	const itemChip = (filter: ItemFilter, detail: string) => {
+	const isBooleanItem = (filter: ItemFilter) =>
+		catalog.feature(filter.feature_id ?? "").type === FeatureType.Boolean;
+	const itemChip = (filter: ItemFilter, detail: string | null): ChipView => {
 		const feature = catalog.feature(filter.feature_id ?? "");
 		return {
 			label: filter.feature_id ? feature.name : itemFilterLabel(filter),
 			tile: feature.tile,
-			details: [detail],
+			details: detail === null ? undefined : [detail],
 		};
 	};
 	return [
@@ -170,11 +199,17 @@ const updatePlanModifications = ({
 		})),
 		...(customize?.add_items ?? []).map((item) => ({
 			sign: "add" as const,
-			chip: itemChip(item, addItemDetail(item)),
+			chip: itemChip(
+				item,
+				addItemDetail({ item, isBoolean: isBooleanItem(item) }),
+			),
 		})),
 		...(customize?.update_items ?? []).map((item) => ({
 			sign: "change" as const,
-			chip: itemChip(item.filter, updateItemDetail(item)),
+			chip: itemChip(
+				item.filter,
+				updateItemDetail({ item, isBoolean: isBooleanItem(item.filter) }),
+			),
 		})),
 		...(customize?.remove_items ?? []).map((item) => ({
 			sign: "remove" as const,
@@ -229,8 +264,9 @@ export const deriveOperationsView = ({
 		inline: firstInline ? withoutTile(firstInline.chip) : null,
 		extraCount: Math.max(inlineCandidates.length - 1, 0),
 		subtitle: firstUpdate
-			? `Update ${targetNames.length > 1 ? "plans" : "plan"} ${targetNames.join(", ")}`
+			? `Update ${pluralize({ count: targetNames.length, noun: "plan" })}`
 			: `Add plan ${head.label}`,
+		targets: capChips(targetNames.map((label) => ({ label }))),
 		modifications,
 		billing: noBillingChanges ? "autumn" : "stripe",
 	};

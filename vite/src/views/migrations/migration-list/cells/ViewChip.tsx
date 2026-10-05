@@ -8,7 +8,8 @@ import {
 } from "@autumn/ui";
 import { overlaySurfaceClassName } from "@autumn/ui/lib/overlay-classes";
 import type { ReactElement, ReactNode } from "react";
-import type { ChipView } from "../rowView/chipView";
+import { cn } from "@/lib/utils";
+import type { CappedChips, ChipView } from "../rowView/chipView";
 
 const Muted = ({ children }: { children: ReactNode }) => (
 	<span className="shrink-0 font-[450] text-tertiary-foreground">
@@ -44,11 +45,34 @@ export function ViewChip({
 	);
 }
 
-export function CountChip({ count }: { count: number }) {
+export function CountChip({
+	count,
+	suffix,
+}: {
+	count: number;
+	suffix?: string;
+}) {
 	return (
 		<span className="inline-flex h-[22px] shrink-0 items-center rounded-md border border-black/6 px-1.5 text-xs leading-4 font-medium text-tertiary-foreground dark:border-white/6">
 			+{count}
+			{suffix && ` ${suffix}`}
 		</span>
+	);
+}
+
+/** Wraps instead of shrinking, so every chip keeps a readable label inside the card. */
+export function ChipList({
+	chips,
+	moreCount,
+	className,
+}: CappedChips & { className?: string }) {
+	return (
+		<div className={cn("flex min-w-0 flex-wrap items-center gap-1", className)}>
+			{chips.map((chip) => (
+				<ViewChip key={chip.label} chip={chip} />
+			))}
+			{moreCount > 0 && <CountChip count={moreCount} suffix="more" />}
+		</div>
 	);
 }
 
@@ -60,9 +84,13 @@ export function PopoverRow({
 	children: ReactNode;
 }) {
 	return (
-		<div className="flex min-h-[26px] items-center justify-between gap-3">
-			<span className="shrink-0 text-xs text-tertiary-foreground">{label}</span>
-			<div className="flex min-w-0 items-center gap-1">{children}</div>
+		<div className="flex min-h-[26px] items-start justify-between gap-3">
+			<span className="shrink-0 py-[3px] text-xs text-tertiary-foreground">
+				{label}
+			</span>
+			<div className="flex min-h-[22px] min-w-0 items-center gap-1">
+				{children}
+			</div>
 		</div>
 	);
 }

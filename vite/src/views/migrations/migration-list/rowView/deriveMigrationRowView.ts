@@ -40,7 +40,11 @@ export const createMigrationCatalog = ({
 				feature?.type,
 				feature?.config?.usage_type,
 			);
-			return { name: feature?.name ?? featureId, tile: { tone, glyph } };
+			return {
+				name: feature?.name ?? featureId,
+				type: feature?.type,
+				tile: { tone, glyph },
+			};
 		},
 		formatAmount: (amount) =>
 			formatAmount({

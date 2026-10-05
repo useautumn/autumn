@@ -42,6 +42,30 @@ const fixtureProducts = [
 	{ id: "business", name: "Business" },
 	{ id: "analytics_addon", name: "Analytics add-on" },
 	{ id: "seat_license", name: "Seat license" },
+	{ id: "hobby_10k", name: "Hobby (10k credits/month)" },
+	{ id: "hobby_25k", name: "Hobby (25k credits/month)" },
+	{ id: "hobby_50k", name: "Hobby (50k credits/month)" },
+	{ id: "hobby_100k", name: "Hobby (100k credits/month)" },
+	{ id: "enterprise_1m", name: "Enterprise (1M credits/month)" },
+	{ id: "enterprise_3m", name: "Enterprise (3M credits/month)" },
+	{ id: "enterprise_7m", name: "Enterprise (7M credits/month, billed yearly)" },
+	{
+		id: "enterprise_10m",
+		name: "Enterprise (10M credits/month, billed yearly)",
+	},
+];
+
+export const TEN_PLAN_VARIANTS = [
+	"hobby",
+	"hobby_10k",
+	"hobby_25k",
+	"hobby_50k",
+	"hobby_100k",
+	"enterprise",
+	"enterprise_1m",
+	"enterprise_3m",
+	"enterprise_7m",
+	"enterprise_10m",
 ];
 
 const feature = ({
@@ -81,6 +105,12 @@ const fixtureFeatures: Feature[] = [
 		usageType: FeatureUsageType.Continuous,
 	}),
 	feature({ id: "sso", name: "SSO", type: FeatureType.Boolean }),
+	feature({ id: "narration", name: "Narration", type: FeatureType.Boolean }),
+	feature({
+		id: "credits",
+		name: "Credits",
+		type: FeatureType.CreditSystem,
+	}),
 ];
 
 const counts = (
@@ -490,6 +520,43 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 			last_activity: {
 				kind: "failed",
 				at: on({ day: 15, hour: 14, minute: 32 }),
+			},
+		}),
+	}),
+	migration({
+		id: "migration-plan-variants",
+		status: "run",
+		filter: { customer: { plan: { plan_id: { $in: TEN_PLAN_VARIANTS } } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: { $in: TEN_PLAN_VARIANTS } },
+					customize: {
+						add_items: [
+							{ feature_id: "narration", included: 0 },
+							{
+								feature_id: "credits",
+								included: 0,
+								reset: { interval: "one_off" },
+							},
+						],
+					},
+				},
+			],
+		} as Operations,
+		runSummary: summary({
+			customer_count: 1131,
+			latest_run: {
+				status: "succeeded",
+				started_at: on({ day: 20, hour: 17, minute: 59 }),
+				finished_at: on({ day: 20, hour: 18, minute: 2 }),
+				error_message: null,
+				counts: counts({ succeeded: 884, ineligible: 1, failed: 1 }),
+			},
+			last_activity: {
+				kind: "finished",
+				at: on({ day: 20, hour: 18, minute: 2 }),
 			},
 		}),
 	}),
