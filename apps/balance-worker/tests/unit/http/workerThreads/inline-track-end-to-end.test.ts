@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
+import { PARTITION_RECOVERY_REASON } from "@autumn/balance-worker-client/protocol";
 import { createBalanceWorkerApp } from "../../../../src/http/createBalanceWorkerApp.js";
+import { workerErrorOf } from "../../../../src/http/handlers/errorHandler/workerErrorOf.js";
 import {
 	createInlineHandler,
 	INLINE_ROUTES,
@@ -9,7 +11,10 @@ import { heldFailureOf } from "../../../../src/http/handlers/inline/heldFailureO
 import { createHttpWorkerPool } from "../../../../src/http/workerThreads/createHttpWorkerPool.js";
 import type { HttpWorkerListener } from "../../../../src/http/workerThreads/types/httpWorkerPool.js";
 import { connectHeldReplies } from "../../../../src/init/construction/connectHeldReplies.js";
-import { MutationBatchNotCommittedError } from "../../../../src/processor/writer/writerErrors.js";
+import {
+	MutationBatchNotCommittedError,
+	PartitionWriterRecoveryRequiredError,
+} from "../../../../src/processor/writer/writerErrors.js";
 import {
 	partition,
 	residentFixture,
@@ -188,6 +193,21 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		});
 	});
 
+	test("an append whose outcome is unknown reaches the held client exactly as the ordinary route answers that cause", async () => {
+		const { worker, http } = await setUp({ inline: true });
+		const held = http.post(trackCommand({ commandId: "unknown" }));
+		await Bun.sleep(50);
+		worker.appender.release({ fail: new Error("acknowledgement lost") });
+		const { status, error } = workerErrorOf({
+			cause: new PartitionWriterRecoveryRequiredError({
+				cause: new Error("acknowledgement lost"),
+			}),
+		});
+		expect(status).toBe(500);
+		expect(error.reason).toBe(PARTITION_RECOVERY_REASON);
+		expect(await held).toEqual({ status, body: { error } });
+	});
+
 	test("shutdown in the worker's order: the writer's disposal answers held clients, then the HTTP threads stop without waiting on them", async () => {
 		const { worker, http } = await setUp({ inline: true });
 		const held = http.post(trackCommand({ commandId: "in-flight" }));
@@ -195,8 +215,10 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		expect(await pendingFor(held, 50)).toBe("pending");
 		worker.processor.dispose();
 		expect(await held).toMatchObject({
-			status: 503,
-			body: { error: { code: "NOT_READY" } },
+			status: 500,
+			body: {
+				error: { code: "INTERNAL", reason: PARTITION_RECOVERY_REASON },
+			},
 		});
 		expect(await pendingFor(http.stop(), 2_000)).toBeUndefined();
 		cleanups.pop();
