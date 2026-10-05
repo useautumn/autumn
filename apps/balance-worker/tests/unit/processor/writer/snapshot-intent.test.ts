@@ -200,6 +200,24 @@ describe("the writer's snapshot intent", () => {
 		expect(balanceOf(intents[1])).toEqual([98]);
 	});
 
+	test("a record appended while off and stored after the flip to write is deleted, not written: its subject was evictable in between", async () => {
+		const { intents, applyGate, track, readWhole, setMode } = createWriter({
+			mode: "off",
+		});
+		readWhole({ baselineAt: 1_234 });
+		const held = Promise.withResolvers<void>();
+		applyGate.held = held.promise;
+		await track("t0").waitForCommit();
+		// t1 queues behind t0's held apply, so its intent is decided only after the flip.
+		const tracked = track("t1");
+		await tracked.waitForCommit();
+		setMode("write");
+		held.resolve();
+		await tracked.waitForStore();
+
+		expect(intents.map(balanceOf)).toEqual([undefined, "delete"]);
+	});
+
 	test("a subject read whole: its record's flush may write the rows it leaves, aged by that read", async () => {
 		const { intents, track, readWhole } = createWriter();
 		readWhole({ baselineAt: 1_234 });

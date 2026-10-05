@@ -48,7 +48,7 @@ const decideTrack = ({
 	};
 };
 
-/** A writer whose store records applies and enqueued DELETEs in order; `applyGate` holds every apply until it resolves. */
+/** A writing writer whose store records applies and enqueued DELETEs in order; `applyGate` holds every apply until it resolves. */
 const createWriter = ({
 	subjectMapMaxBytes,
 }: {
@@ -93,6 +93,7 @@ const createWriter = ({
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "write" }),
 		},
 		config: {
 			topic,

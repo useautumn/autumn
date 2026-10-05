@@ -5,6 +5,7 @@ import {
 	type MeteringIdentity,
 	type TrackCommand,
 } from "@autumn/balance-engine";
+import type { SubjectSnapshotMode } from "../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createSubjectMapBudget } from "../../../../src/processor/writer/subjectMap/createSubjectMapBudget.js";
@@ -16,6 +17,7 @@ import {
 	createSubjectFor,
 	createTrackCommand,
 } from "../../../fixtures/mutations.js";
+import { createSubjectSnapshotsStore } from "../../../fixtures/subjectSnapshotsStore.js";
 
 const topic = "writer-pins";
 const partition = 2;
@@ -44,7 +46,11 @@ const decideTrack = ({
 };
 
 /** A writer over a store with nothing resident and a map so small that reading one more subject evicts the last unpinned one. */
-const createWriter = () => {
+const createWriter = ({
+	mode = "write",
+}: {
+	mode?: SubjectSnapshotMode;
+} = {}) => {
 	const applied: DurableMutationRecord[] = [];
 	const applyGate = { held: Promise.resolve() as Promise<void> };
 	const stateStore: PartitionWriterContext["stateStore"] = {
@@ -75,6 +81,7 @@ const createWriter = () => {
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode }),
 		},
 		config: {
 			topic,
@@ -99,7 +106,7 @@ const createWriter = () => {
 	return { writer, applied, applyGate, track };
 };
 
-describe("a subject's rows stay resident until the store holds its record", () => {
+describe("while snapshots are written, a subject's rows stay resident until the store holds its record", () => {
 	test("appended but not yet stored, the subject survives a read that would otherwise evict it for space; once stored, it goes", async () => {
 		const { writer, applyGate, track } = createWriter();
 		writer.adopt({ state: createState({ identity, balance: 100 }) });
@@ -141,5 +148,22 @@ describe("a subject's rows stay resident until the store holds its record", () =
 		expect(
 			writer.readFreshestState({ identity })?.customerEntitlements[0]?.balance,
 		).toBe(98);
+	});
+});
+
+describe("off, pins are released when Kafka has the record, as without snapshots", () => {
+	test("appended but not yet stored, the subject is evictable for space", async () => {
+		const { writer, applyGate, track } = createWriter({ mode: "off" });
+		writer.adopt({ state: createState({ identity, balance: 100 }) });
+		const held = Promise.withResolvers<void>();
+		applyGate.held = held.promise;
+		try {
+			const tracked = track("t1");
+			await tracked.waitForCommit();
+			writer.adopt({ state: createState({ identity: other, balance: 1 }) });
+			expect(writer.readFreshestState({ identity })).toBeNull();
+		} finally {
+			held.resolve();
+		}
 	});
 });
