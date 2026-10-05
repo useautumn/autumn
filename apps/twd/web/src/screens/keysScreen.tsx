@@ -15,6 +15,7 @@ import {
 	MoreHorizontal,
 	Plus,
 	RefreshCw,
+	RotateCcw,
 	ShieldAlert,
 	Trash2,
 	X,
@@ -29,6 +30,7 @@ import {
 	useProbeKeys,
 	useReinitKeys,
 	useRemoveKey,
+	useRetryBrokenAccounts,
 } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
 import { ErrorCallout, Pill } from "../components/status.tsx";
@@ -92,8 +94,10 @@ export const KeysScreen = () => {
 	const [importing, setImporting] = useState(false);
 	const [picking, setPicking] = useState(false);
 	const remove = useRemoveKey();
+	const retryBroken = useRetryBrokenAccounts();
+	const [retryingBroken, setRetryingBroken] = useState(false);
 	const jobs = useJobs();
-	useLiveTopics("keys", "jobs");
+	useLiveTopics("keys", "jobs", "accounts");
 
 	const fullNukeJobs = new Map<string, Job>();
 	for (const j of jobs.data ?? []) {
@@ -330,6 +334,14 @@ export const KeysScreen = () => {
 				>
 					<RefreshCw className="size-3.5" /> Probe keys
 				</Button>
+				<Button
+					variant="secondary"
+					disabled={draining || totals.broken === 0}
+					isLoading={retryBroken.isPending}
+					onClick={() => setRetryingBroken(true)}
+				>
+					<RotateCcw className="size-3.5" /> Retry broken ({num(totals.broken)})
+				</Button>
 				<ReinitMenu
 					keys={all}
 					disabled={draining}
@@ -396,6 +408,8 @@ export const KeysScreen = () => {
 						{num(totals.clean)}
 					</span>{" "}
 					clean · {num(totals.busy)} busy · {num(totals.broken)} broken
+					{retryBroken.data &&
+						` · retry queued ${num(retryBroken.data.enqueued)}, skipped ${num(retryBroken.data.skipped)}`}
 				</span>
 				<span>last probe {timeAgo(lastProbe)}</span>
 			</div>
@@ -474,6 +488,27 @@ export const KeysScreen = () => {
 					Stripe; re-import the key to use it again.
 				</p>
 				<ErrorCallout error={remove.error} className="mt-3" />
+			</ConfirmDialog>
+			<ConfirmDialog
+				open={retryingBroken}
+				onOpenChange={setRetryingBroken}
+				title={`Retry nuke on ${num(totals.broken)} broken accounts?`}
+				confirmLabel="Retry broken"
+				pending={retryBroken.isPending}
+				onConfirm={() =>
+					retryBroken.mutate(undefined, {
+						onSuccess: () => setRetryingBroken(false),
+					})
+				}
+			>
+				<p>
+					Queues the same nuke job as Retry nuke on the Accounts page for every
+					broken account. Skipped: accounts with a nuke already queued or
+					running, and accounts whose key is missing or mid full nuke or
+					re-init. Accounts in use by runs are never touched. Progress shows in
+					the Nuking and Broken columns.
+				</p>
+				<ErrorCallout error={retryBroken.error} className="mt-3" />
 			</ConfirmDialog>
 			<ConfirmDialog
 				open={confirm}

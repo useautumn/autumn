@@ -1603,6 +1603,37 @@ export const handle = ({
 		return ok(res);
 	}
 
+	if (route === "POST /accounts/retry-broken") {
+		if (gate.state === "draining")
+			return err(
+				409,
+				"keys_draining",
+				"A key re-init is in progress.",
+				"Wait for the reinit_keys job to finish (GET /keys shows the gate), then retry.",
+			);
+		const broken = accounts.filter((a) => a.state === "broken");
+		const retryable = broken.filter((a) =>
+			keys.some(
+				(k) =>
+					k.platformAccountId === a.platformAccountId &&
+					k.present &&
+					k.unusableReason !== FULL_NUKE_REASON,
+			),
+		);
+		const res = retryable.map((a) => enqueue("nuke", `nuke:${a.id}`));
+		const fresh = retryable.filter((_, i) => !res[i].deduped);
+		releaseAccounts((a) => fresh.includes(a));
+		for (const r of res)
+			setTimeout(() => {
+				r.job.status = "succeeded";
+				r.job.finishedAt = iso(Date.now());
+			}, 8_000);
+		return ok({
+			enqueued: fresh.length,
+			skipped: broken.length - fresh.length,
+		});
+	}
+
 	if (method === "DELETE" && seg[0] === "accounts" && seg[1]) {
 		const i = accounts.findIndex((a) => a.id === seg[1]);
 		if (i === -1)
