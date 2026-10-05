@@ -298,6 +298,38 @@ local function process_deduction_pass(params)
 end
 
 --[[
+  order_for_overage_pass(customer_entitlement_deductions)
+
+  Stable-sorts entries by overage_priority so overage lands on rows with their
+  own overage (a usage price) before free allocated grants, and on those before
+  rows only the caller's overage behaviour lets go negative. Entries without a
+  priority keep their deduction order.
+]]
+local function order_for_overage_pass(customer_entitlement_deductions)
+  local indexed = {}
+  for index, ent_obj in ipairs(customer_entitlement_deductions) do
+    local priority = ent_obj.overage_priority
+    if priority == nil or priority == cjson.null then
+      priority = 0
+    end
+    indexed[index] = { ent_obj = ent_obj, index = index, priority = priority }
+  end
+
+  table.sort(indexed, function(left, right)
+    if left.priority ~= right.priority then
+      return left.priority < right.priority
+    end
+    return left.index < right.index
+  end)
+
+  local ordered = {}
+  for index, entry in ipairs(indexed) do
+    ordered[index] = entry.ent_obj
+  end
+  return ordered
+end
+
+--[[
   process_rollover_deduction(params)
 
   Runs rollover deduction before the main balance passes.
@@ -590,9 +622,17 @@ local function run_deduction_on_context(params)
   remaining_amount = pass_one_result.remaining_amount
 
   if remaining_amount ~= 0 then
+    -- Overage goes to rows with their own price first; refunds keep the
+    -- deduction order.
+    local pass_two_customer_entitlement_deductions = customer_entitlement_deductions
+    if not is_refund then
+      pass_two_customer_entitlement_deductions =
+        order_for_overage_pass(customer_entitlement_deductions)
+    end
+
     local pass_two_result = process_deduction_pass({
       context = context,
-      customer_entitlement_deductions = customer_entitlement_deductions,
+      customer_entitlement_deductions = pass_two_customer_entitlement_deductions,
       target_entity_id = target_entity_id,
       spend_limit_by_feature_id = spend_limit_by_feature_id,
       usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
