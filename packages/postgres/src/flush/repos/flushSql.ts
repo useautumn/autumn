@@ -5,8 +5,8 @@ import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js"
 import type { SubjectSnapshotWrites } from "../../subjects/types/subjectSnapshot.js";
 import type { FlushBookmark } from "../types/flush.js";
 
-/** Every folded change as its own CTE, the bookmarks as one, and a row of counts to read the outcome from. */
-export const flushSql = ({
+/** The CTEs every flush shape shares: one per folded change, the bookmarks as `b`, then the snapshot writes. */
+const flushParts = ({
 	changes,
 	bookmarks,
 	snapshots,
@@ -14,7 +14,7 @@ export const flushSql = ({
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
 	snapshots?: SubjectSnapshotWrites;
-}): SQL => {
+}) => {
 	const updateCtes = changes.map(
 		(change, index) =>
 			sql`${sql.identifier(`u${index}`)} AS (${subjectRowChangeSql({ change })})`,
@@ -45,23 +45,83 @@ export const flushSql = ({
 			? sql`'[]'::json`
 			: // An array constructor, not json_build_array: a function call is capped at 100 arguments.
 				sql`to_json(ARRAY[${sql.join(appliedCounts, sql`, `)}])`;
-
-	const hasSnapshotWrites =
-		(snapshots?.upserts.length ?? 0) + (snapshots?.deletes.length ?? 0) > 0;
-	if (!snapshots || !hasSnapshotWrites)
-		return sql`
-		WITH ${sql.join([...updateCtes, bookmarkCte], sql`, `)}
-		SELECT ${applied} AS applied, (SELECT count(*) FROM b) AS bookmarks
-	`;
-
-	const snapshotSql = subjectSnapshotFlushSql({ snapshots });
 	// Snapshot deletes travel alone when an evict has no record to carry them, and VALUES cannot be empty.
 	const bookmarkParts =
 		bookmarks.length > 0
 			? { ctes: [bookmarkCte], count: sql`(SELECT count(*) FROM b)` }
 			: { ctes: [], count: sql`0` };
+	const hasSnapshotWrites =
+		(snapshots?.upserts.length ?? 0) + (snapshots?.deletes.length ?? 0) > 0;
+	const snapshotSql =
+		snapshots && hasSnapshotWrites
+			? subjectSnapshotFlushSql({ snapshots })
+			: null;
+	return {
+		ctes: [...updateCtes, ...bookmarkParts.ctes, ...(snapshotSql?.ctes ?? [])],
+		appliedCounts,
+		applied,
+		bookmarkCount: bookmarkParts.count,
+		snapshotColumns: snapshotSql
+			? sql`, ${snapshotSql.upserted} AS snapshot_upserts, ${snapshotSql.deleted} AS snapshot_deletes`
+			: sql``,
+	};
+};
+
+/** Every folded change as its own CTE, the bookmarks as one, and a row of counts to read the outcome from. */
+export const flushSql = ({
+	changes,
+	bookmarks,
+	snapshots,
+}: {
+	changes: readonly SubjectRowChange[];
+	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
+}): SQL => {
+	const { ctes, applied, bookmarkCount, snapshotColumns } = flushParts({
+		changes,
+		bookmarks,
+		snapshots,
+	});
 	return sql`
-		WITH ${sql.join([...updateCtes, ...bookmarkParts.ctes, ...snapshotSql.ctes], sql`, `)}
-		SELECT ${applied} AS applied, ${bookmarkParts.count} AS bookmarks, ${snapshotSql.upserted} AS snapshot_upserts, ${snapshotSql.deleted} AS snapshot_deletes
+		WITH ${sql.join(ctes, sql`, `)}
+		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks${snapshotColumns}
+	`;
+};
+
+/** Prefixes the counts a single-statement flush carries out in the error that rolls it back. */
+export const FLUSH_ROLLBACK_MARKER = "flush_rolled_back:";
+
+/**
+ * The same flush as one autocommit statement: when a bookmark or a guarded row did not move, a
+ * failing cast aborts it, so nothing lands, and the error text carries `<bookmarks>:<counts>`.
+ */
+export const singleStatementFlushSql = ({
+	changes,
+	bookmarks,
+	snapshots,
+}: {
+	changes: readonly SubjectRowChange[];
+	bookmarks: readonly FlushBookmark[];
+	snapshots?: SubjectSnapshotWrites;
+}): SQL => {
+	const { ctes, appliedCounts, applied, bookmarkCount, snapshotColumns } =
+		flushParts({ changes, bookmarks, snapshots });
+	const landed = changes.flatMap((change, index) =>
+		change.op === "promote" ? [] : [sql`${appliedCounts[index]} = 1`],
+	);
+	const allLanded = sql.join(
+		[sql`${bookmarkCount} = ${bookmarks.length}::bigint`, ...landed],
+		sql` AND `,
+	);
+	const counts =
+		appliedCounts.length === 0
+			? sql`''`
+			: sql`array_to_string(ARRAY[${sql.join(appliedCounts, sql`, `)}], ',')`;
+	// CASE, not OR: only CASE guarantees the cast is never evaluated when everything landed.
+	return sql`
+		WITH ${sql.join(ctes, sql`, `)}
+		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks${snapshotColumns}
+		WHERE CASE WHEN ${allLanded} THEN true
+			ELSE (${FLUSH_ROLLBACK_MARKER}::text || ${bookmarkCount} || ':' || ${counts})::integer IS NULL END
 	`;
 };

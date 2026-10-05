@@ -152,6 +152,9 @@ describe("flushSql subject snapshots", () => {
 const fakeDb = ({ row }: { row: Record<string, unknown> }) => {
 	const statements: string[] = [];
 	const db = {
+		execute: async () => {
+			throw new Error("these cases run the transaction path");
+		},
 		transaction: async <Result>(
 			run: (tx: {
 				execute: (query: unknown) => Promise<unknown[]>;
@@ -169,7 +172,7 @@ const fakeDb = ({ row }: { row: Record<string, unknown> }) => {
 					return [row];
 				},
 			}),
-	} as unknown as Pick<PostgresDb, "transaction">;
+	} as unknown as Pick<PostgresDb, "transaction" | "execute">;
 	return { db, statements };
 };
 
