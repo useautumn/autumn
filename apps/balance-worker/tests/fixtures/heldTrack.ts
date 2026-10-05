@@ -105,10 +105,12 @@ export function processorOn({
 	positions,
 	appender,
 	store,
+	maxBatchSize = 100,
 	catalogCache = createTestCatalogCache(),
 }: {
 	positions: CommitPositions;
 	appender: CommittedOutcomeAppender;
+	maxBatchSize?: number;
 	store: SqliteStateStore & { storeGate?: () => Promise<void> };
 	catalogCache?: CatalogCache;
 }) {
@@ -133,7 +135,7 @@ export function processorOn({
 			topic,
 			partition,
 			writerLimits: {
-				maxBatchSize: 100,
+				maxBatchSize,
 				maxPendingCommands: 1_000,
 				maxPendingCommandsPerCustomer: 100,
 			},
@@ -178,14 +180,22 @@ export function openStore(): {
 
 /** A processor whose customer is resident: one ordinary track has loaded and committed it. */
 export async function residentFixture({
+	maxBatchSize = 100,
 	catalogCache,
 }: {
+	maxBatchSize?: number;
 	catalogCache?: CatalogCache;
 } = {}) {
 	const positions = createCommitPositions({ config: { partitionCount: 4 } });
 	const appender = gatedAppender();
 	const { store, close } = openStore();
-	const processor = processorOn({ positions, appender, store, catalogCache });
+	const processor = processorOn({
+		positions,
+		appender,
+		store,
+		maxBatchSize,
+		catalogCache,
+	});
 	const warm = processor.track({
 		command: trackCommand({ commandId: "warm" }),
 	});

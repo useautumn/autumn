@@ -57,6 +57,17 @@ export function trackInline({
 	command: TrackCommand;
 }): InlineTrackOutcome | null {
 	if (inlineTrackRefusalOf({ scope, command })) return null;
+	return decideTrackHeld({ scope, command });
+}
+
+/** The held decide itself, for a command `inlineTrackRefusalOf` already cleared. */
+export function decideTrackHeld({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
+}): InlineTrackOutcome | null {
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});

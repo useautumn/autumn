@@ -51,6 +51,9 @@ async function serve({
 	inline: boolean;
 }): Promise<{
 	post(command: TrackCommand): Promise<{ status: number; body: unknown }>;
+	postBatch(
+		commands: TrackCommand[],
+	): Promise<{ status: number; body: unknown }>;
 	stop(): Promise<void>;
 }> {
 	const runtime = {
@@ -95,19 +98,25 @@ async function serve({
 		http: listener,
 		renderFailure: heldFailureOf,
 	});
-	async function post(command: TrackCommand) {
-		const response = await fetch(`http://127.0.0.1:${port}/v1/track`, {
+	async function send(path: string, body: object) {
+		const response = await fetch(`http://127.0.0.1:${port}${path}`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ route, command }),
+			body: JSON.stringify(body),
 		});
 		return { status: response.status, body: await response.json() };
+	}
+	function post(command: TrackCommand) {
+		return send("/v1/track", { route, command });
+	}
+	function postBatch(commands: TrackCommand[]) {
+		return send("/v1/track-batch", { route, commands });
 	}
 	async function stop(): Promise<void> {
 		await listener.stop();
 		disconnect();
 	}
-	return { post, stop };
+	return { post, postBatch, stop };
 }
 
 async function pendingFor<T>(promise: Promise<T>, ms: number) {
@@ -124,7 +133,13 @@ async function setUp({ inline }: { inline: boolean }) {
 	const worker = await residentFixture();
 	cleanups.push(() => worker.close());
 	const decideInline = worker.processor.trackInline;
-	const counts = { inlined: 0 };
+	const counts = { inlined: 0, batchesInlined: 0 };
+	const decideBatchInline = worker.processor.trackBatchInline;
+	worker.processor.trackBatchInline = (params) => {
+		const outcome = decideBatchInline(params);
+		if (outcome.kind === "decided") counts.batchesInlined++;
+		return outcome;
+	};
 	worker.processor.trackInline = (params) => {
 		const outcome = decideInline(params);
 		if (outcome) counts.inlined++;
@@ -154,6 +169,30 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		expect(inlineAnswer.status).toBe(200);
 		expect(inlineAnswer).toEqual(ordinaryAnswer);
 		expect([inline.counts.inlined, ordinary.counts.inlined]).toEqual([1, 0]);
+	});
+
+	test("a track batch is held as one write group and answers exactly what the ordinary batch route answers", async () => {
+		const inline = await setUp({ inline: true });
+		const ordinary = await setUp({ inline: false });
+		const commands = [
+			trackCommand({ commandId: "batch_1", value: 1 }),
+			trackCommand({ commandId: "batch_1", value: 2 }),
+			trackCommand({ commandId: "batch_2", value: 3 }),
+		];
+		const held = inline.http.postBatch(commands);
+		await waitForAppend();
+		expect(await pendingFor(held, 100)).toBe("pending");
+		inline.worker.appender.release();
+		const answered = ordinary.http.postBatch(commands);
+		await Bun.sleep(50);
+		ordinary.worker.appender.release();
+		const [inlineAnswer, ordinaryAnswer] = await Promise.all([held, answered]);
+		expect(inlineAnswer.status).toBe(200);
+		expect(inlineAnswer).toEqual(ordinaryAnswer);
+		expect([
+			inline.counts.batchesInlined,
+			ordinary.counts.batchesInlined,
+		]).toEqual([1, 0]);
 	});
 
 	test("a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {
