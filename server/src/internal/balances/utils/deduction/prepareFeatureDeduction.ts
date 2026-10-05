@@ -9,8 +9,6 @@ import {
 	fullCustomerToSpendLimitByFeatureId,
 	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
-	isAllocatedCustomerEntitlement,
-	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
 } from "@autumn/shared";
@@ -23,6 +21,7 @@ import type {
 } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import { computeCreditCosts } from "./computeCreditCosts.js";
+import { resolveOverageAllowance } from "./resolveOverageAllowance.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -106,33 +105,23 @@ export const prepareFeatureDeduction = ({
 			const { creditCost, rateCard } = getCreditCostForEnt(ce.id);
 			const maxOverage = getMaxOverage({ cusEnt: ce });
 
-			const isFreeAllocated =
-				isFreeCustomerEntitlement(ce) && isAllocatedCustomerEntitlement(ce);
-
 			const resetBalance = cusEntToStartingBalance({ cusEnt: ce });
-
-			const isFreeAllocatedUsageAllowed =
-				isFreeAllocated && overageBehaviour !== "reject";
-
-			const overageAllowedControl =
-				overageAllowedByFeatureId[ce.entitlement.feature.id];
-
-			let effectiveUsageAllowed =
-				ce.usage_allowed || isFreeAllocatedUsageAllowed;
-
-			if (
-				overageAllowedControl?.enabled === true &&
-				!nativeUsageAllowedFeatureIds.has(ce.entitlement.feature.id)
-			) {
-				effectiveUsageAllowed = true;
-			} else if (overageAllowedControl?.enabled === false) {
-				effectiveUsageAllowed = false;
-			}
 
 			// Unlimited cusEnts are an infinite sink: always usage-allowed with no
 			// balance clamps in either direction, so the balance drifts negative as
 			// a usage counter and refunds can move it back up freely.
 			const isUnlimited = isUnlimitedCusEnt(ce);
+
+			const { usageAllowed, overagePriority } = resolveOverageAllowance({
+				customerEntitlement: ce,
+				overageBehaviour,
+				overageAllowedControl:
+					overageAllowedByFeatureId[ce.entitlement.feature.id],
+				featureHasNativeOverage: nativeUsageAllowedFeatureIds.has(
+					ce.entitlement.feature.id,
+				),
+				unlimited: isUnlimited,
+			});
 
 			return {
 				customer_entitlement_id: ce.id,
@@ -140,7 +129,8 @@ export const prepareFeatureDeduction = ({
 				...(rateCard ? { rate_card: rateCard } : {}),
 				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed: isUnlimited || effectiveUsageAllowed,
+				usage_allowed: usageAllowed,
+				overage_priority: overagePriority,
 				min_balance:
 					isUnlimited || !notNullish(maxOverage) ? undefined : -maxOverage,
 				max_balance: isUnlimited ? undefined : resetBalance,

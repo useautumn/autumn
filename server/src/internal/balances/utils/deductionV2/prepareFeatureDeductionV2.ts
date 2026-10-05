@@ -10,8 +10,6 @@ import {
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
 	InsufficientBalanceError,
-	isAllocatedCustomerEntitlement,
-	isFreeCustomerEntitlement,
 	isThresholdBillingCustomerProduct,
 	notNullish,
 	orgToInStatuses,
@@ -24,6 +22,7 @@ import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockRec
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
+import { resolveOverageAllowance } from "../deduction/resolveOverageAllowance.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -186,35 +185,23 @@ export const prepareFeatureDeductionV2 = ({
 			const maxOverage = getMaxOverage({
 				cusEnt: customerEntitlement,
 			});
-			const isFreeAllocated =
-				isFreeCustomerEntitlement(customerEntitlement) &&
-				isAllocatedCustomerEntitlement(customerEntitlement);
 			const resetBalance = cusEntToStartingBalance({
 				cusEnt: customerEntitlement,
 			});
-			const isFreeAllocatedUsageAllowed =
-				isFreeAllocated && overageBehaviour !== "reject";
-			const overageAllowedControl =
-				overageAllowedByFeatureId[customerEntitlement.entitlement.feature.id];
-
-			let effectiveUsageAllowed =
-				customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed;
-
-			if (
-				overageAllowedControl?.enabled === true &&
-				!nativeUsageAllowedFeatureIds.has(
-					customerEntitlement.entitlement.feature.id,
-				)
-			) {
-				effectiveUsageAllowed = true;
-			} else if (overageAllowedControl?.enabled === false) {
-				effectiveUsageAllowed = false;
-			}
 
 			// Unlimited cusEnts are an infinite sink: always usage-allowed with no
 			// balance clamps in either direction, so the balance drifts negative as
 			// a usage counter and refunds can move it back up freely.
 			const isUnlimited = isUnlimitedCusEnt(customerEntitlement);
+
+			const featureId = customerEntitlement.entitlement.feature.id;
+			const { usageAllowed, overagePriority } = resolveOverageAllowance({
+				customerEntitlement,
+				overageBehaviour,
+				overageAllowedControl: overageAllowedByFeatureId[featureId],
+				featureHasNativeOverage: nativeUsageAllowedFeatureIds.has(featureId),
+				unlimited: isUnlimited,
+			});
 
 			return {
 				customer_entitlement_id: customerEntitlement.id,
@@ -223,7 +210,8 @@ export const prepareFeatureDeductionV2 = ({
 				feature_id: customerEntitlement.entitlement.feature.id,
 				entity_feature_id:
 					customerEntitlement.entitlement.entity_feature_id ?? null,
-				usage_allowed: isUnlimited || effectiveUsageAllowed,
+				usage_allowed: usageAllowed,
+				overage_priority: overagePriority,
 				min_balance:
 					isUnlimited || !notNullish(maxOverage) ? undefined : -maxOverage,
 				max_balance: isUnlimited ? undefined : resetBalance,

@@ -19,7 +19,6 @@ type Warning = { fields: { event?: string; data?: Record<string, unknown> } };
 
 const createFixture = () => {
 	const clock = { ms: 1_000 };
-	const heap = { bytes: 300 * 1_048_576 };
 	const warnings: Warning[] = [];
 	let nextOffset = 0n;
 	const stateStore: PartitionWriterContext["stateStore"] = {
@@ -47,7 +46,6 @@ const createFixture = () => {
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			now: () => clock.ms,
-			heapSize: () => heap.bytes,
 			logger: {
 				warn: (...args: unknown[]) => {
 					warnings.push({ fields: args[0] as Warning["fields"] });
@@ -67,11 +65,9 @@ const createFixture = () => {
 	let commandIndex = 0;
 	const decide = ({
 		takesMs,
-		collects = false,
 		throws = false,
 	}: {
 		takesMs: number;
-		collects?: boolean;
 		throws?: boolean;
 	}) => {
 		commandIndex += 1;
@@ -86,7 +82,6 @@ const createFixture = () => {
 				initial: createState({ balance: 1_000 }),
 				during: () => {
 					clock.ms += takesMs;
-					if (collects) heap.bytes -= 120 * 1_048_576;
 					if (throws) throw new Error("refused");
 				},
 			}),
@@ -133,7 +128,7 @@ describe("slow decide logging", () => {
 		expect(slowDecides()).toHaveLength(0);
 	});
 
-	test("a slow decide names the customer, the command and its state size, and says no collection ran", () => {
+	test("a slow decide names the customer, the command and its state size", () => {
 		const { decide, slowDecides } = createFixture();
 		decide({ takesMs: 2 });
 		decide({ takesMs: 45 });
@@ -147,24 +142,9 @@ describe("slow decide logging", () => {
 			customerId: testIdentity.customerId,
 			entityId: null,
 			durationMs: 45,
-			gcRan: false,
-			heapBeforeMb: 300,
-			heapAfterMb: 300,
 			pendingCommands: 2,
 		});
 		expect(data?.stateBytes).toBeGreaterThan(0);
-	});
-
-	test("a slow decide during which the heap was collected says so, with the heap before and after", () => {
-		const { decide, slowDecides } = createFixture();
-		decide({ takesMs: 80, collects: true });
-
-		expect(slowDecides()[0]?.fields.data).toMatchObject({
-			durationMs: 80,
-			gcRan: true,
-			heapBeforeMb: 300,
-			heapAfterMb: 180,
-		});
 	});
 
 	test("a decide that throws after holding the thread is still reported", () => {

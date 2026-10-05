@@ -134,7 +134,6 @@ export type PartitionWriterContext = {
 	/** Where the partition's commit position is published; without one the writer numbers its writes alone. */
 	commitPositions?: CommitPositionSink;
 	now?: () => number;
-	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
 

@@ -1,4 +1,3 @@
-import { heapSize } from "bun:jsc";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
 import {
@@ -63,7 +62,6 @@ export function createPartitionWriter({
 		ctx: {
 			logger: ctx.logger,
 			now: ctx.now ?? (() => performance.now()),
-			heapSize: ctx.heapSize ?? heapSize,
 			stateBytesOf: ({ subjectKey }) =>
 				scope.state.subjects.bytesOf({ subjectKey }),
 			pendingCommands: () => scope.state.queue.length,

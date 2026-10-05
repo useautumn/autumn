@@ -637,9 +637,17 @@ BEGIN
 
   -- ============================================================================
   -- PASS 2: Allow usage_allowed=true entitlements to go negative
+  -- Walked by overage_priority (stable): rows with their own overage price
+  -- first, then free allocated grants, then rows only overage_behaviour admits.
   -- ============================================================================
   IF remaining_amount > 0 THEN
-    FOR ent_obj IN SELECT * FROM jsonb_array_elements(sorted_entitlements)
+    FOR ent_obj IN
+      SELECT ent_entry.ent_value
+      FROM jsonb_array_elements(sorted_entitlements)
+        WITH ORDINALITY AS ent_entry(ent_value, ent_position)
+      ORDER BY
+        COALESCE((ent_entry.ent_value->>'overage_priority')::int, 0),
+        ent_entry.ent_position
     LOOP
       EXIT WHEN remaining_amount = 0;
 
