@@ -88,27 +88,6 @@ const fillInOrder = ({
 	});
 };
 
-/** Removes `held` from a shared row's grants (included first) and remaining. */
-const withoutHeld = ({
-	item,
-	held,
-}: {
-	item: ApiBalanceBreakdownV1;
-	held: number;
-}): ApiBalanceBreakdownV1 => {
-	const includedCut = Decimal.min(held, Decimal.max(0, item.included_grant));
-	return {
-		...item,
-		included_grant: new Decimal(item.included_grant)
-			.minus(includedCut)
-			.toNumber(),
-		prepaid_grant: new Decimal(item.prepaid_grant)
-			.minus(new Decimal(held).minus(includedCut))
-			.toNumber(),
-		remaining: new Decimal(item.remaining).minus(held).toNumber(),
-	};
-};
-
 /** Marks every row's source and scopes the shared rows to what the subject may spend; a customer's "pool" view keeps them whole. */
 export const applyAllocationsToBreakdown = ({
 	subject,
@@ -212,12 +191,14 @@ export const applyAllocationsToBreakdown = ({
 	const unallocatedOnly = () => {
 		const rows = [...withSource];
 		sharedIndexes.forEach((index, position) => {
-			rows[index] = withoutHeld({
-				item: rows[index],
-				held: new Decimal(Math.max(0, rows[index].remaining))
-					.minus(unallocatedShares[position])
-					.toNumber(),
-			});
+			rows[index] = {
+				...rows[index],
+				included_grant: unallocatedShares[position],
+				prepaid_grant: 0,
+				usage: 0,
+				remaining: unallocatedShares[position],
+				overage: 0,
+			};
 		});
 		return rows;
 	};

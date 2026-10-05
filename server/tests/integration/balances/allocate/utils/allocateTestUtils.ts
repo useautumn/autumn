@@ -44,8 +44,15 @@ export const expectAllocatedMessages = async ({
 		const entity = await autumnV2_3.entities.get<{
 			balances: Record<string, ApiBalanceV1>;
 		}>(customerId, entityId);
-		const allocated = { granted: 0, usage: 0, remaining: 0 };
-		for (const row of entity.balances[TestFeature.Messages].breakdown ?? []) {
+		const messages = entity.balances[TestFeature.Messages];
+		// Allocated rows also show the unallocated credits the entity may spend; compare the share alone.
+		const unallocated = messages.unallocated ?? 0;
+		const allocated = {
+			granted: -unallocated,
+			usage: 0,
+			remaining: -unallocated,
+		};
+		for (const row of messages.breakdown ?? []) {
 			if (!row.allocation) continue;
 			allocated.granted += row.included_grant + row.prepaid_grant;
 			allocated.usage += row.usage;
