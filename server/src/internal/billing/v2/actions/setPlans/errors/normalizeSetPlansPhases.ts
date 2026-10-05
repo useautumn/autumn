@@ -6,7 +6,6 @@ import {
 	RecaseError,
 	type ResolvedCreateSchedulePhaseV0,
 } from "@autumn/shared";
-import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 
 type CreateSchedulePhase = CreateScheduleParamsV0["phases"][number];
 type ResolvedPhase = ResolvedCreateSchedulePhaseV0;
@@ -136,21 +135,6 @@ const snapResolvedPhasesToCycleBoundary = ({
 	);
 };
 
-/** A first phase starting within set_plans' tolerance of now starts now. */
-const resolveNumericPhaseStart = ({
-	startsAt,
-	isFirstPhase,
-	currentEpochMs,
-}: {
-	startsAt: number;
-	isFirstPhase: boolean;
-	currentEpochMs: number;
-}) =>
-	isFirstPhase &&
-	classifyFirstPhaseStart({ startsAt, currentEpochMs }) === "now"
-		? currentEpochMs
-		: startsAt;
-
 /** Sort phases for downstream create_schedule setup and execution. */
 export const normalizeSetPlansPhases = ({
 	phases,
@@ -182,11 +166,7 @@ export const normalizeSetPlansPhases = ({
 		if (phase.starts_at === "now") {
 			startsAt = currentEpochMs;
 		} else if (phaseHasNumericStart(phase)) {
-			startsAt = resolveNumericPhaseStart({
-				startsAt: phase.starts_at,
-				isFirstPhase: resolvedPhases.length === 0,
-				currentEpochMs,
-			});
+			startsAt = phase.starts_at;
 		} else if (phase.starting_after) {
 			const previousPhase = resolvedPhases[resolvedPhases.length - 1];
 			if (!previousPhase) {
