@@ -25,6 +25,10 @@ import { heldFailureOf } from "../http/handlers/inline/heldFailureOf.js";
 import { createInlineCounters } from "../http/handlers/inline/inlineCounters.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
+import {
+	commitSummaries,
+	logCommitWindows,
+} from "../logging/commitSummaries.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
 	createDatabaseReporter,
@@ -157,7 +161,12 @@ export async function createBalanceWorker({
 		});
 		// The producer thread starts with the listener, before any partition runtime asks for a producer.
 		let producers: ThreadedProducers | null = null;
-		let drainThreadHealth: (() => Record<string, number>) | null = null;
+		let drainThreadSignals:
+			| (() => {
+					threads: Record<string, number>;
+					latencyMs: Record<string, unknown>;
+			  })
+			| null = null;
 		function partitionProducer(
 			producerConfig: ProducerConfig,
 		): KafkaProducerClient {
@@ -318,7 +327,7 @@ export async function createBalanceWorker({
 				},
 			});
 			producers = started.producers;
-			drainThreadHealth = started.drainThreadHealth;
+			drainThreadSignals = started.drainThreadSignals;
 			dependencies.logger.info(
 				`Balance worker listening at ${address.endpoint} through ${threads.httpWorkers} HTTP worker threads, partition producers on the producer thread; partition admission follows recovery`,
 			);
@@ -377,10 +386,18 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
+		/** Closes the window: its per-partition commit lines go out, and its signals join the summary line. */
 		function windowSignals() {
+			logCommitWindows({
+				ctx: { logger: dependencies.logger, summaries: commitSummaries },
+				config: {
+					deployment: env.BALANCE_WORKER_DEPLOYMENT,
+					endpoint: address.endpoint,
+				},
+			});
 			return {
 				inline: inlineCounters.drain(),
-				...(drainThreadHealth && { threads: drainThreadHealth() }),
+				...drainThreadSignals?.(),
 			};
 		}
 		const stallMonitor = createEventLoopStallMonitor({
