@@ -108,7 +108,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	"QA SA6: live pro with a saved later phase — a backdate is rejected, a future start replaces the schedule",
+	"QA SA6: live pro with a saved later phase — a backdate recreates it and its schedule, a future start replaces the schedule",
 	async () => {
 		const { pro, premium } = startsAtProducts();
 		const { autumnV2_4, customerId } = await initScenario({

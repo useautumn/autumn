@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	type FullCusProduct,
 	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
@@ -12,6 +13,7 @@ import type {
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
+import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -118,6 +120,25 @@ const isOnReplacedSubscription = ({
 	);
 };
 
+const isOnReplacedSchedule = ({
+	billingContext,
+	customerProduct,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	customerProduct: FullCusProduct;
+}) => {
+	const replacedScheduleId = replacedStripeScheduleId({
+		replacedStripeSubscription: billingContext.replacedStripeSubscription,
+	});
+	return (
+		replacedScheduleId !== undefined &&
+		isCustomerProductOnStripeSubscriptionSchedule({
+			customerProduct,
+			stripeSubscriptionScheduleId: replacedScheduleId,
+		}) === true
+	);
+};
+
 const isLiveRow = (customerProduct: FullCusProduct) =>
 	customerProduct.status !== CusProductStatus.Scheduled;
 
@@ -148,6 +169,13 @@ const keptRowUpdate = ({
 		isOnReplacedSubscription({ billingContext, customerProduct });
 	// Unlinked and paired with an empty patch, execution stamps the new subscription's id on it.
 	if (relinks) update.updates.subscription_ids = [];
+	// Unlinked from the released schedule, execution stamps the new schedule's id on it.
+	const leavesReleasedSchedule =
+		isBackdateRecreate({ billingContext }) &&
+		isOnReplacedSchedule({ billingContext, customerProduct });
+	if (leavesReleasedSchedule) {
+		update.updates.scheduled_ids = [];
+	}
 	if (relinks && backdatedStartsAt !== undefined) {
 		update.updates.starts_at = backdatedStartsAt;
 	}

@@ -37,6 +37,34 @@ describe("buildReplacedSubscriptionAction", () => {
 		});
 	});
 
+	test("a scheduled subscription replaced for a backdate releases its schedule first", () => {
+		expect(
+			buildReplacedSubscriptionAction({
+				replacedStripeSubscription: {
+					...subscription("active"),
+					schedule: "sub_sched_live",
+				} as Stripe.Subscription,
+				subscriptionBackdateStartMs: 1_790_000_000_000,
+			}),
+		).toEqual({
+			type: "cancel",
+			stripeSubscriptionId: "sub_active",
+			stripeSubscriptionScheduleId: "sub_sched_live",
+			reason: "backdate",
+		});
+	});
+
+	test("a scheduled subscription a future start replaces keeps its plain cancel", () => {
+		expect(
+			buildReplacedSubscriptionAction({
+				replacedStripeSubscription: {
+					...subscription("active"),
+					schedule: "sub_sched_live",
+				} as Stripe.Subscription,
+			}),
+		).toEqual({ type: "cancel", stripeSubscriptionId: "sub_active" });
+	});
+
 	test("an unusable subscription keeps its plain cancel when backdating", () => {
 		expect(
 			buildReplacedSubscriptionAction({

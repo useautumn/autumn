@@ -12,7 +12,6 @@ import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { handleBackdateRecreateErrors } from "./handleBackdateRecreateErrors";
-import { handleScheduledSubscriptionBackdateErrors } from "./handleScheduledSubscriptionBackdateErrors";
 import { setPlansError } from "./setPlansError";
 
 const futureStartConflict = ({
@@ -130,9 +129,6 @@ export const handleFirstPhaseStartDateErrors = ({
 
 	// Re-saving an existing schedule replays the started phase's own start date,
 	// which is a past timestamp but never a request to bill from it.
-	if (isExistingScheduleUpdate({ billingContext })) {
-		handleScheduledSubscriptionBackdateErrors({ billingContext });
-		return;
-	}
+	if (isExistingScheduleUpdate({ billingContext })) return;
 	handlePastStartErrors({ billingContext, timeline, preview });
 };

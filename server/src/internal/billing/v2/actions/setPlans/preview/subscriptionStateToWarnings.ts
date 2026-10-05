@@ -18,6 +18,7 @@ import {
 import type Stripe from "stripe";
 import { backdateGap, billsBackdateGap } from "../utils/backdateGap";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { replacedStripeScheduleId } from "../utils/replacedStripeScheduleId";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { subscriptionStateAction } from "../utils/subscriptionStateAction";
 import { billingStartsLaterWarning } from "./billingStartsLaterWarning";
@@ -124,7 +125,11 @@ const backdateRecreateWarning = ({
 	billingContext: SubscriptionWarningContext;
 	lineItems: LineItem[];
 }): Warning | undefined => {
-	const { subscriptionBackdateStartMs, billingCycleAnchorMs } = billingContext;
+	const {
+		subscriptionBackdateStartMs,
+		billingCycleAnchorMs,
+		replacedStripeSubscription,
+	} = billingContext;
 	if (!isBackdateRecreate({ billingContext })) return undefined;
 	if (subscriptionBackdateStartMs === undefined) return undefined;
 	if (typeof billingCycleAnchorMs !== "number") return undefined;
@@ -145,6 +150,9 @@ const backdateRecreateWarning = ({
 			),
 			boldText(backdateStart),
 			punctuationText("."),
+			...(replacedStripeScheduleId({ replacedStripeSubscription })
+				? [plainText("Its saved schedule is replaced.")]
+				: []),
 			...backdateGapParts({ billingContext, lineItems }),
 			...renewal,
 			boldText(formatMsToDate(billingCycleAnchorMs)),

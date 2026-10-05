@@ -46,11 +46,13 @@ const cancelReplacedSubscription = async ({
 	ctx,
 	customerId,
 	stripeSubscriptionId,
+	stripeSubscriptionScheduleId,
 	cancelParams,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	stripeSubscriptionId: string;
+	stripeSubscriptionScheduleId?: string;
 	cancelParams?: Stripe.SubscriptionCancelParams;
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
@@ -65,6 +67,14 @@ const cancelReplacedSubscription = async ({
 					await stripeCli.subscriptions.retrieve(stripeSubscriptionId);
 				if (isEndedStripeSubscription(replacedSubscription)) return;
 
+				// Stripe won't cancel a subscription its schedule still manages.
+				if (stripeSubscriptionScheduleId && replacedSubscription.schedule) {
+					await stripeCli.subscriptionSchedules.release(
+						stripeSubscriptionScheduleId,
+						{},
+						autumnStripeRequestOptions({ source: "set_plans_replace" }),
+					);
+				}
 				await stripeCli.subscriptions.cancel(
 					stripeSubscriptionId,
 					cancelParams,
@@ -96,11 +106,13 @@ export const executeStripeReplacedSubscriptionAction = async ({
 }) => {
 	if (!replacedSubscriptionAction) return;
 
-	const { stripeSubscriptionId, reason } = replacedSubscriptionAction;
+	const { stripeSubscriptionId, stripeSubscriptionScheduleId, reason } =
+		replacedSubscriptionAction;
 	await cancelReplacedSubscription({
 		ctx,
 		customerId: fullCustomer.id ?? fullCustomer.internal_id,
 		stripeSubscriptionId,
+		stripeSubscriptionScheduleId,
 		cancelParams: reason === "backdate" ? BACKDATE_CANCEL_PARAMS : undefined,
 	});
 	await expireReplacedPendingCustomerProducts({

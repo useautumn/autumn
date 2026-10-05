@@ -3,6 +3,7 @@ import {
 	addInterval,
 	BillingInterval,
 	msToSeconds,
+	type ProductV2,
 	secondsToMs,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
@@ -21,10 +22,12 @@ export const initLiveProScenario = async ({
 	customerId,
 	entityCount = 0,
 	advanceDays,
+	otherProducts = [],
 }: {
 	customerId: string;
 	entityCount?: number;
 	advanceDays?: number;
+	otherProducts?: ProductV2[];
 }) => {
 	const { pro } = startsAtProducts();
 	const attachSteps =
@@ -37,7 +40,7 @@ export const initLiveProScenario = async ({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
+			s.products({ list: [pro, ...otherProducts] }),
 			...(entityCount > 0
 				? [s.entities({ count: entityCount, featureId: TestFeature.Users })]
 				: []),

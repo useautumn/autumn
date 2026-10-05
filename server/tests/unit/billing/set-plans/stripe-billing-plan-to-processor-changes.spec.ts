@@ -174,6 +174,32 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		]);
 	});
 
+	test("a scheduled subscription a backdate recreates shows its schedule released before its cancel", () => {
+		expect(
+			stripeBillingPlanToProcessorChanges({
+				stripeBillingPlan: {
+					subscriptionAction: { type: "create", params: {} },
+					subscriptionScheduleAction: { type: "create", params: twoPhases },
+					replacedSubscriptionAction: {
+						type: "cancel",
+						stripeSubscriptionId: "sub_live",
+						stripeSubscriptionScheduleId: "sub_sched_old",
+						reason: "backdate",
+					},
+				},
+			}),
+		).toEqual([
+			{ type: "subscription", id: null, action: "created" },
+			{
+				type: "subscription_schedule",
+				id: "sub_sched_old",
+				action: "released",
+			},
+			{ type: "subscription", id: "sub_live", action: "canceled" },
+			{ type: "subscription_schedule", id: null, action: "created" },
+		]);
+	});
+
 	test("no Stripe actions", () => {
 		expect(
 			stripeBillingPlanToProcessorChanges({

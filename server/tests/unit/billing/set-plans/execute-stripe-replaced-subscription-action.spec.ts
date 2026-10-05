@@ -11,6 +11,8 @@ const stripeState = {
 	cancelCalls: 0,
 	cancelParams: undefined as Stripe.SubscriptionCancelParams | undefined,
 	retrievedStatus: "incomplete" as Stripe.Subscription.Status,
+	retrievedSchedule: null as string | null,
+	calls: [] as string[],
 };
 const loggedErrors: string[] = [];
 
@@ -20,6 +22,7 @@ await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 			cancel: async (id: string, params?: Stripe.SubscriptionCancelParams) => {
 				stripeState.cancelCalls++;
 				stripeState.cancelParams = params;
+				stripeState.calls.push(`cancel ${id}`);
 				const cancelError = stripeState.cancelErrors.shift();
 				if (cancelError) throw cancelError;
 				return { id, status: "canceled" };
@@ -27,7 +30,15 @@ await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 			retrieve: async (id: string) => ({
 				id,
 				status: stripeState.retrievedStatus,
+				schedule: stripeState.retrievedSchedule,
 			}),
+		},
+		subscriptionSchedules: {
+			release: async (id: string) => {
+				stripeState.calls.push(`release ${id}`);
+				stripeState.retrievedSchedule = null;
+				return { id, status: "released" };
+			},
 		},
 	}),
 }));
@@ -46,7 +57,13 @@ const ctx = {
 	},
 } as unknown as AutumnContext;
 
-const cancelReplaced = ({ reason }: { reason?: "backdate" } = {}) =>
+const cancelReplaced = ({
+	reason,
+	stripeSubscriptionScheduleId,
+}: {
+	reason?: "backdate";
+	stripeSubscriptionScheduleId?: string;
+} = {}) =>
 	executeStripeReplacedSubscriptionAction({
 		ctx,
 		fullCustomer: {
@@ -56,6 +73,7 @@ const cancelReplaced = ({ reason }: { reason?: "backdate" } = {}) =>
 		replacedSubscriptionAction: {
 			type: "cancel",
 			stripeSubscriptionId: "sub_old",
+			stripeSubscriptionScheduleId,
 			reason,
 		},
 	});
@@ -72,6 +90,8 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 		stripeState.cancelCalls = 0;
 		stripeState.cancelParams = undefined;
 		stripeState.retrievedStatus = "incomplete";
+		stripeState.retrievedSchedule = null;
+		stripeState.calls = [];
 		loggedErrors.length = 0;
 	});
 
@@ -120,6 +140,33 @@ describe("executeStripeReplacedSubscriptionAction", () => {
 			prorate: false,
 			invoice_now: false,
 		});
+	});
+
+	test("a scheduled subscription recreated for a backdate has its schedule released before it is cancelled", async () => {
+		stripeState.retrievedStatus = "active";
+		stripeState.retrievedSchedule = "sub_sched_old";
+
+		await cancelReplaced({
+			reason: "backdate",
+			stripeSubscriptionScheduleId: "sub_sched_old",
+		});
+
+		expect(stripeState.calls).toEqual([
+			"release sub_sched_old",
+			"cancel sub_old",
+		]);
+		expect(loggedErrors).toEqual([]);
+	});
+
+	test("a schedule a retry already released is not released again", async () => {
+		stripeState.retrievedStatus = "active";
+
+		await cancelReplaced({
+			reason: "backdate",
+			stripeSubscriptionScheduleId: "sub_sched_old",
+		});
+
+		expect(stripeState.calls).toEqual(["cancel sub_old"]);
 	});
 
 	test("a cancel Stripe rejects outright is not retried", async () => {

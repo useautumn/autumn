@@ -1018,5 +1018,100 @@ describe(
 				backdatedStart,
 			);
 		});
+
+		test("plans kept on the replaced schedule are unlinked from it, so the new schedule claims them", () => {
+			const ctx = contexts.create({});
+			const phaseStartsAt = periodEnd;
+			const scheduledSubscription = {
+				...liveSubscription,
+				schedule: "sub_sched_live",
+			} as Stripe.Subscription;
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: [liveSubscription.id],
+			});
+			customerProduct.starts_at = periodStart;
+			customerProduct.ended_at = phaseStartsAt;
+			customerProduct.scheduled_ids = ["sub_sched_live"];
+			const premium = products.createFull({
+				id: "premium",
+				prices: [prices.createFixed({ id: "price_premium" })],
+			});
+			const scheduledPremium = {
+				...customerProducts.create({
+					id: "cus_prod_premium",
+					productId: premium.id,
+					product: premium,
+					status: CusProductStatus.Scheduled,
+					subscriptionIds: [liveSubscription.id],
+					startsAt: phaseStartsAt,
+					customerPrices: [
+						prices.createCustomer({
+							price: premium.prices[0]!,
+							customerProductId: "cus_prod_premium",
+						}),
+					],
+				}),
+				scheduled_ids: ["sub_sched_live"],
+			};
+
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: {
+					...createBillingContext({
+						currentEpochMs,
+						productContexts: [
+							{
+								...requestProductContext({
+									fullProduct: pro,
+									currentCustomerProduct: customerProduct,
+								}),
+								scopeCustomerProducts: [customerProduct, scheduledPremium],
+								scheduledCustomerProduct: scheduledPremium,
+							},
+						],
+						immediatePhase: {
+							starts_at: backdatedStart,
+							plans: [{ plan_id: pro.id }],
+						},
+						futurePhases: [
+							{
+								starts_at: phaseStartsAt,
+								plans: [{ plan_id: premium.id }],
+							} as CreateScheduleBillingContext["futurePhases"][number],
+						],
+						scheduledPhaseContexts: [
+							{
+								startsAt: phaseStartsAt,
+								endsAt: undefined,
+								productContexts: [
+									{
+										fullProduct: premium,
+										customPrices: [],
+										customEntitlements: [],
+										featureQuantities: [],
+									},
+								],
+							} as CreateScheduleBillingContext["scheduledPhaseContexts"][number],
+						],
+					}),
+					replacedStripeSubscription: scheduledSubscription,
+					subscriptionBackdateStartMs: backdatedStart,
+					billingCycleAnchorMs: periodEnd,
+				},
+			});
+
+			expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
+			expect(
+				autumnBillingPlan.updateCustomerProducts?.map(
+					({ customerProduct: updated, updates }) => ({
+						id: updated.id,
+						scheduledIds: updates.scheduled_ids,
+					}),
+				),
+			).toEqual([
+				{ id: customerProduct.id, scheduledIds: [] },
+				{ id: scheduledPremium.id, scheduledIds: [] },
+			]);
+		});
 	},
 );

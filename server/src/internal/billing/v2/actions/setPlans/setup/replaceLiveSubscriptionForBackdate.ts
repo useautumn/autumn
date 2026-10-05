@@ -3,13 +3,14 @@ import type {
 	StripeSubscriptionScope,
 } from "@autumn/shared";
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
+import { startsBeforeLivePlans } from "../utils/startsBeforeLivePlans";
 import { classifyFirstPhaseStart } from "./classifyFirstPhaseStart";
 import {
 	type LiveSubscriptionFields,
 	replaceStripeSubscription,
 } from "./replaceStripeSubscription";
 
-/** A backdated first phase can't move a live subscription's start, so the subscription is recreated from it. */
+/** A backdated first phase can't move a live subscription's start, so the subscription and its schedule are recreated from it. */
 export const replaceLiveSubscriptionForBackdate = ({
 	billingContext,
 	immediatePhase,
@@ -34,13 +35,16 @@ export const replaceLiveSubscriptionForBackdate = ({
 			currentEpochMs: billingContext.currentEpochMs,
 		}) === "past";
 	if (!backdatesFirstPhase) return {};
-	if (
+	const replaysScheduledStart =
 		isExistingScheduleUpdate({
 			billingContext: { ...billingContext, stripeSubscriptionScope },
-		})
-	) {
-		return {};
-	}
+		}) &&
+		!startsBeforeLivePlans({
+			startsAt: immediatePhase.starts_at,
+			fullCustomer: billingContext.fullCustomer,
+			stripeSubscriptionScope,
+		});
+	if (replaysScheduledStart) return {};
 
 	return replaceStripeSubscription({
 		stripeSubscription,

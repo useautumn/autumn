@@ -91,7 +91,6 @@ export const SetPlansBackdateConflictSchema = z.object({
 	conflict: z.enum([
 		"free_trial",
 		"stripe_checkout",
-		"subscription_schedule",
 		"period_ended",
 		"billing_cycle_anchor",
 		"too_far_back",

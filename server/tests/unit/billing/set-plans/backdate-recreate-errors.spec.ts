@@ -1,7 +1,7 @@
 /**
  * A backdate over a healthy live subscription recreates it, so anything the recreate would
  * lose or rebill is rejected with structured details: a trial, Stripe Checkout, a paid period
- * already over, a changed anchor, a start too far back, a plan it doesn't cover, or a schedule.
+ * already over, a changed anchor, a start too far back, or a plan it doesn't cover.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -259,33 +259,18 @@ describe(
 			).toEqual(conflict("plan_outside_request", { plan_name: "addon plan" }));
 		});
 
-		test("a schedule on the subscription can't be rebuilt behind an earlier start; replaying its own start passes", () => {
-			const scheduled = {
-				replacedStripeSubscription: undefined,
-				subscriptionBackdateStartMs: undefined,
-				stripeSubscription: liveSubscription(),
-				stripeSubscriptionSchedule: {
-					id: "sub_sched_live",
-					subscription: "sub_live",
-				} as Stripe.SubscriptionSchedule,
-			};
-			expect(
-				rejectionOf({ billingContext: backdateContext(scheduled) }),
-			).toEqual(conflict("subscription_schedule"));
-
-			const replayedStart = NOW - ms.days(18);
+		test("a scheduled subscription's backdate is recreated with its schedule; replaying its own start passes", () => {
 			expect(
 				rejectionOf({
 					billingContext: backdateContext({
-						...scheduled,
-						immediatePhase: { starts_at: replayedStart, plans: [] },
+						replacedStripeSubscription: {
+							...liveSubscription(),
+							schedule: "sub_sched_live",
+						} as Stripe.Subscription,
 					}),
 				}),
 			).toBeUndefined();
-		});
 
-		test("a replayed start between an older and a newer plan's start predates the newer plan", () => {
-			const betweenStarts = NOW - ms.days(30);
 			expect(
 				rejectionOf({
 					billingContext: backdateContext({
@@ -296,21 +281,10 @@ describe(
 							id: "sub_sched_live",
 							subscription: "sub_live",
 						} as Stripe.SubscriptionSchedule,
-						immediatePhase: { starts_at: betweenStarts, plans: [] },
-						fullCustomer: {
-							customer_products: [
-								rowOnLiveSubscription({
-									id: "pro",
-									startsAt: NOW - ms.days(60),
-								}),
-								rowOnLiveSubscription({ id: "addon" }),
-							],
-						} as CreateScheduleBillingContext["fullCustomer"],
+						immediatePhase: { starts_at: NOW - ms.days(18), plans: [] },
 					}),
 				}),
-			).toEqual(
-				conflict("subscription_schedule", { starts_at: betweenStarts }),
-			);
+			).toBeUndefined();
 		});
 	},
 );

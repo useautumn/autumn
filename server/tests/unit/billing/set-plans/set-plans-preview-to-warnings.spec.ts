@@ -471,11 +471,13 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		billingCycleAnchorMs = NOON_UTC + 12 * DAY_MS,
 		restartsCycle = false,
 		lineItems = [],
+		schedule = null,
 	}: {
 		requestedProrationBehavior?: "none" | "prorate_immediately";
 		billingCycleAnchorMs?: number;
 		restartsCycle?: boolean;
 		lineItems?: LineItem[];
+		schedule?: string | null;
 	}) =>
 		stateWarnings({
 			billingContext: {
@@ -494,6 +496,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 					id: "sub_live",
 					status: "active",
 					start_date: Math.floor((NOON_UTC - 30 * DAY_MS) / 1000),
+					schedule,
 				}),
 				stripeDiscounts: [],
 			},
@@ -538,6 +541,41 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				],
 			}),
 		).toContain("¥3,333 is billed now");
+	});
+
+	test("a backdate over a scheduled subscription says its saved schedule is replaced", () => {
+		expect(backdateRecreateMessage({ schedule: "sub_sched_live" })).toBe(
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. Its saved schedule is replaced. The time before 30 Aug 2026 isn't billed. Billing then continues on 11 Oct 2026.",
+		);
+	});
+
+	test("a backdate over a scheduled subscription also warns that Stripe schedule edits are overwritten", () => {
+		const warningTypes = stateWarnings({
+			processorChanges: [
+				{ type: "subscription", id: null, action: "created" },
+				{
+					type: "subscription_schedule",
+					id: "sub_sched_live",
+					action: "released",
+				},
+				{ type: "subscription", id: "sub_live", action: "canceled" },
+				{ type: "subscription_schedule", id: null, action: "created" },
+			],
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				subscriptionBackdateStartMs: NOON_UTC - 40 * DAY_MS,
+				billingCycleAnchorMs: NOON_UTC + 12 * DAY_MS,
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_live",
+					status: "active",
+					schedule: "sub_sched_live",
+				}),
+				stripeDiscounts: [],
+			},
+		}).map(({ type }) => type);
+
+		expect(warningTypes).toContain("subscription_recreated_backdated");
+		expect(warningTypes).toContain("existing_schedule_replaced");
 	});
 
 	test("a backdate that restarts the cycle says when the restarted cycle renews", () => {

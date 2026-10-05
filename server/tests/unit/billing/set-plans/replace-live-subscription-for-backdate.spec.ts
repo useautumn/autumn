@@ -1,4 +1,4 @@
-/** A backdated first phase recreates a healthy live subscription; a start now, a later start, or a re-saved schedule keeps it. */
+/** A backdated first phase recreates a healthy live subscription and its schedule; a start now, a later start, or a re-saved schedule keeps it. */
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -14,8 +14,15 @@ import { replaceLiveSubscriptionForBackdate } from "@/internal/billing/v2/action
 
 const currentEpochMs = 1_800_000_000_000;
 
+const planStart = currentEpochMs - ms.days(20);
+
 const subscriptionWithStatus = (status: Stripe.Subscription.Status) =>
 	({ id: "sub_live", status }) as Stripe.Subscription;
+
+const liveSchedule = {
+	id: "sub_sched_live",
+	subscription: "sub_live",
+} as Stripe.SubscriptionSchedule;
 
 const proOnLiveSubscription = ({
 	scheduledIds = [],
@@ -28,6 +35,7 @@ const proOnLiveSubscription = ({
 		product: products.createFull({ id: "pro" }),
 		status: CusProductStatus.Active,
 		subscriptionIds: ["sub_live"],
+		startsAt: planStart,
 	}),
 	scheduled_ids: scheduledIds,
 });
@@ -54,7 +62,8 @@ const replace = ({
 	});
 
 describe("replaceLiveSubscriptionForBackdate", () => {
-	const backdatedStart = currentEpochMs - ms.days(20);
+	const backdatedStart = planStart;
+	const earlierThanPlans = planStart - ms.days(30);
 
 	test("a backdated start moves a healthy subscription aside to be recreated", () => {
 		const pastDue = subscriptionWithStatus("past_due");
@@ -77,10 +86,7 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 		expect(
 			replace({
 				startsAt: backdatedStart,
-				stripeSubscriptionSchedule: {
-					id: "sub_sched_live",
-					subscription: "sub_live",
-				} as Stripe.SubscriptionSchedule,
+				stripeSubscriptionSchedule: liveSchedule,
 			}),
 		).toEqual({});
 		expect(
@@ -89,6 +95,33 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 				rows: [proOnLiveSubscription({ scheduledIds: ["sub_sched_live"] })],
 			}),
 		).toEqual({});
+	});
+
+	test("a start earlier than a scheduled subscription's plans moves it and its schedule aside", () => {
+		const active = subscriptionWithStatus("active");
+
+		expect(
+			replace({
+				startsAt: earlierThanPlans,
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: liveSchedule,
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: active,
+		});
+		expect(
+			replace({
+				startsAt: earlierThanPlans,
+				stripeSubscription: active,
+				rows: [proOnLiveSubscription({ scheduledIds: ["sub_sched_live"] })],
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: active,
+		});
 	});
 
 	test("nothing live leaves nothing to replace", () => {

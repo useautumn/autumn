@@ -118,10 +118,6 @@ const BACKDATE_CONFLICT_COPY: Record<
 		subject: "Stripe Checkout can't backdate the subscription to",
 		hint: "Add a payment method, or start the first phase now.",
 	},
-	subscription_schedule: {
-		subject: "A subscription with a schedule can't be backdated to",
-		hint: "Keep the first phase on its current start date.",
-	},
 	period_ended: {
 		subject:
 			"The subscription's paid period has already ended, so it can't be backdated to",
