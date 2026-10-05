@@ -218,6 +218,7 @@ describe("singleStatementFlushSql", () => {
 						nextOffset: 42n,
 					},
 				],
+				nonce: "n0nce",
 			}),
 		);
 		const sql = flatten(query.sql);
@@ -228,7 +229,10 @@ describe("singleStatementFlushSql", () => {
 		expect(sql).toContain(
 			'WHERE CASE WHEN (SELECT count(*) FROM b) = $14::bigint AND (SELECT count(*) FROM "u0") = 1 THEN true ELSE ($15::text || (SELECT count(*) FROM b) || \':\' || array_to_string(ARRAY[(SELECT count(*) FROM "u0"), (SELECT count(*) FROM "u1")], \',\'))::integer IS NULL END',
 		);
-		expect(query.params.slice(-2)).toEqual([1, FLUSH_ROLLBACK_MARKER]);
+		expect(query.params.slice(-2)).toEqual([
+			1,
+			`${FLUSH_ROLLBACK_MARKER}n0nce:`,
+		]);
 		expect(sql).not.toContain("BEGIN");
 	});
 });
