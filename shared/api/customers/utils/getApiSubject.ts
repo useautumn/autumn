@@ -1,4 +1,5 @@
 import type {
+	AllocationView,
 	ApiCustomerV5,
 	ApiEntityV2,
 	FullSubject,
@@ -12,10 +13,12 @@ export const getApiSubject = async ({
 	ctx,
 	fullSubject,
 	includeAggregations,
+	allocationView,
 }: {
 	ctx: SharedContext;
 	fullSubject: FullSubject;
 	includeAggregations: boolean;
+	allocationView?: AllocationView;
 }): Promise<ApiCustomerV5 | ApiEntityV2> => {
 	if (fullSubject.subjectType === "entity") {
 		const { apiEntity } = await getApiEntityBaseV2({
@@ -33,6 +36,7 @@ export const getApiSubject = async ({
 		ctx,
 		fullSubject: subjectToUse,
 		withAutumnId: true,
+		allocationView,
 	});
 
 	return apiCustomer;
