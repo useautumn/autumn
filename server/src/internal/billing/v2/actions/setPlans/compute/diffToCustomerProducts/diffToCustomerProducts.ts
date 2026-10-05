@@ -142,6 +142,35 @@ const isOnReplacedSchedule = ({
 const isLiveRow = (customerProduct: FullCusProduct) =>
 	customerProduct.status !== CusProductStatus.Scheduled;
 
+/** The links a kept row drops to leave a replaced subscription; a backdate recreate also moves its scheduled rows and schedule. */
+const replacedLinkResets = ({
+	billingContext,
+	customerProduct,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	customerProduct: FullCusProduct;
+}): CustomerProductUpdate["updates"] | undefined => {
+	const onReplacedSubscription = isOnReplacedSubscription({
+		billingContext,
+		customerProduct,
+	});
+	if (!isBackdateRecreate({ billingContext })) {
+		return isLiveRow(customerProduct) && onReplacedSubscription
+			? { subscription_ids: [] }
+			: undefined;
+	}
+
+	const onReplacedSchedule = isOnReplacedSchedule({
+		billingContext,
+		customerProduct,
+	});
+	if (!onReplacedSubscription && !onReplacedSchedule) return undefined;
+	return {
+		subscription_ids: [],
+		...(onReplacedSchedule && { scheduled_ids: [] }),
+	};
+};
+
 /** A kept row takes its new end, and moves off a replaced subscription onto the new one, from its backdated start if any. */
 const keptRowUpdate = ({
 	billingContext,
@@ -164,25 +193,20 @@ const keptRowUpdate = ({
 		update.updates.ended_at = retime.endsAt;
 	}
 
-	const relinks =
+	const linkResets = replacedLinkResets({ billingContext, customerProduct });
+	// Unlinked and paired with an empty patch, execution stamps the new subscription and schedule ids on it.
+	if (linkResets) Object.assign(update.updates, linkResets);
+	if (
+		linkResets &&
 		isLiveRow(customerProduct) &&
-		isOnReplacedSubscription({ billingContext, customerProduct });
-	// Unlinked and paired with an empty patch, execution stamps the new subscription's id on it.
-	if (relinks) update.updates.subscription_ids = [];
-	// Unlinked from the released schedule, execution stamps the new schedule's id on it.
-	const leavesReleasedSchedule =
-		isBackdateRecreate({ billingContext }) &&
-		isOnReplacedSchedule({ billingContext, customerProduct });
-	if (leavesReleasedSchedule) {
-		update.updates.scheduled_ids = [];
-	}
-	if (relinks && backdatedStartsAt !== undefined) {
+		backdatedStartsAt !== undefined
+	) {
 		update.updates.starts_at = backdatedStartsAt;
 	}
 
 	return {
 		update: Object.keys(update.updates).length > 0 ? update : undefined,
-		patch: relinks ? emptyPatch(customerProduct) : undefined,
+		patch: linkResets ? emptyPatch(customerProduct) : undefined,
 	};
 };
 

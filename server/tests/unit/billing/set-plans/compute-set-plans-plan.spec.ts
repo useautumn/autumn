@@ -1019,7 +1019,7 @@ describe(
 			);
 		});
 
-		test("plans kept on the replaced schedule are unlinked from it, so the new schedule claims them", () => {
+		test("plans kept on the replaced subscription and schedule are unlinked and patched, so the new ones claim them", () => {
 			const ctx = contexts.create({});
 			const phaseStartsAt = periodEnd;
 			const scheduledSubscription = {
@@ -1105,13 +1105,30 @@ describe(
 				autumnBillingPlan.updateCustomerProducts?.map(
 					({ customerProduct: updated, updates }) => ({
 						id: updated.id,
+						subscriptionIds: updates.subscription_ids,
 						scheduledIds: updates.scheduled_ids,
+						startsAt: updates.starts_at,
 					}),
 				),
 			).toEqual([
-				{ id: customerProduct.id, scheduledIds: [] },
-				{ id: scheduledPremium.id, scheduledIds: [] },
+				{
+					id: customerProduct.id,
+					subscriptionIds: [],
+					scheduledIds: [],
+					startsAt: backdatedStart,
+				},
+				{
+					id: scheduledPremium.id,
+					subscriptionIds: [],
+					scheduledIds: [],
+					startsAt: undefined,
+				},
 			]);
+			expect(
+				autumnBillingPlan.patchCustomerProducts?.map(
+					({ customerProduct: patched }) => patched.id,
+				),
+			).toEqual([customerProduct.id, scheduledPremium.id]);
 		});
 	},
 );
