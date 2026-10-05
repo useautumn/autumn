@@ -390,7 +390,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "2.0.71",
+      "version": "2.0.72",
       "bin": {
         "atmn": "dist/bin.js",
       },
@@ -799,7 +799,7 @@
     },
     "packages/gateway": {
       "name": "@useautumn/gateway",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@ai-sdk/provider": "^4.0.7",
       },
