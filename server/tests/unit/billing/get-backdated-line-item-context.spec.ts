@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { type BillingContext, ms } from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import type Stripe from "stripe";
+import { getBackdateGapLineItemContext } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 import { getBackdatedLineItemContext } from "@/internal/billing/v2/utils/lineItems/getBackdatedLineItemContext";
 
 const NOW = 1_800_000_000_000;
@@ -40,5 +41,27 @@ describe("getBackdatedLineItemContext", () => {
 				} as Stripe.Subscription,
 			}),
 		).toBeUndefined();
+	});
+});
+
+describe("getBackdateGapLineItemContext", () => {
+	const gap = {
+		start: Date.UTC(2026, 0, 31),
+		end: Date.UTC(2026, 2, 30),
+	};
+
+	test("counts a month-end gap's cycles back from its end, the anchor its billing period uses", () => {
+		expect(
+			getBackdateGapLineItemContext({
+				price,
+				billingContext: { requestedProrationBehavior: "bill_difference" },
+				backdateGap: gap,
+			}),
+		).toEqual({
+			billingPeriod: { start: Date.UTC(2026, 0, 30), end: gap.end },
+			now: Date.UTC(2026, 0, 30),
+			effectivePeriod: gap,
+			backdate: { startsAt: gap.start, cycleCount: 2 },
+		});
 	});
 });

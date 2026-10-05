@@ -5,11 +5,43 @@ import {
 	type LineItemContext,
 	type Price,
 } from "@autumn/shared";
-import { getBackdatedCycleCountForPrice } from "./countBackdatedPeriods";
+
+const cyclesBeforeEnd = ({
+	price,
+	end,
+	cycleCount,
+}: {
+	price: Price;
+	end: number;
+	cycleCount: number;
+}) =>
+	addInterval({
+		from: end,
+		interval: price.config.interval,
+		intervalCount: -cycleCount * (price.config.interval_count ?? 1),
+	});
+
+/** Cycles are counted back from the gap's end, the anchor its billing period is built on, until one reaches its start. */
+const countGapCycles = ({
+	price,
+	backdateGap,
+}: {
+	price: Price;
+	backdateGap: BillingPeriod;
+}) => {
+	let cycleCount = 1;
+	while (
+		cyclesBeforeEnd({ price, end: backdateGap.end, cycleCount }) >
+		backdateGap.start
+	) {
+		cycleCount += 1;
+	}
+	return cycleCount;
+};
 
 /**
- * Bills a gap over the cycles it reaches, counted like attach's backdate catch-up and ending on
- * the gap's end: in full for bill_difference, otherwise pro rata from the gap's start.
+ * Bills a gap over the cycles it reaches, counted back from the gap's end: in full for
+ * bill_difference, otherwise pro rata from the gap's start.
  */
 export const getBackdateGapLineItemContext = ({
 	price,
@@ -23,15 +55,11 @@ export const getBackdateGapLineItemContext = ({
 	LineItemContext,
 	"billingPeriod" | "now" | "effectivePeriod" | "backdate"
 > => {
-	const cycleCount = getBackdatedCycleCountForPrice({
+	const cycleCount = countGapCycles({ price, backdateGap });
+	const cyclesStart = cyclesBeforeEnd({
 		price,
-		startsAt: backdateGap.start,
-		currentEpochMs: backdateGap.end,
-	});
-	const cyclesStart = addInterval({
-		from: backdateGap.end,
-		interval: price.config.interval,
-		intervalCount: -cycleCount * (price.config.interval_count ?? 1),
+		end: backdateGap.end,
+		cycleCount,
 	});
 	const billsWholeCycles =
 		billingContext.requestedProrationBehavior === "bill_difference";
