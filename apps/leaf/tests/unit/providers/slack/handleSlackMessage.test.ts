@@ -435,6 +435,20 @@ describe("handleSlackMessage", () => {
 		expect(unsubscribe).not.toHaveBeenCalled();
 	});
 
+	test("ignores Slackbot notices that tag the agent", async () => {
+		const { thread } = createThread([], { subscribed: false });
+
+		await handleSlackThreadStart(
+			thread,
+			createMessage({
+				author: { isBot: false, userId: "USLACKBOT" },
+				text: "Tushar from Waybill was added to this channel by @Autumn.",
+			}),
+		);
+
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+	});
+
 	test("a trusted bot's mention starts a thread that runs as that bot", async () => {
 		trustedBotResult = billBot;
 		const { thread } = createThread();
