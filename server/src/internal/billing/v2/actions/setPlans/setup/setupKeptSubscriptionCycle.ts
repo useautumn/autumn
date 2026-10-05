@@ -1,6 +1,8 @@
 import {
 	type BillingBehavior,
 	type CreateScheduleBillingContext,
+	cusProductToPrices,
+	type FullCusProduct,
 	getCycleEnd,
 	getSmallestInterval,
 	isCustomerProductOnStripeSubscription,
@@ -17,16 +19,53 @@ type KeptSubscriptionCycle = Partial<
 	>
 >;
 
-/** The first renewal of a cycle restarted on the backdated start: its next boundary after now. */
-const backdatedCycleRenewalMs = ({
+/** The rows the diff keeps that ride on the replaced subscription, so its replacement carries them. */
+const keptCustomerProductsOnReplacedSubscription = ({
 	billingContext,
+	operations,
 }: {
 	billingContext: CreateScheduleBillingContext;
+	operations: SetPlansTimeline["diff"]["operations"];
+}): FullCusProduct[] => {
+	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
+	if (!replacedSubscriptionId) return [];
+
+	const keptCustomerProductIds = new Set(
+		operations.flatMap((operation) =>
+			operation.type === "keep" ? [operation.customerProductId] : [],
+		),
+	);
+	return billingContext.fullCustomer.customer_products.filter(
+		(customerProduct) =>
+			keptCustomerProductIds.has(customerProduct.id) &&
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId: replacedSubscriptionId,
+			}),
+	);
+};
+
+/** The first renewal of a cycle restarted on the backdated start, over every plan the recreated subscription runs. */
+const backdatedCycleRenewalMs = ({
+	billingContext,
+	timeline,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	timeline: SetPlansTimeline;
 }) => {
 	const { subscriptionBackdateStartMs, currentEpochMs, fullProducts } =
 		billingContext;
+	const keptCustomerProducts = keptCustomerProductsOnReplacedSubscription({
+		billingContext,
+		operations: timeline.diff.operations,
+	});
 	const smallestInterval = getSmallestInterval({
-		prices: fullProducts.flatMap(({ prices }) => prices),
+		prices: [
+			...fullProducts.flatMap(({ prices }) => prices),
+			...keptCustomerProducts.flatMap((customerProduct) =>
+				cusProductToPrices({ cusProduct: customerProduct }),
+			),
+		],
 		excludeOneOff: true,
 	});
 	if (subscriptionBackdateStartMs === undefined || !smallestInterval) {
@@ -66,7 +105,7 @@ export const setupKeptSubscriptionCycle = ({
 		const billingCycleAnchorMs = restartsCycleAtBackdatedStart({
 			billingContext,
 		})
-			? (backdatedCycleRenewalMs({ billingContext }) ?? periodEndMs)
+			? (backdatedCycleRenewalMs({ billingContext, timeline }) ?? periodEndMs)
 			: periodEndMs;
 		return { billingCycleAnchorMs, requestedProrationBehavior };
 	}
@@ -76,21 +115,15 @@ export const setupKeptSubscriptionCycle = ({
 			.filter(({ origin }) => origin === "declared")
 			.map(({ id }) => id),
 	);
-	const keptCustomerProductIds = new Set(
-		timeline.diff.operations.flatMap((operation) =>
-			operation.type === "keep" && declaredSegmentIds.has(operation.segmentId)
-				? [operation.customerProductId]
-				: [],
-		),
-	);
-	const keepsReplacedPlan = billingContext.fullCustomer.customer_products.some(
-		(customerProduct) =>
-			keptCustomerProductIds.has(customerProduct.id) &&
-			isCustomerProductOnStripeSubscription({
-				customerProduct,
-				stripeSubscriptionId: replacedStripeSubscription.id,
-			}),
-	);
+	const keepsReplacedPlan =
+		keptCustomerProductsOnReplacedSubscription({
+			billingContext,
+			operations: timeline.diff.operations.filter(
+				(operation) =>
+					operation.type === "keep" &&
+					declaredSegmentIds.has(operation.segmentId),
+			),
+		}).length > 0;
 	if (!keepsReplacedPlan) return {};
 
 	return {

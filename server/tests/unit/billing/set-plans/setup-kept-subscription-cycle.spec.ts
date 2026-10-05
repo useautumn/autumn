@@ -2,8 +2,10 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+	BillingInterval,
 	BillingVersion,
 	type CreateScheduleBillingContext,
+	getCycleEnd,
 	ms,
 	msToSeconds,
 } from "@autumn/shared";
@@ -171,5 +173,76 @@ describe(chalk.yellowBright("setupKeptSubscriptionCycle: backdate"), () => {
 		expect(
 			keptCycle(backdatedOverLiveSubscription({ planOnSubscription: false })),
 		).toEqual({ billingCycleAnchorMs: PERIOD_END });
+	});
+
+	test("a restarted cycle renews on the smallest interval among the requested and the retained plans", () => {
+		const yearlyPrice = prices.createFixed({ id: "price_pro_yearly" });
+		yearlyPrice.config.interval = BillingInterval.Year;
+		const proYearly = products.createFull({
+			id: "pro_yearly",
+			prices: [yearlyPrice],
+		});
+		const monthlyAddon = products.createFull({
+			id: "addon",
+			isAddOn: true,
+			prices: [prices.createFixed({ id: "price_addon" })],
+		});
+		const retainedAddon = customerProducts.create({
+			id: "cus_prod_addon",
+			productId: monthlyAddon.id,
+			product: monthlyAddon,
+			subscriptionIds: [liveSubscription.id],
+			customerPrices: [
+				prices.createCustomer({
+					price: monthlyAddon.prices[0]!,
+					customerProductId: "cus_prod_addon",
+				}),
+			],
+		});
+		const baseContext = contexts.createBilling({
+			customerProducts: [retainedAddon],
+			fullProducts: [proYearly],
+			currentEpochMs: NOW,
+			billingVersion: BillingVersion.V2,
+		});
+		const billingContext: CreateScheduleBillingContext = {
+			...baseContext,
+			replacedStripeSubscription: liveSubscription,
+			subscriptionBackdateStartMs: BACKDATED_START,
+			productContexts: [
+				{
+					fullProduct: proYearly,
+					customPrices: [],
+					customEnts: [],
+					featureQuantities: [],
+					fullCustomer: baseContext.fullCustomer,
+				},
+			],
+			checkoutMode: null,
+			immediatePhase: {
+				starts_at: BACKDATED_START,
+				billing_cycle_anchor: "phase_start",
+				plans: [{ plan_id: proYearly.id }],
+			},
+			futurePhases: [],
+			scheduledPhaseContexts: [],
+		};
+
+		expect(
+			setupKeptSubscriptionCycle({
+				billingContext,
+				timeline: setupSetPlansTimeline({
+					ctx,
+					billingContext,
+					params: { undeclared_plans: "retain" },
+				}),
+			}).billingCycleAnchorMs,
+		).toBe(
+			getCycleEnd({
+				anchor: BACKDATED_START,
+				interval: BillingInterval.Month,
+				now: NOW,
+			}),
+		);
 	});
 });
