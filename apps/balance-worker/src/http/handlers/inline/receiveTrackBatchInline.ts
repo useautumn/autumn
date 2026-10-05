@@ -1,5 +1,7 @@
 import type { TrackCommand } from "@autumn/balance-engine";
 import { parseTrackBatchRequest } from "@autumn/balance-worker-client/protocol";
+import type { InlineTrackBatchItem } from "../../../processor/commands/trackBatchInline.js";
+import type { PartitionProcessor } from "../../../processor/types/partitionProcessor.js";
 import { logWorkerRequest } from "../../middlewares/requestLoggingMiddleware.js";
 import type { BalanceWorkerRequestLog } from "../../types/balanceWorkerHttp.js";
 import type { InlineReply } from "../../workerThreads/types/inlineHandler.js";
@@ -57,53 +59,86 @@ export function receiveTrackBatchInline({
 	if (!runtime?.processInline) return null;
 	const startedAt = performance.now();
 	const requestLog: BalanceWorkerRequestLog = { id: crypto.randomUUID() };
-	let reply: InlineReply;
+	function logged(status: number): void {
+		logWorkerRequest({
+			ctx,
+			requestLog,
+			statusCode: status,
+			method: "POST",
+			path: "/v1/track-batch",
+			route,
+			startedAt,
+		});
+	}
+	let decided: ReturnType<PartitionProcessor["trackBatchInline"]> | null;
 	try {
-		const decided = runtime.processInline((processor) =>
+		decided = runtime.processInline((processor) =>
 			processor.trackBatchInline({ commands }),
 		);
-		if (!decided || decided.kind === "refused") return null;
-		const results: Parameters<typeof recordBatch>[0]["results"] = [];
-		const json: string[] = [];
-		const causes: unknown[] = [];
-		for (const item of decided.items) {
-			if (item.ok) {
-				results.push({ ok: true });
-				json.push(`{"ok":true,"reply":${item.body}}`);
-				continue;
-			}
-			causes.push(item.cause);
-			const { status, error } = workerErrorOf({ cause: item.cause });
-			const failed = { ok: false as const, status, error };
-			results.push(failed);
-			json.push(JSON.stringify(failed));
-		}
-		recordBatch({ requestLog, route, commands, results, causes });
-		reply = {
-			status: 200,
-			body: batchBodyOf({ results: json }),
-			partition: route.partition,
-			heldUntilSeq: decided.seq,
-		};
 	} catch (cause) {
 		const { status, error } = workerErrorOf({ cause });
 		requestLog.error = cause as Error;
 		requestLog.errorCode = error.code;
-		reply = {
+		logged(status);
+		return {
 			status,
 			body: JSON.stringify({ error }),
 			partition: route.partition,
 			heldUntilSeq: 0,
 		};
 	}
-	logWorkerRequest({
-		ctx,
-		requestLog,
-		statusCode: reply.status,
-		method: "POST",
-		path: "/v1/track-batch",
-		route,
-		startedAt,
-	});
-	return reply;
+	if (!decided || decided.kind === "refused") return null;
+	const { items, commits, seq } = decided;
+	function answer(commitFailures: (unknown | null)[]): string {
+		const body = batchReplyOf({ items, commitFailures });
+		recordBatch({ requestLog, route, commands, ...body });
+		logged(200);
+		return body.json;
+	}
+	if (!commits)
+		return {
+			status: 200,
+			body: answer(items.map(() => null)),
+			partition: route.partition,
+			heldUntilSeq: seq,
+		};
+	// Split over appends: each command is answered by its own commit, as on the ordinary route.
+	const landing = commits;
+	async function answerWhenLanded() {
+		const settled = await Promise.allSettled(
+			landing.map((commit) => commit ?? Promise.resolve()),
+		);
+		const failures = settled.map((outcome) =>
+			outcome.status === "rejected" ? outcome.reason : null,
+		);
+		return { status: 200, body: answer(failures) };
+	}
+	return { later: answerWhenLanded() };
+}
+
+/** The ordinary batch reply: each success carries the bytes the held decide serialised. */
+function batchReplyOf({
+	items,
+	commitFailures,
+}: {
+	items: InlineTrackBatchItem[];
+	commitFailures: (unknown | null)[];
+}) {
+	const results: Parameters<typeof recordBatch>[0]["results"] = [];
+	const parts: string[] = [];
+	const causes: unknown[] = [];
+	for (const [index, item] of items.entries()) {
+		const cause = item.ok ? commitFailures[index] : item.cause;
+		if (item.ok && cause === null) {
+			results.push({ ok: true });
+			parts.push(`{"ok":true,"reply":${item.body}}`);
+			continue;
+		}
+		causes.push(cause);
+		const { status, error } = workerErrorOf({ cause });
+		const failed = { ok: false as const, status, error };
+		results.push(failed);
+		parts.push(JSON.stringify(failed));
+	}
+	return { results, causes, json: batchBodyOf({ results: parts }) };
 }

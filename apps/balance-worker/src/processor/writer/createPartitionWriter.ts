@@ -14,6 +14,7 @@ import {
 	decideHeld as decideHeldMutation,
 	decideHeldGroup as decideHeldMutationGroup,
 	heldBlockerOf,
+	waitForHeldCommit as waitForHeldMutationCommit,
 } from "./actions/decideHeld.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
@@ -98,8 +99,14 @@ export function createPartitionWriter({
 		});
 	}
 
-	function decideHeldGroup<Result>(decide: () => Result): Result {
+	function decideHeldGroup<Result>(decide: () => Result) {
 		return decideHeldMutationGroup({ scope, decide });
+	}
+
+	function waitForHeldCommit(
+		params: Parameters<PartitionWriter["waitForHeldCommit"]>[0],
+	) {
+		return waitForHeldMutationCommit({ scope, ...params });
 	}
 
 	function heldBlocker(params: Parameters<PartitionWriter["heldBlocker"]>[0]) {
@@ -156,6 +163,7 @@ export function createPartitionWriter({
 		decideHeld,
 		decideHeldGroup,
 		heldBlocker,
+		waitForHeldCommit,
 		log,
 		flushDeferredLogs,
 		waitForPendingCommits,

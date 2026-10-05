@@ -58,6 +58,10 @@ function serveInline({
 		body: body instanceof Uint8Array ? body : new Uint8Array(body),
 	});
 	if (!reply) return false;
+	if ("later" in reply) {
+		void answerLater({ scope, lane, reqId, later: reply.later });
+		return true;
+	}
 	replyToLane({
 		scope,
 		lane,
@@ -70,6 +74,41 @@ function serveInline({
 		heldUntilSeq: reply.heldUntilSeq,
 	});
 	return true;
+}
+
+async function answerLater({
+	scope,
+	lane,
+	reqId,
+	later,
+}: {
+	scope: HttpWorkerPoolScope;
+	lane: HttpWorkerLane;
+	reqId: number;
+	later: Promise<{ status: number; body: string }>;
+}): Promise<void> {
+	let reply: { status: number; body: string };
+	try {
+		reply = await later;
+	} catch (cause) {
+		scope.ctx.logger.error(
+			{ error: cause },
+			"HTTP worker inline reply failed on the decide thread",
+		);
+		reply = { status: 500, body: "" };
+	}
+	try {
+		replyToLane({
+			scope,
+			lane,
+			reqId,
+			status: reply.status,
+			headers: JSON_HEADERS,
+			body: encoder.encode(reply.body),
+		});
+	} catch (cause) {
+		reportPoolFailure({ scope, cause });
+	}
 }
 
 /** Answers one request through `fetch`; a handler that throws is answered 500, never left hanging. */

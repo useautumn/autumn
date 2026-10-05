@@ -120,6 +120,110 @@ describe("inline track batches", () => {
 		}
 	});
 
+	test("a group too big for one append takes the ordinary byte cut, each command waiting on its own append", async () => {
+		const f = await residentFixture({ maxBatchBytes: 3_500 });
+		const committed: number[] = [];
+		f.positions.onCommitted(({ seq }) => committed.push(seq));
+		try {
+			const outcome = f.processor.trackBatchInline({
+				commands: ["s1", "s2", "s3", "s4", "s5"].map((commandId) =>
+					trackCommand({ commandId }),
+				),
+			});
+			if (outcome.kind !== "decided" || !outcome.commits)
+				throw new Error("expected a split decision");
+			expect(outcome.seq).toBe(6);
+			for (let part = 0; part < 3; part++) {
+				await waitForAppend();
+				f.appender.release();
+			}
+			await waitForAppend();
+			expect(f.appender.batches).toEqual([1, 2, 2, 1]);
+			expect(committed).toEqual([3, 5, 6]);
+		} finally {
+			f.close();
+		}
+	});
+
+	test("a split batch answers each command by its own append: a refused later part fails only its commands", async () => {
+		const f = await residentFixture({ maxBatchBytes: 3_500 });
+		try {
+			const outcome = f.processor.trackBatchInline({
+				commands: ["p1", "p2", "p3"].map((commandId) =>
+					trackCommand({ commandId }),
+				),
+			});
+			if (outcome.kind !== "decided" || !outcome.commits)
+				throw new Error("expected a split decision");
+			const settled = Promise.allSettled(
+				outcome.commits.map((commit) => commit ?? Promise.resolve()),
+			);
+			await waitForAppend();
+			f.appender.release();
+			await waitForAppend();
+			f.appender.release({
+				fail: new MutationBatchNotCommittedError({ cause: new Error("no") }),
+			});
+			expect((await settled).map(({ status }) => status)).toEqual([
+				"fulfilled",
+				"fulfilled",
+				"rejected",
+			]);
+			expect(f.positions.readCommitPosition({ partition })).toBe(3);
+		} finally {
+			f.close();
+		}
+	});
+
+	test("a retry after a partial failure applies each command once", async () => {
+		const f = await residentFixture({ maxBatchBytes: 3_500 });
+		try {
+			const commands = ["q1", "q2", "q3"].map((commandId) =>
+				trackCommand({ commandId, value: 5 }),
+			);
+			const outcome = f.processor.trackBatchInline({ commands });
+			if (outcome.kind !== "decided" || !outcome.commits)
+				throw new Error("expected a split decision");
+			const settled = Promise.allSettled(
+				outcome.commits.map((commit) => commit ?? Promise.resolve()),
+			);
+			await waitForAppend();
+			f.appender.release();
+			await waitForAppend();
+			f.appender.release({
+				fail: new MutationBatchNotCommittedError({ cause: new Error("no") }),
+			});
+			await settled;
+			await f.processor.drain();
+			// The ordinary route's retry: every command again, each on its own.
+			const retried = Promise.allSettled(
+				commands.map((command) => f.processor.track({ command })),
+			);
+			for (let turn = 0; turn < 20; turn++) {
+				await waitForAppend();
+				try {
+					f.appender.release();
+				} catch {}
+			}
+			// Landed commands answer from their receipt; only the refused one writes.
+			expect((await retried).map(({ status }) => status)).toEqual([
+				"fulfilled",
+				"fulfilled",
+				"fulfilled",
+			]);
+			await f.processor.drain();
+			const balance = f.store
+				.readState({ identity })
+				?.customerEntitlements.find(
+					(row) => row.id === "messages_monthly",
+				)?.balance;
+			// Warm-up 1, then 5 each for q1, q2 and q3, once.
+			expect(balance).toBe(100 - 1 - 15);
+		} finally {
+			f.close();
+		}
+	});
+
 	test("a refused append fails every write of the batch together", async () => {
 		const f = await residentFixture();
 		const failed: FailedPosition[] = [];

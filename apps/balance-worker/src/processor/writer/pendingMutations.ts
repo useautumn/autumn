@@ -51,6 +51,7 @@ export function createPartitionWriterState({
 		storedSeq: 0,
 		storeWaiters: [],
 		heldGroup: null,
+		heldGroupBytes: 0,
 		lastHeldGroup: 0,
 	};
 }
@@ -253,6 +254,7 @@ export function enqueueMutation({
 	customerPending.add(pending);
 	state.pendingByCustomerKey.set(customerKey, customerPending);
 	state.queue.push(pending);
+	if (pending.heldGroup !== undefined) state.heldGroupBytes += encodedBytes;
 	if (defersCommit) state.deferredQueued += 1;
 	// A log-only record lands no rows, so nothing that re-reads Postgres waits for it:
 	// an evict behind it enqueues its own record straight away and shares the next commit.
