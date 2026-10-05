@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { AppEnv, EntInterval, ResetInterval } from "@autumn/shared";
+import {
+	AppEnv,
+	CustomerBillingControlsResponseSchema,
+	EntInterval,
+	ResetInterval,
+} from "@autumn/shared";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -42,6 +47,15 @@ test("allocation responses preserve stored shares on retained soft-deleted entit
 			allocations: [{ entity_id: "entity_123", amount: 40 }],
 		},
 	]);
+	expect(
+		JSON.parse(
+			JSON.stringify({
+				billing_controls: CustomerBillingControlsResponseSchema.parse({
+					balance_allocations: controls,
+				}),
+			}),
+		).billing_controls.balance_allocations,
+	).toEqual(controls);
 	expect(selection?.sql).not.toContain('"deleted"');
 	expect(selection?.params).toEqual([
 		"org_123",
@@ -51,12 +65,23 @@ test("allocation responses preserve stored shares on retained soft-deleted entit
 	]);
 });
 
-test("empty allocations render without an entity lookup", async () => {
-	expect(
-		await getBalanceAllocationControls({
+test.each([undefined, null, {}])(
+	"unconfigured allocations (%p) are omitted without an entity lookup",
+	async (allocations) => {
+		const controls = await getBalanceAllocationControls({
 			ctx: {} as AutumnContext,
 			internalCustomerId: "cus_123",
-			allocations: {},
-		}),
-	).toEqual([]);
-});
+			allocations,
+		});
+		expect(controls).toBeUndefined();
+		expect(
+			JSON.parse(
+				JSON.stringify({
+					billing_controls: CustomerBillingControlsResponseSchema.parse({
+						balance_allocations: controls,
+					}),
+				}),
+			),
+		).toEqual({ billing_controls: {} });
+	},
+);
