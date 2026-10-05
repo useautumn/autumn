@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { EntInterval, ResetInterval } from "@autumn/shared";
+import { EntInterval, FeatureUsageType, ResetInterval } from "@autumn/shared";
 import {
 	createSubjectState,
 	subjectStateToFullSubject,
@@ -74,6 +74,7 @@ const set = ({
 	lifetimeRowIds = [],
 	allowance,
 	customer,
+	continuousUse = false,
 }: {
 	customerEntitlements: WorkerCustomerEntitlement[];
 	remaining?: number;
@@ -85,6 +86,8 @@ const set = ({
 	/** Every row's catalog allowance: its grant, per entity on a per-entity row. */
 	allowance?: number;
 	customer?: WorkerCustomer;
+	/** The rows' feature counts continuous use (seats, inboxes), so a free row may run over. */
+	continuousUse?: boolean;
 }): DeductionOutcome => {
 	const state = createSubjectState({
 		identity: { ...identity, entityId },
@@ -103,6 +106,10 @@ const set = ({
 		if (lifetimeRowIds.includes(customerEntitlement.id))
 			entitlement.interval = EntInterval.Lifetime;
 		if (allowance !== undefined) entitlement.allowance = allowance;
+	}
+	if (continuousUse) {
+		for (const feature of Object.values(catalog.features))
+			feature.config = { usage_type: FeatureUsageType.Continuous };
 	}
 	return setBalance({
 		fullSubject: subjectStateToFullSubject({ state, catalog, entityId }),
@@ -205,7 +212,7 @@ describe("setBalance: several rows (update-balance-breakdown, update-basic6)", (
 		expect(balancesAfter(outcome)).toEqual({ free: 20, arrear: 0 });
 	});
 
-	test("a negative target drains every row, then takes the first below zero", () => {
+	test("a negative target drains every row, then takes the pay-per-use row below zero", () => {
 		const outcome = set({
 			customerEntitlements: [
 				row({ id: "free", balance: 10 }),
@@ -220,7 +227,58 @@ describe("setBalance: several rows (update-balance-breakdown, update-basic6)", (
 		});
 
 		expectLandsOn({ outcome, remaining: -10 });
-		expect(balancesAfter(outcome)).toEqual({ free: -10, arrear: 0 });
+		expect(balancesAfter(outcome)).toEqual({ free: 0, arrear: -10 });
+	});
+});
+
+describe("setBalance: free continuous grant plus a priced add-on (update-usage-free-plus-paid-addon)", () => {
+	const freeGrant = ({ balance }: { balance: number }) =>
+		row({ id: "free", balance });
+	const pricedAddOn = ({ balance }: { balance: number }) =>
+		row({
+			id: "addon",
+			balance,
+			usageAllowed: true,
+			createdAt: occurredAt + 1,
+		});
+
+	test("overage past the free grant lands on the priced add-on", () => {
+		const outcome = set({
+			customerEntitlements: [
+				freeGrant({ balance: 3 }),
+				pricedAddOn({ balance: 0 }),
+			],
+			remaining: -2,
+			continuousUse: true,
+		});
+
+		expectLandsOn({ outcome, remaining: -2 });
+		expect(balancesAfter(outcome)).toEqual({ free: 0, addon: -2 });
+	});
+
+	test("a lower usage gives the add-on's overage back first", () => {
+		const outcome = set({
+			customerEntitlements: [
+				freeGrant({ balance: 0 }),
+				pricedAddOn({ balance: -2 }),
+			],
+			remaining: 1,
+			continuousUse: true,
+		});
+
+		expectLandsOn({ outcome, remaining: 1 });
+		expect(balancesAfter(outcome)).toEqual({ free: 1, addon: 0 });
+	});
+
+	test("without a priced row the free grant still runs over", () => {
+		const outcome = set({
+			customerEntitlements: [freeGrant({ balance: 3 })],
+			remaining: -2,
+			continuousUse: true,
+		});
+
+		expectLandsOn({ outcome, remaining: -2 });
+		expect(balancesAfter(outcome)).toEqual({ free: -2 });
 	});
 });
 

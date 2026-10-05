@@ -29,6 +29,13 @@ export type DeductionOptions = {
 	skipAdditionalBalance?: boolean;
 };
 
+/**
+ * Overage pass order (Lua/SQL walk it stably): 0 = the row's own overage (a
+ * usage price or an overage control), 1 = a free allocated grant that may run
+ * over, 2 = only the caller's overage behaviour lets it go negative.
+ */
+export type OveragePriority = 0 | 1 | 2;
+
 /** Input for a single entitlement in the deduction script (Lua/SQL) */
 export type CustomerEntitlementDeduction = {
 	customer_entitlement_id: string;
@@ -37,6 +44,7 @@ export type CustomerEntitlementDeduction = {
 	feature_id: string;
 	entity_feature_id: string | null;
 	usage_allowed: boolean;
+	overage_priority: OveragePriority;
 	min_balance: number | undefined;
 	max_balance: number | undefined;
 	// Unlimited entitlements act as an infinite sink: usage_allowed with no
