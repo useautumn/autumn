@@ -59,14 +59,15 @@ const movedToFirstPhase = (field: string) =>
 		.optional()
 		.meta({ internal: true });
 
-// `undeclared_plans` is internal on the public API but exposed here, so an
-// agent can keep plans it does not list, as createSchedule does. `extend`
-// drops the parent's object-level checks, so they are re-applied.
+// `undeclared_plans` is internal on the public API but exposed here, and
+// defaults to "retain" so plans a request leaves out keep running, as with
+// createSchedule. `extend` drops the parent's object-level checks, so they are
+// re-applied.
 // Typed loosely: its inferred type is too large for the domain exports to serialize.
 const setPlansMcpSchema: z.ZodType = SetPlansParamsV0Schema.extend({
-	undeclared_plans: z.enum(["end", "retain"]).optional().meta({
+	undeclared_plans: z.enum(["end", "retain"]).default("retain").meta({
 		description:
-			"What happens to a current plan in the request's scope that no phase or unscheduled plan lists: 'end' (default) ends it now, 'retain' keeps it running until a listed plan claims its group.",
+			"What happens to a current plan in the request's scope that no phase or unscheduled plan lists: 'retain' (default) keeps it running until a listed plan claims its group, 'end' ends it now.",
 	}),
 	billing_behavior: movedToFirstPhase("billing_behavior"),
 	billing_cycle_anchor: movedToFirstPhase("billing_cycle_anchor"),

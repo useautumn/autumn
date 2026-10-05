@@ -121,7 +121,6 @@ export const surfaceRendersGroup = (provider: string) =>
 const SHEET_LINKABLE_TOOLS = new Set([
 	"attach",
 	"createSchedule",
-	"setPlans",
 	"updateSubscription",
 ]);
 

@@ -1544,8 +1544,7 @@ export const approvalSheetUrl = ({
 	const sheet =
 		normalizedToolName === "updateSubscription"
 			? `sheet=subscription-update${planId ? `&plan_id=${encodeURIComponent(planId)}` : ""}`
-			: normalizedToolName === "createSchedule" ||
-					normalizedToolName === "setPlans"
+			: normalizedToolName === "createSchedule"
 				? "sheet=create-schedule"
 				: "sheet=attach-product";
 	const orgParam = orgId ? `&org_id=${encodeURIComponent(orgId)}` : "";

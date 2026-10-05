@@ -47,6 +47,18 @@ const lineItemRows = ({
 	return rows;
 };
 
+/** setPlans previews flag side effects to confirm, e.g. a plan or Stripe item it removes. */
+const previewWarningElements = (payload: LooseRecord): CardChild[] =>
+	(Array.isArray(payload.warnings) ? payload.warnings : []).flatMap(
+		(warning) => {
+			const record = asRecord(warning);
+			if (typeof record?.message !== "string") return [];
+			return record.severity === "warning"
+				? [CardText(`⚠️ ${record.message}`)]
+				: [CardText(record.message, { style: "muted" })];
+		},
+	);
+
 // attach / createSchedule / setPlans / updateSubscription previews all share the
 // BillingPreviewResponse shape (line_items, total, currency, next_cycle).
 // Rendered receipt-style: one table holding line items AND total rows.
@@ -90,6 +102,7 @@ const billingPreviewElements = (payload: LooseRecord): CardChild[] => {
 		...(notes.length
 			? [CardText(notes.join("  ·  "), { style: "muted" })]
 			: []),
+		...previewWarningElements(payload),
 	];
 };
 

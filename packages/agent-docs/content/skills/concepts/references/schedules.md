@@ -7,9 +7,9 @@
 
 ### Plans the request leaves out
 
-- Always pass `undeclared_plans: "retain"` unless the user asks to end the plans the request does not list.
+- `undeclared_plans` defaults to `"retain"`. Pass `"end"` only when the user asks to end the plans the request does not list.
 - `"retain"`: a current plan you leave out keeps running until a listed plan claims its group, e.g. a separately attached add-on stays.
-- `"end"` (the default when omitted): every current plan in scope that you leave out ends now, with credit per the first phase's `proration_behavior`. One-off purchases are never ended.
+- `"end"`: every current plan in scope that you leave out ends now, with credit per the first phase's `proration_behavior`. One-off purchases are never ended.
 - Before writing, check the preview's `warnings` and outgoing plans. If it ends a plan the user did not ask to end, fix the request instead of writing it.
 
 ### Phase timing

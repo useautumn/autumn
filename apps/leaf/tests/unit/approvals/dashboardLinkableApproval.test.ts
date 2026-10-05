@@ -18,34 +18,50 @@ describe("dashboardLinkableApproval", () => {
 		}
 	});
 
-	test("links setPlans and createSchedule (per-plan customize is schema-restricted to seedable keys)", () => {
-		for (const toolName of ["autumn__setPlans", "autumn__createSchedule"]) {
-			expect(
-				dashboardLinkableApproval({
-					approval: {
-						...base,
-						tool_args: {
-							request: {
-								customer_id: "cus_1",
-								phases: [
-									{
-										plans: [
-											{
-												customize: { price: { amount: 900 } },
-												plan_id: "scale",
-											},
-										],
-										starts_at: "now",
-									},
-								],
-							},
+	test("links createSchedule (per-plan customize is schema-restricted to seedable keys)", () => {
+		expect(
+			dashboardLinkableApproval({
+				approval: {
+					...base,
+					tool_args: {
+						request: {
+							customer_id: "cus_1",
+							phases: [
+								{
+									plans: [
+										{ customize: { price: { amount: 900 } }, plan_id: "scale" },
+									],
+									starts_at: "now",
+								},
+							],
 						},
-						tool_name: toolName,
 					},
-					groupedStepCount: 0,
-				}),
-			).toBe(true);
-		}
+					tool_name: "autumn__createSchedule",
+				},
+				groupedStepCount: 0,
+			}),
+		).toBe(true);
+	});
+
+	// The schedule sheet cannot carry undeclared_plans or a first-phase anchor
+	// timestamp, so submitting it could change the approved schedule.
+	test("does not link setPlans", () => {
+		expect(
+			dashboardLinkableApproval({
+				approval: {
+					...base,
+					tool_args: {
+						request: {
+							customer_id: "cus_1",
+							phases: [{ plans: [{ plan_id: "scale" }], starts_at: "now" }],
+							undeclared_plans: "retain",
+						},
+					},
+					tool_name: "autumn__setPlans",
+				},
+				groupedStepCount: 0,
+			}),
+		).toBe(false);
 	});
 
 	test("links updateSubscription", () => {

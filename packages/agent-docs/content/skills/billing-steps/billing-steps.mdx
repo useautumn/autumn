@@ -19,7 +19,7 @@ This covers the majority of cases. Load skills upfront when needed:
 - Then decide which operation the request needs based on the current state and the target plan ID:
   - Is the target plan ID already active on that customer or entity? → updateSubscription
   - Moving the customer onto a different plan ID? → `attach` or `multiAttach`
-  - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `setPlans`. Load the `schedules` skill first, and pass `undeclared_plans: "retain"` so plans the request leaves out keep running.
+  - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `setPlans`. Load the `schedules` skill first. Plans the request leaves out keep running unless you pass `undeclared_plans: "end"`.
 
 Then decide how it is paid. Follow the user's instructions or the org rules. If neither says, first check if there is a payment method (from the `getCustomer` call), and follow these defaults:
 

@@ -11,7 +11,6 @@ export type ResolvedApprovalRequest = {
 const RESOLVE_TOOLS: Record<string, string> = {
 	attach: "attach",
 	createSchedule: "create_schedule",
-	setPlans: "set_plans",
 	updateSubscription: "update_subscription",
 };
 
