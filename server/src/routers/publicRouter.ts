@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { agentIdRouter } from "@/internal/auth/agentId/agentIdRouter.js";
 import { publicSsoRouter } from "@/internal/auth/sso/publicSsoRouter.js";
 import { publicCheckoutRouter } from "@/internal/checkouts/checkoutRouter.js";
 import { publicTrmnlRouter } from "@/internal/misc/trmnl/trmnlRouter.js";
@@ -12,3 +13,4 @@ publicRouter.route("/checkouts", publicCheckoutRouter);
 publicRouter.route("/invoices", publicInvoiceRouter);
 publicRouter.route("/trmnl", publicTrmnlRouter);
 publicRouter.route("/auth/sso", publicSsoRouter);
+publicRouter.route("/auth/agentid", agentIdRouter);
