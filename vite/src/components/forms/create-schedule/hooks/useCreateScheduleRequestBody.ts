@@ -1,4 +1,9 @@
-import type { Feature, ProductV2, SetPlansParamsV0 } from "@autumn/shared";
+import type {
+	Feature,
+	FreeTrial,
+	ProductV2,
+	SetPlansParamsV0,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
 import {
@@ -9,9 +14,15 @@ import {
 } from "@/components/forms/customer-state/customerStateSchema";
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
+import type { FreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 import { phaseToBillingCycleAnchor } from "../utils/phaseBillingCycleAnchor";
+import {
+	type CurrentScheduleTrial,
+	canScheduleFreeTrial,
+	scheduleFreeTrialParam,
+} from "../utils/scheduleFreeTrial";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function buildCreateScheduleRequestBody({
@@ -28,6 +39,9 @@ export function buildCreateScheduleRequestBody({
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
 	stripeSubscriptionId,
+	freeTrial,
+	currentTrial = null,
+	catalogFreeTrial = null,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -42,6 +56,9 @@ export function buildCreateScheduleRequestBody({
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
 	stripeSubscriptionId?: string | null;
+	freeTrial?: FreeTrialFormValues;
+	currentTrial?: CurrentScheduleTrial | null;
+	catalogFreeTrial?: FreeTrial | null;
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
@@ -135,6 +152,16 @@ export function buildCreateScheduleRequestBody({
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
 		body.ends_at = endDate;
 	}
+
+	const freeTrialParam =
+		freeTrial && canScheduleFreeTrial({ phases, nowMs: now })
+			? scheduleFreeTrialParam({
+					formValues: freeTrial,
+					currentTrial,
+					catalogFreeTrial,
+				})
+			: undefined;
+	if (freeTrialParam !== undefined) body.free_trial = freeTrialParam;
 	return body as SetPlansParamsV0;
 }
 
@@ -165,6 +192,9 @@ export function useCreateScheduleRequestBody({
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
 	stripeSubscriptionId,
+	freeTrial,
+	currentTrial,
+	catalogFreeTrial,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -179,6 +209,9 @@ export function useCreateScheduleRequestBody({
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
 	stripeSubscriptionId?: string | null;
+	freeTrial?: FreeTrialFormValues;
+	currentTrial?: CurrentScheduleTrial | null;
+	catalogFreeTrial?: FreeTrial | null;
 }) {
 	return useMemo(
 		() =>
@@ -196,6 +229,9 @@ export function useCreateScheduleRequestBody({
 				allowFirstPhaseBackdate,
 				enablePlanImmediately,
 				stripeSubscriptionId,
+				freeTrial,
+				currentTrial,
+				catalogFreeTrial,
 			}),
 		[
 			customerId,
@@ -211,6 +247,9 @@ export function useCreateScheduleRequestBody({
 			allowFirstPhaseBackdate,
 			enablePlanImmediately,
 			stripeSubscriptionId,
+			freeTrial,
+			currentTrial,
+			catalogFreeTrial,
 		],
 	);
 }
@@ -227,6 +266,9 @@ export function useBuildCreateScheduleRequestBody({
 	getEndDate,
 	getEnablePlanImmediately,
 	getAllowFirstPhaseBackdate,
+	getFreeTrial,
+	currentTrial,
+	catalogFreeTrial,
 	stripeSubscriptionId,
 }: {
 	customerId: string | undefined;
@@ -243,6 +285,9 @@ export function useBuildCreateScheduleRequestBody({
 	getEndDate?: () => CustomerStateForm["endDate"];
 	getEnablePlanImmediately?: () => boolean;
 	getAllowFirstPhaseBackdate?: () => boolean;
+	getFreeTrial?: () => FreeTrialFormValues;
+	currentTrial?: CurrentScheduleTrial | null;
+	catalogFreeTrial?: FreeTrial | null;
 	stripeSubscriptionId?: string | null;
 }) {
 	return useMemo(
@@ -262,6 +307,9 @@ export function useBuildCreateScheduleRequestBody({
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
 					enablePlanImmediately: getEnablePlanImmediately?.() ?? false,
 					stripeSubscriptionId,
+					freeTrial: getFreeTrial?.(),
+					currentTrial,
+					catalogFreeTrial,
 				}),
 		[
 			customerId,
@@ -275,6 +323,9 @@ export function useBuildCreateScheduleRequestBody({
 			getEndDate,
 			getEnablePlanImmediately,
 			getAllowFirstPhaseBackdate,
+			getFreeTrial,
+			currentTrial,
+			catalogFreeTrial,
 			stripeSubscriptionId,
 		],
 	);

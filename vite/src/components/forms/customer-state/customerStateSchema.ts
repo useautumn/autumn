@@ -4,6 +4,7 @@ import {
 	type ProductItem,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { FreeTrialFormFieldsSchema } from "@/components/forms/shared/utils/freeTrialFormValues";
 
 export const CustomerStatePlanSchema = z.object({
 	productId: z.string().min(1),
@@ -207,6 +208,7 @@ export const CustomerStateFormSchema = z
 		billingCycleAnchorDate: z.number().nullable(),
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),
+		...FreeTrialFormFieldsSchema.shape,
 	})
 	.refine(
 		(data) =>

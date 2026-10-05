@@ -2,6 +2,7 @@ import {
 	type BillingBehavior,
 	BillingBehaviorSchema,
 	type CustomizePlanLicense,
+	FreeTrialDuration,
 	type ProductItem,
 } from "@autumn/shared";
 import { addMonths, addYears } from "date-fns";
@@ -10,6 +11,7 @@ import type {
 	CustomerStatePhase,
 	CustomerStatePlan,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import {
 	type FieldReaders,
 	overridesFromRequest,
@@ -86,6 +88,31 @@ const startsAtFrom = ({
 		: addMonths(base, offset.duration_count).getTime();
 };
 
+const isFreeTrialDuration = (value: unknown): value is FreeTrialDuration =>
+	Object.values(FreeTrialDuration).includes(value as FreeTrialDuration);
+
+/** `null` ends a running trial and an object starts one; an omitted trial leaves the row as seeded. */
+const freeTrialFrom = (
+	value: unknown,
+): Partial<CustomerStateForm> | undefined => {
+	if (value === null) {
+		return { ...DISABLED_FREE_TRIAL_FORM_VALUES, trialEdited: true };
+	}
+	const freeTrial = requestRecord(value);
+	if (!freeTrial || typeof freeTrial.duration_length !== "number") {
+		return undefined;
+	}
+	return {
+		trialEnabled: true,
+		trialLength: freeTrial.duration_length,
+		trialDuration: isFreeTrialDuration(freeTrial.duration_type)
+			? freeTrial.duration_type
+			: FreeTrialDuration.Month,
+		trialCardRequired: freeTrial.card_required === true,
+		trialEdited: true,
+	};
+};
+
 /** Inverse of the schedule request builder: maps a resolved set_plans
  * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
@@ -148,5 +175,6 @@ export const scheduleFormFromRequestBody = (
 		billingCycleAnchorMode: customAnchor === null ? "now" : "custom",
 		billingCycleAnchorDate: customAnchor,
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
+		...freeTrialFrom(request.free_trial),
 	};
 };
