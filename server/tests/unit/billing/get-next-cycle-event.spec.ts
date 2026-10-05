@@ -386,6 +386,28 @@ describe("getNextCycleEvent", () => {
 		expect(event.kind).toBe("scheduled_start");
 	});
 
+	test("a switch on the renewal date with proration none still bills the renewal", () => {
+		const event = resolve({
+			billingContext: setPlansContext({
+				phaseStartsAt: renewalBoundaryMs,
+				prorationBehavior: "none",
+			}),
+			customerProducts: [
+				cusProduct({ id: "pro", endedAt: renewalBoundaryMs }),
+				cusProduct({
+					id: "premium",
+					startsAt: renewalBoundaryMs,
+					status: CusProductStatus.Scheduled,
+				}),
+			],
+		});
+
+		expect(event.kind).toBe("scheduled_change");
+		if (event.kind === "scheduled_change") {
+			expect(event.startsAtMs).toBe(renewalBoundaryMs);
+		}
+	});
+
 	test("a phase start carries the proration set_plans requested for it", () => {
 		const scheduledAt = renewalBoundaryMs - ms.days(5);
 		const event = resolve({

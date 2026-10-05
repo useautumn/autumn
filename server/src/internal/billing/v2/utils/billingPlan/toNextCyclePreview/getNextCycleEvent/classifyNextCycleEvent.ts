@@ -117,10 +117,12 @@ export const classifyNextCycleEvent = ({
 
 	const changesCustomerProducts =
 		incomingCustomerProducts.length > 0 || outgoingCustomerProducts.length > 0;
+	const landsOnRenewal = timestampsMatch(startsAtMs, renewalBoundaryMs);
+	const startsWithoutPaidPlans = previousCustomerProducts.length === 0;
 	const raisesInvoice = phaseStartRaisesInvoice({
 		prorationBehavior,
 		startsNewBillingCycle:
-			isAnchorReset || previousCustomerProducts.length === 0,
+			isAnchorReset || landsOnRenewal || startsWithoutPaidPlans,
 	});
 	if (changesCustomerProducts && !raisesInvoice && !isTrialEnd) return;
 
