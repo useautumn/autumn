@@ -49,9 +49,10 @@ export function trackBatchInline({
 			});
 		if (reason) return { kind: "refused", reason };
 	}
-	const { result: items, fitsOneAppend } = scope.ctx.writer.decideHeldGroup(
-		() => decideEach({ scope, commands }),
-	);
+	const { result: items, fitsOneAppend } = scope.ctx.writer.decideHeldGroup({
+		identities: commands.map((command) => command.identity),
+		decide: () => decideEach({ scope, commands }),
+	});
 	let seq = 0;
 	for (const item of items) if (item.ok) seq = Math.max(seq, item.seq);
 	return {

@@ -36,8 +36,12 @@ export type PartitionWriter = {
 	decideHeld<Reply>(
 		submission: HeldSubmission<Reply>,
 	): HeldDecision<Reply> | null;
-	/** Every held write `decide` makes lands in one append when the group fits the byte budget; past it, the ordinary cut splits them. */
-	decideHeldGroup<Result>(decide: () => Result): {
+	/** Every held write `decide` makes lands in one append when the group fits the byte budget; past it, the ordinary cut splits them.
+	 *  The members' subjects stay pinned while `decide` runs. */
+	decideHeldGroup<Result>(params: {
+		identities: MeteringIdentity[];
+		decide: () => Result;
+	}): {
 		result: Result;
 		fitsOneAppend: boolean;
 	};

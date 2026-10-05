@@ -5,6 +5,7 @@
 import {
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
+	meteringIdentityToSubjectKey,
 } from "@autumn/balance-engine";
 import {
 	enqueueMutation,
@@ -132,12 +133,15 @@ export function heldBlockerOf({
 	return null;
 }
 
-/** Whether the group fits one append: past the byte budget its writes split, as the ordinary route's do. */
+/** Whether the group fits one append: past the byte budget its writes split, as the ordinary route's do.
+ *  Every member's subjects stay pinned while it runs, so one member's write cannot evict another's rows. */
 export function decideHeldGroup<Result>({
 	scope,
+	identities,
 	decide,
 }: {
 	scope: PartitionWriterScope;
+	identities: MeteringIdentity[];
 	decide: () => Result;
 }): { result: Result; fitsOneAppend: boolean } {
 	const { state, config } = scope;
@@ -146,6 +150,11 @@ export function decideHeldGroup<Result>({
 	const group = state.lastHeldGroup;
 	state.heldGroup = group;
 	state.heldGroupBytes = 0;
+	const subjectKeys = identities.flatMap((identity) => [
+		meteringIdentityToSubjectKey({ identity: { ...identity, entityId: null } }),
+		...(identity.entityId ? [meteringIdentityToSubjectKey({ identity })] : []),
+	]);
+	for (const subjectKey of subjectKeys) state.subjects.pin({ subjectKey });
 	try {
 		const result = decide();
 		const fitsOneAppend =
@@ -154,6 +163,7 @@ export function decideHeldGroup<Result>({
 		return { result, fitsOneAppend };
 	} finally {
 		state.heldGroup = null;
+		for (const subjectKey of subjectKeys) state.subjects.unpin({ subjectKey });
 	}
 }
 

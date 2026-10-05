@@ -109,8 +109,12 @@ export function createPartitionWriter({
 		});
 	}
 
-	function decideHeldGroup<Result>(decide: () => Result) {
-		return decideHeldMutationGroup({ scope, decide });
+	function decideHeldGroup<Result>(
+		params: Parameters<PartitionWriter["decideHeldGroup"]>[0] & {
+			decide: () => Result;
+		},
+	) {
+		return decideHeldMutationGroup({ scope, ...params });
 	}
 
 	function waitForHeldCommit(
