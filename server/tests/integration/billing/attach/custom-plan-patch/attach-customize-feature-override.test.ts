@@ -197,7 +197,9 @@ test.concurrent(
 			},
 		});
 
-		// 10 units * 0.2 (catalog) = 2 credits.
+		// Update carries existing usage by default, so assert the delta: 10 units * 0.2 (catalog) = 2 credits.
+		const customerBeforeTrack =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -205,7 +207,9 @@ test.concurrent(
 		});
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		expect(customerAfter.features[TestFeature.Credits].usage).toBe(2);
+		expect(customerAfter.features[TestFeature.Credits].usage).toBe(
+			(customerBeforeTrack.features[TestFeature.Credits].usage ?? 0) + 2,
+		);
 	},
 	{ timeout: 120_000 },
 );
