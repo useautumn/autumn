@@ -106,7 +106,6 @@ export type PartitionWriterContext = {
 		changes: RowChange[];
 	}) => void;
 	now?: () => number;
-	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
 
