@@ -35,7 +35,11 @@ export function settleAck({
 	resolve(ack);
 }
 
-function drainAcks({ scope }: { scope: ThreadedProducersScope }): number {
+export function drainAcks({
+	scope,
+}: {
+	scope: ThreadedProducersScope;
+}): number {
 	const { acks } = scope;
 	let read = 0;
 	for (;;) {
@@ -59,7 +63,11 @@ async function ackLoop({
 }): Promise<void> {
 	const { state, acks } = scope;
 	while (!state.stopping && !state.failed) {
-		if (drainAcks({ scope }) > 0) continue;
+		if (drainAcks({ scope }) > 0) {
+			// Let the settled sends' continuations run before the next batch.
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			continue;
+		}
 		await scope.rings.ackSignal.sleep({ hasWork: acks.hasWork, timeoutMs: 20 });
 	}
 }

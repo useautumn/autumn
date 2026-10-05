@@ -49,6 +49,8 @@ export function createThreadProducer({
 	const producerId = state.nextProducerId++;
 	let nextSeq = 0;
 	let closed = false;
+	/** A send that never reached the thread leaves a gap in the sequence: every later send would be held. */
+	let lostSend: KafkaJSError | null = null;
 	postToProducerThread({
 		scope,
 		message: {
@@ -83,12 +85,25 @@ export function createThreadProducer({
 			throw new KafkaJSError("The producer is disconnected", {
 				retriable: false,
 			});
-		if (state.failed)
-			throw new KafkaJSError("Producer thread failed", { retriable: false });
+		if (state.failed || state.stopping)
+			throw new KafkaJSError(
+				state.failed ? "Producer thread failed" : "Producer thread stopped",
+				{ retriable: false },
+			);
+		if (lostSend) throw lostSend;
 		const reqId = state.nextReqId++;
-		nextSeq++;
 		const settled = awaitAck({ scope, reqId });
-		enqueueSend({ scope, reqId, meta, records });
+		try {
+			enqueueSend({ scope, reqId, meta, records });
+		} catch (cause) {
+			scope.pending.delete(reqId);
+			lostSend = new KafkaJSError(
+				`Producer ${producerId} could not hand a send to the producer thread: ${String((cause as Error)?.message ?? cause)}`,
+				{ retriable: false },
+			);
+			throw lostSend;
+		}
+		nextSeq++;
 		const ack = await settled;
 		if (!ack.ok) throw kafkaErrorOf({ error: ack.error });
 		return ack.metadata;
