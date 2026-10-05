@@ -320,8 +320,6 @@ export function rejectAllPending({
 	for (const pending of batch) pending.settlement?.reject({ error });
 	for (const waiter of state.storeWaiters) waiter.reject(error);
 	state.storeWaiters = [];
-	// Nothing dropped here will be stored: later store waits cover only what is written from now on.
-	state.lastRowSeq = state.storedSeq;
 	state.queue.length = 0;
 	state.deferredQueued = 0;
 	if (state.deferredCommitTimer) clearTimeout(state.deferredCommitTimer);
