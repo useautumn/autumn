@@ -205,6 +205,21 @@ const SCENARIOS: Record<string, Scenario> = {
 			bookmarks: bookmarks(),
 		},
 	},
+	"a value Postgres echoes as a rollback marker fails as the transaction does, and nothing lands":
+		{
+			landed: false,
+			outcome: { error: "PostgresError", sqlState: "22P02" },
+			request: {
+				changes: [
+					{
+						op: "insert",
+						table: "customerEntitlements",
+						row: { id: "ce_echo", created_at: "flush_rolled_back:1:1" },
+					},
+				],
+				bookmarks: bookmarks(),
+			},
+		},
 	"a promote with nothing due still lands": {
 		landed: true,
 		outcome: { result: { applied: [true] } },
