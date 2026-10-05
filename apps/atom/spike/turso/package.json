@@ -1,0 +1,14 @@
+{
+	"name": "turso-spike",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"@libsql/client": "^0.18.0",
+		"@tursodatabase/database": "^0.8.1",
+		"@tursodatabase/sync": "^0.8.1"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.4.2",
+		"typescript": "^7.0.2"
+	}
+}

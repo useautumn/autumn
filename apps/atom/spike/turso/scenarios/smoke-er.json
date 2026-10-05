@@ -1,0 +1,18 @@
+{
+	"name": "smoke-er",
+	"db": "spike-bench-er",
+	"engine": "er",
+	"readers": 2,
+	"seconds": 25,
+	"pollMs": 0,
+	"warmupS": 4,
+	"writer": {
+		"ratePerSec": 10,
+		"rowsPerRequest": 1,
+		"maxInFlight": 8,
+		"keys": 2000,
+		"bytes": 6000,
+		"seconds": 15
+	},
+	"pointReads": 2000
+}
