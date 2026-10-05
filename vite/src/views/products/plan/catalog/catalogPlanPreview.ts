@@ -632,7 +632,6 @@ export type CatalogMigrateTargetRow = {
 	version: number;
 	isCurrent: boolean;
 	isNew: boolean;
-	customerCount: number;
 	conflicts: CatalogConflictPreview[];
 } & CatalogPlanChangeDiff;
 
@@ -643,32 +642,23 @@ export type CatalogMigrateTarget = {
 	rows: CatalogMigrateTargetRow[];
 };
 
-const customerCountOf = ({
-	usage,
-}: {
-	usage?: { customers?: { count?: number } };
-}) => usage?.customers?.count ?? 0;
-
 const migrateRowFromPlanChange = ({
 	version,
 	isCurrent,
 	isNew,
 	planChange,
-	customerCount,
 	conflicts,
 }: {
 	version: number;
 	isCurrent: boolean;
 	isNew: boolean;
 	planChange?: PlanChangeV0 | null;
-	customerCount: number;
 	conflicts?: CatalogConflictPreview[];
 }): CatalogMigrateTargetRow => ({
 	version,
 	isCurrent,
 	isNew,
 	...planChangeToTargetDiff({ planChange }),
-	customerCount,
 	conflicts: conflicts ?? [],
 });
 
@@ -732,7 +722,6 @@ const buildLicenseParentMigrateTargets = ({
 						isCurrent: false,
 						isNew: true,
 						planChange: parent.plan_change,
-						customerCount: customerCountOf({ usage: parent.state.usage }),
 						conflicts: parent.conflicts,
 					}),
 				]
@@ -742,7 +731,6 @@ const buildLicenseParentMigrateTargets = ({
 						isCurrent: entry.version === parent.version,
 						isNew: false,
 						planChange: entry.plan_change,
-						customerCount: customerCountOf({ usage: entry.state.usage }),
 						conflicts: entry.conflicts,
 					}),
 				);
@@ -784,7 +772,6 @@ export const buildCatalogMigrateTargets = ({
 			isCurrent: !baseCreatesNewVersion,
 			isNew: baseCreatesNewVersion,
 			planChange: preview.plan_change,
-			customerCount: customerCountOf({ usage: preview.state.usage }),
 		}),
 		...(includeHistorical
 			? (preview.sibling_versions ?? []).map((sibling) =>
@@ -793,7 +780,6 @@ export const buildCatalogMigrateTargets = ({
 						isCurrent: false,
 						isNew: false,
 						planChange: sibling.plan_change,
-						customerCount: customerCountOf({ usage: sibling.state.usage }),
 						conflicts: sibling.conflicts,
 					}),
 				)
@@ -843,7 +829,6 @@ export const buildCatalogMigrateTargets = ({
 						isCurrent: false,
 						isNew: true,
 						planChange: variant.plan_change,
-						customerCount: customerCountOf({ usage: variant.state.usage }),
 						conflicts: variant.conflicts,
 					}),
 				]
@@ -853,7 +838,6 @@ export const buildCatalogMigrateTargets = ({
 						isCurrent: entry.version === variant.version,
 						isNew: false,
 						planChange: entry.plan_change,
-						customerCount: customerCountOf({ usage: entry.state.usage }),
 						conflicts: entry.conflicts,
 					}),
 				);
