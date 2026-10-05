@@ -1,9 +1,9 @@
 import {
 	type CreateScheduleBillingContext,
-	customerProductHasRelevantStatus,
 	type FullCusProduct,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
+	STRIPE_LINKED_STATUSES,
 } from "@autumn/shared";
 import type { TimelineOperation } from "../timeline/types/timelineDiff";
 import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
@@ -31,7 +31,7 @@ const staysOnLiveSubscription = ({
 	removedCustomerProductIds: Set<string>;
 }) => {
 	if (removedCustomerProductIds.has(customerProduct.id)) return false;
-	if (!customerProductHasRelevantStatus(customerProduct)) return false;
+	if (!STRIPE_LINKED_STATUSES.includes(customerProduct.status)) return false;
 	return (
 		isCustomerProductOnStripeSubscription({
 			customerProduct,

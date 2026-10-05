@@ -114,6 +114,22 @@ describe("replaceLiveSubscriptionForFutureStart", () => {
 		).toEqual({});
 	});
 
+	test("keeps the subscription while a paused plan still bills on it", () => {
+		const trial = rowOnLiveSubscription("trial");
+		const pausedPro = {
+			...rowOnLiveSubscription("pro"),
+			status: CusProductStatus.Paused,
+		};
+
+		expect(
+			replace({
+				startsAt: futureStart,
+				rows: [trial, pausedPro],
+				operations: [expire(trial.id)],
+			}),
+		).toEqual({});
+	});
+
 	test("leaves a first phase that starts now alone", () => {
 		const pro = rowOnLiveSubscription("pro");
 
