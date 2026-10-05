@@ -121,6 +121,7 @@ const fixture = ({
 		dispose: () => undefined,
 		trackInline: () => null,
 		trackBatchInline: () => ({ kind: "refused", reason: "not_resident" }),
+		checkInline: () => null,
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},

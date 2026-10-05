@@ -67,6 +67,8 @@ export type PartitionProcessor = {
 		command: TrackCommand;
 	}): Promise<DecidedMutation<never>>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	/** Decided now on a resident, current subject; null hands it to `check`. */
+	checkInline(params: { command: CheckCommand }): CheckReply | null;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	readSubjectState(params: {
