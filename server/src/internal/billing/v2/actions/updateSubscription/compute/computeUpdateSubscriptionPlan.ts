@@ -94,8 +94,9 @@ export const computeUpdateSubscriptionPlan = async ({
 	// When skipBillingChanges is true, Stripe is never called, so the post-Stripe
 	// sub-id linkage in executeStripeSubscriptionAction never runs.
 	const linkedSubscriptionId =
-		params.processor_subscription_id ??
-		billingContext.customerProduct.subscription_ids?.[0];
+		params.processor_subscription_id !== undefined
+			? params.processor_subscription_id
+			: billingContext.customerProduct.subscription_ids?.[0];
 
 	if (billingContext.skipBillingChanges && linkedSubscriptionId) {
 		addStripeSubscriptionIdToBillingPlan({
