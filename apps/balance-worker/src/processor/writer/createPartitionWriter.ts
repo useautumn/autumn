@@ -10,14 +10,21 @@ import {
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
+import { decideHeld as decideHeldMutation } from "./actions/decideHeld.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
 import {
+	allStored,
 	createPartitionWriterState,
 	rejectAllPending,
 } from "./pendingMutations.js";
-import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
+import type {
+	DecidedMutation,
+	HeldDecision,
+	HeldSubmission,
+	MutationSubmission,
+} from "./types/mutation.js";
 import type {
 	PartitionWriter,
 	PartitionWriterConfig,
@@ -85,6 +92,18 @@ export function createPartitionWriter({
 		});
 	}
 
+	function decideHeld<Reply>(
+		submission: HeldSubmission<Reply>,
+	): HeldDecision<Reply> | null {
+		return slowDecides.measure({
+			command: submission.command,
+			run: () =>
+				timeSync({ label: "writer.decide" }, () =>
+					decideHeldMutation({ scope, submission }),
+				),
+		});
+	}
+
 	function log(params: Parameters<PartitionWriter["log"]>[0]): Promise<void> {
 		return logMutation({ scope, ...params });
 	}
@@ -120,7 +139,7 @@ export function createPartitionWriter({
 	}
 
 	function waitForStore() {
-		return scope.state.storeCompletion;
+		return allStored({ state: scope.state });
 	}
 
 	/** The append in flight and every batch handed to the store so far, applied or failed; never rejects. */
@@ -133,6 +152,7 @@ export function createPartitionWriter({
 		waitForStore,
 		waitForApplies,
 		decide,
+		decideHeld,
 		log,
 		flushDeferredLogs,
 		waitForPendingCommits,

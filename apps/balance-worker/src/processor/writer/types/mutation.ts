@@ -70,3 +70,18 @@ export type DecidedMutation<Reply> = {
 	/** Resolves once this write's batch is stored (or durably refused); replies wait for preceding writes. */
 	waitForStore(): Promise<void>;
 };
+
+export type HeldSubmission<Reply> = Pick<
+	MutationSubmission<Reply>,
+	"command" | "mutate"
+> & {
+	/** The reply for this write, or for a retry of it while it is still in flight. */
+	replyOf: (committed: CommittedMutation) => string;
+};
+
+export type HeldDecision<Reply> =
+	/** Enqueued: the reply may go out once the partition's commit position reaches `seq`. */
+	| { kind: "write"; seq: number; body: string }
+	/** A retry: of a write still in flight (its seq), or of one already stored (seq 0: release now). */
+	| { kind: "duplicate"; seq: number; body: string }
+	| { kind: "reply"; reply: Reply };

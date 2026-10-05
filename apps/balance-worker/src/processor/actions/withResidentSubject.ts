@@ -5,7 +5,7 @@ import { SubjectCatalogEvictedError } from "../subject/subjectErrors.js";
 const MAX_ATTEMPTS = 2;
 
 /** The rows, or catalog rows they join to, left the cache during this request; ensuring again loads them back. */
-function isGoneMidRequest(cause: unknown): boolean {
+export function isGoneMidRequest(cause: unknown): boolean {
 	return (
 		cause instanceof PartitionProcessorStateNotFoundError ||
 		cause instanceof SubjectCatalogEvictedError
