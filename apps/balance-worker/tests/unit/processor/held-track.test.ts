@@ -64,6 +64,24 @@ describe("inline tracks with held replies", () => {
 		}
 	});
 
+	test("each held body in a run of balance-only writes is byte for byte JSON.stringify of its reply", async () => {
+		const f = await residentFixture();
+		try {
+			for (const n of [1, 2, 3, 4]) {
+				const outcome = decided(
+					f.processor.trackInline({
+						command: trackCommand({ commandId: `run_${n}`, value: n }),
+					}),
+				);
+				expect(outcome.body).toBe(JSON.stringify(outcome.reply));
+			}
+			await waitForAppend();
+			f.appender.release();
+		} finally {
+			f.close();
+		}
+	});
+
 	test("a retry while the write is in flight gets the same reply and sequence number, and appends nothing", async () => {
 		const f = await residentFixture();
 		try {
