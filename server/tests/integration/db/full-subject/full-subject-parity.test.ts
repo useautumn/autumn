@@ -11,6 +11,7 @@ import {
 	fullCustomerToComparableSubject,
 	fullSubjectToComparableSubject,
 } from "./utils/buildComparableFullSubject.js";
+import { entityAggregationCtx } from "./utils/entityAggregationCtx.js";
 import {
 	buildCustomerLooseEntitlementScenario,
 	buildCustomerMeteredScenario,
@@ -204,7 +205,7 @@ describe(`${chalk.yellowBright("fullSubject db parity")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const fullSubject = await getFullSubject({
-					ctx,
+					ctx: entityAggregationCtx,
 					customerId: scenario.ids.customerId,
 				});
 
