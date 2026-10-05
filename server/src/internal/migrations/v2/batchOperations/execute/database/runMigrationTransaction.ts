@@ -1,14 +1,17 @@
-import { schemas } from "@autumn/shared";
-import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool, PoolClient, QueryConfig, QueryResult } from "pg";
 import { isTransientDbError } from "@/db/dbUtils.js";
-import { type DrizzleCli, normalizeDbExecute } from "@/db/initDrizzle.js";
+
+export type MigrationQuery = (
+	config: string | QueryConfig,
+	values?: unknown[],
+) => Promise<QueryResult>;
 
 export class MigrationDbDeadlineError extends Error {
 	constructor() {
 		super("batch-migration: database operation deadline exceeded");
 	}
 }
+
 export class MigrationCommitUnknownError extends Error {
 	constructor(cause: unknown) {
 		super(
@@ -17,114 +20,142 @@ export class MigrationCommitUnknownError extends Error {
 		);
 	}
 }
+
+/** Runs `run` in a transaction on a client this call owns: every statement is
+ * deadlined, and a failed or aborted attempt destroys its connection. */
 export const runMigrationTransaction = async <T>({
 	pool,
 	signal,
 	queryTimeoutMs,
 	maxAttempts,
 	run,
-	transaction = true,
 }: {
 	pool: Pool;
 	signal: AbortSignal;
 	queryTimeoutMs: number;
 	maxAttempts: number;
-	run: (db: DrizzleCli) => Promise<T>;
-	transaction?: boolean;
+	run: (query: MigrationQuery) => Promise<T>;
 }): Promise<T> => {
 	for (let attempt = 1; ; attempt++) {
 		signal.throwIfAborted();
-		let client: PoolClient | undefined;
-		let failed: unknown;
-		let released = false;
+		const connection = createOwnedConnection({ pool, signal, queryTimeoutMs });
 		let commitSent = false;
-		const pending = new Set<(error: unknown) => void>();
-		const discard = (error: unknown) => {
-			failed ??= error;
-			if (client && !released) {
-				released = true;
-				client.release(true);
-			}
-			for (const reject of pending) reject(failed);
-		};
-		const assertActive = () => {
-			signal.throwIfAborted();
-			if (failed) throw failed;
-			if (released)
-				throw new Error("batch-migration: transaction already closed");
-		};
-		const onAbort = () => discard(signal.reason);
-		signal.addEventListener("abort", onAbort, { once: true });
-		const bounded = <R>(
-			operation: () => Promise<R>,
-			deadline = true,
-		): Promise<R> => {
-			assertActive();
-			return new Promise<R>((resolve, reject) => {
-				pending.add(reject);
-				const timer = deadline
-					? setTimeout(
-							() => discard(new MigrationDbDeadlineError()),
-							queryTimeoutMs,
-						)
-					: undefined;
-				Promise.resolve()
-					.then(() => {
-						assertActive();
-						return operation();
-					})
-					.then(resolve, reject)
-					.finally(() => {
-						clearTimeout(timer);
-						pending.delete(reject);
-					});
-			});
-		};
 		try {
-			client = await bounded(async () => {
-				const acquired = await pool.connect();
-				if (failed || signal.aborted) {
-					acquired.release(true);
-					throw failed ?? signal.reason;
-				}
-				return acquired;
+			await connection.acquire();
+			await connection.query("BEGIN");
+			const result = await connection.bounded({
+				operation: () => run(connection.query),
+				deadline: false,
 			});
-			const ownedClient = client;
-			const query = (
-				config: string | QueryConfig,
-				values?: unknown[],
-			): Promise<QueryResult> =>
-				bounded(() => ownedClient.query(config, values));
-			const db = normalizeDbExecute(
-				drizzle({ query } as PoolClient, { schema: schemas }),
-			) as unknown as DrizzleCli;
-			if (transaction) await query("BEGIN");
-			const result = await bounded(() => run(db), false);
-			assertActive();
-			if (transaction) {
-				commitSent = true;
-				await query("COMMIT");
-			}
-			assertActive();
-			released = true;
-			client.release();
+			commitSent = true;
+			await connection.query("COMMIT");
+			connection.release();
 			return result;
 		} catch (error) {
-			discard(error);
-			if (commitSent) throw new MigrationCommitUnknownError(error);
-			const retryable =
-				failed instanceof MigrationDbDeadlineError ||
-				isTransientDbError({ error });
-			if (
-				!transaction ||
-				commitSent ||
-				signal.aborted ||
-				attempt >= maxAttempts ||
-				!retryable
-			)
-				throw error;
+			const failure = connection.discard(error);
+			// An accepted COMMIT may have lost only its reply; replaying could apply it twice.
+			if (commitSent) throw new MigrationCommitUnknownError(failure);
+			if (signal.aborted || attempt >= maxAttempts) throw failure;
+			if (!isRetryableFailure(failure)) throw failure;
 		} finally {
-			signal.removeEventListener("abort", onAbort);
+			connection.close();
 		}
 	}
+};
+
+const isRetryableFailure = (failure: unknown) =>
+	failure instanceof MigrationDbDeadlineError ||
+	isTransientDbError({ error: failure });
+
+/** One attempt's pg client: statements race a deadline and the page abort, and
+ * the first failure destroys the socket so nothing else runs on it. */
+const createOwnedConnection = ({
+	pool,
+	signal,
+	queryTimeoutMs,
+}: {
+	pool: Pool;
+	signal: AbortSignal;
+	queryTimeoutMs: number;
+}) => {
+	let client: PoolClient | undefined;
+	let failure: unknown;
+	let closed = false;
+	const pendingRejects = new Set<(error: unknown) => void>();
+
+	const discard = (error: unknown) => {
+		failure ??= error;
+		if (client && !closed) client.release(true);
+		closed = true;
+		for (const reject of pendingRejects) reject(failure);
+		return failure;
+	};
+	const assertOpen = () => {
+		signal.throwIfAborted();
+		if (failure) throw failure;
+		if (closed) throw new Error("batch-migration: transaction already closed");
+	};
+	const onAbort = () => discard(signal.reason);
+	signal.addEventListener("abort", onAbort, { once: true });
+
+	const bounded = <R>({
+		operation,
+		deadline = true,
+	}: {
+		operation: () => Promise<R>;
+		deadline?: boolean;
+	}): Promise<R> => {
+		assertOpen();
+		return new Promise<R>((resolve, reject) => {
+			pendingRejects.add(reject);
+			const timer = deadline
+				? setTimeout(
+						() => discard(new MigrationDbDeadlineError()),
+						queryTimeoutMs,
+					)
+				: undefined;
+			Promise.resolve()
+				.then(() => {
+					assertOpen();
+					return operation();
+				})
+				.then(resolve, reject)
+				.finally(() => {
+					clearTimeout(timer);
+					pendingRejects.delete(reject);
+				});
+		});
+	};
+
+	const acquire = async () => {
+		client = await bounded({
+			operation: async () => {
+				const acquired = await pool.connect();
+				// A connect that lands after the deadline is never handed out.
+				if (failure || signal.aborted) {
+					acquired.release(true);
+					throw failure ?? signal.reason;
+				}
+				return acquired;
+			},
+		});
+	};
+
+	const query: MigrationQuery = (config, values) => {
+		const owned = client;
+		if (!owned) throw new Error("batch-migration: connection not acquired");
+		return bounded({ operation: () => owned.query(config, values) });
+	};
+
+	const release = () => {
+		closed = true;
+		client?.release();
+	};
+
+	const close = () => {
+		closed = true;
+		signal.removeEventListener("abort", onAbort);
+	};
+
+	return { acquire, query, bounded, discard, release, close };
 };

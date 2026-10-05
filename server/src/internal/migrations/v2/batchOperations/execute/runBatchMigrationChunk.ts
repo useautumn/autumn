@@ -15,7 +15,10 @@ import {
 	claimNextBatchMigrationPage,
 	failPageItemRuns,
 } from "./claim/index.js";
-import { createMigrationPageDb } from "./database/createMigrationPageDb.js";
+import {
+	createMigrationPageDb,
+	type MigrationPageDb,
+} from "./database/createMigrationPageDb.js";
 import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type {
@@ -51,8 +54,7 @@ export type BatchMigrationChunkTimeouts = {
 	recoveryWriteMs?: number;
 };
 
-/** A phase stopped making progress inside its budget. Not a transient DB
- * error, so the page retry wrapper lets it surface. */
+/** A phase stopped making progress inside its budget. */
 export class BatchMigrationStallError extends Error {
 	readonly phase: string;
 
@@ -251,29 +253,28 @@ export const runBatchMigrationChunk = async ({
 						settle: () => Promise.all([caches.settle(), events.settle()]),
 					}),
 				onTimeout: () => {
-					pageDb.abort(new Error(pageStallMessage));
 					ctx.logger.error("batch-migration: page stalled", {
 						data: { ...describeProgress(), pageTimeoutMs },
 					});
 				},
 				timeoutMessage: pageStallMessage,
+				timeoutError: (message) =>
+					new BatchMigrationStallError({
+						phase: `page_${progress.stage ?? "claim"}`,
+						message: `${message} (stage: ${progress.stage}, phases: ${JSON.stringify(progress.pagePhases)})`,
+					}),
 			})
 				.catch(async (error: unknown) => {
-					if (error instanceof Error && error.message === pageStallMessage) {
-						// Fence the page before failure cleanup releases its claims.
-						await failClaimsOfStalledPage({
-							ctx,
-							migrationInternalId,
-							migrationRunId,
-							page: pageNumber,
-							internalCustomerIds: progress.claimedInternalIds,
-							recoveryWriteMs,
-						});
-						throw new BatchMigrationStallError({
-							phase: `page_${progress.stage ?? "claim"}`,
-							message: `${error.message} (stage: ${progress.stage}, phases: ${JSON.stringify(progress.pagePhases)})`,
-						});
-					}
+					// Fence the page before releasing its claims, so no late write lands after.
+					pageDb.abort(error);
+					await failClaimsOfFailedPage({
+						ctx,
+						migrationInternalId,
+						migrationRunId,
+						page: pageNumber,
+						internalCustomerIds: progress.claimedInternalIds,
+						recoveryWriteMs,
+					});
 					throw error;
 				})
 				.finally(() => pageDb.abort());
@@ -362,7 +363,7 @@ const failPageItemRunsBounded = ({
 		timeoutMessage: `batch-migration: failing ${internalCustomerIds.length} claims got no answer from Postgres in ${timeoutMs}ms`,
 	});
 
-const failClaimsOfStalledPage = async ({
+const failClaimsOfFailedPage = async ({
 	ctx,
 	migrationInternalId,
 	migrationRunId,
@@ -386,7 +387,7 @@ const failClaimsOfStalledPage = async ({
 			internalCustomerIds,
 			timeoutMs: recoveryWriteMs,
 		});
-		ctx.logger.error("batch-migration: stalled page claims failed for retry", {
+		ctx.logger.error("batch-migration: failed page claims released for retry", {
 			data: {
 				migrationRunId,
 				page,
@@ -396,7 +397,7 @@ const failClaimsOfStalledPage = async ({
 		});
 	} catch (error) {
 		ctx.logger.error(
-			"batch-migration: could not fail a stalled page's claims — the parent settles them when the run ends",
+			"batch-migration: could not release a failed page's claims — the parent settles running claims when the run ends",
 			{
 				data: {
 					migrationRunId,
@@ -419,8 +420,7 @@ type NextPageOutcome =
 			pagePhases: BatchMigrationPagePhases;
 	  };
 
-/** One claim → execute → finalize. Cursor is only returned on success so a
- * retry restarts from the same keyset after a dropped socket. */
+/** One claim → execute → finalize. The cursor advances only on success. */
 const runNextBatchMigrationPage = async ({
 	ctx,
 	pageDb,
@@ -439,7 +439,7 @@ const runNextBatchMigrationPage = async ({
 	settle,
 }: {
 	ctx: AutumnContext;
-	pageDb: ReturnType<typeof createMigrationPageDb>;
+	pageDb: MigrationPageDb;
 	migration: MigrationRuntimeWithEventId;
 	migrationInternalId: string;
 	migrationRunId: string;
@@ -555,18 +555,13 @@ const runNextBatchMigrationPage = async ({
 				webhooks,
 				phases: pagePhases,
 				invalidateSkipped,
-				deferEvents: (emit) => {
-					pageDb.assertActive();
-					eventsDefer({ label, run: emit });
-				},
-				deferCaches: (invalidate) => {
-					pageDb.assertActive();
+				deferEvents: (emit) => eventsDefer({ label, run: emit }),
+				deferCaches: (invalidate) =>
 					cachesDefer({
 						label,
 						run: invalidate,
 						onFailure: revokeCheckpoints,
-					});
-				},
+					}),
 			}),
 	});
 	enterStage("settle");

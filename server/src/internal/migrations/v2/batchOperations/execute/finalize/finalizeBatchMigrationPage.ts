@@ -45,7 +45,6 @@ export const finalizeBatchMigrationPage = async ({
 	deferCaches?: (invalidate: () => Promise<unknown>) => void;
 	assertActive?: () => void;
 }): Promise<void> => {
-	assertActive?.();
 	const emitEvents = () =>
 		emitBatchMigrationItemEvents({
 			ctx,
@@ -83,7 +82,6 @@ export const finalizeBatchMigrationPage = async ({
 		runCaches(),
 		runEvents(),
 	]);
-	assertActive?.();
 	const eventCount = emitted?.eventCount ?? null;
 	const webhookRecords = webhooks?.sendWebhooks
 		? await timePhase({
@@ -114,7 +112,6 @@ export const finalizeBatchMigrationPage = async ({
 				})
 			: 0;
 
-	assertActive?.();
 	ctx.logger.debug("batch-migration: page finalized", {
 		data: {
 			migrationInternalId,

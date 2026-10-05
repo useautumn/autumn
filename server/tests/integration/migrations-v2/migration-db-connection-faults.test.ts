@@ -27,7 +27,7 @@ test("lost COMMIT reply stops replay while the committed row survives", async ()
 	});
 	const page = createMigrationPageDb({
 		ctx: { db: drizzle(pool) as unknown as DrizzleCli },
-		queryTimeoutMs: 50,
+		queryTimeoutMs: 250,
 		maxAttempts: 2,
 	});
 	let attempts = 0;
@@ -63,7 +63,7 @@ test("abort fences a late callback and preserves the prior committed batch", asy
 	});
 	const page = createMigrationPageDb({
 		ctx: { db: drizzle(pool) as unknown as DrizzleCli },
-		queryTimeoutMs: 50,
+		queryTimeoutMs: 250,
 		maxAttempts: 2,
 	});
 	const entered = Promise.withResolvers<void>();
@@ -90,10 +90,14 @@ test("abort fences a late callback and preserves the prior committed batch", asy
 		const completion = work.then(() => {
 			finalized = true;
 		});
-		const aborted = expect(completion).rejects.toThrow("fixture page aborted");
+		// Bun's expect().rejects blocks until settlement, so capture the rejection instead.
+		const aborted = completion.then(
+			() => null,
+			(error: unknown) => error,
+		);
 		await entered.promise;
 		page.abort(new Error("fixture page aborted"));
-		await aborted;
+		expect(await aborted).toEqual(new Error("fixture page aborted"));
 		resume.resolve();
 		await returned.promise;
 		await setImmediate();
@@ -122,7 +126,7 @@ for (const lostCommand of ["BEGIN", "SET"]) {
 		});
 		const page = createMigrationPageDb({
 			ctx: { db: drizzle(pool) as unknown as DrizzleCli },
-			queryTimeoutMs: 50,
+			queryTimeoutMs: 250,
 			maxAttempts: 2,
 		});
 		let removed = 0;

@@ -37,7 +37,8 @@ export const iterateCustomerProductPages = async <
 		limit: number;
 		assertWithinCeiling: (selectedCount: number) => void;
 	}) => Promise<{ rows: Row[]; result: Result }>;
-	onCommit?: (result: Result) => void;
+	/** Publishes a batch's result only once its transaction has committed. */
+	onCommit: (result: Result) => void;
 }): Promise<{ rowCount: number }> => {
 	let afterCustomerProductId: string | undefined;
 	let rowCount = 0;
@@ -62,7 +63,7 @@ export const iterateCustomerProductPages = async <
 			BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 			{ forceCustomPlan: true },
 		);
-		onCommit?.(result);
+		onCommit(result);
 		if (rows.length === 0) break;
 		rowCount += rows.length;
 		afterCustomerProductId = rows[rows.length - 1].customerProductId;

@@ -10,21 +10,25 @@ export const createPgResponseFaultProxy = async ({
 	const target = new URL(fixtureUrl);
 	if (target.hostname !== "127.0.0.1")
 		throw new Error("Postgres fault proxy requires isolated loopback Postgres");
+	const upstreamPort = Number(target.port || 5432);
 	const sockets = new Set<Socket>();
 	let suppressedResponses = 0;
 	let commits = 0;
 	const server = createServer((downstream) => {
 		const upstream = createConnection({
 			host: "127.0.0.1",
-			port: Number(target.port || 5432),
+			port: upstreamPort,
 		});
 		sockets.add(downstream);
 		sockets.add(upstream);
 		let pending = Buffer.alloc(0);
 		let blackholed = false;
-		downstream.pipe(upstream);
+		// Explicit forwarding: Bun's socket pipe drops the client's Terminate/end.
+		downstream.on("data", (data: Buffer) => upstream.write(data));
+		downstream.on("end", () => upstream.end());
 		upstream.on("data", (data: Buffer) => {
 			pending = Buffer.concat([pending, data]);
+			const forwarded: Buffer[] = [];
 			while (pending.length >= 5) {
 				const length = pending.readInt32BE(1) + 1;
 				if (length < 5 || length > 1_000_000)
@@ -42,8 +46,9 @@ export const createPgResponseFaultProxy = async ({
 						suppressedResponses += 1;
 					}
 				}
-				if (!blackholed) downstream.write(frame);
+				if (!blackholed) forwarded.push(frame);
 			}
+			if (forwarded.length > 0) downstream.write(Buffer.concat(forwarded));
 		});
 		for (const [socket, peer] of [
 			[downstream, upstream],
