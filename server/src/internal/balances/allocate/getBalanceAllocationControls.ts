@@ -15,7 +15,7 @@ export const getBalanceAllocationControls = async ({
 	ctx: AutumnContext;
 	internalCustomerId: string;
 	allocations: BalanceAllocations | null | undefined;
-}): Promise<BalanceAllocationControl[]> => {
+}): Promise<BalanceAllocationControl[] | undefined> => {
 	const internalEntityIds = [
 		...new Set(
 			Object.values(allocations ?? {}).flatMap((allocation) =>
@@ -23,7 +23,7 @@ export const getBalanceAllocationControls = async ({
 			),
 		),
 	];
-	if (internalEntityIds.length === 0) return [];
+	if (internalEntityIds.length === 0) return undefined;
 	const rows = await ctx.db
 		.select({ id: entities.id, internalId: entities.internal_id })
 		.from(entities)
