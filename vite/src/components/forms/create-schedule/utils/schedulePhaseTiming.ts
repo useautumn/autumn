@@ -1,15 +1,16 @@
 import {
+	isFutureStartDate,
 	isPastStartDate,
 	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 } from "@autumn/shared";
-import { format, isAfter } from "date-fns";
+import { format } from "date-fns";
 
 const IMMEDIATE_PHASE_INDEX = 0;
 
 export const isImmediatePhase = ({ phaseIndex }: { phaseIndex: number }) =>
 	phaseIndex === IMMEDIATE_PHASE_INDEX;
 
-/** The first phase is set to start on a later date, so billing waits until then. */
+/** The first phase starts further ahead than set_plans treats as now, so billing waits until then. */
 export const firstPhaseStartsLater = ({
 	phases,
 	nowMs,
@@ -18,7 +19,10 @@ export const firstPhaseStartsLater = ({
 	nowMs: number;
 }) => {
 	const startsAt = phases[0]?.startsAt;
-	return startsAt != null && isAfter(startsAt, nowMs);
+	return (
+		startsAt != null &&
+		isFutureStartDate(startsAt, nowMs, SET_PLANS_FIRST_PHASE_TOLERANCE_MS)
+	);
 };
 
 /** The first phase starts further back than set_plans treats as now, so it backdates. */

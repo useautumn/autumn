@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
-import { firstPhaseBackdatesLiveSubscription } from "@/components/forms/create-schedule/utils/schedulePhaseTiming";
+import {
+	firstPhaseBackdatesLiveSubscription,
+	firstPhaseStartsLater,
+} from "@/components/forms/create-schedule/utils/schedulePhaseTiming";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
 
@@ -38,4 +41,15 @@ test("without a live subscription there is nothing to backdate", () => {
 	expect(
 		backdates({ startsAt: NOW - ms.days(10), hasActiveSubscription: false }),
 	).toBe(false);
+});
+
+const startsLater = ({ startsAt }: { startsAt: number }) =>
+	firstPhaseStartsLater({ phases: [{ startsAt }], nowMs: NOW });
+
+test("a first phase further ahead than the server's tolerance starts later", () => {
+	expect(startsLater({ startsAt: NOW + ms.days(10) })).toBe(true);
+});
+
+test("a first phase within the server's tolerance ahead of now starts now, not later", () => {
+	expect(startsLater({ startsAt: NOW + ms.minutes(10) })).toBe(false);
 });
