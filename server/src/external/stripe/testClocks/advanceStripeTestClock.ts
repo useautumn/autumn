@@ -2,6 +2,21 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { attachStripeTestClock } from "./attachStripeTestClock";
 
+const assertTargetAfterClock = ({
+	frozenTimeSeconds,
+	clockSeconds,
+}: {
+	frozenTimeSeconds: number;
+	clockSeconds: number;
+}) => {
+	if (frozenTimeSeconds > clockSeconds) return;
+	throw new RecaseError({
+		message: "frozen_time must be later than the current test clock time",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
 export const advanceStripeTestClock = async ({
 	stripe,
 	stripeCustomerId,
@@ -36,18 +51,18 @@ export const advanceStripeTestClock = async ({
 		});
 	}
 	const frozenTimeSeconds = Math.floor(frozenTime / 1000);
-	const currentClockSeconds =
-		customer.test_clock?.frozen_time ?? Math.floor(Date.now() / 1000);
-	if (frozenTimeSeconds <= currentClockSeconds) {
-		throw new RecaseError({
-			message: "frozen_time must be later than the current test clock time",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
+	assertTargetAfterClock({
+		frozenTimeSeconds,
+		clockSeconds:
+			customer.test_clock?.frozen_time ?? Math.floor(Date.now() / 1000),
+	});
 	const clock =
 		customer.test_clock ??
 		(await attachStripeTestClock({ stripe, stripeCustomerId }));
+	assertTargetAfterClock({
+		frozenTimeSeconds,
+		clockSeconds: clock.frozen_time,
+	});
 	return stripe.testHelpers.testClocks.advance(clock.id, {
 		frozen_time: frozenTimeSeconds,
 	});

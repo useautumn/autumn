@@ -73,7 +73,7 @@ test("customers.advance_test_clock attaches a clock to an unclocked sandbox cust
 	let current = clock;
 	for (
 		let attempt = 0;
-		attempt < 30 &&
+		attempt < 90 &&
 		(current.status !== "ready" || current.frozen_time * 1000 !== frozenTime);
 		attempt++
 	) {

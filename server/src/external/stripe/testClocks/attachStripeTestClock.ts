@@ -1,3 +1,4 @@
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 
 const CLOCK_READY_POLL_MS = 1000;
@@ -15,7 +16,11 @@ const waitForStripeTestClockReady = async ({
 		if (clock.status === "ready") return clock;
 		await Bun.sleep(CLOCK_READY_POLL_MS);
 	}
-	return stripe.testHelpers.testClocks.retrieve(clockId);
+	throw new RecaseError({
+		message: `Stripe test clock ${clockId} is not ready yet; retry shortly`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 409,
+	});
 };
 
 const readAttachedStripeTestClockId = async ({
@@ -51,7 +56,7 @@ export const attachStripeTestClock = async ({
 		const concurrentClockId = await readAttachedStripeTestClockId({
 			stripe,
 			stripeCustomerId,
-		});
+		}).catch(() => null);
 		if (!concurrentClockId) throw error;
 		clockId = concurrentClockId;
 	}

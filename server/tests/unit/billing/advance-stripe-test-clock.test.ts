@@ -213,4 +213,67 @@ describe("advance Stripe test clock", () => {
 		).rejects.toBe(error);
 		expect(advance).not.toHaveBeenCalled();
 	});
+	test("rejects a target a concurrent request already advanced past", async () => {
+		const { stripe, retrieve, create, retrieveClock, advance } = setup({
+			customer: unclockedCustomer,
+		});
+		const advancedClock = { ...attachedClock, frozen_time: currentTime + 120 };
+		create.mockRejectedValue(new Error("Customer already has a test clock"));
+		retrieve.mockResolvedValueOnce(
+			unclockedCustomer as Stripe.Response<Stripe.Customer>,
+		);
+		retrieve.mockResolvedValueOnce({
+			...unclockedCustomer,
+			test_clock: advancedClock,
+		} as Stripe.Response<Stripe.Customer>);
+		retrieveClock.mockResolvedValue(
+			advancedClock as Stripe.Response<Stripe.TestHelpers.TestClock>,
+		);
+		await expect(
+			advanceStripeTestClock({
+				stripe,
+				stripeCustomerId: "cus_123",
+				frozenTime: (currentTime + 60) * 1000,
+			}),
+		).rejects.toThrow("later than");
+		expect(advance).not.toHaveBeenCalled();
+	});
+	test("keeps the attach error when the concurrent-clock lookup also fails", async () => {
+		const { stripe, retrieve, create, advance } = setup({
+			customer: unclockedCustomer,
+		});
+		const error = new Error("Billing Automations are configured");
+		create.mockRejectedValue(error);
+		retrieve.mockResolvedValueOnce(
+			unclockedCustomer as Stripe.Response<Stripe.Customer>,
+		);
+		retrieve.mockRejectedValueOnce(new Error("lookup failed"));
+		await expect(
+			advanceStripeTestClock({
+				stripe,
+				stripeCustomerId: "cus_123",
+				frozenTime: (currentTime + 60) * 1000,
+			}),
+		).rejects.toBe(error);
+		expect(advance).not.toHaveBeenCalled();
+	});
+	test("does not advance a freshly attached clock that never becomes ready", async () => {
+		const sleep = spyOn(Bun, "sleep").mockResolvedValue(undefined);
+		const { stripe, retrieveClock, advance } = setup({
+			customer: unclockedCustomer,
+		});
+		retrieveClock.mockResolvedValue({
+			...attachedClock,
+			status: "advancing",
+		} as Stripe.Response<Stripe.TestHelpers.TestClock>);
+		await expect(
+			advanceStripeTestClock({
+				stripe,
+				stripeCustomerId: "cus_123",
+				frozenTime: (currentTime + 60) * 1000,
+			}),
+		).rejects.toThrow("not ready");
+		expect(sleep).toHaveBeenCalled();
+		expect(advance).not.toHaveBeenCalled();
+	});
 });
