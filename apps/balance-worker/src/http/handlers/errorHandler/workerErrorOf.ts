@@ -27,6 +27,7 @@ import {
 	PartitionWriterRecordTooLargeError,
 	PartitionWriterStateNotFoundError,
 } from "../../../processor/writer/writerErrors.js";
+import { CommitPositionsOverlapError } from "../../../runtime/commitPositions/errors.js";
 import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
@@ -160,6 +161,12 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 			code: "NOT_OWNER",
 			message: "Route is not admitted by this worker",
 			...(cause.successor && { successor: cause.successor }),
+		};
+	} else if (cause instanceof CommitPositionsOverlapError) {
+		status = 503;
+		error = {
+			code: "NOT_READY",
+			message: "The partition's writer is being replaced; nothing ran, retry",
 		};
 	} else if (cause instanceof OwnedPartitionNotReadyError) {
 		status = 503;
