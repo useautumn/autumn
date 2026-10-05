@@ -167,6 +167,8 @@ describe("createCommitterDb", () => {
 			deleted: 4,
 			hits: 0,
 			misses: 0,
+			served: 0,
+			unreadable: 0,
 		});
 	});
 });

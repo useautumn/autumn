@@ -129,10 +129,19 @@ describe("database timings", () => {
 		timings.recordSubjectSnapshots({ upserted: 2, deleted: 0 });
 		timings.recordSubjectSnapshots({ hits: 1 });
 		timings.recordSubjectSnapshots({ misses: 2 });
+		timings.recordSubjectSnapshots({ served: 3 });
+		timings.recordSubjectSnapshots({ unreadable: 1 });
 		tick();
 		expect(logged[0]?.[0]).toMatchObject({
 			data: {
-				subjectSnapshots: { upserted: 5, deleted: 1, hits: 1, misses: 2 },
+				subjectSnapshots: {
+					upserted: 5,
+					deleted: 1,
+					hits: 1,
+					misses: 2,
+					served: 3,
+					unreadable: 1,
+				},
 			},
 		});
 		tick();
