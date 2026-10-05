@@ -4,7 +4,11 @@ import {
 	meteringIdentityToPartitionKey,
 	type SubjectStateMutation,
 } from "@autumn/balance-engine";
-import { enqueueMutation, pendingKeyOf } from "../pendingMutations.js";
+import {
+	enqueueMutation,
+	pendingKeyOf,
+	settlementOf,
+} from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
@@ -45,5 +49,5 @@ export function log({
 	});
 	if (defersCommit) scheduleDeferredCommit({ scope });
 	else scheduleCommit({ scope });
-	return pending.settlement.waitForLog();
+	return settlementOf({ pending }).waitForLog();
 }
