@@ -17,7 +17,6 @@ export function CreateScheduleAdvancedSection() {
 	const { form, formValues, products, nowMs, backdatesLiveSubscription } =
 		useCreateScheduleFormContext();
 	const {
-		billingBehavior,
 		resetBillingCycle,
 		billingCycleAnchorMode,
 		billingCycleAnchorDate,
@@ -72,12 +71,12 @@ export function CreateScheduleAdvancedSection() {
 					rule={rules.proration}
 					billsBackdatedGap={backdatesLiveSubscription}
 					value={
-						billingBehavior ??
+						phases[0]?.prorationBehavior ??
 						(backdatesLiveSubscription ? "none" : "prorate_immediately")
 					}
 					onChange={(value) =>
 						form.setFieldValue(
-							"billingBehavior",
+							"phases[0].prorationBehavior",
 							value === "prorate_immediately" && !backdatesLiveSubscription
 								? null
 								: value,

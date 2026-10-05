@@ -216,11 +216,6 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const getBillingBehavior = useCallback(
-		() => form.store.state.values.billingBehavior ?? null,
-		[form.store],
-	);
-
 	const getResetBillingCycle = useCallback(
 		() =>
 			!backdatesLiveSubscription &&
@@ -251,7 +246,6 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		getPhases,
 		getUnscheduledPlans,
-		getBillingBehavior,
 		getResetBillingCycle,
 		getBillingCycleAnchorAndEndDate,
 		getEnablePlanImmediately,
@@ -266,7 +260,6 @@ export function CreateScheduleFormProvider({
 		products,
 		features,
 		nowMs,
-		billingBehavior: formValues.billingBehavior,
 		resetBillingCycle:
 			formValues.resetBillingCycle && !backdatesLiveSubscription,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,

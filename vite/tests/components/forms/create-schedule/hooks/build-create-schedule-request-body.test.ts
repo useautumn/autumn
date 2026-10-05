@@ -1025,16 +1025,18 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [
-				schedulePhase({
-					startsAt: now,
-					productIds: ["prod_1", "prod_2"],
-				}),
+				{
+					...schedulePhase({
+						startsAt: now,
+						productIds: ["prod_1", "prod_2"],
+					}),
+					prorationBehavior: "none",
+				},
 				schedulePhase({ startsAt: future }),
 			],
 			products: defaultProducts,
 			features,
 			nowMs: now,
-			billingBehavior: "none",
 			resetBillingCycle: true,
 		});
 
@@ -1050,7 +1052,10 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [
-				schedulePhase({ startsAt: now, productIds: [""] }),
+				{
+					...schedulePhase({ startsAt: now, productIds: [""] }),
+					prorationBehavior: "none",
+				},
 				schedulePhase({
 					startsAt: future,
 					productIds: ["prod_1", "prod_2"],
@@ -1060,7 +1065,6 @@ describe("buildCreateScheduleRequestBody", () => {
 			products: defaultProducts,
 			features,
 			nowMs: now,
-			billingBehavior: "none",
 			resetBillingCycle: true,
 		});
 
@@ -1071,6 +1075,53 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].plans).toHaveLength(2);
 		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("sends the first phase's proration top-level and each later phase's on that phase", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				{ ...schedulePhase({ startsAt: now }), prorationBehavior: "none" },
+				{
+					...schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+					prorationBehavior: "prorate_immediately",
+				},
+				{
+					...schedulePhase({ startsAt: Date.UTC(2027, 4, 1) }),
+					prorationBehavior: "none",
+				},
+				schedulePhase({ startsAt: Date.UTC(2027, 6, 1) }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+		});
+
+		expect(result!.proration_behavior).toBe("none");
+		expect(result!.phases[0]).not.toHaveProperty("proration_behavior");
+		expect(result!.phases[1].proration_behavior).toBe("prorate_immediately");
+		expect(result!.phases[2].proration_behavior).toBe("none");
+		expect(result!.phases[3]).not.toHaveProperty("proration_behavior");
+	});
+
+	test("omits proration when no phase sets it", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({ startsAt: now }),
+				schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+		});
+
+		expect(result).not.toHaveProperty("proration_behavior");
+		for (const phase of result!.phases) {
+			expect(phase).not.toHaveProperty("proration_behavior");
+		}
 	});
 
 	test("a later phase that keeps its cycle anchor sends no anchor, the rest reset", () => {

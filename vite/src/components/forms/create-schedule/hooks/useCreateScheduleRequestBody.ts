@@ -1,9 +1,4 @@
-import type {
-	BillingBehavior,
-	Feature,
-	ProductV2,
-	SetPlansParamsV0,
-} from "@autumn/shared";
+import type { Feature, ProductV2, SetPlansParamsV0 } from "@autumn/shared";
 import { useMemo } from "react";
 import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
 import {
@@ -30,7 +25,6 @@ export function buildCreateScheduleRequestBody({
 	products,
 	features,
 	nowMs,
-	billingBehavior,
 	resetBillingCycle,
 	billingCycleAnchorMode,
 	billingCycleAnchorDate,
@@ -45,7 +39,6 @@ export function buildCreateScheduleRequestBody({
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
-	billingBehavior?: BillingBehavior | null;
 	resetBillingCycle?: boolean;
 	billingCycleAnchorMode?: BillingCycleAnchorMode;
 	billingCycleAnchorDate?: number | null;
@@ -88,6 +81,7 @@ export function buildCreateScheduleRequestBody({
 		if (plans.length === 0) return null;
 		return {
 			keepsCycleAnchor: phase.keepsCycleAnchor,
+			prorationBehavior: phase.prorationBehavior,
 			starts_at: startsAt,
 			plans,
 		};
@@ -99,17 +93,22 @@ export function buildCreateScheduleRequestBody({
 	if (validPhases.length === 0) return null;
 
 	const hasMultipleImmediatePlans = (validPhases[0]?.plans.length ?? 0) > 1;
-	const phasesWithBillingAnchors = validPhases.map(
-		({ keepsCycleAnchor, ...apiPhase }, index) => {
+	const requestPhases = validPhases.map(
+		({ keepsCycleAnchor, prorationBehavior, ...apiPhase }, index) => {
+			const isFirstPhase = index === 0;
 			const billingCycleAnchor = phaseToBillingCycleAnchor({
 				phase: { keepsCycleAnchor },
-				isFirstPhase: index === 0,
+				isFirstPhase,
 			});
-			return billingCycleAnchor
-				? { ...apiPhase, billing_cycle_anchor: billingCycleAnchor }
-				: apiPhase;
+			return {
+				...apiPhase,
+				...(billingCycleAnchor && { billing_cycle_anchor: billingCycleAnchor }),
+				...(!isFirstPhase &&
+					prorationBehavior && { proration_behavior: prorationBehavior }),
+			};
 		},
 	);
+	const firstPhaseProrationBehavior = phases[0]?.prorationBehavior;
 
 	const apiUnscheduledPlans = unscheduledPlans.flatMap((plan) =>
 		plan.productId ? [toApiPlan(plan)] : [],
@@ -117,13 +116,14 @@ export function buildCreateScheduleRequestBody({
 
 	const body: Record<string, unknown> = {
 		customer_id: customerId,
-		phases: phasesWithBillingAnchors,
+		phases: requestPhases,
 		...(apiUnscheduledPlans.length > 0
 			? { unscheduled_plans: apiUnscheduledPlans }
 			: {}),
 	};
 
-	if (billingBehavior) body.proration_behavior = billingBehavior;
+	if (firstPhaseProrationBehavior)
+		body.proration_behavior = firstPhaseProrationBehavior;
 	if (enablePlanImmediately && startsLater) body.enable_plan_immediately = true;
 	if (stripeSubscriptionId) body.stripe_subscription_id = stripeSubscriptionId;
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
@@ -166,7 +166,6 @@ export function useCreateScheduleRequestBody({
 	products,
 	features,
 	nowMs,
-	billingBehavior,
 	resetBillingCycle,
 	billingCycleAnchorMode,
 	billingCycleAnchorDate,
@@ -181,7 +180,6 @@ export function useCreateScheduleRequestBody({
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
-	billingBehavior?: BillingBehavior | null;
 	resetBillingCycle?: boolean;
 	billingCycleAnchorMode?: BillingCycleAnchorMode;
 	billingCycleAnchorDate?: number | null;
@@ -199,7 +197,6 @@ export function useCreateScheduleRequestBody({
 				products,
 				features,
 				nowMs,
-				billingBehavior,
 				resetBillingCycle,
 				billingCycleAnchorMode,
 				billingCycleAnchorDate,
@@ -215,7 +212,6 @@ export function useCreateScheduleRequestBody({
 			products,
 			features,
 			nowMs,
-			billingBehavior,
 			resetBillingCycle,
 			billingCycleAnchorMode,
 			billingCycleAnchorDate,
@@ -234,7 +230,6 @@ export function useBuildCreateScheduleRequestBody({
 	nowMs,
 	getPhases,
 	getUnscheduledPlans,
-	getBillingBehavior,
 	getResetBillingCycle,
 	getBillingCycleAnchorAndEndDate,
 	getEnablePlanImmediately,
@@ -247,7 +242,6 @@ export function useBuildCreateScheduleRequestBody({
 	nowMs?: number;
 	getPhases: () => CustomerStatePhase[];
 	getUnscheduledPlans?: () => CustomerStatePlan[];
-	getBillingBehavior?: () => BillingBehavior | null;
 	getResetBillingCycle?: () => boolean;
 	getBillingCycleAnchorAndEndDate?: () => Pick<
 		CustomerStateForm,
@@ -268,7 +262,6 @@ export function useBuildCreateScheduleRequestBody({
 					products,
 					features,
 					nowMs,
-					billingBehavior: getBillingBehavior?.() ?? null,
 					resetBillingCycle: getResetBillingCycle?.() ?? false,
 					...getBillingCycleAnchorAndEndDate?.(),
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
@@ -282,7 +275,6 @@ export function useBuildCreateScheduleRequestBody({
 			nowMs,
 			getPhases,
 			getUnscheduledPlans,
-			getBillingBehavior,
 			getResetBillingCycle,
 			getBillingCycleAnchorAndEndDate,
 			getEnablePlanImmediately,

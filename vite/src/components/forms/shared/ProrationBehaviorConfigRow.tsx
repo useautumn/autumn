@@ -4,6 +4,12 @@ import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionTogg
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import type { BillingOptionRule } from "@/components/forms/shared/utils/billingOptionRules";
 
+export const PRORATION_BEHAVIOR_LABELS: Record<BillingBehavior, string> = {
+	prorate_immediately: "Prorated",
+	bill_difference: "Full difference",
+	none: "None",
+};
+
 const MODE_DESCRIPTIONS: Record<Exclude<BillingBehavior, "none">, string> = {
 	prorate_immediately: "Charge or credit the remaining time in this cycle",
 	bill_difference:
@@ -63,8 +69,14 @@ export function ProrationBehaviorConfigRow({
 						disabled={rule.disabled}
 						onValueChange={(mode) => onChange(mode as BillingBehavior)}
 						options={[
-							{ value: "prorate_immediately", label: "Prorated" },
-							{ value: "bill_difference", label: "Full difference" },
+							{
+								value: "prorate_immediately",
+								label: PRORATION_BEHAVIOR_LABELS.prorate_immediately,
+							},
+							{
+								value: "bill_difference",
+								label: PRORATION_BEHAVIOR_LABELS.bill_difference,
+							},
 						]}
 					/>
 					<span className="text-xs text-tertiary-foreground/70">

@@ -29,7 +29,6 @@ describe("scheduleFormFromRequestBody", () => {
 			unscheduled_plans: [{ plan_id: "support-addon" }],
 		});
 		expect(form).toMatchObject({
-			billingBehavior: "none",
 			enablePlanImmediately: true,
 			resetBillingCycle: true,
 			unscheduledPlans: [
@@ -46,6 +45,7 @@ describe("scheduleFormFromRequestBody", () => {
 					productId: "scale",
 				},
 			],
+			prorationBehavior: "none",
 			startsAt: null,
 		});
 		expect(form?.phases?.[1]).toMatchObject({
@@ -67,6 +67,42 @@ describe("scheduleFormFromRequestBody", () => {
 		const second = form?.phases?.[1]?.startsAt;
 		expect(typeof second).toBe("number");
 		expect(second).toBeGreaterThan(1780000000000);
+	});
+
+	test("round trips each phase's proration: the first through the request, later ones per phase", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const product = { id: "pro", items: [] } as unknown as ProductV2;
+		const request = {
+			customer_id: "cus_1",
+			proration_behavior: "none",
+			phases: [
+				{ plans: [{ plan_id: "pro" }], starts_at: now },
+				{
+					plans: [{ plan_id: "pro" }],
+					starts_at: Date.UTC(2027, 2, 1),
+					proration_behavior: "prorate_immediately",
+				},
+				{ plans: [{ plan_id: "pro" }], starts_at: Date.UTC(2027, 4, 1) },
+			],
+		};
+		const form = scheduleFormFromRequestBody(request);
+		expect(form?.phases?.map((phase) => phase.prorationBehavior)).toEqual([
+			"none",
+			"prorate_immediately",
+			null,
+		]);
+
+		const rebuilt = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: form?.phases ?? [],
+			products: [product],
+			features: [],
+			nowMs: now,
+		});
+		expect(rebuilt?.proration_behavior).toBe("none");
+		expect(rebuilt?.phases[0]).not.toHaveProperty("proration_behavior");
+		expect(rebuilt?.phases[1]?.proration_behavior).toBe("prorate_immediately");
+		expect(rebuilt?.phases[2]).not.toHaveProperty("proration_behavior");
 	});
 
 	test("returns undefined without phases", () => {

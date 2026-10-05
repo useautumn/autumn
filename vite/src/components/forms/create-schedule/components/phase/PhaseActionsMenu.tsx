@@ -1,19 +1,29 @@
+import { PhaseProrationBehaviorSchema } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	DotsThreeIcon,
+	ReceiptIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
+import { PRORATION_BEHAVIOR_LABELS } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { isImmediatePhase } from "../../utils/schedulePhaseTiming";
+
+const PHASE_PRORATION_BEHAVIORS = PhaseProrationBehaviorSchema.options;
 
 export function PhaseActionsMenu({
 	phaseIndex,
@@ -25,8 +35,11 @@ export function PhaseActionsMenu({
 	const { form, formValues, handleRemovePhase } = useCustomerStateContext();
 	if (isImmediatePhase({ phaseIndex }) || hasStarted) return null;
 
-	const keepsCycleAnchor =
-		formValues.phases[phaseIndex]?.keepsCycleAnchor ?? false;
+	const phase = formValues.phases[phaseIndex];
+	const keepsCycleAnchor = phase?.keepsCycleAnchor ?? false;
+	const prorationBehavior =
+		phase?.prorationBehavior ??
+		(keepsCycleAnchor ? "prorate_immediately" : "none");
 
 	return (
 		<DropdownMenu>
@@ -53,6 +66,29 @@ export function PhaseActionsMenu({
 					<CalendarBlankIcon className="size-4" />
 					Keep cycle anchor
 				</DropdownMenuCheckboxItem>
+				<DropdownMenuSub>
+					<DropdownMenuSubTrigger>
+						<ReceiptIcon className="size-4" />
+						Proration
+					</DropdownMenuSubTrigger>
+					<DropdownMenuSubContent>
+						<DropdownMenuRadioGroup
+							value={prorationBehavior}
+							onValueChange={(value) =>
+								form.setFieldValue(
+									`phases[${phaseIndex}].prorationBehavior`,
+									PhaseProrationBehaviorSchema.parse(value),
+								)
+							}
+						>
+							{PHASE_PRORATION_BEHAVIORS.map((behavior) => (
+								<DropdownMenuRadioItem key={behavior} value={behavior}>
+									{PRORATION_BEHAVIOR_LABELS[behavior]}
+								</DropdownMenuRadioItem>
+							))}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuSubContent>
+				</DropdownMenuSub>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					variant="destructive"

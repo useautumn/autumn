@@ -70,6 +70,31 @@ const resetsBillingCycleAt = ({
 			) === truncateMsToSecondPrecision(startsAt),
 	);
 
+const startsWithPhase = ({
+	customerProduct,
+	startsAt,
+}: {
+	customerProduct: FullCusProduct;
+	startsAt: number;
+}) =>
+	isScheduledCustomerProduct(customerProduct) &&
+	truncateMsToSecondPrecision(customerProduct.starts_at) ===
+		truncateMsToSecondPrecision(startsAt);
+
+/** The proration a later phase was saved with, from the plans that start it. */
+const prorationBehaviorAt = ({
+	customerProducts,
+	startsAt,
+}: {
+	customerProducts: FullCusProduct[];
+	startsAt: number;
+}) =>
+	customerProducts.find(
+		(customerProduct) =>
+			startsWithPhase({ customerProduct, startsAt }) &&
+			customerProduct.phase_proration_behavior,
+	)?.phase_proration_behavior ?? null;
+
 /** When today's phase began: its earliest live plan that ends at a scheduled
  * phase. Ongoing plans aren't part of it, so their start doesn't count. */
 const findCurrentPhaseStart = ({
@@ -138,14 +163,21 @@ export function buildInitialValues({
 	const phases = seededState.phases.map((phase, index) => {
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
+		const laterPhaseStartsAt = index > 0 ? phase.startsAt : null;
 		const keepsCycleAnchor =
-			index > 0 &&
-			phase.startsAt != null &&
-			!resetsBillingCycleAt({ customerProducts, startsAt: phase.startsAt });
+			laterPhaseStartsAt != null &&
+			!resetsBillingCycleAt({ customerProducts, startsAt: laterPhaseStartsAt });
 		return {
 			...phase,
 			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
 			keepsCycleAnchor,
+			prorationBehavior:
+				laterPhaseStartsAt == null
+					? null
+					: prorationBehaviorAt({
+							customerProducts,
+							startsAt: laterPhaseStartsAt,
+						}),
 			...(hasScheduledPlans && persistedStartsAt != null
 				? { persistedStartsAt }
 				: {}),
@@ -159,7 +191,6 @@ export function buildInitialValues({
 	return {
 		phases,
 		unscheduledPlans: seededState.unscheduledPlans,
-		billingBehavior: null,
 		resetBillingCycle: false,
 		billingCycleAnchorMode: "now",
 		billingCycleAnchorDate: null,

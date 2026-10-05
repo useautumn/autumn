@@ -834,6 +834,48 @@ describe("buildInitialValues", () => {
 		expect(request).not.toHaveProperty("billing_cycle_anchor");
 	});
 
+	test("each saved later phase reopens with its proration, and re-saving sends it back", () => {
+		const current = withDates({
+			customerProduct: makeCusProduct({ id: "cp_1", productId: "prod_1" }),
+			startsAt: 1000,
+			endedAt: 2000,
+		});
+		const prorated = {
+			...scheduledAt({ id: "cp_2", productId: "prod_2", startsAt: 2000 }),
+			ended_at: 3000,
+			phase_proration_behavior: "none",
+		} as FullCusProduct;
+		const unset = scheduledAt({
+			id: "cp_3",
+			productId: "prod_1",
+			startsAt: 3000,
+		});
+		const customer = makeCustomer({
+			customerProducts: [current, prorated, unset],
+		});
+		const values = buildInitialValues({ customer, products });
+
+		expect(values.phases.map((phase) => phase.prorationBehavior)).toEqual([
+			null,
+			"none",
+			null,
+		]);
+
+		const request = buildCreateScheduleRequestBody({
+			...values,
+			customerId: "cus_1",
+			products,
+			features: [],
+			nowMs: 1500,
+		});
+		expect(request?.phases.map((phase) => phase.proration_behavior)).toEqual([
+			undefined,
+			"none",
+			undefined,
+		]);
+		expect(request).not.toHaveProperty("proration_behavior");
+	});
+
 	test("a reset recorded at the current phase's start does not mark a later phase", () => {
 		const current = {
 			...withDates({
