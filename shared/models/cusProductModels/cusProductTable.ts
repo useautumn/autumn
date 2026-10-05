@@ -9,6 +9,7 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { PhaseProrationBehavior } from "../../api/billing/common/billingBehavior.js";
 import { collatePgColumn } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
@@ -51,6 +52,10 @@ export const customerProducts = pgTable(
 		trial_ends_at: numeric({ mode: "number" }),
 		billing_cycle_anchor: numeric({ mode: "number" }),
 		billing_cycle_anchor_resets_at: numeric({ mode: "number" }),
+		// How the Stripe schedule phase this scheduled row starts bills its transition.
+		phase_proration_behavior: text(
+			"phase_proration_behavior",
+		).$type<PhaseProrationBehavior>(),
 		collection_method: text("collection_method").default(
 			"charge_automatically",
 		),

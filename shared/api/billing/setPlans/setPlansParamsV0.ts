@@ -5,6 +5,7 @@ import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import {
 	CreateScheduleParamsV0BaseSchema,
+	createSchedulePhaseProrationIssues,
 	createScheduleTimingIssues,
 } from "../createSchedule/createScheduleParamsV0";
 
@@ -55,7 +56,14 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 			.meta({ internal: true }),
 	})
 	.check((ctx) => {
-		for (const issue of createScheduleTimingIssues(ctx.value.phases)) {
+		const issues = [
+			...createScheduleTimingIssues(ctx.value.phases),
+			...createSchedulePhaseProrationIssues({
+				phases: ctx.value.phases,
+				requestProrationField: "proration_behavior",
+			}),
+		];
+		for (const issue of issues) {
 			ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
 		}
 	});

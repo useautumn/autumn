@@ -6,7 +6,10 @@ import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1
 import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
 import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
-import { BillingBehaviorSchema } from "../common/billingBehavior";
+import {
+	BillingBehaviorSchema,
+	PhaseProrationBehaviorSchema,
+} from "../common/billingBehavior";
 import { ImmediateBillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import {
 	CustomizePlanV1BaseSchema,
@@ -91,6 +94,10 @@ export const CreateSchedulePhaseSchema = z
 			description:
 				"Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.",
 		}),
+		proration_behavior: PhaseProrationBehaviorSchema.optional().meta({
+			description:
+				"How the change when this phase starts is billed: 'prorate_immediately' invoices the prorated difference at the phase start, 'none' skips it. Omit for the default. Not allowed on the first phase, which uses the request's proration setting.",
+		}),
 	})
 	.check((ctx) => {
 		const hasStartsAt = ctx.value.starts_at !== undefined;
@@ -166,6 +173,23 @@ export const createScheduleTimingIssues = (
 	return issues;
 };
 
+/** A phase's proration bills its start, so the first phase takes the request-level setting. */
+export const createSchedulePhaseProrationIssues = ({
+	phases,
+	requestProrationField,
+}: {
+	phases: readonly { proration_behavior?: unknown }[];
+	requestProrationField: "billing_behavior" | "proration_behavior";
+}): { message: string; path: (string | number)[] }[] =>
+	phases[0]?.proration_behavior === undefined
+		? []
+		: [
+				{
+					message: `proration_behavior cannot be set on the first phase. Use the top-level ${requestProrationField} instead.`,
+					path: ["phases", 0, "proration_behavior"],
+				},
+			];
+
 export const CreateScheduleParamsV0BaseSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer to create the schedule for.",
@@ -233,7 +257,14 @@ export const CreateScheduleParamsV0BaseSchema = z.object({
 
 export const CreateScheduleParamsV0Schema =
 	CreateScheduleParamsV0BaseSchema.check((ctx) => {
-		for (const issue of createScheduleTimingIssues(ctx.value.phases)) {
+		const issues = [
+			...createScheduleTimingIssues(ctx.value.phases),
+			...createSchedulePhaseProrationIssues({
+				phases: ctx.value.phases,
+				requestProrationField: "billing_behavior",
+			}),
+		];
+		for (const issue of issues) {
 			ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
 		}
 	});

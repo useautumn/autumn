@@ -34,6 +34,7 @@ export interface ScheduledPhaseContext {
 	startsAt: number;
 	endsAt: number | undefined;
 	billingCycleAnchor?: CreateSchedulePhaseV0["billing_cycle_anchor"];
+	prorationBehavior?: CreateSchedulePhaseV0["proration_behavior"];
 	productContexts: ScheduledProductContext[];
 }
 
