@@ -410,7 +410,7 @@ export const createInvoiceContract = oc
 export const issueCreditNoteContract = oc
 	.route({
 		method: "POST",
-		path: "/v1/invoices.issueCreditNote",
+		path: "/v1/invoices.issue_credit_note",
 		operationId: "issueCreditNote",
 		tags: ["invoices"],
 		description:

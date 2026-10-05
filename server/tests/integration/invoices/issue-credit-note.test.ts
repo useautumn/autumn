@@ -1,8 +1,8 @@
 /**
- * invoices.issueCreditNote: credit an open or paid Stripe invoice.
+ * invoices.issue_credit_note: credit an open or paid Stripe invoice.
  *
  * Contract:
- *   POST /invoices.issueCreditNote { invoice_id, amount | lines, destination?, ... } -> { credit_note }
+ *   POST /invoices.issue_credit_note { invoice_id, amount | lines, destination?, ... } -> { credit_note }
  *   paid + lines + refund  → refund issued, refunded_amount tracked on our row
  *   paid + amount          → defaults to customer_balance
  *   open + amount          → reduces what's owed; preview creates nothing
@@ -55,7 +55,7 @@ const setupPaidInvoice = async ({ customerId }: { customerId: string }) => {
 };
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.issueCreditNote: paid invoice, line refund → refund issued and tracked")}`,
+	`${chalk.yellowBright("invoices.issue_credit_note: paid invoice, line refund → refund issued and tracked")}`,
 	async () => {
 		const customerId = "credit-note-paid-refund";
 		const { autumnV2_3, invoice } = await setupPaidInvoice({ customerId });
@@ -72,14 +72,14 @@ test.concurrent(
 		};
 
 		const { credit_note: preview } = (await autumnV2_3.post(
-			"/invoices.issueCreditNote",
+			"/invoices.issue_credit_note",
 			{ ...request, preview: true },
 		)) as CreditNoteResponse;
 		expect(preview.id).toBeNull();
 		expect(preview.refund_amount).toBe(5);
 
 		const { credit_note: creditNote } = (await autumnV2_3.post(
-			"/invoices.issueCreditNote",
+			"/invoices.issue_credit_note",
 			request,
 		)) as CreditNoteResponse;
 		expect(creditNote.id).toStartWith("cn_");
@@ -103,13 +103,13 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.issueCreditNote: paid invoice, flat amount → customer balance by default")}`,
+	`${chalk.yellowBright("invoices.issue_credit_note: paid invoice, flat amount → customer balance by default")}`,
 	async () => {
 		const customerId = "credit-note-paid-balance";
 		const { autumnV2_3, invoice } = await setupPaidInvoice({ customerId });
 
 		const { credit_note: creditNote } = (await autumnV2_3.post(
-			"/invoices.issueCreditNote",
+			"/invoices.issue_credit_note",
 			{ invoice_id: invoice.id, amount: 3, send_email: false },
 		)) as CreditNoteResponse;
 		expect(creditNote.total).toBe(3);
@@ -127,7 +127,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.issueCreditNote: open invoice → reduces amount due; preview creates nothing")}`,
+	`${chalk.yellowBright("invoices.issue_credit_note: open invoice → reduces amount due; preview creates nothing")}`,
 	async () => {
 		const customerId = "credit-note-open";
 		const pro = products.pro({
@@ -158,7 +158,7 @@ test.concurrent(
 			destination: "refund",
 			send_email: false,
 		};
-		await autumnV2_3.post("/invoices.issueCreditNote", {
+		await autumnV2_3.post("/invoices.issue_credit_note", {
 			...request,
 			preview: true,
 		});
@@ -168,7 +168,7 @@ test.concurrent(
 		expect(before.data).toHaveLength(0);
 
 		const { credit_note: creditNote } = (await autumnV2_3.post(
-			"/invoices.issueCreditNote",
+			"/invoices.issue_credit_note",
 			request,
 		)) as CreditNoteResponse;
 		expect(creditNote.pre_payment_amount).toBe(4);
@@ -185,7 +185,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("invoices.issueCreditNote: invalid requests → 400")}`,
+	`${chalk.yellowBright("invoices.issue_credit_note: invalid requests → 400")}`,
 	async () => {
 		const customerId = "credit-note-invalid";
 		const { autumnV2_3, invoice } = await setupPaidInvoice({ customerId });
@@ -194,7 +194,7 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
-				autumnV2_3.post("/invoices.issueCreditNote", {
+				autumnV2_3.post("/invoices.issue_credit_note", {
 					invoice_id: invoice.id,
 					amount: 1,
 					lines: [{ id: line!.id, amount: 1 }],
@@ -203,7 +203,7 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
-				autumnV2_3.post("/invoices.issueCreditNote", {
+				autumnV2_3.post("/invoices.issue_credit_note", {
 					invoice_id: invoice.id,
 					lines: [{ id: "invoice_li_not_on_invoice", amount: 1 }],
 				}),

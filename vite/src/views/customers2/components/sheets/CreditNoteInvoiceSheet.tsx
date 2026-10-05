@@ -155,7 +155,7 @@ function CreditNoteForm({
 		queryFn: async ({ signal }) => {
 			const { data } = await axiosInstance.post<{
 				credit_note: ApiCreditNote;
-			}>("/v1/invoices.issueCreditNote", JSON.parse(previewPayload), {
+			}>("/v1/invoices.issue_credit_note", JSON.parse(previewPayload), {
 				signal,
 			});
 			return data.credit_note;
@@ -167,7 +167,7 @@ function CreditNoteForm({
 		mutationFn: async () => {
 			const { data } = await axiosInstance.post<{
 				credit_note: ApiCreditNote;
-			}>("/v1/invoices.issueCreditNote", payload);
+			}>("/v1/invoices.issue_credit_note", payload);
 			return data.credit_note;
 		},
 		onSuccess: async (creditNote) => {

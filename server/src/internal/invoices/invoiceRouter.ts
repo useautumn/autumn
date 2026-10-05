@@ -48,4 +48,4 @@ invoiceRpcRouter.post("/invoices.listTemplates", ...handleListInvoiceTemplates);
 invoiceRpcRouter.post("/invoices.pay", ...handlePayInvoice);
 invoiceRpcRouter.post("/invoices.void", ...handleVoidInvoice);
 invoiceRpcRouter.post("/invoices.reissue", ...handleReissueInvoice);
-invoiceRpcRouter.post("/invoices.issueCreditNote", ...handleIssueCreditNote);
+invoiceRpcRouter.post("/invoices.issue_credit_note", ...handleIssueCreditNote);

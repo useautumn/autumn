@@ -117,11 +117,11 @@ test("the credit note preview and write tools own the preview flag", async () =>
 	}));
 	expect(sentBodies).toEqual([
 		{
-			path: "/v1/invoices.issueCreditNote",
+			path: "/v1/invoices.issue_credit_note",
 			body: { ...request, send_email: true, preview: true },
 		},
 		{
-			path: "/v1/invoices.issueCreditNote",
+			path: "/v1/invoices.issue_credit_note",
 			body: { ...request, send_email: true, preview: false },
 		},
 	]);
