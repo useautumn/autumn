@@ -11,13 +11,17 @@ const trialLengthDefaults: {
 	trialDuration: FreeTrialDuration.Day,
 };
 
-/** Length and unit inputs of a free trial, bound to any form holding the trial fields. */
+const NO_EDIT_HANDLER: { onEdit?: () => void } = {};
+
+/** Length and unit inputs of a free trial; `onEdit` fires on user input only. */
 export const FreeTrialLengthFields = withFieldGroup({
 	defaultValues: trialLengthDefaults,
-	render: function FreeTrialLengthFieldsRender({ group }) {
+	props: NO_EDIT_HANDLER,
+	render: function FreeTrialLengthFieldsRender({ group, onEdit }) {
+		const listeners = { onChange: () => onEdit?.() };
 		return (
 			<>
-				<group.AppField name="trialLength">
+				<group.AppField name="trialLength" listeners={listeners}>
 					{(field) => (
 						<field.NumberField
 							label=""
@@ -29,7 +33,7 @@ export const FreeTrialLengthFields = withFieldGroup({
 						/>
 					)}
 				</group.AppField>
-				<group.AppField name="trialDuration">
+				<group.AppField name="trialDuration" listeners={listeners}>
 					{(field) => (
 						<field.SelectField
 							label=""

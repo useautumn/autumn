@@ -116,6 +116,7 @@ export const syncProposalToCustomerState = ({
 		endDate: null,
 		enablePlanImmediately: false,
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
+		trialEdited: false,
 	} as const;
 	const scopedCustomerProducts = scopeCustomerProducts({
 		customerProducts,

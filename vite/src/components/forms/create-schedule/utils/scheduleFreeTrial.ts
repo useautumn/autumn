@@ -124,17 +124,21 @@ export const canScheduleFreeTrial = ({
 };
 
 /**
- * Untouched, a running trial is omitted so set_plans carries it on; switched off it is ended with null.
- * Without a running trial, a disabled row omits `free_trial` entirely.
+ * Untouched, a running trial is omitted so set_plans carries it on. Switched off, null ends a running
+ * trial or skips the catalog trial set_plans would start; with neither, `free_trial` is omitted.
  */
 export const scheduleFreeTrialParam = ({
 	formValues,
 	currentTrial,
+	catalogFreeTrial,
 }: {
 	formValues: FreeTrialFormValues;
 	currentTrial: CurrentScheduleTrial | null;
+	catalogFreeTrial: FreeTrial | null;
 }): FreeTrialParamsV1 | null | undefined => {
-	if (!formValues.trialEnabled) return currentTrial ? null : undefined;
+	if (!formValues.trialEnabled) {
+		return currentTrial || catalogFreeTrial ? null : undefined;
+	}
 	const keepsCurrentTrial =
 		currentTrial !== null &&
 		isSameFreeTrialFormValues({
@@ -143,4 +147,22 @@ export const scheduleFreeTrialParam = ({
 		});
 	if (keepsCurrentTrial) return undefined;
 	return freeTrialFormValuesToParams(formValues);
+};
+
+/** A plan change re-seeds the row with its new default, unless the user has edited the row. */
+export const reseededScheduleTrialFormValues = ({
+	trialEdited,
+	previousDefaultFormValues,
+	defaultFormValues,
+}: {
+	trialEdited: boolean;
+	previousDefaultFormValues: FreeTrialFormValues;
+	defaultFormValues: FreeTrialFormValues;
+}): FreeTrialFormValues | null => {
+	if (trialEdited) return null;
+	const defaultChanged = !isSameFreeTrialFormValues({
+		left: previousDefaultFormValues,
+		right: defaultFormValues,
+	});
+	return defaultChanged ? defaultFormValues : null;
 };

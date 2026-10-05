@@ -29,6 +29,7 @@ export function useCustomerStateForm({
 		endDate: null,
 		enablePlanImmediately: false,
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
+		trialEdited: false,
 	};
 
 	return useAppForm({

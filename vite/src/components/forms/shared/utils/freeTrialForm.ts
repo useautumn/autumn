@@ -9,6 +9,9 @@ export type FreeTrialForm =
 	| UseUpdateSubscriptionForm
 	| UseCustomerStateForm;
 
+const PROGRAMMATIC_WRITE = { dontRunListeners: true };
+
+/** Programmatic writes skip field listeners, so only user input counts as an edit. */
 export const applyFreeTrialFormValues = ({
 	form,
 	values,
@@ -17,15 +20,23 @@ export const applyFreeTrialFormValues = ({
 	values: Partial<FreeTrialFormValues>;
 }) => {
 	if (values.trialEnabled !== undefined) {
-		form.setFieldValue("trialEnabled", values.trialEnabled);
+		form.setFieldValue("trialEnabled", values.trialEnabled, PROGRAMMATIC_WRITE);
 	}
 	if (values.trialLength !== undefined) {
-		form.setFieldValue("trialLength", values.trialLength);
+		form.setFieldValue("trialLength", values.trialLength, PROGRAMMATIC_WRITE);
 	}
 	if (values.trialDuration !== undefined) {
-		form.setFieldValue("trialDuration", values.trialDuration);
+		form.setFieldValue(
+			"trialDuration",
+			values.trialDuration,
+			PROGRAMMATIC_WRITE,
+		);
 	}
 	if (values.trialCardRequired !== undefined) {
-		form.setFieldValue("trialCardRequired", values.trialCardRequired);
+		form.setFieldValue(
+			"trialCardRequired",
+			values.trialCardRequired,
+			PROGRAMMATIC_WRITE,
+		);
 	}
 };

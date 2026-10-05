@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
+	type FreeTrial,
 	FreeTrialDuration,
 	type FullCusProduct,
 	type ProductV2,
@@ -17,6 +18,7 @@ import {
 	defaultScheduleTrialFormValues,
 	findCatalogScheduleTrial,
 	findCurrentScheduleTrial,
+	reseededScheduleTrialFormValues,
 } from "./scheduleFreeTrial";
 
 const NOW = Date.UTC(2027, 0, 1);
@@ -44,6 +46,9 @@ const proWithTrial = {
 		card_required: true,
 	},
 } as unknown as ProductV2;
+
+const CATALOG_TRIAL = (proWithTrial as unknown as { free_trial: FreeTrial })
+	.free_trial;
 
 const phasesStarting = (
 	startsAt: number | null,
@@ -78,10 +83,12 @@ const customerProduct = (overrides: Partial<FullCusProduct>): FullCusProduct =>
 const buildFreeTrialParam = ({
 	freeTrial,
 	currentTrial = null,
+	catalogFreeTrial = null,
 	phases = phasesStarting(null),
 }: {
 	freeTrial: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
+	catalogFreeTrial?: FreeTrial | null;
 	phases?: CustomerStatePhase[];
 }) =>
 	buildCreateScheduleRequestBody({
@@ -92,6 +99,7 @@ const buildFreeTrialParam = ({
 		products: [proPlan],
 		freeTrial,
 		currentTrial,
+		catalogFreeTrial,
 	});
 
 describe("schedule free_trial request mapping", () => {
@@ -113,7 +121,15 @@ describe("schedule free_trial request mapping", () => {
 		expect(body).toHaveProperty("free_trial", null);
 	});
 
-	test("a disabled row without a running trial omits free_trial", () => {
+	test("switching off a catalog trial set_plans would start sends null to skip it", () => {
+		const body = buildFreeTrialParam({
+			freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES,
+			catalogFreeTrial: CATALOG_TRIAL,
+		});
+		expect(body).toHaveProperty("free_trial", null);
+	});
+
+	test("a disabled row without a running or catalog trial omits free_trial", () => {
 		expect(
 			buildFreeTrialParam({ freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES }),
 		).not.toHaveProperty("free_trial");
@@ -239,5 +255,37 @@ describe("initial trial row", () => {
 				catalogFreeTrial: null,
 			}),
 		).toEqual(DISABLED_FREE_TRIAL_FORM_VALUES);
+	});
+});
+
+describe("re-seeding the trial row on a plan change", () => {
+	test("an untouched row takes the new opening plan's catalog trial", () => {
+		expect(
+			reseededScheduleTrialFormValues({
+				trialEdited: false,
+				previousDefaultFormValues: DISABLED_FREE_TRIAL_FORM_VALUES,
+				defaultFormValues: FOURTEEN_DAY_TRIAL,
+			}),
+		).toEqual(FOURTEEN_DAY_TRIAL);
+	});
+
+	test("a row switched on then off keeps the user's choice", () => {
+		expect(
+			reseededScheduleTrialFormValues({
+				trialEdited: true,
+				previousDefaultFormValues: DISABLED_FREE_TRIAL_FORM_VALUES,
+				defaultFormValues: FOURTEEN_DAY_TRIAL,
+			}),
+		).toBeNull();
+	});
+
+	test("an unchanged default re-seeds nothing", () => {
+		expect(
+			reseededScheduleTrialFormValues({
+				trialEdited: false,
+				previousDefaultFormValues: FOURTEEN_DAY_TRIAL,
+				defaultFormValues: FOURTEEN_DAY_TRIAL,
+			}),
+		).toBeNull();
 	});
 });

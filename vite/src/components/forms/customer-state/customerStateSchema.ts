@@ -209,6 +209,8 @@ export const CustomerStateFormSchema = z
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),
 		...FreeTrialFormFieldsSchema.shape,
+		/** Set once the user touches the trial row, so plan changes stop re-seeding it. */
+		trialEdited: z.boolean(),
 	})
 	.refine(
 		(data) =>

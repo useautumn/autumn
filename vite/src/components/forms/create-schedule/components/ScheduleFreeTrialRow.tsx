@@ -20,6 +20,7 @@ export function ScheduleFreeTrialRow() {
 		(product) => firstPhaseProductIds.has(product.id) && product.free_trial,
 	)?.free_trial;
 	const endsCurrentTrial = currentTrial !== null && !trialEnabled;
+	const markTrialEdited = () => form.setFieldValue("trialEdited", true);
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -29,12 +30,14 @@ export function ScheduleFreeTrialRow() {
 					<FreeTrialLengthFields
 						form={form}
 						fields={FREE_TRIAL_LENGTH_FIELDS}
+						onEdit={markTrialEdited}
 					/>
 				}
 				description="Let the customer try the schedule before being charged"
 				expanded={trialEnabled}
 				checked={trialEnabled}
 				trialCardRequired={trialCardRequired}
+				onEdit={markTrialEdited}
 				onToggle={(enabled) =>
 					applyFreeTrialFormValues({
 						form,

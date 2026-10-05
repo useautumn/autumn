@@ -202,6 +202,7 @@ export function buildInitialValues({
 				customerProducts: customer?.customer_products ?? [],
 			}),
 		}),
+		trialEdited: false,
 	};
 }
 

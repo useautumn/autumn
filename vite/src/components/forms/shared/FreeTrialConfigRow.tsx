@@ -15,6 +15,7 @@ export function FreeTrialConfigRow({
 	trialOnEnd,
 	onTrialOnEndChange,
 	onToggle,
+	onEdit,
 	description = "Let the customer try the plan before being charged",
 }: {
 	form: FreeTrialForm;
@@ -25,16 +26,22 @@ export function FreeTrialConfigRow({
 	trialOnEnd?: TrialOnEnd;
 	onTrialOnEndChange?: (value: TrialOnEnd) => void;
 	onToggle: (enabled: boolean) => void;
+	/** Fires on any user change to the row's switch or options. */
+	onEdit?: () => void;
 	description?: string;
 }) {
 	const showTrialOnEnd = !!onTrialOnEndChange;
+	const handleToggle = (enabled: boolean) => {
+		onEdit?.();
+		onToggle(enabled);
+	};
 
 	return (
 		<ConfigRow
 			title="Free Trial"
 			description={description}
 			expanded={expanded}
-			action={<Switch checked={checked} onCheckedChange={onToggle} />}
+			action={<Switch checked={checked} onCheckedChange={handleToggle} />}
 		>
 			<div className="flex flex-col gap-3">
 				<div className="flex items-center gap-2">
@@ -43,9 +50,10 @@ export function FreeTrialConfigRow({
 						<div className="mx-2">
 							<TextCheckbox
 								checked={trialCardRequired}
-								onCheckedChange={(checked) =>
-									form.setFieldValue("trialCardRequired", checked === true)
-								}
+								onCheckedChange={(checked) => {
+									onEdit?.();
+									form.setFieldValue("trialCardRequired", checked === true);
+								}}
 							>
 								Card Required
 							</TextCheckbox>
@@ -56,6 +64,7 @@ export function FreeTrialConfigRow({
 					<TrialOnEndSelect
 						value={trialOnEnd ?? "revert"}
 						onChange={(value) => {
+							onEdit?.();
 							onTrialOnEndChange(value);
 							if (value === "revert") {
 								form.setFieldValue("trialCardRequired", false);
