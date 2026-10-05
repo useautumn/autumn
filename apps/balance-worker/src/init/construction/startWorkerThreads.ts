@@ -14,7 +14,7 @@ import type { WorkerListener } from "../types/balanceWorker.js";
  * start takes the HTTP threads down with it, so a task never serves with no way to commit. Stopping goes the
  * other way round: the HTTP threads finish their requests, then the producers disconnect.
  */
-export async function listenThroughThreads({
+export async function startWorkerThreads({
 	ctx,
 	config,
 }: {
