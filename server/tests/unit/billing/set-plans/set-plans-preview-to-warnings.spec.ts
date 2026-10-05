@@ -497,6 +497,50 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	test("an ongoing plan charged now is billed now, and the rest from the start", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+			lineItems: [
+				{ amountAfterDiscounts: 20, chargeImmediately: true } as LineItem,
+			],
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Ongoing plans are billed now. Billing for the other plans starts on 06 Oct 2026.",
+			},
+		]);
+	});
+
+	test("a credit now still says billing starts later", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+			lineItems: [
+				{ amountAfterDiscounts: -20, chargeImmediately: true } as LineItem,
+			],
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
+			},
+		]);
+	});
+
 	test("a first phase that starts now doesn't say billing starts later", () => {
 		expect(
 			stateWarnings({

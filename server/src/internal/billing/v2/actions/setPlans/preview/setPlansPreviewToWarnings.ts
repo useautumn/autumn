@@ -115,6 +115,7 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices,
 	liveOpenInvoices,
 	unbilledUsageLineItems = [],
+	lineItems = [],
 	stripeSubscriptionScope,
 }: {
 	phases: SetPlansPreviewPhase[];
@@ -131,6 +132,8 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices: Stripe.Invoice[];
 	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
+	/** The line items the immediate invoice bills. */
+	lineItems?: LineItem[];
 	stripeSubscriptionScope?: StripeSubscriptionScope;
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
@@ -142,6 +145,7 @@ export const setPlansPreviewToWarnings = ({
 			stripeBillingPlan,
 			replacedOpenInvoices,
 			liveOpenInvoices,
+			lineItems,
 		}),
 		...liveSubscriptionChangeWarnings({
 			stripeSubscription: billingContext.stripeSubscription,

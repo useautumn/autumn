@@ -3,6 +3,7 @@ import {
 	boldText,
 	formatAmount,
 	formatMsToDate,
+	type LineItem,
 	plainText,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
@@ -197,11 +198,13 @@ export const subscriptionStateToWarnings = ({
 	stripeBillingPlan,
 	replacedOpenInvoices,
 	liveOpenInvoices,
+	lineItems,
 }: {
 	billingContext: SubscriptionWarningContext;
 	stripeBillingPlan: StripeBillingPlan;
 	replacedOpenInvoices: Stripe.Invoice[];
 	liveOpenInvoices: Stripe.Invoice[];
+	lineItems: LineItem[];
 }): Warning[] => {
 	const { replacedStripeSubscription } = billingContext;
 
@@ -229,6 +232,6 @@ export const subscriptionStateToWarnings = ({
 			liveOpenInvoices,
 		}),
 		trialEndedWarning(billingContext),
-		billingStartsLaterWarning({ billingContext }),
+		billingStartsLaterWarning({ billingContext, lineItems }),
 	].filter((warning): warning is Warning => warning !== undefined);
 };

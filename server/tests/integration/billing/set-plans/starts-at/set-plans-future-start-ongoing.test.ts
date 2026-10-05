@@ -97,6 +97,10 @@ test.concurrent(
 
 		const preview = await autumnV2_2.billing.previewSetPlans(params);
 		expect(preview.total).toBeGreaterThan(0);
+		expect(
+			preview.warnings.find(({ type }) => type === "billing_starts_later")
+				?.message,
+		).toStartWith("Ongoing plans are billed now.");
 
 		await autumnV2_2.billing.setPlans(params);
 
