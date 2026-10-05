@@ -158,7 +158,7 @@ export const expectedBackdateGapCharge = ({
 	prorationBehavior,
 }: {
 	cyclePrice: number;
-	interval?: BillingInterval;
+	interval?: Exclude<BillingInterval, BillingInterval.OneOff>;
 	backdatedStartMs: number;
 	liveStartMs: number;
 	prorationBehavior: BackdateProrationBehavior;
