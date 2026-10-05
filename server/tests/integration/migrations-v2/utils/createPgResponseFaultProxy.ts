@@ -27,6 +27,10 @@ export const createPgResponseFaultProxy = async ({
 			pending = Buffer.concat([pending, data]);
 			while (pending.length >= 5) {
 				const length = pending.readInt32BE(1) + 1;
+				if (length < 5 || length > 1_000_000)
+					throw new Error(
+						`Invalid PostgreSQL frame: ${pending.subarray(0, 12).toString("hex")}`,
+					);
 				if (pending.length < length) break;
 				const frame = pending.subarray(0, length);
 				pending = pending.subarray(length);

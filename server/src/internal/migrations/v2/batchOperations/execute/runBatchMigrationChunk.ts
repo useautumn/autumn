@@ -15,6 +15,7 @@ import {
 	claimNextBatchMigrationPage,
 	failPageItemRuns,
 } from "./claim/index.js";
+import { createMigrationPageDb } from "./database/createMigrationPageDb.js";
 import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type {
@@ -39,7 +40,6 @@ import {
 	type BatchMigrationPagePhases,
 	timePhase,
 } from "./utils/pagePhaseTimings.js";
-import { createMigrationPageDb } from "./database/createMigrationPageDb.js";
 
 export type BatchMigrationChunkTimeouts = {
 	pageMs?: number;
@@ -231,30 +231,52 @@ export const runBatchMigrationChunk = async ({
 				Date.now() + Math.min(pageTimeoutMs, remainingPageBudgetMs());
 			const pageDb = createMigrationPageDb({ ctx });
 			const outcome = await withTimeout({
-			  timeoutMs: Math.max(1, pageDeadlineAt - Date.now()),
-			  fn: () => runNextBatchMigrationPage({
-			    ctx, pageDb, migration, migrationInternalId, migrationRunId, plan,
-			    afterInternalId: pageAfterInternalId, pageNumber, controls, webhooks,
-			    progress, recoveryWriteMs, eventsDefer: events.defer, cachesDefer: caches.defer,
-			    settle: () => Promise.all([caches.settle(), events.settle()]),
-			  }),
-			  onTimeout: () => {
-			    pageDb.abort(new Error(pageStallMessage));
-			    ctx.logger.error("batch-migration: page stalled", { data: { ...describeProgress(), pageTimeoutMs } });
-			  },
-			  timeoutMessage: pageStallMessage,
-			}).catch(async (error: unknown) => {
-			  if (error instanceof Error && error.message === pageStallMessage) {
-			    // Fence the page before failure cleanup releases its claims.
-			    await failClaimsOfStalledPage({ ctx, migrationInternalId, migrationRunId,
-			      page: pageNumber, internalCustomerIds: progress.claimedInternalIds, recoveryWriteMs });
-			    throw new BatchMigrationStallError({
-			      phase: `page_${progress.stage ?? "claim"}`,
-			      message: `${error.message} (stage: ${progress.stage}, phases: ${JSON.stringify(progress.pagePhases)})`,
-			    });
-			  }
-			  throw error;
-			}).finally(() => pageDb.abort());
+				timeoutMs: Math.max(1, pageDeadlineAt - Date.now()),
+				fn: () =>
+					runNextBatchMigrationPage({
+						ctx,
+						pageDb,
+						migration,
+						migrationInternalId,
+						migrationRunId,
+						plan,
+						afterInternalId: pageAfterInternalId,
+						pageNumber,
+						controls,
+						webhooks,
+						progress,
+						recoveryWriteMs,
+						eventsDefer: events.defer,
+						cachesDefer: caches.defer,
+						settle: () => Promise.all([caches.settle(), events.settle()]),
+					}),
+				onTimeout: () => {
+					pageDb.abort(new Error(pageStallMessage));
+					ctx.logger.error("batch-migration: page stalled", {
+						data: { ...describeProgress(), pageTimeoutMs },
+					});
+				},
+				timeoutMessage: pageStallMessage,
+			})
+				.catch(async (error: unknown) => {
+					if (error instanceof Error && error.message === pageStallMessage) {
+						// Fence the page before failure cleanup releases its claims.
+						await failClaimsOfStalledPage({
+							ctx,
+							migrationInternalId,
+							migrationRunId,
+							page: pageNumber,
+							internalCustomerIds: progress.claimedInternalIds,
+							recoveryWriteMs,
+						});
+						throw new BatchMigrationStallError({
+							phase: `page_${progress.stage ?? "claim"}`,
+							message: `${error.message} (stage: ${progress.stage}, phases: ${JSON.stringify(progress.pagePhases)})`,
+						});
+					}
+					throw error;
+				})
+				.finally(() => pageDb.abort());
 			if (outcome.kind === "exhausted") return finish("exhausted");
 			cursor = outcome.cursor ?? cursor;
 			progress.lastPageFinishedAt = Date.now();

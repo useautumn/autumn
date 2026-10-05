@@ -250,7 +250,9 @@ export const replaceLicenseEntitlementsForPage = async ({
 			for (const id of patched.internalCustomerIds) pageReplacedIds.add(id);
 			for (const row of rows) {
 				if (!updatedIdSet.has(row.customerEntitlementId)) continue;
-				pageRemovedItems.push(toRemovedItem({ row, operation, fromEntitlement }));
+				pageRemovedItems.push(
+					toRemovedItem({ row, operation, fromEntitlement }),
+				);
 				pageInsertedItems.push(
 					toInsertedItem({ row, operation, customerEntitlementPatch }),
 				);
