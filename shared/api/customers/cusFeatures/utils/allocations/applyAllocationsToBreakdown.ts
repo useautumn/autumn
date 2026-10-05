@@ -24,6 +24,9 @@ type AllocationCounterView = {
 	usage: number;
 };
 
+/** A customer balance shows the whole shared pool, or only what customer-level usage may spend. */
+export type AllocationView = "pool" | "spendable";
+
 /** What rendering allocations reads of a subject; absent fields mean nothing is allocated. */
 export type AllocationSubjectView = {
 	customer?: { balance_allocations?: BalanceAllocations | null } | null;
@@ -85,23 +88,46 @@ const fillInOrder = ({
 	});
 };
 
-/** Marks every row's source and, for allocated entities, scopes the shared rows to the entity's share. */
+/** Removes `held` from a shared row's grants (included first) and remaining. */
+const withoutHeld = ({
+	item,
+	held,
+}: {
+	item: ApiBalanceBreakdownV1;
+	held: number;
+}): ApiBalanceBreakdownV1 => {
+	const includedCut = Decimal.min(held, Decimal.max(0, item.included_grant));
+	return {
+		...item,
+		included_grant: new Decimal(item.included_grant)
+			.minus(includedCut)
+			.toNumber(),
+		prepaid_grant: new Decimal(item.prepaid_grant)
+			.minus(new Decimal(held).minus(includedCut))
+			.toNumber(),
+		remaining: new Decimal(item.remaining).minus(held).toNumber(),
+	};
+};
+
+/** Marks every row's source and scopes the shared rows to what the subject may spend; a customer's "pool" view keeps them whole. */
 export const applyAllocationsToBreakdown = ({
 	subject,
 	feature,
 	customerEntitlements,
 	breakdownItems,
+	view = "pool",
 	now = Date.now(),
 }: {
 	subject: AllocationSubjectView;
 	feature: Pick<Feature, "id" | "internal_id">;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	breakdownItems: ApiBalanceBreakdownV1[];
+	view?: AllocationView;
 	now?: number;
 }): {
 	breakdownItems: ApiBalanceBreakdownV1[];
 	totals: { allocated: number; unallocated: number } | null;
-	/** What check may draw beyond the displayed remaining: own unused + unallocated in place of the shown shared rows. */
+	/** What check may draw beyond the displayed remaining; 0 once the rows show only spendable credits. */
 	checkRemainingOffset: number | null;
 } => {
 	const sourced = breakdownItems.map((item, index) => ({
@@ -176,15 +202,41 @@ export const applyAllocationsToBreakdown = ({
 	const unallocated =
 		scale < 1 ? new Decimal(0) : Decimal.max(0, covered.minus(requestedTotal));
 
+	const unallocatedShares = fillInOrder({
+		total: unallocated.toNumber(),
+		capacities: sharedIndexes.map((index) =>
+			Math.max(0, withSource[index].remaining),
+		),
+	});
+	// Customer-level draws and unallocated entities may only spend unallocated credits.
+	const unallocatedOnly = () => {
+		const rows = [...withSource];
+		sharedIndexes.forEach((index, position) => {
+			rows[index] = withoutHeld({
+				item: rows[index],
+				held: new Decimal(Math.max(0, rows[index].remaining))
+					.minus(unallocatedShares[position])
+					.toNumber(),
+			});
+		});
+		return rows;
+	};
+
 	const internalEntityId = subject.entity?.internal_id ?? null;
 	if (!internalEntityId) {
+		const totals = {
+			allocated: Decimal.min(requestedTotal, covered).toNumber(),
+			unallocated: unallocated.toNumber(),
+		};
+		if (view === "spendable")
+			return {
+				breakdownItems: unallocatedOnly(),
+				totals,
+				checkRemainingOffset: 0,
+			};
 		return {
 			breakdownItems: withSource,
-			totals: {
-				allocated: Decimal.min(requestedTotal, covered).toNumber(),
-				unallocated: unallocated.toNumber(),
-			},
-			// A customer-level draw may only take unallocated credits from the shared rows.
+			totals,
 			checkRemainingOffset: unallocated.minus(sharedRemaining).toNumber(),
 		};
 	}
@@ -192,9 +244,9 @@ export const applyAllocationsToBreakdown = ({
 	const requested = allocation.amounts[internalEntityId];
 	if (requested === undefined)
 		return {
-			breakdownItems: withSource,
-			totals: null,
-			checkRemainingOffset: unallocated.minus(sharedRemaining).toNumber(),
+			breakdownItems: unallocatedOnly(),
+			totals: { allocated: 0, unallocated: unallocated.toNumber() },
+			checkRemainingOffset: 0,
 		};
 
 	const usage = counterUsage({
@@ -220,21 +272,24 @@ export const applyAllocationsToBreakdown = ({
 	sharedIndexes.forEach((index, position) => {
 		scoped[index] = {
 			...scoped[index],
-			included_grant: shares[position],
+			included_grant: new Decimal(shares[position])
+				.plus(unallocatedShares[position])
+				.toNumber(),
 			prepaid_grant: 0,
 			usage: usages[position],
 			remaining: Decimal.max(
 				0,
 				new Decimal(shares[position]).minus(usages[position]),
-			).toNumber(),
+			)
+				.plus(unallocatedShares[position])
+				.toNumber(),
 			overage: 0,
 			allocation: { amount: requested },
 		};
 	});
-	// The scoped rows already show own unused; check may also draw unallocated credits.
 	return {
 		breakdownItems: scoped,
-		totals: null,
-		checkRemainingOffset: unallocated.toNumber(),
+		totals: { allocated: granted, unallocated: unallocated.toNumber() },
+		checkRemainingOffset: 0,
 	};
 };

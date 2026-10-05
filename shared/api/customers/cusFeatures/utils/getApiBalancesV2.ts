@@ -14,6 +14,7 @@ import {
 	scopeExpandForCtx,
 } from "@autumn/shared";
 import { getApiFlagV2 } from "../../flags/utils/getApiFlagV2.js";
+import type { AllocationView } from "./allocations/applyAllocationsToBreakdown.js";
 import { getApiBalanceV2 } from "./getApiBalanceV2.js";
 
 type FeatureInput = {
@@ -109,9 +110,11 @@ const getFeatureInputs = ({
 export const getApiBalancesV2 = ({
 	ctx,
 	fullSubject,
+	allocationView,
 }: {
 	ctx: SharedContext;
 	fullSubject: FullSubject;
+	allocationView?: AllocationView;
 }): {
 	balances: Record<string, ApiBalanceV1>;
 	flags: Record<string, ApiFlagV0>;
@@ -170,6 +173,7 @@ export const getApiBalancesV2 = ({
 			customerEntitlements,
 			feature,
 			aggregatedFeatureBalance,
+			allocationView,
 		});
 
 		apiBalances[featureId] = data;

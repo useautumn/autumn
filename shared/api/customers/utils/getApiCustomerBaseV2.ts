@@ -1,4 +1,5 @@
 import {
+	type AllocationView,
 	type ApiCustomerV5,
 	ApiCustomerV5Schema,
 	type ApiInvoiceV1,
@@ -24,16 +25,19 @@ export const getApiCustomerBaseV2 = async ({
 	fullSubject,
 	withAutumnId = true,
 	invoices,
+	allocationView,
 }: {
 	ctx: SharedContext;
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
+	allocationView?: AllocationView;
 	/** Already in API form: an invoice's hosted URL is built from the server's own address, which this has no way to know. */
 	invoices?: ApiInvoiceV1[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const { balances: apiBalances, flags: apiFlags } = getApiBalancesV2({
 		ctx,
 		fullSubject,
+		allocationView,
 	});
 
 	const subscriptionsScopedCtx = scopeExpandForCtx({

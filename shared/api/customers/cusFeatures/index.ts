@@ -4,6 +4,7 @@ export * from "./previousVersions/apiCusFeatureV0";
 export * from "./previousVersions/apiCusFeatureV1";
 export * from "./previousVersions/apiCusFeatureV2";
 export * from "./previousVersions/apiCusFeatureV3";
+export type { AllocationView } from "./utils/allocations/applyAllocationsToBreakdown";
 export * from "./utils/apiBalanceUtils";
 export * from "./utils/apiBalanceV2Utils";
 export * from "./utils/check/index";

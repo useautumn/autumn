@@ -40,8 +40,13 @@ const fullSubjectToApiBalance = ({
 		featureIds: [feature.id],
 	});
 	if (customerEntitlements.length === 0) return null;
-	return getApiBalanceV2({ ctx, fullSubject, customerEntitlements, feature })
-		.data;
+	return getApiBalanceV2({
+		ctx,
+		fullSubject,
+		customerEntitlements,
+		feature,
+		allocationView: "spendable",
+	}).data;
 };
 
 /**
