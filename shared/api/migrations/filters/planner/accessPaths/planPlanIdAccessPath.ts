@@ -119,7 +119,7 @@ export const planPlanIdAccessPath: CustomerAccessPath<PlanIdConstraint> = {
 			sql: [
 				"(WITH plan_products AS MATERIALIZED (",
 				planProducts.sql,
-				") SELECT DISTINCT c.internal_id, c.id, c.name, c.email, c.org_id, c.env",
+				") SELECT DISTINCT c.internal_id, c.id, c.name, c.email, c.org_id, c.env, c.processor, c.processors",
 				"FROM plan_products pp",
 				"JOIN customer_products cp ON cp.internal_product_id = pp.internal_id",
 				"JOIN customers c ON c.internal_id = cp.internal_customer_id",
