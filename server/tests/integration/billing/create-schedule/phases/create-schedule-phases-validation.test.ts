@@ -169,10 +169,11 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
-			errMessage: "The first phase must start immediately",
+			errMessage: "A free trial can't start on",
 			func: async () => {
 				await autumnV1.billing.createSchedule({
 					customer_id: customerId,
+					free_trial: { duration_length: 7, duration_type: "day" },
 					phases: [
 						{
 							starts_at: Date.now() + ms.days(1),

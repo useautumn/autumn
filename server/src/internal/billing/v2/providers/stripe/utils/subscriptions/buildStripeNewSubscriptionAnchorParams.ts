@@ -1,5 +1,6 @@
 import type { BillingContext } from "@autumn/shared";
 import { msToSeconds } from "@autumn/shared";
+import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils/isBackdateRecreate";
 import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/utils/billingContext/billingContextToNewSubscriptionAnchorMs";
 
 type StripeNewSubscriptionAnchorParams = {
@@ -7,7 +8,10 @@ type StripeNewSubscriptionAnchorParams = {
 	proration_behavior: "create_prorations" | "none";
 };
 
-/** Stripe prorates the stub up to the anchor, or with "none" bills nothing until it. */
+/**
+ * Stripe prorates the stub up to the anchor, or with "none" bills nothing until it.
+ * A backdate recreate never prorates: the replaced subscription already paid up to the anchor.
+ */
 export const buildStripeNewSubscriptionAnchorParams = ({
 	billingContext,
 }: {
@@ -19,7 +23,8 @@ export const buildStripeNewSubscriptionAnchorParams = ({
 	return {
 		billing_cycle_anchor: msToSeconds(anchorMs),
 		proration_behavior:
-			billingContext.requestedProrationBehavior === "none"
+			billingContext.requestedProrationBehavior === "none" ||
+			isBackdateRecreate({ billingContext })
 				? "none"
 				: "create_prorations",
 	};

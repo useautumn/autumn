@@ -15,6 +15,8 @@ export type ReviewPhaseComparison =
 
 export type ReviewPhaseMatch = {
 	at: number;
+	/** When the plans this phase drops stop: now for a first phase, even one starting later. */
+	endsAt: number;
 	comparison: ReviewPhaseComparison;
 };
 

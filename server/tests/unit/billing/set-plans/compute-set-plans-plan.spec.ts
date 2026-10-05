@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+	addInterval,
+	BillingInterval,
 	BillingVersion,
 	type CreateScheduleBillingContext,
 	CusProductStatus,
@@ -7,6 +9,7 @@ import {
 	type FullCusProduct,
 	type MultiAttachProductContext,
 	ms,
+	msToSeconds,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -15,6 +18,7 @@ import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { phaseResetsBillingCycle } from "@/internal/billing/v2/actions/generateRequest/setup/phaseResetsBillingCycle";
+import { handleSetPlansComputeErrors } from "@/internal/billing/v2/actions/setPlans/errors/handleSetPlansErrors";
 import { deferredSetPlansSchedulePhases } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { computeSetPlansPlanFromContext } from "./setPlansTimelineHelpers";
 
@@ -694,3 +698,437 @@ test("an anchor at a different second does not reset the cycle at the phase star
 		}),
 	).toBe(false);
 });
+
+describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
+	const currentEpochMs = 1_800_000_000_000;
+	const startsAt = currentEpochMs + ms.days(7) + 123;
+
+	const futureStartContext = ({
+		currentCustomerProduct,
+		fullProduct,
+		earlyAccess = false,
+	}: {
+		currentCustomerProduct?: FullCusProduct;
+		fullProduct: MultiAttachProductContext["fullProduct"];
+		earlyAccess?: boolean;
+	}): CreateScheduleBillingContext => ({
+		...createBillingContext({
+			currentEpochMs,
+			productContexts: [
+				requestProductContext({ fullProduct, currentCustomerProduct }),
+			],
+			immediatePhase: {
+				starts_at: startsAt,
+				plans: [{ plan_id: fullProduct.id }],
+			},
+		}),
+		...(earlyAccess && { accessStartsAt: currentEpochMs }),
+	});
+
+	const computeFutureStartErrors = (
+		billingContext: CreateScheduleBillingContext,
+	) => {
+		const ctx = contexts.create({});
+		const { autumnBillingPlan, immediatePhaseTransition } =
+			computeSetPlansPlanFromContext({ ctx, billingContext });
+		return handleSetPlansComputeErrors({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+			immediatePhaseTransition,
+		});
+	};
+
+	test("with nothing live, the plan is scheduled at the start and nothing is charged now", () => {
+		const ctx = contexts.create({});
+		const { pro } = proWithCustomerProduct();
+
+		const { autumnBillingPlan, phases, immediatePhaseTransition } =
+			computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: futureStartContext({ fullProduct: pro }),
+			});
+
+		const [scheduled] = autumnBillingPlan.insertCustomerProducts;
+		expect(autumnBillingPlan.insertCustomerProducts).toHaveLength(1);
+		expect(scheduled?.status).toBe(CusProductStatus.Scheduled);
+		expect(scheduled?.starts_at).toBe(startsAt);
+		expect(scheduled?.access_starts_at).toBeNull();
+		expect(autumnBillingPlan.lineItems ?? []).toEqual([]);
+		expect(immediatePhaseTransition.incomingCustomerProducts).toEqual([]);
+		expect(phases).toEqual([{ startsAt, customerProductIds: [scheduled!.id] }]);
+	});
+
+	test("a live plan ends now with a credit, and its successor starts at the start", () => {
+		const ctx = contexts.create({});
+		const { pro, customerProduct } = proWithCustomerProduct({
+			subscriptionIds: ["sub_live"],
+		});
+		customerProduct.starts_at = currentEpochMs - ms.days(10);
+
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext: futureStartContext({
+				fullProduct: pro,
+				currentCustomerProduct: customerProduct,
+			}),
+		});
+
+		const [ended] = autumnBillingPlan.updateCustomerProducts ?? [];
+		expect(ended?.customerProduct.id).toBe(customerProduct.id);
+		expect(ended?.updates.status).toBe(CusProductStatus.Expired);
+		expect(ended?.updates.ended_at).toBe(currentEpochMs);
+
+		const [successor] = autumnBillingPlan.insertCustomerProducts;
+		expect(successor?.status).toBe(CusProductStatus.Scheduled);
+		expect(successor?.starts_at).toBe(startsAt);
+
+		const lineItems = autumnBillingPlan.lineItems ?? [];
+		expect(lineItems.length).toBeGreaterThan(0);
+		expect(
+			lineItems.every(
+				(lineItem) =>
+					lineItem.context.customerProduct?.id === customerProduct.id &&
+					lineItem.amountAfterDiscounts < 0,
+			),
+		).toBe(true);
+	});
+
+	test("early access makes the plan active now while billing waits for the start", () => {
+		const ctx = contexts.create({});
+		const { pro } = proWithCustomerProduct();
+
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext: futureStartContext({
+				fullProduct: pro,
+				earlyAccess: true,
+			}),
+		});
+
+		const [enabled] = autumnBillingPlan.insertCustomerProducts;
+		expect(enabled?.status).toBe(CusProductStatus.Active);
+		expect(enabled?.access_starts_at).toBe(currentEpochMs);
+		expect(enabled?.starts_at).toBe(startsAt);
+		expect(autumnBillingPlan.lineItems ?? []).toEqual([]);
+	});
+
+	test("a free plan with nothing in Stripe to start it is rejected", async () => {
+		const free = products.createFull({ id: "free", prices: [] });
+
+		await expect(
+			computeFutureStartErrors(futureStartContext({ fullProduct: free })),
+		).rejects.toThrow("can't start on a later date");
+	});
+
+	test("an ongoing plan starts and is charged now while the first phase starts later", () => {
+		const ctx = contexts.create({});
+		const { pro } = proWithCustomerProduct();
+		const sso = products.createFull({
+			id: "sso",
+			isAddOn: true,
+			prices: [prices.createFixed({ id: "price_sso" })],
+		});
+		const billingContext: CreateScheduleBillingContext = {
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({ fullProduct: pro }),
+					{ ...requestProductContext({ fullProduct: sso }), unscheduled: true },
+				],
+				immediatePhase: { starts_at: startsAt, plans: [{ plan_id: pro.id }] },
+			}),
+			resetCycleAnchorMs: startsAt,
+		};
+
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext,
+		});
+
+		const byProduct = new Map(
+			autumnBillingPlan.insertCustomerProducts.map((customerProduct) => [
+				customerProduct.product_id,
+				customerProduct,
+			]),
+		);
+		expect(byProduct.get(pro.id)?.status).toBe(CusProductStatus.Scheduled);
+		expect(byProduct.get(pro.id)?.starts_at).toBe(startsAt);
+		expect(byProduct.get(sso.id)?.status).toBe(CusProductStatus.Active);
+		expect(byProduct.get(sso.id)?.starts_at).toBe(currentEpochMs);
+		expect(
+			(autumnBillingPlan.lineItems ?? []).some(
+				(lineItem) =>
+					lineItem.context.customerProduct?.id === byProduct.get(sso.id)?.id &&
+					lineItem.amountAfterDiscounts > 0,
+			),
+		).toBe(true);
+	});
+
+	test("early access lets a free plan with nothing in Stripe start now", async () => {
+		const free = products.createFull({ id: "free", prices: [] });
+
+		await expect(
+			computeFutureStartErrors(
+				futureStartContext({ fullProduct: free, earlyAccess: true }),
+			),
+		).resolves.toBeUndefined();
+	});
+
+	test("early access still rejects a paid one-off plan Stripe has nothing to bill at the start", async () => {
+		const ctx = contexts.create({});
+		const credits = products.createFull({
+			id: "credits",
+			prices: [prices.createOneOff({ id: "price_credits" })],
+		});
+		const billingContext = futureStartContext({
+			fullProduct: credits,
+			earlyAccess: true,
+		});
+
+		const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+			ctx,
+			billingContext,
+		});
+
+		expect(autumnBillingPlan.insertCustomerProducts[0]?.status).toBe(
+			CusProductStatus.Active,
+		);
+		await expect(computeFutureStartErrors(billingContext)).rejects.toThrow(
+			"can't start on a later date",
+		);
+	});
+});
+
+describe(
+	chalk.yellowBright("computeSetPlansPlan: backdate over a live subscription"),
+	() => {
+		const currentEpochMs = 1_800_000_000_000;
+		const periodStart = currentEpochMs - ms.days(18);
+		const periodEnd = addInterval({
+			from: periodStart,
+			interval: BillingInterval.Month,
+		});
+		const backdatedStart = currentEpochMs - ms.days(40);
+		const liveSubscription = {
+			id: "sub_live",
+			status: "active",
+			billing_cycle_anchor: msToSeconds(periodStart),
+			items: { data: [{ current_period_end: msToSeconds(periodEnd) }] },
+		} as Stripe.Subscription;
+
+		const backdatedContext = ({
+			fullProduct,
+			currentCustomerProduct,
+		}: {
+			fullProduct: MultiAttachProductContext["fullProduct"];
+			currentCustomerProduct: FullCusProduct;
+		}): CreateScheduleBillingContext => ({
+			...createBillingContext({
+				currentEpochMs,
+				productContexts: [
+					requestProductContext({ fullProduct, currentCustomerProduct }),
+				],
+				immediatePhase: {
+					starts_at: backdatedStart,
+					plans: [{ plan_id: fullProduct.id }],
+				},
+			}),
+			replacedStripeSubscription: liveSubscription,
+			subscriptionBackdateStartMs: backdatedStart,
+			billingCycleAnchorMs: periodEnd,
+		});
+
+		test("only the start date moving keeps the plan, bills nothing, and records the backdated start", () => {
+			const ctx = contexts.create({});
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: [liveSubscription.id],
+			});
+			customerProduct.starts_at = periodStart;
+
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: backdatedContext({
+					fullProduct: pro,
+					currentCustomerProduct: customerProduct,
+				}),
+			});
+
+			expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
+			expect(autumnBillingPlan.lineItems ?? []).toEqual([]);
+			expect(
+				autumnBillingPlan.updateCustomerProducts?.map(
+					({ customerProduct: updated, updates }) => ({
+						id: updated.id,
+						updates,
+					}),
+				),
+			).toEqual([
+				{
+					id: customerProduct.id,
+					updates: { subscription_ids: [], starts_at: backdatedStart },
+				},
+			]);
+		});
+
+		test("a plan change credits and charges only the rest of the live period", () => {
+			const ctx = contexts.create({});
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: [liveSubscription.id],
+			});
+			customerProduct.starts_at = periodStart;
+			const premium = products.createFull({
+				id: "premium",
+				prices: [prices.createFixed({ id: "price_premium" })],
+			});
+
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: backdatedContext({
+					fullProduct: premium,
+					currentCustomerProduct: customerProduct,
+				}),
+			});
+
+			const lineItems = autumnBillingPlan.lineItems ?? [];
+			const linePeriods = lineItems.map(({ amount, context }) => ({
+				productId: context.product.id,
+				direction: context.direction,
+				charges: amount > 0,
+				periodEnd: context.billingPeriod?.end,
+				backdated: context.backdate !== undefined,
+			}));
+			expect(linePeriods).toEqual([
+				{
+					productId: pro.id,
+					direction: "refund",
+					charges: false,
+					periodEnd,
+					backdated: false,
+				},
+				{
+					productId: premium.id,
+					direction: "charge",
+					charges: true,
+					periodEnd,
+					backdated: false,
+				},
+			]);
+			expect(autumnBillingPlan.insertCustomerProducts[0]?.starts_at).toBe(
+				backdatedStart,
+			);
+		});
+
+		test("plans kept on the replaced subscription and schedule are unlinked and patched, so the new ones claim them", () => {
+			const ctx = contexts.create({});
+			const phaseStartsAt = periodEnd;
+			const scheduledSubscription = {
+				...liveSubscription,
+				schedule: "sub_sched_live",
+			} as Stripe.Subscription;
+			const { pro, customerProduct } = proWithCustomerProduct({
+				subscriptionIds: [liveSubscription.id],
+			});
+			customerProduct.starts_at = periodStart;
+			customerProduct.ended_at = phaseStartsAt;
+			customerProduct.scheduled_ids = ["sub_sched_live"];
+			const premium = products.createFull({
+				id: "premium",
+				prices: [prices.createFixed({ id: "price_premium" })],
+			});
+			const scheduledPremium = {
+				...customerProducts.create({
+					id: "cus_prod_premium",
+					productId: premium.id,
+					product: premium,
+					status: CusProductStatus.Scheduled,
+					subscriptionIds: [liveSubscription.id],
+					startsAt: phaseStartsAt,
+					customerPrices: [
+						prices.createCustomer({
+							price: premium.prices[0]!,
+							customerProductId: "cus_prod_premium",
+						}),
+					],
+				}),
+				scheduled_ids: ["sub_sched_live"],
+			};
+
+			const { autumnBillingPlan } = computeSetPlansPlanFromContext({
+				ctx,
+				billingContext: {
+					...createBillingContext({
+						currentEpochMs,
+						productContexts: [
+							{
+								...requestProductContext({
+									fullProduct: pro,
+									currentCustomerProduct: customerProduct,
+								}),
+								scopeCustomerProducts: [customerProduct, scheduledPremium],
+								scheduledCustomerProduct: scheduledPremium,
+							},
+						],
+						immediatePhase: {
+							starts_at: backdatedStart,
+							plans: [{ plan_id: pro.id }],
+						},
+						futurePhases: [
+							{
+								starts_at: phaseStartsAt,
+								plans: [{ plan_id: premium.id }],
+							} as CreateScheduleBillingContext["futurePhases"][number],
+						],
+						scheduledPhaseContexts: [
+							{
+								startsAt: phaseStartsAt,
+								endsAt: undefined,
+								productContexts: [
+									{
+										fullProduct: premium,
+										customPrices: [],
+										customEntitlements: [],
+										featureQuantities: [],
+									},
+								],
+							} as CreateScheduleBillingContext["scheduledPhaseContexts"][number],
+						],
+					}),
+					replacedStripeSubscription: scheduledSubscription,
+					subscriptionBackdateStartMs: backdatedStart,
+					billingCycleAnchorMs: periodEnd,
+				},
+			});
+
+			expect(autumnBillingPlan.insertCustomerProducts).toEqual([]);
+			expect(
+				autumnBillingPlan.updateCustomerProducts?.map(
+					({ customerProduct: updated, updates }) => ({
+						id: updated.id,
+						subscriptionIds: updates.subscription_ids,
+						scheduledIds: updates.scheduled_ids,
+						startsAt: updates.starts_at,
+					}),
+				),
+			).toEqual([
+				{
+					id: customerProduct.id,
+					subscriptionIds: [],
+					scheduledIds: [],
+					startsAt: backdatedStart,
+				},
+				{
+					id: scheduledPremium.id,
+					subscriptionIds: [],
+					scheduledIds: [],
+					startsAt: undefined,
+				},
+			]);
+			expect(
+				autumnBillingPlan.patchCustomerProducts?.map(
+					({ customerProduct: patched }) => patched.id,
+				),
+			).toEqual([customerProduct.id, scheduledPremium.id]);
+		});
+	},
+);

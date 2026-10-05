@@ -6,11 +6,13 @@ import type { BillingStageParams } from "@/components/forms/shared/utils/billing
 export function useCreateScheduleMutation({
 	customerId,
 	buildRequestBody,
+	getEnablePlanImmediately,
 	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
 	customerId: string | undefined;
+	getEnablePlanImmediately?: () => boolean;
 	onApplied?: () => void;
 	buildRequestBody: (params?: BillingStageParams) => SetPlansParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
@@ -59,7 +61,10 @@ export function useCreateScheduleMutation({
 
 	// The checkout stage owns the URL, so suppress the provider's copy-and-toast.
 	const handleCheckoutSubmit = async () => {
-		const result = await mutation.mutateAsync({ skipDefaultSuccess: true });
+		const result = await mutation.mutateAsync({
+			skipDefaultSuccess: true,
+			enableProductImmediately: getEnablePlanImmediately?.() || undefined,
+		});
 		return { paymentUrl: result.data?.payment_url };
 	};
 

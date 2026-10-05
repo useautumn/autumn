@@ -7,7 +7,7 @@ import { CusProductStatus, cp } from "@autumn/shared";
 import { isFreePhasePlaceholderCustomerProduct } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isFreePhasePlaceholderCustomerProduct";
 import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
-const isOnStripeSchedule = ({
+export const isOnStripeSchedule = ({
 	customerProduct,
 	linksFreePlaceholders,
 }: {

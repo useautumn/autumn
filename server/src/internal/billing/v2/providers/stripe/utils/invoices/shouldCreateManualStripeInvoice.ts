@@ -6,8 +6,20 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils/isBackdateRecreate";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
 import { willStripeSubscriptionInvoiceEndOfCycle } from "../subscriptions/willStripeSubscriptionInvoiceEndOfCycle";
+
+const lineItemsCharge = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}) =>
+	sumValues(
+		(autumnBillingPlan.lineItems ?? []).map(
+			(lineItem) => lineItem.amountAfterDiscounts,
+		),
+	) !== 0;
 
 export const shouldCreateManualStripeInvoice = ({
 	ctx,
@@ -21,6 +33,10 @@ export const shouldCreateManualStripeInvoice = ({
 	stripeSubscriptionAction?: StripeSubscriptionAction;
 }): boolean => {
 	const isCreateAction = stripeSubscriptionAction?.type === "create";
+	// A backdate recreate bills nothing until the old period end, so its plan changes are invoiced on their own.
+	if (isCreateAction && isBackdateRecreate({ billingContext })) {
+		return lineItemsCharge({ autumnBillingPlan });
+	}
 	if (isCreateAction) {
 		const willCreateInvoiceEndOfCycle = willStripeSubscriptionInvoiceEndOfCycle(
 			{
@@ -42,12 +58,7 @@ export const shouldCreateManualStripeInvoice = ({
 
 	const { stripeSubscription } = billingContext;
 	if (!stripeSubscription) {
-		const lineItems = autumnBillingPlan.lineItems;
-		const totalAmount = lineItems
-			? sumValues(lineItems.map((li) => li.amountAfterDiscounts))
-			: 0;
-
-		return totalAmount !== 0;
+		return lineItemsCharge({ autumnBillingPlan });
 	}
 
 	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({

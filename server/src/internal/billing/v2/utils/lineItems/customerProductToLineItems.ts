@@ -18,6 +18,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BackdateGapRun } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
@@ -40,6 +41,7 @@ export const customerProductToLineItems = ({
 	direction,
 	priceFilters,
 	billingCycleAnchorMsOverride,
+	backdateGapRun,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -49,6 +51,7 @@ export const customerProductToLineItems = ({
 		excludeOneOffPrices?: boolean;
 	};
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
+	backdateGapRun?: BackdateGapRun;
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
 
@@ -110,6 +113,7 @@ export const customerProductToLineItems = ({
 			billingPeriod,
 			direction,
 			billingTiming: "in_advance",
+			backdateGapRun,
 		});
 		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
 
@@ -119,7 +123,7 @@ export const customerProductToLineItems = ({
 			product: customerProduct.product,
 			feature: undefined,
 
-			billingPeriod,
+			billingPeriod: backdatedLineItemContext?.billingPeriod ?? billingPeriod,
 			direction,
 			billingTiming: "in_advance",
 			now: effectiveNow,
@@ -177,6 +181,8 @@ export const customerProductToLineItems = ({
 				customerProduct,
 				customerLicense,
 				direction,
+				excludeOneOffPrices: priceFilters?.excludeOneOffPrices,
+				backdateGapRun,
 			}),
 		);
 	}

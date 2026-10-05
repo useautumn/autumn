@@ -17,6 +17,12 @@ const TRANSIENT_STRIPE_ERROR_TYPES = new Set([
 const TOO_MANY_REQUESTS_STATUS = 429;
 const SERVER_ERROR_STATUS = 500;
 
+/** The recreated subscription takes over a period this one already billed, so it ends without a credit or a final invoice. */
+const BACKDATE_CANCEL_PARAMS: Stripe.SubscriptionCancelParams = {
+	prorate: false,
+	invoice_now: false,
+};
+
 const isEndedStripeSubscription = (subscription: Stripe.Subscription) =>
 	subscription.status === "canceled" ||
 	subscription.status === "incomplete_expired";
@@ -40,10 +46,12 @@ const cancelReplacedSubscription = async ({
 	ctx,
 	customerId,
 	stripeSubscriptionId,
+	cancelParams,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	stripeSubscriptionId: string;
+	cancelParams?: Stripe.SubscriptionCancelParams;
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	try {
@@ -59,7 +67,7 @@ const cancelReplacedSubscription = async ({
 
 				await stripeCli.subscriptions.cancel(
 					stripeSubscriptionId,
-					undefined,
+					cancelParams,
 					autumnStripeRequestOptions({ source: "set_plans_replace" }),
 				);
 			},
@@ -88,11 +96,12 @@ export const executeStripeReplacedSubscriptionAction = async ({
 }) => {
 	if (!replacedSubscriptionAction) return;
 
-	const { stripeSubscriptionId } = replacedSubscriptionAction;
+	const { stripeSubscriptionId, reason } = replacedSubscriptionAction;
 	await cancelReplacedSubscription({
 		ctx,
 		customerId: fullCustomer.id ?? fullCustomer.internal_id,
 		stripeSubscriptionId,
+		cancelParams: reason === "backdate" ? BACKDATE_CANCEL_PARAMS : undefined,
 	});
 	await expireReplacedPendingCustomerProducts({
 		ctx,

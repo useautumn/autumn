@@ -347,6 +347,45 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		expect(phaseRows(review)).toEqual([["enterprise:starts", "pro:ends"]]);
 	});
 
+	test("a first phase starting later lists its plans as starting there", () => {
+		const review = reviewFor({
+			billingContext: {
+				...buildContext({
+					existing: [],
+					opening: [{ fullProduct: pro }, { fullProduct: bonus }],
+					later: [{ startsAt: PHASE_C, plans: [{ fullProduct: premium }] }],
+				}),
+				immediatePhase: { starts_at: PHASE_B, plans: [] },
+			},
+		});
+		expect(phaseRows(review)).toEqual([
+			["pro:starts", "bonus:starts"],
+			["premium:starts"],
+		]);
+	});
+
+	test("a first phase starting later shows a replaced plan ending now", () => {
+		const review = reviewFor({
+			billingContext: {
+				...buildContext({
+					existing: [running({ product: pro })],
+					opening: [{ fullProduct: premium }],
+				}),
+				immediatePhase: { starts_at: PHASE_B, plans: [] },
+			},
+		});
+		const [firstPhase] = review.phases;
+		expect(
+			firstPhase?.plans.map((plan) => [
+				`${plan.plan_id}:${plan.status}`,
+				plan.expires_at,
+			]),
+		).toEqual([
+			["premium:starts", null],
+			["pro:ends", NOW],
+		]);
+	});
+
 	test("a plan billed on another subscription is left out of the preview", () => {
 		const proOnA = running({ product: pro, subscriptionIds: ["sub_a"] });
 		const ssoOnB = running({ product: sso, subscriptionIds: ["sub_b"] });
@@ -451,6 +490,20 @@ describe(chalk.yellowBright("diffToReview"), () => {
 			}),
 		});
 		expect(review.withdrawnStarts).toEqual([]);
+	});
+
+	test("an ongoing plan added now is listed in the first phase only", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [running({ product: pro })],
+				opening: [{ fullProduct: pro }, { fullProduct: sso, ongoing: true }],
+				later: [{ startsAt: PHASE_B, plans: [{ fullProduct: premium }] }],
+			}),
+		});
+		expect(phaseRows(review)).toEqual([
+			["sso:starts", "pro:kept"],
+			["premium:starts"],
+		]);
 	});
 
 	test("a kept cancellation is not a removed phase when an unrelated ongoing plan is added", () => {

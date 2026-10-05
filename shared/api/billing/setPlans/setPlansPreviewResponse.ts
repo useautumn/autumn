@@ -119,7 +119,6 @@ export const SetPlansPreviewRemovedPhaseSchema = z.object({
 export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"unmanaged_stripe_item_removed",
 	"usage_reset",
-	"existing_schedule_replaced",
 	"future_phase_removed",
 	"pending_quantity_change_dropped",
 	"new_stripe_price_created",
@@ -135,6 +134,8 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"past_due_invoice_open",
 	"cycle_reset",
 	"other_subscriptions_unaffected",
+	"billing_starts_later",
+	"subscription_recreated_backdated",
 ]);
 
 export const SetPlansPreviewWarningSchema = z.object({

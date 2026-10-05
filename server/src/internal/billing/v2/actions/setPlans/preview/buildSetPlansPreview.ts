@@ -86,7 +86,6 @@ export const buildSetPlansPreview = async ({
 				stripeSubscription: billingContext.stripeSubscription,
 				context: processorItemContext,
 			}),
-			processorChanges,
 			withdrawnCustomerProducts: review.withdrawnStarts,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
@@ -102,6 +101,7 @@ export const buildSetPlansPreview = async ({
 			stripeBillingPlan: billingPlan.stripe,
 			...replacedSubscriptionInputs,
 			liveOpenInvoices,
+			lineItems: billingPlan.autumn.lineItems,
 			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
 		}),
 	};

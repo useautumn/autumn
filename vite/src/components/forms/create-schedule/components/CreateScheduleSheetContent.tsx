@@ -132,6 +132,14 @@ export function CreateScheduleReviewContent() {
 		setSheet({ type: "create-schedule-send-invoice" });
 	};
 
+	const handlePrimaryButtonClick = () => {
+		if (preview?.redirect_to_checkout) {
+			setSheet({ type: "create-schedule-checkout" });
+			return;
+		}
+		handleSubmit();
+	};
+
 	const isDisabled = isPreviewLoading || !!error;
 
 	return (
@@ -168,13 +176,7 @@ export function CreateScheduleReviewContent() {
 				<Button
 					variant="primary"
 					className="w-full"
-					onClick={() => {
-						if (preview?.redirect_to_checkout) {
-							setSheet({ type: "create-schedule-checkout" });
-							return;
-						}
-						handleSubmit();
-					}}
+					onClick={handlePrimaryButtonClick}
 					isLoading={isPending}
 					disabled={isDisabled}
 				>

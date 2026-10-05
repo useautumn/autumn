@@ -10,22 +10,40 @@ const MODE_DESCRIPTIONS: Record<Exclude<BillingBehavior, "none">, string> = {
 		"Charge added items in full; credit removed items for unused time",
 };
 
+const BACKDATED_GAP_MODE_DESCRIPTIONS: Record<
+	Exclude<BillingBehavior, "none">,
+	string
+> = {
+	prorate_immediately: "Charge the backdated time for the days it covers",
+	bill_difference: "Charge every billing cycle the backdated time reaches",
+};
+
 /** Proration on/off, with a Prorated / Full difference choice when on. */
 export function ProrationBehaviorConfigRow({
 	rule,
 	value,
 	onChange,
+	billsBackdatedGap = false,
 }: {
 	rule: BillingOptionRule;
 	value: BillingBehavior;
 	onChange: (value: BillingBehavior) => void;
+	/** The first phase is backdated before the live subscription started, so proration bills that time. */
+	billsBackdatedGap?: boolean;
 }) {
 	const enabled = value !== "none";
+	const modeDescriptions = billsBackdatedGap
+		? BACKDATED_GAP_MODE_DESCRIPTIONS
+		: MODE_DESCRIPTIONS;
 
 	return (
 		<ConfigRow
 			title="Proration Behavior"
-			description="Invoice price differences when changing plans mid-cycle"
+			description={
+				billsBackdatedGap
+					? "Bill the backdated time before the current subscription started"
+					: "Invoice price differences when changing plans mid-cycle"
+			}
 			expanded={enabled}
 			action={
 				<BillingOptionToggle
@@ -50,7 +68,7 @@ export function ProrationBehaviorConfigRow({
 						]}
 					/>
 					<span className="text-xs text-tertiary-foreground/70">
-						{MODE_DESCRIPTIONS[value]}
+						{modeDescriptions[value]}
 					</span>
 				</div>
 			)}
