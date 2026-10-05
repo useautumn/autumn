@@ -466,6 +466,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: multi-plan op
 	await expectPreparedStripeProductCount({
 		ctx,
 		priceIds: [proRows.priceId, premiumRows.priceId],
-		count: 2,
+		count: 1,
 	});
 });

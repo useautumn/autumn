@@ -1,3 +1,125 @@
+diff --git a/node_modules/kafkajs/.bun-tag-53fc1d1c63a4d2e0 b/.bun-tag-53fc1d1c63a4d2e0
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/kafkajs/.bun-tag-9af2d68b0d3bdbc0 b/.bun-tag-9af2d68b0d3bdbc0
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/network/connection.js b/src/network/connection.js
+index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e2747e0a8 100644
+--- a/src/network/connection.js
++++ b/src/network/connection.js
+@@ -27,6 +27,24 @@ const isAuthenticatedRequest = request => {
+ const PRIVATE = {
+   SHOULD_REAUTHENTICATE: Symbol('private:Connection:shouldReauthenticate'),
+   AUTHENTICATE: Symbol('private:Connection:authenticate'),
++  RENEW_REFUSED_SESSION: Symbol('private:Connection:renewRefusedSession'),
++}
++
++// TOPIC, GROUP, CLUSTER and TRANSACTIONAL_ID_AUTHORIZATION_FAILED
++const SESSION_REFUSAL_CODES = [29, 30, 31, 53]
++// A broker that really does deny this client is asked again at most this often, not on every request.
++const REFUSAL_REAUTHENTICATION_INTERVAL = 10000
++
++// A dropped session is refused everything, so a Produce with any partition accepted was not.
++const isRefusedSession = ({ error, apiName, decoded }) => {
++  if (!error || !SESSION_REFUSAL_CODES.includes(error.code)) return false
++  if (apiName !== 'Produce') return true
++  return (
++    decoded != null &&
++    decoded.topics.every(({ partitions }) =>
++      partitions.every(({ errorCode }) => SESSION_REFUSAL_CODES.includes(errorCode))
++    )
++  )
+ }
+ 
+ module.exports = class Connection {
+@@ -112,6 +130,7 @@ module.exports = class Connection {
+     }
+ 
+     this.logDebug = log('debug')
++    this.logWarn = log('warn')
+     this.logError = log('error')
+ 
+     const env = getEnv()
+@@ -122,6 +141,7 @@ module.exports = class Connection {
+     this.authenticatedAt = null
+     this.sessionLifetime = Long.ZERO
+     this.supportAuthenticationProtocol = null
++    this.refusalReauthenticatedAt = null
+ 
+     /**
+      * @private
+@@ -376,10 +396,17 @@ module.exports = class Connection {
+    * @param {boolean} [protocol.logResponseError=true] Whether to log errors
+    * @returns {Promise<data>} where data is the return of "response#parse"
+    */
+-  async send({ request, response, requestTimeout = null, logResponseError = true }) {
++  async send({
++    request,
++    response,
++    requestTimeout = null,
++    logResponseError = true,
++    isRefusalRetry = false,
++  }) {
+     if (!this.isAuthenticated() && isAuthenticatedRequest(request)) {
+       await this[PRIVATE.AUTHENTICATE]()
+     }
++    const session = this.authenticatedAt
+ 
+     this.failIfNotConnected()
+ 
+@@ -421,8 +448,9 @@ module.exports = class Connection {
+       return
+     }
+ 
++    let payloadDecoded
+     try {
+-      const payloadDecoded = await response.decode(payload)
++      payloadDecoded = await response.decode(payload)
+ 
+       /**
+        * @see KIP-219
+@@ -456,10 +484,40 @@ module.exports = class Connection {
+           isBuffer && !this.shouldLogBuffers ? { type: 'Buffer', data: '[filtered]' } : payload,
+       })
+ 
++      if (
++        !isRefusalRetry &&
++        isRefusedSession({ error: e, apiName: entry.apiName, decoded: payloadDecoded }) &&
++        this[PRIVATE.RENEW_REFUSED_SESSION]({ session, apiName: entry.apiName, error: e })
++      ) {
++        return this.send({ request, response, requestTimeout, logResponseError, isRefusalRetry: true })
++      }
++
+       throw e
+     }
+   }
+ 
++  /**
++   * MSK periodically forgets an authenticated session and refuses everything on it until the
++   * scheduled re-authentication, up to 290s later. Re-authenticate now; true means send it again.
++   * @private
++   */
++  [PRIVATE.RENEW_REFUSED_SESSION]({ session, apiName, error }) {
++    if (!this.sasl || session == null) return false
++    if (this.authenticatedAt !== session) return true
++
++    const now = Date.now()
++    const lastRenewal = this.refusalReauthenticatedAt
++    if (lastRenewal != null && now - lastRenewal < REFUSAL_REAUTHENTICATION_INTERVAL) return false
++
++    this.refusalReauthenticatedAt = now
++    this.authenticatedAt = null
++    this.logWarn('Broker refused an authenticated session; re-authenticating', {
++      apiName,
++      error: error.message,
++    })
++    return true
++  }
++
+   /**
+    * @private
+    */
 diff --git a/src/network/requestQueue/index.js b/src/network/requestQueue/index.js
 index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..ac44131f5148611a3e3c6d412559b4f5837b4498 100644
 --- a/src/network/requestQueue/index.js

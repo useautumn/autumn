@@ -95,6 +95,8 @@ transaction.state.log.replication.factor=1
 transaction.state.log.min.isr=1
 group.initial.rebalance.delay.ms=0
 auto.create.topics.enable=false
+# A VM wake drops the page cache; unflushed records vanish while Neon keeps bookmarks past them.
+log.flush.interval.messages=1
 EOF
 	if [ ! -f "$dir/data/meta.properties" ]; then
 		"$CAPY_KAFKA_HOME/bin/kafka-storage.sh" format \
