@@ -110,38 +110,54 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	// 2. Send 20 events
+	// 2. Send 20 events: 16 usage, then 4 refunds each smaller than the usage it mirrors.
+	// A refund applied before enough usage is capped at the grant, so mixing signs concurrently is order-dependent.
 	test("usage3: should send 20 events", async () => {
-		const eventCount = 20;
-		const batchEvents = [];
-		for (let i = 0; i < eventCount; i++) {
-			const randomVal = new Decimal(Math.random().toFixed(PRECISION))
+		const usageEvents = Array.from({ length: 16 }, (_, i) => ({
+			featureId: i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2,
+			value: new Decimal(Math.random().toFixed(PRECISION))
 				.mul(CREDIT_MULTIPLIER)
-				.mul(Math.random() > 0.2 ? 1 : -1)
-				.toNumber();
-			const featureId = i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2;
+				.toNumber(),
+		}));
+		const refundEvents = usageEvents
+			.slice(0, 4)
+			.map(({ featureId, value }) => ({
+				featureId,
+				value: new Decimal(Math.random().toFixed(PRECISION))
+					.mul(-value)
+					.toNumber(),
+			}));
 
-			const creditsUsed = getCreditCost({
-				creditSystem: creditsFeature,
-				featureId: featureId,
-				amount: randomVal,
-			});
+		const sendEvents = async ({
+			events,
+		}: {
+			events: { featureId: string; value: number }[];
+		}) => {
+			for (const { featureId, value } of events) {
+				const creditsUsed = getCreditCost({
+					creditSystem: creditsFeature,
+					featureId,
+					amount: value,
+				});
+				totalCreditsUsed = new Decimal(totalCreditsUsed)
+					.plus(creditsUsed)
+					.toNumber();
+			}
 
-			totalCreditsUsed = new Decimal(totalCreditsUsed)
-				.plus(creditsUsed)
-				.toNumber();
-
-			batchEvents.push(
-				AutumnCli.sendEvent({
-					customerId: customerId,
-					featureId: featureId,
-					properties: { value: randomVal },
-				}),
+			await Promise.all(
+				events.map(({ featureId, value }) =>
+					AutumnCli.sendEvent({
+						customerId,
+						featureId,
+						properties: { value },
+					}),
+				),
 			);
-		}
+			await new Promise((resolve) => setTimeout(resolve, 15000));
+		};
 
-		await Promise.all(batchEvents);
-		await new Promise((resolve) => setTimeout(resolve, 15000));
+		await sendEvents({ events: usageEvents });
+		await sendEvents({ events: refundEvents });
 	});
 
 	// 3. Advance test clock by 15 days and upgrade
