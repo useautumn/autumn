@@ -35,6 +35,7 @@ export const createSubjectHydrator = ({
 			ensureSubjectCatalog({ scope, identity, state }),
 		readSubject: ({ state, identity }) =>
 			readSubject({ scope, state, identity }),
+		peekCatalog: ({ state }) => scope.state.joinCache.peekCatalog({ state }),
 		readCatalog: ({ state }) => readSubjectCatalog({ scope, state }),
 		readSubjectWith: ({ state, catalog, identity }) =>
 			scope.state.joinCache.readFullSubject({

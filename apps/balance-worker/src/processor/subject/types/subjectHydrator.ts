@@ -21,6 +21,8 @@ export type SubjectHydrator = {
 		identity: MeteringIdentity;
 		state: SubjectState;
 	}): Promise<Catalog>;
+	/** Sync: the state's joined catalog while it is current (catalog unmoved, recheck not due), else null: the ensure would refresh it. */
+	peekCatalog(params: { state: SubjectState }): Catalog | null;
 	/** Sync: the catalog rows that view was joined from, which a reply hands to the server so it need not load them. */
 	readCatalog(params: { state: SubjectState }): Catalog;
 	/** Sync: the same view over a catalog the caller already read, so a command that builds the subject twice reads the catalog once. */

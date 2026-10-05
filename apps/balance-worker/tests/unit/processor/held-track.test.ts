@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setSystemTime, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +7,8 @@ import {
 	type MeteringIdentity,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
+import type { CatalogCache } from "@autumn/catalog-lru";
+import { BALANCE_WORKER_CATALOG_RECHECK_MS } from "@autumn/env/balanceWorkerConstants";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { CommittedOutcomeAppender } from "../../../src/processor/writer/types/partitionWriter.js";
@@ -116,10 +118,12 @@ function processorOn({
 	positions,
 	appender,
 	store,
+	catalogCache = createTestCatalogCache(),
 }: {
 	positions: CommitPositions;
 	appender: CommittedOutcomeAppender;
 	store: SqliteStateStore & { storeGate?: () => Promise<void> };
+	catalogCache?: CatalogCache;
 }) {
 	async function applyDurableMutations(
 		params: Parameters<SqliteStateStore["applyDurableMutations"]>[0],
@@ -132,7 +136,7 @@ function processorOn({
 			stateStore: { ...store, applyDurableMutations },
 			appender,
 			db: createSyntheticWorkerDb(),
-			catalogCache: createTestCatalogCache(),
+			catalogCache,
 			receiptPolicy: { retentionMs: 86_400_000, now: () => 1_700_000_000_000 },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 			commitPositions: positions.sinkFor({ partition }),
@@ -186,11 +190,15 @@ function openStore(): {
 }
 
 /** A processor whose customer is resident: one ordinary track has loaded and committed it. */
-async function residentFixture() {
+async function residentFixture({
+	catalogCache,
+}: {
+	catalogCache?: CatalogCache;
+} = {}) {
 	const positions = createCommitPositions({ config: { partitionCount: 4 } });
 	const appender = gatedAppender();
 	const { store, close } = openStore();
-	const processor = processorOn({ positions, appender, store });
+	const processor = processorOn({ positions, appender, store, catalogCache });
 	const warm = processor.track({
 		command: trackCommand({ commandId: "warm" }),
 	});
@@ -304,6 +312,48 @@ describe("inline tracks with held replies", () => {
 				JSON.parse(held?.body ?? "{}"),
 			);
 		} finally {
+			f.close();
+		}
+	});
+
+	test("a catalog invalidated past its recheck window is refused inline, and the ordinary path answers from the refreshed rows", async () => {
+		let allowance = 1000;
+		const synthetic = createSyntheticWorkerDb();
+		const catalogCache = createTestCatalogCache({
+			db: {
+				async getCatalogRows(params) {
+					const rows = await synthetic.getCatalogRows(params);
+					return {
+						...rows,
+						entitlements: rows.entitlements.map((row) => ({
+							...row,
+							allowance,
+						})),
+					};
+				},
+			},
+		});
+		const f = await residentFixture({ catalogCache });
+		try {
+			allowance = 400;
+			catalogCache.invalidate({ orgId: identity.orgId, env: identity.env });
+			setSystemTime(Date.now() + BALANCE_WORKER_CATALOG_RECHECK_MS + 1);
+			expect(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "stale" }),
+				}),
+			).toBeNull();
+			const answered = f.processor.track({
+				command: trackCommand({ commandId: "stale" }),
+			});
+			await waitForAppend();
+			f.appender.release();
+			const reply = JSON.parse(JSON.stringify(await answered));
+			expect(reply.catalog.entitlements.ent_messages_monthly.allowance).toBe(
+				400,
+			);
+		} finally {
+			setSystemTime();
 			f.close();
 		}
 	});

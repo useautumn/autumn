@@ -1,12 +1,10 @@
 import {
 	meteringIdentityToPartitionKey,
-	type SubjectState,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { resetMayBeDue } from "../actions/ensureSubjectCurrent/earliestResetAt.js";
-import { isGoneMidRequest } from "../actions/withResidentSubject.js";
 import { viewHasEntity } from "../subject/actions/ensureSubject/ensureSubjectState.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
@@ -25,7 +23,7 @@ export type InlineTrackRefusal =
 	| "lock"
 	| "not_resident"
 	| "reset_due"
-	| "catalog_evicted";
+	| "catalog_stale";
 
 /** The ensure's own view, checked without awaiting: the rows (an entity's included), current resets and catalog. */
 export function inlineTrackRefusalOf({
@@ -42,24 +40,9 @@ export function inlineTrackRefusalOf({
 		return "not_resident";
 	if (resetMayBeDue({ state: resident, asOf: command.occurredAt }))
 		return "reset_due";
-	if (!hasResidentCatalog({ scope, state: resident })) return "catalog_evicted";
+	if (!scope.ctx.subjectHydrator.peekCatalog({ state: resident }))
+		return "catalog_stale";
 	return null;
-}
-
-function hasResidentCatalog({
-	scope,
-	state,
-}: {
-	scope: PartitionProcessorScope;
-	state: SubjectState;
-}): boolean {
-	try {
-		scope.ctx.subjectHydrator.readCatalog({ state });
-		return true;
-	} catch (cause) {
-		if (isGoneMidRequest(cause)) return false;
-		throw cause;
-	}
 }
 
 /**
