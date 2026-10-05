@@ -6,6 +6,9 @@ import { pushSubjectToCache } from "./pushSubjectToCache/pushSubjectToCache.js";
 import type { CachePushContext } from "./types/cachePushContext.js";
 import { recordsToCacheSubjects } from "./utils/recordsToCacheSubjects.js";
 
+/** Subjects in a slice are distinct, so they push independently; one at a time capped herald at ~1/push latency per partition. */
+export const CACHE_PUSH_CONCURRENCY = 16;
+
 /** Keeps each org's BYOC cache current: every subject a batch moved is re-read from its worker and written as it now stands. */
 export function createCachePushConsumer({
 	ctx,
@@ -17,8 +20,18 @@ export function createCachePushConsumer({
 	}: {
 		records: StreamRecord[];
 	}): Promise<void> {
-		for (const cacheSubject of recordsToCacheSubjects({ records }))
-			await pushSubjectToCache({ ctx, cacheSubject });
+		const subjects = recordsToCacheSubjects({ records });
+		let next = 0;
+		const pushNext = async (): Promise<void> => {
+			for (let index = next++; index < subjects.length; index = next++)
+				await pushSubjectToCache({ ctx, cacheSubject: subjects[index] });
+		};
+		await Promise.all(
+			Array.from(
+				{ length: Math.min(CACHE_PUSH_CONCURRENCY, subjects.length) },
+				pushNext,
+			),
+		);
 	}
 
 	return { name: "cache-push", handle };
