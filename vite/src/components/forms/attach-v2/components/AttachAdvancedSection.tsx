@@ -37,6 +37,7 @@ import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/Disco
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
+import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
@@ -131,6 +132,7 @@ export function AttachAdvancedSection() {
 		billingCycleAnchorMode,
 		billingCycleAnchorDate,
 		noBillingChanges,
+		chargeTax,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -140,6 +142,9 @@ export function AttachAdvancedSection() {
 		startDate,
 		endDate,
 	} = formValues;
+	const { org } = useOrg();
+	const showChargeTax =
+		!isMultiPlan && !noBillingChanges && Boolean(org?.config?.automatic_tax);
 	const hasCustomerEntitlements =
 		customer?.customer_products?.some(
 			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
@@ -246,6 +251,21 @@ export function AttachAdvancedSection() {
 
 	const moreOptions = (
 		<>
+			{showChargeTax && (
+				<ConfigRow
+					title="Charge Tax"
+					description="Calculate tax automatically via Stripe"
+					action={
+						<Switch
+							checked={chargeTax}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("chargeTax", !!checked)
+							}
+						/>
+					}
+				/>
+			)}
+
 			{rules.startDate.visible && (
 				<ConfigRow
 					title="Start Date"

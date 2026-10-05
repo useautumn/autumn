@@ -8,7 +8,7 @@ type PreviewTotalsBlockPreviewData = {
 	total: number;
 	tax?: {
 		total: number;
-		status: "complete" | "incomplete";
+		status: "complete" | "incomplete" | "requires_location";
 	};
 	invoice_credits?: {
 		balance: number;

@@ -2,6 +2,7 @@ import type { ProductItem } from "@autumn/shared";
 import { FreeTrialDuration } from "@autumn/shared";
 import { useAppForm } from "@/hooks/form/form";
 import { type AttachForm, AttachFormSchema } from "../attachFormSchema";
+import { EMPTY_INVOICE_BILLING_DETAILS } from "../utils/invoiceBillingDetails";
 
 export function useAttachForm({
 	initialProductId,
@@ -48,6 +49,8 @@ export function useAttachForm({
 			grantFree: false,
 			currency: null,
 			noBillingChanges: false,
+			chargeTax: true,
+			billingDetails: EMPTY_INVOICE_BILLING_DETAILS,
 			enablePlanImmediately: false,
 			longLivedCheckout: false,
 			carryOverBalances: false,

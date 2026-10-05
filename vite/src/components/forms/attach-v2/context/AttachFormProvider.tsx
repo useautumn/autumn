@@ -518,6 +518,8 @@ export function AttachFormProvider({
 		disableProration,
 		currency: attachCurrency.requestCurrency,
 		removePlanIds: formValues.removePlanIds,
+		chargeTax: formValues.chargeTax,
+		billingDetails: formValues.billingDetails,
 	});
 	const {
 		requestBody: multiRequestBody,
