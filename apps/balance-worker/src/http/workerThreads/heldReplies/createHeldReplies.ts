@@ -55,9 +55,12 @@ export function createHeldReplies({
 	}
 
 	function positionOf({ partition }: { partition: number }): number | null {
+		// Position first: the writer counts a failure before moving past its gap, so a count read
+		// after the position covers every failure that position may have skipped.
+		const position = Number(Atomics.load(positions, partition));
 		if (Atomics.load(failures, partition) !== failuresSeen[partition])
 			return null;
-		return Number(Atomics.load(positions, partition));
+		return position;
 	}
 
 	function release(): boolean {
