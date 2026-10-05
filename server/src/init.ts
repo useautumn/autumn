@@ -9,6 +9,7 @@ import { getRequestListener } from "@hono/node-server";
 import {
 	client,
 	clientCritical,
+	prefillCriticalPool,
 	clientReplica,
 	clientReplicaSlow,
 	db,
@@ -112,6 +113,7 @@ const init = async ({
 
 	initPgHealthMonitor({ client: clientCritical });
 	startPgPoolMonitor();
+	const criticalPrefill = prefillCriticalPool();
 	// `db` is the general pool — the probe must never occupy a critical-pool slot.
 	startReplicaRoutingProber({ db });
 
@@ -182,6 +184,7 @@ const init = async ({
 		idleSweep.unref?.();
 	};
 
+	await criticalPrefill;
 	await awaitBoundedWarmup({
 		warmup: redisWarmup,
 		timeoutMs: 10_000,

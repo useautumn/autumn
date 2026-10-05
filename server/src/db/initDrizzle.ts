@@ -140,6 +140,9 @@ const PROD_POOL_MAX = {
 	replica: 9,
 };
 
+/** Staging spike: critical connections opened at boot and kept, so a surge logs nothing new in to PgBouncer. */
+const CRITICAL_POOL_PREFILL = 60;
+
 const criticalPoolMax = poolMaxFromEnv({
 	envVar: "CRITICAL_DB_POOL_MAX",
 	fallback: isProd ? PROD_POOL_MAX.critical : 10,
@@ -217,9 +220,28 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 		// statement_timeout still kills runaway queries once they start running.
 		query_timeout: isProd ? 15_000 : 30_000,
 		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
-		min: Math.min(10, criticalPoolMax),
+		min: Math.min(CRITICAL_POOL_PREFILL, criticalPoolMax),
 	},
 });
+
+/** Opens the critical pool's kept connections before the fork serves; a failure is logged, never fatal. */
+export const prefillCriticalPool = async () => {
+	const target = Math.min(CRITICAL_POOL_PREFILL, criticalPoolMax);
+	const startedAt = performance.now();
+	const connected = await Promise.allSettled(
+		Array.from({ length: target }, () => clientCritical.connect()),
+	);
+	let opened = 0;
+	for (const result of connected) {
+		if (result.status !== "fulfilled") continue;
+		result.value.release();
+		opened++;
+	}
+	logger.info(
+		{ opened, target, durationMs: Math.round(performance.now() - startedAt) },
+		"[initDrizzle] critical pool prefilled",
+	);
+};
 
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
