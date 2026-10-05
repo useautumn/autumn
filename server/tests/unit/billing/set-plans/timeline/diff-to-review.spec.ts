@@ -364,6 +364,28 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		]);
 	});
 
+	test("a first phase starting later shows a replaced plan ending now", () => {
+		const review = reviewFor({
+			billingContext: {
+				...buildContext({
+					existing: [running({ product: pro })],
+					opening: [{ fullProduct: premium }],
+				}),
+				immediatePhase: { starts_at: PHASE_B, plans: [] },
+			},
+		});
+		const [firstPhase] = review.phases;
+		expect(
+			firstPhase?.plans.map((plan) => [
+				`${plan.plan_id}:${plan.status}`,
+				plan.expires_at,
+			]),
+		).toEqual([
+			["premium:starts", null],
+			["pro:ends", NOW],
+		]);
+	});
+
 	test("a plan billed on another subscription is left out of the preview", () => {
 		const proOnA = running({ product: pro, subscriptionIds: ["sub_a"] });
 		const ssoOnB = running({ product: sso, subscriptionIds: ["sub_b"] });

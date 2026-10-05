@@ -21,6 +21,7 @@ import { withoutCarriedOverRows } from "./withoutCarriedOverRows";
 export type ReviewRows = {
 	phases: {
 		at: number;
+		endsAt: number;
 		comparison: ReviewPhaseComparison;
 		rows: ReviewPlanRow[];
 	}[];
@@ -73,6 +74,7 @@ export const timelineToReviewRows = ({
 		phases: withoutCarriedOverRows(
 			matches.phases.map((phase, phaseIndex) => ({
 				at: phase.at,
+				endsAt: phase.endsAt,
 				comparison: phase.comparison,
 				rows: phasePlanRows({
 					contents: resolvedContentsAt({

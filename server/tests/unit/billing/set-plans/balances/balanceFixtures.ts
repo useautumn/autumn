@@ -290,6 +290,7 @@ export const exactDateMatches = ({
 	return {
 		phases: phases.map(({ startsAt }, phaseIndex) => ({
 			at: startsAt,
+			endsAt: phaseIndex === 0 ? NOW : startsAt,
 			comparison:
 				phaseIndex === 0 || savedStarts.has(startsAt)
 					? { type: "saved", at: phaseIndex === 0 ? NOW : startsAt }
