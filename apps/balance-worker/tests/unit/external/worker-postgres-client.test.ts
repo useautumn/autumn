@@ -14,7 +14,19 @@ describe("worker Postgres client", () => {
 		expect(sqlOptionsOf({ config })).toMatchObject({
 			max: 32,
 			maxLifetime: 0,
-			idleTimeout: 30,
+			idleTimeout: 5,
 		});
+	});
+
+	test("a silent connection fails a query within seconds, above the flush statement_timeout", () => {
+		const config = workerPostgresClientConfig({
+			env: {
+				DATABASE_URL: "postgres://user:secret@127.0.0.1:1/never",
+				BALANCE_WORKER_DATABASE_POOL_SIZE: 32,
+			},
+		});
+
+		expect(config.idleTimeout).toBeGreaterThan(2);
+		expect(config.idleTimeout).toBeLessThanOrEqual(5);
 	});
 });

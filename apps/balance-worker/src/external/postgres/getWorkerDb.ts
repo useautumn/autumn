@@ -24,6 +24,10 @@ import type { CommitterDb } from "../../types/committerDb.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectLoadGate } from "./createSubjectLoadGate.js";
 
+/** bun:sql's idle timer is also its only read deadline: a query whose connection goes silent fails after this.
+ *  Kept just above the flush's 2 s statement_timeout so a wedged socket costs seconds, not 30 s. */
+export const WORKER_SILENT_CONNECTION_TIMEOUT_SECONDS = 5;
+
 export const workerPostgresClientConfig = ({
 	env,
 }: {
@@ -35,7 +39,7 @@ export const workerPostgresClientConfig = ({
 	databaseUrl: env.DATABASE_URL,
 	maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
 	connectTimeout: 10,
-	idleTimeout: 30,
+	idleTimeout: WORKER_SILENT_CONNECTION_TIMEOUT_SECONDS,
 });
 
 /** One pool per worker, closed with it; its size counts against the fleet's PgBouncer client budget. */
