@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
 	createSubjectState,
 	type MeteringIdentity,
+	parseCheckCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
 import { createPartitionProcessor } from "../../src/processor/createPartitionProcessor.js";
@@ -63,6 +64,29 @@ export function trackCommand({
 					expiryAction: "release",
 				},
 			}),
+		},
+	});
+}
+
+export function checkCommand({
+	requiredBalance = 1,
+	who = identity,
+}: {
+	requiredBalance?: number;
+	who?: MeteringIdentity;
+} = {}) {
+	return parseCheckCommand({
+		input: {
+			schemaVersion: 1,
+			type: "check",
+			org: testOrg,
+			requestId: "req_check",
+			identity: who,
+			featureId: "messages",
+			internalFeatureId: "feat_messages",
+			requiredBalance,
+			properties: null,
+			occurredAt: 1_700_000_000_000,
 		},
 	});
 }
