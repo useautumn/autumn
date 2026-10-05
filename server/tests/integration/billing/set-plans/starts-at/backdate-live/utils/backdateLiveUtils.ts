@@ -16,9 +16,9 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { CusService } from "@/internal/customers/CusService";
 import {
 	findLiveCustomerProduct,
+	findStripeCustomerId,
 	startsAtProducts,
 } from "../../utils/futureStartUtils";
 
@@ -26,19 +26,24 @@ const CENTS_PER_UNIT = 100;
 const WEBHOOK_SETTLE_WINDOW_MS = ms.seconds(15);
 const WEBHOOK_SETTLE_POLL_MS = ms.seconds(1);
 
+type ScenarioActions = Parameters<typeof initScenario>[0]["actions"];
+
 /** A customer with pro on a live subscription, attached per entity when it has entities, then aged by advanceDays. */
 export const initLiveProScenario = async ({
 	customerId,
 	entityCount = 0,
 	advanceDays,
 	otherProducts = [],
+	afterAttach,
 }: {
 	customerId: string;
 	entityCount?: number;
 	advanceDays?: number;
 	otherProducts?: ProductV2[];
+	afterAttach?: (pro: ProductV2) => ScenarioActions;
 }) => {
 	const { pro } = startsAtProducts();
+	const afterAttachSteps = afterAttach?.(pro) ?? [];
 	const attachSteps =
 		entityCount > 0
 			? Array.from({ length: entityCount }, (_, entityIndex) =>
@@ -56,6 +61,7 @@ export const initLiveProScenario = async ({
 		],
 		actions: [
 			...attachSteps,
+			...afterAttachSteps,
 			...(advanceDays ? [s.advanceTestClock({ days: advanceDays })] : []),
 		],
 	});
@@ -96,22 +102,6 @@ export const liveSubscriptionPeriod = async ({
 	};
 };
 
-const stripeCustomerId = async ({
-	ctx,
-	customerId,
-}: {
-	ctx: TestContext;
-	customerId: string;
-}) => {
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-	});
-	const id = fullCustomer.processor?.id;
-	if (!id) throw new Error(`${customerId} has no Stripe customer`);
-	return id;
-};
-
 const customerInvoiceLines = async ({
 	ctx,
 	customerId,
@@ -120,7 +110,7 @@ const customerInvoiceLines = async ({
 	customerId: string;
 }) => {
 	const { data: invoices } = await ctx.stripeCli.invoices.list({
-		customer: await stripeCustomerId({ ctx, customerId }),
+		customer: await findStripeCustomerId({ ctx, customerId }),
 		limit: 100,
 	});
 	const billed = invoices.filter(({ status }) => status !== "void");
@@ -151,37 +141,43 @@ const lineFallsIn = ({
 
 export type BilledPeriod = { startMs: number; endMs: number; total: number };
 
+export type BackdateProrationBehavior =
+	| "none"
+	| "prorate_immediately"
+	| "bill_difference";
+
 /**
- * What a backdate bills for the monthly cycles before the live start that it reaches: each in full
- * for bill_difference, otherwise pro rata for the days it covers.
+ * What a backdate bills for the cycles before the live start that it reaches: nothing for none,
+ * each in full for bill_difference, otherwise pro rata for the time it covers.
  */
 export const expectedBackdateGapCharge = ({
-	monthlyPrice,
+	cyclePrice,
+	interval = BillingInterval.Month,
 	backdatedStartMs,
 	liveStartMs,
 	prorationBehavior,
 }: {
-	monthlyPrice: number;
+	cyclePrice: number;
+	interval?: BillingInterval;
 	backdatedStartMs: number;
 	liveStartMs: number;
-	prorationBehavior: "prorate_immediately" | "bill_difference";
+	prorationBehavior: BackdateProrationBehavior;
 }) => {
+	if (prorationBehavior === "none") return 0;
+
 	let cycles = 1;
 	while (
-		addInterval({
-			from: liveStartMs,
-			interval: BillingInterval.Month,
-			intervalCount: -cycles,
-		}) > backdatedStartMs
+		addInterval({ from: liveStartMs, interval, intervalCount: -cycles }) >
+		backdatedStartMs
 	) {
 		cycles += 1;
 	}
-	const wholeCycles = new Decimal(monthlyPrice).mul(cycles);
+	const wholeCycles = new Decimal(cyclePrice).mul(cycles);
 	if (prorationBehavior === "bill_difference") return wholeCycles.toNumber();
 
 	const cyclesStartMs = addInterval({
 		from: liveStartMs,
-		interval: BillingInterval.Month,
+		interval,
 		intervalCount: -cycles,
 	});
 	return wholeCycles
@@ -256,7 +252,10 @@ export const expectReplacedSubscriptionCancelledQuietly = async ({
 	expect(invoices).toHaveLength(invoiceCountBefore);
 };
 
-/** The recreated subscription starts on the backdated date and renews on the old period end for the full price. */
+/**
+ * The recreated subscription starts on the backdated date and renews on the old period end for the
+ * full price; given cancelAtMs it keeps the replaced subscription's cancel date instead of renewing.
+ */
 export const expectRecreatedSubscriptionCorrect = async ({
 	ctx,
 	customerId,
@@ -264,13 +263,15 @@ export const expectRecreatedSubscriptionCorrect = async ({
 	startMs,
 	periodEndMs,
 	renewalTotal,
+	cancelAtMs,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	replacedSubscriptionId: string;
 	startMs: number;
 	periodEndMs: number;
-	renewalTotal: number;
+	renewalTotal?: number;
+	cancelAtMs?: number;
 }) => {
 	const subscription = await findStripeSubscriptionByStatus({
 		ctx,
@@ -280,6 +281,10 @@ export const expectRecreatedSubscriptionCorrect = async ({
 	expect(subscription.id).not.toBe(replacedSubscriptionId);
 	expect(subscription.start_date).toBe(msToSeconds(startMs));
 	expect(subscription.billing_cycle_anchor).toBe(msToSeconds(periodEndMs));
+	expect(subscription.cancel_at).toBe(
+		cancelAtMs === undefined ? null : msToSeconds(cancelAtMs),
+	);
+	if (renewalTotal === undefined) return subscription;
 
 	const upcoming = await ctx.stripeCli.invoices.createPreview({
 		subscription: subscription.id,

@@ -1,8 +1,9 @@
 /**
  * proration_behavior decides whether a backdate over a live subscription bills the time before
- * that subscription started: pro rata, or every cycle it reaches in full. The time the live
- * subscription paid is never billed again. Restarting the cycle on the backdated start credits
- * the unused paid time and charges the restarted cycle on the same invoice as the gap.
+ * that subscription started: not at all (none), pro rata (for an annual plan, its part of the
+ * year), or every cycle it reaches in full. The time the live subscription paid is never billed
+ * again. Restarting the cycle on the backdated start credits the unused paid time and charges the
+ * restarted cycle on the same invoice as the gap.
  */
 
 import { expect, test } from "bun:test";
@@ -15,9 +16,13 @@ import {
 } from "@autumn/shared";
 import { expectPreviewWarning } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import {
+	type BackdateProrationBehavior,
 	expectEachPeriodBilledOnce,
 	expectedBackdateGapCharge,
 	expectedRestOfCycle,
@@ -28,6 +33,7 @@ import {
 } from "./utils/backdateLiveUtils";
 
 const PRO_MONTHLY_PRICE = 20;
+const PRO_ANNUAL_PRICE = 200;
 
 const backdateLivePro = async ({
 	customerId,
@@ -37,7 +43,7 @@ const backdateLivePro = async ({
 }: {
 	customerId: string;
 	daysBeforeLiveStart: number;
-	prorationBehavior: "prorate_immediately" | "bill_difference";
+	prorationBehavior: BackdateProrationBehavior;
 	restartsCycle?: boolean;
 }) => {
 	const scenario = await initLiveProScenario({ customerId, advanceDays: 10 });
@@ -55,7 +61,7 @@ const backdateLivePro = async ({
 		],
 	};
 	const gapCharge = expectedBackdateGapCharge({
-		monthlyPrice: PRO_MONTHLY_PRICE,
+		cyclePrice: PRO_MONTHLY_PRICE,
 		backdatedStartMs: backdatedStart,
 		liveStartMs: live.startMs,
 		prorationBehavior,
@@ -129,6 +135,130 @@ for (const { prorationBehavior, daysBeforeLiveStart } of [
 		},
 	);
 }
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans backdate live: none leaves the time before the live start unbilled, charging nothing now")}`,
+	async () => {
+		const customerId = "set-plans-backdate-live-gap-none";
+		const { autumnV1, autumnV2_4, ctx, live, backdatedStart, params } =
+			await backdateLivePro({
+				customerId,
+				daysBeforeLiveStart: 20,
+				prorationBehavior: "none",
+			});
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			autumn: autumnV1,
+			count: 2,
+			latestTotal: 0,
+		});
+		await expectReplacedSubscriptionCancelledQuietly({
+			ctx,
+			subscriptionId: live.subscription.id,
+			invoiceCountBefore: live.invoiceCount,
+		});
+		await expectRecreatedSubscriptionCorrect({
+			ctx,
+			customerId,
+			replacedSubscriptionId: live.subscription.id,
+			startMs: backdatedStart,
+			periodEndMs: live.periodEndMs,
+			renewalTotal: PRO_MONTHLY_PRICE,
+		});
+		await expectEachPeriodBilledOnce({
+			ctx,
+			customerId,
+			periods: [
+				{ startMs: backdatedStart, endMs: live.startMs, total: 0 },
+				{
+					startMs: live.periodStartMs,
+					endMs: live.periodEndMs,
+					total: PRO_MONTHLY_PRICE,
+				},
+			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans backdate live: an annual plan backdated before its start with prorate_immediately bills the gap's part of the year")}`,
+	async () => {
+		const customerId = "set-plans-backdate-live-gap-annual";
+		const proAnnual = products.proAnnual({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV1, autumnV2_4, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proAnnual] }),
+			],
+			actions: [
+				s.billing.attach({ productId: proAnnual.id }),
+				s.advanceTestClock({ months: 2 }),
+			],
+		});
+		const live = await liveSubscriptionPeriod({ ctx, customerId });
+		const backdatedStart = live.startMs - ms.days(45);
+		const gapCharge = expectedBackdateGapCharge({
+			cyclePrice: PRO_ANNUAL_PRICE,
+			interval: BillingInterval.Year,
+			backdatedStartMs: backdatedStart,
+			liveStartMs: live.startMs,
+			prorationBehavior: "prorate_immediately",
+		});
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			proration_behavior: "prorate_immediately",
+			phases: [
+				{ starts_at: backdatedStart, plans: [{ plan_id: proAnnual.id }] },
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBeCloseTo(gapCharge, 2);
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			autumn: autumnV1,
+			count: 2,
+			latestTotal: gapCharge,
+		});
+		await expectReplacedSubscriptionCancelledQuietly({
+			ctx,
+			subscriptionId: live.subscription.id,
+			invoiceCountBefore: live.invoiceCount,
+		});
+		await expectRecreatedSubscriptionCorrect({
+			ctx,
+			customerId,
+			replacedSubscriptionId: live.subscription.id,
+			startMs: backdatedStart,
+			periodEndMs: live.periodEndMs,
+			renewalTotal: PRO_ANNUAL_PRICE,
+		});
+		await expectEachPeriodBilledOnce({
+			ctx,
+			customerId,
+			periods: [
+				{ startMs: backdatedStart, endMs: live.startMs, total: gapCharge },
+				{
+					startMs: live.periodStartMs,
+					endMs: live.periodEndMs,
+					total: PRO_ANNUAL_PRICE,
+				},
+			],
+		});
+	},
+);
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: restarting the cycle on the backdated start credits the paid time and charges the new cycle with the gap")}`,

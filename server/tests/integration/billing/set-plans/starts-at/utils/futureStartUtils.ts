@@ -3,6 +3,7 @@ import {
 	CusProductStatus,
 	type FullCusProduct,
 	msToSeconds,
+	secondsToMs,
 } from "@autumn/shared";
 import { triggerSubscriptionCreated } from "@tests/integration/billing/attach/params/start-date/utils";
 import { items } from "@tests/utils/fixtures/items";
@@ -51,6 +52,57 @@ export const findLiveCustomerProduct = async ({
 		throw new Error(`No live ${productId} row for ${customerId}`);
 	}
 	return customerProduct;
+};
+
+/** The Stripe customer behind an Autumn customer. */
+export const findStripeCustomerId = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const stripeCustomerId = fullCustomer.processor?.id;
+	if (!stripeCustomerId) {
+		throw new Error(`${customerId} has no Stripe customer`);
+	}
+	return stripeCustomerId;
+};
+
+/** The test clock's current time, which is the now set_plans measures starts_at against. */
+export const testClockNowMs = async ({
+	ctx,
+	testClockId,
+}: {
+	ctx: TestContext;
+	testClockId: string;
+}) => {
+	const testClock =
+		await ctx.stripeCli.testHelpers.testClocks.retrieve(testClockId);
+	return secondsToMs(testClock.frozen_time);
+};
+
+/** The customer's not-yet-finished Stripe schedules are exactly these, so a replaced one can't still fire. */
+export const expectPendingSchedules = async ({
+	ctx,
+	customerId,
+	scheduleIds,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	scheduleIds: string[];
+}) => {
+	const { data: schedules } = await ctx.stripeCli.subscriptionSchedules.list({
+		customer: await findStripeCustomerId({ ctx, customerId }),
+	});
+	const pendingIds = schedules
+		.filter(({ status }) => status === "not_started" || status === "active")
+		.map(({ id }) => id);
+	expect(pendingIds.sort()).toEqual([...scheduleIds].sort());
 };
 
 /** The row rides a Stripe schedule whose first phase starts on the future start, to the second. */

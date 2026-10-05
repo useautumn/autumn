@@ -2,13 +2,17 @@
  * What a backdate recreate carries off the live subscription:
  * - a repeating coupon keeps only its remaining cycles, so the next renewals stay discounted
  *   exactly as long as they would have been;
- * - a past_due subscription's open invoice stays open and is not charged a second time.
+ * - a past_due subscription's open invoice stays open and is not charged a second time;
+ * - a plan canceling at period end stays canceling: the recreated subscription keeps the old
+ *   period end as its cancel date.
  */
 
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
+import { s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import {
@@ -133,6 +137,56 @@ test.concurrent(
 			startMs: backdatedStart,
 			periodEndMs: live.periodEndMs,
 			renewalTotal: 20,
+		});
+		await expectEachPeriodBilledOnce({
+			ctx,
+			customerId,
+			periods: [
+				{ startMs: live.periodStartMs, endMs: live.periodEndMs, total: 20 },
+			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans backdate live: a plan canceling at period end keeps its cancel date on the recreated subscription")}`,
+	async () => {
+		const { pro, customerId, autumnV2_4, ctx } = await initLiveProScenario({
+			customerId: "set-plans-backdate-live-canceling",
+			afterAttach: (livePro) => [
+				s.updateSubscription({
+					productId: livePro.id,
+					cancelAction: "cancel_end_of_cycle",
+				}),
+			],
+			advanceDays: 10,
+		});
+		const live = await liveSubscriptionPeriod({ ctx, customerId });
+		expect(live.subscription.cancel_at).not.toBeNull();
+		const backdatedStart = live.startMs - ms.days(10);
+
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [{ starts_at: backdatedStart, plans: [{ plan_id: pro.id }] }],
+		});
+
+		await expectReplacedSubscriptionCancelledQuietly({
+			ctx,
+			subscriptionId: live.subscription.id,
+			invoiceCountBefore: live.invoiceCount,
+		});
+		await expectRecreatedSubscriptionCorrect({
+			ctx,
+			customerId,
+			replacedSubscriptionId: live.subscription.id,
+			startMs: backdatedStart,
+			periodEndMs: live.periodEndMs,
+			cancelAtMs: live.periodEndMs,
+		});
+		await expectCustomerProducts({
+			customerId,
+			autumn: autumnV2_4,
+			canceling: [pro.id],
 		});
 		await expectEachPeriodBilledOnce({
 			ctx,

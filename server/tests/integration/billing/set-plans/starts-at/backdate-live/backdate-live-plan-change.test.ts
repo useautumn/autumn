@@ -2,7 +2,8 @@
  * A backdate over a live subscription that also changes plans bills only the difference for the
  * rest of the current period: the old plans' unused time is credited, the new plans charged,
  * and the preview total equals the invoice. The period the old subscription paid isn't rebilled,
- * and the recreated subscription renews on the old date at the new plans' price.
+ * and the recreated subscription renews on the old date at the new plans' price. Switching a
+ * monthly plan to an annual one works the same way, the annual price billed from the old renewal.
  */
 
 import { expect, test } from "bun:test";
@@ -21,8 +22,11 @@ import {
 	expectEachPeriodBilledOnce,
 	expectRecreatedSubscriptionCorrect,
 	expectReplacedSubscriptionCancelledQuietly,
+	initLiveProScenario,
 	liveSubscriptionPeriod,
 } from "./utils/backdateLiveUtils";
+
+const PRO_ANNUAL_PRICE = 200;
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans backdate live: an upgrade and a downgrade together bill only their difference to the period end")}`,
@@ -114,6 +118,69 @@ test.concurrent(
 			customerId,
 			productId: premium.id,
 			startsAt: backdatedStart,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans backdate live: switching monthly to annual bills the switch once and renews annually on the old date")}`,
+	async () => {
+		const proAnnual = products.proAnnual({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { pro, customerId, autumnV1, autumnV2_4, ctx } =
+			await initLiveProScenario({
+				customerId: "set-plans-backdate-live-to-annual",
+				advanceDays: 10,
+				otherProducts: [proAnnual],
+			});
+		const live = await liveSubscriptionPeriod({ ctx, customerId });
+		const backdatedStart = live.startMs - ms.days(5);
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				{ starts_at: backdatedStart, plans: [{ plan_id: proAnnual.id }] },
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBeGreaterThan(0);
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			autumn: autumnV1,
+			count: 2,
+			latestTotal: preview.total,
+		});
+		await expectCustomerProducts({
+			customerId,
+			active: [proAnnual.id],
+			notPresent: [pro.id],
+		});
+		await expectReplacedSubscriptionCancelledQuietly({
+			ctx,
+			subscriptionId: live.subscription.id,
+			invoiceCountBefore: live.invoiceCount,
+		});
+		await expectRecreatedSubscriptionCorrect({
+			ctx,
+			customerId,
+			replacedSubscriptionId: live.subscription.id,
+			startMs: backdatedStart,
+			periodEndMs: live.periodEndMs,
+			renewalTotal: PRO_ANNUAL_PRICE,
+		});
+		await expectEachPeriodBilledOnce({
+			ctx,
+			customerId,
+			periods: [
+				{
+					startMs: live.periodStartMs,
+					endMs: live.periodEndMs,
+					total: new Decimal(live.billedTotal).plus(preview.total).toNumber(),
+				},
+			],
 		});
 	},
 );
