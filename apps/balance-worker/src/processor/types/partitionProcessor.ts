@@ -33,6 +33,7 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type { InlineTrackOutcome } from "../commands/trackInline.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
 import type { CommitPositionSink } from "../writer/types/commitPositionSink.js";
@@ -54,6 +55,8 @@ export type PartitionProcessor = {
 		deferredLogs?: DeferredLogSink;
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
+	/** Decided now, reply held by commit position; null hands it to `track`. */
+	trackInline(params: { command: TrackCommand }): InlineTrackOutcome | null;
 	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */
 	decideTrack(params: {
 		command: TrackCommand;

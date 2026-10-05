@@ -36,6 +36,7 @@ import {
 	decideTrack as decideTrackPartition,
 	track as trackPartition,
 } from "./commands/track.js";
+import { trackInline as trackInlineCommand } from "./commands/trackInline.js";
 import {
 	decideUpdateBalance as decideUpdateBalancePartition,
 	updateBalance as updateBalancePartition,
@@ -108,6 +109,10 @@ function createProcessor({
 			accepted: scope.accepted,
 			operation: trackPartition({ scope, command }),
 		});
+	}
+
+	function trackInline({ command }: { command: TrackCommand }) {
+		return trackInlineCommand({ scope, command });
 	}
 
 	function decideTrack({ command }: { command: TrackCommand }) {
@@ -285,6 +290,7 @@ function createProcessor({
 		execute,
 		dispose: () => scope.ctx.writer.dispose(),
 		track,
+		trackInline,
 		decideTrack,
 		check,
 		applyBillingPlan,

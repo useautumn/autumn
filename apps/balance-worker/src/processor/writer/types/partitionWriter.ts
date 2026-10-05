@@ -19,6 +19,8 @@ import type { CommitPositionSink } from "./commitPositionSink.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
+	HeldDecision,
+	HeldSubmission,
 	MutationDurability,
 	MutationSubmission,
 } from "./mutation.js";
@@ -30,6 +32,10 @@ export type PartitionWriter = {
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
 	decide<Reply>(submission: MutationSubmission<Reply>): DecidedMutation<Reply>;
+	/** Decides without a settlement: the reply goes out once the commit position reaches its `seq`. Null hands it back. */
+	decideHeld<Reply>(
+		submission: HeldSubmission<Reply>,
+	): HeldDecision<Reply> | null;
 	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
 	log(params: {
 		command: MutatingCommand;
@@ -166,7 +172,10 @@ export type PendingMutation = {
 	effects?: MutationEffect[];
 	/** The record the log gets, built once: the appender measured this object and sends this object. */
 	loggedRecord: MeteringRecord;
-	settlement: PendingSettlement;
+	/** Null for a held write: nobody awaits it, its reply waits on the commit position. */
+	settlement: PendingSettlement | null;
+	/** A held write's reply, kept for a retry that arrives while it is in flight. */
+	replyBody?: string;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
@@ -200,6 +209,16 @@ export type PartitionWriterState = {
 	lastSeq: number;
 	/** The last sequence number whose outcome is published: in the log, or failed. */
 	settledSeq: number;
+	/** The last write that lands rows, and the last one the store holds; a held write is waited on by these. */
+	lastRowSeq: number;
+	storedSeq: number;
+	storeWaiters: StoreWaiter[];
+};
+
+export type StoreWaiter = {
+	seq: number;
+	resolve(): void;
+	reject(error: unknown): void;
 };
 
 export type UnappliedBatch = {

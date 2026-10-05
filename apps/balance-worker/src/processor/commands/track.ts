@@ -77,7 +77,7 @@ export async function track({
 	});
 }
 
-function toTrackReply({
+export function toTrackReply({
 	scope,
 	command,
 	committed,
@@ -108,7 +108,7 @@ function toTrackReply({
 	};
 }
 
-type DecidedAgainst = {
+export type DecidedAgainst = {
 	catalog?: Catalog;
 	effects?: MutationEffect[];
 };
@@ -117,7 +117,7 @@ type DecidedAgainst = {
 type DecidedTrack = DecidedMutation<never> & { decidedAgainst: DecidedAgainst };
 
 /** Runs inside the writer's critical section: no await, no I/O. */
-function mutateTrack({
+export function mutateTrack({
 	scope,
 	state,
 	customerKey,
