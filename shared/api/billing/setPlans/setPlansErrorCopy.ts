@@ -10,6 +10,7 @@ import type {
 import {
 	boldText,
 	plainText,
+	punctuationText,
 	type SetPlansTextPart,
 	textPartsToText,
 } from "./setPlansTextParts";
@@ -44,6 +45,7 @@ const formatDatePair = ({
 
 const plain = plainText;
 const bold = boldText;
+const punctuation = punctuationText;
 
 const DATE_LABELS: Record<
 	Extract<SetPlansErrorDetails, { type: "date_order" }>["date"],
@@ -81,7 +83,7 @@ const startDateConflictCopy = ({
 	copy: StartDateConflictCopy;
 	startsAt: number;
 }): SetPlansErrorCopy => ({
-	line: [plain(copy.subject), bold(`${formatMsToDate(startsAt)}.`)],
+	line: [plain(copy.subject), bold(formatMsToDate(startsAt)), punctuation(".")],
 	hint: { text: copy.hint },
 });
 
@@ -145,7 +147,8 @@ const backdateConflictCopy = (
 				plain(
 					"is on the subscription but not in this request, so it can't be backdated to",
 				),
-				bold(`${formatMsToDate(details.starts_at)}.`),
+				bold(formatMsToDate(details.starts_at)),
+				punctuation("."),
 			],
 			hint: { text: "Include every plan on the subscription in the request." },
 		};
@@ -170,7 +173,8 @@ export const setPlansErrorCopy = (
 								plain("Adding"),
 								bold(details.requested_plan_name),
 								plain("would replace"),
-								bold(`${details.conflicting_plan_name},`),
+								bold(details.conflicting_plan_name),
+								punctuation(","),
 								plain("which is billed on another subscription."),
 							]
 						: [
@@ -214,9 +218,11 @@ export const setPlansErrorCopy = (
 					plain("The"),
 					bold(details.subscription_plan_name),
 					plain("subscription bills in"),
-					bold(`${details.subscription_currency.toUpperCase()},`),
+					bold(details.subscription_currency.toUpperCase()),
+					punctuation(","),
 					plain("but these plans bill in"),
-					bold(`${details.requested_currency.toUpperCase()}.`),
+					bold(details.requested_currency.toUpperCase()),
+					punctuation("."),
 				],
 				hint: { text: "Plans on one subscription must share a currency." },
 			};
@@ -253,7 +259,8 @@ export const setPlansErrorCopy = (
 					plain("This schedule needs"),
 					bold(String(details.phase_count)),
 					plain("phases, but Stripe allows at most"),
-					bold(`${details.max_phases}.`),
+					bold(String(details.max_phases)),
+					punctuation("."),
 				],
 				hint: { text: "Remove or merge some phases." },
 			};
@@ -261,7 +268,8 @@ export const setPlansErrorCopy = (
 			return {
 				line: [
 					plain("Connect Stripe to schedule a change from"),
-					bold(`${details.plan_name}.`),
+					bold(details.plan_name),
+					punctuation("."),
 				],
 				hint: { text: "Autumn runs the schedule on a $0 Stripe subscription." },
 			};
@@ -276,7 +284,8 @@ export const setPlansErrorCopy = (
 					plain(DATE_LABELS[details.date]),
 					bold(dates.first),
 					plain(boundary.relation),
-					bold(`${dates.second}.`),
+					bold(dates.second),
+					punctuation("."),
 				],
 				hint: { text: boundary.hint },
 			};
@@ -291,7 +300,8 @@ export const setPlansErrorCopy = (
 				line: [
 					bold(details.plan_name),
 					plain("can't start on a later date,"),
-					bold(`${formatMsToDate(details.starts_at)}.`),
+					bold(formatMsToDate(details.starts_at)),
+					punctuation("."),
 				],
 				hint: {
 					text: "Stripe has nothing to start it then. Start the first phase now, or turn on early access.",

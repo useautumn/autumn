@@ -9,6 +9,7 @@ import {
 	type ProcessorChange,
 	type ProcessorItem,
 	plainText,
+	punctuationText,
 	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
@@ -169,7 +170,8 @@ export const setPlansPreviewToWarnings = ({
 			type: "new_stripe_price_created" as const,
 			...warningText([
 				plainText("A new Stripe price will be created for"),
-				boldText(`${item.display_name}.`),
+				boldText(item.display_name),
+				punctuationText("."),
 			]),
 		})),
 		...requestedResetFeatureIds(balanceChanges).map((featureId) => ({

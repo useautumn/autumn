@@ -7,6 +7,7 @@ import {
 	formatMsToDate,
 	type LineItem,
 	plainText,
+	punctuationText,
 	type SetPlansPreviewWarning,
 	type SetPlansTextPart,
 	type StripeBillingPlan,
@@ -110,7 +111,8 @@ const backdateGapParts = ({
 	return [
 		boldText(gapTotal),
 		plainText("is billed now for the time before"),
-		boldText(`${gapEnd}.`),
+		boldText(gapEnd),
+		punctuationText("."),
 	];
 };
 
@@ -141,10 +143,12 @@ const backdateRecreateWarning = ({
 			plainText(
 				"The current subscription will be cancelled and recreated from",
 			),
-			boldText(`${backdateStart}.`),
+			boldText(backdateStart),
+			punctuationText("."),
 			...backdateGapParts({ billingContext, lineItems }),
 			...renewal,
-			boldText(`${formatMsToDate(billingCycleAnchorMs)}.`),
+			boldText(formatMsToDate(billingCycleAnchorMs)),
+			punctuationText("."),
 		]),
 	};
 };
@@ -177,7 +181,8 @@ const newSubscriptionWarning = ({
 			plainText("A new Stripe subscription will be created, starting"),
 			boldText(formatMsToDate(subscriptionBackdateStartMs ?? currentEpochMs)),
 			plainText("and first invoiced on"),
-			boldText(`${formatMsToDate(firstInvoiceMs)}.`),
+			boldText(formatMsToDate(firstInvoiceMs)),
+			punctuationText("."),
 		]),
 	};
 };

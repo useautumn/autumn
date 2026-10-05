@@ -600,7 +600,8 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
 				parts: [
 					{ text: "Billing starts on" },
-					{ text: "06 Oct 2026,", bold: true },
+					{ text: "06 Oct 2026", bold: true },
+					{ text: ",", attach: true },
 					{ text: "when the first invoice is sent." },
 				],
 			},

@@ -21,7 +21,8 @@ test("an error with details renders the shared copy with bold phase counts", () 
 			{ text: "This schedule needs" },
 			{ text: "12", bold: true },
 			{ text: "phases, but Stripe allows at most" },
-			{ text: "10.", bold: true },
+			{ text: "10", bold: true },
+			{ text: ".", attach: true },
 		],
 		hint: { text: "Remove or merge some phases." },
 	});

@@ -5,6 +5,7 @@ import {
 	isOneOffPrice,
 	type LineItem,
 	plainText,
+	punctuationText,
 	type SetPlansPreviewWarning,
 } from "@autumn/shared";
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
@@ -43,11 +44,13 @@ export const billingStartsLaterWarning = ({
 				plainText(
 					"Ongoing plans are billed now. Billing for the other plans starts on",
 				),
-				boldText(`${formatMsToDate(billingStartsAt)}.`),
+				boldText(formatMsToDate(billingStartsAt)),
+				punctuationText("."),
 			]
 		: [
 				plainText("Billing starts on"),
-				boldText(`${formatMsToDate(billingStartsAt)},`),
+				boldText(formatMsToDate(billingStartsAt)),
+				punctuationText(","),
 				plainText("when the first invoice is sent."),
 			];
 	return {

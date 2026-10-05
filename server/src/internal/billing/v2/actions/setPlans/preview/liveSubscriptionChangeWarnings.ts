@@ -4,6 +4,7 @@ import {
 	notNullish,
 	type ProcessorItem,
 	plainText,
+	punctuationText,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
 	secondsToMs,
@@ -55,7 +56,8 @@ const scheduledCancelWarning = ({
 			type: "scheduled_cancel_changed",
 			...warningText([
 				plainText("The plans end on"),
-				boldText(`${formatMsToDate(secondsToMs(endsAtSeconds))}.`),
+				boldText(formatMsToDate(secondsToMs(endsAtSeconds))),
+				punctuationText("."),
 			]),
 		};
 	}
@@ -101,7 +103,8 @@ const cycleResetWarning = ({
 				type: "cycle_reset",
 				...warningText([
 					plainText("The billing cycle resets on"),
-					boldText(`${formatMsToDate(requestedAnchorResetMs)}.`),
+					boldText(formatMsToDate(requestedAnchorResetMs)),
+					punctuationText("."),
 				]),
 			};
 
