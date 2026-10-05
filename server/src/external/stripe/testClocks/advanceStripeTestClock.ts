@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
+import { attachStripeTestClock } from "./attachStripeTestClock";
 
 export const advanceStripeTestClock = async ({
 	stripe,
@@ -27,22 +28,26 @@ export const advanceStripeTestClock = async ({
 			statusCode: 400,
 		});
 	}
-	const clock = customer.test_clock;
-	if (!clock || typeof clock === "string") {
+	if (typeof customer.test_clock === "string") {
 		throw new RecaseError({
-			message: "Customer does not have a Stripe test clock",
+			message: "Stripe customer test clock was not expanded",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
 	}
 	const frozenTimeSeconds = Math.floor(frozenTime / 1000);
-	if (frozenTimeSeconds <= clock.frozen_time) {
+	const currentClockSeconds =
+		customer.test_clock?.frozen_time ?? Math.floor(Date.now() / 1000);
+	if (frozenTimeSeconds <= currentClockSeconds) {
 		throw new RecaseError({
 			message: "frozen_time must be later than the current test clock time",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
 	}
+	const clock =
+		customer.test_clock ??
+		(await attachStripeTestClock({ stripe, stripeCustomerId }));
 	return stripe.testHelpers.testClocks.advance(clock.id, {
 		frozen_time: frozenTimeSeconds,
 	});
