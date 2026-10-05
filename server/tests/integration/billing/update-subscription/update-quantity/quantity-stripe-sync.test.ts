@@ -53,7 +53,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: initialQuantity },
@@ -151,7 +151,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync downgrade qu
 			s.products({ list: [product] }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: initialQuantity },

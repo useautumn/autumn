@@ -54,14 +54,14 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 1 increases
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 0,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: initialQuantity1 },
 				],
 			}),
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 1,
 				options: [
@@ -151,14 +151,14 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: entity 2 decreases
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 0,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: initialQuantity1 },
 				],
 			}),
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 1,
 				options: [
@@ -244,14 +244,14 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: mixed changes acro
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 0,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: initialQuantity1 },
 				],
 			}),
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 1,
 				options: [
@@ -358,14 +358,14 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: different products
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: baseProduct.id,
 				entityIndex: 0,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: initialQuantityBase },
 				],
 			}),
-			s.attach({
+			s.billing.attach({
 				productId: proProduct.id,
 				entityIndex: 1,
 				options: [
@@ -462,7 +462,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: multiple features 
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 0,
 				options: [
@@ -473,7 +473,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-quantity: multiple features 
 					{ feature_id: TestFeature.Words, quantity: 2 * wordsBillingUnits },
 				],
 			}),
-			s.attach({
+			s.billing.attach({
 				productId: product.id,
 				entityIndex: 1,
 				options: [

@@ -1,11 +1,3 @@
-/**
- * Concurrent allocate calls are checked one after another under the customer lock, so two
- * calls that each fit alone but not together can't both pass the over-allocation check.
- *
- * Contract (10k pot): Promise.all of two over-allocating calls → exactly one succeeds, the
- *   other fails with allocation_exceeds_available; calls that fit together both succeed.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import type AutumnError from "@/external/autumn/autumnCli.js";
@@ -18,16 +10,16 @@ import { expectMessagesBalance } from "./utils/expectMessagesBalance.js";
 
 const allocateConcurrently = async ({
 	customerId,
-	shares,
+	replacements,
 }: {
 	customerId: string;
-	shares: { entityId: string; amount: number }[];
+	replacements: { entity_id: string; amount: number }[][];
 }) => {
 	const results = await Promise.allSettled(
-		shares.map(({ entityId, amount }) =>
+		replacements.map((allocations) =>
 			allocateMessages({
 				customerId,
-				allocations: [{ entity_id: entityId, amount }],
+				allocations,
 			}),
 		),
 	);
@@ -49,7 +41,7 @@ const expectExactlyOneSucceeded = ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-concurrent1: two concurrent first calls can't both over-allocate")}`,
+	`${chalk.yellowBright("allocate-concurrent1: concurrent valid and over-allocated replacements isolate rejection")}`,
 	async () => {
 		const customerId = "allocate-concurrent-1";
 		const { entityIds } = await setupSharedPool({ customerId });
@@ -58,9 +50,12 @@ test.concurrent(
 		expectExactlyOneSucceeded(
 			await allocateConcurrently({
 				customerId,
-				shares: [
-					{ entityId: a, amount: 6000 },
-					{ entityId: b, amount: 6000 },
+				replacements: [
+					[{ entity_id: a, amount: 6000 }],
+					[
+						{ entity_id: a, amount: 6000 },
+						{ entity_id: b, amount: 6000 },
+					],
 				],
 			}),
 		);
@@ -73,7 +68,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-concurrent2: two concurrent calls on top of existing shares can't both over-allocate")}`,
+	`${chalk.yellowBright("allocate-concurrent2: concurrent replacements preserve the successful full configuration")}`,
 	async () => {
 		const customerId = "allocate-concurrent-2";
 		const { entityIds } = await setupSharedPool({ customerId });
@@ -86,9 +81,16 @@ test.concurrent(
 		expectExactlyOneSucceeded(
 			await allocateConcurrently({
 				customerId,
-				shares: [
-					{ entityId: b, amount: 5000 },
-					{ entityId: c, amount: 5000 },
+				replacements: [
+					[
+						{ entity_id: a, amount: 2000 },
+						{ entity_id: b, amount: 5000 },
+					],
+					[
+						{ entity_id: a, amount: 2000 },
+						{ entity_id: b, amount: 5000 },
+						{ entity_id: c, amount: 5000 },
+					],
 				],
 			}),
 		);
@@ -101,7 +103,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-concurrent3: concurrent calls that fit together both succeed")}`,
+	`${chalk.yellowBright("allocate-concurrent3: concurrent valid replacements both succeed without merging")}`,
 	async () => {
 		const customerId = "allocate-concurrent-3";
 		const { entityIds } = await setupSharedPool({ customerId });
@@ -109,9 +111,9 @@ test.concurrent(
 
 		const { succeeded, failed } = await allocateConcurrently({
 			customerId,
-			shares: [
-				{ entityId: a, amount: 4000 },
-				{ entityId: b, amount: 4000 },
+			replacements: [
+				[{ entity_id: a, amount: 4000 }],
+				[{ entity_id: b, amount: 4000 }],
 			],
 		});
 		expect(failed).toEqual([]);
@@ -119,7 +121,7 @@ test.concurrent(
 		await expectMessagesBalance({
 			autumn: autumnV2_3,
 			customerId,
-			expected: { allocated: 8000, unallocated: 2000 },
+			expected: { allocated: 4000, unallocated: 6000 },
 		});
 	},
 );

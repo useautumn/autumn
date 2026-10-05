@@ -103,6 +103,8 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     needs: checks
+    # Dev and staging pushes only type-check; staging images come from tag=deploy-staging dispatches.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: blacksmith-16vcpu-ubuntu-2404
     
     permissions:

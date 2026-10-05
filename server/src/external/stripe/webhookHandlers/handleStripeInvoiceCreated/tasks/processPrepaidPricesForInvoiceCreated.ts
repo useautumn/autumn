@@ -10,34 +10,33 @@ import {
 	getResetBalancesUpdate,
 	getRolloverUpdates,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	isEntityScopedCusEnt,
 	isPooledBalanceSourceCustomerEntitlement,
 	notNullish,
 	secondsToMs,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { isStripeInvoiceForNewPeriod } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import { getCustomerPricesWithCustomerProducts } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/getCustomerPricesWithCustomerProducts";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
+import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing.js";
 
-/**
- * Handle reset balance?
- */
-
-const processPrepaidPrice = async ({
+/** Plans one prepaid grant's new cycle: its promoted quantity, then its refill unless it resets on its own interval. */
+const processPrepaidPrice = ({
 	ctx,
 	eventContext,
+	plan,
 	customerPrice,
 	customerEntitlement,
 	resetsBillingCycleAnchor,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
+	plan: AutumnBillingPlanBuilder;
 	customerPrice: FullCustomerPrice;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 	resetsBillingCycleAnchor: boolean;
@@ -83,31 +82,37 @@ const processPrepaidPrice = async ({
 			if (o.feature_id === ent.feature_id) {
 				return {
 					...o,
-					quantity: o.upcoming_quantity,
+					quantity: o.upcoming_quantity ?? o.quantity,
 					upcoming_quantity: undefined,
 				};
 			}
 			return o;
 		});
 
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates: {
-				options: newOptions,
-			},
+		plan.updateCustomerProduct({
+			customerProduct,
+			updates: { options: newOptions },
 		});
-		eventContext.results.customerStateChanged = true;
 
 		if (ent.interval === EntInterval.Lifetime) {
 			const difference =
 				(options?.quantity ?? 0) - (options?.upcoming_quantity ?? 0);
-			await CusEntService.decrement({
-				ctx,
-				id: customerEntitlement.id,
-				amount: difference,
+			plan.updateCustomerEntitlement({
+				customerEntitlement,
+				...(isEntityScopedCusEnt(customerEntitlement)
+					? {
+							entityBalanceChanges: Object.fromEntries(
+								Object.keys(customerEntitlement.entities ?? {}).map(
+									(entityId) => [
+										entityId,
+										new Decimal(difference).mul(billingUnits).neg().toNumber(),
+									],
+								),
+							),
+						}
+					: { balanceChange: -difference }),
 			});
-			return true;
+			return;
 		}
 	}
 
@@ -120,29 +125,18 @@ const processPrepaidPrice = async ({
 			newAllowance,
 			nextResetAt: customerEntitlement.next_reset_at ?? end * 1000,
 		});
-		return true;
+		return;
 	}
 
-	if (ent.interval === EntInterval.Lifetime) {
-		return false;
-	}
-
-	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
-		await RolloverService.insert({
-			ctx,
-			rows: rolloverUpdate.toInsert,
-			fullCusEnt: customerEntitlement,
-		});
-	}
+	if (ent.interval === EntInterval.Lifetime) return;
 
 	const nextResetAt = clampNextResetAtToPendingBillingCycleAnchor({
 		billingCycleAnchorResetsAt: customerProduct?.billing_cycle_anchor_resets_at,
 		currentEpochMs: eventContext.nowMs,
 		nextResetAt: end * 1000,
 	});
-	await CusEntService.update({
-		ctx,
-		id: customerEntitlement.id,
+	plan.updateCustomerEntitlement({
+		customerEntitlement,
 		updates: {
 			...resetUpdate,
 			...(isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
@@ -157,9 +151,8 @@ const processPrepaidPrice = async ({
 					}
 				: {}),
 		},
+		insertRollovers: rolloverUpdate.toInsert,
 	});
-
-	eventContext.results.customerStateChanged = true;
 
 	logPrepaidPriceProcessed({
 		ctx,
@@ -169,17 +162,17 @@ const processPrepaidPrice = async ({
 		newAllowance,
 		nextResetAt,
 	});
-
-	return true;
 };
 
-export const processPrepaidPricesForInvoiceCreated = async ({
+export const processPrepaidPricesForInvoiceCreated = ({
 	ctx,
 	eventContext,
+	plan,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
-}): Promise<void> => {
+	plan: AutumnBillingPlanBuilder;
+}): void => {
 	const { stripeInvoice, customerProducts, stripeSubscription } = eventContext;
 
 	const isNewPeriod = isStripeInvoiceForNewPeriod(stripeInvoice);
@@ -214,16 +207,12 @@ export const processPrepaidPricesForInvoiceCreated = async ({
 
 		if (!cusEnt) continue;
 
-		const cusEntWithProduct = addCusProductToCusEnt({
-			cusEnt,
-			cusProduct,
-		});
-
-		await processPrepaidPrice({
+		processPrepaidPrice({
 			ctx,
 			eventContext,
+			plan,
 			customerPrice,
-			customerEntitlement: cusEntWithProduct,
+			customerEntitlement: addCusProductToCusEnt({ cusEnt, cusProduct }),
 			resetsBillingCycleAnchor,
 		});
 	}

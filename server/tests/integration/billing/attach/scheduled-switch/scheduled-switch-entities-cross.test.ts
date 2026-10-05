@@ -344,13 +344,13 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-cross 3: entity
 
 /**
  * Scenario:
- * - Entity 1: Premium Annual → Pro (immediate, interval change)
+ * - Entity 1: Premium Annual → Pro (explicit immediate switch)
  * - Entity 2: Premium Monthly → Pro (scheduled, same interval)
  * - Advance 1 month (monthly cycle ends)
  * - Upgrade entity 2 back to premium
  *
  * Expected Result:
- * - Entity 1 immediately switches to pro (annual→monthly = different interval = immediate)
+ * - Entity 1 immediately switches to pro via plan_schedule: immediate
  * - Entity 2 has premium canceling, pro scheduled (same interval = end_of_cycle)
  * - After cycle: Entity 1 on pro (renewed), Entity 2 on pro (scheduled switch completed)
  * - After upgrade: Entity 2 on premium
@@ -387,13 +387,17 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-cross 4: entity
 		actions: [
 			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }),
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Entity 1: immediate (interval change)
+			s.billing.attach({
+				productId: pro.id,
+				entityIndex: 0,
+				planSchedule: "immediate",
+			}),
 			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Entity 2: scheduled (same interval)
 			s.advanceToNextInvoice(), // Advance 1 month
 		],
 	});
 
-	// Entity 1 already switched to pro immediately (annual→monthly = different interval)
+	// Entity 1 already switched to pro through the explicit immediate override
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,

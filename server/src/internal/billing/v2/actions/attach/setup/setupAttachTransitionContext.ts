@@ -9,6 +9,7 @@ import {
 	isProductUpgrade,
 	productToEffectivePrices,
 } from "@autumn/shared";
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 
 /**
  * Sets up the transition context for attaching a product.
@@ -72,6 +73,11 @@ export const setupAttachTransitionContext = ({
 	// Override if plan_schedule param is provided
 	if (planScheduleOverride) {
 		planTiming = planScheduleOverride;
+	}
+
+	// An Autumn-run trial has no paid period or Stripe schedule to finish, so switching away is immediate.
+	if (isCustomerProductAutumnManagedTrial(currentCustomerProduct)) {
+		planTiming = "immediate";
 	}
 
 	return {

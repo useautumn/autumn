@@ -1,4 +1,5 @@
 import {
+	addCusProductToCusEnt,
 	BillingType,
 	cusProductsToCusEnts,
 	type FullCusEntWithFullCusProduct,
@@ -7,39 +8,30 @@ import { isStripeInvoiceForNewPeriod } from "@/external/stripe/invoices/utils/cl
 import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils";
 import { removeReplaceablesFromCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils";
-import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 import { logAllocatedPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing";
 
-/**
- * Handle reset balance?
- */
-
-const processAllocatedPrice = async ({
+/** Plans the seats freed at cycle end: their replaceables go, their entity entries leave the linked grants, and the seat grant gets them back. */
+const processAllocatedPrice = ({
 	ctx,
-	eventContext,
+	plan,
 	customerEntitlement,
 }: {
 	ctx: StripeWebhookContext;
-	eventContext: InvoiceCreatedContext;
+	plan: AutumnBillingPlanBuilder;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 }) => {
-	const { stripeInvoice } = eventContext;
-
 	const customerProduct = customerEntitlement.customer_product;
 	const customerEntitlements = customerProduct?.customer_entitlements ?? [];
-
-	const isNewPeriod = isStripeInvoiceForNewPeriod(stripeInvoice);
-	if (!isNewPeriod) return;
 
 	const feature = customerEntitlement.entitlement.feature;
 	const replaceables = customerEntitlement.replaceables.filter(
 		(r) => r.delete_next_cycle,
 	);
 
-	if (replaceables.length === 0) return false;
+	if (replaceables.length === 0) return;
 
 	const linkedCusEnts = findLinkedCusEnts({
 		cusEnts: customerEntitlements,
@@ -47,31 +39,26 @@ const processAllocatedPrice = async ({
 	});
 
 	for (const linkedCusEnt of linkedCusEnts) {
+		// A consumable reset earlier in the plan may have rewritten these entries; build on that, not the snapshot.
 		const { newEntities } = removeReplaceablesFromCusEnt({
-			cusEnt: linkedCusEnt,
+			cusEnt: plan.projectedCustomerEntitlement(linkedCusEnt),
 			replaceableIds: replaceables.map((r) => r.id),
 		});
 
-		await CusEntService.update({
-			ctx,
-			id: linkedCusEnt.id,
-			updates: {
-				entities: newEntities,
-			},
+		plan.updateCustomerEntitlement({
+			customerEntitlement: addCusProductToCusEnt({
+				cusEnt: linkedCusEnt,
+				cusProduct: customerProduct,
+			}),
+			updates: { entities: newEntities },
 		});
 	}
 
-	await CusEntService.increment({
-		ctx,
-		id: customerEntitlement.id,
-		amount: replaceables.length,
+	plan.updateCustomerEntitlement({
+		customerEntitlement,
+		balanceChange: replaceables.length,
+		deletedReplaceables: replaceables,
 	});
-
-	await RepService.deleteInIds({
-		ctx,
-		ids: replaceables.map((r) => r.id),
-	});
-	eventContext.results.customerStateChanged = true;
 
 	logAllocatedPriceProcessed({
 		ctx,
@@ -79,17 +66,17 @@ const processAllocatedPrice = async ({
 		replaceablesRemoved: replaceables.length,
 		balanceIncremented: replaceables.length,
 	});
-
-	return true;
 };
 
-export const processAllocatedPricesForInvoiceCreated = async ({
+export const processAllocatedPricesForInvoiceCreated = ({
 	ctx,
 	eventContext,
+	plan,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: InvoiceCreatedContext;
-}): Promise<void> => {
+	plan: AutumnBillingPlanBuilder;
+}): void => {
 	const { stripeInvoice, customerProducts, stripeSubscription } = eventContext;
 
 	const isNewPeriod = isStripeInvoiceForNewPeriod(stripeInvoice);
@@ -104,10 +91,6 @@ export const processAllocatedPricesForInvoiceCreated = async ({
 	});
 
 	for (const customerEntitlement of customerEntitlements) {
-		await processAllocatedPrice({
-			ctx,
-			eventContext,
-			customerEntitlement,
-		});
+		processAllocatedPrice({ ctx, plan, customerEntitlement });
 	}
 };

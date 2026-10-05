@@ -20,6 +20,9 @@ const events = [
 	{ at: Date.UTC(2026, 7, 10, 0, 45), value: 41, region: "us" },
 ];
 
+// /events/aggregate allows 5 requests/s per customer (RateLimitType.Events); the matrix stays under it.
+const EVENTS_REQUEST_SPACING_MS = 250;
+
 type AggregateResponse = {
 	list: {
 		period: number;
@@ -126,6 +129,7 @@ test("aggregate exact timestamp boundaries preserve totals and grouped bins", as
 						filter_by: filtered ? { region: "us" } : undefined,
 						aggregate_on: filtered ? undefined : "deducted",
 					};
+					await timeout(EVENTS_REQUEST_SPACING_MS);
 					const response = (await autumnV2_4.events.aggregate(
 						params,
 					)) as AggregateResponse;

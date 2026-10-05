@@ -9,6 +9,7 @@ import type {
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
+import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
@@ -105,6 +106,8 @@ export type PartitionWriterContext = {
 		changes: RowChange[];
 	}) => void;
 	now?: () => number;
+	heapSize?: () => number;
+	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };
 
 export type PartitionWriterLimits = {

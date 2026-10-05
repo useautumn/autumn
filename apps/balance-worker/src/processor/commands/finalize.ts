@@ -14,23 +14,33 @@ import { withResidentSubject } from "../actions/withResidentSubject.js";
 import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.js";
 import { decideEffects } from "../effects/decideEffects.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
-import type { MutationResult } from "../writer/types/mutation.js";
+import type {
+	DecidedMutation,
+	MutationResult,
+} from "../writer/types/mutation.js";
 
-/** Decide now, reply once committed: the same path a track takes. */
-export async function finalize({
+type DecidedAgainst = { catalog?: Catalog };
+
+/** The settlement, enqueued in order; the catalog it was decided against shapes the sync reply. */
+type DecidedFinalize = DecidedMutation<never> & {
+	decidedAgainst: DecidedAgainst;
+};
+
+/** Every finalize, sync or queued, settles its lock here: serialized by the partition writer, the same path a track takes. */
+export async function decideFinalize({
 	scope,
 	command,
 }: {
 	scope: PartitionProcessorScope;
 	command: FinalizeCommand;
-}): Promise<FinalizeReply> {
+}): Promise<DecidedFinalize> {
 	const { ctx } = scope;
 	const parsed = parseFinalizeCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: parsed.identity,
 	});
 	// Filled by the decision, which is the only place that knows which rows it was made against.
-	const decidedAgainst: { catalog?: Catalog } = {};
+	const decidedAgainst: DecidedAgainst = {};
 	const decided = await withResidentSubject({
 		customerKey,
 		ensure: () => ensureSubjectCurrent({ scope, command: parsed }),
@@ -39,7 +49,7 @@ export async function finalize({
 				command: parsed,
 				mutate: ({ state }) =>
 					timeSync({ label: "finalize.decide" }, () =>
-						decideFinalize({
+						mutateFinalize({
 							scope,
 							state,
 							customerKey,
@@ -49,7 +59,18 @@ export async function finalize({
 					),
 			}),
 	});
+	return { ...decided, decidedAgainst };
+}
 
+/** Sync: decide, then answer once the settlement is committed. */
+export async function finalize({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: FinalizeCommand;
+}): Promise<FinalizeReply> {
+	const decided = await decideFinalize({ scope, command });
 	const { mutation, state } = await decided.waitForCommit();
 	if (mutation.result.type !== "finalize") {
 		throw new Error(`Finalize ${mutation.id} committed a non-finalize record`);
@@ -60,12 +81,13 @@ export async function finalize({
 		state,
 		// A duplicate or joined command never ran the decision, so it reads the committed state's catalog.
 		catalog:
-			decidedAgainst.catalog ?? ctx.subjectHydrator.readCatalog({ state }),
+			decided.decidedAgainst.catalog ??
+			scope.ctx.subjectHydrator.readCatalog({ state }),
 	};
 }
 
 /** Runs inside the writer's critical section: the open-lock check and the settlement are one step. */
-function decideFinalize({
+function mutateFinalize({
 	scope,
 	state,
 	customerKey,
@@ -75,7 +97,7 @@ function decideFinalize({
 	scope: PartitionProcessorScope;
 	state: SubjectState | null;
 	customerKey: string;
-	decidedAgainst: { catalog?: Catalog };
+	decidedAgainst: DecidedAgainst;
 	command: FinalizeCommand;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });

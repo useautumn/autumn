@@ -235,5 +235,7 @@ export const createSubjectMap = ({
 		evictCustomer,
 		clear,
 		sizeBytes: () => totalBytes,
+		bytesOf: ({ subjectKey }: { subjectKey: string }) =>
+			entries.get(subjectKey)?.bytes || null,
 	};
 };

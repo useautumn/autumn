@@ -133,8 +133,11 @@ test.concurrent(`${chalk.yellowBright("version-multi: skip v2 go to v3")}`, asyn
 		version: 3,
 	});
 
-	// Should charge $20 difference ($40 - $20)
-	expect(previewV3.total).toBe(20);
+	// Refund the $20 paid for v1, charge $40 for v3
+	expect(previewV3.subtotal).toBe(20);
+	// The v2 -> v1 downgrade left a $10 Stripe credit balance, applied here
+	expect(previewV3.invoice_credits?.applied).toBe(10);
+	expect(previewV3.total).toBe(10);
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,

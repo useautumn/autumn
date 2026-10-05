@@ -60,13 +60,29 @@ test.concurrent(
 			limit: 1,
 		});
 
+		// The ownership gate only runs for OAuth-connected orgs; reuse the bound account so Stripe routing is unchanged.
+		const connectedAccountId =
+			ctx.org.test_stripe_connect?.account_id ??
+			ctx.org.test_stripe_connect?.default_account_id;
+		const oauthConnectedCtx = {
+			...ctx,
+			org: {
+				...ctx.org,
+				stripe_config: { ...ctx.org.stripe_config, test_api_key: undefined },
+				test_stripe_connect: {
+					...ctx.org.test_stripe_connect,
+					account_id: connectedAccountId,
+				},
+			},
+		};
+
 		const originalClientId = process.env.STRIPE_SANDBOX_CLIENT_ID;
 		process.env.STRIPE_SANDBOX_CLIENT_ID = "ca_autumn_app";
 
 		let thrown: unknown;
 		try {
 			await billingActions.updateSubscription({
-				ctx,
+				ctx: oauthConnectedCtx,
 				params: {
 					customer_id: customerId,
 					plan_id: pro.id,

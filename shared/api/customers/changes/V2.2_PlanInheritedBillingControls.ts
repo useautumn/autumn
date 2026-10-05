@@ -43,6 +43,7 @@ export const V2_2_PlanInheritedBillingControls = defineVersionChange({
 		return {
 			...input,
 			billing_controls: {
+				balance_allocations: billingControls.balance_allocations,
 				auto_topups: stripPlanInherited(billingControls.auto_topups),
 				spend_limits: stripPlanInherited(billingControls.spend_limits),
 				usage_limits: stripPlanInherited(billingControls.usage_limits),

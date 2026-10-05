@@ -4,6 +4,7 @@ import {
 	isCustomerProductPaid,
 	RecaseError,
 } from "@autumn/shared";
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 
 export const handleCurrentCustomerProductErrors = ({
 	billingContext,
@@ -33,11 +34,12 @@ export const handleCurrentCustomerProductErrors = ({
 	// `skipExternalPSPGuard`. Stripe-origin cus_products with `processor: null`
 	// must still be checked, so this is gated on the explicit flag rather than
 	// on `cusProductToProcessorType`. A subscription that is linked but canceled
-	// is explained linkage, not broken linkage, so it passes too.
+	// is explained linkage, not broken linkage, and neither is an Autumn-managed trial.
 	if (
 		!skipBillingChanges &&
 		!skipExternalPSPGuard &&
 		!canceledStripeSubscriptionId &&
+		!isCustomerProductAutumnManagedTrial(currentCustomerProduct) &&
 		isCustomerProductPaid(currentCustomerProduct) &&
 		!stripeSubscription
 	) {

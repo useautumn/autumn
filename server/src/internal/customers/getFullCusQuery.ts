@@ -1178,6 +1178,7 @@ export const getCustomerListFilterSql = ({
 			c.id ILIKE ${pattern}
 			OR c.name ILIKE ${pattern}
 			OR c.email ILIKE ${pattern}
+			OR (c.processor ->> 'id') ILIKE ${pattern}
 		)`);
 	}
 

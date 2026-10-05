@@ -74,6 +74,7 @@ jobs:
         run: bun sync-npm-versions.ts
 
       - name: Commit regenerated artifacts
+        id: commit
         env:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -92,13 +93,15 @@ jobs:
             git fetch origin "${GITHUB_REF_NAME}"
             test "$(git rev-parse "origin/${GITHUB_REF_NAME}")" != "$GITHUB_SHA" || exit 1
             echo "Branch moved on; the newer push regenerates instead."
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           gh api "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" \
             -f state=success -f context=codegen -f description="Artifacts up to date"
 
+      # A superseded commit stays pending: its artifacts never landed, so releases must not cut at it.
       - name: Mark codegen done
-        if: success()
+        if: success() && steps.commit.outputs.superseded != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |

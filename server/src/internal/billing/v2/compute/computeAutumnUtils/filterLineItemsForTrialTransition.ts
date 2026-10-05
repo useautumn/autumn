@@ -1,6 +1,7 @@
 import type { BillingContext } from "@autumn/shared";
 import { isOneOffPrice, type LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 /**
@@ -27,10 +28,9 @@ export const filterLineItemsForTrialTransition = ({
 		billingContext,
 	});
 
-	// No processing needed if no trial transition
-	if (!isTrialing && !willBeTrialing) {
-		return lineItems;
-	}
+	// An Autumn-managed trial has no Stripe sub to report trialing, so its own line items say so.
+	const isFromAutumnManagedTrial = (lineItem: LineItem) =>
+		isCustomerProductAutumnManagedTrial(lineItem.context.customerProduct);
 
 	return lineItems.filter((lineItem) => {
 		const { billingTiming, direction, price } = lineItem.context;
@@ -39,7 +39,7 @@ export const filterLineItemsForTrialTransition = ({
 
 		// Ending trial (isTrialing → !willBeTrialing):
 		// Filter out refunds and in_arrear positive items (no refund for trial period, no arrear charges)
-		if (isTrialing) {
+		if (isTrialing || isFromAutumnManagedTrial(lineItem)) {
 			if (direction === "refund") return false;
 			if (billingTiming === "in_arrear" && isPositive) return false;
 		}

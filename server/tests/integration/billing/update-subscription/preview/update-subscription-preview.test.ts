@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
+	type BillingPreviewChange,
 	UpdateSubscriptionPreviewIntent,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
@@ -201,12 +202,17 @@ test.concurrent(`${chalk.yellowBright("update-subscription preview: cancel end o
 		cancel_action: "cancel_end_of_cycle",
 	});
 
+	const endOfCycle = preview.incoming.find(
+		(change: BillingPreviewChange) => change.plan_id === pro.id,
+	)?.expires_at;
+	expect(endOfCycle).toBeNumber();
+
 	expectPreviewChanges({
 		preview,
 		incoming: [
 			{
 				planId: free.id,
-				effectiveAt: null,
+				effectiveAt: endOfCycle,
 				canceledAt: null,
 				expiresAt: null,
 			},

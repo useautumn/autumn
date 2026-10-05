@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	BillingVersion,
-	FreeTrialDuration,
-	ms,
-} from "@autumn/shared";
+import { type ApiCustomerV3, FreeTrialDuration, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -12,7 +7,7 @@ import {
 	calculateTrialEndMs,
 	expectProductTrialing,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing.js";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -60,13 +55,7 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async (
 		balance: 500,
 	});
 
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		subCount: 1,
-	});
+	await expectSubCount({ ctx, customerId, count: 0 });
 
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -81,11 +70,7 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async (
 		productId: trialDefault.id,
 	});
 
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfter,
-		count: 1,
-		latestTotal: 0,
-	});
+	await expectCustomerInvoiceCorrect({ customer: customerAfter, count: 0 });
 });
 
 test.concurrent(`${chalk.yellowBright("paid-defaults: trial prepaid messages")}`, async () => {
@@ -140,15 +125,7 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial prepaid messages")}`
 	expect(fullCustomer.customer_products[0].options?.[0]).toMatchObject({
 		quantity: 0,
 	});
-
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		subCount: 1,
-		billingVersion: BillingVersion.V2,
-	});
+	expect(fullCustomer.customer_products[0].subscription_ids ?? []).toEqual([]);
 });
 
 test.concurrent(`${chalk.yellowBright("paid-defaults: same group priority (trial > paid > free)")}`, async () => {

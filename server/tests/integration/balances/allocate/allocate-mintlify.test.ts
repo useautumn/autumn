@@ -23,6 +23,7 @@ import chalk from "chalk";
 import {
 	allocateMessages,
 	autumnV2_3,
+	expectAllocatedMessages,
 	isMessagesAllowed,
 	trackMessages,
 	warmCaches,
@@ -181,14 +182,19 @@ test.concurrent(
 		const [a, b] = entities.map((entity) => entity.id);
 		await warmCaches({ customerId, entityIds: [a, b] });
 
-		await autumnV2_3.balances.allocate({
-			customer_id: customerId,
-			feature_id: TestFeature.Credits,
-			interval: ResetInterval.Month,
-			allocations: [
-				{ entity_id: a, amount: 600 },
-				{ entity_id: b, amount: 400 },
-			],
+		await autumnV2_3.customers.update(customerId, {
+			billing_controls: {
+				balance_allocations: [
+					{
+						feature_id: TestFeature.Credits,
+						interval: ResetInterval.Month,
+						allocations: [
+							{ entity_id: a, amount: 600 },
+							{ entity_id: b, amount: 400 },
+						],
+					},
+				],
+			},
 		});
 
 		// 4000 action1 × 0.2 = 800 credits wanted; A's share is 600.
@@ -363,11 +369,28 @@ test.concurrent(
 
 		const lowered = await allocateMessages({
 			customerId,
-			allocations: [{ entity_id: a, amount: 1000 }],
+			allocations: [
+				{ entity_id: a, amount: 1000 },
+				{ entity_id: b, amount: 5000 },
+			],
 		});
-		expect(lowered.allocations[0]).toMatchObject({
-			amount: 1000,
-			granted: 1000,
+		await expectAllocatedMessages({
+			customerId,
+			response: lowered,
+			expected: [
+				{
+					entity_id: a,
+					amount: 1000,
+					granted: 1000,
+				},
+				{
+					entity_id: b,
+					amount: 5000,
+					granted: 5000,
+					usage: 0,
+					remaining: 5000,
+				},
+			],
 		});
 
 		await expectAutumnError({
@@ -375,7 +398,10 @@ test.concurrent(
 			func: () =>
 				allocateMessages({
 					customerId,
-					allocations: [{ entity_id: a, amount: 5000 }],
+					allocations: [
+						{ entity_id: a, amount: 5000 },
+						{ entity_id: b, amount: 5000 },
+					],
 				}),
 		});
 	},

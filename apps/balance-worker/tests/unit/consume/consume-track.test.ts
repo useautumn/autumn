@@ -45,10 +45,18 @@ function createFixture({
 	const logs: string[] = [];
 	const keys = createFakeIdempotencyKeys();
 	const processor = {
-		track: async ({ command }: { command: TrackCommand }) => {
+		decideTrack: async ({ command }: { command: TrackCommand }) => {
 			tracked.push(command.commandId);
 			if (outcome instanceof Error) throw outcome;
-			return { result: { status: outcome ?? "applied", reason: null } };
+			const result = {
+				type: "track",
+				status: outcome ?? "applied",
+				reason: null,
+			};
+			async function waitForCommit() {
+				return { mutation: { result } };
+			}
+			return { kind: "write", waitForCommit };
 		},
 	} as unknown as PartitionProcessor;
 	const ctx = {
@@ -147,13 +155,16 @@ describe("consumeTrack", () => {
 		expect(keys.released).toEqual([]);
 	});
 
-	test("a rejected reply is logged, the claim kept", async () => {
-		const { ctx, logs, keys } = createFixture({ outcome: "rejected" });
-		await consumeTrack({
+	test("a decided track hands back how to free its claim if the store refuses its commit; the decide itself keeps it", async () => {
+		const { ctx, keys } = createFixture();
+		const queued = await consumeTrack({
 			ctx,
 			command: commandOf({ commandId: "c1", requestId: "r1" }),
 		});
-		expect(logs).toEqual(["warn:Queued track rejected by the balance"]);
+		expect(keys.owners.get(storageKey)).toBe("r1");
 		expect(keys.released).toEqual([]);
+
+		await queued?.onRefused?.();
+		expect(keys.released).toEqual([storageKey]);
 	});
 });

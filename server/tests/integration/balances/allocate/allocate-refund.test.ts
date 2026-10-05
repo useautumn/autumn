@@ -36,14 +36,19 @@ test.concurrent(
 		});
 		const [a, b] = entities.map((entity) => entity.id);
 
-		await autumnV2_3.balances.allocate({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			interval: ResetInterval.Month,
-			allocations: [
-				{ entity_id: a, amount: 5000 },
-				{ entity_id: b, amount: 5000 },
-			],
+		await autumnV2_3.customers.update(customerId, {
+			billing_controls: {
+				balance_allocations: [
+					{
+						feature_id: TestFeature.Messages,
+						interval: ResetInterval.Month,
+						allocations: [
+							{ entity_id: a, amount: 5000 },
+							{ entity_id: b, amount: 5000 },
+						],
+					},
+				],
+			},
 		});
 		await autumnV2_3.customers.get(customerId);
 		for (const entityId of [a, b])

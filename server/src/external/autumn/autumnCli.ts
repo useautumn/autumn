@@ -4,8 +4,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
-	type AllocateBalancesParamsV0,
-	type AllocateBalancesResponse,
 	type ApiBaseEntity,
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
@@ -15,6 +13,7 @@ import {
 	type AttachBodyV0,
 	type AttachLicenseParamsV0,
 	type AttachParamsV0Input,
+	type BalanceAllocationControl,
 	type BillingDetailsParams,
 	type CancelBody,
 	type CatalogPreviewUpdateResponse,
@@ -674,7 +673,10 @@ export class AutumnInt {
 				stripe_id?: string | null;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
-				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
+				billing_controls?: Omit<
+					WritableBillingControls<CustomerBillingControlsParams>,
+					"balance_allocations"
+				> & { balance_allocations?: BalanceAllocationControl[] };
 				billing_details?: BillingDetailsParams;
 				config?: CustomerData["config"];
 			},
@@ -696,7 +698,10 @@ export class AutumnInt {
 				email?: string;
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
-				billing_controls?: WritableBillingControls<CustomerBillingControlsParams>;
+				billing_controls?: Omit<
+					WritableBillingControls<CustomerBillingControlsParams>,
+					"balance_allocations"
+				> & { balance_allocations?: BalanceAllocationControl[] };
 				billing_details?: BillingDetailsParams;
 				config?: CustomerData["config"];
 			},
@@ -1330,10 +1335,6 @@ export class AutumnInt {
 	};
 
 	balances = {
-		allocate: async (
-			params: AllocateBalancesParamsV0,
-		): Promise<AllocateBalancesResponse> =>
-			this.post(`/balances.allocate`, params),
 		create: async (params: CreateBalanceParamsV0) => {
 			const data = await this.post(`/balances/create`, params);
 			return data;

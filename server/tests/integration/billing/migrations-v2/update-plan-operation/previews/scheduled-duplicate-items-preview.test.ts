@@ -43,26 +43,48 @@ test(`${chalk.yellowBright("migrations preview scheduled: same-plan active and s
 	const customerId = `migration-preview-scheduled-duplicate-${suffix}`;
 	const plan = products.base({
 		id: `migration-preview-scheduled-duplicate-plan-${suffix}`,
-		items: [items.monthlyMessages({ includedUsage: 100 })],
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.prepaidUsers(),
+		],
 	});
 
 	const { autumnV1, autumnV2_2 } = await initScenario({
 		customerId,
-		setup: [s.customer(), s.products({ list: [plan] })],
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [plan] }),
+		],
 		actions: [],
 	});
 
+	// An unchanged plan across phases merges into one row, so phase 2 changes
+	// the seat quantity to keep a separate scheduled row.
 	const now = Date.now();
 	await autumnV1.billing.createSchedule({
 		customer_id: customerId,
 		phases: [
 			{
 				starts_at: now,
-				plans: [{ plan_id: plan.id }],
+				plans: [
+					{
+						plan_id: plan.id,
+						feature_quantities: [
+							{ feature_id: TestFeature.Users, quantity: 2 },
+						],
+					},
+				],
 			},
 			{
 				starts_at: now + ms.days(30),
-				plans: [{ plan_id: plan.id }],
+				plans: [
+					{
+						plan_id: plan.id,
+						feature_quantities: [
+							{ feature_id: TestFeature.Users, quantity: 3 },
+						],
+					},
+				],
 			},
 		],
 	});

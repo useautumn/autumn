@@ -118,9 +118,10 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and m
 		count: 1,
 		latestTotal: 20,
 	});
+	// Items now diverge from the catalog, so the patched row derives is_custom.
 	expect(
 		await getActiveCustomerProductIsCustom({ ctx, customerId, productId: pro.id }),
-	).toBe(false);
+	).toBe(true);
 	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

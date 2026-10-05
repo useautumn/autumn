@@ -206,6 +206,17 @@ const rebalanceOpSchema = z
 	})
 	.strict();
 
+/** New rollover rows for a held grant. Not a plain insert: the grant's rollover cap may trim the rows it already holds, which needs its catalog, so it resolves after the core plan. */
+const addRolloversOpSchema = z
+	.object({
+		op: z.literal("addRollovers"),
+		table: z.literal("rollovers"),
+		/** The grant that receives them; its owner is the subject whose rows are capped. */
+		id: nonEmptyStringSchema,
+		rows: z.array(workerRolloverSchema).min(1),
+	})
+	.strict();
+
 /** One change a billing plan makes to the subject's rows. */
 export const billingPlanOpSchema = z.discriminatedUnion("op", [
 	insertOpSchema,
@@ -214,6 +225,7 @@ export const billingPlanOpSchema = z.discriminatedUnion("op", [
 	incrementOpSchema,
 	moveEntriesOpSchema,
 	rebalanceOpSchema,
+	addRolloversOpSchema,
 ]);
 
 export type BillingPlanOp = z.infer<typeof billingPlanOpSchema>;
@@ -223,5 +235,9 @@ export type BillingPlanDeleteOp = z.infer<typeof deleteOpSchema>;
 export type BillingPlanIncrementOp = z.infer<typeof incrementOpSchema>;
 export type BillingPlanMoveEntriesOp = z.infer<typeof moveEntriesOpSchema>;
 export type BillingPlanRebalanceOp = z.infer<typeof rebalanceOpSchema>;
-/** Every op but a rebalance: each converts on its own, against the rows as found. */
-export type BillingPlanRowOp = Exclude<BillingPlanOp, BillingPlanRebalanceOp>;
+export type BillingPlanAddRolloversOp = z.infer<typeof addRolloversOpSchema>;
+/** Every op but a rebalance or new rollovers: each converts on its own, against the rows as found. */
+export type BillingPlanRowOp = Exclude<
+	BillingPlanOp,
+	BillingPlanRebalanceOp | BillingPlanAddRolloversOp
+>;

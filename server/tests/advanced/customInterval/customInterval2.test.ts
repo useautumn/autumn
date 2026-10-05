@@ -64,6 +64,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 			db: ctx.db,
 			org: ctx.org,
 			env: ctx.env,
+			expectNoInvoice: true,
 		});
 	});
 
@@ -96,7 +97,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 		});
 
 		const customer = await autumn.customers.get(customerId);
-		expect(customer.invoices.length).toBe(2);
+		expect(customer.invoices.length).toBe(1);
 		expect(invoiceAmount).toBe(customer.invoices[0].total);
 	});
 });

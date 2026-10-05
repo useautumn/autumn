@@ -4,11 +4,11 @@ import {
 	applyResponseVersionChanges,
 	CustomerExpand,
 	type FullSubject,
-	fullSubjectToApiCustomerV5,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
+import { fullSubjectToApiCustomerV5 } from "./fullSubjectToApiCustomerV5.js";
 
 /**
  * Transform FullSubject to ApiCustomer with expand fields and version changes applied.

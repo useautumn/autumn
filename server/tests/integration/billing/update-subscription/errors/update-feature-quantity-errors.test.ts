@@ -1,5 +1,6 @@
-import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -8,11 +9,12 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FEATURE QUANTITY ERRORS (PREPAID PRICES REQUIRE OPTIONS)
+// FEATURE QUANTITY ERRORS
+// Missing prepaid options are not an error: they default to quantity 0.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// 1. Free product → update with prepaid messages but no options → error
-test.concurrent(`${chalk.yellowBright("error: update with prepaid but missing options")}`, async () => {
+// 1. Free product → update with prepaid messages but no options → quantity defaults to 0
+test.concurrent(`${chalk.yellowBright("update with prepaid but missing options defaults quantity to 0")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
 
@@ -25,7 +27,7 @@ test.concurrent(`${chalk.yellowBright("error: update with prepaid but missing op
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Try to update with prepaid messages item but no options
+	// Update to prepaid messages without options
 	const prepaidMessagesItem = items.prepaidMessages({
 		includedUsage: 0,
 		price: 10,
@@ -36,20 +38,25 @@ test.concurrent(`${chalk.yellowBright("error: update with prepaid but missing op
 		customer_id: customerId,
 		product_id: free.id,
 		items: [prepaidMessagesItem],
-		// Missing options!
 	};
 
-	await expectAutumnError({
-		errCode: ErrCode.InvalidOptions,
-		errMessage: "Missing quantity options for prepaid features",
-		func: async () => {
-			await autumnV1.subscriptions.update(updateParams);
-		},
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+	expect(preview.total).toBe(0);
+
+	await autumnV1.subscriptions.update(updateParams);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: 0,
+		balance: 0,
+		usage: 0,
 	});
 });
 
-// 2. Pro with prepaidMessages → update to add prepaidWords but missing options for words
-test.concurrent(`${chalk.yellowBright("error: add prepaid feature without options")}`, async () => {
+// 2. Pro with prepaidMessages → add prepaidWords without options → words defaults to 0, messages kept
+test.concurrent(`${chalk.yellowBright("add prepaid feature without options defaults its quantity to 0")}`, async () => {
 	const prepaidMessagesItem = items.prepaidMessages({
 		includedUsage: 0,
 		price: 10,
@@ -75,7 +82,7 @@ test.concurrent(`${chalk.yellowBright("error: add prepaid feature without option
 		],
 	});
 
-	// Try to add prepaidWords but don't provide options for it
+	// Add prepaidWords without options for it
 	const prepaidWordsItem = items.prepaid({
 		featureId: TestFeature.Words,
 		price: 15,
@@ -88,16 +95,29 @@ test.concurrent(`${chalk.yellowBright("error: add prepaid feature without option
 		product_id: pro.id,
 		items: [priceItem, prepaidMessagesItem, prepaidWordsItem],
 		options: [
-			{ feature_id: TestFeature.Messages, quantity: 5 }, // Only messages, missing words
+			{ feature_id: TestFeature.Messages, quantity: 5 }, // Only messages, words omitted
 		],
 	};
 
-	await expectAutumnError({
-		errCode: ErrCode.InvalidOptions,
-		errMessage: "Missing quantity options for prepaid features",
-		func: async () => {
-			await autumnV1.subscriptions.update(updateParams);
-		},
+	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
+	expect(preview.total).toBe(0);
+
+	await autumnV1.subscriptions.update(updateParams);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Words,
+		includedUsage: 0,
+		balance: 0,
+		usage: 0,
+	});
+	// 5 messages rounds up to one 100-unit pack
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 100,
+		usage: 0,
 	});
 });
 

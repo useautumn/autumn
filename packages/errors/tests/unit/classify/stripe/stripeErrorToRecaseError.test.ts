@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { classifyError } from "../../../../src/classify/classifyError.js";
 import { stripeErrorToRecaseError } from "../../../../src/classify/stripe/stripeErrorToRecaseError.js";
 
 const stripeError = ({
@@ -22,6 +23,71 @@ const noSuchSubscription = stripeError({
 });
 
 describe("stripeErrorToRecaseError", () => {
+	const keyRejections = [
+		stripeError({
+			type: "StripeAuthenticationError",
+			message: "Invalid API Key provided: credential_marker",
+		}),
+		stripeError({
+			type: "StripePermissionError",
+			code: "secret_key_required",
+			message: "A secret key is required: credential_marker",
+		}),
+	];
+
+	it("maps known key rejections only with explicit new-key validation context and a safe message", () => {
+		for (const error of keyRejections) {
+			const params = { error, context: "new_stripe_key" as const };
+			const mapped = stripeErrorToRecaseError(params);
+			expect(mapped).toMatchObject({
+				statusCode: 400,
+				code: "stripe_key_invalid",
+				message:
+					"Invalid Stripe secret key. Please provide a valid secret key.",
+			});
+			expect(mapped?.cause).toBeUndefined();
+			expect(mapped?.data).toBeUndefined();
+			expect(JSON.stringify(mapped)).not.toContain("credential_marker");
+			expect(classifyError({ error: mapped }).kind).toBe("expected");
+		}
+	});
+
+	it("keeps known key rejections reportable without validation context, even on the connect route", () => {
+		for (const error of keyRejections) {
+			expect(stripeErrorToRecaseError({ error })).toBeUndefined();
+			expect(
+				stripeErrorToRecaseError({ error, path: "/v1/organization/stripe" }),
+			).toBeUndefined();
+			expect(classifyError({ error }).kind).toBe("bug");
+		}
+	});
+
+	it("does not opt unrelated errors into key validation rules", () => {
+		for (const error of [
+			stripeError({
+				type: "StripeAuthenticationError",
+				message: "Unrelated authentication rejection",
+			}),
+			stripeError({
+				type: "StripeAuthenticationError",
+				code: "account_invalid",
+				message: "Account unavailable",
+			}),
+			stripeError({
+				type: "StripePermissionError",
+				message: "Permission denied",
+			}),
+			stripeError({
+				type: "StripeConnectionError",
+				message: "Connection failed after retries",
+			}),
+			stripeError({ message: "Not a valid URL" }),
+		]) {
+			const params = { error, context: "new_stripe_key" as const };
+			expect(stripeErrorToRecaseError(params)).toBeUndefined();
+		}
+	});
+
 	it("answers a merchant-caused Stripe error with its rule's status and Stripe's message", () => {
 		const recaseError = stripeErrorToRecaseError({
 			error: stripeError({

@@ -40,6 +40,7 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useCustomerContext } from "../customer/CustomerContext";
+import { fullCustomerToBalanceAllocationControls } from "./fullCustomerToBalanceAllocationControls";
 import { useDisplayedBillingControls } from "./useDisplayedBillingControls";
 
 const ADD_MENU_ITEMS: Array<{ key: BillingControlKey; label: string }> = [
@@ -105,6 +106,14 @@ export function CustomerBillingControlsSection() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const isEntityView = !!selectedEntity;
 
+	const allocations = useMemo(
+		() =>
+			isEntityView
+				? []
+				: fullCustomerToBalanceAllocationControls({ fullCustomer }),
+		[isEntityView, fullCustomer],
+	);
+
 	const entitiesWithControls = useMemo(
 		() => (fullCustomer?.entities ?? []).filter(entityHasBillingControls),
 		[fullCustomer?.entities],
@@ -143,6 +152,13 @@ export function CustomerBillingControlsSection() {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
+				{!isEntityView && (
+					<DropdownMenuItem
+						onClick={() => setSheet({ type: "allocate-balances", data: null })}
+					>
+						Balance allocations
+					</DropdownMenuItem>
+				)}
 				{addMenuItems.map((menuItem) => (
 					<DropdownMenuItem
 						key={menuItem.key}
@@ -232,7 +248,11 @@ export function CustomerBillingControlsSection() {
 		</Table.Toolbar>
 	);
 
-	if (!isLoading && !hasBillingControls(billingControls)) {
+	if (
+		!isLoading &&
+		!hasBillingControls(billingControls) &&
+		allocations.length === 0
+	) {
 		return (
 			<Table.Container>
 				{toolbar}
@@ -278,7 +298,19 @@ export function CustomerBillingControlsSection() {
 			) : (
 				<BillingControlsList
 					billingControls={billingControls}
+					balanceAllocations={allocations}
 					featureNameById={featureNameById}
+					onEditAllocation={(control) =>
+						setSheet({
+							type: "allocate-balances",
+							data: {
+								featureId: control.feature_id,
+								featureName:
+									featureNameById.get(control.feature_id) ?? control.feature_id,
+								interval: control.interval,
+							},
+						})
+					}
 					getRowBadge={({ key, index }) => badgeFor(originOf({ key, index }))}
 					getAlertIcon={({ key, index }) =>
 						originOf({ key, index })?.type === "plan" ? <PlanCubeIcon /> : null

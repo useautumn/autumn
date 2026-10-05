@@ -1121,12 +1121,12 @@ BalanceSource = Union[
 r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
 
 
-class AllocationTypedDict(TypedDict):
+class BalanceAllocationTypedDict(TypedDict):
     amount: float
     r"""The amount allocated to this entity."""
 
 
-class Allocation(BaseModel):
+class BalanceAllocation(BaseModel):
     amount: float
     r"""The amount allocated to this entity."""
 
@@ -1154,7 +1154,7 @@ class BreakdownTypedDict(TypedDict):
     r"""The unique identifier for this balance breakdown."""
     source: NotRequired[BalanceSource]
     r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
-    allocation: NotRequired[Nullable[AllocationTypedDict]]
+    allocation: NotRequired[Nullable[BalanceAllocationTypedDict]]
     r"""Set when this row's numbers are the entity's allocated share of the customer's credits."""
 
 
@@ -1192,7 +1192,7 @@ class Breakdown(BaseModel):
     source: Optional[BalanceSource] = None
     r"""Where this row's credits come from: shared at the customer level, or owned by the entity."""
 
-    allocation: OptionalNullable[Allocation] = UNSET
+    allocation: OptionalNullable[BalanceAllocation] = UNSET
     r"""Set when this row's numbers are the entity's allocated share of the customer's credits."""
 
     @model_serializer(mode="wrap")

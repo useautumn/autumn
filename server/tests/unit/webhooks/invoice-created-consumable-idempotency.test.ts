@@ -28,10 +28,22 @@
  *    their customer price, so a retry across the deploy does not re-add them
  */
 
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
+import {
+	type AutumnBillingPlanBuilder,
+	createAutumnBillingPlanBuilder,
+} from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 type MockLineItem = {
@@ -60,6 +72,7 @@ const createInvoiceItemCalls: unknown[] = [];
 const batchUpdateCalls: unknown[] = [];
 const cacheClears: unknown[] = [];
 let hasEntitlementUpdates = false;
+let plan: AutumnBillingPlanBuilder;
 const arrearLineItemArgs: Array<Record<string, unknown>> = [];
 
 const makeLineItem = (id: string, amount = 100): MockLineItem => ({
@@ -133,6 +146,7 @@ await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
 								allowance: 10,
 								balance: 5,
 							}),
+							updates: { balance: 10 },
 						},
 					]
 				: [],
@@ -320,7 +334,8 @@ describe("invoice.created consumable idempotency", () => {
 		createInvoiceItemCalls.length = 0;
 		batchUpdateCalls.length = 0;
 		cacheClears.length = 0;
-		hasEntitlementUpdates = false;
+		hasEntitlementUpdates = true;
+		plan = createAutumnBillingPlanBuilder({ customerId: "customer_test" });
 		arrearLineItemArgs.length = 0;
 		consumableLineItems = usageLineItems;
 		invoiceCreditLineItems = creditLineItems;
@@ -335,6 +350,11 @@ describe("invoice.created consumable idempotency", () => {
 		addLinesShouldDropLastLine = false;
 	});
 
+	afterEach(() => {
+		expect(batchUpdateCalls).toEqual([]);
+		expect(cacheClears).toEqual([]);
+	});
+
 	test("updates an existing draft line whose billed amount is stale after usage grew between attempts", async () => {
 		const grown = makeLineItem(usageLineItems[0]!.id, 150);
 		consumableLineItems = [grown, usageLineItems[1]!];
@@ -342,6 +362,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineMinorAmounts = { [grown.id]: 10_000 };
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -362,7 +383,9 @@ describe("invoice.created consumable idempotency", () => {
 			usageLineItems[1]!.id,
 			...creditLineItems.map((lineItem) => lineItem.id),
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("leaves an existing line alone when its billed amount still matches", async () => {
@@ -370,6 +393,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineMinorAmounts = { [usageLineItems[0]!.id]: 10_000 };
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -388,6 +412,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineMinorAmounts = { [grown.id]: 10_000 };
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
@@ -406,7 +431,9 @@ describe("invoice.created consumable idempotency", () => {
 				},
 			}),
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("does not carry the same delta twice when the pending item already exists", async () => {
@@ -420,12 +447,15 @@ describe("invoice.created consumable idempotency", () => {
 		];
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
 
 		expect(createInvoiceItemCalls).toEqual([]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("updates the pending carry item when the unbilled delta grew since it was created", async () => {
@@ -439,6 +469,7 @@ describe("invoice.created consumable idempotency", () => {
 		];
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
@@ -450,7 +481,9 @@ describe("invoice.created consumable idempotency", () => {
 				params: expect.objectContaining({ amount: 7000 }),
 			},
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("carries a negative delta when a credit line grew on a finalized invoice", async () => {
@@ -461,6 +494,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineMinorAmounts = { [credit.id]: -10_000 };
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
@@ -474,7 +508,9 @@ describe("invoice.created consumable idempotency", () => {
 				}),
 			}),
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("treats a legacy line with no amount metadata as stale from Stripe's own amount", async () => {
@@ -489,6 +525,7 @@ describe("invoice.created consumable idempotency", () => {
 		};
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -500,7 +537,9 @@ describe("invoice.created consumable idempotency", () => {
 				params: expect.objectContaining({ amount: 150 }),
 			},
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("applies the finalized invoice's percent coupon to a carried delta", async () => {
@@ -512,6 +551,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineCoupons = { [grown.id]: { percent_off: 50 } };
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
@@ -530,6 +570,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineCoupons = { [grown.id]: { amount_off: 10_000 } };
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
@@ -548,13 +589,14 @@ describe("invoice.created consumable idempotency", () => {
 
 		await expect(
 			processConsumablePricesForInvoiceCreated({
+				plan,
 				ctx,
 				eventContext: makeEventContext(),
 			}),
 		).rejects.toThrow(/2 usage lines already exist/);
 
 		expect(addLinesCalls).toEqual([]);
-		expect(batchUpdateCalls).toEqual([]);
+		expect(plan.hasChanges()).toBe(false);
 	});
 
 	test("recognises a usage line written before ids were invoice-scoped by its customer price", async () => {
@@ -565,6 +607,7 @@ describe("invoice.created consumable idempotency", () => {
 		};
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -573,10 +616,13 @@ describe("invoice.created consumable idempotency", () => {
 			usageLineItems[1]!.id,
 			...creditLineItems.map((lineItem) => lineItem.id),
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 	test("sends usage and credit lines in a single bulk addLines call", async () => {
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -592,6 +638,7 @@ describe("invoice.created consumable idempotency", () => {
 
 	test("scopes generated line ids to the invoice so retries produce the same ids", async () => {
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -603,6 +650,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineItemIds = [usageLineItems[0]!.id];
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -621,12 +669,15 @@ describe("invoice.created consumable idempotency", () => {
 		];
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
 
 		expect(addLinesCalls).toEqual([]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("throws before resetting balances when a non-draft invoice is missing lines", async () => {
@@ -634,13 +685,14 @@ describe("invoice.created consumable idempotency", () => {
 
 		await expect(
 			processConsumablePricesForInvoiceCreated({
+				plan,
 				ctx,
 				eventContext: makeEventContext({ invoiceStatus: "open" }),
 			}),
 		).rejects.toThrow(/no longer a draft/i);
 
 		expect(addLinesCalls).toEqual([]);
-		expect(batchUpdateCalls).toEqual([]);
+		expect(plan.hasChanges()).toBe(false);
 	});
 
 	test("continues balance resets on a non-draft invoice when every line is present", async () => {
@@ -650,12 +702,15 @@ describe("invoice.created consumable idempotency", () => {
 		];
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext({ invoiceStatus: "paid" }),
 		});
 
 		expect(addLinesCalls).toEqual([]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test("throws before resetting balances when Stripe returns without a requested line", async () => {
@@ -663,13 +718,14 @@ describe("invoice.created consumable idempotency", () => {
 
 		await expect(
 			processConsumablePricesForInvoiceCreated({
+				plan,
 				ctx,
 				eventContext: makeEventContext(),
 			}),
 		).rejects.toThrow(/returned without 1 requested line/i);
 
 		expect(addLinesCalls).toHaveLength(1);
-		expect(batchUpdateCalls).toEqual([]);
+		expect(plan.hasChanges()).toBe(false);
 	});
 
 	test("splits more than 100 pending lines into batches and verifies all of them landed", async () => {
@@ -679,6 +735,7 @@ describe("invoice.created consumable idempotency", () => {
 		invoiceCreditLineItems = [];
 
 		await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});
@@ -686,17 +743,31 @@ describe("invoice.created consumable idempotency", () => {
 		expect(addLinesCalls.map((call) => call.lines.length)).toEqual([
 			100, 100, 30,
 		]);
-		expect(batchUpdateCalls).toHaveLength(1);
+		expect(plan.build().updateCustomerEntitlements).toMatchObject([
+			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+		]);
 	});
 
 	test.each([false, true])(
-		"records and invalidates only applied entitlement updates: %s",
+		"plans entitlement updates without writing or invalidating: %s",
 		async (hasUpdates) => {
 			hasEntitlementUpdates = hasUpdates;
 			const eventContext: InvoiceCreatedContext = makeEventContext();
-			await processConsumablePricesForInvoiceCreated({ ctx, eventContext });
-			expect(eventContext.results.customerStateChanged).toBe(hasUpdates);
-			expect(cacheClears).toHaveLength(hasUpdates ? 1 : 0);
+			await processConsumablePricesForInvoiceCreated({
+				ctx,
+				eventContext,
+				plan,
+			});
+			expect(eventContext.results.customerStateChanged).toBe(false);
+			expect(plan.build().updateCustomerEntitlements).toHaveLength(
+				hasUpdates ? 1 : 0,
+			);
+			if (hasUpdates) {
+				expect(plan.build().updateCustomerEntitlements?.[0]).toMatchObject({
+					customerEntitlement: { balance: 5 },
+					updates: { balance: 10 },
+				});
+			}
 		},
 	);
 
@@ -704,6 +775,7 @@ describe("invoice.created consumable idempotency", () => {
 		liveStripeLineItemIds = [usageLineItems[0]!.id];
 
 		const result = await processConsumablePricesForInvoiceCreated({
+			plan,
 			ctx,
 			eventContext: makeEventContext(),
 		});

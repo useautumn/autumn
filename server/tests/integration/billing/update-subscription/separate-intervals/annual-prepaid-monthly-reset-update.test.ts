@@ -292,7 +292,6 @@ test.concurrent(
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
 				value: TRACKED_USAGE,
-				timestamp: advancedTo,
 			},
 			{
 				skipCache: true,

@@ -6,6 +6,7 @@ import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -109,7 +110,7 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: positive
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 750,
+		balance: isBalanceWorkerRoute() ? 600 : 750,
 		usage: 0,
 	});
 });

@@ -19,6 +19,53 @@ export type UpdateCustomerGlobals = {
 };
 
 /**
+ * The reset interval of the shared credits being allocated.
+ */
+export const BalanceAllocationIntervalRequestBody = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * The reset interval of the shared credits being allocated.
+ */
+export type BalanceAllocationIntervalRequestBody = ClosedEnum<
+  typeof BalanceAllocationIntervalRequestBody
+>;
+
+export type AllocationRequest = {
+  /**
+   * The public entity ID.
+   */
+  entityId: string;
+  /**
+   * Requested credits per cycle, before proportional scaling. 0 releases the allocation.
+   */
+  amount: number;
+};
+
+export type BalanceAllocationRequest = {
+  /**
+   * The feature whose shared customer credits are allocated.
+   */
+  featureId: string;
+  /**
+   * The reset interval of the shared credits being allocated.
+   */
+  interval: BalanceAllocationIntervalRequestBody;
+  /**
+   * Complete list of entity allocations for this feature. Omitted entities release their shares.
+   */
+  allocations: Array<AllocationRequest>;
+};
+
+/**
  * The time interval for the purchase limit window.
  */
 export const UpdateCustomerAutoTopupIntervalRequestBody = {
@@ -339,6 +386,10 @@ export type UpdateCustomerOverageAllowedRequestBody = {
 
 export type UpdateCustomerBillingControlsRequestBody = {
   /**
+   * Replace all customer-level balance allocations. Omit to keep existing allocations; pass [] to release all. Available only when updating an existing customer.
+   */
+  balanceAllocations?: Array<BalanceAllocationRequest> | undefined;
+  /**
    * List of auto top-up configurations per feature.
    */
   autoTopups?: Array<UpdateCustomerAutoTopupRequestBody> | undefined;
@@ -538,6 +589,53 @@ export const UpdateCustomerEnv = {
  * The environment this customer was created in.
  */
 export type UpdateCustomerEnv = OpenEnum<typeof UpdateCustomerEnv>;
+
+/**
+ * The reset interval of the shared credits being allocated.
+ */
+export const UpdateCustomerBalanceAllocationIntervalResponse = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * The reset interval of the shared credits being allocated.
+ */
+export type UpdateCustomerBalanceAllocationIntervalResponse = OpenEnum<
+  typeof UpdateCustomerBalanceAllocationIntervalResponse
+>;
+
+export type UpdateCustomerAllocationResponse = {
+  /**
+   * The public entity ID.
+   */
+  entityId: string;
+  /**
+   * Requested credits per cycle, before proportional scaling. 0 releases the allocation.
+   */
+  amount: number;
+};
+
+export type UpdateCustomerBalanceAllocationResponse = {
+  /**
+   * The feature whose shared customer credits are allocated.
+   */
+  featureId: string;
+  /**
+   * The reset interval of the shared credits being allocated.
+   */
+  interval: UpdateCustomerBalanceAllocationIntervalResponse;
+  /**
+   * Complete list of entity allocations for this feature. Omitted entities release their shares.
+   */
+  allocations: Array<UpdateCustomerAllocationResponse>;
+};
 
 /**
  * The time interval for the purchase limit window.
@@ -920,6 +1018,12 @@ export type UpdateCustomerOverageAllowedResponse = {
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type UpdateCustomerBillingControlsResponse = {
+  /**
+   * Customer-level entity allocations of shared credits. Amounts are requested shares before proportional scaling.
+   */
+  balanceAllocations?:
+    | Array<UpdateCustomerBalanceAllocationResponse>
+    | undefined;
   /**
    * List of auto top-up configurations per feature.
    */
@@ -1692,6 +1796,73 @@ export type UpdateCustomerResponse = {
 };
 
 /** @internal */
+export const BalanceAllocationIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof BalanceAllocationIntervalRequestBody
+> = z.enum(BalanceAllocationIntervalRequestBody);
+
+/** @internal */
+export type AllocationRequest$Outbound = {
+  entity_id: string;
+  amount: number;
+};
+
+/** @internal */
+export const AllocationRequest$outboundSchema: z.ZodMiniType<
+  AllocationRequest$Outbound,
+  AllocationRequest
+> = z.pipe(
+  z.object({
+    entityId: z.string(),
+    amount: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      entityId: "entity_id",
+    });
+  }),
+);
+
+export function allocationRequestToJSON(
+  allocationRequest: AllocationRequest,
+): string {
+  return JSON.stringify(
+    AllocationRequest$outboundSchema.parse(allocationRequest),
+  );
+}
+
+/** @internal */
+export type BalanceAllocationRequest$Outbound = {
+  feature_id: string;
+  interval: string;
+  allocations: Array<AllocationRequest$Outbound>;
+};
+
+/** @internal */
+export const BalanceAllocationRequest$outboundSchema: z.ZodMiniType<
+  BalanceAllocationRequest$Outbound,
+  BalanceAllocationRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    interval: BalanceAllocationIntervalRequestBody$outboundSchema,
+    allocations: z.array(z.lazy(() => AllocationRequest$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function balanceAllocationRequestToJSON(
+  balanceAllocationRequest: BalanceAllocationRequest,
+): string {
+  return JSON.stringify(
+    BalanceAllocationRequest$outboundSchema.parse(balanceAllocationRequest),
+  );
+}
+
+/** @internal */
 export const UpdateCustomerAutoTopupIntervalRequestBody$outboundSchema:
   z.ZodMiniEnum<typeof UpdateCustomerAutoTopupIntervalRequestBody> = z.enum(
     UpdateCustomerAutoTopupIntervalRequestBody,
@@ -2196,6 +2367,7 @@ export function updateCustomerOverageAllowedRequestBodyToJSON(
 
 /** @internal */
 export type UpdateCustomerBillingControlsRequestBody$Outbound = {
+  balance_allocations?: Array<BalanceAllocationRequest$Outbound> | undefined;
   auto_topups?: Array<UpdateCustomerAutoTopupRequestBody$Outbound> | undefined;
   spend_limits?:
     | Array<UpdateCustomerSpendLimitRequestBody$Outbound>
@@ -2221,6 +2393,9 @@ export const UpdateCustomerBillingControlsRequestBody$outboundSchema:
     UpdateCustomerBillingControlsRequestBody
   > = z.pipe(
     z.object({
+      balanceAllocations: z.optional(
+        z.array(z.lazy(() => BalanceAllocationRequest$outboundSchema)),
+      ),
       autoTopups: z.optional(
         z.array(
           z.lazy(() => UpdateCustomerAutoTopupRequestBody$outboundSchema),
@@ -2252,6 +2427,7 @@ export const UpdateCustomerBillingControlsRequestBody$outboundSchema:
     }),
     z.transform((v) => {
       return remap$(v, {
+        balanceAllocations: "balance_allocations",
         autoTopups: "auto_topups",
         spendLimits: "spend_limits",
         usageLimits: "usage_limits",
@@ -2603,6 +2779,70 @@ export const UpdateCustomerEnv$inboundSchema: z.ZodMiniType<
   UpdateCustomerEnv,
   unknown
 > = openEnums.inboundSchema(UpdateCustomerEnv);
+
+/** @internal */
+export const UpdateCustomerBalanceAllocationIntervalResponse$inboundSchema:
+  z.ZodMiniType<UpdateCustomerBalanceAllocationIntervalResponse, unknown> =
+    openEnums.inboundSchema(UpdateCustomerBalanceAllocationIntervalResponse);
+
+/** @internal */
+export const UpdateCustomerAllocationResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerAllocationResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    entity_id: types.string(),
+    amount: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "entity_id": "entityId",
+    });
+  }),
+);
+
+export function updateCustomerAllocationResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerAllocationResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerAllocationResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerAllocationResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerBalanceAllocationResponse$inboundSchema:
+  z.ZodMiniType<UpdateCustomerBalanceAllocationResponse, unknown> = z.pipe(
+    z.object({
+      feature_id: types.string(),
+      interval: UpdateCustomerBalanceAllocationIntervalResponse$inboundSchema,
+      allocations: z.array(z.lazy(() =>
+        UpdateCustomerAllocationResponse$inboundSchema
+      )),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "feature_id": "featureId",
+      });
+    }),
+  );
+
+export function updateCustomerBalanceAllocationResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  UpdateCustomerBalanceAllocationResponse,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateCustomerBalanceAllocationResponse$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'UpdateCustomerBalanceAllocationResponse' from JSON`,
+  );
+}
 
 /** @internal */
 export const UpdateCustomerAutoTopupIntervalResponse2$inboundSchema:
@@ -2960,24 +3200,28 @@ export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    auto_topups: types.optional(
-      z.array(z.lazy(() => UpdateCustomerAutoTopupResponse$inboundSchema)),
-    ),
-    spend_limits: types.optional(
-      z.array(z.lazy(() => UpdateCustomerSpendLimitResponse$inboundSchema)),
-    ),
-    usage_limits: types.optional(
-      z.array(z.lazy(() => UpdateCustomerUsageLimitResponse$inboundSchema)),
-    ),
-    usage_alerts: types.optional(
-      z.array(z.lazy(() => UpdateCustomerUsageAlertResponse$inboundSchema)),
-    ),
-    overage_allowed: types.optional(
-      z.array(z.lazy(() => UpdateCustomerOverageAllowedResponse$inboundSchema)),
-    ),
+    balance_allocations: types.optional(z.array(z.lazy(() =>
+      UpdateCustomerBalanceAllocationResponse$inboundSchema
+    ))),
+    auto_topups: types.optional(z.array(z.lazy(() =>
+      UpdateCustomerAutoTopupResponse$inboundSchema
+    ))),
+    spend_limits: types.optional(z.array(z.lazy(() =>
+      UpdateCustomerSpendLimitResponse$inboundSchema
+    ))),
+    usage_limits: types.optional(z.array(z.lazy(() =>
+      UpdateCustomerUsageLimitResponse$inboundSchema
+    ))),
+    usage_alerts: types.optional(z.array(z.lazy(() =>
+      UpdateCustomerUsageAlertResponse$inboundSchema
+    ))),
+    overage_allowed: types.optional(z.array(z.lazy(() =>
+      UpdateCustomerOverageAllowedResponse$inboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "balance_allocations": "balanceAllocations",
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
       "usage_limits": "usageLimits",

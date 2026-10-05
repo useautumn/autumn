@@ -46,6 +46,8 @@ export interface TrialContext {
 	appliesToBilling: boolean;
 	cardRequired: boolean;
 	onEnd?: TrialOnEnd;
+	/** Autumn, not Stripe, settles this trial's end (revert, or a no-card trial run without a subscription). */
+	autumnManaged?: boolean;
 }
 
 export interface AnchorResetRefund {
@@ -142,6 +144,8 @@ export interface BillingContext {
 	subscriptionParams?: Record<string, unknown>;
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
+	/** Extra tags on the billing.updated webhook this action emits. */
+	billingUpdatedTags?: string[];
 	shouldFinalizeFirstInvoice?: boolean;
 	skipCustomPaymentMethodGuard?: boolean;
 

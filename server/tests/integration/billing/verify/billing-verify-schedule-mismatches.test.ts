@@ -409,19 +409,29 @@ testSequentially(
 			id: "addon",
 			items: [items.monthlyWords({ includedUsage: 25 })],
 		});
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
 
 		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, addon] }),
+				s.products({ list: [pro, addon, premium] }),
 			],
 			actions: [],
 		});
 
-		const response = await autumnV1.billing.createSchedule(
-			buildTwoPhaseSchedule({ customerId, proId: pro.id, addonId: addon.id }),
-		);
+		// Phase 2 must change the plan: an unchanged plan keeps one row across phases, so no Scheduled row exists.
+		const now = Date.now();
+		const response = await autumnV1.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: now, plans: [{ plan_id: pro.id }, { plan_id: addon.id }] },
+				{ starts_at: now + ms.days(30), plans: [{ plan_id: premium.id }] },
+			],
+		});
 		expect(response.status).toBe("created");
 
 		// Reproduce the prod shape: the scheduled rows keep only scheduled_ids.

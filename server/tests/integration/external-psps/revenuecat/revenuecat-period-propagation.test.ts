@@ -17,10 +17,12 @@ import {
 	setupWebhookTest,
 	type WebhookTestSetup,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
 import { storeRevenueCatProcessorId } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { storeRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
+import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject";
 import { ProductService } from "@/internal/products/ProductService";
 import {
@@ -199,11 +201,16 @@ test.concurrent(
 
 		// A normal read rebuilds the cache; it must now carry the id.
 		await autumnV2_2.customers.get(customerId);
-		const { fullSubject: cached } = await getCachedFullSubject({
-			ctx,
-			customerId,
-			source: "integration-test",
-		});
+		// A routed customer is served from the worker's copy, never Redis; invalidation evicts that copy.
+		const cached = isBalanceWorkerRoute()
+			? await readBalanceWorkerSubject({ ctx, customerId })
+			: (
+					await getCachedFullSubject({
+						ctx,
+						customerId,
+						source: "integration-test",
+					})
+				).fullSubject;
 		const cachedProduct = cached?.customer_products.find(
 			(cp) => cp.id === cusProduct!.id,
 		);

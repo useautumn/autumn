@@ -1,3 +1,5 @@
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAllocatedMessages } from "./utils/allocateTestUtils.js";
 /**
  * Lowering a share below what the entity already used is allowed: usage stays, the share is
  * spent, and only the part of the old share the entity didn't use becomes unallocated.
@@ -39,7 +41,10 @@ const lowerBelowUsage = async ({ customerId }: { customerId: string }) => {
 
 	const lowered = await allocateMessages({
 		customerId,
-		allocations: [{ entity_id: a, amount: 1000 }],
+		allocations: [
+			{ entity_id: a, amount: 1000 },
+			{ entity_id: b, amount: 5000 },
+		],
 	});
 	await warmCaches({ customerId, entityIds });
 	return { a, b, lowered };
@@ -51,10 +56,20 @@ test.concurrent(
 		const customerId = "allocate-lower-1";
 		const { a, lowered } = await lowerBelowUsage({ customerId });
 
-		expect(lowered.allocations).toMatchObject([
-			{ entity_id: a, amount: 1000, granted: 1000, usage: 4000, remaining: 0 },
-		]);
-		expect(lowered.shared).toEqual({
+		await expectAllocatedMessages({
+			customerId,
+			response: lowered,
+			expected: [
+				{
+					entity_id: a,
+					amount: 1000,
+					granted: 1000,
+					usage: 4000,
+					remaining: 0,
+				},
+			],
+		});
+		expect(lowered.balances[TestFeature.Messages]).toMatchObject({
 			granted: 10000,
 			remaining: 6000,
 			allocated: 6000,

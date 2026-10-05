@@ -11,8 +11,10 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
-	getOrSetCachedFullSubject,
+	getOrInitFullSubjectViewEpoch,
+	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
+import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { cleanupFullSubjectScenario } from "../../db/full-subject/utils/cleanupFullSubjectScenario.js";
 import { buildEntitySubjectScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { insertFullSubjectScenario } from "../../db/full-subject/utils/insertFullSubjectScenario.js";
@@ -71,6 +73,19 @@ const buildRequestData = ({
 		case "/billing.attach":
 		case "/billing.setup_payment":
 		case "/billing.multi_attach":
+		case "/balances/update":
+		case "/billing.multi_update":
+		case "/billing.create_schedule":
+		case "/billing.set_plans":
+		case "/billing.open_customer_portal":
+		case "/balances.update":
+		case "/rewards.redeem":
+		case "/customers.update":
+		case "/licenses.attach":
+		case "/licenses.release":
+		case "/billing.import":
+		case "/billing.sync":
+		case "/billing.sync_v2":
 			return {
 				path,
 				body: {
@@ -95,6 +110,7 @@ const buildRequestData = ({
 	}
 };
 
+// Each case starts from fresh Redis views, seeded directly: a balance-worker-routed customer's reads never fill them.
 const warmCaches = async ({
 	ctx,
 	customerId,
@@ -104,19 +120,29 @@ const warmCaches = async ({
 	customerId: string;
 	entityIds: string[];
 }) => {
-	await getOrSetCachedFullSubject({
+	const customerKeys = await ctx.redisV2.keys(`{${customerId}}:*`);
+	if (customerKeys.length > 0) await ctx.redisV2.unlink(...customerKeys);
+
+	const subjectViewEpoch = await getOrInitFullSubjectViewEpoch({
 		ctx,
 		customerId,
-		source: "refreshCacheRoutesTest",
 	});
 
-	for (const entityId of entityIds) {
-		await getOrSetCachedFullSubject({
+	for (const entityId of [undefined, ...entityIds]) {
+		const result = await getFullSubjectNormalized({
 			ctx,
 			customerId,
 			entityId,
-			source: "refreshCacheRoutesTest",
+			runLazyResets: false,
 		});
+		if (!result) throw new Error(`no subject for ${customerId}:${entityId}`);
+		expect(
+			await setCachedFullSubject({
+				ctx,
+				normalized: result.normalized,
+				fetchedSubjectViewEpoch: subjectViewEpoch,
+			}),
+		).toBe("OK");
 	}
 };
 

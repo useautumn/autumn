@@ -16,7 +16,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -106,19 +106,7 @@ test.concurrent(`${chalk.yellowBright("trial-payment 3: card not required - no p
 		resetsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 1,
-		latestTotal: 0,
-	});
-
-	// Verify Stripe subscription state (trial without card)
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-		flags: { checkTrialing: true },
-	});
+	// No-card trials run in Autumn only: no Stripe subscription, no trial invoice
+	await expectCustomerInvoiceCorrect({ customer, count: 0 });
+	await expectSubCount({ ctx, customerId, count: 0 });
 });

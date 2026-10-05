@@ -15,7 +15,9 @@ import {
 	isNotNull,
 	lt,
 	notExists,
+	notInArray,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -40,12 +42,28 @@ export const fetchExpiredTrialProducts = async ({
 	db,
 	nowMs = Date.now(),
 	internalCustomerId,
+	excludeCustomerProductIds = [],
 }: {
 	batchSize: number;
 	db: DrizzleCli;
 	nowMs?: number;
 	internalCustomerId?: string;
+	/** Rows already attempted this run, so ones left for a retry don't block newer rows. */
+	excludeCustomerProductIds?: string[];
 }) => {
+	const hasNoPrices = notExists(
+		db
+			.select()
+			.from(customerPrices)
+			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
+	);
+
+	// Autumn writes on_trial_end "bill" only for no-card trials it runs without Stripe; legacy trials stay null.
+	const isAutumnManagedBillTrial = and(
+		eq(customerProducts.on_trial_end, "bill"),
+		sql`coalesce(cardinality(${customerProducts.subscription_ids}), 0) = 0`,
+	);
+
 	return db
 		.select({
 			customerProduct: customerProducts,
@@ -59,15 +77,9 @@ export const fetchExpiredTrialProducts = async ({
 		.where(
 			and(
 				or(
-					notExists(
-						db
-							.select()
-							.from(customerPrices)
-							.where(
-								eq(customerPrices.customer_product_id, customerProducts.id),
-							),
-					),
+					hasNoPrices,
 					eq(customerProducts.on_trial_end, "revert"),
+					isAutumnManagedBillTrial,
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),
@@ -75,8 +87,12 @@ export const fetchExpiredTrialProducts = async ({
 				internalCustomerId
 					? eq(customerProducts.internal_customer_id, internalCustomerId)
 					: undefined,
+				excludeCustomerProductIds.length > 0
+					? notInArray(customerProducts.id, excludeCustomerProductIds)
+					: undefined,
 			),
 		)
+		.orderBy(customerProducts.trial_ends_at, customerProducts.id)
 		.limit(batchSize);
 };
 

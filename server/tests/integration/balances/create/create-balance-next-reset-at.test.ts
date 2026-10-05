@@ -97,6 +97,7 @@ test.concurrent(
 		});
 		expect(t0CusEnt).toBeDefined();
 		expect(t0CusEnt!.next_reset_at).toBe(customNextResetAt);
+		expect(t0CusEnt!.reset_cycle_anchor).toBe(customNextResetAt);
 
 		// ── t1: use 10 -> 40/50, boundary unchanged ─────────────────────────────
 		await autumnV1.track({

@@ -1,23 +1,17 @@
-// Red: retrying a payment-failed upgrade minted a second open invoice + pending plan.
-// Green: the retry returns the original open invoice; paid/void pending plans get 409.
-
 import { expect, test } from "bun:test";
-import {
-	type AttachParamsV1Input,
-	CusProductStatus,
-	ErrCode,
-} from "@autumn/shared";
+import { type AttachParamsV1Input, CusProductStatus } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { payOpenInvoice } from "@tests/utils/stripeUtils/payOpenInvoice";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { MetadataService } from "@/internal/metadata/MetadataService";
 import { DEFAULT_CUS_PRODUCT_LIMIT } from "@/internal/misc/edgeConfig/orgLimitsStore";
 
 /** Pro → premium upgrade whose first invoice fails on a declining card. */
@@ -276,31 +270,78 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pending-plan-conflict 5: a voided pending invoice is never resumed and never replaced implicitly")}`,
+	`${chalk.yellowBright("pending-plan-conflict 5: voiding expires the pending upgrade before an explicit retry creates a new invoice")}`,
 	async () => {
 		const customerId = "pending-plan-conflict-void";
-		const { autumnV2_4, ctx, customer, premium, first } =
+		const { autumnV2_4, ctx, customer, pro, premium, first } =
 			await initFailedUpgrade({ customerId });
 
-		await ctx.stripeCli.invoices.voidInvoice(first.invoice?.stripe_id ?? "");
+		const pendingRows = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: customer!.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+		expect(pendingRows).toHaveLength(1);
+		const pending = pendingRows[0];
+		expect(pending.product.id).toBe(premium.id);
+		expect(pending.metadata_id).toBeTruthy();
 
-		await expectAutumnError({
-			errCode: ErrCode.PendingPlanConflict,
-			errMessage: "invoice is void",
-			func: () =>
-				autumnV2_4.billing.attach<AttachParamsV1Input>({
-					customer_id: customerId,
-					plan_id: premium.id,
-				}),
+		const voidedInvoice = await ctx.stripeCli.invoices.voidInvoice(
+			first.invoice!.stripe_id!,
+		);
+		expect(voidedInvoice.status).toBe("void");
+
+		await pollUntilAsserted({
+			timeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			fetch: () =>
+				Promise.all([
+					CusProductService.getFull({ db: ctx.db, id: pending.id }),
+					MetadataService.get({ db: ctx.db, id: pending.metadata_id! }),
+				]),
+			assert: ([expired, metadata]) => {
+				expect(expired?.status).toBe(CusProductStatus.Expired);
+				expect(expired?.metadata_id).toBeNull();
+				expect(metadata).toBeNull();
+			},
+		});
+		await expectCustomerProducts({
+			autumn: autumnV2_4,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			active: [pro.id],
+			notPresent: [premium.id],
 		});
 
 		const openInvoices = await ctx.stripeCli.invoices.list({
-			customer: customer?.processor?.id ?? "",
+			customer: customer!.processor!.id!,
 			status: "open",
 			limit: 100,
 		});
 		expect(openInvoices.has_more).toBe(false);
 		expect(openInvoices.data).toHaveLength(0);
+
+		const retry = await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premium.id,
+		});
+		expect(retry.required_action?.code).toBe("payment_failed");
+		expect(retry.invoice?.status).toBe("open");
+		expect(retry.invoice?.stripe_id).toBeTruthy();
+		expect(retry.invoice?.stripe_id).not.toBe(first.invoice!.stripe_id);
+		expect(retry.invoice?.total).toBe(first.invoice!.total);
+
+		await expectOnlyOneOpenInvoice({
+			ctx,
+			stripeCustomerId: customer!.processor!.id!,
+		});
+		const retriedPendingRows = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: customer!.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+		expect(retriedPendingRows).toHaveLength(1);
+		expect(retriedPendingRows[0].product.id).toBe(premium.id);
+		expect(retriedPendingRows[0].id).not.toBe(pending.id);
 	},
 );
 

@@ -1,9 +1,13 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import {
 	type GenerateAuthTokenOptions,
 	generateAuthTokenFromCredentialsProvider,
 } from "aws-msk-iam-sasl-signer-js";
 import { createKafkaTransport } from "../../../src/client/createKafkaTransport.js";
+import {
+	createKafkaTokenRecord,
+	describeKafkaToken,
+} from "../../../src/client/kafkaTokens.js";
 import type { KafkaTransportConfig } from "../../../src/client/types/kafkaClient.js";
 
 function tokenProviderOf({ transport }: { transport: KafkaTransportConfig }) {
@@ -128,4 +132,87 @@ test("the AWS signer works under Bun with rotating synthetic credentials", async
 		);
 	}
 	expect(credentialReads).toBe(2);
+});
+
+function presignedToken({ keyId }: { keyId: string }): string {
+	const url = `https://kafka.us-east-2.amazonaws.com/?Action=kafka-cluster%3AConnect&X-Amz-Credential=${keyId}%2F20261002%2Fus-east-2%2Fkafka-cluster%2Faws4_request&X-Amz-Date=20261002T040100Z&X-Amz-Expires=900`;
+	return Buffer.from(url).toString("base64url");
+}
+
+test("every token signed is recorded for the process, and the caller is still told", async () => {
+	const tokens = createKafkaTokenRecord();
+	const told: string[] = [];
+	let signed = 0;
+	const transport = createKafkaTransport({
+		authMode: "msk_iam",
+		region: "us-east-2",
+		tokens,
+		now: () => Date.parse("2026-10-02T04:01:00.000Z"),
+		generateToken: async () => {
+			signed++;
+			return {
+				token: presignedToken({ keyId: `AKIAEXAMPLE000${signed}KEY` }),
+				expiryTime: Date.parse("2026-10-02T04:16:00.000Z"),
+			};
+		},
+		onToken: (info) => {
+			told.push(info.keyIdSuffix ?? "?");
+		},
+	});
+	const authenticate = tokenProviderOf({ transport });
+	await authenticate();
+	await authenticate();
+
+	expect(told).toEqual(["01KEY", "02KEY"]);
+	expect(
+		describeKafkaToken({
+			record: tokens,
+			now: Date.parse("2026-10-02T04:20:00.000Z"),
+		}),
+	).toEqual({
+		keyIdSuffix: "02KEY",
+		signedAt: "2026-10-02T04:01:00.000Z",
+		expiresAt: "2026-10-02T04:16:00.000Z",
+		ttlSeconds: 900,
+		secondsSinceSigned: 1140,
+		expired: true,
+		tokensSigned: 2,
+	});
+});
+
+test("a process that signed no token yet has none to describe", () => {
+	expect(
+		describeKafkaToken({ record: createKafkaTokenRecord(), now: 0 }),
+	).toBeNull();
+});
+
+test("without a caller to tell, the transport writes each token as its own line", async () => {
+	const lines: string[] = [];
+	const info = spyOn(console, "info").mockImplementation((line: string) => {
+		lines.push(line);
+	});
+	try {
+		const transport = createKafkaTransport({
+			authMode: "msk_iam",
+			region: "us-east-2",
+			tokens: createKafkaTokenRecord(),
+			generateToken: async () => ({
+				token: presignedToken({ keyId: "AKIAEXAMPLEKB2VR" }),
+				expiryTime: Date.parse("2026-10-02T04:16:00.000Z"),
+			}),
+		});
+		await tokenProviderOf({ transport })();
+	} finally {
+		info.mockRestore();
+	}
+	expect(lines).toHaveLength(1);
+	expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
+		level: "INFO",
+		event: "kafka.token_signed",
+		kafkaToken: {
+			keyIdSuffix: "KB2VR",
+			expiresAt: "2026-10-02T04:16:00.000Z",
+			ttlSeconds: 900,
+		},
+	});
 });

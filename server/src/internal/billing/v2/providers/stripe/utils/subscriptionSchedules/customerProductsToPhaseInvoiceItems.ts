@@ -1,4 +1,8 @@
-import type { BillingContext, FullCusProduct } from "@autumn/shared";
+import {
+	type BillingContext,
+	CusProductStatus,
+	type FullCusProduct,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeItemSpecToPhaseAddInvoiceItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
@@ -36,6 +40,13 @@ export const customerProductsToPhaseInvoiceItems = ({
 
 	for (const customerProduct of customerProducts) {
 		const productStartsAt = customerProduct.starts_at;
+		// Avoid re-billing an active plan's one-off fees when a schedule is rebuilt in the same second it started.
+		if (
+			customerProduct.status === CusProductStatus.Active &&
+			productStartsAt <= billingContext.currentEpochMs
+		)
+			continue;
+
 		const startsInThisPhase =
 			productStartsAt >= phaseStartMs &&
 			(phaseEndMs === undefined || productStartsAt < phaseEndMs);
