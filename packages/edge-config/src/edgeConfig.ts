@@ -1,4 +1,10 @@
 export {
+	type BalanceWorkerThreadsEdgeConfig,
+	BalanceWorkerThreadsEdgeConfigSchema,
+	balanceWorkerThreadsEdgeConfig,
+	defaultBalanceWorkerThreadsEdgeConfig,
+} from "./configs/balanceWorkerThreads/balanceWorkerThreadsEdgeConfig.js";
+export {
 	type DbControlEdgeConfig,
 	DbControlEdgeConfigSchema,
 	dbControlEdgeConfig,
@@ -34,6 +40,7 @@ export {
 } from "./configs/shadowAtom/shadowAtomRollout.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
 export {
+	BALANCE_WORKER_THREADS_CONFIG_KEY,
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,
 	MISC_REDIS_CONFIG_KEY,

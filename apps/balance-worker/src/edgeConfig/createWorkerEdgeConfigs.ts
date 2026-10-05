@@ -1,4 +1,6 @@
 import {
+	type BalanceWorkerThreadsEdgeConfig,
+	balanceWorkerThreadsEdgeConfig,
 	createBunS3EdgeConfigClient,
 	createEdgeConfigRegistry,
 	createEdgeConfigStore,
@@ -19,6 +21,8 @@ const ACTIVE_SLOT_POLL_INTERVAL_MS = 2_000;
 /** The edge configs a worker polls; one registry drives them all. */
 export type WorkerEdgeConfigs = {
 	dbControl: EdgeConfigStore<DbControlEdgeConfig>;
+	/** Read once at boot, when the threads are laid out. */
+	balanceWorkerThreads: EdgeConfigStore<BalanceWorkerThreadsEdgeConfig>;
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
 	/** The same bucket and client the stores read, for objects the worker writes itself. */
@@ -50,6 +54,13 @@ export const createWorkerEdgeConfigs = ({
 		defaultValue: dbControlEdgeConfig.defaultValue,
 	});
 	registry.register({ store: dbControl });
+	const balanceWorkerThreads = createEdgeConfigStore({
+		ctx: edgeConfigContext,
+		s3Key: balanceWorkerThreadsEdgeConfig.key,
+		schema: balanceWorkerThreadsEdgeConfig.schema,
+		defaultValue: balanceWorkerThreadsEdgeConfig.defaultValue,
+	});
+	registry.register({ store: balanceWorkerThreads });
 	const activeSlot = createEdgeConfigStore({
 		ctx: edgeConfigContext,
 		s3Key: activeSlotEdgeConfig.key,
@@ -72,6 +83,7 @@ export const createWorkerEdgeConfigs = ({
 
 	return {
 		dbControl,
+		balanceWorkerThreads,
 		activeSlot,
 		adminBucket: { s3Client, location: config.location },
 		start,

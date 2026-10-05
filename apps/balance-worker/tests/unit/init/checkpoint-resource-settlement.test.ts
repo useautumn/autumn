@@ -128,7 +128,7 @@ test.concurrent.each([false, true])(
 					events.push("drained");
 				},
 			},
-			listen: () => ({
+			listen: async () => ({
 				stop: () => {
 					events.push("listener-stopped");
 				},
