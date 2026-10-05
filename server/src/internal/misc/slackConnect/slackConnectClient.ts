@@ -263,9 +263,12 @@ export const inviteToOrgSlackChannel = async ({
 		orgId,
 	});
 
+	// Slack defaults invitees to external limited members, who can't invite
+	// anyone else. Full external members can bring in their own teammates.
 	await client.slack.conversations.inviteShared({
 		channel: channelId,
 		emails: [email],
+		external_limited: false,
 	});
 
 	return { channelName };

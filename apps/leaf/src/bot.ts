@@ -25,6 +25,7 @@ import {
 	handleSlackMessage,
 	handleSlackThreadStart,
 	handleSubscribedSlackMessage,
+	isSlackbotNotice,
 } from "./providers/slack/handlers/handleSlackMessage.js";
 import { handleSlackQuestionAnswer } from "./providers/slack/handlers/handleSlackQuestionAnswer.js";
 import { handleSlackSlashCommand } from "./providers/slack/handlers/handleSlackSlashCommand.js";
@@ -110,6 +111,8 @@ export const bot = new Chat({
 bot.onAssistantThreadStarted(handleAssistantThreadStarted);
 bot.onDirectMessage(handleSlackMessage);
 bot.onNewMention(async (thread, message) => {
+	// Don't follow the thread under a Slackbot notice that happens to tag us.
+	if (isSlackbotNotice(message)) return;
 	await thread.subscribe();
 	await handleSlackThreadStart(thread, message);
 });
