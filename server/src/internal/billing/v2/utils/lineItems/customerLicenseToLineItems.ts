@@ -7,6 +7,7 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BackdateGapRun } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPrepaidRows.js";
 import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem.js";
 import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition.js";
@@ -36,12 +37,14 @@ export const customerLicenseToLineItems = ({
 	customerProduct,
 	customerLicense,
 	direction,
+	backdateGapRun,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	customerProduct: FullCusProduct;
 	customerLicense: FullCustomerLicense;
 	direction: "charge" | "refund";
+	backdateGapRun?: BackdateGapRun;
 }): LineItem[] => {
 	const planLicense = customerLicense.planLicense;
 	const licenseProduct = planLicense?.product;
@@ -82,6 +85,7 @@ export const customerLicenseToLineItems = ({
 				licenseProduct,
 				customerProduct,
 				direction,
+				backdateGapRun,
 			}),
 		)
 		.filter(notNullish);

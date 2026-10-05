@@ -181,6 +181,7 @@ export const customerProductToLineItems = ({
 				customerProduct,
 				customerLicense,
 				direction,
+				backdateGapRun,
 			}),
 		);
 	}

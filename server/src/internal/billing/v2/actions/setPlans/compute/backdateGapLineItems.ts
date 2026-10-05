@@ -77,8 +77,7 @@ export const backdateGapLineItems = ({
 
 		return customerProductToLineItems({
 			ctx,
-			// Seat licenses bill their own current cycle, which would charge now rather than the gap.
-			customerProduct: { ...planRun.customerProduct, customer_licenses: [] },
+			customerProduct: planRun.customerProduct,
 			billingContext,
 			direction: "charge",
 			priceFilters: { excludeOneOffPrices: true },
