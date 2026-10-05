@@ -21,7 +21,6 @@ function trackBatchOf({
 	ctx: InlineHandlerContext;
 	body: Uint8Array;
 }) {
-	if (body.byteLength > MAX_BATCH_BODY_BYTES) return null;
 	try {
 		const { route, commands } = parseTrackBatchRequest({
 			input: JSON.parse(decoder.decode(body)),
@@ -52,11 +51,16 @@ export function receiveTrackBatchInline({
 	ctx: InlineHandlerContext;
 	body: Uint8Array;
 }): InlineReply | null {
+	function fallBack(reason: string): null {
+		ctx.counters.fellBack({ name: "trackBatch", reason });
+		return null;
+	}
+	if (body.byteLength > MAX_BATCH_BODY_BYTES) return fallBack("too_large");
 	const parsed = trackBatchOf({ ctx, body });
-	if (!parsed) return null;
+	if (!parsed) return fallBack("envelope");
 	const { route, commands } = parsed;
 	const runtime = ctx.ownership.findRuntime(route);
-	if (!runtime?.processInline) return null;
+	if (!runtime?.processInline) return fallBack("not_owned");
 	const startedAt = performance.now();
 	const requestLog: BalanceWorkerRequestLog = { id: crypto.randomUUID() };
 	function logged(status: number): void {
@@ -87,7 +91,10 @@ export function receiveTrackBatchInline({
 			heldUntilSeq: 0,
 		};
 	}
-	if (!decided || decided.kind === "refused") return null;
+	if (!decided) return fallBack("not_ready");
+	if (decided.kind === "refused") return fallBack(decided.reason);
+	ctx.counters.answered({ name: "trackBatch" });
+	ctx.counters.answered({ name: "trackBatchItems", count: commands.length });
 	const { items, commits, seq } = decided;
 	function answer(commitFailures: (unknown | null)[]): string {
 		const body = batchReplyOf({ items, commitFailures });

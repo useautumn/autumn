@@ -17,6 +17,8 @@ export type ThreadedProducers = KafkaProducerFactory & {
 	start(): Promise<void>;
 	/** Disconnects every producer still open and ends the thread. */
 	stop(): Promise<void>;
+	/** `sendsAwaitingAck` is a gauge; `sendsOverPort` is the window's count, reset by the read. */
+	drainHealth(): { sendsAwaitingAck: number; sendsOverPort: number };
 };
 
 /** kafkajs's `producer.network.request` payload, the part `kafkaRequestTimings` reads. */

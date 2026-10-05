@@ -11,6 +11,7 @@ import {
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
 import {
+	decided,
 	identity,
 	partition,
 	residentFixture,
@@ -24,13 +25,15 @@ describe("inline tracks with held replies", () => {
 		const committed: number[] = [];
 		f.positions.onCommitted(({ seq }) => committed.push(seq));
 		try {
-			const outcome = f.processor.trackInline({
-				command: trackCommand({ commandId: "a", value: 3 }),
-			});
-			expect(outcome?.seq).toBe(2);
-			expect(outcome?.reply?.result).toMatchObject({ type: "track" });
-			expect(JSON.parse(outcome?.body ?? "{}")).toEqual(
-				JSON.parse(JSON.stringify(outcome?.reply)),
+			const outcome = decided(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "a", value: 3 }),
+				}),
+			);
+			expect(outcome.seq).toBe(2);
+			expect(outcome.reply?.result).toMatchObject({ type: "track" });
+			expect(JSON.parse(outcome.body)).toEqual(
+				JSON.parse(JSON.stringify(outcome.reply)),
 			);
 			expect(f.positions.readCommitPosition({ partition })).toBe(1);
 			await waitForAppend();
@@ -47,15 +50,17 @@ describe("inline tracks with held replies", () => {
 		const inline = await residentFixture();
 		const classic = await residentFixture();
 		try {
-			const held = inline.processor.trackInline({
-				command: trackCommand({ commandId: "same", value: 4 }),
-			});
+			const held = decided(
+				inline.processor.trackInline({
+					command: trackCommand({ commandId: "same", value: 4 }),
+				}),
+			);
 			const answered = classic.processor.track({
 				command: trackCommand({ commandId: "same", value: 4 }),
 			});
 			await waitForAppend();
 			classic.appender.release();
-			expect(JSON.parse(held?.body ?? "{}")).toEqual(
+			expect(JSON.parse(held.body)).toEqual(
 				JSON.parse(JSON.stringify(await answered)),
 			);
 		} finally {
@@ -67,24 +72,34 @@ describe("inline tracks with held replies", () => {
 	test("a retry while the write is in flight gets the same reply and sequence number, and appends nothing", async () => {
 		const f = await residentFixture();
 		try {
-			const first = f.processor.trackInline({
-				command: trackCommand({ commandId: "r" }),
+			const first = decided(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "r" }),
+				}),
+			);
+			const retry = decided(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "r" }),
+				}),
+			);
+			expect(retry).toEqual({
+				kind: "decided",
+				body: first.body,
+				seq: first.seq,
 			});
-			const retry = f.processor.trackInline({
-				command: trackCommand({ commandId: "r" }),
-			});
-			expect(retry).toEqual({ body: first?.body ?? "", seq: first?.seq ?? -1 });
 			await waitForAppend();
 			f.appender.release();
 			await waitForAppend();
 			expect(f.appender.batches).toEqual([1, 1]);
 			await f.processor.drain();
-			const stored = f.processor.trackInline({
-				command: trackCommand({ commandId: "r" }),
-			});
-			expect(stored?.seq).toBe(0);
-			expect(JSON.parse(stored?.body ?? "{}").result).toEqual(
-				JSON.parse(first?.body ?? "{}").result,
+			const stored = decided(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "r" }),
+				}),
+			);
+			expect(stored.seq).toBe(0);
+			expect(JSON.parse(stored.body).result).toEqual(
+				JSON.parse(first.body).result,
 			);
 		} finally {
 			f.close();
@@ -100,20 +115,22 @@ describe("inline tracks with held replies", () => {
 			await waitForAppend();
 			expect(
 				f.processor.trackInline({ command: trackCommand({ commandId: "x" }) }),
-			).toBeNull();
+			).toEqual({ kind: "refused", reason: "settled_write_in_flight" });
 			f.appender.release();
 			await ordinary;
 
-			const held = f.processor.trackInline({
-				command: trackCommand({ commandId: "h" }),
-			});
+			const held = decided(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "h" }),
+				}),
+			);
 			const joined = f.processor.track({
 				command: trackCommand({ commandId: "h" }),
 			});
 			await waitForAppend();
 			f.appender.release();
 			expect(JSON.parse(JSON.stringify(await joined))).toEqual(
-				JSON.parse(held?.body ?? "{}"),
+				JSON.parse(held.body),
 			);
 		} finally {
 			f.close();
@@ -146,7 +163,7 @@ describe("inline tracks with held replies", () => {
 				f.processor.trackInline({
 					command: trackCommand({ commandId: "stale" }),
 				}),
-			).toBeNull();
+			).toEqual({ kind: "refused", reason: "catalog_stale" });
 			const answered = f.processor.track({
 				command: trackCommand({ commandId: "stale" }),
 			});
@@ -169,7 +186,7 @@ describe("inline tracks with held replies", () => {
 				f.processor.trackInline({
 					command: trackCommand({ commandId: "l", lock: true }),
 				}),
-			).toBeNull();
+			).toEqual({ kind: "refused", reason: "lock" });
 			expect(
 				f.processor.trackInline({
 					command: trackCommand({
@@ -177,7 +194,7 @@ describe("inline tracks with held replies", () => {
 						who: { ...identity, entityId: "ent_1" },
 					}),
 				}),
-			).toBeNull();
+			).toEqual({ kind: "refused", reason: "not_resident" });
 			expect(
 				f.processor.trackInline({
 					command: trackCommand({
@@ -185,7 +202,7 @@ describe("inline tracks with held replies", () => {
 						who: { ...identity, customerId: "cus_cold" },
 					}),
 				}),
-			).toBeNull();
+			).toEqual({ kind: "refused", reason: "not_resident" });
 			expect(f.appender.batches).toEqual([1]);
 		} finally {
 			f.close();

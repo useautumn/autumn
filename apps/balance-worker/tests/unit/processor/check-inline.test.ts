@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	checkCommand,
+	decided,
 	identity,
 	residentFixture,
 	trackCommand,
@@ -13,8 +14,10 @@ describe("inline checks", () => {
 		try {
 			const command = checkCommand({ requiredBalance: 5 });
 			const inline = f.processor.checkInline({ command });
-			expect(inline).not.toBeNull();
-			expect(inline).toEqual(await f.processor.check({ command }));
+			expect(inline).toEqual({
+				kind: "decided",
+				reply: await f.processor.check({ command }),
+			});
 			expect(f.appender.batches).toEqual([1]);
 		} finally {
 			f.close();
@@ -30,7 +33,10 @@ describe("inline checks", () => {
 			});
 			const command = checkCommand();
 			const inline = f.processor.checkInline({ command });
-			expect(inline).toEqual(await f.processor.check({ command }));
+			expect(inline).toEqual({
+				kind: "decided",
+				reply: await f.processor.check({ command }),
+			});
 			expect(inline).not.toEqual(before);
 			await waitForAppend();
 			f.appender.release();
@@ -48,7 +54,7 @@ describe("inline checks", () => {
 			])
 				expect(
 					f.processor.checkInline({ command: checkCommand({ who }) }),
-				).toBeNull();
+				).toEqual({ kind: "refused", reason: "not_resident" });
 		} finally {
 			f.close();
 		}
@@ -67,9 +73,13 @@ describe("inline checks", () => {
 			const beforeReset = checkCommand({ occurredAt: resetAt });
 			const afterReset = checkCommand({ occurredAt: resetAt + 1 });
 			expect(
-				f.processor.checkInline({ command: beforeReset })?.result.allowed,
+				decided(f.processor.checkInline({ command: beforeReset })).reply.result
+					.allowed,
 			).toBe(false);
-			expect(f.processor.checkInline({ command: afterReset })).toBeNull();
+			expect(f.processor.checkInline({ command: afterReset })).toEqual({
+				kind: "refused",
+				reason: "reset_due",
+			});
 			const ordinary = await f.processor.check({ command: afterReset });
 			expect(ordinary.result.allowed).toBe(true);
 		} finally {

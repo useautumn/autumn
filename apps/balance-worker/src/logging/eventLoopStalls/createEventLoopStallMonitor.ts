@@ -41,6 +41,8 @@ export function createEventLoopStallMonitor({
 		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
 		memory?: () => { heapUsed: number; rss: number };
 		cpu?: () => CpuCounters;
+		/** Counters the window drains into its summary line: inline answers and fallbacks, thread health. */
+		signals?: () => Record<string, unknown>;
 	};
 	config: EventLoopStallMonitorConfig;
 }): { start(): void; stop(): void } {
@@ -139,6 +141,7 @@ export function createEventLoopStallMonitor({
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
 					...cpuWindow,
+					...ctx.signals?.(),
 					sections,
 				},
 			},
