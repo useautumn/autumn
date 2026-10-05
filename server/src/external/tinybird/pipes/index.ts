@@ -13,13 +13,6 @@ export {
 	createAggregateGroupablePipe,
 } from "./aggregateGroupablePipe.js";
 export {
-	type AggregatePipeParams,
-	type AggregatePipeRow,
-	aggregatePipeParamsSchema,
-	aggregatePipeResponseSchema,
-	createAggregatePipe,
-} from "./aggregatePipe.js";
-export {
 	type AggregateSimplePipeParams,
 	type AggregateSimplePipeRow,
 	aggregateSimplePipeParamsSchema,
@@ -53,13 +46,6 @@ export {
 	listEventsPaginatedPipeParamsSchema,
 	listEventsPaginatedPipeResponseSchema,
 } from "./listEventsPaginatedPipe.js";
-export {
-	createPropertyKeyExistsPipe,
-	type PropertyKeyExistsPipeParams,
-	type PropertyKeyExistsPipeRow,
-	propertyKeyExistsPipeParamsSchema,
-	propertyKeyExistsPipeResponseSchema,
-} from "./propertyKeyExistsPipe.js";
 export {
 	createPropertyRollupCoveragePipe,
 	type PropertyRollupCoveragePipeParams,
