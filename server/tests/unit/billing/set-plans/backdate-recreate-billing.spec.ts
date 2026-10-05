@@ -117,20 +117,43 @@ const seatPlanLicense: FullPlanLicense = {
 	product: seatProduct,
 };
 
-const paidSeats = (paidQuantity: number): FullCustomerLicense[] => [
+const oneOffSeatProduct = products.createFull({
+	id: "seat_one_off",
+	prices: [
+		prices.buildFixed({
+			overrides: { id: "price_seat_one_off" },
+			configOverrides: { amount: SEAT_PRICE, interval: BillingInterval.OneOff },
+		}),
+	],
+});
+
+const oneOffSeatPlanLicense: FullPlanLicense = {
+	...seatPlanLicense,
+	id: "plan_lic_seat_one_off",
+	license_internal_product_id: oneOffSeatProduct.internal_id,
+	product: oneOffSeatProduct,
+};
+
+const paidSeats = ({
+	paidQuantity,
+	planLicense,
+}: {
+	paidQuantity: number;
+	planLicense: FullPlanLicense;
+}): FullCustomerLicense[] => [
 	{
 		id: "cus_lic_seat",
 		link_id: "cus_lic_seat",
 		internal_customer_id: "cus_internal",
 		parent_customer_product_id: "cus_prod_pro",
-		license_internal_product_id: seatProduct.internal_id,
-		plan_license_id: seatPlanLicense.id,
+		license_internal_product_id: planLicense.license_internal_product_id,
+		plan_license_id: planLicense.id,
 		granted: paidQuantity,
 		remaining: paidQuantity,
 		paid_quantity: paidQuantity,
 		created_at: LIVE_START,
 		updated_at: LIVE_START,
-		planLicense: seatPlanLicense,
+		planLicense,
 	},
 ];
 
@@ -140,12 +163,14 @@ const backdatedPro = ({
 	restartsCycle = false,
 	premiumStartsAt,
 	paidSeatCount,
+	planLicense = seatPlanLicense,
 }: {
 	backdatedStart: number;
 	prorationBehavior?: BillingBehavior;
 	restartsCycle?: boolean;
 	premiumStartsAt?: number;
 	paidSeatCount?: number;
+	planLicense?: FullPlanLicense;
 }): CreateScheduleBillingContext => {
 	const plainPro = products.createFull({
 		id: "pro",
@@ -154,7 +179,7 @@ const backdatedPro = ({
 	const pro: FullProduct =
 		paidSeatCount === undefined
 			? plainPro
-			: { ...plainPro, licenses: [seatPlanLicense] };
+			: { ...plainPro, licenses: [planLicense] };
 	const baseCustomerProduct = customerProducts.create({
 		id: "cus_prod_pro",
 		productId: pro.id,
@@ -171,7 +196,13 @@ const backdatedPro = ({
 	const customerProduct =
 		paidSeatCount === undefined
 			? baseCustomerProduct
-			: { ...baseCustomerProduct, customer_licenses: paidSeats(paidSeatCount) };
+			: {
+					...baseCustomerProduct,
+					customer_licenses: paidSeats({
+						paidQuantity: paidSeatCount,
+						planLicense,
+					}),
+				};
 	const billingContext = contexts.createBilling({
 		customerProducts: [customerProduct],
 		fullProducts: [pro],
@@ -190,7 +221,10 @@ const backdatedPro = ({
 				currentCustomerProduct: customerProduct,
 				...(paidSeatCount !== undefined && {
 					customerLicenseQuantities: [
-						{ licensePlanId: seatProduct.id, totalQuantity: paidSeatCount },
+						{
+							licensePlanId: planLicense.product.id,
+							totalQuantity: paidSeatCount,
+						},
 					],
 				}),
 			},
@@ -387,13 +421,15 @@ describe(
 		});
 
 		test("prorate_immediately over more than a cycle bills the seats for each cycle the gap reaches", () => {
-			const seatLine = billedLinesByPrice(
+			const seatLines = billedLinesByPrice(
 				backdatedPro({
 					backdatedStart: fortyDaysBack,
 					prorationBehavior: "prorate_immediately",
 					paidSeatCount: PAID_SEATS,
 				}),
-			).find(({ priceId }) => priceId === "price_seat");
+			).filter(({ priceId }) => priceId === "price_seat");
+			expect(seatLines).toHaveLength(1);
+			const [seatLine] = seatLines;
 
 			expect(seatLine?.effectivePeriod).toEqual(gapPeriod(fortyDaysBack));
 			expect(seatLine?.amount).toBeCloseTo(
@@ -423,6 +459,19 @@ describe(
 				["price_pro", MONTHLY_PRICE * 2],
 				["price_seat", PAID_SEATS * SEAT_PRICE * 2],
 			]);
+		});
+
+		test("one-off seats are not billed again for the gap", () => {
+			const lines = billedLinesByPrice(
+				backdatedPro({
+					backdatedStart: tenDaysBack,
+					prorationBehavior: "prorate_immediately",
+					paidSeatCount: PAID_SEATS,
+					planLicense: oneOffSeatPlanLicense,
+				}),
+			);
+
+			expect(lines.map(({ priceId }) => priceId)).toEqual(["price_pro"]);
 		});
 
 		test("none bills neither the plan nor its seats for the gap", () => {

@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	type FullCusProduct,
 	type FullCustomerLicense,
+	isOneOffPrice,
 	type LicenseBillingPriceRow,
 	type LineItem,
 	notNullish,
@@ -37,6 +38,7 @@ export const customerLicenseToLineItems = ({
 	customerProduct,
 	customerLicense,
 	direction,
+	excludeOneOffPrices = false,
 	backdateGapRun,
 }: {
 	ctx: AutumnContext;
@@ -44,6 +46,7 @@ export const customerLicenseToLineItems = ({
 	customerProduct: FullCusProduct;
 	customerLicense: FullCustomerLicense;
 	direction: "charge" | "refund";
+	excludeOneOffPrices?: boolean;
 	backdateGapRun?: BackdateGapRun;
 }): LineItem[] => {
 	const planLicense = customerLicense.planLicense;
@@ -77,6 +80,7 @@ export const customerLicenseToLineItems = ({
 	);
 
 	return mergeLicenseBillingRowsByPrice(licenseBillingRows)
+		.filter(({ price }) => !(excludeOneOffPrices && isOneOffPrice(price)))
 		.map((licenseBillingRow) =>
 			licenseBillingRowToLineItem({
 				ctx,
