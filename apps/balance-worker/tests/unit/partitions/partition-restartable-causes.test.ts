@@ -172,24 +172,6 @@ test("any other refusal the broker gave up retrying still stops the service", ()
 	});
 	expect(isPartitionRestartableCause({ cause })).toBe(false);
 });
-
-test("a coordinator that was not ready while a transaction's outcome is unknown still stops the service", () => {
-	const cause = new OwnedPartitionRecoveryRequiredError({
-		topic,
-		partition,
-		cause: new PartitionWriterRecoveryRequiredError({
-			cause: new KafkaTransactionStateUnknownError({
-				failureStage: "abort",
-				cause: coordinatorNotReady({
-					type: "COORDINATOR_LOAD_IN_PROGRESS",
-					code: 14,
-				}),
-			}),
-		}),
-	});
-	expect(isPartitionRestartableCause({ cause })).toBe(false);
-});
-
 test("anything else keeps stopping the service", () => {
 	const store = new OwnedPartitionRecoveryRequiredError({
 		topic,

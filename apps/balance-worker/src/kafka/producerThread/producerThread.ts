@@ -43,6 +43,7 @@ function startThread(init: ProducerThreadInit): ProducerLoop | null {
 				transport: createKafkaTransport({
 					authMode: init.authMode,
 					region: init.region,
+					scram: init.scram,
 					onToken: reportToken,
 				}),
 				limits: init.limits,

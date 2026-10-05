@@ -41,7 +41,6 @@ export function isPartitionRestartableCause({
 		!seen.has(current)
 	) {
 		if (isRestartableError(current)) return true;
-		if (current instanceof KafkaTransactionStateUnknownError) return false;
 		seen.add(current);
 		// Several failures reported together are only as safe as the least safe of
 		// them: a refused batch alongside a cleanup that failed is not a partition

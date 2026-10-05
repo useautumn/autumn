@@ -320,6 +320,7 @@ export async function createBalanceWorker({
 						brokers: env.KAFKA_BROKERS,
 						authMode: env.KAFKA_AUTH_MODE,
 						region: env.AWS_REGION,
+						scram: env.KAFKA_SCRAM,
 						limits: WORKER_KAFKA_CLIENT_LIMITS,
 						sendRingBytes: threads.sendRingBytes,
 						ackRingBytes: PRODUCER_ACK_RING_BYTES,

@@ -1,3 +1,4 @@
+import type { KafkaScramCredentials } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import type { Ring } from "../../../threads/ring/types/ring.js";
 import type { ProducerError } from "./producerError.js";
@@ -18,8 +19,9 @@ export type ProducerConfigSnapshot = Pick<
 export type ProducerThreadInit = {
 	clientId: string;
 	brokers: string[];
-	authMode: "none" | "msk_iam";
+	authMode: "none" | "msk_iam" | "scram";
 	region?: string;
+	scram?: KafkaScramCredentials;
 	limits: {
 		connectionTimeoutMs: number;
 		requestTimeoutMs: number;
