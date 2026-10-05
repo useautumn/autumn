@@ -35,6 +35,7 @@ import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
+import type { CommitPositionSink } from "../writer/types/commitPositionSink.js";
 import type { DecidedMutation } from "../writer/types/mutation.js";
 import type {
 	CommittedOutcomeAppender,
@@ -107,6 +108,8 @@ export type PartitionProcessorDependencies = {
 	appender: CommittedOutcomeAppender;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
+	/** Where the partition's writer publishes its commit position. */
+	commitPositions?: CommitPositionSink;
 	assertCanRead(): void;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
 };

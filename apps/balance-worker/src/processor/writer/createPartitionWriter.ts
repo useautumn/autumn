@@ -1,7 +1,10 @@
 import { heapSize } from "bun:jsc";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
-import { flushDeferredLogs as flushDeferred } from "./actions/commit.js";
+import {
+	failAboveSettled,
+	flushDeferredLogs as flushDeferred,
+} from "./actions/commit.js";
 import {
 	decide as decideMutation,
 	readFreshestState as readFreshestSubjectState,
@@ -18,6 +21,7 @@ import type {
 	PartitionWriterContext,
 	PartitionWriterScope,
 } from "./types/partitionWriter.js";
+import { PartitionWriterDisposedError } from "./writerErrors.js";
 
 export function createPartitionWriter({
 	ctx,
@@ -37,6 +41,7 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			start: ctx.commitPositions?.open(),
 		}),
 	};
 
@@ -55,6 +60,9 @@ export function createPartitionWriter({
 	function dispose(): void {
 		budgetShare?.leave();
 		scope.state.subjects.clear();
+		// A drained writer owes nothing; one disposed mid-flight still owes its issued writes an answer.
+		failAboveSettled({ scope, cause: new PartitionWriterDisposedError() });
+		ctx.commitPositions?.closed();
 	}
 
 	function decide<Reply>(
