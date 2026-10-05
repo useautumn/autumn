@@ -28,7 +28,7 @@ const normalizeExecuteRows = <TRow>(result: unknown): TRow[] => {
 	return result as TRow[];
 };
 
-const normalizeDbExecute = <
+export const normalizeDbExecute = <
 	TDb extends { execute: (query: string | SQLWrapper) => Promise<unknown> },
 >(
 	db: TDb,

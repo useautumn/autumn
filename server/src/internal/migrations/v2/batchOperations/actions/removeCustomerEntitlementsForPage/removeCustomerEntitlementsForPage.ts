@@ -1,7 +1,4 @@
-import type {
-	Feature,
-	FullProductWithoutLicenses,
-} from "@autumn/shared";
+import type { Feature, FullProductWithoutLicenses } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
 import type { BatchMigrationRemovedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
@@ -54,6 +51,7 @@ export const removeCustomerEntitlementsForPage = async ({
 			limit,
 			assertWithinCeiling,
 		}) => {
+			const pageRemovedItems: BatchMigrationRemovedItem[] = [];
 			const candidates = await timePhase({
 				phases,
 				phase: "candidates",
@@ -68,7 +66,8 @@ export const removeCustomerEntitlementsForPage = async ({
 						limit,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0)
+				return { rows: candidates, result: pageRemovedItems };
 			assertWithinCeiling(candidates.length);
 
 			const deletedIds = await timePhase({
@@ -89,7 +88,7 @@ export const removeCustomerEntitlementsForPage = async ({
 				if (!deletedIdSet.has(row.customerEntitlementId)) continue;
 				const fromEntitlement = row.liveDefinition;
 				if (!fromEntitlement) continue;
-				removedItems.push(
+				pageRemovedItems.push(
 					toRemovedItem({
 						row,
 						planId: fromProduct.id,
@@ -97,7 +96,10 @@ export const removeCustomerEntitlementsForPage = async ({
 					}),
 				);
 			}
-			return candidates;
+			return { rows: candidates, result: pageRemovedItems };
+		},
+		onCommit: (result) => {
+			removedItems.push(...result);
 		},
 	});
 

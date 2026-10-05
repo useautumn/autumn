@@ -49,26 +49,26 @@ export const BATCH_MIGRATION_DEFERRED_INFLIGHT = 3;
  * events); a hung call otherwise parks settle/drain until trigger kills the chunk. */
 export const BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS = 5 * 60_000;
 
-/** Budget for one page across its transient-retry attempts. Pages run in
- * ~15s; anything past this is a stall, not a big page. */
+/** Budget for one page. Pages run in ~15s; anything past this is a stall,
+ * not a big page. */
 export const BATCH_MIGRATION_PAGE_TIMEOUT_MS = 5 * 60_000;
 
 /** How often a chunk with no page progress logs where it is stuck. */
 export const BATCH_MIGRATION_STALL_LOG_INTERVAL_MS = 30_000;
 
-/** Kept free at the end of a chunk's deadline: one deferred-op drain, one
- * bounded checkpoint write, and slack for logging and the return. */
+/** Kept free at the end of a chunk's deadline: one deferred-op drain, two
+ * bounded recovery writes (failed-page cache bust + claim release), and slack. */
 export const BATCH_MIGRATION_CHUNK_FINALIZE_RESERVE_MS =
 	BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS +
-	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS +
+	2 * BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS +
 	30_000;
+
+/** Attempts per page transaction when Postgres drops or times out before COMMIT. */
+export const BATCH_MIGRATION_TRANSIENT_DB_ATTEMPTS = 5;
+
+/** First pause between those attempts; doubles each retry (1+2+4+8s). */
+export const BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;
 
 /** Below this much remaining budget a chunk yields `slice_complete` instead
  * of starting a page that could only stall. */
 export const BATCH_MIGRATION_MIN_PAGE_BUDGET_MS = 60_000;
-
-/** Claim+execute+finalize attempts per page when Postgres drops or times out. */
-export const BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS = 5;
-
-/** Pause between those page attempts. */
-export const BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;
