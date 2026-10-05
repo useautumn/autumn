@@ -9,7 +9,12 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { FeatureUsageType } from "@autumn/shared";
+import {
+	BillingInterval,
+	BillWhen,
+	FeatureUsageType,
+	PriceType,
+} from "@autumn/shared";
 import {
 	createSubjectState,
 	subjectStateToFullSubject,
@@ -43,6 +48,20 @@ const pricedAddOn = ({
 	created_at: occurredAt + 1,
 });
 
+/** A prepaid-priced row without its own overage: only an overflow draw may take it below zero. It sorts first in deduction order. */
+const prepaidGrant = ({
+	balance,
+}: {
+	balance: number;
+}): WorkerCustomerEntitlement => ({
+	...createCustomerEntitlement({
+		id: "prepaid",
+		featureId: "inboxes",
+		balance,
+	}),
+	created_at: occurredAt - 1,
+});
+
 const deductInboxes = ({
 	customerEntitlements,
 	value,
@@ -52,14 +71,45 @@ const deductInboxes = ({
 	value: number;
 	overageBehavior: "cap" | "overflow";
 }) => {
+	const hasPrepaidGrant = customerEntitlements.some(
+		(customerEntitlement) => customerEntitlement.id === "prepaid",
+	);
 	const state = createSubjectState({
 		identity,
 		customerProducts: [createCustomerProduct()],
+		customerPrices: hasPrepaidGrant
+			? [
+					{
+						id: "cpr_prepaid",
+						internal_customer_id: "cus_internal_1",
+						customer_product_id: "cp_1",
+						price_id: "price_prepaid",
+						created_at: occurredAt,
+					},
+				]
+			: [],
 		customerEntitlements,
 	});
 	const catalog = createCatalogFor({ state });
 	for (const feature of Object.values(catalog.features))
 		feature.config = { usage_type: FeatureUsageType.Continuous };
+	if (hasPrepaidGrant) {
+		catalog.prices.price_prepaid = {
+			id: "price_prepaid",
+			internal_product_id: "prod_internal_pro",
+			entitlement_id: "ent_prepaid",
+			proration_config: null,
+			config: {
+				type: PriceType.Usage,
+				bill_when: BillWhen.InAdvance,
+				billing_units: 1,
+				internal_feature_id: "feat_inboxes",
+				feature_id: "inboxes",
+				usage_tiers: [],
+				interval: BillingInterval.Month,
+			},
+		};
+	}
 
 	return deduct({
 		fullSubject: subjectStateToFullSubject({ state, catalog }),
@@ -94,6 +144,44 @@ describe("overage priority", () => {
 			},
 		);
 	}
+
+	test.concurrent(
+		"overflow: the priced add-on leads, ahead of a row only overflow admits",
+		() => {
+			const outcome = deductInboxes({
+				customerEntitlements: [
+					prepaidGrant({ balance: 0 }),
+					freeGrant({ balance: 3 }),
+					pricedAddOn({ balance: 0 }),
+				],
+				value: 5,
+				overageBehavior: "overflow",
+			});
+
+			expect(outcome).toMatchObject({ appliedValue: 5, remaining: 0 });
+			expect(balancesAfter(outcome)).toEqual([
+				["free", { balance: 0 }],
+				["addon", { balance: -2 }],
+			]);
+		},
+	);
+
+	test.concurrent(
+		"overflow: a free continuous grant runs over before a row only overflow admits",
+		() => {
+			const outcome = deductInboxes({
+				customerEntitlements: [
+					prepaidGrant({ balance: 0 }),
+					freeGrant({ balance: 3 }),
+				],
+				value: 5,
+				overageBehavior: "overflow",
+			});
+
+			expect(outcome).toMatchObject({ appliedValue: 5, remaining: 0 });
+			expect(balancesAfter(outcome)).toEqual([["free", { balance: -2 }]]);
+		},
+	);
 
 	test.concurrent(
 		"cap: a free continuous grant still runs over when nothing is priced",
