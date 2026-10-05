@@ -6,8 +6,10 @@ import type {
 } from "@autumn/shared";
 import {
 	cp,
+	filterCustomerProductsByProcessorType,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
+	ProcessorType,
 	stripePhaseStartsInFuture,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
@@ -17,7 +19,7 @@ import {
 } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
 import { stripeScheduleMatchesPhases } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/stripeScheduleMatchesPhases";
-import { getInsertedOrPatchedCustomerProductIds } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { getPatchCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -234,6 +236,11 @@ const buildActionForScenario = ({
 	}
 };
 
+/** A recreate unlinks its rows from the old subscription and schedule before relinking them. */
+const isUnlinkedFromStripe = (customerProduct: FullCusProduct) =>
+	(customerProduct.subscription_ids ?? []).length === 0 &&
+	(customerProduct.scheduled_ids ?? []).length === 0;
+
 const shouldCreateFutureSchedule = ({
 	billingContext,
 	scheduledPhases,
@@ -276,14 +283,26 @@ export const buildStripeSubscriptionScheduleAction = ({
 	trialEndsAt?: number;
 }): StripeSubscriptionScheduleResult => {
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
-	const writtenCustomerProductIds = getInsertedOrPatchedCustomerProductIds({
-		autumnBillingPlan,
-	});
+	const insertedCustomerProductIds = new Set(
+		autumnBillingPlan.insertCustomerProducts.map(({ id }) => id),
+	);
+	const patchedCustomerProductIds = new Set(
+		getPatchCustomerProducts({ autumnBillingPlan }).map(
+			({ customerProduct }) => customerProduct.id,
+		),
+	);
 
 	// 1. Filter to relevant customer products
 	const relatedCustomerProducts = finalCustomerProducts.filter(
 		(customerProduct) => {
-			if (writtenCustomerProductIds.has(customerProduct.id)) return true;
+			if (insertedCustomerProductIds.has(customerProduct.id)) return true;
+
+			if (
+				patchedCustomerProductIds.has(customerProduct.id) &&
+				isUnlinkedFromStripe(customerProduct)
+			) {
+				return true;
+			}
 
 			if (
 				stripeSubscription &&
@@ -309,7 +328,10 @@ export const buildStripeSubscriptionScheduleAction = ({
 		},
 	);
 
-	const customerProducts = relatedCustomerProducts.filter(
+	const customerProducts = filterCustomerProductsByProcessorType({
+		customerProducts: relatedCustomerProducts,
+		processorType: ProcessorType.Stripe,
+	}).filter(
 		(customerProduct) =>
 			cp(customerProduct).recurring().hasRelevantStatus().valid,
 	);

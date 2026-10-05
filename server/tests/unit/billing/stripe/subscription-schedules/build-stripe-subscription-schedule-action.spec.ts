@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	type FullCusProduct,
 	ms,
+	ProcessorType,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -37,12 +38,14 @@ const customerProductFor = ({
 	startsAt,
 	endedAt,
 	subscriptionIds,
+	processorType,
 }: {
 	product: typeof pro;
 	status: CusProductStatus;
 	startsAt: number;
 	endedAt?: number;
 	subscriptionIds: string[];
+	processorType?: ProcessorType;
 }) => {
 	const customerProductId = `cus_prod_${product.product.id}`;
 	return customerProducts.create({
@@ -59,6 +62,7 @@ const customerProductFor = ({
 		startsAt,
 		endedAt,
 		subscriptionIds,
+		processorType,
 	});
 };
 
@@ -183,5 +187,40 @@ describe("buildStripeSubscriptionScheduleAction", () => {
 		expect(phases).toHaveLength(2);
 		expectPhaseItems(phases[0]!.items, getStripePriceIds(pro));
 		expectPhaseItems(phases[1]!.items, getStripePriceIds(premium));
+	});
+
+	test("a patched row linked to another subscription stays off the schedule", () => {
+		const otherSubscriptionPro = customerProductFor({
+			product: pro,
+			status: CusProductStatus.Active,
+			startsAt: PRO_STARTED_AT,
+			endedAt: PREMIUM_STARTS_AT,
+			subscriptionIds: ["sub_other"],
+		});
+
+		expect(
+			buildScheduleAction({
+				finalCustomerProducts: [otherSubscriptionPro],
+				patchedCustomerProducts: [otherSubscriptionPro],
+			}),
+		).toEqual({});
+	});
+
+	test("a patched row managed by another processor stays off the schedule", () => {
+		const revenueCatPro = customerProductFor({
+			product: pro,
+			status: CusProductStatus.Active,
+			startsAt: PRO_STARTED_AT,
+			endedAt: PREMIUM_STARTS_AT,
+			subscriptionIds: [],
+			processorType: ProcessorType.RevenueCat,
+		});
+
+		expect(
+			buildScheduleAction({
+				finalCustomerProducts: [revenueCatPro],
+				patchedCustomerProducts: [revenueCatPro],
+			}),
+		).toEqual({});
 	});
 });
