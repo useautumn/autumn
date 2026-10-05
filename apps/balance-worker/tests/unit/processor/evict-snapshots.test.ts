@@ -10,6 +10,7 @@ import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
+import type { SubjectSnapshotMode } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
@@ -19,6 +20,7 @@ import {
 } from "../../fixtures/catalog.js";
 import {
 	createInitializeRequest,
+	createTrackCommand,
 	testIdentity,
 	testOccurredAt,
 	testOrg,
@@ -50,13 +52,15 @@ const evictOf = ({
 	...(refreshSnapshots !== undefined && { refreshSnapshots }),
 });
 
-/** The production processor over the committer's store with evict deletes; DELETEs wait on `deleteGate`. */
+/** The production processor over the committer's store with evict deletes; DELETEs wait on `deleteGate`, record applies on `applyGates`. */
 const createProcessor = async ({
 	logsEvicts,
+	mode = "write",
 	db = createSyntheticWorkerDb(),
 	rowsOf = () => [],
 }: {
 	logsEvicts: boolean;
+	mode?: SubjectSnapshotMode;
 	db?: WorkerDb;
 	/** The snapshot rows Postgres holds for a customer, by entity id (null for its own): what its DELETE returns. */
 	rowsOf?: (customerId: string) => (string | null)[];
@@ -65,6 +69,9 @@ const createProcessor = async ({
 	/** Subject keys of the rows each refresh statement wrote. */
 	const refreshed: string[][] = [];
 	const deleteGate = { held: Promise.resolve() as Promise<void> };
+	/** Each record apply waits on the next gate, if any. */
+	const applyGates: Promise<void>[] = [];
+	const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode });
 	const committer: Committer = {
 		apply: async ({ records, expectedOffset, snapshotIntent }) => {
 			if (records.length === 0 && snapshotIntent) {
@@ -96,6 +103,7 @@ const createProcessor = async ({
 				);
 				return { nextOffset: expectedOffset };
 			}
+			await applyGates.shift();
 			return {
 				nextOffset:
 					(records.at(-1)?.position.offset ?? expectedOffset - 1n) + 1n,
@@ -112,7 +120,7 @@ const createProcessor = async ({
 				insertPartitionProgress: async () => undefined,
 				claimPartitionProgress: async () => undefined,
 			},
-			subjectSnapshotsConfig: createSubjectSnapshotsStore({ mode: "write" }),
+			subjectSnapshotsConfig,
 		},
 	});
 	await stateStore.initializePartition({ topic, partition, nextOffset: 0n });
@@ -126,6 +134,7 @@ const createProcessor = async ({
 			},
 			catalogCache: createTestCatalogCache(),
 			db,
+			subjectSnapshotsConfig,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
 					const baseOffset = appended;
@@ -150,7 +159,7 @@ const createProcessor = async ({
 			logsEvicts,
 		},
 	});
-	return { processor, deleted, refreshed, deleteGate };
+	return { processor, deleted, refreshed, deleteGate, applyGates };
 };
 
 describe("evict snapshot deletes", () => {
@@ -217,6 +226,43 @@ describe("evict snapshot deletes", () => {
 			expect(deleted).toEqual([[keyOf("cus_1")]]);
 		},
 	);
+
+	test("off, an evict waits only for the writes before it, as without snapshots: a commit pinning the customer after it is not waited on", async () => {
+		const { processor, deleted, applyGates } = await createProcessor({
+			logsEvicts: false,
+			mode: "off",
+		});
+		await processor.initialize({ request: createInitializeRequest() });
+		await processor.drain();
+		const first = Promise.withResolvers<void>();
+		const second = Promise.withResolvers<void>();
+		applyGates.push(first.promise, second.promise);
+		try {
+			await processor.track({
+				command: createTrackCommand({ commandId: "t1", value: 1 }),
+			});
+			let answered = false;
+			const evicted = processor
+				.evict({ command: evictOf({ customerId: testIdentity.customerId }) })
+				.then(() => {
+					answered = true;
+				});
+			await processor.track({
+				command: createTrackCommand({ commandId: "t2", value: 1 }),
+			});
+			first.resolve();
+			for (let attempt = 0; !answered && attempt < 50; attempt++)
+				await Bun.sleep(2);
+			// t2 is appended but not stored: only the store of t1, which preceded the evict, is waited on.
+			expect(answered).toBe(true);
+			await evicted;
+		} finally {
+			first.resolve();
+			second.resolve();
+		}
+		await processor.drain();
+		expect(deleted).toEqual([]);
+	});
 
 	test("an evict with nothing resident still lands its DELETE before it answers", async () => {
 		const { processor, deleted } = await createProcessor({ logsEvicts: false });
