@@ -8,6 +8,7 @@ import type {
 const previewToolNames = {
 	attach: "previewAttach",
 	createSchedule: "previewCreateSchedule",
+	setPlans: "previewSetPlans",
 } as const;
 
 export const billing = {

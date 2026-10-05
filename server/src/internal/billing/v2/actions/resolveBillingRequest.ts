@@ -9,6 +9,7 @@ import {
 	customizePlanV1ToV0,
 	type FullProduct,
 	type SetPlansParamsV0,
+	SetPlansParamsV0Schema,
 	type UpdateSubscriptionV0Params,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
@@ -24,6 +25,10 @@ export const ResolveBillingRequestParamsSchema = z.discriminatedUnion("tool", [
 	z.object({
 		request: CreateScheduleParamsV0Schema,
 		tool: z.literal("create_schedule"),
+	}),
+	z.object({
+		request: SetPlansParamsV0Schema,
+		tool: z.literal("set_plans"),
 	}),
 	z.object({
 		request: UpdateSubscriptionV1ParamsSchema,
@@ -68,6 +73,32 @@ export const resolveCustomizedPlan = async ({
 	};
 };
 
+/** Resolves every phase's and unscheduled plan's `customize` into items. */
+const resolveSchedulePlans = async <
+	Request extends CreateScheduleParamsV0 | SetPlansParamsV0,
+>({
+	ctx,
+	request,
+}: {
+	ctx: AutumnContext;
+	request: Request;
+}): Promise<Request> => {
+	const resolvePlans = (plans: ReadonlyArray<CreateSchedulePlanV0>) =>
+		Promise.all(plans.map((plan) => resolveCustomizedPlan({ ctx, plan })));
+	return {
+		...request,
+		phases: await Promise.all(
+			request.phases.map(async (phase) => ({
+				...phase,
+				plans: await resolvePlans(phase.plans),
+			})),
+		),
+		...(request.unscheduled_plans
+			? { unscheduled_plans: await resolvePlans(request.unscheduled_plans) }
+			: {}),
+	};
+};
+
 /** Maps a billing request into the dashboard's dialect — `customize` resolves
  * to items against catalog plans (attach/schedule) or the live subscription (updates). */
 export const resolveBillingRequest = async ({
@@ -81,28 +112,19 @@ export const resolveBillingRequest = async ({
 	unrepresentable: string[];
 }> => {
 	if (params.tool === "create_schedule") {
-		const resolvePlans = (plans: ReadonlyArray<CreateSchedulePlanV0>) =>
-			Promise.all(plans.map((plan) => resolveCustomizedPlan({ ctx, plan })));
-		const request = {
-			...params.request,
-			phases: await Promise.all(
-				params.request.phases.map(async (phase) => ({
-					...phase,
-					plans: await resolvePlans(phase.plans),
-				})),
-			),
-			...(params.request.unscheduled_plans
-				? {
-						unscheduled_plans: await resolvePlans(
-							params.request.unscheduled_plans,
-						),
-					}
-				: {}),
-		};
+		const request = await resolveSchedulePlans({
+			ctx,
+			request: params.request,
+		});
 		return {
-			request: createScheduleParamsToSetPlansParams({
-				params: request as CreateScheduleParamsV0,
-			}),
+			request: createScheduleParamsToSetPlansParams({ params: request }),
+			unrepresentable: [],
+		};
+	}
+
+	if (params.tool === "set_plans") {
+		return {
+			request: await resolveSchedulePlans({ ctx, request: params.request }),
 			unrepresentable: [],
 		};
 	}

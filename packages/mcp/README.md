@@ -26,6 +26,8 @@ Tools:
 - `updateSubscription`
 - `previewCreateSchedule`
 - `createSchedule`
+- `previewSetPlans`
+- `setPlans`
 
 The write tools are marked destructive. Clients should call the matching preview
 tool first where one exists and only call a write tool after explicit user

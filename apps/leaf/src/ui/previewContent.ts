@@ -47,7 +47,7 @@ const lineItemRows = ({
 	return rows;
 };
 
-// attach / createSchedule / updateSubscription previews all share the
+// attach / createSchedule / setPlans / updateSubscription previews all share the
 // BillingPreviewResponse shape (line_items, total, currency, next_cycle).
 // Rendered receipt-style: one table holding line items AND total rows.
 const billingPreviewElements = (payload: LooseRecord): CardChild[] => {

@@ -395,7 +395,8 @@ const actionPhrases = ({
 					running: `Updating ${target}`,
 				};
 			}
-			case "createSchedule": {
+			case "createSchedule":
+			case "setPlans": {
 				const target = `plan changes for ${customerLabel}${entitySuffix}`;
 				return {
 					done: `Scheduled ${target}`,
@@ -966,6 +967,7 @@ const catalogApprovalBlocks = ({
 const BILLING_ACTION_TOOLS = new Set([
 	"attach",
 	"createSchedule",
+	"setPlans",
 	"updateSubscription",
 ]);
 
@@ -1542,7 +1544,8 @@ export const approvalSheetUrl = ({
 	const sheet =
 		normalizedToolName === "updateSubscription"
 			? `sheet=subscription-update${planId ? `&plan_id=${encodeURIComponent(planId)}` : ""}`
-			: normalizedToolName === "createSchedule"
+			: normalizedToolName === "createSchedule" ||
+					normalizedToolName === "setPlans"
 				? "sheet=create-schedule"
 				: "sheet=attach-product";
 	const orgParam = orgId ? `&org_id=${encodeURIComponent(orgId)}` : "";
