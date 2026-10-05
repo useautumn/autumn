@@ -20,6 +20,7 @@ import type {
 } from "../types/partitionRuntimeFactory.js";
 import {
 	assertKafkaBalanceWorkerTimings,
+	assertRecoveryDrainOutlastsProducerRetries,
 	createWorkerProducerConfig,
 } from "../workerConfig.js";
 
@@ -31,6 +32,10 @@ export function createPartitionRuntimeFactory({
 	config: PartitionRuntimeFactoryConfig;
 }): KafkaOwnedPartitionRuntimeFactory {
 	assertKafkaBalanceWorkerTimings({ timings: config.timings });
+	assertRecoveryDrainOutlastsProducerRetries({
+		producerLimits: config.producerLimits,
+		timings: config.timings,
+	});
 	if (!config.ownership.topic.trim() || !config.ownership.endpoint.trim()) {
 		throw new Error("Ownership topic and advertised endpoint are required");
 	}

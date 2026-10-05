@@ -25,6 +25,34 @@ import { workerCheckpointLimits } from "./workerCheckpointConfig.js";
 /** A leader election or a replica rejoining the ISR lasts seconds; an append waits it out rather than end unknown. */
 export const PRODUCER_RETRY_BUDGET_MS = 5_000;
 
+/** kafkajs stretches each backoff by up to this fraction. */
+const PRODUCER_RETRY_JITTER = 0.2;
+
+/** A drain that ends while an append still retries disposes the writer under it, and the append can land after a successor's fence. */
+export function assertRecoveryDrainOutlastsProducerRetries({
+	producerLimits,
+	timings,
+}: {
+	producerLimits: Pick<
+		KafkaProducerLimits,
+		"retryCount" | "initialRetryTimeMs" | "maxRetryTimeMs"
+	>;
+	timings: Pick<KafkaBalanceWorkerTimings, "recoveryDrainTimeoutMs">;
+}): void {
+	let backoffMs = 0;
+	for (let attempt = 0; attempt < producerLimits.retryCount; attempt++)
+		backoffMs += Math.min(
+			producerLimits.initialRetryTimeMs * 2 ** attempt,
+			producerLimits.maxRetryTimeMs,
+		);
+	const worstCaseMs = backoffMs * (1 + PRODUCER_RETRY_JITTER);
+	if (timings.recoveryDrainTimeoutMs <= worstCaseMs) {
+		throw new RangeError(
+			`recoveryDrainTimeoutMs must exceed the producer's worst-case retries (${worstCaseMs} ms)`,
+		);
+	}
+}
+
 export function assertKafkaBalanceWorkerTimings({
 	timings,
 }: {
@@ -183,7 +211,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			fetchMaxWaitTimeMs: env.BALANCE_WORKER_FETCH_MAX_WAIT_MS,
 			healthRefreshIntervalMs: 1000,
 			heartbeatIntervalMs: 3000,
-			recoveryDrainTimeoutMs: 5000,
+			recoveryDrainTimeoutMs: 15000,
 			rebalanceTimeoutMs: 60000,
 			sessionTimeoutMs: 30000,
 		},
