@@ -1,6 +1,5 @@
 import { Button } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
-import { useState } from "react";
 import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state/components/CustomerStateUnscheduledPlans";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
@@ -13,12 +12,9 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { findBackdateRecreateWarning } from "../utils/review/findBackdateRecreateWarning";
-import { gateBackdateRecreateSubmit } from "../utils/review/gateBackdateRecreateSubmit";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
 import { PhaseTimeline } from "./phase/timeline/PhaseTimeline";
-import { BackdateRecreateConfirmDialog } from "./review/BackdateRecreateConfirmDialog";
 import { SetPlansReviewChanges } from "./review/SetPlansReviewChanges";
 import { SchedulePreview } from "./SchedulePreview";
 import { SetPlansSubscriptionNote } from "./SetPlansSubscriptionNote";
@@ -116,14 +112,8 @@ export function CreateScheduleReviewContent() {
 		createsRecurringSubscription,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
-	const [pendingRecreateSubmit, setPendingRecreateSubmit] = useState<
-		(() => void) | null
-	>(null);
 
 	const confirmLabel = getConfirmLabel({ preview });
-	const backdateRecreateWarning = findBackdateRecreateWarning({
-		warnings: preview?.warnings,
-	});
 
 	const {
 		isInvoiceOnlyStart,
@@ -149,14 +139,6 @@ export function CreateScheduleReviewContent() {
 		}
 		handleSubmit();
 	};
-
-	const submitAfterRecreateConfirm = (submit: () => void) =>
-		gateBackdateRecreateSubmit({
-			warnings: preview?.warnings,
-			submit,
-			requestConfirm: (confirmedSubmit) =>
-				setPendingRecreateSubmit(() => confirmedSubmit),
-		});
 
 	const isDisabled = isPreviewLoading || !!error;
 
@@ -187,34 +169,20 @@ export function CreateScheduleReviewContent() {
 					disabledReason={invoiceDisabledReason}
 					tooltipClassName="max-w-(--anchor-width)"
 					isLoading={isInvoiceOnlyStart && isPending}
-					onClick={() => submitAfterRecreateConfirm(handleInvoiceButtonClick)}
+					onClick={handleInvoiceButtonClick}
 				>
 					{invoiceButtonLabel}
 				</DisabledTooltipButton>
 				<Button
 					variant="primary"
 					className="w-full"
-					onClick={() => submitAfterRecreateConfirm(handlePrimaryButtonClick)}
+					onClick={handlePrimaryButtonClick}
 					isLoading={isPending}
 					disabled={isDisabled}
 				>
 					{confirmLabel}
 				</Button>
 			</BillingFooter>
-			{backdateRecreateWarning && (
-				<BackdateRecreateConfirmDialog
-					warning={backdateRecreateWarning}
-					open={pendingRecreateSubmit !== null}
-					isPending={isPending}
-					onOpenChange={(open) => {
-						if (!open) setPendingRecreateSubmit(null);
-					}}
-					onConfirm={() => {
-						pendingRecreateSubmit?.();
-						setPendingRecreateSubmit(null);
-					}}
-				/>
-			)}
 		</div>
 	);
 }
