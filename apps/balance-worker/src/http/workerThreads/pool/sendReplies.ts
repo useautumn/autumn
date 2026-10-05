@@ -189,6 +189,8 @@ export function failHeld({
 	scope: HttpWorkerPoolScope;
 	failure: HeldFailure;
 }): void {
+	// Without inline routes nothing is held, and a thread treats a FAIL frame it can't hold as fatal.
+	if (!scope.config.inline) return;
 	const { partition, aboveSeq, lastSeq, status } = failure;
 	const body = encoder.encode(failure.body);
 	for (const lane of scope.state.lanes)
