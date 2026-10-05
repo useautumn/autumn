@@ -222,3 +222,42 @@ describe("HTTP worker pool: replies held by commit position", () => {
 		});
 	});
 });
+
+test("a pool without inline routes holds nothing, so a published failure is ignored and it keeps serving", async () => {
+	const port = await freePort();
+	const fatal: unknown[] = [];
+	const listener = await createHttpWorkerPool({
+		ctx: {
+			fetch: async () => new Response(JSON.stringify({ via: "fetch" })),
+			logger,
+			onFatal: ({ cause }) => fatal.push(cause),
+		},
+		config: {
+			hostname: "127.0.0.1",
+			port,
+			maxRequestBodySize: 1 << 20,
+			threads: 1,
+			requestRingBytes: 1 << 16,
+			replyRingBytes: 1 << 16,
+		},
+	}).listen();
+	try {
+		listener.failHeld({
+			partition: 0,
+			aboveSeq: 0,
+			lastSeq: 1,
+			status: 503,
+			body: "{}",
+		});
+		const answer = await answerOf(
+			fetch(`http://127.0.0.1:${port}/v1/track`, {
+				method: "POST",
+				body: "{}",
+			}),
+		);
+		expect(answer).toEqual({ status: 200, via: "fetch" });
+		expect(fatal).toEqual([]);
+	} finally {
+		await listener.stop();
+	}
+});
