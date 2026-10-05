@@ -154,7 +154,10 @@ test("allocation controls: omit preserves, replacement releases omitted entities
 	const cleared = await autumnV2_3.customers.update(customerId, {
 		billing_controls: { balance_allocations: [] },
 	});
-	expect(cleared.billing_controls.balance_allocations).toBeUndefined();
+	expectAllocationControls({
+		actual: cleared.billing_controls.balance_allocations,
+		expected: [],
+	});
 	expect(cleared.balances[TestFeature.Messages]).toMatchObject({
 		granted: 10000,
 		remaining: 10000,
