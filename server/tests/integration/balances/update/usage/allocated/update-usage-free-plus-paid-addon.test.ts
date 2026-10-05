@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomer, ApiCustomerV3 } from "@autumn/shared";
+import type { ApiCustomer } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -151,7 +151,8 @@ test.concurrent(
 			withPause: true,
 		});
 		await expectCustomerInvoiceCorrect({
-			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			customerId,
+			autumn: autumnV1,
 			count: 1,
 			latestTotal: PRICE_PER_USER,
 		});
