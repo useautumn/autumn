@@ -403,3 +403,55 @@ test.concurrent(
 		});
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: A scheduled swap cannot remove plans
+//
+// Removals expire immediately, but an end_of_cycle attach only starts the new
+// plan at the end of the cycle — the customer would lose the removed plan's
+// access in between, with no credit. The combination is rejected.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("remove-plan-ids separate sub 5: an end_of_cycle swap cannot remove plans")}`,
+	async () => {
+		const customerId = "remove-plan-ids-separate-sub-5";
+		const marketing = marketingPlan();
+		const transactional = transactionalPlan();
+		const enterprise = enterprisePlan();
+
+		const { autumnV1, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [marketing, transactional, enterprise] }),
+			],
+			actions: [
+				s.billing.attach({ productId: transactional.id }),
+				s.billing.attach({
+					productId: marketing.id,
+					newBillingSubscription: true,
+				}),
+			],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: enterprise.id,
+					remove_plan_ids: [marketing.id],
+					plan_schedule: "end_of_cycle",
+					redirect_mode: "if_required",
+				}),
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer,
+			active: [marketing.id, transactional.id],
+			notPresent: [enterprise.id],
+		});
+	},
+);
