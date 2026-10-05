@@ -34,6 +34,20 @@ describe("getAttachConfirmLabel", () => {
 		).toBe("Preview Schedule");
 	});
 
+	test("an immediate change on an advanced test clock charges rather than schedules", () => {
+		const testClockNow = addDays(NOW, 31).getTime();
+		expect(
+			getAttachConfirmLabel({
+				previewData: {
+					...previewData,
+					outgoing: [{ effective_at: testClockNow }],
+				},
+				startDate: null,
+				now: testClockNow,
+			}),
+		).toBe("Charge Customer");
+	});
+
 	test("immediate paid attach charges customer", () => {
 		expect(
 			getAttachConfirmLabel({
