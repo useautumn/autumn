@@ -11,7 +11,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 import {
 	getCustomerSchedulesByScope,
@@ -183,7 +183,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule: entity schedule replaces customer schedule; plan-level entity_id preserved")}`,
+	`${chalk.yellowBright("create-schedule: entity schedule keeps customer-level plans in the one customer schedule")}`,
 	async () => {
 		const pro = products.pro({
 			id: "pro",
@@ -258,19 +258,16 @@ test.concurrent(
 			Object.values(entitySchedules).map((schedule) => schedule.id),
 		).toEqual([entityScheduleId]);
 
-		const replacedScheduledProducts = await ctx.db
-			.select()
-			.from(customerProducts)
-			.where(
-				inArray(
-					customerProducts.id,
-					customerSchedule.phases[1]!.customer_product_ids,
-				),
-			);
-		expect(replacedScheduledProducts).toHaveLength(0);
+		// An entity request leaves customer-level plans out of scope, so they fold into the one schedule.
+		const customerPlanIds = customerSchedule.phases.flatMap(
+			(phase) => phase.customer_product_ids,
+		);
+		const mergedPlanIds = entitySchedule.phases.flatMap(
+			(phase) => phase.customer_product_ids,
+		);
+		expect(mergedPlanIds).toEqual(expect.arrayContaining(customerPlanIds));
 
-		// Every product the replaced schedule placed ends now, including its started plan.
-		const replacedOpeningProducts = await ctx.db
+		const [customerOpeningProduct] = await ctx.db
 			.select()
 			.from(customerProducts)
 			.where(
@@ -279,17 +276,33 @@ test.concurrent(
 					customerSchedule.phases[0]!.customer_product_ids,
 				),
 			);
-		expect(replacedOpeningProducts).toHaveLength(1);
-		expect(replacedOpeningProducts[0]!.product_id).toBe(pro.id);
-		expect(replacedOpeningProducts[0]!.status).toBe(CusProductStatus.Expired);
+		expect(customerOpeningProduct!.product_id).toBe(pro.id);
+		expect(customerOpeningProduct!.status).toBe(CusProductStatus.Active);
+		expect(customerOpeningProduct!.internal_entity_id).toBeNull();
 
-		const entityScheduledProducts = await ctx.db
+		const [customerScheduledProduct] = await ctx.db
 			.select()
 			.from(customerProducts)
 			.where(
 				inArray(
 					customerProducts.id,
-					entitySchedule.phases[1]!.customer_product_ids,
+					customerSchedule.phases[1]!.customer_product_ids,
+				),
+			);
+		expect(customerScheduledProduct!.product_id).toBe(pro.id);
+		expect(customerScheduledProduct!.status).toBe(CusProductStatus.Scheduled);
+		expect(customerScheduledProduct!.internal_entity_id).toBeNull();
+
+		const entityScheduledProducts = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(
+				and(
+					inArray(
+						customerProducts.id,
+						entitySchedule.phases[1]!.customer_product_ids,
+					),
+					eq(customerProducts.product_id, addon.id),
 				),
 			);
 		expect(entityScheduledProducts).toHaveLength(1);
