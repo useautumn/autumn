@@ -13,6 +13,7 @@ import {
 	RCMappingService,
 	type RevenuecatFeatureQuantity,
 } from "@/external/revenueCat/misc/RCMappingService";
+import { setRevenueCatLogContext } from "@/external/revenueCat/misc/revenueCatLogContext";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
@@ -201,7 +202,7 @@ const writeRevenueCatIdentity = async ({
  * first, then falls back to `customer_id`. Ambiguity (processors key and
  * customer_id resolving to different customers) is rejected, not silently picked.
  */
-const resolveRevenueCatCustomer = async ({
+export const resolveRevenueCatCustomer = async ({
 	ctx,
 	appUserId,
 	originalAppUserId,
@@ -551,6 +552,7 @@ export const resolveRevenuecatResources = async ({
 	);
 
 	ctx.customerId = customer.id ?? "";
+	setRevenueCatLogContext({ ctx, customerId: ctx.customerId });
 	const { ctx: routedCtx } = getCtxWithCustomerRedis({
 		ctx,
 		customerId: ctx.customerId,

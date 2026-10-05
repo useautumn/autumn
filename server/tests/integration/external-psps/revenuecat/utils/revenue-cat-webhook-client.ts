@@ -8,7 +8,8 @@ type RevenueCatEventType =
 	| "EXPIRATION"
 	| "NON_RENEWING_PURCHASE"
 	| "BILLING_ISSUE"
-	| "PRODUCT_CHANGE";
+	| "PRODUCT_CHANGE"
+	| "TRANSFER";
 
 interface BaseWebhookEvent {
 	product_id: string;
@@ -365,6 +366,32 @@ export class RevenueCatWebhookClient {
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 			},
+		});
+	}
+
+	/**
+	 * Send TRANSFER event - purchases moved from one RC user to another.
+	 * `mock` serves the destination's current RC subscriptions/purchases.
+	 */
+	async transfer({
+		transferredFrom,
+		transferredTo,
+		mock,
+		subscriberAttributes,
+	}: {
+		transferredFrom: string[];
+		transferredTo: string[];
+		mock?: RevenueCatMockFixtures;
+		subscriberAttributes?: Record<string, string>;
+	}) {
+		return this.sendEvent({
+			type: "TRANSFER",
+			event: {
+				transferred_from: transferredFrom,
+				transferred_to: transferredTo,
+			},
+			mock,
+			subscriberAttributes,
 		});
 	}
 
