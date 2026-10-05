@@ -268,4 +268,33 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 		});
 		expect(attempts).toBe(1);
 	}, 5000);
+
+	test("an abandoned standalone statement is cancelled on the server too", async () => {
+		const marker = `standalone_${Date.now()}`;
+		await withPageDb({
+			queryTimeoutMs: 200,
+			maxAttempts: 1,
+			run: async ({ page }) => {
+				const outcome = await page.db
+					.execute(sql.raw(`select pg_sleep(3) as ${marker}`))
+					.then(
+						() => null,
+						(error: unknown) => error,
+					);
+				expect(outcome).toBeInstanceOf(MigrationDbDeadlineError);
+			},
+		});
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		const admin = new pg.Client({ connectionString: databaseUrl });
+		await admin.connect();
+		try {
+			const running = await admin.query(
+				"SELECT pid FROM pg_stat_activity WHERE state = 'active' AND query LIKE $1",
+				[`%${marker}%`],
+			);
+			expect(running.rows).toEqual([]);
+		} finally {
+			await admin.end();
+		}
+	}, 5000);
 });

@@ -52,7 +52,13 @@ export const createMigrationPageDb = ({
 			queryTimeoutMs,
 			maxAttempts,
 			retryDelayMs,
-			run: (query) => query(config, values),
+			// A discarded socket doesn't stop the server; this bounds an abandoned copy.
+			run: async (query) => {
+				await query(
+					`SET LOCAL statement_timeout = ${Math.floor(queryTimeoutMs)}`,
+				);
+				return query(config, values);
+			},
 		});
 
 	const db = queryToDb(standaloneQuery);
