@@ -1,4 +1,7 @@
-import { KafkaBatchNotCommittedError } from "@autumn/kafka";
+import {
+	KafkaBatchNotCommittedError,
+	KafkaTransactionStateUnknownError,
+} from "@autumn/kafka";
 import { FlushBookmarkConflictError } from "@autumn/postgres";
 import { MutationBatchNotCommittedError } from "../../processor/writer/writerErrors.js";
 import {
@@ -18,9 +21,10 @@ import {
  *  transactional id or the coordinator expired a transaction a stalled thread
  *  left open, this runtime's word on what landed is gone, and a fresh bootstrap
  *  reads the answer from the log and the store. A standby preparation that
- *  failed is the fourth: it holds no producer and wrote nothing. Restarting
- *  goes through the ownership claim, so a partition another worker now holds
- *  is not taken back.
+ *  failed is the fourth: it holds no producer and wrote nothing. An append whose
+ *  retries ran out is the fifth: the bootstrap replays whatever of it landed.
+ *  Restarting goes through the ownership claim, so a partition another worker
+ *  now holds is not taken back.
  *  Stopping the whole service instead, as it did before, turned one stalled
  *  partition into an exit that took the worker's healthy partitions with it. */
 export function isPartitionRestartableCause({
@@ -58,6 +62,7 @@ function isRestartableError(error: object): boolean {
 	return (
 		error instanceof MutationBatchNotCommittedError ||
 		error instanceof KafkaBatchNotCommittedError ||
+		error instanceof KafkaTransactionStateUnknownError ||
 		error instanceof FlushBookmarkConflictError ||
 		error instanceof OwnedPartitionProducerFencedError ||
 		error instanceof PartitionPreparationFailedError
