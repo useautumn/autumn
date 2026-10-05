@@ -204,6 +204,7 @@ export const createCommitterDb = ({
 					ctx: { db: ctx.postgres.db, timing: timeFlushSection },
 					request,
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
+					roundTrips: "single",
 				}),
 		}),
 });
