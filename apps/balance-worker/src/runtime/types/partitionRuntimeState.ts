@@ -43,4 +43,6 @@ export type PartitionRuntimeState = {
 	startupAbortController: AbortController;
 	checkpointLease: PartitionCheckpointLease | null;
 	unavailableListeners: Set<RuntimeUnavailableListener>;
+	/** Since the runtime was created; partition health reports them. */
+	requestCounters: { droppedPastDeadline: number };
 };

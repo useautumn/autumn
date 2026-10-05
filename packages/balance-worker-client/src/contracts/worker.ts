@@ -150,6 +150,35 @@ export function requestBudgetHeaderValue({
 	return String(Math.max(0, Math.floor(expiresAt - now)));
 }
 
+/** The wall-clock moment (epoch ms) every caller of this request has stopped waiting. The budget
+ *  cannot say it: a request queued behind a stalled worker arrives with its budget unspent. */
+export const WORKER_REQUEST_DEADLINE_HEADER = "x-request-deadline-at";
+
+/** The header's value for a request that expires at `expiresAt` (a performance.now() time). */
+export function requestDeadlineHeaderValue({
+	expiresAt,
+	now = performance.now(),
+	wallNow = Date.now(),
+}: {
+	expiresAt: number;
+	now?: number;
+	wallNow?: number;
+}): string {
+	return String(Math.floor(wallNow + expiresAt - now));
+}
+
+/** Undefined for a missing or malformed header: the worker then runs the request whenever it reaches it. */
+export function readRequestDeadlineHeader({
+	value,
+}: {
+	value: string | null | undefined;
+}): number | undefined {
+	if (value === null || value === undefined) return undefined;
+	const trimmed = value.trim();
+	if (!/^\d{1,15}$/.test(trimmed)) return undefined;
+	return Number(trimmed);
+}
+
 /** Undefined for a missing or malformed header: the worker then waits its fixed default. */
 export function readRequestBudgetHeader({
 	value,

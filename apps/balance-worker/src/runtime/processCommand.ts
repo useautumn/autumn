@@ -8,7 +8,10 @@ import { PartitionWriterRecoveryRequiredError } from "../processor/writer/writer
 import { runWithAnswerDeadline } from "./answerDeadline.js";
 import { assertRuntimeReady } from "./getRuntimeHealth.js";
 import { enterRuntimeRecovery } from "./lifecycle/enterRuntimeRecovery.js";
-import { OwnedPartitionProducerFencedError } from "./runtimeErrors.js";
+import {
+	OwnedPartitionProducerFencedError,
+	RequestPastDeadlineError,
+} from "./runtimeErrors.js";
 import type { PartitionRuntimeScope } from "./types/partitionRuntimeState.js";
 
 export type ProcessorRun<Decision> = (
@@ -21,11 +24,19 @@ export async function processCommand<Decision>({
 	state,
 	run,
 	budgetMs,
+	deadlineAt,
 }: PartitionRuntimeScope & {
 	run: ProcessorRun<Decision>;
 	/** How long the caller will still wait; unset for a caller that did not say. */
 	budgetMs?: number;
+	/** Epoch ms the caller stops waiting; unset for a caller that did not say. */
+	deadlineAt?: number;
 }): Promise<Decision> {
+	// Queued behind a stalled loop, the caller has already failed open: an answer now is pure cost.
+	if (deadlineAt !== undefined && Date.now() >= deadlineAt) {
+		state.requestCounters.droppedPastDeadline++;
+		throw new RequestPastDeadlineError();
+	}
 	const answerBy = answerDeadlineOf({ budgetMs });
 	if (state.status === "activating")
 		await waitForActivation({ ctx, state, budgetMs });

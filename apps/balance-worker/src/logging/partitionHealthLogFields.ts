@@ -14,6 +14,7 @@ export function partitionHealthLogFields({
 		highWatermark: health.highWatermark?.toString() ?? null,
 		lag: health.lag?.toString() ?? null,
 		failureReason: health.failureReason,
+		requests: health.requests ?? null,
 		commands: health.commands
 			? {
 					consumedNextOffset:

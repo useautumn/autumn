@@ -125,6 +125,9 @@ export const BALANCE_WORKER_ACTIVATION_WAIT_MS = 500;
 export const BALANCE_WORKER_ACTIVATION_HOLD_MARGIN_MS = 100;
 export const BALANCE_WORKER_ACTIVATION_HOLD_MAX_MS = 5_000;
 export const BALANCE_WORKER_DEFERRED_COMMIT_MS = 1_000;
+/** Checks one customer may have waiting for its load on a partition; past it the next is shed
+ *  as overloaded. A resident customer's checks are never counted: they answer within the turn. */
+export const BALANCE_WORKER_MAX_IN_FLIGHT_CHECKS_PER_CUSTOMER = 500;
 /** Queued commands decided but not yet committed, per partition: two full commits' worth,
  *  well inside the writer's pending capacity. */
 export const BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT = 200;

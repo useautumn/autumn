@@ -45,6 +45,7 @@ import {
 	OwnedPartitionProducerFencedError,
 	OwnedPartitionRecoveryRequiredError,
 	PartitionPreparationFailedError,
+	RequestPastDeadlineError,
 } from "../../../src/runtime/runtimeErrors.js";
 import type {
 	PartitionOutcomeFollowerPort,
@@ -571,6 +572,7 @@ describe("owned partition runtime", () => {
 				highWatermark: 5n,
 				lag: 5n,
 				failureReason: null,
+				requests: { droppedPastDeadline: 0, checksShed: 0 },
 			});
 			await expect(
 				runtime.process((processor) =>
@@ -1917,6 +1919,39 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				expect(
 					await f.runtime.process(async () => readAnswerDeadline()),
 				).toBeUndefined();
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("a command whose caller has already stopped waiting is dropped before it runs, and counted", async () => {
+			const f = createFixture();
+			try {
+				await f.runtime.prepare();
+				await f.runtime.activate();
+				let ran = false;
+				await expect(
+					f.runtime.process(
+						async () => {
+							ran = true;
+							return "served";
+						},
+						{ budgetMs: 800, deadlineAt: Date.now() - 1 },
+					),
+				).rejects.toBeInstanceOf(RequestPastDeadlineError);
+				expect(ran).toBe(false);
+				expect(
+					await f.runtime.process(async () => "served", {
+						deadlineAt: Date.now() + 1_000,
+					}),
+				).toBe("served");
+				expect(f.runtime.getHealth().requests).toEqual({
+					droppedPastDeadline: 1,
+					checksShed: 0,
+				});
+				// NOT_READY with no budget left: the caller fails open and nothing resends it.
+				expect(
+					workerErrorOf({ cause: new RequestPastDeadlineError() }),
+				).toMatchObject({ status: 503, error: { code: "NOT_READY" } });
 			} finally {
 				await f.cleanup();
 			}
