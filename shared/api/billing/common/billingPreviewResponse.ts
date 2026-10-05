@@ -38,9 +38,9 @@ export const PreviewTaxSchema = z.object({
 	currency: z.string().meta({
 		description: "Three-letter currency code.",
 	}),
-	status: z.enum(["complete", "incomplete"]).meta({
+	status: z.enum(["complete", "incomplete", "requires_location"]).meta({
 		description:
-			"Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).",
+			"Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.",
 	}),
 });
 

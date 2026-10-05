@@ -1,6 +1,7 @@
 export * from "./attachPreviewResponse";
 export * from "./billingBehavior";
 export * from "./billingChangeResponse";
+export * from "./billingDetailsBillingParams";
 export * from "./billingParamsBase/billingParamsBaseV0";
 export * from "./billingParamsBase/billingParamsBaseV1";
 export * from "./billingPreviewChange";
@@ -22,4 +23,5 @@ export * from "./multi/index";
 export * from "./redirectMode";
 export * from "./refundLastPayment";
 export * from "./subscriptionParams";
+export * from "./taxParams";
 export * from "./transitionRules";

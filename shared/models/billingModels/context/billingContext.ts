@@ -1,3 +1,4 @@
+import type { BillingDetailsBillingParams } from "@api/billing/common/billingDetailsBillingParams";
 import type {
 	BillingBehavior,
 	CancelAction,
@@ -125,6 +126,9 @@ export interface BillingContext {
 	checkoutSessionParams?: Record<string, unknown>;
 	userMetadata?: Record<string, string>;
 	taxRateId?: string;
+	/** Per-request automatic tax override; undefined follows the org setting. */
+	automaticTaxEnabled?: boolean;
+	billingDetails?: BillingDetailsBillingParams;
 
 	skipBillingChanges?: boolean;
 	dryRunStripe?: boolean;

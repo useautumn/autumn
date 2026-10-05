@@ -25,6 +25,8 @@ import { publishBillingTransition } from "@/internal/billing/v2/publish/publishB
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { applyBillingDetailsForBilling } from "@/internal/billing/v2/utils/tax/applyBillingDetailsForBilling";
+import { resolveTaxRateId } from "@/internal/billing/v2/utils/tax/resolveTaxRateId";
 import { preserveSubjectCache } from "@/internal/customers/cache/fullSubject/actions/preserveSubjectCache.js";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
@@ -59,6 +61,10 @@ export async function attach({
 
 	params = {
 		...params,
+		tax_rate_id: resolveTaxRateId({
+			tax: params.tax,
+			taxRateId: params.tax_rate_id,
+		}),
 		carry_over_usages: await resolveCarryOverUsagesParam({
 			ctx,
 			carryOverUsages: params.carry_over_usages,
@@ -208,7 +214,13 @@ export async function attach({
 		});
 	}
 
-	// 6. Execute billing plan
+	// 6. Save request billing details first so tax resolves against the new location
+	billingContext.stripeCustomer = await applyBillingDetailsForBilling({
+		ctx,
+		billingContext,
+	});
+
+	// 7. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
@@ -221,7 +233,7 @@ export async function attach({
 		preserveSubjectCache({ ctx });
 	}
 
-	// 7. Publish the compute-time balance transition
+	// 8. Publish the compute-time balance transition
 	await publishBillingTransition({
 		ctx,
 		billingContext,

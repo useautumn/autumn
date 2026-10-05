@@ -90,15 +90,15 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 7. Build params. Tax policy is baked in here (not at execute time) so
 	// the action object is self-describing in logs/EXTRA_LOGS.
-	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> = org.config
-		.automatic_tax
-		? {
-				automatic_tax: { enabled: true },
-				billing_address_collection: "required",
-				customer_update: { address: "auto", name: "auto" },
-				tax_id_collection: { enabled: true },
-			}
-		: {};
+	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> =
+		org.config.automatic_tax && billingContext.automaticTaxEnabled !== false
+			? {
+					automatic_tax: { enabled: true },
+					billing_address_collection: "required",
+					customer_update: { address: "auto", name: "auto" },
+					tax_id_collection: { enabled: true },
+				}
+			: {};
 
 	const params: Stripe.Checkout.SessionCreateParams = {
 		customer: stripeCustomer?.id ?? "none",
