@@ -14,9 +14,12 @@ const optionIndex = new Map(
 export function TaxIdTypeSelect({
 	value,
 	onValueChange,
+	compact = false,
 }: {
 	value: string | null;
 	onValueChange: (id: string) => void;
+	/** Narrow trigger showing only the flag and registration label. */
+	compact?: boolean;
 }) {
 	return (
 		<SearchableSelect
@@ -31,13 +34,19 @@ export function TaxIdTypeSelect({
 				option ? (
 					<span className="flex items-center gap-2 truncate">
 						<span>{option.flag}</span>
-						<span>{option.country}</span>
-						<span className="truncate text-tertiary-foreground">
+						{!compact && <span>{option.country}</span>}
+						<span
+							className={
+								compact ? "truncate" : "truncate text-tertiary-foreground"
+							}
+						>
 							{option.label}
 						</span>
 					</span>
 				) : (
-					<span className="text-tertiary-foreground">Registration type</span>
+					<span className="text-tertiary-foreground">
+						{compact ? "Type" : "Registration type"}
+					</span>
 				)
 			}
 			renderOption={(option) => {
@@ -58,7 +67,7 @@ export function TaxIdTypeSelect({
 			}}
 			searchable
 			searchPlaceholder="Search by country or type"
-			triggerClassName="w-56 shrink-0"
+			triggerClassName={compact ? "w-28 shrink-0" : "w-56 shrink-0"}
 			contentClassName="w-[28rem]"
 		/>
 	);

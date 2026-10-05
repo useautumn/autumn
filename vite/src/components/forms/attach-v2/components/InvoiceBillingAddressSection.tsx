@@ -18,8 +18,20 @@ import type { InvoiceBillingDetailsForm } from "../utils/invoiceBillingDetails";
 
 const MAX_ADDRESS_LINES = 2;
 
+const TAX_EXEMPT_DESCRIPTIONS: Record<
+	InvoiceBillingDetailsForm["taxExempt"],
+	string
+> = {
+	none: "Taxed normally. Needs a billing address.",
+	exempt: "Never charged tax. No address needed.",
+	reverse: "Customer self-assesses tax. Needs an address and a tax ID.",
+};
+
 const TAX_EXEMPT_OPTIONS = Object.entries(TAX_EXEMPT_LABELS).map(
-	([value, label]) => ({ value, label: value === "none" ? "None" : label }),
+	([value, label]) => ({
+		value: value as InvoiceBillingDetailsForm["taxExempt"],
+		label: value === "none" ? "None" : label,
+	}),
 );
 
 function Field({
@@ -52,10 +64,11 @@ export function InvoiceBillingAddressSection({
 		form.setFieldValue("billingDetails", { ...details, ...changes });
 
 	const taxRow = (
-		<>
-			<Field label="Tax ID">
+		<div className="flex gap-2">
+			<Field label="Tax ID" className="flex-1 min-w-0">
 				<div className="flex gap-2">
 					<TaxIdTypeSelect
+						compact
 						value={details.taxIdOptionId}
 						onValueChange={(taxIdOptionId) => patch({ taxIdOptionId })}
 					/>
@@ -67,7 +80,7 @@ export function InvoiceBillingAddressSection({
 					/>
 				</div>
 			</Field>
-			<Field label="Tax exemption" className="w-40">
+			<Field label="Tax exemption" className="w-32 shrink-0">
 				<Select
 					value={details.taxExempt}
 					items={TAX_EXEMPT_OPTIONS}
@@ -80,18 +93,27 @@ export function InvoiceBillingAddressSection({
 					<SelectTrigger className="w-full">
 						<SelectValue />
 					</SelectTrigger>
-					<SelectContent>
+					<SelectContent align="end" className="w-62">
 						<SelectGroup>
 							{TAX_EXEMPT_OPTIONS.map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
+								<SelectItem
+									key={option.value}
+									value={option.value}
+									className="items-start py-1.5"
+								>
+									<span className="flex flex-col gap-0.5">
+										<span>{option.label}</span>
+										<span className="text-xs text-tertiary-foreground whitespace-normal">
+											{TAX_EXEMPT_DESCRIPTIONS[option.value]}
+										</span>
+									</span>
 								</SelectItem>
 							))}
 						</SelectGroup>
 					</SelectContent>
 				</Select>
 			</Field>
-		</>
+		</div>
 	);
 
 	return (
