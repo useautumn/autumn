@@ -492,6 +492,20 @@ describe(chalk.yellowBright("diffToReview"), () => {
 		expect(review.withdrawnStarts).toEqual([]);
 	});
 
+	test("an ongoing plan added now is listed in the first phase only", () => {
+		const review = reviewFor({
+			billingContext: buildContext({
+				existing: [running({ product: pro })],
+				opening: [{ fullProduct: pro }, { fullProduct: sso, ongoing: true }],
+				later: [{ startsAt: PHASE_B, plans: [{ fullProduct: premium }] }],
+			}),
+		});
+		expect(phaseRows(review)).toEqual([
+			["sso:starts", "pro:kept"],
+			["premium:starts"],
+		]);
+	});
+
 	test("a kept cancellation is not a removed phase when an unrelated ongoing plan is added", () => {
 		const cancelingBonus = {
 			...running({ product: bonus, endedAt: PHASE_B }),
