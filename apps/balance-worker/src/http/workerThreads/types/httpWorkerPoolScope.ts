@@ -19,5 +19,17 @@ export type HttpWorkerPoolScope = {
 		stopping: boolean;
 		failed: boolean;
 		flushScheduled: boolean;
+		/** Held replies too big for the ring, waiting here for their commit position. */
+		heldOnDecideThread: HeldOnDecideThread[];
 	};
+};
+
+export type HeldOnDecideThread = {
+	lane: HttpWorkerLane;
+	reqId: number;
+	partition: number;
+	seq: number;
+	status: number;
+	headers: [string, string][];
+	body: Uint8Array;
 };

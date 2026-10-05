@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+	FAIL_FRAME,
+	readFailFrame,
+	writeFailFrame,
+} from "../../../../src/http/workerThreads/frames/failFrame.js";
+import {
 	REPLY_FRAME,
 	readReplyFrame,
 	writeReplyFrame,
@@ -73,8 +78,54 @@ describe("HTTP worker frames", () => {
 		expect(readReplyFrame({ reader, frame })).toEqual({
 			reqId: 9,
 			status: 409,
+			partition: 0,
+			heldUntilSeq: 0,
 			headers,
 			body,
+		});
+	});
+
+	test("a held reply carries its partition and the sequence number it waits for; a fail frame its range", () => {
+		const { writer, reader } = ringPair();
+		const body = encoder.encode('{"ok":true}');
+		writeReplyFrame({
+			writer,
+			reqId: 3,
+			status: 200,
+			partition: 7,
+			heldUntilSeq: 2 ** 40 + 1,
+			metaText: JSON.stringify({ headers: [] }),
+			body,
+		});
+		writeFailFrame({
+			writer,
+			fail: {
+				partition: 7,
+				aboveSeq: 2 ** 40,
+				lastSeq: 2 ** 40 + 5,
+				status: 503,
+				body: encoder.encode('{"error":{"code":"NOT_READY"}}'),
+			},
+		});
+		writer.flush();
+		const reply = reader.next();
+		if (!reply) throw new Error("no reply frame");
+		expect(readReplyFrame({ reader, frame: reply })).toMatchObject({
+			reqId: 3,
+			partition: 7,
+			heldUntilSeq: 2 ** 40 + 1,
+		});
+		reader.advance();
+		const fail = reader.next();
+		if (!fail) throw new Error("no fail frame");
+		expect(fail.type).toBe(FAIL_FRAME);
+		const read = readFailFrame({ reader, frame: fail });
+		expect({ ...read, body: new TextDecoder().decode(read.body) }).toEqual({
+			partition: 7,
+			aboveSeq: 2 ** 40,
+			lastSeq: 2 ** 40 + 5,
+			status: 503,
+			body: '{"error":{"code":"NOT_READY"}}',
 		});
 	});
 

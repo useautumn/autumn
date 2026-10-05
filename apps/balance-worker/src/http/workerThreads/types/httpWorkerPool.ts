@@ -1,3 +1,5 @@
+import type { HeldFailure, InlineHandler } from "./inlineHandler.js";
+
 export type HttpWorkerPoolConfig = {
 	hostname: string;
 	port: number;
@@ -7,9 +9,23 @@ export type HttpWorkerPoolConfig = {
 	/** Per thread, powers of two. */
 	requestRingBytes: number;
 	replyRingBytes: number;
+	/** POST routes decided inline, their replies held by commit position; absent, every request goes to `fetch`. */
+	inline?: {
+		routes: string[];
+		handler: InlineHandler;
+		commitCells: SharedArrayBuffer;
+		failureCounts: SharedArrayBuffer;
+	};
+};
+
+export type HttpWorkerListener = {
+	stop(): Promise<void>;
+	/** A partition's commit position moved: held replies it reached may go out. */
+	commitPositionMoved(params: { partition: number; seq: number }): void;
+	failHeld(failure: HeldFailure): void;
 };
 
 export type HttpWorkerPool = {
 	/** Resolves once every thread is bound to the port. */
-	listen(): Promise<{ stop(): Promise<void> }>;
+	listen(): Promise<HttpWorkerListener>;
 };
