@@ -278,4 +278,7 @@ test.concurrent(
 		expect(stripePrice?.recurring?.interval).toBe("month");
 		expect(stripePrice?.recurring?.interval_count).toBe(3);
 	},
+	// Five test-clock advances with 30s settles take ~255s alone on twd, too
+	// close to the 300s default.
+	{ timeout: 420_000 },
 );
