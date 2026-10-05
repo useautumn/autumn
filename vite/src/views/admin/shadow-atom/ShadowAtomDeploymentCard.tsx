@@ -100,7 +100,7 @@ export const ShadowAtomDeploymentCard = ({
 
 		{deployment ? (
 			<ShadowAtomMachineForm
-				key={deployment.deployment_group_id}
+				key={`${deployment.deployment_group_id}:${deployment.machine?.cpu}x${deployment.machine?.memory}`}
 				current={deployment.machine}
 				submitLabel="Resize"
 				onSubmit={onResize}

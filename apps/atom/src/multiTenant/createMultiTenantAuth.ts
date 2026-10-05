@@ -4,13 +4,19 @@ import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import {
 	atomFolderPath,
+	hasAtomFile,
 	listTenantAtoms,
 	removeAtomFolder,
 	type TenantAtom,
 	writeTenantAtom,
 } from "./atomFolders.js";
 
-/** Our one Atom process holding many orgs: each gets a token and a folder of its own. */
+/** A put, rotate or delete made through another process reaches this one by its first request this long after. */
+export const TENANTS_REVALIDATE_MS = 1000;
+/** An unknown token re-reads the folders at most this often, so a flood of bad tokens cannot rescan per request. */
+export const TENANTS_MISS_RESCAN_MS = 100;
+
+/** One Atom holding many orgs: each gets a token and a folder of its own, shared by every process. */
 export type MultiTenantAuth = Auth & {
 	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
 	putAtom(params: TenantAtom): void;
@@ -25,57 +31,105 @@ type HeldAtom = TenantAtom & { slots: Slots | null };
 export const createMultiTenantAuth = ({
 	dataDir,
 	slotCount,
+	clock = () => performance.now(),
 }: {
 	dataDir: string;
 	slotCount: number;
+	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
+	let scannedAt = Number.NEGATIVE_INFINITY;
 
 	function hold(held: HeldAtom): void {
 		heldById.set(held.id, held);
 		heldByTokenHash.set(held.tokenHash, held);
 	}
 
-	function slotsOf(held: HeldAtom): Slots {
-		held.slots ??= openSlots({
+	function retoken({
+		held,
+		tokenHash,
+	}: {
+		held: HeldAtom;
+		tokenHash: string;
+	}): void {
+		heldByTokenHash.delete(held.tokenHash);
+		held.tokenHash = tokenHash;
+		heldByTokenHash.set(tokenHash, held);
+	}
+
+	function forget(held: HeldAtom): void {
+		heldById.delete(held.id);
+		heldByTokenHash.delete(held.tokenHash);
+		held.slots?.close();
+	}
+
+	/** The folders are the truth every process shares; synchronous, so one process never runs two at once. */
+	function rescan(): void {
+		const onDisk = new Map(
+			listTenantAtoms({ dataDir }).map((tenantAtom) => [
+				tenantAtom.id,
+				tenantAtom,
+			]),
+		);
+		for (const held of [...heldById.values()]) {
+			const tokenHash = onDisk.get(held.id)?.tokenHash;
+			if (tokenHash === undefined) forget(held);
+			else if (tokenHash !== held.tokenHash) retoken({ held, tokenHash });
+		}
+		for (const tenantAtom of onDisk.values())
+			if (!heldById.has(tenantAtom.id)) hold({ ...tenantAtom, slots: null });
+		scannedAt = clock();
+	}
+
+	function isRescanDue({ tokenHash }: { tokenHash: string }): boolean {
+		const sinceScan = clock() - scannedAt;
+		if (sinceScan >= TENANTS_REVALIDATE_MS) return true;
+		const isUnknown = !heldByTokenHash.has(tokenHash);
+		return isUnknown && sinceScan >= TENANTS_MISS_RESCAN_MS;
+	}
+
+	/** Null when another process deleted the Atom since the last rescan: opening would recreate its folder. */
+	function slotsOf(held: HeldAtom): Slots | null {
+		if (held.slots) return held.slots;
+		if (!hasAtomFile({ dataDir, id: held.id })) {
+			forget(held);
+			return null;
+		}
+		held.slots = openSlots({
 			folder: atomFolderPath({ dataDir, id: held.id }),
 			slotCount,
 		});
 		return held.slots;
 	}
 
-	/** One map lookup by the token's hash: no other org is read or touched. */
+	/** One map lookup by the token's hash, after a rescan when one is due: no other org is read or touched. */
 	function authorize({ token }: { token: string }): Slots | null {
-		const held = heldByTokenHash.get(hashToken({ token }));
+		const tokenHash = hashToken({ token });
+		if (isRescanDue({ tokenHash })) rescan();
+		const held = heldByTokenHash.get(tokenHash);
 		return held ? slotsOf(held) : null;
 	}
 
+	/** Always written: what this process holds may be stale, and the file is what every other process reads. */
 	function putAtom(tenantAtom: TenantAtom): void {
-		const held = heldById.get(tenantAtom.id);
-		if (held?.tokenHash === tenantAtom.tokenHash) return;
-
 		writeTenantAtom({ dataDir, tenantAtom });
+		const held = heldById.get(tenantAtom.id);
 		if (!held) {
 			hold({ ...tenantAtom, slots: null });
 			return;
 		}
-		// The same folder under a new token: the old one stops working at once.
-		heldByTokenHash.delete(held.tokenHash);
-		hold({ ...held, tokenHash: tenantAtom.tokenHash });
+		if (held.tokenHash !== tenantAtom.tokenHash)
+			retoken({ held, tokenHash: tenantAtom.tokenHash });
 	}
 
 	function hasAtom({ id }: { id: string }): boolean {
-		return heldById.has(id);
+		return hasAtomFile({ dataDir, id });
 	}
 
 	function removeAtom({ id }: { id: string }): void {
 		const held = heldById.get(id);
-		if (held) {
-			held.slots?.close();
-			heldById.delete(id);
-			heldByTokenHash.delete(held.tokenHash);
-		}
+		if (held) forget(held);
 		removeAtomFolder({ dataDir, id });
 	}
 
@@ -85,8 +139,7 @@ export const createMultiTenantAuth = ({
 		heldByTokenHash.clear();
 	}
 
-	for (const tenantAtom of listTenantAtoms({ dataDir }))
-		hold({ ...tenantAtom, slots: null });
+	rescan();
 
 	return { authorize, putAtom, hasAtom, removeAtom, close };
 };
