@@ -3,7 +3,12 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { accrueRunCost } from "./accrueRunCost.ts";
 
-const ENV_KEYS = ["TW_MODAL_REGION", "TWD_MODAL_REGION_MULTIPLIER"] as const;
+const ENV_KEYS = [
+	"TW_MODAL_REGION",
+	"TWD_MODAL_REGION_MULTIPLIER",
+	"TWD_USD_PER_CORE_SECOND",
+	"TWD_USD_PER_GIB_SECOND",
+] as const;
 const saved = Object.fromEntries(
 	ENV_KEYS.map((key) => [key, process.env[key]]),
 );

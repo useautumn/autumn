@@ -308,13 +308,16 @@ const main = async (init: SwarmInit) => {
 	}) => {
 		const sandbox = sandboxes.get(name);
 		sandboxes.delete(name);
-		if (sandbox) await timeBoxed(() => tw.provider.deleteSandbox(sandbox));
-		send({
-			type: "worker_ended",
-			name,
-			accountId,
-			endedAt: new Date().toISOString(),
-		});
+		// Unconfirmed deletes leave endedAt unset; twd then bills the worker until run end.
+		let endedAt: string | undefined = sandbox
+			? undefined
+			: new Date().toISOString();
+		if (sandbox)
+			await timeBoxed(async () => {
+				await tw.provider.deleteSandbox(sandbox);
+				endedAt = new Date().toISOString();
+			});
+		send({ type: "worker_ended", name, accountId, endedAt });
 	};
 
 	process.once("SIGTERM", () => {
@@ -510,12 +513,14 @@ const main = async (init: SwarmInit) => {
 				signal,
 			};
 			let createdAt = new Date();
-			sandbox = await forkLimit(() => {
-				createdAt = new Date();
-				return withTransientRetry({
-					run: () => tw.provider.forkWorker(forkOptions),
-				});
-			});
+			sandbox = await forkLimit(() =>
+				withTransientRetry({
+					run: () => {
+						createdAt = new Date();
+						return tw.provider.forkWorker(forkOptions);
+					},
+				}),
+			);
 			boot.mark(name, "forkDone");
 			track({ name, sandbox, accountId: account.accountId, createdAt });
 			const publicUrl = await tw.provider.getPublicUrl(sandbox, SERVER_PORT);

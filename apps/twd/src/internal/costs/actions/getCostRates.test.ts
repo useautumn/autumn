@@ -42,6 +42,16 @@ test("region multiplier follows scripts/tw's pin, us-east-1 by default", () => {
 	expect(getCostRates().regionMultiplier).toBe(1.15);
 });
 
+test("a blank override falls back to the default instead of pricing at $0", () => {
+	clearEnv();
+	process.env.TWD_MODAL_REGION_MULTIPLIER = "";
+	process.env.TWD_USD_PER_CORE_SECOND = "";
+	expect(getCostRates()).toMatchObject({
+		usdPerCoreSecond: 0.00003942,
+		regionMultiplier: 1.75,
+	});
+});
+
 test("every rate stays overridable per deploy", () => {
 	clearEnv();
 	process.env.TWD_USD_PER_CORE_SECOND = "0.00002";
@@ -71,10 +81,11 @@ test("a default 2-core 4 GiB worker-hour costs $0.66, not the old $0.13", () => 
 
 test("Oct 1 01:00 nightly baseline: 643,199 worker-seconds price within 15% of Modal's $118.11", () => {
 	clearEnv();
+	const { workerCores, workerMemoryGib } = getCostRates();
 	const usd = priceSandboxSeconds({
 		seconds: 643_199,
-		cores: 2,
-		memoryGib: 4,
+		cores: workerCores,
+		memoryGib: workerMemoryGib,
 	});
-	expect(Math.abs(usd - 118.11) / 118.11).toBeLessThan(0.15);
+	expect(Math.abs(usd - 118.11) / 118.11).toBeLessThan(0.02);
 });

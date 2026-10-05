@@ -14,7 +14,8 @@ export const RatesLine = ({ rates }: { rates: CostRates }) => (
 	<span className="block text-tertiary-foreground tabular-nums">
 		({rates.workerCores} cores × ${rates.usdPerCoreSecond}/core·s +{" "}
 		{rates.workerMemoryGib} GiB × ${rates.usdPerGibSecond}/GiB·s) ×{" "}
-		{rates.regionMultiplier} region = {usd(workerUsdPerSecond(rates) * 3600)}
+		{rates.regionMultiplier} region multiplier ={" "}
+		{usd(workerUsdPerSecond(rates) * 3600)}
 		/worker·h
 	</span>
 );

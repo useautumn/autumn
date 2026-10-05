@@ -18,13 +18,13 @@ const modalRegionMultiplier = ({ region }: { region: string }) =>
 
 export const getCostRates = (): z.infer<typeof CostRates> => ({
 	usdPerCoreSecond: Number(
-		process.env.TWD_USD_PER_CORE_SECOND ?? DEFAULT_USD_PER_CORE_SECOND,
+		process.env.TWD_USD_PER_CORE_SECOND || DEFAULT_USD_PER_CORE_SECOND,
 	),
 	usdPerGibSecond: Number(
-		process.env.TWD_USD_PER_GIB_SECOND ?? DEFAULT_USD_PER_GIB_SECOND,
+		process.env.TWD_USD_PER_GIB_SECOND || DEFAULT_USD_PER_GIB_SECOND,
 	),
 	regionMultiplier: Number(
-		process.env.TWD_MODAL_REGION_MULTIPLIER ??
+		process.env.TWD_MODAL_REGION_MULTIPLIER ||
 			modalRegionMultiplier({
 				region: process.env.TW_MODAL_REGION ?? DEFAULT_MODAL_REGION,
 			}),

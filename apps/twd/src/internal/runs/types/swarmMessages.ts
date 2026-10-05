@@ -40,8 +40,8 @@ export type SwarmChildMessage =
 			/** ISO time its create was requested; Modal bills from create, not from when the fork resolves. */
 			createdAt: string;
 	  }
-	/** Worker culled, dead, or failed to boot: its account can go early. `endedAt` is when terminate returned. */
-	| { type: "worker_ended"; name: string; accountId: string; endedAt: string }
+	/** Worker culled, dead, or failed to boot: its account can go early. `endedAt` is when terminate returned, absent if unconfirmed. */
+	| { type: "worker_ended"; name: string; accountId: string; endedAt?: string }
 	/** Accounts the child will not use (no sandbox touched them). */
 	| { type: "release_accounts"; accountIds: string[] }
 	/** A dedicated sub-account now exists; twd records it for deletion. */
