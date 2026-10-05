@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag";
+import { isFreePhasePlaceholderCustomerProduct } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isFreePhasePlaceholderCustomerProduct";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import { addBillingChangeTag } from "../../../common/billingChangeTags";
@@ -19,7 +20,7 @@ import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionU
  * 1. hasCustomerProductStarted (scheduled + starts_at reached)
  * 2. canActivate (free OR on this subscription OR on this schedule)
  *
- * For free products: uses empty subscription/schedule IDs
+ * For free products: uses empty subscription/schedule IDs, unless they ride a $0 placeholder
  * For paid products: uses IDs from stripeSubscription
  */
 export const activateScheduledCustomerProducts = async ({
@@ -56,22 +57,25 @@ export const activateScheduledCustomerProducts = async ({
 
 		if (!canActivate || !hasStarted) continue;
 
-		const isFree = isCustomerProductFree(customerProduct);
-
 		logger.info(
 			`Activating scheduled product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
-		const subscriptionIds = isFree ? [] : [stripeSubscription.id];
-		const scheduledIds = isFree
-			? []
-			: stripeSubscriptionSchedule &&
-					isCustomerProductOnStripeSubscriptionSchedule({
-						customerProduct,
-						stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
-					})
-				? [stripeSubscriptionSchedule.id]
-				: [];
+		const scheduleId =
+			stripeSubscriptionSchedule &&
+			isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct,
+				stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+			})
+				? stripeSubscriptionSchedule.id
+				: undefined;
+		// A free plan riding the $0 placeholder ends when this subscription is canceled.
+		const staysOnSubscription =
+			!isCustomerProductFree(customerProduct) ||
+			(!!scheduleId && isFreePhasePlaceholderCustomerProduct(customerProduct));
+
+		const subscriptionIds = staysOnSubscription ? [stripeSubscription.id] : [];
+		const scheduledIds = staysOnSubscription && scheduleId ? [scheduleId] : [];
 
 		const { updates, allocationsAdjusted } =
 			await customerProductActions.activateScheduled({
