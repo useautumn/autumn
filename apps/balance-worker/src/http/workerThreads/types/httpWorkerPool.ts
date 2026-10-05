@@ -27,7 +27,7 @@ export type HttpWorkerListener = {
 	failHeld(failure: HeldFailure): void;
 	/** The window's counts, reset by the read; `heldOnDecideThread` is a gauge. */
 	drainHealth(): HttpWorkerHealthCounts & { heldOnDecideThread: number };
-	/** In-worker latency per inline route path this window, from arrival to answer; null when none arrived. */
+	/** In-worker latency per inline route path this window, arrival to answer; a ring-full 429 is not timed. */
 	drainLatencies(): Record<string, LatencyPercentiles | null>;
 };
 

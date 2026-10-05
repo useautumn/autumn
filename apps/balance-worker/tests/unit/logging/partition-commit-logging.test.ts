@@ -2,6 +2,7 @@ import { expect, spyOn, test } from "bun:test";
 import {
 	type CommitSummaries,
 	createCommitSummaries,
+	logCommitWindows,
 } from "../../../src/logging/commitSummaries.js";
 import { createPartitionCommitLogging } from "../../../src/logging/createPartitionCommitLogging.js";
 import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
@@ -104,8 +105,9 @@ test.concurrent(
 			now = 117.125;
 			gate.resolve(result);
 			await expect(pending).resolves.toBe(result);
-			expect(summaries.drain()).toEqual({
-				[String(partition)]: {
+			expect(summaries.drain()).toEqual([
+				{
+					partition,
 					commits: 1,
 					records: 1,
 					notCommitted: 0,
@@ -113,12 +115,13 @@ test.concurrent(
 					commitMs: { totalMs: 17.13, maxMs: 17.13 },
 					lingerMs: { totalMs: 0, maxMs: 0 },
 					storeWaitMs: { totalMs: 0, maxMs: 0 },
+					queuedMsMax: 0,
 					applies: 0,
 					applyFailed: 0,
 					applyMs: { totalMs: 0, maxMs: 0 },
 				},
-			});
-			expect(summaries.drain()).toEqual({});
+			]);
+			expect(summaries.drain()).toEqual([]);
 		} finally {
 			gate.resolve(result);
 			closeStoreFixture(fixture);
@@ -151,10 +154,11 @@ test.concurrent(
 					outcomes: [createMutation({ state: createState() })],
 					waits,
 				});
-			expect(summaries.drain()[String(partition)]).toMatchObject({
+			expect(summaries.drain()[0]).toMatchObject({
 				commits: 2,
 				lingerMs: { totalMs: 6, maxMs: 5 },
 				storeWaitMs: { totalMs: 3.5, maxMs: 3.5 },
+				queuedMsMax: 12.35,
 			});
 		} finally {
 			closeStoreFixture(fixture);
@@ -207,7 +211,7 @@ test.concurrent(
 				2,
 			);
 			const window = summaries.drain();
-			expect(window[String(partition)]).toMatchObject({
+			expect(window[0]).toMatchObject({
 				applies: 1,
 				applyFailed: 0,
 				applyMs: { totalMs: 0.38, maxMs: 0.38 },
@@ -261,7 +265,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 						outcomes: [createMutation({ state: createState() })],
 					}),
 				).rejects.toBe(cause);
-				expect(summaries.drain()[String(partition)]).toMatchObject({
+				expect(summaries.drain()[0]).toMatchObject({
 					commits: 1,
 					notCommitted: result === "not_committed" ? 1 : 0,
 					unknown: result === "unknown" ? 1 : 0,
@@ -298,7 +302,7 @@ test.concurrent(
 					],
 				}),
 			).rejects.toThrow("Only an initialize can create subject state");
-			expect(summaries.drain()[String(partition)]).toMatchObject({
+			expect(summaries.drain()[0]).toMatchObject({
 				applies: 1,
 				applyFailed: 1,
 			});
@@ -378,5 +382,50 @@ test.concurrent(
 		} finally {
 			closeStoreFixture(fixture);
 		}
+	},
+);
+
+test.concurrent(
+	"each active partition gets its own commit-window line with the same keys, however many partitions there are",
+	() => {
+		function linesFor(partitions: number) {
+			const summaries = createCommitSummaries();
+			for (let partition = 0; partition < partitions; partition++)
+				summaries.committed({
+					partition,
+					records: 3,
+					durationMs: 2,
+					waits: { queuedMs: 1, lingerMs: 0.5, storeWaitMs: 0 },
+					result: "committed",
+				});
+			summaries.applied({ partition: 0, durationMs: 1, failed: false });
+			const lines: { event: string; data: Record<string, unknown> }[] = [];
+			logCommitWindows({
+				ctx: {
+					logger: {
+						info: (fields: unknown) => {
+							lines.push(fields as (typeof lines)[number]);
+						},
+					},
+					summaries,
+				},
+				config,
+			});
+			return lines;
+		}
+		const keysOf = (line: { data: Record<string, unknown> }) =>
+			Object.keys(line.data).sort();
+		const one = linesFor(1);
+		const many = linesFor(128);
+		expect(one).toHaveLength(1);
+		expect(many).toHaveLength(128);
+		expect(new Set(many.map((line) => keysOf(line).join(","))).size).toBe(1);
+		expect(keysOf(many[127] as (typeof many)[number])).toEqual(
+			keysOf(one[0] as (typeof one)[number]),
+		);
+		expect(many.map((line) => line.data.partition)).toEqual(
+			Array.from({ length: 128 }, (_, partition) => partition),
+		);
+		expect(one[0]?.event).toBe("balance_worker.commit_window");
 	},
 );
