@@ -5,13 +5,16 @@
  */
 import { createRingSignal } from "../../threads/ring/ringSignal.js";
 import { startDispatchLoop } from "./pool/dispatchRequests.js";
+import { commitPositionMoved, failHeld } from "./pool/sendReplies.js";
 import { spawnHttpWorker } from "./pool/spawnHttpWorker.js";
 import { stopHttpWorkers } from "./pool/stopHttpWorkers.js";
 import type {
+	HttpWorkerListener,
 	HttpWorkerPool,
 	HttpWorkerPoolConfig,
 } from "./types/httpWorkerPool.js";
 import type { HttpWorkerPoolScope } from "./types/httpWorkerPoolScope.js";
+import type { HeldFailure } from "./types/inlineHandler.js";
 
 export function createHttpWorkerPool({
 	ctx,
@@ -31,6 +34,7 @@ export function createHttpWorkerPool({
 			stopping: false,
 			failed: false,
 			flushScheduled: false,
+			heldOnDecideThread: [],
 		},
 	};
 
@@ -39,7 +43,15 @@ export function createHttpWorkerPool({
 	}
 
 	/** Resolves once every thread is bound to the port; a thread that cannot bind takes the others down. */
-	async function listen(): Promise<{ stop(): Promise<void> }> {
+	function positionMoved(params: { partition: number; seq: number }): void {
+		commitPositionMoved({ scope, ...params });
+	}
+
+	function fail(failure: HeldFailure): void {
+		failHeld({ scope, failure });
+	}
+
+	async function listen(): Promise<HttpWorkerListener> {
 		const spawned = Array.from({ length: config.threads }, (_, index) =>
 			spawnHttpWorker({ scope, index }),
 		);
@@ -52,7 +64,7 @@ export function createHttpWorkerPool({
 			throw cause;
 		}
 		startDispatchLoop({ scope });
-		return { stop };
+		return { stop, commitPositionMoved: positionMoved, failHeld: fail };
 	}
 
 	return { listen };

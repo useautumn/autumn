@@ -8,12 +8,18 @@ import {
 	createRingWriter,
 } from "../../threads/ring/createRing.js";
 import { createRingSignal } from "../../threads/ring/ringSignal.js";
-import { REPLY_FRAME, readReplyFrame } from "./frames/replyFrame.js";
+import { FAIL_FRAME, readFailFrame } from "./frames/failFrame.js";
+import {
+	REPLY_FRAME,
+	type ReplyFrame,
+	readReplyFrame,
+} from "./frames/replyFrame.js";
 import {
 	type RequestMeta,
 	requestFrameMaxLength,
 	writeRequestFrame,
 } from "./frames/requestFrame.js";
+import { createHeldReplies } from "./heldReplies/createHeldReplies.js";
 import { forwardableHeadersOf } from "./rules/forwardableHeadersOf.js";
 import type {
 	DecideThreadMessage,
@@ -66,6 +72,7 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		init.requestRing.capacity >>> 3,
 		LARGE_REQUEST_BYTES,
 	);
+	const held = init.heldReplies ? createHeldReplies(init.heldReplies) : null;
 	let nextReqId = 1;
 	let largeRequestsInFlight = 0;
 
@@ -85,28 +92,54 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		resolve?.(new Response(body, { status, headers }));
 	}
 
+	function answerOrHold(reply: ReplyFrame): void {
+		if (reply.heldUntilSeq === 0 || !held) {
+			answer(reply);
+			return;
+		}
+		function answerHeld(): void {
+			answer(reply);
+		}
+		function failHeld({ status, body }: { status: number; body: Uint8Array }) {
+			answer({ reqId: reply.reqId, status, headers: reply.headers, body });
+		}
+		held.hold({
+			partition: reply.partition,
+			seq: reply.heldUntilSeq,
+			answer: answerHeld,
+			fail: failHeld,
+		});
+	}
+
 	function drainReplies(): void {
 		let read = 0;
 		for (;;) {
 			const frame = replies.next();
 			if (!frame) break;
-			if (frame.type !== REPLY_FRAME)
+			if (frame.type === REPLY_FRAME)
+				answerOrHold(readReplyFrame({ reader: replies, frame }));
+			else if (frame.type === FAIL_FRAME && held)
+				held.fail(readFailFrame({ reader: replies, frame }));
+			else
 				throw new Error(
 					`HTTP worker ${init.index}: unexpected frame ${frame.type}`,
 				);
-			const reply = readReplyFrame({ reader: replies, frame });
 			replies.advance();
 			read++;
-			answer(reply);
 		}
 		if (read > 0) replies.release();
+	}
+
+	function hasWork(): boolean {
+		return replies.hasWork() || held?.releasable() === true;
 	}
 
 	async function replyLoop(): Promise<void> {
 		for (;;) {
 			drainReplies();
-			// The timeout is insurance against a wake lost some other way; a publish wakes the thread first.
-			await replySignal.sleep({ hasWork: replies.hasWork, timeoutMs: 50 });
+			held?.release();
+			// The timeout is insurance against a wake lost some other way; a publish or a commit wakes the thread first.
+			await replySignal.sleep({ hasWork, timeoutMs: 50 });
 		}
 	}
 
