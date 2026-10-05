@@ -201,7 +201,7 @@ const writeRevenueCatIdentity = async ({
  * first, then falls back to `customer_id`. Ambiguity (processors key and
  * customer_id resolving to different customers) is rejected, not silently picked.
  */
-const resolveRevenueCatCustomer = async ({
+export const resolveRevenueCatCustomer = async ({
 	ctx,
 	appUserId,
 	originalAppUserId,
