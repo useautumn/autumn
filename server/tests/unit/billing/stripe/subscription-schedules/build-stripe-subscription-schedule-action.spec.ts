@@ -9,6 +9,7 @@ import {
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
+import type Stripe from "stripe";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
 import {
 	createCustomerPricesForProduct,
@@ -79,11 +80,13 @@ const buildScheduleAction = ({
 	insertCustomerProducts = [],
 	patchedCustomerProducts = [],
 	stripeSubscriptionId,
+	stripeSubscriptionSchedule,
 }: {
 	finalCustomerProducts: FullCusProduct[];
 	insertCustomerProducts?: FullCusProduct[];
 	patchedCustomerProducts?: FullCusProduct[];
 	stripeSubscriptionId?: string;
+	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 }) => {
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: "cus_123",
@@ -99,6 +102,7 @@ const buildScheduleAction = ({
 			stripeSubscription: stripeSubscriptionId
 				? stripeSubscriptions.create({ id: stripeSubscriptionId })
 				: undefined,
+			stripeSubscriptionSchedule,
 		}),
 		autumnBillingPlan,
 		finalCustomerProducts,
@@ -222,5 +226,31 @@ describe("buildStripeSubscriptionScheduleAction", () => {
 				patchedCustomerProducts: [revenueCatPro],
 			}),
 		).toEqual({});
+	});
+
+	test("starting a pending schedule's plan now cancels the schedule rather than releasing it", () => {
+		const pendingSchedule = {
+			id: "sub_sched_pending",
+			status: "not_started",
+			end_behavior: "release",
+			phases: [],
+		} as unknown as Stripe.SubscriptionSchedule;
+		const startedPro = customerProductFor({
+			product: pro,
+			status: CusProductStatus.Active,
+			startsAt: NOW_MS,
+			subscriptionIds: [],
+		});
+
+		const { scheduleAction } = buildScheduleAction({
+			finalCustomerProducts: [startedPro],
+			insertCustomerProducts: [startedPro],
+			stripeSubscriptionSchedule: pendingSchedule,
+		});
+
+		expect(scheduleAction).toEqual({
+			type: "cancel",
+			stripeSubscriptionScheduleId: pendingSchedule.id,
+		});
 	});
 });

@@ -112,7 +112,8 @@ const getScheduleScenario = ({
 	return "multi_phase";
 };
 
-const buildNoPhasesAction = ({
+/** An existing schedule is released onto its subscription, or cancelled when it has none. */
+const buildEndScheduleAction = ({
 	hasSubscription,
 	scheduleId,
 }: {
@@ -167,21 +168,16 @@ const buildActionForScenario = ({
 }): StripeSubscriptionScheduleResult => {
 	switch (scenario) {
 		case "no_phases":
-			return buildNoPhasesAction({
+			return buildEndScheduleAction({
 				hasSubscription,
 				scheduleId,
 			});
 
 		case "single_indefinite":
-			// Product continues indefinitely: release schedule if exists, clear any cancel_at
+			// Product continues indefinitely: end schedule if exists, clear any cancel_at
 			return {
-				scheduleAction: hasSchedule
-					? {
-							type: "release",
-							stripeSubscriptionScheduleId: scheduleId!,
-						}
-					: undefined,
 				subscriptionCancelAt: null,
+				...buildEndScheduleAction({ hasSubscription, scheduleId }),
 			};
 
 		case "simple_cancel":
