@@ -21,7 +21,7 @@ export const keepSubjectBaseline = async ({
 	const { ctx } = scope;
 	// Postgres is the baseline: nothing to log, the rows just become resident.
 	if ((ctx.baseline ?? "log") === "map")
-		return ctx.writer.adopt({ state: baseline });
+		return ctx.writer.adopt({ state: baseline, baselineAt: occurredAt });
 
 	const request = parseInitializeRequest({
 		input: {
