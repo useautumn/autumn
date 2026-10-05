@@ -4,18 +4,21 @@
  */
 
 import { test } from "bun:test";
-import { ResetInterval } from "@autumn/shared";
+import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { expectMessagesBalance } from "@tests/integration/balances/allocate/utils/expectMessagesBalance";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli";
 import {
 	newRcClient,
 	purchaseOnA,
 	setupCustomers,
 } from "./utils/revenue-cat-transfer-test-utils";
 import { expectWebhookSuccess } from "./utils/revenue-cat-webhook-client";
+
+const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
 	`${chalk.yellowBright("rc transfer: source entity allocations re-fit when the add-on leaves")}`,
@@ -37,7 +40,7 @@ test.concurrent(
 				items.monthlyPrice({ price: 5 }),
 			],
 		});
-		const { entities, autumnV2_3 } = await setupCustomers({
+		const { entities } = await setupCustomers({
 			customerId: customerA,
 			plans: [base, addOn],
 			entityCount: 2,
