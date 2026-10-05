@@ -5,10 +5,10 @@ export type InlineCounters = {
 	drain(): InlineCountersWindow;
 };
 
-export type InlineRouteName = "track" | "trackBatch" | "check";
+type InlineRouteName = "track" | "trackBatch" | "check";
 type InlineCounterName = InlineRouteName | "trackBatchItems";
 
-export type InlineCountersWindow = {
+type InlineCountersWindow = {
 	answered: Partial<Record<InlineCounterName, number>>;
 	/** Keyed `route.reason`; the inline share is answered ÷ (answered + fallbacks). */
 	fallbacks: Record<string, number>;
