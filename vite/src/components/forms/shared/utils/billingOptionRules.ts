@@ -36,12 +36,8 @@ export type BillingOptionState = {
 	showStartDate?: boolean;
 	showEndDate?: boolean;
 	// schedule
-	hasMultipleImmediatePlans?: boolean;
-	hasPersistedSchedule?: boolean;
 	hasPaidRecurringPlan?: boolean;
 };
-
-const MULTI_ATTACH_UNSUPPORTED = "Not yet supported for multi attach";
 
 const HIDDEN: BillingOptionRule = {
 	visible: false,
@@ -108,11 +104,7 @@ function updateRules(state: BillingOptionState): BillingOptionRules {
 function scheduleRules(state: BillingOptionState): BillingOptionRules {
 	return {
 		proration: show(true),
-		// A saved schedule's later phases each pick their own reset, so there's nothing global left.
-		resetBillingCycle: show(
-			!state.hasPersistedSchedule,
-			state.hasMultipleImmediatePlans ? MULTI_ATTACH_UNSUPPORTED : null,
-		),
+		resetBillingCycle: show(true),
 		discounts: HIDDEN,
 		planSchedule: HIDDEN,
 		resetUsage: HIDDEN,

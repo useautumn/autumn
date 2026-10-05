@@ -36,9 +36,14 @@ test.concurrent(
 		const preview =
 			await autumnV2_4.billing.previewSetPlans<SetPlansParamsV0Input>({
 				customer_id: customerId,
-				billing_cycle_anchor: oldPeriodEndMs,
-				proration_behavior: "none",
-				phases: [{ starts_at: oldStartMs, plans: [{ plan_id: pro.id }] }],
+				phases: [
+					{
+						billing_cycle_anchor: oldPeriodEndMs,
+						proration_behavior: "none",
+						starts_at: oldStartMs,
+						plans: [{ plan_id: pro.id }],
+					},
+				],
 			});
 
 		expect(preview.total).toBe(0);

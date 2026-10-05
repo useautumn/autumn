@@ -34,10 +34,10 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,
-					billing_cycle_anchor: advancedTo - ms.days(5),
-					proration_behavior: "none",
 					phases: [
 						{
+							billing_cycle_anchor: advancedTo - ms.days(5),
+							proration_behavior: "none",
 							starts_at: advancedTo - ms.days(35),
 							plans: [{ plan_id: pro.id }],
 						},
@@ -69,14 +69,14 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,
-					billing_cycle_anchor: advancedTo + ms.days(20),
-					proration_behavior: "none",
 					free_trial: {
 						duration_length: 7,
 						duration_type: FreeTrialDuration.Day,
 					},
 					phases: [
 						{
+							billing_cycle_anchor: advancedTo + ms.days(20),
+							proration_behavior: "none",
 							starts_at: advancedTo - ms.days(10),
 							plans: [{ plan_id: pro.id }],
 						},
@@ -110,9 +110,12 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,
-					billing_cycle_anchor: advancedTo + ms.days(20),
 					phases: [
-						{ starts_at: "now", plans: [{ plan_id: pro.id }] },
+						{
+							billing_cycle_anchor: advancedTo + ms.days(20),
+							starts_at: "now",
+							plans: [{ plan_id: pro.id }],
+						},
 						{
 							starts_at: advancedTo + ms.days(10),
 							plans: [{ plan_id: premium.id }],

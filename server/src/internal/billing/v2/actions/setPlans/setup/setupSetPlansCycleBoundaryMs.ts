@@ -1,18 +1,15 @@
-import type {
-	MultiAttachBillingContext,
-	SetPlansParamsV0,
-} from "@autumn/shared";
+import type { BillingContext, MultiAttachBillingContext } from "@autumn/shared";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 
 /** A requested anchor leaves the end-of-cycle boundary unresolved. */
 export const setupSetPlansCycleBoundaryMs = ({
 	billingContext,
-	params,
+	requestedBillingCycleAnchor,
 }: {
 	billingContext: MultiAttachBillingContext;
-	params: SetPlansParamsV0;
+	requestedBillingCycleAnchor: BillingContext["requestedBillingCycleAnchor"];
 }) => {
-	if (params.billing_cycle_anchor !== undefined) {
+	if (requestedBillingCycleAnchor !== undefined) {
 		return undefined;
 	}
 

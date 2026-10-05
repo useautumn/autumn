@@ -1,4 +1,7 @@
-import { truncateMsToSecondPrecision } from "@autumn/shared";
+import {
+	type PhaseProrationBehavior,
+	truncateMsToSecondPrecision,
+} from "@autumn/shared";
 import { isAliveAt } from "../timeline/timelineGuards";
 import type {
 	ResolvedSegment,
@@ -32,17 +35,21 @@ const segmentCustomerProductIdAt = ({
 /** Each request phase lists the phase plans running when it starts; the rows themselves hold the timing. */
 export const diffToSchedule = ({
 	diff,
-	phaseStarts,
+	requestedPhases,
 	customerProductIdBySegmentId,
 }: {
 	diff: TimelineDiff;
-	phaseStarts: number[];
+	requestedPhases: {
+		startsAt: number;
+		prorationBehavior: PhaseProrationBehavior | null;
+	}[];
 	customerProductIdBySegmentId: Map<string, string>;
 }): SchedulePhasePlan[] =>
-	phaseStarts.map((startsAt) => {
+	requestedPhases.map(({ startsAt, prorationBehavior }) => {
 		const at = Math.max(truncateMsToSecondPrecision(startsAt), diff.now);
 		return {
 			startsAt,
+			prorationBehavior,
 			customerProductIds: diff.timeline
 				.filter(
 					(segment) =>

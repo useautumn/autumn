@@ -43,9 +43,14 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
-			billing_cycle_anchor: oldPeriodEndMs,
-			proration_behavior: "none",
-			phases: [{ starts_at: oldStartMs, plans: [{ plan_id: pro.id }] }],
+			phases: [
+				{
+					billing_cycle_anchor: oldPeriodEndMs,
+					proration_behavior: "none",
+					starts_at: oldStartMs,
+					plans: [{ plan_id: pro.id }],
+				},
+			],
 		});
 
 		await expectResyncedSubscriptionCorrect({
@@ -127,10 +132,10 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
-			billing_cycle_anchor: oldPeriodEndMs,
-			proration_behavior: "none",
 			phases: [
 				{
+					billing_cycle_anchor: oldPeriodEndMs,
+					proration_behavior: "none",
 					starts_at: oldStartMs,
 					plans: [
 						{
@@ -193,9 +198,14 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
-			billing_cycle_anchor: oldPeriodEndMs,
-			proration_behavior: "none",
-			phases: [{ starts_at: oldStartMs, plans: [{ plan_id: proAnnual.id }] }],
+			phases: [
+				{
+					billing_cycle_anchor: oldPeriodEndMs,
+					proration_behavior: "none",
+					starts_at: oldStartMs,
+					plans: [{ plan_id: proAnnual.id }],
+				},
+			],
 		});
 
 		await expectResyncedSubscriptionCorrect({

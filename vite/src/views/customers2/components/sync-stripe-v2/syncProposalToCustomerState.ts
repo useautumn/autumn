@@ -109,10 +109,7 @@ export const syncProposalToCustomerState = ({
 	features: Feature[];
 }): CustomerStateForm => {
 	const options = {
-		billingBehavior: null,
 		resetBillingCycle: false,
-		billingCycleAnchorMode: "now",
-		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
 	} as const;

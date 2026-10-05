@@ -15,8 +15,10 @@ import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/provider
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
 import { customerProductsToPhaseInvoiceItems } from "./customerProductsToPhaseInvoiceItems";
+import type { SchedulePhaseProration } from "../../setup/resolveSchedulePhaseProrations";
 import { logTransitionPoints } from "./logBuildPhaseHelpers";
 import { normalizeCustomerProductTimestamps } from "./normalizeCustomerProductTimestamps";
+import { resolveStripePhaseProrationBehavior } from "./resolveStripePhaseProrationBehavior";
 
 /**
  * Converts customer products to Stripe schedule phase items.
@@ -255,6 +257,7 @@ export const buildStripePhasesUpdate = ({
 	customerProducts,
 	trialEndsAt,
 	useFreePhaseStripeProduct = false,
+	phaseProrations = [],
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
@@ -262,6 +265,7 @@ export const buildStripePhasesUpdate = ({
 	trialEndsAt?: number;
 	/** Only create_schedule places free-phase placeholders on the free plan's own product. */
 	useFreePhaseStripeProduct?: boolean;
+	phaseProrations?: SchedulePhaseProration[];
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
 	// Normalize all timestamps to second-level precision for Stripe compatibility.
 	// This is done once at the entry point so downstream functions work with clean data.
@@ -387,7 +391,7 @@ export const buildStripePhasesUpdate = ({
 		const hasOneOffInvoiceItems = phaseAddInvoiceItems.length > 0;
 		const shouldInvoicePhaseTransition =
 			phaseIndex > 0 && phaseItems.length > 0;
-		const shouldAlwaysInvoice =
+		const invoicesPhaseStart =
 			shouldInvoicePhaseTransition ||
 			isBillingCycleAnchorResetPhase ||
 			hasOneOffInvoiceItems;
@@ -402,13 +406,13 @@ export const buildStripePhasesUpdate = ({
 			billing_cycle_anchor: isBillingCycleAnchorResetPhase
 				? "phase_start"
 				: undefined,
-			// Product switches at a reset start a full cycle without old-plan credits.
-			proration_behavior:
-				isBillingCycleAnchorResetPhase && changesCustomerProducts
-					? "none"
-					: shouldAlwaysInvoice
-						? "always_invoice"
-						: undefined,
+			proration_behavior: resolveStripePhaseProrationBehavior({
+				phaseProrations,
+				phaseStartMs: startMs,
+				isBillingCycleAnchorResetPhase,
+				changesCustomerProducts,
+				invoicesPhaseStart,
+			}),
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
 				phaseStartDateSeconds,

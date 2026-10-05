@@ -1,4 +1,6 @@
-type SchedulePhase = { startsAt: number; customerProductIds: string[] };
+import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
+
+type SchedulePhase = SchedulePhasePlan;
 
 const customerProductIdsAt = ({
 	phases,
@@ -50,6 +52,8 @@ export const mergePreservedSchedulePhases = ({
 
 	return phaseStarts.map((startsAt) => ({
 		startsAt,
+		prorationBehavior: sortedPhases.find((phase) => phase.startsAt === startsAt)
+			?.prorationBehavior,
 		customerProductIds: [
 			...new Set([
 				...customerProductIdsAt({ phases: sortedPhases, startsAt }),

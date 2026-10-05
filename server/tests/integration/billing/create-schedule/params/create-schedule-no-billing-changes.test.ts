@@ -66,6 +66,7 @@ const setupExternalSchedule = async ({
 	const now = Date.now();
 	const currentPhase = {
 		starts_at: now,
+		proration_behavior: "none" as const,
 		plans: [{ plan_id: pro.id }],
 	};
 	const futurePhase = {
@@ -83,16 +84,16 @@ const setupExternalSchedule = async ({
 		? [
 				{
 					starts_at: now - 31 * 24 * 60 * 60 * 1000,
+					proration_behavior: "none" as const,
 					plans: [{ plan_id: pro.id }],
 				},
-				currentPhase,
+				{ ...currentPhase, proration_behavior: undefined },
 				futurePhase,
 			]
 		: [currentPhase, futurePhase];
 	const params: SetPlansParamsV0 = {
 		customer_id: customerId,
 		...(noBillingChanges && { no_billing_changes: true }),
-		proration_behavior: "none",
 		redirect_mode: "never",
 		phases,
 	};
@@ -237,10 +238,13 @@ test.concurrent(
 			ctx,
 			params: {
 				customer_id: customerId,
-				proration_behavior: "none",
 				redirect_mode: "never",
 				phases: [
-					{ starts_at: now, plans: [{ plan_id: pro.id }] },
+					{
+						proration_behavior: "none",
+						starts_at: now,
+						plans: [{ plan_id: pro.id }],
+					},
 					{
 						starts_at: now + 31 * 24 * 60 * 60 * 1000,
 						plans: [{ plan_id: premium.id }],
@@ -267,10 +271,13 @@ test.concurrent(
 			params: {
 				customer_id: customerId,
 				no_billing_changes: true,
-				proration_behavior: "none",
 				redirect_mode: "never",
 				phases: [
-					{ starts_at: now, plans: [{ plan_id: pro.id }] },
+					{
+						proration_behavior: "none",
+						starts_at: now,
+						plans: [{ plan_id: pro.id }],
+					},
 					{
 						starts_at: now + 31 * 24 * 60 * 60 * 1000,
 						plans: [{ plan_id: premium.id }],
