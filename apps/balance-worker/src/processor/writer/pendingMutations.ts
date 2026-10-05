@@ -309,7 +309,7 @@ export function removePendingMutation({
 	}
 }
 
-/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. */
+/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. Once per mutation. */
 export function releasePins({
 	state,
 	pending,
@@ -317,6 +317,8 @@ export function releasePins({
 	state: PartitionWriterState;
 	pending: PendingMutation;
 }): void {
+	if (pending.pinsReleased) return;
+	pending.pinsReleased = true;
 	for (const subjectKey of pending.projectedSubjectKeys)
 		state.subjects.unpin({ subjectKey });
 }
