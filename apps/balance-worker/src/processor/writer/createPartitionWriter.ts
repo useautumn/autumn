@@ -10,7 +10,12 @@ import {
 	readFreshestState as readFreshestSubjectState,
 	waitForPendingCommits as waitForCustomerCommits,
 } from "./actions/decide.js";
-import { decideHeld as decideHeldMutation } from "./actions/decideHeld.js";
+import {
+	decideHeld as decideHeldMutation,
+	decideHeldGroup as decideHeldMutationGroup,
+	heldBlockerOf,
+	waitForHeldCommit as waitForHeldMutationCommit,
+} from "./actions/decideHeld.js";
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
@@ -104,6 +109,24 @@ export function createPartitionWriter({
 		});
 	}
 
+	function decideHeldGroup<Result>(
+		params: Parameters<PartitionWriter["decideHeldGroup"]>[0] & {
+			decide: () => Result;
+		},
+	) {
+		return decideHeldMutationGroup({ scope, ...params });
+	}
+
+	function waitForHeldCommit(
+		params: Parameters<PartitionWriter["waitForHeldCommit"]>[0],
+	) {
+		return waitForHeldMutationCommit({ scope, ...params });
+	}
+
+	function heldBlocker(params: Parameters<PartitionWriter["heldBlocker"]>[0]) {
+		return heldBlockerOf({ scope, ...params });
+	}
+
 	function log(params: Parameters<PartitionWriter["log"]>[0]): Promise<void> {
 		return logMutation({ scope, ...params });
 	}
@@ -153,6 +176,9 @@ export function createPartitionWriter({
 		waitForApplies,
 		decide,
 		decideHeld,
+		decideHeldGroup,
+		heldBlocker,
+		waitForHeldCommit,
 		log,
 		flushDeferredLogs,
 		waitForPendingCommits,

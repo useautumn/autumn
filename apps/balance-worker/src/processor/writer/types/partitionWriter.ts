@@ -36,6 +36,25 @@ export type PartitionWriter = {
 	decideHeld<Reply>(
 		submission: HeldSubmission<Reply>,
 	): HeldDecision<Reply> | null;
+	/** Every held write `decide` makes lands in one append when the group fits the byte budget; past it, the ordinary cut splits them.
+	 *  The members' subjects stay pinned while `decide` runs. */
+	decideHeldGroup<Result>(params: {
+		identities: MeteringIdentity[];
+		decide: () => Result;
+	}): {
+		result: Result;
+		fitsOneAppend: boolean;
+	};
+	/** A held write's commit, for a caller that must answer per write; resolves at once if it already settled. */
+	waitForHeldCommit(params: {
+		identity: MeteringIdentity;
+		commandId: string;
+	}): Promise<void>;
+	/** Why `decideHeld` would hand this command back, or null when it would decide it. */
+	heldBlocker(params: {
+		identity: MeteringIdentity;
+		commandId: string;
+	}): HeldBlocker | null;
 	/** Appends a record that leaves no rows resident, such as an evict; resolves once Kafka holds it. */
 	log(params: {
 		command: MutatingCommand;
@@ -176,6 +195,8 @@ export type PendingMutation = {
 	settlement: PendingSettlement | null;
 	/** A held write's reply, kept for a retry that arrives while it is in flight. */
 	replyBody?: string;
+	/** Held writes decided together; one append carries all of them. */
+	heldGroup?: number;
 	/** Bytes of `loggedRecord` on the wire, measured once when queued. */
 	encodedBytes: number;
 	defersCommit: boolean;
@@ -215,6 +236,11 @@ export type PartitionWriterState = {
 	lastRowSeq: number;
 	storedSeq: number;
 	storeWaiters: StoreWaiter[];
+	/** The group held writes join while `decideHeldGroup` runs. */
+	heldGroup: number | null;
+	lastHeldGroup: number;
+	/** Encoded bytes of the group being decided. */
+	heldGroupBytes: number;
 };
 
 export type StoreWaiter = {
@@ -233,3 +259,5 @@ export type PartitionWriterScope = {
 	config: PartitionWriterConfig;
 	state: PartitionWriterState;
 };
+
+export type HeldBlocker = "settled_write_in_flight" | "retry_in_flight";
