@@ -1,3 +1,4 @@
+import { BufferLoggedResponseHook } from "./bufferLoggedResponseHook.js";
 import { FailOpenHook } from "./failOpenHook.js";
 import { RedactDebugLogHook } from "./redactDebugLogHook.js";
 import { TimeoutFixHook } from "./timeoutFixHook.js";
@@ -15,5 +16,6 @@ export function initHooks(hooks: Hooks) {
 	hooks.registerSDKInitHook(failOpenHook);
 	hooks.registerSDKInitHook(new RedactDebugLogHook());
 	hooks.registerBeforeCreateRequestHook(timeoutFixHook);
+	hooks.registerAfterSuccessHook(new BufferLoggedResponseHook());
 	hooks.registerAfterErrorHook(failOpenHook);
 }
