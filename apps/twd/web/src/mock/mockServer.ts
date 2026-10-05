@@ -1603,6 +1603,22 @@ export const handle = ({
 		return ok(res);
 	}
 
+	if (route === "POST /accounts/retry-broken") {
+		const broken = accounts.filter((a) => a.state === "broken");
+		const res = broken.map((a) => enqueue("nuke", `nuke:${a.id}`));
+		const fresh = broken.filter((_, i) => !res[i].deduped);
+		releaseAccounts((a) => fresh.includes(a));
+		for (const r of res)
+			setTimeout(() => {
+				r.job.status = "succeeded";
+				r.job.finishedAt = iso(Date.now());
+			}, 8_000);
+		return ok({
+			enqueued: fresh.length,
+			skipped: broken.length - fresh.length,
+		});
+	}
+
 	if (method === "DELETE" && seg[0] === "accounts" && seg[1]) {
 		const i = accounts.findIndex((a) => a.id === seg[1]);
 		if (i === -1)

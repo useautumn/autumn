@@ -225,6 +225,7 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 			return;
 		case "accounts.changed":
 			qc.invalidateQueries({ queryKey: qk.accounts });
+			qc.invalidateQueries({ queryKey: qk.keys });
 			return;
 		case "warm.updated":
 			qc.setQueryData<Branch[]>(qk.branches, (branches) =>

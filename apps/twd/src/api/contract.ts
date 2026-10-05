@@ -315,6 +315,12 @@ export const StripeAccount = z.object({
 	brokenReason: z.string().nullable(),
 });
 
+/** POST /accounts/retry-broken: nuke jobs enqueued, and broken accounts left alone. */
+export const RetryBrokenAccountsResponse = z.object({
+	enqueued: z.number(),
+	skipped: z.number(),
+});
+
 // ---- jobs -----------------------------------------------------------------
 
 export const Job = z.object({
@@ -535,6 +541,8 @@ export const ROUTES = {
 	// accounts (http/routes/accounts.ts)
 	listAccounts: "GET /accounts",
 	nukeAccounts: "POST /accounts/nuke",
+	/** Re-nukes every broken account; skips ones already queued or on a full-nuke/re-init key. */
+	retryBrokenAccounts: "POST /accounts/retry-broken",
 	/** Drop an account from the ledger (e.g. deleted in Stripe). Not allowed while held by a run. */
 	forgetAccount: "DELETE /accounts/:id",
 
@@ -579,6 +587,9 @@ export type ReinitScope = z.infer<typeof ReinitScope>;
 export type ImportKeysResponse = z.infer<typeof ImportKeysResponse>;
 export type KeysOverview = z.infer<typeof KeysOverview>;
 export type StripeAccount = z.infer<typeof StripeAccount>;
+export type RetryBrokenAccountsResponse = z.infer<
+	typeof RetryBrokenAccountsResponse
+>;
 export type Capacity = z.infer<typeof Capacity>;
 export type ApiError = z.infer<typeof ApiError>;
 export type LiveTopic = z.infer<typeof LiveTopic>;

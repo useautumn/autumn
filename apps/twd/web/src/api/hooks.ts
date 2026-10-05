@@ -19,6 +19,7 @@ import {
 	Job,
 	KeysOverview,
 	Me,
+	RetryBrokenAccountsResponse,
 	RunDetail,
 	RunSummary,
 	RunsPage,
@@ -395,6 +396,23 @@ export const useNukeAccounts = () => {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: qk.accounts });
 			qc.invalidateQueries({ queryKey: qk.capacity });
+		},
+	});
+};
+
+export const useRetryBrokenAccounts = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			api({
+				method: "POST",
+				path: "/accounts/retry-broken",
+				schema: RetryBrokenAccountsResponse,
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: qk.accounts });
+			qc.invalidateQueries({ queryKey: qk.capacity });
+			qc.invalidateQueries({ queryKey: qk.keys });
 		},
 	});
 };
