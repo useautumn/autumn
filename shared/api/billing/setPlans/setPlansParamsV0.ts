@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ms } from "../../../utils/common/unixUtils";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
@@ -6,6 +7,9 @@ import {
 	CreateScheduleParamsV0BaseSchema,
 	createScheduleTimingIssues,
 } from "../createSchedule/createScheduleParamsV0";
+
+/** A first phase starting within this of now starts now: further back it backdates, further ahead it starts later. */
+export const SET_PLANS_FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
 
 export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 	billing_behavior: true,

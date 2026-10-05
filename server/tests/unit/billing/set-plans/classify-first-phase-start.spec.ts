@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { ms } from "@autumn/shared";
-import {
-	classifyFirstPhaseStart,
-	FIRST_PHASE_TOLERANCE_MS,
-} from "@/internal/billing/v2/actions/setPlans/setup/classifyFirstPhaseStart";
+import { ms, SET_PLANS_FIRST_PHASE_TOLERANCE_MS } from "@autumn/shared";
+import { classifyFirstPhaseStart } from "@/internal/billing/v2/actions/setPlans/setup/classifyFirstPhaseStart";
 
 const currentEpochMs = 1_800_000_000_000;
 
@@ -12,23 +9,23 @@ describe("classifyFirstPhaseStart", () => {
 		["exactly now", currentEpochMs, "now"],
 		[
 			"just inside the tolerance ahead",
-			currentEpochMs + FIRST_PHASE_TOLERANCE_MS,
+			currentEpochMs + SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 			"now",
 		],
 		[
 			"just inside the tolerance behind",
-			currentEpochMs - FIRST_PHASE_TOLERANCE_MS,
+			currentEpochMs - SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 			"now",
 		],
 		[
 			"past the tolerance ahead",
-			currentEpochMs + FIRST_PHASE_TOLERANCE_MS + 1,
+			currentEpochMs + SET_PLANS_FIRST_PHASE_TOLERANCE_MS + 1,
 			"future",
 		],
 		["a day ahead", currentEpochMs + ms.days(1), "future"],
 		[
 			"past the tolerance behind",
-			currentEpochMs - FIRST_PHASE_TOLERANCE_MS - 1,
+			currentEpochMs - SET_PLANS_FIRST_PHASE_TOLERANCE_MS - 1,
 			"past",
 		],
 	])("%s", (_label, startsAt, expected) => {

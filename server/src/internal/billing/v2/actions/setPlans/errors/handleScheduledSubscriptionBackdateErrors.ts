@@ -1,8 +1,8 @@
 import {
 	type CreateScheduleBillingContext,
 	customerProductHasActiveStatus,
+	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 } from "@autumn/shared";
-import { FIRST_PHASE_TOLERANCE_MS } from "../setup/classifyFirstPhaseStart";
 import { filterCustomerProductsInStripeSubscriptionScope } from "../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 import { setPlansError } from "./setPlansError";
 
@@ -22,7 +22,7 @@ const startsBeforeLivePlans = ({
 
 	return (
 		Math.max(...liveStarts) - billingContext.immediatePhase.starts_at >
-		FIRST_PHASE_TOLERANCE_MS
+		SET_PLANS_FIRST_PHASE_TOLERANCE_MS
 	);
 };
 

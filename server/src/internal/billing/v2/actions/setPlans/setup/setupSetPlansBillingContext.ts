@@ -1,6 +1,7 @@
 import {
 	type CreateScheduleBillingContext,
 	isPastStartDate,
+	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -16,7 +17,6 @@ import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import {
 	classifyFirstPhaseStart,
-	FIRST_PHASE_TOLERANCE_MS,
 	firstPhaseStartsInFuture,
 } from "./classifyFirstPhaseStart";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
@@ -144,7 +144,7 @@ export const setupSetPlansBillingContext = async ({
 		subscriptionBackdateStartMs: isPastStartDate(
 			immediatePhase.starts_at,
 			billingContext.currentEpochMs,
-			FIRST_PHASE_TOLERANCE_MS,
+			SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 		)
 			? immediatePhase.starts_at
 			: undefined,

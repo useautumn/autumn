@@ -1,6 +1,8 @@
-import { isFutureStartDate, isPastStartDate, ms } from "@autumn/shared";
-
-export const FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
+import {
+	isFutureStartDate,
+	isPastStartDate,
+	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
+} from "@autumn/shared";
 
 export type FirstPhaseStart = "now" | "past" | "future";
 
@@ -12,10 +14,22 @@ export const classifyFirstPhaseStart = ({
 	startsAt: number;
 	currentEpochMs: number;
 }): FirstPhaseStart => {
-	if (isFutureStartDate(startsAt, currentEpochMs, FIRST_PHASE_TOLERANCE_MS)) {
+	if (
+		isFutureStartDate(
+			startsAt,
+			currentEpochMs,
+			SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
+		)
+	) {
 		return "future";
 	}
-	if (isPastStartDate(startsAt, currentEpochMs, FIRST_PHASE_TOLERANCE_MS)) {
+	if (
+		isPastStartDate(
+			startsAt,
+			currentEpochMs,
+			SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
+		)
+	) {
 		return "past";
 	}
 	return "now";

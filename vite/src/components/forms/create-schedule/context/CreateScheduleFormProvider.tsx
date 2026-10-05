@@ -51,7 +51,7 @@ import {
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
 import {
-	firstPhaseIsBackdated,
+	firstPhaseBackdatesLiveSubscription,
 	firstPhaseStartsLater,
 } from "../utils/schedulePhaseTiming";
 
@@ -190,9 +190,12 @@ export function CreateScheduleFormProvider({
 	const allowFirstPhaseBackdate =
 		!isExistingSchedule && immediatePlansPaidRecurring;
 
-	const backdatesLiveSubscription =
-		hasActiveSubscription &&
-		firstPhaseIsBackdated({ phases: formValues.phases, nowMs });
+	const backdatesLiveSubscription = firstPhaseBackdatesLiveSubscription({
+		phases: formValues.phases,
+		nowMs,
+		isExistingSchedule,
+		hasActiveSubscription,
+	});
 
 	// Mirrors attach: a new sub is created when there's no active subscription, and
 	// usage-only plans still bill recurring even though nothing is due immediately.

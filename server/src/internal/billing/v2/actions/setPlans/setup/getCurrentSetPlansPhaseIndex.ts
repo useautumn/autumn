@@ -1,5 +1,5 @@
+import { SET_PLANS_FIRST_PHASE_TOLERANCE_MS } from "@autumn/shared";
 import type { normalizeSetPlansPhases } from "../errors/normalizeSetPlansPhases";
-import { FIRST_PHASE_TOLERANCE_MS } from "./classifyFirstPhaseStart";
 
 export const getCurrentSetPlansPhaseIndex = ({
 	phases,
@@ -9,7 +9,8 @@ export const getCurrentSetPlansPhaseIndex = ({
 	currentEpochMs: number;
 }) => {
 	const startedPhaseCount = phases.filter(
-		(phase) => phase.starts_at <= currentEpochMs + FIRST_PHASE_TOLERANCE_MS,
+		(phase) =>
+			phase.starts_at <= currentEpochMs + SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	).length;
 
 	return Math.max(0, startedPhaseCount - 1);

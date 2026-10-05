@@ -1,19 +1,19 @@
-import type {
-	MultiAttachBillingContext,
-	SetPlansParamsV0,
-	StripeSubscriptionScope,
+import {
+	type MultiAttachBillingContext,
+	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
+	type SetPlansParamsV0,
+	type StripeSubscriptionScope,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import type { normalizeSetPlansPhases } from "../errors/normalizeSetPlansPhases";
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { markUnscheduledProductContexts } from "../utils/unscheduledProductContexts";
-import { FIRST_PHASE_TOLERANCE_MS } from "./classifyFirstPhaseStart";
 import { getCurrentSetPlansPhaseIndex } from "./getCurrentSetPlansPhaseIndex";
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 
 export const SET_PLANS_IMMEDIATE_SETUP_OPTIONS = {
-	billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+	billingStartsAtToleranceMs: SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	includeScheduledProductsForScheduleLookup: true,
 	replaceUnusableSubscription: true,
 	inheritSubscriptionTrial: true,
