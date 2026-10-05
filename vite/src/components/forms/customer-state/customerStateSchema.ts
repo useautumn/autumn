@@ -50,6 +50,8 @@ export const CustomerStatePhaseSchema = z.object({
 	startsAt: z.number().nullable(),
 	persistedStartsAt: z.number().nullable().optional(),
 	plans: z.array(CustomerStatePlanSchema).min(1),
+	/** Later phases reset the billing cycle at their start unless this is set. */
+	keepsCycleAnchor: z.boolean().optional(),
 });
 
 export type CustomerStatePhase = z.infer<typeof CustomerStatePhaseSchema>;
@@ -72,17 +74,6 @@ export function hasMultipleImmediateSchedulePlans({
 	);
 	return (
 		(immediatePhase?.plans.filter((plan) => plan.productId).length ?? 0) > 1
-	);
-}
-
-export function canResetScheduleBillingCycle({
-	phases,
-}: {
-	phases: CustomerStatePhase[];
-}) {
-	return (
-		!hasMultipleImmediateSchedulePlans({ phases }) ||
-		hasPersistedCreateSchedule({ phases })
 	);
 }
 

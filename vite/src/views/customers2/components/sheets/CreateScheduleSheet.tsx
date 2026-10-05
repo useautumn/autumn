@@ -4,7 +4,11 @@ import type {
 	FullCustomer,
 	ProductV2,
 } from "@autumn/shared";
-import { ACTIVE_STATUSES, CusProductStatus } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	CusProductStatus,
+	truncateMsToSecondPrecision,
+} from "@autumn/shared";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -49,20 +53,21 @@ const subscriptionTargetFromSheetData = (
 const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
 	customerProduct.status === CusProductStatus.Scheduled;
 
-/** A scheduled plan whose start also resets the billing cycle. */
-const hasUpcomingBillingCycleReset = ({
+/** Stripe stores phase starts in whole seconds, so a reset matches its phase to the second. */
+const resetsBillingCycleAt = ({
 	customerProducts,
-	nowMs,
+	startsAt,
 }: {
 	customerProducts: FullCusProduct[];
-	nowMs: number;
+	startsAt: number;
 }) =>
 	customerProducts.some(
 		(customerProduct) =>
 			isScheduledCustomerProduct(customerProduct) &&
-			customerProduct.starts_at > nowMs &&
-			customerProduct.billing_cycle_anchor_resets_at ===
-				customerProduct.starts_at,
+			customerProduct.billing_cycle_anchor_resets_at != null &&
+			truncateMsToSecondPrecision(
+				customerProduct.billing_cycle_anchor_resets_at,
+			) === truncateMsToSecondPrecision(startsAt),
 	);
 
 /** When today's phase began: its earliest live plan that ends at a scheduled
@@ -109,13 +114,11 @@ export function buildInitialValues({
 	products,
 	stripeSubscriptionId,
 	stripeScheduleId,
-	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
 	products: ProductV2[];
 	stripeSubscriptionId?: string | null;
 	stripeScheduleId?: string | null;
-	nowMs?: number;
 }): CustomerStateForm {
 	const customerProducts = scopeCustomerProducts({
 		customerProducts: customer?.customer_products ?? [],
@@ -135,9 +138,14 @@ export function buildInitialValues({
 	const phases = seededState.phases.map((phase, index) => {
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
+		const keepsCycleAnchor =
+			index > 0 &&
+			phase.startsAt != null &&
+			!resetsBillingCycleAt({ customerProducts, startsAt: phase.startsAt });
 		return {
 			...phase,
 			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
+			keepsCycleAnchor,
 			...(hasScheduledPlans && persistedStartsAt != null
 				? { persistedStartsAt }
 				: {}),
@@ -152,10 +160,7 @@ export function buildInitialValues({
 		phases,
 		unscheduledPlans: seededState.unscheduledPlans,
 		billingBehavior: null,
-		resetBillingCycle: hasUpcomingBillingCycleReset({
-			customerProducts,
-			nowMs,
-		}),
+		resetBillingCycle: false,
 		billingCycleAnchorMode: "now",
 		billingCycleAnchorDate: null,
 		endDate: null,
@@ -294,18 +299,11 @@ export function CreateScheduleSheet() {
 			products,
 			stripeSubscriptionId: subscriptionTarget?.stripeSubscriptionId,
 			stripeScheduleId: subscriptionTarget?.stripeScheduleId,
-			nowMs: testClockFrozenTimeMs,
 		});
 		// An approval seed is the proposed schedule itself — it replaces the
 		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
-	}, [
-		fullCustomer,
-		products,
-		subscriptionTarget,
-		testClockFrozenTimeMs,
-		seedOverrides,
-	]);
+	}, [fullCustomer, products, subscriptionTarget, seedOverrides]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
