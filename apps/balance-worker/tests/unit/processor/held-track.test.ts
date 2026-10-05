@@ -13,6 +13,7 @@ import type { CommittedOutcomeAppender } from "../../../src/processor/writer/typ
 import {
 	MutationBatchAppendError,
 	MutationBatchNotCommittedError,
+	PartitionWriterRecoveryRequiredError,
 } from "../../../src/processor/writer/writerErrors.js";
 import { createCommitPositions } from "../../../src/runtime/commitPositions/createCommitPositions.js";
 import type {
@@ -356,6 +357,28 @@ describe("inline tracks with held replies", () => {
 			expect(stored).toBe(true);
 		} finally {
 			f.close();
+		}
+	});
+
+	test("a held write whose store apply fails makes the drain fail, as an ordinary write's does", async () => {
+		for (const decideWith of ["inline", "ordinary"] as const) {
+			const f = await residentFixture();
+			try {
+				f.store.storeGate = () => Promise.reject(new Error("store refused"));
+				const command = trackCommand({ commandId: `apply_${decideWith}` });
+				if (decideWith === "inline") f.processor.trackInline({ command });
+				else void f.processor.track({ command });
+				await waitForAppend();
+				f.appender.release();
+				await waitForAppend();
+				const drained = await f.processor.drain().then(
+					() => "resolved",
+					(cause: unknown) => cause,
+				);
+				expect(drained).toBeInstanceOf(PartitionWriterRecoveryRequiredError);
+			} finally {
+				f.close();
+			}
 		}
 	});
 

@@ -277,6 +277,8 @@ async function appendBatch({
 			rejectAllPending({ state, batch, error });
 			failAboveSettled({ scope, cause: error });
 			state.storeCompletion = Promise.resolve();
+			// Nothing is unapplied and nothing dropped will be stored: later waits cover only new writes.
+			state.lastRowSeq = state.storedSeq;
 		} else {
 			enterRecovery({ scope, batch, cause });
 		}
