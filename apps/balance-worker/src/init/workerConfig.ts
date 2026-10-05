@@ -22,6 +22,9 @@ import type {
 } from "./types/partitionRuntimeFactory.js";
 import { workerCheckpointLimits } from "./workerCheckpointConfig.js";
 
+/** A leader election or a replica rejoining the ISR lasts seconds; an append waits it out rather than end unknown. */
+export const PRODUCER_RETRY_BUDGET_MS = 5_000;
+
 export function assertKafkaBalanceWorkerTimings({
 	timings,
 }: {
@@ -170,13 +173,11 @@ export function balanceWorkerEnvToRuntimeConfig({
 			// dies. A live owner's open transaction only holds its followers back,
 			// and a dead owner's is aborted the moment its successor initialises.
 			transactionTimeoutMs: 30_000,
-			// Back-to-back transactions routinely hit CONCURRENT_TRANSACTIONS while the
-			// coordinator is still writing the previous commit's markers, which clears in
-			// a few ms. Start the backoff there instead of at 100ms; eight doublings still
-			// ride out a broker blip for over a second before giving up.
-			retryCount: 8,
-			initialRetryTimeMs: 5,
-			maxRetryTimeMs: 1000,
+			// CONCURRENT_TRANSACTIONS clears in a few ms, so backoff starts at 10 ms; ten doublings
+			// capped at 2.5 s wait ~7.5 s in all, past PRODUCER_RETRY_BUDGET_MS.
+			retryCount: 10,
+			initialRetryTimeMs: 10,
+			maxRetryTimeMs: 2_500,
 		},
 		timings: {
 			fetchMaxWaitTimeMs: env.BALANCE_WORKER_FETCH_MAX_WAIT_MS,
