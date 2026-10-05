@@ -503,9 +503,10 @@ export const KeysScreen = () => {
 			>
 				<p>
 					Queues the same nuke job as Retry nuke on the Accounts page for every
-					broken account. Accounts already queued, or on a key mid full nuke or
-					re-init, are skipped; accounts in use by runs are never touched.
-					Progress shows in the Nuking and Broken columns.
+					broken account. Skipped: accounts with a nuke already queued or
+					running, and accounts whose key is missing or mid full nuke or
+					re-init. Accounts in use by runs are never touched. Progress shows in
+					the Nuking and Broken columns.
 				</p>
 				<ErrorCallout error={retryBroken.error} className="mt-3" />
 			</ConfirmDialog>
