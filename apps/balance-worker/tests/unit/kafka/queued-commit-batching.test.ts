@@ -163,6 +163,34 @@ describe("queued commit batching", () => {
 		}
 	});
 
+	test("an append whose retries ran out parks the partition; the restart replays what landed, so no track is lost or counted twice", async () => {
+		const pipeline = createCommandPipeline({ unknownAppendAt: 1 });
+		try {
+			const commands = queuedTracks({ count: 30 });
+			await pipeline.consumeBatch({ commands });
+			await pipeline.drain().catch(() => undefined);
+			expect(pipeline.parked).toHaveLength(1);
+			const landedBeforeRestart = pipeline.committedSources().length;
+
+			pipeline.restart();
+			const resumeAt = Number(pipeline.readBookmark() ?? 0n);
+			expect(resumeAt).toBe(landedBeforeRestart);
+			await pipeline.consumeBatch({
+				commands: commands.slice(resumeAt),
+				firstOffset: resumeAt,
+			});
+			await pipeline.drain();
+
+			expect(pipeline.parked).toEqual([]);
+			expect(pipeline.committedSources()).toEqual(offsetsOf({ commands }));
+			expect(
+				customers.map((customerId) => balanceOf({ pipeline, customerId })),
+			).toEqual(customers.map(() => STARTING_BALANCE - 10));
+		} finally {
+			await pipeline.close();
+		}
+	});
+
 	test("decides stop running ahead of a stalled commit at the in-flight bound, and resume once it lands", async () => {
 		const held = Promise.withResolvers<void>();
 		const pipeline = createCommandPipeline({

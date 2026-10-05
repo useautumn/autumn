@@ -3,6 +3,7 @@
  *  echo     → metadata whose logAppendTime carries the record the producer received, as JSON
  *  refuse   → a KafkaJSProtocolError (the broker refused; nothing appended)
  *  fenced   → retries exhausted around INVALID_PRODUCER_EPOCH (fate unknown, fencing cause)
+ *  electing → retries exhausted around LEADER_NOT_AVAILABLE (fate unknown, a leader election)
  *  crash    → the thread exits
  *  anything else → one metadata entry with a per-partition base offset
  * A clientId of "bad-client" makes the thread fail to start.
@@ -89,6 +90,16 @@ function fakeProducer({
 					code: 47,
 				}),
 				{ retryCount: 2, retryTime: 100 },
+			);
+		if (record.topic === "electing")
+			throw new KafkaJSNumberOfRetriesExceeded(
+				protocolError({
+					message:
+						"There is no leader for this topic-partition as we are in the middle of a leadership election",
+					type: "LEADER_NOT_AVAILABLE",
+					code: 5,
+				}),
+				{ retryCount: 10, retryTime: 2500 },
 			);
 		const partition = record.messages[0]?.partition ?? 0;
 		const slot = `${record.topic}/${partition}`;
