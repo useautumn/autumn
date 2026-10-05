@@ -31,6 +31,7 @@ import {
 	kafkaRequestTimings,
 } from "../logging/kafkaRequestTimings.js";
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
+import { createCommitPositions } from "../runtime/commitPositions/createCommitPositions.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
 import { startWorkerThreads } from "./construction/startWorkerThreads.js";
@@ -159,11 +160,15 @@ export async function createBalanceWorker({
 				);
 			return producers.producer(producerConfig);
 		}
+		const commitPositions = createCommitPositions({
+			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
+		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
 				logger: dependencies.logger,
 				kafka: { producer: partitionProducer },
+				commitPositions,
 				ownershipOffsets: resources.admin,
 				ownershipHandoff,
 				stateStore: resources.stateStore,

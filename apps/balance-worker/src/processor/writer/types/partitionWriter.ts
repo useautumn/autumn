@@ -15,6 +15,7 @@ import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
 import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
 import type { SubjectMapBudget } from "../subjectMap/types/subjectMapBudget.js";
+import type { CommitPositionSink } from "./commitPositionSink.js";
 import type {
 	CommittedMutation,
 	DecidedMutation,
@@ -105,6 +106,8 @@ export type PartitionWriterContext = {
 		to: SubjectState;
 		changes: RowChange[];
 	}) => void;
+	/** Where the partition's commit position is published; without one the writer numbers its writes alone. */
+	commitPositions?: CommitPositionSink;
 	now?: () => number;
 	heapSize?: () => number;
 	logger?: Partial<Pick<AutumnLogger, "warn">>;
@@ -149,6 +152,8 @@ export type PendingSettlement = {
 
 export type PendingMutation = {
 	pendingKey: string;
+	/** The partition's sequence number for this write, in decide order. */
+	seq: number;
 	customerKey: string;
 	/** The subjects this mutation projected; pinned in the map until it commits. */
 	projectedSubjectKeys: string[];
@@ -191,6 +196,10 @@ export type PartitionWriterState = {
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
+	/** The last sequence number this writer handed out. */
+	lastSeq: number;
+	/** The last sequence number whose outcome is published: in the log, or failed. */
+	settledSeq: number;
 };
 
 export type UnappliedBatch = {
