@@ -1,4 +1,8 @@
-import { KafkaJSError, KafkaJSProtocolError } from "kafkajs";
+import {
+	KafkaJSError,
+	KafkaJSNumberOfRetriesExceeded,
+	KafkaJSProtocolError,
+} from "kafkajs";
 import type { ProducerError } from "../types/producerError.js";
 
 /**
@@ -17,7 +21,13 @@ export const kafkaErrorOf = ({ error }: { error: ProducerError }): Error => {
 			}),
 		);
 	} else {
-		rebuilt = new KafkaJSError(error.message, { retriable: error.retriable });
+		rebuilt =
+			error.name === "KafkaJSNumberOfRetriesExceeded" && cause
+				? new KafkaJSNumberOfRetriesExceeded(cause, {
+						retryCount: 0,
+						retryTime: 0,
+					})
+				: new KafkaJSError(error.message, { retriable: error.retriable });
 		if (error.type !== undefined) rebuilt.type = error.type;
 		if (error.code !== undefined) rebuilt.code = error.code;
 	}

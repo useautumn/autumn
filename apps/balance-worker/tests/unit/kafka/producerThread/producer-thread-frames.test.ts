@@ -5,6 +5,7 @@ import {
 	KafkaJSNumberOfRetriesExceeded,
 	KafkaJSProtocolError,
 } from "kafkajs";
+import { isRetriableKafkaError } from "../../../../../../packages/kafka/src/producer/sendTransactionalBatch.js";
 import {
 	decodeAckFrame,
 	encodeAckFrame,
@@ -106,6 +107,26 @@ describe("producer errors across threads", () => {
 		expect(rebuilt).not.toBeInstanceOf(KafkaJSProtocolError);
 		expect(rebuilt.name).toBe("KafkaJSNumberOfRetriesExceeded");
 		expect(isKafkaProducerFencingCause({ cause: rebuilt })).toBe(true);
+	});
+
+	test("retries exceeded on a retriable broker refusal keeps its class, so the writer still retries it", () => {
+		const exhausted = new KafkaJSNumberOfRetriesExceeded(
+			new KafkaJSProtocolError(
+				Object.assign(new Error("broker said NOT_LEADER_FOR_PARTITION"), {
+					type: "NOT_LEADER_FOR_PARTITION",
+					code: 6,
+					retriable: true,
+				}),
+			),
+			{ retryCount: 5, retryTime: 300 },
+		);
+		expect(isRetriableKafkaError(exhausted)).toBe(true);
+		const rebuilt = kafkaErrorOf({
+			error: producerErrorOf({ cause: exhausted }),
+		});
+		expect(rebuilt).toBeInstanceOf(KafkaJSNumberOfRetriesExceeded);
+		expect(rebuilt.name).toBe("KafkaJSNumberOfRetriesExceeded");
+		expect(isRetriableKafkaError(rebuilt)).toBe(true);
 	});
 
 	test("a thrown non-error crosses as an unknown outcome", () => {
