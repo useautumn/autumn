@@ -169,7 +169,7 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		expect(counts.inlined).toBe(0);
 	});
 
-	test("a refused append reaches the held client as a retryable NOT_READY, never a 5xx", async () => {
+	test("a refused append reaches the held client as a retryable 503 NOT_READY, never a 500", async () => {
 		const { worker, http } = await setUp({ inline: true });
 		const held = http.post(trackCommand({ commandId: "refused" }));
 		await Bun.sleep(50);
