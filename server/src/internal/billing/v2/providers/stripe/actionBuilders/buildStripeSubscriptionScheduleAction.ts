@@ -17,6 +17,7 @@ import {
 } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import type Stripe from "stripe";
 import { stripeScheduleMatchesPhases } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/stripeScheduleMatchesPhases";
+import { getInsertedOrPatchedCustomerProductIds } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -275,16 +276,14 @@ export const buildStripeSubscriptionScheduleAction = ({
 	trialEndsAt?: number;
 }): StripeSubscriptionScheduleResult => {
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
-	const { insertCustomerProducts } = autumnBillingPlan;
+	const writtenCustomerProductIds = getInsertedOrPatchedCustomerProductIds({
+		autumnBillingPlan,
+	});
 
 	// 1. Filter to relevant customer products
 	const relatedCustomerProducts = finalCustomerProducts.filter(
 		(customerProduct) => {
-			const isNewCusProduct = insertCustomerProducts.some(
-				(cp) => cp.id === customerProduct.id,
-			);
-
-			if (isNewCusProduct) return true;
+			if (writtenCustomerProductIds.has(customerProduct.id)) return true;
 
 			if (
 				stripeSubscription &&
