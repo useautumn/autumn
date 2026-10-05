@@ -492,3 +492,41 @@ test.concurrent(
 		expect(onB.map((cp) => cp.id)).toEqual([cusProduct.id]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("rc transfer: leaves the source product when the destination already has the same plan")}`,
+	async () => {
+		const customerA = "rc-xfer-same";
+		const customerB = `${customerA}-b`;
+		const plan = rcPlan({ id: "rc-xfer-same-pro" });
+		await setupCustomers({ customerId: customerA, plans: [plan] });
+
+		const { cusProduct: onAFirst, mock } = await purchaseOnA({
+			plan,
+			rcStoreId: "com.app.rc_xfer_same",
+			rcInternalId: "prod_rc_xfer_same",
+			subId: "sub_rc_xfer_same_a",
+			customerId: customerA,
+		});
+		const { cusProduct: onBFirst } = await purchaseOnA({
+			plan,
+			rcStoreId: "com.app.rc_xfer_same",
+			rcInternalId: "prod_rc_xfer_same",
+			subId: "sub_rc_xfer_same_b",
+			customerId: customerB,
+		});
+
+		expectWebhookSuccess(
+			await newRcClient().transfer({
+				transferredFrom: [customerA],
+				transferredTo: [customerB],
+				mock,
+			}),
+		);
+
+		const onA = await listActiveRcCusProducts({ customerId: customerA });
+		const onB = await listActiveRcCusProducts({ customerId: customerB });
+		expect(onA.map((cp) => cp.id)).toEqual([onAFirst.id]);
+		expect(onB.map((cp) => cp.id)).toEqual([onBFirst.id]);
+	},
+);

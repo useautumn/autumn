@@ -3,7 +3,13 @@ import {
 	getRevenueCatStoreIdentifierMap,
 	mapRevenueCatProductToAutumn,
 } from "@/external/revenueCat/misc/revenueCatCatalogMapper";
+import type { RevenueCatSubscription } from "@/external/revenueCat/revenuecatTypes";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
+
+const subscriptionGivesAccess = (sub: RevenueCatSubscription) =>
+	sub.gives_access === true ||
+	sub.status === "active" ||
+	sub.status === "trialing";
 
 export type DestinationRevenueCatItems = {
 	rcItemIds: Set<string>;
@@ -42,7 +48,11 @@ export const listDestinationRevenueCatProducts = async ({
 			cli.listCustomerPurchases(appUserId),
 		]);
 
-		for (const item of [...subscriptions, ...purchases]) {
+		const holdingItems = [
+			...subscriptions.filter(subscriptionGivesAccess),
+			...purchases.filter((purchase) => purchase.status !== "refunded"),
+		];
+		for (const item of holdingItems) {
 			items.rcItemIds.add(item.id);
 			if (!item.product_id) continue;
 			const autumnProductId = await mapRevenueCatProductToAutumn({

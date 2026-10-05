@@ -5,12 +5,12 @@ import { resolveRevenueCatCustomer } from "@/external/revenueCat/misc/resolveRev
 import { findSourceCustomers } from "@/external/revenueCat/transfer/findSourceCustomers";
 import { hasPooledBalanceDependency } from "@/external/revenueCat/transfer/hasPooledBalanceDependency";
 import { listDestinationRevenueCatProducts } from "@/external/revenueCat/transfer/listDestinationRevenueCatProducts";
+import { loadCustomerWithAllProducts } from "@/external/revenueCat/transfer/loadCustomerWithAllProducts";
 import { moveCusProductsToCustomer } from "@/external/revenueCat/transfer/moveCusProductsToCustomer";
 import { releaseTransferredLicenseSeats } from "@/external/revenueCat/transfer/releaseTransferredLicenseSeats";
 import { selectTransferredCusProducts } from "@/external/revenueCat/transfer/selectTransferredCusProducts";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { refreshAllocationScale } from "@/internal/balances/allocate/actions/refreshAllocationScale";
-import { CusService } from "@/internal/customers/CusService";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
@@ -101,7 +101,12 @@ export const handleTransfer = async ({
 
 	for (const { source, cusProducts } of transferringBySource) {
 		if (source.internal_id === destination.internal_id) continue;
-		await transferProducts({ ctx, source, destination, cusProducts });
+		await transferProducts({
+			ctx,
+			source,
+			destinationInternalId: destination.internal_id,
+			cusProducts,
+		});
 	}
 	return { success: true };
 };
@@ -109,15 +114,19 @@ export const handleTransfer = async ({
 const transferProducts = async ({
 	ctx,
 	source,
-	destination,
+	destinationInternalId,
 	cusProducts,
 }: {
 	ctx: RevenueCatWebhookContext;
 	source: FullCustomer;
-	destination: FullCustomer;
+	destinationInternalId: string;
 	cusProducts: FullCusProduct[];
 }) => {
 	const { logger } = ctx;
+	const destination = await loadCustomerWithAllProducts({
+		ctx,
+		internalId: destinationInternalId,
+	});
 	const movable: FullCusProduct[] = [];
 	const replacedOnDestination = new Set<string>();
 
@@ -155,6 +164,7 @@ const transferProducts = async ({
 	await releaseTransferredLicenseSeats({
 		ctx,
 		sourceCustomerId: publicId(source),
+		sourceInternalId: source.internal_id,
 		cusProductIds,
 	});
 	await moveCusProductsToCustomer({
@@ -164,11 +174,9 @@ const transferProducts = async ({
 	});
 	await refreshCustomer({ ctx, customer: destination });
 
-	const refreshedDestination = await CusService.getFull({
+	const refreshedDestination = await loadCustomerWithAllProducts({
 		ctx,
-		idOrInternalId: destination.internal_id,
-		withEntities: true,
-		withSubs: true,
+		internalId: destination.internal_id,
 	});
 	for (const replaced of refreshedDestination.customer_products.filter(
 		(cusProduct) => replacedOnDestination.has(cusProduct.id),
@@ -180,11 +188,9 @@ const transferProducts = async ({
 		});
 	}
 
-	const refreshedSource = await CusService.getFull({
+	const refreshedSource = await loadCustomerWithAllProducts({
 		ctx,
-		idOrInternalId: source.internal_id,
-		withEntities: true,
-		withSubs: true,
+		internalId: source.internal_id,
 	});
 	for (const moved of movable) {
 		const { curMainProduct } = getExistingCusProducts({

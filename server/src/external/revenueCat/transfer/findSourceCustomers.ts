@@ -1,5 +1,6 @@
 import { CustomerNotFoundError, type FullCustomer } from "@autumn/shared";
 import { resolveRevenueCatCustomer } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { loadCustomerWithAllProducts } from "@/external/revenueCat/transfer/loadCustomerWithAllProducts";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 
 /** Autumn customers behind the RC users purchases were taken from; ids Autumn never saw (e.g. anonymous) drop out. */
@@ -18,7 +19,13 @@ export const findSourceCustomers = async ({
 				appUserId,
 				autoCreateCustomer: false,
 			});
-			found.set(customer.internal_id, customer);
+			found.set(
+				customer.internal_id,
+				await loadCustomerWithAllProducts({
+					ctx,
+					internalId: customer.internal_id,
+				}),
+			);
 		} catch (error) {
 			if (!(error instanceof CustomerNotFoundError)) throw error;
 		}
