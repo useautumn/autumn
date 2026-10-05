@@ -185,8 +185,9 @@ export type PendingMutation = {
 	/** The partition's sequence number for this write, in decide order. */
 	seq: number;
 	customerKey: string;
-	/** The subjects this mutation projected; pinned in the map until it commits. */
+	/** The subjects this mutation projected; pinned in the map until it commits, or until it is stored while snapshots are written. */
 	projectedSubjectKeys: string[];
+	pinsReleased?: boolean;
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied; null for a log-only record. */
 	nextState: SubjectState | null;

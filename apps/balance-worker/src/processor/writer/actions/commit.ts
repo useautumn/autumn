@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
+import { writesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
 	DurableMutationApplyResult,
@@ -365,8 +366,20 @@ function settlePending({
 	const { mutation } = pending;
 	scope.ctx.recentCommands.remember({ mutation });
 	removePendingMutation({ state: scope.state, pending });
+	if (!keepsPinsUntilStored({ scope }))
+		releasePins({ state: scope.state, pending });
 	pending.settlement?.settle({ mutation, state: pending.nextState });
 }
+
+/** Snapshot intents read each subject as its batch leaves it, so while writing, pins hold until the store has the batch. */
+const keepsPinsUntilStored = ({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): boolean => {
+	const settings = scope.ctx.subjectSnapshotsConfig?.get();
+	return settings !== undefined && writesSubjectSnapshots(settings);
+};
 
 /** A committed batch that cannot be applied leaves the writer in recovery. */
 async function applyBatch({
