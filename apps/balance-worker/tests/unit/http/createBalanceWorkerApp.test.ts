@@ -30,6 +30,7 @@ import {
 	PartitionWriterRecordTooLargeError,
 	PartitionWriterStateNotFoundError,
 } from "../../../src/processor/writer/writerErrors.js";
+import { CommitPositionsOverlapError } from "../../../src/runtime/commitPositions/errors.js";
 import {
 	OwnedPartitionNotReadyError,
 	OwnedPartitionProducerFencedError,
@@ -118,6 +119,7 @@ const fixture = ({
 	const processor: PartitionProcessor = {
 		execute: ({ run }) => run(processor),
 		dispose: () => undefined,
+		trackInline: () => null,
 		initialize: async () => {
 			throw new Error("Initialization is not configured in this fixture");
 		},
@@ -624,6 +626,14 @@ describe("Balance worker HTTP", () => {
 	test("maps runtime readiness races centrally", async () => {
 		const { post } = fixture({
 			cause: new OwnedPartitionNotReadyError({ status: "draining" }),
+		});
+		const response = await post();
+		expect(response.status).toBe(503);
+		expect((await response.json()).error.code).toBe("NOT_READY");
+	});
+	test("a write refused while its partition's writer is being replaced answers NOT_READY, never a 500", async () => {
+		const { post } = fixture({
+			cause: new CommitPositionsOverlapError({ partition: 0 }),
 		});
 		const response = await post();
 		expect(response.status).toBe(503);
