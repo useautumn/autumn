@@ -9,9 +9,9 @@ const SOCKET_ERROR_CODES = new Set([
 	"EPIPE",
 	"ETIMEDOUT",
 ]);
-/** pg's and pg-pool's messages for a connection that failed or never answered; they carry no code. */
+/** pg's and pg-pool's messages for a connection that failed, never answered or fell out of step; they carry no code. */
 const DRIVER_CONNECTION_FAILURE =
-	/^(Query read timeout|timeout exceeded when trying to connect|Connection terminated|Client has encountered a connection error and is not queryable)/;
+	/^(Query read timeout|timeout expired|timeout exceeded when trying to connect|Connection terminated|Client has encountered a connection error and is not queryable|Client was closed and is not queryable|Received unexpected \w+ message from backend)/;
 /** SQLSTATE classes worth a retry: the connection, a concurrency abort, a cancelled statement, a full pool, a shutdown. */
 const TRANSIENT_SQLSTATE = /^(08|40001|40P01|57014|53300|57P0[123])/;
 

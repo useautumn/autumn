@@ -20,6 +20,12 @@ describe("postgres errors", () => {
 			"pool checkout timeout",
 			new Error("timeout exceeded when trying to connect"),
 		],
+		["connect timeout", new Error("timeout expired")],
+		["closed client", new Error("Client was closed and is not queryable")],
+		[
+			"protocol desync",
+			new Error("Received unexpected dataRow message from backend."),
+		],
 		[
 			"admin shutdown",
 			databaseError({ message: "terminating connection", code: "57P01" }),

@@ -4,7 +4,7 @@ import { isPostgresConnectionFailure } from "./postgresErrors.js";
 
 /**
  * Drizzle's transaction on a pool hands its client back even after a read timeout, still holding the hung query that
- * fails whoever checks it out next. Here a client whose connection failed leaves the pool instead.
+ * fails whoever checks it out next. Here that client leaves the pool; its rollback waits one more query timeout first.
  */
 export const runInTransaction = async <Value>({
 	ctx,
