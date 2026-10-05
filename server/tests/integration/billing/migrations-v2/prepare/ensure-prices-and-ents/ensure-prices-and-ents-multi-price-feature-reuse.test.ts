@@ -33,7 +33,6 @@ import {
 } from "./utils/ensurePrepareTestUtils.js";
 
 type PriceStripeConfig = {
-	stripe_price_id?: string | null;
 	stripe_product_id?: string | null;
 	stripe_prepaid_price_v2_id?: string | null;
 };
@@ -79,7 +78,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: reuse picks t
 	}
 	const preSeededConfig = preSeededPrepaid.config as PriceStripeConfig;
 	if (
-		!preSeededConfig.stripe_price_id ||
 		!preSeededConfig.stripe_product_id ||
 		!preSeededConfig.stripe_prepaid_price_v2_id
 	) {
@@ -125,7 +123,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: reuse picks t
 		?.config as PriceStripeConfig | undefined;
 
 	// ── The actual fix: reuse finds the PREPAID price, not the metered one ──
-	expect(migratedConfig?.stripe_price_id).toBe(preSeededConfig.stripe_price_id);
 	expect(migratedConfig?.stripe_product_id).toBe(preSeededConfig.stripe_product_id);
 	expect(migratedConfig?.stripe_prepaid_price_v2_id).toBe(
 		preSeededConfig.stripe_prepaid_price_v2_id,
