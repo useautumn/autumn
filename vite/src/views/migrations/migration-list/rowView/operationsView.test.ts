@@ -137,6 +137,27 @@ test("deprecated item updates and feature-less removals still name their target"
 	]);
 });
 
+test("a feature-less removal names its interval count and included amount", () => {
+	expect(
+		view([
+			{
+				type: "update_plan",
+				plan_filter: { plan_id: "pro" },
+				customize: {
+					remove_items: [
+						{
+							billing_method: "usage_based",
+							interval: "month",
+							interval_count: 3,
+							included: 500,
+						},
+					],
+				},
+			},
+		])?.modifications.map(({ chip }) => chip.label),
+	).toEqual(["Usage-based items · 3 months · 500 included"]);
+});
+
 test("a customized license shows as a blue ticket chip", () => {
 	expect(
 		view([

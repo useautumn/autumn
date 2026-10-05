@@ -41,9 +41,20 @@ const itemFilterLabel = (filter: ItemFilter): string => {
 	const method = filter.billing_method
 		? BILLING_METHOD_LABELS[filter.billing_method]
 		: "All";
-	return filter.interval
-		? `${method} items · ${filter.interval}`
-		: `${method} items`;
+	const parts = [
+		`${method} items`,
+		filter.interval
+			? formatInterval({
+					interval: filter.interval,
+					intervalCount: filter.interval_count,
+					prefix: "",
+				})
+			: null,
+		filter.included === undefined
+			? null
+			: `${filter.included.toLocaleString("en-US")} included`,
+	].filter((part) => part !== null);
+	return parts.join(" · ");
 };
 
 const updateItemDetail = (item: UpdateItem): string => {
