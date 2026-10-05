@@ -4,6 +4,7 @@
  * bench: hot `cus_1`, warm `cus_w<i>`, reset-due `cus_r<i>`, and `cus_c<i>` served by a Postgres stand-in.
  * INLINE=off swaps the inline handler for a pass-through, so every request takes the ordinary route.
  */
+import { heapSize } from "bun:jsc";
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
@@ -191,6 +192,8 @@ export async function createBenchWorker({
 			}),
 			commitPositions: commitPositions.sinkFor({ partition: PARTITION }),
 			assertCanRead: () => undefined,
+			// As the runtime wires it: the writer's slow-decide reporter runs only with a logger.
+			logger,
 		},
 		config: {
 			topic: TOPIC,
@@ -224,6 +227,9 @@ export async function createBenchWorker({
 				}),
 			),
 		);
+
+	const heap = padHeap({ targetMb: Number(process.env.HEAP_TARGET_MB ?? 0) });
+	console.error(`heap ${JSON.stringify(heap)}`);
 
 	const runtime = {
 		process: <Decision>(run: (p: typeof processor) => Promise<Decision>) =>
@@ -306,4 +312,25 @@ export async function createBenchWorker({
 		disconnect();
 	}
 	return { stop };
+}
+
+const padding: unknown[] = [];
+
+/** Grows the live heap with small retained objects, as resident state does, until heapSize() reaches the target. */
+function padHeap({ targetMb }: { targetMb: number }) {
+	Bun.gc(true);
+	const target = targetMb * 1_048_576;
+	for (let chunk = 0; heapSize() < target; chunk++) {
+		const objects = new Array(50_000);
+		for (let i = 0; i < objects.length; i++)
+			objects[i] = { id: `pad_${chunk}_${i}`, balance: i, rows: [i, chunk] };
+		padding.push(objects);
+	}
+	Bun.gc(true);
+	const startedAt = performance.now();
+	for (let call = 0; call < 20; call++) heapSize();
+	return {
+		heapMb: Math.round(heapSize() / 1_048_576),
+		heapSizeCallUs: Math.round(((performance.now() - startedAt) * 1000) / 20),
+	};
 }
