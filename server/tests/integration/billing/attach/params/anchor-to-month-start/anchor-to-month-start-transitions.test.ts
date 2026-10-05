@@ -22,6 +22,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import globalCtx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -126,16 +127,27 @@ test.concurrent(
 			}),
 		);
 
-		const { autumnV2_3, advancedTo } = await initScenario({
+		const testClock = await globalCtx.stripeCli.testHelpers.testClocks.create({
+			frozen_time: msToSeconds(PAID_ON_THE_20TH_MS),
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
-				s.customer({ paymentMethod: "success" }),
+				s.customer({
+					testClock: false,
+					paymentMethod: "success",
+					stripeCustomerOverrides: { test_clock: testClock.id },
+				}),
 				s.products({ list: [pro, premium] }),
 			],
-			actions: [
-				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 2 }),
-			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+		const advancedTo = await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClock.id,
+			startingFrom: new Date(PAID_ON_THE_20TH_MS),
+			numberOfDays: 2,
 		});
 		const monthStartMs = nextMonthStartMs({ fromMs: advancedTo });
 
