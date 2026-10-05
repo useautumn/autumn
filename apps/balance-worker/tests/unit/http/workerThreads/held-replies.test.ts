@@ -209,6 +209,20 @@ describe("HTTP worker pool: replies held by commit position", () => {
 		});
 	});
 
+	test("in-worker latency runs from arrival to answer, so a held reply's wait for its commit is in it", async () => {
+		listener.drainLatencies();
+		const held = post({ partition: 2, seq: 60 });
+		await Bun.sleep(150);
+		commit({ partition: 2, seq: 60 });
+		expect(await within(held, 1000)).toEqual({ status: 200, seq: 60 });
+		await post({ partition: 2, seq: 0 }, "/v1/other");
+		const window = listener.drainLatencies();
+		expect(Object.keys(window)).toEqual(["/v1/inline"]);
+		expect(window["/v1/inline"]?.count).toBe(1);
+		expect(window["/v1/inline"]?.p50).toBeGreaterThanOrEqual(150);
+		expect(listener.drainLatencies()["/v1/inline"]).toBeNull();
+	});
+
 	test("the window counts held replies and published failure ranges, and a read resets them", async () => {
 		listener.drainHealth();
 		const held = post({ partition: 3, seq: 40 });

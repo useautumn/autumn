@@ -85,6 +85,7 @@ export function spawnHttpWorker({
 		replyRing,
 		requestSignal: state.requestSignal.sab,
 		replySignal: replySignal.sab,
+		latency: { routes: config.inline?.routes ?? [], cells: state.latencyCells },
 		...(config.inline && {
 			heldReplies: {
 				commitCells: config.inline.commitCells,

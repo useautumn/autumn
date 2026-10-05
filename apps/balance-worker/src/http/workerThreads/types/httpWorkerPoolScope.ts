@@ -22,6 +22,8 @@ export type HttpWorkerPoolScope = {
 		/** Held replies too big for the ring, waiting here for their commit position. */
 		heldOnDecideThread: HeldOnDecideThread[];
 		health: HttpWorkerHealthCounts;
+		/** Every thread's latency histograms for the inline routes; see `latencyCells`. */
+		latencyCells: SharedArrayBuffer;
 	};
 };
 
