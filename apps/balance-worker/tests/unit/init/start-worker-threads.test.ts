@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { listenThroughThreads } from "../../../src/init/construction/listenThroughThreads.js";
+import { startWorkerThreads } from "../../../src/init/construction/startWorkerThreads.js";
 
 const logger = { warn() {}, error() {} };
 const threadUrl = new URL(
@@ -56,11 +56,11 @@ function ctxFor({ fatal }: { fatal: string[] }) {
 	};
 }
 
-describe("listening through threads", () => {
+describe("starting worker threads", () => {
 	test("requests are served on the HTTP threads and partition producers live on the producer thread", async () => {
 		const port = await freePort();
 		const fatal: string[] = [];
-		const { listener, producers } = await listenThroughThreads({
+		const { listener, producers } = await startWorkerThreads({
 			ctx: ctxFor({ fatal }),
 			config: configFor({ port, clientId: "test-client" }),
 		});
@@ -83,7 +83,7 @@ describe("listening through threads", () => {
 
 	test("a producer thread that cannot start takes the HTTP threads down, so the port is free again", async () => {
 		const port = await freePort();
-		const caught = await listenThroughThreads({
+		const caught = await startWorkerThreads({
 			ctx: ctxFor({ fatal: [] }),
 			config: configFor({ port, clientId: "bad-client" }),
 		}).catch((cause: Error) => cause);

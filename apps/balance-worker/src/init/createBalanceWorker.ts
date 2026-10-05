@@ -33,7 +33,7 @@ import {
 import { createPartitionLoad } from "../processor/writer/partitionLoad/createPartitionLoad.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
-import { listenThroughThreads } from "./construction/listenThroughThreads.js";
+import { startWorkerThreads } from "./construction/startWorkerThreads.js";
 import { startWorker } from "./lifecycle/startWorker.js";
 import { stopWorker } from "./lifecycle/stopWorker.js";
 import { resolveWorkerAddress } from "./resolveWorkerAddress.js";
@@ -255,7 +255,7 @@ export async function createBalanceWorker({
 			const threads =
 				resources.edgeConfigs?.balanceWorkerThreads.get() ??
 				defaultBalanceWorkerThreadsEdgeConfig();
-			const started = await listenThroughThreads({
+			const started = await startWorkerThreads({
 				ctx: {
 					fetch: app.fetch,
 					logger: dependencies.logger,
