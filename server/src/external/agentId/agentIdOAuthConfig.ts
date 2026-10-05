@@ -16,6 +16,10 @@ export const getAgentIdOAuthConfigs = (): GenericOAuthConfig[] => {
 			clientSecret,
 			scopes: ["openid", "email", "profile"],
 			pkce: true,
+			// Agents without a display name fail Better Auth's required-name check.
+			mapProfileToUser: (profile) => ({
+				name: profile.name || String(profile.email ?? "").split("@")[0],
+			}),
 		},
 	];
 };
