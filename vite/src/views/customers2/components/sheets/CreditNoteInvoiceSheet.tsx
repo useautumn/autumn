@@ -252,20 +252,19 @@ function CreditNoteForm({
 				) : (
 					<Field
 						label="Lines to credit"
-						hint="Amounts are before discount and tax, like the invoice's items."
+						hint="Enter up to what each line charged, minus earlier credits. Amounts are before discount and tax."
 					>
 						<div className="flex flex-col gap-2">
 							{creditableLines.map((line) => (
-								<div key={line.id} className="flex items-center gap-2">
-									<span
-										className="flex-1 truncate text-sm text-secondary-foreground"
-										title={line.description}
-									>
-										{line.description}
-									</span>
-									<span className="text-xs tabular-nums text-tertiary-foreground">
-										of {money(line.amount)}
-									</span>
+								<div key={line.id} className="flex items-start gap-2">
+									<div className="flex min-w-0 flex-1 flex-col">
+										<span className="break-words text-sm text-secondary-foreground">
+											{line.description}
+										</span>
+										<span className="text-xs tabular-nums text-tertiary-foreground">
+											Charged {money(line.amount)}
+										</span>
+									</div>
 									<Input
 										type="number"
 										aria-label={`Credit for ${line.description}`}
