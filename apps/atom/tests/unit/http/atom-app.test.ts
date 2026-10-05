@@ -497,7 +497,7 @@ describe("the request line", () => {
 		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
 	});
 
-	test("the health probe reports status, boot time and restarts", async () => {
+	test("the health probe reports status, boot time, restarts and container usage", async () => {
 		const { app } = createDeployedApp();
 
 		const response = await app.request("/health");
@@ -507,6 +507,7 @@ describe("the request line", () => {
 			status: "alive",
 			bootedAt: expect.any(String),
 			restarts: expect.any(Number),
+			container: { processes: expect.any(Array) },
 		});
 	});
 
