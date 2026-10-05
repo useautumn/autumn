@@ -1,6 +1,8 @@
 import type { WebhookTransfer } from "@puzzmo/revenue-cat-webhook-types";
 import type { FullCusProduct, FullCustomer } from "@shared/index";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting";
 import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
+import { setRevenueCatLogContext } from "@/external/revenueCat/misc/revenueCatLogContext";
 import { expireSupersededCusProducts } from "@/external/revenueCat/transfer/expireSupersededCusProducts";
 import { findDestinationCustomer } from "@/external/revenueCat/transfer/findDestinationCustomer";
 import { findSourceCustomers } from "@/external/revenueCat/transfer/findSourceCustomers";
@@ -19,6 +21,37 @@ import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/re
 
 const publicId = (customer: FullCustomer) =>
 	customer.id ?? customer.internal_id;
+
+/** Routes Redis for this customer and tags its logs, so source and destination work never share one customer's context. */
+const ctxForCustomer = ({
+	ctx,
+	customer,
+}: {
+	ctx: RevenueCatWebhookContext;
+	customer: FullCustomer;
+}) => {
+	const { ctx: customerCtx } = getCtxWithCustomerRedis({
+		ctx,
+		customerId: publicId(customer),
+	});
+	setRevenueCatLogContext({ ctx: customerCtx, customerId: publicId(customer) });
+	return customerCtx;
+};
+
+const logTransfer = ({
+	ctx,
+	message,
+	extras,
+	level = "info",
+}: {
+	ctx: RevenueCatWebhookContext;
+	message: string;
+	extras: Record<string, unknown>;
+	level?: "info" | "warn";
+}) =>
+	ctx.logger
+		.child({ context: { extras: { rc_transfer: true, ...extras } } })
+		[level](`[handleTransfer] ${message}`);
 
 const refreshCustomer = async ({
 	ctx,
@@ -58,10 +91,19 @@ export const handleTransfer = async ({
 	};
 	ctx: RevenueCatWebhookContext;
 }) => {
-	const { logger } = ctx;
 	const { transferred_from, transferred_to } = event;
-	const skip = (reason: string) => {
-		logger.info(`[handleTransfer] no-op: ${reason}`);
+	const skip = ({
+		reason,
+		extras = {},
+	}: {
+		reason: string;
+		extras?: Record<string, unknown>;
+	}) => {
+		logTransfer({
+			ctx,
+			message: `no-op: ${reason}`,
+			extras: { outcome: "noop", reason, ...extras },
+		});
 		return { success: true };
 	};
 
@@ -69,13 +111,15 @@ export const handleTransfer = async ({
 		ctx,
 		appUserIds: transferred_from ?? [],
 	});
-	if (sources.length === 0) return skip("source customer not found");
+	if (sources.length === 0)
+		return skip({ reason: "source customer not found" });
 
 	const destinationItems = await listDestinationRevenueCatProducts({
 		ctx,
 		appUserIds: transferred_to ?? [],
 	});
-	if (!destinationItems) return skip("no RevenueCat client configured");
+	if (!destinationItems)
+		return skip({ reason: "no RevenueCat client configured" });
 
 	const transferringBySource = sources
 		.map((source) => ({
@@ -86,8 +130,31 @@ export const handleTransfer = async ({
 			}),
 		}))
 		.filter(({ cusProducts }) => cusProducts.length > 0);
+
+	const sourceSummary = sources.map((source) => ({
+		customer_id: publicId(source),
+		rc_products: source.customer_products
+			.filter((cusProduct) => cusProduct.processor?.type === "revenuecat")
+			.map((cusProduct) => ({
+				cus_product_id: cusProduct.id,
+				product_id: cusProduct.product.id,
+				status: cusProduct.status,
+				rc_item_id: cusProduct.processor?.id ?? null,
+			})),
+	}));
+	const destinationSummary = {
+		rc_item_ids: [...destinationItems.rcItemIds],
+		autumn_product_ids: [...destinationItems.autumnProductIds],
+	};
+
 	if (transferringBySource.length === 0)
-		return skip("destination holds none of the source's RevenueCat products");
+		return skip({
+			reason: "destination holds none of the source's RevenueCat products",
+			extras: {
+				sources: sourceSummary,
+				destination_holdings: destinationSummary,
+			},
+		});
 
 	const destination = await findDestinationCustomer({
 		ctx,
@@ -95,9 +162,31 @@ export const handleTransfer = async ({
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 	});
 	ctx.customerId = destination.id ?? "";
+	setRevenueCatLogContext({ ctx, customerId: ctx.customerId });
+
+	logTransfer({
+		ctx,
+		message: "resolved",
+		extras: {
+			destination_customer_id: publicId(destination),
+			sources: sourceSummary,
+			destination_holdings: destinationSummary,
+			selected: transferringBySource.map(({ source, cusProducts }) => ({
+				source_customer_id: publicId(source),
+				cus_product_ids: cusProducts.map((cusProduct) => cusProduct.id),
+			})),
+		},
+	});
 
 	for (const { source, cusProducts } of transferringBySource) {
-		if (source.internal_id === destination.internal_id) continue;
+		if (source.internal_id === destination.internal_id) {
+			logTransfer({
+				ctx,
+				message: "no-op: source and destination are the same customer",
+				extras: { outcome: "noop", source_customer_id: publicId(source) },
+			});
+			continue;
+		}
 		await transferProducts({
 			ctx,
 			source,
@@ -119,19 +208,24 @@ const transferProducts = async ({
 	destinationInternalId: string;
 	cusProducts: FullCusProduct[];
 }) => {
-	const { logger } = ctx;
 	const destination = await loadCustomerWithAllProducts({
 		ctx,
 		internalId: destinationInternalId,
 	});
+	const sourceCtx = ctxForCustomer({ ctx, customer: source });
+	const destinationCtx = ctxForCustomer({ ctx, customer: destination });
+	const transferExtras = {
+		source_customer_id: publicId(source),
+		destination_customer_id: publicId(destination),
+	};
+
 	const movable: FullCusProduct[] = [];
-	const replacedOnDestination = new Set<string>();
+	const replacedOnDestination: FullCusProduct[] = [];
+	const skipped: Array<{ cus_product_id: string; reason: string }> = [];
 
 	for (const cusProduct of cusProducts) {
 		if (hasPooledBalanceDependency(cusProduct)) {
-			logger.warn(
-				`[handleTransfer] skipping ${cusProduct.id}: pooled balance dependency`,
-			);
+			skipped.push({ cus_product_id: cusProduct.id, reason: "pooled_balance" });
 			continue;
 		}
 		const { curMainProduct, curSameProduct } = getExistingCusProducts({
@@ -139,32 +233,43 @@ const transferProducts = async ({
 			cusProducts: destination.customer_products,
 		});
 		if (curSameProduct) {
-			logger.info(
-				`[handleTransfer] destination already has ${cusProduct.product.id}, leaving ${cusProduct.id}`,
-			);
+			skipped.push({
+				cus_product_id: cusProduct.id,
+				reason: "destination_has_same_plan",
+			});
 			continue;
 		}
 		if (curMainProduct && !cusProduct.product.is_add_on)
-			replacedOnDestination.add(curMainProduct.id);
+			replacedOnDestination.push(curMainProduct);
 		movable.push(cusProduct);
 	}
+
+	if (skipped.length > 0)
+		logTransfer({
+			ctx,
+			level: "warn",
+			message: `skipped ${skipped.length} product(s)`,
+			extras: { ...transferExtras, skipped },
+		});
 	if (movable.length === 0) return;
 
 	const cusProductIds = movable.map((cusProduct) => cusProduct.id);
 
 	await invalidateCachedFullSubject({
-		ctx,
+		ctx: sourceCtx,
 		customerId: publicId(source),
 		source: "handleRevenuecatTransfer:flush",
 		flushBalances: true,
 	});
-	await releaseTransferredLicenseSeats({ ctx, source, cusProductIds });
+	await releaseTransferredLicenseSeats({
+		ctx: sourceCtx,
+		source,
+		cusProductIds,
+	});
 	await expireSupersededCusProducts({
-		ctx,
+		ctx: destinationCtx,
 		customerId: publicId(destination),
-		cusProducts: destination.customer_products.filter((cusProduct) =>
-			replacedOnDestination.has(cusProduct.id),
-		),
+		cusProducts: replacedOnDestination,
 	});
 	await moveCusProductsToCustomer({
 		db: ctx.db,
@@ -172,16 +277,29 @@ const transferProducts = async ({
 		destination: { internalId: destination.internal_id, id: destination.id },
 	});
 
-	try {
-		await restoreSourceDefaults({ ctx, source, moved: movable });
-	} finally {
-		await refreshCustomer({ ctx, customer: destination });
-		await refreshCustomer({ ctx, customer: source });
-	}
+	logTransfer({
+		ctx,
+		message: `moved ${cusProductIds.length} product(s) ${publicId(source)} -> ${publicId(destination)}`,
+		extras: {
+			...transferExtras,
+			outcome: "moved",
+			moved: movable.map((cusProduct) => ({
+				cus_product_id: cusProduct.id,
+				product_id: cusProduct.product.id,
+				rc_item_id: cusProduct.processor?.id ?? null,
+			})),
+			replaced_on_destination: replacedOnDestination.map(
+				(cusProduct) => cusProduct.id,
+			),
+		},
+	});
 
-	logger.info(
-		`[handleTransfer] moved ${cusProductIds.length} product(s) ${publicId(source)} -> ${publicId(destination)}`,
-	);
+	try {
+		await restoreSourceDefaults({ ctx: sourceCtx, source, moved: movable });
+	} finally {
+		await refreshCustomer({ ctx: destinationCtx, customer: destination });
+		await refreshCustomer({ ctx: sourceCtx, customer: source });
+	}
 };
 
 const restoreSourceDefaults = async ({

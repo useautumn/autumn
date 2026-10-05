@@ -1,12 +1,14 @@
-import { AuthType } from "@autumn/shared";
 import type { AppEnv } from "@shared/models/genModels/genEnums";
 import type { Organization } from "@shared/models/orgModels/orgTable";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils";
+import {
+	buildRevenueCatEventContext,
+	setRevenueCatLogContext,
+} from "@/external/revenueCat/misc/revenueCatLogContext";
 import type { RevenueCatWebhookHonoEnv } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { OrgService } from "@/internal/orgs/OrgService";
-import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 
 export const revenuecatSeederMiddleware = async (
 	c: Context<RevenueCatWebhookHonoEnv>,
@@ -38,16 +40,7 @@ export const revenuecatSeederMiddleware = async (
 		ctx.features = features;
 	}
 
-	ctx.logger = addAppContextToLogs({
-		logger: ctx.logger,
-		appContext: {
-			org_id: ctx.org?.id,
-			org_slug: ctx.org?.slug,
-			env: ctx.env,
-			auth_type: AuthType.Revenuecat,
-			api_version: ctx.apiVersion?.semver,
-		},
-	});
+	setRevenueCatLogContext({ ctx });
 
 	await next();
 };
@@ -70,10 +63,12 @@ export const revenuecatLogMiddleware = async (
 	c: Context<RevenueCatWebhookHonoEnv>,
 	next: Next,
 ) => {
-	const { logger, org } = c.get("ctx");
+	const ctx = c.get("ctx");
 	const body = await c.req.json();
 
-	logRevCatWebhook({ logger, org, event: body.event });
+	ctx.revenuecatEvent = buildRevenueCatEventContext(body?.event);
+	setRevenueCatLogContext({ ctx });
+	logRevCatWebhook({ logger: ctx.logger, org: ctx.org, event: body.event });
 
 	await next();
 };
