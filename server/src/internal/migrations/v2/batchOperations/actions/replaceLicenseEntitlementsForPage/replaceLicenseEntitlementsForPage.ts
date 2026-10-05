@@ -188,6 +188,16 @@ export const replaceLicenseEntitlementsForPage = async ({
 			limit,
 			assertWithinCeiling,
 		}) => {
+			const pageInsertedItems: BatchMigrationInsertedItem[] = [];
+			const pageRemovedItems: BatchMigrationRemovedItem[] = [];
+			const pageExcludedIds = new Set<string>();
+			const pageReplacedIds = new Set<string>();
+			const result = {
+				insertedItems: pageInsertedItems,
+				removedItems: pageRemovedItems,
+				excludedIds: pageExcludedIds,
+				replacedIds: pageReplacedIds,
+			};
 			const candidates = await timePhase({
 				phases,
 				phase: "license_replace_candidates",
@@ -204,7 +214,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 						fromEntitlementIds,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0) return { rows: candidates, result };
 			assertWithinCeiling(candidates.length);
 
 			const { rows, excludedInternalCustomerIds } = resetting
@@ -221,7 +231,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 						})),
 						excludedInternalCustomerIds: [],
 					};
-			for (const id of excludedInternalCustomerIds) excludedIds.add(id);
+			for (const id of excludedInternalCustomerIds) pageExcludedIds.add(id);
 
 			const patched = await timePhase({
 				phases,
@@ -237,15 +247,23 @@ export const replaceLicenseEntitlementsForPage = async ({
 					}),
 			});
 			const updatedIdSet = new Set(patched.updatedIds);
-			for (const id of patched.internalCustomerIds) replacedIds.add(id);
+			for (const id of patched.internalCustomerIds) pageReplacedIds.add(id);
 			for (const row of rows) {
 				if (!updatedIdSet.has(row.customerEntitlementId)) continue;
-				removedItems.push(toRemovedItem({ row, operation, fromEntitlement }));
-				insertedItems.push(
+				pageRemovedItems.push(
+					toRemovedItem({ row, operation, fromEntitlement }),
+				);
+				pageInsertedItems.push(
 					toInsertedItem({ row, operation, customerEntitlementPatch }),
 				);
 			}
-			return candidates;
+			return { rows: candidates, result };
+		},
+		onCommit: (result) => {
+			for (const id of result.excludedIds) excludedIds.add(id);
+			for (const id of result.replacedIds) replacedIds.add(id);
+			insertedItems.push(...result.insertedItems);
+			removedItems.push(...result.removedItems);
 		},
 	});
 
