@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
+import type { ProcessStatsRecorder } from "../../init/processStats.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { Slots } from "../../slots/types/slots.js";
 
@@ -10,6 +11,7 @@ export type AtomHttpContext = {
 	autumnApiUrl: string;
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
+	processStats?: Pick<ProcessStatsRecorder, "recordRequest">;
 };
 
 /** How a request failed, as its error response said; the request line carries it. */

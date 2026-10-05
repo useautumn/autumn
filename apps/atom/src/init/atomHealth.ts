@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ATOM_STATS_DIR } from "./processStats.js";
 
 /** Set by the supervisor on every child, so /health reports the container's boot, not the child's. */
 export const ATOM_BOOTED_AT = "ATOM_BOOTED_AT";
@@ -21,13 +22,17 @@ export const markAtomBoot = ({
 	env = process.env,
 	now = () => new Date(),
 	restartsFile = join(tmpdir(), `atom-restarts-${process.pid}`),
+	statsDir = join(tmpdir(), `atom-stats-${process.pid}`),
 }: {
 	env?: Record<string, string | undefined>;
 	now?: () => Date;
 	restartsFile?: string;
+	statsDir?: string;
 } = {}): { recordRestarts(params: { restarts: number }): void } => {
 	env[ATOM_BOOTED_AT] = now().toISOString();
 	env[ATOM_RESTARTS_FILE] = restartsFile;
+	env[ATOM_STATS_DIR] = statsDir;
+	mkdirSync(statsDir, { recursive: true });
 	writeFileSync(restartsFile, "0");
 	return {
 		recordRestarts: ({ restarts }) =>

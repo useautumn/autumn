@@ -39,6 +39,7 @@ export function requestLogMiddleware({
 
 		const statusCode = context.res.status;
 		const durationMs = Date.now() - startedAt;
+		ctx.processStats?.recordRequest({ path: context.req.path, durationMs });
 		const forwarded = forwardedReason({ context });
 		const failure = context.get("failure");
 		const line = {
