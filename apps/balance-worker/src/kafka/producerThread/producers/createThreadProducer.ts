@@ -60,10 +60,17 @@ export function createThreadProducer({
 		},
 	});
 
+	/** Frames carry the id as a u32, so it wraps before 2^32 like the HTTP workers' ids do. */
+	function takeReqId(): number {
+		const reqId = state.nextReqId;
+		state.nextReqId = reqId === 0xfffffffe ? 1 : reqId + 1;
+		return reqId;
+	}
+
 	function connect(): Promise<void> {
 		return control({
 			scope,
-			message: { kind: "connect", producerId, reqId: state.nextReqId++ },
+			message: { kind: "connect", producerId, reqId: takeReqId() },
 		});
 	}
 
@@ -73,7 +80,7 @@ export function createThreadProducer({
 		scope.requestListeners.delete(producerId);
 		return control({
 			scope,
-			message: { kind: "disconnect", producerId, reqId: state.nextReqId++ },
+			message: { kind: "disconnect", producerId, reqId: takeReqId() },
 		});
 	}
 
@@ -91,7 +98,7 @@ export function createThreadProducer({
 				{ retriable: false },
 			);
 		if (lostSend) throw lostSend;
-		const reqId = state.nextReqId++;
+		const reqId = takeReqId();
 		const settled = awaitAck({ scope, reqId });
 		try {
 			enqueueSend({ scope, reqId, meta, records });

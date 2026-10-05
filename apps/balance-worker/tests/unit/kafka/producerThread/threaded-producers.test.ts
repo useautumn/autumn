@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	createProducerSession,
 	isKafkaProducerFencingCause,
@@ -9,6 +9,8 @@ import {
 } from "@autumn/kafka";
 import { CompressionTypes, KafkaJSError, KafkaJSProtocolError } from "kafkajs";
 import { createThreadedProducers } from "../../../../src/kafka/producerThread/createThreadedProducers.js";
+import * as threadProducer from "../../../../src/kafka/producerThread/producers/createThreadProducer.js";
+import type { ThreadedProducersScope } from "../../../../src/kafka/producerThread/types/threadedProducersScope.js";
 
 const logger = { info() {}, warn() {}, error() {} };
 const threadUrl = new URL("./fakeProducerThread.ts", import.meta.url).href;
@@ -89,6 +91,43 @@ async function withThread<T>({
 }
 
 describe("threaded producers", () => {
+	test("request ids wrap within u32, so sends past 2^32 requests still find their acks", async () => {
+		let scope: ThreadedProducersScope | undefined;
+		const original = threadProducer.createThreadProducer;
+		const captured = spyOn(
+			threadProducer,
+			"createThreadProducer",
+		).mockImplementation((args) => {
+			scope = args.scope;
+			return original(args);
+		});
+		try {
+			await withThread({
+				run: async (remote) => {
+					const producer = remote.producer({ idempotent: true });
+					await producer.connect();
+					if (!scope) throw new Error("scope not captured");
+					scope.state.nextReqId = 0xfffffffe;
+					const record = {
+						topic: "echo",
+						messages: [{ key: "k", value: "v", partition: 0 }],
+					};
+					for (let sent = 0; sent < 3; sent++) {
+						const outcome = await Promise.race([
+							senderOf(producer)(record).then(() => "acked"),
+							Bun.sleep(1000).then(() => "hung"),
+						]);
+						expect(outcome).toBe("acked");
+					}
+					expect(scope.state.nextReqId).toBe(3);
+					await producer.disconnect();
+				},
+			});
+		} finally {
+			captured.mockRestore();
+		}
+	});
+
 	test("a producer's config, record bytes, partition, headers, acks and compression reach the producer thread unchanged", async () => {
 		await withThread({
 			run: async (remote) => {
