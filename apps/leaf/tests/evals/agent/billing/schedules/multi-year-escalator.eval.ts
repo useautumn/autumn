@@ -134,32 +134,32 @@ initEval<EvalMetadata>({
 					toolNames: [
 						"listCustomers",
 						"listPlans",
-						"previewCreateSchedule",
-						"createSchedule",
+						"previewSetPlans",
+						"setPlans",
 					],
 				}),
 				billing.previewBeforeWrite({
 					preview: {
 						body: twoYearSchedule,
-						toolName: "previewCreateSchedule",
+						toolName: "previewSetPlans",
 					},
 					write: {
 						body: twoYearSchedule,
-						toolName: "createSchedule",
+						toolName: "setPlans",
 					},
 				}),
 				api.bodyNumberFields({
 					paths: ["phases.*.starts_at"],
-					toolName: "previewCreateSchedule",
+					toolName: "previewSetPlans",
 				}),
 				api.bodyNumberFields({
 					paths: ["phases.*.starts_at"],
-					toolName: "createSchedule",
+					toolName: "setPlans",
 				}),
 				api.calledAfterApproval({
 					call: {
 						body: twoYearSchedule,
-						toolName: "createSchedule",
+						toolName: "setPlans",
 					},
 				}),
 				response.mentions({
@@ -182,32 +182,32 @@ initEval<EvalMetadata>({
 					toolNames: [
 						"listCustomers",
 						"listPlans",
-						"previewCreateSchedule",
-						"createSchedule",
+						"previewSetPlans",
+						"setPlans",
 					],
 				}),
 				billing.previewBeforeWrite({
 					preview: {
 						body: fourYearSchedule,
-						toolName: "previewCreateSchedule",
+						toolName: "previewSetPlans",
 					},
 					write: {
 						body: fourYearSchedule,
-						toolName: "createSchedule",
+						toolName: "setPlans",
 					},
 				}),
 				api.bodyNumberFields({
 					paths: ["phases.*.starts_at"],
-					toolName: "previewCreateSchedule",
+					toolName: "previewSetPlans",
 				}),
 				api.bodyNumberFields({
 					paths: ["phases.*.starts_at"],
-					toolName: "createSchedule",
+					toolName: "setPlans",
 				}),
 				api.calledAfterApproval({
 					call: {
 						body: fourYearSchedule,
-						toolName: "createSchedule",
+						toolName: "setPlans",
 					},
 				}),
 				response.mentions({

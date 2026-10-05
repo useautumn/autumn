@@ -52,6 +52,8 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		scopes: ["rewards:write"],
 		toolName: "createReward",
 	},
+	// Leaf schedules with setPlans now; createSchedule stays gated for the MCP
+	// tool it still exposes and for approvals parked before the switch.
 	{
 		agents: ["leaf"],
 		previewTool: "previewCreateSchedule",
@@ -77,6 +79,13 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		scopes: ["billing:write"],
 		previewedRequestRequired: true,
 		toolName: "reissueInvoice",
+	},
+	{
+		agents: ["leaf"],
+		previewTool: "previewSetPlans",
+		scopes: ["billing:write"],
+		previewedRequestRequired: true,
+		toolName: "setPlans",
 	},
 	{
 		agents: ["leaf"],

@@ -43,6 +43,27 @@ describe("dashboardLinkableApproval", () => {
 		).toBe(true);
 	});
 
+	// The schedule sheet cannot carry undeclared_plans or a first-phase anchor
+	// timestamp, so submitting it could change the approved schedule.
+	test("does not link setPlans", () => {
+		expect(
+			dashboardLinkableApproval({
+				approval: {
+					...base,
+					tool_args: {
+						request: {
+							customer_id: "cus_1",
+							phases: [{ plans: [{ plan_id: "scale" }], starts_at: "now" }],
+							undeclared_plans: "retain",
+						},
+					},
+					tool_name: "autumn__setPlans",
+				},
+				groupedStepCount: 0,
+			}),
+		).toBe(false);
+	});
+
 	test("links updateSubscription", () => {
 		expect(
 			dashboardLinkableApproval({

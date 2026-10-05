@@ -1,40 +1,84 @@
 import {
 	AttachParamsV1Schema,
 	CreateScheduleParamsV0Schema,
+	createScheduleTimingIssues,
+	SetPlansParamsV0Schema,
+	schedulePhaseBillingIssues,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared/publicApiSchemas";
+import * as z from "zod/v4";
 import { createDomainTools } from "./utils/builders.js";
 import type { ToolDomain } from "./utils/types.js";
 
-const createScheduleMcpSchema = CreateScheduleParamsV0Schema.check((ctx) => {
-	const data = ctx.value;
-	if (data.invoice_mode?.enabled !== true) return;
+type ScheduleRequest = {
+	enable_plan_immediately?: boolean;
+	invoice_mode?: { enabled?: boolean; finalize?: boolean };
+	redirect_mode?: string;
+};
+
+const paidScheduleInvoiceModeIssues = (data: ScheduleRequest) => {
+	if (data.invoice_mode?.enabled !== true) return [];
+
+	const issues: { message: string; path: string[] }[] = [];
 	if (data.invoice_mode.finalize !== false) {
-		ctx.issues.push({
-			code: "custom",
+		issues.push({
 			message:
 				"Paid schedule previews must use invoice_mode.finalize false unless a supported override path is added.",
 			path: ["invoice_mode", "finalize"],
-			input: data,
 		});
 	}
 	if (data.redirect_mode !== "if_required") {
-		ctx.issues.push({
-			code: "custom",
+		issues.push({
 			message:
 				"Paid schedule previews must use redirect_mode if_required unless a supported override path is added.",
 			path: ["redirect_mode"],
-			input: data,
 		});
 	}
 	if (data.enable_plan_immediately !== true) {
-		ctx.issues.push({
-			code: "custom",
+		issues.push({
 			message:
 				"Paid schedule previews must set top-level enable_plan_immediately true.",
 			path: ["enable_plan_immediately"],
-			input: data,
 		});
+	}
+	return issues;
+};
+
+const createScheduleMcpSchema = CreateScheduleParamsV0Schema.check((ctx) => {
+	for (const issue of paidScheduleInvoiceModeIssues(ctx.value)) {
+		ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
+	}
+});
+
+/** set_plans takes these on phases[0]; at the top level the API would drop them silently. */
+const movedToFirstPhase = (field: string) =>
+	z
+		.never({
+			error: `set_plans has no top-level ${field}. Set phases[0].${field === "billing_behavior" ? "proration_behavior" : field} instead.`,
+		})
+		.optional()
+		.meta({ internal: true });
+
+// `undeclared_plans` is internal on the public API but exposed here, and
+// defaults to "retain" so plans a request leaves out keep running, as with
+// createSchedule. `extend` drops the parent's object-level checks, so they are
+// re-applied.
+// Typed loosely: its inferred type is too large for the domain exports to serialize.
+const setPlansMcpSchema: z.ZodType = SetPlansParamsV0Schema.extend({
+	undeclared_plans: z.enum(["end", "retain"]).default("retain").meta({
+		description:
+			"What happens to a current plan in the request's scope that no phase or unscheduled plan lists: 'retain' (default) keeps it running until a listed plan claims its group, 'end' ends it now.",
+	}),
+	billing_behavior: movedToFirstPhase("billing_behavior"),
+	billing_cycle_anchor: movedToFirstPhase("billing_cycle_anchor"),
+	proration_behavior: movedToFirstPhase("proration_behavior"),
+}).check((ctx) => {
+	for (const issue of [
+		...createScheduleTimingIssues(ctx.value.phases),
+		...schedulePhaseBillingIssues({ phases: ctx.value.phases }),
+		...paidScheduleInvoiceModeIssues(ctx.value),
+	]) {
+		ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
 	}
 });
 
@@ -45,6 +89,8 @@ const endpoints = {
 	updateSubscription: "/v1/billing.update",
 	previewCreateSchedule: "/v1/billing.preview_create_schedule",
 	createSchedule: "/v1/billing.create_schedule",
+	previewSetPlans: "/v1/billing.preview_set_plans",
+	setPlans: "/v1/billing.set_plans",
 } as const;
 
 const schemas = {
@@ -54,6 +100,8 @@ const schemas = {
 	updateSubscription: UpdateSubscriptionV1ParamsSchema,
 	previewCreateSchedule: createScheduleMcpSchema,
 	createSchedule: createScheduleMcpSchema,
+	previewSetPlans: setPlansMcpSchema,
+	setPlans: setPlansMcpSchema,
 } as const;
 
 const { billingPreview, confirmedWrite } = createDomainTools({
@@ -91,6 +139,13 @@ ${updateSubscriptionTargeting}
 - Follow the Billing resource.
 `.trim(),
 		}),
+		billingPreview({
+			id: "previewSetPlans",
+			description: `
+- Preview setting a customer's plans over dated phases before setPlans: the billing impact, each phase, and warnings about plans it ends.
+- Follow the Billing resource.
+`.trim(),
+		}),
 	],
 	confirmedWrites: [
 		confirmedWrite({
@@ -113,6 +168,13 @@ ${updateSubscriptionTargeting}
 			id: "createSchedule",
 			description: `
 - Create a multi-phase billing schedule for phased or multi-year order forms.
+- Follow the Billing resource.
+`.trim(),
+		}),
+		confirmedWrite({
+			id: "setPlans",
+			description: `
+- Set a customer's plans over dated phases (ramps, multi-year order forms, scheduled plan changes). Replaces the customer's existing schedule.
 - Follow the Billing resource.
 `.trim(),
 		}),

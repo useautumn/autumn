@@ -14,7 +14,9 @@ const toolStatusLines: Record<string, string> = {
 	createSchedule: "Creating the schedule…",
 	previewAttach: "Re-checking pricing…",
 	previewCreateSchedule: "Re-checking pricing…",
+	previewSetPlans: "Re-checking pricing…",
 	previewUpdateSubscription: "Re-checking pricing…",
+	setPlans: "Creating the schedule…",
 	updateSubscription: "Updating the subscription…",
 };
 
