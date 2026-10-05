@@ -635,14 +635,14 @@ export type StartsAt2 = number | string;
 /**
  * The duration unit to offset this phase from the prior phase.
  */
-export const PhaseStartDurationType = {
+export const PhaseDurationType2 = {
   Month: "month",
   Year: "year",
 } as const;
 /**
  * The duration unit to offset this phase from the prior phase.
  */
-export type PhaseStartDurationType = ClosedEnum<typeof PhaseStartDurationType>;
+export type PhaseDurationType2 = ClosedEnum<typeof PhaseDurationType2>;
 
 /**
  * Relative start offset from the previous resolved schedule phase.
@@ -651,7 +651,7 @@ export type StartingAfter2 = {
   /**
    * The duration unit to offset this phase from the prior phase.
    */
-  durationType: PhaseStartDurationType;
+  durationType: PhaseDurationType2;
   /**
    * How many duration_type periods after the prior phase to start.
    */
@@ -661,7 +661,7 @@ export type StartingAfter2 = {
 /**
  * Quantity configuration for a prepaid feature.
  */
-export type PhaseStartFeatureQuantity = {
+export type PhaseFeatureQuantity2 = {
   /**
    * The ID of the feature to set quantity for.
    */
@@ -676,7 +676,7 @@ export type PhaseStartFeatureQuantity = {
   adjustable?: boolean | undefined;
 };
 
-export type PhaseStartLicenseQuantity = {
+export type PhaseLicenseQuantity2 = {
   /**
    * The license plan to set seat quantity for.
    */
@@ -690,7 +690,7 @@ export type PhaseStartLicenseQuantity = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const PhaseStartPriceInterval = {
+export const PhasePriceInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -701,11 +701,9 @@ export const PhaseStartPriceInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type PhaseStartPriceInterval = ClosedEnum<
-  typeof PhaseStartPriceInterval
->;
+export type PhasePriceInterval = ClosedEnum<typeof PhasePriceInterval>;
 
-export type PhaseStartAdditionalCurrency = {
+export type PhaseAdditionalCurrency2 = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -719,7 +717,7 @@ export type PhaseStartAdditionalCurrency = {
 /**
  * Base price configuration for a plan.
  */
-export type PhaseStartBasePrice = {
+export type PhaseBasePrice2 = {
   /**
    * Base price amount for the plan, in major currency units (e.g. dollars).
    */
@@ -727,7 +725,7 @@ export type PhaseStartBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: PhaseStartPriceInterval;
+  interval: PhasePriceInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -735,17 +733,17 @@ export type PhaseStartBasePrice = {
   /**
    * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
    */
-  additionalCurrencies?: Array<PhaseStartAdditionalCurrency> | undefined;
+  additionalCurrencies?: Array<PhaseAdditionalCurrency2> | undefined;
 };
 
-export type PhaseStartItemThresholdBilling = {
+export type PhaseItemThresholdBilling2 = {
   threshold: number;
 };
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PhaseStartItemResetInterval = {
+export const PhaseItemResetInterval2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -759,25 +757,25 @@ export const PhaseStartItemResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PhaseStartItemResetInterval = ClosedEnum<
-  typeof PhaseStartItemResetInterval
+export type PhaseItemResetInterval2 = ClosedEnum<
+  typeof PhaseItemResetInterval2
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type PhaseStartItemReset = {
+export type PhaseItemReset2 = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PhaseStartItemResetInterval;
+  interval: PhaseItemResetInterval2;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type PhaseStartItemAdditionalCurrency = {
+export type PhaseItemAdditionalCurrency2 = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -788,9 +786,9 @@ export type PhaseStartItemAdditionalCurrency = {
   amount: number;
 };
 
-export type PhaseStartItemPriceTo = number | string;
+export type PhaseItemPriceTo2 = number | string;
 
-export type PhaseStartItemTierAdditionalCurrency = {
+export type PhaseItemTierAdditionalCurrency2 = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -805,30 +803,26 @@ export type PhaseStartItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type PhaseStartItemPriceTier = {
+export type PhaseItemPriceTier2 = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
   /**
    * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
    */
-  additionalCurrencies?:
-    | Array<PhaseStartItemTierAdditionalCurrency>
-    | undefined;
+  additionalCurrencies?: Array<PhaseItemTierAdditionalCurrency2> | undefined;
 };
 
-export const PhaseStartItemTierBehavior = {
+export const PhaseItemTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type PhaseStartItemTierBehavior = ClosedEnum<
-  typeof PhaseStartItemTierBehavior
->;
+export type PhaseItemTierBehavior2 = ClosedEnum<typeof PhaseItemTierBehavior2>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const PhaseStartItemPriceInterval = {
+export const PhaseItemPriceInterval2 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -839,28 +833,28 @@ export const PhaseStartItemPriceInterval = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type PhaseStartItemPriceInterval = ClosedEnum<
-  typeof PhaseStartItemPriceInterval
+export type PhaseItemPriceInterval2 = ClosedEnum<
+  typeof PhaseItemPriceInterval2
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const PhaseStartItemBillingMethod = {
+export const PhaseItemBillingMethod2 = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type PhaseStartItemBillingMethod = ClosedEnum<
-  typeof PhaseStartItemBillingMethod
+export type PhaseItemBillingMethod2 = ClosedEnum<
+  typeof PhaseItemBillingMethod2
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type PhaseStartItemPrice = {
+export type PhaseItemPrice2 = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -868,16 +862,16 @@ export type PhaseStartItemPrice = {
   /**
    * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
    */
-  additionalCurrencies?: Array<PhaseStartItemAdditionalCurrency> | undefined;
+  additionalCurrencies?: Array<PhaseItemAdditionalCurrency2> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PhaseStartItemPriceTier> | undefined;
-  tierBehavior?: PhaseStartItemTierBehavior | undefined;
+  tiers?: Array<PhaseItemPriceTier2> | undefined;
+  tierBehavior?: PhaseItemTierBehavior2 | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: PhaseStartItemPriceInterval;
+  interval: PhaseItemPriceInterval2;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -889,7 +883,7 @@ export type PhaseStartItemPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: PhaseStartItemBillingMethod;
+  billingMethod: PhaseItemBillingMethod2;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -899,7 +893,7 @@ export type PhaseStartItemPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const PhaseStartItemOnIncrease = {
+export const PhaseItemOnIncrease2 = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -908,14 +902,12 @@ export const PhaseStartItemOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type PhaseStartItemOnIncrease = ClosedEnum<
-  typeof PhaseStartItemOnIncrease
->;
+export type PhaseItemOnIncrease2 = ClosedEnum<typeof PhaseItemOnIncrease2>;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const PhaseStartItemOnDecrease = {
+export const PhaseItemOnDecrease2 = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -925,42 +917,40 @@ export const PhaseStartItemOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type PhaseStartItemOnDecrease = ClosedEnum<
-  typeof PhaseStartItemOnDecrease
->;
+export type PhaseItemOnDecrease2 = ClosedEnum<typeof PhaseItemOnDecrease2>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type PhaseStartItemProration = {
+export type PhaseItemProration2 = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: PhaseStartItemOnIncrease;
+  onIncrease: PhaseItemOnIncrease2;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: PhaseStartItemOnDecrease;
+  onDecrease: PhaseItemOnDecrease2;
 };
 
 /**
  * When rolled over units expire.
  */
-export const PhaseStartItemExpiryDurationType = {
+export const PhaseItemExpiryDurationType2 = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type PhaseStartItemExpiryDurationType = ClosedEnum<
-  typeof PhaseStartItemExpiryDurationType
+export type PhaseItemExpiryDurationType2 = ClosedEnum<
+  typeof PhaseItemExpiryDurationType2
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type PhaseStartItemRollover = {
+export type PhaseItemRollover2 = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -972,32 +962,32 @@ export type PhaseStartItemRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: PhaseStartItemExpiryDurationType;
+  expiryDurationType: PhaseItemExpiryDurationType2;
   /**
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
 };
 
-export const PhaseStartItemDuration = {
+export const PhaseItemDuration2 = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
-export type PhaseStartItemDuration = ClosedEnum<typeof PhaseStartItemDuration>;
+export type PhaseItemDuration2 = ClosedEnum<typeof PhaseItemDuration2>;
 
 /**
  * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
  */
-export type PhaseStartItemExpiry = {
-  duration: PhaseStartItemDuration;
+export type PhaseItemExpiry2 = {
+  duration: PhaseItemDuration2;
   length: number;
 };
 
-export type PhaseStartDimensionsItemMatch4 = string | number | boolean;
+export type PhaseDimensionsItemMatch4 = string | number | boolean;
 
-export type PhaseStartDimensionsItem4 = {
+export type PhaseDimensionsItem4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1012,34 +1002,32 @@ export type PhaseStartDimensionsItem4 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsItemMatch3 = string | number | boolean;
+export type PhaseDimensionsItemMatch3 = string | number | boolean;
 
-export const PhaseStartDimensionsToItemEnum2 = {
+export const PhaseDimensionsToItemEnum2 = {
   Inf: "inf",
 } as const;
-export type PhaseStartDimensionsToItemEnum2 = ClosedEnum<
-  typeof PhaseStartDimensionsToItemEnum2
+export type PhaseDimensionsToItemEnum2 = ClosedEnum<
+  typeof PhaseDimensionsToItemEnum2
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartDimensionsItemToUnion2 =
-  | number
-  | PhaseStartDimensionsToItemEnum2;
+export type PhaseDimensionsItemToUnion2 = number | PhaseDimensionsToItemEnum2;
 
-export type PhaseStartDimensionsItemTier2 = {
+export type PhaseDimensionsItemTier2 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartDimensionsToItemEnum2;
+  to: number | PhaseDimensionsToItemEnum2;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsItem3 = {
+export type PhaseDimensionsItem3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1049,16 +1037,16 @@ export type PhaseStartDimensionsItem3 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartDimensionsItemTier2>;
+  tiers: Array<PhaseDimensionsItemTier2>;
 };
 
-export type PhaseStartItemDimensionsUnion2 =
-  | PhaseStartDimensionsItem3
-  | PhaseStartDimensionsItem4;
+export type PhaseItemDimensionsUnion4 =
+  | PhaseDimensionsItem3
+  | PhaseDimensionsItem4;
 
-export type PhaseStartItemMultipliersMatch2 = string | number | boolean;
+export type PhaseItemMultipliersMatch4 = string | number | boolean;
 
-export type PhaseStartItemMultipliers2 = {
+export type PhaseItemMultipliers4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1073,7 +1061,7 @@ export type PhaseStartItemMultipliers2 = {
   add?: number | undefined;
 };
 
-export type PhaseStartCreditSchemaItem2 = {
+export type PhaseCreditSchemaItem2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -1085,22 +1073,22 @@ export type PhaseStartCreditSchemaItem2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: PhaseStartDimensionsItem3 | PhaseStartDimensionsItem4;
-  } | undefined;
+  dimensions?:
+    | { [k: string]: PhaseDimensionsItem3 | PhaseDimensionsItem4 }
+    | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?: { [k: string]: PhaseStartItemMultipliers2 } | undefined;
+  multipliers?: { [k: string]: PhaseItemMultipliers4 } | undefined;
   /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsItemMatch2 = string | number | boolean;
+export type PhaseDimensionsItemMatch2 = string | number | boolean;
 
-export type PhaseStartDimensionsItem2 = {
+export type PhaseDimensionsItem2 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1115,34 +1103,32 @@ export type PhaseStartDimensionsItem2 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsItemMatch1 = string | number | boolean;
+export type PhaseDimensionsItemMatch1 = string | number | boolean;
 
-export const PhaseStartDimensionsToItemEnum1 = {
+export const PhaseDimensionsToItemEnum1 = {
   Inf: "inf",
 } as const;
-export type PhaseStartDimensionsToItemEnum1 = ClosedEnum<
-  typeof PhaseStartDimensionsToItemEnum1
+export type PhaseDimensionsToItemEnum1 = ClosedEnum<
+  typeof PhaseDimensionsToItemEnum1
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartDimensionsItemToUnion1 =
-  | number
-  | PhaseStartDimensionsToItemEnum1;
+export type PhaseDimensionsItemToUnion1 = number | PhaseDimensionsToItemEnum1;
 
-export type PhaseStartDimensionsItemTier1 = {
+export type PhaseDimensionsItemTier1 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartDimensionsToItemEnum1;
+  to: number | PhaseDimensionsToItemEnum1;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsItem1 = {
+export type PhaseDimensionsItem1 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1152,16 +1138,16 @@ export type PhaseStartDimensionsItem1 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartDimensionsItemTier1>;
+  tiers: Array<PhaseDimensionsItemTier1>;
 };
 
-export type PhaseStartItemDimensionsUnion1 =
-  | PhaseStartDimensionsItem1
-  | PhaseStartDimensionsItem2;
+export type PhaseItemDimensionsUnion3 =
+  | PhaseDimensionsItem1
+  | PhaseDimensionsItem2;
 
-export type PhaseStartItemMultipliersMatch1 = string | number | boolean;
+export type PhaseItemMultipliersMatch3 = string | number | boolean;
 
-export type PhaseStartItemMultipliers1 = {
+export type PhaseItemMultipliers3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1176,30 +1162,28 @@ export type PhaseStartItemMultipliers1 = {
   add?: number | undefined;
 };
 
-export const PhaseStartToItemEnum = {
+export const PhaseToItemEnum = {
   Inf: "inf",
 } as const;
-export type PhaseStartToItemEnum = ClosedEnum<typeof PhaseStartToItemEnum>;
+export type PhaseToItemEnum = ClosedEnum<typeof PhaseToItemEnum>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartItemFeatureOverrideToUnion =
-  | number
-  | PhaseStartToItemEnum;
+export type PhaseItemFeatureOverrideToUnion2 = number | PhaseToItemEnum;
 
-export type PhaseStartItemFeatureOverrideTier = {
+export type PhaseItemFeatureOverrideTier2 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartToItemEnum;
+  to: number | PhaseToItemEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartCreditSchemaItem1 = {
+export type PhaseCreditSchemaItem1 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -1211,26 +1195,26 @@ export type PhaseStartCreditSchemaItem1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: PhaseStartDimensionsItem1 | PhaseStartDimensionsItem2;
-  } | undefined;
+  dimensions?:
+    | { [k: string]: PhaseDimensionsItem1 | PhaseDimensionsItem2 }
+    | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?: { [k: string]: PhaseStartItemMultipliers1 } | undefined;
+  multipliers?: { [k: string]: PhaseItemMultipliers3 } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartItemFeatureOverrideTier>;
+  tiers: Array<PhaseItemFeatureOverrideTier2>;
 };
 
-export type PhaseStartItemCreditSchemaUnion =
-  | PhaseStartCreditSchemaItem1
-  | PhaseStartCreditSchemaItem2;
+export type PhaseItemCreditSchemaUnion2 =
+  | PhaseCreditSchemaItem1
+  | PhaseCreditSchemaItem2;
 
-export type PhaseStartItemProviderMarkups = {
+export type PhaseItemProviderMarkups2 = {
   markup: number;
 };
 
-export type PhaseStartItemModelMarkups = {
+export type PhaseItemModelMarkups2 = {
   markup?: number | undefined;
   inputCost?: number | undefined;
   outputCost?: number | undefined;
@@ -1239,7 +1223,7 @@ export type PhaseStartItemModelMarkups = {
 /**
  * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
  */
-export type PhaseStartItemMarkups = {
+export type PhaseItemMarkups2 = {
   /**
    * Default percentage markup for customers on this plan. Use -100 to make usage free.
    */
@@ -1248,39 +1232,39 @@ export type PhaseStartItemMarkups = {
    * Per-provider markup percentages for customers on this plan.
    */
   providerMarkups?:
-    | { [k: string]: PhaseStartItemProviderMarkups }
+    | { [k: string]: PhaseItemProviderMarkups2 }
     | null
     | undefined;
   /**
    * Per-model markup overrides for customers on this plan.
    */
-  modelMarkups?: { [k: string]: PhaseStartItemModelMarkups } | null | undefined;
+  modelMarkups?: { [k: string]: PhaseItemModelMarkups2 } | null | undefined;
 };
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
-export type PhaseStartItemFeatureOverride = {
+export type PhaseItemFeatureOverride2 = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
   creditSchema?:
-    | Array<PhaseStartCreditSchemaItem1 | PhaseStartCreditSchemaItem2>
+    | Array<PhaseCreditSchemaItem1 | PhaseCreditSchemaItem2>
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
    */
-  markups?: PhaseStartItemMarkups | undefined;
+  markups?: PhaseItemMarkups2 | undefined;
 };
 
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type PhaseStartItemPlanItem = {
+export type PhaseItemPlanItem2 = {
   /**
    * Bills this many feature units when outstanding overage reaches it.
    */
-  thresholdBilling?: PhaseStartItemThresholdBilling | null | undefined;
+  thresholdBilling?: PhaseItemThresholdBilling2 | null | undefined;
   /**
    * The ID of the feature to configure.
    */
@@ -1300,37 +1284,37 @@ export type PhaseStartItemPlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: PhaseStartItemReset | undefined;
+  reset?: PhaseItemReset2 | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: PhaseStartItemPrice | undefined;
+  price?: PhaseItemPrice2 | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: PhaseStartItemProration | undefined;
+  proration?: PhaseItemProration2 | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: PhaseStartItemRollover | undefined;
+  rollover?: PhaseItemRollover2 | undefined;
   /**
    * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
    */
-  expiry?: PhaseStartItemExpiry | undefined;
+  expiry?: PhaseItemExpiry2 | undefined;
   /**
    * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
    */
-  featureOverride?: PhaseStartItemFeatureOverride | undefined;
+  featureOverride?: PhaseItemFeatureOverride2 | undefined;
 };
 
-export type PhaseStartAddItemThresholdBilling = {
+export type PhaseAddItemThresholdBilling2 = {
   threshold: number;
 };
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PhaseStartAddItemResetInterval = {
+export const PhaseAddItemResetInterval2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -1344,25 +1328,25 @@ export const PhaseStartAddItemResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PhaseStartAddItemResetInterval = ClosedEnum<
-  typeof PhaseStartAddItemResetInterval
+export type PhaseAddItemResetInterval2 = ClosedEnum<
+  typeof PhaseAddItemResetInterval2
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type PhaseStartAddItemReset = {
+export type PhaseAddItemReset2 = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PhaseStartAddItemResetInterval;
+  interval: PhaseAddItemResetInterval2;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type PhaseStartAddItemAdditionalCurrency = {
+export type PhaseAddItemAdditionalCurrency2 = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -1373,9 +1357,9 @@ export type PhaseStartAddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type PhaseStartAddItemPriceTo = number | string;
+export type PhaseAddItemPriceTo2 = number | string;
 
-export type PhaseStartAddItemTierAdditionalCurrency = {
+export type PhaseAddItemTierAdditionalCurrency2 = {
   /**
    * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
    */
@@ -1390,30 +1374,28 @@ export type PhaseStartAddItemTierAdditionalCurrency = {
   flatAmount?: number | undefined;
 };
 
-export type PhaseStartAddItemPriceTier = {
+export type PhaseAddItemPriceTier2 = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
   /**
    * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
    */
-  additionalCurrencies?:
-    | Array<PhaseStartAddItemTierAdditionalCurrency>
-    | undefined;
+  additionalCurrencies?: Array<PhaseAddItemTierAdditionalCurrency2> | undefined;
 };
 
-export const PhaseStartAddItemTierBehavior = {
+export const PhaseAddItemTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type PhaseStartAddItemTierBehavior = ClosedEnum<
-  typeof PhaseStartAddItemTierBehavior
+export type PhaseAddItemTierBehavior2 = ClosedEnum<
+  typeof PhaseAddItemTierBehavior2
 >;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const PhaseStartAddItemPriceInterval = {
+export const PhaseAddItemPriceInterval2 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -1424,28 +1406,28 @@ export const PhaseStartAddItemPriceInterval = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type PhaseStartAddItemPriceInterval = ClosedEnum<
-  typeof PhaseStartAddItemPriceInterval
+export type PhaseAddItemPriceInterval2 = ClosedEnum<
+  typeof PhaseAddItemPriceInterval2
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const PhaseStartAddItemBillingMethod = {
+export const PhaseAddItemBillingMethod2 = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type PhaseStartAddItemBillingMethod = ClosedEnum<
-  typeof PhaseStartAddItemBillingMethod
+export type PhaseAddItemBillingMethod2 = ClosedEnum<
+  typeof PhaseAddItemBillingMethod2
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type PhaseStartAddItemPrice = {
+export type PhaseAddItemPrice2 = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -1453,16 +1435,16 @@ export type PhaseStartAddItemPrice = {
   /**
    * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
    */
-  additionalCurrencies?: Array<PhaseStartAddItemAdditionalCurrency> | undefined;
+  additionalCurrencies?: Array<PhaseAddItemAdditionalCurrency2> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PhaseStartAddItemPriceTier> | undefined;
-  tierBehavior?: PhaseStartAddItemTierBehavior | undefined;
+  tiers?: Array<PhaseAddItemPriceTier2> | undefined;
+  tierBehavior?: PhaseAddItemTierBehavior2 | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: PhaseStartAddItemPriceInterval;
+  interval: PhaseAddItemPriceInterval2;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -1474,7 +1456,7 @@ export type PhaseStartAddItemPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: PhaseStartAddItemBillingMethod;
+  billingMethod: PhaseAddItemBillingMethod2;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -1484,7 +1466,7 @@ export type PhaseStartAddItemPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const PhaseStartAddItemOnIncrease = {
+export const PhaseAddItemOnIncrease2 = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1493,14 +1475,14 @@ export const PhaseStartAddItemOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type PhaseStartAddItemOnIncrease = ClosedEnum<
-  typeof PhaseStartAddItemOnIncrease
+export type PhaseAddItemOnIncrease2 = ClosedEnum<
+  typeof PhaseAddItemOnIncrease2
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const PhaseStartAddItemOnDecrease = {
+export const PhaseAddItemOnDecrease2 = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -1510,42 +1492,42 @@ export const PhaseStartAddItemOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type PhaseStartAddItemOnDecrease = ClosedEnum<
-  typeof PhaseStartAddItemOnDecrease
+export type PhaseAddItemOnDecrease2 = ClosedEnum<
+  typeof PhaseAddItemOnDecrease2
 >;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type PhaseStartAddItemProration = {
+export type PhaseAddItemProration2 = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: PhaseStartAddItemOnIncrease;
+  onIncrease: PhaseAddItemOnIncrease2;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: PhaseStartAddItemOnDecrease;
+  onDecrease: PhaseAddItemOnDecrease2;
 };
 
 /**
  * When rolled over units expire.
  */
-export const PhaseStartAddItemExpiryDurationType = {
+export const PhaseAddItemExpiryDurationType2 = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type PhaseStartAddItemExpiryDurationType = ClosedEnum<
-  typeof PhaseStartAddItemExpiryDurationType
+export type PhaseAddItemExpiryDurationType2 = ClosedEnum<
+  typeof PhaseAddItemExpiryDurationType2
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type PhaseStartAddItemRollover = {
+export type PhaseAddItemRollover2 = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -1557,34 +1539,32 @@ export type PhaseStartAddItemRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: PhaseStartAddItemExpiryDurationType;
+  expiryDurationType: PhaseAddItemExpiryDurationType2;
   /**
    * Number of periods before expiry.
    */
   expiryDurationLength?: number | undefined;
 };
 
-export const PhaseStartAddItemDuration = {
+export const PhaseAddItemDuration2 = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
-export type PhaseStartAddItemDuration = ClosedEnum<
-  typeof PhaseStartAddItemDuration
->;
+export type PhaseAddItemDuration2 = ClosedEnum<typeof PhaseAddItemDuration2>;
 
 /**
  * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
  */
-export type PhaseStartAddItemExpiry = {
-  duration: PhaseStartAddItemDuration;
+export type PhaseAddItemExpiry2 = {
+  duration: PhaseAddItemDuration2;
   length: number;
 };
 
-export type PhaseStartDimensionsAddItemMatch4 = string | number | boolean;
+export type PhaseDimensionsAddItemMatch4 = string | number | boolean;
 
-export type PhaseStartDimensionsAddItem4 = {
+export type PhaseDimensionsAddItem4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1599,34 +1579,34 @@ export type PhaseStartDimensionsAddItem4 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsAddItemMatch3 = string | number | boolean;
+export type PhaseDimensionsAddItemMatch3 = string | number | boolean;
 
-export const PhaseStartDimensionsToAddItemEnum2 = {
+export const PhaseDimensionsToAddItemEnum2 = {
   Inf: "inf",
 } as const;
-export type PhaseStartDimensionsToAddItemEnum2 = ClosedEnum<
-  typeof PhaseStartDimensionsToAddItemEnum2
+export type PhaseDimensionsToAddItemEnum2 = ClosedEnum<
+  typeof PhaseDimensionsToAddItemEnum2
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartDimensionsAddItemToUnion2 =
+export type PhaseDimensionsAddItemToUnion2 =
   | number
-  | PhaseStartDimensionsToAddItemEnum2;
+  | PhaseDimensionsToAddItemEnum2;
 
-export type PhaseStartDimensionsAddItemTier2 = {
+export type PhaseDimensionsAddItemTier2 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartDimensionsToAddItemEnum2;
+  to: number | PhaseDimensionsToAddItemEnum2;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsAddItem3 = {
+export type PhaseDimensionsAddItem3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1636,16 +1616,16 @@ export type PhaseStartDimensionsAddItem3 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartDimensionsAddItemTier2>;
+  tiers: Array<PhaseDimensionsAddItemTier2>;
 };
 
-export type PhaseStartAddItemDimensionsUnion2 =
-  | PhaseStartDimensionsAddItem3
-  | PhaseStartDimensionsAddItem4;
+export type PhaseAddItemDimensionsUnion4 =
+  | PhaseDimensionsAddItem3
+  | PhaseDimensionsAddItem4;
 
-export type PhaseStartAddItemMultipliersMatch2 = string | number | boolean;
+export type PhaseAddItemMultipliersMatch4 = string | number | boolean;
 
-export type PhaseStartAddItemMultipliers2 = {
+export type PhaseAddItemMultipliers4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1660,7 +1640,7 @@ export type PhaseStartAddItemMultipliers2 = {
   add?: number | undefined;
 };
 
-export type PhaseStartCreditSchemaAddItem2 = {
+export type PhaseCreditSchemaAddItem2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -1673,21 +1653,21 @@ export type PhaseStartCreditSchemaAddItem2 = {
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
   dimensions?: {
-    [k: string]: PhaseStartDimensionsAddItem3 | PhaseStartDimensionsAddItem4;
+    [k: string]: PhaseDimensionsAddItem3 | PhaseDimensionsAddItem4;
   } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?: { [k: string]: PhaseStartAddItemMultipliers2 } | undefined;
+  multipliers?: { [k: string]: PhaseAddItemMultipliers4 } | undefined;
   /**
    * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsAddItemMatch2 = string | number | boolean;
+export type PhaseDimensionsAddItemMatch2 = string | number | boolean;
 
-export type PhaseStartDimensionsAddItem2 = {
+export type PhaseDimensionsAddItem2 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1702,34 +1682,34 @@ export type PhaseStartDimensionsAddItem2 = {
   creditCost: number;
 };
 
-export type PhaseStartDimensionsAddItemMatch1 = string | number | boolean;
+export type PhaseDimensionsAddItemMatch1 = string | number | boolean;
 
-export const PhaseStartDimensionsToAddItemEnum1 = {
+export const PhaseDimensionsToAddItemEnum1 = {
   Inf: "inf",
 } as const;
-export type PhaseStartDimensionsToAddItemEnum1 = ClosedEnum<
-  typeof PhaseStartDimensionsToAddItemEnum1
+export type PhaseDimensionsToAddItemEnum1 = ClosedEnum<
+  typeof PhaseDimensionsToAddItemEnum1
 >;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartDimensionsAddItemToUnion1 =
+export type PhaseDimensionsAddItemToUnion1 =
   | number
-  | PhaseStartDimensionsToAddItemEnum1;
+  | PhaseDimensionsToAddItemEnum1;
 
-export type PhaseStartDimensionsAddItemTier1 = {
+export type PhaseDimensionsAddItemTier1 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartDimensionsToAddItemEnum1;
+  to: number | PhaseDimensionsToAddItemEnum1;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartDimensionsAddItem1 = {
+export type PhaseDimensionsAddItem1 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1739,16 +1719,16 @@ export type PhaseStartDimensionsAddItem1 = {
    */
   priority?: number | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartDimensionsAddItemTier1>;
+  tiers: Array<PhaseDimensionsAddItemTier1>;
 };
 
-export type PhaseStartAddItemDimensionsUnion1 =
-  | PhaseStartDimensionsAddItem1
-  | PhaseStartDimensionsAddItem2;
+export type PhaseAddItemDimensionsUnion3 =
+  | PhaseDimensionsAddItem1
+  | PhaseDimensionsAddItem2;
 
-export type PhaseStartAddItemMultipliersMatch1 = string | number | boolean;
+export type PhaseAddItemMultipliersMatch3 = string | number | boolean;
 
-export type PhaseStartAddItemMultipliers1 = {
+export type PhaseAddItemMultipliers3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
    */
@@ -1763,32 +1743,28 @@ export type PhaseStartAddItemMultipliers1 = {
   add?: number | undefined;
 };
 
-export const PhaseStartToAddItemEnum = {
+export const PhaseToAddItemEnum = {
   Inf: "inf",
 } as const;
-export type PhaseStartToAddItemEnum = ClosedEnum<
-  typeof PhaseStartToAddItemEnum
->;
+export type PhaseToAddItemEnum = ClosedEnum<typeof PhaseToAddItemEnum>;
 
 /**
  * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
  */
-export type PhaseStartAddItemFeatureOverrideToUnion =
-  | number
-  | PhaseStartToAddItemEnum;
+export type PhaseAddItemFeatureOverrideToUnion2 = number | PhaseToAddItemEnum;
 
-export type PhaseStartAddItemFeatureOverrideTier = {
+export type PhaseAddItemFeatureOverrideTier2 = {
   /**
    * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
    */
-  to: number | PhaseStartToAddItemEnum;
+  to: number | PhaseToAddItemEnum;
   /**
    * Credits consumed per billing-unit group within this tier.
    */
   creditCost: number;
 };
 
-export type PhaseStartCreditSchemaAddItem1 = {
+export type PhaseCreditSchemaAddItem1 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -1801,25 +1777,25 @@ export type PhaseStartCreditSchemaAddItem1 = {
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
   dimensions?: {
-    [k: string]: PhaseStartDimensionsAddItem1 | PhaseStartDimensionsAddItem2;
+    [k: string]: PhaseDimensionsAddItem1 | PhaseDimensionsAddItem2;
   } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
-  multipliers?: { [k: string]: PhaseStartAddItemMultipliers1 } | undefined;
+  multipliers?: { [k: string]: PhaseAddItemMultipliers3 } | undefined;
   tierBehavior: "graduated";
-  tiers: Array<PhaseStartAddItemFeatureOverrideTier>;
+  tiers: Array<PhaseAddItemFeatureOverrideTier2>;
 };
 
-export type PhaseStartAddItemCreditSchemaUnion =
-  | PhaseStartCreditSchemaAddItem1
-  | PhaseStartCreditSchemaAddItem2;
+export type PhaseAddItemCreditSchemaUnion2 =
+  | PhaseCreditSchemaAddItem1
+  | PhaseCreditSchemaAddItem2;
 
-export type PhaseStartAddItemProviderMarkups = {
+export type PhaseAddItemProviderMarkups2 = {
   markup: number;
 };
 
-export type PhaseStartAddItemModelMarkups = {
+export type PhaseAddItemModelMarkups2 = {
   markup?: number | undefined;
   inputCost?: number | undefined;
   outputCost?: number | undefined;
@@ -1828,7 +1804,7 @@ export type PhaseStartAddItemModelMarkups = {
 /**
  * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
  */
-export type PhaseStartAddItemMarkups = {
+export type PhaseAddItemMarkups2 = {
   /**
    * Default percentage markup for customers on this plan. Use -100 to make usage free.
    */
@@ -1837,32 +1813,29 @@ export type PhaseStartAddItemMarkups = {
    * Per-provider markup percentages for customers on this plan.
    */
   providerMarkups?:
-    | { [k: string]: PhaseStartAddItemProviderMarkups }
+    | { [k: string]: PhaseAddItemProviderMarkups2 }
     | null
     | undefined;
   /**
    * Per-model markup overrides for customers on this plan.
    */
-  modelMarkups?:
-    | { [k: string]: PhaseStartAddItemModelMarkups }
-    | null
-    | undefined;
+  modelMarkups?: { [k: string]: PhaseAddItemModelMarkups2 } | null | undefined;
 };
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
-export type PhaseStartAddItemFeatureOverride = {
+export type PhaseAddItemFeatureOverride2 = {
   /**
    * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
    */
   creditSchema?:
-    | Array<PhaseStartCreditSchemaAddItem1 | PhaseStartCreditSchemaAddItem2>
+    | Array<PhaseCreditSchemaAddItem1 | PhaseCreditSchemaAddItem2>
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
    */
-  markups?: PhaseStartAddItemMarkups | undefined;
+  markups?: PhaseAddItemMarkups2 | undefined;
 };
 
 /** @internal */
@@ -3265,9 +3238,9 @@ export function startsAt2ToJSON(startsAt2: StartsAt2): string {
 }
 
 /** @internal */
-export const PhaseStartDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartDurationType
-> = z.enum(PhaseStartDurationType);
+export const PhaseDurationType2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseDurationType2
+> = z.enum(PhaseDurationType2);
 
 /** @internal */
 export type StartingAfter2$Outbound = {
@@ -3281,7 +3254,7 @@ export const StartingAfter2$outboundSchema: z.ZodMiniType<
   StartingAfter2
 > = z.pipe(
   z.object({
-    durationType: PhaseStartDurationType$outboundSchema,
+    durationType: PhaseDurationType2$outboundSchema,
     durationCount: z.int(),
   }),
   z.transform((v) => {
@@ -3297,16 +3270,16 @@ export function startingAfter2ToJSON(startingAfter2: StartingAfter2): string {
 }
 
 /** @internal */
-export type PhaseStartFeatureQuantity$Outbound = {
+export type PhaseFeatureQuantity2$Outbound = {
   feature_id: string;
   quantity?: number | undefined;
   adjustable?: boolean | undefined;
 };
 
 /** @internal */
-export const PhaseStartFeatureQuantity$outboundSchema: z.ZodMiniType<
-  PhaseStartFeatureQuantity$Outbound,
-  PhaseStartFeatureQuantity
+export const PhaseFeatureQuantity2$outboundSchema: z.ZodMiniType<
+  PhaseFeatureQuantity2$Outbound,
+  PhaseFeatureQuantity2
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -3320,24 +3293,24 @@ export const PhaseStartFeatureQuantity$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartFeatureQuantityToJSON(
-  phaseStartFeatureQuantity: PhaseStartFeatureQuantity,
+export function phaseFeatureQuantity2ToJSON(
+  phaseFeatureQuantity2: PhaseFeatureQuantity2,
 ): string {
   return JSON.stringify(
-    PhaseStartFeatureQuantity$outboundSchema.parse(phaseStartFeatureQuantity),
+    PhaseFeatureQuantity2$outboundSchema.parse(phaseFeatureQuantity2),
   );
 }
 
 /** @internal */
-export type PhaseStartLicenseQuantity$Outbound = {
+export type PhaseLicenseQuantity2$Outbound = {
   license_plan_id: string;
   quantity: number;
 };
 
 /** @internal */
-export const PhaseStartLicenseQuantity$outboundSchema: z.ZodMiniType<
-  PhaseStartLicenseQuantity$Outbound,
-  PhaseStartLicenseQuantity
+export const PhaseLicenseQuantity2$outboundSchema: z.ZodMiniType<
+  PhaseLicenseQuantity2$Outbound,
+  PhaseLicenseQuantity2
 > = z.pipe(
   z.object({
     licensePlanId: z.string(),
@@ -3350,65 +3323,61 @@ export const PhaseStartLicenseQuantity$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartLicenseQuantityToJSON(
-  phaseStartLicenseQuantity: PhaseStartLicenseQuantity,
+export function phaseLicenseQuantity2ToJSON(
+  phaseLicenseQuantity2: PhaseLicenseQuantity2,
 ): string {
   return JSON.stringify(
-    PhaseStartLicenseQuantity$outboundSchema.parse(phaseStartLicenseQuantity),
+    PhaseLicenseQuantity2$outboundSchema.parse(phaseLicenseQuantity2),
   );
 }
 
 /** @internal */
-export const PhaseStartPriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartPriceInterval
-> = z.enum(PhaseStartPriceInterval);
+export const PhasePriceInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PhasePriceInterval
+> = z.enum(PhasePriceInterval);
 
 /** @internal */
-export type PhaseStartAdditionalCurrency$Outbound = {
+export type PhaseAdditionalCurrency2$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const PhaseStartAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  PhaseStartAdditionalCurrency$Outbound,
-  PhaseStartAdditionalCurrency
+export const PhaseAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  PhaseAdditionalCurrency2$Outbound,
+  PhaseAdditionalCurrency2
 > = z.object({
   currency: z.string(),
   amount: z.number(),
 });
 
-export function phaseStartAdditionalCurrencyToJSON(
-  phaseStartAdditionalCurrency: PhaseStartAdditionalCurrency,
+export function phaseAdditionalCurrency2ToJSON(
+  phaseAdditionalCurrency2: PhaseAdditionalCurrency2,
 ): string {
   return JSON.stringify(
-    PhaseStartAdditionalCurrency$outboundSchema.parse(
-      phaseStartAdditionalCurrency,
-    ),
+    PhaseAdditionalCurrency2$outboundSchema.parse(phaseAdditionalCurrency2),
   );
 }
 
 /** @internal */
-export type PhaseStartBasePrice$Outbound = {
+export type PhaseBasePrice2$Outbound = {
   amount: number;
   interval: string;
   interval_count: number;
-  additional_currencies?:
-    | Array<PhaseStartAdditionalCurrency$Outbound>
-    | undefined;
+  additional_currencies?: Array<PhaseAdditionalCurrency2$Outbound> | undefined;
 };
 
 /** @internal */
-export const PhaseStartBasePrice$outboundSchema: z.ZodMiniType<
-  PhaseStartBasePrice$Outbound,
-  PhaseStartBasePrice
+export const PhaseBasePrice2$outboundSchema: z.ZodMiniType<
+  PhaseBasePrice2$Outbound,
+  PhaseBasePrice2
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: PhaseStartPriceInterval$outboundSchema,
+    interval: PhasePriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
-      z.array(z.lazy(() => PhaseStartAdditionalCurrency$outboundSchema)),
+      z.array(z.lazy(() => PhaseAdditionalCurrency2$outboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -3419,55 +3388,51 @@ export const PhaseStartBasePrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartBasePriceToJSON(
-  phaseStartBasePrice: PhaseStartBasePrice,
+export function phaseBasePrice2ToJSON(
+  phaseBasePrice2: PhaseBasePrice2,
 ): string {
-  return JSON.stringify(
-    PhaseStartBasePrice$outboundSchema.parse(phaseStartBasePrice),
-  );
+  return JSON.stringify(PhaseBasePrice2$outboundSchema.parse(phaseBasePrice2));
 }
 
 /** @internal */
-export type PhaseStartItemThresholdBilling$Outbound = {
+export type PhaseItemThresholdBilling2$Outbound = {
   threshold: number;
 };
 
 /** @internal */
-export const PhaseStartItemThresholdBilling$outboundSchema: z.ZodMiniType<
-  PhaseStartItemThresholdBilling$Outbound,
-  PhaseStartItemThresholdBilling
+export const PhaseItemThresholdBilling2$outboundSchema: z.ZodMiniType<
+  PhaseItemThresholdBilling2$Outbound,
+  PhaseItemThresholdBilling2
 > = z.object({
   threshold: z.number(),
 });
 
-export function phaseStartItemThresholdBillingToJSON(
-  phaseStartItemThresholdBilling: PhaseStartItemThresholdBilling,
+export function phaseItemThresholdBilling2ToJSON(
+  phaseItemThresholdBilling2: PhaseItemThresholdBilling2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemThresholdBilling$outboundSchema.parse(
-      phaseStartItemThresholdBilling,
-    ),
+    PhaseItemThresholdBilling2$outboundSchema.parse(phaseItemThresholdBilling2),
   );
 }
 
 /** @internal */
-export const PhaseStartItemResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemResetInterval
-> = z.enum(PhaseStartItemResetInterval);
+export const PhaseItemResetInterval2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemResetInterval2
+> = z.enum(PhaseItemResetInterval2);
 
 /** @internal */
-export type PhaseStartItemReset$Outbound = {
+export type PhaseItemReset2$Outbound = {
   interval: string;
   interval_count: number;
 };
 
 /** @internal */
-export const PhaseStartItemReset$outboundSchema: z.ZodMiniType<
-  PhaseStartItemReset$Outbound,
-  PhaseStartItemReset
+export const PhaseItemReset2$outboundSchema: z.ZodMiniType<
+  PhaseItemReset2$Outbound,
+  PhaseItemReset2
 > = z.pipe(
   z.object({
-    interval: PhaseStartItemResetInterval$outboundSchema,
+    interval: PhaseItemResetInterval2$outboundSchema,
     intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
@@ -3477,67 +3442,65 @@ export const PhaseStartItemReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemResetToJSON(
-  phaseStartItemReset: PhaseStartItemReset,
+export function phaseItemReset2ToJSON(
+  phaseItemReset2: PhaseItemReset2,
 ): string {
-  return JSON.stringify(
-    PhaseStartItemReset$outboundSchema.parse(phaseStartItemReset),
-  );
+  return JSON.stringify(PhaseItemReset2$outboundSchema.parse(phaseItemReset2));
 }
 
 /** @internal */
-export type PhaseStartItemAdditionalCurrency$Outbound = {
+export type PhaseItemAdditionalCurrency2$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const PhaseStartItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  PhaseStartItemAdditionalCurrency$Outbound,
-  PhaseStartItemAdditionalCurrency
+export const PhaseItemAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  PhaseItemAdditionalCurrency2$Outbound,
+  PhaseItemAdditionalCurrency2
 > = z.object({
   currency: z.string(),
   amount: z.number(),
 });
 
-export function phaseStartItemAdditionalCurrencyToJSON(
-  phaseStartItemAdditionalCurrency: PhaseStartItemAdditionalCurrency,
+export function phaseItemAdditionalCurrency2ToJSON(
+  phaseItemAdditionalCurrency2: PhaseItemAdditionalCurrency2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemAdditionalCurrency$outboundSchema.parse(
-      phaseStartItemAdditionalCurrency,
+    PhaseItemAdditionalCurrency2$outboundSchema.parse(
+      phaseItemAdditionalCurrency2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartItemPriceTo$Outbound = number | string;
+export type PhaseItemPriceTo2$Outbound = number | string;
 
 /** @internal */
-export const PhaseStartItemPriceTo$outboundSchema: z.ZodMiniType<
-  PhaseStartItemPriceTo$Outbound,
-  PhaseStartItemPriceTo
+export const PhaseItemPriceTo2$outboundSchema: z.ZodMiniType<
+  PhaseItemPriceTo2$Outbound,
+  PhaseItemPriceTo2
 > = smartUnion([z.number(), z.string()]);
 
-export function phaseStartItemPriceToToJSON(
-  phaseStartItemPriceTo: PhaseStartItemPriceTo,
+export function phaseItemPriceTo2ToJSON(
+  phaseItemPriceTo2: PhaseItemPriceTo2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemPriceTo$outboundSchema.parse(phaseStartItemPriceTo),
+    PhaseItemPriceTo2$outboundSchema.parse(phaseItemPriceTo2),
   );
 }
 
 /** @internal */
-export type PhaseStartItemTierAdditionalCurrency$Outbound = {
+export type PhaseItemTierAdditionalCurrency2$Outbound = {
   currency: string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemTierAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  PhaseStartItemTierAdditionalCurrency$Outbound,
-  PhaseStartItemTierAdditionalCurrency
+export const PhaseItemTierAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  PhaseItemTierAdditionalCurrency2$Outbound,
+  PhaseItemTierAdditionalCurrency2
 > = z.pipe(
   z.object({
     currency: z.string(),
@@ -3551,39 +3514,37 @@ export const PhaseStartItemTierAdditionalCurrency$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemTierAdditionalCurrencyToJSON(
-  phaseStartItemTierAdditionalCurrency: PhaseStartItemTierAdditionalCurrency,
+export function phaseItemTierAdditionalCurrency2ToJSON(
+  phaseItemTierAdditionalCurrency2: PhaseItemTierAdditionalCurrency2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemTierAdditionalCurrency$outboundSchema.parse(
-      phaseStartItemTierAdditionalCurrency,
+    PhaseItemTierAdditionalCurrency2$outboundSchema.parse(
+      phaseItemTierAdditionalCurrency2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartItemPriceTier$Outbound = {
+export type PhaseItemPriceTier2$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
   additional_currencies?:
-    | Array<PhaseStartItemTierAdditionalCurrency$Outbound>
+    | Array<PhaseItemTierAdditionalCurrency2$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemPriceTier$outboundSchema: z.ZodMiniType<
-  PhaseStartItemPriceTier$Outbound,
-  PhaseStartItemPriceTier
+export const PhaseItemPriceTier2$outboundSchema: z.ZodMiniType<
+  PhaseItemPriceTier2$Outbound,
+  PhaseItemPriceTier2
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
     additionalCurrencies: z.optional(
-      z.array(
-        z.lazy(() => PhaseStartItemTierAdditionalCurrency$outboundSchema),
-      ),
+      z.array(z.lazy(() => PhaseItemTierAdditionalCurrency2$outboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -3594,36 +3555,36 @@ export const PhaseStartItemPriceTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemPriceTierToJSON(
-  phaseStartItemPriceTier: PhaseStartItemPriceTier,
+export function phaseItemPriceTier2ToJSON(
+  phaseItemPriceTier2: PhaseItemPriceTier2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemPriceTier$outboundSchema.parse(phaseStartItemPriceTier),
+    PhaseItemPriceTier2$outboundSchema.parse(phaseItemPriceTier2),
   );
 }
 
 /** @internal */
-export const PhaseStartItemTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemTierBehavior
-> = z.enum(PhaseStartItemTierBehavior);
+export const PhaseItemTierBehavior2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemTierBehavior2
+> = z.enum(PhaseItemTierBehavior2);
 
 /** @internal */
-export const PhaseStartItemPriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemPriceInterval
-> = z.enum(PhaseStartItemPriceInterval);
+export const PhaseItemPriceInterval2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemPriceInterval2
+> = z.enum(PhaseItemPriceInterval2);
 
 /** @internal */
-export const PhaseStartItemBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemBillingMethod
-> = z.enum(PhaseStartItemBillingMethod);
+export const PhaseItemBillingMethod2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemBillingMethod2
+> = z.enum(PhaseItemBillingMethod2);
 
 /** @internal */
-export type PhaseStartItemPrice$Outbound = {
+export type PhaseItemPrice2$Outbound = {
   amount?: number | undefined;
   additional_currencies?:
-    | Array<PhaseStartItemAdditionalCurrency$Outbound>
+    | Array<PhaseItemAdditionalCurrency2$Outbound>
     | undefined;
-  tiers?: Array<PhaseStartItemPriceTier$Outbound> | undefined;
+  tiers?: Array<PhaseItemPriceTier2$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -3633,23 +3594,23 @@ export type PhaseStartItemPrice$Outbound = {
 };
 
 /** @internal */
-export const PhaseStartItemPrice$outboundSchema: z.ZodMiniType<
-  PhaseStartItemPrice$Outbound,
-  PhaseStartItemPrice
+export const PhaseItemPrice2$outboundSchema: z.ZodMiniType<
+  PhaseItemPrice2$Outbound,
+  PhaseItemPrice2
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
     additionalCurrencies: z.optional(
-      z.array(z.lazy(() => PhaseStartItemAdditionalCurrency$outboundSchema)),
+      z.array(z.lazy(() => PhaseItemAdditionalCurrency2$outboundSchema)),
     ),
     tiers: z.optional(
-      z.array(z.lazy(() => PhaseStartItemPriceTier$outboundSchema)),
+      z.array(z.lazy(() => PhaseItemPriceTier2$outboundSchema)),
     ),
-    tierBehavior: z.optional(PhaseStartItemTierBehavior$outboundSchema),
-    interval: PhaseStartItemPriceInterval$outboundSchema,
+    tierBehavior: z.optional(PhaseItemTierBehavior2$outboundSchema),
+    interval: PhaseItemPriceInterval2$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: PhaseStartItemBillingMethod$outboundSchema,
+    billingMethod: PhaseItemBillingMethod2$outboundSchema,
     maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
@@ -3664,38 +3625,36 @@ export const PhaseStartItemPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemPriceToJSON(
-  phaseStartItemPrice: PhaseStartItemPrice,
+export function phaseItemPrice2ToJSON(
+  phaseItemPrice2: PhaseItemPrice2,
 ): string {
-  return JSON.stringify(
-    PhaseStartItemPrice$outboundSchema.parse(phaseStartItemPrice),
-  );
+  return JSON.stringify(PhaseItemPrice2$outboundSchema.parse(phaseItemPrice2));
 }
 
 /** @internal */
-export const PhaseStartItemOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemOnIncrease
-> = z.enum(PhaseStartItemOnIncrease);
+export const PhaseItemOnIncrease2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemOnIncrease2
+> = z.enum(PhaseItemOnIncrease2);
 
 /** @internal */
-export const PhaseStartItemOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemOnDecrease
-> = z.enum(PhaseStartItemOnDecrease);
+export const PhaseItemOnDecrease2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemOnDecrease2
+> = z.enum(PhaseItemOnDecrease2);
 
 /** @internal */
-export type PhaseStartItemProration$Outbound = {
+export type PhaseItemProration2$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const PhaseStartItemProration$outboundSchema: z.ZodMiniType<
-  PhaseStartItemProration$Outbound,
-  PhaseStartItemProration
+export const PhaseItemProration2$outboundSchema: z.ZodMiniType<
+  PhaseItemProration2$Outbound,
+  PhaseItemProration2
 > = z.pipe(
   z.object({
-    onIncrease: PhaseStartItemOnIncrease$outboundSchema,
-    onDecrease: PhaseStartItemOnDecrease$outboundSchema,
+    onIncrease: PhaseItemOnIncrease2$outboundSchema,
+    onDecrease: PhaseItemOnDecrease2$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3705,21 +3664,21 @@ export const PhaseStartItemProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemProrationToJSON(
-  phaseStartItemProration: PhaseStartItemProration,
+export function phaseItemProration2ToJSON(
+  phaseItemProration2: PhaseItemProration2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemProration$outboundSchema.parse(phaseStartItemProration),
+    PhaseItemProration2$outboundSchema.parse(phaseItemProration2),
   );
 }
 
 /** @internal */
-export const PhaseStartItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemExpiryDurationType
-> = z.enum(PhaseStartItemExpiryDurationType);
+export const PhaseItemExpiryDurationType2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemExpiryDurationType2
+> = z.enum(PhaseItemExpiryDurationType2);
 
 /** @internal */
-export type PhaseStartItemRollover$Outbound = {
+export type PhaseItemRollover2$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -3727,14 +3686,14 @@ export type PhaseStartItemRollover$Outbound = {
 };
 
 /** @internal */
-export const PhaseStartItemRollover$outboundSchema: z.ZodMiniType<
-  PhaseStartItemRollover$Outbound,
-  PhaseStartItemRollover
+export const PhaseItemRollover2$outboundSchema: z.ZodMiniType<
+  PhaseItemRollover2$Outbound,
+  PhaseItemRollover2
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: PhaseStartItemExpiryDurationType$outboundSchema,
+    expiryDurationType: PhaseItemExpiryDurationType2$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -3746,72 +3705,70 @@ export const PhaseStartItemRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemRolloverToJSON(
-  phaseStartItemRollover: PhaseStartItemRollover,
+export function phaseItemRollover2ToJSON(
+  phaseItemRollover2: PhaseItemRollover2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemRollover$outboundSchema.parse(phaseStartItemRollover),
+    PhaseItemRollover2$outboundSchema.parse(phaseItemRollover2),
   );
 }
 
 /** @internal */
-export const PhaseStartItemDuration$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartItemDuration
-> = z.enum(PhaseStartItemDuration);
+export const PhaseItemDuration2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseItemDuration2
+> = z.enum(PhaseItemDuration2);
 
 /** @internal */
-export type PhaseStartItemExpiry$Outbound = {
+export type PhaseItemExpiry2$Outbound = {
   duration: string;
   length: number;
 };
 
 /** @internal */
-export const PhaseStartItemExpiry$outboundSchema: z.ZodMiniType<
-  PhaseStartItemExpiry$Outbound,
-  PhaseStartItemExpiry
+export const PhaseItemExpiry2$outboundSchema: z.ZodMiniType<
+  PhaseItemExpiry2$Outbound,
+  PhaseItemExpiry2
 > = z.object({
-  duration: PhaseStartItemDuration$outboundSchema,
+  duration: PhaseItemDuration2$outboundSchema,
   length: z.number(),
 });
 
-export function phaseStartItemExpiryToJSON(
-  phaseStartItemExpiry: PhaseStartItemExpiry,
+export function phaseItemExpiry2ToJSON(
+  phaseItemExpiry2: PhaseItemExpiry2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemExpiry$outboundSchema.parse(phaseStartItemExpiry),
+    PhaseItemExpiry2$outboundSchema.parse(phaseItemExpiry2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItemMatch4$Outbound = string | number | boolean;
+export type PhaseDimensionsItemMatch4$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsItemMatch4$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemMatch4$Outbound,
-  PhaseStartDimensionsItemMatch4
+export const PhaseDimensionsItemMatch4$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemMatch4$Outbound,
+  PhaseDimensionsItemMatch4
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsItemMatch4ToJSON(
-  phaseStartDimensionsItemMatch4: PhaseStartDimensionsItemMatch4,
+export function phaseDimensionsItemMatch4ToJSON(
+  phaseDimensionsItemMatch4: PhaseDimensionsItemMatch4,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItemMatch4$outboundSchema.parse(
-      phaseStartDimensionsItemMatch4,
-    ),
+    PhaseDimensionsItemMatch4$outboundSchema.parse(phaseDimensionsItemMatch4),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItem4$Outbound = {
+export type PhaseDimensionsItem4$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsItem4$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItem4$Outbound,
-  PhaseStartDimensionsItem4
+export const PhaseDimensionsItem4$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItem4$Outbound,
+  PhaseDimensionsItem4
 > = z.pipe(
   z.object({
     match: z.record(
@@ -3828,73 +3785,68 @@ export const PhaseStartDimensionsItem4$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsItem4ToJSON(
-  phaseStartDimensionsItem4: PhaseStartDimensionsItem4,
+export function phaseDimensionsItem4ToJSON(
+  phaseDimensionsItem4: PhaseDimensionsItem4,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItem4$outboundSchema.parse(phaseStartDimensionsItem4),
+    PhaseDimensionsItem4$outboundSchema.parse(phaseDimensionsItem4),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItemMatch3$Outbound = string | number | boolean;
+export type PhaseDimensionsItemMatch3$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsItemMatch3$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemMatch3$Outbound,
-  PhaseStartDimensionsItemMatch3
+export const PhaseDimensionsItemMatch3$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemMatch3$Outbound,
+  PhaseDimensionsItemMatch3
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsItemMatch3ToJSON(
-  phaseStartDimensionsItemMatch3: PhaseStartDimensionsItemMatch3,
+export function phaseDimensionsItemMatch3ToJSON(
+  phaseDimensionsItemMatch3: PhaseDimensionsItemMatch3,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItemMatch3$outboundSchema.parse(
-      phaseStartDimensionsItemMatch3,
+    PhaseDimensionsItemMatch3$outboundSchema.parse(phaseDimensionsItemMatch3),
+  );
+}
+
+/** @internal */
+export const PhaseDimensionsToItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseDimensionsToItemEnum2
+> = z.enum(PhaseDimensionsToItemEnum2);
+
+/** @internal */
+export type PhaseDimensionsItemToUnion2$Outbound = number | string;
+
+/** @internal */
+export const PhaseDimensionsItemToUnion2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemToUnion2$Outbound,
+  PhaseDimensionsItemToUnion2
+> = smartUnion([z.number(), PhaseDimensionsToItemEnum2$outboundSchema]);
+
+export function phaseDimensionsItemToUnion2ToJSON(
+  phaseDimensionsItemToUnion2: PhaseDimensionsItemToUnion2,
+): string {
+  return JSON.stringify(
+    PhaseDimensionsItemToUnion2$outboundSchema.parse(
+      phaseDimensionsItemToUnion2,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartDimensionsToItemEnum2$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartDimensionsToItemEnum2
-> = z.enum(PhaseStartDimensionsToItemEnum2);
-
-/** @internal */
-export type PhaseStartDimensionsItemToUnion2$Outbound = number | string;
-
-/** @internal */
-export const PhaseStartDimensionsItemToUnion2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemToUnion2$Outbound,
-  PhaseStartDimensionsItemToUnion2
-> = smartUnion([z.number(), PhaseStartDimensionsToItemEnum2$outboundSchema]);
-
-export function phaseStartDimensionsItemToUnion2ToJSON(
-  phaseStartDimensionsItemToUnion2: PhaseStartDimensionsItemToUnion2,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsItemToUnion2$outboundSchema.parse(
-      phaseStartDimensionsItemToUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsItemTier2$Outbound = {
+export type PhaseDimensionsItemTier2$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsItemTier2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemTier2$Outbound,
-  PhaseStartDimensionsItemTier2
+export const PhaseDimensionsItemTier2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemTier2$Outbound,
+  PhaseDimensionsItemTier2
 > = z.pipe(
   z.object({
-    to: smartUnion([
-      z.number(),
-      PhaseStartDimensionsToItemEnum2$outboundSchema,
-    ]),
+    to: smartUnion([z.number(), PhaseDimensionsToItemEnum2$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -3904,28 +3856,26 @@ export const PhaseStartDimensionsItemTier2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsItemTier2ToJSON(
-  phaseStartDimensionsItemTier2: PhaseStartDimensionsItemTier2,
+export function phaseDimensionsItemTier2ToJSON(
+  phaseDimensionsItemTier2: PhaseDimensionsItemTier2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItemTier2$outboundSchema.parse(
-      phaseStartDimensionsItemTier2,
-    ),
+    PhaseDimensionsItemTier2$outboundSchema.parse(phaseDimensionsItemTier2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItem3$Outbound = {
+export type PhaseDimensionsItem3$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
-  tiers: Array<PhaseStartDimensionsItemTier2$Outbound>;
+  tiers: Array<PhaseDimensionsItemTier2$Outbound>;
 };
 
 /** @internal */
-export const PhaseStartDimensionsItem3$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItem3$Outbound,
-  PhaseStartDimensionsItem3
+export const PhaseDimensionsItem3$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItem3$Outbound,
+  PhaseDimensionsItem3
 > = z.pipe(
   z.object({
     match: z.record(
@@ -3934,7 +3884,7 @@ export const PhaseStartDimensionsItem3$outboundSchema: z.ZodMiniType<
     ),
     priority: z.optional(z.int()),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() => PhaseStartDimensionsItemTier2$outboundSchema)),
+    tiers: z.array(z.lazy(() => PhaseDimensionsItemTier2$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3943,71 +3893,64 @@ export const PhaseStartDimensionsItem3$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsItem3ToJSON(
-  phaseStartDimensionsItem3: PhaseStartDimensionsItem3,
+export function phaseDimensionsItem3ToJSON(
+  phaseDimensionsItem3: PhaseDimensionsItem3,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItem3$outboundSchema.parse(phaseStartDimensionsItem3),
+    PhaseDimensionsItem3$outboundSchema.parse(phaseDimensionsItem3),
   );
 }
 
 /** @internal */
-export type PhaseStartItemDimensionsUnion2$Outbound =
-  | PhaseStartDimensionsItem3$Outbound
-  | PhaseStartDimensionsItem4$Outbound;
+export type PhaseItemDimensionsUnion4$Outbound =
+  | PhaseDimensionsItem3$Outbound
+  | PhaseDimensionsItem4$Outbound;
 
 /** @internal */
-export const PhaseStartItemDimensionsUnion2$outboundSchema: z.ZodMiniType<
-  PhaseStartItemDimensionsUnion2$Outbound,
-  PhaseStartItemDimensionsUnion2
+export const PhaseItemDimensionsUnion4$outboundSchema: z.ZodMiniType<
+  PhaseItemDimensionsUnion4$Outbound,
+  PhaseItemDimensionsUnion4
 > = smartUnion([
-  z.lazy(() => PhaseStartDimensionsItem3$outboundSchema),
-  z.lazy(() => PhaseStartDimensionsItem4$outboundSchema),
+  z.lazy(() => PhaseDimensionsItem3$outboundSchema),
+  z.lazy(() => PhaseDimensionsItem4$outboundSchema),
 ]);
 
-export function phaseStartItemDimensionsUnion2ToJSON(
-  phaseStartItemDimensionsUnion2: PhaseStartItemDimensionsUnion2,
+export function phaseItemDimensionsUnion4ToJSON(
+  phaseItemDimensionsUnion4: PhaseItemDimensionsUnion4,
 ): string {
   return JSON.stringify(
-    PhaseStartItemDimensionsUnion2$outboundSchema.parse(
-      phaseStartItemDimensionsUnion2,
-    ),
+    PhaseItemDimensionsUnion4$outboundSchema.parse(phaseItemDimensionsUnion4),
   );
 }
 
 /** @internal */
-export type PhaseStartItemMultipliersMatch2$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseItemMultipliersMatch4$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartItemMultipliersMatch2$outboundSchema: z.ZodMiniType<
-  PhaseStartItemMultipliersMatch2$Outbound,
-  PhaseStartItemMultipliersMatch2
+export const PhaseItemMultipliersMatch4$outboundSchema: z.ZodMiniType<
+  PhaseItemMultipliersMatch4$Outbound,
+  PhaseItemMultipliersMatch4
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartItemMultipliersMatch2ToJSON(
-  phaseStartItemMultipliersMatch2: PhaseStartItemMultipliersMatch2,
+export function phaseItemMultipliersMatch4ToJSON(
+  phaseItemMultipliersMatch4: PhaseItemMultipliersMatch4,
 ): string {
   return JSON.stringify(
-    PhaseStartItemMultipliersMatch2$outboundSchema.parse(
-      phaseStartItemMultipliersMatch2,
-    ),
+    PhaseItemMultipliersMatch4$outboundSchema.parse(phaseItemMultipliersMatch4),
   );
 }
 
 /** @internal */
-export type PhaseStartItemMultipliers2$Outbound = {
+export type PhaseItemMultipliers4$Outbound = {
   match: { [k: string]: string | number | boolean };
   factor?: number | undefined;
   add?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemMultipliers2$outboundSchema: z.ZodMiniType<
-  PhaseStartItemMultipliers2$Outbound,
-  PhaseStartItemMultipliers2
+export const PhaseItemMultipliers4$outboundSchema: z.ZodMiniType<
+  PhaseItemMultipliers4$Outbound,
+  PhaseItemMultipliers4
 > = z.object({
   match: z.record(
     z.string(),
@@ -4017,33 +3960,29 @@ export const PhaseStartItemMultipliers2$outboundSchema: z.ZodMiniType<
   add: z.optional(z.number()),
 });
 
-export function phaseStartItemMultipliers2ToJSON(
-  phaseStartItemMultipliers2: PhaseStartItemMultipliers2,
+export function phaseItemMultipliers4ToJSON(
+  phaseItemMultipliers4: PhaseItemMultipliers4,
 ): string {
   return JSON.stringify(
-    PhaseStartItemMultipliers2$outboundSchema.parse(phaseStartItemMultipliers2),
+    PhaseItemMultipliers4$outboundSchema.parse(phaseItemMultipliers4),
   );
 }
 
 /** @internal */
-export type PhaseStartCreditSchemaItem2$Outbound = {
+export type PhaseCreditSchemaItem2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
   dimensions?: {
-    [k: string]:
-      | PhaseStartDimensionsItem3$Outbound
-      | PhaseStartDimensionsItem4$Outbound;
+    [k: string]: PhaseDimensionsItem3$Outbound | PhaseDimensionsItem4$Outbound;
   } | undefined;
-  multipliers?:
-    | { [k: string]: PhaseStartItemMultipliers2$Outbound }
-    | undefined;
+  multipliers?: { [k: string]: PhaseItemMultipliers4$Outbound } | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartCreditSchemaItem2$outboundSchema: z.ZodMiniType<
-  PhaseStartCreditSchemaItem2$Outbound,
-  PhaseStartCreditSchemaItem2
+export const PhaseCreditSchemaItem2$outboundSchema: z.ZodMiniType<
+  PhaseCreditSchemaItem2$Outbound,
+  PhaseCreditSchemaItem2
 > = z.pipe(
   z.object({
     meteredFeatureId: z.string(),
@@ -4051,13 +3990,13 @@ export const PhaseStartCreditSchemaItem2$outboundSchema: z.ZodMiniType<
     dimensions: z.optional(z.record(
       z.string(),
       smartUnion([
-        z.lazy(() => PhaseStartDimensionsItem3$outboundSchema),
-        z.lazy(() => PhaseStartDimensionsItem4$outboundSchema),
+        z.lazy(() => PhaseDimensionsItem3$outboundSchema),
+        z.lazy(() => PhaseDimensionsItem4$outboundSchema),
       ]),
     )),
     multipliers: z.optional(z.record(
       z.string(),
-      z.lazy(() => PhaseStartItemMultipliers2$outboundSchema),
+      z.lazy(() => PhaseItemMultipliers4$outboundSchema),
     )),
     creditCost: z.number(),
   }),
@@ -4070,46 +4009,42 @@ export const PhaseStartCreditSchemaItem2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartCreditSchemaItem2ToJSON(
-  phaseStartCreditSchemaItem2: PhaseStartCreditSchemaItem2,
+export function phaseCreditSchemaItem2ToJSON(
+  phaseCreditSchemaItem2: PhaseCreditSchemaItem2,
 ): string {
   return JSON.stringify(
-    PhaseStartCreditSchemaItem2$outboundSchema.parse(
-      phaseStartCreditSchemaItem2,
-    ),
+    PhaseCreditSchemaItem2$outboundSchema.parse(phaseCreditSchemaItem2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItemMatch2$Outbound = string | number | boolean;
+export type PhaseDimensionsItemMatch2$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsItemMatch2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemMatch2$Outbound,
-  PhaseStartDimensionsItemMatch2
+export const PhaseDimensionsItemMatch2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemMatch2$Outbound,
+  PhaseDimensionsItemMatch2
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsItemMatch2ToJSON(
-  phaseStartDimensionsItemMatch2: PhaseStartDimensionsItemMatch2,
+export function phaseDimensionsItemMatch2ToJSON(
+  phaseDimensionsItemMatch2: PhaseDimensionsItemMatch2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItemMatch2$outboundSchema.parse(
-      phaseStartDimensionsItemMatch2,
-    ),
+    PhaseDimensionsItemMatch2$outboundSchema.parse(phaseDimensionsItemMatch2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItem2$Outbound = {
+export type PhaseDimensionsItem2$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsItem2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItem2$Outbound,
-  PhaseStartDimensionsItem2
+export const PhaseDimensionsItem2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItem2$Outbound,
+  PhaseDimensionsItem2
 > = z.pipe(
   z.object({
     match: z.record(
@@ -4126,73 +4061,68 @@ export const PhaseStartDimensionsItem2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsItem2ToJSON(
-  phaseStartDimensionsItem2: PhaseStartDimensionsItem2,
+export function phaseDimensionsItem2ToJSON(
+  phaseDimensionsItem2: PhaseDimensionsItem2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItem2$outboundSchema.parse(phaseStartDimensionsItem2),
+    PhaseDimensionsItem2$outboundSchema.parse(phaseDimensionsItem2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItemMatch1$Outbound = string | number | boolean;
+export type PhaseDimensionsItemMatch1$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsItemMatch1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemMatch1$Outbound,
-  PhaseStartDimensionsItemMatch1
+export const PhaseDimensionsItemMatch1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemMatch1$Outbound,
+  PhaseDimensionsItemMatch1
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsItemMatch1ToJSON(
-  phaseStartDimensionsItemMatch1: PhaseStartDimensionsItemMatch1,
+export function phaseDimensionsItemMatch1ToJSON(
+  phaseDimensionsItemMatch1: PhaseDimensionsItemMatch1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItemMatch1$outboundSchema.parse(
-      phaseStartDimensionsItemMatch1,
+    PhaseDimensionsItemMatch1$outboundSchema.parse(phaseDimensionsItemMatch1),
+  );
+}
+
+/** @internal */
+export const PhaseDimensionsToItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseDimensionsToItemEnum1
+> = z.enum(PhaseDimensionsToItemEnum1);
+
+/** @internal */
+export type PhaseDimensionsItemToUnion1$Outbound = number | string;
+
+/** @internal */
+export const PhaseDimensionsItemToUnion1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemToUnion1$Outbound,
+  PhaseDimensionsItemToUnion1
+> = smartUnion([z.number(), PhaseDimensionsToItemEnum1$outboundSchema]);
+
+export function phaseDimensionsItemToUnion1ToJSON(
+  phaseDimensionsItemToUnion1: PhaseDimensionsItemToUnion1,
+): string {
+  return JSON.stringify(
+    PhaseDimensionsItemToUnion1$outboundSchema.parse(
+      phaseDimensionsItemToUnion1,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartDimensionsToItemEnum1$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartDimensionsToItemEnum1
-> = z.enum(PhaseStartDimensionsToItemEnum1);
-
-/** @internal */
-export type PhaseStartDimensionsItemToUnion1$Outbound = number | string;
-
-/** @internal */
-export const PhaseStartDimensionsItemToUnion1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemToUnion1$Outbound,
-  PhaseStartDimensionsItemToUnion1
-> = smartUnion([z.number(), PhaseStartDimensionsToItemEnum1$outboundSchema]);
-
-export function phaseStartDimensionsItemToUnion1ToJSON(
-  phaseStartDimensionsItemToUnion1: PhaseStartDimensionsItemToUnion1,
-): string {
-  return JSON.stringify(
-    PhaseStartDimensionsItemToUnion1$outboundSchema.parse(
-      phaseStartDimensionsItemToUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartDimensionsItemTier1$Outbound = {
+export type PhaseDimensionsItemTier1$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsItemTier1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItemTier1$Outbound,
-  PhaseStartDimensionsItemTier1
+export const PhaseDimensionsItemTier1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItemTier1$Outbound,
+  PhaseDimensionsItemTier1
 > = z.pipe(
   z.object({
-    to: smartUnion([
-      z.number(),
-      PhaseStartDimensionsToItemEnum1$outboundSchema,
-    ]),
+    to: smartUnion([z.number(), PhaseDimensionsToItemEnum1$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -4202,28 +4132,26 @@ export const PhaseStartDimensionsItemTier1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsItemTier1ToJSON(
-  phaseStartDimensionsItemTier1: PhaseStartDimensionsItemTier1,
+export function phaseDimensionsItemTier1ToJSON(
+  phaseDimensionsItemTier1: PhaseDimensionsItemTier1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItemTier1$outboundSchema.parse(
-      phaseStartDimensionsItemTier1,
-    ),
+    PhaseDimensionsItemTier1$outboundSchema.parse(phaseDimensionsItemTier1),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsItem1$Outbound = {
+export type PhaseDimensionsItem1$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
-  tiers: Array<PhaseStartDimensionsItemTier1$Outbound>;
+  tiers: Array<PhaseDimensionsItemTier1$Outbound>;
 };
 
 /** @internal */
-export const PhaseStartDimensionsItem1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsItem1$Outbound,
-  PhaseStartDimensionsItem1
+export const PhaseDimensionsItem1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsItem1$Outbound,
+  PhaseDimensionsItem1
 > = z.pipe(
   z.object({
     match: z.record(
@@ -4232,7 +4160,7 @@ export const PhaseStartDimensionsItem1$outboundSchema: z.ZodMiniType<
     ),
     priority: z.optional(z.int()),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() => PhaseStartDimensionsItemTier1$outboundSchema)),
+    tiers: z.array(z.lazy(() => PhaseDimensionsItemTier1$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4241,71 +4169,64 @@ export const PhaseStartDimensionsItem1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsItem1ToJSON(
-  phaseStartDimensionsItem1: PhaseStartDimensionsItem1,
+export function phaseDimensionsItem1ToJSON(
+  phaseDimensionsItem1: PhaseDimensionsItem1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsItem1$outboundSchema.parse(phaseStartDimensionsItem1),
+    PhaseDimensionsItem1$outboundSchema.parse(phaseDimensionsItem1),
   );
 }
 
 /** @internal */
-export type PhaseStartItemDimensionsUnion1$Outbound =
-  | PhaseStartDimensionsItem1$Outbound
-  | PhaseStartDimensionsItem2$Outbound;
+export type PhaseItemDimensionsUnion3$Outbound =
+  | PhaseDimensionsItem1$Outbound
+  | PhaseDimensionsItem2$Outbound;
 
 /** @internal */
-export const PhaseStartItemDimensionsUnion1$outboundSchema: z.ZodMiniType<
-  PhaseStartItemDimensionsUnion1$Outbound,
-  PhaseStartItemDimensionsUnion1
+export const PhaseItemDimensionsUnion3$outboundSchema: z.ZodMiniType<
+  PhaseItemDimensionsUnion3$Outbound,
+  PhaseItemDimensionsUnion3
 > = smartUnion([
-  z.lazy(() => PhaseStartDimensionsItem1$outboundSchema),
-  z.lazy(() => PhaseStartDimensionsItem2$outboundSchema),
+  z.lazy(() => PhaseDimensionsItem1$outboundSchema),
+  z.lazy(() => PhaseDimensionsItem2$outboundSchema),
 ]);
 
-export function phaseStartItemDimensionsUnion1ToJSON(
-  phaseStartItemDimensionsUnion1: PhaseStartItemDimensionsUnion1,
+export function phaseItemDimensionsUnion3ToJSON(
+  phaseItemDimensionsUnion3: PhaseItemDimensionsUnion3,
 ): string {
   return JSON.stringify(
-    PhaseStartItemDimensionsUnion1$outboundSchema.parse(
-      phaseStartItemDimensionsUnion1,
-    ),
+    PhaseItemDimensionsUnion3$outboundSchema.parse(phaseItemDimensionsUnion3),
   );
 }
 
 /** @internal */
-export type PhaseStartItemMultipliersMatch1$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseItemMultipliersMatch3$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartItemMultipliersMatch1$outboundSchema: z.ZodMiniType<
-  PhaseStartItemMultipliersMatch1$Outbound,
-  PhaseStartItemMultipliersMatch1
+export const PhaseItemMultipliersMatch3$outboundSchema: z.ZodMiniType<
+  PhaseItemMultipliersMatch3$Outbound,
+  PhaseItemMultipliersMatch3
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartItemMultipliersMatch1ToJSON(
-  phaseStartItemMultipliersMatch1: PhaseStartItemMultipliersMatch1,
+export function phaseItemMultipliersMatch3ToJSON(
+  phaseItemMultipliersMatch3: PhaseItemMultipliersMatch3,
 ): string {
   return JSON.stringify(
-    PhaseStartItemMultipliersMatch1$outboundSchema.parse(
-      phaseStartItemMultipliersMatch1,
-    ),
+    PhaseItemMultipliersMatch3$outboundSchema.parse(phaseItemMultipliersMatch3),
   );
 }
 
 /** @internal */
-export type PhaseStartItemMultipliers1$Outbound = {
+export type PhaseItemMultipliers3$Outbound = {
   match: { [k: string]: string | number | boolean };
   factor?: number | undefined;
   add?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemMultipliers1$outboundSchema: z.ZodMiniType<
-  PhaseStartItemMultipliers1$Outbound,
-  PhaseStartItemMultipliers1
+export const PhaseItemMultipliers3$outboundSchema: z.ZodMiniType<
+  PhaseItemMultipliers3$Outbound,
+  PhaseItemMultipliers3
 > = z.object({
   match: z.record(
     z.string(),
@@ -4315,51 +4236,51 @@ export const PhaseStartItemMultipliers1$outboundSchema: z.ZodMiniType<
   add: z.optional(z.number()),
 });
 
-export function phaseStartItemMultipliers1ToJSON(
-  phaseStartItemMultipliers1: PhaseStartItemMultipliers1,
+export function phaseItemMultipliers3ToJSON(
+  phaseItemMultipliers3: PhaseItemMultipliers3,
 ): string {
   return JSON.stringify(
-    PhaseStartItemMultipliers1$outboundSchema.parse(phaseStartItemMultipliers1),
+    PhaseItemMultipliers3$outboundSchema.parse(phaseItemMultipliers3),
   );
 }
 
 /** @internal */
-export const PhaseStartToItemEnum$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartToItemEnum
-> = z.enum(PhaseStartToItemEnum);
+export const PhaseToItemEnum$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseToItemEnum
+> = z.enum(PhaseToItemEnum);
 
 /** @internal */
-export type PhaseStartItemFeatureOverrideToUnion$Outbound = number | string;
+export type PhaseItemFeatureOverrideToUnion2$Outbound = number | string;
 
 /** @internal */
-export const PhaseStartItemFeatureOverrideToUnion$outboundSchema: z.ZodMiniType<
-  PhaseStartItemFeatureOverrideToUnion$Outbound,
-  PhaseStartItemFeatureOverrideToUnion
-> = smartUnion([z.number(), PhaseStartToItemEnum$outboundSchema]);
+export const PhaseItemFeatureOverrideToUnion2$outboundSchema: z.ZodMiniType<
+  PhaseItemFeatureOverrideToUnion2$Outbound,
+  PhaseItemFeatureOverrideToUnion2
+> = smartUnion([z.number(), PhaseToItemEnum$outboundSchema]);
 
-export function phaseStartItemFeatureOverrideToUnionToJSON(
-  phaseStartItemFeatureOverrideToUnion: PhaseStartItemFeatureOverrideToUnion,
+export function phaseItemFeatureOverrideToUnion2ToJSON(
+  phaseItemFeatureOverrideToUnion2: PhaseItemFeatureOverrideToUnion2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemFeatureOverrideToUnion$outboundSchema.parse(
-      phaseStartItemFeatureOverrideToUnion,
+    PhaseItemFeatureOverrideToUnion2$outboundSchema.parse(
+      phaseItemFeatureOverrideToUnion2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartItemFeatureOverrideTier$Outbound = {
+export type PhaseItemFeatureOverrideTier2$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
-  PhaseStartItemFeatureOverrideTier$Outbound,
-  PhaseStartItemFeatureOverrideTier
+export const PhaseItemFeatureOverrideTier2$outboundSchema: z.ZodMiniType<
+  PhaseItemFeatureOverrideTier2$Outbound,
+  PhaseItemFeatureOverrideTier2
 > = z.pipe(
   z.object({
-    to: smartUnion([z.number(), PhaseStartToItemEnum$outboundSchema]),
+    to: smartUnion([z.number(), PhaseToItemEnum$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -4369,36 +4290,32 @@ export const PhaseStartItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemFeatureOverrideTierToJSON(
-  phaseStartItemFeatureOverrideTier: PhaseStartItemFeatureOverrideTier,
+export function phaseItemFeatureOverrideTier2ToJSON(
+  phaseItemFeatureOverrideTier2: PhaseItemFeatureOverrideTier2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemFeatureOverrideTier$outboundSchema.parse(
-      phaseStartItemFeatureOverrideTier,
+    PhaseItemFeatureOverrideTier2$outboundSchema.parse(
+      phaseItemFeatureOverrideTier2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartCreditSchemaItem1$Outbound = {
+export type PhaseCreditSchemaItem1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
   dimensions?: {
-    [k: string]:
-      | PhaseStartDimensionsItem1$Outbound
-      | PhaseStartDimensionsItem2$Outbound;
+    [k: string]: PhaseDimensionsItem1$Outbound | PhaseDimensionsItem2$Outbound;
   } | undefined;
-  multipliers?:
-    | { [k: string]: PhaseStartItemMultipliers1$Outbound }
-    | undefined;
+  multipliers?: { [k: string]: PhaseItemMultipliers3$Outbound } | undefined;
   tier_behavior: "graduated";
-  tiers: Array<PhaseStartItemFeatureOverrideTier$Outbound>;
+  tiers: Array<PhaseItemFeatureOverrideTier2$Outbound>;
 };
 
 /** @internal */
-export const PhaseStartCreditSchemaItem1$outboundSchema: z.ZodMiniType<
-  PhaseStartCreditSchemaItem1$Outbound,
-  PhaseStartCreditSchemaItem1
+export const PhaseCreditSchemaItem1$outboundSchema: z.ZodMiniType<
+  PhaseCreditSchemaItem1$Outbound,
+  PhaseCreditSchemaItem1
 > = z.pipe(
   z.object({
     meteredFeatureId: z.string(),
@@ -4406,18 +4323,16 @@ export const PhaseStartCreditSchemaItem1$outboundSchema: z.ZodMiniType<
     dimensions: z.optional(z.record(
       z.string(),
       smartUnion([
-        z.lazy(() => PhaseStartDimensionsItem1$outboundSchema),
-        z.lazy(() => PhaseStartDimensionsItem2$outboundSchema),
+        z.lazy(() => PhaseDimensionsItem1$outboundSchema),
+        z.lazy(() => PhaseDimensionsItem2$outboundSchema),
       ]),
     )),
     multipliers: z.optional(z.record(
       z.string(),
-      z.lazy(() => PhaseStartItemMultipliers1$outboundSchema),
+      z.lazy(() => PhaseItemMultipliers3$outboundSchema),
     )),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() =>
-      PhaseStartItemFeatureOverrideTier$outboundSchema
-    )),
+    tiers: z.array(z.lazy(() => PhaseItemFeatureOverrideTier2$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4428,74 +4343,70 @@ export const PhaseStartCreditSchemaItem1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartCreditSchemaItem1ToJSON(
-  phaseStartCreditSchemaItem1: PhaseStartCreditSchemaItem1,
+export function phaseCreditSchemaItem1ToJSON(
+  phaseCreditSchemaItem1: PhaseCreditSchemaItem1,
 ): string {
   return JSON.stringify(
-    PhaseStartCreditSchemaItem1$outboundSchema.parse(
-      phaseStartCreditSchemaItem1,
-    ),
+    PhaseCreditSchemaItem1$outboundSchema.parse(phaseCreditSchemaItem1),
   );
 }
 
 /** @internal */
-export type PhaseStartItemCreditSchemaUnion$Outbound =
-  | PhaseStartCreditSchemaItem1$Outbound
-  | PhaseStartCreditSchemaItem2$Outbound;
+export type PhaseItemCreditSchemaUnion2$Outbound =
+  | PhaseCreditSchemaItem1$Outbound
+  | PhaseCreditSchemaItem2$Outbound;
 
 /** @internal */
-export const PhaseStartItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
-  PhaseStartItemCreditSchemaUnion$Outbound,
-  PhaseStartItemCreditSchemaUnion
+export const PhaseItemCreditSchemaUnion2$outboundSchema: z.ZodMiniType<
+  PhaseItemCreditSchemaUnion2$Outbound,
+  PhaseItemCreditSchemaUnion2
 > = smartUnion([
-  z.lazy(() => PhaseStartCreditSchemaItem1$outboundSchema),
-  z.lazy(() => PhaseStartCreditSchemaItem2$outboundSchema),
+  z.lazy(() => PhaseCreditSchemaItem1$outboundSchema),
+  z.lazy(() => PhaseCreditSchemaItem2$outboundSchema),
 ]);
 
-export function phaseStartItemCreditSchemaUnionToJSON(
-  phaseStartItemCreditSchemaUnion: PhaseStartItemCreditSchemaUnion,
+export function phaseItemCreditSchemaUnion2ToJSON(
+  phaseItemCreditSchemaUnion2: PhaseItemCreditSchemaUnion2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemCreditSchemaUnion$outboundSchema.parse(
-      phaseStartItemCreditSchemaUnion,
+    PhaseItemCreditSchemaUnion2$outboundSchema.parse(
+      phaseItemCreditSchemaUnion2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartItemProviderMarkups$Outbound = {
+export type PhaseItemProviderMarkups2$Outbound = {
   markup: number;
 };
 
 /** @internal */
-export const PhaseStartItemProviderMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartItemProviderMarkups$Outbound,
-  PhaseStartItemProviderMarkups
+export const PhaseItemProviderMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseItemProviderMarkups2$Outbound,
+  PhaseItemProviderMarkups2
 > = z.object({
   markup: z.number(),
 });
 
-export function phaseStartItemProviderMarkupsToJSON(
-  phaseStartItemProviderMarkups: PhaseStartItemProviderMarkups,
+export function phaseItemProviderMarkups2ToJSON(
+  phaseItemProviderMarkups2: PhaseItemProviderMarkups2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemProviderMarkups$outboundSchema.parse(
-      phaseStartItemProviderMarkups,
-    ),
+    PhaseItemProviderMarkups2$outboundSchema.parse(phaseItemProviderMarkups2),
   );
 }
 
 /** @internal */
-export type PhaseStartItemModelMarkups$Outbound = {
+export type PhaseItemModelMarkups2$Outbound = {
   markup?: number | undefined;
   input_cost?: number | undefined;
   output_cost?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemModelMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartItemModelMarkups$Outbound,
-  PhaseStartItemModelMarkups
+export const PhaseItemModelMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseItemModelMarkups2$Outbound,
+  PhaseItemModelMarkups2
 > = z.pipe(
   z.object({
     markup: z.optional(z.number()),
@@ -4510,41 +4421,41 @@ export const PhaseStartItemModelMarkups$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemModelMarkupsToJSON(
-  phaseStartItemModelMarkups: PhaseStartItemModelMarkups,
+export function phaseItemModelMarkups2ToJSON(
+  phaseItemModelMarkups2: PhaseItemModelMarkups2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemModelMarkups$outboundSchema.parse(phaseStartItemModelMarkups),
+    PhaseItemModelMarkups2$outboundSchema.parse(phaseItemModelMarkups2),
   );
 }
 
 /** @internal */
-export type PhaseStartItemMarkups$Outbound = {
+export type PhaseItemMarkups2$Outbound = {
   default_markup?: number | undefined;
   provider_markups?:
-    | { [k: string]: PhaseStartItemProviderMarkups$Outbound }
+    | { [k: string]: PhaseItemProviderMarkups2$Outbound }
     | null
     | undefined;
   model_markups?:
-    | { [k: string]: PhaseStartItemModelMarkups$Outbound }
+    | { [k: string]: PhaseItemModelMarkups2$Outbound }
     | null
     | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartItemMarkups$Outbound,
-  PhaseStartItemMarkups
+export const PhaseItemMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseItemMarkups2$Outbound,
+  PhaseItemMarkups2
 > = z.pipe(
   z.object({
     defaultMarkup: z.optional(z.number()),
     providerMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => PhaseStartItemProviderMarkups$outboundSchema),
+      z.lazy(() => PhaseItemProviderMarkups2$outboundSchema),
     ))),
     modelMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => PhaseStartItemModelMarkups$outboundSchema),
+      z.lazy(() => PhaseItemModelMarkups2$outboundSchema),
     ))),
   }),
   z.transform((v) => {
@@ -4556,39 +4467,36 @@ export const PhaseStartItemMarkups$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemMarkupsToJSON(
-  phaseStartItemMarkups: PhaseStartItemMarkups,
+export function phaseItemMarkups2ToJSON(
+  phaseItemMarkups2: PhaseItemMarkups2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemMarkups$outboundSchema.parse(phaseStartItemMarkups),
+    PhaseItemMarkups2$outboundSchema.parse(phaseItemMarkups2),
   );
 }
 
 /** @internal */
-export type PhaseStartItemFeatureOverride$Outbound = {
+export type PhaseItemFeatureOverride2$Outbound = {
   credit_schema?:
-    | Array<
-      | PhaseStartCreditSchemaItem1$Outbound
-      | PhaseStartCreditSchemaItem2$Outbound
-    >
+    | Array<PhaseCreditSchemaItem1$Outbound | PhaseCreditSchemaItem2$Outbound>
     | undefined;
-  markups?: PhaseStartItemMarkups$Outbound | undefined;
+  markups?: PhaseItemMarkups2$Outbound | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemFeatureOverride$outboundSchema: z.ZodMiniType<
-  PhaseStartItemFeatureOverride$Outbound,
-  PhaseStartItemFeatureOverride
+export const PhaseItemFeatureOverride2$outboundSchema: z.ZodMiniType<
+  PhaseItemFeatureOverride2$Outbound,
+  PhaseItemFeatureOverride2
 > = z.pipe(
   z.object({
     creditSchema: z.optional(z.array(smartUnion([
-      z.lazy(() => PhaseStartCreditSchemaItem1$outboundSchema),
+      z.lazy(() => PhaseCreditSchemaItem1$outboundSchema),
       z.lazy(() =>
-        PhaseStartCreditSchemaItem2$outboundSchema
+        PhaseCreditSchemaItem2$outboundSchema
       ),
     ]))),
     markups: z.optional(z.lazy(() =>
-      PhaseStartItemMarkups$outboundSchema
+      PhaseItemMarkups2$outboundSchema
     )),
   }),
   z.transform((v) => {
@@ -4598,54 +4506,49 @@ export const PhaseStartItemFeatureOverride$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemFeatureOverrideToJSON(
-  phaseStartItemFeatureOverride: PhaseStartItemFeatureOverride,
+export function phaseItemFeatureOverride2ToJSON(
+  phaseItemFeatureOverride2: PhaseItemFeatureOverride2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemFeatureOverride$outboundSchema.parse(
-      phaseStartItemFeatureOverride,
-    ),
+    PhaseItemFeatureOverride2$outboundSchema.parse(phaseItemFeatureOverride2),
   );
 }
 
 /** @internal */
-export type PhaseStartItemPlanItem$Outbound = {
-  threshold_billing?:
-    | PhaseStartItemThresholdBilling$Outbound
-    | null
-    | undefined;
+export type PhaseItemPlanItem2$Outbound = {
+  threshold_billing?: PhaseItemThresholdBilling2$Outbound | null | undefined;
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
   pooled: boolean;
-  reset?: PhaseStartItemReset$Outbound | undefined;
-  price?: PhaseStartItemPrice$Outbound | undefined;
-  proration?: PhaseStartItemProration$Outbound | undefined;
-  rollover?: PhaseStartItemRollover$Outbound | undefined;
-  expiry?: PhaseStartItemExpiry$Outbound | undefined;
-  feature_override?: PhaseStartItemFeatureOverride$Outbound | undefined;
+  reset?: PhaseItemReset2$Outbound | undefined;
+  price?: PhaseItemPrice2$Outbound | undefined;
+  proration?: PhaseItemProration2$Outbound | undefined;
+  rollover?: PhaseItemRollover2$Outbound | undefined;
+  expiry?: PhaseItemExpiry2$Outbound | undefined;
+  feature_override?: PhaseItemFeatureOverride2$Outbound | undefined;
 };
 
 /** @internal */
-export const PhaseStartItemPlanItem$outboundSchema: z.ZodMiniType<
-  PhaseStartItemPlanItem$Outbound,
-  PhaseStartItemPlanItem
+export const PhaseItemPlanItem2$outboundSchema: z.ZodMiniType<
+  PhaseItemPlanItem2$Outbound,
+  PhaseItemPlanItem2
 > = z.pipe(
   z.object({
     thresholdBilling: z.optional(
-      z.nullable(z.lazy(() => PhaseStartItemThresholdBilling$outboundSchema)),
+      z.nullable(z.lazy(() => PhaseItemThresholdBilling2$outboundSchema)),
     ),
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     pooled: z._default(z.boolean(), false),
-    reset: z.optional(z.lazy(() => PhaseStartItemReset$outboundSchema)),
-    price: z.optional(z.lazy(() => PhaseStartItemPrice$outboundSchema)),
-    proration: z.optional(z.lazy(() => PhaseStartItemProration$outboundSchema)),
-    rollover: z.optional(z.lazy(() => PhaseStartItemRollover$outboundSchema)),
-    expiry: z.optional(z.lazy(() => PhaseStartItemExpiry$outboundSchema)),
+    reset: z.optional(z.lazy(() => PhaseItemReset2$outboundSchema)),
+    price: z.optional(z.lazy(() => PhaseItemPrice2$outboundSchema)),
+    proration: z.optional(z.lazy(() => PhaseItemProration2$outboundSchema)),
+    rollover: z.optional(z.lazy(() => PhaseItemRollover2$outboundSchema)),
+    expiry: z.optional(z.lazy(() => PhaseItemExpiry2$outboundSchema)),
     featureOverride: z.optional(
-      z.lazy(() => PhaseStartItemFeatureOverride$outboundSchema),
+      z.lazy(() => PhaseItemFeatureOverride2$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -4657,55 +4560,55 @@ export const PhaseStartItemPlanItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartItemPlanItemToJSON(
-  phaseStartItemPlanItem: PhaseStartItemPlanItem,
+export function phaseItemPlanItem2ToJSON(
+  phaseItemPlanItem2: PhaseItemPlanItem2,
 ): string {
   return JSON.stringify(
-    PhaseStartItemPlanItem$outboundSchema.parse(phaseStartItemPlanItem),
+    PhaseItemPlanItem2$outboundSchema.parse(phaseItemPlanItem2),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemThresholdBilling$Outbound = {
+export type PhaseAddItemThresholdBilling2$Outbound = {
   threshold: number;
 };
 
 /** @internal */
-export const PhaseStartAddItemThresholdBilling$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemThresholdBilling$Outbound,
-  PhaseStartAddItemThresholdBilling
+export const PhaseAddItemThresholdBilling2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemThresholdBilling2$Outbound,
+  PhaseAddItemThresholdBilling2
 > = z.object({
   threshold: z.number(),
 });
 
-export function phaseStartAddItemThresholdBillingToJSON(
-  phaseStartAddItemThresholdBilling: PhaseStartAddItemThresholdBilling,
+export function phaseAddItemThresholdBilling2ToJSON(
+  phaseAddItemThresholdBilling2: PhaseAddItemThresholdBilling2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemThresholdBilling$outboundSchema.parse(
-      phaseStartAddItemThresholdBilling,
+    PhaseAddItemThresholdBilling2$outboundSchema.parse(
+      phaseAddItemThresholdBilling2,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemResetInterval
-> = z.enum(PhaseStartAddItemResetInterval);
+export const PhaseAddItemResetInterval2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemResetInterval2
+> = z.enum(PhaseAddItemResetInterval2);
 
 /** @internal */
-export type PhaseStartAddItemReset$Outbound = {
+export type PhaseAddItemReset2$Outbound = {
   interval: string;
   interval_count: number;
 };
 
 /** @internal */
-export const PhaseStartAddItemReset$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemReset$Outbound,
-  PhaseStartAddItemReset
+export const PhaseAddItemReset2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemReset2$Outbound,
+  PhaseAddItemReset2
 > = z.pipe(
   z.object({
-    interval: PhaseStartAddItemResetInterval$outboundSchema,
+    interval: PhaseAddItemResetInterval2$outboundSchema,
     intervalCount: z._default(z.number(), 1),
   }),
   z.transform((v) => {
@@ -4715,114 +4618,112 @@ export const PhaseStartAddItemReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemResetToJSON(
-  phaseStartAddItemReset: PhaseStartAddItemReset,
+export function phaseAddItemReset2ToJSON(
+  phaseAddItemReset2: PhaseAddItemReset2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemReset$outboundSchema.parse(phaseStartAddItemReset),
+    PhaseAddItemReset2$outboundSchema.parse(phaseAddItemReset2),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemAdditionalCurrency$Outbound = {
+export type PhaseAddItemAdditionalCurrency2$Outbound = {
   currency: string;
   amount: number;
 };
 
 /** @internal */
-export const PhaseStartAddItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemAdditionalCurrency$Outbound,
-  PhaseStartAddItemAdditionalCurrency
+export const PhaseAddItemAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemAdditionalCurrency2$Outbound,
+  PhaseAddItemAdditionalCurrency2
 > = z.object({
   currency: z.string(),
   amount: z.number(),
 });
 
-export function phaseStartAddItemAdditionalCurrencyToJSON(
-  phaseStartAddItemAdditionalCurrency: PhaseStartAddItemAdditionalCurrency,
+export function phaseAddItemAdditionalCurrency2ToJSON(
+  phaseAddItemAdditionalCurrency2: PhaseAddItemAdditionalCurrency2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemAdditionalCurrency$outboundSchema.parse(
-      phaseStartAddItemAdditionalCurrency,
+    PhaseAddItemAdditionalCurrency2$outboundSchema.parse(
+      phaseAddItemAdditionalCurrency2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemPriceTo$Outbound = number | string;
+export type PhaseAddItemPriceTo2$Outbound = number | string;
 
 /** @internal */
-export const PhaseStartAddItemPriceTo$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemPriceTo$Outbound,
-  PhaseStartAddItemPriceTo
+export const PhaseAddItemPriceTo2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemPriceTo2$Outbound,
+  PhaseAddItemPriceTo2
 > = smartUnion([z.number(), z.string()]);
 
-export function phaseStartAddItemPriceToToJSON(
-  phaseStartAddItemPriceTo: PhaseStartAddItemPriceTo,
+export function phaseAddItemPriceTo2ToJSON(
+  phaseAddItemPriceTo2: PhaseAddItemPriceTo2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemPriceTo$outboundSchema.parse(phaseStartAddItemPriceTo),
+    PhaseAddItemPriceTo2$outboundSchema.parse(phaseAddItemPriceTo2),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemTierAdditionalCurrency$Outbound = {
+export type PhaseAddItemTierAdditionalCurrency2$Outbound = {
   currency: string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemTierAdditionalCurrency$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartAddItemTierAdditionalCurrency$Outbound,
-    PhaseStartAddItemTierAdditionalCurrency
-  > = z.pipe(
-    z.object({
-      currency: z.string(),
-      amount: z.optional(z.number()),
-      flatAmount: z.optional(z.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        flatAmount: "flat_amount",
-      });
-    }),
-  );
+export const PhaseAddItemTierAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemTierAdditionalCurrency2$Outbound,
+  PhaseAddItemTierAdditionalCurrency2
+> = z.pipe(
+  z.object({
+    currency: z.string(),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
 
-export function phaseStartAddItemTierAdditionalCurrencyToJSON(
-  phaseStartAddItemTierAdditionalCurrency:
-    PhaseStartAddItemTierAdditionalCurrency,
+export function phaseAddItemTierAdditionalCurrency2ToJSON(
+  phaseAddItemTierAdditionalCurrency2: PhaseAddItemTierAdditionalCurrency2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemTierAdditionalCurrency$outboundSchema.parse(
-      phaseStartAddItemTierAdditionalCurrency,
+    PhaseAddItemTierAdditionalCurrency2$outboundSchema.parse(
+      phaseAddItemTierAdditionalCurrency2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemPriceTier$Outbound = {
+export type PhaseAddItemPriceTier2$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
   additional_currencies?:
-    | Array<PhaseStartAddItemTierAdditionalCurrency$Outbound>
+    | Array<PhaseAddItemTierAdditionalCurrency2$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemPriceTier$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemPriceTier$Outbound,
-  PhaseStartAddItemPriceTier
+export const PhaseAddItemPriceTier2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemPriceTier2$Outbound,
+  PhaseAddItemPriceTier2
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
-    additionalCurrencies: z.optional(z.array(z.lazy(() =>
-      PhaseStartAddItemTierAdditionalCurrency$outboundSchema
-    ))),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PhaseAddItemTierAdditionalCurrency2$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4832,36 +4733,36 @@ export const PhaseStartAddItemPriceTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemPriceTierToJSON(
-  phaseStartAddItemPriceTier: PhaseStartAddItemPriceTier,
+export function phaseAddItemPriceTier2ToJSON(
+  phaseAddItemPriceTier2: PhaseAddItemPriceTier2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemPriceTier$outboundSchema.parse(phaseStartAddItemPriceTier),
+    PhaseAddItemPriceTier2$outboundSchema.parse(phaseAddItemPriceTier2),
   );
 }
 
 /** @internal */
-export const PhaseStartAddItemTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemTierBehavior
-> = z.enum(PhaseStartAddItemTierBehavior);
+export const PhaseAddItemTierBehavior2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemTierBehavior2
+> = z.enum(PhaseAddItemTierBehavior2);
 
 /** @internal */
-export const PhaseStartAddItemPriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemPriceInterval
-> = z.enum(PhaseStartAddItemPriceInterval);
+export const PhaseAddItemPriceInterval2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemPriceInterval2
+> = z.enum(PhaseAddItemPriceInterval2);
 
 /** @internal */
-export const PhaseStartAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemBillingMethod
-> = z.enum(PhaseStartAddItemBillingMethod);
+export const PhaseAddItemBillingMethod2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemBillingMethod2
+> = z.enum(PhaseAddItemBillingMethod2);
 
 /** @internal */
-export type PhaseStartAddItemPrice$Outbound = {
+export type PhaseAddItemPrice2$Outbound = {
   amount?: number | undefined;
   additional_currencies?:
-    | Array<PhaseStartAddItemAdditionalCurrency$Outbound>
+    | Array<PhaseAddItemAdditionalCurrency2$Outbound>
     | undefined;
-  tiers?: Array<PhaseStartAddItemPriceTier$Outbound> | undefined;
+  tiers?: Array<PhaseAddItemPriceTier2$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -4871,23 +4772,23 @@ export type PhaseStartAddItemPrice$Outbound = {
 };
 
 /** @internal */
-export const PhaseStartAddItemPrice$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemPrice$Outbound,
-  PhaseStartAddItemPrice
+export const PhaseAddItemPrice2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemPrice2$Outbound,
+  PhaseAddItemPrice2
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
     additionalCurrencies: z.optional(
-      z.array(z.lazy(() => PhaseStartAddItemAdditionalCurrency$outboundSchema)),
+      z.array(z.lazy(() => PhaseAddItemAdditionalCurrency2$outboundSchema)),
     ),
     tiers: z.optional(
-      z.array(z.lazy(() => PhaseStartAddItemPriceTier$outboundSchema)),
+      z.array(z.lazy(() => PhaseAddItemPriceTier2$outboundSchema)),
     ),
-    tierBehavior: z.optional(PhaseStartAddItemTierBehavior$outboundSchema),
-    interval: PhaseStartAddItemPriceInterval$outboundSchema,
+    tierBehavior: z.optional(PhaseAddItemTierBehavior2$outboundSchema),
+    interval: PhaseAddItemPriceInterval2$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: PhaseStartAddItemBillingMethod$outboundSchema,
+    billingMethod: PhaseAddItemBillingMethod2$outboundSchema,
     maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
@@ -4902,38 +4803,38 @@ export const PhaseStartAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemPriceToJSON(
-  phaseStartAddItemPrice: PhaseStartAddItemPrice,
+export function phaseAddItemPrice2ToJSON(
+  phaseAddItemPrice2: PhaseAddItemPrice2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemPrice$outboundSchema.parse(phaseStartAddItemPrice),
+    PhaseAddItemPrice2$outboundSchema.parse(phaseAddItemPrice2),
   );
 }
 
 /** @internal */
-export const PhaseStartAddItemOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemOnIncrease
-> = z.enum(PhaseStartAddItemOnIncrease);
+export const PhaseAddItemOnIncrease2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemOnIncrease2
+> = z.enum(PhaseAddItemOnIncrease2);
 
 /** @internal */
-export const PhaseStartAddItemOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemOnDecrease
-> = z.enum(PhaseStartAddItemOnDecrease);
+export const PhaseAddItemOnDecrease2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemOnDecrease2
+> = z.enum(PhaseAddItemOnDecrease2);
 
 /** @internal */
-export type PhaseStartAddItemProration$Outbound = {
+export type PhaseAddItemProration2$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const PhaseStartAddItemProration$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemProration$Outbound,
-  PhaseStartAddItemProration
+export const PhaseAddItemProration2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemProration2$Outbound,
+  PhaseAddItemProration2
 > = z.pipe(
   z.object({
-    onIncrease: PhaseStartAddItemOnIncrease$outboundSchema,
-    onDecrease: PhaseStartAddItemOnDecrease$outboundSchema,
+    onIncrease: PhaseAddItemOnIncrease2$outboundSchema,
+    onDecrease: PhaseAddItemOnDecrease2$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4943,21 +4844,21 @@ export const PhaseStartAddItemProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemProrationToJSON(
-  phaseStartAddItemProration: PhaseStartAddItemProration,
+export function phaseAddItemProration2ToJSON(
+  phaseAddItemProration2: PhaseAddItemProration2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemProration$outboundSchema.parse(phaseStartAddItemProration),
+    PhaseAddItemProration2$outboundSchema.parse(phaseAddItemProration2),
   );
 }
 
 /** @internal */
-export const PhaseStartAddItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemExpiryDurationType
-> = z.enum(PhaseStartAddItemExpiryDurationType);
+export const PhaseAddItemExpiryDurationType2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemExpiryDurationType2
+> = z.enum(PhaseAddItemExpiryDurationType2);
 
 /** @internal */
-export type PhaseStartAddItemRollover$Outbound = {
+export type PhaseAddItemRollover2$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -4965,14 +4866,14 @@ export type PhaseStartAddItemRollover$Outbound = {
 };
 
 /** @internal */
-export const PhaseStartAddItemRollover$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemRollover$Outbound,
-  PhaseStartAddItemRollover
+export const PhaseAddItemRollover2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemRollover2$Outbound,
+  PhaseAddItemRollover2
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: PhaseStartAddItemExpiryDurationType$outboundSchema,
+    expiryDurationType: PhaseAddItemExpiryDurationType2$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -4984,75 +4885,72 @@ export const PhaseStartAddItemRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemRolloverToJSON(
-  phaseStartAddItemRollover: PhaseStartAddItemRollover,
+export function phaseAddItemRollover2ToJSON(
+  phaseAddItemRollover2: PhaseAddItemRollover2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemRollover$outboundSchema.parse(phaseStartAddItemRollover),
+    PhaseAddItemRollover2$outboundSchema.parse(phaseAddItemRollover2),
   );
 }
 
 /** @internal */
-export const PhaseStartAddItemDuration$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartAddItemDuration
-> = z.enum(PhaseStartAddItemDuration);
+export const PhaseAddItemDuration2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseAddItemDuration2
+> = z.enum(PhaseAddItemDuration2);
 
 /** @internal */
-export type PhaseStartAddItemExpiry$Outbound = {
+export type PhaseAddItemExpiry2$Outbound = {
   duration: string;
   length: number;
 };
 
 /** @internal */
-export const PhaseStartAddItemExpiry$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemExpiry$Outbound,
-  PhaseStartAddItemExpiry
+export const PhaseAddItemExpiry2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemExpiry2$Outbound,
+  PhaseAddItemExpiry2
 > = z.object({
-  duration: PhaseStartAddItemDuration$outboundSchema,
+  duration: PhaseAddItemDuration2$outboundSchema,
   length: z.number(),
 });
 
-export function phaseStartAddItemExpiryToJSON(
-  phaseStartAddItemExpiry: PhaseStartAddItemExpiry,
+export function phaseAddItemExpiry2ToJSON(
+  phaseAddItemExpiry2: PhaseAddItemExpiry2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemExpiry$outboundSchema.parse(phaseStartAddItemExpiry),
+    PhaseAddItemExpiry2$outboundSchema.parse(phaseAddItemExpiry2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItemMatch4$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseDimensionsAddItemMatch4$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsAddItemMatch4$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemMatch4$Outbound,
-  PhaseStartDimensionsAddItemMatch4
+export const PhaseDimensionsAddItemMatch4$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemMatch4$Outbound,
+  PhaseDimensionsAddItemMatch4
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsAddItemMatch4ToJSON(
-  phaseStartDimensionsAddItemMatch4: PhaseStartDimensionsAddItemMatch4,
+export function phaseDimensionsAddItemMatch4ToJSON(
+  phaseDimensionsAddItemMatch4: PhaseDimensionsAddItemMatch4,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemMatch4$outboundSchema.parse(
-      phaseStartDimensionsAddItemMatch4,
+    PhaseDimensionsAddItemMatch4$outboundSchema.parse(
+      phaseDimensionsAddItemMatch4,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItem4$Outbound = {
+export type PhaseDimensionsAddItem4$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsAddItem4$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItem4$Outbound,
-  PhaseStartDimensionsAddItem4
+export const PhaseDimensionsAddItem4$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItem4$Outbound,
+  PhaseDimensionsAddItem4
 > = z.pipe(
   z.object({
     match: z.record(
@@ -5069,78 +4967,70 @@ export const PhaseStartDimensionsAddItem4$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsAddItem4ToJSON(
-  phaseStartDimensionsAddItem4: PhaseStartDimensionsAddItem4,
+export function phaseDimensionsAddItem4ToJSON(
+  phaseDimensionsAddItem4: PhaseDimensionsAddItem4,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItem4$outboundSchema.parse(
-      phaseStartDimensionsAddItem4,
-    ),
+    PhaseDimensionsAddItem4$outboundSchema.parse(phaseDimensionsAddItem4),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItemMatch3$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseDimensionsAddItemMatch3$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsAddItemMatch3$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemMatch3$Outbound,
-  PhaseStartDimensionsAddItemMatch3
+export const PhaseDimensionsAddItemMatch3$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemMatch3$Outbound,
+  PhaseDimensionsAddItemMatch3
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsAddItemMatch3ToJSON(
-  phaseStartDimensionsAddItemMatch3: PhaseStartDimensionsAddItemMatch3,
+export function phaseDimensionsAddItemMatch3ToJSON(
+  phaseDimensionsAddItemMatch3: PhaseDimensionsAddItemMatch3,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemMatch3$outboundSchema.parse(
-      phaseStartDimensionsAddItemMatch3,
+    PhaseDimensionsAddItemMatch3$outboundSchema.parse(
+      phaseDimensionsAddItemMatch3,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartDimensionsToAddItemEnum2$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartDimensionsToAddItemEnum2
-> = z.enum(PhaseStartDimensionsToAddItemEnum2);
+export const PhaseDimensionsToAddItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseDimensionsToAddItemEnum2
+> = z.enum(PhaseDimensionsToAddItemEnum2);
 
 /** @internal */
-export type PhaseStartDimensionsAddItemToUnion2$Outbound = number | string;
+export type PhaseDimensionsAddItemToUnion2$Outbound = number | string;
 
 /** @internal */
-export const PhaseStartDimensionsAddItemToUnion2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemToUnion2$Outbound,
-  PhaseStartDimensionsAddItemToUnion2
-> = smartUnion([z.number(), PhaseStartDimensionsToAddItemEnum2$outboundSchema]);
+export const PhaseDimensionsAddItemToUnion2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemToUnion2$Outbound,
+  PhaseDimensionsAddItemToUnion2
+> = smartUnion([z.number(), PhaseDimensionsToAddItemEnum2$outboundSchema]);
 
-export function phaseStartDimensionsAddItemToUnion2ToJSON(
-  phaseStartDimensionsAddItemToUnion2: PhaseStartDimensionsAddItemToUnion2,
+export function phaseDimensionsAddItemToUnion2ToJSON(
+  phaseDimensionsAddItemToUnion2: PhaseDimensionsAddItemToUnion2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemToUnion2$outboundSchema.parse(
-      phaseStartDimensionsAddItemToUnion2,
+    PhaseDimensionsAddItemToUnion2$outboundSchema.parse(
+      phaseDimensionsAddItemToUnion2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItemTier2$Outbound = {
+export type PhaseDimensionsAddItemTier2$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsAddItemTier2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemTier2$Outbound,
-  PhaseStartDimensionsAddItemTier2
+export const PhaseDimensionsAddItemTier2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemTier2$Outbound,
+  PhaseDimensionsAddItemTier2
 > = z.pipe(
   z.object({
-    to: smartUnion([
-      z.number(),
-      PhaseStartDimensionsToAddItemEnum2$outboundSchema,
-    ]),
+    to: smartUnion([z.number(), PhaseDimensionsToAddItemEnum2$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -5150,28 +5040,28 @@ export const PhaseStartDimensionsAddItemTier2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsAddItemTier2ToJSON(
-  phaseStartDimensionsAddItemTier2: PhaseStartDimensionsAddItemTier2,
+export function phaseDimensionsAddItemTier2ToJSON(
+  phaseDimensionsAddItemTier2: PhaseDimensionsAddItemTier2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemTier2$outboundSchema.parse(
-      phaseStartDimensionsAddItemTier2,
+    PhaseDimensionsAddItemTier2$outboundSchema.parse(
+      phaseDimensionsAddItemTier2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItem3$Outbound = {
+export type PhaseDimensionsAddItem3$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
-  tiers: Array<PhaseStartDimensionsAddItemTier2$Outbound>;
+  tiers: Array<PhaseDimensionsAddItemTier2$Outbound>;
 };
 
 /** @internal */
-export const PhaseStartDimensionsAddItem3$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItem3$Outbound,
-  PhaseStartDimensionsAddItem3
+export const PhaseDimensionsAddItem3$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItem3$Outbound,
+  PhaseDimensionsAddItem3
 > = z.pipe(
   z.object({
     match: z.record(
@@ -5180,9 +5070,7 @@ export const PhaseStartDimensionsAddItem3$outboundSchema: z.ZodMiniType<
     ),
     priority: z.optional(z.int()),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => PhaseStartDimensionsAddItemTier2$outboundSchema),
-    ),
+    tiers: z.array(z.lazy(() => PhaseDimensionsAddItemTier2$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5191,73 +5079,68 @@ export const PhaseStartDimensionsAddItem3$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsAddItem3ToJSON(
-  phaseStartDimensionsAddItem3: PhaseStartDimensionsAddItem3,
+export function phaseDimensionsAddItem3ToJSON(
+  phaseDimensionsAddItem3: PhaseDimensionsAddItem3,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItem3$outboundSchema.parse(
-      phaseStartDimensionsAddItem3,
-    ),
+    PhaseDimensionsAddItem3$outboundSchema.parse(phaseDimensionsAddItem3),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemDimensionsUnion2$Outbound =
-  | PhaseStartDimensionsAddItem3$Outbound
-  | PhaseStartDimensionsAddItem4$Outbound;
+export type PhaseAddItemDimensionsUnion4$Outbound =
+  | PhaseDimensionsAddItem3$Outbound
+  | PhaseDimensionsAddItem4$Outbound;
 
 /** @internal */
-export const PhaseStartAddItemDimensionsUnion2$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemDimensionsUnion2$Outbound,
-  PhaseStartAddItemDimensionsUnion2
+export const PhaseAddItemDimensionsUnion4$outboundSchema: z.ZodMiniType<
+  PhaseAddItemDimensionsUnion4$Outbound,
+  PhaseAddItemDimensionsUnion4
 > = smartUnion([
-  z.lazy(() => PhaseStartDimensionsAddItem3$outboundSchema),
-  z.lazy(() => PhaseStartDimensionsAddItem4$outboundSchema),
+  z.lazy(() => PhaseDimensionsAddItem3$outboundSchema),
+  z.lazy(() => PhaseDimensionsAddItem4$outboundSchema),
 ]);
 
-export function phaseStartAddItemDimensionsUnion2ToJSON(
-  phaseStartAddItemDimensionsUnion2: PhaseStartAddItemDimensionsUnion2,
+export function phaseAddItemDimensionsUnion4ToJSON(
+  phaseAddItemDimensionsUnion4: PhaseAddItemDimensionsUnion4,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemDimensionsUnion2$outboundSchema.parse(
-      phaseStartAddItemDimensionsUnion2,
+    PhaseAddItemDimensionsUnion4$outboundSchema.parse(
+      phaseAddItemDimensionsUnion4,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemMultipliersMatch2$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseAddItemMultipliersMatch4$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartAddItemMultipliersMatch2$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemMultipliersMatch2$Outbound,
-  PhaseStartAddItemMultipliersMatch2
+export const PhaseAddItemMultipliersMatch4$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMultipliersMatch4$Outbound,
+  PhaseAddItemMultipliersMatch4
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartAddItemMultipliersMatch2ToJSON(
-  phaseStartAddItemMultipliersMatch2: PhaseStartAddItemMultipliersMatch2,
+export function phaseAddItemMultipliersMatch4ToJSON(
+  phaseAddItemMultipliersMatch4: PhaseAddItemMultipliersMatch4,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemMultipliersMatch2$outboundSchema.parse(
-      phaseStartAddItemMultipliersMatch2,
+    PhaseAddItemMultipliersMatch4$outboundSchema.parse(
+      phaseAddItemMultipliersMatch4,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemMultipliers2$Outbound = {
+export type PhaseAddItemMultipliers4$Outbound = {
   match: { [k: string]: string | number | boolean };
   factor?: number | undefined;
   add?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemMultipliers2$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemMultipliers2$Outbound,
-  PhaseStartAddItemMultipliers2
+export const PhaseAddItemMultipliers4$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMultipliers4$Outbound,
+  PhaseAddItemMultipliers4
 > = z.object({
   match: z.record(
     z.string(),
@@ -5267,35 +5150,31 @@ export const PhaseStartAddItemMultipliers2$outboundSchema: z.ZodMiniType<
   add: z.optional(z.number()),
 });
 
-export function phaseStartAddItemMultipliers2ToJSON(
-  phaseStartAddItemMultipliers2: PhaseStartAddItemMultipliers2,
+export function phaseAddItemMultipliers4ToJSON(
+  phaseAddItemMultipliers4: PhaseAddItemMultipliers4,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemMultipliers2$outboundSchema.parse(
-      phaseStartAddItemMultipliers2,
-    ),
+    PhaseAddItemMultipliers4$outboundSchema.parse(phaseAddItemMultipliers4),
   );
 }
 
 /** @internal */
-export type PhaseStartCreditSchemaAddItem2$Outbound = {
+export type PhaseCreditSchemaAddItem2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
   dimensions?: {
     [k: string]:
-      | PhaseStartDimensionsAddItem3$Outbound
-      | PhaseStartDimensionsAddItem4$Outbound;
+      | PhaseDimensionsAddItem3$Outbound
+      | PhaseDimensionsAddItem4$Outbound;
   } | undefined;
-  multipliers?:
-    | { [k: string]: PhaseStartAddItemMultipliers2$Outbound }
-    | undefined;
+  multipliers?: { [k: string]: PhaseAddItemMultipliers4$Outbound } | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
-  PhaseStartCreditSchemaAddItem2$Outbound,
-  PhaseStartCreditSchemaAddItem2
+export const PhaseCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
+  PhaseCreditSchemaAddItem2$Outbound,
+  PhaseCreditSchemaAddItem2
 > = z.pipe(
   z.object({
     meteredFeatureId: z.string(),
@@ -5303,13 +5182,13 @@ export const PhaseStartCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
     dimensions: z.optional(z.record(
       z.string(),
       smartUnion([
-        z.lazy(() => PhaseStartDimensionsAddItem3$outboundSchema),
-        z.lazy(() => PhaseStartDimensionsAddItem4$outboundSchema),
+        z.lazy(() => PhaseDimensionsAddItem3$outboundSchema),
+        z.lazy(() => PhaseDimensionsAddItem4$outboundSchema),
       ]),
     )),
     multipliers: z.optional(z.record(
       z.string(),
-      z.lazy(() => PhaseStartAddItemMultipliers2$outboundSchema),
+      z.lazy(() => PhaseAddItemMultipliers4$outboundSchema),
     )),
     creditCost: z.number(),
   }),
@@ -5322,49 +5201,44 @@ export const PhaseStartCreditSchemaAddItem2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartCreditSchemaAddItem2ToJSON(
-  phaseStartCreditSchemaAddItem2: PhaseStartCreditSchemaAddItem2,
+export function phaseCreditSchemaAddItem2ToJSON(
+  phaseCreditSchemaAddItem2: PhaseCreditSchemaAddItem2,
 ): string {
   return JSON.stringify(
-    PhaseStartCreditSchemaAddItem2$outboundSchema.parse(
-      phaseStartCreditSchemaAddItem2,
-    ),
+    PhaseCreditSchemaAddItem2$outboundSchema.parse(phaseCreditSchemaAddItem2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItemMatch2$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseDimensionsAddItemMatch2$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsAddItemMatch2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemMatch2$Outbound,
-  PhaseStartDimensionsAddItemMatch2
+export const PhaseDimensionsAddItemMatch2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemMatch2$Outbound,
+  PhaseDimensionsAddItemMatch2
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsAddItemMatch2ToJSON(
-  phaseStartDimensionsAddItemMatch2: PhaseStartDimensionsAddItemMatch2,
+export function phaseDimensionsAddItemMatch2ToJSON(
+  phaseDimensionsAddItemMatch2: PhaseDimensionsAddItemMatch2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemMatch2$outboundSchema.parse(
-      phaseStartDimensionsAddItemMatch2,
+    PhaseDimensionsAddItemMatch2$outboundSchema.parse(
+      phaseDimensionsAddItemMatch2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItem2$Outbound = {
+export type PhaseDimensionsAddItem2$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsAddItem2$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItem2$Outbound,
-  PhaseStartDimensionsAddItem2
+export const PhaseDimensionsAddItem2$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItem2$Outbound,
+  PhaseDimensionsAddItem2
 > = z.pipe(
   z.object({
     match: z.record(
@@ -5381,78 +5255,70 @@ export const PhaseStartDimensionsAddItem2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsAddItem2ToJSON(
-  phaseStartDimensionsAddItem2: PhaseStartDimensionsAddItem2,
+export function phaseDimensionsAddItem2ToJSON(
+  phaseDimensionsAddItem2: PhaseDimensionsAddItem2,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItem2$outboundSchema.parse(
-      phaseStartDimensionsAddItem2,
-    ),
+    PhaseDimensionsAddItem2$outboundSchema.parse(phaseDimensionsAddItem2),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItemMatch1$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseDimensionsAddItemMatch1$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartDimensionsAddItemMatch1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemMatch1$Outbound,
-  PhaseStartDimensionsAddItemMatch1
+export const PhaseDimensionsAddItemMatch1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemMatch1$Outbound,
+  PhaseDimensionsAddItemMatch1
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartDimensionsAddItemMatch1ToJSON(
-  phaseStartDimensionsAddItemMatch1: PhaseStartDimensionsAddItemMatch1,
+export function phaseDimensionsAddItemMatch1ToJSON(
+  phaseDimensionsAddItemMatch1: PhaseDimensionsAddItemMatch1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemMatch1$outboundSchema.parse(
-      phaseStartDimensionsAddItemMatch1,
+    PhaseDimensionsAddItemMatch1$outboundSchema.parse(
+      phaseDimensionsAddItemMatch1,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartDimensionsToAddItemEnum1$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartDimensionsToAddItemEnum1
-> = z.enum(PhaseStartDimensionsToAddItemEnum1);
+export const PhaseDimensionsToAddItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseDimensionsToAddItemEnum1
+> = z.enum(PhaseDimensionsToAddItemEnum1);
 
 /** @internal */
-export type PhaseStartDimensionsAddItemToUnion1$Outbound = number | string;
+export type PhaseDimensionsAddItemToUnion1$Outbound = number | string;
 
 /** @internal */
-export const PhaseStartDimensionsAddItemToUnion1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemToUnion1$Outbound,
-  PhaseStartDimensionsAddItemToUnion1
-> = smartUnion([z.number(), PhaseStartDimensionsToAddItemEnum1$outboundSchema]);
+export const PhaseDimensionsAddItemToUnion1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemToUnion1$Outbound,
+  PhaseDimensionsAddItemToUnion1
+> = smartUnion([z.number(), PhaseDimensionsToAddItemEnum1$outboundSchema]);
 
-export function phaseStartDimensionsAddItemToUnion1ToJSON(
-  phaseStartDimensionsAddItemToUnion1: PhaseStartDimensionsAddItemToUnion1,
+export function phaseDimensionsAddItemToUnion1ToJSON(
+  phaseDimensionsAddItemToUnion1: PhaseDimensionsAddItemToUnion1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemToUnion1$outboundSchema.parse(
-      phaseStartDimensionsAddItemToUnion1,
+    PhaseDimensionsAddItemToUnion1$outboundSchema.parse(
+      phaseDimensionsAddItemToUnion1,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItemTier1$Outbound = {
+export type PhaseDimensionsAddItemTier1$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartDimensionsAddItemTier1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItemTier1$Outbound,
-  PhaseStartDimensionsAddItemTier1
+export const PhaseDimensionsAddItemTier1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItemTier1$Outbound,
+  PhaseDimensionsAddItemTier1
 > = z.pipe(
   z.object({
-    to: smartUnion([
-      z.number(),
-      PhaseStartDimensionsToAddItemEnum1$outboundSchema,
-    ]),
+    to: smartUnion([z.number(), PhaseDimensionsToAddItemEnum1$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -5462,28 +5328,28 @@ export const PhaseStartDimensionsAddItemTier1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsAddItemTier1ToJSON(
-  phaseStartDimensionsAddItemTier1: PhaseStartDimensionsAddItemTier1,
+export function phaseDimensionsAddItemTier1ToJSON(
+  phaseDimensionsAddItemTier1: PhaseDimensionsAddItemTier1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItemTier1$outboundSchema.parse(
-      phaseStartDimensionsAddItemTier1,
+    PhaseDimensionsAddItemTier1$outboundSchema.parse(
+      phaseDimensionsAddItemTier1,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartDimensionsAddItem1$Outbound = {
+export type PhaseDimensionsAddItem1$Outbound = {
   match: { [k: string]: string | number | boolean };
   priority?: number | undefined;
   tier_behavior: "graduated";
-  tiers: Array<PhaseStartDimensionsAddItemTier1$Outbound>;
+  tiers: Array<PhaseDimensionsAddItemTier1$Outbound>;
 };
 
 /** @internal */
-export const PhaseStartDimensionsAddItem1$outboundSchema: z.ZodMiniType<
-  PhaseStartDimensionsAddItem1$Outbound,
-  PhaseStartDimensionsAddItem1
+export const PhaseDimensionsAddItem1$outboundSchema: z.ZodMiniType<
+  PhaseDimensionsAddItem1$Outbound,
+  PhaseDimensionsAddItem1
 > = z.pipe(
   z.object({
     match: z.record(
@@ -5492,9 +5358,7 @@ export const PhaseStartDimensionsAddItem1$outboundSchema: z.ZodMiniType<
     ),
     priority: z.optional(z.int()),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => PhaseStartDimensionsAddItemTier1$outboundSchema),
-    ),
+    tiers: z.array(z.lazy(() => PhaseDimensionsAddItemTier1$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5503,73 +5367,68 @@ export const PhaseStartDimensionsAddItem1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartDimensionsAddItem1ToJSON(
-  phaseStartDimensionsAddItem1: PhaseStartDimensionsAddItem1,
+export function phaseDimensionsAddItem1ToJSON(
+  phaseDimensionsAddItem1: PhaseDimensionsAddItem1,
 ): string {
   return JSON.stringify(
-    PhaseStartDimensionsAddItem1$outboundSchema.parse(
-      phaseStartDimensionsAddItem1,
-    ),
+    PhaseDimensionsAddItem1$outboundSchema.parse(phaseDimensionsAddItem1),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemDimensionsUnion1$Outbound =
-  | PhaseStartDimensionsAddItem1$Outbound
-  | PhaseStartDimensionsAddItem2$Outbound;
+export type PhaseAddItemDimensionsUnion3$Outbound =
+  | PhaseDimensionsAddItem1$Outbound
+  | PhaseDimensionsAddItem2$Outbound;
 
 /** @internal */
-export const PhaseStartAddItemDimensionsUnion1$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemDimensionsUnion1$Outbound,
-  PhaseStartAddItemDimensionsUnion1
+export const PhaseAddItemDimensionsUnion3$outboundSchema: z.ZodMiniType<
+  PhaseAddItemDimensionsUnion3$Outbound,
+  PhaseAddItemDimensionsUnion3
 > = smartUnion([
-  z.lazy(() => PhaseStartDimensionsAddItem1$outboundSchema),
-  z.lazy(() => PhaseStartDimensionsAddItem2$outboundSchema),
+  z.lazy(() => PhaseDimensionsAddItem1$outboundSchema),
+  z.lazy(() => PhaseDimensionsAddItem2$outboundSchema),
 ]);
 
-export function phaseStartAddItemDimensionsUnion1ToJSON(
-  phaseStartAddItemDimensionsUnion1: PhaseStartAddItemDimensionsUnion1,
+export function phaseAddItemDimensionsUnion3ToJSON(
+  phaseAddItemDimensionsUnion3: PhaseAddItemDimensionsUnion3,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemDimensionsUnion1$outboundSchema.parse(
-      phaseStartAddItemDimensionsUnion1,
+    PhaseAddItemDimensionsUnion3$outboundSchema.parse(
+      phaseAddItemDimensionsUnion3,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemMultipliersMatch1$Outbound =
-  | string
-  | number
-  | boolean;
+export type PhaseAddItemMultipliersMatch3$Outbound = string | number | boolean;
 
 /** @internal */
-export const PhaseStartAddItemMultipliersMatch1$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemMultipliersMatch1$Outbound,
-  PhaseStartAddItemMultipliersMatch1
+export const PhaseAddItemMultipliersMatch3$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMultipliersMatch3$Outbound,
+  PhaseAddItemMultipliersMatch3
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function phaseStartAddItemMultipliersMatch1ToJSON(
-  phaseStartAddItemMultipliersMatch1: PhaseStartAddItemMultipliersMatch1,
+export function phaseAddItemMultipliersMatch3ToJSON(
+  phaseAddItemMultipliersMatch3: PhaseAddItemMultipliersMatch3,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemMultipliersMatch1$outboundSchema.parse(
-      phaseStartAddItemMultipliersMatch1,
+    PhaseAddItemMultipliersMatch3$outboundSchema.parse(
+      phaseAddItemMultipliersMatch3,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemMultipliers1$Outbound = {
+export type PhaseAddItemMultipliers3$Outbound = {
   match: { [k: string]: string | number | boolean };
   factor?: number | undefined;
   add?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemMultipliers1$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemMultipliers1$Outbound,
-  PhaseStartAddItemMultipliers1
+export const PhaseAddItemMultipliers3$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMultipliers3$Outbound,
+  PhaseAddItemMultipliers3
 > = z.object({
   match: z.record(
     z.string(),
@@ -5579,55 +5438,51 @@ export const PhaseStartAddItemMultipliers1$outboundSchema: z.ZodMiniType<
   add: z.optional(z.number()),
 });
 
-export function phaseStartAddItemMultipliers1ToJSON(
-  phaseStartAddItemMultipliers1: PhaseStartAddItemMultipliers1,
+export function phaseAddItemMultipliers3ToJSON(
+  phaseAddItemMultipliers3: PhaseAddItemMultipliers3,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemMultipliers1$outboundSchema.parse(
-      phaseStartAddItemMultipliers1,
+    PhaseAddItemMultipliers3$outboundSchema.parse(phaseAddItemMultipliers3),
+  );
+}
+
+/** @internal */
+export const PhaseToAddItemEnum$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseToAddItemEnum
+> = z.enum(PhaseToAddItemEnum);
+
+/** @internal */
+export type PhaseAddItemFeatureOverrideToUnion2$Outbound = number | string;
+
+/** @internal */
+export const PhaseAddItemFeatureOverrideToUnion2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemFeatureOverrideToUnion2$Outbound,
+  PhaseAddItemFeatureOverrideToUnion2
+> = smartUnion([z.number(), PhaseToAddItemEnum$outboundSchema]);
+
+export function phaseAddItemFeatureOverrideToUnion2ToJSON(
+  phaseAddItemFeatureOverrideToUnion2: PhaseAddItemFeatureOverrideToUnion2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemFeatureOverrideToUnion2$outboundSchema.parse(
+      phaseAddItemFeatureOverrideToUnion2,
     ),
   );
 }
 
 /** @internal */
-export const PhaseStartToAddItemEnum$outboundSchema: z.ZodMiniEnum<
-  typeof PhaseStartToAddItemEnum
-> = z.enum(PhaseStartToAddItemEnum);
-
-/** @internal */
-export type PhaseStartAddItemFeatureOverrideToUnion$Outbound = number | string;
-
-/** @internal */
-export const PhaseStartAddItemFeatureOverrideToUnion$outboundSchema:
-  z.ZodMiniType<
-    PhaseStartAddItemFeatureOverrideToUnion$Outbound,
-    PhaseStartAddItemFeatureOverrideToUnion
-  > = smartUnion([z.number(), PhaseStartToAddItemEnum$outboundSchema]);
-
-export function phaseStartAddItemFeatureOverrideToUnionToJSON(
-  phaseStartAddItemFeatureOverrideToUnion:
-    PhaseStartAddItemFeatureOverrideToUnion,
-): string {
-  return JSON.stringify(
-    PhaseStartAddItemFeatureOverrideToUnion$outboundSchema.parse(
-      phaseStartAddItemFeatureOverrideToUnion,
-    ),
-  );
-}
-
-/** @internal */
-export type PhaseStartAddItemFeatureOverrideTier$Outbound = {
+export type PhaseAddItemFeatureOverrideTier2$Outbound = {
   to: number | string;
   credit_cost: number;
 };
 
 /** @internal */
-export const PhaseStartAddItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemFeatureOverrideTier$Outbound,
-  PhaseStartAddItemFeatureOverrideTier
+export const PhaseAddItemFeatureOverrideTier2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemFeatureOverrideTier2$Outbound,
+  PhaseAddItemFeatureOverrideTier2
 > = z.pipe(
   z.object({
-    to: smartUnion([z.number(), PhaseStartToAddItemEnum$outboundSchema]),
+    to: smartUnion([z.number(), PhaseToAddItemEnum$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
@@ -5637,36 +5492,34 @@ export const PhaseStartAddItemFeatureOverrideTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemFeatureOverrideTierToJSON(
-  phaseStartAddItemFeatureOverrideTier: PhaseStartAddItemFeatureOverrideTier,
+export function phaseAddItemFeatureOverrideTier2ToJSON(
+  phaseAddItemFeatureOverrideTier2: PhaseAddItemFeatureOverrideTier2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemFeatureOverrideTier$outboundSchema.parse(
-      phaseStartAddItemFeatureOverrideTier,
+    PhaseAddItemFeatureOverrideTier2$outboundSchema.parse(
+      phaseAddItemFeatureOverrideTier2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartCreditSchemaAddItem1$Outbound = {
+export type PhaseCreditSchemaAddItem1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
   dimensions?: {
     [k: string]:
-      | PhaseStartDimensionsAddItem1$Outbound
-      | PhaseStartDimensionsAddItem2$Outbound;
+      | PhaseDimensionsAddItem1$Outbound
+      | PhaseDimensionsAddItem2$Outbound;
   } | undefined;
-  multipliers?:
-    | { [k: string]: PhaseStartAddItemMultipliers1$Outbound }
-    | undefined;
+  multipliers?: { [k: string]: PhaseAddItemMultipliers3$Outbound } | undefined;
   tier_behavior: "graduated";
-  tiers: Array<PhaseStartAddItemFeatureOverrideTier$Outbound>;
+  tiers: Array<PhaseAddItemFeatureOverrideTier2$Outbound>;
 };
 
 /** @internal */
-export const PhaseStartCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
-  PhaseStartCreditSchemaAddItem1$Outbound,
-  PhaseStartCreditSchemaAddItem1
+export const PhaseCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
+  PhaseCreditSchemaAddItem1$Outbound,
+  PhaseCreditSchemaAddItem1
 > = z.pipe(
   z.object({
     meteredFeatureId: z.string(),
@@ -5674,18 +5527,18 @@ export const PhaseStartCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
     dimensions: z.optional(z.record(
       z.string(),
       smartUnion([
-        z.lazy(() => PhaseStartDimensionsAddItem1$outboundSchema),
-        z.lazy(() => PhaseStartDimensionsAddItem2$outboundSchema),
+        z.lazy(() => PhaseDimensionsAddItem1$outboundSchema),
+        z.lazy(() => PhaseDimensionsAddItem2$outboundSchema),
       ]),
     )),
     multipliers: z.optional(z.record(
       z.string(),
-      z.lazy(() => PhaseStartAddItemMultipliers1$outboundSchema),
+      z.lazy(() => PhaseAddItemMultipliers3$outboundSchema),
     )),
     tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() =>
-      PhaseStartAddItemFeatureOverrideTier$outboundSchema
-    )),
+    tiers: z.array(
+      z.lazy(() => PhaseAddItemFeatureOverrideTier2$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5696,74 +5549,72 @@ export const PhaseStartCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartCreditSchemaAddItem1ToJSON(
-  phaseStartCreditSchemaAddItem1: PhaseStartCreditSchemaAddItem1,
+export function phaseCreditSchemaAddItem1ToJSON(
+  phaseCreditSchemaAddItem1: PhaseCreditSchemaAddItem1,
 ): string {
   return JSON.stringify(
-    PhaseStartCreditSchemaAddItem1$outboundSchema.parse(
-      phaseStartCreditSchemaAddItem1,
-    ),
+    PhaseCreditSchemaAddItem1$outboundSchema.parse(phaseCreditSchemaAddItem1),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemCreditSchemaUnion$Outbound =
-  | PhaseStartCreditSchemaAddItem1$Outbound
-  | PhaseStartCreditSchemaAddItem2$Outbound;
+export type PhaseAddItemCreditSchemaUnion2$Outbound =
+  | PhaseCreditSchemaAddItem1$Outbound
+  | PhaseCreditSchemaAddItem2$Outbound;
 
 /** @internal */
-export const PhaseStartAddItemCreditSchemaUnion$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemCreditSchemaUnion$Outbound,
-  PhaseStartAddItemCreditSchemaUnion
+export const PhaseAddItemCreditSchemaUnion2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemCreditSchemaUnion2$Outbound,
+  PhaseAddItemCreditSchemaUnion2
 > = smartUnion([
-  z.lazy(() => PhaseStartCreditSchemaAddItem1$outboundSchema),
-  z.lazy(() => PhaseStartCreditSchemaAddItem2$outboundSchema),
+  z.lazy(() => PhaseCreditSchemaAddItem1$outboundSchema),
+  z.lazy(() => PhaseCreditSchemaAddItem2$outboundSchema),
 ]);
 
-export function phaseStartAddItemCreditSchemaUnionToJSON(
-  phaseStartAddItemCreditSchemaUnion: PhaseStartAddItemCreditSchemaUnion,
+export function phaseAddItemCreditSchemaUnion2ToJSON(
+  phaseAddItemCreditSchemaUnion2: PhaseAddItemCreditSchemaUnion2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemCreditSchemaUnion$outboundSchema.parse(
-      phaseStartAddItemCreditSchemaUnion,
+    PhaseAddItemCreditSchemaUnion2$outboundSchema.parse(
+      phaseAddItemCreditSchemaUnion2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemProviderMarkups$Outbound = {
+export type PhaseAddItemProviderMarkups2$Outbound = {
   markup: number;
 };
 
 /** @internal */
-export const PhaseStartAddItemProviderMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemProviderMarkups$Outbound,
-  PhaseStartAddItemProviderMarkups
+export const PhaseAddItemProviderMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemProviderMarkups2$Outbound,
+  PhaseAddItemProviderMarkups2
 > = z.object({
   markup: z.number(),
 });
 
-export function phaseStartAddItemProviderMarkupsToJSON(
-  phaseStartAddItemProviderMarkups: PhaseStartAddItemProviderMarkups,
+export function phaseAddItemProviderMarkups2ToJSON(
+  phaseAddItemProviderMarkups2: PhaseAddItemProviderMarkups2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemProviderMarkups$outboundSchema.parse(
-      phaseStartAddItemProviderMarkups,
+    PhaseAddItemProviderMarkups2$outboundSchema.parse(
+      phaseAddItemProviderMarkups2,
     ),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemModelMarkups$Outbound = {
+export type PhaseAddItemModelMarkups2$Outbound = {
   markup?: number | undefined;
   input_cost?: number | undefined;
   output_cost?: number | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemModelMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemModelMarkups$Outbound,
-  PhaseStartAddItemModelMarkups
+export const PhaseAddItemModelMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemModelMarkups2$Outbound,
+  PhaseAddItemModelMarkups2
 > = z.pipe(
   z.object({
     markup: z.optional(z.number()),
@@ -5778,43 +5629,41 @@ export const PhaseStartAddItemModelMarkups$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemModelMarkupsToJSON(
-  phaseStartAddItemModelMarkups: PhaseStartAddItemModelMarkups,
+export function phaseAddItemModelMarkups2ToJSON(
+  phaseAddItemModelMarkups2: PhaseAddItemModelMarkups2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemModelMarkups$outboundSchema.parse(
-      phaseStartAddItemModelMarkups,
-    ),
+    PhaseAddItemModelMarkups2$outboundSchema.parse(phaseAddItemModelMarkups2),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemMarkups$Outbound = {
+export type PhaseAddItemMarkups2$Outbound = {
   default_markup?: number | undefined;
   provider_markups?:
-    | { [k: string]: PhaseStartAddItemProviderMarkups$Outbound }
+    | { [k: string]: PhaseAddItemProviderMarkups2$Outbound }
     | null
     | undefined;
   model_markups?:
-    | { [k: string]: PhaseStartAddItemModelMarkups$Outbound }
+    | { [k: string]: PhaseAddItemModelMarkups2$Outbound }
     | null
     | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemMarkups$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemMarkups$Outbound,
-  PhaseStartAddItemMarkups
+export const PhaseAddItemMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMarkups2$Outbound,
+  PhaseAddItemMarkups2
 > = z.pipe(
   z.object({
     defaultMarkup: z.optional(z.number()),
     providerMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => PhaseStartAddItemProviderMarkups$outboundSchema),
+      z.lazy(() => PhaseAddItemProviderMarkups2$outboundSchema),
     ))),
     modelMarkups: z.optional(z.nullable(z.record(
       z.string(),
-      z.lazy(() => PhaseStartAddItemModelMarkups$outboundSchema),
+      z.lazy(() => PhaseAddItemModelMarkups2$outboundSchema),
     ))),
   }),
   z.transform((v) => {
@@ -5826,39 +5675,38 @@ export const PhaseStartAddItemMarkups$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemMarkupsToJSON(
-  phaseStartAddItemMarkups: PhaseStartAddItemMarkups,
+export function phaseAddItemMarkups2ToJSON(
+  phaseAddItemMarkups2: PhaseAddItemMarkups2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemMarkups$outboundSchema.parse(phaseStartAddItemMarkups),
+    PhaseAddItemMarkups2$outboundSchema.parse(phaseAddItemMarkups2),
   );
 }
 
 /** @internal */
-export type PhaseStartAddItemFeatureOverride$Outbound = {
+export type PhaseAddItemFeatureOverride2$Outbound = {
   credit_schema?:
     | Array<
-      | PhaseStartCreditSchemaAddItem1$Outbound
-      | PhaseStartCreditSchemaAddItem2$Outbound
+      PhaseCreditSchemaAddItem1$Outbound | PhaseCreditSchemaAddItem2$Outbound
     >
     | undefined;
-  markups?: PhaseStartAddItemMarkups$Outbound | undefined;
+  markups?: PhaseAddItemMarkups2$Outbound | undefined;
 };
 
 /** @internal */
-export const PhaseStartAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
-  PhaseStartAddItemFeatureOverride$Outbound,
-  PhaseStartAddItemFeatureOverride
+export const PhaseAddItemFeatureOverride2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemFeatureOverride2$Outbound,
+  PhaseAddItemFeatureOverride2
 > = z.pipe(
   z.object({
     creditSchema: z.optional(z.array(smartUnion([
-      z.lazy(() => PhaseStartCreditSchemaAddItem1$outboundSchema),
+      z.lazy(() => PhaseCreditSchemaAddItem1$outboundSchema),
       z.lazy(() =>
-        PhaseStartCreditSchemaAddItem2$outboundSchema
+        PhaseCreditSchemaAddItem2$outboundSchema
       ),
     ]))),
     markups: z.optional(z.lazy(() =>
-      PhaseStartAddItemMarkups$outboundSchema
+      PhaseAddItemMarkups2$outboundSchema
     )),
   }),
   z.transform((v) => {
@@ -5868,12 +5716,12 @@ export const PhaseStartAddItemFeatureOverride$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function phaseStartAddItemFeatureOverrideToJSON(
-  phaseStartAddItemFeatureOverride: PhaseStartAddItemFeatureOverride,
+export function phaseAddItemFeatureOverride2ToJSON(
+  phaseAddItemFeatureOverride2: PhaseAddItemFeatureOverride2,
 ): string {
   return JSON.stringify(
-    PhaseStartAddItemFeatureOverride$outboundSchema.parse(
-      phaseStartAddItemFeatureOverride,
+    PhaseAddItemFeatureOverride2$outboundSchema.parse(
+      phaseAddItemFeatureOverride2,
     ),
   );
 }
