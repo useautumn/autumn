@@ -3,6 +3,8 @@ import {
 	type FullCusProduct,
 	timestampsMatch,
 } from "@autumn/shared";
+import type { SchedulePhaseProration } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
+import { resolvePhaseStartProrationBehavior } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import { getActiveCustomerProductsAt } from "./activeCustomerProducts";
 import {
 	differenceByCustomerProductId,
@@ -25,6 +27,7 @@ export const classifyNextCycleEvent = ({
 	startsAtMs,
 	renewalBoundaryMs,
 	smallestInterval,
+	phaseProrations,
 }: {
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
@@ -32,6 +35,7 @@ export const classifyNextCycleEvent = ({
 	startsAtMs: number;
 	renewalBoundaryMs: number;
 	smallestInterval: SmallestInterval;
+	phaseProrations: SchedulePhaseProration[];
 }): NextCycleEvent | undefined => {
 	const exactStartsAtMs = getExactTransitionTimestamp({
 		billingContext,
@@ -91,6 +95,12 @@ export const classifyNextCycleEvent = ({
 		left: activeCustomerProducts,
 		right: previousCustomerProducts,
 	});
+	const prorationBehavior = resolvePhaseStartProrationBehavior({
+		phaseProrations,
+		phaseStartMs: exactStartsAtMs,
+		resetsBillingCycle: isAnchorReset,
+		changesCustomerProducts: true,
+	});
 	const outgoingCustomerProducts = uniqueCustomerProductsById([
 		...differenceByCustomerProductId({
 			left: previousCustomerProducts,
@@ -112,6 +122,7 @@ export const classifyNextCycleEvent = ({
 			startsAtMs: exactStartsAtMs,
 			renewalBoundaryMs,
 			resetsBillingCycle: isAnchorReset,
+			prorationBehavior,
 			incomingCustomerProducts,
 			outgoingCustomerProducts,
 		};
@@ -123,6 +134,7 @@ export const classifyNextCycleEvent = ({
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
 			resetsBillingCycle: isAnchorReset,
+			prorationBehavior,
 			customerProducts: incomingCustomerProducts,
 		};
 	}
@@ -134,6 +146,7 @@ export const classifyNextCycleEvent = ({
 			startsAtMs: exactStartsAtMs,
 			renewalBoundaryMs,
 			resetsBillingCycle: isAnchorReset,
+			prorationBehavior,
 			incomingCustomerProducts,
 			outgoingCustomerProducts,
 		};

@@ -3,8 +3,10 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 } from "@autumn/shared";
+import { setPlansPhaseProrations } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 import { normalizeCustomerProductTimestamps } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/normalizeCustomerProductTimestamps";
 import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
+import { phaseStartRaisesInvoice } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import { classifyNextCycleEvent } from "./classifyNextCycleEvent";
 import { getSmallestIntervalForNextCycle } from "./smallestInterval";
 import { normalizeMs } from "./timeUtils";
@@ -13,6 +15,13 @@ import type { NextCycleEvent } from "./types";
 
 export { getActiveCustomerProductsAt } from "./activeCustomerProducts";
 export type { NextCycleEvent, SmallestInterval } from "./types";
+
+const nextCycleEventRaisesInvoice = (event: NextCycleEvent) => {
+	if (event.kind !== "scheduled_start" && event.kind !== "scheduled_change") {
+		return true;
+	}
+	return phaseStartRaisesInvoice(event);
+};
 
 /** Finds the next chronological event that should generate an invoice preview. */
 export const getNextCycleEvent = ({
@@ -64,6 +73,8 @@ export const getNextCycleEvent = ({
 		]),
 	).sort((a, b) => a - b);
 
+	const phaseProrations = setPlansPhaseProrations({ billingContext }) ?? [];
+
 	for (const startsAtMs of candidateTimestamps) {
 		const event = classifyNextCycleEvent({
 			billingContext,
@@ -72,9 +83,10 @@ export const getNextCycleEvent = ({
 			startsAtMs,
 			renewalBoundaryMs,
 			smallestInterval,
+			phaseProrations,
 		});
 
-		if (event) return event;
+		if (event && nextCycleEventRaisesInvoice(event)) return event;
 	}
 
 	return { kind: "none" };

@@ -1,18 +1,7 @@
-import { truncateMsToSecondPrecision } from "@autumn/shared";
 import type Stripe from "stripe";
+import { resolvePhaseStartProrationBehavior } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import type { SchedulePhaseProration } from "../../setup/resolveSchedulePhaseProrations";
 import { phaseProrationBehaviorToStripe } from "./phaseProrationBehaviorToStripe";
-
-const findRequestedProrationBehavior = ({
-	phaseProrations,
-	phaseStartMs,
-}: {
-	phaseProrations: SchedulePhaseProration[];
-	phaseStartMs: number;
-}) =>
-	phaseProrations.find(
-		({ startsAt }) => truncateMsToSecondPrecision(startsAt) === phaseStartMs,
-	)?.prorationBehavior;
 
 /** The proration the schedule phase starting here asked for, else the default rule. */
 export const resolveStripePhaseProrationBehavior = ({
@@ -30,17 +19,15 @@ export const resolveStripePhaseProrationBehavior = ({
 }):
 	| Stripe.SubscriptionScheduleUpdateParams.Phase.ProrationBehavior
 	| undefined => {
-	const requestedProrationBehavior = findRequestedProrationBehavior({
+	const prorationBehavior = resolvePhaseStartProrationBehavior({
 		phaseProrations,
 		phaseStartMs,
+		resetsBillingCycle: isBillingCycleAnchorResetPhase,
+		changesCustomerProducts,
 	});
-	if (requestedProrationBehavior) {
-		return phaseProrationBehaviorToStripe({
-			prorationBehavior: requestedProrationBehavior,
-		});
+	if (prorationBehavior) {
+		return phaseProrationBehaviorToStripe({ prorationBehavior });
 	}
 
-	// Product switches at a reset start a full cycle without old-plan credits.
-	if (isBillingCycleAnchorResetPhase && changesCustomerProducts) return "none";
 	return invoicesPhaseStart ? "always_invoice" : undefined;
 };
