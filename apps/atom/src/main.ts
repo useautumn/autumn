@@ -3,6 +3,7 @@ import { markAtomBoot } from "./init/atomHealth.js";
 import { atomProcessRole } from "./init/atomProcessRole.js";
 import { createAtomServer } from "./init/createAtomServer.js";
 import { createAtomSupervisor } from "./init/createAtomSupervisor.js";
+import { startProcessStats } from "./init/processStats.js";
 import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
@@ -21,7 +22,14 @@ function createAtom(): AtomServer {
 			env,
 			childIndex: childIndex === undefined ? null : Number(childIndex),
 		});
-		return createAtomServer({ ctx: { logger }, config: { env, role } });
+		const processStats = startProcessStats({
+			index: childIndex === undefined ? 0 : Number(childIndex),
+			logger,
+		});
+		return createAtomServer({
+			ctx: { logger, processStats },
+			config: { env, role },
+		});
 	}
 	const { recordRestarts } = markAtomBoot();
 	return createAtomSupervisor({

@@ -508,6 +508,7 @@ describe("the request line", () => {
 			bootedAt: expect.any(String),
 			restarts: expect.any(Number),
 			container: { processes: expect.any(Array) },
+			processTimings: expect.any(Array),
 		});
 	});
 

@@ -64,6 +64,7 @@ export const createAtomServer = ({
 			auth,
 			multiTenant,
 			logger: ctx.logger,
+			processStats: ctx.processStats,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		},
 	});
@@ -100,6 +101,7 @@ export const createAtomServer = ({
 	async function stop(): Promise<void> {
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), receiving]);
+		ctx.processStats?.stop();
 		auth.close();
 	}
 
