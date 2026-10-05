@@ -11,7 +11,7 @@ import ts from "typescript";
 const SRC = new URL("../../../src/", import.meta.url).pathname;
 
 /** Every plumbing folder, as each slice of the ring stack adds one. */
-const PLUMBING = ["threads", "http/workerThreads"];
+const PLUMBING = ["threads", "http/workerThreads", "kafka/producerThread"];
 
 const BUSINESS_PACKAGES = [
 	"@autumn/balance-engine",
