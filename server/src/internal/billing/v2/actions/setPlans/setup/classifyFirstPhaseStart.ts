@@ -48,3 +48,15 @@ export const firstPhaseStartsInFuture = ({
 		startsAt: billingContext.immediatePhase.starts_at,
 		currentEpochMs: billingContext.currentEpochMs,
 	}) === "future";
+
+/** A first phase starting within the tolerance of now bills from now, so its plan starts active. */
+export const firstPhaseBillingStartsAt = ({
+	startsAt,
+	currentEpochMs,
+}: {
+	startsAt: number;
+	currentEpochMs: number;
+}) =>
+	classifyFirstPhaseStart({ startsAt, currentEpochMs }) === "now"
+		? currentEpochMs
+		: startsAt;

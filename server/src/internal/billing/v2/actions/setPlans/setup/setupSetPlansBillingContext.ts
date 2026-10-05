@@ -17,6 +17,7 @@ import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import {
 	classifyFirstPhaseStart,
+	firstPhaseBillingStartsAt,
 	firstPhaseStartsInFuture,
 } from "./classifyFirstPhaseStart";
 import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomizations";
@@ -140,7 +141,10 @@ export const setupSetPlansBillingContext = async ({
 		}),
 		requestedProrationBehavior: params.proration_behavior,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		billingStartsAt: immediatePhase.starts_at,
+		billingStartsAt: firstPhaseBillingStartsAt({
+			startsAt: immediatePhase.starts_at,
+			currentEpochMs: billingContext.currentEpochMs,
+		}),
 		subscriptionBackdateStartMs: isPastStartDate(
 			immediatePhase.starts_at,
 			billingContext.currentEpochMs,
