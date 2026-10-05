@@ -50,6 +50,8 @@ export function createPartitionWriterState({
 		lastRowSeq: 0,
 		storedSeq: 0,
 		storeWaiters: [],
+		heldGroup: null,
+		lastHeldGroup: 0,
 	};
 }
 
@@ -239,6 +241,7 @@ export function enqueueMutation({
 		encodedBytes,
 		defersCommit,
 		queuedAt: writerNowOf({ scope }),
+		...(held && state.heldGroup !== null && { heldGroup: state.heldGroup }),
 	};
 	for (const [index, projected] of projectedStates.entries()) {
 		const subjectKey = pending.projectedSubjectKeys[index];
