@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	boldText,
 	type CreateScheduleBillingContext,
+	currencyInputDecimals,
 	formatAmount,
 	formatMsToDate,
 	type LineItem,
@@ -96,10 +97,12 @@ const backdateGapParts = ({
 	}
 
 	const gapLineItems = lineItems.filter(({ context }) => context.backdate);
+	const currency = gapLineItems[0]?.context.currency;
+	const currencyDecimals = currencyInputDecimals(currency);
 	const gapTotal = formatAmount({
-		currency: gapLineItems[0]?.context.currency,
-		minFractionDigits: 2,
-		maxFractionDigits: 2,
+		currency,
+		minFractionDigits: currencyDecimals,
+		maxFractionDigits: currencyDecimals,
 		amount: sumValues(
 			gapLineItems.map(({ amountAfterDiscounts }) => amountAfterDiscounts),
 		),

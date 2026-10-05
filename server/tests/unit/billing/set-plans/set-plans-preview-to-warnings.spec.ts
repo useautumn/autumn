@@ -524,6 +524,22 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		);
 	});
 
+	test("a backdate's gap total is shown to its currency's precision", () => {
+		expect(
+			backdateRecreateMessage({
+				requestedProrationBehavior: "prorate_immediately",
+				lineItems: [
+					{
+						...gapLineItem,
+						amount: 3333,
+						amountAfterDiscounts: 3333,
+						context: { ...gapLineItem.context, currency: "jpy" },
+					},
+				],
+			}),
+		).toContain("¥3,333 is billed now");
+	});
+
 	test("a backdate that restarts the cycle says when the restarted cycle renews", () => {
 		expect(
 			backdateRecreateMessage({
