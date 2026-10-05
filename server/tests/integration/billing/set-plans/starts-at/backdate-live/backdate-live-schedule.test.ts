@@ -1,23 +1,27 @@
 /**
  * set_plans with a past phases[0].starts_at over a live subscription that has a saved later phase:
- * - the old schedule is released and the old subscription cancelled with no final invoice;
+ * - the old subscription is cancelled with no final invoice, which cancels its schedule too;
  * - the subscription is recreated from the backdated date, anchored on the old period end;
+ * - the live plan stays active on it once the old subscription's webhooks settle;
  * - a new schedule on it starts the later phase on its date;
  * - every period is billed exactly once.
  */
 
 import { expect, test } from "bun:test";
-import { ms, msToSeconds, type SetPlansParamsV0Input } from "@autumn/shared";
 import {
-	findLiveCustomerProduct,
-	startsAtProducts,
-} from "@tests/integration/billing/set-plans/starts-at/utils/futureStartUtils";
+	CusProductStatus,
+	ms,
+	type SetPlansParamsV0Input,
+} from "@autumn/shared";
+import { startsAtProducts } from "@tests/integration/billing/set-plans/starts-at/utils/futureStartUtils";
 import { expectPreviewWarning } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import chalk from "chalk";
 import {
+	expectCustomerProductHoldsAcrossWebhooks,
 	expectEachPeriodBilledOnce,
 	expectRecreatedSubscriptionCorrect,
 	expectReplacedSubscriptionCancelledQuietly,
+	expectScheduledOnRecreatedSchedule,
 	initLiveProScenario,
 	liveSubscriptionPeriod,
 } from "./utils/backdateLiveUtils";
@@ -76,7 +80,6 @@ test.concurrent(
 			]),
 		).toEqual([
 			["subscription", null, "created"],
-			["subscription_schedule", oldScheduleId, "released"],
 			["subscription", live.subscription.id, "canceled"],
 			["subscription_schedule", null, "created"],
 		]);
@@ -85,7 +88,7 @@ test.concurrent(
 
 		const oldSchedule =
 			await ctx.stripeCli.subscriptionSchedules.retrieve(oldScheduleId);
-		expect(oldSchedule.status).toBe("released");
+		expect(oldSchedule.status).toBe("canceled");
 		await expectReplacedSubscriptionCancelledQuietly({
 			ctx,
 			subscriptionId: live.subscription.id,
@@ -103,18 +106,24 @@ test.concurrent(
 		const newScheduleId = recreated.schedule as string;
 		expect(newScheduleId).toBeString();
 		expect(newScheduleId).not.toBe(oldScheduleId);
-		const newSchedule =
-			await ctx.stripeCli.subscriptionSchedules.retrieve(newScheduleId);
-		expect(newSchedule.phases.map(({ start_date }) => start_date)).toContain(
-			msToSeconds(laterPhaseStart),
-		);
-		const scheduledPremium = await findLiveCustomerProduct({
+
+		await expectCustomerProductHoldsAcrossWebhooks({
+			ctx,
+			customerId,
+			productId: pro.id,
+			assert: (livePro) => {
+				expect(livePro.status).toBe(CusProductStatus.Active);
+				expect(livePro.subscription_ids).toEqual([recreated.id]);
+			},
+		});
+		await expectScheduledOnRecreatedSchedule({
 			ctx,
 			customerId,
 			productId: premium.id,
+			subscriptionId: recreated.id,
+			scheduleId: newScheduleId,
+			startsAt: laterPhaseStart,
 		});
-		expect(scheduledPremium.starts_at).toBe(laterPhaseStart);
-		expect(scheduledPremium.scheduled_ids).toEqual([newScheduleId]);
 
 		await expectEachPeriodBilledOnce({
 			ctx,

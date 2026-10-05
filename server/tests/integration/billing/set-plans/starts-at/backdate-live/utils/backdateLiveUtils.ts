@@ -2,20 +2,29 @@ import { expect } from "bun:test";
 import {
 	addInterval,
 	BillingInterval,
+	CusProductStatus,
+	type FullCusProduct,
+	ms,
 	msToSeconds,
 	type ProductV2,
 	secondsToMs,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { TestFeature } from "@tests/setup/v2Features";
+import { timeout } from "@tests/utils/genUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
-import { startsAtProducts } from "../../utils/futureStartUtils";
+import {
+	findLiveCustomerProduct,
+	startsAtProducts,
+} from "../../utils/futureStartUtils";
 
 const CENTS_PER_UNIT = 100;
+const WEBHOOK_SETTLE_WINDOW_MS = ms.seconds(15);
+const WEBHOOK_SETTLE_POLL_MS = ms.seconds(1);
 
 /** A customer with pro on a live subscription, attached per entity when it has entities, then aged by advanceDays. */
 export const initLiveProScenario = async ({
@@ -282,4 +291,71 @@ export const expectRecreatedSubscriptionCorrect = async ({
 		renewalTotal,
 	);
 	return subscription;
+};
+
+/** The replaced subscription's webhooks land after set_plans returns, so a row must hold its state across them, not just once. */
+export const expectCustomerProductHoldsAcrossWebhooks = async ({
+	ctx,
+	customerId,
+	productId,
+	assert,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	assert: (customerProduct: FullCusProduct) => void;
+}) => {
+	const settledAt = Date.now() + WEBHOOK_SETTLE_WINDOW_MS;
+	while (Date.now() < settledAt) {
+		assert(await findLiveCustomerProduct({ ctx, customerId, productId }));
+		await timeout(WEBHOOK_SETTLE_POLL_MS);
+	}
+	const customerProduct = await findLiveCustomerProduct({
+		ctx,
+		customerId,
+		productId,
+	});
+	assert(customerProduct);
+	return customerProduct;
+};
+
+/** The scheduled plan rides the recreated subscription's new schedule, whose phase on its start date bills it. */
+export const expectScheduledOnRecreatedSchedule = async ({
+	ctx,
+	customerId,
+	productId,
+	subscriptionId,
+	scheduleId,
+	startsAt,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	subscriptionId: string;
+	scheduleId: string;
+	startsAt: number;
+}) => {
+	const scheduled = await findLiveCustomerProduct({
+		ctx,
+		customerId,
+		productId,
+	});
+	expect(scheduled.status).toBe(CusProductStatus.Scheduled);
+	expect(scheduled.starts_at).toBe(startsAt);
+	expect(scheduled.scheduled_ids).toEqual([scheduleId]);
+
+	const schedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	expect(schedule.subscription).toBe(subscriptionId);
+	const phase = schedule.phases.find(
+		({ start_date }) => start_date === msToSeconds(startsAt),
+	);
+	const phasePriceIds = (phase?.items ?? []).map(({ price }) =>
+		typeof price === "string" ? price : price.id,
+	);
+	const planPriceIds = scheduled.customer_prices.flatMap(({ price }) =>
+		price.config.stripe_price_id ? [price.config.stripe_price_id] : [],
+	);
+	expect(planPriceIds).not.toBeEmpty();
+	expect(phasePriceIds).toEqual(expect.arrayContaining(planPriceIds));
 };
