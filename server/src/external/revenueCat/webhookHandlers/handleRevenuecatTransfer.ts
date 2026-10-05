@@ -2,6 +2,7 @@ import type { WebhookTransfer } from "@puzzmo/revenue-cat-webhook-types";
 import type { FullCusProduct, FullCustomer } from "@shared/index";
 import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenueCatCustomer } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { expireSupersededCusProducts } from "@/external/revenueCat/transfer/expireSupersededCusProducts";
 import { findSourceCustomers } from "@/external/revenueCat/transfer/findSourceCustomers";
 import { hasPooledBalanceDependency } from "@/external/revenueCat/transfer/hasPooledBalanceDependency";
 import { listDestinationRevenueCatProducts } from "@/external/revenueCat/transfer/listDestinationRevenueCatProducts";
@@ -12,7 +13,6 @@ import { selectTransferredCusProducts } from "@/external/revenueCat/transfer/sel
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { refreshAllocationScale } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
@@ -161,51 +161,55 @@ const transferProducts = async ({
 		source: "handleRevenuecatTransfer:flush",
 		flushBalances: true,
 	});
-	await releaseTransferredLicenseSeats({
+	await releaseTransferredLicenseSeats({ ctx, source, cusProductIds });
+	await expireSupersededCusProducts({
 		ctx,
-		source,
-		cusProductIds,
+		customerId: publicId(destination),
+		cusProducts: destination.customer_products.filter((cusProduct) =>
+			replacedOnDestination.has(cusProduct.id),
+		),
 	});
 	await moveCusProductsToCustomer({
 		db: ctx.db,
 		cusProductIds,
 		destination: { internalId: destination.internal_id, id: destination.id },
 	});
-	await refreshCustomer({ ctx, customer: destination });
 
-	const refreshedDestination = await loadCustomerWithAllProducts({
-		ctx,
-		internalId: destination.internal_id,
-	});
-	for (const replaced of refreshedDestination.customer_products.filter(
-		(cusProduct) => replacedOnDestination.has(cusProduct.id),
-	)) {
-		await customerProductActions.expireAndActivateDefault({
-			ctx,
-			customerProduct: replaced,
-			fullCustomer: refreshedDestination,
-		});
+	try {
+		await restoreSourceDefaults({ ctx, source, moved: movable });
+	} finally {
+		await refreshCustomer({ ctx, customer: destination });
+		await refreshCustomer({ ctx, customer: source });
 	}
 
+	logger.info(
+		`[handleTransfer] moved ${cusProductIds.length} product(s) ${publicId(source)} -> ${publicId(destination)}`,
+	);
+};
+
+const restoreSourceDefaults = async ({
+	ctx,
+	source,
+	moved,
+}: {
+	ctx: RevenueCatWebhookContext;
+	source: FullCustomer;
+	moved: FullCusProduct[];
+}) => {
 	const refreshedSource = await loadCustomerWithAllProducts({
 		ctx,
 		internalId: source.internal_id,
 	});
-	for (const moved of movable) {
+	for (const cusProduct of moved) {
 		const { curMainProduct } = getExistingCusProducts({
-			product: moved.product,
+			product: cusProduct.product,
 			cusProducts: refreshedSource.customer_products,
 		});
 		if (curMainProduct) continue;
 		await activateFreeDefaultProduct({
 			ctx,
-			customerProduct: moved,
+			customerProduct: cusProduct,
 			fullCustomer: refreshedSource,
 		});
 	}
-	await refreshCustomer({ ctx, customer: source });
-
-	logger.info(
-		`[handleTransfer] moved ${cusProductIds.length} product(s) ${publicId(source)} -> ${publicId(destination)}`,
-	);
 };
