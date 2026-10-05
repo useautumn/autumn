@@ -32,6 +32,8 @@ const parseArgs = ({ argv }: { argv: string[] }) => {
 
 // An expired login still leaves config behind, so it counts as set up and fails hard in `infisical run`.
 const isInfisicalSetUp = () => {
+	// Capy machines are provisioned by `bun capy`; their server/.env.local is the source of truth.
+	if (process.env.CAPY_MACHINE_CONFIG) return false;
 	if (process.env.INFISICAL_TOKEN || process.env.INFISICAL_CLIENT_ID) {
 		return true;
 	}

@@ -2,22 +2,44 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-/** Infra a Capy stack runs only once an agent opts in; the marker survives sleep and reboot. */
-const OPT_IN_ENV_KEYS = {
-	alien: ["ALIEN_API_KEY"],
-} as const;
+/** Stack pieces a Capy machine runs only after an agent opts in; markers survive sleep and reboot. */
+const OPT_INS = {
+	alien: { envKeys: ["ALIEN_API_KEY"], devServices: [] },
+	trigger: { envKeys: [], devServices: ["trigger"] },
+	eve: { envKeys: [], devServices: ["eve", "leaf"] },
+	checkout: { envKeys: [], devServices: ["checkout"] },
+	atom: { envKeys: [], devServices: ["herald", "atom"] },
+} as const satisfies Record<
+	string,
+	{ envKeys: readonly string[]; devServices: readonly string[] }
+>;
 
-type CapyOptIn = keyof typeof OPT_IN_ENV_KEYS;
+/** scripts/dev.ts service names every Capy stack runs. */
+const DEFAULT_DEV_SERVICES = [
+	"server",
+	"workers",
+	"cron",
+	"balance-worker",
+	"vite",
+	"stripe",
+];
 
-const CAPY_OPT_INS = Object.keys(OPT_IN_ENV_KEYS) as CapyOptIn[];
+export type CapyOptIn = keyof typeof OPT_INS;
+
+const CAPY_OPT_INS = Object.keys(OPT_INS) as CapyOptIn[];
 
 export const CAPY_OPT_IN_DIR = join(
-	homedir(),
-	".capy/work/autumn-capy/opt-ins",
+	process.env.CAPY_PREFIX ?? join(homedir(), ".autumn-capy"),
+	"opt-ins",
 );
 
-const isOptedIn = ({ name, dir }: { name: CapyOptIn; dir: string }) =>
-	existsSync(join(dir, name));
+export const isOptedIn = ({
+	name,
+	dir = CAPY_OPT_IN_DIR,
+}: {
+	name: CapyOptIn;
+	dir?: string;
+}) => existsSync(join(dir, name));
 
 /** `--<name>` writes the marker and `--no-<name>` removes it; true when that changed anything. */
 export function applyOptInFlags({
@@ -53,6 +75,20 @@ export function withheldEnvKeys({
 	dir?: string;
 } = {}): string[] {
 	return CAPY_OPT_INS.filter((name) => !isOptedIn({ name, dir })).flatMap(
-		(name) => [...OPT_IN_ENV_KEYS[name]],
+		(name) => [...OPT_INS[name].envKeys],
 	);
+}
+
+/** scripts/dev.ts services to launch: the defaults plus every opted-in piece. */
+export function capyDevServices({
+	dir = CAPY_OPT_IN_DIR,
+}: {
+	dir?: string;
+} = {}): string[] {
+	return [
+		...DEFAULT_DEV_SERVICES,
+		...CAPY_OPT_INS.filter((name) => isOptedIn({ name, dir })).flatMap(
+			(name) => [...OPT_INS[name].devServices],
+		),
+	];
 }

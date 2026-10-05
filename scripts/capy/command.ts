@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fatal, sh, shInherit } from "../dw/helpers/shell.ts";
 import { spawnDevInTmux, tmuxSessionExists } from "../dw/helpers/tmux.ts";
-import { applyOptInFlags, withheldEnvKeys } from "./optIns.ts";
+import { applyOptInFlags, capyDevServices, withheldEnvKeys } from "./optIns.ts";
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
 const REPO_ROOT = join(SCRIPT_DIR, "..", "..");
@@ -129,7 +129,8 @@ export function capyHandoffText(): string {
 	return [
 		"Capy is ready.",
 		`tmux session: ${CAPY_SESSION}`,
-		"local ports: 3000 dashboard, 8080 server, 3001 checkout, 3099 leaf/chat",
+		"local ports: 3000 dashboard, 8080 server (3001 checkout, 3099 leaf/chat when opted in)",
+		"opt-ins: ls ~/.autumn-capy/opt-ins | enable: bun capy restart --trigger|--eve|--checkout|--atom",
 		"browser API uses /__autumn_api via the Capy Vite proxy; expose only port 3000",
 		`logs: bun capy logs | attach: tmux attach -t ${CAPY_SESSION}`,
 	].join("\n");
@@ -185,6 +186,8 @@ function ensureAppProcess(): void {
 		...process.env,
 		CAPY_DEV: "1",
 		VITE_EMULATE_GOOGLE_PROXY: "1",
+		DEV_SERVICES: capyDevServices().join(","),
+		WORKER_PROCESSES: "1",
 	} as Record<string, string>;
 	const withheld = withheldEnvKeys();
 	for (const key of withheld) delete env[key];

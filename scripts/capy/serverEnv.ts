@@ -32,14 +32,13 @@ export function capyEnvFiles({
 	machineId,
 	databaseUrl,
 	secrets,
-	triggerSecretKey,
-	triggerAccessToken,
+	trigger,
 }: {
 	machineId: string;
 	databaseUrl: string;
 	secrets: CapySecrets;
-	triggerSecretKey: string;
-	triggerAccessToken: string;
+	/** Absent when Trigger.dev is not opted in, so the server builds no Trigger client. */
+	trigger?: { secretKey: string; accessToken: string };
 }): {
 	server: Record<string, string>;
 	vite: Record<string, string>;
@@ -79,9 +78,11 @@ export function capyEnvFiles({
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${sqsBase}/autumn-track-async`,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
 		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN: FAKECLOUD_SCHEDULER_ROLE_ARN,
-		TRIGGER_API_URL: `http://localhost:${TRIGGER_PORT}`,
-		TRIGGER_ACCESS_TOKEN: triggerAccessToken,
-		TRIGGER_SERVER_SECRET_KEY: triggerSecretKey,
+		// Blank rather than absent so an opt-out overwrites keys left by an earlier opt-in.
+		TRIGGER_API_URL: trigger ? `http://localhost:${TRIGGER_PORT}` : "",
+		TRIGGER_ACCESS_TOKEN: trigger?.accessToken ?? "",
+		TRIGGER_SERVER_SECRET_KEY: trigger?.secretKey ?? "",
+
 		AWS_REGION: "us-east-1",
 		AWS_ACCESS_KEY_ID: "x",
 		AWS_SECRET_ACCESS_KEY: "x",
