@@ -14,6 +14,10 @@ describe("postgres errors", () => {
 	test.each([
 		["connection refused", socketError({ code: "ECONNREFUSED" })],
 		["socket reset", socketError({ code: "ECONNRESET" })],
+		["host not found", socketError({ code: "ENOTFOUND" })],
+		["DNS lookup timed out", socketError({ code: "EAI_AGAIN" })],
+		["host unreachable", socketError({ code: "EHOSTUNREACH" })],
+		["network unreachable", socketError({ code: "ENETUNREACH" })],
 		["query read timeout", new Error("Query read timeout")],
 		["connection dropped", new Error("Connection terminated unexpectedly")],
 		[

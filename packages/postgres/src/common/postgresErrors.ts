@@ -8,6 +8,10 @@ const SOCKET_ERROR_CODES = new Set([
 	"ECONNREFUSED",
 	"EPIPE",
 	"ETIMEDOUT",
+	"ENOTFOUND",
+	"EAI_AGAIN",
+	"EHOSTUNREACH",
+	"ENETUNREACH",
 ]);
 /** pg's and pg-pool's messages for a connection that failed, never answered or fell out of step; they carry no code. */
 const DRIVER_CONNECTION_FAILURE =
