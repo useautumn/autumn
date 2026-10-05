@@ -64,14 +64,17 @@ export const FLUSH_ROLLBACK_MARKER = "flush_rolled_back:";
 
 /**
  * The same flush as one autocommit statement: when a bookmark or a guarded row did not move, a
- * failing cast aborts it, so nothing lands, and the error text carries `<bookmarks>:<counts>`.
+ * failing cast aborts it, so nothing lands, and the error text carries `<nonce>:<bookmarks>:<counts>`.
  */
 export const singleStatementFlushSql = ({
 	changes,
 	bookmarks,
+	nonce,
 }: {
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
+	/** Per flush, so a value Postgres echoes in a cast error can never pass for this flush's rollback. */
+	nonce: string;
 }): SQL => {
 	const { ctes, appliedCounts, applied } = flushParts({ changes, bookmarks });
 	const bookmarkCount = sql`(SELECT count(*) FROM b)`;
@@ -91,6 +94,6 @@ export const singleStatementFlushSql = ({
 		WITH ${sql.join(ctes, sql`, `)}
 		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks
 		WHERE CASE WHEN ${allLanded} THEN true
-			ELSE (${FLUSH_ROLLBACK_MARKER}::text || ${bookmarkCount} || ':' || ${counts})::integer IS NULL END
+			ELSE (${`${FLUSH_ROLLBACK_MARKER}${nonce}:`}::text || ${bookmarkCount} || ':' || ${counts})::integer IS NULL END
 	`;
 };

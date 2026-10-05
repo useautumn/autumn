@@ -7,7 +7,7 @@ import { createDatabaseTimings } from "../../../src/logging/databaseTimings.js";
 const dialect = new PgDialect();
 
 /** A drizzle stand-in: records every statement, which executor ran it, and how each transaction ended.
- *  A flush whose guarded row did not move aborts as Postgres does, on the rollback marker's integer cast. */
+ *  A flush whose guarded row did not move aborts as Postgres does, on its rollback marker's integer cast. */
 function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 	const statements: { via: "pool" | "tx"; sql: string; params: unknown[] }[] =
 		[];
@@ -17,9 +17,13 @@ function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 			execute: async (query: SQL) => {
 				const { sql, params } = dialect.sqlToQuery(query);
 				statements.push({ via, sql, params });
-				if (sql.includes("AS bookmarks") && applied.includes(0))
-					throw new Error(
-						`invalid input syntax for type integer: "flush_rolled_back:1:${applied.join(",")}"`,
+				const marker = /E'(flush_rolled_back:[0-9a-f]+:)'/.exec(sql)?.[1];
+				if (marker && applied.includes(0))
+					throw Object.assign(
+						new Error(
+							`invalid input syntax for type integer: "${marker}1:${applied.join(",")}"`,
+						),
+						{ errno: "22P02" },
 					);
 				return sql.includes("AS bookmarks")
 					? [{ applied, bookmarks: 1 }]
