@@ -90,6 +90,7 @@ const perReader = [...readers.entries()]
 			missingKeys,
 			staleKeys,
 			readUs: last?.readUs ? dist(last.readUs) : null,
+			receivedBytes: last?.receivedBytes ?? null,
 		};
 	});
 

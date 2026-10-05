@@ -1,4 +1,4 @@
-/** Atom's slot schema (apps/atom/src/state/openSlotDatabase.ts) plus the two probe columns. */
+/** Atom's slot schema plus a seq column, as a rowid table: the Turso engine scans WITHOUT ROWID tables on PK lookups. */
 export const SUBJECT_STATES_DDL = [
 	`CREATE TABLE IF NOT EXISTS subject_states (
 		customer_id TEXT NOT NULL,
@@ -10,7 +10,7 @@ export const SUBJECT_STATES_DDL = [
 		org_json TEXT NOT NULL,
 		seq INTEGER NOT NULL,
 		PRIMARY KEY (customer_id, entity_id)
-	) WITHOUT ROWID`,
+	)`,
 	"CREATE INDEX IF NOT EXISTS subject_states_seq ON subject_states (seq)",
 ];
 

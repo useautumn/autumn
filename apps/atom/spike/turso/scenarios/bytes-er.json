@@ -1,0 +1,18 @@
+{
+	"name": "bytes-er",
+	"db": "spike-bench-w3",
+	"engine": "er",
+	"readers": 2,
+	"seconds": 40,
+	"pollMs": 250,
+	"warmupS": 6,
+	"writer": {
+		"ratePerSec": 20,
+		"rowsPerRequest": 2,
+		"maxInFlight": 2,
+		"keys": 100000,
+		"bytes": 6000,
+		"seconds": 25
+	},
+	"pointReads": 200
+}

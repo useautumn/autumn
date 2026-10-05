@@ -1,0 +1,18 @@
+{
+	"name": "steady-er",
+	"db": "spike-bench-er",
+	"engine": "er",
+	"readers": 4,
+	"seconds": 75,
+	"pollMs": 0,
+	"warmupS": 8,
+	"writer": {
+		"ratePerSec": 50,
+		"rowsPerRequest": 5,
+		"maxInFlight": 2,
+		"keys": 2000,
+		"bytes": 6000,
+		"seconds": 60
+	},
+	"pointReads": 5000
+}

@@ -7,8 +7,9 @@ const TOKEN_DIR =
 const ORG = process.env.TURSO_ORG ?? "johnyeocx";
 const REGION = process.env.TURSO_REGION ?? "aws-us-east-1";
 
+/** SPIKE_URL points the probe at a self-hosted sqld instead of Turso Cloud (no auth). */
 export const dbUrl = ({ db }: { db: string }) =>
-	`libsql://${db}-${ORG}.${REGION}.turso.io`;
+	process.env.SPIKE_URL ?? `libsql://${db}-${ORG}.${REGION}.turso.io`;
 
 export const dbToken = ({
 	db,
@@ -17,10 +18,11 @@ export const dbToken = ({
 	db: string;
 	access: "full" | "read";
 }) =>
-	(access === "read" ? process.env.TURSO_READ_TOKEN : undefined) ??
-	readFileSync(
-		join(TOKEN_DIR, access === "full" ? `.tok-${db}` : `.rtok-${db}`),
-		"utf8",
-	).trim();
+	process.env.SPIKE_URL
+		? ""
+		: readFileSync(
+				join(TOKEN_DIR, access === "full" ? `.tok-${db}` : `.rtok-${db}`),
+				"utf8",
+			).trim();
 
 export const nowMs = () => performance.timeOrigin + performance.now();

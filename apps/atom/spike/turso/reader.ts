@@ -18,11 +18,14 @@ type ReaderParams = {
 
 type Replica = {
 	sync: () => Promise<void>;
+	receivedBytes: () => Promise<number | null>;
 	all: (sql: string, args: unknown[]) => Promise<Record<string, unknown>[]>;
 	close: () => void;
 };
 
 const params: ReaderParams = JSON.parse(process.argv[2] ?? "{}");
+
+let framesSynced = 0;
 
 const openEmbeddedReplica = (): Replica => {
 	const client = createClient({
@@ -32,8 +35,10 @@ const openEmbeddedReplica = (): Replica => {
 	});
 	return {
 		sync: async () => {
-			await client.sync();
+			const result = await client.sync();
+			framesSynced += result?.frames_synced ?? 0;
 		},
+		receivedBytes: async () => framesSynced * 4096,
 		all: async (sql, args) =>
 			(await client.execute({ sql, args: args as never })).rows as never,
 		close: () => client.close(),
@@ -47,11 +52,17 @@ const openTursoSync = async (): Promise<Replica> => {
 		authToken: dbToken({ db: params.db, access: "read" }),
 		longPollTimeoutMs: params.pollMs,
 	});
+	const statements = new Map<string, Awaited<ReturnType<typeof db.prepare>>>();
 	return {
 		sync: async () => {
 			await db.pull();
 		},
-		all: async (sql, args) => (await db.prepare(sql)).all(...(args as never[])),
+		receivedBytes: async () => Number((await db.stats()).networkReceivedBytes),
+		all: async (sql, args) => {
+			const statement = statements.get(sql) ?? (await db.prepare(sql));
+			statements.set(sql, statement);
+			return statement.all(...(args as never[]));
+		},
 		close: () => void db.close(),
 	};
 };
@@ -138,5 +149,10 @@ for (let i = 0; i < params.pointReads; i++) {
 	readUs.push((performance.now() - t) * 1000);
 }
 
-flush({ finalState, readUs, done: true });
+flush({
+	finalState,
+	readUs,
+	receivedBytes: await replica.receivedBytes(),
+	done: true,
+});
 replica.close();

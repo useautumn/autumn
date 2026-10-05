@@ -1,0 +1,18 @@
+{
+	"name": "burst-ts",
+	"db": "spike-bench-sync",
+	"engine": "ts",
+	"readers": 4,
+	"seconds": 45,
+	"pollMs": 10000,
+	"warmupS": 5,
+	"writer": {
+		"ratePerSec": 1000,
+		"rowsPerRequest": 50,
+		"maxInFlight": 4,
+		"keys": 20000,
+		"bytes": 6000,
+		"seconds": 15
+	},
+	"pointReads": 1000
+}

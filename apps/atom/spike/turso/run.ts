@@ -1,11 +1,4 @@
-import {
-	cpSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { $ } from "bun";
@@ -39,68 +32,55 @@ type Scenario = {
 	pointReads?: number;
 };
 
-const BLIP_USER = "spikeblip";
-const BLIP_HARNESS = "/tmp/turso-harness-blip";
+/** Blip readers run inside the "blip" netns from setup-netns.sh; dropping its forwarded traffic cuts off only them. */
+const BLIP_NETNS = "blip";
+const BLIP_SUBNET = "10.77.0.0/24";
+
 const here = import.meta.dir;
 const scenario: Scenario = JSON.parse(readFileSync(process.argv[2]!, "utf8"));
+const runId = `${scenario.name}-${Date.now()}`;
 const runDir = join(
 	process.env.SPIKE_OUT ?? `${process.env.HOME}/.capy/work/turso/runs`,
-	`${scenario.name}-${Date.now()}`,
+	runId,
 );
+const replicaDir = `/tmp/turso-replicas/${runId}`;
 mkdirSync(runDir, { recursive: true });
-const replicaDir = `/tmp/turso-replicas/${scenario.name}-${Date.now()}`;
-mkdirSync(replicaDir, { recursive: true, mode: 0o777 });
-await $`chmod 777 ${replicaDir}`;
+mkdirSync(replicaDir, { recursive: true });
 
 const isBlipReader = (i: number) =>
 	scenario.faults?.some((f) => f.type === "blip" && f.reader === i) ?? false;
 
-if (scenario.faults?.some((f) => f.type === "blip")) {
-	rmSync(BLIP_HARNESS, { recursive: true, force: true });
-	cpSync(here, BLIP_HARNESS, { recursive: true });
-	await $`chmod -R a+rX ${BLIP_HARNESS}`;
-}
-
-const readerParams = (i: number, incarnation: number) => ({
-	db: scenario.db,
-	engine: scenario.engine,
-	file: join(replicaDir, `replica-${i}.db`),
-	out: join(
-		isBlipReader(i) ? replicaDir : runDir,
-		`reader-${i}-${incarnation}.json`,
-	),
-	seconds: scenario.seconds,
-	pollMs: scenario.pollMs,
-	keys: scenario.writer.keys,
-	pointReads: scenario.pointReads ?? 5000,
-});
-
-const spawnReader = (i: number, incarnation: number, secondsLeft: number) => {
-	const p = { ...readerParams(i, incarnation), seconds: secondsLeft };
-	if (!isBlipReader(i))
-		return Bun.spawn(["bun", join(here, "reader.ts"), JSON.stringify(p)], {
-			stdout: "inherit",
-			stderr: "inherit",
-		});
-	return Bun.spawn(
-		[
-			"sudo",
-			"-u",
-			BLIP_USER,
-			`--preserve-env=TURSO_READ_TOKEN`,
-			"bun",
-			join(BLIP_HARNESS, "reader.ts"),
-			JSON.stringify(p),
-		],
-		{
-			env: {
-				...process.env,
-				TURSO_READ_TOKEN: dbToken({ db: scenario.db, access: "read" }),
-			},
-			stdout: "inherit",
-			stderr: "inherit",
-		},
-	);
+const spawnReader = (i: number, incarnation: number, seconds: number) => {
+	const params = {
+		db: scenario.db,
+		engine: scenario.engine,
+		file: join(replicaDir, `replica-${i}.db`),
+		out: join(runDir, `reader-${i}-${incarnation}.json`),
+		seconds,
+		pollMs: scenario.pollMs,
+		keys: scenario.writer.keys,
+		pointReads: scenario.pointReads ?? 5000,
+	};
+	const cmd = ["bun", join(here, "reader.ts"), JSON.stringify(params)];
+	const user = process.env.USER ?? "user";
+	const home = process.env.HOME!;
+	const inNetns = [
+		"sudo",
+		"ip",
+		"netns",
+		"exec",
+		BLIP_NETNS,
+		"sudo",
+		"-u",
+		user,
+		"env",
+		`HOME=${home}`,
+		`PATH=${process.env.PATH}`,
+	];
+	return Bun.spawn(isBlipReader(i) ? [...inNetns, ...cmd] : cmd, {
+		stdout: "inherit",
+		stderr: "inherit",
+	});
 };
 
 const admin = createClient({
@@ -111,10 +91,9 @@ await admin.batch(SUBJECT_STATES_DDL, "write");
 admin.close();
 
 const startedAt = Date.now();
-const procs = new Map<number, ReturnType<typeof spawnReader>>();
+const readers = new Map<number, ReturnType<typeof spawnReader>>();
 for (let i = 0; i < scenario.readers; i++)
-	procs.set(i, spawnReader(i, 0, scenario.seconds));
-const incarnations = new Map<number, number>();
+	readers.set(i, spawnReader(i, 0, scenario.seconds));
 
 await Bun.sleep(scenario.warmupS * 1000);
 const writer = Bun.spawn(
@@ -131,35 +110,30 @@ const writer = Bun.spawn(
 	{ stdout: "inherit", stderr: "inherit" },
 );
 
-const faultLog: unknown[] = [];
+const faultLog: Record<string, unknown>[] = [];
 const runFault = async (f: Fault) => {
 	await Bun.sleep(f.atS * 1000);
 	if (f.type === "restart") {
-		procs.get(f.reader)!.kill(9);
+		readers.get(f.reader)!.kill(9);
 		faultLog.push({ ...f, killedAt: Date.now() });
 		await Bun.sleep(f.downS * 1000);
-		const n = (incarnations.get(f.reader) ?? 0) + 1;
-		incarnations.set(f.reader, n);
-		const left = scenario.seconds - (Date.now() - startedAt) / 1000;
-		procs.set(f.reader, spawnReader(f.reader, n, left));
+		const secondsLeft = scenario.seconds - (Date.now() - startedAt) / 1000;
+		readers.set(f.reader, spawnReader(f.reader, 1, secondsLeft));
 		faultLog.push({ ...f, restartedAt: Date.now() });
 		return;
 	}
-	const uid = (await $`id -u ${BLIP_USER}`.text()).trim();
-	await $`sudo iptables -I OUTPUT -m owner --uid-owner ${uid} -j DROP`;
+	await $`sudo iptables -I FORWARD -s ${BLIP_SUBNET} -j DROP`;
 	faultLog.push({ ...f, droppedAt: Date.now() });
 	await Bun.sleep(f.downS * 1000);
-	await $`sudo iptables -D OUTPUT -m owner --uid-owner ${uid} -j DROP`;
+	await $`sudo iptables -D FORWARD -s ${BLIP_SUBNET} -j DROP`;
 	faultLog.push({ ...f, restoredAt: Date.now() });
 };
 await Promise.all([writer.exited, ...(scenario.faults ?? []).map(runFault)]);
-await Promise.all([...procs.values()].map((p) => p.exited));
+await Promise.all([...readers.values()].map((p) => p.exited));
 
-if (existsSync(replicaDir))
-	await $`sh -c ${`cp ${replicaDir}/reader-*.json ${runDir}/ 2>/dev/null || true`}`;
 writeFileSync(
 	join(runDir, "scenario.json"),
-	JSON.stringify({ scenario, faultLog, url: dbUrl({ db: scenario.db }) }),
+	JSON.stringify({ scenario, faultLog }),
 );
 await $`du -sh ${replicaDir}`.nothrow();
 await $`bun ${join(here, "analyze.ts")} ${runDir}`;

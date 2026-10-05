@@ -1,0 +1,22 @@
+{
+	"name": "faults-ts",
+	"db": "spike-bench-sync",
+	"engine": "ts",
+	"readers": 4,
+	"seconds": 70,
+	"pollMs": 10000,
+	"warmupS": 5,
+	"writer": {
+		"ratePerSec": 50,
+		"rowsPerRequest": 5,
+		"maxInFlight": 2,
+		"keys": 2000,
+		"bytes": 6000,
+		"seconds": 45
+	},
+	"faults": [
+		{ "type": "restart", "reader": 1, "atS": 12, "downS": 5 },
+		{ "type": "blip", "reader": 2, "atS": 20, "downS": 10 }
+	],
+	"pointReads": 1000
+}

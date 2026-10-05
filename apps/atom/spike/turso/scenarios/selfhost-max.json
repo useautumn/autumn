@@ -1,0 +1,18 @@
+{
+	"name": "selfmax",
+	"db": "local",
+	"engine": "er",
+	"readers": 0,
+	"seconds": 15,
+	"pollMs": 0,
+	"warmupS": 1,
+	"writer": {
+		"ratePerSec": 3000,
+		"rowsPerRequest": 20,
+		"maxInFlight": 2,
+		"keys": 200000,
+		"bytes": 6000,
+		"seconds": 12
+	},
+	"pointReads": 100
+}
