@@ -139,6 +139,23 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		]);
 	});
 
+	test("a subscription a later start replaces shows its cancel before the new schedule", () => {
+		expect(
+			stripeBillingPlanToProcessorChanges({
+				stripeBillingPlan: {
+					subscriptionScheduleAction: { type: "create", params: twoPhases },
+					replacedSubscriptionAction: {
+						type: "cancel",
+						stripeSubscriptionId: "sub_live",
+					},
+				},
+			}),
+		).toEqual([
+			{ type: "subscription", id: "sub_live", action: "canceled" },
+			{ type: "subscription_schedule", id: null, action: "created" },
+		]);
+	});
+
 	test("no Stripe actions", () => {
 		expect(
 			stripeBillingPlanToProcessorChanges({

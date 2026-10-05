@@ -121,6 +121,15 @@ test.concurrent(
 
 		const preview = await autumnV2_2.billing.previewSetPlans(params);
 		expect(preview.total).toBeLessThan(0);
+		expect(preview.processor_changes).toContainEqual({
+			type: "subscription",
+			id: liveSubscriptionId,
+			action: "canceled",
+		});
+		const endingPro = preview.phases[0]?.plans.find(
+			(plan) => plan.plan_id === pro.id && plan.status === "ends",
+		);
+		expect(endingPro?.expires_at).toBeLessThan(startsAt);
 
 		await autumnV2_2.billing.setPlans(params);
 
