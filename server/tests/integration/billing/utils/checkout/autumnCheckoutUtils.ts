@@ -9,7 +9,8 @@ import type {
 
 const CHECKOUT_BASE_URL =
 	process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
-const CHECKOUT_TIMEOUT_MS = 15000;
+// Confirming a create-schedule checkout runs the full set_plans billing, which can take ~20s.
+const CHECKOUT_TIMEOUT_MS = 60000;
 
 export const fetchAutumnCheckout = async ({
 	checkoutId,
