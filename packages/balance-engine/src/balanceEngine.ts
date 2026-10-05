@@ -76,6 +76,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { trackCommandToDeductionRequest } from "./commands/track/trackCommandToDeductionRequest.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -94,6 +95,7 @@ export type {
 } from "./common/rebalance/types/rebalanceOutcome.js";
 export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest.js";
 // deduction
+export { advanceDeductionContext } from "./deduction/advanceDeductionContext.js";
 export { deduct } from "./deduction/deduct.js";
 export { setupDeductionContext } from "./deduction/setup/setupDeductionContext.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
@@ -105,7 +107,11 @@ export type {
 	DeductionSelection,
 } from "./deduction/types/deductionRequest.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
-export { deductionSelectionToKey } from "./deduction/utils/convertDeductionUtils.js";
+export {
+	deductionContextToExpiresAt,
+	deductionRowToCurrentBalance,
+	deductionSelectionToKey,
+} from "./deduction/utils/convertDeductionUtils.js";
 export { usageWindowFeaturesOf } from "./deduction/utils/limits/usageWindowFeaturesOf.js";
 export type { UnsupportedCommandReason } from "./errors.js";
 // boundary
