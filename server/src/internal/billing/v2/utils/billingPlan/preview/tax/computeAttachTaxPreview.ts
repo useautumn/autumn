@@ -29,8 +29,6 @@ import { billingDetailsToTaxCalculationCustomerDetails } from "@/internal/billin
  *  - flow is `stripe_checkout` (Stripe Checkout collects the address itself
  *    and computes tax during the buyer-facing form, so any pre-checkout
  *    preview here would diverge from what Stripe ultimately charges)
- *  - no Stripe customer exists (we only support previewing against an
- *    existing Stripe customer; Stripe's location waterfall needs it)
  *  - no `chargeImmediately` line items at all
  *
  * When the net taxable subtotal is negative, Stripe Tax is called with the
@@ -97,7 +95,6 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 }): Promise<PreviewTax | undefined> => {
 	if (!wantsStripeAutomaticTax({ ctx, billingContext })) return undefined;
 	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
-	if (!billingContext.stripeCustomer?.id) return undefined;
 
 	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
@@ -124,6 +121,8 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 				: "requires_location",
 		);
 	}
+	const stripeCustomerId = billingContext.stripeCustomer?.id;
+
 	const taxSign = netSubtotal < 0 ? -1 : 1;
 	const taxableSubtotal = Math.abs(netSubtotal);
 
@@ -132,7 +131,7 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 			currency,
 			...(customerDetails
 				? { customer_details: customerDetails }
-				: { customer: billingContext.stripeCustomer.id }),
+				: { customer: stripeCustomerId }),
 			line_items: [
 				{
 					amount: atmnToStripeAmount({
