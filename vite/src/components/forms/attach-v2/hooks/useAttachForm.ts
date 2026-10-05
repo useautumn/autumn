@@ -1,5 +1,5 @@
 import type { ProductItem } from "@autumn/shared";
-import { FreeTrialDuration } from "@autumn/shared";
+import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useAppForm } from "@/hooks/form/form";
 import { type AttachForm, AttachFormSchema } from "../attachFormSchema";
 import { EMPTY_INVOICE_BILLING_DETAILS } from "../utils/invoiceBillingDetails";
@@ -30,10 +30,7 @@ export function useAttachForm({
 			addLicenses: null,
 			isCustom: initialIsCustom ?? false,
 			version: initialVersion ?? undefined,
-			trialLength: null,
-			trialDuration: FreeTrialDuration.Day,
-			trialEnabled: false,
-			trialCardRequired: true,
+			...DISABLED_FREE_TRIAL_FORM_VALUES,
 			trialOnEnd: "revert",
 			planSchedule: null,
 			startDate: null,

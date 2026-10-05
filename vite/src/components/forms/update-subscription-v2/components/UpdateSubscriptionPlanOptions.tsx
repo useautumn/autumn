@@ -9,6 +9,11 @@ import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
+import {
+	FREE_TRIAL_LENGTH_FIELDS,
+	FreeTrialLengthFields,
+} from "@/components/forms/shared/FreeTrialLengthFields";
+import { DEFAULT_TRIAL_LENGTH } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
@@ -86,6 +91,12 @@ export function UpdateSubscriptionPlanOptions() {
 
 				<FreeTrialConfigRow
 					form={form}
+					lengthFields={
+						<FreeTrialLengthFields
+							form={form}
+							fields={FREE_TRIAL_LENGTH_FIELDS}
+						/>
+					}
 					expanded={trialExpanded}
 					checked={trialExpanded}
 					trialCardRequired={!!trialCardRequired}
@@ -98,7 +109,7 @@ export function UpdateSubscriptionPlanOptions() {
 									"trialLength",
 									productTrial
 										? Number(productTrial.length)
-										: FreeTrialConfigRow.DEFAULT_TRIAL_LENGTH,
+										: DEFAULT_TRIAL_LENGTH,
 								);
 								if (productTrial?.duration) {
 									form.setFieldValue("trialDuration", productTrial.duration);
