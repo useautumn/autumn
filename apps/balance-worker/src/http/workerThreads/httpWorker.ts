@@ -32,6 +32,7 @@ const REQUEST_RING_FULL = JSON.stringify({
 });
 const JSON_HEADERS = { "content-type": "application/json" };
 const LARGE_REQUEST_BYTES = 256 * 1024;
+const MAX_LARGE_REQUESTS_IN_FLIGHT = 32;
 
 type HttpWorkerThread = { receive(message: DecideThreadMessage): void };
 
@@ -66,6 +67,7 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		LARGE_REQUEST_BYTES,
 	);
 	let nextReqId = 1;
+	let largeRequestsInFlight = 0;
 
 	function answer({
 		reqId,
@@ -122,11 +124,19 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		nextReqId = nextReqId === 0xfffffffe ? 1 : nextReqId + 1;
 		const { promise, resolve } = Promise.withResolvers<Response>();
 		if (requestFrameMaxLength({ metaText, body }) > largeRequestBytes) {
+			if (largeRequestsInFlight >= MAX_LARGE_REQUESTS_IN_FLIGHT)
+				return new Response(REQUEST_RING_FULL, {
+					status: 429,
+					headers: JSON_HEADERS,
+				});
 			pending.set(reqId, resolve);
 			report({ kind: "request", reqId, meta, body: body.buffer }, [
 				body.buffer,
 			]);
-			return promise;
+			largeRequestsInFlight++;
+			return promise.finally(() => {
+				largeRequestsInFlight--;
+			});
 		}
 		if (!writeRequestFrame({ writer: requests, reqId, metaText, body }))
 			return new Response(REQUEST_RING_FULL, {

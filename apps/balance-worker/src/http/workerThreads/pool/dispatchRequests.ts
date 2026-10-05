@@ -44,16 +44,18 @@ export async function serveRequest({
 	body: Uint8Array | ArrayBuffer;
 }): Promise<void> {
 	let response: Response;
+	let replyBody: Uint8Array;
 	try {
 		response = await scope.ctx.fetch(requestOf({ scope, meta, body }));
+		replyBody = new Uint8Array(await response.arrayBuffer());
 	} catch (cause) {
 		scope.ctx.logger.error(
 			{ error: cause },
 			"HTTP worker request failed on the decide thread",
 		);
 		response = new Response(null, { status: 500 });
+		replyBody = new Uint8Array(0);
 	}
-	const replyBody = new Uint8Array(await response.arrayBuffer());
 	try {
 		replyToLane({ scope, lane, reqId, response, body: replyBody });
 	} catch (cause) {

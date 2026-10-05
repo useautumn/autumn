@@ -184,6 +184,46 @@ describe("HTTP worker pool stop", () => {
 		await listener.stop();
 		expect(await inFlight).toBe("200 done");
 	});
+
+	test("a reply body that errors while being read answers 500, and stop still resolves", async () => {
+		const port = await freePort();
+		const pool = createHttpWorkerPool({
+			ctx: {
+				fetch: async () =>
+					new Response(
+						new ReadableStream({
+							pull(controller) {
+								controller.error(new Error("body read failed"));
+							},
+						}),
+					),
+				logger,
+				onFatal: noFatal,
+			},
+			config: {
+				hostname: "127.0.0.1",
+				port,
+				maxRequestBodySize: 1 << 20,
+				threads: 1,
+				requestRingBytes: 1 << 16,
+				replyRingBytes: 1 << 16,
+			},
+		});
+		const listener = await pool.listen();
+		const status = await Promise.race([
+			fetch(`http://127.0.0.1:${port}/v1/track`, {
+				method: "POST",
+				body: "{}",
+			}).then((response) => response.status),
+			Bun.sleep(2_000).then(() => "hung"),
+		]);
+		const stopped = await Promise.race([
+			listener.stop().then(() => "stopped"),
+			Bun.sleep(2_000).then(() => "hung"),
+		]);
+		expect(status).toBe(500);
+		expect(stopped).toBe("stopped");
+	});
 });
 
 describe("HTTP worker pool back-pressure", () => {
@@ -222,6 +262,50 @@ describe("HTTP worker pool back-pressure", () => {
 			expect(overloaded).toBeGreaterThan(0);
 			expect(ok + overloaded).toBe(60);
 			expect(ok).toBeLessThanOrEqual(24);
+		} finally {
+			await listener.stop();
+		}
+	});
+
+	test("while the main thread is stalled, large requests past the in-flight cap get OVERLOADED, and once it resumes they are accepted again", async () => {
+		const port = await freePort();
+		const pool = createHttpWorkerPool({
+			ctx: { fetch: async () => new Response("ok"), logger, onFatal: noFatal },
+			// An eighth of a 64 KiB ring: every 16 KiB request travels by postMessage.
+			config: {
+				hostname: "127.0.0.1",
+				port,
+				maxRequestBodySize: 1 << 20,
+				threads: 1,
+				requestRingBytes: 1 << 16,
+				replyRingBytes: 1 << 16,
+			},
+		});
+		const listener = await pool.listen();
+		const body = "z".repeat(16 << 10);
+		try {
+			const client = new Worker(
+				new URL("./burstClient.ts", import.meta.url).href,
+			);
+			const statuses = new Promise<number[]>((resolve) => {
+				client.onmessage = (event: MessageEvent<number[]>) =>
+					resolve(event.data);
+			});
+			client.postMessage({ port, count: 48, body });
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 700);
+			const result = await statuses;
+			client.terminate();
+			expect(result.filter((status) => status === 200)).toHaveLength(32);
+			expect(result.filter((status) => status === 429)).toHaveLength(16);
+			const after = await Promise.all(
+				Array.from({ length: 32 }, () =>
+					fetch(`http://127.0.0.1:${port}/v1/initialize`, {
+						method: "POST",
+						body,
+					}).then((response) => response.status),
+				),
+			);
+			expect(after.every((status) => status === 200)).toBe(true);
 		} finally {
 			await listener.stop();
 		}
