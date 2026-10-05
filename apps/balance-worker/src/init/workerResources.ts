@@ -126,7 +126,10 @@ export async function openWorkerResources({
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
-		const postgres = createWorkerPostgresClient({ env });
+		const postgres = createWorkerPostgresClient({
+			ctx: { logger: dependencies.logger },
+			env,
+		});
 		const db = createWorkerDb({
 			ctx: {
 				postgres,

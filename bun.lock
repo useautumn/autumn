@@ -902,11 +902,13 @@
       "dependencies": {
         "@autumn/shared": "workspace:*",
         "drizzle-orm": "catalog:",
+        "pg": "^8.20.0",
         "zod": "^3.25.23",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
         "@types/node": "^24.9.1",
+        "@types/pg": "8.20.0",
         "typescript": "~5.8.3",
       },
     },
@@ -1098,6 +1100,7 @@
         "@autumn/kafka": "workspace:*",
         "@autumn/ksuid": "workspace:*",
         "@autumn/logging": "workspace:*",
+        "@autumn/postgres": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@autumn/sqs": "workspace:*",
         "@autumn/stripe-sync": "workspace:*",

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { postgresSqlStateOf } from "../../../src/common/postgresErrors.js";
 import { createPostgresClient } from "../../../src/createPostgresClient.js";
 import {
 	commitFlush,
@@ -277,29 +278,38 @@ describe.skipIf(!databaseUrl)(
 
 		beforeAll(async () => {
 			postgres = createPostgresClient({
+				ctx: { logger: console },
 				config: {
 					databaseUrl: databaseUrl as string,
+					applicationName: "flush-round-trips-test",
 					maxConnections: 2,
 					connectTimeout: 10,
 					idleTimeout: 30,
+					queryTimeout: 30,
 				},
 			});
-			await postgres.client.unsafe(SCHEMA);
+			await postgres.client.query(SCHEMA);
 		});
 		afterAll(async () => {
 			await postgres?.close();
 		});
 
 		const snapshot = async () => ({
-			entitlements: await postgres.client.unsafe(
-				"SELECT id, balance::text, usage_attribution, entities, entitlement_id, created_at::text FROM customer_entitlements ORDER BY id",
-			),
-			progress: await postgres.client.unsafe(
-				"SELECT topic, partition_id, next_offset::text, command_next_offset::text, owner_epoch::text, owner_fence_offset::text, claim_token FROM partition_progress ORDER BY topic, partition_id",
-			),
-			contributions: await postgres.client.unsafe(
-				"SELECT id, current_contribution::text, effective_at::text, updated_at::text FROM pooled_balance_contributions ORDER BY id",
-			),
+			entitlements: (
+				await postgres.client.query(
+					"SELECT id, balance::text, usage_attribution, entities, entitlement_id, created_at::text FROM customer_entitlements ORDER BY id",
+				)
+			).rows,
+			progress: (
+				await postgres.client.query(
+					"SELECT topic, partition_id, next_offset::text, command_next_offset::text, owner_epoch::text, owner_fence_offset::text, claim_token FROM partition_progress ORDER BY topic, partition_id",
+				)
+			).rows,
+			contributions: (
+				await postgres.client.query(
+					"SELECT id, current_contribution::text, effective_at::text, updated_at::text FROM pooled_balance_contributions ORDER BY id",
+				)
+			).rows,
 		});
 
 		const runArm = async ({
@@ -309,7 +319,7 @@ describe.skipIf(!databaseUrl)(
 			request: FlushRequest;
 			roundTrips: FlushRoundTrips;
 		}) => {
-			await postgres.client.unsafe(SEED_SQL);
+			await postgres.client.query(SEED_SQL);
 			let outcome: unknown;
 			try {
 				outcome = {
@@ -321,11 +331,11 @@ describe.skipIf(!databaseUrl)(
 					}),
 				};
 			} catch (error) {
-				const { name, errno, message } = error as Error & { errno?: string };
+				const sqlState = postgresSqlStateOf({ error });
 				outcome = {
-					error: name,
-					sqlState: errno ?? null,
-					message: errno ? undefined : message,
+					error: (error as Error).constructor.name,
+					sqlState,
+					message: sqlState ? undefined : (error as Error).message,
 				};
 			}
 			return { outcome, after: await snapshot() };
@@ -382,7 +392,7 @@ describe.skipIf(!databaseUrl)(
 				"x'||(SELECT 1)||'",
 				"\\\\'' ; -- $1",
 			];
-			await postgres.client.unsafe(SEED_SQL);
+			await postgres.client.query(SEED_SQL);
 			const result = await commitFlush({
 				ctx: { db: postgres.db },
 				request: {
@@ -404,13 +414,15 @@ describe.skipIf(!databaseUrl)(
 				roundTrips: "single",
 			});
 			expect(result.applied).toEqual(ids.map(() => true));
-			const rows = await postgres.client.unsafe(
+			const { rows } = await postgres.client.query(
 				"SELECT id, entitlement_id FROM customer_entitlements WHERE id LIKE '%;%' OR id LIKE '%''%' ORDER BY id",
 			);
 			expect(rows.map((r: { id: string }) => r.id).sort()).toEqual(
 				[...ids, "ce_o'q\\$1"].sort(),
 			);
-			const [counted] = await postgres.client.unsafe(
+			const {
+				rows: [counted],
+			} = await postgres.client.query(
 				"SELECT count(*)::int AS n FROM customer_entitlements",
 			);
 			expect(counted?.n).toBe(3 + ids.length);
@@ -448,15 +460,18 @@ describe.skipIf(!databaseUrl)(
 					},
 				],
 			};
-			await postgres.client.unsafe(
+			await postgres.client.query(
 				"ALTER DATABASE postgres SET lc_messages = 'de_DE.utf8'",
 			);
 			const localized = createPostgresClient({
+				ctx: { logger: console },
 				config: {
 					databaseUrl: databaseUrl as string,
+					applicationName: "flush-round-trips-test",
 					maxConnections: 1,
 					connectTimeout: 10,
 					idleTimeout: 30,
+					queryTimeout: 30,
 				},
 			});
 			try {
@@ -464,7 +479,7 @@ describe.skipIf(!databaseUrl)(
 					request,
 					roundTrips: "transaction",
 				});
-				await postgres.client.unsafe(SEED_SQL);
+				await postgres.client.query(SEED_SQL);
 				let single: unknown;
 				try {
 					single = {
@@ -476,8 +491,11 @@ describe.skipIf(!databaseUrl)(
 						}),
 					};
 				} catch (error) {
-					const { name, errno, message } = error as Error & { errno?: string };
-					single = { error: name, sqlState: errno, message };
+					single = {
+						error: (error as Error).constructor.name,
+						sqlState: postgresSqlStateOf({ error }),
+						message: (error as Error).message,
+					};
 				}
 				console.log(
 					"localized single outcome:",
@@ -491,7 +509,7 @@ describe.skipIf(!databaseUrl)(
 				expect(single).toEqual(transaction.outcome);
 			} finally {
 				await localized.close();
-				await postgres.client.unsafe(
+				await postgres.client.query(
 					"ALTER DATABASE postgres RESET lc_messages",
 				);
 			}

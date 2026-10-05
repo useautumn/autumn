@@ -3,7 +3,7 @@ import type { PostgresContext } from "../../../types/postgresClient.js";
 import type { CatalogRowIds } from "../../types/catalogRowsEnvelope.js";
 import { planLicenseCatalogRowsSql } from "./planLicenseCatalogRowsSql.js";
 
-/** Bun's driver flattens a JS array to "a,b" and JSON-encodes a string bound as jsonb, so the list travels as text. */
+/** The list travels as one jsonb text parameter, so the statement's text never grows with it. */
 const idList = (ids: readonly string[]): SQL =>
 	sql`(SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::text::jsonb))`;
 

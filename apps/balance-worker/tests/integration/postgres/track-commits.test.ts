@@ -2115,7 +2115,7 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(balanceOf(reply, seat.customerEntitlementId)).toBe(495);
 				let landed = 500;
 				for (let attempt = 0; attempt < 200 && landed !== 495; attempt++) {
-					const rows = await postgres.db.execute(
+					const { rows } = await postgres.db.execute(
 						sql`SELECT balance FROM customer_entitlements WHERE id = ${seat.customerEntitlementId}`,
 					);
 					landed = Number(rows[0]?.balance);

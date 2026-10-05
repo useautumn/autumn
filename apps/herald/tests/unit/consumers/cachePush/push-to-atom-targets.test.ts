@@ -105,18 +105,20 @@ const createPushContext = ({
 					}),
 				},
 			},
-			execute: async () => [
-				{
-					envelope: {
-						entitlements: [],
-						products: [],
-						features: [],
-						prices: [],
-						plan_licenses: [],
-						free_trials: [],
+			execute: async () => ({
+				rows: [
+					{
+						envelope: {
+							entitlements: [],
+							products: [],
+							features: [],
+							prices: [],
+							plan_licenses: [],
+							free_trials: [],
+						},
 					},
-				},
-			],
+				],
+			}),
 		},
 		balanceWorkerClient: {
 			readSubjectState: async () => ({ state: {}, catalog: {} }),

@@ -215,14 +215,14 @@ export async function seedCustomer({
 	}
 
 	async function readBalance(): Promise<number> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT balance FROM customer_entitlements WHERE id = ${customerEntitlementId}`,
 		);
 		return Number(rows[0]?.balance);
 	}
 
 	async function readNextResetAt(): Promise<number | null> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT next_reset_at FROM customer_entitlements WHERE id = ${customerEntitlementId}`,
 		);
 		const value = rows[0]?.next_reset_at;
@@ -232,7 +232,7 @@ export async function seedCustomer({
 	async function readRollovers(): Promise<
 		{ balance: number; expires_at: number | null }[]
 	> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT balance, expires_at FROM rollovers WHERE cus_ent_id = ${customerEntitlementId} ORDER BY expires_at`,
 		);
 		return rows.map((row) => ({
@@ -250,7 +250,7 @@ export async function seedCustomer({
 		topic: string;
 		partition: number;
 	}): Promise<bigint | null> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT ${sql.identifier(column)} AS value FROM partition_progress WHERE topic = ${topic} AND partition_id = ${partition}`,
 		);
 		const value = rows[0]?.value;
@@ -412,26 +412,26 @@ export async function seedPool({
 	}
 
 	async function readGranted(): Promise<number> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT granted FROM pooled_balances WHERE id = ${pooledBalanceId}`,
 		);
 		return Number(rows[0]?.granted);
 	}
 	async function readBalance(): Promise<number> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT balance FROM customer_entitlements WHERE id = ${poolCustomerEntitlementId}`,
 		);
 		return Number(rows[0]?.balance);
 	}
 	async function readNextResetAt(): Promise<number | null> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT next_reset_at FROM customer_entitlements WHERE id = ${poolCustomerEntitlementId}`,
 		);
 		const value = rows[0]?.next_reset_at;
 		return value === undefined || value === null ? null : Number(value);
 	}
 	async function readContributions() {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT id, current_contribution, effective_at FROM pooled_balance_contributions WHERE pooled_balance_id = ${pooledBalanceId} ORDER BY id`,
 		);
 		return rows.map((row) => ({
@@ -469,11 +469,14 @@ export function openFixturePostgres({
 	databaseUrl: string;
 }): PostgresClient {
 	return createPostgresClient({
+		ctx: { logger: console },
 		config: {
 			databaseUrl,
+			applicationName: "balance-worker-test",
 			maxConnections: 2,
 			connectTimeout: 10,
 			idleTimeout: 30,
+			queryTimeout: 30,
 		},
 	});
 }
@@ -774,7 +777,7 @@ export async function planNewCustomer({
 	}
 
 	async function readCurrency(): Promise<unknown> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT currency FROM customers WHERE internal_id = ${internalCustomerId}`,
 		);
 		return rows[0]?.currency;
@@ -783,14 +786,14 @@ export async function planNewCustomer({
 	async function readEntity(
 		entityId: string,
 	): Promise<Record<string, unknown> | null> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT id, name, feature_id FROM entities WHERE internal_customer_id = ${internalCustomerId} AND id = ${entityId}`,
 		);
 		return rows[0] ?? null;
 	}
 
 	async function readName(): Promise<unknown> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT name FROM customers WHERE internal_id = ${internalCustomerId}`,
 		);
 		return rows[0]?.name;
@@ -803,7 +806,7 @@ export async function planNewCustomer({
 	}
 
 	async function readProcessor(): Promise<unknown> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT processor FROM customers WHERE internal_id = ${internalCustomerId}`,
 		);
 		return rows[0]?.processor;
@@ -824,21 +827,21 @@ export async function planNewCustomer({
 		string,
 		unknown
 	> | null> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT options, subscription_ids, scheduled_ids FROM customer_products WHERE id = ${customerProductId}`,
 		);
 		return rows[0] ?? null;
 	}
 
 	async function countCustomers(): Promise<number> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT count(*)::int AS count FROM customers WHERE org_id = ${orgId} AND env = ${env} AND id = ${customerId}`,
 		);
 		return Number(rows[0]?.count);
 	}
 
 	async function readBalance(): Promise<number> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT balance FROM customer_entitlements WHERE id = ${customerEntitlementId}`,
 		);
 		return Number(rows[0]?.balance);
@@ -859,7 +862,7 @@ export async function planNewCustomer({
 	}
 
 	async function readInternalIdHoldingCustomerId(): Promise<unknown> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT internal_id FROM customers WHERE org_id = ${orgId} AND env = ${env} AND id = ${customerId}`,
 		);
 		return rows[0]?.internal_id;
@@ -1009,7 +1012,7 @@ export async function planEntityOfCustomer({
 	}
 
 	async function readEntityGrantBalance(): Promise<number | null> {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT balance FROM customer_entitlements WHERE id = ${customerEntitlementId}`,
 		);
 		return rows[0] ? Number(rows[0].balance) : null;
@@ -1262,7 +1265,7 @@ export async function planPooledEntities({
 	});
 
 	const numberOf = async (query: ReturnType<typeof sql>) => {
-		const rows = await db.execute(query);
+		const { rows } = await db.execute(query);
 		const [row] = rows;
 		const value = row ? Object.values(row)[0] : null;
 		return value === null || value === undefined ? null : Number(value);
@@ -1282,7 +1285,7 @@ export async function planPooledEntities({
 			),
 		);
 	async function readContributions() {
-		const rows = await db.execute(
+		const { rows } = await db.execute(
 			sql`SELECT source_customer_entitlement_id AS source, current_contribution AS current
 				FROM pooled_balance_contributions WHERE pooled_balance_id = ${poolId}
 				ORDER BY source_customer_entitlement_id`,

@@ -1,5 +1,6 @@
 import { type EventInsert, events } from "@autumn/shared";
 import { and, inArray, isNull } from "drizzle-orm";
+import { postgresSqlStateOf } from "../../common/postgresErrors.js";
 import type { PostgresDb } from "../../types/postgresClient.js";
 
 // 17 columns a row, so this stays far under Postgres's 65,535 parameters per statement.
@@ -16,12 +17,8 @@ export type UsageEventsInsertResult = {
 	refused: RefusedUsageEvent[];
 };
 
-const isRowRefusal = (cause: unknown): boolean => {
-	if (!(cause instanceof Error) || !("errno" in cause)) return false;
-	return (
-		typeof cause.errno === "string" && ROW_REFUSED_SQLSTATE.test(cause.errno)
-	);
-};
+const isRowRefusal = (cause: unknown): boolean =>
+	ROW_REFUSED_SQLSTATE.test(postgresSqlStateOf({ error: cause }) ?? "");
 
 /**
  * Inserts the rows; when Postgres refuses the statement over a row, halves it until that row stands alone.

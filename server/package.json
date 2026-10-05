@@ -67,6 +67,7 @@
 		"@autumn/ksuid": "workspace:*",
 		"@autumn/ducklake": "workspace:*",
 		"@autumn/logging": "workspace:*",
+		"@autumn/postgres": "workspace:*",
 		"@autumn/agent-docs": "workspace:*",
 		"@autumn/axiom": "workspace:*",
 		"@autumn/billing": "workspace:*",
