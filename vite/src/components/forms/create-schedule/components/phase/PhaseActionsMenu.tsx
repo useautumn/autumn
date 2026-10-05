@@ -7,7 +7,11 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
-import { DotsThreeIcon } from "@phosphor-icons/react";
+import {
+	CalendarBlankIcon,
+	DotsThreeIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
 import { isImmediatePhase } from "../../utils/schedulePhaseTiming";
 
@@ -46,6 +50,7 @@ export function PhaseActionsMenu({
 						)
 					}
 				>
+					<CalendarBlankIcon className="size-4" />
 					Keep cycle anchor
 				</DropdownMenuCheckboxItem>
 				<DropdownMenuSeparator />
@@ -53,6 +58,7 @@ export function PhaseActionsMenu({
 					variant="destructive"
 					onClick={() => handleRemovePhase({ phaseIndex })}
 				>
+					<TrashIcon className="size-4" />
 					Delete phase
 				</DropdownMenuItem>
 			</DropdownMenuContent>
