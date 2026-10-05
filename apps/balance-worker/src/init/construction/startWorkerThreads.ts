@@ -35,8 +35,11 @@ export async function startWorkerThreads({
 }): Promise<{
 	listener: WorkerListener;
 	producers: ThreadedProducers;
-	/** Both pools' window counts for the summary line, reset by the read. */
-	drainThreadHealth(): Record<string, number>;
+	/** The threads' window for the summary line, reset by the read: health counts and in-worker latency. */
+	drainThreadSignals(): {
+		threads: Record<string, number>;
+		latencyMs: Record<string, unknown>;
+	};
 }> {
 	function httpWorkersFailed({ cause }: { cause: unknown }): void {
 		ctx.onFatal({ cause, scope: "http-workers" });
@@ -75,8 +78,11 @@ export async function startWorkerThreads({
 			await producers.stop();
 		}
 	}
-	function drainThreadHealth() {
-		return { ...http.drainHealth(), ...producers.drainHealth() };
+	function drainThreadSignals() {
+		return {
+			threads: { ...http.drainHealth(), ...producers.drainHealth() },
+			latencyMs: http.drainLatencies(),
+		};
 	}
-	return { listener: { stop }, producers, drainThreadHealth };
+	return { listener: { stop }, producers, drainThreadSignals };
 }

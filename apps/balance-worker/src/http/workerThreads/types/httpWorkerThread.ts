@@ -18,6 +18,8 @@ export type HttpWorkerInit = {
 		commitCells: SharedArrayBuffer;
 		failureCounts: SharedArrayBuffer;
 	};
+	/** Paths whose in-worker latency this thread records into `cells`, by index. */
+	latency: { routes: string[]; cells: SharedArrayBuffer };
 };
 
 /** A request or reply over an eighth of its ring travels by `postMessage` instead, with the same id. */

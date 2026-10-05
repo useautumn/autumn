@@ -1,4 +1,8 @@
 import { expect, spyOn, test } from "bun:test";
+import {
+	type CommitSummaries,
+	createCommitSummaries,
+} from "../../../src/logging/commitSummaries.js";
 import { createPartitionCommitLogging } from "../../../src/logging/createPartitionCommitLogging.js";
 import { MutationBatchNotCommittedError } from "../../../src/processor/writer/writerErrors.js";
 import type { DurableMutationRecord } from "../../../src/state/types/durableMutation.js";
@@ -23,23 +27,26 @@ import {
 
 const config = { deployment: "staging", endpoint: "http://worker.test" };
 
-test.concurrent("keeps the original ports when no logger is supplied", () => {
-	const fixture = createStoreFixture();
-	const appender = { appendCommitted: async () => ({ baseOffset: 0n }) };
-	try {
-		const logging = createPartitionCommitLogging({
-			ctx: { appender, stateStore: fixture.store },
-			config,
-		});
-		expect(logging.appender).toBe(appender);
-		expect(logging.stateStore).toBe(fixture.store);
-	} finally {
-		closeStoreFixture(fixture);
-	}
-});
+test.concurrent(
+	"keeps the original ports when no logger or summaries are supplied",
+	() => {
+		const fixture = createStoreFixture();
+		const appender = { appendCommitted: async () => ({ baseOffset: 0n }) };
+		try {
+			const logging = createPartitionCommitLogging({
+				ctx: { appender, stateStore: fixture.store },
+				config,
+			});
+			expect(logging.appender).toBe(appender);
+			expect(logging.stateStore).toBe(fixture.store);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	},
+);
 
 test.concurrent(
-	"a logged store still claims the partition through the store it wraps",
+	"a summarized store still claims the partition through the store it wraps",
 	async () => {
 		const fixture = createStoreFixture();
 		const claimed: unknown[] = [];
@@ -53,7 +60,7 @@ test.concurrent(
 							claimed.push(position);
 						},
 					},
-					logger: { debug: () => {} },
+					summaries: createCommitSummaries(),
 				},
 				config,
 			});
@@ -66,11 +73,11 @@ test.concurrent(
 );
 
 test.concurrent(
-	"measures the full committed append and preserves large offsets",
+	"a committed append adds its full duration and records to its partition's window, and keeps large offsets",
 	async () => {
 		const fixture = createStoreFixture();
 		const gate = Promise.withResolvers<{ baseOffset: bigint }>();
-		const logs: unknown[][] = [];
+		const summaries = createCommitSummaries();
 		let now = 100;
 		const params = {
 			topic,
@@ -88,37 +95,30 @@ test.concurrent(
 							return gate.promise;
 						},
 					},
-					logger: {
-						debug: (...args) => {
-							logs.push(args);
-						},
-					},
+					summaries,
 					monotonicNow: () => now,
 				},
 				config,
 			});
 			const pending = appender.appendCommitted(params);
-			now = 110;
-			await Promise.resolve();
-			expect(logs).toEqual([]);
 			now = 117.125;
 			gate.resolve(result);
 			await expect(pending).resolves.toBe(result);
-			expect(logs).toHaveLength(1);
-			expect(logs[0]?.[0]).toEqual({
-				event: "balance_worker.commit",
-				durationMs: 17.13,
-				data: {
-					topic,
-					partition,
-					phase: "kafka_commit",
-					result: "committed",
-					workerEndpoint: config.endpoint,
-					batchSize: 1,
-					baseOffset: "9007199254740993",
-					errorName: undefined,
+			expect(summaries.drain()).toEqual({
+				[String(partition)]: {
+					commits: 1,
+					records: 1,
+					notCommitted: 0,
+					unknown: 0,
+					commitMs: { totalMs: 17.13, maxMs: 17.13 },
+					lingerMs: { totalMs: 0, maxMs: 0 },
+					storeWaitMs: { totalMs: 0, maxMs: 0 },
+					applies: 0,
+					applyFailed: 0,
+					applyMs: { totalMs: 0, maxMs: 0 },
 				},
 			});
+			expect(summaries.drain()).toEqual({});
 		} finally {
 			gate.resolve(result);
 			closeStoreFixture(fixture);
@@ -127,37 +127,34 @@ test.concurrent(
 );
 
 test.concurrent(
-	"a commit line says how long its batch waited before the commit started",
+	"a window sums how long its batches waited before their commits started",
 	async () => {
 		const fixture = createStoreFixture();
-		const logs: unknown[][] = [];
+		const summaries = createCommitSummaries();
 		try {
 			const { appender } = createPartitionCommitLogging({
 				ctx: {
 					stateStore: fixture.store,
 					appender: { appendCommitted: async () => ({ baseOffset: 4n }) },
-					logger: {
-						debug: (...args) => {
-							logs.push(args);
-						},
-					},
+					summaries,
 					monotonicNow: () => 0,
 				},
 				config,
 			});
-			await appender.appendCommitted({
-				topic,
-				partition,
-				outcomes: [createMutation({ state: createState() })],
-				waits: { queuedMs: 12.3456, lingerMs: 5.001, storeWaitMs: 0 },
-			});
-			expect(logs[0]?.[0]).toMatchObject({
-				data: {
-					phase: "kafka_commit",
-					queuedMs: 12.35,
-					lingerMs: 5,
-					storeWaitMs: 0,
-				},
+			for (const waits of [
+				{ queuedMs: 12.3456, lingerMs: 5.001, storeWaitMs: 0 },
+				{ queuedMs: null, lingerMs: 1, storeWaitMs: 3.5 },
+			])
+				await appender.appendCommitted({
+					topic,
+					partition,
+					outcomes: [createMutation({ state: createState() })],
+					waits,
+				});
+			expect(summaries.drain()[String(partition)]).toMatchObject({
+				commits: 2,
+				lingerMs: { totalMs: 6, maxMs: 5 },
+				storeWaitMs: { totalMs: 3.5, maxMs: 3.5 },
 			});
 		} finally {
 			closeStoreFixture(fixture);
@@ -166,7 +163,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	"measures one atomic SQLite batch including initialization, without logging payloads",
+	"one atomic SQLite batch, initialization included, is summed as one apply without any payload",
 	async () => {
 		const fixture = createStoreFixture();
 		const state = createState();
@@ -183,7 +180,7 @@ test.concurrent(
 				}),
 			},
 		];
-		const logs: unknown[][] = [];
+		const summaries = createCommitSummaries();
 		let now = 0;
 		const originalApply = fixture.store.applyDurableMutations.bind(
 			fixture.store,
@@ -201,11 +198,7 @@ test.concurrent(
 				ctx: {
 					stateStore: fixture.store,
 					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
-					logger: {
-						debug: (...args) => {
-							logs.push(args);
-						},
-					},
+					summaries,
 					monotonicNow: () => now,
 				},
 				config,
@@ -213,24 +206,19 @@ test.concurrent(
 			expect(await stateStore.applyDurableMutations({ records })).toHaveLength(
 				2,
 			);
-			expect(logs).toHaveLength(1);
-			expect(logs[0]?.[0]).toMatchObject({
-				durationMs: 0.38,
-				data: {
-					phase: "store_apply",
-					result: "applied",
-					batchSize: 2,
-					baseOffset: "0",
-				},
+			const window = summaries.drain();
+			expect(window[String(partition)]).toMatchObject({
+				applies: 1,
+				applyFailed: 0,
+				applyMs: { totalMs: 0.38, maxMs: 0.38 },
 			});
 			expect(stateStore.readState({ identity })?.revision).toBe(2);
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(2n);
 			expect(stateStore.readState({ identity })).toEqual(
 				fixture.store.readState({ identity }),
 			);
-			expect(JSON.stringify(logs)).not.toContain("private_baseline");
-			expect(JSON.stringify(logs)).not.toContain(identity.customerId);
-			expect(JSON.stringify(logs)).not.toContain("deltas");
+			expect(JSON.stringify(window)).not.toContain("private_baseline");
+			expect(JSON.stringify(window)).not.toContain(identity.customerId);
 		} finally {
 			apply.mockRestore();
 			closeStoreFixture(fixture);
@@ -240,7 +228,7 @@ test.concurrent(
 
 for (const result of ["not_committed", "unknown"] as const) {
 	test.concurrent(
-		`logs ${result} without changing the append failure`,
+		`counts ${result} without changing the append failure`,
 		async () => {
 			const fixture = createStoreFixture();
 			const cause =
@@ -249,7 +237,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 							cause: new Error("private details"),
 						})
 					: new Error("private details");
-			const logs: unknown[][] = [];
+			const summaries = createCommitSummaries();
 			let now = 0;
 			try {
 				const { appender } = createPartitionCommitLogging({
@@ -261,11 +249,7 @@ for (const result of ["not_committed", "unknown"] as const) {
 								throw cause;
 							},
 						},
-						logger: {
-							debug: (...args) => {
-								logs.push(args);
-							},
-						},
+						summaries,
 						monotonicNow: () => now,
 					},
 					config,
@@ -277,17 +261,12 @@ for (const result of ["not_committed", "unknown"] as const) {
 						outcomes: [createMutation({ state: createState() })],
 					}),
 				).rejects.toBe(cause);
-				expect(logs).toHaveLength(1);
-				expect(logs[0]?.[0]).toMatchObject({
-					durationMs: 25,
-					data: {
-						phase: "kafka_commit",
-						result,
-						baseOffset: null,
-						errorName: cause.name,
-					},
+				expect(summaries.drain()[String(partition)]).toMatchObject({
+					commits: 1,
+					notCommitted: result === "not_committed" ? 1 : 0,
+					unknown: result === "unknown" ? 1 : 0,
+					commitMs: { totalMs: 25, maxMs: 25 },
 				});
-				expect(JSON.stringify(logs)).not.toContain("private details");
 			} finally {
 				closeStoreFixture(fixture);
 			}
@@ -296,20 +275,16 @@ for (const result of ["not_committed", "unknown"] as const) {
 }
 
 test.concurrent(
-	"logs a failed SQLite apply without changing rollback or the error",
+	"counts a failed SQLite apply without changing rollback or the error",
 	async () => {
 		const fixture = createStoreFixture();
-		const logs: unknown[][] = [];
+		const summaries = createCommitSummaries();
 		try {
 			const { stateStore } = createPartitionCommitLogging({
 				ctx: {
 					stateStore: fixture.store,
 					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
-					logger: {
-						debug: (...args) => {
-							logs.push(args);
-						},
-					},
+					summaries,
 				},
 				config,
 			});
@@ -323,14 +298,9 @@ test.concurrent(
 					],
 				}),
 			).rejects.toThrow("Only an initialize can create subject state");
-			expect(logs).toHaveLength(1);
-			expect(logs[0]?.[0]).toMatchObject({
-				durationMs: expect.any(Number),
-				data: {
-					phase: "store_apply",
-					result: "failed",
-					errorName: "SubjectStateMissingError",
-				},
+			expect(summaries.drain()[String(partition)]).toMatchObject({
+				applies: 1,
+				applyFailed: 1,
 			});
 			expect(stateStore.readNextOffset({ topic, partition })).toBe(0n);
 		} finally {
@@ -340,16 +310,21 @@ test.concurrent(
 );
 
 test.concurrent(
-	"throwing loggers cannot change committed results or original failures",
+	"throwing summaries cannot change committed results or original failures",
 	async () => {
 		const fixture = createStoreFixture();
 		const cause = new MutationBatchNotCommittedError({
 			cause: new Error("aborted"),
 		});
 		let fail = false;
-		function failLog(): never {
-			throw new Error("logging unavailable");
+		function failSummary(): never {
+			throw new Error("telemetry unavailable");
 		}
+		const summaries: CommitSummaries = {
+			committed: failSummary,
+			applied: failSummary,
+			drain: failSummary,
+		};
 		try {
 			const seededState = seedSubjectState({
 				store: fixture.store,
@@ -368,7 +343,7 @@ test.concurrent(
 							return { baseOffset: 0n };
 						},
 					},
-					logger: { debug: failLog },
+					summaries,
 				},
 				config,
 			});
