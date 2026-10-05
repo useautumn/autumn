@@ -37,7 +37,7 @@ export type BillingOptionState = {
 	showEndDate?: boolean;
 	// schedule
 	hasMultipleImmediatePlans?: boolean;
-	canResetScheduleBillingCycle?: boolean;
+	hasPersistedSchedule?: boolean;
 	hasPaidRecurringPlan?: boolean;
 };
 
@@ -106,14 +106,12 @@ function updateRules(state: BillingOptionState): BillingOptionRules {
 }
 
 function scheduleRules(state: BillingOptionState): BillingOptionRules {
-	const multiPlanBlocked = !!state.hasMultipleImmediatePlans;
 	return {
 		proration: show(true),
+		// A saved schedule's later phases each pick their own reset, so there's nothing global left.
 		resetBillingCycle: show(
-			true,
-			multiPlanBlocked && !state.canResetScheduleBillingCycle
-				? MULTI_ATTACH_UNSUPPORTED
-				: null,
+			!state.hasPersistedSchedule,
+			state.hasMultipleImmediatePlans ? MULTI_ATTACH_UNSUPPORTED : null,
 		),
 		discounts: HIDDEN,
 		planSchedule: HIDDEN,

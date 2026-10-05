@@ -1,4 +1,5 @@
 import { truncateMsToSecondPrecision } from "@autumn/shared";
+import { classifyFirstPhaseStart } from "../../setup/classifyFirstPhaseStart";
 import { isAliveAt, isAliveJustBefore } from "../../timeline/timelineGuards";
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
@@ -125,6 +126,14 @@ export const matchReviewPhases = ({
 	phaseStarts: number[];
 	now: number;
 }): ReviewPhaseMatches => {
+	const [firstPhaseStart = now] = phaseStarts;
+	const firstPhaseAt =
+		classifyFirstPhaseStart({
+			startsAt: firstPhaseStart,
+			currentEpochMs: now,
+		}) === "future"
+			? truncateMsToSecondPrecision(firstPhaseStart)
+			: now;
 	const requestStarts = phaseStarts.slice(1).map(truncateMsToSecondPrecision);
 	const savedStarts = savedPhaseStarts({ saved, now });
 	const anchors = [
@@ -146,16 +155,18 @@ export const matchReviewPhases = ({
 	const pairedSavedStarts = new Set(movedFrom.values());
 
 	const futurePhases = requestStarts.map((at): ReviewPhaseMatch => {
-		if (anchors.includes(at)) return { at, comparison: { type: "saved", at } };
+		if (anchors.includes(at)) {
+			return { at, endsAt: at, comparison: { type: "saved", at } };
+		}
 		const savedAt = movedFrom.get(at);
 		return savedAt === undefined
-			? { at, comparison: { type: "previousPhase" } }
-			: { at, comparison: { type: "saved", at: savedAt } };
+			? { at, endsAt: at, comparison: { type: "previousPhase" } }
+			: { at, endsAt: at, comparison: { type: "saved", at: savedAt } };
 	});
 
 	return {
 		phases: [
-			{ at: now, comparison: { type: "saved", at: now } },
+			{ at: firstPhaseAt, endsAt: now, comparison: { type: "saved", at: now } },
 			...futurePhases,
 		],
 		removedPhaseStarts: changedSavedStarts.filter(

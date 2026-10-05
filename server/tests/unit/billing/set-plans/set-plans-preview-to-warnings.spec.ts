@@ -8,7 +8,7 @@ import type {
 	SetPlansPreviewWarning,
 	StripeBillingPlan,
 } from "@autumn/shared";
-import { textPartsToText } from "@autumn/shared";
+import { BillingInterval, textPartsToText } from "@autumn/shared";
 import type Stripe from "stripe";
 import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
@@ -66,7 +66,6 @@ const resetMessages = ({
 });
 
 const MESSAGE_ONLY_WARNING_TYPES: SetPlansPreviewWarning["type"][] = [
-	"existing_schedule_replaced",
 	"proration_disabled",
 ];
 
@@ -90,13 +89,6 @@ describe("setPlansPreviewToWarnings", () => {
 				liveProcessorItems: [
 					processorItem({ price_id: "price_base" }),
 					processorItem({ price_id: "price_old_pro" }),
-				],
-				processorChanges: [
-					{
-						type: "subscription",
-						id: null,
-						action: "created",
-					},
 				],
 				withdrawnCustomerProducts: [],
 				outgoingCustomerProducts: [],
@@ -137,13 +129,6 @@ describe("setPlansPreviewToWarnings", () => {
 					plan_id: null,
 				}),
 			],
-			processorChanges: [
-				{
-					type: "subscription_schedule",
-					id: "sub_sched_old",
-					action: "released",
-				},
-			],
 			withdrawnCustomerProducts: [scheduledEnterprise],
 			outgoingCustomerProducts: [outgoingPro],
 			requestedProrationBehavior: "none",
@@ -155,7 +140,6 @@ describe("setPlansPreviewToWarnings", () => {
 			"unmanaged_stripe_item_removed",
 			"new_stripe_price_created",
 			"usage_reset",
-			"existing_schedule_replaced",
 			"future_phase_removed",
 			"pending_quantity_change_dropped",
 			"proration_disabled",
@@ -166,13 +150,12 @@ describe("setPlansPreviewToWarnings", () => {
 			"warning",
 			"warning",
 			"warning",
-			"warning",
 			"info",
 		]);
 		expect(warnings[0].message).toContain("Support add-on");
-		expect(warnings[4].message).toContain("enterprise");
+		expect(warnings[3].message).toContain("enterprise");
 		expect(
-			warnings[4].parts?.filter((part) => part.bold).map((part) => part.text),
+			warnings[3].parts?.filter((part) => part.bold).map((part) => part.text),
 		).toEqual([scheduledEnterprise.product.name]);
 		const warningsWithParts = warnings.filter(
 			(warning) => !MESSAGE_ONLY_WARNING_TYPES.includes(warning.type),
@@ -188,7 +171,6 @@ describe("setPlansPreviewToWarnings", () => {
 		const warnings = setPlansPreviewToWarnings({
 			phases: [phase({}), phase({ balance_changes: [resetMessages()] })],
 			liveProcessorItems: [],
-			processorChanges: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
 			features: [],
@@ -206,7 +188,6 @@ describe("setPlansPreviewToWarnings", () => {
 				}),
 			],
 			liveProcessorItems: [],
-			processorChanges: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
 			features: [],
@@ -228,7 +209,6 @@ describe("setPlansPreviewToWarnings", () => {
 				phase({ balance_changes: [resetMessages()] }),
 			],
 			liveProcessorItems: [],
-			processorChanges: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
 			features: [],
@@ -238,26 +218,6 @@ describe("setPlansPreviewToWarnings", () => {
 		expect(
 			warnings.filter((warning) => warning.type === "usage_reset"),
 		).toHaveLength(1);
-	});
-
-	test("updating a standalone schedule in place doesn't warn about replacing it", () => {
-		expect(
-			setPlansPreviewToWarnings({
-				phases: [phase({})],
-				liveProcessorItems: [],
-				processorChanges: [
-					{
-						type: "subscription_schedule",
-						id: "sub_sched_standalone",
-						action: "updated",
-					},
-				],
-				withdrawnCustomerProducts: [],
-				outgoingCustomerProducts: [],
-				features: [],
-				...noSubscriptionState,
-			}),
-		).toEqual([]);
 	});
 });
 
@@ -282,13 +242,25 @@ const createsSubscription: Pick<StripeBillingPlan, "subscriptionAction"> = {
 	} as StripeBillingPlan["subscriptionAction"],
 };
 
+const chargedNowLineItem = ({
+	amount,
+	interval,
+}: {
+	amount: number;
+	interval: BillingInterval;
+}) =>
+	({
+		amountAfterDiscounts: amount,
+		chargeImmediately: true,
+		context: { price: { config: { interval } } },
+	}) as LineItem;
+
 const stateWarnings = (
 	overrides: Partial<Parameters<typeof setPlansPreviewToWarnings>[0]>,
 ) =>
 	setPlansPreviewToWarnings({
 		phases: [phase({})],
 		liveProcessorItems: [],
-		processorChanges: [],
 		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
 		features: [],
@@ -421,6 +393,132 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	test("a backdate over a live subscription says it is recreated and when billing continues", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				subscriptionBackdateStartMs: NOON_UTC - 40 * DAY_MS,
+				billingCycleAnchorMs: NOON_UTC + 12 * DAY_MS,
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_live",
+					status: "active",
+				}),
+				stripeDiscounts: [],
+			},
+			stripeBillingPlan: {
+				...createsSubscription,
+				replacedSubscriptionAction: {
+					type: "cancel",
+					stripeSubscriptionId: "sub_live",
+					reason: "backdate",
+				},
+			},
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "subscription_recreated_backdated",
+				severity: "warning",
+				message:
+					"The current subscription will be cancelled and recreated from 20 Aug 2026. Billing then continues on 11 Oct 2026.",
+			},
+		]);
+	});
+
+	const backdateRecreateMessage = ({
+		requestedProrationBehavior,
+		billingCycleAnchorMs = NOON_UTC + 12 * DAY_MS,
+		restartsCycle = false,
+		lineItems = [],
+		schedule = null,
+	}: {
+		requestedProrationBehavior?: "none" | "prorate_immediately";
+		billingCycleAnchorMs?: number;
+		restartsCycle?: boolean;
+		lineItems?: LineItem[];
+		schedule?: string | null;
+	}) =>
+		stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				subscriptionBackdateStartMs: NOON_UTC - 40 * DAY_MS,
+				billingCycleAnchorMs,
+				requestedProrationBehavior,
+				immediatePhase: {
+					starts_at: NOON_UTC - 40 * DAY_MS,
+					plans: [],
+					...(restartsCycle
+						? { billing_cycle_anchor: "phase_start" as const }
+						: {}),
+				},
+				replacedStripeSubscription: stripeSubscription({
+					id: "sub_live",
+					status: "active",
+					start_date: Math.floor((NOON_UTC - 30 * DAY_MS) / 1000),
+					schedule,
+				}),
+				stripeDiscounts: [],
+			},
+			lineItems,
+		}).find(({ type }) => type === "subscription_recreated_backdated")?.message;
+
+	const gapLineItem = {
+		amount: 33.33,
+		amountAfterDiscounts: 33.33,
+		context: {
+			currency: "usd",
+			direction: "charge",
+			backdate: { startsAt: NOON_UTC - 40 * DAY_MS, cycleCount: 1 },
+		},
+	} as LineItem;
+
+	test("a backdate before the live start says whether the time before it is billed", () => {
+		expect(backdateRecreateMessage({})).toBe(
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. The time before 30 Aug 2026 isn't billed. Billing then continues on 11 Oct 2026.",
+		);
+		expect(
+			backdateRecreateMessage({
+				requestedProrationBehavior: "prorate_immediately",
+				lineItems: [gapLineItem],
+			}),
+		).toBe(
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. $33.33 is billed now for the time before 30 Aug 2026. Billing then continues on 11 Oct 2026.",
+		);
+	});
+
+	test("a backdate's gap total is shown to its currency's precision", () => {
+		expect(
+			backdateRecreateMessage({
+				requestedProrationBehavior: "prorate_immediately",
+				lineItems: [
+					{
+						...gapLineItem,
+						amount: 3333,
+						amountAfterDiscounts: 3333,
+						context: { ...gapLineItem.context, currency: "jpy" },
+					},
+				],
+			}),
+		).toContain("¥3,333 is billed now");
+	});
+
+	test("a backdate over a scheduled subscription says its saved schedule is replaced", () => {
+		expect(backdateRecreateMessage({ schedule: "sub_sched_live" })).toBe(
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. Its saved schedule is replaced. The time before 30 Aug 2026 isn't billed. Billing then continues on 11 Oct 2026.",
+		);
+	});
+
+	test("a backdate that restarts the cycle says when the restarted cycle renews", () => {
+		expect(
+			backdateRecreateMessage({
+				restartsCycle: true,
+				billingCycleAnchorMs: NOON_UTC + 21 * DAY_MS,
+			}),
+		).toBe(
+			"The current subscription will be cancelled and recreated from 20 Aug 2026. The time before 30 Aug 2026 isn't billed. The billing cycle restarts from 20 Aug 2026 and renews on 20 Oct 2026.",
+		);
+	});
+
 	test("a customer with no subscription is told a new one will be created", () => {
 		const warnings = stateWarnings({
 			billingContext: {
@@ -451,6 +549,129 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		});
 
 		expect(warnings).toEqual([]);
+	});
+
+	test("a future first phase says when billing starts", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+		});
+
+		expect(warnings).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
+				parts: [
+					{ text: "Billing starts on" },
+					{ text: "06 Oct 2026", bold: true },
+					{ text: ",", attach: true },
+					{ text: "when the first invoice is sent." },
+				],
+			},
+		]);
+	});
+
+	test("early access says the plans are usable before billing starts", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+				accessStartsAt: NOON_UTC,
+			},
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Access starts now. Billing starts on 06 Oct 2026, when the first invoice is sent.",
+			},
+		]);
+	});
+
+	test("an ongoing plan charged now is billed now, and the rest from the start", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+			lineItems: [
+				chargedNowLineItem({ amount: 20, interval: BillingInterval.Month }),
+			],
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Ongoing plans are billed now. Billing for the other plans starts on 06 Oct 2026.",
+			},
+		]);
+	});
+
+	test("a one-off charged now still says billing starts later", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+			lineItems: [
+				chargedNowLineItem({ amount: 20, interval: BillingInterval.OneOff }),
+			],
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
+			},
+		]);
+	});
+
+	test("a credit now still says billing starts later", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+			lineItems: [
+				chargedNowLineItem({ amount: -20, interval: BillingInterval.Month }),
+			],
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
+			},
+		]);
+	});
+
+	test("a first phase that starts now doesn't say billing starts later", () => {
+		expect(
+			stateWarnings({
+				billingContext: {
+					currentEpochMs: NOON_UTC,
+					billingCycleAnchorMs: "now",
+					billingStartsAt: NOON_UTC,
+				},
+			}),
+		).toEqual([]);
 	});
 
 	test("a discount the request carries over is not flagged", () => {

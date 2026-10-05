@@ -1,4 +1,5 @@
-import { ConditionalTooltip, DateInputUnix } from "@autumn/ui";
+import { ConditionalTooltip, DateInputUnix, IconButton } from "@autumn/ui";
+import { XIcon } from "@phosphor-icons/react";
 import { format, subYears } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
@@ -23,6 +24,33 @@ type PickerLimits = Pick<
 	| "maxUnixDate"
 	| "fromYear"
 >;
+
+/** A started phase that can backdate may only move earlier than its saved start. */
+export function phaseDatePickerLimits({
+	nowMs,
+	hasStarted,
+	canBackdate,
+	persistedStartsAt,
+}: {
+	nowMs: number;
+	hasStarted: boolean;
+	canBackdate: boolean;
+	persistedStartsAt?: number | null;
+}): PickerLimits {
+	const movesStartedPhaseEarlier = hasStarted && canBackdate;
+	const disablePastDates = !hasStarted && !canBackdate;
+	return {
+		disabled: hasStarted && !movesStartedPhaseEarlier,
+		disablePastDates,
+		minUnixDate: disablePastDates ? nowMs : undefined,
+		maxUnixDate: movesStartedPhaseEarlier
+			? (persistedStartsAt ?? undefined)
+			: undefined,
+		fromYear: disablePastDates
+			? undefined
+			: subYears(nowMs, BACKDATE_START_YEAR_LOOKBACK).getFullYear(),
+	};
+}
 
 function PhaseDateBox({
 	className,
@@ -118,8 +146,11 @@ export function PhaseDateControl({
 	isLocked: boolean;
 	hasTimingError: boolean;
 }) {
-	const { isExistingSchedule, allowFirstPhaseBackdate } =
-		useCreateScheduleFormContext();
+	const {
+		isExistingSchedule,
+		allowFirstPhaseBackdate,
+		allowStartedPhaseBackdate,
+	} = useCreateScheduleFormContext();
 	const { form, formValues, nowMs } = useCustomerStateContext();
 
 	const phase = formValues.phases[phaseIndex];
@@ -135,38 +166,44 @@ export function PhaseDateControl({
 		/>
 	);
 
-	if (isNewFirstPhase && !allowFirstPhaseBackdate) {
-		return <PhaseDateBox>{dateLabel(null)}</PhaseDateBox>;
-	}
-
-	const disablePastDates = !hasStarted;
-	const limits: PickerLimits = isNewFirstPhase
-		? {
-				disableFutureDates: true,
-				maxUnixDate: nowMs,
-				fromYear: subYears(nowMs, BACKDATE_START_YEAR_LOOKBACK).getFullYear(),
-			}
-		: {
-				disabled: hasStarted,
-				disablePastDates,
-				minUnixDate: disablePastDates ? nowMs : undefined,
-			};
+	const canBackdate = isExistingSchedule
+		? isFirstPhase && hasStarted && allowStartedPhaseBackdate
+		: isNewFirstPhase && allowFirstPhaseBackdate;
+	const canResetToNow =
+		isNewFirstPhase && !hasStarted && phase.startsAt !== null;
+	const setStartsAt = (startsAt: number | null) =>
+		form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt);
+	const limits = phaseDatePickerLimits({
+		nowMs,
+		hasStarted,
+		canBackdate,
+		persistedStartsAt: phase.persistedStartsAt,
+	});
 
 	return (
 		<ConditionalTooltip
-			enabled={hasStarted && !isLocked}
+			enabled={hasStarted && !isLocked && limits.disabled === true}
 			content={CURRENT_PHASE_TIME_LOCKED_MESSAGE}
 		>
-			<div className="w-fit">
+			<div className="flex w-fit items-center gap-1">
 				<PhaseDatePicker
 					startsAt={phase.startsAt}
 					label={dateLabel(phase.startsAt)}
 					limits={limits}
 					hasTimingError={hasTimingError}
-					onChange={(startsAt) =>
-						form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt)
-					}
+					onChange={setStartsAt}
 				/>
+				{canResetToNow && (
+					<IconButton
+						type="button"
+						variant="muted"
+						size="sm"
+						aria-label="Start now"
+						onClick={() => setStartsAt(null)}
+						icon={<XIcon size={12} />}
+						className="shrink-0 text-tertiary-foreground"
+					/>
+				)}
 			</div>
 		</ConditionalTooltip>
 	);

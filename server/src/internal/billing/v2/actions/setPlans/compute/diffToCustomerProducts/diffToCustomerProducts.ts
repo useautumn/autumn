@@ -4,6 +4,7 @@ import {
 	CusProductStatus,
 	type FullCusProduct,
 	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
@@ -11,6 +12,8 @@ import type {
 	TimelineDiff,
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
+import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
+import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -117,18 +120,68 @@ const isOnReplacedSubscription = ({
 	);
 };
 
+const isOnReplacedSchedule = ({
+	billingContext,
+	customerProduct,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	customerProduct: FullCusProduct;
+}) => {
+	const replacedScheduleId = replacedStripeScheduleId({
+		replacedStripeSubscription: billingContext.replacedStripeSubscription,
+	});
+	return (
+		replacedScheduleId !== undefined &&
+		isCustomerProductOnStripeSubscriptionSchedule({
+			customerProduct,
+			stripeSubscriptionScheduleId: replacedScheduleId,
+		}) === true
+	);
+};
+
 const isLiveRow = (customerProduct: FullCusProduct) =>
 	customerProduct.status !== CusProductStatus.Scheduled;
 
-/** A kept row takes its new end, and moves off a replaced subscription onto the new one. */
+/** The links a kept row drops to leave a replaced subscription; a backdate recreate also moves its scheduled rows and schedule. */
+const replacedLinkResets = ({
+	billingContext,
+	customerProduct,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	customerProduct: FullCusProduct;
+}): CustomerProductUpdate["updates"] | undefined => {
+	const onReplacedSubscription = isOnReplacedSubscription({
+		billingContext,
+		customerProduct,
+	});
+	if (!isBackdateRecreate({ billingContext })) {
+		return isLiveRow(customerProduct) && onReplacedSubscription
+			? { subscription_ids: [] }
+			: undefined;
+	}
+
+	const onReplacedSchedule = isOnReplacedSchedule({
+		billingContext,
+		customerProduct,
+	});
+	if (!onReplacedSubscription && !onReplacedSchedule) return undefined;
+	return {
+		subscription_ids: [],
+		...(onReplacedSchedule && { scheduled_ids: [] }),
+	};
+};
+
+/** A kept row takes its new end, and moves off a replaced subscription onto the new one, from its backdated start if any. */
 const keptRowUpdate = ({
 	billingContext,
 	customerProduct,
 	retime,
+	backdatedStartsAt,
 }: {
 	billingContext: CreateScheduleBillingContext;
 	customerProduct: FullCusProduct;
 	retime?: OperationOf<"retime">;
+	backdatedStartsAt?: number;
 }): { update?: CustomerProductUpdate; patch?: CustomerProductPatch } => {
 	const update: CustomerProductUpdate = { customerProduct, updates: {} };
 	if (retime && isLiveRow(customerProduct)) {
@@ -140,15 +193,20 @@ const keptRowUpdate = ({
 		update.updates.ended_at = retime.endsAt;
 	}
 
-	const relinks =
+	const linkResets = replacedLinkResets({ billingContext, customerProduct });
+	// Unlinked and paired with an empty patch, execution stamps the new subscription and schedule ids on it.
+	if (linkResets) Object.assign(update.updates, linkResets);
+	if (
+		linkResets &&
 		isLiveRow(customerProduct) &&
-		isOnReplacedSubscription({ billingContext, customerProduct });
-	// Unlinked and paired with an empty patch, execution stamps the new subscription's id on it.
-	if (relinks) update.updates.subscription_ids = [];
+		backdatedStartsAt !== undefined
+	) {
+		update.updates.starts_at = backdatedStartsAt;
+	}
 
 	return {
 		update: Object.keys(update.updates).length > 0 ? update : undefined,
-		patch: relinks ? emptyPatch(customerProduct) : undefined,
+		patch: linkResets ? emptyPatch(customerProduct) : undefined,
 	};
 };
 
@@ -191,6 +249,15 @@ export const diffToCustomerProducts = ({
 	const patchCustomerProducts: CustomerProductPatch[] = [];
 	const keptCustomerProducts: FullCusProduct[] = [];
 
+	const segmentsById = new Map(
+		diff.timeline.map((segment) => [segment.id, segment]),
+	);
+	const backdatedStartsAtFor = (segmentId: string) => {
+		if (!isBackdateRecreate({ billingContext })) return undefined;
+		const declared = segmentsById.get(segmentId)?.origin === "declared";
+		return declared ? billingContext.subscriptionBackdateStartMs : undefined;
+	};
+
 	for (const keep of operations.keep) {
 		const customerProduct = customerProductFor(keep.customerProductId);
 		if (!customerProductIdBySegmentId.has(keep.segmentId)) {
@@ -204,14 +271,12 @@ export const diffToCustomerProducts = ({
 			retime: retimes.find(
 				({ customerProductId }) => customerProductId === customerProduct.id,
 			),
+			backdatedStartsAt: backdatedStartsAtFor(keep.segmentId),
 		});
 		if (update) updateCustomerProducts.push(update);
 		if (patch) patchCustomerProducts.push(patch);
 	}
 
-	const segmentsById = new Map(
-		diff.timeline.map((segment) => [segment.id, segment]),
-	);
 	const immediateInsertCustomerProducts: FullCusProduct[] = [];
 	const scheduledInsertCustomerProducts: FullCusProduct[] = [];
 	for (const insert of operations.insert) {

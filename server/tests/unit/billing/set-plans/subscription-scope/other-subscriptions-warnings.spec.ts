@@ -7,7 +7,6 @@ const warningsFor = (otherStripeSubscriptionIds?: string[]) =>
 	setPlansPreviewToWarnings({
 		phases: [],
 		liveProcessorItems: [],
-		processorChanges: [],
 		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
 		features: [],

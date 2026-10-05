@@ -67,6 +67,43 @@ export const SetPlansDateOrderSchema = z.object({
 	boundary_ms: z.number(),
 });
 
+/** A first phase that starts later can't take something that bills or anchors now. */
+export const SetPlansFutureStartConflictSchema = z.object({
+	type: z.literal("future_start_conflict"),
+	conflict: z.enum(["free_trial", "invoice_mode", "billing_cycle_anchor"]),
+	starts_at: z.number(),
+});
+
+export type SetPlansFutureStartConflict = z.infer<
+	typeof SetPlansFutureStartConflictSchema
+>["conflict"];
+
+/** Nothing in Stripe would start this plan when a later first phase begins. */
+export const SetPlansPlanCannotStartLaterSchema = z.object({
+	type: z.literal("plan_cannot_start_later"),
+	plan_name: z.string(),
+	starts_at: z.number(),
+});
+
+/** A backdate over a live subscription that can't be recreated without losing or rebilling something. */
+export const SetPlansBackdateConflictSchema = z.object({
+	type: z.literal("backdate_conflict"),
+	conflict: z.enum([
+		"free_trial",
+		"stripe_checkout",
+		"period_ended",
+		"billing_cycle_anchor",
+		"too_far_back",
+		"plan_outside_request",
+	]),
+	starts_at: z.number(),
+	plan_name: z.string().optional(),
+});
+
+export type SetPlansBackdateConflict = z.infer<
+	typeof SetPlansBackdateConflictSchema
+>["conflict"];
+
 export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansSubscriptionConflictSchema,
 	SetPlansPlanOutsideSubscriptionSchema,
@@ -77,6 +114,9 @@ export const SetPlansErrorDetailsSchema = z.discriminatedUnion("type", [
 	SetPlansTooManyPhasesSchema,
 	SetPlansFreePlanNeedsStripeSchema,
 	SetPlansDateOrderSchema,
+	SetPlansFutureStartConflictSchema,
+	SetPlansPlanCannotStartLaterSchema,
+	SetPlansBackdateConflictSchema,
 ]);
 
 export type SetPlansErrorDetails = z.infer<typeof SetPlansErrorDetailsSchema>;

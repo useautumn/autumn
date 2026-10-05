@@ -55,6 +55,29 @@ export type WorkerBootstrapConfig = {
 	checkpointSource?: PartitionCheckpointSource;
 };
 
+/** The client limits every worker Kafka client uses, the producer thread's included. */
+export const WORKER_KAFKA_CLIENT_LIMITS = {
+	connectionTimeoutMs: 5000,
+	requestTimeoutMs: 30000,
+	retryCount: 2,
+	initialRetryTimeMs: 100,
+	maxRetryTimeMs: 1000,
+};
+
+/** Every token a client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
+export function logWorkerKafkaToken({
+	logger,
+	info,
+}: {
+	logger?: Pick<AutumnLogger, "info">;
+	info: KafkaTokenInfo;
+}): void {
+	logger?.info(
+		{ event: "balance_worker.kafka_token", data: info },
+		`Kafka token signed with key …${info.keyIdSuffix ?? "?"}; expires ${info.expiresAt}`,
+	);
+}
+
 export async function openWorkerResources({
 	ctx: dependencies = {},
 	config,
@@ -71,12 +94,8 @@ export async function openWorkerResources({
 	bootstrap: WorkerBootstrapConfig;
 }): Promise<WorkerResources> {
 	const { env } = config;
-	/** Every token the client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
 	function logKafkaToken(info: KafkaTokenInfo): void {
-		dependencies.logger?.info(
-			{ event: "balance_worker.kafka_token", data: info },
-			`Kafka token signed with key …${info.keyIdSuffix ?? "?"}; expires ${info.expiresAt}`,
-		);
+		logWorkerKafkaToken({ logger: dependencies.logger, info });
 	}
 	const kafka = new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
@@ -87,13 +106,7 @@ export async function openWorkerResources({
 				region: env.AWS_REGION,
 				onToken: logKafkaToken,
 			}),
-			limits: {
-				connectionTimeoutMs: 5000,
-				requestTimeoutMs: 30000,
-				retryCount: 2,
-				initialRetryTimeMs: 100,
-				maxRetryTimeMs: 1000,
-			},
+			limits: WORKER_KAFKA_CLIENT_LIMITS,
 		}),
 	);
 	const admin = kafka.admin();

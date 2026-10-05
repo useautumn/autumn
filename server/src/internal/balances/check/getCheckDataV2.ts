@@ -95,6 +95,7 @@ export const getCheckDataV2 = async ({
 		ctx,
 		fullSubject,
 		includeAggregations: true,
+		allocationView: "spendable",
 	});
 	const evaluationFullSubject = getCheckSubject({ ctx, fullSubject });
 	const evaluationApiSubject = await buildEvaluationSubject({

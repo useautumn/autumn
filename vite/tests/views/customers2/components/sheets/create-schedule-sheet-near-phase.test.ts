@@ -109,7 +109,7 @@ test("a saved phase starting within a day of now is kept in the form and the req
 	} as unknown as FullCustomer;
 	const products = [plan("enterprise")];
 
-	const form = buildInitialValues({ customer, products, nowMs: NOW });
+	const form = buildInitialValues({ customer, products });
 	expect(form.phases.map((phase) => phase.startsAt)).toEqual([
 		PHASE_START,
 		NEXT_PHASE,

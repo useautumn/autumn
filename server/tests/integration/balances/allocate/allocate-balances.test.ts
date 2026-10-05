@@ -154,10 +154,7 @@ test("allocation controls: omit preserves, replacement releases omitted entities
 	const cleared = await autumnV2_3.customers.update(customerId, {
 		billing_controls: { balance_allocations: [] },
 	});
-	expectAllocationControls({
-		actual: cleared.billing_controls.balance_allocations,
-		expected: [],
-	});
+	expect(cleared.billing_controls.balance_allocations).toBeUndefined();
 	expect(cleared.balances[TestFeature.Messages]).toMatchObject({
 		granted: 10000,
 		remaining: 10000,
@@ -234,7 +231,7 @@ test("allocation controls: invalid second feature leaves the entire configuratio
 });
 
 test.concurrent(
-	`${chalk.yellowBright("allocate1: Kyle's split — A is held to its 5k share, B keeps its 5k")}`,
+	`${chalk.yellowBright("allocate1: even split — A is held to its 5k share, B keeps its 5k")}`,
 	async () => {
 		const customerId = "allocate-gate-1";
 		const { a, b, c } = await setupSharedPool({ customerId });

@@ -58,6 +58,7 @@ export const checkResultToApiResponse = ({
 					ctx,
 					fullSubject: attachedSubject,
 					featureId: feature.id,
+					allocationView: "spendable",
 				})
 			: null;
 	const flag =

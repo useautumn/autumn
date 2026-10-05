@@ -50,6 +50,10 @@ import {
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
+import {
+	firstPhaseBackdatesLiveSubscription,
+	firstPhaseStartsLater,
+} from "../utils/schedulePhaseTiming";
 
 interface CreateScheduleFormContextValue {
 	generation: BillingGenerationState;
@@ -60,8 +64,12 @@ interface CreateScheduleFormContextValue {
 	products: ProductV2[];
 	features: Feature[];
 	isExistingSchedule: boolean;
-	/** First phase may start in the past — only when a new Stripe subscription will be created. */
+	/** First phase may start in the past; a live subscription is recreated from that date. */
 	allowFirstPhaseBackdate: boolean;
+	/** An existing schedule's started first phase may move earlier, recreating its live subscription. */
+	allowStartedPhaseBackdate: boolean;
+	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
+	backdatesLiveSubscription: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -182,9 +190,16 @@ export function CreateScheduleFormProvider({
 	}, [formValues.phases, products]);
 
 	const allowFirstPhaseBackdate =
-		!isExistingSchedule &&
-		!hasActiveSubscription &&
-		immediatePlansPaidRecurring;
+		!isExistingSchedule && immediatePlansPaidRecurring;
+	const allowStartedPhaseBackdate =
+		isExistingSchedule && immediatePlansPaidRecurring && hasActiveSubscription;
+
+	const backdatesLiveSubscription = firstPhaseBackdatesLiveSubscription({
+		phases: formValues.phases,
+		nowMs,
+		isExistingSchedule,
+		hasActiveSubscription,
+	});
 
 	// Mirrors attach: a new sub is created when there's no active subscription, and
 	// usage-only plans still bill recurring even though nothing is due immediately.
@@ -207,8 +222,10 @@ export function CreateScheduleFormProvider({
 	);
 
 	const getResetBillingCycle = useCallback(
-		() => form.store.state.values.resetBillingCycle ?? false,
-		[form.store],
+		() =>
+			!backdatesLiveSubscription &&
+			(form.store.state.values.resetBillingCycle ?? false),
+		[form.store, backdatesLiveSubscription],
 	);
 
 	const getBillingCycleAnchorAndEndDate = useCallback(() => {
@@ -250,21 +267,27 @@ export function CreateScheduleFormProvider({
 		features,
 		nowMs,
 		billingBehavior: formValues.billingBehavior,
-		resetBillingCycle: formValues.resetBillingCycle,
+		resetBillingCycle:
+			formValues.resetBillingCycle && !backdatesLiveSubscription,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
+		enablePlanImmediately: formValues.enablePlanImmediately,
 		stripeSubscriptionId,
 	});
 
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
 		if (allowFirstPhaseBackdate || isExistingSchedule) return;
-		if (form.store.state.values.phases[0]?.startsAt != null) {
+		const { phases } = form.store.state.values;
+		if (
+			phases[0]?.startsAt != null &&
+			!firstPhaseStartsLater({ phases, nowMs })
+		) {
 			form.setFieldValue("phases[0].startsAt", null);
 		}
-	}, [allowFirstPhaseBackdate, isExistingSchedule, form]);
+	}, [allowFirstPhaseBackdate, isExistingSchedule, form, nowMs]);
 
 	const phaseTimingError = useMemo(
 		() =>
@@ -281,14 +304,19 @@ export function CreateScheduleFormProvider({
 		error: previewError,
 	} = useCreateSchedulePreview({ requestBody: generationRequestBody });
 
-	// Only the checkout stage sets this, so drop it once the schedule no longer
-	// goes through checkout — otherwise a stale `true` reaches a direct submit.
+	const startsLater = firstPhaseStartsLater({
+		phases: formValues.phases,
+		nowMs,
+	});
+
+	// Checkout and a later first phase set this, so drop it once neither applies
+	// — otherwise a stale `true` reaches a direct submit.
 	useEffect(() => {
-		if (preview?.redirect_to_checkout) return;
+		if (preview?.redirect_to_checkout || startsLater) return;
 		if (form.store.state.values.enablePlanImmediately) {
 			form.setFieldValue("enablePlanImmediately", false);
 		}
-	}, [preview?.redirect_to_checkout, form]);
+	}, [preview?.redirect_to_checkout, startsLater, form]);
 
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,
@@ -300,6 +328,7 @@ export function CreateScheduleFormProvider({
 		useCreateScheduleMutation({
 			customerId,
 			buildRequestBody,
+			getEnablePlanImmediately,
 			onApplied,
 			onCheckoutRedirect,
 			onSuccess,
@@ -318,6 +347,8 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			allowStartedPhaseBackdate,
+			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,
@@ -339,6 +370,8 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			allowStartedPhaseBackdate,
+			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,

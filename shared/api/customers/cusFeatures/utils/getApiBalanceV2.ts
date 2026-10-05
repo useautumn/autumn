@@ -36,6 +36,7 @@ import {
 import { Decimal } from "decimal.js";
 import {
 	type AllocationSubjectView,
+	type AllocationView,
 	applyAllocationsToBreakdown,
 } from "./allocations/applyAllocationsToBreakdown.js";
 import { getUnlimitedApiBalance } from "./apiBalanceUtils.js";
@@ -117,12 +118,14 @@ export const customerEntitlementsToApiBalance = ({
 	feature,
 	aggregatedFeatureBalance,
 	apiFeature,
+	allocationView,
 }: {
 	fullSubject: Pick<FullSubjectView, "entity"> & AllocationSubjectView;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
 	apiFeature?: ReturnType<typeof dbToApiFeatureV1>;
+	allocationView?: AllocationView;
 }): { data: ApiBalanceWithAllocationCheck } => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
 
@@ -182,6 +185,7 @@ export const customerEntitlementsToApiBalance = ({
 		subject: fullSubject,
 		feature,
 		customerEntitlements,
+		view: allocationView,
 		breakdownItems: customerEntitlements.map((customerEntitlement) =>
 			getApiBalanceBreakdownItemV2({
 				fullSubject,
@@ -272,12 +276,14 @@ export const getApiBalanceV2 = ({
 	customerEntitlements,
 	feature,
 	aggregatedFeatureBalance,
+	allocationView,
 }: {
 	ctx: SharedContext;
 	fullSubject: Pick<FullSubjectView, "entity"> & AllocationSubjectView;
 	customerEntitlements: CustomerEntitlementWithPricesView[];
 	feature: Feature;
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
+	allocationView?: AllocationView;
 }): { data: ApiBalanceWithAllocationCheck } => {
 	const apiFeature = expandIncludes({
 		expand: ctx.expand,
@@ -295,5 +301,6 @@ export const getApiBalanceV2 = ({
 		feature,
 		aggregatedFeatureBalance,
 		apiFeature,
+		allocationView,
 	});
 };

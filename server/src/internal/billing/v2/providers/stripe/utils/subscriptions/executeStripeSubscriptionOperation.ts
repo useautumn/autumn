@@ -118,14 +118,20 @@ export const executeStripeSubscriptionOperation = async ({
 				autumnStripeRequestOptions({ source: idempotencySource }),
 			);
 		}
-		case "create":
+		case "create": {
+			// Stripe rejects default_tax_rates alongside automatic_tax; a manual rate takes precedence.
+			const hasManualTaxRates = Boolean(
+				subscriptionAction.params.default_tax_rates?.length,
+			);
 			return await stripeClient.subscriptions.create(
 				{
 					...subscriptionAction.params,
 					...invoiceModeParams,
 					...fallbackPaymentMethodParams,
 					...(autumnMeta && { metadata: autumnMeta }),
-					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
+					...(wantsAutoTax && !hasManualTaxRates
+						? { automatic_tax: { enabled: true } }
+						: {}),
 					...taxRateParams,
 
 					billing_mode: { type: "flexible" },
@@ -134,6 +140,7 @@ export const executeStripeSubscriptionOperation = async ({
 				},
 				autumnStripeRequestOptions({ source: idempotencySource }),
 			);
+		}
 		case "cancel":
 			return await stripeClient.subscriptions.cancel(
 				subscriptionAction.stripeSubscriptionId,

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { readCpuCounters } from "../../../src/logging/eventLoopStalls/cpuCounters.js";
+import {
+	cpuWindowOf,
+	readCpuCounters,
+} from "../../../src/logging/eventLoopStalls/cpuCounters.js";
 
 const PROC_STAT = `cpu  4705 150 1120 16250 520 30 45 90 7 0
 cpu0 4705 150 1120 16250 520 30 45 90 7 0
@@ -20,6 +23,7 @@ describe("cpu counters", () => {
 			processMicros: 500,
 			host: { stealTicks: 90, iowaitTicks: 520, totalTicks: 22_910 },
 			throttledMicros: null,
+			mainThreadMicros: null,
 		});
 	});
 
@@ -58,6 +62,24 @@ describe("cpu counters", () => {
 			processMicros: 15,
 			host: null,
 			throttledMicros: null,
+			mainThreadMicros: null,
 		});
+	});
+
+	test("the decide thread's own CPU comes from its task stat, apart from GC helpers and other threads", () => {
+		const taskStat = `${process.pid} (bun (main)) R 1 2 3 0 -1 4194560 100 0 0 0 250 70 0 0 20 0 9 0 5 1 1`;
+		const read = (mainTicks: string) =>
+			readCpuCounters({
+				readFile: readerOf({
+					files: { [`/proc/self/task/${process.pid}/stat`]: mainTicks },
+				}),
+				processUsage: () => ({ user: 0, system: 0 }),
+			});
+		const previous = read(taskStat);
+		expect(previous.mainThreadMicros).toBe(3_200_000);
+		const current = read(taskStat.replace(" 250 70 ", " 650 70 "));
+		expect(
+			cpuWindowOf({ previous, current, windowMs: 10_000 }).mainCpuPct,
+		).toBe(40);
 	});
 });

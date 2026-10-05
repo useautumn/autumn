@@ -54,6 +54,10 @@ export const aggregateGroupablePipeParamsSchema = z.object({
 	use_monthly_rollup: z.enum(["0", "1"]).optional(),
 	use_org_dimension_rollup: z.enum(["0", "1"]).optional(),
 	use_org_property_rollup: z.enum(["0", "1"]).optional(),
+	// Parallel arrays of top groups from aggregate_groupable_top_groups; when set, only these
+	// customers get per-period series.
+	top_event_names: z.array(z.string()).optional(),
+	top_customer_ids: z.array(z.string()).optional(),
 	// "1" forces the ungated events_hourly_mv path when the property key is
 	// absent from events_property_mv (its value-shape gate drops UUID values)
 	skip_property_rollup: z.enum(["0", "1"]).optional(),

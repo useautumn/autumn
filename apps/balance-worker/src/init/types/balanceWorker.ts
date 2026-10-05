@@ -60,7 +60,7 @@ export type WorkerLifecycleContext = {
 	healthReporter?: { start(): void; stop(): void };
 	/** Drops an org's cached catalog rows when the server says they changed. */
 	catalogInvalidations?: Pick<CatalogInvalidationConsumer, "start" | "stop">;
-	listen(): WorkerListener;
+	listen(): Promise<WorkerListener>;
 	settleResources(): Promise<void>;
 	closeStore(): void;
 };

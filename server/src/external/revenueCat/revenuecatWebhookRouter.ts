@@ -7,6 +7,7 @@ import type {
 	WebhookInitialPurchase,
 	WebhookNonRenewingPurchase,
 	WebhookRenewal,
+	WebhookTransfer,
 	WebhookUnCancellation,
 } from "@puzzmo/revenue-cat-webhook-types";
 import { type Context, Hono } from "hono";
@@ -22,6 +23,7 @@ import { handleCancellation } from "./webhookHandlers/handleRevenuecatCancellati
 import { handleExpiration } from "./webhookHandlers/handleRevenuecatExpiration";
 import { handleInitialPurchase } from "./webhookHandlers/handleRevenuecatInitialPurchase";
 import { handleNonRenewingPurchase } from "./webhookHandlers/handleRevenuecatNonRenewingPurchase";
+import { handleTransfer } from "./webhookHandlers/handleRevenuecatTransfer";
 import { handleUncancellation } from "./webhookHandlers/handleRevenuecatUncancellation";
 import type { RevenueCatWebhookHonoEnv } from "./webhookMiddlewares/revenuecatWebhookContext";
 import { revenuecatWebhookRefreshMiddleware } from "./webhookMiddlewares/revenuecatWebhookRefreshMiddleware";
@@ -90,6 +92,12 @@ revenuecatWebhookRouter.post(
 				case "UNCANCELLATION":
 					await handleUncancellation({
 						event: body.event as WebhookUnCancellation,
+						ctx,
+					});
+					break;
+				case "TRANSFER":
+					await handleTransfer({
+						event: body.event as WebhookTransfer,
 						ctx,
 					});
 					break;

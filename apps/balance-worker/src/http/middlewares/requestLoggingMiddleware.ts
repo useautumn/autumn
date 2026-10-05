@@ -1,4 +1,5 @@
 import { UnsupportedCommandError } from "@autumn/balance-engine";
+import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { OwnedPartitionNotReadyError } from "../../runtime/runtimeErrors.js";
@@ -25,7 +26,15 @@ export function requestLoggingMiddleware({
 		await next();
 		try {
 			timeSync({ label: "request.log" }, () =>
-				logRequestResult({ ctx, context, startedAt }),
+				logWorkerRequest({
+					ctx,
+					requestLog: context.get("requestLog"),
+					statusCode: context.res.status,
+					method: context.req.method,
+					path: context.req.path,
+					route: context.get("request")?.route,
+					startedAt,
+				}),
 			);
 		} catch (cause) {
 			// A logging failure cannot turn a committed request into an HTTP error.
@@ -35,18 +44,25 @@ export function requestLoggingMiddleware({
 	return logRequest;
 }
 
-function logRequestResult({
+/** One line per request, the same for one answered inline or through the ordinary route. */
+export function logWorkerRequest({
 	ctx,
-	context,
+	requestLog,
+	statusCode,
+	method,
+	path,
+	route,
 	startedAt,
 }: {
-	ctx: BalanceWorkerHttpContext;
-	context: Context<BalanceWorkerHttpEnv>;
+	ctx: Pick<BalanceWorkerHttpContext, "logger" | "requestLog">;
+	requestLog: BalanceWorkerRequestLog;
+	statusCode: number;
+	method: string;
+	path: string;
+	route?: PartitionRoute;
 	startedAt: number;
 }): void {
-	const requestLog = context.get("requestLog");
 	const { command, response, error, errorCode, batch } = requestLog;
-	const statusCode = context.res.status;
 	// A batch answers 200 around its commands' failures; the worst of them sets the level.
 	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
 	// Decided before the line is built: what is skipped costs nothing but this comparison.
@@ -70,15 +86,15 @@ function logRequestResult({
 		error: error && loggedErrorOf({ error, statusCode }),
 		req: {
 			id: command?.requestId ?? requestLog.id,
-			method: context.req.method,
-			path: context.req.path,
+			method,
+			path,
 			// The command is a large object the logger walks and serialises on every call; a success reports its outcome fields instead.
 			body:
 				severity >= 400 && command ? loggedCommandOf({ command }) : undefined,
 		},
 		res: shouldLogResponse() ? (response ?? null) : undefined,
 		data: {
-			route: context.get("request")?.route ?? batch?.route,
+			route: route ?? batch?.route,
 			commandId: command?.commandId,
 			featureId: command?.featureId,
 			value: command?.value,
@@ -86,7 +102,7 @@ function logRequestResult({
 			...outcomeOf({ requestLog }),
 		},
 	};
-	const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
+	const message = `[${statusCode}] ${method} ${path} ${durationMs}ms${error ? ` — ${error.name}` : ""}`;
 	const isActivating =
 		!batch &&
 		error instanceof OwnedPartitionNotReadyError &&
@@ -118,7 +134,11 @@ function loggedErrorOf({
 }
 
 /** Every failure is logged; a success is logged at the configured rate, or always when none is set. */
-function sampleSuccess({ ctx }: { ctx: BalanceWorkerHttpContext }): boolean {
+function sampleSuccess({
+	ctx,
+}: {
+	ctx: Pick<BalanceWorkerHttpContext, "requestLog">;
+}): boolean {
 	const rate = ctx.requestLog?.successSampleRate;
 	if (rate === undefined || rate >= 1) return true;
 	if (rate <= 0) return false;

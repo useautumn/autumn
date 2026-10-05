@@ -1,11 +1,20 @@
 import { expect, test } from "bun:test";
-import type { CreateScheduleBillingContext, FreeTrial } from "@autumn/shared";
+import {
+	type CreateScheduleBillingContext,
+	type FreeTrial,
+	ms,
+} from "@autumn/shared";
+import type Stripe from "stripe";
 import { setupSetPlansPolicies } from "@/internal/billing/v2/actions/setPlans/setup/setupSetPlansPolicies";
 
 const billingContextWith = (
 	overrides: Partial<CreateScheduleBillingContext>,
 ): CreateScheduleBillingContext =>
-	({ ...overrides }) as unknown as CreateScheduleBillingContext;
+	({
+		currentEpochMs: 0,
+		immediatePhase: { starts_at: 0, plans: [] },
+		...overrides,
+	}) as unknown as CreateScheduleBillingContext;
 
 test("a requested trial recreates live rows so every plan starts it; otherwise live rows carry", () => {
 	const withTrial = billingContextWith({
@@ -26,4 +35,77 @@ test("a requested trial recreates live rows so every plan starts it; otherwise l
 			params: {},
 		}).liveRows,
 	).toBe("carry");
+});
+
+test("a future first phase ends undeclared live plans now, even when asked to retain them", () => {
+	const currentEpochMs = 1_800_000_000_000;
+	const startingAt = (startsAt: number) =>
+		billingContextWith({
+			currentEpochMs,
+			immediatePhase: { starts_at: startsAt, plans: [] },
+		});
+
+	expect(
+		setupSetPlansPolicies({
+			billingContext: startingAt(currentEpochMs + ms.days(7)),
+			params: { undeclared_plans: "retain" },
+		}).undeclared,
+	).toBe("end");
+	expect(
+		setupSetPlansPolicies({
+			billingContext: startingAt(currentEpochMs),
+			params: { undeclared_plans: "retain" },
+		}).undeclared,
+	).toBe("retain");
+});
+
+test("a backdate over a healthy subscription carries its live rows onto the recreated one", () => {
+	const currentEpochMs = 1_800_000_000_000;
+	const backdatedOver = (status: Stripe.Subscription.Status) =>
+		billingContextWith({
+			currentEpochMs,
+			immediatePhase: { starts_at: currentEpochMs - ms.days(20), plans: [] },
+			subscriptionBackdateStartMs: currentEpochMs - ms.days(20),
+			replacedStripeSubscription: {
+				id: "sub_live",
+				status,
+			} as Stripe.Subscription,
+		});
+
+	expect(
+		setupSetPlansPolicies({
+			billingContext: backdatedOver("active"),
+			params: {},
+		}).liveRows,
+	).toBe("carry");
+	expect(
+		setupSetPlansPolicies({
+			billingContext: backdatedOver("unpaid"),
+			params: {},
+		}).liveRows,
+	).toBe("recreate");
+});
+
+test("a backdate that restarts the cycle on its start recreates the live rows, so their paid time is credited", () => {
+	const currentEpochMs = 1_800_000_000_000;
+	const backdatedStart = currentEpochMs - ms.days(20);
+
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({
+				currentEpochMs,
+				immediatePhase: {
+					starts_at: backdatedStart,
+					plans: [],
+					billing_cycle_anchor: "phase_start",
+				},
+				subscriptionBackdateStartMs: backdatedStart,
+				replacedStripeSubscription: {
+					id: "sub_live",
+					status: "active",
+				} as Stripe.Subscription,
+			}),
+			params: {},
+		}).liveRows,
+	).toBe("recreate");
 });

@@ -20,6 +20,7 @@ import type {
 	PartitionBootstrapper,
 	PartitionBootstrapRetryPolicy,
 } from "../../runtime/bootstrap/types/partitionBootstrap.js";
+import type { CommitPositions } from "../../runtime/commitPositions/types/commitPositions.js";
 import type {
 	MeteringPartitionResolver,
 	PartitionOutcomeFollowerPort,
@@ -71,6 +72,8 @@ export type PartitionRuntimeFactoryContext = {
 	partitionResolver: MeteringPartitionResolver;
 	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
 	partitionLoad?: PartitionLoad;
+	/** The task's commit positions; each partition's writer publishes to its own cell. */
+	commitPositions?: Pick<CommitPositions, "sinkFor">;
 	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */
 	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 };

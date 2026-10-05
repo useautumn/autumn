@@ -1,4 +1,5 @@
 import {
+	type AllocationView,
 	type ApiBalanceV1,
 	fullSubjectToCustomerEntitlements,
 	getApiBalanceV2,
@@ -14,10 +15,12 @@ export function workerStateToApiBalance({
 	ctx,
 	fullSubject,
 	featureId,
+	allocationView,
 }: {
 	ctx: SharedContext;
 	fullSubject: WorkerFullSubject;
 	featureId: string;
+	allocationView?: AllocationView;
 }): ApiBalanceV1 | null {
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
@@ -32,6 +35,7 @@ export function workerStateToApiBalance({
 		fullSubject,
 		customerEntitlements,
 		feature: first.entitlement.feature,
+		allocationView,
 	});
 	return data;
 }

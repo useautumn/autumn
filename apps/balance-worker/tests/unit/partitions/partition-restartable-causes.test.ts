@@ -4,7 +4,7 @@ import {
 	KafkaTransactionStateUnknownError,
 } from "@autumn/kafka";
 import { FlushBookmarkConflictError } from "@autumn/postgres";
-import { KafkaJSProtocolError } from "kafkajs";
+import { KafkaJSNumberOfRetriesExceeded, KafkaJSProtocolError } from "kafkajs";
 import { FlushRecordFailedError } from "../../../src/committer/committerErrors.js";
 import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { isPartitionRestartableCause } from "../../../src/partitions/health/partitionRestartableCauses.js";
@@ -82,6 +82,30 @@ test("a producer the broker fenced restarts the partition alone: the log and the
 			cause: new KafkaTransactionStateUnknownError({
 				failureStage: "commit",
 				cause: expired,
+			}),
+		}),
+	});
+	expect(isPartitionRestartableCause({ cause })).toBe(true);
+});
+
+test("an append whose retries ran out in a leader election restarts the partition alone: the bootstrap replays whatever landed", () => {
+	const election = new KafkaJSProtocolError(
+		Object.assign(new Error("There is no leader for this topic-partition"), {
+			type: "LEADER_NOT_AVAILABLE",
+			code: 5,
+			retriable: true,
+		}),
+	);
+	const cause = new OwnedPartitionRecoveryRequiredError({
+		topic,
+		partition,
+		cause: new PartitionWriterRecoveryRequiredError({
+			cause: new KafkaTransactionStateUnknownError({
+				failureStage: "commit",
+				cause: new KafkaJSNumberOfRetriesExceeded(election, {
+					retryCount: 10,
+					retryTime: 2_500,
+				}),
 			}),
 		}),
 	});

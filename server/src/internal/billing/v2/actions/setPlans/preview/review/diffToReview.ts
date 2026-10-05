@@ -46,17 +46,17 @@ export const diffToReview = ({
 	const ongoingContext = ongoingContextFor({ saved, now: diff.now });
 	const toPlans = ({
 		rows,
-		phaseStartsAt,
+		endsAt,
 		phaseCredits,
 	}: {
 		rows: ReviewPlanRow[];
-		phaseStartsAt: number;
+		endsAt: number;
 		phaseCredits: LineItem[];
 	}) =>
 		rows.flatMap((row) => {
 			const plan = reviewRowToPreviewPlan({
 				row,
-				phaseStartsAt,
+				endsAt,
 				lookup,
 				creditLineItems: phaseCredits,
 				entities,
@@ -70,10 +70,10 @@ export const diffToReview = ({
 	const reviewRows = timelineToReviewRows({ saved, diff, matches });
 
 	return {
-		phases: reviewRows.phases.map(({ at, rows }, phaseIndex) => ({
+		phases: reviewRows.phases.map(({ endsAt, rows }, phaseIndex) => ({
 			plans: toPlans({
 				rows,
-				phaseStartsAt: at,
+				endsAt,
 				phaseCredits: phaseIndex === 0 ? creditLineItems : [],
 			}),
 			planChanges: transitionsToCustomerPlanChanges({
@@ -85,7 +85,7 @@ export const diffToReview = ({
 		})),
 		removedPhases: reviewRows.removedPhases.map(({ at, rows }) => ({
 			starts_at: at,
-			plans: toPlans({ rows, phaseStartsAt: at, phaseCredits: [] }),
+			plans: toPlans({ rows, endsAt: at, phaseCredits: [] }),
 		})),
 		withdrawnStarts: withdrawnScheduledStarts({
 			saved,

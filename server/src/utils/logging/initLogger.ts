@@ -32,6 +32,7 @@ const FORMATTED_LOG_EXCLUDE_FIELDS = new Set([
 	"trigger",
 	"stripe_event",
 	"vercel_event",
+	"revenuecat_event",
 	"worker",
 	"extras",
 	"type",

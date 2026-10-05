@@ -139,6 +139,61 @@ describe("stripeBillingPlanToProcessorChanges", () => {
 		]);
 	});
 
+	test("a subscription a later start replaces shows its cancel before the new schedule", () => {
+		expect(
+			stripeBillingPlanToProcessorChanges({
+				stripeBillingPlan: {
+					subscriptionScheduleAction: { type: "create", params: twoPhases },
+					replacedSubscriptionAction: {
+						type: "cancel",
+						stripeSubscriptionId: "sub_live",
+					},
+				},
+			}),
+		).toEqual([
+			{ type: "subscription", id: "sub_live", action: "canceled" },
+			{ type: "subscription_schedule", id: null, action: "created" },
+		]);
+	});
+
+	test("a replaced subscription shows its cancel beside the new one's create", () => {
+		expect(
+			stripeBillingPlanToProcessorChanges({
+				stripeBillingPlan: {
+					subscriptionAction: { type: "create", params: {} },
+					replacedSubscriptionAction: {
+						type: "cancel",
+						stripeSubscriptionId: "sub_live",
+						reason: "backdate",
+					},
+				},
+			}),
+		).toEqual([
+			{ type: "subscription", id: null, action: "created" },
+			{ type: "subscription", id: "sub_live", action: "canceled" },
+		]);
+	});
+
+	test("a scheduled subscription a backdate recreates shows only its cancel, which ends its schedule too", () => {
+		expect(
+			stripeBillingPlanToProcessorChanges({
+				stripeBillingPlan: {
+					subscriptionAction: { type: "create", params: {} },
+					subscriptionScheduleAction: { type: "create", params: twoPhases },
+					replacedSubscriptionAction: {
+						type: "cancel",
+						stripeSubscriptionId: "sub_live",
+						reason: "backdate",
+					},
+				},
+			}),
+		).toEqual([
+			{ type: "subscription", id: null, action: "created" },
+			{ type: "subscription", id: "sub_live", action: "canceled" },
+			{ type: "subscription_schedule", id: null, action: "created" },
+		]);
+	});
+
 	test("no Stripe actions", () => {
 		expect(
 			stripeBillingPlanToProcessorChanges({

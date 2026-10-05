@@ -7,6 +7,7 @@ import {
 } from "@/components/forms/shared/utils/invoiceButtonState";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { isFutureStartDate } from "../utils/buildAttachPreviewTotals";
 import { getAttachConfirmLabel } from "../utils/getAttachConfirmLabel";
@@ -22,6 +23,7 @@ export function AttachFooterV3() {
 		billingOptions,
 	} = useAttachFormContext();
 	const { setSheet } = useSheetStore();
+	const { testClockFrozenTimeMs } = useCusQuery();
 	const itemId = useSheetStore((s) => s.itemId);
 
 	const { isEndOfCycleSelected, createsRecurringSubscription } = billingOptions;
@@ -33,8 +35,15 @@ export function AttachFooterV3() {
 	const previewFailed = !!previewError;
 	const isMultiPlan = additionalPlans.isMultiPlan;
 	const startDate = isMultiPlan ? null : formValues.startDate;
-	const hasFutureStartDate = isFutureStartDate(startDate);
-	const confirmLabel = getAttachConfirmLabel({ previewData, startDate });
+	const hasFutureStartDate = isFutureStartDate(
+		startDate,
+		testClockFrozenTimeMs,
+	);
+	const confirmLabel = getAttachConfirmLabel({
+		previewData,
+		startDate,
+		now: testClockFrozenTimeMs,
+	});
 
 	const { isInvoiceOnlyStart, label, zeroAmountReason } = getInvoiceButtonState(
 		{

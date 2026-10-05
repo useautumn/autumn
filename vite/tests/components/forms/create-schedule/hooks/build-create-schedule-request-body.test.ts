@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { AppEnv, ProductItemInterval, UsageModel } from "@autumn/shared";
-import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
+import { addDays, subDays } from "date-fns";
+import {
+	buildCreateScheduleRequestBody,
+	buildCreateScheduleStageRequestBody,
+} from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import {
 	type CustomerStatePhase,
-	canResetScheduleBillingCycle,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import {
 	buildCustomize,
 	buildCustomizeBasePrice,
@@ -105,7 +109,7 @@ const schedulePhase = ({
 	persistedStartsAt,
 	productIds = ["prod_1"],
 }: {
-	startsAt?: number;
+	startsAt?: number | null;
 	persistedStartsAt?: number;
 	productIds?: string[];
 }): CustomerStatePhase => ({
@@ -335,44 +339,6 @@ describe("buildCustomize", () => {
 });
 
 // ---------------------------------------------------------------------------
-// canResetScheduleBillingCycle
-// ---------------------------------------------------------------------------
-
-describe("canResetScheduleBillingCycle", () => {
-	test("allows existing schedules with multiple current plans", () => {
-		expect(
-			canResetScheduleBillingCycle({
-				phases: [
-					schedulePhase({
-						persistedStartsAt: 1000,
-						productIds: ["prod_1", "prod_2"],
-					}),
-				],
-			}),
-		).toBe(true);
-	});
-
-	test("blocks new schedules with multiple current plans", () => {
-		expect(
-			canResetScheduleBillingCycle({
-				phases: [schedulePhase({ productIds: ["prod_1", "prod_2"] })],
-			}),
-		).toBe(false);
-	});
-
-	test("blocks new schedules whose first non-empty phase has multiple plans", () => {
-		expect(
-			canResetScheduleBillingCycle({
-				phases: [
-					schedulePhase({ productIds: [""] }),
-					schedulePhase({ productIds: ["prod_1", "prod_2"] }),
-				],
-			}),
-		).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
 // buildCreateScheduleRequestBody
 // ---------------------------------------------------------------------------
 
@@ -452,7 +418,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 	});
 
-	test("a custom anchor does not also reset the cycle at each future phase", () => {
+	test("a custom anchor leaves later phases resetting at their own start", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
@@ -469,7 +435,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 
 		expect(result!.billing_cycle_anchor).toBe(Date.UTC(2027, 0, 15));
-		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
 	});
 
 	test("sends a now billing cycle anchor without ends_at", () => {
@@ -836,6 +802,59 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].starts_at).toBe(now);
 	});
 
+	test("sends a future first-phase starts_at, with early access only then", () => {
+		const now = Date.now();
+		const later = addDays(now, 7).getTime();
+		const firstPhaseFrom = (startsAt: number) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: [schedulePhase({ startsAt })],
+				products: defaultProducts,
+				features,
+				nowMs: now,
+				enablePlanImmediately: true,
+			});
+
+		const futureStart = firstPhaseFrom(later);
+		expect(futureStart!.phases[0].starts_at).toBe(later);
+		expect(futureStart!.enable_plan_immediately).toBe(true);
+
+		const immediateStart = firstPhaseFrom(subDays(now, 1).getTime());
+		expect(immediateStart!.phases[0].starts_at).toBe(now);
+		expect(immediateStart!.enable_plan_immediately).toBeUndefined();
+	});
+
+	test("a submit sends early access only for a later first phase or from the checkout stage", () => {
+		const now = Date.now();
+		const submit = ({
+			startsAt,
+			stageParams,
+		}: {
+			startsAt: number | null;
+			stageParams?: BillingStageParams;
+		}) =>
+			buildCreateScheduleStageRequestBody({
+				stageParams,
+				customerId: "cus_1",
+				phases: [schedulePhase({ startsAt })],
+				products: defaultProducts,
+				features,
+				nowMs: now,
+				enablePlanImmediately: true,
+			});
+
+		expect(submit({ startsAt: null })!.enable_plan_immediately).toBeUndefined();
+		expect(
+			submit({ startsAt: addDays(now, 7).getTime() })!.enable_plan_immediately,
+		).toBe(true);
+		expect(
+			submit({
+				startsAt: null,
+				stageParams: { enableProductImmediately: true },
+			})!.enable_plan_immediately,
+		).toBe(true);
+	});
+
 	test("preserves persisted first phase start when editing an existing schedule", () => {
 		const persistedStart = Date.UTC(2027, 5, 30, 13, 11);
 		const now = Date.UTC(2027, 6, 2, 16, 49);
@@ -872,7 +891,26 @@ describe("buildCreateScheduleRequestBody", () => {
 		]);
 	});
 
-	test("sets phase billing anchor for future phases when billing cycle reset is enabled", () => {
+	test("a started first phase moved earlier sends the earlier start, and never a later one", () => {
+		const now = Date.UTC(2027, 6, 2, 16, 49);
+		const persistedStart = now - 1000 * 60 * 60 * 24 * 10;
+		const startsAtSent = (startsAt: number) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: [
+					schedulePhase({ startsAt, persistedStartsAt: persistedStart }),
+				],
+				products: paidProducts,
+				features,
+				nowMs: now,
+			})?.phases[0]?.starts_at;
+
+		const earlierStart = persistedStart - 1000 * 60 * 60 * 24 * 20;
+		expect(startsAtSent(earlierStart)).toBe(earlierStart);
+		expect(startsAtSent(persistedStart + 1000 * 60 * 60)).toBe(persistedStart);
+	});
+
+	test("resets later phases at their start by default, without the global toggle", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
@@ -892,7 +930,7 @@ describe("buildCreateScheduleRequestBody", () => {
 			products: defaultProducts,
 			features,
 			nowMs: now,
-			resetBillingCycle: true,
+			resetBillingCycle: false,
 		});
 
 		expect(result).not.toBeNull();
@@ -956,7 +994,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
 	});
 
-	test("does not send stale billing anchors for new schedules with multiple current plans", () => {
+	test("does not send a top-level anchor for new schedules with multiple current plans", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
@@ -978,7 +1016,7 @@ describe("buildCreateScheduleRequestBody", () => {
 
 		expect(result).not.toBeNull();
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
-		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
 	});
 
 	test("sends proration behavior without an anchor reset for multi-plan immediate phases", () => {
@@ -1032,6 +1070,50 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases).toHaveLength(2);
 		expect(result!.phases[0].plans).toHaveLength(2);
 		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("a later phase that keeps its cycle anchor sends no anchor, the rest reset", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				{ ...schedulePhase({ startsAt: now }), keepsCycleAnchor: true },
+				{
+					...schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+					keepsCycleAnchor: true,
+				},
+				schedulePhase({ startsAt: Date.UTC(2027, 4, 1) }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+		});
+
+		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[2].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("the global reset toggle does not reset a later phase that keeps its cycle anchor", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({ startsAt: now }),
+				{
+					...schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+					keepsCycleAnchor: true,
+				},
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "now",
+		});
+
+		expect(result!.billing_cycle_anchor).toBe("now");
 		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
 

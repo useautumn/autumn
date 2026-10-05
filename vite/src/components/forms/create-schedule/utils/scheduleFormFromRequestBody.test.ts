@@ -219,7 +219,7 @@ describe("scheduleFormFromRequestBody", () => {
 		expect(request?.phases[0]?.starts_at).toBe(generatedStartsAt);
 	});
 
-	test("preserves phase-level billing cycle resets", () => {
+	test("maps each later phase's billing cycle reset to its own keep cycle anchor", () => {
 		const form = scheduleFormFromRequestBody({
 			phases: [
 				{ plans: [{ plan_id: "launch" }], starts_at: 1780000000000 },
@@ -228,10 +228,47 @@ describe("scheduleFormFromRequestBody", () => {
 					plans: [{ plan_id: "scale" }],
 					starts_at: 1790000000000,
 				},
+				{ plans: [{ plan_id: "enterprise" }], starts_at: 1800000000000 },
 			],
 		});
 
-		expect(form?.resetBillingCycle).toBe(true);
+		expect(form?.resetBillingCycle).toBe(false);
+		expect(form?.phases?.map((phase) => phase.keepsCycleAnchor)).toEqual([
+			false,
+			false,
+			true,
+		]);
+	});
+
+	test("round trips per-phase billing cycle resets unchanged", () => {
+		const now = 1770000000000;
+		const phases = [
+			{ plans: [{ plan_id: "launch" }], starts_at: now },
+			{ plans: [{ plan_id: "scale" }], starts_at: 1790000000000 },
+			{
+				billing_cycle_anchor: "phase_start",
+				plans: [{ plan_id: "enterprise" }],
+				starts_at: 1800000000000,
+			},
+		];
+		const form = scheduleFormFromRequestBody({ phases });
+
+		const request = buildCreateScheduleRequestBody({
+			...form,
+			customerId: "cus_1",
+			features: [],
+			nowMs: now,
+			phases: form?.phases ?? [],
+			products: ["launch", "scale", "enterprise"].map(
+				(id) => ({ id, items: [] }) as unknown as ProductV2,
+			),
+		});
+		expect(request?.phases.map((phase) => phase.billing_cycle_anchor)).toEqual([
+			undefined,
+			undefined,
+			"phase_start",
+		]);
+		expect(request).not.toHaveProperty("billing_cycle_anchor");
 	});
 
 	test("round trips a custom billing cycle anchor and ends_at", () => {
