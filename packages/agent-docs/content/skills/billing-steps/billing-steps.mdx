@@ -29,7 +29,7 @@ Then decide how it is paid. Follow the user's instructions or the org rules. If 
 - Timing: always set `plan_schedule: "immediate"`. DO NOT omit this, as Autumn will default to schedule a lower priced plan.
 - Proration: `proration_behavior: "none"` — but omit it entirely if the customer has no existing subscription.
 - Checkout URL instead: omit `invoice_mode`, set `redirect_mode: "always"`, with long_lived_checkout: true
-- For `setPlans`: omit `plan_schedule` (the phases set the timing), and in invoice mode use `invoice_mode.finalize: false` with `redirect_mode: "if_required"`.
+- For `setPlans`: omit `plan_schedule` (the phases set the timing), put `proration_behavior` on `phases[0]` instead of the top level, and in invoice mode use `invoice_mode.finalize: false` with `redirect_mode: "if_required"`.
 
 ## 2. Build the request body
 

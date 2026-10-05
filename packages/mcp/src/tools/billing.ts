@@ -3,6 +3,7 @@ import {
 	CreateScheduleParamsV0Schema,
 	createScheduleTimingIssues,
 	SetPlansParamsV0Schema,
+	schedulePhaseBillingIssues,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared/publicApiSchemas";
 import * as z from "zod/v4";
@@ -49,18 +50,31 @@ const createScheduleMcpSchema = CreateScheduleParamsV0Schema.check((ctx) => {
 	}
 });
 
+/** set_plans takes these on phases[0]; at the top level the API would drop them silently. */
+const movedToFirstPhase = (field: string) =>
+	z
+		.never({
+			error: `set_plans has no top-level ${field}. Set phases[0].${field === "billing_behavior" ? "proration_behavior" : field} instead.`,
+		})
+		.optional()
+		.meta({ internal: true });
+
 // `undeclared_plans` is internal on the public API but exposed here, so an
 // agent can keep plans it does not list, as createSchedule does. `extend`
-// drops the parent's object-level checks, so the timing checks are re-applied.
+// drops the parent's object-level checks, so they are re-applied.
 // Typed loosely: its inferred type is too large for the domain exports to serialize.
 const setPlansMcpSchema: z.ZodType = SetPlansParamsV0Schema.extend({
 	undeclared_plans: z.enum(["end", "retain"]).optional().meta({
 		description:
 			"What happens to a current plan in the request's scope that no phase or unscheduled plan lists: 'end' (default) ends it now, 'retain' keeps it running until a listed plan claims its group.",
 	}),
+	billing_behavior: movedToFirstPhase("billing_behavior"),
+	billing_cycle_anchor: movedToFirstPhase("billing_cycle_anchor"),
+	proration_behavior: movedToFirstPhase("proration_behavior"),
 }).check((ctx) => {
 	for (const issue of [
 		...createScheduleTimingIssues(ctx.value.phases),
+		...schedulePhaseBillingIssues({ phases: ctx.value.phases }),
 		...paidScheduleInvoiceModeIssues(ctx.value),
 	]) {
 		ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
