@@ -48,8 +48,14 @@ import {
 	capyEnvFiles,
 	DRAGONFLY_PORT,
 	FAKECLOUD_PORT,
+	KAFKA_PORT,
 	TRIGGER_PORT,
 } from "./serverEnv.ts";
+import {
+	findStaleBookmarks,
+	type PartitionBookmark,
+	parseLogEndOffsets,
+} from "./staleKafkaBookmarks.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -599,6 +605,61 @@ function clearInheritedJwks(directUrl: string): void {
 	log("cleared inherited jwks rows (better-auth re-mints on first boot)");
 }
 
+// The local broker can come back emptier than the branch's bookmarks (lost data dir,
+// pre-flush crash); the worker rightly refuses those, so capy drops them here.
+function clearStaleKafkaBookmarks(directUrl: string): void {
+	const offsets = sh(
+		"bash",
+		[
+			"-c",
+			`. scripts/setup/capy-kafka.sh && "$CAPY_KAFKA_HOME/bin/kafka-get-offsets.sh" --bootstrap-server 127.0.0.1:${KAFKA_PORT}`,
+		],
+		{ cwd: PROJECT_ROOT },
+	);
+	if (offsets.code !== 0) {
+		log(`skipping kafka bookmark check: ${offsets.stderr}`);
+		return;
+	}
+	const rows = sh("psql", [
+		directUrl,
+		"-v",
+		"ON_ERROR_STOP=1",
+		"-Atc",
+		"SELECT topic, partition_id, next_offset, command_next_offset FROM partition_progress",
+	]);
+	if (rows.code !== 0)
+		fatal(`reading partition_progress failed:\n${rows.stderr}`);
+	const bookmarks: PartitionBookmark[] = rows.stdout
+		.split("\n")
+		.filter(Boolean)
+		.map((line) => {
+			const [topic = "", partition, nextOffset, commandNextOffset] =
+				line.split("|");
+			return {
+				topic,
+				partition: Number(partition),
+				nextOffset: BigInt(nextOffset ?? "0"),
+				commandNextOffset: commandNextOffset ? BigInt(commandNextOffset) : null,
+			};
+		});
+	const stale = findStaleBookmarks({
+		bookmarks,
+		logEnds: parseLogEndOffsets({ output: offsets.stdout }),
+	});
+	if (stale.length === 0) return;
+	const keys = stale
+		.map((b) => `('${b.topic.replace(/'/g, "''")}', ${b.partition})`)
+		.join(", ");
+	const res = sh("psql", [directUrl, "-v", "ON_ERROR_STOP=1"], {
+		stdin: `DELETE FROM partition_progress WHERE (topic, partition_id) IN (${keys});\n`,
+	});
+	if (res.code !== 0)
+		fatal(`clearing stale partition_progress failed:\n${res.stderr}`);
+	log(
+		`cleared ${stale.length} partition_progress rows ahead of local kafka: ${stale.map((b) => `${b.topic}[${b.partition}]`).join(", ")}`,
+	);
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -630,6 +691,7 @@ async function main(): Promise<void> {
 	const directUrl = connectionString(nextState.branchName, { pooled: false });
 	applyCommittedMigrations(nextState.branchName, directUrl);
 	loadDbFunctions(nextState.branchName, directUrl);
+	clearStaleKafkaBookmarks(directUrl);
 
 	// Per-machine secrets — mint on first run, then persist. Server can't
 	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
