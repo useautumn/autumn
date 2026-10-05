@@ -11,6 +11,7 @@ import type { HttpWorkerListener } from "../../../../src/http/workerThreads/type
 import { connectHeldReplies } from "../../../../src/init/construction/connectHeldReplies.js";
 import { MutationBatchNotCommittedError } from "../../../../src/processor/writer/writerErrors.js";
 import {
+	identity,
 	partition,
 	residentFixture,
 	trackCommand,
@@ -48,7 +49,7 @@ async function serve({
 	post(command: TrackCommand): Promise<{ status: number; body: unknown }>;
 	postBatch(
 		commands: TrackCommand[],
-	): Promise<{ status: number; body: unknown }>;
+	): Promise<{ status: number; text: string }>;
 	stop(): Promise<void>;
 }> {
 	const runtime = {
@@ -76,8 +77,8 @@ async function serve({
 			port,
 			maxRequestBodySize: 1 << 20,
 			threads: 1,
-			requestRingBytes: 1 << 16,
-			replyRingBytes: 1 << 16,
+			requestRingBytes: 4 << 20,
+			replyRingBytes: 16 << 20,
 			...(inline && {
 				inline: {
 					routes: INLINE_ROUTES,
@@ -88,11 +89,14 @@ async function serve({
 			}),
 		},
 	}).listen();
-	const disconnect = connectHeldReplies({
-		positions: worker.positions,
-		http: listener,
-		renderFailure: heldFailureOf,
-	});
+	// Only a pool with inline routes holds replies, as in the worker's wiring.
+	const disconnect = inline
+		? connectHeldReplies({
+				positions: worker.positions,
+				http: listener,
+				renderFailure: heldFailureOf,
+			})
+		: () => {};
 	async function send(path: string, body: object) {
 		const response = await fetch(`http://127.0.0.1:${port}${path}`, {
 			method: "POST",
@@ -104,8 +108,13 @@ async function serve({
 	function post(command: TrackCommand) {
 		return send("/v1/track", { route, command });
 	}
-	function postBatch(commands: TrackCommand[]) {
-		return send("/v1/track-batch", { route, commands });
+	async function postBatch(commands: TrackCommand[]) {
+		const response = await fetch(`http://127.0.0.1:${port}/v1/track-batch`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ route, commands }),
+		});
+		return { status: response.status, text: await response.text() };
 	}
 	async function stop(): Promise<void> {
 		await listener.stop();
@@ -116,6 +125,43 @@ async function serve({
 
 async function pendingFor<T>(promise: Promise<T>, ms: number) {
 	return Promise.race([promise, Bun.sleep(ms).then(() => "pending" as const)]);
+}
+
+/** Releases appends as they arrive until `answer` settles, refusing the `failAppend`-th (0-based). */
+async function answerReleasing<T>({
+	worker,
+	answer,
+	failAppend,
+}: {
+	worker: Worker;
+	answer: Promise<T>;
+	failAppend?: number;
+}): Promise<T> {
+	let appends = 0;
+	for (;;) {
+		const settled = await pendingFor(answer, 20);
+		if (settled !== "pending") return settled;
+		try {
+			worker.appender.release(
+				appends === failAppend
+					? {
+							fail: new MutationBatchNotCommittedError({
+								cause: new Error("no"),
+							}),
+						}
+					: undefined,
+			);
+			appends++;
+		} catch {}
+	}
+}
+
+/** About 390 kB of batch body, under the inline cap: logged, it passes the writer's 800 kB append budget. */
+function bigBatch(prefix: string): TrackCommand[] {
+	return Array.from({ length: 90 }, (_, index) => ({
+		...trackCommand({ commandId: `${prefix}_${index}` }),
+		properties: { pad: "x".repeat(3_700) },
+	}));
 }
 
 const cleanups: (() => Promise<void> | void)[] = [];
@@ -188,6 +234,76 @@ describe("inline track end to end, through HTTP worker threads", () => {
 			inline.counts.batchesInlined,
 			ordinary.counts.batchesInlined,
 		]).toEqual([1, 0]);
+	});
+
+	test("a ~400 kB batch takes more than one append and answers byte for byte what the ordinary batch route answers", async () => {
+		const inline = await setUp({ inline: true });
+		const ordinary = await setUp({ inline: false });
+		const commands = bigBatch("big");
+		const warmed = inline.worker.appender.batches.length;
+		const inlineAnswer = await answerReleasing({
+			worker: inline.worker,
+			answer: inline.http.postBatch(commands),
+		});
+		const ordinaryAnswer = await answerReleasing({
+			worker: ordinary.worker,
+			answer: ordinary.http.postBatch(commands),
+		});
+		expect(inline.counts.batchesInlined).toBe(1);
+		expect(inline.worker.appender.batches.length - warmed).toBeGreaterThan(1);
+		expect(inlineAnswer.status).toBe(200);
+		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
+	});
+
+	test("a refused second append fails only its commands, as the ordinary batch route does", async () => {
+		const inline = await setUp({ inline: true });
+		const ordinary = await setUp({ inline: false });
+		const commands = bigBatch("half");
+		const warmed = inline.worker.appender.batches.length;
+		const inlineAnswer = await answerReleasing({
+			worker: inline.worker,
+			answer: inline.http.postBatch(commands),
+			failAppend: 1,
+		});
+		const ordinaryAnswer = await answerReleasing({
+			worker: ordinary.worker,
+			answer: ordinary.http.postBatch(commands),
+			failAppend: 1,
+		});
+		const landed = inline.worker.appender.batches[warmed] ?? 0;
+		const { results } = JSON.parse(inlineAnswer.text) as {
+			results: { ok: boolean }[];
+		};
+		expect(landed).toBeGreaterThan(0);
+		expect(results.map(({ ok }) => ok)).toEqual(
+			commands.map((_, index) => index < landed),
+		);
+		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
+	});
+
+	test("a retry after a partly refused batch applies each command once", async () => {
+		const { worker, http } = await setUp({ inline: true });
+		const commands = bigBatch("again");
+		await answerReleasing({
+			worker,
+			answer: http.postBatch(commands),
+			failAppend: 1,
+		});
+		const retried = await answerReleasing({
+			worker,
+			answer: http.postBatch(commands),
+		});
+		const { results } = JSON.parse(retried.text) as {
+			results: { ok: boolean }[];
+		};
+		expect(results.every(({ ok }) => ok)).toBe(true);
+		await worker.processor.drain();
+		const balance = worker.store
+			.readState({ identity })
+			?.customerEntitlements.find(
+				(row) => row.id === "messages_monthly",
+			)?.balance;
+		expect(balance).toBe(100 - 1 - commands.length);
 	});
 
 	test("a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {

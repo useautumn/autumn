@@ -6,13 +6,19 @@ import {
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 } from "@autumn/balance-engine";
-import { enqueueMutation, pendingKeyOf } from "../pendingMutations.js";
+import {
+	enqueueMutation,
+	maxBatchBytesOf,
+	pendingKeyOf,
+	settlementOf,
+} from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type { HeldDecision, HeldSubmission } from "../types/mutation.js";
 import type {
 	HeldBlocker,
 	PartitionWriterScope,
+	PendingMutation,
 } from "../types/partitionWriter.js";
 import {
 	PartitionWriterDuplicateCommandError,
@@ -126,23 +132,58 @@ export function heldBlockerOf({
 	return null;
 }
 
-/** Nested calls join the outer group. */
+/** Whether the group fits one append: past the byte budget its writes split, as the ordinary route's do. */
 export function decideHeldGroup<Result>({
 	scope,
 	decide,
 }: {
 	scope: PartitionWriterScope;
 	decide: () => Result;
-}): Result {
-	const { state } = scope;
-	if (state.heldGroup !== null) return decide();
+}): { result: Result; fitsOneAppend: boolean } {
+	const { state, config } = scope;
+	if (state.heldGroup !== null) throw new Error("Held groups do not nest");
 	state.lastHeldGroup += 1;
-	state.heldGroup = state.lastHeldGroup;
+	const group = state.lastHeldGroup;
+	state.heldGroup = group;
+	state.heldGroupBytes = 0;
 	try {
-		return decide();
+		const result = decide();
+		const fitsOneAppend =
+			state.heldGroupBytes <= maxBatchBytesOf({ limits: config.limits });
+		if (!fitsOneAppend) releaseHeldGroup({ queue: state.queue, group });
+		return { result, fitsOneAppend };
 	} finally {
 		state.heldGroup = null;
 	}
+}
+
+/** A group past the byte budget takes the ordinary batch cut, so its writes span appends. */
+function releaseHeldGroup({
+	queue,
+	group,
+}: {
+	queue: PendingMutation[];
+	group: number;
+}): void {
+	for (let index = queue.length - 1; queue[index]?.heldGroup === group; index--)
+		delete (queue[index] as PendingMutation).heldGroup;
+}
+
+/** Resolves once the log has this held write; rejects with its failure. Only for a write still in flight. */
+export function waitForHeldCommit({
+	scope,
+	identity,
+	commandId,
+}: {
+	scope: PartitionWriterScope;
+	identity: MeteringIdentity;
+	commandId: string;
+}): Promise<void> {
+	const customerKey = meteringIdentityToPartitionKey({ identity });
+	const pending = scope.state.pendingByKey.get(
+		pendingKeyOf({ customerKey, commandId }),
+	);
+	return pending ? settlementOf({ pending }).waitForLog() : Promise.resolve();
 }
 
 function hasSettledWriteInFlight({

@@ -105,10 +105,12 @@ export function processorOn({
 	appender,
 	store,
 	maxBatchSize = 100,
+	maxBatchBytes,
 }: {
 	positions: CommitPositions;
 	appender: CommittedOutcomeAppender;
 	maxBatchSize?: number;
+	maxBatchBytes?: number;
 	store: SqliteStateStore & { storeGate?: () => Promise<void> };
 }) {
 	async function applyDurableMutations(
@@ -133,6 +135,7 @@ export function processorOn({
 			partition,
 			writerLimits: {
 				maxBatchSize,
+				...(maxBatchBytes !== undefined && { maxBatchBytes }),
 				maxPendingCommands: 1_000,
 				maxPendingCommandsPerCustomer: 100,
 			},
@@ -178,13 +181,21 @@ export function openStore(): {
 /** A processor whose customer is resident: one ordinary track has loaded and committed it. */
 export async function residentFixture({
 	maxBatchSize = 100,
+	maxBatchBytes,
 }: {
 	maxBatchSize?: number;
+	maxBatchBytes?: number;
 } = {}) {
 	const positions = createCommitPositions({ config: { partitionCount: 4 } });
 	const appender = gatedAppender();
 	const { store, close } = openStore();
-	const processor = processorOn({ positions, appender, store, maxBatchSize });
+	const processor = processorOn({
+		positions,
+		appender,
+		store,
+		maxBatchSize,
+		maxBatchBytes,
+	});
 	const warm = processor.track({
 		command: trackCommand({ commandId: "warm" }),
 	});
