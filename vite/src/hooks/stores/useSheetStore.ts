@@ -26,6 +26,7 @@ export type SheetType =
 	| "balance-create"
 	| "invoice-detail"
 	| "invoice-reissue"
+	| "invoice-credit-note"
 	| "create-invoice"
 	| "upcoming-invoice-detail"
 	| "sync-stripe"

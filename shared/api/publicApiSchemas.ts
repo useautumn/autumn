@@ -36,6 +36,7 @@ export { CreateEntityParamsV1Schema } from "./entities/crud/createEntityParams.j
 export { PreviewUpdateFeatureResponseSchema } from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 export { CreateInvoiceParamsSchema } from "./others/apiInvoice/createInvoiceParams.js";
 export { FinalizeInvoiceParamsSchema } from "./others/apiInvoice/finalizeInvoiceParams.js";
+export { IssueCreditNoteParamsSchema } from "./others/apiInvoice/issueCreditNoteParams.js";
 export { ListInvoicesParamsSchema } from "./others/apiInvoice/listInvoicesParams.js";
 export { ListInvoiceTemplatesParamsSchema } from "./others/apiInvoice/listInvoiceTemplatesParams.js";
 export { PayInvoiceParamsSchema } from "./others/apiInvoice/payInvoiceParams.js";

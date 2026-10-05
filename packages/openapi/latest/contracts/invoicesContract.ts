@@ -10,6 +10,10 @@ import {
 } from "@api/others/apiInvoice/finalizeInvoiceParams.js";
 import { InsertInvoicesParamsSchema } from "@api/others/apiInvoice/insertInvoicesParams.js";
 import { InsertInvoicesResponseSchema } from "@api/others/apiInvoice/insertInvoicesResponse.js";
+import {
+	IssueCreditNoteParamsSchema,
+	IssueCreditNoteResponseSchema,
+} from "@api/others/apiInvoice/issueCreditNoteParams.js";
 import { ListInvoicesParamsSchema } from "@api/others/apiInvoice/listInvoicesParams.js";
 import {
 	ListInvoiceTemplatesParamsSchema,
@@ -397,6 +401,71 @@ export const createInvoiceContract = oc
 						invoice_credits: { balance: 10, applied: 10, currency: "usd" },
 						amount_due: 19.99,
 						due_date: 1761839877000,
+					},
+				},
+			],
+		}),
+	);
+
+export const issueCreditNoteContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.issueCreditNote",
+		operationId: "issueCreditNote",
+		tags: ["invoices"],
+		description:
+			"Issues a Stripe credit note against an open or paid invoice, for a flat amount or for specific invoice lines. On an open invoice the credit reduces what is still owed. On a paid invoice the credited money goes to the chosen destination: the customer's balance (default), a refund, or a record of money returned outside Stripe. Line amounts are pre-discount and pre-tax, like the invoice's own item amounts. Pass preview to see the credit note without issuing it.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "issueCreditNote",
+		}),
+	})
+	.input(
+		IssueCreditNoteParamsSchema.meta({
+			title: "IssueCreditNoteParams",
+			examples: [
+				{
+					invoice_id: "inv_2b3c4d5e6f7g8h",
+					lines: [{ id: "invoice_li_2b3c4d5e6f7g8h", amount: 20 }],
+					destination: "refund",
+					send_email: true,
+					reason: "product_unsatisfactory",
+					memo: "Partial refund for degraded service",
+				},
+			],
+		}),
+	)
+	.output(
+		IssueCreditNoteResponseSchema.meta({
+			examples: [
+				{
+					credit_note: {
+						id: "cn_1MxvRqLkdIwHu7ixY0xbUcxk",
+						invoice_id: "inv_2b3c4d5e6f7g8h",
+						number: "ABC-0001-CN-01",
+						status: "issued",
+						currency: "usd",
+						subtotal: 20,
+						discount_amount: 0,
+						tax_amount: 0,
+						total: 20,
+						pre_payment_amount: 0,
+						post_payment_amount: 20,
+						refund_amount: 20,
+						credit_amount: 0,
+						out_of_band_amount: 0,
+						reason: "product_unsatisfactory",
+						memo: "Partial refund for degraded service",
+						pdf: "https://pay.stripe.com/credit_notes/acct_123/test_456/pdf",
+						lines: [
+							{
+								invoice_line_item_id: "invoice_li_2b3c4d5e6f7g8h",
+								description: "Pro plan",
+								quantity: null,
+								amount: 20,
+								discount_amount: 0,
+							},
+						],
 					},
 				},
 			],
