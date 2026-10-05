@@ -24,6 +24,25 @@ describe("inline checks", () => {
 		}
 	});
 
+	test("an inline and an ordinary check on the same view and second share one decision", async () => {
+		const f = await residentFixture();
+		try {
+			const ordinary = await f.processor.check({ command: checkCommand() });
+			const inline = decided(
+				f.processor.checkInline({
+					command: checkCommand({ occurredAt: 1_700_000_000_900 }),
+				}),
+			);
+			expect(inline.reply).toBe(ordinary);
+			expect(f.processor.readCounters()).toMatchObject({
+				checkMemoHits: 1,
+				checkMemoMisses: 1,
+			});
+		} finally {
+			f.close();
+		}
+	});
+
 	test("a check reads the customer's held tracks before they commit, as the ordinary check does", async () => {
 		const f = await residentFixture();
 		try {
