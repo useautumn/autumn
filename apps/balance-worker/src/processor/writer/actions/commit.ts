@@ -146,7 +146,7 @@ async function commitOutcomes({
 					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
 				},
 			});
-			if (baseOffset === null) return;
+			if (baseOffset === null || state.recoveryError) return;
 			settleAppended({ scope, batch });
 			queueApply({ scope, batch, baseOffset });
 		}
@@ -246,12 +246,17 @@ async function appendBatch({
 }): Promise<bigint | null> {
 	const { ctx, config, state } = scope;
 	try {
-		const { baseOffset } = await ctx.appender.appendCommitted({
+		const appended = ctx.appender.appendCommitted({
 			topic: config.topic,
 			partition: config.partition,
 			outcomes: batch.map(mutationOf),
 			waits,
 		});
+		state.appending = appended.then(
+			() => undefined,
+			() => undefined,
+		);
+		const { baseOffset } = await appended;
 		if (typeof baseOffset !== "bigint" || baseOffset < 0n) {
 			throw new RangeError("Invalid appended Kafka offset");
 		}

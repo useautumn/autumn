@@ -282,6 +282,32 @@ describe("commit positions", () => {
 		}
 	});
 
+	test("an ack landing after dispose answers no caller as committed: the caller and the sink both hear the write failed", async () => {
+		const positions = createCommitPositions({ config: { partitionCount: 4 } });
+		const failed = failuresOf({ positions });
+		const stalled = Promise.withResolvers<{ baseOffset: bigint }>();
+		const { processor, close } = processorOn({
+			positions,
+			appender: { appendCommitted: () => stalled.promise },
+		});
+		try {
+			const issued = track({ processor, commandId: "a" });
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			processor.dispose();
+			stalled.resolve({ baseOffset: 0n });
+			const [verdict] = await Promise.allSettled([issued]);
+			expect(verdict).toMatchObject({
+				status: "rejected",
+				reason: expect.any(PartitionWriterDisposedError),
+			});
+			expect(failed).toHaveLength(1);
+			expect(failureCount({ positions })).toBe(1);
+		} finally {
+			stalled.resolve({ baseOffset: 0n });
+			close();
+		}
+	});
+
 	test("a second writer cannot issue while the first has unconfirmed writes; once it may, the first is retired and its failures cover only its own", async () => {
 		const positions = createCommitPositions({ config: { partitionCount: 4 } });
 		const failed = failuresOf({ positions });

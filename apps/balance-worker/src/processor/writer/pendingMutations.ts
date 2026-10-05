@@ -35,6 +35,7 @@ export function createPartitionWriterState({
 		draining: false,
 		storeCompletion: Promise.resolve(),
 		unapplied: [],
+		appending: Promise.resolve(),
 		applyTail: Promise.resolve(),
 		applying: false,
 		drainScheduled: false,

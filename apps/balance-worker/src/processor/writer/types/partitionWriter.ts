@@ -183,6 +183,8 @@ export type PartitionWriterState = {
 	storeCompletion: Promise<void>;
 	/** Batches Kafka has but the store has not applied yet, oldest first. */
 	unapplied: UnappliedBatch[];
+	/** Settles once the append in flight, if any, has its answer; never rejects. */
+	appending: Promise<void>;
 	/** Resolves once every batch handed to the store so far has been applied, in log order. */
 	applyTail: Promise<void>;
 	/** Whether a store flush is running; the next one takes everything queued by then. */

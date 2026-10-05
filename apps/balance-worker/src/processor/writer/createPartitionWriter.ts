@@ -13,7 +13,10 @@ import {
 import { evict as evictCustomer } from "./actions/evict.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
-import { createPartitionWriterState } from "./pendingMutations.js";
+import {
+	createPartitionWriterState,
+	rejectAllPending,
+} from "./pendingMutations.js";
 import type { DecidedMutation, MutationSubmission } from "./types/mutation.js";
 import type {
 	PartitionWriter,
@@ -58,9 +61,15 @@ export function createPartitionWriter({
 
 	function dispose(): void {
 		budgetShare?.leave();
-		scope.state.subjects.clear();
-		// A drained writer owes nothing; one disposed mid-flight still owes its issued writes an answer.
-		failAboveSettled({ scope, cause: new PartitionWriterDisposedError() });
+		// Terminal: an ack landing after this settles no caller as committed, so callers and the sink agree.
+		const error = new PartitionWriterDisposedError();
+		scope.state.recoveryError ??= error;
+		rejectAllPending({
+			state: scope.state,
+			batch: scope.state.unapplied.flatMap((unapplied) => unapplied.batch),
+			error,
+		});
+		failAboveSettled({ scope, cause: error });
 		ctx.commitPositions?.closed();
 	}
 
@@ -114,9 +123,10 @@ export function createPartitionWriter({
 		return scope.state.storeCompletion;
 	}
 
-	/** Every batch handed to the store so far, applied or failed; never rejects. */
-	function waitForApplies(): Promise<void> {
-		return scope.state.applyTail.catch(() => undefined);
+	/** The append in flight and every batch handed to the store so far, applied or failed; never rejects. */
+	async function waitForApplies(): Promise<void> {
+		await scope.state.appending;
+		await scope.state.applyTail.catch(() => undefined);
 	}
 
 	return {

@@ -63,11 +63,11 @@ export class PartitionWriterRecoveryRequiredError extends Error {
 	}
 }
 
-/** The partition's writer was disposed (handoff, recovery or shutdown) before the write reached the log. */
+/** The partition's writer was disposed (handoff, recovery or shutdown) before the write's append was confirmed: it may or may not be in the log. */
 export class PartitionWriterDisposedError extends Error {
 	constructor() {
 		super(
-			"The partition's writer was disposed before the write reached the log",
+			"The partition's writer was disposed before the write's append was confirmed; its outcome is unknown",
 		);
 		this.name = "PartitionWriterDisposedError";
 	}
