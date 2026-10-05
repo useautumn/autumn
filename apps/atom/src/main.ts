@@ -1,4 +1,5 @@
 import { getAtomEnv } from "@autumn/env/atom";
+import { markAtomBoot } from "./init/atomHealth.js";
 import { atomProcessRole } from "./init/atomProcessRole.js";
 import { createAtomServer } from "./init/createAtomServer.js";
 import { createAtomSupervisor } from "./init/createAtomSupervisor.js";
@@ -22,8 +23,9 @@ function createAtom(): AtomServer {
 		});
 		return createAtomServer({ ctx: { logger }, config: { env, role } });
 	}
+	const { recordRestarts } = markAtomBoot();
 	return createAtomSupervisor({
-		ctx: { spawnChild: spawnAtomChild, logger },
+		ctx: { spawnChild: spawnAtomChild, logger, recordRestarts },
 		config: {
 			processes: env.ATOM_PROCESSES,
 			restartDelayMs: RESTART_DELAY_MS,

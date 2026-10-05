@@ -497,6 +497,19 @@ describe("the request line", () => {
 		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
 	});
 
+	test("the health probe reports status, boot time and restarts", async () => {
+		const { app } = createDeployedApp();
+
+		const response = await app.request("/health");
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			status: "alive",
+			bootedAt: expect.any(String),
+			restarts: expect.any(Number),
+		});
+	});
+
 	test("the health probe is not logged", async () => {
 		const { app, logged } = createDeployedApp();
 
