@@ -5,9 +5,15 @@ import {
 } from "./anchorQuantityResetCase.js";
 
 const cases: AnchorQuantityVariant[] = [
-	{ name: "increase", old: 300, next: 500 },
-	{ name: "decrease", old: 500, next: 300 },
-	{ name: "deferred-decrease", old: 500, next: 300, deferred: true },
+	{ name: "volume", old: 300, next: 800, volume: true },
+	{ name: "none-increase", old: 300, next: 500, none: true },
+	{
+		name: "none-deferred-decrease",
+		old: 500,
+		next: 300,
+		deferred: true,
+		none: true,
+	},
 ];
 for (const variant of cases) {
 	test.concurrent(`anchor quantities: ${variant.name}`, () =>
