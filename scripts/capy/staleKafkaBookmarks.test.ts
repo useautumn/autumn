@@ -51,14 +51,29 @@ describe("findStaleBookmarks", () => {
 		expect(stale).toHaveLength(1);
 	});
 
-	test("leaves bookmarks for topics the broker does not know", () => {
+	test("flags bookmarks for topics the broker no longer has", () => {
 		const stale = findStaleBookmarks({
 			bookmarks: [
 				{
-					topic: "prod-events",
+					topic: "local-ownership",
 					partition: 0,
-					nextOffset: 99n,
-					commandNextOffset: 99n,
+					nextOffset: 5n,
+					commandNextOffset: null,
+				},
+			],
+			logEnds,
+		});
+		expect(stale).toHaveLength(1);
+	});
+
+	test("keeps a zero bookmark on a missing topic", () => {
+		const stale = findStaleBookmarks({
+			bookmarks: [
+				{
+					topic: "local-ownership",
+					partition: 0,
+					nextOffset: 0n,
+					commandNextOffset: null,
 				},
 			],
 			logEnds,

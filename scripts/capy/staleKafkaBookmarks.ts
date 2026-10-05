@@ -22,8 +22,9 @@ export function parseLogEndOffsets({
 const commandsTopicFor = ({ topic }: { topic: string }) =>
 	topic.replace(/-events$/, "-commands");
 
+// A partition the broker lacks will be recreated empty, so its log end is effectively 0.
 const isAheadOf = ({ offset, end }: { offset: bigint | null; end?: bigint }) =>
-	offset !== null && end !== undefined && offset > end;
+	offset !== null && offset > (end ?? 0n);
 
 /** Bookmarks past their topic's log end: the broker lost records the bookmark already passed. */
 export function findStaleBookmarks({
