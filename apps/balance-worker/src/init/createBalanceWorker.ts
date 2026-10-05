@@ -22,6 +22,7 @@ import {
 	INLINE_ROUTES,
 } from "../http/handlers/inline/createInlineHandler.js";
 import { heldFailureOf } from "../http/handlers/inline/heldFailureOf.js";
+import { createInlineCounters } from "../http/handlers/inline/inlineCounters.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
@@ -156,6 +157,7 @@ export async function createBalanceWorker({
 		});
 		// The producer thread starts with the listener, before any partition runtime asks for a producer.
 		let producers: ThreadedProducers | null = null;
+		let drainThreadHealth: (() => Record<string, number>) | null = null;
 		function partitionProducer(
 			producerConfig: ProducerConfig,
 		): KafkaProducerClient {
@@ -246,8 +248,10 @@ export async function createBalanceWorker({
 			},
 		});
 
+		const inlineCounters = createInlineCounters();
 		const inlineHandler = createInlineHandler({
 			ctx: {
+				counters: inlineCounters,
 				ownership: partitions,
 				partitionResolver: resources.partitionResolver,
 				logger: dependencies.logger,
@@ -314,6 +318,7 @@ export async function createBalanceWorker({
 				},
 			});
 			producers = started.producers;
+			drainThreadHealth = started.drainThreadHealth;
 			dependencies.logger.info(
 				`Balance worker listening at ${address.endpoint} through ${threads.httpWorkers} HTTP worker threads, partition producers on the producer thread; partition admission follows recovery`,
 			);
@@ -372,8 +377,18 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
+		function windowSignals() {
+			return {
+				inline: inlineCounters.drain(),
+				...(drainThreadHealth && { threads: drainThreadHealth() }),
+			};
+		}
 		const stallMonitor = createEventLoopStallMonitor({
-			ctx: { logger: dependencies.logger, recorder: syncSections },
+			ctx: {
+				logger: dependencies.logger,
+				recorder: syncSections,
+				signals: windowSignals,
+			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
 				endpoint: address.endpoint,

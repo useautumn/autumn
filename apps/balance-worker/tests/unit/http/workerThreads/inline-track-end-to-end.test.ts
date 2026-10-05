@@ -8,6 +8,10 @@ import {
 	INLINE_ROUTES,
 } from "../../../../src/http/handlers/inline/createInlineHandler.js";
 import { heldFailureOf } from "../../../../src/http/handlers/inline/heldFailureOf.js";
+import {
+	createInlineCounters,
+	type InlineCounters,
+} from "../../../../src/http/handlers/inline/inlineCounters.js";
 import { createHttpWorkerPool } from "../../../../src/http/workerThreads/createHttpWorkerPool.js";
 import type { HttpWorkerListener } from "../../../../src/http/workerThreads/types/httpWorkerPool.js";
 import { connectHeldReplies } from "../../../../src/init/construction/connectHeldReplies.js";
@@ -48,9 +52,11 @@ async function freePort(): Promise<number> {
 async function serve({
 	worker,
 	inline,
+	counters,
 }: {
 	worker: Worker;
 	inline: boolean;
+	counters: InlineCounters;
 }): Promise<{
 	post(command: TrackCommand): Promise<{ status: number; body: unknown }>;
 	postBatch(
@@ -68,6 +74,7 @@ async function serve({
 		) => run(worker.processor),
 	};
 	const ctx = {
+		counters,
 		ownership: { findRuntime: () => runtime },
 		partitionResolver: { partitionForIdentity: () => partition },
 		logger,
@@ -182,7 +189,7 @@ afterEach(async () => {
 	for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-/** Counts the tracks the processor decided inline, so a test knows which path answered. */
+/** The worker's own inline counters say which path answered, and why one fell back. */
 async function setUp({
 	inline,
 	nextResetAt,
@@ -192,28 +199,10 @@ async function setUp({
 }) {
 	const worker = await residentFixture({ nextResetAt });
 	cleanups.push(() => worker.close());
-	const decideInline = worker.processor.trackInline;
-	const counts = { inlined: 0, batchesInlined: 0, checksInlined: 0 };
-	const decideCheckInline = worker.processor.checkInline;
-	worker.processor.checkInline = (params) => {
-		const reply = decideCheckInline(params);
-		if (reply) counts.checksInlined++;
-		return reply;
-	};
-	const decideBatchInline = worker.processor.trackBatchInline;
-	worker.processor.trackBatchInline = (params) => {
-		const outcome = decideBatchInline(params);
-		if (outcome.kind === "decided") counts.batchesInlined++;
-		return outcome;
-	};
-	worker.processor.trackInline = (params) => {
-		const outcome = decideInline(params);
-		if (outcome) counts.inlined++;
-		return outcome;
-	};
-	const http = await serve({ worker, inline });
+	const counters = createInlineCounters();
+	const http = await serve({ worker, inline, counters });
 	cleanups.push(() => http.stop());
-	return { worker, http, counts };
+	return { worker, http, counters };
 }
 
 describe("inline track end to end, through HTTP worker threads", () => {
@@ -234,7 +223,11 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		const [inlineAnswer, ordinaryAnswer] = await Promise.all([held, answered]);
 		expect(inlineAnswer.status).toBe(200);
 		expect(inlineAnswer).toEqual(ordinaryAnswer);
-		expect([inline.counts.inlined, ordinary.counts.inlined]).toEqual([1, 0]);
+		expect(inline.counters.drain()).toEqual({
+			answered: { track: 1 },
+			fallbacks: {},
+		});
+		expect(ordinary.counters.drain()).toEqual({ answered: {}, fallbacks: {} });
 	});
 
 	test("a track batch is held as one write group and answers exactly what the ordinary batch route answers", async () => {
@@ -255,10 +248,10 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		const [inlineAnswer, ordinaryAnswer] = await Promise.all([held, answered]);
 		expect(inlineAnswer.status).toBe(200);
 		expect(inlineAnswer).toEqual(ordinaryAnswer);
-		expect([
-			inline.counts.batchesInlined,
-			ordinary.counts.batchesInlined,
-		]).toEqual([1, 0]);
+		expect(inline.counters.drain()).toEqual({
+			answered: { trackBatch: 1, trackBatchItems: 3 },
+			fallbacks: {},
+		});
 	});
 
 	test("a ~400 kB batch takes more than one append and answers byte for byte what the ordinary batch route answers", async () => {
@@ -274,7 +267,10 @@ describe("inline track end to end, through HTTP worker threads", () => {
 			worker: ordinary.worker,
 			answer: ordinary.http.postBatch(commands),
 		});
-		expect(inline.counts.batchesInlined).toBe(1);
+		expect(inline.counters.drain().answered).toEqual({
+			trackBatch: 1,
+			trackBatchItems: commands.length,
+		});
 		expect(inline.worker.appender.batches.length - warmed).toBeGreaterThan(1);
 		expect(inlineAnswer.status).toBe(200);
 		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
@@ -341,10 +337,10 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		]);
 		expect(inlineAnswer.status).toBe(200);
 		expect(inlineAnswer.text).toBe(ordinaryAnswer.text);
-		expect([
-			inline.counts.checksInlined,
-			ordinary.counts.checksInlined,
-		]).toEqual([1, 0]);
+		expect(inline.counters.drain()).toEqual({
+			answered: { check: 1 },
+			fallbacks: {},
+		});
 	});
 
 	test("a check past a due reset is answered by the ordinary route on the reset balance, byte for byte", async () => {
@@ -357,7 +353,9 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		const command = checkCommand({ occurredAt: resetAt + 1 });
 		const inlineAnswer = await inline.http.postCheck(command);
 		const ordinaryAnswer = await ordinary.http.postCheck(command);
-		expect(inline.counts.checksInlined).toBe(0);
+		expect(inline.counters.drain().fallbacks).toEqual({
+			"check.reset_due": 1,
+		});
 		expect(
 			(JSON.parse(inlineAnswer.text) as { result: { allowed: boolean } }).result
 				.allowed,
@@ -366,15 +364,18 @@ describe("inline track end to end, through HTTP worker threads", () => {
 	});
 
 	test("a check for a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {
-		const { http, counts } = await setUp({ inline: true });
+		const { http, counters } = await setUp({ inline: true });
 		const cold = { ...identity, customerId: "cus_cold" };
 		const answer = http.postCheck(checkCommand({ who: cold }));
 		expect((await answer).status).toBe(404);
-		expect(counts.checksInlined).toBe(0);
+		expect(counters.drain()).toEqual({
+			answered: {},
+			fallbacks: { "check.not_resident": 1 },
+		});
 	});
 
 	test("a customer that needs the asynchronous ensure is answered through the ordinary route", async () => {
-		const { worker, http, counts } = await setUp({ inline: true });
+		const { worker, http, counters } = await setUp({ inline: true });
 		const answer = http.post(
 			trackCommand({
 				commandId: "cold",
@@ -388,7 +389,10 @@ describe("inline track end to end, through HTTP worker threads", () => {
 		);
 		expect(await answer).toMatchObject({ status: 404 });
 		expect(worker.appender.batches).toEqual([1]);
-		expect(counts.inlined).toBe(0);
+		expect(counters.drain()).toEqual({
+			answered: {},
+			fallbacks: { "track.not_resident": 1 },
+		});
 	});
 
 	test("a refused append reaches the held client as a retryable 503 NOT_READY, never a 500", async () => {

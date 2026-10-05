@@ -34,6 +34,7 @@ export function enqueueSend({
 		sends.flush();
 		return;
 	}
+	scope.state.sendsOverPort += 1;
 	const bytes = new Uint8Array(length);
 	writeSendFrame({ bytes, at: 0, reqId, metaBytes, records });
 	postToProducerThread({

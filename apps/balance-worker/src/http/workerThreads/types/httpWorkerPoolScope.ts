@@ -21,7 +21,17 @@ export type HttpWorkerPoolScope = {
 		flushScheduled: boolean;
 		/** Held replies too big for the ring, waiting here for their commit position. */
 		heldOnDecideThread: HeldOnDecideThread[];
+		health: HttpWorkerHealthCounts;
 	};
+};
+
+/** Counted per window and drained by the summary line. */
+export type HttpWorkerHealthCounts = {
+	/** Times a reply waited for a thread to read its full ring. */
+	ringFullWaits: number;
+	heldReplies: number;
+	/** Failure ranges published to the threads. */
+	failRanges: number;
 };
 
 export type HeldOnDecideThread = {
