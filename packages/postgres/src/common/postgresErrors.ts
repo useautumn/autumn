@@ -16,6 +16,7 @@ const TRANSIENT_SQLSTATE = /^(08|40001|40P01|57014|53300|57P0[123])/;
 export const PostgresSqlState = {
 	UniqueViolation: "23505",
 	ForeignKeyViolation: "23503",
+	InvalidTextRepresentation: "22P02",
 } as const;
 
 const fieldsOf = (

@@ -11,7 +11,25 @@ import type { PostgresClient } from "../../../src/types/postgresClient.js";
 const databaseUrl = process.env.FLUSH_TEST_DATABASE_URL;
 
 const SCHEMA = `
-	DROP TABLE IF EXISTS customer_entitlements, partition_progress, pooled_balance_contributions;
+	DROP TABLE IF EXISTS customer_entitlements, partition_progress, pooled_balance_contributions, subject_snapshots, customers, entities;
+	CREATE TABLE customers (internal_id text PRIMARY KEY);
+	CREATE TABLE entities (internal_id text PRIMARY KEY);
+	CREATE TABLE subject_snapshots (
+		org_id text NOT NULL,
+		env text NOT NULL,
+		customer_id text NOT NULL,
+		entity_id text NOT NULL,
+		internal_customer_id text NOT NULL,
+		internal_entity_id text,
+		partition integer NOT NULL,
+		partition_count integer NOT NULL,
+		state_version integer NOT NULL,
+		state jsonb NOT NULL,
+		baseline_at bigint NOT NULL,
+		written_at bigint NOT NULL,
+		log_offset bigint,
+		PRIMARY KEY (org_id, env, customer_id, entity_id)
+	);
 	CREATE TABLE customer_entitlements (
 		id text PRIMARY KEY,
 		balance numeric NOT NULL DEFAULT 0,
@@ -42,7 +60,11 @@ const SCHEMA = `
 	);`;
 
 const SEED = `
-	TRUNCATE customer_entitlements, partition_progress, pooled_balance_contributions;
+	TRUNCATE customer_entitlements, partition_progress, pooled_balance_contributions, subject_snapshots, customers, entities;
+	INSERT INTO customers (internal_id) VALUES ('cus_int_1'), ('cus_int_2');
+	INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at, log_offset) VALUES
+		('org_1', 'live', 'cus_1', '', 'cus_int_1', 3, 8, 1, '{"old":true}', 0, 0, 30),
+		('org_1', 'live', 'cus_gone', '', 'cus_int_1', 3, 8, 1, '{}', 0, 0, 30);
 	INSERT INTO customer_entitlements (id, balance, entities) VALUES
 		('ce_1', 100, '{"e1":{"id":"e1","balance":10,"adjustment":0}}'),
 		('ce_2', 50, NULL);
@@ -80,6 +102,26 @@ const bookmarks = ({ stale = false, claim = "claim-3" } = {}) => [
 		commandNextOffset: 12n,
 	},
 ];
+
+const snapshotWrites = {
+	upserts: [
+		{
+			orgId: "org_1",
+			env: "live",
+			customerId: "cus_1",
+			entityId: null,
+			internalCustomerId: "cus_int_1",
+			internalEntityId: null,
+			partition: 3,
+			partitionCount: 8,
+			stateVersion: 2,
+			stateJson: '{"balance":95,"note":"it\'s a \\\\ and a \\"quote\\""}',
+			baselineAt: 1000,
+			logOffset: 41n,
+		},
+	],
+	deletes: [{ orgId: "org_1", env: "live", customerId: "cus_gone" }],
+};
 
 const CONFLICT = { error: "FlushBookmarkConflictError", sqlState: null };
 
@@ -205,6 +247,80 @@ const SCENARIOS: Record<string, Scenario> = {
 			bookmarks: bookmarks(),
 		},
 	},
+	"a value Postgres echoes as a rollback marker fails as the transaction does, and nothing lands":
+		{
+			landed: false,
+			outcome: { error: "PostgresError", sqlState: "22P02" },
+			request: {
+				changes: [
+					{
+						op: "insert",
+						table: "customerEntitlements",
+						row: { id: "ce_echo", created_at: "flush_rolled_back:1:1" },
+					},
+				],
+				bookmarks: bookmarks(),
+			},
+		},
+	"snapshot writes land in the same statement as the rows and bookmarks": {
+		landed: true,
+		outcome: {
+			result: {
+				applied: [true],
+				snapshots: {
+					upserted: 1,
+					deleted: [
+						{
+							orgId: "org_1",
+							env: "live",
+							customerId: "cus_gone",
+							entityId: null,
+						},
+					],
+				},
+			},
+		},
+		request: {
+			changes: [increment({ id: "ce_1", delta: -5 })],
+			bookmarks: bookmarks(),
+			snapshots: snapshotWrites,
+		},
+	},
+	"a guard miss rolls snapshot writes back with everything else": {
+		landed: false,
+		outcome: {
+			result: { applied: [false], snapshots: { upserted: 0, deleted: [] } },
+		},
+		request: {
+			changes: [increment({ id: "ce_gone", delta: -1 })],
+			bookmarks: bookmarks(),
+			snapshots: snapshotWrites,
+		},
+	},
+	"snapshot deletes with no bookmark still land alone": {
+		landed: true,
+		outcome: {
+			result: {
+				applied: [],
+				snapshots: {
+					upserted: 0,
+					deleted: [
+						{
+							orgId: "org_1",
+							env: "live",
+							customerId: "cus_gone",
+							entityId: null,
+						},
+					],
+				},
+			},
+		},
+		request: {
+			changes: [],
+			bookmarks: [],
+			snapshots: { upserts: [], deletes: snapshotWrites.deletes },
+		},
+	},
 	"a promote with nothing due still lands": {
 		landed: true,
 		outcome: { result: { applied: [true] } },
@@ -249,6 +365,9 @@ describe.skipIf(!databaseUrl)(
 			),
 			progress: await postgres.client.unsafe(
 				"SELECT topic, partition_id, next_offset::text, command_next_offset::text, owner_epoch::text, owner_fence_offset::text, claim_token FROM partition_progress ORDER BY topic, partition_id",
+			),
+			snapshots: await postgres.client.unsafe(
+				"SELECT org_id, env, customer_id, entity_id, state, log_offset::text FROM subject_snapshots ORDER BY customer_id, entity_id",
 			),
 			contributions: await postgres.client.unsafe(
 				"SELECT id, current_contribution::text, effective_at::text FROM pooled_balance_contributions ORDER BY id",

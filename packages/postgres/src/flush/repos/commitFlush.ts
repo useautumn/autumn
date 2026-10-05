@@ -1,7 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { inlineSqlParams } from "../../common/inlineSqlParams.js";
 import { RowsInvalidError } from "../../common/parseRows.js";
+import {
+	PostgresSqlState,
+	postgresSqlStateOf,
+} from "../../common/postgresErrors.js";
 import { foldSubjectRowChanges } from "../../subjects/repos/applySubjectRowUpdates/foldSubjectRowChanges.js";
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
 import { subjectRowChangeLanded } from "../../subjects/types/subjectRowChange.js";
@@ -175,16 +180,24 @@ const guardMissed = ({
 			}),
 	);
 
-const ROLLBACK_COUNTS = new RegExp(`${FLUSH_ROLLBACK_MARKER}(\\d+):([\\d,]*)`);
-
-/** The counts a single-statement flush aborted with, or null when the error is anything else. */
+/** The counts this flush aborted with: only Postgres's own 22P02 text for this flush's marker, never a value it echoes. */
 const rolledBackOutcomeOf = ({
 	error,
+	nonce,
 }: {
 	error: unknown;
+	nonce: string;
 }): FlushOutcome | null => {
+	const rollback = new RegExp(
+		`^invalid input syntax for type integer: "${FLUSH_ROLLBACK_MARKER}${nonce}:(\\d+):([\\d,]*)"$`,
+	);
 	for (let cause = error; cause instanceof Error; cause = cause.cause) {
-		const match = ROLLBACK_COUNTS.exec(cause.message);
+		if (
+			postgresSqlStateOf({ error: cause }) !==
+			PostgresSqlState.InvalidTextRepresentation
+		)
+			continue;
+		const match = rollback.exec(cause.message);
 		if (!match) continue;
 		return {
 			bookmarks: Number(match[1]),
@@ -218,12 +231,14 @@ const runFlushStatement = async ({
 	folded: readonly SubjectRowChange[];
 	statementTimeoutMs: number;
 }): Promise<FlushOutcome> => {
+	const nonce = randomUUID().replaceAll("-", "");
 	const statement = ctx.timing("flush.sql", () =>
 		inlineSqlParams({
 			statement: singleStatementFlushSql({
 				changes: folded,
 				bookmarks: request.bookmarks,
 				snapshots: request.snapshots,
+				nonce,
 			}),
 		}),
 	);
@@ -238,7 +253,7 @@ const runFlushStatement = async ({
 			),
 		);
 	} catch (error) {
-		const outcome = rolledBackOutcomeOf({ error });
+		const outcome = rolledBackOutcomeOf({ error, nonce });
 		if (!outcome) throw error;
 		assertBookmarksAdvanced({ request, outcome });
 		return outcome;
