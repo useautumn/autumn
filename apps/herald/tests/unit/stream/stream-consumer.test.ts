@@ -229,14 +229,16 @@ const startConsumer = async ({
 		storedFence === undefined
 			? undefined
 			: {
-					execute: async () => [
-						{
-							next_offset: "50",
-							command_next_offset: null,
-							owner_epoch: storedFence?.epoch ?? null,
-							owner_fence_offset: storedFence?.offset ?? null,
-						},
-					],
+					execute: async () => ({
+						rows: [
+							{
+								next_offset: "50",
+								command_next_offset: null,
+								owner_epoch: storedFence?.epoch ?? null,
+								owner_fence_offset: storedFence?.offset ?? null,
+							},
+						],
+					}),
 				};
 	const consumer = createStreamConsumer({
 		ctx: {
@@ -329,7 +331,7 @@ test("stopping herald while the store is down leaves the slice unresolved, so th
 			name: "usage-events",
 			handle: async ({ records }) => {
 				attempts.push(offsetsOf(records));
-				throw Object.assign(new Error("connection reset"), { errno: "08006" });
+				throw new Error("Connection terminated unexpectedly");
 			},
 		},
 	});

@@ -4,6 +4,7 @@ import {
 	insertIsolatingRefusals,
 	type UsageEventsInsertResult,
 } from "../../../src/eventsDb/repos/usageEvents.js";
+import { databaseError } from "../../fixtures/databaseError.js";
 
 const eventOf = ({ id }: { id: string }): EventInsert => ({
 	id,
@@ -21,7 +22,7 @@ const statementRefusing = ({ badIds }: { badIds: string[] }) => {
 	const insertRows = async (rows: EventInsert[]): Promise<string[]> => {
 		statements.push(rows.map((row) => row.id));
 		if (rows.some((row) => badIds.includes(row.id)))
-			throw Object.assign(new Error("value out of range"), { errno: "22003" });
+			throw databaseError({ message: "value out of range", code: "22003" });
 		return rows.map((row) => row.id);
 	};
 	return { insertRows, statements };

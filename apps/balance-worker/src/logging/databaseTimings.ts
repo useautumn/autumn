@@ -58,12 +58,12 @@ function distributionOf({ window }: { window: SampledWindow }): Distribution {
 	};
 }
 
+/** A SQLSTATE or socket code; pg names its own failures (a read timeout, a dropped connection) only in the message. */
 function errorCodeOf({ cause }: { cause: unknown }): string {
-	if (cause instanceof Error) {
-		const code = (cause as { code?: unknown }).code;
-		return typeof code === "string" ? code : cause.name;
-	}
-	return "unknown";
+	if (!(cause instanceof Error)) return "unknown";
+	const code = (cause as { code?: unknown }).code;
+	if (typeof code === "string") return code;
+	return cause.name === "Error" ? cause.message : cause.name;
 }
 
 export function createDatabaseTimings() {

@@ -5,12 +5,6 @@ import {
 	timeQuery,
 } from "../../../src/logging/databaseTimings.js";
 
-function postgresError({ code }: { code: string }) {
-	return Object.assign(new Error("Max lifetime timeout reached after 30m"), {
-		code,
-	});
-}
-
 describe("database timings", () => {
 	test("summarise each query kind, its error codes, and the most queries in flight at once", async () => {
 		const timings = createDatabaseTimings();
@@ -27,10 +21,10 @@ describe("database timings", () => {
 			ctx: { timings },
 			kind: "subject_rows",
 			run: async () => {
-				throw postgresError({ code: "ERR_POSTGRES_LIFETIME_TIMEOUT" });
+				throw new Error("Query read timeout");
 			},
 		});
-		await expect(killed).rejects.toThrow("Max lifetime");
+		await expect(killed).rejects.toThrow("Query read timeout");
 		finishLoad();
 		expect(await load).toBe("rows");
 		await timeQuery({ ctx: { timings }, kind: "flush", run: async () => 1 });
@@ -39,7 +33,7 @@ describe("database timings", () => {
 		expect(summary.inFlightMax).toBe(2);
 		expect(summary.queries.subject_rows).toMatchObject({ count: 2, errors: 1 });
 		expect(summary.queries.flush).toMatchObject({ count: 1, errors: 0 });
-		expect(summary.errorCodes).toEqual({ ERR_POSTGRES_LIFETIME_TIMEOUT: 1 });
+		expect(summary.errorCodes).toEqual({ "Query read timeout": 1 });
 
 		const next = timings.drain();
 		expect(next).toMatchObject({ inFlightMax: 0, queries: {}, errorCodes: {} });

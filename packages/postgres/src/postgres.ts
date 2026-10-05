@@ -4,6 +4,7 @@ export type {
 	CatalogRowIds,
 	CatalogRowsEnvelope,
 } from "./catalog/types/catalogRowsEnvelope.js";
+export { attachPoolErrorHandlers } from "./common/attachPoolErrorHandlers.js";
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
 export {
 	isPostgresConnectionFailure,
@@ -13,7 +14,7 @@ export {
 } from "./common/postgresErrors.js";
 export {
 	createPostgresClient,
-	sqlOptionsOf,
+	poolConfigOf,
 } from "./createPostgresClient.js";
 export { getBillingCycleAnchors } from "./customerProducts/repos/getBillingCycleAnchors.js";
 export { claimCustomerByEmail } from "./customers/repos/claimCustomerByEmail.js";
@@ -70,4 +71,5 @@ export type {
 	PostgresContext,
 	PostgresDb,
 	PostgresExecutor,
+	PostgresLogger,
 } from "./types/postgresClient.js";

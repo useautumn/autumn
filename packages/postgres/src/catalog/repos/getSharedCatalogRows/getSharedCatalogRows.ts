@@ -12,7 +12,7 @@ export const getSharedCatalogRows = async ({
 }: {
 	ctx: PostgresContext;
 }): Promise<CatalogRowsEnvelope> => {
-	const rows = await ctx.db.execute(sharedCatalogRowsSql({ ctx }));
+	const { rows } = await ctx.db.execute(sharedCatalogRowsSql({ ctx }));
 	const parsed = catalogRowsEnvelopeSchema.safeParse(rows[0]?.envelope);
 	if (!parsed.success) {
 		throw new RowsInvalidError({

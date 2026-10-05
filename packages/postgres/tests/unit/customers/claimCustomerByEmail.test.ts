@@ -26,12 +26,15 @@ describe("claimCustomerByEmail", () => {
 
 	test("the claimed row's internal id, or null when there was none to claim", async () => {
 		const claimed = await claimCustomerByEmail({
-			ctx: { ...ctx, db: { execute: async () => [{ internal_id: "ci_1" }] } },
+			ctx: {
+				...ctx,
+				db: { execute: async () => ({ rows: [{ internal_id: "ci_1" }] }) },
+			},
 			customerId: "cus_ada",
 			email: "ada@x.com",
 		});
 		const none = await claimCustomerByEmail({
-			ctx: { ...ctx, db: { execute: async () => [] } },
+			ctx: { ...ctx, db: { execute: async () => ({ rows: [] }) } },
 			customerId: "cus_ada",
 			email: "ada@x.com",
 		});
