@@ -63,6 +63,12 @@ export const BATCH_MIGRATION_CHUNK_FINALIZE_RESERVE_MS =
 	2 * BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS +
 	30_000;
 
+/** Attempts per page transaction when Postgres drops or times out before COMMIT. */
+export const BATCH_MIGRATION_TRANSIENT_DB_ATTEMPTS = 5;
+
+/** First pause between those attempts; doubles each retry (1+2+4+8s). */
+export const BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;
+
 /** Below this much remaining budget a chunk yields `slice_complete` instead
  * of starting a page that could only stall. */
 export const BATCH_MIGRATION_MIN_PAGE_BUDGET_MS = 60_000;

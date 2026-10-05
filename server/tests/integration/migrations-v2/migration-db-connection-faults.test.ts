@@ -39,6 +39,7 @@ withFixture(
 					ctx: { db: drizzle(pool) as unknown as DrizzleCli },
 					queryTimeoutMs: 250,
 					maxAttempts: 2,
+					retryDelayMs: 10,
 				});
 				let attempts = 0;
 				try {
@@ -95,6 +96,7 @@ withFixture(
 					ctx: { db: drizzle(pool) as unknown as DrizzleCli },
 					queryTimeoutMs: 250,
 					maxAttempts: 2,
+					retryDelayMs: 10,
 				});
 				const entered = Promise.withResolvers<void>();
 				const resume = Promise.withResolvers<void>();
@@ -167,6 +169,7 @@ for (const lostCommand of ["BEGIN", "SET"]) {
 				ctx: { db: drizzle(pool) as unknown as DrizzleCli },
 				queryTimeoutMs: 250,
 				maxAttempts: 2,
+				retryDelayMs: 10,
 			});
 			let removed = 0;
 			pool.on("remove", () => {

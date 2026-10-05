@@ -28,15 +28,23 @@ export const runMigrationTransaction = async <T>({
 	signal,
 	queryTimeoutMs,
 	maxAttempts,
+	retryDelayMs,
 	run,
 }: {
 	pool: Pool;
 	signal: AbortSignal;
 	queryTimeoutMs: number;
 	maxAttempts: number;
+	retryDelayMs: number;
 	run: (query: MigrationQuery) => Promise<T>;
 }): Promise<T> => {
 	for (let attempt = 1; ; attempt++) {
+		// Backoff rides out a brief failover; the page abort still cuts it short.
+		if (attempt > 1)
+			await waitForRetry({
+				signal,
+				delayMs: retryDelayMs * 2 ** (attempt - 2),
+			});
 		signal.throwIfAborted();
 		const connection = createOwnedConnection({ pool, signal, queryTimeoutMs });
 		let commitSent = false;
@@ -62,6 +70,26 @@ export const runMigrationTransaction = async <T>({
 		}
 	}
 };
+
+const waitForRetry = ({
+	signal,
+	delayMs,
+}: {
+	signal: AbortSignal;
+	delayMs: number;
+}): Promise<void> =>
+	new Promise((resolve, reject) => {
+		signal.throwIfAborted();
+		const onAbort = () => {
+			clearTimeout(timer);
+			reject(signal.reason);
+		};
+		const timer = setTimeout(() => {
+			signal.removeEventListener("abort", onAbort);
+			resolve();
+		}, delayMs);
+		signal.addEventListener("abort", onAbort, { once: true });
+	});
 
 const isRetryableFailure = (failure: unknown) =>
 	failure instanceof MigrationDbDeadlineError ||

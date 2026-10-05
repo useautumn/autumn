@@ -18,12 +18,14 @@ const withPageDb = async ({
 	poolMax = 2,
 	queryTimeoutMs,
 	maxAttempts,
+	retryDelayMs = 10,
 	run,
 }: {
 	options?: string;
 	poolMax?: number;
 	queryTimeoutMs: number;
-	maxAttempts: number;
+	maxAttempts?: number;
+	retryDelayMs?: number;
 	run: (args: {
 		pool: pg.Pool;
 		page: ReturnType<typeof createMigrationPageDb>;
@@ -38,6 +40,7 @@ const withPageDb = async ({
 		ctx: { db: drizzle(pool) as unknown as DrizzleCli },
 		queryTimeoutMs,
 		maxAttempts,
+		retryDelayMs,
 	});
 	try {
 		await run({ pool, page });
@@ -216,6 +219,51 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 						),
 					);
 				});
+			},
+		});
+		expect(attempts).toBe(1);
+	}, 5000);
+
+	test("default retries back off and ride out several consecutive transient failures", async () => {
+		let attempts = 0;
+		const startedAt = Date.now();
+		await withPageDb({
+			queryTimeoutMs: 100,
+			retryDelayMs: 50,
+			run: async ({ page }) => {
+				await page.db.transaction(async (transaction) => {
+					attempts++;
+					await transaction.execute(
+						sql`select pg_sleep(${attempts <= 3 ? 0.3 : 0})`,
+					);
+				});
+			},
+		});
+		expect(attempts).toBe(4);
+		expect(Date.now() - startedAt).toBeGreaterThanOrEqual(50 + 100 + 200);
+	}, 10000);
+
+	test("a page abort cuts a retry backoff short", async () => {
+		let attempts = 0;
+		await withPageDb({
+			queryTimeoutMs: 100,
+			maxAttempts: 3,
+			retryDelayMs: 5000,
+			run: async ({ page }) => {
+				const work = page.db
+					.transaction(async (transaction) => {
+						attempts++;
+						await transaction.execute(sql`select pg_sleep(0.3)`);
+					})
+					.then(
+						() => null,
+						(error: unknown) => error,
+					);
+				await new Promise((resolve) => setTimeout(resolve, 300));
+				const abortedAt = Date.now();
+				page.abort(new Error("page aborted"));
+				expect(await work).toEqual(new Error("page aborted"));
+				expect(Date.now() - abortedAt).toBeLessThan(500);
 			},
 		});
 		expect(attempts).toBe(1);
