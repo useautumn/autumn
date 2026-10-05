@@ -158,20 +158,23 @@ describe("Kafka owned partition runtime factory", () => {
 					processor.track({ command }),
 				);
 				await commitStarted.promise;
-				expect(commitSummaries.drain()).toEqual({});
+				expect(commitSummaries.drain()).toEqual([]);
 				expect(fixture.store.readState({ identity })?.revision).toBe(0);
 				releaseCommit.resolve();
 				await expect(pending).resolves.toMatchObject({
 					result: { status: "applied" },
 				});
-				expect(commitSummaries.drain()["0"]).toMatchObject({
-					commits: 1,
-					records: 1,
-					notCommitted: 0,
-					unknown: 0,
-					applies: 1,
-					applyFailed: 0,
-				});
+				expect(commitSummaries.drain()).toMatchObject([
+					{
+						partition: 0,
+						commits: 1,
+						records: 1,
+						notCommitted: 0,
+						unknown: 0,
+						applies: 1,
+						applyFailed: 0,
+					},
+				]);
 				expect(fixture.store.readState({ identity })?.revision).toBe(1);
 				await expect(
 					runtime.process((processor) => processor.track({ command })),

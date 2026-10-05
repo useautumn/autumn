@@ -25,7 +25,10 @@ import { heldFailureOf } from "../http/handlers/inline/heldFailureOf.js";
 import { createInlineCounters } from "../http/handlers/inline/inlineCounters.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
-import { commitSummaries } from "../logging/commitSummaries.js";
+import {
+	commitSummaries,
+	logCommitWindows,
+} from "../logging/commitSummaries.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
 	createDatabaseReporter,
@@ -383,10 +386,17 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client`select 1`;
 		}
+		/** Closes the window: its per-partition commit lines go out, and its signals join the summary line. */
 		function windowSignals() {
+			logCommitWindows({
+				ctx: { logger: dependencies.logger, summaries: commitSummaries },
+				config: {
+					deployment: env.BALANCE_WORKER_DEPLOYMENT,
+					endpoint: address.endpoint,
+				},
+			});
 			return {
 				inline: inlineCounters.drain(),
-				commits: commitSummaries.drain(),
 				...drainThreadSignals?.(),
 			};
 		}
