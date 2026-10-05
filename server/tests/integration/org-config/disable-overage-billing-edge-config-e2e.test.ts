@@ -23,6 +23,13 @@ import { FeatureFlagConfigSchema } from "@/internal/misc/featureFlags/featureFla
 const FEATURE_FLAGS_PATH = "/admin/feature-flags-config";
 
 test(`${chalk.yellowBright("disable overage billing: edge config disables Stripe overage and resets")}`, async () => {
+	// Without the in-memory override this writes the shared S3 config the fleet reads.
+	if (!process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64) {
+		throw new Error(
+			"Feature-flag config writes require AUTUMN_EDGE_CONFIG_OVERRIDE_B64 (in-memory edge config)",
+		);
+	}
+
 	const customerId = "disable-overage-edge-config";
 	const pro = products.pro({
 		id: "pro",
