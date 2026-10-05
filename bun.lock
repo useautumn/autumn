@@ -799,7 +799,7 @@
     },
     "packages/gateway": {
       "name": "@useautumn/gateway",
-      "version": "0.1.15",
+      "version": "0.1.16",
       "dependencies": {
         "@ai-sdk/provider": "^4.0.7",
       },
