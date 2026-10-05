@@ -3,24 +3,25 @@ import {
 	customerLicenses,
 	customerProducts,
 	type FullCusProduct,
+	type FullCustomer,
 } from "@autumn/shared";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseRemainingChanges } from "@/internal/billing/v2/actions/releaseLicense/compute/computeCustomerLicenseRemainingChanges";
 import { computeEntityCustomerProductUpdates } from "@/internal/billing/v2/actions/releaseLicense/compute/computeEntityCustomerProductUpdates";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo";
+import { listFullCustomerProductsByIds } from "@/internal/licenses/repos/listFullCustomerProductsByIds";
 
 /** Entities stay with the source: seats on a moving pool are released, then every leftover seat row is expired so the destination never reuses them. */
 export const releaseTransferredLicenseSeats = async ({
 	ctx,
-	sourceCustomerId,
-	sourceInternalId,
+	source,
 	cusProductIds,
 }: {
 	ctx: AutumnContext;
-	sourceCustomerId: string;
-	sourceInternalId: string;
+	source: FullCustomer;
 	cusProductIds: string[];
 }) => {
 	const pools = await ctx.db
@@ -29,6 +30,8 @@ export const releaseTransferredLicenseSeats = async ({
 		.where(inArray(customerLicenses.parent_customer_product_id, cusProductIds));
 	if (pools.length === 0) return;
 
+	const sourceCustomerId = source.id ?? source.internal_id;
+	const sourceInternalId = source.internal_id;
 	const linkIds = pools.map((pool) => pool.linkId);
 	const assignments = await ctx.db
 		.select()
@@ -49,10 +52,25 @@ export const releaseTransferredLicenseSeats = async ({
 		db: ctx.db,
 		customerLicenseLinkIds: linkIds,
 	});
-	await licenseAssignmentRepo.expireUnusedAssignmentsByIds({
-		db: ctx.db,
-		customerProductIds: unused.map((assignment) => assignment.id),
-		endedAt: Date.now(),
+	const endedAt = Date.now();
+	const expiredSeats = await licenseAssignmentRepo.expireUnusedAssignmentsByIds(
+		{
+			db: ctx.db,
+			customerProductIds: unused.map((assignment) => assignment.id),
+			endedAt,
+		},
+	);
+	if (expiredSeats.length === 0) return;
+
+	await applyPooledBalanceCustomerProductTransitions({
+		ctx,
+		fullCustomer: source,
+		outgoingCustomerProducts: await listFullCustomerProductsByIds({
+			db: ctx.db,
+			customerProductIds: expiredSeats.map((seat) => seat.id),
+		}),
+		incomingCustomerProducts: [],
+		now: endedAt,
 	});
 };
 

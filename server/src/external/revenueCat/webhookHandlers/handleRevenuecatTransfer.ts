@@ -163,8 +163,7 @@ const transferProducts = async ({
 	});
 	await releaseTransferredLicenseSeats({
 		ctx,
-		sourceCustomerId: publicId(source),
-		sourceInternalId: source.internal_id,
+		source,
 		cusProductIds,
 	});
 	await moveCusProductsToCustomer({
