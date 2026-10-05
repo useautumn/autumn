@@ -3,6 +3,7 @@ import {
 	ms,
 	type PhaseProrationBehavior,
 	type SetPlansParamsV0Input,
+	type SetPlansPreviewResponse,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
@@ -11,15 +12,20 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { Decimal } from "decimal.js";
 import { CusService } from "@/internal/customers/CusService";
 import { getCustomerSchedulesByScope } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 
 const LATER_PHASE_OFFSET_DAYS = 10;
+const CENTS_PER_UNIT = 100;
+const MS_PER_SECOND = 1000;
 
 export const setupPhaseProrationScenario = async ({
 	customerId,
+	proAlreadyActive = false,
 }: {
 	customerId: string;
+	proAlreadyActive?: boolean;
 }) => {
 	const pro = products.base({
 		id: `${customerId}-pro`,
@@ -47,7 +53,7 @@ export const setupPhaseProrationScenario = async ({
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, premium, addOn] }),
 		],
-		actions: [],
+		actions: proAlreadyActive ? [s.billing.attach({ productId: pro.id })] : [],
 	});
 
 	return {
@@ -93,14 +99,12 @@ export const twoPhaseParams = ({
 const sameSecond = (first: number, second: number) =>
 	truncateMsToSecondPrecision(first) === truncateMsToSecondPrecision(second);
 
-export const stripeSchedulePhaseStartingAt = async ({
+const activeSubscriptionScheduleId = async ({
 	ctx,
 	customerId,
-	startsAt,
 }: {
 	ctx: TestContext;
 	customerId: string;
-	startsAt: number;
 }) => {
 	const subscription = await findStripeSubscriptionByStatus({
 		ctx,
@@ -112,8 +116,21 @@ export const stripeSchedulePhaseStartingAt = async ({
 			? subscription.schedule
 			: subscription.schedule?.id;
 	if (!scheduleId) throw new Error(`${customerId} has no Stripe schedule`);
+	return scheduleId;
+};
 
-	const schedule = await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+export const stripeSchedulePhaseStartingAt = async ({
+	ctx,
+	customerId,
+	startsAt,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	startsAt: number;
+}) => {
+	const scheduleId = await activeSubscriptionScheduleId({ ctx, customerId });
+	const schedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
 	const phase = schedule.phases.find((candidate) =>
 		sameSecond(candidate.start_date * 1000, startsAt),
 	);
@@ -185,3 +202,36 @@ export const advancePastPhaseStartAndGetInvoices = async ({
 
 export const invoicesTotal = (invoices: { total: number }[]) =>
 	invoices.reduce((total, invoice) => total + invoice.total, 0);
+
+/** The previewed next_cycle is the invoice Stripe will actually raise next for the customer's schedule, to the cent. */
+export const expectPreviewMatchesStripeUpcomingInvoice = async ({
+	ctx,
+	customerId,
+	nextCycle,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	nextCycle: SetPlansPreviewResponse["next_cycle"];
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const upcomingInvoice = await ctx.stripeCli.invoices.createPreview({
+		customer: subscription.customer as string,
+		schedule: await activeSubscriptionScheduleId({ ctx, customerId }),
+	});
+	const upcomingInvoiceStartsAt =
+		Math.min(...upcomingInvoice.lines.data.map(({ period }) => period.start)) *
+		MS_PER_SECOND;
+
+	expect({
+		startsAt: nextCycle && truncateMsToSecondPrecision(nextCycle.starts_at),
+		total:
+			nextCycle && new Decimal(nextCycle.total).toDecimalPlaces(2).toNumber(),
+	}).toEqual({
+		startsAt: upcomingInvoiceStartsAt,
+		total: new Decimal(upcomingInvoice.total).div(CENTS_PER_UNIT).toNumber(),
+	});
+};

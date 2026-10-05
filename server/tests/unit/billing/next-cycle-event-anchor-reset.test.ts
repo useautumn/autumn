@@ -44,6 +44,7 @@ test("scheduled start carries its second-normalized phase anchor reset", () => {
 		startsAtMs,
 		renewalBoundaryMs: startsAtMs + 86_400_000,
 		smallestInterval: { interval: BillingInterval.Month, intervalCount: 1 },
+		phaseProrations: [],
 	});
 
 	expect(event).toMatchObject({
@@ -77,6 +78,7 @@ test("scheduled switch on the renewal boundary classifies as a scheduled change"
 		startsAtMs: boundaryMs,
 		renewalBoundaryMs: boundaryMs,
 		smallestInterval: { interval: BillingInterval.Month, intervalCount: 1 },
+		phaseProrations: [],
 	});
 
 	expect(event).toMatchObject({
