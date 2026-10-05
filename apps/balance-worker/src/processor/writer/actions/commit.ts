@@ -146,7 +146,7 @@ async function commitOutcomes({
 					storeWaitMs: lingerStartedAt - storeWaitStartedAt,
 				},
 			});
-			if (baseOffset === null) return;
+			if (baseOffset === null || state.recoveryError) return;
 			settleAppended({ scope, batch });
 			queueApply({ scope, batch, baseOffset });
 		}
@@ -246,12 +246,17 @@ async function appendBatch({
 }): Promise<bigint | null> {
 	const { ctx, config, state } = scope;
 	try {
-		const { baseOffset } = await ctx.appender.appendCommitted({
+		const appended = ctx.appender.appendCommitted({
 			topic: config.topic,
 			partition: config.partition,
 			outcomes: batch.map(mutationOf),
 			waits,
 		});
+		state.appending = appended.then(
+			() => undefined,
+			() => undefined,
+		);
+		const { baseOffset } = await appended;
 		if (typeof baseOffset !== "bigint" || baseOffset < 0n) {
 			throw new RangeError("Invalid appended Kafka offset");
 		}
@@ -264,11 +269,9 @@ async function appendBatch({
 			cause instanceof MutationBatchNotCommittedError &&
 			state.unapplied.length === 0;
 		if (provenUncommitted && !holdsQueuedCommand({ state, batch })) {
-			rejectAllPending({
-				state,
-				batch,
-				error: new MutationBatchAppendError({ cause }),
-			});
+			const error = new MutationBatchAppendError({ cause });
+			rejectAllPending({ state, batch, error });
+			failAboveSettled({ scope, cause: error });
 			state.storeCompletion = Promise.resolve();
 		} else {
 			enterRecovery({ scope, batch, cause });
@@ -314,6 +317,29 @@ function settleAppended({
 		if (pending.durability !== "log") continue;
 		settlePending({ scope, pending });
 	}
+	// Bookkeeping first, position last: a reply released by it may bring the next command at once.
+	const last = batch.at(-1);
+	if (!last || last.seq <= scope.state.settledSeq) return;
+	scope.state.settledSeq = last.seq;
+	scope.ctx.commitPositions?.committed({ seq: last.seq });
+}
+
+/** Nothing this writer issued past what it already settled will reach the log. */
+export function failAboveSettled({
+	scope,
+	cause,
+}: {
+	scope: PartitionWriterScope;
+	cause: unknown;
+}): void {
+	const { state } = scope;
+	if (state.lastSeq <= state.settledSeq) return;
+	scope.ctx.commitPositions?.failedAbove({
+		seq: state.settledSeq,
+		lastSeq: state.lastSeq,
+		cause,
+	});
+	state.settledSeq = state.lastSeq;
 }
 
 /** Remember the command for dedup, unpin the subjects, answer the caller. */
@@ -407,6 +433,7 @@ function enterRecovery({
 	for (const unapplied of scope.state.unapplied)
 		for (const pending of unapplied.batch) owed.add(pending);
 	rejectAllPending({ state: scope.state, batch: [...owed], error });
+	failAboveSettled({ scope, cause: error });
 }
 
 // Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.

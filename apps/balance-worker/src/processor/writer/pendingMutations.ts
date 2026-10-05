@@ -35,6 +35,7 @@ export function createPartitionWriterState({
 		draining: false,
 		storeCompletion: Promise.resolve(),
 		unapplied: [],
+		appending: Promise.resolve(),
 		applyTail: Promise.resolve(),
 		applying: false,
 		drainScheduled: false,
@@ -44,6 +45,8 @@ export function createPartitionWriterState({
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
+		lastSeq: 0,
+		settledSeq: 0,
 	};
 }
 
@@ -212,8 +215,11 @@ export function enqueueMutation({
 	const projectedStates =
 		explicitProjectedStates ??
 		(nextState ? projectedStatesOf({ state: nextState }) : []);
+	const seq = scope.ctx.commitPositions?.nextSeq() ?? state.lastSeq + 1;
+	state.lastSeq = seq;
 	const pending: PendingMutation = {
 		pendingKey,
+		seq,
 		customerKey,
 		projectedSubjectKeys: projectedStates.map((projected) =>
 			meteringIdentityToSubjectKey({ identity: projected.identity }),
