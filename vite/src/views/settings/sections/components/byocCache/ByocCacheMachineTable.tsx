@@ -37,7 +37,7 @@ export const ByocCacheMachineTable = ({
 		const machine = findByocCacheMachineByInstanceType({
 			instanceType: String(instanceType),
 		});
-		if (machine) onSelect(machine);
+		if (machine?.available) onSelect(machine);
 	};
 
 	return (
@@ -53,22 +53,32 @@ export const ByocCacheMachineTable = ({
 					{BYOC_CACHE_MACHINES.map((machine) => {
 						const isSelected = machine.instanceType === selected.instanceType;
 						const isCurrent = machine.instanceType === current?.instanceType;
+						const isSelectable = machine.available && !disabled;
 						return (
 							<TableRow
 								key={machine.instanceType}
 								className={cn(
 									SETTINGS_ROW_CLASS,
-									"cursor-pointer",
+									isSelectable ? "cursor-pointer" : "cursor-not-allowed",
 									isSelected && "bg-hover-primary",
+									!machine.available && "opacity-60",
 								)}
-								onClick={() => !disabled && onSelect(machine)}
+								onClick={() => isSelectable && onSelect(machine)}
 							>
 								<TableCell className="pl-4">
 									<div className="flex items-center gap-3">
-										<RadioGroupItem value={machine.instanceType} />
+										<RadioGroupItem
+											value={machine.instanceType}
+											disabled={!machine.available}
+										/>
 										<span className="font-medium text-foreground">
 											{byocCacheMachineLabel(machine)}
 										</span>
+										{machine.unavailableReason && (
+											<span className="text-xs text-subtle">
+												{machine.unavailableReason}
+											</span>
+										)}
 										{isCurrent && (
 											<span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-tertiary-foreground">
 												Current
@@ -95,7 +105,7 @@ export const ByocCacheMachineTable = ({
 			</RadioGroup>
 			<p className="text-xs text-subtle">
 				Estimated AWS on-demand price for the instance, billed by AWS to your
-				account.
+				account, plus about $9 a month for the deployment.
 			</p>
 		</div>
 	);

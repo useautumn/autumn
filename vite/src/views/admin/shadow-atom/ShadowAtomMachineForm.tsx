@@ -1,4 +1,9 @@
-import { BYOC_CACHE_MACHINES } from "@autumn/shared";
+import {
+	BYOC_CACHE_MACHINES,
+	type ByocCacheMachine,
+	DEFAULT_BYOC_CACHE_MACHINE,
+	findByocCacheMachine,
+} from "@autumn/shared";
 import {
 	Button,
 	Select,
@@ -9,18 +14,22 @@ import {
 	SelectValue,
 } from "@autumn/ui";
 import { useForm } from "@tanstack/react-form";
+import { byocCacheMachineSummary } from "@/views/settings/sections/components/byocCache/byocCacheMachineDisplay";
 import type { ShadowAtomMachine } from "./shadowAtomTypes";
 
-const machineKey = ({ cpu, memory }: ShadowAtomMachine) => `${cpu}x${memory}`;
-
 const MACHINE_ITEMS = BYOC_CACHE_MACHINES.map((machine) => ({
-	value: machineKey(machine),
-	label: `${machine.cpu} vCPU · ${machine.memory} GiB (${machine.instanceType})`,
+	value: machine.instanceType,
+	label: byocCacheMachineSummary(machine),
 }));
 
-const keyToMachine = (key: string): ShadowAtomMachine =>
-	BYOC_CACHE_MACHINES.find((machine) => machineKey(machine) === key) ??
-	BYOC_CACHE_MACHINES[0];
+const keyToMachine = (instanceType: string): ByocCacheMachine =>
+	BYOC_CACHE_MACHINES.find(
+		(machine) => machine.instanceType === instanceType,
+	) ?? DEFAULT_BYOC_CACHE_MACHINE;
+
+/** The machine the Atom runs on when it is one we offer; otherwise the default tier. */
+const initialMachine = (current: ShadowAtomMachine | null): ByocCacheMachine =>
+	(current && findByocCacheMachine(current)) ?? DEFAULT_BYOC_CACHE_MACHINE;
 
 /** Pick one of the machines a customer's Atom can run on, then submit. */
 export const ShadowAtomMachineForm = ({
@@ -37,8 +46,11 @@ export const ShadowAtomMachineForm = ({
 	disabled: boolean;
 }) => {
 	const form = useForm({
-		defaultValues: { machine: machineKey(current ?? BYOC_CACHE_MACHINES[0]) },
-		onSubmit: ({ value }) => onSubmit(keyToMachine(value.machine)),
+		defaultValues: { machine: initialMachine(current).instanceType as string },
+		onSubmit: ({ value }) => {
+			const { cpu, memory } = keyToMachine(value.machine);
+			onSubmit({ cpu, memory });
+		},
 	});
 
 	return (
@@ -56,14 +68,25 @@ export const ShadowAtomMachineForm = ({
 						items={MACHINE_ITEMS}
 						onValueChange={(value) => field.handleChange(String(value))}
 					>
-						<SelectTrigger className="h-8 w-64 text-xs" aria-label="Machine">
+						<SelectTrigger className="h-8 w-72 text-xs" aria-label="Machine">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
 							<SelectGroup>
-								{MACHINE_ITEMS.map((item) => (
-									<SelectItem key={item.value} value={item.value}>
-										{item.label}
+								{BYOC_CACHE_MACHINES.map((machine) => (
+									<SelectItem
+										key={machine.instanceType}
+										value={machine.instanceType}
+										disabled={!machine.available}
+									>
+										<span className="flex flex-col">
+											{byocCacheMachineSummary(machine)}
+											{machine.unavailableReason && (
+												<span className="text-[11px] text-subtle">
+													{machine.unavailableReason}
+												</span>
+											)}
+										</span>
 									</SelectItem>
 								))}
 							</SelectGroup>

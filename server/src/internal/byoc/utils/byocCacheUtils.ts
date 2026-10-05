@@ -69,7 +69,7 @@ export const shadowAtomCacheNames = () => ({
 /** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
 export const CACHE_LOCK_TTL_MS = 30_000;
 
-/** The request schemas only let offered pairs through, so a miss here is a contract bug. */
+/** The request schemas only let available pairs through; the admin routes rely on these 400s. */
 export const resourcesToMachine = ({
 	cpu,
 	memory,
@@ -78,12 +78,19 @@ export const resourcesToMachine = ({
 	memory: number;
 }): ByocCacheMachine => {
 	const machine = findByocCacheMachine({ cpu, memory });
-	if (machine) return machine;
-	throw new RecaseError({
-		message: `No cache machine has ${cpu} vCPU / ${memory} GiB`,
-		code: ErrCode.InvalidRequest,
-		statusCode: 400,
-	});
+	if (!machine)
+		throw new RecaseError({
+			message: `No cache machine has ${cpu} vCPU / ${memory} GiB`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	if (!machine.available)
+		throw new RecaseError({
+			message: `${machine.tier} (${cpu} vCPU / ${memory} GiB) is not available yet: ${machine.unavailableReason}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	return machine;
 };
 
 export const cacheDeploymentToMachine = ({

@@ -26,7 +26,7 @@ const runningDeployment: AlienDeployment = {
 		},
 	},
 	stackSettings: {
-		compute: { pools: { stateful: { machine: "t4g.micro" } } },
+		compute: { pools: { stateful: { machine: "m7g.xlarge" } } },
 	},
 };
 
@@ -136,7 +136,7 @@ const lastWritten = () => write.mock.calls.at(-1)?.[0].config;
 test("staff create the shadow Atom with the customer's alien stack, in multi-tenant mode, under a fixed admin group", async () => {
 	const response = await send({
 		method: "POST",
-		body: { admin_token_hash: "admin_hash", cpu: 4, memory: 8 },
+		body: { admin_token_hash: "admin_hash", cpu: 8, memory: 16 },
 	});
 
 	expect(response.status).toBe(200);
@@ -148,7 +148,7 @@ test("staff create the shadow Atom with the customer's alien stack, in multi-ten
 	expect(started?.externalId).toEndWith("autumn-internal-shadow-atom");
 	expect(started?.label).toEndWith("autumn-internal-shadow-atom");
 	expect(started?.pools).toEqual({
-		stateful: { machine: "c7g.xlarge", machines: 1 },
+		stateful: { machine: "c7g.2xlarge", machines: 1 },
 	});
 	const variables = Object.fromEntries(
 		(started?.environmentVariables ?? []).map(({ name, value }) => [
@@ -175,6 +175,21 @@ test("a machine that is not offered is refused before alien is called", async ()
 	expect(write).not.toHaveBeenCalled();
 });
 
+test("a listed tier the stack cannot run on yet is refused on create and resize", async () => {
+	stored = configWith({ deploymentGroupId: "dg_1" });
+	deployment = runningDeployment;
+
+	const created = await send({
+		method: "POST",
+		body: { admin_token_hash: "admin_hash", cpu: 4, memory: 8 },
+	});
+	const resized = await send({ method: "PATCH", body: { cpu: 2, memory: 4 } });
+
+	expect([created.status, resized.status]).toEqual([400, 400]);
+	expect(calls.started).toHaveLength(0);
+	expect(calls.resized).toHaveLength(0);
+});
+
 test("with no deployment, staff read null and alien is never asked", async () => {
 	const response = await send({ method: "GET" });
 
@@ -194,7 +209,7 @@ test("reading a running deployment saves its endpoint into the config, once", as
 			deployment_group_id: "dg_1",
 			status: "ready",
 			endpoint_url: ENDPOINT,
-			machine: { cpu: 2, memory: 1 },
+			machine: null,
 		},
 	});
 	expect(lastWritten()?.endpointUrl).toBe(ENDPOINT);
@@ -239,7 +254,10 @@ test("resize moves the running Atom's pool to the new machine", async () => {
 test("resize of an Atom still awaiting setup is a 409", async () => {
 	stored = configWith({ deploymentGroupId: "dg_1" });
 
-	const response = await send({ method: "PATCH", body: { cpu: 2, memory: 4 } });
+	const response = await send({
+		method: "PATCH",
+		body: { cpu: 8, memory: 16 },
+	});
 
 	expect(response.status).toBe(409);
 	expect(calls.resized).toHaveLength(0);
@@ -255,7 +273,10 @@ test("an endpoint alien no longer reports is cleared, so the shadow check stops"
 });
 
 test("resize with nothing deployed is a 409", async () => {
-	const response = await send({ method: "PATCH", body: { cpu: 2, memory: 4 } });
+	const response = await send({
+		method: "PATCH",
+		body: { cpu: 8, memory: 16 },
+	});
 
 	expect(response.status).toBe(409);
 	expect(calls.resized).toHaveLength(0);
@@ -312,7 +333,7 @@ test("a server with no alien manager answers 503", async () => {
 
 	const response = await send({
 		method: "POST",
-		body: { admin_token_hash: "h", cpu: 2, memory: 1 },
+		body: { admin_token_hash: "h", cpu: 8, memory: 16 },
 	});
 
 	expect(response.status).toBe(503);

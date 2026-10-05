@@ -42,12 +42,15 @@ export const ApiByocCacheSchema = z.object({
 		.describe("Memory of the cache's machine in GiB, once it is running."),
 });
 
-const OFFERED_MACHINES = BYOC_CACHE_MACHINES.map(
-	({ cpu, memory }) => `${cpu} vCPU / ${memory} GiB`,
-).join(", ");
+const OFFERED_MACHINES = BYOC_CACHE_MACHINES.filter(
+	({ available }) => available,
+)
+	.map(({ cpu, memory }) => `${cpu} vCPU / ${memory} GiB`)
+	.join(", ");
 
+/** A listed machine the stack cannot run on yet is refused, so its setup never fails at preflight. */
 const isOfferedMachine = ({ cpu, memory }: { cpu: number; memory: number }) =>
-	findByocCacheMachine({ cpu, memory }) !== undefined;
+	findByocCacheMachine({ cpu, memory })?.available === true;
 
 /** Both omitted takes the default machine; a lone `cpu` or `memory` names no machine. */
 const isDefaultOrOfferedMachine = ({

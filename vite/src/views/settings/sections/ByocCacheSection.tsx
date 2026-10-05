@@ -85,9 +85,12 @@ export const ByocCacheSection = () => {
 						<ByocCacheActions
 							cache={cache}
 							setupUrl={setupUrl}
-							onGetSetupLink={() =>
-								deploy(cacheToMachine(cache) ?? DEFAULT_BYOC_CACHE_MACHINE)
-							}
+							onGetSetupLink={() => {
+								const machine = cacheToMachine(cache);
+								deploy(
+									machine?.available ? machine : DEFAULT_BYOC_CACHE_MACHINE,
+								);
+							}}
 							isGettingSetupLink={create.isPending}
 							onDelete={() => setDeleteOpen(true)}
 						/>
