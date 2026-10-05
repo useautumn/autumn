@@ -10,6 +10,8 @@ export type AtomSupervisorContext = {
 	/** Starts the Atom server as its own process; `index` only tells them apart in logs. */
 	spawnChild(params: { index: number }): AtomChild;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
+	/** Told each time a dead child is replaced, with the total since boot. */
+	recordRestarts?(params: { restarts: number }): void;
 };
 
 export type AtomSupervisorConfig = {
