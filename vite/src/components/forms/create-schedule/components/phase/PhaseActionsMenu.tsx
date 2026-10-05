@@ -3,16 +3,23 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	DotsThreeIcon,
+	ReceiptIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
+import { LATER_PHASE_PRORATION_OPTIONS } from "@/components/forms/shared/utils/prorationBehaviorOptions";
 import { isImmediatePhase } from "../../utils/schedulePhaseTiming";
 
 export function PhaseActionsMenu({
@@ -25,8 +32,11 @@ export function PhaseActionsMenu({
 	const { form, formValues, handleRemovePhase } = useCustomerStateContext();
 	if (isImmediatePhase({ phaseIndex }) || hasStarted) return null;
 
-	const keepsCycleAnchor =
-		formValues.phases[phaseIndex]?.keepsCycleAnchor ?? false;
+	const phase = formValues.phases[phaseIndex];
+	const keepsCycleAnchor = phase?.keepsCycleAnchor ?? false;
+	const prorationBehavior =
+		phase?.prorationBehavior ??
+		(keepsCycleAnchor ? "prorate_immediately" : "none");
 
 	return (
 		<DropdownMenu>
@@ -53,6 +63,34 @@ export function PhaseActionsMenu({
 					<CalendarBlankIcon className="size-4" />
 					Keep cycle anchor
 				</DropdownMenuCheckboxItem>
+				<DropdownMenuSub>
+					<DropdownMenuSubTrigger>
+						<ReceiptIcon className="size-4" />
+						Proration
+					</DropdownMenuSubTrigger>
+					<DropdownMenuSubContent>
+						<DropdownMenuRadioGroup
+							value={prorationBehavior}
+							onValueChange={(value) =>
+								form.setFieldValue(
+									`phases[${phaseIndex}].prorationBehavior`,
+									LATER_PHASE_PRORATION_OPTIONS.find(
+										(option) => option.value === value,
+									)?.value ?? prorationBehavior,
+								)
+							}
+						>
+							{LATER_PHASE_PRORATION_OPTIONS.map(
+								({ value, label, icon: Icon }) => (
+									<DropdownMenuRadioItem key={value} value={value}>
+										<Icon className="size-4" />
+										{label}
+									</DropdownMenuRadioItem>
+								),
+							)}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuSubContent>
+				</DropdownMenuSub>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					variant="destructive"

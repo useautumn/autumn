@@ -46215,11 +46215,26 @@ paths:
                               - plan_id
                           description: Plans to materialize for this phase.
                         billing_cycle_anchor:
+                          anyOf:
+                            - const: phase_start
+                            - type: integer
+                              minimum: 0
+                              maximum: 9007199254740991
+                          description: Pass 'phase_start' to reset the billing cycle when this phase
+                            starts. On the first phase, a future timestamp in
+                            epoch milliseconds anchors the cycle on that date
+                            instead.
+                        proration_behavior:
                           enum:
-                            - phase_start
+                            - prorate_immediately
+                            - none
+                            - bill_difference
                           type: string
-                          description: Pass 'phase_start' to reset the Stripe billing cycle anchor when
-                            this phase starts.
+                          description: How the change when this phase starts is billed.
+                            'prorate_immediately' charges or credits the
+                            prorated difference, 'none' skips it. The first
+                            phase also takes 'bill_difference', which charges or
+                            credits the full-period price difference.
                       required:
                         - plans
                   items:
@@ -48657,11 +48672,26 @@ paths:
                             - plan_id
                         description: Plans to materialize for this phase.
                       billing_cycle_anchor:
+                        anyOf:
+                          - const: phase_start
+                          - type: integer
+                            minimum: 0
+                            maximum: 9007199254740991
+                        description: Pass 'phase_start' to reset the billing cycle when this phase
+                          starts. On the first phase, a future timestamp in
+                          epoch milliseconds anchors the cycle on that date
+                          instead.
+                      proration_behavior:
                         enum:
-                          - phase_start
+                          - prorate_immediately
+                          - none
+                          - bill_difference
                         type: string
-                        description: Pass 'phase_start' to reset the Stripe billing cycle anchor when
-                          this phase starts.
+                        description: How the change when this phase starts is billed.
+                          'prorate_immediately' charges or credits the prorated
+                          difference, 'none' skips it. The first phase also
+                          takes 'bill_difference', which charges or credits the
+                          full-period price difference.
                     required:
                       - plans
                   description: Ordered phase definitions for the schedule.

@@ -6,9 +6,13 @@ import {
 
 describe("phaseToBillingCycleAnchor", () => {
 	test("a later phase resets the billing cycle at its start by default", () => {
-		expect(phaseToBillingCycleAnchor({ phase: {}, isFirstPhase: false })).toBe(
-			"phase_start",
-		);
+		expect(
+			phaseToBillingCycleAnchor({
+				phase: {},
+				isFirstPhase: false,
+				resetBillingCycle: false,
+			}),
+		).toBe("phase_start");
 	});
 
 	test("a later phase that keeps its cycle anchor sends no anchor", () => {
@@ -16,17 +20,22 @@ describe("phaseToBillingCycleAnchor", () => {
 			phaseToBillingCycleAnchor({
 				phase: { keepsCycleAnchor: true },
 				isFirstPhase: false,
+				resetBillingCycle: true,
 			}),
 		).toBeUndefined();
 	});
 
-	test("the first phase never sends a phase anchor", () => {
+	test("the first phase resets only when asked to", () => {
+		const firstPhase = {
+			phase: { keepsCycleAnchor: false },
+			isFirstPhase: true,
+		};
 		expect(
-			phaseToBillingCycleAnchor({
-				phase: { keepsCycleAnchor: false },
-				isFirstPhase: true,
-			}),
+			phaseToBillingCycleAnchor({ ...firstPhase, resetBillingCycle: false }),
 		).toBeUndefined();
+		expect(
+			phaseToBillingCycleAnchor({ ...firstPhase, resetBillingCycle: true }),
+		).toBe("phase_start");
 	});
 });
 

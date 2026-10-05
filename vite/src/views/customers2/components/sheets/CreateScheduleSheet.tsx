@@ -2,6 +2,7 @@ import type {
 	Entity,
 	FullCusProduct,
 	FullCustomer,
+	FullCustomerSchedule,
 	ProductV2,
 } from "@autumn/shared";
 import {
@@ -70,6 +71,22 @@ const resetsBillingCycleAt = ({
 			) === truncateMsToSecondPrecision(startsAt),
 	);
 
+/** The proration a later phase was saved with, from the schedule phase starting with it. */
+const prorationBehaviorAt = ({
+	schedules,
+	startsAt,
+}: {
+	schedules: FullCustomerSchedule[];
+	startsAt: number;
+}) =>
+	schedules
+		.flatMap((schedule) => schedule.phases)
+		.find(
+			(phase) =>
+				truncateMsToSecondPrecision(phase.starts_at) ===
+				truncateMsToSecondPrecision(startsAt),
+		)?.proration_behavior ?? null;
+
 /** When today's phase began: its earliest live plan that ends at a scheduled
  * phase. Ongoing plans aren't part of it, so their start doesn't count. */
 const findCurrentPhaseStart = ({
@@ -114,11 +131,13 @@ export function buildInitialValues({
 	products,
 	stripeSubscriptionId,
 	stripeScheduleId,
+	schedules = [],
 }: {
 	customer: FullCustomer | undefined;
 	products: ProductV2[];
 	stripeSubscriptionId?: string | null;
 	stripeScheduleId?: string | null;
+	schedules?: FullCustomerSchedule[];
 }): CustomerStateForm {
 	const customerProducts = scopeCustomerProducts({
 		customerProducts: customer?.customer_products ?? [],
@@ -138,14 +157,18 @@ export function buildInitialValues({
 	const phases = seededState.phases.map((phase, index) => {
 		const persistedStartsAt =
 			index === 0 ? currentPhaseStart : (phase.startsAt ?? undefined);
+		const laterPhaseStartsAt = index > 0 ? phase.startsAt : null;
 		const keepsCycleAnchor =
-			index > 0 &&
-			phase.startsAt != null &&
-			!resetsBillingCycleAt({ customerProducts, startsAt: phase.startsAt });
+			laterPhaseStartsAt != null &&
+			!resetsBillingCycleAt({ customerProducts, startsAt: laterPhaseStartsAt });
 		return {
 			...phase,
 			startsAt: index === 0 ? (currentPhaseStart ?? null) : phase.startsAt,
 			keepsCycleAnchor,
+			prorationBehavior:
+				laterPhaseStartsAt == null
+					? null
+					: prorationBehaviorAt({ schedules, startsAt: laterPhaseStartsAt }),
 			...(hasScheduledPlans && persistedStartsAt != null
 				? { persistedStartsAt }
 				: {}),
@@ -159,10 +182,7 @@ export function buildInitialValues({
 	return {
 		phases,
 		unscheduledPlans: seededState.unscheduledPlans,
-		billingBehavior: null,
 		resetBillingCycle: false,
-		billingCycleAnchorMode: "now",
-		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
 	};
@@ -282,7 +302,9 @@ export function CreateScheduleSheet() {
 	);
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
 	const onApplied = useSettleApprovalOnApply();
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, schedules, testClockFrozenTimeMs, isLoading } = useCusQuery(
+		{ schedule: true },
+	);
 	const fullCustomer = customer as FullCustomer | undefined;
 
 	const { products } = useProductsQuery();
@@ -299,16 +321,20 @@ export function CreateScheduleSheet() {
 			products,
 			stripeSubscriptionId: subscriptionTarget?.stripeSubscriptionId,
 			stripeScheduleId: subscriptionTarget?.stripeScheduleId,
+			schedules,
 		});
 		// An approval seed is the proposed schedule itself — it replaces the
 		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
-	}, [fullCustomer, products, subscriptionTarget, seedOverrides]);
+	}, [fullCustomer, products, subscriptionTarget, seedOverrides, schedules]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
 		[fullCustomer, products],
 	);
+
+	// The form seeds once, so it waits for the saved schedule's phase settings.
+	if (isLoading) return null;
 
 	return (
 		<CreateScheduleFormProvider

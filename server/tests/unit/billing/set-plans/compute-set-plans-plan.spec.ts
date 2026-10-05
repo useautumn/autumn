@@ -756,7 +756,9 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 		expect(scheduled?.access_starts_at).toBeNull();
 		expect(autumnBillingPlan.lineItems ?? []).toEqual([]);
 		expect(immediatePhaseTransition.incomingCustomerProducts).toEqual([]);
-		expect(phases).toEqual([{ startsAt, customerProductIds: [scheduled!.id] }]);
+		expect(phases).toEqual([
+			{ startsAt, customerProductIds: [scheduled!.id], prorationBehavior: null },
+		]);
 	});
 
 	test("a live plan ends now with a credit, and its successor starts at the start", () => {

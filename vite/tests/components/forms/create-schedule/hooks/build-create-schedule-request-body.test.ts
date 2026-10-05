@@ -396,29 +396,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].plans[0].plan_id).toBe("prod_1");
 	});
 
-	test("sends a custom billing cycle anchor and ends_at", () => {
-		const now = Date.UTC(2027, 0, 1);
-		const anchor = Date.UTC(2027, 0, 15);
-		const endsAt = Date.UTC(2027, 6, 1);
-		const result = buildCreateScheduleRequestBody({
-			customerId: "cus_1",
-			phases: [schedulePhase({ startsAt: now })],
-			products: paidProducts,
-			features,
-			nowMs: now,
-			resetBillingCycle: true,
-			billingCycleAnchorMode: "custom",
-			billingCycleAnchorDate: anchor,
-			endDate: endsAt,
-		});
-
-		expect(result).toMatchObject({
-			billing_cycle_anchor: Date.UTC(2027, 0, 15),
-			ends_at: Date.UTC(2027, 6, 1),
-		});
-	});
-
-	test("a custom anchor leaves later phases resetting at their own start", () => {
+	test("resets the first phase's cycle at its start and sends ends_at", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
@@ -426,37 +404,35 @@ describe("buildCreateScheduleRequestBody", () => {
 				schedulePhase({ startsAt: now }),
 				schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
 			],
-			products: defaultProducts,
+			products: paidProducts,
 			features,
 			nowMs: now,
 			resetBillingCycle: true,
-			billingCycleAnchorMode: "custom",
-			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
+			endDate: Date.UTC(2027, 6, 1),
 		});
 
-		expect(result!.billing_cycle_anchor).toBe(Date.UTC(2027, 0, 15));
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+		expect(result!.ends_at).toBe(Date.UTC(2027, 6, 1));
 	});
 
-	test("sends a now billing cycle anchor without ends_at", () => {
+	test("resets a multi-plan first phase too", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			phases: [schedulePhase({ startsAt: now })],
+			phases: [
+				schedulePhase({ startsAt: now, productIds: ["prod_1", "prod_2"] }),
+			],
 			products: defaultProducts,
 			features,
 			nowMs: now,
 			resetBillingCycle: true,
-			billingCycleAnchorMode: "now",
-			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
-			endDate: null,
 		});
 
-		expect(result!.billing_cycle_anchor).toBe("now");
-		expect(result).not.toHaveProperty("ends_at");
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
 	});
 
-	test("omits the anchor when the billing cycle reset is off", () => {
+	test("omits the first phase's anchor when the billing cycle reset is off", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
@@ -465,12 +441,10 @@ describe("buildCreateScheduleRequestBody", () => {
 			features,
 			nowMs: now,
 			resetBillingCycle: false,
-			billingCycleAnchorMode: "custom",
-			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
 			endDate: Date.UTC(2027, 6, 1),
 		});
 
-		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.ends_at).toBe(Date.UTC(2027, 6, 1));
 	});
 
@@ -938,7 +912,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
 	});
 
-	test("does not reset current billing anchor when editing an existing schedule", () => {
+	test("resets the live phase's billing cycle now when editing an existing schedule", () => {
 		const now = Date.now();
 		const persistedStart = now - 1000 * 60 * 60 * 24;
 		const future = now + 1000 * 60 * 60 * 24 * 30;
@@ -963,7 +937,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 
 		expect(result).not.toBeNull();
-		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
 	});
 
@@ -1019,28 +993,32 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
 	});
 
-	test("sends proration behavior without an anchor reset for multi-plan immediate phases", () => {
+	test("sends proration and the anchor reset on a multi-plan first phase", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [
-				schedulePhase({
-					startsAt: now,
-					productIds: ["prod_1", "prod_2"],
-				}),
+				{
+					...schedulePhase({
+						startsAt: now,
+						productIds: ["prod_1", "prod_2"],
+					}),
+					prorationBehavior: "none",
+				},
 				schedulePhase({ startsAt: future }),
 			],
 			products: defaultProducts,
 			features,
 			nowMs: now,
-			billingBehavior: "none",
 			resetBillingCycle: true,
 		});
 
 		expect(result).not.toBeNull();
-		expect(result!.proration_behavior).toBe("none");
-		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[0]).toMatchObject({
+			proration_behavior: "none",
+			billing_cycle_anchor: "phase_start",
+		});
 	});
 
 	test("sends proration behavior when the first valid phase is multi-plan", () => {
@@ -1050,7 +1028,10 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
 			phases: [
-				schedulePhase({ startsAt: now, productIds: [""] }),
+				{
+					...schedulePhase({ startsAt: now, productIds: [""] }),
+					prorationBehavior: "none",
+				},
 				schedulePhase({
 					startsAt: future,
 					productIds: ["prod_1", "prod_2"],
@@ -1060,17 +1041,63 @@ describe("buildCreateScheduleRequestBody", () => {
 			products: defaultProducts,
 			features,
 			nowMs: now,
-			billingBehavior: "none",
 			resetBillingCycle: true,
 		});
 
 		expect(result).not.toBeNull();
-		expect(result!.proration_behavior).toBe("none");
-		expect(result).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases).toHaveLength(2);
 		expect(result!.phases[0].plans).toHaveLength(2);
-		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[0]).toMatchObject({
+			proration_behavior: "none",
+			billing_cycle_anchor: "phase_start",
+		});
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("sends each phase's proration on that phase", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				{ ...schedulePhase({ startsAt: now }), prorationBehavior: "none" },
+				{
+					...schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+					prorationBehavior: "prorate_immediately",
+				},
+				{
+					...schedulePhase({ startsAt: Date.UTC(2027, 4, 1) }),
+					prorationBehavior: "none",
+				},
+				schedulePhase({ startsAt: Date.UTC(2027, 6, 1) }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+		});
+
+		expect(result!.phases[0].proration_behavior).toBe("none");
+		expect(result!.phases[1].proration_behavior).toBe("prorate_immediately");
+		expect(result!.phases[2].proration_behavior).toBe("none");
+		expect(result!.phases[3]).not.toHaveProperty("proration_behavior");
+	});
+
+	test("omits proration when no phase sets it", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({ startsAt: now }),
+				schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+		});
+
+		expect(result).not.toHaveProperty("proration_behavior");
+		for (const phase of result!.phases) {
+			expect(phase).not.toHaveProperty("proration_behavior");
+		}
 	});
 
 	test("a later phase that keeps its cycle anchor sends no anchor, the rest reset", () => {
@@ -1110,10 +1137,9 @@ describe("buildCreateScheduleRequestBody", () => {
 			features,
 			nowMs: now,
 			resetBillingCycle: true,
-			billingCycleAnchorMode: "now",
 		});
 
-		expect(result!.billing_cycle_anchor).toBe("now");
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
 		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
 

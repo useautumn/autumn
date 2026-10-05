@@ -2,10 +2,26 @@ import { secondsToMilliseconds } from "date-fns";
 import type Stripe from "stripe";
 import { schedulePhaseItemShape } from "@/external/stripe/subscriptionSchedules/utils/schedulePhaseItemShape";
 
+const STRIPE_DEFAULT_PHASE_PRORATION_BEHAVIOR = "create_prorations";
+
 const phaseEndSeconds = (endDate: unknown) =>
 	typeof endDate === "number" ? endDate : null;
 
-/** The live schedule already runs these phases: same current and future phases, start dates, items, end date and end behavior. */
+/** The current phase has already started, so only a later phase's proration still bills anything. */
+const sameStartProration = ({
+	index,
+	openPhase,
+	phase,
+}: {
+	index: number;
+	openPhase: Stripe.SubscriptionSchedule.Phase;
+	phase: Stripe.SubscriptionScheduleUpdateParams.Phase;
+}) =>
+	index === 0 ||
+	openPhase.proration_behavior ===
+		(phase.proration_behavior ?? STRIPE_DEFAULT_PHASE_PRORATION_BEHAVIOR);
+
+/** The live schedule already runs these phases: same current and future phases, start dates, items, proration, end date and end behavior. */
 export const stripeScheduleMatchesPhases = ({
 	schedule,
 	phases,
@@ -40,6 +56,7 @@ export const stripeScheduleMatchesPhases = ({
 			openPhase.start_date === phase.start_date;
 		return (
 			sameStart &&
+			sameStartProration({ index, openPhase, phase }) &&
 			schedulePhaseItemShape(openPhase) ===
 				schedulePhaseItemShape({ items: phase.items ?? [] })
 		);

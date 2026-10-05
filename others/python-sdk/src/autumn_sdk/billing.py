@@ -507,9 +507,7 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
-        ],
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
         entity_id: Optional[str] = None,
         free_trial: OptionalNullable[
             Union[
@@ -602,7 +600,7 @@ class Billing(BaseSDK):
             unscheduled_plans=utils.get_pydantic_model(
                 unscheduled_plans, Optional[List[models.UnscheduledPlan]]
             ),
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
         )
 
         req = self._build_request(
@@ -668,9 +666,7 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
-        ],
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
         entity_id: Optional[str] = None,
         free_trial: OptionalNullable[
             Union[
@@ -763,7 +759,7 @@ class Billing(BaseSDK):
             unscheduled_plans=utils.get_pydantic_model(
                 unscheduled_plans, Optional[List[models.UnscheduledPlan]]
             ),
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
         )
 
         req = self._build_request_async(

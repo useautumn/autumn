@@ -1,7 +1,8 @@
-import type {
-	BillingBehavior,
-	CustomizePlanLicense,
-	ProductItem,
+import {
+	type BillingBehavior,
+	BillingBehaviorSchema,
+	type CustomizePlanLicense,
+	type ProductItem,
 } from "@autumn/shared";
 import { addMonths, addYears } from "date-fns";
 import type {
@@ -10,7 +11,6 @@ import type {
 	CustomerStatePlan,
 } from "@/components/forms/customer-state/customerStateSchema";
 import {
-	anchorOverridesFrom,
 	type FieldReaders,
 	overridesFromRequest,
 	readArray,
@@ -55,6 +55,9 @@ const planFrom = (value: unknown): CustomerStatePlan | undefined => {
 		version: overrides.version,
 	};
 };
+
+const prorationBehaviorFrom = (value: unknown): BillingBehavior | null =>
+	BillingBehaviorSchema.safeParse(value).data ?? null;
 
 const plansFrom = (value: unknown): CustomerStatePlan[] =>
 	Array.isArray(value)
@@ -123,22 +126,23 @@ export const scheduleFormFromRequestBody = (
 					billingCycleAnchor: phase.billing_cycle_anchor,
 					isFirstPhase: index === 0,
 				}),
+				prorationBehavior: prorationBehaviorFrom(
+					phase.proration_behavior ??
+						(index === 0 ? request.billing_behavior : undefined),
+				),
 				...(persistedStartsAt != null ? { persistedStartsAt } : {}),
 			},
 		];
 	});
 	if (!phases.length) return undefined;
-	const anchorOverrides = anchorOverridesFrom(request.billing_cycle_anchor);
+	const firstPhase = requestRecord(request.phases[0]);
 	return {
-		billingBehavior:
-			typeof request.proration_behavior === "string"
-				? (request.proration_behavior as BillingBehavior)
-				: null,
 		enablePlanImmediately: request.enable_plan_immediately === true,
 		endDate: readNumber("ends_at")(request) ?? null,
 		phases,
-		...anchorOverrides,
-		resetBillingCycle: anchorOverrides.resetBillingCycle === true,
+		resetBillingCycle:
+			(firstPhase?.billing_cycle_anchor ?? request.billing_cycle_anchor) !==
+			undefined,
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
 	};
 };

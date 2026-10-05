@@ -87,7 +87,14 @@ export const setupScheduledProductsContext = async ({
 			return {
 				startsAt: phase.starts_at,
 				endsAt: nextPhaseStartsAt ?? endsAt,
-				billingCycleAnchor: phase.billing_cycle_anchor,
+				billingCycleAnchor:
+					phase.billing_cycle_anchor === "phase_start"
+						? phase.billing_cycle_anchor
+						: undefined,
+				prorationBehavior:
+					phase.proration_behavior === "bill_difference"
+						? undefined
+						: phase.proration_behavior,
 				productContexts,
 			};
 		}),

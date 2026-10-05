@@ -33,8 +33,13 @@ const backdateProParams = ({
 	startsAt: number;
 }): SetPlansParamsV0Input => ({
 	customer_id: customerId,
-	proration_behavior: "prorate_immediately",
-	phases: [{ starts_at: startsAt, plans: [{ plan_id: planId }] }],
+	phases: [
+		{
+			proration_behavior: "prorate_immediately",
+			starts_at: startsAt,
+			plans: [{ plan_id: planId }],
+		},
+	],
 });
 
 test.concurrent(

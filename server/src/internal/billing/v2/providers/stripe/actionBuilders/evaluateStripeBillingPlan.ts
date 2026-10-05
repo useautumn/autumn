@@ -19,6 +19,7 @@ import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/acti
 import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
 import { buildStripeInvoiceItemsAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceItemsAction";
 import { buildStripeSubscriptionAction } from "../../../providers/stripe/actionBuilders/buildStripeSubscriptionAction";
+import { resolveSchedulePhaseProrations } from "../setup/resolveSchedulePhaseProrations";
 import { initStripeResourcesForBillingPlan } from "../utils/common/initStripeResourcesForProducts";
 
 export const evaluateStripeBillingPlan = async ({
@@ -63,6 +64,10 @@ export const evaluateStripeBillingPlan = async ({
 		autumnBillingPlan,
 		finalCustomerProducts: stripeCustomerProducts,
 		trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
+		phaseProrations: await resolveSchedulePhaseProrations({
+			ctx,
+			billingContext,
+		}),
 	});
 
 	const stripeSubscriptionAction = buildStripeSubscriptionAction({
