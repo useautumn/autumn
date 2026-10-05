@@ -38430,9 +38430,14 @@ paths:
         then the org default. (optional)
 
         @param removePlanIds - Plan IDs to expire on the customer as part of
-        this attach. Each must be an active plan billed on the same subscription
-        as the attach (or a free plan); plans on a separate subscription are
-        rejected. (optional)
+        this attach. Each must be an active plan. When no plan in the same group
+        is being replaced, the attach takes over the subscription of the first
+        paid plan listed here, unless `new_billing_subscription` is true (paid
+        plans cannot be removed in that case). Any other paid plan must be
+        billed on that same subscription (free plans can always be removed).
+        Only allowed when the new plan starts immediately (not with
+        `plan_schedule: end_of_cycle`, or a future `starts_at` without
+        `enable_plan_immediately`). (optional)
 
         @param removeDiscounts - Discounts to remove from the subscription, by
         reward ID. Discounts not listed are left unchanged. (optional)
@@ -41083,10 +41088,16 @@ paths:
                   type: array
                   items:
                     type: string
-                  description: Plan IDs to expire on the customer as part of this attach. Each
-                    must be an active plan billed on the same subscription as
-                    the attach (or a free plan); plans on a separate
-                    subscription are rejected.
+                  description: "Plan IDs to expire on the customer as part of this attach. Each
+                    must be an active plan. When no plan in the same group is
+                    being replaced, the attach takes over the subscription of
+                    the first paid plan listed here, unless
+                    `new_billing_subscription` is true (paid plans cannot be
+                    removed in that case). Any other paid plan must be billed on
+                    that same subscription (free plans can always be removed).
+                    Only allowed when the new plan starts immediately (not with
+                    `plan_schedule: end_of_cycle`, or a future `starts_at`
+                    without `enable_plan_immediately`)."
                 remove_discounts:
                   type: array
                   items:
@@ -50120,9 +50131,14 @@ paths:
         then the org default. (optional)
 
         @param removePlanIds - Plan IDs to expire on the customer as part of
-        this attach. Each must be an active plan billed on the same subscription
-        as the attach (or a free plan); plans on a separate subscription are
-        rejected. (optional)
+        this attach. Each must be an active plan. When no plan in the same group
+        is being replaced, the attach takes over the subscription of the first
+        paid plan listed here, unless `new_billing_subscription` is true (paid
+        plans cannot be removed in that case). Any other paid plan must be
+        billed on that same subscription (free plans can always be removed).
+        Only allowed when the new plan starts immediately (not with
+        `plan_schedule: end_of_cycle`, or a future `starts_at` without
+        `enable_plan_immediately`). (optional)
 
         @param removeDiscounts - Discounts to remove from the subscription, by
         reward ID. Discounts not listed are left unchanged. (optional)
@@ -52773,10 +52789,16 @@ paths:
                   type: array
                   items:
                     type: string
-                  description: Plan IDs to expire on the customer as part of this attach. Each
-                    must be an active plan billed on the same subscription as
-                    the attach (or a free plan); plans on a separate
-                    subscription are rejected.
+                  description: "Plan IDs to expire on the customer as part of this attach. Each
+                    must be an active plan. When no plan in the same group is
+                    being replaced, the attach takes over the subscription of
+                    the first paid plan listed here, unless
+                    `new_billing_subscription` is true (paid plans cannot be
+                    removed in that case). Any other paid plan must be billed on
+                    that same subscription (free plans can always be removed).
+                    Only allowed when the new plan starts immediately (not with
+                    `plan_schedule: end_of_cycle`, or a future `starts_at`
+                    without `enable_plan_immediately`)."
                 remove_discounts:
                   type: array
                   items:
@@ -64032,10 +64054,16 @@ paths:
                   type: array
                   items:
                     type: string
-                  description: Plan IDs to expire on the customer as part of this attach. Each
-                    must be an active plan billed on the same subscription as
-                    the attach (or a free plan); plans on a separate
-                    subscription are rejected.
+                  description: "Plan IDs to expire on the customer as part of this attach. Each
+                    must be an active plan. When no plan in the same group is
+                    being replaced, the attach takes over the subscription of
+                    the first paid plan listed here, unless
+                    `new_billing_subscription` is true (paid plans cannot be
+                    removed in that case). Any other paid plan must be billed on
+                    that same subscription (free plans can always be removed).
+                    Only allowed when the new plan starts immediately (not with
+                    `plan_schedule: end_of_cycle`, or a future `starts_at`
+                    without `enable_plan_immediately`)."
                 remove_discounts:
                   type: array
                   items:
