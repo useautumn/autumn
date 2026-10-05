@@ -64,7 +64,11 @@ export const addLicenseEntitlementsForPage = async ({
 						match: "add",
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0)
+				return {
+					rows: candidates,
+					result: { insertedItems: [], excludedInternalCustomerIds: [] },
+				};
 			assertWithinCeiling(candidates.length);
 
 			const { insertedItems: pageItems, excludedInternalCustomerIds } =
@@ -77,10 +81,14 @@ export const addLicenseEntitlementsForPage = async ({
 					now,
 					phases,
 				});
-			for (const id of excludedInternalCustomerIds) excludedIds.add(id);
-			insertedItems.push(...pageItems);
-
-			return candidates;
+			return {
+				rows: candidates,
+				result: { insertedItems: pageItems, excludedInternalCustomerIds },
+			};
+		},
+		onCommit: (result) => {
+			for (const id of result.excludedInternalCustomerIds) excludedIds.add(id);
+			insertedItems.push(...result.insertedItems);
 		},
 	});
 

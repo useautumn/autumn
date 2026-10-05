@@ -29,6 +29,7 @@ export const finalizeBatchMigrationPage = async ({
 	invalidateSkipped = false,
 	deferEvents,
 	deferCaches,
+	assertActive,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -42,7 +43,9 @@ export const finalizeBatchMigrationPage = async ({
 	invalidateSkipped?: boolean;
 	deferEvents?: (emit: () => Promise<unknown>) => void;
 	deferCaches?: (invalidate: () => Promise<unknown>) => void;
+	assertActive?: () => void;
 }): Promise<void> => {
+	assertActive?.();
 	const emitEvents = () =>
 		emitBatchMigrationItemEvents({
 			ctx,
@@ -80,6 +83,7 @@ export const finalizeBatchMigrationPage = async ({
 		runCaches(),
 		runEvents(),
 	]);
+	assertActive?.();
 	const eventCount = emitted?.eventCount ?? null;
 	const webhookRecords = webhooks?.sendWebhooks
 		? await timePhase({
@@ -98,16 +102,19 @@ export const finalizeBatchMigrationPage = async ({
 			? await timePhase({
 					phases,
 					phase: "finalize_webhook_queue",
-					run: () =>
-						queueMigrationWebhooks({
+					run: () => {
+						assertActive?.();
+						return queueMigrationWebhooks({
 							ctx,
 							migrationRunId,
 							controls: webhooks,
 							records: webhookRecords,
-						}),
+						});
+					},
 				})
 			: 0;
 
+	assertActive?.();
 	ctx.logger.debug("batch-migration: page finalized", {
 		data: {
 			migrationInternalId,

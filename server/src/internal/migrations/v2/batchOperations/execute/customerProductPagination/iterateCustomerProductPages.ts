@@ -18,10 +18,12 @@ import {
  */
 export const iterateCustomerProductPages = async <
 	Row extends { customerProductId: string },
+	Result,
 >({
 	db,
 	pageSize,
 	executePage,
+	onCommit,
 }: {
 	db: DrizzleCli;
 	pageSize: number;
@@ -34,7 +36,8 @@ export const iterateCustomerProductPages = async <
 		afterCustomerProductId: string | undefined;
 		limit: number;
 		assertWithinCeiling: (selectedCount: number) => void;
-	}) => Promise<Row[]>;
+	}) => Promise<{ rows: Row[]; result: Result }>;
+	onCommit?: (result: Result) => void;
 }): Promise<{ rowCount: number }> => {
 	let afterCustomerProductId: string | undefined;
 	let rowCount = 0;
@@ -47,7 +50,7 @@ export const iterateCustomerProductPages = async <
 	};
 
 	while (true) {
-		const rows = await withStatementTimeout(
+		const { rows, result } = await withStatementTimeout(
 			db,
 			(transaction) =>
 				executePage({
@@ -59,6 +62,7 @@ export const iterateCustomerProductPages = async <
 			BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 			{ forceCustomPlan: true },
 		);
+		onCommit?.(result);
 		if (rows.length === 0) break;
 		rowCount += rows.length;
 		afterCustomerProductId = rows[rows.length - 1].customerProductId;
