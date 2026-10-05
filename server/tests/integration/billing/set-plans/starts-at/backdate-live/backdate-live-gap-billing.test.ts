@@ -7,9 +7,9 @@
 
 import { expect, test } from "bun:test";
 import {
-	addInterval,
 	BillingInterval,
 	getCycleEnd,
+	getCycleStart,
 	ms,
 	type SetPlansParamsV0Input,
 } from "@autumn/shared";
@@ -163,10 +163,10 @@ test.concurrent(
 		const restartedCycleCharge = expectedRestOfCycle({
 			monthlyPrice: PRO_MONTHLY_PRICE,
 			nowMs: advancedTo,
-			cycleStartMs: addInterval({
-				from: restartedRenewalMs,
+			cycleStartMs: getCycleStart({
+				anchor: backdatedStart,
 				interval: BillingInterval.Month,
-				intervalCount: -1,
+				now: advancedTo,
 			}),
 			cycleEndMs: restartedRenewalMs,
 		});
