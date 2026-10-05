@@ -1,4 +1,5 @@
 import type {
+	BillingPeriod,
 	CreateScheduleBillingContext,
 	FullCusProduct,
 	LineItem,
@@ -8,6 +9,12 @@ import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItem
 import { backdateGap, billsBackdateGap } from "../utils/backdateGap";
 import type { SetPlansCustomerProductChanges } from "./diffToCustomerProducts/diffToCustomerProducts";
 
+type PlanRun = {
+	customerProduct: FullCusProduct;
+	startsAt: number;
+	endsAt?: number | null;
+};
+
 /** The plans the recreated subscription runs from the backdated start: new rows, and kept rows moved back to it. */
 const plansFromBackdatedStart = ({
 	customerProductChanges,
@@ -15,12 +22,38 @@ const plansFromBackdatedStart = ({
 }: {
 	customerProductChanges: SetPlansCustomerProductChanges;
 	backdatedStartMs: number;
-}): FullCusProduct[] => [
-	...customerProductChanges.immediateInsertCustomerProducts,
+}): PlanRun[] => [
+	...customerProductChanges.immediateInsertCustomerProducts.map(
+		(customerProduct) => ({
+			customerProduct,
+			startsAt: customerProduct.starts_at,
+			endsAt: customerProduct.ended_at,
+		}),
+	),
 	...customerProductChanges.updateCustomerProducts
 		.filter(({ updates }) => updates.starts_at === backdatedStartMs)
-		.map(({ customerProduct }) => customerProduct),
+		.map(({ customerProduct, updates }) => ({
+			customerProduct,
+			startsAt: backdatedStartMs,
+			endsAt:
+				updates.ended_at === undefined
+					? customerProduct.ended_at
+					: updates.ended_at,
+		})),
 ];
+
+/** The part of the gap a plan ran, so a later phase's plan is never billed before it started. */
+const planRunInGap = ({
+	planRun,
+	gap,
+}: {
+	planRun: PlanRun;
+	gap: BillingPeriod;
+}): BillingPeriod | undefined => {
+	const start = Math.max(gap.start, planRun.startsAt);
+	const end = Math.min(gap.end, planRun.endsAt ?? gap.end);
+	return start < end ? { start, end } : undefined;
+};
 
 /** Charges the backdated time before the replaced subscription started, per proration_behavior. */
 export const backdateGapLineItems = ({
@@ -38,15 +71,18 @@ export const backdateGapLineItems = ({
 	return plansFromBackdatedStart({
 		customerProductChanges,
 		backdatedStartMs: gap.start,
-	}).flatMap((customerProduct) =>
-		customerProductToLineItems({
+	}).flatMap((planRun) => {
+		const runInGap = planRunInGap({ planRun, gap });
+		if (!runInGap) return [];
+
+		return customerProductToLineItems({
 			ctx,
 			// Seat licenses bill their own current cycle, which would charge now rather than the gap.
-			customerProduct: { ...customerProduct, customer_licenses: [] },
+			customerProduct: { ...planRun.customerProduct, customer_licenses: [] },
 			billingContext,
 			direction: "charge",
 			priceFilters: { excludeOneOffPrices: true },
-			backdateGap: gap,
-		}),
-	);
+			backdateGap: runInGap,
+		});
+	});
 };

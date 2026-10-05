@@ -65,14 +65,39 @@ const proRataGapCharge = ({
 		.div(LIVE_START - monthsBefore({ from: LIVE_START, months: cycles }))
 		.toNumber();
 
+const premium = products.createFull({
+	id: "premium",
+	prices: [prices.createFixed({ id: "price_premium" })],
+});
+
+const premiumPhaseFrom = (startsAt: number) => ({
+	futurePhases: [{ starts_at: startsAt, plans: [{ plan_id: premium.id }] }],
+	scheduledPhaseContexts: [
+		{
+			startsAt,
+			endsAt: undefined,
+			productContexts: [
+				{
+					fullProduct: premium,
+					customPrices: [],
+					customEntitlements: [],
+					featureQuantities: [],
+				},
+			],
+		} as CreateScheduleBillingContext["scheduledPhaseContexts"][number],
+	],
+});
+
 const backdatedPro = ({
 	backdatedStart,
 	prorationBehavior,
 	restartsCycle = false,
+	premiumStartsAt,
 }: {
 	backdatedStart: number;
 	prorationBehavior?: BillingBehavior;
 	restartsCycle?: boolean;
+	premiumStartsAt?: number;
 }): CreateScheduleBillingContext => {
 	const pro = products.createFull({
 		id: "pro",
@@ -117,8 +142,9 @@ const backdatedPro = ({
 				? { billing_cycle_anchor: "phase_start" as const }
 				: {}),
 		},
-		futurePhases: [],
-		scheduledPhaseContexts: [],
+		...(premiumStartsAt === undefined
+			? { futurePhases: [], scheduledPhaseContexts: [] }
+			: premiumPhaseFrom(premiumStartsAt)),
 		replacedStripeSubscription: liveSubscription,
 		subscriptionBackdateStartMs: backdatedStart,
 	};
@@ -189,16 +215,37 @@ describe(
 		});
 
 		test("prorate_immediately over more than a cycle charges each whole cycle plus the part one", () => {
-			const [gapLine] = billedLines(
+			const lines = billedLines(
 				backdatedPro({
 					backdatedStart: fortyDaysBack,
 					prorationBehavior: "prorate_immediately",
 				}),
 			);
-			expect(gapLine?.amount).toBeCloseTo(
+			expect(lines).toHaveLength(1);
+			expect(lines[0]?.direction).toBe("charge");
+			expect(lines[0]?.effectivePeriod).toEqual({
+				start: fortyDaysBack,
+				end: LIVE_START,
+			});
+			expect(lines[0]?.amount).toBeCloseTo(
 				proRataGapCharge({ backdatedStart: fortyDaysBack, cycles: 2 }),
 				2,
 			);
+		});
+
+		test("a plan from a later phase starting inside the gap is billed only from its own start", () => {
+			const premiumStart = LIVE_START - ms.days(20);
+			const gapPeriods = billedLines(
+				backdatedPro({
+					backdatedStart: fortyDaysBack,
+					prorationBehavior: "prorate_immediately",
+					premiumStartsAt: premiumStart,
+				}),
+			)
+				.map(({ effectivePeriod }) => effectivePeriod)
+				.filter((period) => period !== undefined && period.end <= LIVE_START);
+
+			expect(gapPeriods).toEqual([{ start: premiumStart, end: LIVE_START }]);
 		});
 
 		test("bill_difference charges every cycle the gap reaches in full, like attach's backdate catch-up", () => {
