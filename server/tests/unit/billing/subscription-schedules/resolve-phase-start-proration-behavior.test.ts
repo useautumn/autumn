@@ -77,29 +77,29 @@ describe("phase start billing", () => {
 		);
 	});
 
-	test("a kept-anchor phase start with none raises no invoice; a reset always does", () => {
+	test("a phase start adjusting a running cycle with none raises no invoice; a new cycle always does", () => {
 		expect(
 			phaseStartRaisesInvoice({
 				prorationBehavior: "none",
-				resetsBillingCycle: false,
+				startsNewBillingCycle: false,
 			}),
 		).toBe(false);
 		expect(
 			phaseStartRaisesInvoice({
 				prorationBehavior: "none",
-				resetsBillingCycle: true,
+				startsNewBillingCycle: true,
 			}),
 		).toBe(true);
 		expect(
 			phaseStartRaisesInvoice({
 				prorationBehavior: "prorate_immediately",
-				resetsBillingCycle: false,
+				startsNewBillingCycle: false,
 			}),
 		).toBe(true);
 		expect(
 			phaseStartRaisesInvoice({
 				prorationBehavior: undefined,
-				resetsBillingCycle: false,
+				startsNewBillingCycle: false,
 			}),
 		).toBe(true);
 	});

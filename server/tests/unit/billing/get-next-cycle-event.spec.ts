@@ -367,6 +367,25 @@ describe("getNextCycleEvent", () => {
 		}
 	});
 
+	test("a first paid plan starting with proration none still bills its new cycle", () => {
+		const scheduledAt = renewalBoundaryMs - ms.days(5);
+		const event = resolve({
+			billingContext: setPlansContext({
+				phaseStartsAt: scheduledAt,
+				prorationBehavior: "none",
+			}),
+			customerProducts: [
+				cusProduct({
+					id: "pro",
+					startsAt: scheduledAt,
+					status: CusProductStatus.Scheduled,
+				}),
+			],
+		});
+
+		expect(event.kind).toBe("scheduled_start");
+	});
+
 	test("a phase start carries the proration set_plans requested for it", () => {
 		const scheduledAt = renewalBoundaryMs - ms.days(5);
 		const event = resolve({

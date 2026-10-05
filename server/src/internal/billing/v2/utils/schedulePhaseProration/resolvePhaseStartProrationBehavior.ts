@@ -46,11 +46,12 @@ export const phaseStartCreditsUnusedTime = ({
 	prorationBehavior: PhaseProrationBehavior | undefined;
 }) => prorationBehavior !== "none";
 
-/** Without proration or a cycle reset, Stripe bills nothing until the next renewal. */
+/** A phase start that adjusts a running cycle without proration bills nothing until the next renewal. */
 export const phaseStartRaisesInvoice = ({
 	prorationBehavior,
-	resetsBillingCycle,
+	startsNewBillingCycle,
 }: {
 	prorationBehavior: PhaseProrationBehavior | undefined;
-	resetsBillingCycle: boolean;
-}) => resetsBillingCycle || phaseStartCreditsUnusedTime({ prorationBehavior });
+	startsNewBillingCycle: boolean;
+}) =>
+	startsNewBillingCycle || phaseStartCreditsUnusedTime({ prorationBehavior });

@@ -4,7 +4,10 @@ import {
 	timestampsMatch,
 } from "@autumn/shared";
 import type { SchedulePhaseProration } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
-import { resolvePhaseStartProrationBehavior } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
+import {
+	phaseStartRaisesInvoice,
+	resolvePhaseStartProrationBehavior,
+} from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import { getActiveCustomerProductsAt } from "./activeCustomerProducts";
 import {
 	differenceByCustomerProductId,
@@ -111,6 +114,15 @@ export const classifyNextCycleEvent = ({
 			previousCustomerProducts,
 		}),
 	]);
+
+	const changesCustomerProducts =
+		incomingCustomerProducts.length > 0 || outgoingCustomerProducts.length > 0;
+	const raisesInvoice = phaseStartRaisesInvoice({
+		prorationBehavior,
+		startsNewBillingCycle:
+			isAnchorReset || previousCustomerProducts.length === 0,
+	});
+	if (changesCustomerProducts && !raisesInvoice && !isTrialEnd) return;
 
 	if (
 		incomingCustomerProducts.length > 0 &&
