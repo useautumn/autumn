@@ -78,10 +78,11 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 			run: async ({ page }) => {
 				await page.db.transaction(async (transaction) => {
 					attempts++;
-					const [row] = await transaction.execute<{ id: number }>(
+					const result = await transaction.execute(
 						sql`select pg_backend_pid() as id`,
 					);
-					backendIds.push(row.id);
+					const rows = Array.isArray(result) ? result : result.rows;
+					backendIds.push(rows[0].id as number);
 					await transaction.execute(
 						sql`select pg_sleep(${attempts === 1 ? 0.3 : 0})`,
 					);

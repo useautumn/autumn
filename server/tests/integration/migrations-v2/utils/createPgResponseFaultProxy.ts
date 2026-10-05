@@ -8,7 +8,7 @@ export const createPgResponseFaultProxy = async ({
 	lostCommand?: string;
 }) => {
 	const target = new URL(fixtureUrl);
-	if (target.hostname !== "127.0.0.1")
+	if (!["127.0.0.1", "localhost"].includes(target.hostname))
 		throw new Error("Postgres fault proxy requires isolated loopback Postgres");
 	const upstreamPort = Number(target.port || 5432);
 	const sockets = new Set<Socket>();
@@ -16,7 +16,7 @@ export const createPgResponseFaultProxy = async ({
 	let commits = 0;
 	const server = createServer((downstream) => {
 		const upstream = createConnection({
-			host: "127.0.0.1",
+			host: target.hostname,
 			port: upstreamPort,
 		});
 		sockets.add(downstream);
