@@ -13,6 +13,7 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
 	type AttachParamsV1Input,
+	msToSeconds,
 	secondsToMs,
 } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
@@ -21,6 +22,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import globalCtx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -31,6 +33,8 @@ import {
 } from "./utils/anchorToMonthStartUtils";
 
 const ANCHOR_NOW_TOLERANCE_MS = 60_000;
+// Pinned: a cycle started any time on a 1st already counts as anchored.
+const PAID_ON_THE_20TH_MS = Date.UTC(2027, 2, 1, 11, 14);
 
 test.concurrent(
 	`${chalk.yellowBright("anchor-to-month-start transitions 1: explicit billing_cycle_anchor 'now' wins over the flag")}`,
@@ -160,10 +164,19 @@ test(`${chalk.yellowBright("anchor-to-month-start transitions 4: paid on the 20t
 		}),
 	);
 
-	const { autumnV2_3, ctx, advancedTo, testClockId } = await initScenario({
+	const testClock = await globalCtx.stripeCli.testHelpers.testClocks.create({
+		frozen_time: msToSeconds(PAID_ON_THE_20TH_MS),
+	});
+	const advancedTo = PAID_ON_THE_20TH_MS;
+
+	const { autumnV2_3, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success" }),
+			s.customer({
+				testClock: false,
+				paymentMethod: "success",
+				stripeCustomerOverrides: { test_clock: testClock.id },
+			}),
 			s.products({ list: [pro, premium] }),
 		],
 		actions: [s.billing.attach({ productId: pro.id })],
@@ -200,7 +213,7 @@ test(`${chalk.yellowBright("anchor-to-month-start transitions 4: paid on the 20t
 
 	await advanceToAnchor({
 		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
+		testClockId: testClock.id,
 		advancedTo,
 		anchorMs: monthStartMs,
 	});
