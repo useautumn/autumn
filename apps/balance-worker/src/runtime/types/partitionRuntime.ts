@@ -128,6 +128,10 @@ export type PartitionRuntime = {
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 		options?: ProcessOptions,
 	): Promise<Decision>;
+	/** One synchronous processor command on a ready runtime, same recovery mapping; null when not ready. */
+	processInline<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 };
 
 export type ProcessOptions = { budgetMs?: number };

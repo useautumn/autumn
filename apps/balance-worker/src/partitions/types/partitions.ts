@@ -17,6 +17,10 @@ export interface PartitionRuntimePort {
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 	): Promise<Decision>;
+	/** Synchronous, on a ready runtime only; null hands the command to `process`. */
+	processInline?<Decision>(
+		run: (processor: PartitionProcessor) => Decision | null,
+	): Decision | null;
 }
 
 export type Unsubscribe = () => void;
