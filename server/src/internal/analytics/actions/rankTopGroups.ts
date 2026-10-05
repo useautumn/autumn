@@ -5,8 +5,8 @@ const isArrayParamSafe = (value: string) =>
 	value !== "" && !value.includes(",");
 
 /**
- * Ranks the org's top customers per event over the window, as aggregate_groupable top-group params.
- * Returns undefined when there is nothing to rank or a value can't be passed as an Array param.
+ * Ranks the org's top customers (or values of propertyKey) per event over the window, as
+ * aggregate_groupable top-group params. Undefined when nothing ranks or a value can't be an Array param.
  */
 export const rankTopGroups = async ({
 	orgId,
@@ -15,6 +15,7 @@ export const rankTopGroups = async ({
 	startDate,
 	endDate,
 	maxGroups,
+	propertyKey,
 }: {
 	orgId: string;
 	env: string;
@@ -22,6 +23,7 @@ export const rankTopGroups = async ({
 	startDate: string;
 	endDate: string;
 	maxGroups?: number;
+	propertyKey?: string;
 }) => {
 	const { data } = await getTinybirdPipes().aggregateGroupableTopGroups({
 		org_id: orgId,
@@ -30,6 +32,9 @@ export const rankTopGroups = async ({
 		start_date: startDate,
 		end_date: endDate,
 		max_groups: maxGroups,
+		...(propertyKey
+			? { group_column: "property" as const, property_key: propertyKey }
+			: {}),
 	});
 
 	const allSafe = data.every(
@@ -38,8 +43,9 @@ export const rankTopGroups = async ({
 	);
 	if (data.length === 0 || !allSafe) return undefined;
 
-	return {
-		top_event_names: data.map((row) => row.event_name),
-		top_customer_ids: data.map((row) => row.group_value),
-	};
+	const topEventNames = data.map((row) => row.event_name);
+	const topGroupValues = data.map((row) => row.group_value);
+	return propertyKey
+		? { top_event_names: topEventNames, top_property_values: topGroupValues }
+		: { top_event_names: topEventNames, top_customer_ids: topGroupValues };
 };
