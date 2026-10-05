@@ -1,5 +1,6 @@
 import type { CheckCommand } from "@autumn/balance-engine";
 import type { InlineReply } from "../../workerThreads/types/inlineHandler.js";
+import { serializedCheckReplyOf } from "../serializedCheckReplyOf.js";
 import { receiveCommandInline } from "./receiveCommandInline.js";
 import type { InlineHandlerContext } from "./types/inlineHandlerContext.js";
 
@@ -20,7 +21,12 @@ export function receiveCheckInline({
 			const decision = processor.checkInline({ command });
 			if (decision.kind === "refused") return decision;
 			const { reply } = decision;
-			return { kind: "decided", body: JSON.stringify(reply), reply, seq: 0 };
+			return {
+				kind: "decided",
+				body: serializedCheckReplyOf({ reply }),
+				reply,
+				seq: 0,
+			};
 		},
 	});
 }
