@@ -866,7 +866,6 @@ export default function PlanChangeDialog({
 														)}
 														<MigrateTargetsStep
 															features={features}
-															showCustomers={migrateNeeded}
 															showSettings={false}
 															targets={migrateTargets}
 														/>
