@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	boldText,
 	formatMsToDate,
+	isOneOffPrice,
 	type LineItem,
 	plainText,
 	type SetPlansPreviewWarning,
@@ -9,10 +10,12 @@ import {
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import { warningText } from "./warningText";
 
-const chargesNow = (lineItems: LineItem[]) =>
+const chargesOngoingPlanNow = (lineItems: LineItem[]) =>
 	lineItems.some(
 		(lineItem) =>
-			lineItem.chargeImmediately && lineItem.amountAfterDiscounts > 0,
+			lineItem.chargeImmediately &&
+			!isOneOffPrice(lineItem.context.price) &&
+			lineItem.amountAfterDiscounts > 0,
 	);
 
 /** A later first phase bills from its start, and early access opens the plans before then. */
@@ -35,7 +38,7 @@ export const billingStartsLaterWarning = ({
 		return undefined;
 	}
 
-	const billingStart = chargesNow(lineItems)
+	const billingStart = chargesOngoingPlanNow(lineItems)
 		? [
 				plainText(
 					"Ongoing plans are billed now. Billing for the other plans starts on",

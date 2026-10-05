@@ -8,7 +8,7 @@ import type {
 	SetPlansPreviewWarning,
 	StripeBillingPlan,
 } from "@autumn/shared";
-import { textPartsToText } from "@autumn/shared";
+import { BillingInterval, textPartsToText } from "@autumn/shared";
 import type Stripe from "stripe";
 import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
@@ -282,6 +282,19 @@ const createsSubscription: Pick<StripeBillingPlan, "subscriptionAction"> = {
 	} as StripeBillingPlan["subscriptionAction"],
 };
 
+const chargedNowLineItem = ({
+	amount,
+	interval,
+}: {
+	amount: number;
+	interval: BillingInterval;
+}) =>
+	({
+		amountAfterDiscounts: amount,
+		chargeImmediately: true,
+		context: { price: { config: { interval } } },
+	}) as LineItem;
+
 const stateWarnings = (
 	overrides: Partial<Parameters<typeof setPlansPreviewToWarnings>[0]>,
 ) =>
@@ -505,7 +518,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				billingStartsAt: NOON_UTC + 7 * DAY_MS,
 			},
 			lineItems: [
-				{ amountAfterDiscounts: 20, chargeImmediately: true } as LineItem,
+				chargedNowLineItem({ amount: 20, interval: BillingInterval.Month }),
 			],
 		});
 
@@ -519,6 +532,28 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		]);
 	});
 
+	test("a one-off charged now still says billing starts later", () => {
+		const warnings = stateWarnings({
+			billingContext: {
+				currentEpochMs: NOON_UTC,
+				billingCycleAnchorMs: "now",
+				billingStartsAt: NOON_UTC + 7 * DAY_MS,
+			},
+			lineItems: [
+				chargedNowLineItem({ amount: 20, interval: BillingInterval.OneOff }),
+			],
+		});
+
+		expect(warnings.map(withoutParts)).toEqual([
+			{
+				type: "billing_starts_later",
+				severity: "info",
+				message:
+					"Billing starts on 06 Oct 2026, when the first invoice is sent.",
+			},
+		]);
+	});
+
 	test("a credit now still says billing starts later", () => {
 		const warnings = stateWarnings({
 			billingContext: {
@@ -527,7 +562,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				billingStartsAt: NOON_UTC + 7 * DAY_MS,
 			},
 			lineItems: [
-				{ amountAfterDiscounts: -20, chargeImmediately: true } as LineItem,
+				chargedNowLineItem({ amount: -20, interval: BillingInterval.Month }),
 			],
 		});
 
