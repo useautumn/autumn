@@ -34,7 +34,7 @@ import {
 
 const ANCHOR_NOW_TOLERANCE_MS = 60_000;
 // Pinned: a cycle started any time on a 1st already counts as anchored.
-const PAID_ON_THE_20TH_MS = Date.UTC(2027, 2, 1, 11, 14);
+const PAID_ON_THE_20TH_MS = Date.UTC(2027, 2, 20, 12);
 
 test.concurrent(
 	`${chalk.yellowBright("anchor-to-month-start transitions 1: explicit billing_cycle_anchor 'now' wins over the flag")}`,
