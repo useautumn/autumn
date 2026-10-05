@@ -69,6 +69,9 @@ describe("drain safety under concurrent load", () => {
 					FORK_RECYCLE_MIN_AGE_MS: "600",
 					FORK_RECYCLE_CHECK_INTERVAL_MS: "1000",
 					FORK_RECYCLE_DRAIN_TIMEOUT_MS: "1000",
+					// The 5s production grace outlasts the 3s slow requests, so none would
+					// still be in flight when the drain deadline checks for active ones.
+					FORK_RECYCLE_DRAIN_GRACE_MS: "200",
 					FORK_RECYCLE_MAX_DELAY_MS: "0",
 					FORK_RECYCLE_BLACKOUT_BEFORE_MS: "0",
 					FORK_RECYCLE_BLACKOUT_AFTER_MS: "0",
