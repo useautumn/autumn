@@ -1,16 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import { createBalanceWorkerEnv } from "./balanceWorker/balanceWorkerEnv.js";
 import { createBalanceWorkerClientEnv } from "./balanceWorkerClient.js";
+import { createHeraldEnv } from "./herald.js";
 
 const brokers = {
 	KAFKA_BROKERS: "localhost:19092",
 	DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 };
 
-for (const [name, createEnv] of [
-	["worker", createBalanceWorkerEnv],
-	["ownership reader", createBalanceWorkerClientEnv],
-] as const) {
+const services = [
+	["worker", createBalanceWorkerEnv, "BALANCE_WORKER"],
+	["ownership reader", createBalanceWorkerClientEnv, "SERVER"],
+	["herald", createHeraldEnv, "HERALD"],
+] as const;
+
+for (const [name, createEnv, service] of services) {
+	const username = `KAFKA_SASL_USERNAME_${service}`;
+	const password = `KAFKA_SASL_PASSWORD_${service}`;
 	describe(`${name} Kafka authentication`, () => {
 		test("defaults to MSK IAM without a deployment auth setting", () => {
 			expect(createEnv({ ...brokers, AWS_REGION: "us-east-1" })).toHaveProperty(
@@ -61,8 +67,8 @@ for (const [name, createEnv] of [
 				createEnv({
 					...brokers,
 					KAFKA_AUTH_MODE: "scram",
-					KAFKA_SASL_USERNAME: "tf-redpanda-staging-server",
-					KAFKA_SASL_PASSWORD: "secret",
+					[username]: "tf-redpanda-staging-server",
+					[password]: "secret",
 				}),
 			).toMatchObject({
 				KAFKA_AUTH_MODE: "scram",
@@ -80,21 +86,21 @@ for (const [name, createEnv] of [
 					...brokers,
 					KAFKA_AUTH_MODE: "scram",
 					KAFKA_SASL_MECHANISM: "scram-sha-512",
-					KAFKA_SASL_USERNAME: "user",
-					KAFKA_SASL_PASSWORD: "secret",
+					[username]: "user",
+					[password]: "secret",
 				}),
 			).toHaveProperty("KAFKA_SCRAM.mechanism", "scram-sha-512");
 		});
 
 		test.each([
-			{ KAFKA_SASL_PASSWORD: "secret" },
-			{ KAFKA_SASL_USERNAME: "user" },
-			{ KAFKA_SASL_USERNAME: " ", KAFKA_SASL_PASSWORD: "secret" },
-			{ KAFKA_SASL_USERNAME: "user", KAFKA_SASL_PASSWORD: "" },
+			{ [password]: "secret" },
+			{ [username]: "user" },
+			{ [username]: " ", [password]: "secret" },
+			{ [username]: "user", [password]: "" },
 		])("rejects SCRAM without a username and password: %j", (credentials) => {
 			expect(() =>
 				createEnv({ ...brokers, KAFKA_AUTH_MODE: "scram", ...credentials }),
-			).toThrow("requires KAFKA_SASL_USERNAME and KAFKA_SASL_PASSWORD");
+			).toThrow(`requires ${username} and ${password}`);
 		});
 
 		test.each(["plain", "SCRAM-SHA-256", "scram-sha-1"])(
@@ -105,8 +111,8 @@ for (const [name, createEnv] of [
 						...brokers,
 						KAFKA_AUTH_MODE: "scram",
 						KAFKA_SASL_MECHANISM: mechanism,
-						KAFKA_SASL_USERNAME: "user",
-						KAFKA_SASL_PASSWORD: "secret",
+						[username]: "user",
+						[password]: "secret",
 					}),
 				).toThrow("KAFKA_SASL_MECHANISM");
 			},
@@ -117,10 +123,37 @@ for (const [name, createEnv] of [
 				createEnv({
 					...brokers,
 					AWS_REGION: "us-east-1",
-					KAFKA_SASL_USERNAME: "user",
-					KAFKA_SASL_PASSWORD: "secret",
+					[username]: "user",
+					[password]: "secret",
 				}),
 			).toHaveProperty("KAFKA_SCRAM", undefined);
+		});
+
+		test("SCRAM reads only this service's credentials", () => {
+			const others = Object.fromEntries(
+				services
+					.filter(([, , other]) => other !== service)
+					.flatMap(([, , other]) => [
+						[`KAFKA_SASL_USERNAME_${other}`, `user-${other}`],
+						[`KAFKA_SASL_PASSWORD_${other}`, `secret-${other}`],
+					]),
+			);
+			expect(() =>
+				createEnv({ ...brokers, KAFKA_AUTH_MODE: "scram", ...others }),
+			).toThrow(`requires ${username} and ${password}`);
+			expect(
+				createEnv({
+					...brokers,
+					KAFKA_AUTH_MODE: "scram",
+					...others,
+					[username]: "mine",
+					[password]: "my-secret",
+				}),
+			).toHaveProperty("KAFKA_SCRAM", {
+				mechanism: "scram-sha-256",
+				username: "mine",
+				password: "my-secret",
+			});
 		});
 
 		test.each(["iam", "msk", "MSK_IAM", "", " "])(

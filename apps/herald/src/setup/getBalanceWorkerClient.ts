@@ -7,6 +7,7 @@ import {
 	BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
+import { getHeraldEnv } from "@autumn/env/herald";
 import { getHeraldLogger } from "./getHeraldLogger.js";
 
 let balanceWorkerClient: BalanceWorkerClient | undefined;
@@ -22,7 +23,7 @@ export function getBalanceWorkerClient(): BalanceWorkerClient {
 				brokers: env.KAFKA_BROKERS,
 				authMode: env.KAFKA_AUTH_MODE,
 				region: env.AWS_REGION,
-				scram: env.KAFKA_SCRAM,
+				scram: getHeraldEnv().KAFKA_SCRAM,
 			},
 			ownershipTopic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
