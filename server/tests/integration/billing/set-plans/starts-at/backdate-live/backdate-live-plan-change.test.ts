@@ -7,11 +7,19 @@
  */
 
 import { expect, test } from "bun:test";
-import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
+import {
+	addInterval,
+	BillingInterval,
+	ms,
+	type SetPlansParamsV0Input,
+} from "@autumn/shared";
 import { expectPlanStartsAt } from "@tests/integration/billing/set-plans/utils/resyncUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { calculateProratedDiff } from "@tests/integration/billing/utils/proration";
+import {
+	calculateProratedDiff,
+	calculateProrationFromPeriod,
+} from "@tests/integration/billing/utils/proration";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -26,6 +34,7 @@ import {
 	liveSubscriptionPeriod,
 } from "./utils/backdateLiveUtils";
 
+const PRO_MONTHLY_PRICE = 20;
 const PRO_ANNUAL_PRICE = 200;
 
 test.concurrent(
@@ -128,7 +137,7 @@ test.concurrent(
 		const proAnnual = products.proAnnual({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
-		const { pro, customerId, autumnV1, autumnV2_4, ctx } =
+		const { pro, customerId, autumnV1, autumnV2_4, ctx, advancedTo } =
 			await initLiveProScenario({
 				customerId: "set-plans-backdate-live-to-annual",
 				advanceDays: 10,
@@ -143,8 +152,29 @@ test.concurrent(
 			],
 		};
 
+		const annualCharge = calculateProrationFromPeriod({
+			billingPeriod: {
+				start: addInterval({
+					from: live.periodEndMs,
+					interval: BillingInterval.Year,
+					intervalCount: -1,
+				}),
+				end: live.periodEndMs,
+			},
+			advancedTo,
+			amount: PRO_ANNUAL_PRICE,
+		});
+		const monthlyCredit = calculateProrationFromPeriod({
+			billingPeriod: { start: live.periodStartMs, end: live.periodEndMs },
+			advancedTo,
+			amount: PRO_MONTHLY_PRICE,
+		});
+		const expectedCharge = new Decimal(annualCharge)
+			.minus(monthlyCredit)
+			.toNumber();
+
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.total).toBeGreaterThan(0);
+		expect(preview.total).toBeCloseTo(expectedCharge, 1);
 		await autumnV2_4.billing.setPlans(params);
 
 		await expectCustomerInvoiceCorrect({
