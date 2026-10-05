@@ -1,4 +1,8 @@
-import type { KafkaSender, OwnershipKafka } from "@autumn/kafka";
+import type {
+	KafkaScramCredentials,
+	KafkaSender,
+	OwnershipKafka,
+} from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import type { PartitionOwners } from "../../routing/types/routing.js";
 
@@ -15,8 +19,9 @@ export type BalanceWorkerKafka = OwnershipKafka & {
 export type BalanceWorkerKafkaConfig = {
 	clientId: string;
 	brokers: string[];
-	authMode: "none" | "msk_iam";
+	authMode: "none" | "msk_iam" | "scram";
 	region?: string;
+	scram?: KafkaScramCredentials;
 };
 
 type LogMethod = (payload: object | string, message?: string) => void;

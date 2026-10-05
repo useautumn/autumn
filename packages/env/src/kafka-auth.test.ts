@@ -56,6 +56,73 @@ for (const [name, createEnv] of [
 			},
 		);
 
+		test("SCRAM carries its credentials, defaults to SHA-256 and needs no AWS region", () => {
+			expect(
+				createEnv({
+					...brokers,
+					KAFKA_AUTH_MODE: "scram",
+					KAFKA_SASL_USERNAME: "tf-redpanda-staging-server",
+					KAFKA_SASL_PASSWORD: "secret",
+				}),
+			).toMatchObject({
+				KAFKA_AUTH_MODE: "scram",
+				KAFKA_SCRAM: {
+					mechanism: "scram-sha-256",
+					username: "tf-redpanda-staging-server",
+					password: "secret",
+				},
+			});
+		});
+
+		test("SCRAM accepts SHA-512", () => {
+			expect(
+				createEnv({
+					...brokers,
+					KAFKA_AUTH_MODE: "scram",
+					KAFKA_SASL_MECHANISM: "scram-sha-512",
+					KAFKA_SASL_USERNAME: "user",
+					KAFKA_SASL_PASSWORD: "secret",
+				}),
+			).toHaveProperty("KAFKA_SCRAM.mechanism", "scram-sha-512");
+		});
+
+		test.each([
+			{ KAFKA_SASL_PASSWORD: "secret" },
+			{ KAFKA_SASL_USERNAME: "user" },
+			{ KAFKA_SASL_USERNAME: " ", KAFKA_SASL_PASSWORD: "secret" },
+			{ KAFKA_SASL_USERNAME: "user", KAFKA_SASL_PASSWORD: "" },
+		])("rejects SCRAM without a username and password: %j", (credentials) => {
+			expect(() =>
+				createEnv({ ...brokers, KAFKA_AUTH_MODE: "scram", ...credentials }),
+			).toThrow("requires KAFKA_SASL_USERNAME and KAFKA_SASL_PASSWORD");
+		});
+
+		test.each(["plain", "SCRAM-SHA-256", "scram-sha-1"])(
+			"rejects an unknown SCRAM mechanism: %j",
+			(mechanism) => {
+				expect(() =>
+					createEnv({
+						...brokers,
+						KAFKA_AUTH_MODE: "scram",
+						KAFKA_SASL_MECHANISM: mechanism,
+						KAFKA_SASL_USERNAME: "user",
+						KAFKA_SASL_PASSWORD: "secret",
+					}),
+				).toThrow("KAFKA_SASL_MECHANISM");
+			},
+		);
+
+		test("other modes never carry SCRAM credentials", () => {
+			expect(
+				createEnv({
+					...brokers,
+					AWS_REGION: "us-east-1",
+					KAFKA_SASL_USERNAME: "user",
+					KAFKA_SASL_PASSWORD: "secret",
+				}),
+			).toHaveProperty("KAFKA_SCRAM", undefined);
+		});
+
 		test.each(["iam", "msk", "MSK_IAM", "", " "])(
 			"rejects an unknown auth mode instead of falling back to plaintext: %j",
 			(mode) => {

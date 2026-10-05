@@ -76,6 +76,7 @@ export function createHerald({
 			transport: createKafkaTransport({
 				authMode: env.KAFKA_AUTH_MODE,
 				region: env.AWS_REGION,
+				scram: env.KAFKA_SCRAM,
 			}),
 			limits: {
 				connectionTimeoutMs: 5000,

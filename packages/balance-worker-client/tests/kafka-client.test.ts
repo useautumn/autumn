@@ -232,7 +232,7 @@ test("the producer connects on the first queued command only, and a failed conne
 	}
 });
 
-test("a connection is built without connecting, with MSK IAM transport when asked", () => {
+test("a connection is built without connecting, with MSK IAM or SCRAM transport when asked", () => {
 	const plain = createBalanceWorkerKafka({
 		clientId: "test",
 		brokers: ["127.0.0.1:19092"],
@@ -246,6 +246,24 @@ test("a connection is built without connecting, with MSK IAM transport when aske
 			authMode: "msk_iam",
 		}),
 	).toThrow("MSK IAM authentication requires a region");
+	expect(() =>
+		createBalanceWorkerKafka({
+			clientId: "test",
+			brokers: ["seed.redpanda:9092"],
+			authMode: "scram",
+		}),
+	).toThrow("SCRAM authentication requires a username and password");
+	const scram = createBalanceWorkerKafka({
+		clientId: "test",
+		brokers: ["seed.redpanda:9092"],
+		authMode: "scram",
+		scram: {
+			mechanism: "scram-sha-256",
+			username: "server",
+			password: "secret",
+		},
+	});
+	expect(typeof scram.producer).toBe("function");
 });
 
 test("a process that appends connects both producers at start, and a failed connect is left to the first append", async () => {

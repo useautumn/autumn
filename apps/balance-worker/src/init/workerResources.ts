@@ -104,6 +104,7 @@ export async function openWorkerResources({
 			transport: createKafkaTransport({
 				authMode: env.KAFKA_AUTH_MODE,
 				region: env.AWS_REGION,
+				scram: env.KAFKA_SCRAM,
 				onToken: logKafkaToken,
 			}),
 			limits: WORKER_KAFKA_CLIENT_LIMITS,

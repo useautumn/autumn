@@ -28,6 +28,7 @@ export type {
 	KafkaProducerClient,
 	KafkaProducerFactory,
 	KafkaRequestTiming,
+	KafkaScramCredentials,
 	KafkaSender,
 	KafkaTransaction,
 	KafkaTransportConfig,

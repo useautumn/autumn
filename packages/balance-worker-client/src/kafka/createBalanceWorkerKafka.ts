@@ -14,12 +14,13 @@ export function createBalanceWorkerKafka({
 	brokers,
 	authMode,
 	region,
+	scram,
 }: BalanceWorkerKafkaConfig): BalanceWorkerKafka {
 	return new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId,
 			brokers,
-			transport: createKafkaTransport({ authMode, region }),
+			transport: createKafkaTransport({ authMode, region, scram }),
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,

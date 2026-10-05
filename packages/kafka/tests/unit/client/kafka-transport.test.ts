@@ -32,6 +32,35 @@ test("local transport never resolves AWS credentials", () => {
 	expect(calls).toBe(0);
 });
 
+test("SCRAM uses TLS with its credentials and never signs an IAM token", () => {
+	let calls = 0;
+	async function generateToken(): Promise<never> {
+		calls++;
+		throw new Error("SCRAM must not sign an IAM token");
+	}
+	const scram = {
+		mechanism: "scram-sha-256" as const,
+		username: "tf-redpanda-staging-server",
+		password: "secret",
+	};
+	expect(
+		createKafkaTransport({ authMode: "scram", scram, generateToken }),
+	).toEqual({ ssl: true, sasl: scram });
+	expect(calls).toBe(0);
+});
+
+test("SCRAM without a username and password is refused", () => {
+	expect(() => createKafkaTransport({ authMode: "scram" })).toThrow(
+		"SCRAM authentication requires a username and password",
+	);
+	expect(() =>
+		createKafkaTransport({
+			authMode: "scram",
+			scram: { mechanism: "scram-sha-512", username: "", password: "secret" },
+		}),
+	).toThrow("SCRAM authentication requires a username and password");
+});
+
 test("IAM uses TLS and signs lazily for every authentication", async () => {
 	const requests: GenerateAuthTokenOptions[] = [];
 	async function generateToken(options: GenerateAuthTokenOptions) {

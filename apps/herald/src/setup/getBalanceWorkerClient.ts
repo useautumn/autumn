@@ -22,6 +22,7 @@ export function getBalanceWorkerClient(): BalanceWorkerClient {
 				brokers: env.KAFKA_BROKERS,
 				authMode: env.KAFKA_AUTH_MODE,
 				region: env.AWS_REGION,
+				scram: env.KAFKA_SCRAM,
 			},
 			ownershipTopic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,

@@ -6,18 +6,23 @@ import {
 	writeKafkaTokenLine,
 } from "./kafkaTokens.js";
 import { describeMskToken, type KafkaTokenInfo } from "./mskTokenInfo.js";
-import type { KafkaTransportConfig } from "./types/kafkaClient.js";
+import type {
+	KafkaScramCredentials,
+	KafkaTransportConfig,
+} from "./types/kafkaClient.js";
 
 export function createKafkaTransport({
 	authMode,
 	region,
+	scram,
 	generateToken = generateAuthToken,
 	onToken = writeKafkaTokenLine,
 	tokens = processKafkaTokens,
 	now = Date.now,
 }: {
-	authMode: "none" | "msk_iam";
+	authMode: "none" | "msk_iam" | "scram";
 	region?: string;
+	scram?: KafkaScramCredentials;
 	generateToken?: typeof generateAuthToken;
 	/** Told about every token signed, so a refusal can be read against the key and lifetime the client presented. */
 	onToken?(info: KafkaTokenInfo): void;
@@ -25,6 +30,7 @@ export function createKafkaTransport({
 	now?: () => number;
 }): KafkaTransportConfig {
 	if (authMode === "none") return {};
+	if (authMode === "scram") return createScramTransport({ scram });
 	if (authMode !== "msk_iam") {
 		throw new Error("Unsupported Kafka authentication mode");
 	}
@@ -50,5 +56,26 @@ export function createKafkaTransport({
 	return {
 		ssl: true,
 		sasl: { mechanism: "oauthbearer", oauthBearerProvider },
+	};
+}
+
+function createScramTransport({
+	scram,
+}: {
+	scram?: KafkaScramCredentials;
+}): KafkaTransportConfig {
+	if (!scram?.username.trim() || !scram.password) {
+		throw new Error("SCRAM authentication requires a username and password");
+	}
+	const { username, password } = scram;
+	if (scram.mechanism === "scram-sha-512") {
+		return {
+			ssl: true,
+			sasl: { mechanism: "scram-sha-512", username, password },
+		};
+	}
+	return {
+		ssl: true,
+		sasl: { mechanism: "scram-sha-256", username, password },
 	};
 }
