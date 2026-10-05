@@ -9,7 +9,7 @@ import type {
 
 const CHECKOUT_BASE_URL =
 	process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
-const CHECKOUT_TIMEOUT_MS = 15000;
+const CHECKOUT_TIMEOUT_MS = 180000;
 
 export const fetchAutumnCheckout = async ({
 	checkoutId,

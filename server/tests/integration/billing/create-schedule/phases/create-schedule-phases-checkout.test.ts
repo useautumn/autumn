@@ -273,6 +273,7 @@ test.concurrent(
 		});
 
 		const now = Date.now();
+		console.log("[dbg] createSchedule start");
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			redirect_mode: "always",
@@ -294,17 +295,22 @@ test.concurrent(
 		expect(isAutumnCheckoutUrl(response.payment_url!)).toBe(true);
 
 		const checkoutId = getCheckoutId(response.payment_url);
+		console.log("[dbg] createSchedule took", Date.now() - now);
+		let t = Date.now();
 		const checkout = await fetchAutumnCheckout({ checkoutId });
+		console.log("[dbg] fetch took", Date.now() - t);
 
 		expect(checkout.action).toBe(CheckoutAction.CreateSchedule);
 		expect(checkout.preview.total).toBe(30);
 
+		t = Date.now();
 		await confirmAutumnCheckout({
 			checkoutId,
 			customerId,
 			productId: premium.id,
 		});
 
+		console.log("[dbg] confirm took", Date.now() - t);
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.features?.[TestFeature.Messages]?.balance).toBe(500);
 
