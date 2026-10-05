@@ -246,6 +246,7 @@
 							"api-reference/invoices/payInvoice",
 							"api-reference/invoices/voidInvoice",
 							"api-reference/invoices/reissueInvoice",
+							"api-reference/invoices/issueCreditNote",
 							"api-reference/invoices/insertInvoices",
 							"api-reference/invoices/listInvoiceTemplates"
 						]
