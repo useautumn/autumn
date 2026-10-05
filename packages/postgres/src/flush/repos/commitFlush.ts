@@ -144,7 +144,8 @@ const guardMissed = ({
 			}),
 	);
 
-/** The counts this flush aborted with: only Postgres's own 22P02 text for this flush's marker, never a value it echoes. */
+/** The counts this flush aborted with: a 22P02 carrying this flush's nonce'd marker. Only the marker is matched,
+ *  since Postgres words and quotes the message per lc_messages; the nonce keeps an echoed value from posing as it. */
 const rolledBackOutcomeOf = ({
 	error,
 	nonce,
@@ -153,7 +154,7 @@ const rolledBackOutcomeOf = ({
 	nonce: string;
 }): FlushOutcome | null => {
 	const rollback = new RegExp(
-		`^invalid input syntax for type integer: "${FLUSH_ROLLBACK_MARKER}${nonce}:(\\d+):([\\d,]*)"$`,
+		`${FLUSH_ROLLBACK_MARKER}${nonce}:(\\d+):([\\d,]*)`,
 	);
 	for (let cause = error; cause instanceof Error; cause = cause.cause) {
 		if (

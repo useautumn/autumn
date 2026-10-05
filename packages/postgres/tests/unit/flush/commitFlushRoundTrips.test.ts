@@ -98,6 +98,20 @@ describe("commitFlush with roundTrips single", () => {
 		expect(result).toEqual({ applied: [true, false] });
 	});
 
+	test("a rollback worded in another lc_messages language still names the row that did not land", async () => {
+		const result = await single({
+			execute: async (query) => {
+				throw Object.assign(
+					new Error(
+						`ungültige Eingabesyntax für Typ integer: »${markerOf(query)}1:1,0«`,
+					),
+					{ errno: "22P02", code: "ERR_POSTGRES_SERVER_ERROR" },
+				);
+			},
+		});
+		expect(result).toEqual({ applied: [true, false] });
+	});
+
 	test("a value that echoes a rollback marker without this flush's nonce comes out as the error it is", async () => {
 		for (const text of [
 			"flush_rolled_back:1:1,1",
@@ -114,26 +128,17 @@ describe("commitFlush with roundTrips single", () => {
 		}
 	});
 
-	test("this flush's marker inside any other error, or another error code, is not a rollback", async () => {
-		const wrapped = (query: SQL) =>
-			Object.assign(
-				new Error(
-					`invalid input syntax for type integer: "x" near "${markerOf(query)}1:1,1"`,
-				),
-				{ errno: "22P02" },
-			);
-		const otherCode = (query: SQL) =>
-			Object.assign(castError(`${markerOf(query)}1:1,1`), { errno: "57014" });
-		for (const errorOf of [wrapped, otherCode]) {
-			let thrown: unknown;
-			const caught = await single({
-				execute: async (query) => {
-					thrown = errorOf(query);
-					throw thrown;
-				},
-			}).catch((error: unknown) => error);
-			expect(caught).toBe(thrown);
-		}
+	test("this flush's marker under another error code is not a rollback", async () => {
+		let thrown: unknown;
+		const caught = await single({
+			execute: async (query) => {
+				thrown = Object.assign(castError(`${markerOf(query)}1:1,1`), {
+					errno: "57014",
+				});
+				throw thrown;
+			},
+		}).catch((error: unknown) => error);
+		expect(caught).toBe(thrown);
 	});
 
 	test("any other Postgres error comes out unchanged", async () => {
