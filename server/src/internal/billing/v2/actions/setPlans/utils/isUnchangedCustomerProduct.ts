@@ -44,5 +44,6 @@ export const isUnchangedCustomerProduct = ({
 				licenses: customerProductToGrantedLicenses(customerProduct),
 			},
 			resetsBillingCycle: false,
+			prorationBehavior: null,
 		}),
 	});

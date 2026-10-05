@@ -152,5 +152,6 @@ export const insertSegmentCustomerProduct = ({
 			phaseContext.billingCycleAnchor === "phase_start"
 				? phaseContext.startsAt
 				: null,
+		phaseProrationBehavior: phaseContext.prorationBehavior ?? null,
 	});
 };

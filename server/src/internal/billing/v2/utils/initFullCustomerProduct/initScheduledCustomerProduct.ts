@@ -7,6 +7,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
+	type PhaseProrationBehavior,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -32,6 +33,7 @@ export const initScheduledCustomerProduct = ({
 	accessStartsAt,
 	externalId,
 	billingCycleAnchorResetsAt,
+	phaseProrationBehavior,
 	subscriptionId,
 	subscriptionScheduleId,
 	internalEntityId,
@@ -49,6 +51,7 @@ export const initScheduledCustomerProduct = ({
 	/** Customer-facing Autumn subscription API id, stored on customer_products.external_id. */
 	externalId?: string;
 	billingCycleAnchorResetsAt?: number | null;
+	phaseProrationBehavior?: PhaseProrationBehavior | null;
 	/** When syncing from an existing Stripe sub/schedule, link the resulting
 	 * scheduled cusProduct back to it so the customer-products view shows the
 	 * Stripe linkage and downstream actions (cancel, restore) can find it. */
@@ -83,6 +86,7 @@ export const initScheduledCustomerProduct = ({
 			accessStartsAt,
 			externalId,
 			billingCycleAnchorResetsAt,
+			phaseProrationBehavior,
 			subscriptionId,
 			subscriptionScheduleId,
 			internalEntityId,

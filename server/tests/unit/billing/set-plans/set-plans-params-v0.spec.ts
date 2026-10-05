@@ -44,6 +44,67 @@ describe(chalk.yellowBright("SetPlansParamsV0Schema"), () => {
 		expect(parsed.billing_cycle_anchor).toBe("now");
 	});
 
+	test("accepts prorate_immediately or none on a later phase", () => {
+		const parsed = SetPlansParamsV0Schema.parse({
+			...resyncRequest,
+			phases: [
+				...resyncRequest.phases,
+				{
+					starts_at: OLD_PERIOD_END_MS,
+					proration_behavior: "none",
+					plans: [{ plan_id: "pro" }],
+				},
+			],
+		});
+
+		expect(parsed.phases[1]?.proration_behavior).toBe("none");
+	});
+
+	test("rejects bill_difference on a later phase", () => {
+		const result = SetPlansParamsV0Schema.safeParse({
+			...resyncRequest,
+			phases: [
+				...resyncRequest.phases,
+				{
+					starts_at: OLD_PERIOD_END_MS,
+					proration_behavior: "bill_difference",
+					plans: [{ plan_id: "pro" }],
+				},
+			],
+		});
+
+		expect(result.success).toBe(false);
+		expect(result.error?.issues[0]?.path).toEqual([
+			"phases",
+			1,
+			"proration_behavior",
+		]);
+		expect(result.error?.issues[0]?.message).toContain("bill_difference");
+	});
+
+	test("rejects a per-phase proration on the first phase, pointing to the top-level field", () => {
+		const firstPhase = {
+			starts_at: "now",
+			proration_behavior: "none",
+			plans: [{ plan_id: "pro" }],
+		};
+		const setPlansResult = SetPlansParamsV0Schema.safeParse({
+			customer_id: "cus_123",
+			phases: [firstPhase],
+		});
+		const createScheduleResult = CreateScheduleParamsV0Schema.safeParse({
+			customer_id: "cus_123",
+			phases: [firstPhase],
+		});
+
+		expect(setPlansResult.error?.issues[0]?.message).toBe(
+			"proration_behavior cannot be set on the first phase. Use the top-level proration_behavior instead.",
+		);
+		expect(createScheduleResult.error?.issues[0]?.message).toBe(
+			"proration_behavior cannot be set on the first phase. Use the top-level billing_behavior instead.",
+		);
+	});
+
 	test("rejects billing_behavior and points to proration_behavior", () => {
 		const result = SetPlansParamsV0Schema.safeParse({
 			customer_id: "cus_123",

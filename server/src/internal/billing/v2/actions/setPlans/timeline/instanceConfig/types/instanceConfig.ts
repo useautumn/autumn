@@ -2,6 +2,7 @@ import type {
 	CustomerLicenseQuantity,
 	FeatureOptions,
 	FullProduct,
+	PhaseProrationBehavior,
 } from "@autumn/shared";
 
 export type GrantedLicense = {
@@ -27,4 +28,6 @@ export type InstanceConfig = {
 	planQuantity: number;
 	/** Starting this instance resets the billing cycle anchor. */
 	resetsBillingCycle: boolean;
+	/** How starting this instance bills, when the request names it. */
+	prorationBehavior: PhaseProrationBehavior | null;
 };

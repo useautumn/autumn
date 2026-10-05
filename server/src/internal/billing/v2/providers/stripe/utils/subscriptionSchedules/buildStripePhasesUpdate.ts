@@ -17,6 +17,7 @@ import { buildTransitionPoints } from "./buildTransitionPoints";
 import { customerProductsToPhaseInvoiceItems } from "./customerProductsToPhaseInvoiceItems";
 import { logTransitionPoints } from "./logBuildPhaseHelpers";
 import { normalizeCustomerProductTimestamps } from "./normalizeCustomerProductTimestamps";
+import { resolveStripePhaseProrationBehavior } from "./resolveStripePhaseProrationBehavior";
 
 /**
  * Converts customer products to Stripe schedule phase items.
@@ -387,7 +388,7 @@ export const buildStripePhasesUpdate = ({
 		const hasOneOffInvoiceItems = phaseAddInvoiceItems.length > 0;
 		const shouldInvoicePhaseTransition =
 			phaseIndex > 0 && phaseItems.length > 0;
-		const shouldAlwaysInvoice =
+		const invoicesPhaseStart =
 			shouldInvoicePhaseTransition ||
 			isBillingCycleAnchorResetPhase ||
 			hasOneOffInvoiceItems;
@@ -402,13 +403,13 @@ export const buildStripePhasesUpdate = ({
 			billing_cycle_anchor: isBillingCycleAnchorResetPhase
 				? "phase_start"
 				: undefined,
-			// Product switches at a reset start a full cycle without old-plan credits.
-			proration_behavior:
-				isBillingCycleAnchorResetPhase && changesCustomerProducts
-					? "none"
-					: shouldAlwaysInvoice
-						? "always_invoice"
-						: undefined,
+			proration_behavior: resolveStripePhaseProrationBehavior({
+				phaseCustomerProducts: activeCustomerProducts,
+				phaseStartMs: startMs,
+				isBillingCycleAnchorResetPhase,
+				changesCustomerProducts,
+				invoicesPhaseStart,
+			}),
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
 				phaseStartDateSeconds,

@@ -119,6 +119,7 @@ describe(chalk.yellowBright("set_plans omitted license quantities"), () => {
 			featureQuantities: [],
 			planQuantity: 1,
 			resetsBillingCycle: false,
+			prorationBehavior: null,
 		};
 
 		const requestedHash = configHash({

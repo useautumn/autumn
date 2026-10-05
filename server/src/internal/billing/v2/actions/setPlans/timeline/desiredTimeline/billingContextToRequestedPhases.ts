@@ -18,6 +18,7 @@ export const billingContextToRequestedPhases = ({
 			? truncateMsToSecondPrecision(billingContext.immediatePhase.starts_at)
 			: now,
 		resetsBillingCycle: false,
+		prorationBehavior: null,
 		plans: billingContext.productContexts.map((productContext, planIndex) => ({
 			fullProduct: productContext.fullProduct,
 			featureQuantities: productContext.featureQuantities,
@@ -36,6 +37,7 @@ export const billingContextToRequestedPhases = ({
 		(phaseContext, index): RequestedPhase => ({
 			startsAt: truncateMsToSecondPrecision(phaseContext.startsAt),
 			resetsBillingCycle: phaseContext.billingCycleAnchor === "phase_start",
+			prorationBehavior: phaseContext.prorationBehavior ?? null,
 			plans: phaseContext.productContexts.map((productContext, planIndex) => ({
 				fullProduct: productContext.fullProduct,
 				featureQuantities: productContext.featureQuantities,

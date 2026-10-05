@@ -2,6 +2,7 @@ import type {
 	CustomerLicenseQuantity,
 	FeatureOptions,
 	FullProduct,
+	PhaseProrationBehavior,
 } from "@autumn/shared";
 import type { DesiredSegmentSource } from "../../types/timelineSegment";
 
@@ -20,5 +21,6 @@ export type RequestedPlan = {
 export type RequestedPhase = {
 	startsAt: number;
 	resetsBillingCycle: boolean;
+	prorationBehavior: PhaseProrationBehavior | null;
 	plans: RequestedPlan[];
 };

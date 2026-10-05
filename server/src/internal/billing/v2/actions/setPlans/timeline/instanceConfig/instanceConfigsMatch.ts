@@ -126,7 +126,8 @@ export const instanceConfigsMatch = ({
 
 	const sameSchedulingShape =
 		first.planQuantity === second.planQuantity &&
-		first.resetsBillingCycle === second.resetsBillingCycle;
+		first.resetsBillingCycle === second.resetsBillingCycle &&
+		first.prorationBehavior === second.prorationBehavior;
 	const sameFeatureQuantities = featureOptionsAreSame({
 		curFeatureOptions: first.featureQuantities,
 		newFeatureOptions: second.featureQuantities,
