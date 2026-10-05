@@ -5,6 +5,7 @@ import {
 } from "../../../src/processor/writer/writerErrors.js";
 import type { FailedPosition } from "../../../src/runtime/commitPositions/types/commitPositions.js";
 import {
+	decided,
 	identity,
 	partition,
 	residentFixture,
@@ -52,10 +53,12 @@ describe("inline track batches", () => {
 			expect(outcome).toEqual({ kind: "refused", reason: "not_resident" });
 			await waitForAppend();
 			expect(f.appender.batches).toEqual([1]);
-			const retry = f.processor.trackInline({
-				command: trackCommand({ commandId: "ok" }),
-			});
-			expect(retry?.seq).toBe(2);
+			const retry = decided(
+				f.processor.trackInline({
+					command: trackCommand({ commandId: "ok" }),
+				}),
+			);
+			expect(retry.seq).toBe(2);
 		} finally {
 			f.close();
 		}

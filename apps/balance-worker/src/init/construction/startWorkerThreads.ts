@@ -32,7 +32,12 @@ export async function startWorkerThreads({
 		heldReplies?: Omit<Parameters<typeof connectHeldReplies>[0], "http">;
 	};
 	config: { http: HttpWorkerPoolConfig; producers: ThreadedProducersConfig };
-}): Promise<{ listener: WorkerListener; producers: ThreadedProducers }> {
+}): Promise<{
+	listener: WorkerListener;
+	producers: ThreadedProducers;
+	/** Both pools' window counts for the summary line, reset by the read. */
+	drainThreadHealth(): Record<string, number>;
+}> {
 	function httpWorkersFailed({ cause }: { cause: unknown }): void {
 		ctx.onFatal({ cause, scope: "http-workers" });
 	}
@@ -70,5 +75,8 @@ export async function startWorkerThreads({
 			await producers.stop();
 		}
 	}
-	return { listener: { stop }, producers };
+	function drainThreadHealth() {
+		return { ...http.drainHealth(), ...producers.drainHealth() };
+	}
+	return { listener: { stop }, producers, drainThreadHealth };
 }

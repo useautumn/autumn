@@ -42,5 +42,7 @@ export type ThreadedProducersScope = {
 		nextProducerId: number;
 		stopping: boolean;
 		failed: boolean;
+		/** Sends too big for the ring, or that found it full, this window: they went by message port. */
+		sendsOverPort: number;
 	};
 };

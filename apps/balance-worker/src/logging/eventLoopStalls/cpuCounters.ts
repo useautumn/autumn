@@ -4,6 +4,8 @@ export type CpuCounters = {
 	processMicros: number;
 	host: { stealTicks: number; iowaitTicks: number; totalTicks: number } | null;
 	throttledMicros: number | null;
+	/** The decide thread alone (Linux), apart from GC helpers and worker threads. */
+	mainThreadMicros: number | null;
 };
 
 export type CpuWindow = {
@@ -12,6 +14,7 @@ export type CpuWindow = {
 	stealPct?: number;
 	iowaitPct?: number;
 	throttledMs?: number;
+	mainCpuPct?: number;
 };
 
 const PROC_STAT = "/proc/stat";
@@ -20,6 +23,9 @@ const CGROUP_V1_CPU_STAT = "/sys/fs/cgroup/cpu/cpu.stat";
 const HOST_TICK_FIELDS = 8;
 const STEAL_FIELD = 7;
 const IOWAIT_FIELD = 4;
+/** `utime` and `stime` in /proc/<pid>/task/<tid>/stat, counted after the `(comm)` field; USER_HZ is 100. */
+const THREAD_UTIME_FIELD = 11;
+const MICROS_PER_TICK = 10_000;
 
 function readCounterFile({ path }: { path: string }): string | null {
 	try {
@@ -76,6 +82,14 @@ function throttledMicrosOf({
 	return v1Nanos === null ? null : v1Nanos / 1_000;
 }
 
+function threadMicrosOf({ text }: { text: string | null }): number | null {
+	const fields = text?.slice(text.lastIndexOf(")") + 2).split(" ");
+	const utime = Number(fields?.[THREAD_UTIME_FIELD]);
+	const stime = Number(fields?.[THREAD_UTIME_FIELD + 1]);
+	if (!Number.isFinite(utime) || !Number.isFinite(stime)) return null;
+	return (utime + stime) * MICROS_PER_TICK;
+}
+
 export function readCpuCounters({
 	readFile = readCounterFile,
 	processUsage = () => process.cpuUsage(),
@@ -88,6 +102,9 @@ export function readCpuCounters({
 		processMicros: user + system,
 		host: hostTicksOf({ text: readFile({ path: PROC_STAT }) }),
 		throttledMicros: throttledMicrosOf({ readFile }),
+		mainThreadMicros: threadMicrosOf({
+			text: readFile({ path: `/proc/self/task/${process.pid}/stat` }),
+		}),
 	};
 }
 
@@ -127,5 +144,14 @@ export function cpuWindowOf({
 	if (current.throttledMicros !== null && previous.throttledMicros !== null)
 		window.throttledMs =
 			Math.round(current.throttledMicros - previous.throttledMicros) / 1_000;
+	if (
+		current.mainThreadMicros !== null &&
+		previous.mainThreadMicros !== null &&
+		windowMs > 0
+	)
+		window.mainCpuPct = percentOf({
+			part: (current.mainThreadMicros - previous.mainThreadMicros) / 1_000,
+			whole: windowMs,
+		});
 	return window;
 }

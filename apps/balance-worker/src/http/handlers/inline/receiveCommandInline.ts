@@ -14,12 +14,15 @@ const decoder = new TextDecoder();
 
 type InlineCommand = TrackCommand | CheckCommand;
 
-/** What an inline decide answers: the reply bytes, held until the commit position reaches `seq` (0 for at once). */
-type InlineDecision = {
-	body: string;
-	reply?: BalanceWorkerRequestLog["response"];
-	seq: number;
-};
+/** The reply bytes, held until the commit position reaches `seq` (0 for at once); or why the ordinary route answers. */
+type InlineDecision =
+	| {
+			kind: "decided";
+			body: string;
+			reply?: BalanceWorkerRequestLog["response"];
+			seq: number;
+	  }
+	| { kind: "refused"; reason: string };
 
 /** The envelope of one command of `type`; anything else is the ordinary route's to answer. */
 function commandRequestOf<Command extends InlineCommand>({
@@ -60,17 +63,21 @@ export function receiveCommandInline<Command extends InlineCommand>({
 	decide: (params: {
 		processor: PartitionProcessor;
 		command: Command;
-	}) => InlineDecision | null;
+	}) => InlineDecision;
 }): InlineReply | null {
+	function fallBack(reason: string): null {
+		ctx.counters.fellBack({ name: type, reason });
+		return null;
+	}
 	const parsed = commandRequestOf<Command>({ body, type });
-	if (!parsed) return null;
+	if (!parsed) return fallBack("envelope");
 	const { route, command } = parsed;
 	const partition = ctx.partitionResolver.partitionForIdentity({
 		identity: command.identity,
 	});
-	if (partition !== route.partition) return null;
+	if (partition !== route.partition) return fallBack("partition");
 	const runtime = ctx.ownership.findRuntime(route);
-	if (!runtime?.processInline) return null;
+	if (!runtime?.processInline) return fallBack("not_owned");
 	const startedAt = performance.now();
 	const requestLog: BalanceWorkerRequestLog = {
 		id: crypto.randomUUID(),
@@ -81,7 +88,9 @@ export function receiveCommandInline<Command extends InlineCommand>({
 		const outcome = runtime.processInline((processor) =>
 			decide({ processor, command }),
 		);
-		if (!outcome) return null;
+		if (!outcome) return fallBack("not_ready");
+		if (outcome.kind === "refused") return fallBack(outcome.reason);
+		ctx.counters.answered({ name: type });
 		requestLog.response = outcome.reply;
 		reply = {
 			status: 200,

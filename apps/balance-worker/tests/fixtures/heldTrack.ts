@@ -245,3 +245,12 @@ export async function waitForAppend(): Promise<void> {
 	for (let turn = 0; turn < 3; turn++)
 		await new Promise<void>((resolve) => setImmediate(resolve));
 }
+
+/** The decision of an inline decide that must not have been refused. */
+export function decided<Decision extends { kind: string }>(
+	decision: Decision,
+): Extract<Decision, { kind: "decided" }> {
+	if (decision.kind !== "decided")
+		throw new Error(`expected a decision, got ${JSON.stringify(decision)}`);
+	return decision as Extract<Decision, { kind: "decided" }>;
+}

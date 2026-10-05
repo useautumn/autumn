@@ -209,6 +209,24 @@ describe("HTTP worker pool: replies held by commit position", () => {
 		});
 	});
 
+	test("the window counts held replies and published failure ranges, and a read resets them", async () => {
+		listener.drainHealth();
+		const held = post({ partition: 3, seq: 40 });
+		expect(await within(held, 100)).toBe("pending");
+		fail({ partition: 3, aboveSeq: 39, lastSeq: 40 });
+		expect(await within(held, 1000)).toEqual({
+			status: 503,
+			code: "NOT_READY",
+		});
+		expect(listener.drainHealth()).toEqual({
+			ringFullWaits: 0,
+			heldReplies: 1,
+			failRanges: 1,
+			heldOnDecideThread: 0,
+		});
+		expect(listener.drainHealth().heldReplies).toBe(0);
+	});
+
 	test("a held reply too big for the ring waits on the decide thread, released by position or failed by range", async () => {
 		const released = post({ partition: 1, seq: 10, pad: 20_000 });
 		const failed = post({ partition: 1, seq: 12, pad: 20_000 });

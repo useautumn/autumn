@@ -9,14 +9,17 @@ const idleCpu: CpuCounters = {
 	processMicros: 0,
 	host: null,
 	throttledMicros: null,
+	mainThreadMicros: null,
 };
 
 function createFixture({
 	reportEveryMs = 1_000,
 	cpu = () => idleCpu,
+	signals,
 }: {
 	reportEveryMs?: number;
 	cpu?: () => CpuCounters;
+	signals?: () => Record<string, unknown>;
 } = {}) {
 	let clock = 1_000;
 	const now = () => clock;
@@ -38,6 +41,7 @@ function createFixture({
 			recorder,
 			now,
 			cpu,
+			signals,
 			schedule: ({ run }) => {
 				tick = run;
 				return () => {
@@ -171,17 +175,19 @@ function summaryOf({ infos }: { infos: Log[] }) {
 	)?.[0];
 }
 
-test("the periodic summary says how much CPU the worker got, and what the host took or waited on", () => {
+test("the periodic summary says how much CPU the worker and its decide thread got, and what the host took or waited on", () => {
 	const samples: CpuCounters[] = [
 		{
 			processMicros: 1_000_000,
 			host: { stealTicks: 100, iowaitTicks: 50, totalTicks: 1_000 },
 			throttledMicros: 2_000,
+			mainThreadMicros: 500_000,
 		},
 		{
 			processMicros: 1_250_000,
 			host: { stealTicks: 160, iowaitTicks: 60, totalTicks: 1_100 },
 			throttledMicros: 7_000,
+			mainThreadMicros: 650_000,
 		},
 	];
 	const { monitor, infos, elapse } = createFixture({
@@ -199,14 +205,25 @@ test("the periodic summary says how much CPU the worker got, and what the host t
 			stealPct: 60,
 			iowaitPct: 10,
 			throttledMs: 5,
+			mainCpuPct: 15,
 		},
 	});
 });
 
 test("without host or cgroup counters the summary still reports the worker's own CPU, and omits the rest", () => {
 	const samples: CpuCounters[] = [
-		{ processMicros: 0, host: null, throttledMicros: null },
-		{ processMicros: 400_000, host: null, throttledMicros: null },
+		{
+			processMicros: 0,
+			host: null,
+			throttledMicros: null,
+			mainThreadMicros: null,
+		},
+		{
+			processMicros: 400_000,
+			host: null,
+			throttledMicros: null,
+			mainThreadMicros: null,
+		},
 	];
 	const { monitor, infos, elapse } = createFixture({
 		cpu: () => samples.shift() ?? idleCpu,
@@ -245,4 +262,17 @@ test("a timed section returns its value and still records when it throws", () =>
 		}),
 	).toThrow("boom");
 	expect(recorder.drainTotals()["subject.read"]?.count).toBe(2);
+});
+
+test("each summary carries the window's signals, drained once per report", () => {
+	let window = 0;
+	const { monitor, infos, elapse } = createFixture({
+		signals: () => ({ inline: { track: ++window } }),
+	});
+	monitor.start();
+	elapse({ elapsedMs: 1_000 });
+	expect(summaryOf({ infos })).toMatchObject({
+		data: { inline: { track: 1 } },
+	});
+	expect(window).toBe(1);
 });

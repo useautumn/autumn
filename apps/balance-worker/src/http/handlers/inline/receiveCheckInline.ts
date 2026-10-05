@@ -17,8 +17,10 @@ export function receiveCheckInline({
 		type: "check",
 		path: "/v1/check",
 		decide: ({ processor, command }) => {
-			const reply = processor.checkInline({ command });
-			return reply && { body: JSON.stringify(reply), reply, seq: 0 };
+			const decision = processor.checkInline({ command });
+			if (decision.kind === "refused") return decision;
+			const { reply } = decision;
+			return { kind: "decided", body: JSON.stringify(reply), reply, seq: 0 };
 		},
 	});
 }
