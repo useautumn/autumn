@@ -53,7 +53,7 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 					concurrency: billingVerifyExportConfig.customer.concurrency,
 					run: (scalar: CustomerExportScalarRow) =>
 						verifyCustomerToExportRows({ ctx, scalar, sweep }),
-					onBatchSettled: async ({ results }) => {
+					onBatchSettled: async ({ batch, results }) => {
 						const page = pageContexts.shift();
 						if (!page) return;
 						releaseSweptSubscriptions({
@@ -63,6 +63,7 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 						});
 						await onPageProcessed({
 							customerCount: page.scalars.length,
+							candidateCount: batch.length,
 							rowCount: results.reduce((total, rows) => total + rows.length, 0),
 						});
 					},
