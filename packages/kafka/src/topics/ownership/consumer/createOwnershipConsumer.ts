@@ -28,7 +28,11 @@ export function createOwnershipConsumer({
 	ctx: dependencies,
 	config,
 }: {
-	ctx: { kafka: OwnershipKafka };
+	ctx: {
+		kafka: OwnershipKafka;
+		/** Told once when a consumer that had caught up stops following the log; it never resumes by itself. */
+		onFailed?: (failure: { cause: unknown }) => void;
+	};
 	config: OwnershipConsumerConfig;
 }): OwnershipConsumer {
 	const catchUpTimeoutMs = config.catchUpTimeoutMs ?? 10_000;
@@ -87,12 +91,17 @@ export function createOwnershipConsumer({
 				offset: parseKafkaOffset({ offset: input.message.offset }),
 			});
 		} catch (cause) {
-			failOwnershipConsumer({ state, cause });
+			fail({ cause });
 			throw cause;
 		}
 	}
 	function onCrash(event: ConsumerCrashEvent): void {
-		failOwnershipConsumer({ state, cause: event.payload.error });
+		fail({ cause: event.payload.error });
+	}
+	function fail({ cause }: { cause: unknown }): void {
+		const wasServing = state.status === "started";
+		failOwnershipConsumer({ state, cause });
+		if (wasServing) dependencies.onFailed?.({ cause });
 	}
 	const topicConsumer = createTopicConsumer({
 		ctx: { consumer, progress, handler: { readResumeOffset, applyRecord } },

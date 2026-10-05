@@ -114,7 +114,7 @@ test.concurrent(
 			customerId,
 			count: 2,
 			latestTotal: preview.total,
-			latestInvoiceProductIds: [current.id, legacy.id],
+			latestInvoiceProductId: current.id,
 		});
 	},
 );

@@ -37,17 +37,21 @@ const getTestHelpers = async (): Promise<TestHelpers> => {
 };
 
 /**
- * Create a session for a fresh user that is a member of ctx.org, with the
- * active organization set so betterAuthMiddleware resolves it. Defaults to an
- * owner so customSession grants the broadest scopes.
+ * Create a session for a fresh member of ctx.org with it set active. `superuser`
+ * adds the global "admin" role that customSession maps to the superuser scope.
  */
 export const createDashboardSession = async (
 	ctx: DashboardCtx,
-	{ role = "owner" }: { role?: string } = {},
+	{
+		role = "owner",
+		superuser = false,
+	}: { role?: string; superuser?: boolean } = {},
 ): Promise<DashboardSession> => {
 	const test = await getTestHelpers();
 
-	const user = await test.saveUser(test.createUser());
+	const user = await test.saveUser(
+		test.createUser(superuser ? { role: "admin" } : {}),
+	);
 	await test.addMember?.({
 		userId: user.id,
 		organizationId: ctx.org.id,

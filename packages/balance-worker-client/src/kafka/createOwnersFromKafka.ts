@@ -14,6 +14,7 @@ type OwnersState = {
 	ready?: OwnershipConsumer;
 	/** A failed consumer cannot restart, so each attempt builds its own and promotes it once caught up. */
 	starting?: OwnershipConsumer;
+	stopped: boolean;
 };
 
 function sleep({ ms }: { ms: number }): Promise<void> {
@@ -29,7 +30,7 @@ export function createOwnersFromKafka({
 	ctx: { kafka: BalanceWorkerKafka; logger?: ClientLogger };
 	config: OwnersFromKafkaConfig;
 }): OwnersFromKafka {
-	const state: OwnersState = {};
+	const state: OwnersState = { stopped: false };
 	const retryDelaysMs =
 		config.startRetryDelaysMs ?? DEFAULT_START_RETRY_DELAYS_MS;
 
@@ -44,28 +45,48 @@ export function createOwnersFromKafka({
 	}
 
 	function build(): OwnershipConsumer {
-		return createOwnershipConsumer({
-			ctx: { kafka: ctx.kafka },
+		const consumer = createOwnershipConsumer({
+			ctx: { kafka: ctx.kafka, onFailed: replaceFailed },
 			config: {
 				topic: config.topic,
 				groupIdPrefix: config.groupIdPrefix,
 				catchUpTimeoutMs: config.catchUpTimeoutMs,
 			},
 		});
+		/** A failed consumer would answer every lookup with an error until the process restarted. */
+		function replaceFailed({ cause }: { cause: unknown }): void {
+			if (state.stopped || state.ready !== consumer) return;
+			state.ready = undefined;
+			ctx.logger?.error(
+				{ error: cause, type: "balance_worker_ownership_failed" },
+				"[balance-worker] Kafka ownership consumer failed; rebuilding it",
+			);
+			void stopFailed({ consumer });
+			void start();
+		}
+		return consumer;
 	}
 
 	/** Stopped rather than abandoned: a leaked membership stays in the group, and a fleet of retrying servers piles them up. */
-	async function discardFailed(): Promise<void> {
-		const abandoned = state.starting;
-		state.starting = undefined;
+	async function stopFailed({
+		consumer,
+	}: {
+		consumer?: OwnershipConsumer;
+	}): Promise<void> {
 		try {
-			await abandoned?.stop();
+			await consumer?.stop();
 		} catch (cause) {
 			ctx.logger?.warn(
 				{ error: cause },
 				"[balance-worker] Could not stop a failed ownership consumer",
 			);
 		}
+	}
+
+	async function discardFailed(): Promise<void> {
+		const abandoned = state.starting;
+		state.starting = undefined;
+		await stopFailed({ consumer: abandoned });
 	}
 
 	/** Routing is useless without owners and nothing else retries this, so it keeps trying. */
@@ -75,11 +96,12 @@ export function createOwnersFromKafka({
 			{ topic: config.topic },
 			"[balance-worker] Starting Kafka ownership consumer; waiting for initial catch-up",
 		);
-		for (let attempt = 1; ; attempt++) {
+		for (let attempt = 1; !state.stopped; attempt++) {
 			try {
 				state.starting ??= build();
 				await state.starting.start();
 				state.ready = state.starting;
+				state.starting = undefined;
 				ctx.logger?.info(
 					`[balance-worker] Kafka ownership consumer ready; initial catch-up complete (${Math.round(performance.now() - startedAt)}ms, attempt ${attempt})`,
 				);
@@ -105,6 +127,7 @@ export function createOwnersFromKafka({
 	}
 
 	async function stop(): Promise<void> {
+		state.stopped = true;
 		const running = state.ready ?? state.starting;
 		state.ready = undefined;
 		state.starting = undefined;

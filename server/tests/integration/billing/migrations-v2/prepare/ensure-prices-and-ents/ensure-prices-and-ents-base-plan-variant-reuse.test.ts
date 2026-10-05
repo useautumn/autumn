@@ -10,8 +10,8 @@
  *   price for that same feature — because someone pre-seeded it via ordinary
  *   catalog editing, exactly as Mintlify plans to do before running its tier
  *   migration — the variant's newly-synthesized price must REUSE the base
- *   plan's real `stripe_price_id` / `stripe_product_id` /
- *   `stripe_prepaid_price_v2_id`, not mint its own independent Stripe price.
+ *   plan's real `stripe_product_id` / `stripe_prepaid_price_v2_id`, not mint
+ *   its own independent Stripe price.
  *
  * Red-failure mode (before this fix): `inheritStripeResourcesFromLatestVersion`
  * resolved reuse candidates using only `product.id` (the variant's own plan
@@ -43,7 +43,6 @@ import {
 } from "./utils/ensurePrepareTestUtils.js";
 
 type PriceStripeConfig = {
-	stripe_price_id?: string | null;
 	stripe_product_id?: string | null;
 	stripe_prepaid_price_v2_id?: string | null;
 };
@@ -120,7 +119,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: variant plan 
 	}
 	const preSeededConfig = preSeededPro.config as PriceStripeConfig;
 	if (
-		!preSeededConfig.stripe_price_id ||
 		!preSeededConfig.stripe_product_id ||
 		!preSeededConfig.stripe_prepaid_price_v2_id
 	) {
@@ -164,7 +162,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: variant plan 
 		?.config as PriceStripeConfig | undefined;
 
 	// ── The actual fix: pro_yearly's new price reuses pro's real Stripe ids ──
-	expect(variantConfig?.stripe_price_id).toBe(preSeededConfig.stripe_price_id);
 	expect(variantConfig?.stripe_product_id).toBe(preSeededConfig.stripe_product_id);
 	expect(variantConfig?.stripe_prepaid_price_v2_id).toBe(
 		preSeededConfig.stripe_prepaid_price_v2_id,

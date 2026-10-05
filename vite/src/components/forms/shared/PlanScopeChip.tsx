@@ -26,8 +26,8 @@ export function PlanScopeChip({
 	const tooltip = disabled && disabledReason ? disabledReason : "Change scope";
 
 	return (
-		<Tooltip>
-			<TooltipTrigger {...triggerProps} asChild>
+		<Tooltip disableHoverablePopup>
+			<TooltipTrigger {...triggerProps} closeDelay={0} asChild>
 				<button
 					type="button"
 					aria-disabled={disabled || undefined}
@@ -48,7 +48,12 @@ export function PlanScopeChip({
 					</StatusChip>
 				</button>
 			</TooltipTrigger>
-			<TooltipContent side="top">{tooltip}</TooltipContent>
+			<TooltipContent
+				side="top"
+				className="pointer-events-none data-closed:animate-none!"
+			>
+				{tooltip}
+			</TooltipContent>
 		</Tooltip>
 	);
 }

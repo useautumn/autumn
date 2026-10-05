@@ -884,6 +884,35 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		expect(findFailed).toThrow("failed");
 		await crashed.stop();
 	}
+	async function reportsOnlyAFailureAfterServing(): Promise<void> {
+		const failures: unknown[] = [];
+		function onFailed({ cause }: { cause: unknown }): void {
+			failures.push(cause);
+		}
+		const serving = createInMemoryOwnership();
+		const consumer = createOwnershipConsumer({
+			ctx: { kafka: serving.kafka, onFailed },
+			config: { topic },
+		});
+		await consumer.start();
+		serving.crash();
+		serving.crash();
+		expect(failures).toHaveLength(1);
+		expect(failures[0]).toMatchObject({ message: "Consumer crashed" });
+		await consumer.stop();
+
+		const starting = createInMemoryOwnership();
+		const unstarted = createOwnershipConsumer({
+			ctx: { kafka: starting.kafka, onFailed },
+			config: { topic },
+		});
+		starting.raiseTarget();
+		const started = Promise.allSettled([unstarted.start()]);
+		starting.crash();
+		expect((await started)[0].status).toBe("rejected");
+		expect(failures).toHaveLength(1);
+		await unstarted.stop();
+	}
 
 	test(
 		"replayed claims cannot resurrect a released owner",
@@ -912,6 +941,10 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 	test(
 		"startup cancellation and terminal crashes fail closed",
 		cancelsStartupAndFailsClosed,
+	);
+	test(
+		"a crash after catching up is reported once; a crash while starting is left to start",
+		reportsOnlyAFailureAfterServing,
 	);
 
 	describe("createOwnershipConsumer", () => {

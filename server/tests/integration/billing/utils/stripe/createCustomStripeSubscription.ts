@@ -16,6 +16,7 @@ export const createCustomStripeSubscription = async ({
 	interval = "month",
 	billingCycleAnchorMs,
 	prorationBehavior,
+	metadata,
 }: {
 	ctx: TestContext;
 	customerId: string;
@@ -24,6 +25,7 @@ export const createCustomStripeSubscription = async ({
 	interval?: Stripe.PriceCreateParams.Recurring.Interval;
 	billingCycleAnchorMs?: number;
 	prorationBehavior?: Stripe.SubscriptionCreateParams.ProrationBehavior;
+	metadata?: Stripe.MetadataParam;
 }): Promise<Stripe.Subscription> => {
 	const [fullCustomer, fullProduct] = await Promise.all([
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
@@ -56,5 +58,6 @@ export const createCustomStripeSubscription = async ({
 		...(prorationBehavior !== undefined && {
 			proration_behavior: prorationBehavior,
 		}),
+		...(metadata !== undefined && { metadata }),
 	});
 };
