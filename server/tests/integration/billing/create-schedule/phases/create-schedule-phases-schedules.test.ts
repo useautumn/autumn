@@ -267,46 +267,27 @@ test.concurrent(
 		);
 		expect(mergedPlanIds).toEqual(expect.arrayContaining(customerPlanIds));
 
-		const [customerOpeningProduct] = await ctx.db
+		// A plan repeated in the next phase continues on its live row instead of queuing a new one.
+		const customerProductRows = await ctx.db
 			.select()
 			.from(customerProducts)
-			.where(
-				inArray(
-					customerProducts.id,
-					customerSchedule.phases[0]!.customer_product_ids,
-				),
-			);
-		expect(customerOpeningProduct!.product_id).toBe(pro.id);
-		expect(customerOpeningProduct!.status).toBe(CusProductStatus.Active);
-		expect(customerOpeningProduct!.internal_entity_id).toBeNull();
+			.where(inArray(customerProducts.id, customerPlanIds));
+		expect(customerProductRows).toHaveLength(1);
+		expect(customerProductRows[0]!.product_id).toBe(pro.id);
+		expect(customerProductRows[0]!.status).toBe(CusProductStatus.Active);
+		expect(customerProductRows[0]!.internal_entity_id).toBeNull();
 
-		const [customerScheduledProduct] = await ctx.db
-			.select()
-			.from(customerProducts)
-			.where(
-				inArray(
-					customerProducts.id,
-					customerSchedule.phases[1]!.customer_product_ids,
-				),
-			);
-		expect(customerScheduledProduct!.product_id).toBe(pro.id);
-		expect(customerScheduledProduct!.status).toBe(CusProductStatus.Scheduled);
-		expect(customerScheduledProduct!.internal_entity_id).toBeNull();
-
-		const entityScheduledProducts = await ctx.db
+		const entityProductRows = await ctx.db
 			.select()
 			.from(customerProducts)
 			.where(
 				and(
-					inArray(
-						customerProducts.id,
-						entitySchedule.phases[1]!.customer_product_ids,
-					),
+					inArray(customerProducts.id, mergedPlanIds),
 					eq(customerProducts.product_id, addon.id),
 				),
 			);
-		expect(entityScheduledProducts).toHaveLength(1);
-		expect(entityScheduledProducts[0]!.status).toBe(CusProductStatus.Scheduled);
-		expect(entityScheduledProducts[0]!.entity_id).toBe(entityId);
+		expect(entityProductRows).toHaveLength(1);
+		expect(entityProductRows[0]!.status).toBe(CusProductStatus.Active);
+		expect(entityProductRows[0]!.entity_id).toBe(entityId);
 	},
 );
