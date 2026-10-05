@@ -45,6 +45,34 @@ describe("database timings", () => {
 		expect(next).toMatchObject({ inFlightMax: 0, queries: {}, errorCodes: {} });
 	});
 
+	test("connections stay open across windows while connects and closes count per window", () => {
+		const timings = createDatabaseTimings();
+		timings.connectionOpened();
+		timings.connectionOpened();
+		timings.connectionClosed({
+			cause: postgresError({ code: "ERR_POSTGRES_CONNECTION_TIMEOUT" }),
+		});
+		timings.connectionClosed({
+			cause: postgresError({ code: "ERR_POSTGRES_EXPECTED_REQUEST" }),
+		});
+
+		expect(timings.drain().connections).toEqual({
+			open: 1,
+			connects: 2,
+			closes: 2,
+			closeCodes: {
+				ERR_POSTGRES_CONNECTION_TIMEOUT: 1,
+				ERR_POSTGRES_EXPECTED_REQUEST: 1,
+			},
+		});
+		expect(timings.drain().connections).toEqual({
+			open: 1,
+			connects: 0,
+			closes: 0,
+			closeCodes: {},
+		});
+	});
+
 	test("the wait for a subject load slot is summarised apart from the query", () => {
 		const timings = createDatabaseTimings();
 		for (const waitMs of [0, 0, 40, 900])

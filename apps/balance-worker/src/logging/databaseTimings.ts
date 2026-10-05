@@ -14,8 +14,17 @@ export type DatabaseQueryKind =
 
 type Distribution = { count: number; p50: number; p99: number; max: number };
 
+type ConnectionsSummary = {
+	open: number;
+	connects: number;
+	closes: number;
+	closeCodes: Record<string, number>;
+};
+
 export type DatabaseTimingsSummary = {
 	inFlightMax: number;
+	inFlight: number;
+	connections: ConnectionsSummary;
 	queries: Partial<
 		Record<DatabaseQueryKind, Distribution & { errors: number }>
 	>;
@@ -58,7 +67,13 @@ function distributionOf({ window }: { window: SampledWindow }): Distribution {
 	};
 }
 
-function errorCodeOf({ cause }: { cause: unknown }): string {
+/** Bun reports a connect that never opened through `onclose`, so it must not lower `open`. */
+const FAILED_CONNECT_CODES = new Set([
+	"ERR_POSTGRES_CONNECTION_REFUSED",
+	"ERR_POSTGRES_CONNECTION_TIMEOUT",
+]);
+
+export function errorCodeOf({ cause }: { cause: unknown }): string {
 	if (cause instanceof Error) {
 		const code = (cause as { code?: unknown }).code;
 		return typeof code === "string" ? code : cause.name;
@@ -75,6 +90,22 @@ export function createDatabaseTimings() {
 	>();
 	let subjectLoadWait = emptySampled();
 	let errorCodes: Record<string, number> = {};
+	let open = 0;
+	let connects = 0;
+	let closes = 0;
+	let closeCodes: Record<string, number> = {};
+
+	function connectionOpened(): void {
+		open += 1;
+		connects += 1;
+	}
+
+	function connectionClosed({ cause }: { cause: Error | null }): void {
+		const code = cause === null ? "none" : errorCodeOf({ cause });
+		if (!FAILED_CONNECT_CODES.has(code)) open -= 1;
+		closes += 1;
+		closeCodes[code] = (closeCodes[code] ?? 0) + 1;
+	}
 
 	function queryStarted(): void {
 		inFlight += 1;
@@ -110,6 +141,8 @@ export function createDatabaseTimings() {
 	function drain(): DatabaseTimingsSummary {
 		const summary: DatabaseTimingsSummary = {
 			inFlightMax,
+			inFlight,
+			connections: { open, connects, closes, closeCodes },
 			queries: Object.fromEntries(
 				[...queries].map(([kind, window]) => [
 					kind,
@@ -126,10 +159,20 @@ export function createDatabaseTimings() {
 		queries = new Map();
 		subjectLoadWait = emptySampled();
 		errorCodes = {};
+		connects = 0;
+		closes = 0;
+		closeCodes = {};
 		return summary;
 	}
 
-	return { queryStarted, queryFinished, recordSubjectLoadWait, drain };
+	return {
+		connectionOpened,
+		connectionClosed,
+		queryStarted,
+		queryFinished,
+		recordSubjectLoadWait,
+		drain,
+	};
 }
 
 export type DatabaseTimings = ReturnType<typeof createDatabaseTimings>;

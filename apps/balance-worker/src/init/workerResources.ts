@@ -24,6 +24,7 @@ import {
 	createCommitterDb,
 	createWorkerDb,
 	createWorkerPostgresClient,
+	prefillWorkerPool,
 } from "../external/postgres/getWorkerDb.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createCatalogInvalidationConsumer } from "../kafka/createCatalogInvalidationConsumer.js";
@@ -126,7 +127,14 @@ export async function openWorkerResources({
 	try {
 		await admin.connect();
 		await validateBalanceWorkerTopics({ admin, env });
-		const postgres = createWorkerPostgresClient({ env });
+		const postgres = createWorkerPostgresClient({
+			ctx: { logger: dependencies.logger, timings: databaseTimings },
+			env,
+		});
+		await prefillWorkerPool({
+			ctx: { postgres, logger: dependencies.logger },
+			size: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
+		});
 		const db = createWorkerDb({
 			ctx: {
 				postgres,

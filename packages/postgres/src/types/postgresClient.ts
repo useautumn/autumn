@@ -39,4 +39,8 @@ export type PostgresClientConfig = {
 	 *  a missing-prepared-statement error naming the bouncer, and it poisons the
 	 *  surrounding transaction. Only turn it on against a direct connection. */
 	usePreparedStatements?: boolean;
+	/** Bun calls this once per pool connection that finishes opening. */
+	onConnect?: (cause: Error | null) => void;
+	/** Bun calls this per connection close, including a connect that failed. */
+	onClose?: (cause: Error | null) => void;
 };

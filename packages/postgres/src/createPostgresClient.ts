@@ -12,6 +12,8 @@ export const sqlOptionsOf = ({ config }: { config: PostgresClientConfig }) => ({
 	connectionTimeout: config.connectTimeout,
 	idleTimeout: config.idleTimeout,
 	maxLifetime: config.maxLifetime ?? 0,
+	onconnect: config.onConnect,
+	onclose: config.onClose,
 });
 
 export const createPostgresClient = ({
