@@ -1,10 +1,10 @@
 /**
- * The cases Mintlify asked for in their own shape: every site (entity) has a plan with pooled
+ * A customer shape with per-site plans: every site (entity) has a plan with pooled
  * monthly credits and, when overage is on, its own priced overage row; the pooled credits form one pot.
  *
  * Contract (PRD §4 rule 2, §11 core + interval + deduction paths):
- *   Kyle on:  10k pot, A=5k B=5k, A uses 8k → 5k from its share, 3k on A's own overage row; B keeps 5k.
- *   Kyle off: same, no overage → A stops at 5k; B keeps 5k.
+ *   Overage on:  10k pot, A=5k B=5k, A uses 8k → 5k from its share, 3k on A's own overage row; B keeps 5k.
+ *   Overage off: same, no overage → A stops at 5k; B keeps 5k.
  *   Credit system: a metered feature drawing from allocated credits is held to the share after conversion.
  *   One-off credits: never count toward the pot, but any entity can use them on top of its share.
  *   After an automatic cut: lowering a share works; raising past what's left is rejected.
@@ -77,9 +77,9 @@ const setupSites = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-mintlify1: Kyle with overage on — A's extra 3k is billed on A's own overage, B keeps 5k")}`,
+	`${chalk.yellowBright("allocate-site-pools1: even split with overage on — A's extra 3k is billed on A's own overage, B keeps 5k")}`,
 	async () => {
-		const customerId = "allocate-mintlify-1";
+		const customerId = "allocate-site-pools-1";
 		const [a, b] = await setupSites({ customerId, withOverage: true });
 		await allocateMessages({
 			customerId,
@@ -125,9 +125,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-mintlify2: Kyle with overage off — A is blocked at 5k, B keeps 5k")}`,
+	`${chalk.yellowBright("allocate-site-pools2: even split with overage off — A is blocked at 5k, B keeps 5k")}`,
 	async () => {
-		const customerId = "allocate-mintlify-2";
+		const customerId = "allocate-site-pools-2";
 		const [a, b] = await setupSites({ customerId, withOverage: false });
 		await allocateMessages({
 			customerId,
@@ -158,9 +158,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-mintlify3: a metered feature drawing from allocated credits is held to the share")}`,
+	`${chalk.yellowBright("allocate-site-pools3: a metered feature drawing from allocated credits is held to the share")}`,
 	async () => {
-		const customerId = "allocate-mintlify-3";
+		const customerId = "allocate-site-pools-3";
 		const site = products.base({
 			id: `${customerId}-site`,
 			items: [
@@ -240,9 +240,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-mintlify4: one-off credits don't count toward the pot but any entity can use them")}`,
+	`${chalk.yellowBright("allocate-site-pools4: one-off credits don't count toward the pot but any entity can use them")}`,
 	async () => {
-		const customerId = "allocate-mintlify-4";
+		const customerId = "allocate-site-pools-4";
 		const shared = products.base({
 			id: `${customerId}-shared`,
 			items: [items.monthlyMessages({ includedUsage: 10000 })],
@@ -323,9 +323,9 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("allocate-mintlify5: after an automatic cut, lowering works and raising past what's left is rejected")}`,
+	`${chalk.yellowBright("allocate-site-pools5: after an automatic cut, lowering works and raising past what's left is rejected")}`,
 	async () => {
-		const customerId = "allocate-mintlify-5";
+		const customerId = "allocate-site-pools-5";
 		const base = products.base({
 			id: `${customerId}-base`,
 			items: [items.monthlyMessages({ includedUsage: 6000 })],

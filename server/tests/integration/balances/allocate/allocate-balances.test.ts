@@ -234,7 +234,7 @@ test("allocation controls: invalid second feature leaves the entire configuratio
 });
 
 test.concurrent(
-	`${chalk.yellowBright("allocate1: Kyle's split — A is held to its 5k share, B keeps its 5k")}`,
+	`${chalk.yellowBright("allocate1: even split — A is held to its 5k share, B keeps its 5k")}`,
 	async () => {
 		const customerId = "allocate-gate-1";
 		const { a, b, c } = await setupSharedPool({ customerId });
