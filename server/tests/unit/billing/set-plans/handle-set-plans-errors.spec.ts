@@ -25,6 +25,7 @@ const buildContext = ({
 	immediateStartsAt,
 	currentEpochMs,
 	existingSchedule,
+	existingSubscription,
 	fullProducts = [],
 	checkoutMode,
 	trialEndsAt,
@@ -34,6 +35,7 @@ const buildContext = ({
 	immediateStartsAt: number;
 	currentEpochMs: number;
 	existingSchedule?: Stripe.SubscriptionSchedule;
+	existingSubscription?: Stripe.Subscription;
 	fullProducts?: FullProduct[];
 	checkoutMode?: "stripe_checkout";
 	trialEndsAt?: number;
@@ -46,6 +48,7 @@ const buildContext = ({
 			starts_at: immediateStartsAt,
 			plans: [{ plan_id: "plan" }],
 		},
+		stripeSubscription: existingSubscription,
 		stripeSubscriptionSchedule: existingSchedule,
 		checkoutMode,
 		trialContext: trialEndsAt ? { trialEndsAt } : undefined,
@@ -260,6 +263,25 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 					existingSchedule: {
 						id: "sub_sched_existing",
 					} as unknown as Stripe.SubscriptionSchedule,
+				}),
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	test("skips the past-start guards when a re-save keeps the live subscription", async () => {
+		const now = Date.now();
+
+		await expect(
+			handleSetPlansErrorsFromContext({
+				ctx,
+				params: {},
+				billingContext: buildContext({
+					immediateStartsAt: now - ms.days(30),
+					currentEpochMs: now,
+					existingSubscription: {
+						id: "sub_existing",
+						status: "active",
+					} as unknown as Stripe.Subscription,
 				}),
 			}),
 		).resolves.toBeUndefined();

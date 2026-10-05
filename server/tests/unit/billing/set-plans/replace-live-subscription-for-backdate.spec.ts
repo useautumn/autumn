@@ -1,4 +1,4 @@
-/** A backdated first phase recreates a healthy live subscription and its schedule; a start now, a later start, or a re-saved schedule keeps it. */
+/** A backdated first phase recreates a healthy live subscription and its schedule; a start now, a later start, or a re-save of the live start keeps it. */
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -69,7 +69,7 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 		const pastDue = subscriptionWithStatus("past_due");
 
 		expect(
-			replace({ startsAt: backdatedStart, stripeSubscription: pastDue }),
+			replace({ startsAt: earlierThanPlans, stripeSubscription: pastDue }),
 		).toEqual({
 			stripeSubscription: undefined,
 			stripeSubscriptionSchedule: undefined,
@@ -95,6 +95,25 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 				rows: [proOnLiveSubscription({ scheduledIds: ["sub_sched_live"] })],
 			}),
 		).toEqual({});
+	});
+
+	test("a re-saved plain subscription replays its plans' start rather than backdating", () => {
+		expect(replace({ startsAt: backdatedStart })).toEqual({});
+	});
+
+	test("a past start that moves a plain subscription's plans earlier or later moves it aside", () => {
+		const active = subscriptionWithStatus("active");
+
+		for (const startsAt of [
+			backdatedStart - ms.days(10),
+			backdatedStart + ms.days(10),
+		]) {
+			expect(replace({ startsAt, stripeSubscription: active })).toEqual({
+				stripeSubscription: undefined,
+				stripeSubscriptionSchedule: undefined,
+				replacedStripeSubscription: active,
+			});
+		}
 	});
 
 	test("a start earlier than a scheduled subscription's plans moves it and its schedule aside", () => {

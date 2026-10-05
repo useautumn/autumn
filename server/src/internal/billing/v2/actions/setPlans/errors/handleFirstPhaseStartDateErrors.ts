@@ -127,8 +127,11 @@ export const handleFirstPhaseStartDateErrors = ({
 
 	if (firstPhaseStart !== "past") return;
 
-	// Re-saving an existing schedule replays the started phase's own start date,
-	// which is a past timestamp but never a request to bill from it.
-	if (isExistingScheduleUpdate({ billingContext })) return;
+	// A past start that keeps the live subscription or schedule replays its plans' own start,
+	// never a request to bill from it.
+	const replaysLiveStart =
+		!!billingContext.stripeSubscription ||
+		isExistingScheduleUpdate({ billingContext });
+	if (replaysLiveStart) return;
 	handlePastStartErrors({ billingContext, timeline, preview });
 };
