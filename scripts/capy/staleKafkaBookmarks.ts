@@ -22,9 +22,21 @@ export function parseLogEndOffsets({
 const commandsTopicFor = ({ topic }: { topic: string }) =>
 	topic.replace(/-events$/, "-commands");
 
-// A partition the broker lacks will be recreated empty, so its log end is effectively 0.
+// A missing local partition will be recreated empty; other topics aren't this broker's to judge.
+const logEndFor = ({
+	logEnds,
+	topic,
+	partition,
+}: {
+	logEnds: Map<string, bigint>;
+	topic: string;
+	partition: number;
+}): bigint | undefined =>
+	logEnds.get(`${topic}:${partition}`) ??
+	(topic.startsWith("local-") ? 0n : undefined);
+
 const isAheadOf = ({ offset, end }: { offset: bigint | null; end?: bigint }) =>
-	offset !== null && offset > (end ?? 0n);
+	offset !== null && end !== undefined && offset > end;
 
 /** Bookmarks past their topic's log end: the broker lost records the bookmark already passed. */
 export function findStaleBookmarks({
@@ -38,11 +50,15 @@ export function findStaleBookmarks({
 		(bookmark) =>
 			isAheadOf({
 				offset: bookmark.nextOffset,
-				end: logEnds.get(`${bookmark.topic}:${bookmark.partition}`),
+				end: logEndFor({ logEnds, ...bookmark }),
 			}) ||
 			isAheadOf({
 				offset: bookmark.commandNextOffset,
-				end: logEnds.get(`${commandsTopicFor(bookmark)}:${bookmark.partition}`),
+				end: logEndFor({
+					logEnds,
+					topic: commandsTopicFor(bookmark),
+					partition: bookmark.partition,
+				}),
 			}),
 	);
 }
