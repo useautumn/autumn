@@ -29,6 +29,10 @@ const isPaymentFailure = (error: unknown) =>
 	error instanceof Stripe.errors.StripeCardError ||
 	PAYMENT_FAILURE_CODES.has((error as { code?: string })?.code ?? "");
 
+const isMissingStripeResource = (error: unknown) =>
+	error instanceof Stripe.errors.StripeInvalidRequestError &&
+	error.code === "resource_missing";
+
 const isBillableTrial = (customerProduct: FullCusProduct) =>
 	!customerProduct.canceled &&
 	isCustomerProductAutumnManagedTrial(customerProduct) &&
@@ -58,11 +62,16 @@ const fetchStripeCustomer = async ({
 	const stripeId = fullCustomer.processor?.id;
 	if (!stripeId) return undefined;
 
-	const stripeCustomer = await createStripeCli({
-		org: ctx.org,
-		env: ctx.env,
-	}).customers.retrieve(stripeId);
-	return stripeCustomer.deleted ? undefined : stripeCustomer;
+	try {
+		const stripeCustomer = await createStripeCli({
+			org: ctx.org,
+			env: ctx.env,
+		}).customers.retrieve(stripeId);
+		return stripeCustomer.deleted ? undefined : stripeCustomer;
+	} catch (error) {
+		if (isMissingStripeResource(error)) return undefined;
+		throw error;
+	}
 };
 
 const customerCanReceiveInvoice = async ({

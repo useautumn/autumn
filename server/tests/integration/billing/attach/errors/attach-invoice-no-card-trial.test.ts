@@ -121,19 +121,23 @@ test.concurrent(
 		const customInvoiceOptions: Partial<InvoiceModeParams>[] = [
 			{ finalize: false },
 			{ net_terms_days: 45 },
+			{ invoice_template_id: "tmpl_unsupported_for_trial" },
 		];
 		for (const invoiceMode of customInvoiceOptions) {
+			const params = buildParams({
+				customerId,
+				planId: enterprise.id,
+				cardRequired: false,
+				invoiceMode,
+			});
 			await expectAutumnError({
 				errMessage: TRIAL_INVOICE_OPTIONS_ERROR,
 				func: () =>
-					autumnV2_3.billing.previewAttach<AttachParamsV1Input>(
-						buildParams({
-							customerId,
-							planId: enterprise.id,
-							cardRequired: false,
-							invoiceMode,
-						}),
-					),
+					autumnV2_3.billing.previewAttach<AttachParamsV1Input>(params),
+			});
+			await expectAutumnError({
+				errMessage: TRIAL_INVOICE_OPTIONS_ERROR,
+				func: () => autumnV2_3.billing.attach<AttachParamsV1Input>(params),
 			});
 		}
 	},
