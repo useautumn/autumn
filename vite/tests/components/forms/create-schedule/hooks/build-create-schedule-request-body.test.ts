@@ -930,6 +930,25 @@ describe("buildCreateScheduleRequestBody", () => {
 		]);
 	});
 
+	test("a started first phase moved earlier sends the earlier start, and never a later one", () => {
+		const now = Date.UTC(2027, 6, 2, 16, 49);
+		const persistedStart = now - 1000 * 60 * 60 * 24 * 10;
+		const startsAtSent = (startsAt: number) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: [
+					schedulePhase({ startsAt, persistedStartsAt: persistedStart }),
+				],
+				products: paidProducts,
+				features,
+				nowMs: now,
+			})?.phases[0]?.starts_at;
+
+		const earlierStart = persistedStart - 1000 * 60 * 60 * 24 * 20;
+		expect(startsAtSent(earlierStart)).toBe(earlierStart);
+		expect(startsAtSent(persistedStart + 1000 * 60 * 60)).toBe(persistedStart);
+	});
+
 	test("sets phase billing anchor for future phases when billing cycle reset is enabled", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;

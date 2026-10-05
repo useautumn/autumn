@@ -66,6 +66,8 @@ interface CreateScheduleFormContextValue {
 	isExistingSchedule: boolean;
 	/** First phase may start in the past; a live subscription is recreated from that date. */
 	allowFirstPhaseBackdate: boolean;
+	/** An existing schedule's started first phase may move earlier, recreating its live subscription. */
+	allowStartedPhaseBackdate: boolean;
 	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
 	backdatesLiveSubscription: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
@@ -189,6 +191,8 @@ export function CreateScheduleFormProvider({
 
 	const allowFirstPhaseBackdate =
 		!isExistingSchedule && immediatePlansPaidRecurring;
+	const allowStartedPhaseBackdate =
+		isExistingSchedule && immediatePlansPaidRecurring && hasActiveSubscription;
 
 	const backdatesLiveSubscription = firstPhaseBackdatesLiveSubscription({
 		phases: formValues.phases,
@@ -343,6 +347,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
@@ -365,6 +370,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,

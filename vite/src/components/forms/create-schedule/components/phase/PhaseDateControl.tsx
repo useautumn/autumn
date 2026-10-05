@@ -25,6 +25,33 @@ type PickerLimits = Pick<
 	| "fromYear"
 >;
 
+/** A started phase that can backdate may only move earlier than its saved start. */
+export function phaseDatePickerLimits({
+	nowMs,
+	hasStarted,
+	canBackdate,
+	persistedStartsAt,
+}: {
+	nowMs: number;
+	hasStarted: boolean;
+	canBackdate: boolean;
+	persistedStartsAt?: number | null;
+}): PickerLimits {
+	const movesStartedPhaseEarlier = hasStarted && canBackdate;
+	const disablePastDates = !hasStarted && !canBackdate;
+	return {
+		disabled: hasStarted && !movesStartedPhaseEarlier,
+		disablePastDates,
+		minUnixDate: disablePastDates ? nowMs : undefined,
+		maxUnixDate: movesStartedPhaseEarlier
+			? (persistedStartsAt ?? undefined)
+			: undefined,
+		fromYear: disablePastDates
+			? undefined
+			: subYears(nowMs, BACKDATE_START_YEAR_LOOKBACK).getFullYear(),
+	};
+}
+
 function PhaseDateBox({
 	className,
 	children,
@@ -119,8 +146,11 @@ export function PhaseDateControl({
 	isLocked: boolean;
 	hasTimingError: boolean;
 }) {
-	const { isExistingSchedule, allowFirstPhaseBackdate } =
-		useCreateScheduleFormContext();
+	const {
+		isExistingSchedule,
+		allowFirstPhaseBackdate,
+		allowStartedPhaseBackdate,
+	} = useCreateScheduleFormContext();
 	const { form, formValues, nowMs } = useCustomerStateContext();
 
 	const phase = formValues.phases[phaseIndex];
@@ -136,24 +166,23 @@ export function PhaseDateControl({
 		/>
 	);
 
-	const disablePastDates =
-		!hasStarted && !(isNewFirstPhase && allowFirstPhaseBackdate);
+	const canBackdate = isExistingSchedule
+		? isFirstPhase && hasStarted && allowStartedPhaseBackdate
+		: isNewFirstPhase && allowFirstPhaseBackdate;
 	const canResetToNow =
 		isNewFirstPhase && !hasStarted && phase.startsAt !== null;
 	const setStartsAt = (startsAt: number | null) =>
 		form.setFieldValue(`phases[${phaseIndex}].startsAt`, startsAt);
-	const limits: PickerLimits = {
-		disabled: hasStarted,
-		disablePastDates,
-		minUnixDate: disablePastDates ? nowMs : undefined,
-		fromYear: disablePastDates
-			? undefined
-			: subYears(nowMs, BACKDATE_START_YEAR_LOOKBACK).getFullYear(),
-	};
+	const limits = phaseDatePickerLimits({
+		nowMs,
+		hasStarted,
+		canBackdate,
+		persistedStartsAt: phase.persistedStartsAt,
+	});
 
 	return (
 		<ConditionalTooltip
-			enabled={hasStarted && !isLocked}
+			enabled={hasStarted && !isLocked && limits.disabled === true}
 			content={CURRENT_PHASE_TIME_LOCKED_MESSAGE}
 		>
 			<div className="flex w-fit items-center gap-1">

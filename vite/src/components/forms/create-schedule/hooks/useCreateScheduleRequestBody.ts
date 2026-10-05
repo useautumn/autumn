@@ -72,7 +72,10 @@ export function buildCreateScheduleRequestBody({
 			else if (phase.persistedStartsAt == null) startsAt = now;
 			else
 				startsAt = hasStarted
-					? phase.persistedStartsAt
+					? Math.min(
+							phase.startsAt ?? phase.persistedStartsAt,
+							phase.persistedStartsAt,
+						)
 					: (phase.startsAt ?? phase.persistedStartsAt);
 		}
 		if (startsAt === null) return null;

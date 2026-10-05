@@ -40,21 +40,28 @@ const firstPhaseIsBackdated = ({
 	);
 };
 
-/** A new schedule whose backdated first phase makes set_plans recreate the live subscription. */
+/** A backdated first phase, or a started one moved before its saved start, makes set_plans recreate the live subscription. */
 export const firstPhaseBackdatesLiveSubscription = ({
 	phases,
 	nowMs,
 	isExistingSchedule,
 	hasActiveSubscription,
 }: {
-	phases: { startsAt: number | null }[];
+	phases: { startsAt: number | null; persistedStartsAt?: number | null }[];
 	nowMs: number;
 	isExistingSchedule: boolean;
 	hasActiveSubscription: boolean;
-}) =>
-	!isExistingSchedule &&
-	hasActiveSubscription &&
-	firstPhaseIsBackdated({ phases, nowMs });
+}) => {
+	if (!hasActiveSubscription) return false;
+	if (!isExistingSchedule) return firstPhaseIsBackdated({ phases, nowMs });
+
+	const persistedStartsAt = phases[0]?.persistedStartsAt;
+	return (
+		persistedStartsAt != null &&
+		persistedStartsAt <= nowMs &&
+		firstPhaseIsBackdated({ phases, nowMs: persistedStartsAt })
+	);
+};
 
 export const formatPhaseDate = ({ startsAt }: { startsAt: number }) =>
 	format(startsAt, "MMM d, yyyy");
