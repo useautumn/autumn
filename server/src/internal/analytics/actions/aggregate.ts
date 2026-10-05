@@ -657,7 +657,7 @@ export const aggregate = async ({
 		// For internal API, return the actual truncation status from the pipe
 		truncated = params.enforceGroupLimit
 			? false
-			: result.data.length > 0 && result.data[0]._truncated === true;
+			: result.data.some((row) => row._truncated === true);
 
 		formatted = formatGroupableResults({
 			rows: result.data,
