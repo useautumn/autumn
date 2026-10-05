@@ -16,11 +16,7 @@ export class BufferLoggedResponseHook implements AfterSuccessHook {
 			return response;
 		}
 
-		const body = await response.arrayBuffer();
-		return new Response(body, {
-			status: response.status,
-			statusText: response.statusText,
-			headers: response.headers,
-		});
+		await response.clone().arrayBuffer();
+		return response;
 	}
 }
