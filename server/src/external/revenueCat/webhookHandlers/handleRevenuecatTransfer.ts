@@ -1,8 +1,8 @@
 import type { WebhookTransfer } from "@puzzmo/revenue-cat-webhook-types";
 import type { FullCusProduct, FullCustomer } from "@shared/index";
 import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
-import { resolveRevenueCatCustomer } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { expireSupersededCusProducts } from "@/external/revenueCat/transfer/expireSupersededCusProducts";
+import { findDestinationCustomer } from "@/external/revenueCat/transfer/findDestinationCustomer";
 import { findSourceCustomers } from "@/external/revenueCat/transfer/findSourceCustomers";
 import { hasPooledBalanceDependency } from "@/external/revenueCat/transfer/hasPooledBalanceDependency";
 import { listDestinationRevenueCatProducts } from "@/external/revenueCat/transfer/listDestinationRevenueCatProducts";
@@ -89,13 +89,10 @@ export const handleTransfer = async ({
 	if (transferringBySource.length === 0)
 		return skip("destination holds none of the source's RevenueCat products");
 
-	const [firstTo, ...otherTo] = transferred_to;
-	const destination = await resolveRevenueCatCustomer({
+	const destination = await findDestinationCustomer({
 		ctx,
-		appUserId: firstTo,
-		originalAppUserId: otherTo[0],
+		appUserIds: transferred_to,
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
-		autoCreateCustomer: true,
 	});
 	ctx.customerId = destination.id ?? "";
 
