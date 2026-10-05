@@ -4,21 +4,20 @@
  */
 
 import { test } from "bun:test";
-import { ApiVersion, ResetInterval } from "@autumn/shared";
+import {
+	allocateMessages,
+	autumnV2_3,
+} from "@tests/integration/balances/allocate/utils/allocateTestUtils";
 import { expectMessagesBalance } from "@tests/integration/balances/allocate/utils/expectMessagesBalance";
-import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import chalk from "chalk";
-import { AutumnInt } from "@/external/autumn/autumnCli";
 import {
 	newRcClient,
 	purchaseOnA,
 	setupCustomers,
 } from "./utils/revenue-cat-transfer-test-utils";
 import { expectWebhookSuccess } from "./utils/revenue-cat-webhook-client";
-
-const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
 	`${chalk.yellowBright("rc transfer: source entity allocations re-fit when the add-on leaves")}`,
@@ -60,10 +59,8 @@ test.concurrent(
 			customerId: customerA,
 		});
 		const [first, second] = entities.map((entity) => entity.id);
-		await autumnV2_3.balances.allocate({
-			customer_id: customerA,
-			feature_id: TestFeature.Messages,
-			interval: ResetInterval.Month,
+		await allocateMessages({
+			customerId: customerA,
 			allocations: [
 				{ entity_id: first, amount: 5000 },
 				{ entity_id: second, amount: 5000 },
