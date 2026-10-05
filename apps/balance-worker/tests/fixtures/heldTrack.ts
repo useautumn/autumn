@@ -72,9 +72,11 @@ export function trackCommand({
 export function checkCommand({
 	requiredBalance = 1,
 	who = identity,
+	occurredAt = 1_700_000_000_000,
 }: {
 	requiredBalance?: number;
 	who?: MeteringIdentity;
+	occurredAt?: number;
 } = {}) {
 	return parseCheckCommand({
 		input: {
@@ -87,7 +89,7 @@ export function checkCommand({
 			internalFeatureId: "feat_messages",
 			requiredBalance,
 			properties: null,
-			occurredAt: 1_700_000_000_000,
+			occurredAt,
 		},
 	});
 }
@@ -170,7 +172,11 @@ export function processorOn({
 	});
 }
 
-export function openStore(): {
+export function openStore({
+	nextResetAt = null,
+}: {
+	nextResetAt?: number | null;
+} = {}): {
 	store: SqliteStateStore & { storeGate?: () => Promise<void> };
 	close(): void;
 } {
@@ -187,11 +193,14 @@ export function openStore(): {
 			createSubjectState({
 				identity,
 				customerEntitlements: [
-					createCustomerEntitlement({
-						id: "messages_monthly",
-						featureId: "messages",
-						balance: 100,
-					}),
+					{
+						...createCustomerEntitlement({
+							id: "messages_monthly",
+							featureId: "messages",
+							balance: 100,
+						}),
+						next_reset_at: nextResetAt,
+					},
 				],
 			}),
 		],
@@ -209,15 +218,17 @@ export function openStore(): {
 export async function residentFixture({
 	maxBatchSize = 100,
 	maxBatchBytes,
+	nextResetAt,
 	catalogCache,
 }: {
 	maxBatchSize?: number;
 	maxBatchBytes?: number;
+	nextResetAt?: number | null;
 	catalogCache?: CatalogCache;
 } = {}) {
 	const positions = createCommitPositions({ config: { partitionCount: 4 } });
 	const appender = gatedAppender();
-	const { store, close } = openStore();
+	const { store, close } = openStore({ nextResetAt });
 	const processor = processorOn({
 		positions,
 		appender,
