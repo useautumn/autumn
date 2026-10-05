@@ -40,6 +40,7 @@ import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachLicenseTransitionSource } from "./setupAttachLicenseTransitionSource";
 import { setupAttachProductContext } from "./setupAttachProductContext";
+import { setupAttachSubscriptionTarget } from "./setupAttachSubscriptionTarget";
 import { setupAttachTransitionContext } from "./setupAttachTransitionContext";
 import { setupAttachTrialContext } from "./setupAttachTrialContext";
 
@@ -115,6 +116,12 @@ export const setupAttachBillingContext = async ({
 	const carryOverSourceCustomerProduct =
 		currentCustomerProduct ?? removedCarrySource ?? undefined;
 
+	const subscriptionTargetCustomerProduct = setupAttachSubscriptionTarget({
+		fullCustomer,
+		params,
+		currentCustomerProduct,
+	});
+
 	const licenseTransitionSourceCustomerProduct =
 		setupAttachLicenseTransitionSource({
 			fullCustomer,
@@ -168,7 +175,7 @@ export const setupAttachBillingContext = async ({
 		ctx,
 		fullCustomer,
 		product: attachProduct,
-		targetCustomerProduct: currentCustomerProduct,
+		targetCustomerProduct: subscriptionTargetCustomerProduct,
 		contextOverride,
 		params,
 		newBillingSubscription: shouldForceNewSubscription,
