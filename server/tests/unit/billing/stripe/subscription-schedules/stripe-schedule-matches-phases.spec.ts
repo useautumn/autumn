@@ -28,15 +28,20 @@ const livePhase = ({
 const liveSchedule = ({
 	endBehavior,
 	lastEnd,
+	status = "active",
+	firstStart = NOW_SECONDS - 100,
 }: {
 	endBehavior: Stripe.SubscriptionSchedule.EndBehavior;
 	lastEnd: number;
+	status?: Stripe.SubscriptionSchedule.Status;
+	firstStart?: number;
 }) =>
 	({
+		status,
 		end_behavior: endBehavior,
 		phases: [
 			livePhase({
-				start: NOW_SECONDS - 100,
+				start: firstStart,
 				end: NEXT_PHASE,
 				price: "price_pro",
 			}),
@@ -88,6 +93,37 @@ describe(chalk.yellowBright("stripeScheduleMatchesPhases"), () => {
 		expect(
 			stripeScheduleMatchesPhases({
 				schedule: liveSchedule({ endBehavior: "release", lastEnd: OLD_END }),
+				phases: requestedPhases({}),
+				endBehavior: "release",
+				nowMs: NOW_SECONDS * 1000,
+			}),
+		).toBe(true);
+	});
+
+	test("a not-started schedule whose first phase start moved is a change", () => {
+		expect(
+			stripeScheduleMatchesPhases({
+				schedule: liveSchedule({
+					endBehavior: "release",
+					lastEnd: OLD_END,
+					status: "not_started",
+					firstStart: NOW_SECONDS + 7 * 86_400,
+				}),
+				phases: requestedPhases({}),
+				endBehavior: "release",
+				nowMs: NOW_SECONDS * 1000,
+			}),
+		).toBe(false);
+	});
+
+	test("an active schedule keeps its current phase start fixed", () => {
+		expect(
+			stripeScheduleMatchesPhases({
+				schedule: liveSchedule({
+					endBehavior: "release",
+					lastEnd: OLD_END,
+					firstStart: NOW_SECONDS - 7 * 86_400,
+				}),
 				phases: requestedPhases({}),
 				endBehavior: "release",
 				nowMs: NOW_SECONDS * 1000,
