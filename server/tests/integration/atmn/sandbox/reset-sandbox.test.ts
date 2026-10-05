@@ -96,13 +96,13 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 	// could be a file outside the scenario.
 	scenario.writeFile(".env", "");
 
-	const atmn = (args: string[]): string =>
+	const atmn = (args: string[]): Promise<string> =>
 		runCli({ cwd, args, secretKey, baseUrl });
 
 	let sandboxId: string | undefined;
 	try {
 		sandboxId = createdSandboxId({
-			output: atmn(["sandbox", "create", sandboxName, "--use"]),
+			output: await atmn(["sandbox", "create", sandboxName, "--use"]),
 		});
 		const sandboxKey = envValue({
 			cwd,
@@ -118,14 +118,14 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 
 		// R1 — nothing is sent without --yes.
-		const gated = atmn(["reset"]);
+		const gated = await atmn(["reset"]);
 		expect(gated).toContain(
 			`This wipes sandbox ${sandboxName} (${sandboxId}): every customer, plan, feature and migration draft. Keys and settings stay. Re-run with --yes to wipe.`,
 		);
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 
 		// R2 — the wipe takes the whole catalog.
-		const wiped = atmn(["reset", "--yes"]);
+		const wiped = await atmn(["reset", "--yes"]);
 		expect(wiped).toContain(
 			`Wiped sandbox ${sandboxName} (${sandboxId}). Run atmn push to rebuild it from your config.`,
 		);
@@ -146,7 +146,7 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 	} finally {
 		if (sandboxId !== undefined) {
 			try {
-				atmn(["sandbox", "delete", sandboxId, "--yes"]);
+				await atmn(["sandbox", "delete", sandboxId, "--yes"]);
 			} catch (error) {
 				console.warn(`reset-sandbox cleanup: delete failed — ${error}`);
 			}

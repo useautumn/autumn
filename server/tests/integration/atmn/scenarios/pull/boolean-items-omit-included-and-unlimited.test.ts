@@ -69,7 +69,9 @@ test.concurrent(
 					included: 0,`);
 			expect(fixtureText).not.toContain("unlimited: false");
 
-			const wire = wireOfConfig({ configPath: scenario.configPath }) as {
+			const wire = (await wireOfConfig({
+				configPath: scenario.configPath,
+			})) as {
 				plans?: Array<{
 					items?: Array<Record<string, unknown>>;
 				}>;

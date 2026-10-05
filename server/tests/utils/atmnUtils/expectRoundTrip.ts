@@ -94,14 +94,14 @@ export const expectRoundTrip = async ({
 				secretKey: scenario.secretKey,
 				baseUrl: scenario.baseUrl,
 			});
-		pullFresh();
-		const freshWire = wireOfConfig({
+		await pullFresh();
+		const freshWire = await wireOfConfig({
 			configPath: join(freshDir, "autumn.config.ts"),
 		});
 		await expectPreviewNone({ client: scenario.client, wire: freshWire });
 
 		const before = snapshot(freshDir);
-		pullFresh();
+		await pullFresh();
 		const after = snapshot(freshDir);
 		expect([...after.entries()]).toEqual([...before.entries()]);
 		return { freshDir, freshFiles: after, freshWire };
