@@ -141,10 +141,16 @@ const createOwnedConnection = ({
 		});
 	};
 
+	// pg runs one statement at a time per client; chaining starts each deadline at dispatch, not enqueue.
+	let lastStatement: Promise<unknown> = Promise.resolve();
 	const query: MigrationQuery = (config, values) => {
 		const owned = client;
 		if (!owned) throw new Error("batch-migration: connection not acquired");
-		return bounded({ operation: () => owned.query(config, values) });
+		const statement = lastStatement
+			.catch(() => undefined)
+			.then(() => bounded({ operation: () => owned.query(config, values) }));
+		lastStatement = statement;
+		return statement;
 	};
 
 	const release = () => {

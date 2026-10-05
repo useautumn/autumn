@@ -6,16 +6,21 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/iterateCustomerProductPages.js";
 import { createMigrationPageDb } from "@/internal/migrations/v2/batchOperations/execute/database/createMigrationPageDb.js";
 import { MigrationDbDeadlineError } from "@/internal/migrations/v2/batchOperations/execute/database/runMigrationTransaction.js";
-import { loopbackDatabaseUrl } from "./utils/loopbackDatabaseUrl.js";
+import {
+	migrationTestDatabaseUrl,
+	withScratchSchema,
+} from "./utils/scratchDatabase.js";
 
-const databaseUrl = loopbackDatabaseUrl();
+const databaseUrl = migrationTestDatabaseUrl() as string;
 
 const withPageDb = async ({
+	options,
 	poolMax = 2,
 	queryTimeoutMs,
 	maxAttempts,
 	run,
 }: {
+	options?: string;
 	poolMax?: number;
 	queryTimeoutMs: number;
 	maxAttempts: number;
@@ -24,7 +29,11 @@ const withPageDb = async ({
 		page: ReturnType<typeof createMigrationPageDb>;
 	}) => Promise<void>;
 }) => {
-	const pool = new pg.Pool({ connectionString: databaseUrl, max: poolMax });
+	const pool = new pg.Pool({
+		connectionString: databaseUrl,
+		max: poolMax,
+		options,
+	});
 	const page = createMigrationPageDb({
 		ctx: { db: drizzle(pool) as unknown as DrizzleCli },
 		queryTimeoutMs,
@@ -38,8 +47,14 @@ const withPageDb = async ({
 	}
 };
 
-const rowsOf = async ({ table }: { table: string }) => {
-	const admin = new pg.Client({ connectionString: databaseUrl });
+const rowsOf = async ({
+	options,
+	table,
+}: {
+	options: string;
+	table: string;
+}) => {
+	const admin = new pg.Client({ connectionString: databaseUrl, options });
 	await admin.connect();
 	try {
 		return (await admin.query(`SELECT value FROM ${table} ORDER BY value`))
@@ -49,24 +64,27 @@ const rowsOf = async ({ table }: { table: string }) => {
 	}
 };
 
-const withScratchTable = async ({
+/** Creates `table` inside a scratch schema the test owns. */
+const withScratchTable = ({
 	table,
 	run,
 }: {
 	table: string;
-	run: () => Promise<void>;
-}) => {
-	const admin = new pg.Client({ connectionString: databaseUrl });
-	await admin.connect();
-	try {
-		await admin.query(`DROP TABLE IF EXISTS ${table}`);
-		await admin.query(`CREATE TABLE ${table} (value integer)`);
-		await run();
-	} finally {
-		await admin.query(`DROP TABLE IF EXISTS ${table}`);
-		await admin.end();
-	}
-};
+	run: (args: { options: string }) => Promise<void>;
+}) =>
+	withScratchSchema({
+		databaseUrl,
+		run: async ({ options }) => {
+			const admin = new pg.Client({ connectionString: databaseUrl, options });
+			await admin.connect();
+			try {
+				await admin.query(`CREATE TABLE ${table} (value integer)`);
+			} finally {
+				await admin.end();
+			}
+			await run({ options });
+		},
+	});
 
 describe.skipIf(!databaseUrl)("migration query deadline", () => {
 	test("migration query deadline discards the connection and retries only its transaction", async () => {
@@ -122,8 +140,9 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 		const table = "migration_deadline_standalone";
 		await withScratchTable({
 			table,
-			run: () =>
+			run: ({ options }) =>
 				withPageDb({
+					options,
 					queryTimeoutMs: 5000,
 					maxAttempts: 1,
 					run: async ({ page }) => {
@@ -138,7 +157,7 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 						page.abort(new Error("page aborted"));
 						expect(await outcome).toEqual(new Error("page aborted"));
 						await new Promise((resolve) => setTimeout(resolve, 600));
-						expect(await rowsOf({ table })).toEqual([]);
+						expect(await rowsOf({ options, table })).toEqual([]);
 					},
 				}),
 		});
@@ -150,8 +169,9 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 		const attemptsByBatch = new Map<number, number>();
 		await withScratchTable({
 			table,
-			run: () =>
+			run: ({ options }) =>
 				withPageDb({
+					options,
 					queryTimeoutMs: 100,
 					maxAttempts: 2,
 					run: async ({ page }) => {
@@ -180,5 +200,24 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 		});
 		expect(attemptsByBatch.get(2)).toBe(2);
 		expect(published).toEqual([1, 2, 3]);
+	}, 5000);
+
+	test("a statement's deadline starts when it is sent, not while queued behind others", async () => {
+		let attempts = 0;
+		await withPageDb({
+			queryTimeoutMs: 250,
+			maxAttempts: 1,
+			run: async ({ page }) => {
+				await page.db.transaction(async (transaction) => {
+					attempts++;
+					await Promise.all(
+						[1, 2, 3].map(() =>
+							transaction.execute(sql`select pg_sleep(0.15)`),
+						),
+					);
+				});
+			},
+		});
+		expect(attempts).toBe(1);
 	}, 5000);
 });

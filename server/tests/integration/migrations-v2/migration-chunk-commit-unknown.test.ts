@@ -1,5 +1,5 @@
 /** A page whose checkpoint COMMIT reply is lost must not keep `succeeded`
- * checkpoints: the runner fences the page and releases its claims for retry. */
+ * checkpoints with stale caches: the runner busts its caches and releases its claims. */
 
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -8,9 +8,12 @@ import type { BatchMigrationPageCustomer } from "@/internal/migrations/v2/batchO
 import type { BatchMigrationExecutionPlan } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import type { MigrationRuntimeWithEventId } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { createPgResponseFaultProxy } from "./utils/createPgResponseFaultProxy.js";
-import { loopbackDatabaseUrl } from "./utils/loopbackDatabaseUrl.js";
+import {
+	migrationTestDatabaseUrl,
+	withScratchSchema,
+} from "./utils/scratchDatabase.js";
 
-const databaseUrl = loopbackDatabaseUrl();
+const databaseUrl = migrationTestDatabaseUrl() as string;
 
 const claimModulePath =
 	"@/internal/migrations/v2/batchOperations/execute/claim/index.js";
@@ -39,7 +42,7 @@ const customers: BatchMigrationPageCustomer[] = ["a", "b"].map((suffix) => ({
 }));
 
 let executions = 0;
-let invalidatedPages = 0;
+const invalidatedCustomerIds: string[] = [];
 
 mock.module(constantsModulePath, () => ({
 	...realConstants,
@@ -94,9 +97,15 @@ mock.module(executeModulePath, () => ({
 }));
 
 mock.module(invalidateModulePath, () => ({
-	invalidateBatchMigrationCaches: async () => {
-		invalidatedPages++;
-		return 0;
+	invalidateBatchMigrationCaches: async ({
+		pageResult,
+	}: {
+		pageResult: { succeeded: BatchMigrationPageCustomer[] };
+	}) => {
+		invalidatedCustomerIds.push(
+			...pageResult.succeeded.map((customer) => customer.internalId),
+		);
+		return pageResult.succeeded.length;
 	},
 }));
 
@@ -121,7 +130,6 @@ afterAll(() => {
 });
 
 const SCHEMA = `
-	DROP TABLE IF EXISTS migration_item_runs, migration_runner_customer_writes;
 	CREATE TABLE migration_runner_customer_writes (item_id text);
 	CREATE TABLE migration_item_runs (
 		migration_item_run_id text PRIMARY KEY,
@@ -145,75 +153,85 @@ const silentLogger = {
 };
 
 describe.skipIf(!databaseUrl)("batch migration runner", () => {
-	test("a lost checkpoint COMMIT reply releases the page's claims without replaying its writes", async () => {
-		const admin = new pg.Client({ connectionString: databaseUrl });
-		await admin.connect();
-		const proxy = await createPgResponseFaultProxy({
-			fixtureUrl: databaseUrl as string,
-			lostCommand: "COMMIT",
+	test("a lost checkpoint COMMIT reply busts caches and releases claims without replaying writes", async () => {
+		await withScratchSchema({
+			databaseUrl,
+			run: async ({ options }) => {
+				const admin = new pg.Client({ connectionString: databaseUrl, options });
+				await admin.connect();
+				const proxy = await createPgResponseFaultProxy({
+					fixtureUrl: databaseUrl as string,
+					lostCommand: "COMMIT",
+				});
+				const pool = new pg.Pool({
+					connectionString: proxy.connectionString,
+					options,
+				});
+				try {
+					await admin.query(SCHEMA);
+					for (const customer of customers)
+						await admin.query(
+							`INSERT INTO migration_item_runs VALUES ($1, $2, $3, false, 'customer', $4, 'running', NULL, 0, NULL)`,
+							[
+								`mir_${customer.internalId}`,
+								MIGRATION_INTERNAL_ID,
+								MIGRATION_RUN_ID,
+								customer.internalId,
+							],
+						);
+
+					const outcome = await runBatchMigrationChunk({
+						ctx: {
+							db: drizzle(pool),
+							logger: silentLogger,
+							features: [],
+							org: { id: "org_test" },
+							env: "sandbox",
+							// biome-ignore lint/suspicious/noExplicitAny: minimal ctx for the chunk loop
+						} as any,
+						migration: {
+							internal_id: MIGRATION_INTERNAL_ID,
+							id: "commit-unknown",
+						} as unknown as MigrationRuntimeWithEventId,
+						migrationRunId: MIGRATION_RUN_ID,
+						plan: { patches: [] } as unknown as BatchMigrationExecutionPlan,
+						maxPages: 5,
+						timeouts: { pageMs: 5000, recoveryWriteMs: 2000 },
+					}).then(
+						() => null,
+						(error: unknown) => error,
+					);
+
+					expect(outcome).toBeInstanceOf(MigrationCommitUnknownError);
+					expect(proxy.inspect()).toEqual({
+						commits: 2,
+						suppressedResponses: 1,
+					});
+					expect(executions).toBe(1);
+					expect(invalidatedCustomerIds.sort()).toEqual(
+						customers.map((customer) => customer.internalId).sort(),
+					);
+					const writes = await admin.query(
+						"SELECT item_id FROM migration_runner_customer_writes ORDER BY item_id",
+					);
+					expect(writes.rows.map((row) => row.item_id)).toEqual(
+						customers.map((customer) => customer.internalId),
+					);
+					const claims = await admin.query(
+						"SELECT item_id, status FROM migration_item_runs ORDER BY item_id",
+					);
+					expect(claims.rows).toEqual(
+						customers.map((customer) => ({
+							item_id: customer.internalId,
+							status: "failed",
+						})),
+					);
+				} finally {
+					await proxy.close();
+					await pool.end();
+					await admin.end();
+				}
+			},
 		});
-		const pool = new pg.Pool({ connectionString: proxy.connectionString });
-		try {
-			await admin.query(SCHEMA);
-			for (const customer of customers)
-				await admin.query(
-					`INSERT INTO migration_item_runs VALUES ($1, $2, $3, false, 'customer', $4, 'running', NULL, 0, NULL)`,
-					[
-						`mir_${customer.internalId}`,
-						MIGRATION_INTERNAL_ID,
-						MIGRATION_RUN_ID,
-						customer.internalId,
-					],
-				);
-
-			const outcome = await runBatchMigrationChunk({
-				ctx: {
-					db: drizzle(pool),
-					logger: silentLogger,
-					features: [],
-					org: { id: "org_test" },
-					env: "sandbox",
-					// biome-ignore lint/suspicious/noExplicitAny: minimal ctx for the chunk loop
-				} as any,
-				migration: {
-					internal_id: MIGRATION_INTERNAL_ID,
-					id: "commit-unknown",
-				} as unknown as MigrationRuntimeWithEventId,
-				migrationRunId: MIGRATION_RUN_ID,
-				plan: { patches: [] } as unknown as BatchMigrationExecutionPlan,
-				maxPages: 5,
-				timeouts: { pageMs: 5000, recoveryWriteMs: 2000 },
-			}).then(
-				() => null,
-				(error: unknown) => error,
-			);
-
-			expect(outcome).toBeInstanceOf(MigrationCommitUnknownError);
-			expect(proxy.inspect()).toEqual({ commits: 2, suppressedResponses: 1 });
-			expect(executions).toBe(1);
-			expect(invalidatedPages).toBe(0);
-			const writes = await admin.query(
-				"SELECT item_id FROM migration_runner_customer_writes ORDER BY item_id",
-			);
-			expect(writes.rows.map((row) => row.item_id)).toEqual(
-				customers.map((customer) => customer.internalId),
-			);
-			const claims = await admin.query(
-				"SELECT item_id, status FROM migration_item_runs ORDER BY item_id",
-			);
-			expect(claims.rows).toEqual(
-				customers.map((customer) => ({
-					item_id: customer.internalId,
-					status: "failed",
-				})),
-			);
-		} finally {
-			await proxy.close();
-			await pool.end();
-			await admin.query(
-				"DROP TABLE IF EXISTS migration_item_runs, migration_runner_customer_writes",
-			);
-			await admin.end();
-		}
 	}, 15000);
 });

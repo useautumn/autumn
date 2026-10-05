@@ -10,6 +10,7 @@ import {
 	getMigrationEventInternalId,
 	type MigrationRuntimeWithEventId,
 } from "@/internal/migrations/v2/types/migrationDefinition.js";
+import { invalidateBatchMigrationCaches } from "../finalize/invalidateBatchMigrationCaches.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import {
 	claimNextBatchMigrationPage,
@@ -23,6 +24,7 @@ import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type {
 	BatchMigrationChunkResult,
+	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
 } from "./types/batchMigrationExecutionTypes.js";
 import {
@@ -76,7 +78,7 @@ type ChunkProgress = {
 	stage: PageStage | null;
 	stageStartedAt: number;
 	pagePhases: BatchMigrationPagePhases;
-	claimedInternalIds: string[];
+	claimedCustomers: BatchMigrationPageCustomer[];
 	lastPageFinishedAt: number;
 };
 
@@ -169,7 +171,7 @@ export const runBatchMigrationChunk = async ({
 		stage: null,
 		stageStartedAt: Date.now(),
 		pagePhases: {},
-		claimedInternalIds: [],
+		claimedCustomers: [],
 		lastPageFinishedAt: Date.now(),
 	};
 	const describeProgress = () => ({
@@ -267,12 +269,12 @@ export const runBatchMigrationChunk = async ({
 				.catch(async (error: unknown) => {
 					// Fence the page before releasing its claims, so no late write lands after.
 					pageDb.abort(error);
-					await failClaimsOfFailedPage({
+					await releaseFailedPage({
 						ctx,
 						migrationInternalId,
 						migrationRunId,
 						page: pageNumber,
-						internalCustomerIds: progress.claimedInternalIds,
+						customers: progress.claimedCustomers,
 						recoveryWriteMs,
 					});
 					throw error;
@@ -363,22 +365,32 @@ const failPageItemRunsBounded = ({
 		timeoutMessage: `batch-migration: failing ${internalCustomerIds.length} claims got no answer from Postgres in ${timeoutMs}ms`,
 	});
 
-const failClaimsOfFailedPage = async ({
+/** A failed page's writes may have committed (e.g. a lost COMMIT reply), so
+ * bust its customers' caches before releasing their claims for retry. */
+const releaseFailedPage = async ({
 	ctx,
 	migrationInternalId,
 	migrationRunId,
 	page,
-	internalCustomerIds,
+	customers,
 	recoveryWriteMs,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
 	migrationRunId: string;
 	page: number;
-	internalCustomerIds: string[];
+	customers: BatchMigrationPageCustomer[];
 	recoveryWriteMs: number;
 }): Promise<void> => {
-	if (internalCustomerIds.length === 0) return;
+	if (customers.length === 0) return;
+	await invalidateFailedPageCaches({
+		ctx,
+		migrationRunId,
+		page,
+		customers,
+		recoveryWriteMs,
+	});
+	const internalCustomerIds = customers.map((customer) => customer.internalId);
 	try {
 		const failed = await failPageItemRunsBounded({
 			ctx,
@@ -403,6 +415,49 @@ const failClaimsOfFailedPage = async ({
 					migrationRunId,
 					page,
 					customers: internalCustomerIds.length,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			},
+		);
+	}
+};
+
+const invalidateFailedPageCaches = async ({
+	ctx,
+	migrationRunId,
+	page,
+	customers,
+	recoveryWriteMs,
+}: {
+	ctx: AutumnContext;
+	migrationRunId: string;
+	page: number;
+	customers: BatchMigrationPageCustomer[];
+	recoveryWriteMs: number;
+}) => {
+	try {
+		await withTimeout({
+			timeoutMs: recoveryWriteMs,
+			fn: () =>
+				invalidateBatchMigrationCaches({
+					ctx,
+					pageResult: {
+						succeeded: customers,
+						skipped: [],
+						insertedItems: [],
+						removedItems: [],
+					},
+				}),
+			timeoutMessage: `batch-migration: invalidating ${customers.length} failed-page caches exceeded ${recoveryWriteMs}ms`,
+		});
+	} catch (error) {
+		ctx.logger.error(
+			"batch-migration: could not invalidate a failed page's caches — customers may hold stale caches",
+			{
+				data: {
+					migrationRunId,
+					page,
+					customers: customers.length,
 					error: error instanceof Error ? error.message : String(error),
 				},
 			},
@@ -464,7 +519,7 @@ const runNextBatchMigrationPage = async ({
 		progress.pagePhases = pagePhases;
 	};
 
-	progress.claimedInternalIds = [];
+	progress.claimedCustomers = [];
 	enterStage("claim");
 	const page = await claimNextBatchMigrationPage({
 		ctx: pageCtx,
@@ -482,9 +537,7 @@ const runNextBatchMigrationPage = async ({
 		return { kind: "advanced", cursor: nextCursor };
 	}
 
-	progress.claimedInternalIds = page.customers.map(
-		(customer) => customer.internalId,
-	);
+	progress.claimedCustomers = page.customers;
 	enterStage("execute");
 	const pageResult = await executeBatchMigrationPage({
 		ctx: pageCtx,
