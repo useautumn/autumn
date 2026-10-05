@@ -256,9 +256,12 @@ function CreditNoteForm({
 					>
 						<div className="flex flex-col gap-2">
 							{creditableLines.map((line) => (
-								<div key={line.id} className="flex items-start gap-2">
+								<div key={line.id} className="flex items-center gap-2">
 									<div className="flex min-w-0 flex-1 flex-col">
-										<span className="break-words text-sm text-secondary-foreground">
+										<span
+											className="truncate text-sm text-secondary-foreground"
+											title={line.description}
+										>
 											{line.description}
 										</span>
 										<span className="text-xs tabular-nums text-tertiary-foreground">
