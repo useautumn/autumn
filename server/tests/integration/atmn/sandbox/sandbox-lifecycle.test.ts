@@ -89,12 +89,12 @@ test(`${chalk.yellowBright("atmn sandbox: mint, target, delete")}`, async () => 
 	// that could be a file outside the scenario.
 	scenario.writeFile(".env", "");
 
-	const atmn = (args: string[]): string =>
+	const atmn = (args: string[]): Promise<string> =>
 		runCli({ cwd, args, secretKey, baseUrl });
 
 	try {
 		// B1 — the key is shown once, so it has to land on disk.
-		const created = atmn(["sandbox", "create", sandboxName, "--use"]);
+		const created = await atmn(["sandbox", "create", sandboxName, "--use"]);
 		const sandboxId = createdSandboxId({ output: created });
 		const keyName = sandboxKeyName({ sandboxId });
 
@@ -107,7 +107,7 @@ test(`${chalk.yellowBright("atmn sandbox: mint, target, delete")}`, async () => 
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBe(sandboxId);
 
 		// B2 — the pin is what "current" means.
-		const listed = atmn(["sandbox", "list"]);
+		const listed = await atmn(["sandbox", "list"]);
 		expect(listed).toContain(sandboxId);
 		expect(listed).toContain(sandboxName);
 		expect(listed).toContain("current");
@@ -125,13 +125,13 @@ test(`${chalk.yellowBright("atmn sandbox: mint, target, delete")}`, async () => 
 		expect(pulled.deleted).toEqual([]);
 
 		// B4 — deleting takes the sandbox and both of its .env lines.
-		const deleted = atmn(["sandbox", "delete", sandboxId, "--yes"]);
+		const deleted = await atmn(["sandbox", "delete", sandboxId, "--yes"]);
 		expect(deleted).toContain(`Deleted sandbox ${sandboxName} (${sandboxId}).`);
 
 		expect(envText({ cwd })).not.toContain(keyName);
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBeUndefined();
 		// The org key survives: only the sandbox's own lines go.
-		expect(atmn(["sandbox", "list"])).not.toContain(sandboxId);
+		expect(await atmn(["sandbox", "list"])).not.toContain(sandboxId);
 	} finally {
 		scenario.cleanup();
 	}
@@ -151,28 +151,30 @@ test(`${chalk.yellowBright("atmn sandbox: delete needs --yes, and an unknown id 
 	const { cwd, secretKey, baseUrl } = scenario;
 	scenario.writeFile(".env", "");
 
-	const atmn = (args: string[]): string =>
+	const atmn = (args: string[]): Promise<string> =>
 		runCli({ cwd, args, secretKey, baseUrl });
 
 	try {
 		const sandboxId = createdSandboxId({
-			output: atmn(["sandbox", "create", sandboxName]),
+			output: await atmn(["sandbox", "create", sandboxName]),
 		});
 
 		// Nothing is sent without --yes: the sandbox is still listed after.
-		const gated = atmn(["sandbox", "delete", sandboxId]);
+		const gated = await atmn(["sandbox", "delete", sandboxId]);
 		expect(gated).toContain(
 			`This deletes sandbox ${sandboxName} (${sandboxId}) and everything in it. Re-run with --yes to delete.`,
 		);
-		expect(atmn(["sandbox", "list"])).toContain(sandboxId);
+		expect(await atmn(["sandbox", "list"])).toContain(sandboxId);
 
 		// A typo is the CLI's error, not a request the server has to refuse.
-		expect(() =>
+		await expect(
 			atmn(["sandbox", "delete", "org_not_a_sandbox", "--yes"]),
-		).toThrow(/No sandbox with id org_not_a_sandbox\. Run atmn sandbox list\./);
+		).rejects.toThrow(
+			/No sandbox with id org_not_a_sandbox\. Run atmn sandbox list\./,
+		);
 
-		atmn(["sandbox", "delete", sandboxId, "--yes"]);
-		expect(atmn(["sandbox", "list"])).not.toContain(sandboxId);
+		await atmn(["sandbox", "delete", sandboxId, "--yes"]);
+		expect(await atmn(["sandbox", "list"])).not.toContain(sandboxId);
 	} finally {
 		scenario.cleanup();
 	}

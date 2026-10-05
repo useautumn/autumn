@@ -66,7 +66,7 @@ test.concurrent(
 			await mintVersion({ name: "Pro v2", amount: 59 });
 
 			// A fresh pull: both versions in plans.ts, the root imports the array.
-			const firstOutput = pull();
+			const firstOutput = await pull();
 			expect(firstOutput).toContain(`+ ${planId}@v1`);
 			expect(firstOutput).toContain(`+ ${planId}@v2`);
 			const rootPath = join(freshDirectory, "autumn.config.ts");
@@ -81,9 +81,9 @@ test.concurrent(
 			expect(plans.match(/active: true/g)).toHaveLength(1);
 			expect(plans.match(/active: false/g)).toHaveLength(1);
 
-			expect(pull()).toBe("Nothing to pull.\n");
+			expect(await pull()).toBe("Nothing to pull.\n");
 			expect(readFileSync(plansPath, "utf8")).toBe(plans);
-			expect(dryRun()).toContain("No changes");
+			expect(await dryRun()).toContain("No changes");
 
 			// The user lifts v1 into its own file under a name of their choosing,
 			// and references it from the array. Pull must follow the reference.
@@ -112,12 +112,12 @@ test.concurrent(
 				`import { ${legacyExport} } from "./legacy";\n${plans.replace(v1Literal, `\t${legacyExport},`)}`,
 				"utf8",
 			);
-			expect(dryRun()).toContain("No changes");
+			expect(await dryRun()).toContain("No changes");
 
 			// The server mints v3: it is appended to the array the root imports,
 			// v2 flips to inactive where it sits, and the lifted v1 is untouched.
 			await mintVersion({ name: "Pro v3", amount: 69 });
-			const thirdOutput = pull();
+			const thirdOutput = await pull();
 			expect(thirdOutput).toContain(`+ ${planId}@v3`);
 			expect(thirdOutput).toContain(`~ ${planId}@v2`);
 			const finalPlans = readFileSync(plansPath, "utf8");
@@ -128,8 +128,8 @@ test.concurrent(
 			expect(finalLegacy).toContain(`export const ${legacyExport} = plan({`);
 			expect(finalLegacy).toContain('versionSlug: "v1"');
 			expect(finalLegacy).toContain("active: false");
-			expect(pull()).toBe("Nothing to pull.\n");
-			expect(dryRun()).toContain("No changes");
+			expect(await pull()).toBe("Nothing to pull.\n");
+			expect(await dryRun()).toContain("No changes");
 
 			// A server-side edit to the lifted row lands in the user's file.
 			await scenario.client.update({
@@ -137,12 +137,12 @@ test.concurrent(
 					{ plan_id: planId, version_slug: "v1", name: "Pro v1 (renamed)" },
 				],
 			});
-			expect(pull()).toContain(`~ ${planId}@v1`);
+			expect(await pull()).toContain(`~ ${planId}@v1`);
 			expect(readFileSync(legacyPath, "utf8")).toContain(
 				'name: "Pro v1 (renamed)"',
 			);
 			expect(readFileSync(plansPath, "utf8")).not.toContain("Pro v1 (renamed)");
-			expect(dryRun()).toContain("No changes");
+			expect(await dryRun()).toContain("No changes");
 		} finally {
 			rmSync(freshDirectory, { recursive: true, force: true });
 			scenario.cleanup();
