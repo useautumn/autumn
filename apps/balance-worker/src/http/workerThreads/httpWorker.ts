@@ -171,7 +171,10 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 			path: pathStart === -1 ? "/" : url.slice(pathStart),
 			headers: forwardableHeadersOf({ headers: request.headers }),
 		};
-		const route = init.latency.routes.indexOf(meta.path);
+		const query = meta.path.indexOf("?");
+		const route = init.latency.routes.indexOf(
+			query === -1 ? meta.path : meta.path.slice(0, query),
+		);
 		const body = new Uint8Array(await request.arrayBuffer());
 		const metaText = JSON.stringify(meta);
 		const reqId = nextReqId;
