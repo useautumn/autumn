@@ -2,7 +2,7 @@
 // import { prepaidPriceToLineItem } from "./lineItemBuilders/prepaidPriceToLineItem";
 // import { allocatedPriceToLineItem } from "./lineItemBuilders/allocatedPriceToLineItem";
 
-import type { BillingContext, BillingPeriod } from "@autumn/shared";
+import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
 	billingContextToCurrency,
@@ -18,6 +18,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BackdateGapRun } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
@@ -40,7 +41,7 @@ export const customerProductToLineItems = ({
 	direction,
 	priceFilters,
 	billingCycleAnchorMsOverride,
-	backdateGap,
+	backdateGapRun,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -50,7 +51,7 @@ export const customerProductToLineItems = ({
 		excludeOneOffPrices?: boolean;
 	};
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
-	backdateGap?: BillingPeriod;
+	backdateGapRun?: BackdateGapRun;
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
 
@@ -112,7 +113,7 @@ export const customerProductToLineItems = ({
 			billingPeriod,
 			direction,
 			billingTiming: "in_advance",
-			backdateGap,
+			backdateGapRun,
 		});
 		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
 

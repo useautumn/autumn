@@ -82,7 +82,7 @@ export const backdateGapLineItems = ({
 			billingContext,
 			direction: "charge",
 			priceFilters: { excludeOneOffPrices: true },
-			backdateGap: runInGap,
+			backdateGapRun: { gap, run: runInGap },
 		});
 	});
 };

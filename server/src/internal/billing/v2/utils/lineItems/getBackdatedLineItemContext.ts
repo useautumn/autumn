@@ -6,7 +6,10 @@ import type {
 } from "@autumn/shared";
 import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils/isBackdateRecreate";
 import { getBackdatedImmediatePeriod } from "@/internal/billing/v2/utils/backdate/getBackdatedImmediatePeriod";
-import { getBackdateGapLineItemContext } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
+import {
+	type BackdateGapRun,
+	getBackdateGapLineItemContext,
+} from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 
 type BackdatedLineItemContext = Pick<
 	LineItemContext,
@@ -20,14 +23,14 @@ export const getBackdatedLineItemContext = ({
 	billingPeriod,
 	direction,
 	billingTiming,
-	backdateGap,
+	backdateGapRun,
 }: {
 	price: Price;
 	billingContext: BillingContext;
 	billingPeriod?: BillingPeriod;
 	direction: LineItemContext["direction"];
 	billingTiming: LineItemContext["billingTiming"];
-	backdateGap?: BillingPeriod;
+	backdateGapRun?: BackdateGapRun;
 }): BackdatedLineItemContext | undefined => {
 	if (!billingPeriod) return undefined;
 	if (billingContext.subscriptionBackdateStartMs === undefined)
@@ -37,8 +40,8 @@ export const getBackdatedLineItemContext = ({
 	if (billingTiming !== "in_advance") return undefined;
 	if (isBackdateRecreate({ billingContext })) {
 		return (
-			backdateGap &&
-			getBackdateGapLineItemContext({ price, billingContext, backdateGap })
+			backdateGapRun &&
+			getBackdateGapLineItemContext({ price, billingContext, backdateGapRun })
 		);
 	}
 

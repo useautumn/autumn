@@ -1,7 +1,13 @@
 /** A new backdated subscription bills its catch-up periods; one recreated over a paid-up live subscription never does. */
 
 import { describe, expect, test } from "bun:test";
-import { type BillingContext, ms } from "@autumn/shared";
+import {
+	applyBackdatedLineItemAmount,
+	applyProration,
+	type BillingContext,
+	type LineItemContext,
+	ms,
+} from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import type Stripe from "stripe";
 import { getBackdateGapLineItemContext } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
@@ -45,6 +51,7 @@ describe("getBackdatedLineItemContext", () => {
 });
 
 describe("getBackdateGapLineItemContext", () => {
+	const MONTHLY_AMOUNT = 100;
 	const gap = {
 		start: Date.UTC(2026, 0, 31),
 		end: Date.UTC(2026, 2, 30),
@@ -55,7 +62,7 @@ describe("getBackdateGapLineItemContext", () => {
 			getBackdateGapLineItemContext({
 				price,
 				billingContext: { requestedProrationBehavior: "bill_difference" },
-				backdateGap: gap,
+				backdateGapRun: { gap, run: gap },
 			}),
 		).toEqual({
 			billingPeriod: { start: Date.UTC(2026, 0, 30), end: gap.end },
@@ -63,5 +70,33 @@ describe("getBackdateGapLineItemContext", () => {
 			effectivePeriod: gap,
 			backdate: { startsAt: gap.start, cycleCount: 2 },
 		});
+	});
+
+	test("a run cut short by a phase end is prorated over the gap's own cycle, not one anchored on the phase end", () => {
+		const run = { start: gap.start, end: Date.UTC(2026, 1, 10) };
+		const gapRunContext = getBackdateGapLineItemContext({
+			price,
+			billingContext: { requestedProrationBehavior: "prorate_immediately" },
+			backdateGapRun: { gap, run },
+		});
+		const proratedAmount = applyProration({
+			now: gapRunContext.now,
+			billingPeriod: gapRunContext.billingPeriod,
+			amount: MONTHLY_AMOUNT,
+		});
+		const context = {
+			...gapRunContext,
+			direction: "charge",
+			billingTiming: "in_advance",
+		} as LineItemContext;
+
+		expect(gapRunContext.billingPeriod).toEqual({
+			start: Date.UTC(2026, 0, 30),
+			end: Date.UTC(2026, 1, 28),
+		});
+		expect(gapRunContext.effectivePeriod).toEqual(run);
+		expect(
+			applyBackdatedLineItemAmount({ amount: proratedAmount, context }),
+		).toBeCloseTo((MONTHLY_AMOUNT * 10) / 29, 2);
 	});
 });
