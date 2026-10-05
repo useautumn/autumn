@@ -35,14 +35,15 @@ export const getTopEventNames = async ({
 
 	const ch = getClickhouseClient();
 
+	// The org hourly rollup keeps this cheap; raw events scan every event in the month.
 	const query = `
-		SELECT count(*) as count, event_name
-		FROM events
+		SELECT sum(event_count) as count, event_name
+		FROM events_org_hourly_mv
 		WHERE org_id = {org_id:String}
 			AND env = {env:String}
-			AND timestamp >= NOW() - INTERVAL 1 MONTH
+			AND hour >= toStartOfHour(NOW() - INTERVAL 1 MONTH)
 		GROUP BY event_name
-		ORDER BY count(*) DESC
+		ORDER BY count DESC
 		LIMIT {limit:UInt32}
 	`;
 
