@@ -15,8 +15,10 @@ type Bucket = {
 	loopLagMaxMs: number;
 	checkMaxMs: number;
 	pushMaxMs: number;
+	forwardMaxMs: number;
 	checks: number;
 	pushes: number;
+	forwards: number;
 };
 
 /** Maxima over the trailing two seconds, so a reader polling every 2 s misses no stall. */
@@ -28,16 +30,20 @@ const emptyBucket = (): Bucket => ({
 	loopLagMaxMs: 0,
 	checkMaxMs: 0,
 	pushMaxMs: 0,
+	forwardMaxMs: 0,
 	checks: 0,
 	pushes: 0,
+	forwards: 0,
 });
 
 const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	loopLagMaxMs: Math.max(a.loopLagMaxMs, b.loopLagMaxMs),
 	checkMaxMs: Math.max(a.checkMaxMs, b.checkMaxMs),
 	pushMaxMs: Math.max(a.pushMaxMs, b.pushMaxMs),
+	forwardMaxMs: Math.max(a.forwardMaxMs, b.forwardMaxMs),
 	checks: a.checks + b.checks,
 	pushes: a.pushes + b.pushes,
+	forwards: a.forwards + b.forwards,
 });
 
 /** A lone process, with no supervisor, publishes where its own /health reads. */
@@ -49,7 +55,12 @@ export const atomStatsDir = ({
 	env[ATOM_STATS_DIR] ?? join(tmpdir(), `atom-stats-${process.pid}`);
 
 export type ProcessStatsRecorder = {
-	recordRequest(params: { path: string; durationMs: number }): void;
+	/** A forwarded check waits on the Autumn API, so it is timed apart from the checks Atom answers itself. */
+	recordRequest(params: {
+		path: string;
+		durationMs: number;
+		forwarded: boolean;
+	}): void;
 	stop(): void;
 };
 
@@ -105,11 +116,16 @@ export const startProcessStats = ({
 	function recordRequest({
 		path,
 		durationMs,
+		forwarded,
 	}: {
 		path: string;
 		durationMs: number;
+		forwarded: boolean;
 	}): void {
-		if (path === "/v1/balances.check") {
+		if (forwarded) {
+			current.forwards += 1;
+			current.forwardMaxMs = Math.max(current.forwardMaxMs, durationMs);
+		} else if (path === "/v1/balances.check") {
 			current.checks += 1;
 			current.checkMaxMs = Math.max(current.checkMaxMs, durationMs);
 		} else if (PUSH_PATHS.has(path)) {

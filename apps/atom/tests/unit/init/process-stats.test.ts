@@ -47,20 +47,32 @@ describe("process stats", () => {
 		]);
 	});
 
-	test("checks and pushes are timed separately; other paths are not counted", () => {
+	test("answered checks, forwards and pushes are timed separately; other paths are not counted", () => {
 		const statsDir = newStatsDir();
 		const { stats } = startStats({ statsDir });
+		const check = { path: "/v1/balances.check", forwarded: false };
 
-		stats.recordRequest({ path: "/v1/balances.check", durationMs: 3 });
-		stats.recordRequest({ path: "/v1/balances.check", durationMs: 9 });
-		stats.recordRequest({ path: "/v1/subjects.set", durationMs: 40 });
-		stats.recordRequest({ path: "/v1/atoms.get", durationMs: 500 });
+		stats.recordRequest({ ...check, durationMs: 3 });
+		stats.recordRequest({ ...check, durationMs: 9 });
+		stats.recordRequest({ ...check, durationMs: 140, forwarded: true });
+		stats.recordRequest({
+			path: "/v1/subjects.set",
+			durationMs: 40,
+			forwarded: false,
+		});
+		stats.recordRequest({
+			path: "/v1/atoms.get",
+			durationMs: 500,
+			forwarded: false,
+		});
 		stats.publish();
 		stats.stop();
 
 		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
 			checks: 2,
 			checkMaxMs: 9,
+			forwards: 1,
+			forwardMaxMs: 140,
 			pushes: 1,
 			pushMaxMs: 40,
 		});
@@ -72,9 +84,17 @@ describe("process stats", () => {
 		let clock = 0;
 		const read = createProcessStatsReader({ statsDir, clock: () => clock });
 
-		stats.recordRequest({ path: "/v1/balances.check", durationMs: 250 });
+		stats.recordRequest({
+			path: "/v1/balances.check",
+			durationMs: 250,
+			forwarded: false,
+		});
 		stats.publish();
-		stats.recordRequest({ path: "/v1/balances.check", durationMs: 2 });
+		stats.recordRequest({
+			path: "/v1/balances.check",
+			durationMs: 2,
+			forwarded: false,
+		});
 		stats.publish();
 		expect(read()[0]).toMatchObject({ checks: 2, checkMaxMs: 250 });
 
