@@ -460,12 +460,18 @@ export const handleSwarmJob: JobHandler = async ({
 							name: message.name,
 							sandboxId: message.sandboxId,
 							accountId: message.accountId,
+							startedAt: new Date(message.createdAt),
 						}),
 					);
 				} else if (message.type === "worker_ended") {
 					workers.delete(message.name);
 					enqueueWrite(async () => {
-						await endRunWorkers({ ctx, runId, name: message.name });
+						await endRunWorkers({
+							ctx,
+							runId,
+							name: message.name,
+							endedAt: new Date(message.endedAt),
+						});
 						await releaseRunAccounts({
 							ctx,
 							runId,
