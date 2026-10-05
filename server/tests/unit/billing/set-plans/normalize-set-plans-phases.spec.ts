@@ -88,6 +88,41 @@ describe(chalk.yellowBright("normalizeSetPlansPhases"), () => {
 		]);
 	});
 
+	test("starts a first phase within the start tolerance of now at now", () => {
+		const currentEpochMs = Date.UTC(2026, 0, 14);
+		const secondPhaseStartsAt = currentEpochMs + ms.days(30);
+
+		for (const offsetMs of [ms.minutes(10), -ms.minutes(10)]) {
+			const result = normalizeSetPlansPhases({
+				phases: [
+					{ starts_at: currentEpochMs + offsetMs, plans: [{ plan_id: "pro" }] },
+					{ starts_at: secondPhaseStartsAt, plans: [{ plan_id: "premium" }] },
+				],
+				currentEpochMs,
+			});
+
+			expect(result.map((phase) => phase.starts_at)).toEqual([
+				currentEpochMs,
+				secondPhaseStartsAt,
+			]);
+		}
+	});
+
+	test("keeps a first phase beyond the start tolerance of now", () => {
+		const currentEpochMs = Date.UTC(2026, 0, 14);
+
+		for (const offsetMs of [ms.minutes(20), -ms.minutes(20)]) {
+			const result = normalizeSetPlansPhases({
+				phases: [
+					{ starts_at: currentEpochMs + offsetMs, plans: [{ plan_id: "pro" }] },
+				],
+				currentEpochMs,
+			});
+
+			expect(result[0].starts_at).toBe(currentEpochMs + offsetMs);
+		}
+	});
+
 	test("snaps a near-boundary future phase onto the cycle boundary", () => {
 		const currentEpochMs = Date.UTC(2026, 0, 14);
 		const cycleBoundaryMs = currentEpochMs + ms.days(30);
