@@ -8,6 +8,7 @@ import {
 	type ThreadedProducersConfig,
 } from "../../kafka/producerThread/createThreadedProducers.js";
 import type { WorkerListener } from "../types/balanceWorker.js";
+import { connectHeldReplies } from "./connectHeldReplies.js";
 
 /**
  * The HTTP worker threads first (they own the port), then the producer thread. A producer thread that cannot
@@ -27,6 +28,8 @@ export async function listenThroughThreads({
 			scope: "http-workers" | "producer-thread";
 		}): void;
 		onToken(info: KafkaTokenInfo): void;
+		/** Where held replies learn their fate: the commit positions, and how a failure is answered. */
+		heldReplies?: Omit<Parameters<typeof connectHeldReplies>[0], "http">;
 	};
 	config: { http: HttpWorkerPoolConfig; producers: ThreadedProducersConfig };
 }): Promise<{ listener: WorkerListener; producers: ThreadedProducers }> {
@@ -40,6 +43,9 @@ export async function listenThroughThreads({
 		ctx: { fetch: ctx.fetch, logger: ctx.logger, onFatal: httpWorkersFailed },
 		config: config.http,
 	}).listen();
+	const disconnectHeld = ctx.heldReplies
+		? connectHeldReplies({ ...ctx.heldReplies, http })
+		: null;
 	const producers = createThreadedProducers({
 		ctx: {
 			logger: ctx.logger,
@@ -51,12 +57,15 @@ export async function listenThroughThreads({
 	try {
 		await producers.start();
 	} catch (cause) {
+		disconnectHeld?.();
 		await http.stop();
 		throw cause;
 	}
 	async function stop(): Promise<void> {
 		try {
+			// Partitions stopped first, so every held reply has had its commit or its failure.
 			await http.stop();
+			disconnectHeld?.();
 		} finally {
 			await producers.stop();
 		}

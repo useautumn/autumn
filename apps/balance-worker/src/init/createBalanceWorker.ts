@@ -17,6 +17,11 @@ import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import {
+	createInlineHandler,
+	INLINE_ROUTES,
+} from "../http/handlers/inline/createInlineHandler.js";
+import { heldFailureOf } from "../http/handlers/inline/heldFailureOf.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
@@ -241,6 +246,17 @@ export async function createBalanceWorker({
 			},
 		});
 
+		const inlineHandler = createInlineHandler({
+			ctx: {
+				ownership: partitions,
+				partitionResolver: resources.partitionResolver,
+				logger: dependencies.logger,
+				requestLog: {
+					successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
+				},
+			},
+		});
+
 		/** A thread that died leaves the worker unable to serve or commit; the task is replaced. */
 		function stopForThreads({
 			cause,
@@ -266,6 +282,10 @@ export async function createBalanceWorker({
 					logger: dependencies.logger,
 					onFatal: stopForThreads,
 					onToken: logProducerThreadToken,
+					heldReplies: {
+						positions: commitPositions,
+						renderFailure: heldFailureOf,
+					},
 				},
 				config: {
 					http: {
@@ -275,6 +295,12 @@ export async function createBalanceWorker({
 						threads: threads.httpWorkers,
 						requestRingBytes: threads.requestRingBytes,
 						replyRingBytes: threads.replyRingBytes,
+						inline: {
+							routes: INLINE_ROUTES,
+							handler: inlineHandler,
+							commitCells: commitPositions.cells,
+							failureCounts: commitPositions.failureCounts,
+						},
 					},
 					producers: {
 						clientId: `balance-worker-producers-${crypto.randomUUID()}`,
