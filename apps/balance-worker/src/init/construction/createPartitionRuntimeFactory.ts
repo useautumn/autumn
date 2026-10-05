@@ -6,6 +6,7 @@ import {
 	createOwnerEpochCell,
 	type OwnerEpochCell,
 } from "../../kafka/ownerEpochCell.js";
+import { commitSummaries } from "../../logging/commitSummaries.js";
 import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
 import { kafkaRequestTimings } from "../../logging/kafkaRequestTimings.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
@@ -90,7 +91,12 @@ export function createPartitionRuntimeFactory({
 			config: config.commands,
 		});
 		const commitLogging = createPartitionCommitLogging({
-			ctx: { appender, stateStore: ctx.stateStore, logger: ctx.logger },
+			ctx: {
+				appender,
+				stateStore: ctx.stateStore,
+				logger: ctx.logger,
+				summaries: commitSummaries,
+			},
 			config: {
 				deployment: config.deploymentEnvironment,
 				endpoint: config.ownership.endpoint,

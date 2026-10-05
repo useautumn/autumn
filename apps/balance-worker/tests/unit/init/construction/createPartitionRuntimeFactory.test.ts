@@ -4,6 +4,7 @@ import type { KafkaProducerClient } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
+import { commitSummaries } from "../../../../src/logging/commitSummaries.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type {
@@ -60,7 +61,7 @@ const config: PartitionRuntimeFactoryConfig = {
 
 describe("Kafka owned partition runtime factory", () => {
 	test.concurrent(
-		"logs Kafka commit and SQLite apply after each phase completes",
+		"sums each Kafka commit and SQLite apply into its partition's window once the phase completes, with no line per commit",
 		async () => {
 			const fixture = createStoreFixture();
 			const commitStarted = Promise.withResolvers<void>();
@@ -129,6 +130,7 @@ describe("Kafka owned partition runtime factory", () => {
 					},
 				}).runtime;
 				await runtime.start();
+				commitSummaries.drain();
 				const command = parseTrackCommand({
 					input: {
 						schemaVersion: 1,
@@ -156,38 +158,28 @@ describe("Kafka owned partition runtime factory", () => {
 					processor.track({ command }),
 				);
 				await commitStarted.promise;
-				expect(logs).toEqual([]);
+				expect(commitSummaries.drain()).toEqual({});
 				expect(fixture.store.readState({ identity })?.revision).toBe(0);
 				releaseCommit.resolve();
 				await expect(pending).resolves.toMatchObject({
 					result: { status: "applied" },
 				});
-				expect(logs).toHaveLength(2);
-				for (const [index, phase, result] of [
-					[0, "kafka_commit", "committed"],
-					[1, "store_apply", "applied"],
-				] as const) {
-					expect(logs[index]?.[0]).toMatchObject({
-						event: "balance_worker.commit",
-						durationMs: expect.any(Number),
-						data: {
-							topic,
-							partition: 0,
-							phase,
-							result,
-							workerEndpoint: "http://worker.test",
-							batchSize: 1,
-							baseOffset: "0",
-						},
-					});
-				}
+				expect(commitSummaries.drain()["0"]).toMatchObject({
+					commits: 1,
+					records: 1,
+					notCommitted: 0,
+					unknown: 0,
+					applies: 1,
+					applyFailed: 0,
+				});
 				expect(fixture.store.readState({ identity })?.revision).toBe(1);
 				await expect(
 					runtime.process((processor) => processor.track({ command })),
 				).resolves.toMatchObject({ result: { status: "applied" } });
-				expect(logs).toHaveLength(2);
-				expect(JSON.stringify(logs)).not.toContain("private_command");
-				expect(JSON.stringify(logs)).not.toContain(identity.customerId);
+				expect(logs).toEqual([]);
+				const window = JSON.stringify(commitSummaries.drain());
+				expect(window).not.toContain("private_command");
+				expect(window).not.toContain(identity.customerId);
 			} finally {
 				releaseCommit.resolve();
 				await runtime?.stop();

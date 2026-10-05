@@ -3,7 +3,9 @@
  * worker's own `fetch` (the Hono app, unchanged), and writes each reply's bytes back to the thread that
  * holds the connection. The decide thread never accepts a socket.
  */
+
 import { createRingSignal } from "../../threads/ring/ringSignal.js";
+import { createLatencyCells, drainLatency } from "./latency/latencyCells.js";
 import { startDispatchLoop } from "./pool/dispatchRequests.js";
 import { commitPositionMoved, failHeld } from "./pool/sendReplies.js";
 import { spawnHttpWorker } from "./pool/spawnHttpWorker.js";
@@ -36,6 +38,9 @@ export function createHttpWorkerPool({
 			flushScheduled: false,
 			heldOnDecideThread: [],
 			health: emptyHealth(),
+			latencyCells: createLatencyCells({
+				routes: config.inline?.routes.length ?? 0,
+			}),
 		},
 	};
 
@@ -61,6 +66,14 @@ export function createHttpWorkerPool({
 		};
 	}
 
+	function drainLatencies() {
+		const cells = new Int32Array(scope.state.latencyCells);
+		const routes = config.inline?.routes ?? [];
+		return Object.fromEntries(
+			routes.map((path, route) => [path, drainLatency({ cells, route })]),
+		);
+	}
+
 	async function listen(): Promise<HttpWorkerListener> {
 		const spawned = Array.from({ length: config.threads }, (_, index) =>
 			spawnHttpWorker({ scope, index }),
@@ -79,6 +92,7 @@ export function createHttpWorkerPool({
 			commitPositionMoved: positionMoved,
 			failHeld: fail,
 			drainHealth,
+			drainLatencies,
 		};
 	}
 

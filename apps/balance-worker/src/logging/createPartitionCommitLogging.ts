@@ -1,25 +1,10 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type {
-	CommittedOutcomeAppender,
-	CommitWaits,
-} from "../processor/writer/types/partitionWriter.js";
+import type { CommittedOutcomeAppender } from "../processor/writer/types/partitionWriter.js";
 import { MutationBatchNotCommittedError } from "../processor/writer/writerErrors.js";
 import type { PartitionRuntimeDependencies } from "../runtime/types/partitionRuntime.js";
 import type { DurableMutationApplyResult } from "../state/types/durableMutation.js";
 import type { StateStore } from "../state/types/stateStore.js";
-
-type CommitLog = {
-	topic: string;
-	partition: number;
-	batchSize: number;
-	baseOffset: bigint | null;
-	startedAt: number;
-	errorName?: string;
-	waits?: CommitWaits;
-} & (
-	| { phase: "kafka_commit"; result: "committed" | "not_committed" | "unknown" }
-	| { phase: "store_apply"; result: "applied" | "failed" }
-);
+import type { CommitSummaries } from "./commitSummaries.js";
 
 export function createPartitionCommitLogging({
 	ctx,
@@ -28,7 +13,9 @@ export function createPartitionCommitLogging({
 	ctx: {
 		appender: CommittedOutcomeAppender;
 		stateStore: PartitionRuntimeDependencies["stateStore"];
-		logger?: Pick<AutumnLogger, "debug"> & Partial<Pick<AutumnLogger, "error">>;
+		logger?: Partial<Pick<AutumnLogger, "error">>;
+		/** Where each batch's timings are summed for the window's summary line. */
+		summaries?: CommitSummaries;
 		monotonicNow?: () => number;
 	};
 	config: { deployment: string; endpoint: string };
@@ -36,38 +23,19 @@ export function createPartitionCommitLogging({
 	appender: CommittedOutcomeAppender;
 	stateStore: PartitionRuntimeDependencies["stateStore"];
 } {
-	const { logger } = ctx;
-	if (!logger) return { appender: ctx.appender, stateStore: ctx.stateStore };
+	const { logger, summaries } = ctx;
+	if (!logger && !summaries)
+		return { appender: ctx.appender, stateStore: ctx.stateStore };
 	const now = ctx.monotonicNow ?? (() => performance.now());
 
-	function report({
-		startedAt,
-		baseOffset,
-		batchSize,
-		errorName,
-		waits,
-		...fields
-	}: CommitLog): void {
+	function elapsedMs(startedAt: number): number {
+		return now() - startedAt;
+	}
+
+	function summarize(record: (summaries: CommitSummaries) => void): void {
+		if (!summaries) return;
 		try {
-			const event = {
-				event: "balance_worker.commit",
-				durationMs: Math.round((now() - startedAt) * 100) / 100,
-				data: {
-					...fields,
-					...waitFieldsOf({ waits }),
-					workerEndpoint: config.endpoint,
-					batchSize,
-					baseOffset: baseOffset?.toString() ?? null,
-					errorName,
-				},
-			};
-			// Per-batch telemetry stays at debug; a failure surfaces through the request log.
-			logger?.debug(
-				event,
-				fields.result === "committed" || fields.result === "applied"
-					? "Balance worker commit phase completed"
-					: "Balance worker commit phase failed",
-			);
+			record(summaries);
 		} catch {
 			// Telemetry cannot turn a durable commit into a failed request.
 		}
@@ -76,34 +44,35 @@ export function createPartitionCommitLogging({
 	async function appendCommitted(
 		params: Parameters<CommittedOutcomeAppender["appendCommitted"]>[0],
 	): Promise<{ baseOffset: bigint }> {
-		const metadata = {
-			topic: params.topic,
+		const startedAt = now();
+		const batch = {
 			partition: params.partition,
-			batchSize: params.outcomes.length,
-			startedAt: now(),
+			records: params.outcomes.length,
 			waits: params.waits,
-			phase: "kafka_commit" as const,
 		};
 		let result: { baseOffset: bigint };
 		try {
 			result = await ctx.appender.appendCommitted(params);
 		} catch (cause) {
-			report({
-				...metadata,
-				result:
-					cause instanceof MutationBatchNotCommittedError
-						? "not_committed"
-						: "unknown",
-				baseOffset: null,
-				errorName: cause instanceof Error ? cause.name : "unknown_failure",
-			});
+			summarize((window) =>
+				window.committed({
+					...batch,
+					durationMs: elapsedMs(startedAt),
+					result:
+						cause instanceof MutationBatchNotCommittedError
+							? "not_committed"
+							: "unknown",
+				}),
+			);
 			throw cause;
 		}
-		report({
-			...metadata,
-			result: "committed",
-			baseOffset: result.baseOffset,
-		});
+		summarize((window) =>
+			window.committed({
+				...batch,
+				durationMs: elapsedMs(startedAt),
+				result: "committed",
+			}),
+		);
 		return result;
 	}
 
@@ -115,23 +84,29 @@ export function createPartitionCommitLogging({
 		const metadata = {
 			topic: position.topic,
 			partition: position.partition,
-			batchSize: params.records.length,
 			baseOffset: position.offset,
-			startedAt: now(),
-			phase: "store_apply" as const,
 		};
+		const startedAt = now();
 		let result: DurableMutationApplyResult[];
 		try {
 			result = await ctx.stateStore.applyDurableMutations(params);
 		} catch (cause) {
-			report({
-				...metadata,
-				result: "failed",
-				errorName: cause instanceof Error ? cause.name : "unknown_failure",
-			});
+			summarize((window) =>
+				window.applied({
+					partition: position.partition,
+					durationMs: elapsedMs(startedAt),
+					failed: true,
+				}),
+			);
 			throw cause;
 		}
-		report({ ...metadata, result: "applied" });
+		summarize((window) =>
+			window.applied({
+				partition: position.partition,
+				durationMs: elapsedMs(startedAt),
+				failed: false,
+			}),
+		);
 		reportUnreachableVerdicts({ metadata, results: result });
 		return result;
 	}
@@ -200,17 +175,4 @@ export function createPartitionCommitLogging({
 			applyDurableMutations,
 		},
 	};
-}
-
-function waitFieldsOf({ waits }: { waits?: CommitWaits }) {
-	if (!waits) return {};
-	return {
-		queuedMs: waits.queuedMs === null ? null : roundMs(waits.queuedMs),
-		lingerMs: roundMs(waits.lingerMs),
-		storeWaitMs: roundMs(waits.storeWaitMs),
-	};
-}
-
-function roundMs(ms: number): number {
-	return Math.round(ms * 100) / 100;
 }
