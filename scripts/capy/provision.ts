@@ -45,6 +45,7 @@ import {
 } from "../dw/helpers/neon.ts";
 import { sh } from "../dw/helpers/shell.ts";
 import { getMachineId, stateForMachine } from "./machineIdentity.ts";
+import { isOptedIn } from "./optIns.ts";
 import {
 	capyEnvFiles,
 	DRAGONFLY_PORT,
@@ -309,15 +310,13 @@ function writeEnvFiles(
 	machineId: string,
 	databaseUrl: string,
 	secrets: NonNullable<State["secrets"]>,
-	triggerSecretKey: string,
-	triggerAccessToken: string,
+	trigger: { secretKey: string; accessToken: string } | undefined,
 ): void {
 	const { server, vite, checkout } = capyEnvFiles({
 		machineId,
 		databaseUrl,
 		secrets,
-		triggerSecretKey,
-		triggerAccessToken,
+		trigger,
 	});
 	writeEnvFile("server/.env.local", server);
 	writeEnvFile("vite/.env.local", vite);
@@ -664,13 +663,14 @@ async function main(): Promise<void> {
 	// 1. Local services were started by capy-startup.sh. Wait for their
 	// published ports before provisioning anything that writes their URLs.
 	await waitForDragonfly();
+	const triggerOptedIn = isOptedIn({ name: "trigger" });
 	await Promise.all([
 		waitForHttpService("fakecloud", FAKECLOUD_PORT),
-		waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
+		triggerOptedIn && waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
 	]);
 	// fakecloud has no startup config for seeding queues; create them like bun dw does.
 	await ensureFakecloudQueues({ port: FAKECLOUD_PORT });
-	const trigger = ensureTriggerProject();
+	const trigger = triggerOptedIn ? ensureTriggerProject() : undefined;
 
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
@@ -707,13 +707,7 @@ async function main(): Promise<void> {
 	if (nextState.branchName) ensureChatDatabase(nextState.branchName);
 
 	// 3. Env files. preload-env.ts at every bun entry point auto-loads these.
-	writeEnvFiles(
-		machineId,
-		nextState.databaseUrl,
-		nextState.secrets,
-		trigger.secretKey,
-		trigger.accessToken,
-	);
+	writeEnvFiles(machineId, nextState.databaseUrl, nextState.secrets, trigger);
 
 	runSetupTest(["--ensure"], directUrl);
 	runSetupTest(["--ensure-key"], directUrl);

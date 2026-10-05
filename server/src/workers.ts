@@ -23,8 +23,12 @@ import "./internal/misc/batchReset/batchResetConfigStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/rateLimiter/rateLimitOverridesStore.js";
 
-// Number of worker processes (defaults to CPU cores)
-const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 3 : 4;
+// WORKER_PROCESSES lets small dev machines (Capy) run a single worker.
+const NUM_PROCESSES = process.env.WORKER_PROCESSES
+	? Number(process.env.WORKER_PROCESSES)
+	: process.env.NODE_ENV === "development"
+		? 3
+		: 4;
 
 // Track if we're shutting down
 let isShuttingDown = false;

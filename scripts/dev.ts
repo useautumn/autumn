@@ -223,9 +223,10 @@ async function startDev() {
 				});
 			}
 
-			// Clear Vite cache to prevent dep optimization issues
+			// Clear Vite cache to prevent dep optimization issues. Capy keeps it: a cold
+			// re-optimize costs ~10s of TTFP and GBs of esbuild memory on every boot.
 			const viteCachePath = join(projectRoot, "vite", "node_modules", ".vite");
-			if (existsSync(viteCachePath)) {
+			if (existsSync(viteCachePath) && process.env.CAPY_DEV !== "1") {
 				console.log("Clearing Vite cache...\n");
 				rmSync(viteCachePath, { recursive: true, force: true });
 			}
@@ -433,6 +434,22 @@ async function startDev() {
 				console.error(
 					"CLOUD_AGENT=1 — Stripe CLI not installed; skipping stripe listen.\n",
 				);
+			}
+
+			// DEV_SERVICES (comma-separated names) launches only those services.
+			const onlyServices = process.env.DEV_SERVICES?.split(",").filter(Boolean);
+			if (onlyServices?.includes("cron")) {
+				names.push("cron");
+				colors.push("red");
+				cmds.push('"cd server && bun src/cron.ts"');
+			}
+			if (onlyServices) {
+				const kept = names.flatMap((name, i) =>
+					onlyServices.includes(name) ? [i] : [],
+				);
+				names.splice(0, names.length, ...kept.map((i) => names[i]));
+				colors.splice(0, colors.length, ...kept.map((i) => colors[i]));
+				cmds.splice(0, cmds.length, ...kept.map((i) => cmds[i]));
 			}
 
 			shellArgs = [
