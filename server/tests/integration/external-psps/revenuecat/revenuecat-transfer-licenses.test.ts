@@ -83,5 +83,8 @@ test.concurrent(
 		expect(onB.pools.map((pool) => pool.id)).toEqual(
 			before.pools.map((pool) => pool.id),
 		);
+		expect(onB.assignments.filter((cp) => cp.internal_entity_id)).toHaveLength(
+			0,
+		);
 	},
 );

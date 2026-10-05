@@ -23,7 +23,7 @@ test.concurrent(
 	async () => {
 		const customerA = "rc-xfer-ovr";
 		const declaredCustomer = `${customerA}-b`;
-		const rcDestinationUser = `${customerA}-rcuser`;
+		const rcDestinationUser = `${customerA}-rcuser-${Date.now()}`;
 		const plan = rcPlan({ id: "rc-xfer-ovr-pro" });
 		await setupCustomers({ customerId: customerA, plans: [plan] });
 		const { cusProduct, mock } = await purchaseOnA({
