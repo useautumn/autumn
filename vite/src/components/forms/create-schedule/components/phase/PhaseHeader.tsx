@@ -4,8 +4,8 @@ import {
 	getPhaseTimingError,
 	hasCreateSchedulePhaseStarted,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { PhaseActionsMenu } from "./PhaseActionsMenu";
 import { PhaseDateControl } from "./PhaseDateControl";
-import { PhaseDeleteButton } from "./PhaseDeleteButton";
 
 export function PhaseHeader({ phaseIndex }: { phaseIndex: number }) {
 	const { formValues, nowMs, isPhaseLocked } = useCustomerStateContext();
@@ -34,7 +34,7 @@ export function PhaseHeader({ phaseIndex }: { phaseIndex: number }) {
 					/>
 				</div>
 				<span className="flex-1" />
-				<PhaseDeleteButton phaseIndex={phaseIndex} hasStarted={hasStarted} />
+				<PhaseActionsMenu phaseIndex={phaseIndex} hasStarted={hasStarted} />
 			</div>
 			{timingError && (
 				<p className="pt-1 text-xs text-destructive">{timingError}</p>

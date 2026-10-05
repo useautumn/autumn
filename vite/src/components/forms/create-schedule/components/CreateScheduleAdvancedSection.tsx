@@ -1,6 +1,5 @@
 import { Switch } from "@autumn/ui";
 import {
-	canResetScheduleBillingCycle,
 	hasMultipleImmediateSchedulePlans,
 	hasPersistedCreateSchedule,
 } from "@/components/forms/customer-state/customerStateSchema";
@@ -36,7 +35,7 @@ export function CreateScheduleAdvancedSection() {
 		flow: "schedule",
 		state: {
 			hasMultipleImmediatePlans: hasMultipleImmediateSchedulePlans({ phases }),
-			canResetScheduleBillingCycle: canResetScheduleBillingCycle({ phases }),
+			hasPersistedSchedule: hasPersistedCreateSchedule({ phases }),
 			hasPaidRecurringPlan,
 		},
 	});

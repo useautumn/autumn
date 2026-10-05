@@ -20,6 +20,7 @@ import {
 	resolveBillingCycleAnchor,
 } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
+import { phaseToBillingCycleAnchor } from "../utils/phaseBillingCycleAnchor";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function buildCreateScheduleRequestBody({
@@ -86,6 +87,7 @@ export function buildCreateScheduleRequestBody({
 
 		if (plans.length === 0) return null;
 		return {
+			keepsCycleAnchor: phase.keepsCycleAnchor,
 			starts_at: startsAt,
 			plans,
 		};
@@ -97,17 +99,17 @@ export function buildCreateScheduleRequestBody({
 	if (validPhases.length === 0) return null;
 
 	const hasMultipleImmediatePlans = (validPhases[0]?.plans.length ?? 0) > 1;
-	const pinsCustomAnchor = billingCycleAnchorMode === "custom";
-	const canResetFuturePhases =
-		resetBillingCycle &&
-		!pinsCustomAnchor &&
-		(!hasMultipleImmediatePlans || hasPersistedSchedule);
-	const phasesWithBillingAnchors = validPhases.map((phase, index) => ({
-		...phase,
-		...(index > 0 && canResetFuturePhases
-			? { billing_cycle_anchor: "phase_start" as const }
-			: {}),
-	}));
+	const phasesWithBillingAnchors = validPhases.map(
+		({ keepsCycleAnchor, ...apiPhase }, index) => {
+			const billingCycleAnchor = phaseToBillingCycleAnchor({
+				phase: { keepsCycleAnchor },
+				isFirstPhase: index === 0,
+			});
+			return billingCycleAnchor
+				? { ...apiPhase, billing_cycle_anchor: billingCycleAnchor }
+				: apiPhase;
+		},
+	);
 
 	const apiUnscheduledPlans = unscheduledPlans.flatMap((plan) =>
 		plan.productId ? [toApiPlan(plan)] : [],
@@ -128,8 +130,7 @@ export function buildCreateScheduleRequestBody({
 		body.ends_at = endDate;
 	}
 
-	// Anchor resets aren't supported when the immediate phase is a multi-attach;
-	// future phase anchor resets are allowed for persisted schedules.
+	// Anchor resets aren't supported when the immediate phase is a multi-attach.
 	const billingCycleAnchor = resolveBillingCycleAnchor({
 		resetBillingCycle: !!resetBillingCycle,
 		billingCycleAnchorMode: billingCycleAnchorMode ?? "now",

@@ -8,6 +8,7 @@ import {
 	ProductItemInterval,
 	type ProductV2,
 } from "@autumn/shared";
+import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
 import { customerStatePlanToApiPlan } from "@/components/forms/customer-state/customerStatePlanToApiPlan";
 import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/customerStateSchema";
@@ -652,7 +653,7 @@ describe("buildInitialValues", () => {
 		});
 		const customer = makeCustomer({ customerProducts: [current, scheduled] });
 
-		const result = buildInitialValues({ customer, products, nowMs: 1500 });
+		const result = buildInitialValues({ customer, products });
 
 		expect(
 			result.phases.map((phase) => ({
@@ -687,7 +688,7 @@ describe("buildInitialValues", () => {
 			customerProducts: [running, startingLater],
 		});
 
-		const result = buildInitialValues({ customer, products, nowMs: DAY });
+		const result = buildInitialValues({ customer, products });
 
 		expect(
 			result.phases.map((phase) => [
@@ -730,7 +731,7 @@ describe("buildInitialValues", () => {
 			customerProducts: [ongoing, pastDue, scheduled],
 		});
 
-		const result = buildInitialValues({ customer, products, nowMs: 1500 });
+		const result = buildInitialValues({ customer, products });
 
 		expect(result.unscheduledPlans.map((plan) => plan.productId)).toEqual([
 			"prod_1",
@@ -741,31 +742,99 @@ describe("buildInitialValues", () => {
 		]);
 	});
 
-	test("hydrates billing cycle reset state from scheduled plans", () => {
+	const scheduledAt = ({
+		id,
+		productId,
+		startsAt,
+		billingCycleAnchorResetsAt = null,
+	}: {
+		id: string;
+		productId: string;
+		startsAt: number;
+		billingCycleAnchorResetsAt?: number | null;
+	}) =>
+		({
+			...withDates({
+				customerProduct: makeCusProduct({
+					id,
+					productId,
+					status: CusProductStatus.Scheduled,
+				}),
+				startsAt,
+			}),
+			billing_cycle_anchor_resets_at: billingCycleAnchorResetsAt,
+		}) as FullCusProduct;
+
+	test("a saved phase that resets the billing cycle loads with keep cycle anchor off, one without it on", () => {
 		const current = withDates({
 			customerProduct: makeCusProduct({ id: "cp_1", productId: "prod_1" }),
 			startsAt: 1000,
 			endedAt: 2000,
 		});
-		const scheduled = {
-			...withDates({
-				customerProduct: makeCusProduct({
-					id: "cp_2",
-					productId: "prod_2",
-					status: CusProductStatus.Scheduled,
-				}),
-				startsAt: 2000,
-			}),
-			billing_cycle_anchor_resets_at: 2000,
+		const keeps = {
+			...scheduledAt({ id: "cp_2", productId: "prod_2", startsAt: 2000 }),
+			ended_at: 3000,
 		} as FullCusProduct;
-		const customer = makeCustomer({ customerProducts: [current, scheduled] });
+		const resets = scheduledAt({
+			id: "cp_3",
+			productId: "prod_1",
+			startsAt: 3000,
+			billingCycleAnchorResetsAt: 3000,
+		});
+		const customer = makeCustomer({
+			customerProducts: [current, keeps, resets],
+		});
 
-		const result = buildInitialValues({ customer, products, nowMs: 1500 });
+		const result = buildInitialValues({ customer, products });
 
-		expect(result.resetBillingCycle).toBe(true);
+		expect(
+			result.phases.map((phase) => [phase.startsAt, phase.keepsCycleAnchor]),
+		).toEqual([
+			[1000, false],
+			[2000, true],
+			[3000, false],
+		]);
+		expect(result.resetBillingCycle).toBe(false);
 	});
 
-	test("does not hydrate billing cycle reset state from a past reset", () => {
+	test("re-saving an untouched saved schedule sends exactly its saved phase resets", () => {
+		const current = withDates({
+			customerProduct: makeCusProduct({ id: "cp_1", productId: "prod_1" }),
+			startsAt: 1000,
+			endedAt: 2000,
+		});
+		const keeps = {
+			...scheduledAt({ id: "cp_2", productId: "prod_2", startsAt: 2000 }),
+			ended_at: 3000,
+		} as FullCusProduct;
+		const resets = scheduledAt({
+			id: "cp_3",
+			productId: "prod_1",
+			startsAt: 3000,
+			billingCycleAnchorResetsAt: 3000,
+		});
+		const customer = makeCustomer({
+			customerProducts: [current, keeps, resets],
+		});
+		const values = buildInitialValues({ customer, products });
+
+		const request = buildCreateScheduleRequestBody({
+			...values,
+			customerId: "cus_1",
+			products,
+			features: [],
+			nowMs: 1500,
+		});
+
+		expect(request?.phases.map((phase) => phase.billing_cycle_anchor)).toEqual([
+			undefined,
+			undefined,
+			"phase_start",
+		]);
+		expect(request).not.toHaveProperty("billing_cycle_anchor");
+	});
+
+	test("a reset recorded at the current phase's start does not mark a later phase", () => {
 		const current = {
 			...withDates({
 				customerProduct: makeCusProduct({ id: "cp_1", productId: "prod_1" }),
@@ -774,19 +843,16 @@ describe("buildInitialValues", () => {
 			}),
 			billing_cycle_anchor_resets_at: 1000,
 		} as FullCusProduct;
-		const scheduled = withDates({
-			customerProduct: makeCusProduct({
-				id: "cp_2",
-				productId: "prod_2",
-				status: CusProductStatus.Scheduled,
-			}),
+		const scheduled = scheduledAt({
+			id: "cp_2",
+			productId: "prod_2",
 			startsAt: 2000,
 		});
 		const customer = makeCustomer({ customerProducts: [current, scheduled] });
 
-		const result = buildInitialValues({ customer, products, nowMs: 1500 });
+		const result = buildInitialValues({ customer, products });
 
-		expect(result.resetBillingCycle).toBe(false);
+		expect(result.phases[1]?.keepsCycleAnchor).toBe(true);
 	});
 
 	test("preserves custom items for custom scheduled plans", () => {
@@ -804,7 +870,7 @@ describe("buildInitialValues", () => {
 		});
 		const customer = makeCustomer({ customerProducts: [customScheduled] });
 
-		const result = buildInitialValues({ customer, products, nowMs: 1500 });
+		const result = buildInitialValues({ customer, products });
 
 		const plan = result.phases[1].plans[0];
 		expect(plan.items).not.toBeNull();
@@ -838,7 +904,7 @@ describe("buildInitialValues", () => {
 			customerProducts: [customerPlan, entityPlan],
 		});
 
-		const result = buildInitialValues({ customer, products, nowMs: 1500 });
+		const result = buildInitialValues({ customer, products });
 
 		expect(result.phases[1].startsAt).toBe(2000);
 		expect(result.phases[1].plans.map((plan) => plan.entityId)).toEqual([
@@ -975,7 +1041,6 @@ describe("buildInitialValues", () => {
 			customer,
 			products,
 			stripeScheduleId: "sub_sched_1",
-			nowMs,
 		});
 
 		expect(

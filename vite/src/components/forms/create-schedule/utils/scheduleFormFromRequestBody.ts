@@ -19,6 +19,7 @@ import {
 	readString,
 	requestRecord,
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
+import { billingCycleAnchorToKeepsCycleAnchor } from "./phaseBillingCycleAnchor";
 
 type RequestBody = Record<string, unknown>;
 
@@ -118,6 +119,10 @@ export const scheduleFormFromRequestBody = (
 			{
 				plans,
 				startsAt,
+				keepsCycleAnchor: billingCycleAnchorToKeepsCycleAnchor({
+					billingCycleAnchor: phase.billing_cycle_anchor,
+					isFirstPhase: index === 0,
+				}),
 				...(persistedStartsAt != null ? { persistedStartsAt } : {}),
 			},
 		];
@@ -133,11 +138,7 @@ export const scheduleFormFromRequestBody = (
 		endDate: readNumber("ends_at")(request) ?? null,
 		phases,
 		...anchorOverrides,
-		resetBillingCycle:
-			anchorOverrides.resetBillingCycle === true ||
-			request.phases.some(
-				(value) => requestRecord(value)?.billing_cycle_anchor === "phase_start",
-			),
+		resetBillingCycle: anchorOverrides.resetBillingCycle === true,
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
 	};
 };
