@@ -182,7 +182,7 @@ test.concurrent(
 //
 // Same subscriptions as test 1. Attach Enterprise with a custom $80/mo price,
 // carry_over_usages, prorate_immediately and remove_plan_ids: [marketing].
-// Expected: Enterprise on sub A at $80, marketing's usage carried over,
+// Expected: Enterprise on sub B at $80, marketing's usage carried over,
 // invoice = ($80 - $30) x remaining ratio.
 // ═══════════════════════════════════════════════════════════════════════════════
 
