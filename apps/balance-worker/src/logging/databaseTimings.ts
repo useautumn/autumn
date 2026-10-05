@@ -25,7 +25,7 @@ export type DatabaseTimingsSummary = {
 	errorCodes: Record<string, number>;
 	/** Flush latency by statement size (bytes sent): staging telemetry for the snapshot write cost. */
 	flushBySize?: Record<string, Distribution & { bytes: number }>;
-	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
+	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses), rows served or unreadable. */
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
 
@@ -34,9 +34,22 @@ type SubjectSnapshotCounts = {
 	deleted: number;
 	hits: number;
 	misses: number;
+	served: number;
+	unreadable: number;
 	/** Present only in a window where an evict rebuilt rows. */
 	refreshes?: SnapshotRefreshCounts;
 };
+
+function emptySnapshotCounts(): SubjectSnapshotCounts {
+	return {
+		upserted: 0,
+		deleted: 0,
+		hits: 0,
+		misses: 0,
+		served: 0,
+		unreadable: 0,
+	};
+}
 
 type SampledWindow = { count: number; max: number; samples: number[] };
 
@@ -151,17 +164,19 @@ export function createDatabaseTimings() {
 	function recordSubjectSnapshots(
 		counts: Partial<Omit<SubjectSnapshotCounts, "refreshes">>,
 	): void {
-		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
+		subjectSnapshots ??= emptySnapshotCounts();
 		subjectSnapshots.upserted += counts.upserted ?? 0;
 		subjectSnapshots.deleted += counts.deleted ?? 0;
 		subjectSnapshots.hits += counts.hits ?? 0;
 		subjectSnapshots.misses += counts.misses ?? 0;
+		subjectSnapshots.served += counts.served ?? 0;
+		subjectSnapshots.unreadable += counts.unreadable ?? 0;
 	}
 
 	function recordSnapshotRefreshes(
 		counts: Partial<SnapshotRefreshCounts>,
 	): void {
-		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
+		subjectSnapshots ??= emptySnapshotCounts();
 		const refreshes = (subjectSnapshots.refreshes ??= {
 			queued: 0,
 			refreshed: 0,

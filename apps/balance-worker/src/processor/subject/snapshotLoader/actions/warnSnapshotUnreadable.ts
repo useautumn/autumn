@@ -1,4 +1,5 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import { databaseTimings } from "../../../../logging/databaseTimings.js";
 import type { SubjectScope } from "../../types/subject.js";
 
 /** A row the statement answered that will not parse is nobody's to use; the customer's next flush rewrites it. */
@@ -9,6 +10,7 @@ export const warnSnapshotUnreadable = ({
 	scope: SubjectScope;
 	identity: MeteringIdentity;
 }): void => {
+	databaseTimings.recordSubjectSnapshots({ unreadable: 1 });
 	scope.ctx.logger?.warn?.(
 		{ event: "balance_worker.snapshot_unreadable", data: { identity } },
 		`Balance worker could not read ${identity.customerId}'s snapshot; its next flush rewrites it`,

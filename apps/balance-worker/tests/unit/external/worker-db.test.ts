@@ -80,6 +80,8 @@ describe("createWorkerDb", () => {
 			deleted: 0,
 			hits: 1,
 			misses: 1,
+			served: 0,
+			unreadable: 0,
 		});
 	});
 

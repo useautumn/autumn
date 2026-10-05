@@ -5,6 +5,7 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import { SUBJECT_ROW_LIMITS, type SubjectRowsEnvelope } from "@autumn/postgres";
+import { databaseTimings } from "../../../logging/databaseTimings.js";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import { subjectEnvelopeToState } from "../actions/ensureSubject/readSubjectBaseline.js";
 import { verifySnapshot } from "../snapshotLoader/actions/verifySnapshot.js";
@@ -110,6 +111,8 @@ const runBatch = async ({
 	try {
 		rows = await probeEntitySnapshots({ scope, batch, probe });
 		const served = probe === "serve" ? rows : new Map<Waiting, SubjectState>();
+		if (served.size > 0)
+			databaseTimings.recordSubjectSnapshots({ served: served.size });
 		for (const [waiting, row] of served)
 			waiting.settle.resolve({ baseline: row, baselineAt: occurredAt });
 		envelopeByEntity = await readEntityRows({
