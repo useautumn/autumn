@@ -2,12 +2,18 @@
  * `decide` without a settlement: dedup, capacity, projection, the record and the commit loop are the writer's
  * own, but the reply is built here and held until the commit position reaches its write's sequence number.
  */
-import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import {
+	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
+} from "@autumn/balance-engine";
 import { enqueueMutation, pendingKeyOf } from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type { HeldDecision, HeldSubmission } from "../types/mutation.js";
-import type { PartitionWriterScope } from "../types/partitionWriter.js";
+import type {
+	HeldBlocker,
+	PartitionWriterScope,
+} from "../types/partitionWriter.js";
 import {
 	PartitionWriterDuplicateCommandError,
 	PartitionWriterStateNotFoundError,
@@ -100,6 +106,43 @@ export function decideHeld<Reply>({
 	pending.replyBody = body;
 	scheduleCommit({ scope });
 	return { kind: "write", seq: pending.seq, body };
+}
+
+/** Why `decideHeld` would hand this command back: a settled write owns the customer's order, or the retry's reply is another write's. */
+export function heldBlockerOf({
+	scope,
+	identity,
+	commandId,
+}: {
+	scope: PartitionWriterScope;
+	identity: MeteringIdentity;
+	commandId: string;
+}): HeldBlocker | null {
+	const customerKey = meteringIdentityToPartitionKey({ identity });
+	if (hasSettledWriteInFlight({ scope, customerKey }))
+		return "settled_write_in_flight";
+	if (scope.state.pendingByKey.has(pendingKeyOf({ customerKey, commandId })))
+		return "retry_in_flight";
+	return null;
+}
+
+/** Nested calls join the outer group. */
+export function decideHeldGroup<Result>({
+	scope,
+	decide,
+}: {
+	scope: PartitionWriterScope;
+	decide: () => Result;
+}): Result {
+	const { state } = scope;
+	if (state.heldGroup !== null) return decide();
+	state.lastHeldGroup += 1;
+	state.heldGroup = state.lastHeldGroup;
+	try {
+		return decide();
+	} finally {
+		state.heldGroup = null;
+	}
 }
 
 function hasSettledWriteInFlight({
