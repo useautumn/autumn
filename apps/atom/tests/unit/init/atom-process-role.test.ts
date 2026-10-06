@@ -18,46 +18,45 @@ const envWith = ({
 	});
 
 describe("an Atom process's role", () => {
-	test("the first ATOM_WRITERS children receive pushes and never serve; the rest serve", () => {
+	test("every child serves; the first ATOM_WRITERS also receive pushes", () => {
 		const env = envWith({ processes: 8, linked: true });
 		const roles = [...Array(8).keys()].map((childIndex) =>
 			atomProcessRole({ env, childIndex }),
 		);
 
-		expect(roles.filter((role) => role.receivesPushes)).toHaveLength(2);
-		expect(roles.slice(0, 2)).toEqual([
-			{ servesChecks: false, receivesPushes: true },
-			{ servesChecks: false, receivesPushes: true },
+		expect(roles.map((role) => role.receivesPushes)).toEqual([
+			true,
+			true,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
 		]);
-		expect(
-			roles.slice(2).every((role) => role.servesChecks && !role.receivesPushes),
-		).toBe(true);
 	});
 
-	test("a lone process serves, and receives when the push queue is linked", () => {
+	test("a lone process receives when the push queue is linked", () => {
 		const withQueue = envWith({ processes: 1, linked: true });
 		const without = envWith({ processes: 1, linked: false });
 
 		expect(atomProcessRole({ env: withQueue, childIndex: null })).toEqual({
-			servesChecks: true,
 			receivesPushes: true,
 		});
 		expect(atomProcessRole({ env: without, childIndex: null })).toEqual({
-			servesChecks: true,
 			receivesPushes: false,
 		});
 	});
 
-	test("with no push queue every child serves", () => {
+	test("with no push queue no child receives", () => {
 		const env = envWith({ processes: 4, linked: false });
 
 		expect(atomProcessRole({ env, childIndex: 0 })).toEqual({
-			servesChecks: true,
 			receivesPushes: false,
 		});
 	});
 
-	test("a multi-tenant Atom with its queue linked splits writers from servers like an org's", () => {
+	test("a multi-tenant Atom with its queue linked receives on two children of eight", () => {
 		const env = createAtomEnv(
 			{
 				ATOM_MODE: "multi_tenant",
@@ -72,6 +71,5 @@ describe("an Atom process's role", () => {
 
 		expect(env.ATOM_PROCESSES).toBe(8);
 		expect(roles.filter((role) => role.receivesPushes)).toHaveLength(2);
-		expect(roles.filter((role) => role.servesChecks)).toHaveLength(6);
 	});
 });

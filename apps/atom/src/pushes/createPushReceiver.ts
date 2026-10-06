@@ -18,11 +18,14 @@ export const PUSH_QUEUE = "pushes";
 const RECEIVE_BATCH = 10;
 /** Long polls in flight per writer process, so applying one batch never waits on the next receive. */
 const RECEIVE_LOOPS = 4;
+/** After a failed receive, so an unreachable queue is not polled in a tight loop. */
+const RECEIVE_RETRY_MS = 1_000;
 
 type PushReceiverContext = {
 	pushes: Pick<Queue, "receive" | "ack">;
 	auth: Pick<Auth, "pushSlots">;
 	logger: Pick<AutumnLogger, "warn">;
+	sleep?: (ms: number) => Promise<unknown>;
 	processStats?: Pick<ProcessStatsRecorder, "recordRequest">;
 };
 
@@ -116,7 +119,16 @@ export const createPushReceiver = ({
 
 	async function receiveUntilStopped(): Promise<void> {
 		while (!stopping) {
-			const messages = await pushes.receive(RECEIVE_BATCH);
+			const messages = await pushes
+				.receive(RECEIVE_BATCH)
+				.catch(async (error) => {
+					ctx.logger.warn(
+						{ error, type: "atom_push_receive_failed" },
+						"Receiving queued pushes failed; trying again",
+					);
+					await (ctx.sleep ?? Bun.sleep)(RECEIVE_RETRY_MS);
+					return [];
+				});
 			const done = messages.filter((message) => receivePush({ ctx, message }));
 			await Promise.all(
 				done.map((message) =>

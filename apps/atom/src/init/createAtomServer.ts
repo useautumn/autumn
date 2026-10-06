@@ -93,17 +93,10 @@ export const createAtomServer = ({
 		);
 	}
 
-	/** A writer never listens: the port hands connections only to the processes serving checks. */
+	/** Receiving is async I/O beside serving, so a process that applies pushes still answers checks. */
 	async function start(): Promise<void> {
-		if (role.servesChecks) listen();
-		receiving = pushReceiver?.run().catch((error) => {
-			ctx.logger.error(
-				{ error, type: "atom_push_receiver_stopped" },
-				"Push receiver stopped",
-			);
-			// A process that only writes is useless without its receiver: exiting lets the supervisor replace it.
-			if (!role.servesChecks) throw error;
-		});
+		listen();
+		receiving = pushReceiver?.run();
 	}
 
 	/** In-flight requests and leased pushes finish before the files close. */
