@@ -1,15 +1,11 @@
 import { expect, test } from "bun:test";
-import { serializeMeteringRecord } from "@autumn/kafka";
+import { parseMeteringRecord, serializeMeteringRecord } from "@autumn/kafka";
 import { createTrackMutation } from "../../../../../packages/kafka/tests/meteringFixtures.js";
 import { createSharedRecordParser } from "../../../src/stream/createSharedRecordParser.js";
 
-test("every job's consumer gets the one parse of a log record", () => {
+test("herald's parse reads the same record the full schema does", () => {
 	const parse = createSharedRecordParser();
 	const encoded = serializeMeteringRecord({ record: createTrackMutation() });
 	const position = { topic: "t", partition: 3, offset: 9n };
-	const first = parse({ position, ...encoded });
-	expect(parse({ position, ...encoded })).toBe(first);
-	expect(
-		parse({ position: { ...position, offset: 10n }, ...encoded }),
-	).not.toBe(first);
+	expect(parse({ position, ...encoded })).toEqual(parseMeteringRecord(encoded));
 });
