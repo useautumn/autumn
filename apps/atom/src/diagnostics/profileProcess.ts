@@ -1,6 +1,7 @@
 import { profile } from "bun:jsc";
 import { readdirSync, readFileSync } from "node:fs";
 import { servedTotals } from "../init/processStats.js";
+import { subjectReadCounts } from "../state/openSqliteStore.js";
 
 type Frame = {
 	name: string;
@@ -13,6 +14,12 @@ type Trace = { frames: Frame[] };
 const MAX_SECONDS = 30;
 const TOP = 40;
 const CLOCK_TICKS_PER_SECOND = 100;
+
+/** CPU ms of the calling thread alone: the share of `coresByThread` this thread's own work used. */
+const callingThreadCpuMs = (): number => {
+	const { user, system } = process.threadCpuUsage();
+	return (user + system) / 1000;
+};
 
 /** Each of this process's threads (JS, GC helpers, JIT compilers, I/O) with its CPU seconds so far, by thread name. */
 const readThreadCpu = (): Map<string, number> => {
@@ -95,12 +102,15 @@ export const profileProcess = async ({
 		const windowSeconds = Math.min(Math.max(seconds, 1), MAX_SECONDS);
 		const threadsBefore = readThreadCpu();
 		const servedBefore = { ...servedTotals };
+		const readsBefore = subjectReadCounts.reads;
+		const cpuBefore = callingThreadCpuMs();
 		const startedAt = performance.now();
 		const result = await profile(
 			() => Bun.sleep(windowSeconds * 1000),
 			Math.max(intervalMicros, 100),
 		);
 		const elapsedSeconds = (performance.now() - startedAt) / 1000;
+		const threadCpuMs = callingThreadCpuMs() - cpuBefore;
 		const threadsAfter = readThreadCpu();
 		const threadCpu = Object.fromEntries(
 			[...threadsAfter.entries()]
@@ -124,10 +134,14 @@ export const profileProcess = async ({
 			arch: process.arch,
 			elapsedSeconds,
 			intervalMicros,
+			/** Checks and pushes this thread took in, and the subject reads it made as owner, over the window. */
 			served: {
 				checks: servedTotals.checks - servedBefore.checks,
 				pushes: servedTotals.pushes - servedBefore.pushes,
+				ownedReads: subjectReadCounts.reads - readsBefore,
 			},
+			threadCpuCores:
+				Math.round((threadCpuMs / 1000 / elapsedSeconds) * 1000) / 1000,
 			coresByThread: threadCpu,
 			memory: process.memoryUsage(),
 			...summarize(traces),

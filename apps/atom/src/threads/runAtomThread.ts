@@ -1,5 +1,6 @@
 import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
+import { startSelfProfile } from "../diagnostics/startSelfProfile.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { startProcessStats } from "../init/processStats.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
@@ -65,6 +66,19 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		},
 	});
 
+	const selfProfile = env.ATOM_PROFILE_EVERY_S
+		? startSelfProfile({
+				everySeconds: env.ATOM_PROFILE_EVERY_S,
+				index,
+				logger,
+			})
+		: null;
+
+	async function stop(): Promise<void> {
+		selfProfile?.stop();
+		await server.stop();
+	}
+
 	function join({ peer, ports }: { peer: number; ports: PeerPorts }): void {
 		owners.connect({ thread: peer, port: ports.calls });
 		answerOwnerCalls({ ctx: { auth }, port: ports.answers });
@@ -77,7 +91,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	return { start: server.start, stop: server.stop, join, leave };
+	return { start: server.start, stop, join, leave };
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */
