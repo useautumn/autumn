@@ -193,6 +193,7 @@ export const DataTable = <T,>({
 	getRowClassName,
 	rowClassName = "h-10",
 	footer,
+	fill = false,
 }: {
 	data: T[] | undefined;
 	// biome-ignore lint/suspicious/noExplicitAny: tanstack column values vary per column
@@ -204,6 +205,8 @@ export const DataTable = <T,>({
 	getRowClassName?: (row: T) => string | undefined;
 	rowClassName?: string;
 	footer?: ReactNode;
+	/** Shrink to the parent flex column and scroll rows under the sticky header. */
+	fill?: boolean;
 }) => {
 	const table = useReactTable({
 		data: data ?? [],
@@ -232,8 +235,14 @@ export const DataTable = <T,>({
 					{ "--twd-table-min": `${table.getTotalSize()}px` } as CSSProperties
 				}
 			>
-				<Table.Container>
-					<Table.Content footer={footer}>
+				<Table.Container className={cn(fill && "min-h-0 flex-1")}>
+					<Table.Content
+						footer={footer}
+						className={cn(
+							fill &&
+								"flex max-h-full min-h-0 flex-col [&>[data-slot=table-container]]:min-h-0",
+						)}
+					>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>

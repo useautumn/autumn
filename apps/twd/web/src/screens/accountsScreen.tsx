@@ -131,7 +131,7 @@ export const AccountsScreen = () => {
 			<ErrorCallout error={capacity.error ?? accounts.error} className="mb-4" />
 
 			<SectionTag>Pool</SectionTag>
-			<Panel className="mb-6 px-3 py-2.5">
+			<Panel className="mb-6 shrink-0 px-3 py-2.5">
 				{cap && counts ? (
 					<div className="flex flex-col gap-2">
 						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tertiary-foreground tabular-nums">
@@ -171,13 +171,17 @@ export const AccountsScreen = () => {
 
 			<SectionTag>Broken accounts</SectionTag>
 			<PagedDataTable
+				fill
 				resetKey=""
 				data={brokenAccounts}
 				isLoading={accounts.isLoading}
 				columns={brokenColumns}
 				emptyText="No broken accounts. Accounts land here when a nuke or verify fails."
 			/>
-			<ErrorCallout error={nuke.error ?? forget.error} className="mt-3" />
+			<ErrorCallout
+				error={nuke.error ?? forget.error}
+				className="mt-3 shrink-0"
+			/>
 
 			<ConfirmDialog
 				open={forgetting !== null}

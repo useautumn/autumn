@@ -29,19 +29,22 @@ export const shouldUseOrgDimensionRollup = ({
 	!hasEntityId &&
 	!hasPropertyFilters;
 
-// Whole-window customer ranking only needs per-period series for the winners.
+// Whole-window ranking only needs per-period series for the winners.
 export const shouldRankGroupsFirst = ({
 	groupColumn,
 	useOrgDimensionRollup,
+	useOrgPropertyRollup,
 	groupRanking,
 }: {
 	groupColumn: GroupableColumn;
 	useOrgDimensionRollup: boolean;
+	useOrgPropertyRollup: boolean;
 	groupRanking?: "bin" | "window";
-}): boolean =>
-	useOrgDimensionRollup &&
-	groupColumn === "customer_id" &&
-	groupRanking === "window";
+}): boolean => {
+	if (groupRanking !== "window") return false;
+	if (groupColumn === "customer_id") return useOrgDimensionRollup;
+	return groupColumn === "property" && useOrgPropertyRollup;
+};
 
 export const shouldUseOrgPropertyRollup = ({
 	groupColumn,

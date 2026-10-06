@@ -6,8 +6,8 @@
  *
  * Contract:
  *   E1 legacy attach, $1/credit        → stamp true, renewal invoice itemized
- *   E2 entity-scoped $1/credit, 2 ents → stamp true; each entity itemizes on its own, and an entity
- *                                        whose usage stayed within its included credits adds no lines
+ *   E2 entity-scoped $1/credit, 2 ents → stamp true; every entity's usage is itemized, offset by one
+ *                                        combined credits line, so only the overrunning entity costs money
  *   E3 7-day trial, $1/credit          → stamp true; usage during the trial is not charged at trial end
  *   E4 eur customer, €1/credit         → stamp true, eur invoice itemized at €1 per credit
  *   E5 switch $1/credit → $0.10/credit → old balance stays stamped, new balance stamped false,
@@ -188,27 +188,21 @@ test.concurrent(
 		expect(rows.length).toBeGreaterThan(0);
 		for (const row of rows) expect(row.invoice_credit).toBe(true);
 
-		// Entity 1 overran its included credits and itemizes; entity 0 netted to zero and adds nothing.
+		// usage_attribution has no entity dimension, so entity 0's usage is itemized too and the
+		// credits line offsets everything except entity 1's overage.
 		const entityOverage = ACTION2_CREDITS - INCLUDED;
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectInvoiceLineItemsCorrect({
 			stripeInvoiceId: customer.invoices![0]!.stripe_id,
-			expectedCount: 3,
+			expectedCount: 4,
 			expectedTotal: BASE_PRICE + entityOverage,
 			expectedLineItems: [
 				{ isBasePrice: true, direction: "charge", amount: BASE_PRICE },
-				{
-					featureId: TestFeature.Action2,
-					direction: "charge",
-					billingTiming: "in_arrear",
-					amount: ACTION2_CREDITS,
-				},
-				{
-					featureId: TestFeature.InvoiceCredits,
-					direction: "refund",
-					billingTiming: "in_arrear",
-					amount: -INCLUDED,
-				},
+				...itemizedLines({
+					action1Amount: ACTION1_CREDITS,
+					action2Amount: ACTION2_CREDITS,
+					creditsApplied: ACTION1_CREDITS + ACTION2_CREDITS - entityOverage,
+				}),
 			],
 		});
 	},
