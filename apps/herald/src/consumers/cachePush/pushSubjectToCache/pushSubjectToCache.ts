@@ -15,6 +15,7 @@ export const pushSubjectToCache = async ({
 	cacheSubject: CacheSubjectRef;
 }): Promise<CachePushTiming | null> => {
 	const { identity, logOffset } = cacheSubject;
+	const targetsStartedAt = performance.now();
 	const targets = await readSubjectAtomTargets({ ctx, identity });
 	if (!targets) return null;
 
@@ -40,6 +41,7 @@ export const pushSubjectToCache = async ({
 		),
 	);
 	return {
+		targetsMs: readStartedAt - targetsStartedAt,
 		readMs: sendStartedAt - readStartedAt,
 		sendMs: performance.now() - sendStartedAt,
 	};

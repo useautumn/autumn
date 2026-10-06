@@ -41,9 +41,11 @@ export function createCachePushConsumer({
 	}: {
 		cacheSubject: Parameters<typeof pushSubjectToCache>[0]["cacheSubject"];
 	}): Promise<void> {
+		const startedAt = performance.now();
 		try {
 			const timing = await pushSubjectToCache({ ctx, cacheSubject });
-			if (timing) stats.recordPush(timing);
+			if (timing)
+				stats.recordPush({ ...timing, totalMs: performance.now() - startedAt });
 			else stats.recordSkip();
 		} catch (error) {
 			stats.recordFailure();
