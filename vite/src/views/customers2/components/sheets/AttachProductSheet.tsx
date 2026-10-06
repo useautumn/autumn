@@ -20,7 +20,10 @@ import {
 } from "@/components/forms/attach-v2";
 import type { AttachForm } from "@/components/forms/attach-v2/attachFormSchema";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { InvoiceBillingAddressSection } from "@/components/forms/attach-v2/components/InvoiceBillingAddressSection";
+import { useAttachPreview } from "@/components/forms/attach-v2/hooks/useAttachPreview";
 import { isFutureStartDate } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { hasInvoiceBillingDetails } from "@/components/forms/attach-v2/utils/invoiceBillingDetails";
 import {
 	DisabledTooltipButton,
 	PlanScopeChip,
@@ -310,7 +313,7 @@ function SendInvoiceContent() {
 	const {
 		form,
 		product,
-		previewQuery,
+		invoicePreview,
 		isPending,
 		handleInvoiceAttach,
 		additionalPlans,
@@ -324,9 +327,32 @@ function SendInvoiceContent() {
 		!additionalPlans.isMultiPlan && isFutureStartDate(startDate)
 			? startDate
 			: null;
+	const chargeTax = useStore(form.store, (state) => state.values.chargeTax);
+	const billingDetails = useStore(
+		form.store,
+		(state) => state.values.billingDetails,
+	);
+	const previewQuery = useAttachPreview(invoicePreview);
+	const taxStatus = previewQuery.data?.tax?.status;
+	const hasTypedDetails = hasInvoiceBillingDetails(billingDetails);
+	const taxIncomplete = hasTypedDetails && taxStatus === "incomplete";
+	const showBillingAddress =
+		!additionalPlans.isMultiPlan &&
+		chargeTax &&
+		(taxStatus === "requires_location" || hasTypedDetails);
 
 	return (
 		<SendInvoiceStageWithPreview
+			billingAddressSection={
+				showBillingAddress ? (
+					<InvoiceBillingAddressSection taxIncomplete={taxIncomplete} />
+				) : undefined
+			}
+			submitBlocked={
+				showBillingAddress &&
+				(taxStatus === "requires_location" || taxIncomplete)
+			}
+			onEmailSaved={() => previewQuery.refetch()}
 			productName={product?.name}
 			previewQuery={previewQuery}
 			isPending={isPending}

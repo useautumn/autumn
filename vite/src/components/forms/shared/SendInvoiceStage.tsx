@@ -2,7 +2,7 @@ import type { AppEnv } from "@autumn/shared";
 import { Button, Input, PanelButton } from "@autumn/ui";
 import { ArrowLeft, HourglassIcon, LightningIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { toast } from "sonner";
 import {
 	SheetFooter,
@@ -121,6 +121,9 @@ export function SendInvoiceStage({
 	getInvoiceUrl,
 	previewQuery,
 	scheduledStartDate,
+	billingAddressSection,
+	submitBlocked = false,
+	onEmailSaved,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -132,6 +135,9 @@ export function SendInvoiceStage({
 	getInvoiceUrl: (invoiceStripeId: string) => string;
 	previewQuery: PreviewSectionQuery;
 	scheduledStartDate?: number | null;
+	billingAddressSection?: ReactNode;
+	submitBlocked?: boolean;
+	onEmailSaved?: () => void;
 }) {
 	const { customer, refetch } = useCusQuery();
 	const { org } = useOrg();
@@ -166,6 +172,7 @@ export function SendInvoiceStage({
 				email: emailValue.trim(),
 			});
 			await refetch();
+			onEmailSaved?.();
 			setEmailSaved(true);
 			toast.success("Email saved");
 		} catch {
@@ -173,7 +180,7 @@ export function SendInvoiceStage({
 		} finally {
 			setEmailSaving(false);
 		}
-	}, [axiosInstance, customerId, emailValue, refetch]);
+	}, [axiosInstance, customerId, emailValue, refetch, onEmailSaved]);
 
 	const buildSubmitParams = (
 		finalizeInvoice: boolean,
@@ -221,6 +228,7 @@ export function SendInvoiceStage({
 	};
 
 	const needsEmail = !customer?.email && !emailSaved;
+	const submitDisabled = needsEmail || submitBlocked || isPending;
 
 	if (completedDraftUrl) {
 		return (
@@ -303,6 +311,8 @@ export function SendInvoiceStage({
 				</SheetSection>
 			)}
 
+			{billingAddressSection}
+
 			<PlanActivationSection
 				enableImmediately={enableImmediately}
 				setEnableImmediately={setEnableImmediately}
@@ -326,7 +336,7 @@ export function SendInvoiceStage({
 						className="w-full"
 						onClick={handleDraft}
 						isLoading={activeAction === "draft"}
-						disabled={needsEmail || isPending}
+						disabled={submitDisabled}
 					>
 						Draft and edit in Stripe
 					</Button>
@@ -335,7 +345,7 @@ export function SendInvoiceStage({
 						className="w-full"
 						onClick={handleFinalize}
 						isLoading={activeAction === "finalize"}
-						disabled={needsEmail || isPending}
+						disabled={submitDisabled}
 					>
 						Finalize and send invoice
 					</Button>
@@ -354,6 +364,9 @@ export function SendInvoiceStageWithPreview({
 	env,
 	onBack,
 	scheduledStartDate,
+	billingAddressSection,
+	submitBlocked,
+	onEmailSaved,
 }: {
 	productName?: string;
 	previewQuery: PreviewSectionQuery;
@@ -366,6 +379,9 @@ export function SendInvoiceStageWithPreview({
 	env: AppEnv;
 	onBack: () => void;
 	scheduledStartDate?: number | null;
+	billingAddressSection?: ReactNode;
+	submitBlocked?: boolean;
+	onEmailSaved?: () => void;
 }) {
 	const effectiveScheduledStartDate = scheduledStartDate ?? null;
 
@@ -388,6 +404,9 @@ export function SendInvoiceStageWithPreview({
 			getInvoiceUrl={getInvoiceUrl}
 			previewQuery={previewQuery}
 			scheduledStartDate={effectiveScheduledStartDate}
+			billingAddressSection={billingAddressSection}
+			submitBlocked={submitBlocked}
+			onEmailSaved={onEmailSaved}
 		/>
 	);
 }

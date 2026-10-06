@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { FormDiscount } from "./utils/discountUtils";
+import type { InvoiceBillingDetailsForm } from "./utils/invoiceBillingDetails";
 
 export interface FormCustomLineItem {
 	_id: string;
@@ -67,6 +68,8 @@ export const AttachFormSchema = z.object({
 	currency: z.string().nullable(),
 
 	noBillingChanges: z.boolean(),
+	chargeTax: z.boolean(),
+	billingDetails: z.custom<InvoiceBillingDetailsForm>(),
 	enablePlanImmediately: z.boolean(),
 	longLivedCheckout: z.boolean(),
 	carryOverBalances: z.boolean(),
