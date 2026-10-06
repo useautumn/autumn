@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
-import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
+import {
+	createMultiTenantAuth,
+	TENANTS_MISS_RESCAN_MS,
+	TENANTS_REVALIDATE_MS,
+} from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
 	checkRequestFor,
 	forwardReasonOf,
@@ -139,5 +143,95 @@ describe("multi-tenant auth", () => {
 		expect(() =>
 			auth.putAtom({ id: "../outside", tokenHash: tokenHash("token_a") }),
 		).toThrow("Invalid Atom id");
+	});
+});
+
+/** Two processes over one data directory, on a clock the test moves. */
+const openTwoProcesses = () => {
+	const dataDir = newDataDir();
+	let now = 0;
+	const clock = () => now;
+	const openProcess = () => {
+		const auth = createMultiTenantAuth({ dataDir, slotCount: 2, clock });
+		opened.push(auth);
+		return auth;
+	};
+	return {
+		dataDir,
+		first: openProcess(),
+		second: openProcess(),
+		advance: (ms: number) => {
+			now += ms;
+		},
+	};
+};
+
+describe("multi-tenant auth across processes", () => {
+	test("an Atom put through one process opens on another as soon as its token is asked for", () => {
+		const { first, second, advance } = openTwoProcesses();
+		advance(TENANTS_MISS_RESCAN_MS);
+
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		storeCustomer({ auth: first, token: "token_a" });
+
+		expect(checkCustomer({ auth: second, token: "token_a" })).toMatchObject({
+			allowed: true,
+		});
+		expect(second.hasAtom({ id: "atom_a" })).toBe(true);
+	});
+
+	test("a rotated token stops working on the other process within the revalidate bound", () => {
+		const { first, second, advance } = openTwoProcesses();
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_old") });
+		advance(TENANTS_MISS_RESCAN_MS);
+		storeCustomer({ auth: second, token: "token_old" });
+
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_new") });
+		advance(TENANTS_REVALIDATE_MS);
+
+		expect(second.authorize({ token: "token_old" })).toBeNull();
+		expect(checkCustomer({ auth: second, token: "token_new" })).toMatchObject({
+			allowed: true,
+		});
+	});
+
+	test("an Atom deleted through one process stops answering on the other, which leaves its folder gone", () => {
+		const { dataDir, first, second, advance } = openTwoProcesses();
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_MISS_RESCAN_MS);
+		storeCustomer({ auth: second, token: "token_a" });
+
+		first.removeAtom({ id: "atom_a" });
+		advance(TENANTS_REVALIDATE_MS);
+
+		expect(second.authorize({ token: "token_a" })).toBeNull();
+		expect(second.hasAtom({ id: "atom_a" })).toBe(false);
+		expect(existsSync(join(dataDir, "atom_a"))).toBe(false);
+	});
+
+	test("an Atom deleted before the other process ever opened it is not recreated there", () => {
+		const { dataDir, first, second, advance } = openTwoProcesses();
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_MISS_RESCAN_MS);
+		second.authorize({ token: "token_unknown" });
+
+		first.removeAtom({ id: "atom_a" });
+
+		expect(second.authorize({ token: "token_a" })).toBeNull();
+		expect(existsSync(join(dataDir, "atom_a"))).toBe(false);
+	});
+
+	test("unknown tokens re-read the folders at most once per miss interval", () => {
+		const { first, second, advance } = openTwoProcesses();
+		advance(TENANTS_MISS_RESCAN_MS);
+		expect(second.authorize({ token: "token_bad" })).toBeNull();
+
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_MISS_RESCAN_MS - 1);
+		for (let attempt = 0; attempt < 100; attempt++)
+			expect(second.authorize({ token: "token_a" })).toBeNull();
+
+		advance(1);
+		expect(second.authorize({ token: "token_a" })).not.toBeNull();
 	});
 });

@@ -38,8 +38,8 @@ export const ByocCacheMachineCard = ({
 			{machine.instanceType}
 		</span>
 		<span className="pt-1.5 text-[13px] font-semibold text-foreground">
-			${machine.estimatedMonthlyUsd}
-			<span className="text-xs font-normal text-subtle"> /mo on AWS</span>
+			~${machine.estimatedMonthlyUsd}
+			<span className="text-xs font-normal text-subtle"> /mo</span>
 		</span>
 	</div>
 );

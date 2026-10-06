@@ -10,7 +10,7 @@ const running = {
 				stateful: {
 					mode: "fixed",
 					machines: 1,
-					machine: "t4g.micro",
+					machine: "c7g.2xlarge",
 					failure_domains: { spread: 1 },
 				},
 			},
@@ -25,7 +25,7 @@ describe("a deployment's pool machine", () => {
 			pool: "stateful",
 		});
 
-		expect(machine).toBe("t4g.micro");
+		expect(machine).toBe("c7g.2xlarge");
 	});
 
 	test("is null for a pool the deployment does not have", () => {

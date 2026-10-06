@@ -101,16 +101,30 @@ describe("atom env", () => {
 		expect(told.ATOM_PROCESSES).toBe(12);
 	});
 
-	test("a multi-tenant Atom is always one process", () => {
+	test("a multi-tenant Atom sizes its processes like a customer's, and may be told how many", () => {
 		const multiTenant = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 16,
 			memoryLimitBytes: 64 * 1024 ** 3,
 		});
+		const small = createAtomEnv(MULTI_TENANT, {
+			availableCpus: 2,
+			memoryLimitBytes: 4 * 1024 ** 3,
+		});
+		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_PROCESSES: "3" });
 
-		expect(multiTenant.ATOM_PROCESSES).toBe(1);
-		expect(() =>
-			createAtomEnv({ ...MULTI_TENANT, ATOM_PROCESSES: "2" }),
-		).toThrow("one process");
+		expect(multiTenant.ATOM_PROCESSES).toBe(8);
+		expect(small.ATOM_PROCESSES).toBe(2);
+		expect(told.ATOM_PROCESSES).toBe(3);
+	});
+
+	test("a multi-tenant Atom never reads the push queue: every process serves, even with the queue linked", () => {
+		const env = createAtomEnv(
+			{ ...MULTI_TENANT, ALIEN_PUSHES_BINDING: "{}" },
+			{ availableCpus: 8, memoryLimitBytes: 16 * 1024 ** 3 },
+		);
+
+		expect(env.ATOM_PROCESSES).toBe(8);
+		expect(env.ATOM_WRITERS).toBe(0);
 	});
 
 	test("about 30% of the processes receive pushes when the push queue is linked, at least one of each", () => {

@@ -187,4 +187,118 @@ describe("sqlite store", () => {
 		).toEqual(subjectAt({ logOffset: 5n }));
 		sqliteStore.close();
 	});
+
+	test("a subject another process writes is read on the next check, not the parsed copy", () => {
+		const databasePath = slotPath();
+		const reader = openSqliteStore({ databasePath });
+		const writer = openSqliteStore({ databasePath });
+		writer.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		const read = () =>
+			reader.readSubject({ customerId: "cus_1", entityId: null });
+		expect(read()?.logOffset).toBe(41n);
+
+		writer.setSubject({ subject: subjectAt({ logOffset: 42n }) });
+
+		expect(read()?.logOffset).toBe(42n);
+		reader.close();
+		writer.close();
+	});
+
+	test("a subject written through the same store is read back at once", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
+
+		sqliteStore.setSubjects({ subjects: [subjectAt({ logOffset: 43n })] });
+
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
+				?.logOffset,
+		).toBe(43n);
+		sqliteStore.close();
+	});
+
+	test("the parsed copy checks share cannot be changed by one of them", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		const read = sqliteStore.readSubject({
+			customerId: "cus_1",
+			entityId: null,
+		});
+
+		expect(() => {
+			(read as { readAt: number }).readAt = 0;
+		}).toThrow(TypeError);
+		expect(Object.isFrozen(read?.state.identity)).toBe(true);
+		sqliteStore.close();
+	});
+
+	test("a push to one customer leaves another customer's parsed copy in place", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		const other: StoredSubject = {
+			...subjectAt({ logOffset: 1n }),
+			state: createSubjectState({
+				identity: { ...identity, customerId: "cus_2" },
+			}),
+		};
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		const first = sqliteStore.readSubject({
+			customerId: "cus_1",
+			entityId: null,
+		});
+
+		sqliteStore.setSubject({ subject: other });
+
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toBe(first);
+		sqliteStore.close();
+	});
+	test("a write by another process is read on the next check, and an unchanged row is served without asking the file", () => {
+		const databasePath = slotPath();
+		const writer = openSqliteStore({ databasePath });
+		const reader = openSqliteStore({ databasePath });
+		const read = () =>
+			reader.readSubject({ customerId: "cus_1", entityId: null });
+		writer.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+
+		const first = read();
+		expect(first?.logOffset).toBe(1n);
+		expect(read()).toBe(first as StoredSubject);
+
+		writer.setSubjects({ subjects: [subjectAt({ logOffset: 2n })] });
+		expect(read()?.logOffset).toBe(2n);
+
+		// A row written behind the stamps' back is not seen until a stamped write: the stamp, not the file, says when to look.
+		new Database(databasePath).run(
+			"UPDATE subject_states SET log_offset = 3 WHERE customer_id = 'cus_1'",
+		);
+		expect(read()?.logOffset).toBe(2n);
+		writer.setSubject({ subject: subjectAt({ logOffset: 4n }) });
+		expect(read()?.logOffset).toBe(4n);
+	});
+	test("customers sharing a catalog store its text once, and each reads it back whole", () => {
+		const databasePath = slotPath();
+		const sqliteStore = openSqliteStore({ databasePath });
+		const catalog = {
+			...emptyCatalog,
+			features: { messages: { id: "messages" } },
+		} as unknown as StoredSubject["catalog"];
+		for (const customerId of ["cus_1", "cus_2"])
+			sqliteStore.setSubject({
+				subject: {
+					...subjectAt({ logOffset: 1n }),
+					state: createSubjectState({ identity: { ...identity, customerId } }),
+					catalog,
+				},
+			});
+
+		const texts = new Database(databasePath)
+			.query("SELECT count(*) AS n FROM shared_texts")
+			.get() as { n: number };
+		expect(texts.n).toBe(2);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_2", entityId: null })?.catalog,
+		).toEqual(catalog);
+	});
 });
