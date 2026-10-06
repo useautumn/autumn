@@ -24,13 +24,16 @@ export const getNextCycleEvent = ({
 	customerProducts,
 	anchorMs,
 	schedulePhaseProrations,
+	fromMs = billingContext.currentEpochMs,
 }: {
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	anchorMs: number;
 	schedulePhaseProrations?: SchedulePhaseProration[];
+	/** Search for events after this time; defaults to now. */
+	fromMs?: number;
 }): NextCycleEvent => {
-	const { currentEpochMs } = billingContext;
+	const currentEpochMs = fromMs;
 	const nowMs = normalizeMs(currentEpochMs);
 	const normalizedCustomerProducts = customerProducts.map(
 		normalizeCustomerProductTimestamps,

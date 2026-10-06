@@ -19,9 +19,9 @@ import {
 	type NextCycleLineItemOptions,
 } from "./billingPlanToNextCycleLineItems";
 import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorResetPreview";
+import { findNextInvoicedCycleEvent } from "./findNextInvoicedCycleEvent";
 import {
 	getActiveCustomerProductsAt,
-	getNextCycleEvent,
 	type NextCycleEvent,
 	type SmallestInterval,
 } from "./getNextCycleEvent";
@@ -156,17 +156,22 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
-	const anchorMs =
+	const currentAnchorMs =
 		billingCycleAnchorMs === "now"
 			? billingContext.currentEpochMs
 			: billingCycleAnchorMs;
 
-	const event = getNextCycleEvent({
+	const { event, anchorMs } = findNextInvoicedCycleEvent({
 		billingContext,
 		customerProducts,
-		anchorMs,
+		anchorMs: currentAnchorMs,
 		schedulePhaseProrations,
 	});
+	// An uninvoiced anchor reset moved the cycle before this event, so it bills from the new anchor.
+	const cycleBillingContext: BillingContext =
+		anchorMs === currentAnchorMs
+			? billingContext
+			: { ...billingContext, billingCycleAnchorMs: anchorMs };
 
 	const baseDebug = {
 		allCustomerProducts,
@@ -245,7 +250,7 @@ export const billingPlanToNextCyclePreview = ({
 			productsForUsageLineItems,
 			lineItemSpecs,
 			autumnBillingPlan: billingPlan.autumn,
-			billingContext,
+			billingContext: cycleBillingContext,
 			nextCycleStart: event.startsAtMs,
 			options,
 		});
@@ -291,7 +296,7 @@ export const billingPlanToNextCyclePreview = ({
 				},
 			],
 			autumnBillingPlan: billingPlan.autumn,
-			billingContext,
+			billingContext: cycleBillingContext,
 			nextCycleStart: event.startsAtMs,
 			options,
 		});
@@ -313,16 +318,15 @@ export const billingPlanToNextCyclePreview = ({
 	}
 
 	let nextCycleStart: number;
-	let lineItemsBillingContext: BillingContext = billingContext;
+	let lineItemsBillingContext: BillingContext = cycleBillingContext;
 	let anchorResetProration: AnchorResetProration | undefined;
 	let nextCycleCustomerProducts: FullCusProduct[];
 
 	if (event.kind === "anchor_reset") {
 		const result = computeScheduledAnchorResetPreview({
-			billingContext,
+			billingContext: cycleBillingContext,
 			interval: event.smallestInterval.interval,
 			intervalCount: event.smallestInterval.intervalCount,
-			prorationBehavior: event.prorationBehavior,
 		});
 		nextCycleStart = result.nextCycleStart;
 		anchorResetProration = result.anchorResetProration;

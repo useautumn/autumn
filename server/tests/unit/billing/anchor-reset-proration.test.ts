@@ -1,4 +1,4 @@
-// A timestamp anchor's reset phase carries the first phase's proration, as Stripe
+// A timestamp anchor's reset phase carries the request's proration, as Stripe
 // applies a phase's own proration_behavior; with none it invoices nothing at the anchor.
 
 import { describe, expect, test } from "bun:test";
@@ -78,25 +78,11 @@ describe("computeScheduledAnchorResetPreview", () => {
 		stripeSubscription: { billing_cycle_anchor: periodStartMs / 1000 },
 	} as unknown as BillingContext;
 
-	test("with none, the next invoice is the new cycle's full renewal", () => {
-		const result = computeScheduledAnchorResetPreview({
-			billingContext,
-			interval: BillingInterval.Month,
-			intervalCount: 1,
-			prorationBehavior: "none",
-		});
-
-		expect(result.nextCycleStart).toBe(Date.UTC(2026, 10, 16, 12));
-		expect(result.anchorResetProration).toBeUndefined();
-		expect(result.lineItemsBillingContext.billingCycleAnchorMs).toBe(anchorMs);
-	});
-
 	test("by default, the anchor invoices each line's netted extra window", () => {
 		const result = computeScheduledAnchorResetPreview({
 			billingContext,
 			interval: BillingInterval.Month,
 			intervalCount: 1,
-			prorationBehavior: undefined,
 		});
 
 		expect(result.nextCycleStart).toBe(anchorMs);
