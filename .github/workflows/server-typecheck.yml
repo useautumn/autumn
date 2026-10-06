@@ -37,9 +37,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           bun test check-generated-paths.test.ts
-          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" \
-            --jq '.[] | .filename, (.previous_filename // empty)' > "$RUNNER_TEMP/pr-files.txt"
-          bun check-generated-paths.ts < "$RUNNER_TEMP/pr-files.txt"
+          bun check-generated-paths.ts
 
       - name: Check changed files
         id: filter

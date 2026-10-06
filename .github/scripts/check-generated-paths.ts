@@ -18,12 +18,50 @@ export const findGeneratedEdits = ({
 		.filter((path) => path !== "" && isGeneratedPath({ patterns, path }));
 };
 
-// Reads the PR's changed paths (one per line) from stdin.
+export const listPullRequestFiles = async ({
+	ctx,
+	repository,
+	number,
+	token,
+}: {
+	ctx: { fetch: (url: string, init?: RequestInit) => Promise<Response> };
+	repository: string;
+	number: number;
+	token: string;
+}) => {
+	const files: string[] = [];
+	for (let page = 1; ; page++) {
+		const response = await ctx.fetch(
+			`https://api.github.com/repos/${repository}/pulls/${number}/files?per_page=100&page=${page}`,
+			{ headers: { authorization: `Bearer ${token}` } },
+		);
+		if (!response.ok) {
+			throw new Error(`Listing PR files failed: HTTP ${response.status}`);
+		}
+		const batch: { filename: string; previous_filename?: string }[] =
+			await response.json();
+		for (const file of batch) {
+			files.push(file.filename);
+			if (file.previous_filename) files.push(file.previous_filename);
+		}
+		if (batch.length < 100) return files;
+	}
+};
+
 if (import.meta.main) {
+	const { GITHUB_REPOSITORY, PR_NUMBER, GH_TOKEN } = process.env;
+	if (!GITHUB_REPOSITORY || !PR_NUMBER || !GH_TOKEN) {
+		throw new Error("Missing GITHUB_REPOSITORY, PR_NUMBER or GH_TOKEN");
+	}
 	const root = join(import.meta.dir, "../..");
 	const edits = findGeneratedEdits({
 		list: await Bun.file(join(root, GENERATED_PATHS_FILE)).text(),
-		files: (await Bun.stdin.text()).split("\n"),
+		files: await listPullRequestFiles({
+			ctx: { fetch },
+			repository: GITHUB_REPOSITORY,
+			number: Number(PR_NUMBER),
+			token: GH_TOKEN,
+		}),
 	});
 	for (const path of edits) {
 		console.error(
