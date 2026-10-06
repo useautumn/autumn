@@ -5,6 +5,7 @@ import {
 	type KafkaConsumerGroupTimings,
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
+	type MeteringRecordsHandler,
 	type MeteringStaleRecord,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
@@ -55,6 +56,8 @@ export function createStreamConsumer({
 		topic: string;
 		groupIdPrefix: string;
 		recordsPerSlice?: number;
+		/** Shared across a process's jobs so each log record is parsed once. */
+		parseRecord?: MeteringRecordsHandler["parseRecord"];
 		/** Tests only: a short session so an evicted member is seen in seconds. */
 		timings?: KafkaConsumerGroupTimings;
 	};
@@ -147,6 +150,7 @@ export function createStreamConsumer({
 				onRecordError,
 				onStaleRecord,
 				readOwnerFence,
+				parseRecord: config.parseRecord,
 			},
 		},
 		config: {

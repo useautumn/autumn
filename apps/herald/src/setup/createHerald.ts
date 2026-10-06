@@ -28,6 +28,7 @@ import { createSlotFollower } from "../slot/followSlot.js";
 import { createHeraldHeartbeat } from "../slot/heraldHeartbeat.js";
 import { createHeraldReadinessProbes } from "../slot/heraldReadinessProbes.js";
 import type { JobHealth } from "../slot/types/heraldHeartbeat.js";
+import { createSharedRecordParser } from "../stream/createSharedRecordParser.js";
 import { createStreamConsumer } from "../stream/createStreamConsumer.js";
 import type { RunningStreamConsumer } from "../stream/types/streamConsumer.js";
 
@@ -112,6 +113,7 @@ export function createHerald({
 	const started: Array<() => Promise<void>> = [];
 
 	function buildJobs(): RunningStreamConsumer[] {
+		const parseRecord = createSharedRecordParser();
 		return createHeraldConsumers({ ctx: consumersCtx }).map((streamConsumer) =>
 			createStreamConsumer({
 				ctx: {
@@ -123,6 +125,7 @@ export function createHerald({
 				config: {
 					topic: env.HERALD_METERING_TOPIC,
 					groupIdPrefix: env.HERALD_GROUP_ID,
+					parseRecord,
 				},
 				streamConsumer,
 			}),
