@@ -3,7 +3,7 @@ import type { ProducerThreadInit } from "./producerThreadMessages.js";
 
 export type ThreadedProducersConfig = Pick<
 	ProducerThreadInit,
-	"clientId" | "brokers" | "authMode" | "region" | "scram" | "limits"
+	"clientId" | "brokers" | "authMode" | "region" | "sasl" | "limits"
 > & {
 	/** Powers of two. */
 	sendRingBytes: number;

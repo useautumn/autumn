@@ -152,7 +152,7 @@ self.onmessage = (
 	}
 	if (
 		message.clientId === "scram-client" &&
-		(message.authMode !== "scram" || !message.scram?.password)
+		(message.authMode !== "scram" || !message.sasl?.password)
 	) {
 		postMessage({ kind: "error", message: "SCRAM credentials missing" });
 		return;

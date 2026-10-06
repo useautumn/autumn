@@ -15,8 +15,8 @@ export type KafkaTransportConfig = Omit<
 	| "retry"
 >;
 
-export type KafkaScramCredentials = {
-	mechanism: "scram-sha-256" | "scram-sha-512";
+export type KafkaSaslCredentials = {
+	mechanism: "scram-sha-256" | "scram-sha-512" | "plain";
 	username: string;
 	password: string;
 };

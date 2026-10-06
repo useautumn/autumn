@@ -72,7 +72,7 @@ for (const [name, createEnv, service] of services) {
 				}),
 			).toMatchObject({
 				KAFKA_AUTH_MODE: "scram",
-				KAFKA_SCRAM: {
+				KAFKA_SASL: {
 					mechanism: "scram-sha-256",
 					username: "tf-redpanda-staging-server",
 					password: "secret",
@@ -89,7 +89,7 @@ for (const [name, createEnv, service] of services) {
 					[username]: "user",
 					[password]: "secret",
 				}),
-			).toHaveProperty("KAFKA_SCRAM.mechanism", "scram-sha-512");
+			).toHaveProperty("KAFKA_SASL.mechanism", "scram-sha-512");
 		});
 
 		test.each([
@@ -118,6 +118,31 @@ for (const [name, createEnv, service] of services) {
 			},
 		);
 
+		test("PLAIN carries this service's credentials and ignores the SCRAM mechanism", () => {
+			expect(
+				createEnv({
+					...brokers,
+					KAFKA_AUTH_MODE: "plain",
+					KAFKA_SASL_MECHANISM: "scram-sha-512",
+					[username]: "confluent-api-key",
+					[password]: "secret",
+				}),
+			).toMatchObject({
+				KAFKA_AUTH_MODE: "plain",
+				KAFKA_SASL: {
+					mechanism: "plain",
+					username: "confluent-api-key",
+					password: "secret",
+				},
+			});
+		});
+
+		test("rejects PLAIN without a username and password", () => {
+			expect(() =>
+				createEnv({ ...brokers, KAFKA_AUTH_MODE: "plain", [username]: "user" }),
+			).toThrow(`KAFKA_AUTH_MODE=plain requires ${username} and ${password}`);
+		});
+
 		test("other modes never carry SCRAM credentials", () => {
 			expect(
 				createEnv({
@@ -126,7 +151,7 @@ for (const [name, createEnv, service] of services) {
 					[username]: "user",
 					[password]: "secret",
 				}),
-			).toHaveProperty("KAFKA_SCRAM", undefined);
+			).toHaveProperty("KAFKA_SASL", undefined);
 		});
 
 		test("SCRAM reads only this service's credentials", () => {
@@ -149,7 +174,7 @@ for (const [name, createEnv, service] of services) {
 					[username]: "mine",
 					[password]: "my-secret",
 				}),
-			).toHaveProperty("KAFKA_SCRAM", {
+			).toHaveProperty("KAFKA_SASL", {
 				mechanism: "scram-sha-256",
 				username: "mine",
 				password: "my-secret",

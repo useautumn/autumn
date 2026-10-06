@@ -101,7 +101,7 @@ describe("threaded producers", () => {
 				...clientConfig,
 				clientId: "scram-client",
 				authMode: "scram",
-				scram: {
+				sasl: {
 					mechanism: "scram-sha-256",
 					username: "balance-worker",
 					password: "test-password",

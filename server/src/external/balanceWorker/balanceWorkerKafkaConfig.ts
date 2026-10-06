@@ -13,6 +13,6 @@ export function readBalanceWorkerKafkaConfig({
 		brokers: env.KAFKA_BROKERS,
 		authMode: env.KAFKA_AUTH_MODE,
 		region: env.AWS_REGION,
-		scram: env.KAFKA_SCRAM,
+		sasl: env.KAFKA_SASL,
 	};
 }

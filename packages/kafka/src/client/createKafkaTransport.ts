@@ -7,22 +7,22 @@ import {
 } from "./kafkaTokens.js";
 import { describeMskToken, type KafkaTokenInfo } from "./mskTokenInfo.js";
 import type {
-	KafkaScramCredentials,
+	KafkaSaslCredentials,
 	KafkaTransportConfig,
 } from "./types/kafkaClient.js";
 
 export function createKafkaTransport({
 	authMode,
 	region,
-	scram,
+	sasl,
 	generateToken = generateAuthToken,
 	onToken = writeKafkaTokenLine,
 	tokens = processKafkaTokens,
 	now = Date.now,
 }: {
-	authMode: "none" | "msk_iam" | "scram";
+	authMode: "none" | "msk_iam" | "scram" | "plain";
 	region?: string;
-	scram?: KafkaScramCredentials;
+	sasl?: KafkaSaslCredentials;
 	generateToken?: typeof generateAuthToken;
 	/** Told about every token signed, so a refusal can be read against the key and lifetime the client presented. */
 	onToken?(info: KafkaTokenInfo): void;
@@ -30,7 +30,8 @@ export function createKafkaTransport({
 	now?: () => number;
 }): KafkaTransportConfig {
 	if (authMode === "none") return {};
-	if (authMode === "scram") return createScramTransport({ scram });
+	if (authMode === "scram" || authMode === "plain")
+		return createSaslTransport({ sasl });
 	if (authMode !== "msk_iam") {
 		throw new Error("Unsupported Kafka authentication mode");
 	}
@@ -59,23 +60,27 @@ export function createKafkaTransport({
 	};
 }
 
-function createScramTransport({
-	scram,
+function createSaslTransport({
+	sasl,
 }: {
-	scram?: KafkaScramCredentials;
+	sasl?: KafkaSaslCredentials;
 }): KafkaTransportConfig {
-	if (!scram?.username.trim() || !scram.password) {
-		throw new Error("SCRAM authentication requires a username and password");
+	if (!sasl?.username.trim() || !sasl.password) {
+		throw new Error("SASL authentication requires a username and password");
 	}
-	const { username, password } = scram;
-	if (scram.mechanism === "scram-sha-512") {
-		return {
-			ssl: true,
-			sasl: { mechanism: "scram-sha-512", username, password },
-		};
+	const { username, password } = sasl;
+	switch (sasl.mechanism) {
+		case "plain":
+			return { ssl: true, sasl: { mechanism: "plain", username, password } };
+		case "scram-sha-512":
+			return {
+				ssl: true,
+				sasl: { mechanism: "scram-sha-512", username, password },
+			};
+		case "scram-sha-256":
+			return {
+				ssl: true,
+				sasl: { mechanism: "scram-sha-256", username, password },
+			};
 	}
-	return {
-		ssl: true,
-		sasl: { mechanism: "scram-sha-256", username, password },
-	};
 }

@@ -252,12 +252,12 @@ test("a connection is built without connecting, with MSK IAM or SCRAM transport 
 			brokers: ["seed.redpanda:9092"],
 			authMode: "scram",
 		}),
-	).toThrow("SCRAM authentication requires a username and password");
+	).toThrow("SASL authentication requires a username and password");
 	const scram = createBalanceWorkerKafka({
 		clientId: "test",
 		brokers: ["seed.redpanda:9092"],
 		authMode: "scram",
-		scram: {
+		sasl: {
 			mechanism: "scram-sha-256",
 			username: "server",
 			password: "secret",

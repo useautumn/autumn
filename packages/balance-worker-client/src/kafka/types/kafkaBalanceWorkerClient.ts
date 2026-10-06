@@ -1,5 +1,5 @@
 import type {
-	KafkaScramCredentials,
+	KafkaSaslCredentials,
 	KafkaSender,
 	OwnershipKafka,
 } from "@autumn/kafka";
@@ -19,9 +19,9 @@ export type BalanceWorkerKafka = OwnershipKafka & {
 export type BalanceWorkerKafkaConfig = {
 	clientId: string;
 	brokers: string[];
-	authMode: "none" | "msk_iam" | "scram";
+	authMode: "none" | "msk_iam" | "scram" | "plain";
 	region?: string;
-	scram?: KafkaScramCredentials;
+	sasl?: KafkaSaslCredentials;
 };
 
 type LogMethod = (payload: object | string, message?: string) => void;
