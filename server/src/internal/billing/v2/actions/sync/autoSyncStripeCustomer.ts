@@ -5,7 +5,7 @@ import { syncV2 } from "./syncV2";
 import { logAutoSyncSkip } from "./utils/logAutoSyncSkip";
 import { withStripeSyncCustomerLock } from "./utils/withStripeSyncCustomerLock";
 
-const autoSyncStripeCustomer = async ({
+export const autoSyncStripeCustomer = async ({
 	ctx,
 	customerId,
 	stripeCustomerId,

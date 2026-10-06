@@ -217,3 +217,36 @@ test.concurrent(
 		expect(await getSubscriptionIds({ ctx, customerId })).toEqual([]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("get_or_create stripe link: a Stripe customer already linked to another customer is not shared")}`,
+	async () => {
+		const customerId = "goc-stripe-link-owned";
+		const otherCustomerId = "goc-stripe-link-owner";
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [
+				s.deleteCustomer({ customerId }),
+				s.deleteCustomer({ customerId: otherCustomerId }),
+			],
+			actions: [],
+		});
+		const stripeCustomer = await createStripeCustomer({
+			ctx,
+			customerId: otherCustomerId,
+		});
+		await getOrCreateCustomer({
+			autumn: autumnV2_3,
+			customerId: otherCustomerId,
+			stripeId: stripeCustomer.id,
+		});
+		await getOrCreateCustomer({ autumn: autumnV2_3, customerId });
+
+		const result = await getOrCreateCustomer({
+			autumn: autumnV2_3,
+			customerId,
+			stripeId: stripeCustomer.id,
+		});
+
+		expect(result.stripe_id).toBeNull();
+	},
+);
