@@ -3,6 +3,7 @@ import { CusProductStatus, ResetInterval } from "@autumn/shared";
 import {
 	applyMutation,
 	computeFinalize,
+	computeReset,
 	computeTrack,
 	type FinalizeCommand,
 	LockNotFoundError,
@@ -117,6 +118,64 @@ describe("splitFinalize", () => {
 });
 
 describe("computeFinalize", () => {
+	test.each([0, 20, 600, 650])(
+		"finalizing a previous-cycle lock at %s does not refund the new cycle",
+		(finalValue) => {
+			const locked = takeLock({
+				state: createState({
+					customerEntitlements: [
+						{
+							...createCustomerEntitlement({ balance: 1000 }),
+							next_reset_at: occurredAt + 1,
+						},
+					],
+				}),
+				value: 600,
+			});
+			expect(balanceOf({ state: locked.state })).toBe(400);
+			const reset = computeReset({
+				fullSubject: createSubjectFor({ state: locked.state }),
+				command: {
+					schemaVersion: 1,
+					type: "reset",
+					commandId: "cmd_reset",
+					requestId: "req_reset",
+					identity,
+					org,
+					occurredAt: occurredAt + 2,
+				},
+			});
+			if (!reset) throw new Error("Expected a monthly reset");
+			const resetState = applyMutation({
+				state: locked.state,
+				mutation: reset,
+			});
+			expect(balanceOf({ state: resetState })).toBe(1000);
+			// Fresh usage must not be erased by settling the previous cycle's hold.
+			const freshUsage = computeTrack({
+				fullSubject: createSubjectFor({ state: resetState }),
+				command: {
+					...createTrackCommand({ value: 100 }),
+					occurredAt: occurredAt + 3,
+				},
+			});
+			const current = applyMutation({
+				state: resetState,
+				mutation: freshUsage,
+			});
+			const mutation = computeFinalize({
+				fullSubject: createSubjectFor({ state: current }),
+				command: {
+					...finalizeCommand({ lock: locked.lock, finalValue }),
+					occurredAt: occurredAt + 4,
+				},
+			});
+			const state = applyMutation({ state: current, mutation });
+			expect(balanceOf({ state })).toBe(900 - Math.max(0, finalValue - 600));
+			expect(state.openLocks).toEqual([]);
+		},
+	);
+
 	test.concurrent("a confirm below the lock gives the difference back", () => {
 		const locked = takeLock({ state: createState(), value: 8 });
 		expect(balanceOf({ state: locked.state })).toBe(2);
