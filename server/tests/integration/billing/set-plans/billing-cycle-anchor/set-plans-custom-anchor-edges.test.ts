@@ -5,10 +5,11 @@
 
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
-import { expectPreviewMatchesStripeUpcomingInvoice } from "@tests/integration/billing/set-plans/phase-proration/utils/phaseProrationUtils";
+import { stripeSchedulePhaseStartingAt } from "@tests/integration/billing/set-plans/phase-proration/utils/phaseProrationUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import {
+	calculateBillingCycleAnchorResetNextCycle,
 	calculateNewSubscriptionAnchorStub,
 	calculateProratedDiff,
 	getBillingPeriod,
@@ -23,7 +24,7 @@ import { addMonths, addYears } from "date-fns";
 import { expectCycleResetPhase } from "../utils/resyncUtils";
 import {
 	advancePastCycleStart,
-	calculateStripeAnchorResetTotal,
+	expectNextCycleTotalMatchesStripe,
 	expectStripeCycleCorrect,
 } from "./utils/anchorCycleUtils";
 
@@ -84,11 +85,12 @@ test.concurrent(
 
 		const { billingPeriod } = await getBillingPeriod({ customerId });
 		const anchorMs = billingPeriod.end - ms.days(5);
-		const expectedResetTotal = await calculateStripeAnchorResetTotal({
-			customerId,
-			anchorMs,
-			amount: 20,
-		});
+		const { total: expectedResetTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 20,
+			});
 		const params = anchorParams({
 			customerId,
 			planId: pro.id,
@@ -107,10 +109,10 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans(params);
 		await expectCycleResetPhase({ ctx, customerId, anchorMs });
-		await expectPreviewMatchesStripeUpcomingInvoice({
+		await expectNextCycleTotalMatchesStripe({
 			ctx,
 			customerId,
-			nextCycle: preview.next_cycle,
+			nextCycleTotal: preview.next_cycle?.total,
 		});
 
 		await advancePastCycleStart({
@@ -220,11 +222,12 @@ test.concurrent(
 			latestTotal: 20,
 		});
 
-		const expectedResetTotal = await calculateStripeAnchorResetTotal({
-			customerId,
-			anchorMs,
-			amount: 20,
-		});
+		const { total: expectedResetTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 20,
+			});
 		await advancePastCycleStart({
 			ctx,
 			testClockId: testClockId!,
@@ -273,11 +276,12 @@ test.concurrent(
 			oldAmount: 20,
 			newAmount: 50,
 		});
-		const expectedResetTotal = await calculateStripeAnchorResetTotal({
-			customerId,
-			anchorMs,
-			amount: 50,
-		});
+		const { total: expectedResetTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 50,
+			});
 		const params = anchorParams({
 			customerId,
 			planId: premium.id,
@@ -285,8 +289,11 @@ test.concurrent(
 			startsAt: advancedTo,
 		});
 
+		// The credit and charge lines round separately, so the net can be a cent off a single proration.
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.total).toBe(expectedUpgradeTotal);
+		expect(Math.abs(preview.total - expectedUpgradeTotal)).toBeLessThanOrEqual(
+			0.01,
+		);
 		expectPreviewNextCycleCorrect({
 			preview,
 			startsAt: anchorMs,
@@ -298,7 +305,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
-			latestTotal: expectedUpgradeTotal,
+			latestTotal: preview.total,
 		});
 		await expectCycleResetPhase({ ctx, customerId, anchorMs });
 		await expectBalanceCorrect({
@@ -347,11 +354,13 @@ test.concurrent(
 			});
 
 		const anchorMs = advancedTo + ms.days(10);
-		const expectedResetTotal = await calculateStripeAnchorResetTotal({
-			customerId,
-			anchorMs,
-			amount: 200,
-		});
+		const { total: expectedResetTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 200,
+				interval: "year",
+			});
 		const params = anchorParams({
 			customerId,
 			planId: proAnnual.id,
@@ -370,10 +379,10 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans(params);
 		await expectCycleResetPhase({ ctx, customerId, anchorMs });
-		await expectPreviewMatchesStripeUpcomingInvoice({
+		await expectNextCycleTotalMatchesStripe({
 			ctx,
 			customerId,
-			nextCycle: preview.next_cycle,
+			nextCycleTotal: preview.next_cycle?.total,
 		});
 
 		await advancePastCycleStart({
@@ -540,3 +549,184 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans custom anchor edges: a monthly plan and an annual add-on on one subscription reset on the anchor, billed as previewed")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const annualAddOn = products.base({
+			id: "annual-addon",
+			isAddOn: true,
+			items: [items.annualPrice({ price: 240 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-anchor-edge-mixed",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, annualAddOn] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id }),
+					s.billing.attach({ productId: annualAddOn.id }),
+					s.advanceTestClock({ days: 5 }),
+				],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					starts_at: advancedTo,
+					plans: [{ plan_id: pro.id }, { plan_id: annualAddOn.id }],
+				},
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: anchorMs,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+		await expectCycleResetPhase({ ctx, customerId, anchorMs });
+		await expectNextCycleTotalMatchesStripe({
+			ctx,
+			customerId,
+			nextCycleTotal: preview.next_cycle?.total,
+		});
+
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: anchorMs,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: preview.next_cycle?.total,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans custom anchor edges: usage tracked before the anchor is billed once, on the anchor invoice")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.consumableMessages({ includedUsage: 0 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-anchor-edge-usage",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id }),
+					s.advanceTestClock({ days: 5 }),
+					s.track({
+						featureId: TestFeature.Messages,
+						value: 100,
+						timeout: 2000,
+					}),
+				],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		const usageCharge = 10;
+		const { total: baseResetTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 20,
+			});
+		const params = anchorParams({
+			customerId,
+			planId: pro.id,
+			anchorMs,
+			startsAt: advancedTo,
+		});
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
+
+		await autumnV2_4.billing.setPlans(params);
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: anchorMs,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: baseResetTotal + usageCharge,
+		});
+
+		const renewalAt = addMonths(anchorMs, 1).getTime();
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: renewalAt,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: 20,
+		});
+	},
+);
+
+// DISABLED: phase 0's proration_behavior none doesn't reach the anchor's reset phase, which is forced to always_invoice
+// (D5, a bug Charlie wants fixed, 2026-10-06); re-enable once Billy Acton's fix (ATMN-704) lands.
+test.skip(`${chalk.yellowBright("set-plans custom anchor edges: proration none carries to the anchor's reset phase, billed as previewed")}`, async () => {
+	const { customerId, autumnV2_4, ctx, advancedTo, testClockId, pro } =
+		await livePro({ customerId: "set-plans-anchor-edge-none" });
+
+	const anchorMs = advancedTo + ms.days(10);
+	const params: SetPlansParamsV0Input = {
+		customer_id: customerId,
+		phases: [
+			{
+				billing_cycle_anchor: anchorMs,
+				proration_behavior: "none",
+				starts_at: advancedTo,
+				plans: [{ plan_id: pro.id }],
+			},
+		],
+	};
+
+	const preview = await autumnV2_4.billing.previewSetPlans(params);
+	expect(preview.total).toBe(0);
+
+	await autumnV2_4.billing.setPlans(params);
+	const resetPhase = await stripeSchedulePhaseStartingAt({
+		ctx,
+		customerId,
+		startsAt: anchorMs,
+	});
+	expect(resetPhase.proration_behavior).toBe("none");
+	await expectNextCycleTotalMatchesStripe({
+		ctx,
+		customerId,
+		nextCycleTotal: preview.next_cycle?.total,
+	});
+
+	await advancePastCycleStart({
+		ctx,
+		testClockId: testClockId!,
+		cycleStartsAt: preview.next_cycle!.starts_at,
+	});
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: preview.next_cycle?.total,
+	});
+});

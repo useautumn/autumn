@@ -9,6 +9,7 @@ import { expectPreviewMatchesStripeUpcomingInvoice } from "@tests/integration/bi
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import {
+	calculateBillingCycleAnchorResetNextCycle,
 	calculateProratedDiff,
 	getBillingPeriod,
 } from "@tests/integration/billing/utils/proration";
@@ -324,6 +325,83 @@ test.concurrent(
 			customerId,
 			anchorMs: nextPhaseStartsAt,
 			periodEndMs: addYears(nextPhaseStartsAt, 1).getTime(),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans later phase anchor: a first-phase anchor then a later phase_start reset the cycle twice, each billed as Stripe does")}`,
+	async () => {
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId, pro } =
+			await setupLivePro({
+				customerId: "set-plans-later-anchor-two-resets",
+				nextPlan: premium,
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		const nextPhaseStartsAt = advancedTo + ms.days(20);
+		const { total: expectedAnchorTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 20,
+			});
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					starts_at: advancedTo,
+					plans: [{ plan_id: pro.id }],
+				},
+				{
+					billing_cycle_anchor: "phase_start",
+					starts_at: nextPhaseStartsAt,
+					plans: [{ plan_id: premium.id }],
+				},
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: anchorMs,
+			total: expectedAnchorTotal,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: anchorMs,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedAnchorTotal,
+		});
+
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: nextPhaseStartsAt,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: 50,
+		});
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: nextPhaseStartsAt,
+			periodEndMs: addMonths(nextPhaseStartsAt, 1).getTime(),
 		});
 	},
 );
