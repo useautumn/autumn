@@ -11,10 +11,10 @@ export type SlotProcessorContext = {
 	logger: AutumnLogger;
 };
 
-/** Everything one slot does: decide checks, and take in the subjects Autumn sends. */
+/** Everything one slot does: decide checks, and take in the subjects Autumn sends. Answered here, or on the thread that owns the slot. */
 export type SlotProcessor = {
-	/** The API's check response at the caller's version; throws CannotAnswerError for a check the API must answer. */
-	check(params: { request: CheckRequest }): CheckResponseV3;
+	/** The API's check response at the caller's version; rejects with CannotAnswerError for a check the API must answer. */
+	check(params: { request: CheckRequest }): Promise<CheckResponseV3>;
 	/** False when the subject was read before the one held, and so ignored. */
-	setSubject(params: { subject: StoredSubject }): boolean;
+	setSubject(params: { subject: StoredSubject }): Promise<boolean>;
 };

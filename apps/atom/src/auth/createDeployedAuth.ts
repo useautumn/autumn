@@ -1,5 +1,6 @@
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
+import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { tokenMatchesHash } from "./tokenMatchesHash.js";
 import type { Auth } from "./types/auth.js";
 
@@ -11,21 +12,23 @@ export const createDeployedAuth = ({
 	dataDir,
 	tokenHash,
 	slotCount,
+	owners,
 }: {
 	dataDir: string;
 	tokenHash: string;
 	slotCount: number;
+	owners?: SlotOwners;
 }): DeployedAuth => {
-	const slots = openSlots({ folder: dataDir, slotCount });
+	const slots = openSlots({ folder: dataDir, slotCount, owners });
 
 	function authorize({ token }: { token: string }) {
 		return tokenMatchesHash({ token, expectedHash: tokenHash }) ? slots : null;
 	}
 
 	/** A push naming a tenant was meant for a multi-tenant Atom, never this one. */
-	function pushSlots({ atomId }: { atomId: string | null }) {
+	function slotsFor({ atomId }: { atomId: string | null }) {
 		return atomId === null ? slots : null;
 	}
 
-	return { authorize, pushSlots, slots, close: () => slots.close() };
+	return { authorize, slotsFor, slots, close: () => slots.close() };
 };

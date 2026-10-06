@@ -5,8 +5,8 @@ import type { AtomHttpEnv } from "../types/atomHttp.js";
 const CLOSE_ONE_IN = 256;
 
 /**
- * Processes share the port and the kernel picks one per connection, so a long-lived connection stays on
- * its process: a few busy callers can pin one process to its limit while the rest idle. Closing a
+ * Threads share the port and the kernel picks one per connection, so a long-lived connection stays on
+ * its thread: a few busy callers can pin one thread to its limit while the rest idle. Closing a
  * connection now and then makes the caller reconnect, and the kernel picks again.
  */
 export function rebalanceConnectionsMiddleware({

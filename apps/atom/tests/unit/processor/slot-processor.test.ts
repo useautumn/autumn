@@ -29,11 +29,11 @@ const checkBalance = ({ requiredBalance }: { requiredBalance: number }) =>
 	checkRequestFor({ params: { required_balance: requiredBalance } });
 
 describe("slot processor check", () => {
-	test("a requirement within the stored balance is allowed, answered as the API answers", () => {
+	test("a requirement within the stored balance is allowed, answered as the API answers", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		const reply = processor.check({
+		const reply = await processor.check({
 			request: checkBalance({ requiredBalance: 10 }),
 		});
 
@@ -45,23 +45,23 @@ describe("slot processor check", () => {
 		});
 	});
 
-	test("a requirement past the stored balance is refused", () => {
+	test("a requirement past the stored balance is refused", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		const reply = processor.check({
+		const reply = await processor.check({
 			request: checkBalance({ requiredBalance: 11 }),
 		});
 
 		expect(reply.allowed).toBe(false);
 	});
 
-	test("the answer follows the subject Autumn sent last", () => {
+	test("the answer follows the subject Autumn sent last", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
-		processor.setSubject({ subject: storedSubjectWith({ balance: 3 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 3 }) });
 
-		const reply = processor.check({
+		const reply = await processor.check({
 			request: checkBalance({ requiredBalance: 5 }),
 		});
 
@@ -71,11 +71,11 @@ describe("slot processor check", () => {
 		});
 	});
 
-	test("an older API version gets that version's response", () => {
+	test("an older API version gets that version's response", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		const reply = processor.check({
+		const reply = await processor.check({
 			request: checkRequestFor({ apiVersion: oldestApiVersion }),
 		});
 
@@ -86,12 +86,12 @@ describe("slot processor check", () => {
 		});
 	});
 
-	test("the feature is expanded in the balance only when asked for", () => {
+	test("the feature is expanded in the balance only when asked for", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
-		const plain = processor.check({ request: checkRequestFor() });
-		const expanded = processor.check({
+		const plain = await processor.check({ request: checkRequestFor() });
+		const expanded = await processor.check({
 			request: checkRequestFor({
 				query: { expand: [CheckExpand.BalanceFeature] },
 			}),
@@ -101,23 +101,23 @@ describe("slot processor check", () => {
 		expect(expanded.balance?.feature?.id).toBe("messages");
 	});
 
-	test("a customer Atom does not hold goes to the API", () => {
+	test("a customer Atom does not hold goes to the API", async () => {
 		const processor = createProcessor();
 
 		const request = checkRequestFor({ params: { customer_id: "cus_unknown" } });
 
-		expect(forwardReasonOf(() => processor.check({ request }))).toBe(
+		expect(await forwardReasonOf(() => processor.check({ request }))).toBe(
 			"customer_not_stored",
 		);
 	});
 
-	test("a feature the org does not have, as far as Atom knows, goes to the API", () => {
+	test("a feature the org does not have, as far as Atom knows, goes to the API", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
 		const request = checkRequestFor({ params: { feature_id: "seats" } });
 
-		expect(forwardReasonOf(() => processor.check({ request }))).toBe(
+		expect(await forwardReasonOf(() => processor.check({ request }))).toBe(
 			"feature_not_stored",
 		);
 	});
@@ -129,19 +129,19 @@ describe("slot processor check on an entity", () => {
 			params: { entity_id: "ent_42", required_balance: requiredBalance },
 		});
 
-	test("an entity is answered from the customer's balance and its own together", () => {
+	test("an entity is answered from the customer's balance and its own together", async () => {
 		const processor = createProcessor();
-		processor.setSubject({
+		await processor.setSubject({
 			subject: storedEntitySubjectWith({
 				customerBalance: 10,
 				entityBalance: 5,
 			}),
 		});
 
-		const within = processor.check({
+		const within = await processor.check({
 			request: checkEntity({ requiredBalance: 15 }),
 		});
-		const past = processor.check({
+		const past = await processor.check({
 			request: checkEntity({ requiredBalance: 16 }),
 		});
 
@@ -149,19 +149,19 @@ describe("slot processor check on an entity", () => {
 		expect(past.allowed).toBe(false);
 	});
 
-	test("the entity's push also stores the customer, without the entity's own rows", () => {
+	test("the entity's push also stores the customer, without the entity's own rows", async () => {
 		const processor = createProcessor();
-		processor.setSubject({
+		await processor.setSubject({
 			subject: storedEntitySubjectWith({
 				customerBalance: 10,
 				entityBalance: 5,
 			}),
 		});
 
-		const customerAt10 = processor.check({
+		const customerAt10 = await processor.check({
 			request: checkRequestFor({ params: { required_balance: 10 } }),
 		});
-		const customerAt11 = processor.check({
+		const customerAt11 = await processor.check({
 			request: checkRequestFor({ params: { required_balance: 11 } }),
 		});
 
@@ -169,9 +169,9 @@ describe("slot processor check on an entity", () => {
 		expect(customerAt11.allowed).toBe(false);
 	});
 
-	test("a later push of the customer alone changes what its entity is answered", () => {
+	test("a later push of the customer alone changes what its entity is answered", async () => {
 		const processor = createProcessor();
-		processor.setSubject({
+		await processor.setSubject({
 			subject: storedEntitySubjectWith({
 				customerBalance: 10,
 				entityBalance: 5,
@@ -179,25 +179,27 @@ describe("slot processor check on an entity", () => {
 			}),
 		});
 
-		processor.setSubject({
+		await processor.setSubject({
 			subject: storedSubjectWith({ balance: 2, readAt: 2000 }),
 		});
 
 		// 2 left on the customer and 5 on the entity.
 		expect(
-			processor.check({ request: checkEntity({ requiredBalance: 7 }) }).allowed,
+			(await processor.check({ request: checkEntity({ requiredBalance: 7 }) }))
+				.allowed,
 		).toBe(true);
 		expect(
-			processor.check({ request: checkEntity({ requiredBalance: 8 }) }).allowed,
+			(await processor.check({ request: checkEntity({ requiredBalance: 8 }) }))
+				.allowed,
 		).toBe(false);
 	});
 
-	test("an entity Atom does not hold goes to the API", () => {
+	test("an entity Atom does not hold goes to the API", async () => {
 		const processor = createProcessor();
-		processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		await processor.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 
 		expect(
-			forwardReasonOf(() =>
+			await forwardReasonOf(() =>
 				processor.check({ request: checkEntity({ requiredBalance: 1 }) }),
 			),
 		).toBe("entity_not_stored");

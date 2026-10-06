@@ -2,9 +2,6 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-/** Set by the supervisor on every child: where each process publishes its stall stats for /health. */
-export const ATOM_STATS_DIR = "ATOM_STATS_DIR";
-
 const LAG_PROBE_EVERY_MS = 20;
 const PUBLISH_EVERY_MS = 1000;
 /** A loop this late is logged once, so a stall carries an exact time and process. */
@@ -107,13 +104,9 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 /** Requests answered since the process started, for a window a diagnostic opens and closes itself. */
 export const servedTotals = { checks: 0, pushes: 0 };
 
-/** A lone process, with no supervisor, publishes where its own /health reads. */
-export const atomStatsDir = ({
-	env = process.env,
-}: {
-	env?: Record<string, string | undefined>;
-} = {}): string =>
-	env[ATOM_STATS_DIR] ?? join(tmpdir(), `atom-stats-${process.pid}`);
+/** Every thread of the process publishes here, so any thread's /health reads them all. */
+export const atomStatsDir = (): string =>
+	join(tmpdir(), `atom-stats-${process.pid}`);
 
 export type ProcessStatsRecorder = {
 	/** A forwarded check waits on the Autumn API, so it is timed apart from the checks Atom answers itself. */

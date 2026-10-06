@@ -2,14 +2,10 @@ import { Database } from "bun:sqlite";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
-/** Set by the supervisor on every child: it checkpoints their files, so a push never copies the log back itself. */
-export const ATOM_WAL_CHECKPOINTED_ELSEWHERE =
-	"ATOM_WAL_CHECKPOINTED_ELSEWHERE";
-
 const TICK_MS = 1000;
 /**
  * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
- * next write restart the log, and that restart syncs the log header on the writing (serving) process.
+ * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
  */
 export const TICKS_PER_FILE = 30;
 const WAL_SUFFIX = "-wal";
@@ -25,8 +21,8 @@ const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
 };
 
 /**
- * Copies every SQLite log in the data folder back into its file once a second, from the supervisor.
- * A checkpoint writes and syncs megabytes; done by a serving process, it stalls every request queued behind that push.
+ * Copies every SQLite log in the data folder back into its file, from the main thread, which serves nothing.
+ * A checkpoint writes and syncs megabytes; done by a serving thread, it stalls every request queued behind that push.
  */
 export const startWalCheckpointer = ({
 	dataDir,

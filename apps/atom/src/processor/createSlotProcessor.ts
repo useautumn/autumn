@@ -10,6 +10,6 @@ export const createSlotProcessor = ({
 }: {
 	ctx: SlotProcessorContext;
 }): SlotProcessor => ({
-	check: (params) => check({ ctx, ...params }),
-	setSubject: (params) => setSubject({ ctx, ...params }),
+	check: async (params) => check({ ctx, ...params }),
+	setSubject: async (params) => setSubject({ ctx, ...params }),
 });
