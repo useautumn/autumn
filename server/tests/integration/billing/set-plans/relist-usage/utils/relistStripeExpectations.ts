@@ -139,9 +139,10 @@ const liveTimeline = ({
 			renewalUsage: false,
 			usageAfterChange: 0,
 			periodEnd: "change+1mo",
-			nextCycle: cancelsAtRenewal
-				? null
-				: { startsAt: "change+1mo", cents: sumCents(after) },
+			nextCycle: {
+				startsAt: "change+1mo",
+				cents: cancelsAtRenewal ? 0 : sumCents(after),
+			},
 		};
 	}
 
@@ -180,9 +181,10 @@ const liveTimeline = ({
 		anchorUsage: false,
 		renewalCents: renewalLicensedCents + (meteredKept ? usageCents : 0),
 		renewalUsage: meteredKept,
-		nextCycle: cancelsAtRenewal
-			? null
-			: { startsAt: "period_start+1mo", cents: sumCents(after) },
+		nextCycle: {
+			startsAt: "period_start+1mo",
+			cents: cancelsAtRenewal ? 0 : sumCents(after),
+		},
 	};
 };
 
@@ -244,7 +246,7 @@ export type RelistExpectationOptions = {
 	renewalObserved?: boolean;
 	/** Renewals of other subs the customer keeps (multi-sub state). */
 	otherRenewals?: number;
-	/** The plan is canceling: a re-list keeps the cancellation, so the period end bills only kept usage. */
+	/** The plan is canceling: a re-list keeps the cancellation, so the period end bills only kept usage and next_cycle is $0. */
 	cancelsAtRenewal?: boolean;
 };
 
