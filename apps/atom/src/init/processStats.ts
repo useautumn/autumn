@@ -40,10 +40,20 @@ type Bucket = {
 	/** How long a request sat behind others the loop handled first in the same burst: a floor on its wait. */
 	queueWaitMaxMs: number;
 	queueWaitTotalMs: number;
+	/** This thread's own CPU, and the wall time it was measured over. */
+	cpuMs: number;
+	windowMs: number;
 };
 
-/** Maxima over the trailing two seconds, so a reader polling every 2 s misses no stall. */
-export type ProcessStats = Bucket & { index: number; pid: number; at: string };
+/** One thread's stats; maxima over the trailing two seconds, so a reader polling every 2 s misses no stall. */
+export type ProcessStats = Bucket & {
+	index: number;
+	pid: number;
+	at: string;
+	checksPerSecond: number;
+	/** Cores this thread used over the window: its share of the Atom's CPU. */
+	cpuCores: number;
+};
 
 export const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 
@@ -72,6 +82,8 @@ const emptyBucket = (): Bucket => ({
 	newConnections: 0,
 	queueWaitMaxMs: 0,
 	queueWaitTotalMs: 0,
+	cpuMs: 0,
+	windowMs: 0,
 });
 
 const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
@@ -99,7 +111,15 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	newConnections: a.newConnections + b.newConnections,
 	queueWaitMaxMs: Math.max(a.queueWaitMaxMs, b.queueWaitMaxMs),
 	queueWaitTotalMs: a.queueWaitTotalMs + b.queueWaitTotalMs,
+	cpuMs: a.cpuMs + b.cpuMs,
+	windowMs: a.windowMs + b.windowMs,
 });
+
+/** CPU time of the calling thread alone, in ms. */
+const threadCpuMs = (): number => {
+	const { user, system } = process.threadCpuUsage();
+	return (user + system) / 1000;
+};
 
 /** Requests answered since the process started, for a window a diagnostic opens and closes itself. */
 export const servedTotals = { checks: 0, pushes: 0 };
@@ -147,6 +167,7 @@ export const startProcessStats = ({
 	checkPhaseTotals = () => ({ read: 0, decide: 0, render: 0, respond: 0 }),
 	pushPhaseTotals = () => ({ parse: 0, apply: 0, write: 0 }),
 	afterLoopTurn = (callback: () => void) => setImmediate(callback),
+	cpuMs = threadCpuMs,
 }: {
 	index: number;
 	statsDir?: string;
@@ -158,6 +179,7 @@ export const startProcessStats = ({
 	pushPhaseTotals?: () => PushPhaseTotals;
 	/** Runs once the loop has handled every request it read in this turn. */
 	afterLoopTurn?: (callback: () => void) => void;
+	cpuMs?: () => number;
 }): ProcessStatsRecorder & { publish(): void; probeLag(): void } => {
 	mkdirSync(statsDir, { recursive: true });
 	const file = join(statsDir, `process-${index}.json`);
@@ -167,6 +189,8 @@ export const startProcessStats = ({
 	let publishedReads = { ...subjectReadCounts() };
 	let publishedPhases = { ...checkPhaseTotals() };
 	let publishedPushPhases = { ...pushPhaseTotals() };
+	let publishedAt = clock();
+	let publishedCpuMs = cpuMs();
 	const connectionSeenAt = new Map<string, number>();
 	let burstStartedAt: number | null = null;
 
@@ -223,12 +247,22 @@ export const startProcessStats = ({
 		current.pushApplyMs = pushPhases.apply - publishedPushPhases.apply;
 		current.pushWriteMs = pushPhases.write - publishedPushPhases.write;
 		publishedPushPhases = { ...pushPhases };
+		const at = clock();
+		current.windowMs = at - publishedAt;
+		publishedAt = at;
+		const cpuNow = cpuMs();
+		current.cpuMs = cpuNow - publishedCpuMs;
+		publishedCpuMs = cpuNow;
 		forgetIdleConnections();
+		const window = mergeBuckets(previous, current);
+		const perSecond = window.windowMs > 0 ? 1000 / window.windowMs : 0;
 		const stats: ProcessStats = {
 			index,
 			pid: process.pid,
 			at: now().toISOString(),
-			...mergeBuckets(previous, current),
+			...window,
+			checksPerSecond: Math.round(window.checks * perSecond),
+			cpuCores: Math.round((window.cpuMs / 1000) * perSecond * 100) / 100,
 		};
 		for (const key of [
 			"loopLagMaxMs",
@@ -248,6 +282,8 @@ export const startProcessStats = ({
 			"pushWriteMs",
 			"queueWaitMaxMs",
 			"queueWaitTotalMs",
+			"cpuMs",
+			"windowMs",
 		] as const)
 			stats[key] = Math.round(stats[key]);
 		previous = current;

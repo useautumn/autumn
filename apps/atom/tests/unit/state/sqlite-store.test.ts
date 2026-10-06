@@ -7,7 +7,10 @@ import {
 	createSubjectState,
 	type MeteringIdentity,
 } from "@autumn/balance-engine";
-import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
+import {
+	openSqliteStore,
+	subjectReadCounts,
+} from "../../../src/state/openSqliteStore.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import { atomOrg } from "../utils/atomFixtures.js";
 
@@ -270,6 +273,29 @@ describe("sqlite store", () => {
 		expect(read()).toBe(held as StoredSubject);
 		expect(held?.logOffset).toBe(2n);
 		expect(Object.isFrozen(held?.state)).toBe(true);
+		sqliteStore.close();
+	});
+
+	test("past its bound, the subject read least recently is dropped and read from the file again", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		const subjectOf = (customerId: string): StoredSubject => ({
+			...subjectAt({ logOffset: 1n }),
+			state: createSubjectState({ identity: { ...identity, customerId } }),
+		});
+		const read = (customerId: string) =>
+			sqliteStore.readSubject({ customerId, entityId: null });
+		sqliteStore.setSubjects({
+			subjects: Array.from({ length: 2048 }, (_, i) => subjectOf(`cus_${i}`)),
+		});
+		read("cus_0");
+		const parses = subjectReadCounts.parses;
+
+		sqliteStore.setSubject({ subject: subjectOf("cus_new") });
+		read("cus_0");
+		read("cus_new");
+		expect(subjectReadCounts.parses).toBe(parses);
+		read("cus_1");
+		expect(subjectReadCounts.parses).toBe(parses + 1);
 		sqliteStore.close();
 	});
 

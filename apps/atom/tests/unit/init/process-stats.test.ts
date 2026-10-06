@@ -29,6 +29,40 @@ const startStats = ({ statsDir }: { statsDir: string }) => {
 };
 
 describe("process stats", () => {
+	test("each thread publishes its own checks per second and the cores it used", () => {
+		const statsDir = newStatsDir();
+		let now = 0;
+		let cpu = 0;
+		const stats = startProcessStats({
+			index: 1,
+			statsDir,
+			logger: { warn: () => {} },
+			clock: () => now,
+			cpuMs: () => cpu,
+		});
+		const check = { path: "/v1/balances.check", forwarded: false, bytes: 0 };
+
+		for (let i = 0; i < 300; i++)
+			stats.recordRequest({ ...check, durationMs: 1 });
+		now += 1000;
+		cpu += 400;
+		stats.publish();
+		for (let i = 0; i < 100; i++)
+			stats.recordRequest({ ...check, durationMs: 1 });
+		now += 1000;
+		cpu += 600;
+		stats.publish();
+		stats.stop();
+
+		// Two seconds, 400 checks and one CPU-second: 200/s on half a core.
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			index: 1,
+			checks: 400,
+			checksPerSecond: 200,
+			cpuCores: 0.5,
+		});
+	});
+
 	test("a late event loop is recorded and a stall is logged once", () => {
 		const statsDir = newStatsDir();
 		const { stats, warned, advance } = startStats({ statsDir });

@@ -1,5 +1,9 @@
 import type { Auth } from "../../auth/types/auth.js";
-import { errorToReply, wireToCheckRequest } from "./ownerCallContract.js";
+import {
+	errorToReply,
+	wireToCheckRequest,
+	wireToStoredSubject,
+} from "./ownerCallContract.js";
 import type { OwnerCall } from "./types/ownerCall.js";
 
 type OwnerContext = { auth: Pick<Auth, "slotsFor"> };
@@ -17,10 +21,9 @@ const runOwnerCall = async ({
 	if (call.type === "setCatalog") return slots.setCatalog(call.catalog);
 	if (call.type === "installCatalog") return slots.installCatalog(call.catalog);
 	if (call.type === "setSubject") {
-		const { customerId } = call.subject.state.identity;
-		return slots
-			.processorFor({ customerId })
-			.setSubject({ subject: call.subject });
+		const subject = wireToStoredSubject({ subject: call.subject });
+		const { customerId } = subject.state.identity;
+		return slots.processorFor({ customerId }).setSubject({ subject });
 	}
 	const request = wireToCheckRequest({ request: call.request });
 	return slots
@@ -36,8 +39,8 @@ export const answerOwnerCalls = ({
 	ctx: OwnerContext;
 	port: MessagePort;
 }): void => {
-	async function answer(event: MessageEvent<OwnerCall>): Promise<void> {
-		const call = event.data;
+	async function answer(event: MessageEvent<string>): Promise<void> {
+		const call: OwnerCall = JSON.parse(event.data);
 		try {
 			const value = await runOwnerCall({ ctx, call });
 			port.postMessage({ id: call.id, ok: true, value });

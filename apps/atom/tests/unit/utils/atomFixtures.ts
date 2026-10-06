@@ -2,6 +2,7 @@ import { createSubjectState } from "@autumn/balance-engine";
 import {
 	ApiVersion,
 	ApiVersionClass,
+	type CheckResponseV3,
 	LATEST_VERSION,
 	OrgConfigSchema,
 	type SharedContext,
@@ -20,6 +21,7 @@ import {
 	type ForwardReason,
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
+import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 
 /** The org settings Autumn sends with every subject. */
@@ -27,6 +29,15 @@ export const atomOrg: SharedContext["org"] = {
 	config: OrgConfigSchema.parse({}),
 	default_currency: "usd",
 };
+
+/** A check's response as the caller reads it, parsed from the JSON body Atom sends. */
+export const checkResponseOf = async ({
+	processor,
+	request,
+}: {
+	processor: SlotProcessor;
+	request: CheckRequest;
+}): Promise<CheckResponseV3> => JSON.parse(await processor.check({ request }));
 
 /** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
 export const subjectBody = ({ balance }: { balance: number }) => {
