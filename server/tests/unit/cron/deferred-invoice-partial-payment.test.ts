@@ -109,6 +109,14 @@ await mockModuleWithRestore("@/external/redis/resolveRedisV2.js", () => ({
 }));
 
 await mockModuleWithRestore(
+	"@/internal/billing/v2/execute/withDeferredBillingPlanLock.js",
+	() => ({
+		withDeferredBillingPlanLock: ({ fn }: { fn: () => Promise<unknown> }) =>
+			fn(),
+	}),
+);
+
+await mockModuleWithRestore(
 	"@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts.js",
 	() => ({
 		expirePendingCustomerProducts: async ({
@@ -130,6 +138,7 @@ await mockModuleWithRestore(
 await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 	MetadataService: {
 		getByStripeInvoiceId: async () => metadata,
+		get: async () => metadata,
 		delete: async ({ id }: { id: string }) => {
 			state.deletedMetadataIds.push(id);
 		},

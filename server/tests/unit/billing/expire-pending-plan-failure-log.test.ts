@@ -8,6 +8,17 @@ await mockModuleWithRestore("@/external/redis/resolveRedisV2.js", () => ({
 	resolveRedisV2: () => ({}),
 }));
 
+await mockModuleWithRestore(
+	"@/internal/billing/v2/execute/withDeferredBillingPlanLock.js",
+	() => ({
+		withDeferredBillingPlanLock: ({ fn }: { fn: () => Promise<unknown> }) =>
+			fn(),
+	}),
+);
+await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
+	MetadataService: { get: async () => ({ id: "meta_123" }) },
+}));
+
 const { expirePendingPlanAtDueDate } = await import(
 	"@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanAtDueDate.js"
 );

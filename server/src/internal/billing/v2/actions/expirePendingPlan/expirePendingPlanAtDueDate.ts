@@ -4,6 +4,7 @@ import type { RepoContext } from "@/db/repoContext";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { hasStripeInvoicePayment } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
 import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
+import { withDeferredBillingPlanLock } from "@/internal/billing/v2/execute/withDeferredBillingPlanLock";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { releaseExpiredPendingPlan } from "./execute/releaseExpiredPendingPlan";
 import { voidInvoiceAtDueDate } from "./execute/voidInvoiceAtDueDate";
@@ -63,7 +64,20 @@ export const expirePendingPlanAtDueDate = async ({
 	};
 
 	try {
-		await expireUnpaidPendingPlan({ ctx: repoContext, ...params });
+		// Shares activation's lock so a late invoice.finalized can't activate a plan being expired.
+		await withDeferredBillingPlanLock({
+			orgId,
+			env,
+			metadataId: params.metadata.id,
+			fn: async () => {
+				const current = await MetadataService.get({
+					db: ctx.db,
+					id: params.metadata.id,
+				});
+				if (!current) return;
+				await expireUnpaidPendingPlan({ ctx: repoContext, ...params });
+			},
+		});
 	} catch (error) {
 		ctx.logger.error(
 			`[expirePendingPlanAtDueDate] Failed for invoice ${params.stripeInvoice.id}; retrying next run: ${error}`,

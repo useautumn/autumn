@@ -21,6 +21,9 @@ export const getDeferredBillingMetadataExpiresAt = ({
 }) => {
 	if (paymentMethod?.type === "custom") return null;
 
+	// A draft has no due date yet; finalizing it schedules the expiry.
+	if (stripeInvoice?.status === "draft") return null;
+
 	if (deferredInvoiceMode) return finalizedInvoiceDueDateMs(stripeInvoice);
 
 	return addMinutes(now, DEFERRED_METADATA_EXPIRY_MINUTES).getTime();
