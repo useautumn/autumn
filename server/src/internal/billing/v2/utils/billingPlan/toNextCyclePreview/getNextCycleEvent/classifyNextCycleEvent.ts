@@ -87,7 +87,17 @@ export const classifyNextCycleEvent = ({
 	});
 
 	if (isAnchorReset && !isProductTransition && !isTrialEnd) {
-		return { kind: "anchor_reset", smallestInterval };
+		return {
+			kind: "anchor_reset",
+			smallestInterval,
+			startsAtMs: exactStartsAtMs,
+			prorationBehavior: resolvePhaseStartProrationBehavior({
+				phaseProrations,
+				phaseStartMs: exactStartsAtMs,
+				resetsBillingCycle: true,
+				changesCustomerProducts: false,
+			}),
+		};
 	}
 
 	const previousCustomerProducts = getActiveCustomerProductsAt({

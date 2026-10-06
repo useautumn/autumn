@@ -1,5 +1,6 @@
 import type { BillingContext, PhaseProrationBehavior } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { firstPhaseAnchorResetProration } from "@/internal/billing/v2/actions/setPlans/utils/firstPhaseAnchorResetProration";
 import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { listSchedulePhaseProrations } from "@/internal/customers/schedules/repos/listSchedulePhaseProrations";
 
@@ -8,7 +9,7 @@ export type SchedulePhaseProration = {
 	prorationBehavior: PhaseProrationBehavior;
 };
 
-/** The later phases' prorations a set_plans request names; undefined for any other action. */
+/** The phase prorations a set_plans request names; undefined for any other action. */
 export const setPlansPhaseProrations = ({
 	billingContext,
 }: {
@@ -16,10 +17,16 @@ export const setPlansPhaseProrations = ({
 }): SchedulePhaseProration[] | undefined => {
 	if (!isSetPlansBillingContext(billingContext)) return undefined;
 
-	return billingContext.scheduledPhaseContexts.flatMap(
+	const laterPhaseProrations = billingContext.scheduledPhaseContexts.flatMap(
 		({ startsAt, prorationBehavior }) =>
 			prorationBehavior ? [{ startsAt, prorationBehavior }] : [],
 	);
+
+	// A later phase starting on the anchor keeps its own proration, so it is listed first.
+	return [
+		...laterPhaseProrations,
+		...firstPhaseAnchorResetProration({ billingContext }),
+	];
 };
 
 /** set_plans names each later phase's proration; any other action keeps what the saved schedule holds. */
