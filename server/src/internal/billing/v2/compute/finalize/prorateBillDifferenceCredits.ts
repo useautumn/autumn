@@ -17,22 +17,52 @@ const sumBy = ({
 const lineQuantity = (lineItem: LineItem) =>
 	lineItem.paidQuantity ?? lineItem.totalQuantity;
 
+const byDirection = (lineItems: LineItem[]) => ({
+	refunds: lineItems.filter((li) => li.context.direction === "refund"),
+	charges: lineItems.filter((li) => li.context.direction === "charge"),
+});
+
+const hasQuantities = (lineItems: LineItem[]) =>
+	lineItems.every((lineItem) => lineQuantity(lineItem) !== undefined);
+
 /** Removal is judged by quantity, since stored credits may already be discounted. */
 const priceIsRemoval = (lineItems: LineItem[]) => {
-	const refunds = lineItems.filter((li) => li.context.direction === "refund");
-	const charges = lineItems.filter((li) => li.context.direction === "charge");
+	const { refunds, charges } = byDirection(lineItems);
 	if (refunds.length === 0) return false;
 	if (charges.length === 0) return true;
 
-	const hasQuantities = lineItems.every(
-		(lineItem) => lineQuantity(lineItem) !== undefined,
-	);
-	if (!hasQuantities)
+	if (!hasQuantities(lineItems))
 		return sumBy({ lineItems, value: (li) => li.amount }).isNegative();
 
 	return sumBy({ lineItems: charges, value: lineQuantity }).lessThan(
 		sumBy({ lineItems: refunds, value: lineQuantity }),
 	);
+};
+
+const customerProductId = (lineItem: LineItem) =>
+	lineItem.context.customerProduct?.id;
+
+/** A changed quantity on a new customer product replaces the old quantity whole, so only
+ * the old product's credit is prorated; an in-place change bills just the difference. */
+const priceQuantityIsReplaced = (lineItems: LineItem[]) => {
+	const { refunds, charges } = byDirection(lineItems);
+	if (refunds.length === 0 || charges.length === 0) return false;
+	if (!hasQuantities(lineItems)) return false;
+
+	const chargedProductIds = new Set(charges.map(customerProductId));
+	const movedProduct = refunds.every(
+		(refund) => !chargedProductIds.has(customerProductId(refund)),
+	);
+	const quantityChanged = !sumBy({
+		lineItems: charges,
+		value: lineQuantity,
+	}).equals(sumBy({ lineItems: refunds, value: lineQuantity }));
+	return movedProduct && quantityChanged;
+};
+
+const creditedLineItems = (lineItems: LineItem[]) => {
+	if (priceQuantityIsReplaced(lineItems)) return byDirection(lineItems).refunds;
+	return priceIsRemoval(lineItems) ? lineItems : [];
 };
 
 const prorateToNow = ({
@@ -66,8 +96,8 @@ const prorateToNow = ({
 	};
 };
 
-/** `bill_difference` lines are built over the full period. A price whose quantity went
- * down is scaled back to its unused time, so removals never refund time already used. */
+/** `bill_difference` lines are built over the full period. Credits for what went out are
+ * scaled back to their unused time, so removals never refund time already used. */
 export const prorateBillDifferenceCredits = ({
 	lineItems,
 	billingContext,
@@ -77,17 +107,19 @@ export const prorateBillDifferenceCredits = ({
 }): LineItem[] => {
 	if (!billingContextBillsDifference({ billingContext })) return lineItems;
 
-	const creditPriceIds = new Set(
-		[...new Set(lineItems.map((lineItem) => lineItem.context.price.id))].filter(
-			(priceId) =>
-				priceIsRemoval(
-					lineItems.filter((lineItem) => lineItem.context.price.id === priceId),
-				),
+	const priceIds = [
+		...new Set(lineItems.map((lineItem) => lineItem.context.price.id)),
+	];
+	const proratedLineItems = new Set(
+		priceIds.flatMap((priceId) =>
+			creditedLineItems(
+				lineItems.filter((lineItem) => lineItem.context.price.id === priceId),
+			),
 		),
 	);
 
 	return lineItems.map((lineItem) =>
-		creditPriceIds.has(lineItem.context.price.id)
+		proratedLineItems.has(lineItem)
 			? prorateToNow({ lineItem, now: billingContext.currentEpochMs })
 			: lineItem,
 	);

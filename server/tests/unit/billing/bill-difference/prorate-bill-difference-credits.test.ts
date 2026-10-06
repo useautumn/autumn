@@ -24,11 +24,13 @@ const line = ({
 	amount,
 	quantity,
 	priceId = "price_packs",
+	customerProductId = "cus_prod_pro",
 }: {
 	direction: "charge" | "refund";
 	amount: number;
 	quantity: number;
 	priceId?: string;
+	customerProductId?: string;
 }): LineItem => {
 	const lineItem =
 		direction === "charge"
@@ -36,6 +38,9 @@ const line = ({
 			: lineItemFixtures.refund({ amount });
 	lineItem.paidQuantity = quantity;
 	lineItem.context.price = { id: priceId } as LineItem["context"]["price"];
+	lineItem.context.customerProduct = {
+		id: customerProductId,
+	} as LineItem["context"]["customerProduct"];
 	lineItem.context.billingPeriod = {
 		start: PERIOD_START_MS,
 		end: PERIOD_END_MS,
@@ -68,6 +73,40 @@ describe(chalk.yellowBright("prorateBillDifferenceCredits"), () => {
 		});
 
 		expect(amounts(result)).toEqual([-30, 50]);
+	});
+
+	test("a quantity moved to a new customer product credits the old quantity's unused time", () => {
+		const result = prorateBillDifferenceCredits({
+			billingContext,
+			lineItems: [
+				line({ direction: "refund", amount: 10, quantity: 100 }),
+				line({
+					direction: "charge",
+					amount: 20,
+					quantity: 200,
+					customerProductId: "cus_prod_pro_relisted",
+				}),
+			],
+		});
+
+		expect(amounts(result)).toEqual([-5, 20]);
+	});
+
+	test("an unchanged quantity on a new customer product is left alone", () => {
+		const result = prorateBillDifferenceCredits({
+			billingContext,
+			lineItems: [
+				line({ direction: "refund", amount: 5, quantity: 100 }),
+				line({
+					direction: "charge",
+					amount: 10,
+					quantity: 100,
+					customerProductId: "cus_prod_pro_relisted",
+				}),
+			],
+		});
+
+		expect(amounts(result)).toEqual([-5, 10]);
 	});
 
 	test("an outgoing price with no matching charge is prorated", () => {
