@@ -222,6 +222,7 @@ export const ListRunsQuery = z.object({
 	status: z.enum(["live", "finished", "all"]).default("live"),
 	/** Narrows finished runs; "failed" includes errored. */
 	outcome: RunOutcome.default("all"),
+	purpose: z.enum(["adhoc", "baseline"]).optional(),
 	/** Substring match on branch name. */
 	branch: z.string().optional(),
 	/** Opaque `nextCursor` from the previous page. */

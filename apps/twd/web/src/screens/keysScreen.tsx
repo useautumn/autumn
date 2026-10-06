@@ -442,6 +442,7 @@ export const KeysScreen = () => {
 			</div>
 
 			<PagedDataTable
+				fill
 				resetKey={`${filter}|${query}`}
 				data={keys.data ? rows : undefined}
 				isLoading={keys.isLoading}

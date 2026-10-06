@@ -127,6 +127,7 @@ export const getRunWithEmail = async ({
 export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
+	purpose?: "adhoc" | "baseline";
 	branch?: string;
 };
 export type RunsCursor = { createdAt: string; id: string };
@@ -138,7 +139,12 @@ const OUTCOME_STATUSES: Record<"passed" | "failed" | "cancelled", RunStatus[]> =
 		cancelled: ["cancelled"],
 	};
 
-const runsFilterSql = ({ status, outcome = "all", branch }: RunsFilter) =>
+const runsFilterSql = ({
+	status,
+	outcome = "all",
+	purpose,
+	branch,
+}: RunsFilter) =>
 	and(
 		status === "live"
 			? inArray(runs.status, LIVE_RUN_STATUSES)
@@ -148,6 +154,7 @@ const runsFilterSql = ({ status, outcome = "all", branch }: RunsFilter) =>
 		outcome === "all"
 			? undefined
 			: inArray(runs.status, OUTCOME_STATUSES[outcome]),
+		purpose ? eq(runs.purpose, purpose) : undefined,
 		branch
 			? ilike(runs.branch, `%${branch.replace(/[\\%_]/g, "\\$&")}%`)
 			: undefined,
