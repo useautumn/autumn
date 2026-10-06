@@ -6,27 +6,18 @@ import {
 	BreadcrumbList,
 	BreadcrumbSeparator,
 } from "@autumn/ui/components/ui/breadcrumb";
-import type { ColumnDef } from "@tanstack/react-table";
 import {
 	Check,
 	Copy,
 	GitCommitHorizontal,
-	Hourglass,
 	RotateCcw,
 	Square,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-	type Drift,
-	isFailedFileStatus,
-	type RunDetail,
-	type RunFile,
-} from "../../../src/api/contract.ts";
-import {
-	splitRepetitionId,
-	summariseRepeats,
-} from "../../../src/internal/runs/repeat/repetitions.ts";
+import type { RunDetail } from "../../../src/api/contract.ts";
+import { splitRepetitionId } from "../../../src/internal/runs/repeat/repetitions.ts";
+import { summariseRunTiming } from "../../../src/internal/runs/timing/summariseRunTiming.ts";
 import {
 	fetchRunLogs,
 	useCancelRun,
@@ -39,8 +30,7 @@ import {
 	useWorkerLog,
 } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
-import type { LogLine } from "../api/liveCache.ts";
-import { AnsiLog, AnsiText } from "../components/ansi.tsx";
+import { AnsiLog } from "../components/ansi.tsx";
 import { CostValue } from "../components/cost.tsx";
 import { RunLabel } from "../components/runLabel.tsx";
 import {
@@ -48,104 +38,20 @@ import {
 	ErrorCallout,
 	FileStatusBadge,
 	Pill,
-	RunProgress,
 	RunStatusBadge,
-	StatusDot,
 } from "../components/status.tsx";
-import {
-	Button,
-	ConfirmDialog,
-	Drawer,
-	PagedDataTable,
-	Panel,
-	SearchInput,
-	SectionTag,
-	Segmented,
-	Skeleton,
-	Tooltip,
-} from "../components/ui.tsx";
-import { cn, elapsed, formatDate, formatMs, num, sha7 } from "../lib/format.ts";
+import { Button, ConfirmDialog, Drawer, Skeleton } from "../components/ui.tsx";
+import { elapsed, formatDate, formatMs, sha7 } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
-import { BootBreakdown } from "./runDetail/bootBreakdown.tsx";
 import { FileHistoryChart } from "./runDetail/fileHistoryChart.tsx";
-import { RepeatsPanel } from "./runDetail/repeatsPanel.tsx";
-import { RunEta } from "./runDetail/runEta.tsx";
-import { RunTimingPanel } from "./runDetail/runTiming.tsx";
+import { FilesCard } from "./runDetail/filesCard.tsx";
+import { FailuresCard, RunningCard } from "./runDetail/liveCards.tsx";
+import { TERMINAL } from "./runDetail/runFiles.ts";
+import { RunStats } from "./runDetail/runStats.tsx";
+import { TimingSheet } from "./runDetail/timingSheet.tsx";
+import { WorkersCard } from "./runDetail/workersCard.tsx";
 
-const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
-const FILTERS = ["all", "failed", "drift", "running", "passed"] as const;
-type Filter = (typeof FILTERS)[number];
-
-const isFailure = (f: RunFile) => isFailedFileStatus(f.status);
 const baseFile = (id: string) => splitRepetitionId({ id }).file;
-
-const WORKER_COLOR: Record<RunDetail["workers"][number]["status"], string> = {
-	provisioning: "bg-subtle/40",
-	booting: "bg-orange-400/60",
-	ready: "bg-green-500/35",
-	busy: "bg-blue-500",
-	dead: "bg-subtle/60",
-	failed: "bg-red-500",
-};
-
-const DriftBadge = ({ drift }: { drift: Drift }) =>
-	drift.kind === "new_failure" ? (
-		<Tooltip
-			content={`Passes ${Math.round(drift.baselineValue * 100)}% of the time on dev`}
-		>
-			<span>
-				<Pill tone="bad">new failure</Pill>
-			</span>
-		</Tooltip>
-	) : (
-		<Tooltip
-			content={`${formatMs(drift.branchValue)} here vs ${formatMs(drift.baselineValue)} dev p90`}
-		>
-			<span>
-				<Pill tone="warn">
-					{(drift.branchValue / drift.baselineValue).toFixed(1)}× slower
-				</Pill>
-			</span>
-		</Tooltip>
-	);
-
-const DurationCell = ({
-	ms,
-	p90,
-}: {
-	ms: number | null;
-	p90: number | null;
-}) => {
-	if (ms === null) return <span className="text-right text-subtle">—</span>;
-	const ratio = p90 ? ms / p90 : null;
-	return (
-		<span className="flex items-center justify-end gap-2 tabular-nums">
-			<span
-				className={cn(
-					ratio !== null && ratio > 1.5
-						? "text-orange-600 dark:text-orange-400"
-						: "text-foreground",
-				)}
-			>
-				{formatMs(ms)}
-			</span>
-			<span className="relative h-1 w-12 overflow-hidden rounded-full bg-muted">
-				{ratio !== null && (
-					<span
-						className={cn(
-							"absolute inset-y-0 left-0 rounded-full",
-							ratio > 1.5 ? "bg-orange-400" : "bg-subtle/60",
-						)}
-						style={{ width: `${Math.min(ratio / 2, 1) * 100}%` }}
-					/>
-				)}
-				{ratio !== null && (
-					<span className="absolute inset-y-0 left-1/2 w-px bg-tertiary-foreground/60" />
-				)}
-			</span>
-		</span>
-	);
-};
 
 /** Copies text produced on click (fetched lazily), with brief "Copied" feedback. */
 const CopyTextButton = ({
@@ -186,113 +92,6 @@ const CopyTextButton = ({
 	);
 };
 
-const WorkerGrid = ({
-	workers,
-	wanted,
-	onOpen,
-}: {
-	workers: RunDetail["workers"];
-	wanted: number;
-	onOpen: (worker: string) => void;
-}) => {
-	const counts = workers.reduce<Record<string, number>>((acc, w) => {
-		acc[w.status] = (acc[w.status] ?? 0) + 1;
-		return acc;
-	}, {});
-	return (
-		<div>
-			<div className="flex flex-wrap gap-[3px]">
-				{workers.map((w) => (
-					<Tooltip
-						key={w.name}
-						content={
-							<span>
-								<span className="font-mono">{w.name}</span> · {w.status}
-								{w.file && (
-									<span className="mt-0.5 block font-mono text-tertiary-foreground">
-										{w.file}
-									</span>
-								)}
-							</span>
-						}
-					>
-						<button
-							type="button"
-							onClick={() => onOpen(w.name)}
-							className={cn(
-								"twd-pop size-2.5 cursor-pointer rounded-[2px] hover:ring-1 hover:ring-foreground/40",
-								WORKER_COLOR[w.status],
-								w.status === "busy" && "twd-pulse",
-							)}
-							aria-label={`${w.name} ${w.status} — open logs`}
-						/>
-					</Tooltip>
-				))}
-				{Array.from(
-					{ length: Math.max(0, wanted - workers.length) },
-					(_, i) => (
-						<span
-							// biome-ignore lint/suspicious/noArrayIndexKey: interchangeable empty slots
-							key={i}
-							className="size-2.5 rounded-[2px] border border-dashed border-subtle/50"
-							aria-hidden
-						/>
-					),
-				)}
-			</div>
-			<div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-tertiary-foreground tabular-nums">
-				{Object.entries(counts).map(([status, n]) => (
-					<span key={status} className="flex items-center gap-1.5">
-						<span
-							className={cn(
-								"size-2 rounded-[2px]",
-								WORKER_COLOR[status as keyof typeof WORKER_COLOR],
-							)}
-						/>
-						{n} {status}
-					</span>
-				))}
-				{wanted > workers.length && (
-					<span className="flex items-center gap-1.5">
-						<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
-						{wanted - workers.length} waiting for accounts
-					</span>
-				)}
-			</div>
-		</div>
-	);
-};
-
-const LiveLog = ({
-	lines,
-	onOpen,
-}: {
-	lines: LogLine[];
-	onOpen: (file: string) => void;
-}) => (
-	<div className="h-64 overflow-auto rounded-lg border bg-card px-2.5 py-2 font-mono text-[11px] leading-[1.7]">
-		{lines.length === 0 ? (
-			<p className="text-subtle">Waiting for output…</p>
-		) : (
-			lines
-				.slice(-120)
-				.reverse()
-				.map((l, i) => (
-					<button
-						// biome-ignore lint/suspicious/noArrayIndexKey: append-only log tail
-						key={i}
-						type="button"
-						onClick={() => l.file && onOpen(l.file)}
-						className="block w-full cursor-pointer truncate text-left hover:bg-muted"
-					>
-						{l.worker && <span className="text-subtle">{l.worker} </span>}
-						<AnsiText text={l.text} />
-					</button>
-				))
-		)}
-	</div>
-);
-
 const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	const navigate = useNavigate();
 	const cancel = useCancelRun(run.id);
@@ -301,7 +100,7 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	const rates = useCostRates();
 	const live = !TERMINAL.has(run.status);
 	return (
-		<div className="flex flex-col gap-2 pb-4">
+		<div className="flex shrink-0 flex-col gap-2">
 			<div className="flex items-center justify-between gap-4">
 				<Breadcrumb>
 					<BreadcrumbList className="text-xs text-tertiary-foreground sm:gap-1.5">
@@ -395,8 +194,6 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	);
 };
 
-type AttentionRow = { file: RunFile; drift: Drift | undefined };
-
 export const RunDetailScreen = () => {
 	const { id = "" } = useParams();
 	const run = useRun(id);
@@ -405,8 +202,7 @@ export const RunDetailScreen = () => {
 	useLiveTopics(id && `run:${id}`, live && "runs");
 	const log = useLiveLog(id);
 	const now = useNow({ active: live });
-	const [filter, setFilter] = useState<Filter>("all");
-	const [query, setQuery] = useState("");
+	const [timingOpen, setTimingOpen] = useState(false);
 	const [openFile, setOpenFile] = useState<string | null>(null);
 	const fileLog = useFileLog({ runId: id, file: openFile });
 	const [openWorker, setOpenWorker] = useState<string | null>(null);
@@ -426,333 +222,56 @@ export const RunDetailScreen = () => {
 	const p90 = new Map(
 		catalog.data?.files.map((f) => [f.path, f.baselineP90Ms]),
 	);
-	const driftByFile = new Map(r.drift.map((d) => [d.file, d]));
-	const repeats = r.repeat > 1 ? summariseRepeats({ files: r.files }) : [];
-	const failures = r.files.filter(isFailure);
+	const timing = summariseRunTiming(r, now);
 	const running = r.files.filter((f) => f.status === "running").length;
-	const timedOut = failures.filter((f) => f.status === "timed_out").length;
 	const total = r.fileCount ?? r.files.length;
-	const attention: AttentionRow[] = [
-		...failures.map((f) => ({ file: f, drift: driftByFile.get(f.file) })),
-		...r.drift
-			.filter((d) => d.kind === "slow")
-			.flatMap((d) => {
-				const f = r.files.find((x) => x.file === d.file);
-				return f && !isFailure(f) ? [{ file: f, drift: d }] : [];
-			}),
-	].sort(
-		(a, b) =>
-			Number(b.drift?.kind === "new_failure") -
-			Number(a.drift?.kind === "new_failure"),
-	);
-
-	const order: Record<RunFile["status"], number> = {
-		failed: 0,
-		crashed: 0,
-		timed_out: 0,
-		running: 1,
-		queued: 2,
-		passed: 3,
-		skipped: 4,
-	};
-	const rows = r.files
-		.filter((f) =>
-			filter === "all"
-				? true
-				: filter === "failed"
-					? isFailure(f)
-					: filter === "drift"
-						? driftByFile.has(f.file)
-						: f.status === filter,
-		)
-		.filter((f) => !query || f.file.toLowerCase().includes(query.toLowerCase()))
-		.sort(
-			(a, b) =>
-				order[a.status] - order[b.status] ||
-				(b.durationMs ?? 0) - (a.durationMs ?? 0),
-		);
-	const counts: Record<Filter, number> = {
-		all: r.files.length,
-		failed: failures.length,
-		drift: r.drift.length,
-		running,
-		passed: r.passed,
-	};
+	const queued = r.files.filter((f) => f.status === "queued").length;
 	const opened = r.files.find((f) => f.file === openFile);
-
-	const fileColumns: ColumnDef<RunFile>[] = [
-		{
-			id: "status",
-			header: "Status",
-			size: 104,
-			cell: ({ row: { original: f } }) => <FileStatusBadge status={f.status} />,
-		},
-		{
-			id: "file",
-			header: "File",
-			size: 320,
-			meta: { grow: true },
-			cell: ({ row: { original: f } }) => {
-				const drift = driftByFile.get(f.file);
-				return (
-					<span className="flex min-w-0 items-center gap-2 pr-2">
-						<span className="truncate text-tiny-id text-foreground">
-							{f.file}
-						</span>
-						{drift && <DriftBadge drift={drift} />}
-					</span>
-				);
-			},
-		},
-		{
-			id: "duration",
-			header: "Duration vs p90",
-			size: 140,
-			cell: ({ row: { original: f } }) => (
-				<DurationCell
-					ms={f.durationMs}
-					p90={p90.get(baseFile(f.file)) ?? null}
-				/>
-			),
-		},
-		{
-			id: "worker",
-			header: "Worker",
-			size: 80,
-			cell: ({ row: { original: f } }) => (
-				<span className="text-tiny-id text-tertiary-foreground">
-					{f.worker ?? "—"}
-				</span>
-			),
-		},
-		{
-			id: "tries",
-			header: "Tries",
-			size: 60,
-			cell: ({ row: { original: f } }) => (
-				<span
-					className={cn(
-						"text-xs tabular-nums",
-						f.attempt > 1
-							? "text-orange-600 dark:text-orange-400"
-							: "text-subtle",
-					)}
-				>
-					{f.attempt}
-				</span>
-			),
-		},
-	];
-
-	const attentionColumns: ColumnDef<AttentionRow>[] = [
-		{
-			id: "status",
-			header: "Status",
-			size: 104,
-			cell: ({ row: { original: a } }) => (
-				<FileStatusBadge status={a.file.status} />
-			),
-		},
-		{
-			id: "file",
-			header: "File",
-			size: 300,
-			meta: { grow: true },
-			cell: ({ row: { original: a } }) => (
-				<span className="flex min-w-0 flex-col pr-2">
-					<span className="truncate text-tiny-id text-foreground">
-						{a.file.file}
-					</span>
-					{a.file.failureSummary && (
-						<span className="truncate text-tiny-id text-subtle">
-							{a.file.failureSummary.split("\n")[0]}
-						</span>
-					)}
-				</span>
-			),
-		},
-		{
-			id: "flags",
-			header: "",
-			size: 150,
-			cell: ({ row: { original: a } }) => (
-				<span className="flex items-center justify-end gap-1.5">
-					{a.drift && <DriftBadge drift={a.drift} />}
-					{a.file.attempt > 1 && <Pill>attempt {a.file.attempt}</Pill>}
-				</span>
-			),
-		},
-	];
+	const fromSheet = (open: (target: string) => void) => (target: string) => {
+		setTimingOpen(false);
+		open(target);
+	};
 
 	return (
-		<>
+		<div className="flex min-h-0 flex-1 flex-col gap-4">
 			<Header run={r} now={now} />
+			<RunStats
+				run={r}
+				now={now}
+				total={total}
+				running={running}
+				wallMs={timing.wallMs}
+				timingOpen={timingOpen}
+				onOpenTiming={() => setTimingOpen(true)}
+			/>
 
-			<div className="mb-5 flex flex-col gap-2">
-				<div className="flex flex-wrap items-center justify-between gap-3 text-xs tabular-nums text-tertiary-foreground">
-					<div className="flex items-center gap-3">
-						<span>
-							<span className="font-medium text-green-600 dark:text-green-500">
-								{num(r.passed)}
-							</span>{" "}
-							passed
-						</span>
-						<span>
-							<span
-								className={cn(
-									"font-medium",
-									r.failed ? "text-red-600 dark:text-red-400" : "text-subtle",
-								)}
-							>
-								{num(r.failed)}
-							</span>{" "}
-							failed
-							{timedOut > 0 && (
-								<span className="text-amber-600 dark:text-amber-400">
-									{" "}
-									({num(timedOut)} timed out)
-								</span>
-							)}
-						</span>
-						{running > 0 && (
-							<span>
-								<span className="font-medium text-blue-600 dark:text-blue-400">
-									{num(running)}
-								</span>{" "}
-								running
-							</span>
-						)}
-						<span className="text-subtle">of {num(total)} files</span>
-						<RunEta run={r} now={now} />
-					</div>
-					{r.phase && (
-						<span className="flex items-center gap-2 text-tiny-id text-tertiary-foreground">
-							<StatusDot tone="info" pulse />
-							{r.phase}
-						</span>
-					)}
+			<div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+				<div className="flex min-h-0 min-w-0 flex-col gap-3 max-sm:h-[36rem]">
+					<WorkersCard run={r} live={live} onOpenWorker={setOpenWorker} />
+					<FilesCard run={r} live={live} p90={p90} onOpenFile={setOpenFile} />
 				</div>
-				<RunProgress
-					passed={r.passed}
-					failed={r.failed}
-					running={running}
-					total={total}
-				/>
-			</div>
-
-			<div className="flex flex-col gap-6">
-				<div className="flex min-w-0 flex-col gap-6">
-					{repeats.length > 0 && (
-						<RepeatsPanel
-							repeat={r.repeat}
-							repeats={repeats}
-							onOpenFile={(file) => {
-								setFilter("all");
-								setQuery(`${file}#`);
-							}}
-						/>
-					)}
-					{attention.length > 0 && (
-						<section>
-							<SectionTag>
-								Needs attention{" "}
-								<span className="text-subtle tabular-nums">
-									{attention.length}
-								</span>
-							</SectionTag>
-							<PagedDataTable
-								resetKey=""
-								pageSizes={[5, 10, 25]}
-								data={attention}
-								columns={attentionColumns}
-								onRowClick={(a) => setOpenFile(a.file.file)}
-								emptyText="Nothing needs attention."
-							/>
-						</section>
-					)}
-
-					<RunTimingPanel run={r} onOpenFile={setOpenFile} />
-
-					<section className="flex flex-col">
-						<div className="flex flex-wrap items-center gap-2 pb-2">
-							<SectionTag className="mb-0">Files</SectionTag>
-							<Segmented
-								label="File filter"
-								value={filter}
-								onChange={(f) => {
-									setFilter(f);
-								}}
-								options={FILTERS.map((f) => ({
-									value: f,
-									label: (
-										<>
-											<span className="capitalize">{f}</span>{" "}
-											<span className="text-subtle tabular-nums">
-												{counts[f]}
-											</span>
-										</>
-									),
-								}))}
-								className="ml-auto"
-							/>
-							<SearchInput
-								value={query}
-								onChange={setQuery}
-								placeholder="Filter files"
-								className="w-52"
-							/>
-						</div>
-						<PagedDataTable
-							resetKey={`${filter}|${query}`}
-							data={rows}
-							columns={fileColumns}
-							onRowClick={(f) => setOpenFile(f.file)}
-							rowClassName="h-8"
-							emptyText="No files match. Try another filter."
-						/>
-					</section>
-				</div>
-
-				<div className="flex flex-col gap-6">
-					<section>
-						<SectionTag>
-							Workers{" "}
-							<span className="text-subtle tabular-nums">
-								{r.workers.length}
-								{r.workersWanted !== null && `/${num(r.workersWanted)}`}
-							</span>
-						</SectionTag>
-						<Panel className="flex flex-col gap-3 p-3">
-							{r.queuePosition !== null && (
-								<p className="flex items-center gap-2 text-xs text-tertiary-foreground">
-									<Hourglass className="size-3.5 text-subtle" />
-									Waiting for accounts ·{" "}
-									<span className="text-foreground tabular-nums">
-										#{r.queuePosition}
-									</span>{" "}
-									in queue
-								</p>
-							)}
-							{r.workers.length || r.workersWanted ? (
-								<WorkerGrid
-									workers={r.workers}
-									wanted={live ? (r.workersWanted ?? 0) : 0}
-									onOpen={setOpenWorker}
-								/>
-							) : (
-								<p className="text-xs text-subtle">No workers yet.</p>
-							)}
-						</Panel>
-					</section>
-					<BootBreakdown workers={r.workers} onOpenWorker={setOpenWorker} />
-					{live && (
-						<section>
-							<SectionTag>Live output</SectionTag>
-							<LiveLog lines={log} onOpen={setOpenFile} />
-						</section>
-					)}
+				<div className="flex min-h-0 min-w-0 flex-col gap-3 max-sm:h-[36rem]">
+					<FailuresCard run={r} live={live} onOpenFile={setOpenFile} />
+					<RunningCard
+						run={r}
+						live={live}
+						now={now}
+						queued={queued}
+						onOpenFile={setOpenFile}
+					/>
 				</div>
 			</div>
+
+			<TimingSheet
+				open={timingOpen}
+				onOpenChange={setTimingOpen}
+				run={r}
+				timing={timing}
+				live={live}
+				log={log}
+				onOpenFile={fromSheet(setOpenFile)}
+				onOpenWorker={fromSheet(setOpenWorker)}
+			/>
 
 			<Drawer
 				open={openFile !== null}
@@ -833,6 +352,6 @@ export const RunDetailScreen = () => {
 					)}
 				</div>
 			</Drawer>
-		</>
+		</div>
 	);
 };
