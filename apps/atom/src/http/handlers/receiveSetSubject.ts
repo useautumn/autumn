@@ -3,9 +3,9 @@ import { applySubjectPush } from "../../pushes/applyPushes.js";
 import { pushPhaseMs } from "../../pushes/pushPhaseMs.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
-export function receiveSetSubject(context: Context<AtomHttpEnv>) {
+export async function receiveSetSubject(context: Context<AtomHttpEnv>) {
 	const applyStartedAt = performance.now();
-	const stored = applySubjectPush({
+	const stored = await applySubjectPush({
 		slots: context.get("slots"),
 		body: context.get("body"),
 	});

@@ -9,7 +9,7 @@ export const applySubjectPush = ({
 }: {
 	slots: Slots;
 	body: unknown;
-}): boolean => {
+}): Promise<boolean> => {
 	const subject = subjectBodyToStoredSubject({ body });
 	const { customerId } = subject.state.identity;
 	return slots.processorFor({ customerId }).setSubject({ subject });

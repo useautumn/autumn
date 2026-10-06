@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { benchPrimitives } from "../../diagnostics/benchPrimitives.js";
 import { profileProcess } from "../../diagnostics/profileProcess.js";
 
-/** Diagnostics for staging: what one serving process spends its CPU on. Only timings, sizes and function names leave. */
+/** Diagnostics for staging: what one serving thread spends its CPU on. Only timings, sizes and function names leave. */
 export const receiveProfile = async (context: Context) =>
 	context.json(
 		await profileProcess({

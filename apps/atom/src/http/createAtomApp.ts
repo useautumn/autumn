@@ -25,7 +25,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 		requestLogMiddleware({ ctx, handleError }),
 		requestBodyMiddleware,
 	);
-	app.get("/health", receiveHealth);
+	app.get("/health", receiveHealth({ ctx }));
 	app.get("/health/profile", receiveProfile);
 	app.post("/health/floor", receiveFloor);
 	if (ctx.dataDir)

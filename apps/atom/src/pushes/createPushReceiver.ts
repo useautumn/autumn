@@ -16,14 +16,14 @@ import type { PushReceiver } from "./types/pushReceiver.js";
 export const PUSH_QUEUE = "pushes";
 /** SQS's most per receive. */
 const RECEIVE_BATCH = 10;
-/** Long polls in flight per writer process, so applying one batch never waits on the next receive. */
+/** Long polls in flight per receiving thread, so applying one batch never waits on the next receive. */
 const RECEIVE_LOOPS = 4;
 /** After a failed receive, so an unreachable queue is not polled in a tight loop. */
 const RECEIVE_RETRY_MS = 1_000;
 
 type PushReceiverContext = {
 	pushes: Pick<Queue, "receive" | "ack">;
-	auth: Pick<Auth, "pushSlots">;
+	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
 	sleep?: (ms: number) => Promise<unknown>;
 	processStats?: Pick<ProcessStatsRecorder, "recordRequest">;
@@ -52,7 +52,7 @@ const decodePush = ({
 };
 
 /** The same apply the HTTP routes run; it throws only on a failure that may pass, so SQS delivers the push again. */
-const applyPush = ({
+const applyPush = async ({
 	ctx,
 	push,
 	slots,
@@ -62,10 +62,10 @@ const applyPush = ({
 	push: AtomPushMessage;
 	slots: Slots;
 	bytes: number;
-}): void => {
+}): Promise<void> => {
 	const applyStartedAt = performance.now();
 	if (push.type === AtomPushType.SetSubject)
-		applySubjectPush({ slots, body: push.body });
+		await applySubjectPush({ slots, body: push.body });
 	else applyCatalogPush({ slots, body: push.body });
 	const durationMs = performance.now() - applyStartedAt;
 	pushPhaseMs.apply += durationMs;
@@ -78,17 +78,17 @@ const applyPush = ({
 	});
 };
 
-/** Whether the message is done with: applied, or never applicable. */
-const receivePush = ({
+/** Whether the message is done with: applied on the thread that owns its customer, or never applicable. */
+const receivePush = async ({
 	ctx,
 	message,
 }: {
 	ctx: PushReceiverContext;
 	message: QueueMessage;
-}): boolean => {
+}): Promise<boolean> => {
 	const push = decodePush({ ctx, message });
 	if (!push) return true;
-	const slots = ctx.auth.pushSlots({ atomId: push.atomId });
+	const slots = ctx.auth.slotsFor({ atomId: push.atomId });
 	if (!slots) {
 		ctx.logger.warn(
 			{ type: "atom_push_unrouted", data: { atomId: push.atomId } },
@@ -97,7 +97,7 @@ const receivePush = ({
 		return true;
 	}
 	try {
-		applyPush({ ctx, push, slots, bytes: message.payload.length });
+		await applyPush({ ctx, push, slots, bytes: message.payload.length });
 		return true;
 	} catch (error) {
 		ctx.logger.warn(
@@ -129,7 +129,10 @@ export const createPushReceiver = ({
 					await (ctx.sleep ?? Bun.sleep)(RECEIVE_RETRY_MS);
 					return [];
 				});
-			const done = messages.filter((message) => receivePush({ ctx, message }));
+			const applied = await Promise.all(
+				messages.map((message) => receivePush({ ctx, message })),
+			);
+			const done = messages.filter((_, index) => applied[index]);
 			await Promise.all(
 				done.map((message) =>
 					pushes
