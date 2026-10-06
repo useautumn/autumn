@@ -27,6 +27,15 @@ const storedSubjectFromRow = ({
 	readAt: Number(row.readAt),
 });
 
+/** Moves whenever another connection, in this process or any other, commits to the file; this connection's own writes leave it alone. */
+export const readSlotDataVersion = ({ ctx }: { ctx: SlotContext }): bigint => {
+	const row = ctx.sqliteDb
+		.query<{ data_version: bigint }, []>("PRAGMA data_version")
+		.get();
+	if (!row) throw new Error("Unable to read the slot file's data version");
+	return row.data_version;
+};
+
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb

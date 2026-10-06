@@ -11,6 +11,8 @@ import {
 
 /** Answered for a load balancer's probe every second; nothing to learn from it. */
 const UNLOGGED_PATHS = new Set(["/health"]);
+/** A check Atom answered itself is logged one time in a hundred: at peak a line each was a sixth of a process's CPU. */
+const ANSWERED_CHECK_LOG_SAMPLE_RATE = 0.01;
 
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
@@ -45,6 +47,13 @@ export function requestLogMiddleware({
 			durationMs,
 			forwarded: forwarded !== undefined,
 		});
+		if (
+			statusCode < 400 &&
+			forwarded === undefined &&
+			context.req.path === "/v1/balances.check" &&
+			Math.random() >= ANSWERED_CHECK_LOG_SAMPLE_RATE
+		)
+			return;
 		const failure = context.get("failure");
 		const line = {
 			statusCode,

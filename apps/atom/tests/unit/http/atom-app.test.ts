@@ -409,8 +409,10 @@ describe("the request line", () => {
 
 	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
 		const { app, logged } = createDeployedApp();
-		notSampled();
+		const random = notSampled();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		// Drawn into the one in a hundred answered checks that are logged; the body is not sampled.
+		random.mockReturnValueOnce(0);
 		await app.request("/v1/balances.check", checkMessages());
 
 		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
@@ -439,6 +441,19 @@ describe("the request line", () => {
 		expect(logged[1]?.message).toMatch(
 			/^\[200\] POST \/v1\/balances\.check \d+ms$/,
 		);
+	});
+
+	test("a check Atom answered itself is logged one time in a hundred; its push still is", async () => {
+		const { app, logged } = createDeployedApp();
+		notSampled();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await app.request("/v1/balances.check", checkMessages());
+
+		expect(logged.map((line) => line.fields)).toEqual([
+			expect.objectContaining({
+				req: expect.objectContaining({ path: "/v1/subjects.set" }),
+			}),
+		]);
 	});
 
 	test("one in a hundred successful answers carries its body, without the balance's breakdown", async () => {
