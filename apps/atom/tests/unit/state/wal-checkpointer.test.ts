@@ -3,7 +3,10 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startWalCheckpointer } from "../../../src/state/startWalCheckpointer.js";
+import {
+	startWalCheckpointer,
+	TICKS_PER_FILE,
+} from "../../../src/state/startWalCheckpointer.js";
 
 const openWriter = ({ path }: { path: string }) => {
 	const database = new Database(path, { create: true });
@@ -16,7 +19,7 @@ const openWriter = ({ path }: { path: string }) => {
 };
 
 describe("WAL checkpointer", () => {
-	test("copies every log in the data folder, an org's folder included, back into its file", () => {
+	test("within one round of ticks, copies every log in the data folder, an org's folder included, back into its file", () => {
 		const dataDir = mkdtempSync(join(tmpdir(), "atom-wal-"));
 		mkdirSync(join(dataDir, "atoms", "org_1"), { recursive: true });
 		const paths = [
@@ -31,7 +34,7 @@ describe("WAL checkpointer", () => {
 			dataDir,
 			logger: { warn: () => {} },
 		});
-		checkpointer.checkpoint();
+		for (let tick = 0; tick < TICKS_PER_FILE; tick++) checkpointer.checkpoint();
 		checkpointer.stop();
 
 		fileBytes().forEach((bytes, index) => {
