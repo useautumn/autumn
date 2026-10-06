@@ -66,6 +66,7 @@ import {
 } from "../models/licenseModels/planLicenseRelations.js";
 // Metering log bookkeeping
 import { partitionProgress } from "../models/meteringLogModels/partitionProgressTable.js";
+import { subjectSnapshots } from "../models/meteringLogModels/subjectSnapshotTable.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -248,6 +249,7 @@ export {
 	subscriptions,
 	usageWindows,
 	partitionProgress,
+	subjectSnapshots,
 	balanceLocks,
 	// Auth
 	user,

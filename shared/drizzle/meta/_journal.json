@@ -673,6 +673,13 @@
       "when": 1791281222560,
       "tag": "0095_melodic_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1791321078509,
+      "tag": "0096_special_red_wolf",
+      "breakpoints": true
     }
   ]
 }
