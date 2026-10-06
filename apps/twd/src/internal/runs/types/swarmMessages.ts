@@ -1,3 +1,4 @@
+import type { FileStats } from "@tw/worker/runTestFileWithStats.ts";
 import type { RunFile, WorkerState } from "../../../api/contract.ts";
 
 export type SwarmAccount = { accountId: string; secretKey: string };
@@ -54,6 +55,14 @@ export type SwarmChildMessage =
 	| { type: "demand"; workers: number }
 	| { type: "worker"; worker: WorkerState }
 	| { type: "file"; file: RunFile; final: boolean }
+	/** One attempt's `[tw-file-stats]` line: Stripe load, CPU and memory. */
+	| {
+			type: "file_stats";
+			file: string;
+			attempt: number;
+			worker: string;
+			stats: FileStats;
+	  }
 	| { type: "log"; file: string | null; worker: string | null; text: string }
 	| {
 			type: "done";

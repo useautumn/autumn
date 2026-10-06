@@ -6,7 +6,7 @@
  *   - `modalProvider` (`--provider=modal`): classic V1 backend — tags, list,
  *     fromName, but capped at 5 creates/s + 100 concurrent (so fan-out is paced).
  *   - `modalV2Provider` (`--provider=modalv2`): experimental V2 backend —
- *     `experimentalCreate`, 10k concurrent + 20+/s (NO pacing), region-pinned, but
+ *     `experimentalCreate`, 10k concurrent + 20+/s (NO pacing), unpinned by default, but
  *     NO tags/list/fromName (teardown reattaches by sandboxId via `fromId`, tracked
  *     in the run registry; orphans rely on each sandbox's `timeoutMs` auto-expiry).
  *
@@ -55,6 +55,7 @@ import {
 	buildBaseImage,
 	buildIngressImage,
 } from "./modalImage.ts";
+import { modalRegions } from "./modalRegion.ts";
 import type {
 	CreateSandboxOptions,
 	DetachedCommand,
@@ -266,13 +267,10 @@ const wrap = (name: string, handle: Sandbox): ProviderSandbox => ({
 const unwrap = (sandbox: ProviderSandbox): Sandbox => sandbox.handle as Sandbox;
 
 /**
- * Modal region for V2 placement. Defaults to us-east-1: benchmarks showed
- * eu-west-2 (London) cliffs at N=100 — `experimentalCreate` (which blocks until
- * the VM is live) jumps from ~8s @ N=50 to ~2m33s @ N=100 — while us-east-1 holds
- * at ~1s/create, turning a 100-wide fan-out from 3m45s into ~41s. Override with
- * `TW_MODAL_REGION` (e.g. eu-west-2 for small London-local runs).
+ * Unpinned costs 1x vs 1.75x for the old us-east-1 pin, at the same create-to-exec time (Oct 2026 probe).
+ * Pin with `TW_MODAL_REGION` (e.g. `us`); twd's cost rates follow the same setting.
  */
-const MODAL_REGION = process.env.TW_MODAL_REGION ?? "us-east-1";
+const MODAL_REGIONS = modalRegions();
 
 /** Stamp the name into tags so `list({tags})` can recover it (Sandbox has no name). */
 const tagsWithName = (
@@ -492,7 +490,7 @@ const isSandboxStreamClosed = (error: unknown): boolean => {
 
 /**
  * Create a sandbox. `v2=true` uses Modal's experimental V2 backend (10k
- * concurrent, 20+/s) — NO pacing, NO tags/name (unsupported), region-pinned. V1
+ * concurrent, 20+/s) — NO pacing, NO tags/name (unsupported). V1
  * uses the classic `create` (tags + name + 5/s pacing). Both tracked in
  * {@link liveSandboxes} by name AND sandboxId for teardown.
  */
@@ -527,8 +525,8 @@ const createFromImage = async (
 	const sandbox = v2
 		? await modal.sandboxes.experimentalCreate(app, image, {
 				...base,
-				// V2 supports neither tags nor name lookups; pin the region instead.
-				regions: [MODAL_REGION],
+				// V2 supports neither tags nor name lookups.
+				regions: MODAL_REGIONS,
 			})
 		: await modal.sandboxes.create(app, image, {
 				...base,

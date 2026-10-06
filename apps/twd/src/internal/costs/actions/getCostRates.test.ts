@@ -31,8 +31,10 @@ test("defaults to Modal's Sandbox rates, 3x the Function rates", () => {
 	expect(rates.usdPerGibSecond / 0.00000222).toBeCloseTo(3, 1);
 });
 
-test("region multiplier follows scripts/tw's pin, us-east-1 by default", () => {
+test("region multiplier follows scripts/tw's pin, unpinned (1x) by default", () => {
 	clearEnv();
+	expect(getCostRates().regionMultiplier).toBe(1);
+	process.env.TW_MODAL_REGION = "us-east-1";
 	expect(getCostRates().regionMultiplier).toBe(1.75);
 	process.env.TW_MODAL_REGION = "us";
 	expect(getCostRates().regionMultiplier).toBe(1.15);
@@ -48,7 +50,7 @@ test("a blank override falls back to the default instead of pricing at $0", () =
 	process.env.TWD_USD_PER_CORE_SECOND = "";
 	expect(getCostRates()).toMatchObject({
 		usdPerCoreSecond: 0.00003942,
-		regionMultiplier: 1.75,
+		regionMultiplier: 1,
 	});
 });
 
@@ -67,8 +69,9 @@ test("every rate stays overridable per deploy", () => {
 	);
 });
 
-test("a default 2-core 4 GiB worker-hour costs $0.66, not the old $0.13", () => {
+test("a us-east-1-pinned 2-core 4 GiB worker-hour costs $0.66, not the old $0.13", () => {
 	clearEnv();
+	process.env.TW_MODAL_REGION = "us-east-1";
 	const { workerCores, workerMemoryGib } = getCostRates();
 	const usd = priceSandboxSeconds({
 		seconds: 3600,
@@ -79,8 +82,21 @@ test("a default 2-core 4 GiB worker-hour costs $0.66, not the old $0.13", () => 
 	expect(usd).toBeCloseTo(0.6648, 4);
 });
 
-test("Oct 1 01:00 nightly baseline: 643,199 worker-seconds price within 15% of Modal's $118.11", () => {
+test("an unpinned 2-core 4 GiB worker-hour costs $0.38", () => {
 	clearEnv();
+	const { workerCores, workerMemoryGib } = getCostRates();
+	const usd = priceSandboxSeconds({
+		seconds: 3600,
+		cores: workerCores,
+		memoryGib: workerMemoryGib,
+	});
+	expect(usd).toBeCloseTo(3600 * (2 * 0.00003942 + 4 * 0.00000667), 10);
+	expect(usd).toBeCloseTo(0.3799, 4);
+});
+
+test("Oct 1 01:00 nightly baseline (us-east-1 pin): 643,199 worker-seconds price within 15% of Modal's $118.11", () => {
+	clearEnv();
+	process.env.TW_MODAL_REGION = "us-east-1";
 	const { workerCores, workerMemoryGib } = getCostRates();
 	const usd = priceSandboxSeconds({
 		seconds: 643_199,

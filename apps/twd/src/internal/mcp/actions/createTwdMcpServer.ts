@@ -83,6 +83,7 @@ const summariseRun = (run: RunDetail) => {
 		failures,
 		drift: run.drift,
 		eta: { etaMs: run.etaMs, etaP90Ms: run.etaP90Ms },
+		resources: run.resources ?? null,
 		startedAt: run.startedAt,
 		finishedAt: run.finishedAt,
 	};
@@ -218,7 +219,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted (once finished: peak attached at once vs wanted), boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted (once finished: peak attached at once vs wanted), boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90), and resources (per-file stats totals: Stripe requests, 429s, permit-wait p95/max, worker peak rps/in-flight, CPU core-seconds and p95 peak cores, p95/max peak memory; null until files report). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),

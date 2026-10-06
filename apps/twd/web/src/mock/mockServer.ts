@@ -557,7 +557,7 @@ const summary = (run: RunDetail): RunSummary => {
 const RATES: Costs["rates"] = {
 	usdPerCoreSecond: 0.00003942,
 	usdPerGibSecond: 0.00000667,
-	regionMultiplier: 1.75,
+	regionMultiplier: 1,
 	workerCores: 2,
 	workerMemoryGib: 4,
 };
