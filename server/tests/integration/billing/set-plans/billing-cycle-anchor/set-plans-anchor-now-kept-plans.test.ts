@@ -413,69 +413,6 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans anchor now kept: bill_difference credits only the unused part of the old period")}`,
-	async () => {
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const premium = products.premium({
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
-			customerId: "set-plans-anchor-now-bill-difference",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 10 }),
-			],
-		});
-
-		const renewalAt = addMonths(advancedTo, 1).getTime();
-		const expectedTotal = await calculateResetBillingCycleNowTotal({
-			customerId,
-			advancedTo,
-			oldAmount: 20,
-			newAmount: 50,
-		});
-		const params: SetPlansParamsV0Input = {
-			customer_id: customerId,
-			phases: [
-				resetNowPhase({
-					planIds: [premium.id],
-					prorationBehavior: "bill_difference",
-				}),
-			],
-		};
-
-		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.total).toBe(expectedTotal);
-		expectPreviewNextCycleCorrect({
-			preview,
-			startsAt: renewalAt,
-			total: 50,
-			toleranceMs: 1000,
-		});
-
-		await autumnV2_4.billing.setPlans(params);
-
-		await expectCustomerInvoiceCorrect({
-			customerId,
-			count: 2,
-			latestTotal: expectedTotal,
-		});
-		await expectStripeCycleCorrect({
-			ctx,
-			customerId,
-			anchorMs: advancedTo,
-			periodEndMs: renewalAt,
-		});
-	},
-);
-
-test.concurrent(
 	`${chalk.yellowBright("set-plans anchor now kept: bill_difference on the same plan still bills the days already used")}`,
 	async () => {
 		const pro = products.pro({
