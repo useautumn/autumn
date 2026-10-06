@@ -76,6 +76,29 @@ describe("previewElements", () => {
 		expect(json).toContain("Cancel at end of cycle");
 	});
 
+	test("shows setPlans preview warnings", () => {
+		const json = JSON.stringify(
+			previewElements({
+				...attachPreview,
+				object: "set_plans_preview",
+				warnings: [
+					{
+						type: "unmanaged_stripe_items_removed",
+						severity: "warning",
+						message: "Removes 1 Stripe item Autumn does not manage.",
+					},
+					{
+						type: "cycle_reset",
+						severity: "info",
+						message: "Resets the billing cycle.",
+					},
+				],
+			}),
+		);
+		expect(json).toContain("⚠️ Removes 1 Stripe item Autumn does not manage.");
+		expect(json).toContain("Resets the billing cycle.");
+	});
+
 	test("renders createBalance local previews as a table", () => {
 		const json = JSON.stringify(
 			previewElements({

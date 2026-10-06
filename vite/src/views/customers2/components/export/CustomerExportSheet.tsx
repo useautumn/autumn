@@ -15,6 +15,7 @@ import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
 import { CustomerExportJobList } from "./CustomerExportJobList";
 import { CustomerExportOverview } from "./CustomerExportOverview";
+import { CustomerExportUnlinkedStripeToggle } from "./CustomerExportUnlinkedStripeToggle";
 import { CUSTOMER_EXPORT_SHEET_COPY } from "./customerExportSheetCopy";
 import {
 	type CustomerExportSheetProps,
@@ -98,7 +99,22 @@ export function CustomerExportSheet({
 														</form.Field>
 													) : null
 												}
-											/>
+											>
+												{kind === CustomerExportKind.BillingVerify ? (
+													<form.Field name="includeUnlinkedStripeCustomers">
+														{(unlinkedField) => (
+															<CustomerExportUnlinkedStripeToggle
+																includeUnlinkedStripeCustomers={
+																	unlinkedField.state.value
+																}
+																onIncludeUnlinkedStripeCustomersChange={
+																	unlinkedField.handleChange
+																}
+															/>
+														)}
+													</form.Field>
+												) : null}
+											</CustomerExportOverview>
 										)}
 									</form.Field>
 								</div>

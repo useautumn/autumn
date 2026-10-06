@@ -1,12 +1,13 @@
 import {
 	type FullCustomer,
+	filterCustomerProductsByActiveStatuses,
+	filterCustomerProductsByStripeSubscriptionId,
+	findCustomerProductSuccessor,
 	InternalError,
+	isCustomerProductScheduled,
 	type StripeBillingPlan,
 	type StripeSubscriptionAction,
 	type StripeSubscriptionScheduleAction,
-	filterCustomerProductsByActiveStatuses,
-	filterCustomerProductsByStripeSubscriptionId,
-	isCustomerProductScheduled,
 } from "@autumn/shared";
 
 const ALLOWED_SUB_ACTION_TYPES = new Set<StripeSubscriptionAction["type"]>([
@@ -25,8 +26,8 @@ const ALLOWED_SCHEDULE_ACTION_TYPES = new Set<
  * update / create for the schedule, throws.
  */
 /**
- * An open-ended active plan alongside a scheduled successor would reshape Stripe
- * as if it never transitions, silently dropping the future phase.
+ * An open-ended plan with a scheduled successor (same entity and group) would reshape
+ * Stripe as if it never transitions; other entities' plans on a shared sub may stay open.
  */
 const assertActivePlansEndBeforeSuccessors = ({
 	fullCustomer,
@@ -39,11 +40,21 @@ const assertActivePlansEndBeforeSuccessors = ({
 		customerProducts: fullCustomer.customer_products,
 		stripeSubscriptionId,
 	});
-	if (!customerProducts.some(isCustomerProductScheduled)) return;
+	const scheduledCustomerProducts = customerProducts.filter(
+		isCustomerProductScheduled,
+	);
+	if (scheduledCustomerProducts.length === 0) return;
 
 	const openEnded = filterCustomerProductsByActiveStatuses({
 		customerProducts,
-	}).find((customerProduct) => !customerProduct.ended_at);
+	}).find(
+		(customerProduct) =>
+			!customerProduct.ended_at &&
+			findCustomerProductSuccessor({
+				sourceCustomerProduct: customerProduct,
+				candidateCustomerProducts: scheduledCustomerProducts,
+			}),
+	);
 	if (!openEnded) return;
 
 	throw new InternalError({

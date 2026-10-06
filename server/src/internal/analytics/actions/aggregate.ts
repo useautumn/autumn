@@ -526,6 +526,7 @@ export const aggregate = async ({
 		const topGroupParams = shouldRankGroupsFirst({
 			groupColumn,
 			useOrgDimensionRollup,
+			useOrgPropertyRollup,
 			groupRanking: params.group_ranking,
 		})
 			? await rankTopGroups({
@@ -535,6 +536,7 @@ export const aggregate = async ({
 					startDate,
 					endDate,
 					maxGroups: params.max_groups,
+					propertyKey: groupColumn === "property" ? propertyKey : undefined,
 				}).catch((error: unknown) => {
 					// Ranking is an optimization; fall back to the single-query path if it fails.
 					ctx.logger.warn("Top-group ranking failed; using full grouping", {
@@ -603,6 +605,7 @@ export const aggregate = async ({
 						rollupIsIncomplete = groupedValueIsMateriallyShort({
 							rows: result.data,
 							totals,
+							coverage,
 						});
 					} else {
 						rollupIsIncomplete = shortfall === "major";

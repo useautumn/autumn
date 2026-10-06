@@ -4,10 +4,13 @@ import { Workflow } from "lucide-react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	type MigrationWithRunInfo,
 	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { MIGRATION_LIST_PAGE_SIZE_OPTIONS } from "@/utils/constants/migrationListPagination";
 import { pushPage } from "@/utils/genUtils";
 import { useMigrationListPagination } from "@/views/migrations/hooks/useMigrationListPagination";
@@ -17,17 +20,54 @@ import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createMigrationListColumns } from "./MigrationListColumns";
 import { MigrationListCreateButton } from "./MigrationListCreateButton";
 import { MigrationListMenuButton } from "./MigrationListMenuButton";
+import {
+	createMigrationCatalog,
+	type MigrationListRow,
+	toMigrationListRows,
+} from "./rowView/deriveMigrationRowView";
+
+const LIST_POLL_MS = 5000;
+
+function useMigrationListRows(
+	migrations: MigrationWithRunInfo[],
+): MigrationListRow[] {
+	const { products } = useProductsQuery();
+	const { features } = useFeaturesQuery();
+	const { org } = useOrg();
+	const currency = org?.default_currency ?? "USD";
+
+	return useMemo(
+		() =>
+			toMigrationListRows({
+				migrations,
+				catalog: createMigrationCatalog({ products, features, currency }),
+				now: Date.now(),
+			}),
+		[migrations, products, features, currency],
+	);
+}
 
 export function MigrationListTable() {
-	const { migrations, isLoading } = useMigrationsQuery();
+	const { migrations, isLoading } = useMigrationsQuery({
+		pollWhileActiveMs: LIST_POLL_MS,
+	});
+	const rows = useMigrationListRows(migrations);
+	return <MigrationListTableView rows={rows} isLoading={isLoading} />;
+}
+
+export function MigrationListTableView({
+	rows,
+	isLoading,
+}: {
+	rows: MigrationListRow[];
+	isLoading: boolean;
+}) {
 	const { queryStates } = useMigrationsQueryState();
 
 	const filteredMigrations = useMemo(
 		() =>
-			migrations.filter((m) =>
-				queryStates.showArchived ? m.archived : !m.archived,
-			),
-		[migrations, queryStates.showArchived],
+			rows.filter((m) => (queryStates.showArchived ? m.archived : !m.archived)),
+		[rows, queryStates.showArchived],
 	);
 
 	const columns = useMemo(() => createMigrationListColumns(), []);
@@ -57,7 +97,7 @@ export function MigrationListTable() {
 		},
 	});
 
-	const getRowHref = (row: MigrationWithRunInfo) =>
+	const getRowHref = (row: MigrationListRow) =>
 		pushPage({
 			path: `/migrations/${row.id}`,
 			queryParams: { step: row.status === "draft" ? undefined : "live" },
@@ -67,7 +107,7 @@ export function MigrationListTable() {
 	const showPagination =
 		filteredMigrations.length > MIGRATION_LIST_PAGE_SIZE_OPTIONS[0];
 
-	if (!isLoading && migrations.length === 0) {
+	if (!isLoading && rows.length === 0) {
 		return (
 			<EmptyState
 				type="migrations"

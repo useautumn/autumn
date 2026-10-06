@@ -11,7 +11,7 @@ SQL >
         customer_id,
         event_name,
         coalesce(entity_id, '') as entity_id,
-        internal_product_id,
+        coalesce(internal_product_id, '') as internal_product_id,
         toStartOfHour(timestamp) as hour,
         sum(toFloat64(coalesce(value, 1))) as total_value,
         count() as event_count

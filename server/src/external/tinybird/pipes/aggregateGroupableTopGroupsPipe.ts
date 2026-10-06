@@ -8,6 +8,8 @@ export const aggregateGroupableTopGroupsPipeParamsSchema = z.object({
 	start_date: z.string(),
 	end_date: z.string(),
 	max_groups: z.number().int().min(1).max(250).optional(),
+	group_column: z.enum(["customer_id", "property"]).optional(),
+	property_key: z.string().optional(),
 });
 
 export const aggregateGroupableTopGroupsPipeResponseSchema = z.object({
@@ -19,7 +21,7 @@ export type AggregateGroupableTopGroupsPipeRow = z.infer<
 	typeof aggregateGroupableTopGroupsPipeResponseSchema
 >;
 
-/** Top customers per event over a whole window, for org-wide window-ranked grouping */
+/** Top customers or property values per event over a whole window, for org-wide window-ranked grouping */
 export const createAggregateGroupableTopGroupsPipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_groupable_top_groups",

@@ -136,22 +136,21 @@ export const createProducts = async ({
 		} catch (error) {}
 	}
 
-	const batchCreate = [];
-	for (const product of products) {
-		batchCreate.push(
-			createProduct({
-				db,
-				orgId,
-				env,
-				autumn,
-				product,
-				prefix,
-				createInStripe,
-			}),
-		);
-	}
+	const create = (product: (typeof products)[number]) =>
+		createProduct({ db, orgId, env, autumn, product, prefix, createInStripe });
 
-	await Promise.all(batchCreate);
+	// Defaults go one at a time: a default mid-create (row in, prices not yet)
+	// reads as a free default and fails the next default's validation.
+	const createDefaultsInOrder = async () => {
+		for (const product of products.filter((p) => p.is_default)) {
+			await create(product);
+		}
+	};
+
+	await Promise.all([
+		...products.filter((p) => !p.is_default).map(create),
+		createDefaultsInOrder(),
+	]);
 };
 
 export const createReward = async ({

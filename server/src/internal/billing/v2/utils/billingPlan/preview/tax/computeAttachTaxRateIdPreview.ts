@@ -137,16 +137,12 @@ export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
 		};
 	}
 
-	const taxMinorUnits = taxableMinorUnits.reduce(
-		(sum, amount) =>
-			sum +
-			taxableMinorUnitsToTaxMinorUnits({
-				taxableMinorUnits: amount,
-				percentage: taxRate.percentage,
-				inclusive: taxRate.inclusive,
-			}),
-		0,
-	);
+	// Stripe rounds manual-rate tax once on the invoice subtotal, then allocates it to lines.
+	const taxMinorUnits = taxableMinorUnitsToTaxMinorUnits({
+		taxableMinorUnits: totalTaxableMinorUnits,
+		percentage: taxRate.percentage,
+		inclusive: taxRate.inclusive,
+	});
 
 	const taxAmount = stripeToAtmnAmount({
 		amount: taxMinorUnits,

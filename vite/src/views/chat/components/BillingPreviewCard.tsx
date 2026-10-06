@@ -10,6 +10,7 @@ import {
 	AppEnv,
 	type BillingPreviewChange,
 	type BillingPreviewResponse,
+	type SetPlansPreviewWarning,
 } from "@autumn/shared";
 import { Badge, StatusChip } from "@autumn/ui";
 import {
@@ -38,6 +39,14 @@ type CustomerStatePhase = {
 	plans?: { customize?: Record<string, unknown>; plan_id?: string }[];
 	starting_after?: string;
 	starts_at?: string | number;
+};
+
+/** setPlans previews flag side effects to confirm, e.g. a plan or Stripe item it removes. */
+const previewWarnings = (
+	preview: BillingPreviewResponse,
+): SetPlansPreviewWarning[] => {
+	const { warnings } = preview as { warnings?: unknown };
+	return Array.isArray(warnings) ? (warnings as SetPlansPreviewWarning[]) : [];
 };
 
 const phaseTiming = (phase: CustomerStatePhase, index: number) => {
@@ -165,6 +174,7 @@ export function BillingPreviewCard({
 	const phases = Array.isArray(params?.phases)
 		? (params.phases as CustomerStatePhase[])
 		: [];
+	const warnings = previewWarnings(preview);
 	const nextCycle = preview.next_cycle;
 	const totals = nextCycle
 		? [
@@ -213,6 +223,15 @@ export function BillingPreviewCard({
 					<BillingChangeSummary added={added} removed={removed} />
 				</InfoBox>
 			)}
+
+			{warnings.map((warning) => (
+				<InfoBox
+					key={`${warning.type}-${warning.message}`}
+					variant={warning.severity === "warning" ? "warning" : "note"}
+				>
+					{warning.message}
+				</InfoBox>
+			))}
 
 			{badges.length > 0 && (
 				<div className="flex flex-wrap gap-1.5">

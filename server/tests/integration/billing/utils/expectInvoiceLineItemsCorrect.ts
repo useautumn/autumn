@@ -4,11 +4,11 @@ import {
 	type InvoiceLineItemDiscount,
 	logInvoiceLineItems,
 } from "@autumn/shared";
+import { DEFAULT_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 
 const DEFAULT_POLL_INTERVAL_MS = 500;
-const DEFAULT_TIMEOUT_MS = 10000;
 
 /**
  * Waits for invoice line items to be stored in the database.
@@ -16,7 +16,8 @@ const DEFAULT_TIMEOUT_MS = 10000;
  */
 export const waitForInvoiceLineItems = async ({
 	stripeInvoiceId,
-	timeoutMs = DEFAULT_TIMEOUT_MS,
+	// Line items land via an SQS job whose Stripe reads queue for tw rate-limit permits.
+	timeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
 	pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
 }: {
 	stripeInvoiceId: string;

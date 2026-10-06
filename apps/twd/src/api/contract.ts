@@ -222,6 +222,7 @@ export const ListRunsQuery = z.object({
 	status: z.enum(["live", "finished", "all"]).default("live"),
 	/** Narrows finished runs; "failed" includes errored. */
 	outcome: RunOutcome.default("all"),
+	purpose: z.enum(["adhoc", "baseline"]).optional(),
 	/** Substring match on branch name. */
 	branch: z.string().optional(),
 	/** Opaque `nextCursor` from the previous page. */
@@ -449,6 +450,8 @@ export const LiveServerMessage = z.discriminatedUnion("type", [
 export const CostRates = z.object({
 	usdPerCoreSecond: z.number(),
 	usdPerGibSecond: z.number(),
+	/** Modal's surcharge on base prices for the pinned sandbox region. */
+	regionMultiplier: z.number(),
 	workerCores: z.number(),
 	workerMemoryGib: z.number(),
 });

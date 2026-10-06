@@ -115,11 +115,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||
 		contextOverride.skipBillingFetching === true ||
-		billingRelatedFields.length === 0 ||
+		(billingRelatedFields.length === 0 && params.redirect_mode !== "always") ||
 		isUpdatingFreeCustomerProduct;
 
 	const skipBillingChangesBase =
 		skipBillingFetching ||
+		billingRelatedFields.length === 0 ||
 		params.no_billing_changes === true ||
 		params.processor_subscription_id !== undefined;
 
@@ -143,7 +144,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
 		createStripeCustomerIfMissing:
-			!preview && params.no_billing_changes !== true,
+			!preview &&
+			params.no_billing_changes !== true &&
+			billingRelatedFields.length > 0,
 	});
 
 	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];

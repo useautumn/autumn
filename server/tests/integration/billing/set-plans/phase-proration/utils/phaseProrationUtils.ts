@@ -191,12 +191,15 @@ export const advancePastPhaseStartAndGetInvoices = async ({
 		waitForSeconds: 30,
 	});
 
+	// Stripe's server-side subscription/created filters miss the test-clock invoice raised at the phase start.
 	const { data } = await ctx.stripeCli.invoices.list({
-		subscription: subscription.id,
-		created: { gte: Math.floor(laterPhaseStartsAt / 1000) - 60 },
+		customer: subscription.customer as string,
 	});
+	const phaseStartSeconds = Math.floor(laterPhaseStartsAt / 1000);
 	return await Promise.all(
-		data.map((invoice) => ctx.stripeCli.invoices.retrieve(invoice.id!)),
+		data
+			.filter((invoice) => invoice.created >= phaseStartSeconds - 60)
+			.map((invoice) => ctx.stripeCli.invoices.retrieve(invoice.id!)),
 	);
 };
 

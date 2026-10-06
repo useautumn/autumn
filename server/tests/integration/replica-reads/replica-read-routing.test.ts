@@ -35,10 +35,12 @@
  * exist. Post-impl green: routing seam + debug header land per design §3.1.
  *
  * (a)-(e) run E2E against the live dev server (real primary + 2 replicas,
- * prober started in init.ts). (f)-(g) run service-level in the test process
- * because they need fake pools and forced prober states — not expressible over
- * HTTP. They are intentionally NON-concurrent: they mutate test-process module
- * state (prober probe, replica override) that must not interleave.
+ * prober started in init.ts), and only while the balance-worker rollout is
+ * below 100%: worker customer reads never take the replica-routed path.
+ * (f)-(g) run service-level in the test process because they need fake pools
+ * and forced prober states — not expressible over HTTP. They are intentionally
+ * NON-concurrent: they mutate test-process module state (prober probe, replica
+ * override) that must not interleave.
  */
 
 import { expect, test } from "bun:test";
@@ -46,7 +48,10 @@ import { ApiVersion } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
-import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import { getServerBalanceWorkerRolloutPercent } from "@tests/utils/rolloutTestUtils.js";
+import testCtx, {
+	type TestContext,
+} from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { sql } from "drizzle-orm";
@@ -125,9 +130,22 @@ const preAgeLedger = async ({
 /** Dev replicas run ~0 lag; this bounds the created-row catch-up window. */
 const REPLICA_CATCHUP_MS = 1_500;
 
+// (a)-(e) read x-subject-source, which only the legacy (non-worker) customer read path sets.
+const workerServesCustomerReads =
+	(await getServerBalanceWorkerRolloutPercent({ org: testCtx.org })) === 100;
+const legacyReadTest = test.concurrent.skipIf(workerServesCustomerReads);
+const legacyReadTitle = (title: string) =>
+	chalk.yellowBright(
+		workerServesCustomerReads
+			? `${title} [skipped: customer reads go through the balance worker at 100% rollout; replica routing for worker reads is untested]`
+			: title,
+	);
+
 // ── Contract assertion (a): quiet customer + skipCache -> replica ──────────
-test.concurrent(
-	`${chalk.yellowBright("replica-reads (a): quiet customer + skipCache read is served by the replica")}`,
+legacyReadTest(
+	legacyReadTitle(
+		"replica-reads (a): quiet customer + skipCache read is served by the replica",
+	),
 	async () => {
 		const customerId = "replica-read-quiet-customer";
 		const { ctx } = await initScenario({
@@ -153,8 +171,10 @@ test.concurrent(
 );
 
 // ── Contract assertion (b): structural write < 60s ago -> primary ──────────
-test.concurrent(
-	`${chalk.yellowBright("replica-reads (b): freshly attached customer + skipCache read pins primary (read-your-writes)")}`,
+legacyReadTest(
+	legacyReadTitle(
+		"replica-reads (b): freshly attached customer + skipCache read pins primary (read-your-writes)",
+	),
 	async () => {
 		const customerId = "replica-read-fresh-write-customer";
 		const pro = products.pro({
@@ -185,8 +205,10 @@ test.concurrent(
 );
 
 // ── Contract assertion (c): get_or_create existing + quiet -> replica ──────
-test.concurrent(
-	`${chalk.yellowBright("replica-reads (c): get_or_create of an existing quiet customer serves the lookup from the replica")}`,
+legacyReadTest(
+	legacyReadTitle(
+		"replica-reads (c): get_or_create of an existing quiet customer serves the lookup from the replica",
+	),
 	async () => {
 		const customerId = "replica-read-goc-existing";
 		const { ctx } = await initScenario({
@@ -212,8 +234,10 @@ test.concurrent(
 );
 
 // ── Contract assertion (d): get_or_create brand-new -> converges, then primary
-test.concurrent(
-	`${chalk.yellowBright("replica-reads (d): get_or_create of a brand-new customer creates via primary; follow-up read pins primary")}`,
+legacyReadTest(
+	legacyReadTitle(
+		"replica-reads (d): get_or_create of a brand-new customer creates via primary; follow-up read pins primary",
+	),
 	async () => {
 		const customerId = "replica-read-goc-brand-new";
 		const { ctx, autumnV1 } = await initScenario({
@@ -247,8 +271,10 @@ test.concurrent(
 );
 
 // ── Contract assertion (e): normal cache path untouched ────────────────────
-test.concurrent(
-	`${chalk.yellowBright("replica-reads (e): reads without skipCache stay on the cache path and emit no header without the debug opt-in")}`,
+legacyReadTest(
+	legacyReadTitle(
+		"replica-reads (e): reads without skipCache stay on the cache path and emit no header without the debug opt-in",
+	),
 	async () => {
 		const customerId = "replica-read-cache-path";
 		const { ctx } = await initScenario({

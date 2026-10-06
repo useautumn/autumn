@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { BillingPreviewResponse } from "@autumn/shared";
 import {
 	OnDecrease,
+	stripeToAtmnAmount,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
@@ -87,7 +88,7 @@ for (const variant of [
 					oldAmount,
 					newAmount,
 				});
-		expect(preview.total).toBeCloseTo(expectedTotal, 2);
+		if (variant.deferred) expect(preview.total).toBe(0);
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>(params);
 		const { product } = await expectAnchorQuantityIdentity({
 			scenario,
@@ -124,6 +125,24 @@ for (const variant of [
 			...(variant.deferred ? {} : { latestTotal: expectedTotal }),
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
+		if (!variant.deferred) {
+			// Stripe rounds each proration line to minor units, so the preview must match the real invoice exactly.
+			const { latest_invoice } = await ctx.stripeCli.subscriptions.retrieve(
+				scenario.subscription.id,
+			);
+			const invoiceId =
+				typeof latest_invoice === "string"
+					? latest_invoice
+					: latest_invoice?.id;
+			expect(invoiceId).toBeDefined();
+			const invoice = await ctx.stripeCli.invoices.retrieve(invoiceId!);
+			expect(preview.total).toBe(
+				stripeToAtmnAmount({
+					amount: invoice.total,
+					currency: invoice.currency,
+				}),
+			);
+		}
 
 		if (variant.prepaid && !variant.license) {
 			await advanceTestClock({

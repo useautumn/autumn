@@ -61,7 +61,7 @@ export const entitySubjectRowsSql = ({
 		FROM entities e
 		WHERE e.internal_id = ANY(${idList})
 			AND e.internal_customer_id = (SELECT internal_id FROM customer_record)
-			AND NOT (e.id = ANY(${idList}))
+			AND (e.id IS NULL OR NOT (e.id = ANY(${idList})))
 		LIMIT ${SUBJECT_ROW_LIMITS.entitiesPerLoad}
 	)
 

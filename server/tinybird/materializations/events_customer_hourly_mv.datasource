@@ -10,8 +10,8 @@ DESCRIPTION >
     Totals reconcile exactly with events_hourly_no_properties_two_mv because both pre-aggregate one row per
     event at insert and the read pipe re-sums by (period, event_name, group_value).
 
-    BACKFILL skip: deploy empty + forward-materialization trigger only (no deploy-time repopulate of the
-    existing events history); fill history in bounded chunks via events_customer_hourly_mv_backfill.
+    SummingMergeTree: background merges collapse rows sharing the full sort key, summing total_value and
+    event_count. Readers must still sum(...) with GROUP BY, since merges are eventual.
 
 SCHEMA >
     `org_id` String,
@@ -19,13 +19,13 @@ SCHEMA >
     `customer_id` String,
     `event_name` String,
     `entity_id` String DEFAULT '',
-    `internal_product_id` Nullable(String),
+    `internal_product_id` String DEFAULT '',
     `hour` DateTime,
     `total_value` Float64,
     `event_count` UInt64
 
-ENGINE "MergeTree"
+ENGINE "SummingMergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(hour)"
-ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, hour"
+ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, hour, internal_product_id"
 
 BACKFILL skip

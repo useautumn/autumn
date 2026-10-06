@@ -501,14 +501,16 @@ const summary = (run: RunDetail): RunSummary => {
 
 /** Same defaults as internal/costs/actions/getCostRates.ts. */
 const RATES: Costs["rates"] = {
-	usdPerCoreSecond: 0.0000131,
-	usdPerGibSecond: 0.00000222,
+	usdPerCoreSecond: 0.00003942,
+	usdPerGibSecond: 0.00000667,
+	regionMultiplier: 1.75,
 	workerCores: 2,
 	workerMemoryGib: 4,
 };
 const WORKER_USD_S =
-	RATES.workerCores * RATES.usdPerCoreSecond +
-	RATES.workerMemoryGib * RATES.usdPerGibSecond;
+	(RATES.workerCores * RATES.usdPerCoreSecond +
+		RATES.workerMemoryGib * RATES.usdPerGibSecond) *
+	RATES.regionMultiplier;
 const BOOT_S = 90;
 const costOf = (workerSeconds: number, final: boolean) => ({
 	usd: Math.round(workerSeconds * WORKER_USD_S * 10_000) / 10_000,
@@ -1297,11 +1299,13 @@ export const handle = ({
 	if (route === "GET /runs") {
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
+		const purpose = url.searchParams.get("purpose");
 		const list = allSummaries()
 			.filter((r) =>
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
+			.filter((r) => !purpose || r.purpose === purpose)
 			.filter((r) => {
 				const outcome = url.searchParams.get("outcome") ?? "all";
 				if (outcome === "all") return true;
