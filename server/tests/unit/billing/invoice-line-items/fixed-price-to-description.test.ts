@@ -27,11 +27,11 @@ const contextWith = (
 
 test("fixed price description omits the period suffix when there is no period", () => {
 	expect(fixedPriceToDescription({ price, context: contextWith() })).toBe(
-		"Test Product - Base Price",
+		"Test Product",
 	);
 	expect(
 		fixedPriceToDescription({ price, context: contextWith(), quantity: 3 }),
-	).toBe("Test Product - 3x Base Price");
+	).toBe("3x Test Product");
 });
 
 test("fixed price description keeps the period suffix when a period is set", () => {
@@ -43,6 +43,6 @@ test("fixed price description keeps the period suffix when a period is set", () 
 	});
 
 	expect(fixedPriceToDescription({ price, context })).toMatch(
-		/^Test Product - Base Price \(from .+ to .+\)$/,
+		/^Test Product \(from .+ to .+\)$/,
 	);
 });
