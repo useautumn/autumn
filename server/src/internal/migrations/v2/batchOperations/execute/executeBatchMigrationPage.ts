@@ -8,7 +8,8 @@ import { replaceCustomerEntitlementsForPage } from "../actions/replaceCustomerEn
 import { repointCustomerProductsForPage } from "../actions/repointCustomerProductsForPage/repointCustomerProductsForPage.js";
 import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
-import { markPageItemRuns } from "./claim/index.js";
+import { markPageItemRuns, recordItemRunChanges } from "./claim/index.js";
+import type { RecordBatchMigrationChanges } from "./types/batchMigrationChanges.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
@@ -32,11 +33,8 @@ import {
  * patch actually changed (≥1 inserted row); everyone else — out-of-scope OR
  * already converged — is skipped.
  *
- * The unit of atomicity is one candidate BATCH, not the page: ops commit
- * per bounded batch (see runCandidateBatches) and the marks commit in their
- * own transaction. Safe because mutations are dedup-idempotent and the
- * page's claims stay `running` until the marks land — a mid-page failure
- * keeps committed batches and a replay converges the rest.
+ * The unit of atomicity is one op transaction, not the page: each commits its
+ * writes together with the item-run record of what it changed (`recordChanges`).
  */
 export const executeBatchMigrationPage = async ({
 	ctx,
@@ -65,6 +63,13 @@ export const executeBatchMigrationPage = async ({
 
 	const pageInternalIds = customers.map((customer) => customer.internalId);
 	const now = Date.now();
+	const recordChanges: RecordBatchMigrationChanges = ({ db, changes }) =>
+		recordItemRunChanges({
+			db,
+			migrationInternalId,
+			migrationRunId,
+			changes,
+		});
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
 	const repointedProducts: BatchMigrationRepointedProduct[] = [];
@@ -87,6 +92,7 @@ export const executeBatchMigrationPage = async ({
 			run: (remove) =>
 				removeCustomerEntitlementsForPage({
 					db: ctx.db,
+					recordChanges,
 					features: ctx.features,
 					scope: patch.scope,
 					internalCustomerIds: pageInternalIds,
@@ -116,6 +122,7 @@ export const executeBatchMigrationPage = async ({
 			run: (replace) =>
 				replaceCustomerEntitlementsForPage({
 					db: ctx.db,
+					recordChanges,
 					features: ctx.features,
 					scope: patch.scope,
 					internalCustomerIds: pageInternalIds,
@@ -151,6 +158,7 @@ export const executeBatchMigrationPage = async ({
 			run: (add) =>
 				addCustomerEntitlementsForPage({
 					db: ctx.db,
+					recordChanges,
 					scope: patch.scope,
 					internalCustomerIds: pageInternalIds,
 					fromProduct: patch.fromProduct,
@@ -182,6 +190,7 @@ export const executeBatchMigrationPage = async ({
 		for (const operation of patch.licenseEntitlementOps) {
 			const result = await runLicenseEntitlementOp({
 				db: ctx.db,
+				recordChanges,
 				features: ctx.features,
 				scope: patch.scope,
 				internalCustomerIds: pageInternalIds,
@@ -212,19 +221,18 @@ export const executeBatchMigrationPage = async ({
 		if (patch.repointCustomerProduct) {
 			const rows = await repointCustomerProductsForPage({
 				db: ctx.db,
+				recordChanges,
 				scope: patch.scope,
 				internalCustomerIds: pageInternalIds.filter(
 					(id) => !excludedIds.has(id),
 				),
 				toInternalProductId: patch.repointCustomerProduct.toInternalProductId,
+				fromProduct: patch.fromProduct,
+				toProduct: patch.toProduct ?? patch.fromProduct,
 			});
 			for (const row of rows) {
 				repointedIds.add(row.internalCustomerId);
-				repointedProducts.push({
-					...row,
-					fromProduct: patch.fromProduct,
-					toProduct: patch.toProduct ?? patch.fromProduct,
-				});
+				repointedProducts.push(row);
 			}
 			ctx.logger.debug("batch-migration: repoint customer products", {
 				data: {

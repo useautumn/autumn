@@ -3,6 +3,7 @@ import {
 	isResettingEntitlement,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
 import type { BatchMigrationInsertedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
@@ -44,6 +45,7 @@ export type AddCustomerEntitlementsForPageResult = {
  */
 export const addCustomerEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	scope,
 	internalCustomerIds,
 	fromProduct,
@@ -53,6 +55,7 @@ export const addCustomerEntitlementsForPage = async ({
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	/** The patch's lowered row-level scope. */
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -70,6 +73,7 @@ export const addCustomerEntitlementsForPage = async ({
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
+		recordChanges,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
 			transaction,

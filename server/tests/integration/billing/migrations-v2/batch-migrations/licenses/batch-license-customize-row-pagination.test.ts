@@ -114,6 +114,7 @@ test.concurrent(
 		);
 		if (!repointOperation) throw new Error("expected a repoint op");
 		const repointed = await repointLicensePoolForPage({
+			recordChanges: async () => {},
 			db: ctx.db,
 			scope: patch.scope,
 			internalCustomerIds,
@@ -122,6 +123,7 @@ test.concurrent(
 		expect(repointed.repointedPools).toBe(1);
 
 		const result = await addLicenseEntitlementsForPage({
+			recordChanges: async () => {},
 			db: ctx.db,
 			scope: patch.scope,
 			internalCustomerIds,
@@ -155,6 +157,7 @@ test.concurrent(
 
 		// Replay over the paginated path: per-batch dedup still holds.
 		const replayRepoint = await repointLicensePoolForPage({
+			recordChanges: async () => {},
 			db: ctx.db,
 			scope: patch.scope,
 			internalCustomerIds,
@@ -163,6 +166,7 @@ test.concurrent(
 		expect(replayRepoint.repointedPools).toBe(0);
 
 		const replay = await addLicenseEntitlementsForPage({
+			recordChanges: async () => {},
 			db: ctx.db,
 			scope: patch.scope,
 			internalCustomerIds,

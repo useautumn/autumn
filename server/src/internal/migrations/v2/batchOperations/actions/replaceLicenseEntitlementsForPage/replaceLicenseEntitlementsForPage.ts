@@ -4,6 +4,7 @@ import {
 	isResettingEntitlement,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import {
 	computeCustomerEntitlementInitialState,
 	computeCustomerEntitlementPatch,
@@ -120,6 +121,7 @@ const toRemovedItem = ({
  */
 export const replaceLicenseEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	features,
 	scope,
 	internalCustomerIds,
@@ -130,6 +132,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 	maxDistinctEntitlements,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -181,6 +184,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 
 	await iterateCustomerProductPages({
 		db,
+		recordChanges,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
 			transaction,

@@ -1,4 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "../../execute/utils/batchMigrationExecutionConstants.js";
 import {
@@ -18,12 +19,14 @@ export type RepointLicensePoolForPageResult = LicenseOpPageResult & {
  * per batch, which would mutate before the ceiling assertion. */
 export const repointLicensePoolForPage = async ({
 	db,
+	recordChanges,
 	scope,
 	internalCustomerIds,
 	operation,
 	phases,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	scope: OperationScope;
 	internalCustomerIds: string[];
 	operation: BatchMigrationRepointLicensePoolOp;
@@ -35,14 +38,22 @@ export const repointLicensePoolForPage = async ({
 		run: () =>
 			withStatementTimeout(
 				db,
-				(transaction) =>
-					repointLicensePoolRows({
+				async (transaction) => {
+					const repointed = await repointLicensePoolRows({
 						db: transaction,
 						internalCustomerIds,
 						scope,
 						planLicenseId: operation.planLicenseId,
 						licensePlanId: operation.licensePlanId,
-					}),
+					});
+					await recordChanges({
+						db: transaction,
+						changes: {
+							repointedPoolCustomerIds: [...repointed.internalCustomerIds],
+						},
+					});
+					return repointed;
+				},
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				{ forceCustomPlan: true },
 			),

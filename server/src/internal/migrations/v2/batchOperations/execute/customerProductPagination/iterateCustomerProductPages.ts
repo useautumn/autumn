@@ -1,5 +1,9 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
+import type {
+	BatchMigrationChanges,
+	RecordBatchMigrationChanges,
+} from "../types/batchMigrationChanges.js";
 import {
 	BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE,
 	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
@@ -11,18 +15,17 @@ import {
  * call. The rows a call returns drive the cursor; a short page ends the
  * iteration.
  *
- * Partial iterations are safe by design: every mutation is dedup-idempotent
- * and the customer page's claims stay `running` until the marks land, so a
- * failure keeps committed pages, aborts only the current one, and a replay
- * converges.
+ * Each batch records its changes on its customers' item runs before COMMIT,
+ * so a failure keeps committed batches with their record and a replay converges.
  */
 export const iterateCustomerProductPages = async <
 	Row extends { customerProductId: string },
-	Result,
+	Result extends BatchMigrationChanges,
 >({
 	db,
 	pageSize,
 	executePage,
+	recordChanges,
 	onCommit,
 }: {
 	db: DrizzleCli;
@@ -37,6 +40,7 @@ export const iterateCustomerProductPages = async <
 		limit: number;
 		assertWithinCeiling: (selectedCount: number) => void;
 	}) => Promise<{ rows: Row[]; result: Result }>;
+	recordChanges: RecordBatchMigrationChanges;
 	/** Publishes a batch's result only once its transaction has committed. */
 	onCommit: (result: Result) => void;
 }): Promise<{ rowCount: number }> => {
@@ -53,13 +57,16 @@ export const iterateCustomerProductPages = async <
 	while (true) {
 		const { rows, result } = await withStatementTimeout(
 			db,
-			(transaction) =>
-				executePage({
+			async (transaction) => {
+				const page = await executePage({
 					transaction,
 					afterCustomerProductId,
 					limit: pageSize,
 					assertWithinCeiling,
-				}),
+				});
+				await recordChanges({ db: transaction, changes: page.result });
+				return page;
+			},
 			BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 			{ forceCustomPlan: true },
 		);
