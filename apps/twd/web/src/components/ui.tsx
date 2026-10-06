@@ -306,14 +306,22 @@ export const Tooltip = ({
 	content,
 	children,
 	side = "top",
+	align,
+	className,
 }: {
 	content: ReactNode;
 	children: ReactElement;
 	side?: "top" | "bottom" | "left" | "right";
+	align?: "start" | "center" | "end";
+	className?: string;
 }) => (
 	<AutumnTooltip delayDuration={150}>
 		<TooltipTrigger render={children} />
-		<TooltipContent side={side} className="max-w-sm">
+		<TooltipContent
+			side={side}
+			align={align}
+			className={cn("max-w-sm", className)}
+		>
 			{content}
 		</TooltipContent>
 	</AutumnTooltip>
