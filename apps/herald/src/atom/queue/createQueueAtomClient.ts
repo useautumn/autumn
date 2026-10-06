@@ -1,5 +1,6 @@
 import {
 	ATOM_PUSH_MAX_BYTES,
+	type AtomPushMessage,
 	AtomPushType,
 	atomPushMessageToPayload,
 } from "@autumn/byoc";
@@ -17,26 +18,21 @@ type QueueAtomClientContext = {
 
 const push = async ({
 	ctx,
-	atomId,
-	type,
-	readAt,
-	body,
+	message,
 	sendOverHttp,
 }: {
 	ctx: QueueAtomClientContext;
-	atomId: string | null;
-	type: AtomPushType;
-	readAt: number;
-	body: unknown;
+	message: AtomPushMessage;
 	sendOverHttp: () => Promise<void>;
 }): Promise<void> => {
-	const payload = atomPushMessageToPayload({
-		message: { type, atomId, readAt, body },
-	});
+	const payload = atomPushMessageToPayload({ message });
 	const bytes = Buffer.byteLength(payload);
 	if (bytes <= ATOM_PUSH_MAX_BYTES) return ctx.pushQueue.send({ payload });
 	ctx.logger.warn(
-		{ type: "herald_atom_push_oversized", data: { pushType: type, bytes } },
+		{
+			type: "herald_atom_push_oversized",
+			data: { pushType: message.type, bytes },
+		},
 		"A push is too big for the Atom's queue; it goes over HTTP",
 	);
 	return sendOverHttp();
@@ -53,19 +49,25 @@ export const createQueueAtomClient = ({
 	setSubject: ({ body }) =>
 		push({
 			ctx,
-			atomId,
-			type: AtomPushType.SetSubject,
-			readAt: body.read_at,
-			body,
+			message: {
+				type: AtomPushType.SetSubject,
+				atomId,
+				customerId: body.state.identity.customerId,
+				readAt: body.read_at,
+				body,
+			},
 			sendOverHttp: () => ctx.http.setSubject({ body }),
 		}),
 	setCatalog: ({ rows, readAt }) =>
 		push({
 			ctx,
-			atomId,
-			type: AtomPushType.SetCatalog,
-			readAt,
-			body: toAtomCatalogBody({ rows, readAt }),
+			message: {
+				type: AtomPushType.SetCatalog,
+				atomId,
+				customerId: null,
+				readAt,
+				body: toAtomCatalogBody({ rows, readAt }),
+			},
 			sendOverHttp: () => ctx.http.setCatalog({ rows, readAt }),
 		}),
 });

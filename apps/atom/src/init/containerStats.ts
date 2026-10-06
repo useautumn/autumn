@@ -7,6 +7,8 @@ const STATS_READ_EVERY_MS = 1000;
 /** cgroup v2 usage of the whole container; a limit is null when unset ("max") or unreadable. */
 export type ContainerStats = {
 	cpuUsageSeconds: number | null;
+	/** Cores the whole container used since the previous read; null on the first. */
+	cpuCores: number | null;
 	/** Cumulative time the CPU limit held the container back: rising at below-limit usage means bursts hit the quota. */
 	cpuThrottledSeconds: number | null;
 	cpuLimitCores: number | null;
@@ -101,10 +103,20 @@ export const createContainerStatsReader = ({
 
 	return () => {
 		if (stats && clock() - readAt < STATS_READ_EVERY_MS) return stats;
+		const previous = stats ? { readAt, usage: stats.cpuUsageSeconds } : null;
 		readAt = clock();
 		const cpuStat = readText(join(cgroupDir, "cpu.stat"));
+		const cpuUsageSeconds = readCpuStatSeconds({
+			cpuStat,
+			field: "usage_usec",
+		});
 		stats = {
-			cpuUsageSeconds: readCpuStatSeconds({ cpuStat, field: "usage_usec" }),
+			cpuUsageSeconds,
+			cpuCores:
+				previous?.usage != null && cpuUsageSeconds !== null
+					? (cpuUsageSeconds - previous.usage) /
+						((readAt - previous.readAt) / 1000)
+					: null,
 			cpuThrottledSeconds: readCpuStatSeconds({
 				cpuStat,
 				field: "throttled_usec",

@@ -14,6 +14,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	storedSubjectWith,
+	subjectPushOf,
 } from "../utils/atomFixtures.js";
 
 const opened: Auth[] = [];
@@ -47,7 +48,7 @@ const storeCustomer = async ({
 	await auth
 		.authorize({ token })
 		?.processorFor({ customerId: "cus_1" })
-		.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		.setSubject(subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }));
 };
 const checkCustomer = async ({
 	auth,

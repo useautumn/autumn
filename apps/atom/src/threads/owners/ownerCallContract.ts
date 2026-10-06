@@ -1,15 +1,11 @@
 import { type ApiVersion, ApiVersionClass } from "@autumn/shared";
+import { InvalidPushError } from "../../lib/contracts/invalidPushError.js";
 import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
-import type { StoredSubject } from "../../state/types/storedSubject.js";
-import type {
-	CheckRequestOnWire,
-	OwnerReply,
-	StoredSubjectOnWire,
-} from "./types/ownerCall.js";
+import type { CheckRequestOnWire, OwnerReply } from "./types/ownerCall.js";
 
 /** One instance per version on the owner: building one sorts the version registry. */
 const apiVersions = new Map<ApiVersion, ApiVersionClass>();
@@ -40,21 +36,6 @@ export const wireToCheckRequest = ({
 	apiVersion: request.apiVersion ? apiVersionOf(request.apiVersion) : null,
 });
 
-export const storedSubjectToWire = ({
-	subject,
-}: {
-	subject: StoredSubject;
-}): StoredSubjectOnWire => ({
-	...subject,
-	logOffset: subject.logOffset.toString(),
-});
-
-export const wireToStoredSubject = ({
-	subject,
-}: {
-	subject: StoredSubjectOnWire;
-}): StoredSubject => ({ ...subject, logOffset: BigInt(subject.logOffset) });
-
 export const errorToReply = ({
 	id,
 	error,
@@ -65,17 +46,21 @@ export const errorToReply = ({
 	id,
 	ok: false,
 	cannotAnswer: error instanceof CannotAnswerError ? error.reason : null,
+	invalid: error instanceof InvalidPushError,
 	message: error instanceof Error ? error.message : String(error),
 });
 
-/** The owner's failure, thrown again on the caller's thread: a check it cannot answer is still forwarded. */
+/** The owner's failure, thrown again on the caller's thread: a check it cannot answer is still forwarded, a bad push still refused. */
 export const replyToError = ({
 	cannotAnswer,
+	invalid,
 	message,
 }: {
 	cannotAnswer: ForwardReason | null;
+	invalid: boolean;
 	message: string;
-}): Error =>
-	cannotAnswer
-		? new CannotAnswerError({ reason: cannotAnswer })
-		: new Error(message);
+}): Error => {
+	if (cannotAnswer) return new CannotAnswerError({ reason: cannotAnswer });
+	if (invalid) return new InvalidPushError(message);
+	return new Error(message);
+};

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	ATOM_PUSH_MAX_BYTES,
 	AtomPushType,
-	payloadToAtomPushMessage,
+	payloadToQueuedAtomPush,
 } from "@autumn/byoc";
 import { createQueueAtomClient } from "../../../src/atom/queue/createQueueAtomClient.js";
 import type {
@@ -54,18 +54,19 @@ const createClient = () => {
 };
 
 describe("queue Atom client", () => {
-	test("a subject is queued as the Atom will read it: its folder, read time and body", async () => {
+	test("a subject is queued as the Atom will read it: its folder, customer, read time and body", async () => {
 		const { client, queued, overHttp } = createClient();
 		const body = subjectBody();
 
 		await client.setSubject({ body });
 
 		expect(overHttp).toEqual([]);
-		expect(payloadToAtomPushMessage({ payload: queued[0] as string })).toEqual({
+		expect(payloadToQueuedAtomPush({ payload: queued[0] as string })).toEqual({
 			type: AtomPushType.SetSubject,
 			atomId: "org_1.sandbox",
+			customerId: "cus_1",
 			readAt: 1700,
-			body,
+			body: JSON.stringify(body),
 		});
 	});
 
@@ -74,11 +75,12 @@ describe("queue Atom client", () => {
 
 		await client.setCatalog({ rows: [], readAt: 1800 });
 
-		expect(payloadToAtomPushMessage({ payload: queued[0] as string })).toEqual({
+		expect(payloadToQueuedAtomPush({ payload: queued[0] as string })).toEqual({
 			type: AtomPushType.SetCatalog,
 			atomId: "org_1.sandbox",
+			customerId: null,
 			readAt: 1800,
-			body: { rows: [], read_at: 1800 },
+			body: JSON.stringify({ rows: [], read_at: 1800 }),
 		});
 	});
 

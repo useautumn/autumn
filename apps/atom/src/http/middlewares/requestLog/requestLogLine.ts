@@ -12,10 +12,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** Who a request was about, read from its body: a check names the customer at the top, a push inside its state. */
 export const requestFieldsOf = ({
 	body,
+	routedCustomerId,
 }: {
 	body: unknown;
+	/** A subject push's customer, sent beside a body left unparsed here. */
+	routedCustomerId?: string;
 }): Record<string, unknown> => {
-	if (!isRecord(body)) return {};
+	if (!isRecord(body))
+		return routedCustomerId ? { customer_id: routedCustomerId } : {};
 	const identity = isRecord(body.state) ? body.state.identity : undefined;
 	const named = isRecord(identity)
 		? { customer_id: identity.customerId, entity_id: identity.entityId }

@@ -1,9 +1,5 @@
 import type { Auth } from "../../auth/types/auth.js";
-import {
-	errorToReply,
-	wireToCheckRequest,
-	wireToStoredSubject,
-} from "./ownerCallContract.js";
+import { errorToReply, wireToCheckRequest } from "./ownerCallContract.js";
 import type { OwnerCall } from "./types/ownerCall.js";
 
 type OwnerContext = { auth: Pick<Auth, "slotsFor"> };
@@ -20,11 +16,10 @@ const runOwnerCall = async ({
 	if (!slots) throw new Error(`This Atom holds no folder ${call.atomId}`);
 	if (call.type === "setCatalog") return slots.setCatalog(call.catalog);
 	if (call.type === "installCatalog") return slots.installCatalog(call.catalog);
-	if (call.type === "setSubject") {
-		const subject = wireToStoredSubject({ subject: call.subject });
-		const { customerId } = subject.state.identity;
-		return slots.processorFor({ customerId }).setSubject({ subject });
-	}
+	if (call.type === "setSubject")
+		return slots
+			.processorFor({ customerId: call.customerId })
+			.setSubject({ customerId: call.customerId, body: call.body });
 	const request = wireToCheckRequest({ request: call.request });
 	return slots
 		.processorFor({ customerId: request.params.customer_id })
@@ -39,8 +34,11 @@ export const answerOwnerCalls = ({
 	ctx: OwnerContext;
 	port: MessagePort;
 }): void => {
-	async function answer(event: MessageEvent<string>): Promise<void> {
-		const call: OwnerCall = JSON.parse(event.data);
+	async function answer(
+		event: MessageEvent<string | OwnerCall>,
+	): Promise<void> {
+		const call: OwnerCall =
+			typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 		try {
 			const value = await runOwnerCall({ ctx, call });
 			port.postMessage({ id: call.id, ok: true, value });
