@@ -214,6 +214,8 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       BUMP_BRANCH: bot/bump-autumn-js
+      # Off main (dry-run verification) the bump targets the publishing branch itself.
+      BUMP_BASE: ${{ github.ref_name == 'main' && 'dev' || github.ref_name }}
       PACKAGES: ${{ needs.prepare.outputs.packages }}
     steps:
       - name: Create app token
@@ -230,10 +232,10 @@ jobs:
           path: publisher
           sparse-checkout: scripts/release
 
-      - name: Checkout dev
+      - name: Checkout ${{ env.BUMP_BASE }}
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ env.BUMP_BASE }}
           path: dev
           token: ${{ steps.app-token.outputs.token }}
 
@@ -270,7 +272,7 @@ jobs:
             echo "dev already pins autumn-js@${VERSION}."
             exit 0
           fi
-          EXISTING=$(gh pr list --head "$BUMP_BRANCH" --base dev --state open --json number --jq '.[0].number // empty')
+          EXISTING=$(gh pr list --head "$BUMP_BRANCH" --base "$BUMP_BASE" --state open --json number --jq '.[0].number // empty')
           if [ "$DRY_RUN" = "true" ]; then
             echo "Dry run: would ${EXISTING:+update #}${EXISTING:-open a PR} on ${BUMP_BRANCH} bumping autumn-js to ${VERSION}."
             exit 0
@@ -286,5 +288,5 @@ jobs:
           if [ -n "$EXISTING" ]; then
             gh pr edit "$EXISTING" --title "$TITLE" --body "$BODY"
           else
-            gh pr create --base dev --head "$BUMP_BRANCH" --title "$TITLE" --body "$BODY"
+            gh pr create --base "$BUMP_BASE" --head "$BUMP_BRANCH" --title "$TITLE" --body "$BODY"
           fi
