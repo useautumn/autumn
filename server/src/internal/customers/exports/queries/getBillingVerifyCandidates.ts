@@ -1,6 +1,26 @@
-import { type AppEnv, customerProducts, customers } from "@autumn/shared";
-import { and, eq, gt, inArray, min, or, sql } from "drizzle-orm";
+import {
+	type AppEnv,
+	type CustomerExportSnapshot,
+	customerProducts,
+	customers,
+} from "@autumn/shared";
+import {
+	and,
+	eq,
+	exists,
+	gt,
+	inArray,
+	isNotNull,
+	min,
+	or,
+	sql,
+} from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	type CustomerExportScalarRow,
+	customerExportScalarColumns,
+	whereCustomerExportPopulation,
+} from "./getCustomerExportScalars.js";
 
 /** The oldest customer bounds how far back the Stripe sweep must reach. */
 export const getEarliestCustomerCreatedAt = async ({
@@ -20,48 +40,78 @@ export const getEarliestCustomerCreatedAt = async ({
 	return rows[0]?.createdAt ?? null;
 };
 
-/** Customers holding a plan tied to a Stripe subscription or schedule. */
-export const getStripeLinkedCustomerIds = async ({
-	db,
-	internalCustomerIds,
-}: {
+type CustomerExportPopulationScope = {
 	db: DrizzleCli;
-	internalCustomerIds: string[];
-}): Promise<Set<string>> => {
-	if (internalCustomerIds.length === 0) return new Set();
+	orgId: string;
+	env: AppEnv;
+	snapshot: CustomerExportSnapshot;
+	upperBoundInternalId: string;
+	createdAtCutoff: number;
+};
 
-	const rows = await db
-		.selectDistinct({
-			internalCustomerId: customerProducts.internal_customer_id,
-		})
-		.from(customerProducts)
+/** Stripe customers in the population holding a plan tied to a Stripe subscription or schedule. */
+export const getStripeLinkedCandidates = async ({
+	db,
+	...scope
+}: CustomerExportPopulationScope): Promise<CustomerExportScalarRow[]> =>
+	await db
+		.select(customerExportScalarColumns)
+		.from(customers)
 		.where(
 			and(
-				inArray(customerProducts.internal_customer_id, internalCustomerIds),
-				or(
-					gt(sql`cardinality(${customerProducts.subscription_ids})`, 0),
-					gt(sql`cardinality(${customerProducts.scheduled_ids})`, 0),
+				whereCustomerExportPopulation(scope),
+				isNotNull(sql`${customers.processor}->>'id'`),
+				exists(
+					db
+						.select({ one: sql`1` })
+						.from(customerProducts)
+						.where(
+							and(
+								eq(
+									customerProducts.internal_customer_id,
+									customers.internal_id,
+								),
+								or(
+									gt(sql`cardinality(${customerProducts.subscription_ids})`, 0),
+									gt(sql`cardinality(${customerProducts.scheduled_ids})`, 0),
+								),
+							),
+						),
 				),
 			),
 		);
 
-	return new Set(rows.map((row) => row.internalCustomerId));
+/** Customers in the population pointing at any of these Stripe customer ids. */
+export const getCandidatesByStripeCustomerIds = async ({
+	db,
+	stripeCustomerIds,
+	...scope
+}: CustomerExportPopulationScope & {
+	stripeCustomerIds: string[];
+}): Promise<CustomerExportScalarRow[]> => {
+	if (stripeCustomerIds.length === 0) return [];
+
+	return await db
+		.select(customerExportScalarColumns)
+		.from(customers)
+		.where(
+			and(
+				whereCustomerExportPopulation(scope),
+				inArray(sql`${customers.processor}->>'id'`, stripeCustomerIds),
+			),
+		);
 };
 
-/** Stripe customer ids that more than one Autumn customer points at. */
+/** Stripe customer ids that more than one Autumn customer in the org points at. */
 export const getSharedStripeCustomerIds = async ({
 	db,
 	orgId,
 	env,
-	stripeCustomerIds,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
-	stripeCustomerIds: string[];
 }): Promise<Set<string>> => {
-	if (stripeCustomerIds.length === 0) return new Set();
-
 	const stripeCustomerId = sql<string>`${customers.processor}->>'id'`;
 	const rows = await db
 		.select({ stripeCustomerId })
@@ -70,7 +120,7 @@ export const getSharedStripeCustomerIds = async ({
 			and(
 				eq(customers.org_id, orgId),
 				eq(customers.env, env),
-				inArray(stripeCustomerId, stripeCustomerIds),
+				isNotNull(stripeCustomerId),
 			),
 		)
 		.groupBy(stripeCustomerId)

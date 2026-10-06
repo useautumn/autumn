@@ -9,6 +9,7 @@ import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/exe
 import { createRatePacer, type RatePacer } from "@/utils/createRatePacer.js";
 import { billingVerifyExportConfig } from "../billingVerifyExportConfig.js";
 import type { BillingVerifySweep } from "../setupBillingVerifySweep.js";
+import { toBatches } from "../toBatches.js";
 import { findPossibleMatches } from "./findPossibleMatches.js";
 import { findUnlinkedStripeCustomerIds } from "./findUnlinkedStripeCustomerIds.js";
 import {
@@ -18,7 +19,6 @@ import {
 	orphanToExportRow,
 } from "./orphanToExportRow.js";
 import { readOrphanedStripeCustomer } from "./readOrphanedStripeCustomer.js";
-import { toBatches } from "./toBatches.js";
 
 type OrphanRead =
 	| { orphan: OrphanedStripeCustomer | null }
@@ -111,8 +111,8 @@ const orphanBatchToExportRows = async ({
 	];
 };
 
-/** Run after the walk: whatever the sweep still holds belongs to a Stripe
- * customer no walked Autumn customer pointed at. Yields one batch of rows at a time. */
+/** Run after the candidates: whatever the sweep still holds belongs to a Stripe
+ * customer no candidate pointed at. Yields one batch of rows at a time. */
 export const orphanedSubscriptionsToExportRows = async function* ({
 	ctx,
 	sweep,

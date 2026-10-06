@@ -24,6 +24,39 @@ export type CustomerExportScalarRow = {
 	processor: { id?: string } | null;
 };
 
+export const customerExportScalarColumns = {
+	internal_id: customers.internal_id,
+	id: customers.id,
+	name: customers.name,
+	email: customers.email,
+	processor: customers.processor,
+};
+
+/** Every read of an export's population agrees on these bounds. */
+export const whereCustomerExportPopulation = ({
+	orgId,
+	env,
+	snapshot,
+	upperBoundInternalId,
+	createdAtCutoff,
+}: {
+	orgId: string;
+	env: AppEnv;
+	snapshot: CustomerExportSnapshot;
+	upperBoundInternalId: string;
+	createdAtCutoff: number;
+}) =>
+	and(
+		buildSearchPredicates({
+			orgId,
+			env,
+			search: snapshot.search,
+			filters: snapshot.filters,
+		}).whereRaw,
+		lte(customers.created_at, createdAtCutoff),
+		lte(customers.internal_id, upperBoundInternalId),
+	);
+
 export const getCustomerExportUpperBound = async ({
 	db,
 	orgId,
@@ -82,16 +115,13 @@ export const countCustomerExportRows = async ({
 		.select({ total_count: sql<string>`COUNT(*)`.as("total_count") })
 		.from(customers)
 		.where(
-			and(
-				buildSearchPredicates({
-					orgId,
-					env,
-					search: snapshot.search,
-					filters: snapshot.filters,
-				}).whereRaw,
-				lte(customers.created_at, createdAtCutoff),
-				lte(customers.internal_id, upperBoundInternalId),
-			),
+			whereCustomerExportPopulation({
+				orgId,
+				env,
+				snapshot,
+				upperBoundInternalId,
+				createdAtCutoff,
+			}),
 		);
 
 	const rows = await db.execute<{ total_count: number | string }>(
@@ -154,24 +184,17 @@ export const buildCustomerExportScalarsQuery = ({
 	limit?: number;
 }) =>
 	db
-		.select({
-			internal_id: customers.internal_id,
-			id: customers.id,
-			name: customers.name,
-			email: customers.email,
-			processor: customers.processor,
-		})
+		.select(customerExportScalarColumns)
 		.from(customers)
 		.where(
 			and(
-				buildSearchPredicates({
+				whereCustomerExportPopulation({
 					orgId,
 					env,
-					search: snapshot.search,
-					filters: snapshot.filters,
-				}).whereRaw,
-				lte(customers.created_at, createdAtCutoff),
-				lte(customers.internal_id, upperBoundInternalId),
+					snapshot,
+					upperBoundInternalId,
+					createdAtCutoff,
+				}),
 				// Both terms are load-bearing: the row value keeps the planner off
 				// customers_pkey (which filters 7.1M other orgs' rows on the last
 				// pages), and the scalar bound is what the index can actually seek on.

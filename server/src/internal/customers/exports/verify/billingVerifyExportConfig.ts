@@ -18,6 +18,10 @@ type BillingVerifyExportConfig = {
 		retryDelayMs: number;
 		maxRetryDelayMs: number;
 	};
+	candidates: {
+		lookupBatchSize: number;
+		timeoutMs: number;
+	};
 	stripeReader: {
 		maxMemoizedReads: number;
 		timeoutMs: number;
@@ -67,6 +71,12 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		attempts: 6,
 		retryDelayMs: 2_000,
 		maxRetryDelayMs: 30_000,
+	},
+	/** The shared-id aggregate and the linked-plan semi-join each read the whole
+	 * org once, so they get the slow replica lane's budget, not a customer's. */
+	candidates: {
+		lookupBatchSize: 1000,
+		timeoutMs: 60_000,
 	},
 	/** A memoized read is evicted only when its own deadline rejects it, so it
 	 * must expire well inside the customer deadline — otherwise the customer
