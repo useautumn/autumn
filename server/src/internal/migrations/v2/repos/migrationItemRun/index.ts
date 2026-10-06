@@ -3,7 +3,7 @@ import {
 	getCustomerMigrationItemRun,
 	getMigrationItemRun,
 } from "./getMigrationItemRun.js";
-import { listMigrationIdsWithLiveRuns } from "./listMigrationIdsWithLiveRuns.js";
+import { listItemRunCountRows } from "./listItemRunCountRows.js";
 import {
 	getMigrationItemRunCounts,
 	listMigrationItemRunCountsByRun,
@@ -22,8 +22,8 @@ export const migrationItemRunRepo = {
 	getCustomer: getCustomerMigrationItemRun,
 	getCounts: getMigrationItemRunCounts,
 	listCountsByRun: listMigrationItemRunCountsByRun,
+	listCountRows: listItemRunCountRows,
 	listForItems: listMigrationItemRunsForItems,
-	listIdsWithLiveRuns: listMigrationIdsWithLiveRuns,
 	markSucceeded: markMigrationItemRunSucceeded,
 	markSkipped: markMigrationItemRunSkipped,
 	markFailed: markMigrationItemRunFailed,
@@ -31,6 +31,7 @@ export const migrationItemRunRepo = {
 };
 
 export type { MigrationItemRunClaimBehavior } from "./claimMigrationItemRun.js";
+export type { MigrationItemRunCountRow } from "./listItemRunCountRows.js";
 export type {
 	MigrationItemRunCounts,
 	MigrationItemRunCountsByRun,

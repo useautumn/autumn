@@ -22,6 +22,7 @@ export const updateMigrationRun = async ({
 			| "status"
 			| "trigger_run_id"
 			| "error_message"
+			| "error_code"
 			| "started_at"
 			| "finished_at"
 		>

@@ -1,9 +1,8 @@
 import type { Migration, MigrationStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isTriggerConfigured } from "@/trigger/configureTrigger.js";
-import { migrationRepo, migrationRunRepo } from "../../repos/index.js";
-import { reconcileAbandonedRunsOnce } from "../migrationRun/reconcileAbandonedRunsOnce.js";
-import { resolveMigrationStatus } from "./resolveMigrationStatus.js";
+import { migrationRepo } from "../../repos/index.js";
+import { resolveMigrationStatusFromRunState } from "./resolveMigrationStatus.js";
+import { setupMigrationRunState } from "./setupMigrationRunState.js";
 
 type MigrationRef = Pick<Migration, "internal_id" | "id">;
 type MigrationStatusInfo = {
@@ -38,30 +37,18 @@ export const listMigrationStatuses = async ({
 }): Promise<Map<string, MigrationStatusInfo>> => {
 	if (migrations.length === 0) return new Map();
 
-	const [activeRuns, latestRunAllStatuses] = await Promise.all([
-		migrationRunRepo.list({ ctx, active: true }),
-		migrationRunRepo.listLatestRunAllStatuses({
-			ctx,
-			migrationInternalIds: migrations.map((m) => m.internal_id),
-		}),
-	]);
-
-	if (isTriggerConfigured()) {
-		void reconcileAbandonedRunsOnce({ ctx, runs: activeRuns });
-	}
-	const orgActiveRuns = activeRuns;
+	const runState = await setupMigrationRunState({
+		ctx,
+		migrationInternalIds: migrations.map((m) => m.internal_id),
+	});
 
 	const statuses = new Map<string, MigrationStatusInfo>();
 	for (const migration of migrations) {
-		const { status, blockedByMigrationInternalId } = resolveMigrationStatus({
-			migrationInternalId: migration.internal_id,
-			runs: orgActiveRuns.filter(
-				(run) => run.migration_internal_id === migration.internal_id,
-			),
-			orgActiveRuns,
-			latestRunAllStatus:
-				latestRunAllStatuses.get(migration.internal_id) ?? null,
-		});
+		const { status, blockedByMigrationInternalId } =
+			resolveMigrationStatusFromRunState({
+				migrationInternalId: migration.internal_id,
+				runState,
+			});
 		statuses.set(migration.internal_id, {
 			status,
 			blocked_by: blockedByMigrationInternalId

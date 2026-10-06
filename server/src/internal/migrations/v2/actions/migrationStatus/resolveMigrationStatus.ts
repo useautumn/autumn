@@ -3,11 +3,8 @@ import {
 	MigrationRunStatus,
 	MigrationStatus,
 } from "@autumn/shared";
-
-/** A Run All is a live run over the whole filter; `only_ids` and
- * `target_limit` runs never change status. */
-const isRunAll = (run: MigrationRun): boolean =>
-	!run.dry_run && run.only_ids === null && run.target_limit === null;
+import { isRunAll } from "../../utils/migrationRunKind.js";
+import type { MigrationRunState } from "./types/migrationRunState.js";
 
 const outcomeStatus = (status: MigrationRunStatus): MigrationStatus => {
 	if (status === MigrationRunStatus.Succeeded) return MigrationStatus.Run;
@@ -27,12 +24,10 @@ export const resolveMigrationStatus = ({
 	migrationInternalId,
 	runs,
 	orgActiveRuns,
-	latestRunAllStatus = null,
 }: {
 	migrationInternalId: string;
 	runs: MigrationRun[];
 	orgActiveRuns: MigrationRun[];
-	latestRunAllStatus?: MigrationRunStatus | null;
 }): {
 	status: MigrationStatus;
 	blockedByMigrationInternalId: string | null;
@@ -58,22 +53,36 @@ export const resolveMigrationStatus = ({
 			: { status: MigrationStatus.Running, blockedByMigrationInternalId: null };
 	}
 
-	const latestLocal = runAllRuns
+	const latestStartedRunAll = runAllRuns
 		.filter((run) => run.started_at !== null)
 		.reduce<MigrationRun | null>(
 			(latest, run) =>
 				latest === null || run.created_at > latest.created_at ? run : latest,
 			null,
 		);
-	const outcome = latestLocal?.status ?? latestRunAllStatus;
-	if (!outcome)
+	if (!latestStartedRunAll)
 		return {
 			status: MigrationStatus.Draft,
 			blockedByMigrationInternalId: null,
 		};
 
 	return {
-		status: outcomeStatus(outcome),
+		status: outcomeStatus(latestStartedRunAll.status),
 		blockedByMigrationInternalId: null,
 	};
 };
+
+export const resolveMigrationStatusFromRunState = ({
+	migrationInternalId,
+	runState: { orgActiveRuns, latestRuns },
+}: {
+	migrationInternalId: string;
+	runState: MigrationRunState;
+}) =>
+	resolveMigrationStatus({
+		migrationInternalId,
+		runs: [...orgActiveRuns, ...latestRuns].filter(
+			(run) => run.migration_internal_id === migrationInternalId,
+		),
+		orgActiveRuns,
+	});

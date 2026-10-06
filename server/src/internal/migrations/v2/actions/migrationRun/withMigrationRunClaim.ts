@@ -1,12 +1,14 @@
 import {
 	ErrCode,
 	type Migration,
+	MigrationRunErrorCode,
 	MigrationRunStatus,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
+import { classifyMigrationRunError } from "./classifyMigrationRunError.js";
 import {
 	type PersistTriggerRunId,
 	persistDispatchHandle,
@@ -20,10 +22,12 @@ const failRun = async ({
 	ctx,
 	migrationRunId,
 	message,
+	errorCode,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
 	message: string;
+	errorCode: MigrationRunErrorCode;
 }) =>
 	migrationRunRepo.update({
 		ctx,
@@ -31,6 +35,7 @@ const failRun = async ({
 		updates: {
 			status: MigrationRunStatus.Failed,
 			error_message: message,
+			error_code: errorCode,
 			finished_at: Date.now(),
 		},
 	});
@@ -99,6 +104,7 @@ export const withMigrationRunClaim = async ({
 			ctx,
 			migrationRunId: migrationRun.internal_id,
 			message: error instanceof Error ? error.message : String(error),
+			errorCode: classifyMigrationRunError({ error }),
 		});
 		throw error;
 	}
@@ -111,6 +117,7 @@ export const withMigrationRunClaim = async ({
 				ctx,
 				migrationRunId: migrationRun.internal_id,
 				message,
+				errorCode: MigrationRunErrorCode.DispatchFailed,
 			});
 			throw new RecaseError({
 				message,

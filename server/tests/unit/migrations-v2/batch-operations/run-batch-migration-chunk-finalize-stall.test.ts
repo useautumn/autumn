@@ -173,9 +173,13 @@ mock.module(cancelTokenModulePath, () => ({
 	isMigrationCancelRequested: async () => false,
 }));
 
-const { BatchMigrationStallError, runBatchMigrationChunk } = await import(
+const { runBatchMigrationChunk } = await import(
 	"@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js"
 );
+const { BatchMigrationCacheInvalidationError, BatchMigrationStallError } =
+	await import(
+		"@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js"
+	);
 
 afterAll(() => {
 	mock.module(claimModulePath, () => realClaim);
@@ -359,6 +363,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		expect(scenario.executedPages).toEqual([1]);
 		expect(scenario.invalidationStarts).toEqual([1]);
 		const error = expectStall({ outcome, phase: "finalize_caches" });
+		expect(error).toBeInstanceOf(BatchMigrationCacheInvalidationError);
 		expect(error.message).toContain("page 1");
 		expect(error.message).toContain("1 timed out");
 		expect(

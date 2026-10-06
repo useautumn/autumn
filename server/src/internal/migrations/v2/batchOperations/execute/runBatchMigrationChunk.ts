@@ -20,6 +20,11 @@ import {
 	createMigrationPageDb,
 	type MigrationPageDb,
 } from "./database/createMigrationPageDb.js";
+import {
+	BatchMigrationCacheInvalidationError,
+	BatchMigrationPageLimitError,
+	BatchMigrationStallError,
+} from "./errors/batchMigrationErrors.js";
 import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type {
@@ -55,17 +60,6 @@ export type BatchMigrationChunkTimeouts = {
 	/** Bounds the checkpoint writes made during recovery. */
 	recoveryWriteMs?: number;
 };
-
-/** A phase stopped making progress inside its budget. */
-export class BatchMigrationStallError extends Error {
-	readonly phase: string;
-
-	constructor({ phase, message }: { phase: string; message: string }) {
-		super(message);
-		this.name = "BatchMigrationStallError";
-		this.phase = phase;
-	}
-}
 
 type PageStage = "claim" | "execute" | "finalize" | "settle";
 
@@ -224,9 +218,9 @@ export const runBatchMigrationChunk = async ({
 			}
 
 			if (summary.pages >= BATCH_MIGRATION_MAX_PAGES)
-				throw new Error(
-					`batch-migration: exceeded ${BATCH_MIGRATION_MAX_PAGES} pages — aborting run`,
-				);
+				throw new BatchMigrationPageLimitError({
+					maxPages: BATCH_MIGRATION_MAX_PAGES,
+				});
 
 			const pageAfterInternalId = cursor ?? undefined;
 			const pageNumber = summary.pages + 1;
@@ -316,8 +310,7 @@ export const runBatchMigrationChunk = async ({
 		const timedOut = cachesDrained.failures.filter(
 			(failure) => failure.timedOut,
 		).length;
-		throw new BatchMigrationStallError({
-			phase: "finalize_caches",
+		throw new BatchMigrationCacheInvalidationError({
 			message: `batch-migration: cache invalidation did not complete for ${cachesDrained.failures.length} page(s) (${timedOut} timed out; ${cachesDrained.failures.map((failure) => failure.label).join(", ")}); checkpoints revoked for retry where the revoke succeeded (see per-page logs)`,
 		});
 	}

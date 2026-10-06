@@ -1,6 +1,7 @@
 import type {
 	Migration,
 	MigrationFilter,
+	MigrationListSummary,
 	MigrationStatus,
 	Operations,
 } from "@autumn/shared";
@@ -14,6 +15,7 @@ export type MigrationWithRunInfo = Migration & {
 	has_live_runs: boolean;
 	/** Whether a plain run of this migration takes the batch lane. */
 	batch_eligible: boolean;
+	summary: MigrationListSummary;
 };
 export type RetryableMigrationItemRunStatus = "failed" | "skipped";
 
@@ -30,7 +32,11 @@ interface PrepareResponse {
 	warnings: string[];
 }
 
-export const useMigrationsQuery = () => {
+export const useMigrationsQuery = ({
+	pollWhileActiveMs,
+}: {
+	pollWhileActiveMs?: number;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const queryClient = useQueryClient();
@@ -46,6 +52,14 @@ export const useMigrationsQuery = () => {
 			}>("/migrations.list");
 			return data;
 		},
+		refetchInterval: (query) =>
+			pollWhileActiveMs &&
+			query.state.data?.list.some(
+				(migration) =>
+					migration.status === "waiting" || migration.status === "running",
+			)
+				? pollWhileActiveMs
+				: false,
 	});
 
 	const invalidate = () => queryClient.invalidateQueries({ queryKey });
