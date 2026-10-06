@@ -93,6 +93,7 @@ export function createHerald({
 		...ctx,
 		db: ctx.postgres.db,
 		shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
+		cachePushCoalesceMs: env.HERALD_CACHE_PUSH_COALESCE_MS,
 	};
 	const jobNames = createHeraldConsumers({ ctx: consumersCtx }).map(
 		(job) => job.name,
