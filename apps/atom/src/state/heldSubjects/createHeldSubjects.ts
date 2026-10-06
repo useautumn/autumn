@@ -9,6 +9,8 @@ export const createHeldSubjects = ({
 	// A Map iterates in insertion order, so re-inserting on each read keeps the least recent first.
 	const held = new Map<string, HeldSubject>();
 	let bytes = 0;
+	let lookups = 0;
+	let misses = 0;
 
 	function drop(key: string): void {
 		const found = held.get(key);
@@ -18,8 +20,12 @@ export const createHeldSubjects = ({
 	}
 
 	function get(key: string): HeldSubject | undefined {
+		lookups += 1;
 		const found = held.get(key);
-		if (!found) return undefined;
+		if (!found) {
+			misses += 1;
+			return undefined;
+		}
 		held.delete(key);
 		held.set(key, found);
 		return found;
@@ -43,8 +49,17 @@ export const createHeldSubjects = ({
 		get,
 		hold,
 		dropPrefix,
+		get size() {
+			return held.size;
+		},
 		get bytes() {
 			return bytes;
+		},
+		get lookups() {
+			return lookups;
+		},
+		get misses() {
+			return misses;
 		},
 	};
 };

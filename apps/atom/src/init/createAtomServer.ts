@@ -1,6 +1,7 @@
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
+import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
 	AtomServer,
 	AtomServerConfig,
@@ -23,6 +24,7 @@ export const createAtomServer = ({
 					pushQueue: getPushQueue({ env }),
 					auth: ctx.auth,
 					logger: ctx.logger,
+					counters: ctx.counters,
 				},
 			})
 		: undefined;
@@ -32,8 +34,13 @@ export const createAtomServer = ({
 			multiTenant: ctx.multiTenant,
 			logger: ctx.logger,
 			health: ctx.health,
+			counters: ctx.counters,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		},
+	});
+	const statsTick = startThreadStatsTick({
+		counters: ctx.counters,
+		held: ctx.held,
 	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
 	let receiving: Promise<void> | undefined;
@@ -58,6 +65,7 @@ export const createAtomServer = ({
 	async function stop(): Promise<void> {
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), receiving]);
+		statsTick.stop();
 		ctx.auth.close();
 	}
 

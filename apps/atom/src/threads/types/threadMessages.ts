@@ -11,6 +11,8 @@ export type ThreadInit = {
 	bootedAt: string;
 	/** One Int32: how many threads the main thread has replaced, shared so any thread's /health reads it. */
 	restarts: SharedArrayBuffer;
+	/** Every thread's counters (see threadStats), shared the same way. */
+	stats: SharedArrayBuffer;
 };
 
 /** What the main thread tells a running thread. */

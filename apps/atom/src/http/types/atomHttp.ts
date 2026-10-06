@@ -3,6 +3,7 @@ import type { Auth } from "../../auth/types/auth.js";
 import type { AtomHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { Slots } from "../../slots/types/slots.js";
+import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 
 export type AtomHttpContext = {
 	auth: Auth;
@@ -10,6 +11,7 @@ export type AtomHttpContext = {
 	/** Where a request Atom does not answer itself is sent. */
 	autumnApiUrl: string;
 	health: AtomHealthSource;
+	counters: ThreadCounters;
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
 };

@@ -14,6 +14,10 @@ import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
+	createThreadStatsBuffer,
+	openThreadCounters,
+} from "../../../src/threads/stats/threadStats.js";
+import {
 	allSlotsOwnedHere,
 	freshHeld,
 	subjectBody,
@@ -23,10 +27,13 @@ const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
+const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
 const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
+	threadStats: THREAD_STATS,
 };
+const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -70,7 +77,13 @@ const createDeployedApp = () => {
 	const { logger, logged } = createLogger();
 	return {
 		app: createAtomApp({
-			ctx: { auth, logger, autumnApiUrl: AUTUMN_API_URL, health: HEALTH },
+			ctx: {
+				auth,
+				logger,
+				autumnApiUrl: AUTUMN_API_URL,
+				health: HEALTH,
+				counters,
+			},
 		}),
 		logged,
 	};
@@ -93,6 +106,7 @@ const createMultiTenantApp = () => {
 			multiTenant: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
+			counters,
 		},
 	});
 };
@@ -534,6 +548,24 @@ describe("the request line", () => {
 			res: null,
 		});
 		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
+	});
+
+	test("the health probe reports boot, restarts, the container and every thread's counters; a check counts", async () => {
+		const { app } = createDeployedApp();
+		const before = (await (await app.request("/health")).json()).threads[0]
+			.checks;
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await app.request("/v1/balances.check", checkMessages());
+
+		const health = await (await app.request("/health")).json();
+
+		expect(health).toMatchObject({
+			status: "alive",
+			bootedAt: HEALTH.bootedAt,
+			restarts: 0,
+			container: expect.any(Object),
+		});
+		expect(health.threads[0].checks).toBe(before + 1);
 	});
 
 	test("the health probe is not logged", async () => {

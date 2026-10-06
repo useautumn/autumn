@@ -7,6 +7,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../auth/types/auth.js";
 import { isUnreadableRequest } from "../lib/contracts/invalidPushError.js";
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
+import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
 
@@ -21,6 +22,7 @@ type PushReceiverContext = {
 	pushQueue: PushQueue;
 	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
+	counters?: Pick<ThreadCounters, "add">;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
@@ -61,6 +63,7 @@ const receivePush = async ({
 	ctx: PushReceiverContext;
 	message: PulledPush;
 }): Promise<boolean> => {
+	ctx.counters?.add("pushes");
 	try {
 		await applyPush({ ctx, push: payloadToQueuedAtomPush(message) });
 		return true;

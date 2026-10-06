@@ -1,6 +1,7 @@
 import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AtomServer } from "../init/types/atomServer.js";
+import { createThreadStatsBuffer } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
 	ThreadControl,
@@ -74,6 +75,7 @@ export const createAtomThreads = ({
 	const threads: (Worker | null)[] = Array(env.ATOM_THREADS).fill(null);
 	const bootedAt = new Date().toISOString();
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
 	let stopping = false;
 
 	/** Wired to every thread already running; those still to start wire themselves to it the same way. */
@@ -89,7 +91,7 @@ export const createAtomThreads = ({
 		const ready = readyOf({ worker });
 		send({
 			worker,
-			control: { type: "init", index, env, bootedAt, restarts },
+			control: { type: "init", index, env, bootedAt, restarts, stats },
 		});
 		threads.forEach((peer, peerIndex) => {
 			if (!peer || peerIndex === index) return;

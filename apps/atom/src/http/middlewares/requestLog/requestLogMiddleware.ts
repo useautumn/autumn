@@ -12,6 +12,12 @@ import {
 
 /** Answered for a load balancer's probe every second; nothing to learn from it. */
 const UNLOGGED_PATHS = new Set(["/health"]);
+/** What the thread counts for /health, by route. */
+const COUNTED_PATHS = {
+	"/v1/balances.check": "checks",
+	"/v1/subjects.set": "pushes",
+	"/v1/catalog.set": "pushes",
+} as const;
 
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
@@ -37,6 +43,9 @@ export function requestLogMiddleware({
 			context.res = await handleError(toError(cause), context);
 		}
 		if (UNLOGGED_PATHS.has(context.req.path)) return;
+		const counted =
+			COUNTED_PATHS[context.req.path as keyof typeof COUNTED_PATHS];
+		if (counted) ctx.counters.add(counted);
 
 		const statusCode = context.res.status;
 		const durationMs = Date.now() - startedAt;
