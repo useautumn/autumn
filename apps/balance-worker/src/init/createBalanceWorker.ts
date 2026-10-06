@@ -17,8 +17,18 @@ import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
+import {
+	createInlineHandler,
+	INLINE_ROUTES,
+} from "../http/handlers/inline/createInlineHandler.js";
+import { heldFailureOf } from "../http/handlers/inline/heldFailureOf.js";
+import { createInlineCounters } from "../http/handlers/inline/inlineCounters.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
 import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
+import {
+	commitSummaries,
+	logCommitWindows,
+} from "../logging/commitSummaries.js";
 import { createWorkerHealthReporter } from "../logging/createWorkerHealthReporter.js";
 import {
 	createDatabaseReporter,
@@ -151,6 +161,12 @@ export async function createBalanceWorker({
 		});
 		// The producer thread starts with the listener, before any partition runtime asks for a producer.
 		let producers: ThreadedProducers | null = null;
+		let drainThreadSignals:
+			| (() => {
+					threads: Record<string, number>;
+					latencyMs: Record<string, unknown>;
+			  })
+			| null = null;
 		function partitionProducer(
 			producerConfig: ProducerConfig,
 		): KafkaProducerClient {
@@ -241,6 +257,19 @@ export async function createBalanceWorker({
 			},
 		});
 
+		const inlineCounters = createInlineCounters();
+		const inlineHandler = createInlineHandler({
+			ctx: {
+				counters: inlineCounters,
+				ownership: partitions,
+				partitionResolver: resources.partitionResolver,
+				logger: dependencies.logger,
+				requestLog: {
+					successSampleRate: env.BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE,
+				},
+			},
+		});
+
 		/** A thread that died leaves the worker unable to serve or commit; the task is replaced. */
 		function stopForThreads({
 			cause,
@@ -266,6 +295,10 @@ export async function createBalanceWorker({
 					logger: dependencies.logger,
 					onFatal: stopForThreads,
 					onToken: logProducerThreadToken,
+					heldReplies: {
+						positions: commitPositions,
+						renderFailure: heldFailureOf,
+					},
 				},
 				config: {
 					http: {
@@ -275,6 +308,12 @@ export async function createBalanceWorker({
 						threads: threads.httpWorkers,
 						requestRingBytes: threads.requestRingBytes,
 						replyRingBytes: threads.replyRingBytes,
+						inline: {
+							routes: INLINE_ROUTES,
+							handler: inlineHandler,
+							commitCells: commitPositions.cells,
+							failureCounts: commitPositions.failureCounts,
+						},
 					},
 					producers: {
 						clientId: `balance-worker-producers-${crypto.randomUUID()}`,
@@ -288,6 +327,7 @@ export async function createBalanceWorker({
 				},
 			});
 			producers = started.producers;
+			drainThreadSignals = started.drainThreadSignals;
 			dependencies.logger.info(
 				`Balance worker listening at ${address.endpoint} through ${threads.httpWorkers} HTTP worker threads, partition producers on the producer thread; partition admission follows recovery`,
 			);
@@ -344,10 +384,28 @@ export async function createBalanceWorker({
 		}
 		async function probePostgres(): Promise<void> {
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
-			await resources.postgres.client`select 1`;
+			await resources.postgres.client.query("select 1");
+		}
+		/** Closes the window: its per-partition commit lines go out, and its signals join the summary line. */
+		function windowSignals() {
+			logCommitWindows({
+				ctx: { logger: dependencies.logger, summaries: commitSummaries },
+				config: {
+					deployment: env.BALANCE_WORKER_DEPLOYMENT,
+					endpoint: address.endpoint,
+				},
+			});
+			return {
+				inline: inlineCounters.drain(),
+				...drainThreadSignals?.(),
+			};
 		}
 		const stallMonitor = createEventLoopStallMonitor({
-			ctx: { logger: dependencies.logger, recorder: syncSections },
+			ctx: {
+				logger: dependencies.logger,
+				recorder: syncSections,
+				signals: windowSignals,
+			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
 				endpoint: address.endpoint,

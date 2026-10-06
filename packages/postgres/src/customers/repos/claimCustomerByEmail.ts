@@ -36,12 +36,13 @@ export const claimCustomerByEmail = async ({
 	customerId: string;
 	email: string;
 }): Promise<string | null> => {
+	const result = await ctx.db.execute(
+		claimCustomerByEmailSql({ ctx, customerId, email }),
+	);
 	const [claimed] = parseRows({
 		table: "customers",
 		schema: claimedRowSchema,
-		rows: await ctx.db.execute(
-			claimCustomerByEmailSql({ ctx, customerId, email }),
-		),
+		rows: result.rows,
 	});
 	return claimed?.internal_id ?? null;
 };

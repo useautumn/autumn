@@ -279,7 +279,7 @@ const slotHeartbeat =
 						postgres: async () => {
 							if (!resources.postgres.client)
 								throw new Error("No Postgres pool");
-							await resources.postgres.client`select 1`;
+							await resources.postgres.client.query("select 1");
 						},
 					},
 					logger,

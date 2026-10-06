@@ -31,8 +31,8 @@ import chalk from "chalk";
  * - Attach pro with prepaid messages AND prepaid words
  * - On Stripe checkout page, update quantity (messages line item)
  *
- * Note: completeStripeCheckoutForm only adjusts the first adjustable line item.
- * Words quantity remains as originally set.
+ * Note: completeStripeCheckoutForm adjusts the first adjustable line item, and
+ * checkout line item order isn't fixed, so only messages is adjustable.
  *
  * Expected Result:
  * - Messages reflects updated checkout quantity
@@ -89,7 +89,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 			{
 				feature_id: TestFeature.Words,
 				quantity: initialWordsQty,
-				adjustable: true,
 			},
 		],
 	});

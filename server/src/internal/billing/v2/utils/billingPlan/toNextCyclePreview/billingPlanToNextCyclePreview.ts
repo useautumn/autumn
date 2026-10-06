@@ -13,6 +13,7 @@ import {
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
+import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import {
 	billingPlanToNextCycleLineItems,
 	type NextCycleLineItemOptions,
@@ -237,10 +238,10 @@ export const billingPlanToNextCyclePreview = ({
 			priceFilters: { excludeOneOffPrices: true },
 		};
 
-		// A reset starts a fresh full cycle, so we don't credit the old plan's
-		// leftover time — mirrors proration_behavior "none" on the Stripe phase.
 		const keepsOldPlanCredit =
-			!event.resetsBillingCycle &&
+			phaseStartCreditsUnusedTime({
+				prorationBehavior: event.prorationBehavior,
+			}) &&
 			!outgoingPlansRunToBoundary({
 				outgoingCustomerProducts: event.outgoingCustomerProducts,
 				transitionMs: event.startsAtMs,

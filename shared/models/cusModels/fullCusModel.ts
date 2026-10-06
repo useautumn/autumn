@@ -1,5 +1,6 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
+import { PhaseProrationBehaviorSchema } from "../../api/billing/common/billingBehavior.js";
 import type { ApiUsageLimit } from "../../api/billingControls/usageLimit.js";
 import type { CustomerProductsPage } from "../../api/customers/cusPlans/listCustomerProductsParams.js";
 import {
@@ -33,6 +34,7 @@ export const FullCustomerSchedulePhaseSchema = z.object({
 	schedule_id: z.string(),
 	starts_at: z.number(),
 	customer_product_ids: z.array(z.string()),
+	proration_behavior: PhaseProrationBehaviorSchema.nullish(),
 	created_at: z.number(),
 });
 

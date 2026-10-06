@@ -19,5 +19,29 @@ export type HttpWorkerPoolScope = {
 		stopping: boolean;
 		failed: boolean;
 		flushScheduled: boolean;
+		/** Held replies too big for the ring, waiting here for their commit position. */
+		heldOnDecideThread: HeldOnDecideThread[];
+		health: HttpWorkerHealthCounts;
+		/** Every thread's latency histograms for the inline routes; see `latencyCells`. */
+		latencyCells: SharedArrayBuffer;
 	};
+};
+
+/** Counted per window and drained by the summary line. */
+export type HttpWorkerHealthCounts = {
+	/** Times a reply waited for a thread to read its full ring. */
+	ringFullWaits: number;
+	heldReplies: number;
+	/** Failure ranges published to the threads. */
+	failRanges: number;
+};
+
+export type HeldOnDecideThread = {
+	lane: HttpWorkerLane;
+	reqId: number;
+	partition: number;
+	seq: number;
+	status: number;
+	headers: [string, string][];
+	body: Uint8Array;
 };

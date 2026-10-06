@@ -86,21 +86,24 @@ export function CustomerExportJobList({
 		>
 			<Table.Container>
 				<Table.Content
+					className="[&_[data-slot=table-container]]:h-auto"
 					footer={
 						totalPages > 1 && (
 							<div className={TABLE_TRAY_FOOTER_CLASS}>
 								<span className="text-tertiary-foreground text-xs tabular-nums">
 									{totalExports} total
 								</span>
-								<CursorPagination
-									currentPage={page}
-									totalPages={totalPages}
-									canGoPrev={page > 1}
-									canGoNext={page < totalPages}
-									onPrev={() => onPageChange(page - 1)}
-									onNext={() => onPageChange(page + 1)}
-									disabled={isLoading}
-								/>
+								<div>
+									<CursorPagination
+										currentPage={page}
+										totalPages={totalPages}
+										canGoPrev={page > 1}
+										canGoNext={page < totalPages}
+										onPrev={() => onPageChange(page - 1)}
+										onNext={() => onPageChange(page + 1)}
+										disabled={isLoading}
+									/>
+								</div>
 							</div>
 						)
 					}

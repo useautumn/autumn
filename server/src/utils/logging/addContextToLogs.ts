@@ -4,6 +4,7 @@ import type {
 	LogAppContext,
 	LogRedisData,
 	LogRequestContext,
+	LogRevenueCatEventContext,
 	LogStripeEventContext,
 	LogTriggerContext,
 	LogVercelEventContext,
@@ -63,6 +64,18 @@ export const addVercelEventToLogs = ({
 	vercelEventContext: LogVercelEventContext;
 }): Logger => {
 	return logger.child({ context: { vercel_event: vercelEventContext } });
+};
+
+export const addRevenueCatEventToLogs = ({
+	logger,
+	revenueCatEventContext,
+}: {
+	logger: Logger;
+	revenueCatEventContext: LogRevenueCatEventContext;
+}): Logger => {
+	return logger.child({
+		context: { revenuecat_event: revenueCatEventContext },
+	});
 };
 
 export const addWorkflowToLogs = ({

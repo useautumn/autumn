@@ -1,5 +1,5 @@
 import type { Feature } from "@autumn/shared";
-import { UsersIcon, WarningIcon } from "@phosphor-icons/react";
+import { WarningIcon } from "@phosphor-icons/react";
 import type {
 	CatalogMigrateTarget,
 	CatalogMigrateTargetRow,
@@ -15,13 +15,7 @@ function MetaBadge({ children }: { children: React.ReactNode }) {
 	);
 }
 
-function VersionStatusBadges({
-	row,
-	showCustomers,
-}: {
-	row: CatalogMigrateTargetRow;
-	showCustomers: boolean;
-}) {
+function VersionStatusBadges({ row }: { row: CatalogMigrateTargetRow }) {
 	let status = "";
 	if (row.isNew) status = "New";
 	else if (row.isCurrent) status = "Current";
@@ -29,12 +23,6 @@ function VersionStatusBadges({
 		<div className="flex shrink-0 items-center gap-1.5">
 			<MetaBadge>v{row.version}</MetaBadge>
 			{status && <MetaBadge>{status}</MetaBadge>}
-			{showCustomers && row.customerCount > 0 && (
-				<span className="flex items-center gap-1 text-[11px] text-tertiary-foreground">
-					<UsersIcon size={11} />
-					{row.customerCount}
-				</span>
-			)}
 			{row.conflicts.length > 0 && (
 				<span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-500">
 					<WarningIcon size={11} weight="fill" />
@@ -83,12 +71,10 @@ const ROLE_LABEL = {
 export function MigrateTargetsStep({
 	features,
 	targets,
-	showCustomers = true,
 	showSettings = true,
 }: {
 	features?: Feature[];
 	targets: CatalogMigrateTarget[];
-	showCustomers?: boolean;
 	showSettings?: boolean;
 }) {
 	if (targets.length === 0) {
@@ -111,12 +97,7 @@ export function MigrateTargetsStep({
 								{target.name}
 							</span>
 							<div className="flex shrink-0 items-center gap-1.5">
-								{singleRow && (
-									<VersionStatusBadges
-										row={target.rows[0]}
-										showCustomers={showCustomers}
-									/>
-								)}
+								{singleRow && <VersionStatusBadges row={target.rows[0]} />}
 								<MetaBadge>{ROLE_LABEL[target.role]}</MetaBadge>
 							</div>
 						</div>
@@ -130,10 +111,7 @@ export function MigrateTargetsStep({
 							<div className="flex flex-col gap-2">
 								{target.rows.map((row) => (
 									<div className="flex flex-col gap-1.5" key={row.version}>
-										<VersionStatusBadges
-											row={row}
-											showCustomers={showCustomers}
-										/>
+										<VersionStatusBadges row={row} />
 										<VersionBody
 											features={features}
 											row={row}

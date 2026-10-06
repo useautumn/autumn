@@ -4,9 +4,12 @@ import {
 } from "@autumn/balance-engine";
 import type { TrackReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
-import { resetMayBeDue } from "../actions/ensureSubjectCurrent/earliestResetAt.js";
-import { viewHasEntity } from "../subject/actions/ensureSubject/ensureSubjectState.js";
+import {
+	type ResidentViewRefusal,
+	residentViewRefusalOf,
+} from "../actions/residentViewRefusalOf.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
+import type { HeldBlocker } from "../writer/types/partitionWriter.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
 
 /** A track answered inline: its reply bytes, released once the partition's commit position reaches `seq`. */
@@ -19,13 +22,8 @@ export type InlineTrackOutcome = {
 };
 
 /** Why a track needs the ordinary path: a lock waits for the store, and the rest need the asynchronous ensure. */
-export type InlineTrackRefusal =
-	| "lock"
-	| "not_resident"
-	| "reset_due"
-	| "catalog_stale";
+export type InlineTrackRefusal = "lock" | ResidentViewRefusal;
 
-/** The ensure's own view, checked without awaiting: the rows (an entity's included), current resets and catalog. */
 export function inlineTrackRefusalOf({
 	scope,
 	command,
@@ -34,29 +32,41 @@ export function inlineTrackRefusalOf({
 	command: TrackCommand;
 }): InlineTrackRefusal | null {
 	if (command.lock) return "lock";
-	const { identity } = command;
-	const resident = scope.ctx.writer.readFreshestState({ identity });
-	if (!resident || !viewHasEntity({ state: resident, identity }))
-		return "not_resident";
-	if (resetMayBeDue({ state: resident, asOf: command.occurredAt }))
-		return "reset_due";
-	if (!scope.ctx.subjectHydrator.peekCatalog({ state: resident }))
-		return "catalog_stale";
-	return null;
+	return residentViewRefusalOf({
+		scope,
+		identity: command.identity,
+		asOf: command.occurredAt,
+	});
 }
 
-/**
- * A track decided synchronously against a resident, current subject, with its reply held by commit position.
- * Null hands it to the ordinary path; errors are the ones `track` raises.
- */
+/** Decided now, reply held by commit position; refused hands it to `track`, saying why. */
+export type InlineTrackDecision =
+	| ({ kind: "decided" } & InlineTrackOutcome)
+	| { kind: "refused"; reason: InlineTrackRefusal | HeldBlocker };
+
+/** A track decided synchronously against a resident, current subject; errors are the ones `track` raises. */
 export function trackInline({
 	scope,
 	command,
 }: {
 	scope: PartitionProcessorScope;
 	command: TrackCommand;
+}): InlineTrackDecision {
+	const reason = inlineTrackRefusalOf({ scope, command });
+	if (reason) return { kind: "refused", reason };
+	const outcome = decideTrackHeld({ scope, command });
+	if (!outcome) return { kind: "refused", reason: "settled_write_in_flight" };
+	return { kind: "decided", ...outcome };
+}
+
+/** The held decide itself, for a command `inlineTrackRefusalOf` already cleared. */
+export function decideTrackHeld({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TrackCommand;
 }): InlineTrackOutcome | null {
-	if (inlineTrackRefusalOf({ scope, command })) return null;
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});

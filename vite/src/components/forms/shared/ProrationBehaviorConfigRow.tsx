@@ -3,6 +3,9 @@ import { GroupedTabButton } from "@autumn/ui";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import type { BillingOptionRule } from "@/components/forms/shared/utils/billingOptionRules";
+import { prorationBehaviorOption } from "@/components/forms/shared/utils/prorationBehaviorOptions";
+
+const ENABLED_MODES = ["prorate_immediately", "bill_difference"] as const;
 
 const MODE_DESCRIPTIONS: Record<Exclude<BillingBehavior, "none">, string> = {
 	prorate_immediately: "Charge or credit the remaining time in this cycle",
@@ -62,10 +65,10 @@ export function ProrationBehaviorConfigRow({
 						className="w-full"
 						disabled={rule.disabled}
 						onValueChange={(mode) => onChange(mode as BillingBehavior)}
-						options={[
-							{ value: "prorate_immediately", label: "Prorated" },
-							{ value: "bill_difference", label: "Full difference" },
-						]}
+						options={ENABLED_MODES.map((mode) => ({
+							value: mode,
+							label: prorationBehaviorOption(mode).label,
+						}))}
 					/>
 					<span className="text-xs text-tertiary-foreground/70">
 						{modeDescriptions[value]}

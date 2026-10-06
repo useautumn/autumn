@@ -28,10 +28,12 @@ const legacyDeferredSchedulePhases = ({
 	const phaseSizes = [
 		{
 			startsAt: billingContext.immediatePhase.starts_at,
+			prorationBehavior: null,
 			count: billingContext.productContexts.length,
 		},
 		...billingContext.scheduledPhaseContexts.map((phaseContext) => ({
 			startsAt: phaseContext.startsAt,
+			prorationBehavior: phaseContext.prorationBehavior ?? null,
 			count: phaseContext.productContexts.length,
 		})),
 	];
@@ -52,6 +54,7 @@ const legacyDeferredSchedulePhases = ({
 
 		return {
 			startsAt: phase.startsAt,
+			prorationBehavior: phase.prorationBehavior,
 			customerProductIds,
 		};
 	});

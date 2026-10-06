@@ -33,8 +33,13 @@ test.concurrent(
 				autumnV2_4.billing.setPlans({
 					customer_id: customerId,
 					free_trial: null,
-					proration_behavior: "none",
-					phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
+					phases: [
+						{
+							starts_at: "now",
+							proration_behavior: "none",
+							plans: [{ plan_id: proTrial.id }],
+						},
+					],
 				}),
 		});
 	},

@@ -347,6 +347,27 @@ BEGIN
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
     is_unlimited := COALESCE((ent_obj->>'unlimited')::boolean, false);
 
+    -- A flat zero rate is free usage: the row funds every unit that reaches it
+    -- without moving its balance, whatever that balance is (unlimited or not).
+    -- Logged at zero credits so a lock receipt still holds the units.
+    IF rate_card IS NULL AND credit_cost = 0 THEN
+      mutation_logs_json := mutation_logs_json || jsonb_build_array(
+        jsonb_build_object(
+          'target_type', 'customer_entitlement',
+          'customer_entitlement_id', ent_id,
+          'rollover_id', NULL,
+          'entity_id', NULL,
+          'credit_cost', 0,
+          'balance_delta', 0,
+          'adjustment_delta', 0,
+          'usage_delta', 0,
+          'value_delta', remaining_amount
+        )
+      );
+      remaining_amount := 0;
+      EXIT;
+    END IF;
+
     -- Unlimited sink: absorb the entire remaining amount (positive or negative)
     -- into this entitlement. Rollovers and additional_balance are intentionally
     -- untouched (reset windows are TS-suppressed).
@@ -637,9 +658,17 @@ BEGIN
 
   -- ============================================================================
   -- PASS 2: Allow usage_allowed=true entitlements to go negative
+  -- Walked by overage_priority (stable): rows with their own overage price
+  -- first, then free allocated grants, then rows only overage_behaviour admits.
   -- ============================================================================
   IF remaining_amount > 0 THEN
-    FOR ent_obj IN SELECT * FROM jsonb_array_elements(sorted_entitlements)
+    FOR ent_obj IN
+      SELECT ent_entry.ent_value
+      FROM jsonb_array_elements(sorted_entitlements)
+        WITH ORDINALITY AS ent_entry(ent_value, ent_position)
+      ORDER BY
+        COALESCE((ent_entry.ent_value->>'overage_priority')::int, 0),
+        ent_entry.ent_position
     LOOP
       EXIT WHEN remaining_amount = 0;
 

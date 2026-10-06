@@ -1,3 +1,4 @@
+import { PhaseProrationBehaviorSchema } from "@api/billing/common/billingBehavior";
 import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
 import type { InsertCustomerEntitlement } from "@autumn/shared";
@@ -185,6 +186,7 @@ export const AutumnBillingPlanSchema = z.object({
 			z.object({
 				startsAt: z.number(),
 				customerProductIds: z.array(z.string()),
+				prorationBehavior: PhaseProrationBehaviorSchema.nullish(),
 			}),
 		)
 		.optional(),

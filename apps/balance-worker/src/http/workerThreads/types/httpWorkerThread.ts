@@ -11,8 +11,15 @@ export type HttpWorkerInit = {
 	replyRing: Ring;
 	/** Woken by this thread when it publishes requests; the decide thread sleeps on it. */
 	requestSignal: SharedArrayBuffer;
-	/** Woken by the decide thread when it publishes replies; this thread sleeps on it. */
+	/** Woken by the decide thread when it publishes replies or a commit position moves; this thread sleeps on it. */
 	replySignal: SharedArrayBuffer;
+	/** Present when replies may be held: each partition's commit position and published failure count. */
+	heldReplies?: {
+		commitCells: SharedArrayBuffer;
+		failureCounts: SharedArrayBuffer;
+	};
+	/** Paths whose in-worker latency this thread records into `cells`, by index. */
+	latency: { routes: string[]; cells: SharedArrayBuffer };
 };
 
 /** A request or reply over an eighth of its ring travels by `postMessage` instead, with the same id. */

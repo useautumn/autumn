@@ -473,7 +473,28 @@ function takeBatch({
 		bytes += pending.encodedBytes;
 		count++;
 	}
-	return state.queue.splice(0, count);
+	return state.queue.splice(
+		0,
+		keepHeldGroupWhole({ queue: state.queue, count }),
+	);
+}
+
+/** A held group never straddles two appends: cut before it, or take all of it when it leads the batch. */
+function keepHeldGroupWhole({
+	queue,
+	count,
+}: {
+	queue: PendingMutation[];
+	count: number;
+}): number {
+	const group = queue[count - 1]?.heldGroup;
+	if (group === undefined || queue[count]?.heldGroup !== group) return count;
+	let start = count - 1;
+	while (start > 0 && queue[start - 1]?.heldGroup === group) start--;
+	if (start > 0) return start;
+	let end = count;
+	while (queue[end]?.heldGroup === group) end++;
+	return end;
 }
 
 function mutationOf(pending: PendingMutation): MeteringRecord {

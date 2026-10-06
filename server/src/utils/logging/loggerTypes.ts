@@ -51,6 +51,17 @@ export type LogStripeEventContext = {
 	object_id: string;
 };
 
+/** RevenueCat webhook event context */
+export type LogRevenueCatEventContext = {
+	id?: string;
+	type?: string;
+	app_user_id?: string;
+	original_app_user_id?: string;
+	product_id?: string;
+	transferred_from?: string[];
+	transferred_to?: string[];
+};
+
 /** Vercel webhook event context */
 export type LogVercelEventContext = {
 	id?: string;

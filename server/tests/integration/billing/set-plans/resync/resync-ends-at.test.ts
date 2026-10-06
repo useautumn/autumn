@@ -51,10 +51,15 @@ test.concurrent(
 		const endsAt = oldPeriodEndMs;
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
-			billing_cycle_anchor: oldPeriodEndMs,
 			ends_at: endsAt,
-			proration_behavior: "none",
-			phases: [{ starts_at: oldStartMs, plans: [{ plan_id: pro.id }] }],
+			phases: [
+				{
+					billing_cycle_anchor: oldPeriodEndMs,
+					proration_behavior: "none",
+					starts_at: oldStartMs,
+					plans: [{ plan_id: pro.id }],
+				},
+			],
 			unscheduled_plans: [{ plan_id: addOn.id }],
 		};
 
@@ -204,11 +209,11 @@ test.concurrent(
 			func: () =>
 				autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 					customer_id: customerId,
-					billing_cycle_anchor: advancedTo + ms.days(20),
 					ends_at: advancedTo + ms.days(10),
-					proration_behavior: "none",
 					phases: [
 						{
+							billing_cycle_anchor: advancedTo + ms.days(20),
+							proration_behavior: "none",
 							starts_at: advancedTo - ms.days(10),
 							plans: [{ plan_id: pro.id }],
 						},

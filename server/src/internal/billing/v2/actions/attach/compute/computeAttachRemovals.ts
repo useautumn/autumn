@@ -6,6 +6,7 @@ import {
 	cp,
 	ErrCode,
 	findActiveCustomerProductById,
+	isFutureStartDate,
 	RecaseError,
 } from "@autumn/shared";
 
@@ -26,6 +27,7 @@ export const computeAttachRemovals = ({
 		stripeSubscription,
 		currentCustomerProduct,
 		currentEpochMs,
+		planTiming,
 	} = attachBillingContext;
 
 	// The current product is already expired via the transition update. Repeats
@@ -38,6 +40,22 @@ export const computeAttachRemovals = ({
 		),
 	];
 	if (removePlanIds.length === 0) return [];
+
+	// Removals expire now, but a scheduled attach (end of cycle, or a future
+	// starts_at without immediate access) only starts the new plan later, so the
+	// customer would lose access in between, uncredited.
+	const newPlanStartsLater =
+		planTiming !== "immediate" ||
+		(isFutureStartDate(params.starts_at, currentEpochMs) &&
+			params.enable_plan_immediately !== true);
+	if (newPlanStartsLater) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message:
+				"remove_plan_ids can only be used with an immediate attach. Remove the plans separately or attach immediately.",
+			statusCode: 400,
+		});
+	}
 
 	// Carry-over reads a single source. With no same-group product to carry from,
 	// removing multiple plans is ambiguous — there is no merge rule.

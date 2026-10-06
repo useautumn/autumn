@@ -3,6 +3,7 @@ import { z } from "zod";
 import { forgetAccount } from "../../internal/accounts/actions/forgetAccount.ts";
 import { listAccounts } from "../../internal/accounts/actions/listAccounts.ts";
 import { nukeAccounts } from "../../internal/accounts/actions/nukeAccounts.ts";
+import { retryBrokenAccounts } from "../../internal/accounts/actions/retryBrokenAccounts.ts";
 import { TwdError } from "../apiError.ts";
 import type { TwdHono } from "../types/twdHono.ts";
 
@@ -59,6 +60,9 @@ export const accountsRoutes = new Hono<TwdHono>()
 			202,
 		);
 	})
+	.post("/accounts/retry-broken", async (c) =>
+		c.json(await retryBrokenAccounts({ ctx: c.get("ctx") }), 202),
+	)
 	.delete("/accounts/:id", async (c) =>
 		c.json(
 			await forgetAccount({ ctx: c.get("ctx"), accountId: c.req.param("id") }),

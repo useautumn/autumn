@@ -6,6 +6,7 @@ import {
 	createOwnerEpochCell,
 	type OwnerEpochCell,
 } from "../../kafka/ownerEpochCell.js";
+import { commitSummaries } from "../../logging/commitSummaries.js";
 import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
 import { kafkaRequestTimings } from "../../logging/kafkaRequestTimings.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
@@ -19,6 +20,7 @@ import type {
 } from "../types/partitionRuntimeFactory.js";
 import {
 	assertKafkaBalanceWorkerTimings,
+	assertRecoveryDrainOutlastsProducerRetries,
 	createWorkerProducerConfig,
 } from "../workerConfig.js";
 
@@ -30,6 +32,10 @@ export function createPartitionRuntimeFactory({
 	config: PartitionRuntimeFactoryConfig;
 }): KafkaOwnedPartitionRuntimeFactory {
 	assertKafkaBalanceWorkerTimings({ timings: config.timings });
+	assertRecoveryDrainOutlastsProducerRetries({
+		producerLimits: config.producerLimits,
+		timings: config.timings,
+	});
 	if (!config.ownership.topic.trim() || !config.ownership.endpoint.trim()) {
 		throw new Error("Ownership topic and advertised endpoint are required");
 	}
@@ -90,7 +96,12 @@ export function createPartitionRuntimeFactory({
 			config: config.commands,
 		});
 		const commitLogging = createPartitionCommitLogging({
-			ctx: { appender, stateStore: ctx.stateStore, logger: ctx.logger },
+			ctx: {
+				appender,
+				stateStore: ctx.stateStore,
+				logger: ctx.logger,
+				summaries: commitSummaries,
+			},
 			config: {
 				deployment: config.deploymentEnvironment,
 				endpoint: config.ownership.endpoint,

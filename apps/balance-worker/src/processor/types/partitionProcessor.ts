@@ -33,7 +33,9 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
-import type { InlineTrackOutcome } from "../commands/trackInline.js";
+import type { InlineCheckDecision } from "../commands/checkInline.js";
+import type { InlineTrackBatchOutcome } from "../commands/trackBatchInline.js";
+import type { InlineTrackDecision } from "../commands/trackInline.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
 import type { CommitPositionSink } from "../writer/types/commitPositionSink.js";
@@ -55,13 +57,19 @@ export type PartitionProcessor = {
 		deferredLogs?: DeferredLogSink;
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
-	/** Decided now, reply held by commit position; null hands it to `track`. */
-	trackInline(params: { command: TrackCommand }): InlineTrackOutcome | null;
+	/** Decided now, reply held by commit position; refused hands it to `track`. */
+	trackInline(params: { command: TrackCommand }): InlineTrackDecision;
+	/** A batch decided inline whole, its reply held on its last write; refused hands it to `track` per command. */
+	trackBatchInline(params: {
+		commands: TrackCommand[];
+	}): InlineTrackBatchOutcome;
 	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */
 	decideTrack(params: {
 		command: TrackCommand;
 	}): Promise<DecidedMutation<never>>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
+	/** Decided now on a resident, current subject; refused hands it to `check`. */
+	checkInline(params: { command: CheckCommand }): InlineCheckDecision;
 	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	readSubjectState(params: {

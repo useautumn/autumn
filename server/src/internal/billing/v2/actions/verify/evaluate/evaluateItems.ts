@@ -20,6 +20,7 @@ import { stripePriceCanBill } from "@/external/stripe/prices/utils/classifyStrip
 import { stripePriceToAmount } from "@/external/stripe/prices/utils/convertStripePriceUtils";
 import { stripeSchedulePhaseItemToPriceId } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import { stripeInlinePriceMatchesStripePrice } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
+import { isFreePhasePlaceholderItem } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import { findSubscriptionItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findSubscriptionItemForAutumnPrice";
 import { stripeCandidateMatchesAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/stripeCandidateMatchesAutumnPrice";
 import { normalizeStripePhaseItem } from "@/internal/billing/v2/providers/stripe/utils/sync/normalizeStripeObject";
@@ -118,6 +119,7 @@ type ActualCandidate = {
 	priceId: string;
 	price?: Stripe.Price;
 	quantity?: number;
+	isFreePhasePlaceholder?: boolean;
 };
 
 const buildActualCandidates = ({
@@ -135,6 +137,7 @@ const buildActualCandidates = ({
 			priceId: item.price.id,
 			price: item.price,
 			quantity: item.quantity,
+			isFreePhasePlaceholder: isFreePhasePlaceholderItem(item),
 		}));
 	}
 
@@ -151,6 +154,7 @@ const buildActualCandidates = ({
 			priceId: stripeSchedulePhaseItemToPriceId(item),
 			price: priceObj,
 			quantity: item.quantity,
+			isFreePhasePlaceholder: isFreePhasePlaceholderItem(item),
 		};
 	});
 };
@@ -243,6 +247,14 @@ const findActualIndex = ({
 			identityCusPriceIds.has(candidate.autumnCustomerPriceId),
 	);
 	if (exact) return { index: exact.index };
+
+	// A free phase's $0 placeholder has no Autumn price, only its own marker.
+	if (isFreePhasePlaceholderItem(expected)) {
+		const placeholder = available.find(
+			(candidate) => candidate.isFreePhasePlaceholder,
+		);
+		return placeholder ? { index: placeholder.index } : undefined;
+	}
 
 	if (isInline) {
 		const inlinePrice = (expected as { price_data: StripeInlinePrice })

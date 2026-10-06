@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { applyOptInFlags, withheldEnvKeys } from "./optIns.ts";
+import { applyOptInFlags, capyDevServices, withheldEnvKeys } from "./optIns.ts";
 
 describe("capy opt-ins", () => {
 	const dirs: string[] = [];
@@ -42,5 +42,25 @@ describe("capy opt-ins", () => {
 		expect(applyOptInFlags({ args: ["--no-alien"], dir })).toBe(false);
 		applyOptInFlags({ args: ["--alien"], dir });
 		expect(applyOptInFlags({ args: ["--alien"], dir })).toBe(false);
+	});
+
+	test("the default stack leaves trigger, eve, checkout and atom out", () => {
+		expect(capyDevServices({ dir: createDir() })).toEqual([
+			"server",
+			"workers",
+			"cron",
+			"balance-worker",
+			"vite",
+			"stripe",
+		]);
+	});
+
+	test("--trigger and --eve add their dev services", () => {
+		const dir = createDir();
+		applyOptInFlags({ args: ["--trigger", "--eve"], dir });
+		expect(capyDevServices({ dir })).toEqual(
+			expect.arrayContaining(["trigger", "eve", "leaf"]),
+		);
+		expect(capyDevServices({ dir })).not.toContain("checkout");
 	});
 });

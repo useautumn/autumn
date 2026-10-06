@@ -36,12 +36,8 @@ export type BillingOptionState = {
 	showStartDate?: boolean;
 	showEndDate?: boolean;
 	// schedule
-	hasMultipleImmediatePlans?: boolean;
-	canResetScheduleBillingCycle?: boolean;
 	hasPaidRecurringPlan?: boolean;
 };
-
-const MULTI_ATTACH_UNSUPPORTED = "Not yet supported for multi attach";
 
 const HIDDEN: BillingOptionRule = {
 	visible: false,
@@ -106,15 +102,9 @@ function updateRules(state: BillingOptionState): BillingOptionRules {
 }
 
 function scheduleRules(state: BillingOptionState): BillingOptionRules {
-	const multiPlanBlocked = !!state.hasMultipleImmediatePlans;
 	return {
 		proration: show(true),
-		resetBillingCycle: show(
-			true,
-			multiPlanBlocked && !state.canResetScheduleBillingCycle
-				? MULTI_ATTACH_UNSUPPORTED
-				: null,
-		),
+		resetBillingCycle: show(true),
 		discounts: HIDDEN,
 		planSchedule: HIDDEN,
 		resetUsage: HIDDEN,

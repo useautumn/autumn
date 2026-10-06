@@ -6,35 +6,33 @@ import { createDatabaseTimings } from "../../../src/logging/databaseTimings.js";
 
 const dialect = new PgDialect();
 
-/** A drizzle stand-in: records every statement, which executor ran it, and how each transaction ended. */
+/** A drizzle stand-in: records every statement and every transaction it was asked to open.
+ *  A flush whose guarded row did not move aborts as Postgres does, on its rollback marker's integer cast. */
 function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
-	const statements: { via: "pool" | "tx"; sql: string; params: unknown[] }[] =
-		[];
-	const transactions: ("committed" | "rolled_back")[] = [];
-	function executorFor(via: "pool" | "tx") {
-		return {
-			execute: async (query: SQL) => {
-				const { sql, params } = dialect.sqlToQuery(query);
-				statements.push({ via, sql, params });
-				return sql.includes("AS bookmarks")
-					? [{ applied, bookmarks: 1 }]
-					: [{ topic: "metering" }];
-			},
-		};
-	}
+	const statements: { sql: string; params: unknown[] }[] = [];
+	const transactions: string[] = [];
 	const db = {
-		...executorFor("pool"),
-		transaction: async <T>(
-			run: (tx: ReturnType<typeof executorFor>) => Promise<T>,
-		) => {
-			try {
-				const result = await run(executorFor("tx"));
-				transactions.push("committed");
-				return result;
-			} catch (cause) {
-				transactions.push("rolled_back");
-				throw cause;
-			}
+		execute: async (query: SQL) => {
+			const { sql, params } = dialect.sqlToQuery(query);
+			statements.push({ sql, params });
+			const marker = /E'(flush_rolled_back:[0-9a-f]+:)'/.exec(sql)?.[1];
+			if (marker && applied.includes(0))
+				throw Object.assign(
+					new Error(
+						`invalid input syntax for type integer: "${marker}1:${applied.join(",")}"`,
+					),
+					{ code: "22P02", severity: "ERROR" },
+				);
+			// pg answers a multi-statement simple query with one result per statement.
+			return sql.includes("AS bookmarks")
+				? [{ rows: [] }, { rows: [{ applied, bookmarks: 1 }] }]
+				: { rows: [{ topic: "metering" }] };
+		},
+		$client: {
+			connect: async () => {
+				transactions.push("opened");
+				throw new Error("the flush opened a transaction");
+			},
 		},
 	};
 	return { db, statements, transactions };
@@ -58,7 +56,7 @@ const bookmark = {
 };
 
 describe("createCommitterDb", () => {
-	test("a flush is one transaction: the statement timeout, one statement, and the counts read back", async () => {
+	test("a flush is one simple query on the pool, bounded by its statement timeout, its counts read back", async () => {
 		const fake = createFakePostgres();
 		const committerDb = createCommitterDb({
 			ctx: {
@@ -78,19 +76,18 @@ describe("createCommitterDb", () => {
 		});
 
 		expect(result).toEqual({ applied: [true] });
-		expect(fake.statements.map((statement) => statement.via)).toEqual([
-			"pool",
-			"tx",
-			"tx",
-		]);
-		expect(fake.statements[1]?.sql).toBe("SET LOCAL statement_timeout = 2000");
-		expect(fake.statements[2]?.sql).toContain('WITH "u0" AS (');
-		expect(fake.statements[2]?.sql).toContain('UPDATE "customer_entitlements"');
-		expect(fake.statements[2]?.sql).toContain("UPDATE partition_progress");
-		expect(fake.transactions).toEqual(["committed"]);
+		expect(fake.statements).toHaveLength(2);
+		expect(fake.statements[1]?.sql).toStartWith(
+			"SET LOCAL statement_timeout = 2000; ",
+		);
+		expect(fake.statements[1]?.params).toEqual([]);
+		expect(fake.statements[1]?.sql).toContain('WITH "u0" AS (');
+		expect(fake.statements[1]?.sql).toContain('UPDATE "customer_entitlements"');
+		expect(fake.statements[1]?.sql).toContain("UPDATE partition_progress");
+		expect(fake.transactions).toEqual([]);
 	});
 
-	test("a guarded row that no longer matches rolls the whole flush back: no row and no bookmark lands", async () => {
+	test("a guarded row that no longer matches aborts the whole query: no row and no bookmark lands", async () => {
 		const fake = createFakePostgres({ applied: [1, 0] });
 		const committerDb = createCommitterDb({
 			ctx: {
@@ -105,6 +102,7 @@ describe("createCommitterDb", () => {
 		});
 
 		expect(result).toEqual({ applied: [true, false] });
-		expect(fake.transactions).toEqual(["rolled_back"]);
+		expect(fake.statements).toHaveLength(1);
+		expect(fake.transactions).toEqual([]);
 	});
 });

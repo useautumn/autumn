@@ -10,15 +10,21 @@ import {
 	getMigrationEventInternalId,
 	type MigrationRuntimeWithEventId,
 } from "@/internal/migrations/v2/types/migrationDefinition.js";
+import { invalidateBatchMigrationCaches } from "../finalize/invalidateBatchMigrationCaches.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import {
 	claimNextBatchMigrationPage,
 	failPageItemRuns,
 } from "./claim/index.js";
+import {
+	createMigrationPageDb,
+	type MigrationPageDb,
+} from "./database/createMigrationPageDb.js";
 import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type {
 	BatchMigrationChunkResult,
+	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
 } from "./types/batchMigrationExecutionTypes.js";
 import {
@@ -30,8 +36,6 @@ import {
 	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 	BATCH_MIGRATION_PAGE_TIMEOUT_MS,
 	BATCH_MIGRATION_STALL_LOG_INTERVAL_MS,
-	BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS,
-	BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS,
 } from "./utils/batchMigrationExecutionConstants.js";
 import {
 	createDeferredSideEffects,
@@ -41,7 +45,6 @@ import {
 	type BatchMigrationPagePhases,
 	timePhase,
 } from "./utils/pagePhaseTimings.js";
-import { runWithTransientDbRetry } from "./utils/runWithTransientDbRetry.js";
 
 export type BatchMigrationChunkTimeouts = {
 	pageMs?: number;
@@ -53,8 +56,7 @@ export type BatchMigrationChunkTimeouts = {
 	recoveryWriteMs?: number;
 };
 
-/** A phase stopped making progress inside its budget. Not a transient DB
- * error, so the page retry wrapper lets it surface. */
+/** A phase stopped making progress inside its budget. */
 export class BatchMigrationStallError extends Error {
 	readonly phase: string;
 
@@ -76,7 +78,7 @@ type ChunkProgress = {
 	stage: PageStage | null;
 	stageStartedAt: number;
 	pagePhases: BatchMigrationPagePhases;
-	claimedInternalIds: string[];
+	claimedCustomers: BatchMigrationPageCustomer[];
 	lastPageFinishedAt: number;
 };
 
@@ -169,7 +171,7 @@ export const runBatchMigrationChunk = async ({
 		stage: null,
 		stageStartedAt: Date.now(),
 		pagePhases: {},
-		claimedInternalIds: [],
+		claimedCustomers: [],
 		lastPageFinishedAt: Date.now(),
 	};
 	const describeProgress = () => ({
@@ -229,73 +231,55 @@ export const runBatchMigrationChunk = async ({
 			const pageAfterInternalId = cursor ?? undefined;
 			const pageNumber = summary.pages + 1;
 			const pageStallMessage = `batch-migration: page ${pageNumber} made no progress for ${pageTimeoutMs}ms`;
-			// One budget across the transient retries (or five attempts could each
-			// spend the full page timeout), clipped to the chunk's own deadline.
 			const pageDeadlineAt =
 				Date.now() + Math.min(pageTimeoutMs, remainingPageBudgetMs());
-			const outcome = await runWithTransientDbRetry({
-				maxAttempts: BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS,
-				delayMs: BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS,
-				onRetry: ({ error, attempt, maxAttempts }) => {
-					ctx.logger.warn(
-						"batch-migration: retrying page after transient db error",
-						{
-							data: {
-								migrationRunId,
-								cursor,
-								attempt,
-								maxAttempts,
-								error: error instanceof Error ? error.message : String(error),
-							},
-						},
-					);
-				},
-				run: () =>
-					withTimeout({
-						timeoutMs: Math.max(1, pageDeadlineAt - Date.now()),
-						fn: () =>
-							runNextBatchMigrationPage({
-								ctx,
-								migration,
-								migrationInternalId,
-								migrationRunId,
-								plan,
-								afterInternalId: pageAfterInternalId,
-								pageNumber,
-								controls,
-								webhooks,
-								progress,
-								recoveryWriteMs,
-								eventsDefer: events.defer,
-								cachesDefer: caches.defer,
-								settle: () => Promise.all([caches.settle(), events.settle()]),
-							}),
-						onTimeout: () => {
-							ctx.logger.error("batch-migration: page stalled", {
-								data: { ...describeProgress(), pageTimeoutMs },
-							});
-						},
-						timeoutMessage: pageStallMessage,
-					}).catch(async (error: unknown) => {
-						if (error instanceof Error && error.message === pageStallMessage) {
-							// The abandoned page may still commit its marks later; failing
-							// its claims now keeps those customers on the retry path.
-							await failClaimsOfStalledPage({
-								ctx,
-								migrationInternalId,
-								migrationRunId,
-								page: pageNumber,
-								internalCustomerIds: progress.claimedInternalIds,
-								recoveryWriteMs,
-							});
-							throw new BatchMigrationStallError({
-								phase: `page_${progress.stage ?? "claim"}`,
-								message: `${error.message} (stage: ${progress.stage}, phases: ${JSON.stringify(progress.pagePhases)})`,
-							});
-						}
-						throw error;
+			const pageDb = createMigrationPageDb({ ctx });
+			const outcome = await withTimeout({
+				timeoutMs: Math.max(1, pageDeadlineAt - Date.now()),
+				fn: () =>
+					runNextBatchMigrationPage({
+						ctx,
+						pageDb,
+						migration,
+						migrationInternalId,
+						migrationRunId,
+						plan,
+						afterInternalId: pageAfterInternalId,
+						pageNumber,
+						controls,
+						webhooks,
+						progress,
+						recoveryWriteMs,
+						eventsDefer: events.defer,
+						cachesDefer: caches.defer,
+						settle: () => Promise.all([caches.settle(), events.settle()]),
 					}),
-			});
+				onTimeout: () => {
+					ctx.logger.error("batch-migration: page stalled", {
+						data: { ...describeProgress(), pageTimeoutMs },
+					});
+				},
+				timeoutMessage: pageStallMessage,
+				timeoutError: (message) =>
+					new BatchMigrationStallError({
+						phase: `page_${progress.stage ?? "claim"}`,
+						message: `${message} (stage: ${progress.stage}, phases: ${JSON.stringify(progress.pagePhases)})`,
+					}),
+			})
+				.catch(async (error: unknown) => {
+					// Fence the page before releasing its claims, so no late write lands after.
+					pageDb.abort(error);
+					await releaseFailedPage({
+						ctx,
+						migrationInternalId,
+						migrationRunId,
+						page: pageNumber,
+						customers: progress.claimedCustomers,
+						recoveryWriteMs,
+					});
+					throw error;
+				})
+				.finally(() => pageDb.abort());
 			if (outcome.kind === "exhausted") return finish("exhausted");
 			cursor = outcome.cursor ?? cursor;
 			progress.lastPageFinishedAt = Date.now();
@@ -381,22 +365,32 @@ const failPageItemRunsBounded = ({
 		timeoutMessage: `batch-migration: failing ${internalCustomerIds.length} claims got no answer from Postgres in ${timeoutMs}ms`,
 	});
 
-const failClaimsOfStalledPage = async ({
+/** A failed page's writes may have committed (e.g. a lost COMMIT reply), so
+ * bust its customers' caches before releasing their claims for retry. */
+const releaseFailedPage = async ({
 	ctx,
 	migrationInternalId,
 	migrationRunId,
 	page,
-	internalCustomerIds,
+	customers,
 	recoveryWriteMs,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
 	migrationRunId: string;
 	page: number;
-	internalCustomerIds: string[];
+	customers: BatchMigrationPageCustomer[];
 	recoveryWriteMs: number;
 }): Promise<void> => {
-	if (internalCustomerIds.length === 0) return;
+	if (customers.length === 0) return;
+	await invalidateFailedPageCaches({
+		ctx,
+		migrationRunId,
+		page,
+		customers,
+		recoveryWriteMs,
+	});
+	const internalCustomerIds = customers.map((customer) => customer.internalId);
 	try {
 		const failed = await failPageItemRunsBounded({
 			ctx,
@@ -405,7 +399,7 @@ const failClaimsOfStalledPage = async ({
 			internalCustomerIds,
 			timeoutMs: recoveryWriteMs,
 		});
-		ctx.logger.error("batch-migration: stalled page claims failed for retry", {
+		ctx.logger.error("batch-migration: failed page claims released for retry", {
 			data: {
 				migrationRunId,
 				page,
@@ -415,12 +409,55 @@ const failClaimsOfStalledPage = async ({
 		});
 	} catch (error) {
 		ctx.logger.error(
-			"batch-migration: could not fail a stalled page's claims — the parent settles them when the run ends",
+			"batch-migration: could not release a failed page's claims — the parent settles running claims when the run ends",
 			{
 				data: {
 					migrationRunId,
 					page,
 					customers: internalCustomerIds.length,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			},
+		);
+	}
+};
+
+const invalidateFailedPageCaches = async ({
+	ctx,
+	migrationRunId,
+	page,
+	customers,
+	recoveryWriteMs,
+}: {
+	ctx: AutumnContext;
+	migrationRunId: string;
+	page: number;
+	customers: BatchMigrationPageCustomer[];
+	recoveryWriteMs: number;
+}) => {
+	try {
+		await withTimeout({
+			timeoutMs: recoveryWriteMs,
+			fn: () =>
+				invalidateBatchMigrationCaches({
+					ctx,
+					pageResult: {
+						succeeded: customers,
+						skipped: [],
+						insertedItems: [],
+						removedItems: [],
+					},
+				}),
+			timeoutMessage: `batch-migration: invalidating ${customers.length} failed-page caches exceeded ${recoveryWriteMs}ms`,
+		});
+	} catch (error) {
+		ctx.logger.error(
+			"batch-migration: could not invalidate a failed page's caches — customers may hold stale caches",
+			{
+				data: {
+					migrationRunId,
+					page,
+					customers: customers.length,
 					error: error instanceof Error ? error.message : String(error),
 				},
 			},
@@ -438,10 +475,10 @@ type NextPageOutcome =
 			pagePhases: BatchMigrationPagePhases;
 	  };
 
-/** One claim → execute → finalize. Cursor is only returned on success so a
- * retry restarts from the same keyset after a dropped socket. */
+/** One claim → execute → finalize. The cursor advances only on success. */
 const runNextBatchMigrationPage = async ({
 	ctx,
+	pageDb,
 	migration,
 	migrationInternalId,
 	migrationRunId,
@@ -457,6 +494,7 @@ const runNextBatchMigrationPage = async ({
 	settle,
 }: {
 	ctx: AutumnContext;
+	pageDb: MigrationPageDb;
 	migration: MigrationRuntimeWithEventId;
 	migrationInternalId: string;
 	migrationRunId: string;
@@ -471,18 +509,20 @@ const runNextBatchMigrationPage = async ({
 	cachesDefer: (operation: DeferredOperation) => void;
 	settle: () => Promise<unknown>;
 }): Promise<NextPageOutcome> => {
+	const pageCtx = { ...ctx, db: pageDb.db };
 	const pagePhases: BatchMigrationPagePhases = {};
 	const enterStage = (stage: PageStage) => {
+		pageDb.assertActive();
 		progress.page = pageNumber;
 		progress.stage = stage;
 		progress.stageStartedAt = Date.now();
 		progress.pagePhases = pagePhases;
 	};
 
-	progress.claimedInternalIds = [];
+	progress.claimedCustomers = [];
 	enterStage("claim");
 	const page = await claimNextBatchMigrationPage({
-		ctx,
+		ctx: pageCtx,
 		migration,
 		migrationInternalId,
 		migrationRunId,
@@ -497,12 +537,10 @@ const runNextBatchMigrationPage = async ({
 		return { kind: "advanced", cursor: nextCursor };
 	}
 
-	progress.claimedInternalIds = page.customers.map(
-		(customer) => customer.internalId,
-	);
+	progress.claimedCustomers = page.customers;
 	enterStage("execute");
 	const pageResult = await executeBatchMigrationPage({
-		ctx,
+		ctx: pageCtx,
 		migrationInternalId,
 		migrationRunId,
 		plan,
@@ -561,7 +599,8 @@ const runNextBatchMigrationPage = async ({
 		phase: "finalize",
 		run: () =>
 			finalizeBatchMigrationPage({
-				ctx,
+				ctx: pageCtx,
+				assertActive: pageDb.assertActive,
 				migrationInternalId,
 				migrationRunId,
 				plan,

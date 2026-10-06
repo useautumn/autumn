@@ -3,15 +3,20 @@
  * worker's own `fetch` (the Hono app, unchanged), and writes each reply's bytes back to the thread that
  * holds the connection. The decide thread never accepts a socket.
  */
+
 import { createRingSignal } from "../../threads/ring/ringSignal.js";
+import { createLatencyCells, drainLatency } from "./latency/latencyCells.js";
 import { startDispatchLoop } from "./pool/dispatchRequests.js";
+import { commitPositionMoved, failHeld } from "./pool/sendReplies.js";
 import { spawnHttpWorker } from "./pool/spawnHttpWorker.js";
 import { stopHttpWorkers } from "./pool/stopHttpWorkers.js";
 import type {
+	HttpWorkerListener,
 	HttpWorkerPool,
 	HttpWorkerPoolConfig,
 } from "./types/httpWorkerPool.js";
 import type { HttpWorkerPoolScope } from "./types/httpWorkerPoolScope.js";
+import type { HeldFailure } from "./types/inlineHandler.js";
 
 export function createHttpWorkerPool({
 	ctx,
@@ -31,6 +36,11 @@ export function createHttpWorkerPool({
 			stopping: false,
 			failed: false,
 			flushScheduled: false,
+			heldOnDecideThread: [],
+			health: emptyHealth(),
+			latencyCells: createLatencyCells({
+				routes: config.inline?.routes.length ?? 0,
+			}),
 		},
 	};
 
@@ -39,7 +49,32 @@ export function createHttpWorkerPool({
 	}
 
 	/** Resolves once every thread is bound to the port; a thread that cannot bind takes the others down. */
-	async function listen(): Promise<{ stop(): Promise<void> }> {
+	function positionMoved(params: { partition: number; seq: number }): void {
+		commitPositionMoved({ scope, ...params });
+	}
+
+	function fail(failure: HeldFailure): void {
+		failHeld({ scope, failure });
+	}
+
+	function drainHealth() {
+		const counts = scope.state.health;
+		scope.state.health = emptyHealth();
+		return {
+			...counts,
+			heldOnDecideThread: scope.state.heldOnDecideThread.length,
+		};
+	}
+
+	function drainLatencies() {
+		const cells = new Int32Array(scope.state.latencyCells);
+		const routes = config.inline?.routes ?? [];
+		return Object.fromEntries(
+			routes.map((path, route) => [path, drainLatency({ cells, route })]),
+		);
+	}
+
+	async function listen(): Promise<HttpWorkerListener> {
 		const spawned = Array.from({ length: config.threads }, (_, index) =>
 			spawnHttpWorker({ scope, index }),
 		);
@@ -52,8 +87,18 @@ export function createHttpWorkerPool({
 			throw cause;
 		}
 		startDispatchLoop({ scope });
-		return { stop };
+		return {
+			stop,
+			commitPositionMoved: positionMoved,
+			failHeld: fail,
+			drainHealth,
+			drainLatencies,
+		};
 	}
 
 	return { listen };
+}
+
+function emptyHealth() {
+	return { ringFullWaits: 0, heldReplies: 0, failRanges: 0 };
 }

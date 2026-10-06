@@ -57,12 +57,32 @@ export const cliProcessEnv = (): Record<string, string> => ({
 	FORCE_COLOR: "0",
 });
 
+/** Async on purpose: spawnSync blocks the test process's event loop, so
+ * concurrent cases starve DB connects and Kafka heartbeats until they time out. */
+const spawnOutput = async ({
+	cmd,
+	cwd,
+	env,
+}: {
+	cmd: string[];
+	cwd: string;
+	env?: Record<string, string>;
+}): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+	const proc = Bun.spawn(cmd, { cwd, env, stdout: "pipe", stderr: "pipe" });
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(proc.stdout).text(),
+		new Response(proc.stderr).text(),
+		proc.exited,
+	]);
+	return { stdout, stderr, exitCode };
+};
+
 /**
  * Every push and pull runs the real CLI in a fresh process: a config's
  * imported files are re-read each time, which an in-process import cannot
  * promise, and the output is what a user sees.
  */
-export const runCli = ({
+export const runCli = async ({
 	cwd,
 	args,
 	secretKey,
@@ -72,38 +92,37 @@ export const runCli = ({
 	args: string[];
 	secretKey: string;
 	baseUrl: string;
-}): string => {
-	const result = Bun.spawnSync(["bun", CLI_ENTRY, ...args], {
+}): Promise<string> => {
+	const result = await spawnOutput({
+		cmd: ["bun", CLI_ENTRY, ...args],
 		cwd,
 		env: {
 			...cliProcessEnv(),
 			AUTUMN_SECRET_KEY: secretKey,
 			AUTUMN_BASE_URL: baseUrl,
 		},
-		stdout: "pipe",
-		stderr: "pipe",
 	});
-	const output = `${result.stdout.toString()}${result.stderr.toString()}`;
+	const output = `${result.stdout}${result.stderr}`;
 	if (result.exitCode !== 0) throw new Error(output.trim());
 	return output;
 };
 
 /** The wire a config evaluates to, in a fresh process so imported files are re-read. */
-export const wireOfConfig = ({
+export const wireOfConfig = async ({
 	configPath,
 }: {
 	configPath: string;
-}): Record<string, unknown> => {
-	const result = Bun.spawnSync(
-		[
+}): Promise<Record<string, unknown>> => {
+	const result = await spawnOutput({
+		cmd: [
 			"bun",
 			"-e",
 			`import(${JSON.stringify(configPath)}).then((m) => process.stdout.write(JSON.stringify(m.default)))`,
 		],
-		{ cwd: dirname(configPath), stdout: "pipe", stderr: "pipe" },
-	);
-	if (result.exitCode !== 0) throw new Error(result.stderr.toString().trim());
-	return JSON.parse(result.stdout.toString()) as Record<string, unknown>;
+		cwd: dirname(configPath),
+	});
+	if (result.exitCode !== 0) throw new Error(result.stderr.trim());
+	return JSON.parse(result.stdout) as Record<string, unknown>;
 };
 
 /** Ids under the last "Draft migrations (n)" heading — the applied block; the
@@ -297,7 +316,7 @@ export const initAtmnScenario = async ({
 			return out;
 		},
 		push: async ({ dryRun = false } = {}) => {
-			const output = runCli({
+			const output = await runCli({
 				cwd,
 				args: ["push", dryRun ? "--dry-run" : "--yes"],
 				secretKey: scenario.ctx.orgSecretKey,
@@ -306,7 +325,7 @@ export const initAtmnScenario = async ({
 			return { output, migrationIds: migrationIdsIn(output) };
 		},
 		pull: async ({ includeMappings = false } = {}) => {
-			const output = runCli({
+			const output = await runCli({
 				cwd,
 				args: ["pull", ...(includeMappings ? ["--include-mappings"] : [])],
 				secretKey: scenario.ctx.orgSecretKey,
@@ -314,11 +333,11 @@ export const initAtmnScenario = async ({
 			});
 			return { output, ...pullEditsIn(output) };
 		},
-		wireFromConfig: async () => wireOfConfig({ configPath }),
+		wireFromConfig: () => wireOfConfig({ configPath }),
 		preview: async () =>
 			(await client.previewUpdate(
 				// biome-ignore lint/suspicious/noExplicitAny: the wire is the CLI's own document
-				wireOfConfig({ configPath }) as any,
+				(await wireOfConfig({ configPath })) as any,
 			)) as Record<string, unknown>,
 		attachCustomer: async ({ planId, customerId }) => {
 			const target = customerId ?? scenario.customerId;

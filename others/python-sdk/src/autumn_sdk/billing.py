@@ -125,7 +125,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
-        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -372,7 +372,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
-        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -507,9 +507,7 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
-        ],
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
         entity_id: Optional[str] = None,
         free_trial: OptionalNullable[
             Union[
@@ -602,7 +600,7 @@ class Billing(BaseSDK):
             unscheduled_plans=utils.get_pydantic_model(
                 unscheduled_plans, Optional[List[models.UnscheduledPlan]]
             ),
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
         )
 
         req = self._build_request(
@@ -668,9 +666,7 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
-        ],
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
         entity_id: Optional[str] = None,
         free_trial: OptionalNullable[
             Union[
@@ -763,7 +759,7 @@ class Billing(BaseSDK):
             unscheduled_plans=utils.get_pydantic_model(
                 unscheduled_plans, Optional[List[models.UnscheduledPlan]]
             ),
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
         )
 
         req = self._build_request_async(
@@ -1281,7 +1277,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
-        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -1539,7 +1535,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
-        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -3660,7 +3656,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
-        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -3893,7 +3889,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
-        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
         :param remove_discounts: Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method

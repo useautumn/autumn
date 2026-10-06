@@ -3,8 +3,8 @@
  *
  * Contract:
  *   entities.get (allocated): shared breakdown row keeps its id, source "customer",
- *     included_grant/usage/remaining scoped to the share, allocation { amount }.
- *   entities.get (not allocated): full shared row, allocation null.
+ *     included_grant/remaining = own share + unallocated, usage = own usage, allocation { amount }.
+ *   entities.get (not allocated): shared row shows only unallocated credits, allocation null.
  *   customers.get: balance gains allocated / unallocated; breakdown rows carry source.
  *
  * Red (before):  no source/allocation fields; entity rows show the whole pool.
@@ -97,23 +97,31 @@ test.concurrent(
 			await autumnV2_3.entities.get<WithBalances>(customerId, a),
 		);
 		expect(entityA).toMatchObject({
-			granted: 6000,
+			granted: 8000,
 			usage: 1500,
-			remaining: 4500,
+			remaining: 6500,
+			allocated: 6000,
+			unallocated: 2000,
 		});
 		expect(entityA.breakdown?.[0]).toMatchObject({
 			id: sharedRowId,
 			source: "customer",
-			included_grant: 6000,
+			included_grant: 8000,
 			usage: 1500,
-			remaining: 4500,
+			remaining: 6500,
 			allocation: { amount: 6000 },
 		} satisfies Partial<ApiBalanceBreakdownV1>);
 
 		const entityC = messagesOf(
 			await autumnV2_3.entities.get<WithBalances>(customerId, c),
 		);
-		expect(entityC).toMatchObject({ granted: 10000, remaining: 8500 });
+		expect(entityC).toMatchObject({
+			granted: 2000,
+			usage: 0,
+			remaining: 2000,
+			allocated: 0,
+			unallocated: 2000,
+		});
 		expect(entityC.breakdown?.[0]).toMatchObject({
 			id: sharedRowId,
 			source: "customer",

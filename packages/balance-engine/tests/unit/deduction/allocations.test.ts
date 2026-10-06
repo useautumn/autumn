@@ -222,7 +222,7 @@ const counterUsageAdded = (
 
 describe("allocation gate", () => {
 	test.concurrent(
-		"Kyle's scenario with overage on: A's 5k share, then 3k to A's own overage",
+		"even split with overage on: A's 5k share, then 3k to A's own overage",
 		() => {
 			const outcome = trackAsEntity({
 				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },
@@ -235,7 +235,7 @@ describe("allocation gate", () => {
 	);
 
 	test.concurrent(
-		"Kyle's scenario with overage off: A is blocked at its 5k share",
+		"even split with overage off: A is blocked at its 5k share",
 		() => {
 			const outcome = trackAsEntity({
 				amounts: { [entity.internal_id]: 5000, [otherEntity]: 5000 },

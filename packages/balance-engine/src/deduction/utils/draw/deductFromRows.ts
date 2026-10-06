@@ -8,7 +8,11 @@ import type { DeductionContext } from "../../types/deductionContext.js";
 import type { DeductionDelta } from "../../types/deductionDelta.js";
 import type { DeductionRow } from "../../types/deductionRow.js";
 import type { DeductionState } from "../../types/deductionState.js";
-import { allowsNegative, isRefund } from "../classifyDeductionUtils.js";
+import {
+	allowsNegative,
+	isFreeRow,
+	isRefund,
+} from "../classifyDeductionUtils.js";
 import {
 	deductionRowToCurrentBalance,
 	deductionRowToRateUnits,
@@ -174,6 +178,24 @@ export const deductFromRows = ({
 		const units = windowHeadroom
 			? Decimal.min(deductionState.remaining, windowHeadroom)
 			: deductionState.remaining;
+
+		// Free usage moves no credits, so no floor, allocation or spend limit can hold it back.
+		// A refund has nothing to give back here: it only takes what the paid rows leave, in the last bucket.
+		if (isFreeRow({ row })) {
+			if (refund && bucket !== "overage") continue;
+			deductionState.deltas.push(
+				changeToDelta({ row, change: new Decimal(0), unitsGiven: units }),
+			);
+			deductionState.remaining = deductionState.remaining.minus(units);
+			consumeUsageWindows({
+				context,
+				deductionState,
+				row: windowRow,
+				units,
+				credits: new Decimal(0),
+			});
+			continue;
+		}
 
 		// A spend limit caps the overage bucket in place of the row's floor, as the Lua gate does.
 		const headroom =

@@ -36,6 +36,7 @@ export function spawnHttpWorker({
 		thread,
 		requests: createRingReader({ ring: requestRing }),
 		replies: createRingWriter({ ring: replyRing, signal: replySignal }),
+		replySignal,
 		outbox: [],
 		pumping: false,
 		dirty: false,
@@ -84,6 +85,13 @@ export function spawnHttpWorker({
 		replyRing,
 		requestSignal: state.requestSignal.sab,
 		replySignal: replySignal.sab,
+		latency: { routes: config.inline?.routes ?? [], cells: state.latencyCells },
+		...(config.inline && {
+			heldReplies: {
+				commitCells: config.inline.commitCells,
+				failureCounts: config.inline.failureCounts,
+			},
+		}),
 	};
 	thread.postMessage(init);
 	return { lane, ready: ready.promise };

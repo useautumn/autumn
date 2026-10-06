@@ -7,10 +7,11 @@
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
-	type CreateScheduleParamsV0,
 	CreateScheduleParamsV0Schema,
 	ms,
 	type ProductItem,
+	type SetPlansParamsV0,
+	SetPlansParamsV0Schema,
 	schedules,
 } from "@autumn/shared";
 import {
@@ -36,13 +37,14 @@ import { resetCatalogPlans } from "../../../scenarios/catalog/utils/catalogScena
 const GENERATE_PATH = "/agent.generate_billing_request";
 const planId = "generate-schedule-e2e-plan";
 
+/** Generation returns the set_plans request the dashboard submits, so it applies through set_plans. */
 const generatedRequestToApi = ({
 	ctx,
 	request,
 }: {
 	ctx: Parameters<typeof productItemsToCustomizePlanV1>[0]["ctx"];
 	request: Record<string, unknown>;
-}): CreateScheduleParamsV0 => {
+}): SetPlansParamsV0 => {
 	const plansToApi = (plans: Record<string, unknown>[]) =>
 		plans.map(({ items, ...plan }) => ({
 			...plan,
@@ -55,7 +57,7 @@ const generatedRequestToApi = ({
 					}
 				: {}),
 		}));
-	return CreateScheduleParamsV0Schema.parse({
+	return SetPlansParamsV0Schema.parse({
 		...request,
 		phases: (request.phases as Record<string, unknown>[]).map((phase) => ({
 			...phase,
@@ -197,9 +199,10 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 	expect(generatedPhases.map(({ plans }) => plans[0]?.version)).toEqual(
 		phaseTerms.map(({ version }) => version),
 	);
+	// The request's top-level billing_cycle_anchor 'now' is the first phase's 'phase_start' in set_plans.
 	expect(
 		generatedPhases.map(({ billing_cycle_anchor }) => billing_cycle_anchor),
-	).toEqual([undefined, "phase_start", undefined, "phase_start"]);
+	).toEqual(["phase_start", "phase_start", undefined, "phase_start"]);
 	expect(
 		generatedPhases.map(({ plans }) =>
 			plans.map(
@@ -222,8 +225,8 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 	]);
 	const request = generatedRequestToApi({ ctx, request: generated.request });
 
-	await autumnV1.post("/billing.preview_create_schedule", request);
-	const applied = await autumnV1.billing.createSchedule(request);
+	await autumnV1.billing.previewSetPlans(request);
+	const applied = await autumnV1.billing.setPlans(request);
 
 	getRequiredScheduleId(initial.schedule_id);
 	const appliedScheduleId = getRequiredScheduleId(applied.schedule_id);
@@ -402,8 +405,8 @@ test(`${chalk.yellowBright("billing.generate schedule: appends a relative phase 
 	expect(phaseFourItems.some((item) => item.price === 75)).toBe(true);
 
 	const request = generatedRequestToApi({ ctx, request: generated.request });
-	await autumnV1.post("/billing.preview_create_schedule", request);
-	const applied = await autumnV1.billing.createSchedule(request);
+	await autumnV1.billing.previewSetPlans(request);
+	const applied = await autumnV1.billing.setPlans(request);
 	expect(applied.phases).toHaveLength(4);
 	expect(applied.phases[3]!.starts_at).toBeGreaterThan(
 		applied.phases[2]!.starts_at,

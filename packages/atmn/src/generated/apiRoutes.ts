@@ -1204,7 +1204,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
+					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).",
 			},
 			{
 				name: "remove_discounts",
@@ -1669,7 +1669,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
+					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).",
 			},
 			{
 				name: "remove_discounts",
@@ -2419,7 +2419,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description:
-					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.",
+					"Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).",
 			},
 			{
 				name: "remove_discounts",

@@ -21,6 +21,7 @@ describe("gated-write registry derivations", () => {
 			"finalizeInvoice",
 			"payInvoice",
 			"reissueInvoice",
+			"setPlans",
 			"updateAgentRules",
 			"updateCustomer",
 			"updateSubscription",
@@ -37,7 +38,7 @@ describe("gated-write registry derivations", () => {
 	test("every write the live agent can call is approval-gated", () => {
 		const ungated = toolAllowlists.leaf.filter(
 			(tool) =>
-				/^(attach|create|update|finalize|pay|reissue|void)/.test(tool) &&
+				/^(attach|create|update|finalize|pay|reissue|set|void)/.test(tool) &&
 				!approvalSets.leaf.has(tool),
 		);
 		expect(ungated).toEqual([]);
@@ -54,6 +55,7 @@ describe("gated-write registry derivations", () => {
 			finalizeInvoice: ["billing:write"],
 			payInvoice: ["billing:write"],
 			reissueInvoice: ["billing:write"],
+			setPlans: ["billing:write"],
 			updateCatalog: { ALL: ["plans:write", "features:write"] },
 			updateCustomer: ["customers:write"],
 			updatePlan: ["plans:write"],
@@ -80,6 +82,7 @@ describe("gated-write registry derivations", () => {
 			finalizeInvoice: "getInvoice",
 			payInvoice: "getInvoice",
 			reissueInvoice: "previewReissueInvoice",
+			setPlans: "previewSetPlans",
 			updateAgentRules: undefined,
 			updateCatalog: "previewUpdateCatalog",
 			updateCustomer: undefined,

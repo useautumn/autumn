@@ -1,0 +1,1 @@
+ALTER TABLE "phases" ADD COLUMN "proration_behavior" text;

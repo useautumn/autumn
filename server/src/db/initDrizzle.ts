@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+import { attachPoolErrorHandlers } from "@autumn/postgres";
 import { schemas as schema } from "@autumn/shared";
 import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
 
@@ -12,7 +13,7 @@ import { logger } from "../external/logtail/logtailUtils.js";
 import { getServerForkCount } from "../utils/memory/forkRecycling/recyclePolicy.js";
 import { otelConfig } from "../utils/otel/otelConfig.js";
 import { applyConnectRefusedRetry } from "./connectRetry.js";
-import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
+import { getRole, registerPool } from "./pgPoolMonitor.js";
 
 type AutumnDb = Omit<ReturnType<typeof drizzle<typeof schema>>, "execute"> & {
 	execute: <TRow = Record<string, unknown>>(
@@ -28,7 +29,7 @@ const normalizeExecuteRows = <TRow>(result: unknown): TRow[] => {
 	return result as TRow[];
 };
 
-const normalizeDbExecute = <
+export const normalizeDbExecute = <
 	TDb extends { execute: (query: string | SQLWrapper) => Promise<unknown> },
 >(
 	db: TDb,
@@ -76,7 +77,11 @@ export const initDrizzle = ({
 	});
 
 	if (name) {
-		attachPoolErrorHandlers({ pool: client, name });
+		attachPoolErrorHandlers({
+			ctx: { logger: logger.child({ context: { role: getRole() } }) },
+			pool: client,
+			name,
+		});
 		registerPool({ pool: client, name, max: maxConnections });
 	}
 	// After registerPool so a retry passes through timeAcquires as its own acquire attempt.

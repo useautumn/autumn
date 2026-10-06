@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ApiRequestError } from "./api/client.ts";
 import { connectLiveCache } from "./api/liveCache.ts";
-import { AppShell } from "./components/appShell.tsx";
+import { AppShell, FILL_PAGE } from "./components/appShell.tsx";
 import { RouteError } from "./components/routeError.tsx";
 import { TooltipProvider } from "./components/ui.tsx";
 import { AccountsScreen } from "./screens/accountsScreen.tsx";
@@ -42,12 +42,12 @@ const router = createBrowserRouter([
 			{
 				errorElement: <RouteError />,
 				children: [
-					{ path: "/", element: <RunsScreen /> },
+					{ path: "/", element: <RunsScreen />, handle: FILL_PAGE },
 					{ path: "/runs/new", element: <NewRunScreen /> },
 					{ path: "/runs/:id", element: <RunDetailScreen /> },
 					{ path: "/costs", element: <CostsScreen /> },
-					{ path: "/keys", element: <KeysScreen /> },
-					{ path: "/accounts", element: <AccountsScreen /> },
+					{ path: "/keys", element: <KeysScreen />, handle: FILL_PAGE },
+					{ path: "/accounts", element: <AccountsScreen />, handle: FILL_PAGE },
 					{ path: "/settings", element: <SettingsScreen /> },
 				],
 			},

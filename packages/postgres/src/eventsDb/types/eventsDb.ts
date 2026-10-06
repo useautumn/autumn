@@ -3,6 +3,8 @@ import type { UsageEventsInsertResult } from "../repos/usageEvents.js";
 
 export type EventsDbConfig = {
 	databaseUrl: string;
+	/** Names the pool's connections in pg_stat_activity and the bouncer's logs. */
+	applicationName: string;
 	/** Pool ceiling; counts against the events database's connection budget per process. */
 	maxConnections: number;
 };

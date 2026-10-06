@@ -39,9 +39,14 @@ test.concurrent(
 			});
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
-			billing_cycle_anchor: anchorMs,
-			proration_behavior: "none",
-			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
 		};
 
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
@@ -104,10 +109,15 @@ test.concurrent(
 		const anchorMs = advancedTo + ms.days(10);
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
-			billing_cycle_anchor: anchorMs,
-			proration_behavior: "none",
 			undeclared_plans: "retain",
-			phases: [{ starts_at: "now", plans: [{ plan_id: pro.id }] }],
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
 		});
 
 		await expectBalanceCorrect({

@@ -11,6 +11,9 @@ import { CompressionTypes, KafkaJSError, KafkaJSProtocolError } from "kafkajs";
 import { createThreadedProducers } from "../../../../src/kafka/producerThread/createThreadedProducers.js";
 import * as threadProducer from "../../../../src/kafka/producerThread/producers/createThreadProducer.js";
 import type { ThreadedProducersScope } from "../../../../src/kafka/producerThread/types/threadedProducersScope.js";
+import { isPartitionRestartableCause } from "../../../../src/partitions/health/partitionRestartableCauses.js";
+import { PartitionWriterRecoveryRequiredError } from "../../../../src/processor/writer/writerErrors.js";
+import { OwnedPartitionRecoveryRequiredError } from "../../../../src/runtime/runtimeErrors.js";
 
 const logger = { info() {}, warn() {}, error() {} };
 const threadUrl = new URL("./fakeProducerThread.ts", import.meta.url).href;
@@ -252,6 +255,34 @@ describe("threaded producers", () => {
 		});
 	});
 
+	test("retries exhausted in a leader election cross the thread as an unknown append that parks only its partition", async () => {
+		await withThread({
+			run: async (remote) => {
+				const producer = remote.producer({ idempotent: true });
+				await producer.connect();
+				const caught = await rejectionOf(
+					sendIdempotentBatch({
+						sender: { send: senderOf(producer) },
+						topic: "electing",
+						partition: 0,
+						messages: [{ key: Buffer.from("k"), value: Buffer.from("v") }],
+						ownerEpoch: "1",
+					}),
+				);
+				expect(caught).toBeInstanceOf(KafkaTransactionStateUnknownError);
+				expect(((caught as Error).cause as Error).name).toBe(
+					"KafkaJSNumberOfRetriesExceeded",
+				);
+				const recovery = new OwnedPartitionRecoveryRequiredError({
+					topic: "electing",
+					partition: 0,
+					cause: new PartitionWriterRecoveryRequiredError({ cause: caught }),
+				});
+				expect(isPartitionRestartableCause({ cause: recovery })).toBe(true);
+			},
+		});
+	});
+
 	test("broker request timings reach a producer session's onRequest, as the in-thread client's do", async () => {
 		await withThread({
 			run: async (remote) => {
@@ -296,7 +327,7 @@ describe("threaded producers", () => {
 		});
 	});
 
-	test("sends keep their order per producer even when the ring is full and payloads take the message port", async () => {
+	test("sends keep their order per producer even when the ring is full and payloads take the message port, which the window counts", async () => {
 		await withThread({
 			sendRingBytes: 4096,
 			run: async (remote) => {
@@ -314,6 +345,10 @@ describe("threaded producers", () => {
 				expect(replies.map((metadata) => metadata[0]?.baseOffset)).toEqual(
 					Array.from({ length: 50 }, (_, i) => String(i)),
 				);
+				const window = remote.drainHealth();
+				expect(window.sendsOverPort).toBeGreaterThan(0);
+				expect(window.sendsAwaitingAck).toBe(0);
+				expect(remote.drainHealth().sendsOverPort).toBe(0);
 			},
 		});
 	});

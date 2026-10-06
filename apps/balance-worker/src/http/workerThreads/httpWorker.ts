@@ -8,12 +8,19 @@ import {
 	createRingWriter,
 } from "../../threads/ring/createRing.js";
 import { createRingSignal } from "../../threads/ring/ringSignal.js";
-import { REPLY_FRAME, readReplyFrame } from "./frames/replyFrame.js";
+import { FAIL_FRAME, readFailFrame } from "./frames/failFrame.js";
+import {
+	REPLY_FRAME,
+	type ReplyFrame,
+	readReplyFrame,
+} from "./frames/replyFrame.js";
 import {
 	type RequestMeta,
 	requestFrameMaxLength,
 	writeRequestFrame,
 } from "./frames/requestFrame.js";
+import { createHeldReplies } from "./heldReplies/createHeldReplies.js";
+import { recordLatency } from "./latency/latencyCells.js";
 import { forwardableHeadersOf } from "./rules/forwardableHeadersOf.js";
 import type {
 	DecideThreadMessage,
@@ -35,6 +42,13 @@ const LARGE_REQUEST_BYTES = 256 * 1024;
 const MAX_LARGE_REQUESTS_IN_FLIGHT = 32;
 
 type HttpWorkerThread = { receive(message: DecideThreadMessage): void };
+
+/** A request waiting for its reply; `route` is its index in `init.latency.routes`, or -1 when untimed. */
+type Pending = {
+	resolve(response: Response): void;
+	route: number;
+	startedAt: number;
+};
 
 let thread: HttpWorkerThread | null | undefined;
 
@@ -61,11 +75,14 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 	});
 	const replies = createRingReader({ ring: init.replyRing });
 	const replySignal = createRingSignal({ sab: init.replySignal });
-	const pending = new Map<number, (response: Response) => void>();
+	const pending = new Map<number, Pending>();
+	const latencyCells = new Int32Array(init.latency.cells);
+	let answeredAt = 0;
 	const largeRequestBytes = Math.min(
 		init.requestRing.capacity >>> 3,
 		LARGE_REQUEST_BYTES,
 	);
+	const held = init.heldReplies ? createHeldReplies(init.heldReplies) : null;
 	let nextReqId = 1;
 	let largeRequestsInFlight = 0;
 
@@ -80,9 +97,35 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		headers: [string, string][];
 		body: Uint8Array | ArrayBuffer;
 	}): void {
-		const resolve = pending.get(reqId);
+		const waiting = pending.get(reqId);
+		if (!waiting) return;
 		pending.delete(reqId);
-		resolve?.(new Response(body, { status, headers }));
+		waiting.resolve(new Response(body, { status, headers }));
+		if (waiting.route < 0) return;
+		recordLatency({
+			cells: latencyCells,
+			route: waiting.route,
+			micros: (answeredAt - waiting.startedAt) * 1_000,
+		});
+	}
+
+	function answerOrHold(reply: ReplyFrame): void {
+		if (reply.heldUntilSeq === 0 || !held) {
+			answer(reply);
+			return;
+		}
+		function answerHeld(): void {
+			answer(reply);
+		}
+		function failHeld({ status, body }: { status: number; body: Uint8Array }) {
+			answer({ reqId: reply.reqId, status, headers: reply.headers, body });
+		}
+		held.hold({
+			partition: reply.partition,
+			seq: reply.heldUntilSeq,
+			answer: answerHeld,
+			fail: failHeld,
+		});
 	}
 
 	function drainReplies(): void {
@@ -90,27 +133,37 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		for (;;) {
 			const frame = replies.next();
 			if (!frame) break;
-			if (frame.type !== REPLY_FRAME)
+			if (frame.type === REPLY_FRAME)
+				answerOrHold(readReplyFrame({ reader: replies, frame }));
+			else if (frame.type === FAIL_FRAME && held)
+				held.fail(readFailFrame({ reader: replies, frame }));
+			else
 				throw new Error(
 					`HTTP worker ${init.index}: unexpected frame ${frame.type}`,
 				);
-			const reply = readReplyFrame({ reader: replies, frame });
 			replies.advance();
 			read++;
-			answer(reply);
 		}
 		if (read > 0) replies.release();
 	}
 
+	function hasWork(): boolean {
+		return replies.hasWork() || held?.releasable() === true;
+	}
+
 	async function replyLoop(): Promise<void> {
 		for (;;) {
+			// One clock read per pass answers every reply in it.
+			answeredAt = performance.now();
 			drainReplies();
-			// The timeout is insurance against a wake lost some other way; a publish wakes the thread first.
-			await replySignal.sleep({ hasWork: replies.hasWork, timeoutMs: 50 });
+			held?.release();
+			// The timeout is insurance against a wake lost some other way; a publish or a commit wakes the thread first.
+			await replySignal.sleep({ hasWork, timeoutMs: 50 });
 		}
 	}
 
 	async function forward(request: Request): Promise<Response> {
+		const startedAt = performance.now();
 		const url = request.url;
 		const pathStart = url.indexOf("/", url.indexOf("//") + 2);
 		const meta: RequestMeta = {
@@ -118,18 +171,23 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 			path: pathStart === -1 ? "/" : url.slice(pathStart),
 			headers: forwardableHeadersOf({ headers: request.headers }),
 		};
+		const query = meta.path.indexOf("?");
+		const route = init.latency.routes.indexOf(
+			query === -1 ? meta.path : meta.path.slice(0, query),
+		);
 		const body = new Uint8Array(await request.arrayBuffer());
 		const metaText = JSON.stringify(meta);
 		const reqId = nextReqId;
 		nextReqId = nextReqId === 0xfffffffe ? 1 : nextReqId + 1;
 		const { promise, resolve } = Promise.withResolvers<Response>();
+		const waiting = { resolve, route, startedAt };
 		if (requestFrameMaxLength({ metaText, body }) > largeRequestBytes) {
 			if (largeRequestsInFlight >= MAX_LARGE_REQUESTS_IN_FLIGHT)
 				return new Response(REQUEST_RING_FULL, {
 					status: 429,
 					headers: JSON_HEADERS,
 				});
-			pending.set(reqId, resolve);
+			pending.set(reqId, waiting);
 			report({ kind: "request", reqId, meta, body: body.buffer }, [
 				body.buffer,
 			]);
@@ -143,7 +201,7 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 				status: 429,
 				headers: JSON_HEADERS,
 			});
-		pending.set(reqId, resolve);
+		pending.set(reqId, waiting);
 		requests.flush();
 		return promise;
 	}
@@ -173,6 +231,7 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 	}
 
 	function receive(message: DecideThreadMessage): void {
+		answeredAt = performance.now();
 		if (message.kind === "reply") answer(message);
 		else void stop();
 	}

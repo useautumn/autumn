@@ -1,11 +1,6 @@
 import { Switch } from "@autumn/ui";
-import {
-	canResetScheduleBillingCycle,
-	hasMultipleImmediateSchedulePlans,
-	hasPersistedCreateSchedule,
-} from "@/components/forms/customer-state/customerStateSchema";
 import { AdvancedSection } from "@/components/forms/shared/advanced-section";
-import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
+import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
@@ -17,30 +12,16 @@ import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 export function CreateScheduleAdvancedSection() {
 	const { form, formValues, products, nowMs, backdatesLiveSubscription } =
 		useCreateScheduleFormContext();
-	const {
-		billingBehavior,
-		resetBillingCycle,
-		billingCycleAnchorMode,
-		billingCycleAnchorDate,
-		endDate,
-		phases,
-		enablePlanImmediately,
-	} = formValues;
-
-	const hasPaidRecurringPlan = hasPaidRecurringSchedulePlan({
-		phases,
-		products,
-	});
+	const { resetBillingCycle, endDate, phases, enablePlanImmediately } =
+		formValues;
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",
 		state: {
-			hasMultipleImmediatePlans: hasMultipleImmediateSchedulePlans({ phases }),
-			canResetScheduleBillingCycle: canResetScheduleBillingCycle({ phases }),
-			hasPaidRecurringPlan,
+			hasPaidRecurringPlan: hasPaidRecurringSchedulePlan({ phases, products }),
 		},
 	});
-	const anchorRule = backdatesLiveSubscription
+	const resetRule = backdatesLiveSubscription
 		? {
 				...rules.resetBillingCycle,
 				disabled: true,
@@ -73,12 +54,12 @@ export function CreateScheduleAdvancedSection() {
 					rule={rules.proration}
 					billsBackdatedGap={backdatesLiveSubscription}
 					value={
-						billingBehavior ??
+						phases[0]?.prorationBehavior ??
 						(backdatesLiveSubscription ? "none" : "prorate_immediately")
 					}
 					onChange={(value) =>
 						form.setFieldValue(
-							"billingBehavior",
+							"phases[0].prorationBehavior",
 							value === "prorate_immediately" && !backdatesLiveSubscription
 								? null
 								: value,
@@ -87,21 +68,17 @@ export function CreateScheduleAdvancedSection() {
 				/>
 			)}
 			{rules.resetBillingCycle.visible && (
-				<BillingCycleAnchorConfigRow
-					rule={anchorRule}
-					enabled={resetBillingCycle && !backdatesLiveSubscription}
-					mode={billingCycleAnchorMode}
-					allowCustomAnchor={!hasPersistedCreateSchedule({ phases })}
-					customAnchor={billingCycleAnchorDate}
-					maxUnixDate={endDate ? endDate - 1_000 : undefined}
-					onEnabledChange={(enabled) =>
-						form.setFieldValue("resetBillingCycle", enabled)
-					}
-					onModeChange={(mode) =>
-						form.setFieldValue("billingCycleAnchorMode", mode)
-					}
-					onCustomAnchorChange={(anchor) =>
-						form.setFieldValue("billingCycleAnchorDate", anchor)
+				<ConfigRow
+					title="Reset Billing Cycle"
+					description="Restart the billing cycle when the first phase starts"
+					action={
+						<BillingOptionToggle
+							rule={resetRule}
+							checked={resetBillingCycle && !backdatesLiveSubscription}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("resetBillingCycle", checked)
+							}
+						/>
 					}
 				/>
 			)}

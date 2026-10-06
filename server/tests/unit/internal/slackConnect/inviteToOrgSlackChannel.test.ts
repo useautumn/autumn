@@ -133,6 +133,21 @@ describe("inviteToOrgSlackChannel", () => {
 		]);
 	});
 
+	test("invites a full external member so they can invite teammates", async () => {
+		const fake = createFakeSlack({});
+
+		await invite({ client: fake.client, requestedName: "acme" });
+
+		const inviteSharedCall = fake.calls.find(
+			(call) => call.method === "inviteShared",
+		);
+		expect(inviteSharedCall?.args).toEqual({
+			channel: "C_autumn-acme",
+			emails: [EMAIL],
+			external_limited: false,
+		});
+	});
+
 	test("reuses the org's own channel without creating one", async () => {
 		const fake = createFakeSlack({
 			channels: [

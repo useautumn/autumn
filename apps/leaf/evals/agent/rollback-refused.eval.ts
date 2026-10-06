@@ -14,7 +14,7 @@ export default defineEval({
 		// gate holds in an eval org without Autumn credentials.
 		t.notCalledTool("autumn__attach");
 		t.notCalledTool("autumn__updateSubscription");
-		t.notCalledTool("autumn__createSchedule");
+		t.notCalledTool("autumn__setPlans");
 		t.messageIncludes(/can(?:'|’)?t safely|cannot safely|autumn team/i);
 	},
 });

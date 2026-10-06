@@ -107,7 +107,7 @@ async function runTrack({
 	return runtime.process(track);
 }
 
-function looksLikeTrackCommand(input: unknown): input is TrackCommand {
+export function looksLikeTrackCommand(input: unknown): input is TrackCommand {
 	if (typeof input !== "object" || input === null) return false;
 	const command = input as Partial<TrackCommand>;
 	const identity = command.identity as
@@ -126,7 +126,7 @@ function looksLikeTrackCommand(input: unknown): input is TrackCommand {
 }
 
 /** Failures are counted by code; only one unexpected cause is kept, so a bad batch costs one stack. */
-function recordBatch({
+export function recordBatch({
 	requestLog,
 	route,
 	commands,
@@ -136,7 +136,8 @@ function recordBatch({
 	requestLog: BalanceWorkerRequestLog;
 	route: PartitionRoute;
 	commands: unknown[];
-	results: TrackBatchItemResult[];
+	/** Only success and the failure's status and code are counted. */
+	results: (Extract<TrackBatchItemResult, { ok: false }> | { ok: true })[];
 	causes: unknown[];
 }): void {
 	const batch: BalanceWorkerBatchLog = {

@@ -22,6 +22,19 @@ export const handleCustomLineItemsErrors = ({
 }) => {
 	if (!params.custom_line_items?.length) return;
 
+	// Scheduled switches still yield an "update" action, but have no immediate invoice to override.
+	if (
+		"planTiming" in billingContext &&
+		billingContext.planTiming === "end_of_cycle"
+	) {
+		throw new RecaseError({
+			message:
+				"custom_line_items can only be used when updating an existing subscription immediately (not for scheduled plan changes)",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const subAction = billingPlan.stripe?.subscriptionAction;
 
 	// 1. Only allowed for subscription updates (not creates, cancels, etc.)

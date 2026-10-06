@@ -88,7 +88,7 @@ test("a store failure is retried in place with capped backoff until the store an
 	const { ctx, logs, delays, heartbeats } = createContext();
 	const { job, batches } = createStoreJob({
 		failures: 6,
-		cause: Object.assign(new Error("connection reset"), { errno: "08006" }),
+		cause: new Error("Connection terminated unexpectedly"),
 	});
 
 	const settled = await landRecords({
@@ -200,7 +200,7 @@ test("stopping herald ends a wait on the store without skipping anything, and le
 		handle: async () => {
 			attempts += 1;
 			stopping.abort();
-			throw Object.assign(new Error("connection reset"), { errno: "08006" });
+			throw new Error("Connection terminated unexpectedly");
 		},
 	};
 

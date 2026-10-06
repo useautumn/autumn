@@ -42,10 +42,13 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
 			customer_id: customerId,
-			billing_cycle_anchor: oldPeriodEndMs,
-			proration_behavior: "none",
 			phases: [
-				{ starts_at: oldStartMs, plans: [{ plan_id: pro.id }] },
+				{
+					billing_cycle_anchor: oldPeriodEndMs,
+					proration_behavior: "none",
+					starts_at: oldStartMs,
+					plans: [{ plan_id: pro.id }],
+				},
 				{ starts_at: nextPhaseStartsAt, plans: [{ plan_id: premium.id }] },
 			],
 		});

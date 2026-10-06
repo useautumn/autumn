@@ -1425,7 +1425,7 @@ class PreviewAttachParamsTypedDict(TypedDict):
     currency: NotRequired[str]
     r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     remove_plan_ids: NotRequired[List[str]]
-    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
+    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`)."""
     remove_discounts: NotRequired[List[PreviewAttachRemoveDiscountTypedDict]]
     r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""
 
@@ -1522,7 +1522,7 @@ class PreviewAttachParams(BaseModel):
     r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
     remove_plan_ids: Optional[List[str]] = None
-    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
+    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`)."""
 
     remove_discounts: Optional[List[PreviewAttachRemoveDiscount]] = None
     r"""Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged."""

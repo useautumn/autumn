@@ -17,6 +17,9 @@
  *     memoized reader, which serves both of verify's schedule reads.
  *   - A billing_verify job runs to completion: published to S3, downloadable
  *     under its own file name, holding only the drifted customer.
+ *   - A billed Stripe subscription on a Stripe customer no Autumn customer is
+ *     linked to yields one orphan row naming the same-email Autumn customer;
+ *     a linked Stripe customer left in the sweep yields none.
  */
 
 import { expect, test } from "bun:test";
@@ -40,6 +43,8 @@ import { CustomerExportService } from "@/internal/customers/exports/CustomerExpo
 import { resolveCustomerExportPopulation } from "@/internal/customers/exports/queries/getCustomerExportScalars";
 import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader";
 import { filterBillingVerifyCandidates } from "@/internal/customers/exports/verify/filterBillingVerifyCandidates";
+import { orphanedSubscriptionsToExportRows } from "@/internal/customers/exports/verify/orphanedSubscriptionsToExportRows/orphanedSubscriptionsToExportRows";
+import { STRIPE_CUSTOMER_NOT_IN_AUTUMN } from "@/internal/customers/exports/verify/orphanedSubscriptionsToExportRows/orphanToExportRow";
 import {
 	type BillingVerifySweep,
 	setupBillingVerifySweep,
@@ -229,7 +234,11 @@ test.concurrent(
 			},
 		});
 
-		const snapshot = { search: searchTerm, filters: {} };
+		const snapshot = {
+			search: searchTerm,
+			filters: {},
+			include_unlinked_stripe_customers: false,
+		};
 		const { population, totalCount } = await resolveCustomerExportPopulation({
 			db: ctx.db,
 			orgId: ctx.org.id,
@@ -517,6 +526,80 @@ testWithS3(
 			await ctx.db
 				.delete(customerExports)
 				.where(eq(customerExports.id, exportId));
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify export 10: unlinked Stripe customer -> orphan row with same-email match")}`,
+	async () => {
+		const customerId = "verify-export-orphan";
+		const email = `${customerId}@example.com`;
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ email, testClock: false })],
+			actions: [],
+		});
+		const linkedCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const linkedStripeCustomerId = linkedCustomer.processor?.id;
+		if (!linkedStripeCustomerId)
+			throw new Error("Customer has no Stripe customer ID");
+
+		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+		const orphanStripeCustomer = await stripeCli.customers.create({
+			email,
+			name: "Orphaned Pro",
+		});
+		const stripeProduct = await stripeCli.products.create({
+			name: "Billing verify orphan",
+		});
+		try {
+			const orphanSubscription = await stripeCli.subscriptions.create({
+				customer: orphanStripeCustomer.id,
+				items: [
+					{
+						price_data: {
+							currency: "usd",
+							product: stripeProduct.id,
+							recurring: { interval: "month" },
+							unit_amount: 4242,
+						},
+					},
+				],
+				trial_period_days: 30,
+			});
+
+			const rows = (
+				await Array.fromAsync(
+					orphanedSubscriptionsToExportRows({
+						ctx,
+						sweep: sweepOf({
+							ctx,
+							subscriptionsByStripeCustomerId: new Map([
+								[orphanStripeCustomer.id, [orphanSubscription]],
+								[linkedStripeCustomerId, [orphanSubscription]],
+							]),
+						}),
+					}),
+				)
+			).flat();
+
+			expect(rows).toHaveLength(1);
+			expect(rows[0]).toMatchObject({
+				customer_id: null,
+				name: "Orphaned Pro",
+				email,
+				stripe_customer_id: orphanStripeCustomer.id,
+				stripe_subscription_ids: orphanSubscription.id,
+				severity: "error",
+				issues: STRIPE_CUSTOMER_NOT_IN_AUTUMN,
+			});
+			expect(rows[0].details).toContain(customerId);
+		} finally {
+			await stripeCli.customers.del(orphanStripeCustomer.id);
 		}
 	},
 );

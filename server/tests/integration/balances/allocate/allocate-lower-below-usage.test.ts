@@ -5,7 +5,8 @@ import { expectAllocatedMessages } from "./utils/allocateTestUtils.js";
  * spent, and only the part of the old share the entity didn't use becomes unallocated.
  *
  * Contract: A=5k, B=5k on 10k; A uses 4k; A→1k.
- *   A: granted 1k, usage 4k, remaining 0. Shared: remaining 6k, allocated 6k, unallocated 1k.
+ *   A's share: granted 1k, usage 4k, remaining 0. Shared: remaining 6k, allocated 6k, unallocated 1k.
+ *   A's balance adds the 1k unallocated it may spend: granted 2k, remaining 1k.
  *   A may then draw only unallocated credits; B's share is untouched.
  */
 
@@ -79,7 +80,13 @@ test.concurrent(
 			autumn: autumnV2_3,
 			customerId,
 			entityId: a,
-			expected: { granted: 1000, usage: 4000, remaining: 0 },
+			expected: {
+				granted: 2000,
+				usage: 4000,
+				remaining: 1000,
+				allocated: 1000,
+				unallocated: 1000,
+			},
 		});
 	},
 );
