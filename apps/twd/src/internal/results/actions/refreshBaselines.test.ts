@@ -9,7 +9,7 @@ import { recordNewFailures } from "./refreshBaselines.ts";
 const testDatabaseUrl = process.env.TWD_TEST_DATABASE_URL;
 const MIGRATION = join(
 	import.meta.dir,
-	"../../../db/migrations/0010_run_baseline_flag.sql",
+	"../../../db/migrations/0011_run_baseline_flag.sql",
 );
 
 const at = (minute: number) =>
@@ -57,7 +57,7 @@ const result = (
 	minute = 0,
 ) => ({ run_id, file, status, attempt, created_at: at(minute) });
 
-/** Minimal pre-0010 tables in a throwaway schema; the 0010 migration file then runs against them. */
+/** Minimal pre-0011 tables in a throwaway schema; the 0011 migration file then runs against them. */
 const withSchema = async (
 	fn: (client: postgres.Sql) => Promise<void>,
 ): Promise<void> => {
@@ -103,7 +103,7 @@ const flags = async (client: postgres.Sql) =>
 	);
 
 test.skipIf(!testDatabaseUrl)(
-	"0010 backfills baseline flags and new failures against the previous baseline",
+	"0011 backfills baseline flags and new failures against the previous baseline",
 	async () => {
 		await withSchema(async (client) => {
 			await client`insert into warm_images ${client([

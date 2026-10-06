@@ -6,11 +6,13 @@ import {
 	expect,
 	test,
 } from "bun:test";
+import type { WorkerHandle } from "../types.ts";
 
 // run.ts sizes its Stripe budget at import time and throws without any key.
 const originalStripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
 process.env.STRIPE_SANDBOX_SECRET_KEY ||= "sk_test_tw_unit_placeholder";
-const { buildWorkerEnv } = await import("./run.ts");
+const { buildWorkerEnv, cullExcessIdle } = await import("./run.ts");
+const { WorkerPool } = await import("../helpers/pool.ts");
 
 afterAll(() => {
 	if (originalStripeKey === undefined)
@@ -152,5 +154,73 @@ describe("buildWorkerEnv pg-replica shard", () => {
 		const env = build([]);
 		expect(env).not.toHaveProperty("TW_PG_REPLICA");
 		expect(env).not.toHaveProperty("DATABASE_REPLICA_URL");
+	});
+});
+
+describe("cullExcessIdle", () => {
+	const poolOf = (size: number) =>
+		new WorkerPool(
+			Array.from(
+				{ length: size },
+				(_, i) => ({ name: `w${i}`, inFlight: 0 }) as WorkerHandle,
+			),
+		);
+	const busyWorkers = (pool: InstanceType<typeof WorkerPool>, count: number) =>
+		Promise.all(Array.from({ length: count }, () => pool.acquire()));
+	const settlesNow = <T>(promise: Promise<T>) =>
+		Promise.race([promise, Bun.sleep(20).then(() => undefined)]);
+
+	test("keeps one idle worker per busy one", async () => {
+		const pool = poolOf(20);
+		const busy = await busyWorkers(pool, 6);
+		const { culled, reserve } = cullExcessIdle({ pool, floor: 4 });
+		expect(reserve).toBe(6);
+		expect(culled).toHaveLength(8);
+		expect(pool.idleCount).toBe(6);
+		expect(pool.all.filter((w) => w.inFlight > 0)).toEqual(busy);
+	});
+
+	test("keeps the floor once almost nothing is busy", async () => {
+		const pool = poolOf(20);
+		await busyWorkers(pool, 1);
+		cullExcessIdle({ pool, floor: 4 });
+		expect(pool.idleCount).toBe(4);
+		expect(pool.size).toBe(5);
+	});
+
+	test("culls nothing while busy workers outnumber idle ones", async () => {
+		const pool = poolOf(10);
+		await busyWorkers(pool, 8);
+		expect(cullExcessIdle({ pool, floor: 4 }).culled).toHaveLength(0);
+		expect(pool.size).toBe(10);
+	});
+
+	test("after a cull every running file can retry on a different worker at once", async () => {
+		const pool = poolOf(30);
+		const busy = await busyWorkers(pool, 5);
+		cullExcessIdle({ pool, floor: 4 });
+		const retries = busy.map((worker) => {
+			pool.release(worker);
+			return pool.acquireDifferentFrom(worker.name);
+		});
+		const granted = await settlesNow(Promise.all(retries));
+		expect(granted).toBeDefined();
+		granted?.forEach((worker, i) => {
+			expect(worker.name).not.toBe(busy[i]?.name);
+		});
+	});
+
+	test("after a cull every running file's worker can die and reschedule at once", async () => {
+		const pool = poolOf(30);
+		const busy = await busyWorkers(pool, 5);
+		cullExcessIdle({ pool, floor: 4 });
+		const reschedules = busy.map((worker) => {
+			pool.markDead(worker);
+			return pool.acquireDifferentFrom(worker.name, true);
+		});
+		const granted = await settlesNow(Promise.all(reschedules));
+		expect(granted?.map((w) => w.name).sort()).toEqual(
+			pool.all.map((w) => w.name).sort(),
+		);
 	});
 });
