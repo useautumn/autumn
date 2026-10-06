@@ -12,6 +12,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCreditNote, ApiListInvoiceV1 } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
+import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -49,6 +50,9 @@ const setupPaidInvoice = async ({ customerId }: { customerId: string }) => {
 		],
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
+	// Line items are stored by an async queue job after the invoice is created.
+	const created = await getOnlyInvoice({ autumnV2_3, customerId });
+	await waitForInvoiceLineItems({ stripeInvoiceId: created.stripe_id });
 	const invoice = await getOnlyInvoice({ autumnV2_3, customerId });
 	expect(invoice.status).toBe("paid");
 	return { autumnV2_3, invoice };
@@ -190,6 +194,7 @@ test.concurrent(
 		const customerId = "credit-note-invalid";
 		const { autumnV2_3, invoice } = await setupPaidInvoice({ customerId });
 		const line = invoice.items?.[0];
+		expect(line).toBeDefined();
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
