@@ -1,5 +1,6 @@
 import { pushPhaseMs } from "../pushes/pushPhaseMs.js";
 import { deepFreeze } from "./deepFreeze.js";
+import { getHeldSubjects } from "./heldSubjects/getHeldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
@@ -13,8 +14,8 @@ import type { StoredSubject } from "./types/storedSubject.js";
 /** Every slot's subject reads on this thread, and how many read the file: published as the held copies' hit rate. */
 export const subjectReadCounts = { reads: 0, parses: 0 };
 
-/** Subjects held per slot, the least recently read dropped first: a thread owning ~18 of 128 slots holds ~37k at most. */
-const HELD_SUBJECTS_PER_SLOT = 2048;
+/** Tells this thread's stores apart in the one held-subjects budget, files and in-memory stores alike. */
+let storesOpened = 0;
 
 const subjectKey = ({
 	customerId,
@@ -40,44 +41,46 @@ export const openSqliteStore = ({
 	databasePath: string;
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
-	// Frozen, because every check of the subject shares the copy.
-	const held = new Map<string, StoredSubject>();
+	const held = getHeldSubjects();
+	const storePrefix = `${storesOpened++}\u0000`;
 
 	function readSubject(params: {
 		customerId: string;
 		entityId: string | null;
 	}): StoredSubject | null {
 		subjectReadCounts.reads += 1;
-		const key = subjectKey(params);
+		const key = storePrefix + subjectKey(params);
 		const found = held.get(key);
-		if (found) {
-			held.delete(key);
-			held.set(key, found);
-			return found;
-		}
+		if (found) return found;
 		const row = readSubjectRow({ ctx, ...params });
 		if (row === null) return null;
 		subjectReadCounts.parses += 1;
-		const subject = deepFreeze(storedSubjectFromRow({ ctx, row }));
-		hold({ key, subject });
+		const { subject, bytes } = storedSubjectFromRow({ row });
+		// Frozen, because every check of the subject shares the copy.
+		held.hold({ key, subject: deepFreeze(subject), bytes });
 		return subject;
-	}
-
-	function hold({ key, subject }: { key: string; subject: StoredSubject }) {
-		held.delete(key);
-		if (held.size >= HELD_SUBJECTS_PER_SLOT)
-			held.delete(held.keys().next().value as string);
-		held.set(key, subject);
 	}
 
 	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
 	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
 		const writeStartedAt = performance.now();
-		const stored = upsertSubjects({ ctx, subjects });
-		for (const subject of stored)
-			if (subject) hold({ key: keyOf(subject), subject: deepFreeze(subject) });
+		const storedBytes = upsertSubjects({ ctx, subjects });
+		subjects.forEach((subject, index) => {
+			const bytes = storedBytes[index];
+			if (bytes === null || bytes === undefined) return;
+			held.hold({
+				key: storePrefix + keyOf(subject),
+				subject: deepFreeze(subject),
+				bytes,
+			});
+		});
 		pushPhaseMs.write += performance.now() - writeStartedAt;
-		return stored.map((subject) => subject !== null);
+		return storedBytes.map((bytes) => bytes !== null);
+	}
+
+	function close(): void {
+		held.dropPrefix(storePrefix);
+		ctx.sqliteDb.close(true);
 	}
 
 	return {
@@ -86,6 +89,6 @@ export const openSqliteStore = ({
 			setSubjects({ subjects: [subject] })[0] ?? false,
 		setSubjects,
 		countSubjects: () => countSubjects({ ctx }),
-		close: () => ctx.sqliteDb.close(true),
+		close,
 	};
 };

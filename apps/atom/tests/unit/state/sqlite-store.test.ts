@@ -7,10 +7,7 @@ import {
 	createSubjectState,
 	type MeteringIdentity,
 } from "@autumn/balance-engine";
-import {
-	openSqliteStore,
-	subjectReadCounts,
-} from "../../../src/state/openSqliteStore.js";
+import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import { atomOrg } from "../utils/atomFixtures.js";
 
@@ -276,51 +273,52 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("past its bound, the subject read least recently is dropped and read from the file again", () => {
-		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
-		const subjectOf = (customerId: string): StoredSubject => ({
-			...subjectAt({ logOffset: 1n }),
-			state: createSubjectState({ identity: { ...identity, customerId } }),
-		});
-		const read = (customerId: string) =>
-			sqliteStore.readSubject({ customerId, entityId: null });
-		sqliteStore.setSubjects({
-			subjects: Array.from({ length: 2048 }, (_, i) => subjectOf(`cus_${i}`)),
-		});
-		read("cus_0");
-		const parses = subjectReadCounts.parses;
-
-		sqliteStore.setSubject({ subject: subjectOf("cus_new") });
-		read("cus_0");
-		read("cus_new");
-		expect(subjectReadCounts.parses).toBe(parses);
-		read("cus_1");
-		expect(subjectReadCounts.parses).toBe(parses + 1);
-		sqliteStore.close();
-	});
-
-	test("customers sharing a catalog store its text once, and each reads it back whole", () => {
+	test("each row holds its own catalog slice and org, and reads back whole after a restart", () => {
 		const databasePath = slotPath();
-		const sqliteStore = openSqliteStore({ databasePath });
 		const catalog = {
 			...emptyCatalog,
 			features: { messages: { id: "messages" } },
 		} as unknown as StoredSubject["catalog"];
-		for (const customerId of ["cus_1", "cus_2"])
-			sqliteStore.setSubject({
-				subject: {
-					...subjectAt({ logOffset: 1n }),
-					state: createSubjectState({ identity: { ...identity, customerId } }),
-					catalog,
-				},
-			});
+		const subjects = ["cus_1", "cus_2"].map(
+			(customerId): StoredSubject => ({
+				...subjectAt({ logOffset: 1n }),
+				state: createSubjectState({ identity: { ...identity, customerId } }),
+				catalog,
+			}),
+		);
+		const writer = openSqliteStore({ databasePath });
+		writer.setSubjects({ subjects });
+		writer.close();
 
-		const texts = new Database(databasePath)
-			.query("SELECT count(*) AS n FROM shared_texts")
-			.get() as { n: number };
-		expect(texts.n).toBe(2);
+		const reopened = openSqliteStore({ databasePath });
+
 		expect(
-			sqliteStore.readSubject({ customerId: "cus_2", entityId: null })?.catalog,
-		).toEqual(catalog);
+			reopened.readSubject({ customerId: "cus_2", entityId: null }),
+		).toEqual(subjects[1] as StoredSubject);
+		const columns = new Database(databasePath)
+			.query("SELECT name FROM pragma_table_info('subject_states')")
+			.all() as { name: string }[];
+		expect(columns.map(({ name }) => name)).toContain("catalog_json");
+		reopened.close();
+	});
+
+	test("a file of the shared-text schema (v3) is emptied and its shared texts dropped", () => {
+		const databasePath = slotPath();
+		const older = new Database(databasePath, { create: true });
+		older.run(
+			"CREATE TABLE subject_states (customer_id TEXT, catalog_hash TEXT)",
+		);
+		older.run("CREATE TABLE shared_texts (hash TEXT PRIMARY KEY, text TEXT)");
+		older.run("PRAGMA user_version = 3");
+		older.close();
+
+		const sqliteStore = openSqliteStore({ databasePath });
+
+		expect(sqliteStore.countSubjects()).toBe(0);
+		const tables = new Database(databasePath)
+			.query("SELECT name FROM sqlite_master WHERE type = 'table'")
+			.all() as { name: string }[];
+		expect(tables.map(({ name }) => name)).toEqual(["subject_states"]);
+		sqliteStore.close();
 	});
 });

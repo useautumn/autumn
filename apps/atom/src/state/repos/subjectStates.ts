@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { sharedJson, sharedTextHash } from "../sharedJson.js";
+import type { HeldSubject } from "../types/heldSubject.js";
 import type { StoredSubject } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
@@ -11,73 +11,28 @@ export type SubjectStateRow = {
 	logOffset: bigint;
 	readAt: bigint;
 	stateJson: string;
-	catalogHash: string;
-	orgHash: string;
+	catalogJson: string;
+	orgJson: string;
 };
 
-/** Rows were validated where they entered (the request that stored them), so reading only parses JSON. The customer's own state is parsed per row; its catalog and org are mostly the org's, shared. */
+const textBytes = (texts: string[]): number =>
+	texts.reduce((bytes, text) => bytes + text.length, 0);
+
+/** Rows were validated where they entered (the request that stored them), so reading only parses JSON. */
 export const storedSubjectFromRow = ({
-	ctx,
 	row,
 }: {
-	ctx: SlotContext;
 	row: SubjectStateRow;
-}): StoredSubject => ({
-	state: JSON.parse(row.stateJson),
-	catalog: sharedJson({
-		hash: row.catalogHash,
-		load: () => JSON.parse(readSharedText({ ctx, hash: row.catalogHash })),
-	}),
-	org: sharedJson({
-		hash: row.orgHash,
-		load: () => JSON.parse(readSharedText({ ctx, hash: row.orgHash })),
-	}),
-	logOffset: row.logOffset,
-	readAt: Number(row.readAt),
+}): HeldSubject => ({
+	subject: {
+		state: JSON.parse(row.stateJson),
+		catalog: JSON.parse(row.catalogJson),
+		org: JSON.parse(row.orgJson),
+		logOffset: row.logOffset,
+		readAt: Number(row.readAt),
+	},
+	bytes: textBytes([row.stateJson, row.catalogJson, row.orgJson]),
 });
-
-/** A row only ever names a text already stored, so this read finds it. */
-const readSharedText = ({
-	ctx,
-	hash,
-}: {
-	ctx: SlotContext;
-	hash: string;
-}): string => {
-	const row = ctx.sqliteDb
-		.query<{ text: string }, { hash: string }>(
-			"SELECT text FROM shared_texts WHERE hash = $hash",
-		)
-		.get({ hash });
-	if (!row) throw new Error(`Shared text ${hash} is missing`);
-	return row.text;
-};
-
-/** Hashes each connection has stored or seen stored: texts are never removed, so these need no second write. */
-const storedHashes = new WeakMap<Database, Set<string>>();
-
-/** Stores the value's text once per file, before any row names it; the value held is the one copy for its hash. */
-const storeSharedText = <T>({
-	ctx,
-	value,
-}: {
-	ctx: SlotContext;
-	value: T;
-}): { hash: string; held: T } => {
-	const text = JSON.stringify(value);
-	const hash = sharedTextHash(text);
-	const held = sharedJson({ hash, load: () => value });
-	const known = storedHashes.get(ctx.sqliteDb) ?? new Set<string>();
-	storedHashes.set(ctx.sqliteDb, known);
-	if (known.has(hash)) return { hash, held };
-	ctx.sqliteDb
-		.query(
-			"INSERT OR IGNORE INTO shared_texts (hash, text) VALUES ($hash, $text)",
-		)
-		.run({ hash, text });
-	known.add(hash);
-	return { hash, held };
-};
 
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
@@ -105,8 +60,8 @@ export const readSubjectRow = ({
 				log_offset AS logOffset,
 				read_at AS readAt,
 				state_json AS stateJson,
-				catalog_hash AS catalogHash,
-				org_hash AS orgHash
+				catalog_json AS catalogJson,
+				org_json AS orgJson
 			FROM subject_states
 			WHERE customer_id = $customerId AND entity_id = $entityId
 		`)
@@ -119,7 +74,7 @@ export const upsertSubjects = ({
 }: {
 	ctx: SlotContext;
 	subjects: StoredSubject[];
-}): (StoredSubject | null)[] => {
+}): (number | null)[] => {
 	// One statement is already atomic: a transaction around it only adds a BEGIN and a COMMIT per push.
 	if (subjects.length === 1)
 		return subjects.map((subject) => upsertSubject({ ctx, subject }));
@@ -129,8 +84,8 @@ export const upsertSubjects = ({
 };
 
 /**
- * The subject as it is now held, its catalog and org the one copy per text; null when it was read before the one
- * stored, or at the same instant for an earlier change: a late push never undoes a newer one.
+ * The bytes of row text stored; null when the subject was read before the one stored, or at the same instant
+ * for an earlier change: a late push never undoes a newer one. The row carries its own catalog slice and org.
  */
 export const upsertSubject = ({
 	ctx,
@@ -138,22 +93,23 @@ export const upsertSubject = ({
 }: {
 	ctx: SlotContext;
 	subject: StoredSubject;
-}): StoredSubject | null => {
+}): number | null => {
 	const { customerId, entityId } = subject.state.identity;
-	const catalog = storeSharedText({ ctx, value: subject.catalog });
-	const org = storeSharedText({ ctx, value: subject.org });
+	const stateJson = JSON.stringify(subject.state);
+	const catalogJson = JSON.stringify(subject.catalog);
+	const orgJson = JSON.stringify(subject.org);
 	const { changes } = ctx.sqliteDb
 		.query(`
 			INSERT INTO subject_states
-				(customer_id, entity_id, log_offset, read_at, state_json, catalog_hash, org_hash)
+				(customer_id, entity_id, log_offset, read_at, state_json, catalog_json, org_json)
 			VALUES
-				($customerId, $entityId, $logOffset, $readAt, $stateJson, $catalogHash, $orgHash)
+				($customerId, $entityId, $logOffset, $readAt, $stateJson, $catalogJson, $orgJson)
 			ON CONFLICT (customer_id, entity_id) DO UPDATE SET
 				log_offset = excluded.log_offset,
 				read_at = excluded.read_at,
 				state_json = excluded.state_json,
-				catalog_hash = excluded.catalog_hash,
-				org_hash = excluded.org_hash
+				catalog_json = excluded.catalog_json,
+				org_json = excluded.org_json
 			WHERE excluded.read_at > subject_states.read_at
 				OR (excluded.read_at = subject_states.read_at
 					AND excluded.log_offset >= subject_states.log_offset)
@@ -163,10 +119,9 @@ export const upsertSubject = ({
 			entityId: entityId ?? CUSTOMER_ENTITY_ID,
 			logOffset: subject.logOffset,
 			readAt: subject.readAt,
-			stateJson: JSON.stringify(subject.state),
-			catalogHash: catalog.hash,
-			orgHash: org.hash,
+			stateJson,
+			catalogJson,
+			orgJson,
 		});
-	if (changes === 0) return null;
-	return { ...subject, catalog: catalog.held, org: org.held };
+	return changes > 0 ? textBytes([stateJson, catalogJson, orgJson]) : null;
 };
