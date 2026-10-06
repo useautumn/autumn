@@ -9,6 +9,7 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { findMatchingInlinePriceIdForPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
+import { linkPhaseDiscountsToSubscription } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/linkPhaseDiscountsToSubscription";
 import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { discardFailedScheduleRecreate } from "./discardFailedScheduleRecreate";
@@ -158,13 +159,18 @@ const createScheduleFromSubscription = async ({
 		autumnStripeRequestOptions({ source: "schedule" }),
 	);
 
-	const phases = buildAnchoredPhases({
-		params,
-		existingSchedule: schedule,
-		stripeSubscription,
-	});
-
+	// Everything after the create runs under the discard path, so a failure never strands the bare schedule.
 	try {
+		const phases = await linkPhaseDiscountsToSubscription({
+			stripeCli,
+			subscriptionId,
+			phases: buildAnchoredPhases({
+				params,
+				existingSchedule: schedule,
+				stripeSubscription,
+			}),
+		});
+
 		return await stripeCli.subscriptionSchedules.update(
 			schedule.id,
 			{

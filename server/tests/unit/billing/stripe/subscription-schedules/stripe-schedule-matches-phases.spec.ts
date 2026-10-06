@@ -170,4 +170,46 @@ describe(chalk.yellowBright("stripeScheduleMatchesPhases"), () => {
 			}),
 		).toBe(true);
 	});
+
+	test("a coupon added to the subscription but missing from a later phase is a change", () => {
+		const schedule = liveSchedule({ endBehavior: "release", lastEnd: OLD_END });
+		schedule.phases[0]!.discounts = [
+			{ coupon: "coupon_half", discount: null, promotion_code: null },
+		];
+		const phases = requestedPhases({}).map((phase) => ({
+			...phase,
+			discounts: [{ coupon: "coupon_half" }],
+		}));
+
+		expect(
+			stripeScheduleMatchesPhases({
+				schedule,
+				phases,
+				endBehavior: "release",
+				nowMs: NOW_SECONDS * 1000,
+			}),
+		).toBe(false);
+	});
+
+	test("phases sharing the subscription's discount match the requested discount", () => {
+		const schedule = liveSchedule({ endBehavior: "release", lastEnd: OLD_END });
+		for (const phase of schedule.phases) {
+			phase.discounts = [
+				{ coupon: null, discount: "di_half", promotion_code: null },
+			];
+		}
+		const phases = requestedPhases({}).map((phase) => ({
+			...phase,
+			discounts: [{ discount: "di_half" }],
+		}));
+
+		expect(
+			stripeScheduleMatchesPhases({
+				schedule,
+				phases,
+				endBehavior: "release",
+				nowMs: NOW_SECONDS * 1000,
+			}),
+		).toBe(true);
+	});
 });
