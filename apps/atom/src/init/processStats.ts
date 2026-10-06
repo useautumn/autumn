@@ -31,9 +31,10 @@ type Bucket = {
 	checkDecideMs: number;
 	checkRenderMs: number;
 	checkRespondMs: number;
-	/** Summed ms of pushes' synchronous work: body parse, validation and storing (writeMs is the stringify and SQL part of it). */
+	/** Summed push ms (see pushPhaseMs): reading what this thread received, waiting on owners, applying its own; writeMs is the store part of ownerMs. */
 	pushParseMs: number;
-	pushApplyMs: number;
+	pushHopWaitMs: number;
+	pushOwnerMs: number;
 	pushWriteMs: number;
 	/** Connections that sent their first request here. */
 	newConnections: number;
@@ -77,7 +78,8 @@ const emptyBucket = (): Bucket => ({
 	checkRenderMs: 0,
 	checkRespondMs: 0,
 	pushParseMs: 0,
-	pushApplyMs: 0,
+	pushHopWaitMs: 0,
+	pushOwnerMs: 0,
 	pushWriteMs: 0,
 	newConnections: 0,
 	queueWaitMaxMs: 0,
@@ -106,7 +108,8 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	checkRenderMs: a.checkRenderMs + b.checkRenderMs,
 	checkRespondMs: a.checkRespondMs + b.checkRespondMs,
 	pushParseMs: a.pushParseMs + b.pushParseMs,
-	pushApplyMs: a.pushApplyMs + b.pushApplyMs,
+	pushHopWaitMs: a.pushHopWaitMs + b.pushHopWaitMs,
+	pushOwnerMs: a.pushOwnerMs + b.pushOwnerMs,
 	pushWriteMs: a.pushWriteMs + b.pushWriteMs,
 	newConnections: a.newConnections + b.newConnections,
 	queueWaitMaxMs: Math.max(a.queueWaitMaxMs, b.queueWaitMaxMs),
@@ -151,7 +154,12 @@ export type CheckPhaseTotals = {
 	render: number;
 	respond: number;
 };
-export type PushPhaseTotals = { parse: number; apply: number; write: number };
+export type PushPhaseTotals = {
+	parse: number;
+	hopWait: number;
+	owner: number;
+	write: number;
+};
 
 /** A connection idle this long and then seen again counts as new; far longer than any keep-alive gap under load. */
 const CONNECTION_FORGOTTEN_AFTER_MS = 30_000;
@@ -165,7 +173,7 @@ export const startProcessStats = ({
 	now = () => new Date(),
 	subjectReadCounts = () => ({ reads: 0, parses: 0 }),
 	checkPhaseTotals = () => ({ read: 0, decide: 0, render: 0, respond: 0 }),
-	pushPhaseTotals = () => ({ parse: 0, apply: 0, write: 0 }),
+	pushPhaseTotals = () => ({ parse: 0, hopWait: 0, owner: 0, write: 0 }),
 	afterLoopTurn = (callback: () => void) => setImmediate(callback),
 	cpuMs = threadCpuMs,
 }: {
@@ -244,7 +252,8 @@ export const startProcessStats = ({
 		publishedPhases = { ...phases };
 		const pushPhases = pushPhaseTotals();
 		current.pushParseMs = pushPhases.parse - publishedPushPhases.parse;
-		current.pushApplyMs = pushPhases.apply - publishedPushPhases.apply;
+		current.pushHopWaitMs = pushPhases.hopWait - publishedPushPhases.hopWait;
+		current.pushOwnerMs = pushPhases.owner - publishedPushPhases.owner;
 		current.pushWriteMs = pushPhases.write - publishedPushPhases.write;
 		publishedPushPhases = { ...pushPhases };
 		const at = clock();
@@ -278,7 +287,8 @@ export const startProcessStats = ({
 			"checkRenderMs",
 			"checkRespondMs",
 			"pushParseMs",
-			"pushApplyMs",
+			"pushHopWaitMs",
+			"pushOwnerMs",
 			"pushWriteMs",
 			"queueWaitMaxMs",
 			"queueWaitTotalMs",

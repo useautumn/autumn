@@ -51,6 +51,22 @@ export const subjectBody = ({ balance }: { balance: number }) => {
 	};
 };
 
+/** A stored subject as Autumn pushes it: routed by its customer, the body as JSON text. */
+export const subjectPushOf = ({
+	subject,
+}: {
+	subject: StoredSubject;
+}): { customerId: string; body: string } => ({
+	customerId: subject.state.identity.customerId,
+	body: JSON.stringify({
+		state: subject.state,
+		catalog: subject.catalog,
+		org: subject.org,
+		log_offset: subject.logOffset.toString(),
+		read_at: subject.readAt,
+	}),
+});
+
 /** The fixture customer `cus_1` holding `balance` messages, as Atom stores it. */
 export const storedSubjectWith = ({
 	balance,

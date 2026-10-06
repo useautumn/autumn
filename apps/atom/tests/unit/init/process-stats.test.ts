@@ -161,9 +161,9 @@ describe("process stats", () => {
 		});
 	});
 
-	test("each publish sums the pushes' parse, apply and write times since the last", () => {
+	test("each publish sums the pushes' parse, hop wait, owner and write times since the last", () => {
 		const statsDir = newStatsDir();
-		const phases = { parse: 1, apply: 2, write: 1 };
+		const phases = { parse: 1, hopWait: 2, owner: 3, write: 1 };
 		const stats = startProcessStats({
 			index: 0,
 			statsDir,
@@ -171,14 +171,16 @@ describe("process stats", () => {
 			pushPhaseTotals: () => phases,
 		});
 		phases.parse = 7;
-		phases.apply = 12;
+		phases.hopWait = 12;
+		phases.owner = 9;
 		phases.write = 5;
 		stats.publish();
 		stats.stop();
 
 		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
 			pushParseMs: 6,
-			pushApplyMs: 10,
+			pushHopWaitMs: 10,
+			pushOwnerMs: 6,
 			pushWriteMs: 4,
 		});
 	});

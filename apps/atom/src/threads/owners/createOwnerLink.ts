@@ -1,9 +1,6 @@
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
-import {
-	checkRequestToWire,
-	replyToError,
-	storedSubjectToWire,
-} from "./ownerCallContract.js";
+import { pushPhaseMs } from "../../pushes/pushPhaseMs.js";
+import { checkRequestToWire, replyToError } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type { OwnerCallBody, OwnerReply } from "./types/ownerCall.js";
 import type { CatalogCalls } from "./types/slotOwners.js";
@@ -40,7 +37,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		const id = nextId++;
 		const reply = Promise.withResolvers<OwnerReply>();
 		waiting.set(id, reply);
-		port.postMessage(JSON.stringify({ id, ...body }));
+		const message = { id, ...body };
+		port.postMessage(
+			message.type === "setSubject" ? message : JSON.stringify(message),
+		);
 		const answered = await reply.promise;
 		if (!answered.ok) throw replyToError(answered);
 		return answered.value;
@@ -54,12 +54,19 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					request: checkRequestToWire({ request }),
 				})) as string,
-			setSubject: async ({ subject }) =>
-				(await call({
-					type: "setSubject",
-					atomId,
-					subject: storedSubjectToWire({ subject }),
-				})) as boolean,
+			setSubject: async ({ customerId, body }) => {
+				const startedAt = performance.now();
+				try {
+					return (await call({
+						type: "setSubject",
+						atomId,
+						customerId,
+						body,
+					})) as boolean;
+				} finally {
+					pushPhaseMs.hopWait += performance.now() - startedAt;
+				}
+			},
 		};
 	}
 

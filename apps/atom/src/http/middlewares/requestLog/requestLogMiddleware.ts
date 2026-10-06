@@ -1,3 +1,4 @@
+import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import {
@@ -68,7 +69,10 @@ export function requestLogMiddleware({
 			req: {
 				method: context.req.method,
 				path: context.req.path,
-				...requestFieldsOf({ body: context.get("body") }),
+				...requestFieldsOf({
+					body: context.get("body"),
+					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
+				}),
 			},
 			res: carriesResponse({ context })
 				? await responseBodyOf({ context })

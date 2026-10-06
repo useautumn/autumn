@@ -83,7 +83,8 @@ export const benchPrimitives = ({ dataDir }: { dataDir: string }) => {
 			database
 				.query<SampleRow, []>(
 					`SELECT customer_id AS customerId, entity_id AS entityId, state_json AS stateJson,
-						catalog_json AS catalogJson, org_json AS orgJson FROM subject_states LIMIT 2`,
+						catalog_json AS catalogJson, org_json AS orgJson
+						FROM subject_states JOIN subject_slices USING (customer_id, entity_id) LIMIT 2`,
 				)
 				.all()
 				.map((row) => ({ row, database })),
@@ -100,7 +101,9 @@ export const benchPrimitives = ({ dataDir }: { dataDir: string }) => {
 		const rowReads = sample.map(({ row, database }) => ({
 			row,
 			query: database.query(
-				"SELECT log_offset, read_at, state_json, catalog_json, org_json FROM subject_states WHERE customer_id = ? AND entity_id = ?",
+				`SELECT log_offset, read_at, state_json, catalog_json, org_json
+					FROM subject_states JOIN subject_slices USING (customer_id, entity_id)
+					WHERE customer_id = ? AND entity_id = ?`,
 			),
 		}));
 		const rows = sample.map(({ row }) => row);

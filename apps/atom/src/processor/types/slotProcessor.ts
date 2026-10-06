@@ -1,7 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
-import type { StoredSubject } from "../../state/types/storedSubject.js";
 import type { CheckRequest } from "./check.js";
 
 export type SlotProcessorContext = {
@@ -14,6 +13,9 @@ export type SlotProcessorContext = {
 export type SlotProcessor = {
 	/** The API's check response at the caller's version, as the JSON body it is sent as; rejects with CannotAnswerError for a check the API must answer. */
 	check(params: { request: CheckRequest }): Promise<string>;
-	/** False when the subject was read before the one held, and so ignored. */
-	setSubject(params: { subject: StoredSubject }): Promise<boolean>;
+	/**
+	 * A `subjects.set` body as JSON text, routed by its customer: parsed once, on the owner thread, which refuses a body for
+	 * another customer with InvalidPushError. False when the subject was read before the one held, and so ignored.
+	 */
+	setSubject(params: { customerId: string; body: string }): Promise<boolean>;
 };

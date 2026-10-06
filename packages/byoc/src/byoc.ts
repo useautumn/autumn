@@ -1,9 +1,11 @@
 export {
+	ATOM_CUSTOMER_ID_HEADER,
 	ATOM_PUSH_MAX_BYTES,
 	type AtomPushMessage,
 	AtomPushType,
 	atomPushMessageToPayload,
-	payloadToAtomPushMessage,
+	payloadToQueuedAtomPush,
+	type QueuedAtomPush,
 } from "./atomPushes/atomPushMessage.js";
 export {
 	BYOC_CACHE_API_VERSION,

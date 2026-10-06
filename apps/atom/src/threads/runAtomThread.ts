@@ -8,6 +8,7 @@ import { pushPhaseMs } from "../pushes/pushPhaseMs.js";
 import { subjectReadCounts } from "../state/openSqliteStore.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
+import { receivesPushes } from "./receivesPushes.js";
 import type {
 	PeerPorts,
 	ThreadControl,
@@ -39,7 +40,14 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 				pushPhaseTotals: () => pushPhaseMs,
 			}),
 		},
-		config: { env, receivesPushes: index < env.ATOM_PUSH_RECEIVERS },
+		config: {
+			env,
+			receivesPushes: receivesPushes({
+				index,
+				threads: env.ATOM_THREADS,
+				receivers: env.ATOM_PUSH_RECEIVERS,
+			}),
+		},
 	});
 
 	function join({ peer, ports }: { peer: number; ports: PeerPorts }): void {
