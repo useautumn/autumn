@@ -68,6 +68,7 @@ export const createCreditListColumns = ({
 	},
 	{
 		header: "Features",
+		enableSorting: false,
 		size: 200,
 		accessorKey: "features",
 		cell: ({ row }: { row: Row<Feature> }) => {

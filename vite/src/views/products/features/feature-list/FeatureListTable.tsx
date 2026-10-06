@@ -1,9 +1,11 @@
 import { AppEnv, type Feature, isAnyCreditSystem } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { ArrowSquareOutIcon, CoinsIcon, LegoIcon } from "@phosphor-icons/react";
+import type { SortingState } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEnv } from "@/utils/envUtils";
@@ -22,6 +24,10 @@ export function FeatureListTable() {
 	const { features } = useFeaturesQuery();
 	const { providers } = useModelsDevPricing();
 	const { queryStates, setQueryStates } = useProductsQueryState();
+	const [sorting, setSorting] = useLocalStorage<SortingState>(
+		"autumn.features-table.sorting",
+		[],
+	);
 	const { selectedFeature, selectedCreditSystem } = sheetFeatureForId({
 		features,
 		featureId: queryStates.feature,
@@ -34,14 +40,17 @@ export function FeatureListTable() {
 
 	// Filter features and credit systems based on archived state
 	const { regularFeatures, creditSystems, hasEventNames } = useMemo(() => {
-		const regularFeatures = features?.filter((feature) => {
+		const byCreatedAt = [...(features ?? [])].sort(
+			(a, b) => b.created_at - a.created_at,
+		);
+		const regularFeatures = byCreatedAt.filter((feature) => {
 			if (isAnyCreditSystem(feature.type)) return false;
 			return queryStates.showArchivedFeatures
 				? feature.archived
 				: !feature.archived;
 		});
 
-		const creditSystems = features?.filter((feature) => {
+		const creditSystems = byCreatedAt.filter((feature) => {
 			if (!isAnyCreditSystem(feature.type)) return false;
 			return queryStates.showArchivedFeatures
 				? feature.archived
@@ -65,24 +74,30 @@ export function FeatureListTable() {
 	);
 
 	const featureTable = useProductTable({
-		data: regularFeatures || [],
+		data: regularFeatures,
 		columns: featureColumns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
+			enableSorting: true,
+			state: { sorting },
+			onSortingChange: setSorting,
 		},
 	});
 
 	const creditTable = useProductTable({
-		data: creditSystems || [],
+		data: creditSystems,
 		columns: creditColumns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
+			enableSorting: true,
+			state: { sorting },
+			onSortingChange: setSorting,
 		},
 	});
 
-	const enableSorting = false;
+	const enableSorting = true;
 
 	const hasFeatureRows =
 		featureTable.getRowModel().rows.length > 0 ||
