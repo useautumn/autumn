@@ -7,7 +7,7 @@ type SlotContext = { sqliteDb: Database };
 /** The customer's own rows are stored under no entity. */
 const CUSTOMER_ENTITY_ID = "";
 
-type SubjectStateRow = {
+export type SubjectStateRow = {
 	logOffset: bigint;
 	readAt: bigint;
 	stateJson: string;
@@ -16,7 +16,7 @@ type SubjectStateRow = {
 };
 
 /** Rows were validated where they entered (the request that stored them), so reading only parses JSON. The customer's own state is parsed per row; its catalog and org are mostly the org's, shared. */
-const storedSubjectFromRow = ({
+export const storedSubjectFromRow = ({
 	row,
 }: {
 	row: SubjectStateRow;
@@ -28,27 +28,6 @@ const storedSubjectFromRow = ({
 	readAt: Number(row.readAt),
 });
 
-/** Which read of the subject the file holds: a change to the row always moves it, so a parsed copy at the same version is current. */
-export const readSubjectVersion = ({
-	ctx,
-	customerId,
-	entityId,
-}: {
-	ctx: SlotContext;
-	customerId: string;
-	entityId: string | null;
-}): string | null => {
-	const row = ctx.sqliteDb
-		.query<
-			{ logOffset: bigint; readAt: bigint },
-			{ customerId: string; entityId: string }
-		>(
-			"SELECT log_offset AS logOffset, read_at AS readAt FROM subject_states WHERE customer_id = $customerId AND entity_id = $entityId",
-		)
-		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
-	return row ? `${row.readAt}:${row.logOffset}` : null;
-};
-
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb
@@ -59,7 +38,12 @@ export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	return Number(row?.count ?? 0);
 };
 
-export const readSubject = ({
+/** Which read of the subject a row holds: a change to the row always moves it, so a parsed copy at the same version is current. */
+export const subjectRowVersion = ({ row }: { row: SubjectStateRow }): string =>
+	`${row.readAt}:${row.logOffset}`;
+
+/** The row as stored, unparsed: a caller holding a parsed copy at the same version skips the parse. */
+export const readSubjectRow = ({
 	ctx,
 	customerId,
 	entityId,
@@ -67,8 +51,8 @@ export const readSubject = ({
 	ctx: SlotContext;
 	customerId: string;
 	entityId: string | null;
-}): StoredSubject | null => {
-	const row = ctx.sqliteDb
+}): SubjectStateRow | null =>
+	ctx.sqliteDb
 		.query<SubjectStateRow, { customerId: string; entityId: string }>(`
 			SELECT
 				log_offset AS logOffset,
@@ -80,9 +64,6 @@ export const readSubject = ({
 			WHERE customer_id = $customerId AND entity_id = $entityId
 		`)
 		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
-	if (!row) return null;
-	return storedSubjectFromRow({ row });
-};
 
 /** Subjects that came from one read are written together. One answer each, as `upsertSubject` gives. */
 export const upsertSubjects = ({

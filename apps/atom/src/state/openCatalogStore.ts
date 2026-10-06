@@ -1,8 +1,8 @@
 import type { Database } from "bun:sqlite";
 import { catalogRowsToCatalog } from "@autumn/balance-engine";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
+import { openVersionStamps } from "./openVersionStamps.js";
 import {
-	readCatalogDataVersion,
 	readCatalogReadAt,
 	readCatalogRows,
 	replaceCatalog,
@@ -10,6 +10,7 @@ import {
 import type { CatalogStore, SharedCatalog } from "./types/catalogStore.js";
 
 const CATALOG_SCHEMA_VERSION = 2;
+const CATALOG_STAMP = "catalog";
 
 const dropCatalogSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS catalog_rows");
@@ -56,15 +57,19 @@ export const openCatalogStore = ({
 		return { catalog: catalogRowsToCatalog({ rows }), readAt };
 	}
 
+	const stamps = openVersionStamps({
+		path: databasePath === ":memory:" ? null : `${databasePath}-stamps`,
+	});
+	// Read before the file, so a write that lands in between moves the stamp past the one held.
+	let heldStamp = stamps.read({ key: CATALOG_STAMP });
 	let sharedCatalog = readFromFile();
-	let dataVersion = readCatalogDataVersion({ ctx });
 
-	/** The held copy, read again from the file only when another process has written it. */
+	/** The held copy, read again from the file only when a write has moved the stamp since. */
 	function read(): SharedCatalog | null {
-		const currentVersion = readCatalogDataVersion({ ctx });
-		if (currentVersion !== dataVersion) {
+		const stamp = stamps.read({ key: CATALOG_STAMP });
+		if (stamp !== heldStamp) {
+			heldStamp = stamp;
 			sharedCatalog = readFromFile();
-			dataVersion = currentVersion;
 		}
 		return sharedCatalog;
 	}
@@ -72,6 +77,8 @@ export const openCatalogStore = ({
 	function set({ rows, readAt }: Parameters<CatalogStore["set"]>[0]): boolean {
 		// A push can arrive late, after a retry, or be beaten by another process: the file decides, under its write lock.
 		if (!replaceCatalog({ ctx, rows, readAt })) return false;
+		stamps.bump({ key: CATALOG_STAMP });
+		heldStamp = stamps.read({ key: CATALOG_STAMP });
 		sharedCatalog = { catalog: catalogRowsToCatalog({ rows }), readAt };
 		return true;
 	}

@@ -4,8 +4,9 @@ import { openSlotDatabase } from "./openSlotDatabase.js";
 import { openVersionStamps } from "./openVersionStamps.js";
 import {
 	countSubjects,
-	readSubject,
-	readSubjectVersion,
+	readSubjectRow,
+	storedSubjectFromRow,
+	subjectRowVersion,
 	upsertSubject,
 	upsertSubjects,
 } from "./repos/subjectStates.js";
@@ -51,24 +52,20 @@ export const openSqliteStore = ({
 		const held = parsed.get(key);
 		// No write to the row's bucket since the copy was read: the copy is the row, without asking SQLite.
 		if (held?.stamp === stamp) return held.subject;
-		const version = readSubjectVersion({ ctx, ...params });
-		if (version === null) return null;
+		// One read of the row: the stamp moved, so it has most likely changed.
+		const row = readSubjectRow({ ctx, ...params });
+		if (row === null) return null;
+		const version = subjectRowVersion({ row });
 		parsed.delete(key);
 		if (held?.version === version) {
 			parsed.set(key, { ...held, stamp });
 			return held.subject;
 		}
 		subjectReadCounts.parses += 1;
-		const subject = readSubject({ ctx, ...params });
-		if (subject === null) return null;
+		const subject = deepFreeze(storedSubjectFromRow({ row }));
 		if (parsed.size >= PARSED_SUBJECTS_PER_SLOT)
 			parsed.delete(parsed.keys().next().value as string);
-		// Versioned by what was read, not the version checked first: a write in between is caught by the next check.
-		parsed.set(key, {
-			version: `${subject.readAt}:${subject.logOffset}`,
-			stamp,
-			subject: deepFreeze(subject),
-		});
+		parsed.set(key, { version, stamp, subject });
 		return subject;
 	}
 
