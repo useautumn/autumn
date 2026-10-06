@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { runs } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { listFileProfiles, upsertFileProfiles } from "../repos/fileProfiles.ts";
@@ -36,24 +36,34 @@ export const updateFileProfiles = async ({
 	const samples = await collectRunSamples({ ctx, runId });
 	if (samples.size === 0) return { files: 0 };
 	const workerClass = getWorkerClass();
-	const previous = new Map(
-		(
-			await listFileProfiles({ ctx, workerClass, files: [...samples.keys()] })
-		).map((profile) => [profile.file, profile]),
-	);
-	const unfolded = [...samples].filter(
-		([file]) => previous.get(file)?.lastRunId !== runId,
-	);
-	const profiles = unfolded.map(([file, sample]) =>
-		foldFileProfile({
-			previous: previous.get(file),
-			sample,
-			file,
-			workerClass,
-			runId,
-		}),
-	);
-	await upsertFileProfiles({ ctx, profiles });
+	// Serialised so two runs finishing together can't both fold from the same previous row.
+	const profiles = await ctx.db.transaction(async (tx) => {
+		await tx.execute(
+			sql`select pg_advisory_xact_lock(hashtext('twd:file_profiles'))`,
+		);
+		const previous = new Map(
+			(
+				await listFileProfiles({
+					db: tx,
+					workerClass,
+					files: [...samples.keys()],
+				})
+			).map((profile) => [profile.file, profile]),
+		);
+		const folded = [...samples]
+			.filter(([file]) => previous.get(file)?.lastRunId !== runId)
+			.map(([file, sample]) =>
+				foldFileProfile({
+					previous: previous.get(file),
+					sample,
+					file,
+					workerClass,
+					runId,
+				}),
+			);
+		await upsertFileProfiles({ db: tx, profiles: folded });
+		return folded;
+	});
 	ctx.logger.info("file profiles updated", { runId, files: profiles.length });
 	return { files: profiles.length };
 };

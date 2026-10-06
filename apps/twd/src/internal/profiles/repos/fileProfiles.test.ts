@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../../db/schema/schema.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { getWorkerClass } from "../actions/getWorkerClass.ts";
 import { updateFileProfiles } from "../actions/updateFileProfiles.ts";
 import { listFileProfiles } from "./fileProfiles.ts";
 import { insertFileRunStats, summariseRunResources } from "./fileRunStats.ts";
@@ -59,7 +60,7 @@ test.skipIf(!testDatabaseUrl)(
 		});
 		await admin.unsafe(`create schema ${schemaName}`);
 		const client = postgres(testDatabaseUrl as string, {
-			max: 1,
+			max: 4,
 			onnotice: () => {},
 			connection: { search_path: schemaName },
 		});
@@ -123,8 +124,8 @@ test.skipIf(!testDatabaseUrl)(
 				files: 0,
 			});
 			const profiles = await listFileProfiles({
-				ctx,
-				workerClass: "2c4g-us-east-1",
+				db: ctx.db,
+				workerClass: getWorkerClass(),
 			});
 			expect(
 				profiles
@@ -149,6 +150,34 @@ test.skipIf(!testDatabaseUrl)(
 					stripeRequests: null,
 				},
 			]);
+
+			const concurrentRuns = ["run_c1", "run_c2", "run_c3", "run_c4"];
+			await client`insert into runs ${client(
+				concurrentRuns.map((id) => ({
+					id,
+					status: "passed",
+					selection: JSON.stringify({ groups: ["core"] }),
+				})),
+			)}`;
+			await client`insert into test_results ${client(
+				concurrentRuns.map((run_id) => ({
+					run_id,
+					file: "a.test.ts",
+					repetition: null,
+					status: "passed",
+					attempt: 1,
+					duration_ms: 20_000,
+				})),
+			)}`;
+			await Promise.all(
+				concurrentRuns.map((runId) => updateFileProfiles({ ctx, runId })),
+			);
+			const [afterConcurrent] = await listFileProfiles({
+				db: ctx.db,
+				workerClass: getWorkerClass(),
+				files: ["a.test.ts"],
+			});
+			expect(afterConcurrent?.samples).toBe(5);
 
 			expect(await summariseRunResources({ ctx, runId: "run_a" })).toEqual({
 				attempts: 1,
