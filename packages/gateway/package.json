@@ -1,6 +1,6 @@
 {
 	"name": "@useautumn/gateway",
-	"version": "0.1.20",
+	"version": "0.1.21",
 	"type": "module",
 	"engines": {
 		"node": ">=22"
