@@ -40,7 +40,9 @@ export const loadSpec = ({
 	path = INTERNAL_SPEC_PATH,
 }: {
 	path?: string;
-} = {}): OpenApiDocument => yaml.parse(readFileSync(path, "utf8"));
+} = {}): OpenApiDocument =>
+	// Every operation reuses the x-api-version header alias, so the default cap of 100 is hit as routes grow.
+	yaml.parse(readFileSync(path, "utf8"), { maxAliasCount: -1 });
 
 const operationAt = ({
 	spec,

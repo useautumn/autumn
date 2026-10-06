@@ -64,6 +64,7 @@ import {
 	createInvoiceContract,
 	finalizeInvoiceContract,
 	insertInvoicesContract,
+	issueCreditNoteContract,
 	listInvoicesContract,
 	listInvoiceTemplatesContract,
 	payInvoiceContract,
@@ -200,6 +201,7 @@ export const v2_3ContractRouter = oc.router({
 	invoicesList: listInvoicesContract,
 	invoicesListTemplates: listInvoiceTemplatesContract,
 	invoicesPay: payInvoiceContract,
+	invoicesIssueCreditNote: issueCreditNoteContract,
 	invoicesReissue: reissueInvoiceContract,
 	invoicesVoid: voidInvoiceContract,
 

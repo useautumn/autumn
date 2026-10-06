@@ -40,6 +40,8 @@ const INVOICE_TOOL_NAMES = [
 	"createInvoice",
 	"previewReissueInvoice",
 	"reissueInvoice",
+	"previewIssueCreditNote",
+	"issueCreditNote",
 	"finalizeInvoice",
 	"payInvoice",
 	"voidInvoice",
@@ -62,6 +64,7 @@ test("invoice writes are destructive and reads are not", () => {
 	expect(destructive.sort()).toEqual([
 		"createInvoice",
 		"finalizeInvoice",
+		"issueCreditNote",
 		"payInvoice",
 		"reissueInvoice",
 		"voidInvoice",
@@ -92,6 +95,35 @@ test("the preview and write tools own the preview flag", async () => {
 	expect(sentBodies).toEqual([
 		{ path: "/v1/invoices.reissue", body: { ...request, preview: true } },
 		{ path: "/v1/invoices.reissue", body: { ...request, preview: false } },
+	]);
+});
+
+test("the credit note preview and write tools own the preview flag", async () => {
+	const fetch = mock(
+		async (_url: string | URL | Request, _init?: RequestInit) =>
+			Response.json({ ok: true }),
+	);
+	globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
+	const tools = createRawAutumnOperationTools({ requireIntent: false });
+	const request = { invoice_id: "inv_123", amount: 20, destination: "refund" };
+	const context = { mcp: { extra: { authInfo: auth } } };
+
+	await tools.previewIssueCreditNote?.execute?.({ request }, context as never);
+	await tools.issueCreditNote?.execute?.({ request }, context as never);
+
+	const sentBodies = fetch.mock.calls.map(([url, init]) => ({
+		path: new URL(String(url)).pathname,
+		body: JSON.parse(String(init?.body)),
+	}));
+	expect(sentBodies).toEqual([
+		{
+			path: "/v1/invoices.issue_credit_note",
+			body: { ...request, send_email: true, preview: true },
+		},
+		{
+			path: "/v1/invoices.issue_credit_note",
+			body: { ...request, send_email: true, preview: false },
+		},
 	]);
 });
 
