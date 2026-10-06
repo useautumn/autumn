@@ -1,10 +1,5 @@
 import { queue } from "@alienplatform/bindings";
-import type { AtomEnv } from "@autumn/env/atom";
-import { createDeployedAuth } from "../auth/createDeployedAuth.js";
-import type { Auth } from "../auth/types/auth.js";
 import { createAtomApp } from "../http/createAtomApp.js";
-import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
-import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
 import {
 	createPushReceiver,
 	PUSH_QUEUE,
@@ -15,33 +10,7 @@ import type {
 	AtomServerDependencies,
 } from "./types/atomServer.js";
 
-/** An org's deployment is given its one token hash; a multi-tenant Atom adds orgs as the admin registers them. */
-const openAuth = ({
-	env,
-}: {
-	env: AtomEnv;
-}): {
-	auth: Auth;
-	multiTenant?: MultiTenantContext;
-} => {
-	if (env.ATOM_MODE === "deployed") {
-		const auth = createDeployedAuth({
-			dataDir: env.ATOM_DATA_DIR,
-			tokenHash: env.ATOM_TOKEN_HASH,
-			slotCount: env.ATOM_SLOT_COUNT,
-		});
-		return { auth };
-	}
-	const auth = createMultiTenantAuth({
-		dataDir: env.ATOM_DATA_DIR,
-		slotCount: env.ATOM_SLOT_COUNT,
-	});
-	return {
-		auth,
-		multiTenant: { auth, adminTokenHash: env.ATOM_TOKEN_HASH },
-	};
-};
-
+/** One thread's server: it answers on the shared port and, when told to, receives Autumn's queued pushes. */
 export const createAtomServer = ({
 	ctx,
 	config,
@@ -49,13 +18,12 @@ export const createAtomServer = ({
 	ctx: AtomServerDependencies;
 	config: AtomServerConfig;
 }): AtomServer => {
-	const { env, role } = config;
-	const { auth, multiTenant } = openAuth({ env });
-	const pushReceiver = role.receivesPushes
+	const { env } = config;
+	const pushReceiver = config.receivesPushes
 		? createPushReceiver({
 				ctx: {
 					pushes: queue(PUSH_QUEUE),
-					auth,
+					auth: ctx.auth,
 					logger: ctx.logger,
 					processStats: ctx.processStats,
 				},
@@ -63,10 +31,11 @@ export const createAtomServer = ({
 		: undefined;
 	const app = createAtomApp({
 		ctx: {
-			auth,
-			multiTenant,
+			auth: ctx.auth,
+			multiTenant: ctx.multiTenant,
 			logger: ctx.logger,
 			processStats: ctx.processStats,
+			health: ctx.health,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 			dataDir: env.ATOM_DATA_DIR,
 		},
@@ -78,8 +47,8 @@ export const createAtomServer = ({
 		listener = Bun.serve({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PORT,
-			// Several processes listen on the one port, and Linux gives each connection to one of them.
-			reusePort: env.ATOM_PROCESSES > 1,
+			// Every thread listens on the one port, and Linux gives each connection to one of them.
+			reusePort: true,
 			fetch: (request, server) => {
 				const remote = server.requestIP(request);
 				ctx.processStats?.noteArrival({
@@ -88,12 +57,9 @@ export const createAtomServer = ({
 				return app.fetch(request, server);
 			},
 		});
-		ctx.logger.info(
-			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT}`,
-		);
 	}
 
-	/** Receiving is async I/O beside serving, so a process that applies pushes still answers checks. */
+	/** Receiving is async I/O beside serving, so a thread that receives pushes still answers checks. */
 	async function start(): Promise<void> {
 		listen();
 		receiving = pushReceiver?.run();
@@ -104,7 +70,7 @@ export const createAtomServer = ({
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), receiving]);
 		ctx.processStats?.stop();
-		auth.close();
+		ctx.auth.close();
 	}
 
 	return { start, stop };

@@ -6,7 +6,7 @@ import type { AtomHttpEnv } from "../types/atomHttp.js";
 
 const API_VERSION_HEADER = "x-api-version";
 
-export function receiveCheck(context: Context<AtomHttpEnv>) {
+export async function receiveCheck(context: Context<AtomHttpEnv>) {
 	const request = checkCallToRequest({
 		body: context.get("body"),
 		query: context.req.query(),
@@ -17,7 +17,7 @@ export function receiveCheck(context: Context<AtomHttpEnv>) {
 	const processor = context
 		.get("slots")
 		.processorFor({ customerId: request.params.customer_id });
-	const response = processor.check({ request });
+	const response = await processor.check({ request });
 	const respondStartedAt = performance.now();
 	// The API drops fields it keeps for itself before a response leaves; so does Atom, by the same list.
 	const reply = context.json(stripInternalFields({ data: response }));

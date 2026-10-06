@@ -116,7 +116,7 @@ describe("push receiver", () => {
 		const { acked } = await drain({ auth, batches: [[message]] });
 
 		expect(acked).toEqual([message.receiptHandle]);
-		expect(checkCustomer(auth.slots)).toMatchObject({ allowed: true });
+		expect(await checkCustomer(auth.slots)).toMatchObject({ allowed: true });
 	});
 
 	test("a multi-tenant Atom applies a push to the folder it names", async () => {
@@ -131,11 +131,11 @@ describe("push receiver", () => {
 		});
 
 		expect(
-			checkCustomer(auth.pushSlots({ atomId: "org_a.sandbox" })),
+			await checkCustomer(auth.slotsFor({ atomId: "org_a.sandbox" })),
 		).toMatchObject({ allowed: true });
 		expect(
-			forwardReasonOf(() =>
-				checkCustomer(auth.pushSlots({ atomId: "org_b.sandbox" })),
+			await forwardReasonOf(() =>
+				checkCustomer(auth.slotsFor({ atomId: "org_b.sandbox" })),
 			),
 		).toBe("customer_not_stored");
 	});
@@ -194,6 +194,6 @@ describe("push receiver", () => {
 		await receiver.run();
 
 		expect(warnings).toContain("atom_push_receive_failed");
-		expect(checkCustomer(auth.slots)).toMatchObject({ allowed: true });
+		expect(await checkCustomer(auth.slots)).toMatchObject({ allowed: true });
 	});
 });

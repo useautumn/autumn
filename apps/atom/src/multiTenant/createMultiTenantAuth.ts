@@ -2,6 +2,7 @@ import { hashToken } from "../auth/hashToken.js";
 import type { Auth } from "../auth/types/auth.js";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
+import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import {
 	atomFolderPath,
 	hasAtomFile,
@@ -11,12 +12,12 @@ import {
 	writeTenantAtom,
 } from "./atomFolders.js";
 
-/** A put, rotate or delete made through another process reaches this one by its first request this long after. */
+/** A put, rotate or delete made through another thread reaches this one by its first request this long after. */
 export const TENANTS_REVALIDATE_MS = 1000;
 /** An unknown token re-reads the folders at most this often, so a flood of bad tokens cannot rescan per request. */
 export const TENANTS_MISS_RESCAN_MS = 100;
 
-/** One Atom holding many orgs: each gets a token and a folder of its own, shared by every process. */
+/** One Atom holding many orgs: each gets a token and a folder of its own, shared by every thread. */
 export type MultiTenantAuth = Auth & {
 	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
 	putAtom(params: TenantAtom): void;
@@ -31,10 +32,12 @@ type HeldAtom = TenantAtom & { slots: Slots | null };
 export const createMultiTenantAuth = ({
 	dataDir,
 	slotCount,
+	owners,
 	clock = () => performance.now(),
 }: {
 	dataDir: string;
 	slotCount: number;
+	owners?: SlotOwners;
 	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
@@ -64,7 +67,7 @@ export const createMultiTenantAuth = ({
 		held.slots?.close();
 	}
 
-	/** The folders are the truth every process shares; synchronous, so one process never runs two at once. */
+	/** The folders are the truth every thread shares; synchronous, so one thread never runs two at once. */
 	function rescan(): void {
 		const onDisk = new Map(
 			listTenantAtoms({ dataDir }).map((tenantAtom) => [
@@ -89,7 +92,7 @@ export const createMultiTenantAuth = ({
 		return isUnknown && sinceScan >= TENANTS_MISS_RESCAN_MS;
 	}
 
-	/** Null when another process deleted the Atom since the last rescan: opening would recreate its folder. */
+	/** Null when another thread deleted the Atom since the last rescan: opening would recreate its folder. */
 	function slotsOf(held: HeldAtom): Slots | null {
 		if (held.slots) return held.slots;
 		if (!hasAtomFile({ dataDir, id: held.id })) {
@@ -99,6 +102,8 @@ export const createMultiTenantAuth = ({
 		held.slots = openSlots({
 			folder: atomFolderPath({ dataDir, id: held.id }),
 			slotCount,
+			atomId: held.id,
+			owners,
 		});
 		return held.slots;
 	}
@@ -111,8 +116,8 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
-	/** A push names its folder; a rescan picks up an Atom another process registered since. */
-	function pushSlots({ atomId }: { atomId: string | null }): Slots | null {
+	/** A push or another thread's call names its folder; a rescan picks up an Atom registered since. */
+	function slotsFor({ atomId }: { atomId: string | null }): Slots | null {
 		if (atomId === null) return null;
 		if (!heldById.has(atomId) || clock() - scannedAt >= TENANTS_REVALIDATE_MS)
 			rescan();
@@ -120,7 +125,7 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
-	/** Always written: what this process holds may be stale, and the file is what every other process reads. */
+	/** Always written: what this thread holds may be stale, and the file is what every other thread reads. */
 	function putAtom(tenantAtom: TenantAtom): void {
 		writeTenantAtom({ dataDir, tenantAtom });
 		const held = heldById.get(tenantAtom.id);
@@ -150,5 +155,5 @@ export const createMultiTenantAuth = ({
 
 	rescan();
 
-	return { authorize, pushSlots, putAtom, hasAtom, removeAtom, close };
+	return { authorize, slotsFor, putAtom, hasAtom, removeAtom, close };
 };

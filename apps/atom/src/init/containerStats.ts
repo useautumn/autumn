@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** /health is polled, so the cgroup files are read at most this often per process. */
+/** /health is polled, so the cgroup files are read at most this often per thread. */
 const STATS_READ_EVERY_MS = 1000;
 
 /** cgroup v2 usage of the whole container; a limit is null when unset ("max") or unreadable. */
@@ -12,7 +12,7 @@ export type ContainerStats = {
 	cpuLimitCores: number | null;
 	memoryBytes: number | null;
 	memoryLimitBytes: number | null;
-	/** cpuSeconds is the process's own user + system time since it started, the supervisor's included. */
+	/** cpuSeconds is the process's own user + system time since it started, every thread's included. */
 	processes: { pid: number; rssBytes: number; cpuSeconds: number | null }[];
 };
 

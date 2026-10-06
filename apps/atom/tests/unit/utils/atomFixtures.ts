@@ -117,9 +117,11 @@ export const checkRequestFor = ({
 });
 
 /** The reason `run` left its request to the API; null when it answered itself. */
-export const forwardReasonOf = (run: () => unknown): ForwardReason | null => {
+export const forwardReasonOf = async (
+	run: () => unknown,
+): Promise<ForwardReason | null> => {
 	try {
-		run();
+		await run();
 		return null;
 	} catch (error) {
 		if (error instanceof CannotAnswerError) return error.reason;

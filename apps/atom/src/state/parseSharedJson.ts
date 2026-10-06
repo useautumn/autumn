@@ -9,7 +9,7 @@ const parsedByHash = new Map<string, unknown>();
 export const sharedTextHash = (text: string): string =>
 	new Bun.CryptoHasher("sha256").update(text).digest("base64");
 
-/** One frozen copy per hash; the text is read only when this process has not parsed it yet. */
+/** One frozen copy per hash; the text is read only when this thread has not parsed it yet. */
 export const parseSharedJson = <T>({
 	hash,
 	readText,

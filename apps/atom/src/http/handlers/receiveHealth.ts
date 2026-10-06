@@ -1,16 +1,17 @@
 import type { Context } from "hono";
-import { createAtomHealthReader } from "../../init/atomHealth.js";
+import { readAtomHealth } from "../../init/atomHealth.js";
 import { createContainerStatsReader } from "../../init/containerStats.js";
 import { createProcessStatsReader } from "../../init/processStats.js";
+import type { AtomHttpContext } from "../types/atomHttp.js";
 
-const readAtomHealth = createAtomHealthReader();
 const readContainerStats = createContainerStatsReader();
 const readProcessStats = createProcessStatsReader();
 
-export function receiveHealth(context: Context) {
-	return context.json({
-		...readAtomHealth(),
-		container: readContainerStats(),
-		processTimings: readProcessStats(),
-	});
-}
+export const receiveHealth = ({ ctx }: { ctx: AtomHttpContext }) =>
+	function receive(context: Context) {
+		return context.json({
+			...readAtomHealth(ctx.health),
+			container: readContainerStats(),
+			processTimings: readProcessStats(),
+		});
+	};
