@@ -189,7 +189,7 @@ export const RunSummary = z.object({
 	repeat: z.number(),
 	/** Work items: files × repeat. */
 	fileCount: z.number().nullable(),
-	/** Workers currently attached; grows as accounts free up (elastic, FIFO). */
+	/** Workers currently attached (elastic, FIFO); once finished, the most that were attached at once. */
 	workerCount: z.number().nullable(),
 	/** Workers this run wants: min(files, key budget). */
 	workersWanted: z.number().nullable(),
