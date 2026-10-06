@@ -1,6 +1,10 @@
 import type { AutumnLogger } from "@autumn/logging";
 
-export type CachePushTiming = { readMs: number; sendMs: number };
+export type CachePushTiming = {
+	targetsMs: number;
+	readMs: number;
+	sendMs: number;
+};
 
 const STATS_EVERY_MS = 10_000;
 
@@ -28,8 +32,10 @@ export function createCachePushStats({
 	logger: Pick<AutumnLogger, "info">;
 	queueDepth: () => { pending: number; active: number };
 }) {
+	let targets: number[] = [];
 	let reads: number[] = [];
 	let sends: number[] = [];
+	let totals: number[] = [];
 	let skipped = 0;
 	let failed = 0;
 
@@ -43,15 +49,19 @@ export function createCachePushStats({
 					pushes: reads.length,
 					skipped,
 					failed,
+					targetsMs: summarize(targets),
 					readMs: summarize(reads),
 					sendMs: summarize(sends),
+					totalMs: summarize(totals),
 					...queueDepth(),
 				},
 			},
 			"herald cache push timings",
 		);
+		targets = [];
 		reads = [];
 		sends = [];
+		totals = [];
 		skipped = 0;
 		failed = 0;
 	}
@@ -60,9 +70,17 @@ export function createCachePushStats({
 	timer.unref?.();
 
 	return {
-		recordPush: ({ readMs, sendMs }: CachePushTiming) => {
+		/** totalMs is from the subject leaving the queue to its push settling, so it includes event-loop wait. */
+		recordPush: ({
+			targetsMs,
+			readMs,
+			sendMs,
+			totalMs,
+		}: CachePushTiming & { totalMs: number }) => {
+			targets.push(targetsMs);
 			reads.push(readMs);
 			sends.push(sendMs);
+			totals.push(totalMs);
 		},
 		recordSkip: () => {
 			skipped++;
