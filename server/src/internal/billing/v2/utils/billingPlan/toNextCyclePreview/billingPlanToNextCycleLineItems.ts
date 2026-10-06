@@ -1,11 +1,11 @@
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
+	billingContextToCurrency,
 	type FullCusProduct,
 	isCustomerEntitlementDueAtInvoice,
 	type LineItem,
 	ms,
-	sumValues,
 	timestampsMatch,
 } from "@autumn/shared";
 import { partitionSkippedOverageLineItems } from "@/external/stripe/webhookHandlers/common/filterSkippedOverageLineItems";
@@ -17,6 +17,8 @@ import { customerProductToArrearLineItems } from "../../lineItems/customerProduc
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
+import { roundPreviewLineItem } from "../preview/roundPreviewLineItem";
+import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
 
 export type NextCycleLineItemOptions = {
 	/**
@@ -196,13 +198,18 @@ export const billingPlanToNextCycleLineItems = ({
 		});
 	}
 
-	const previewLineItems = [
-		...nextCycleAutumnLineItems,
-		...deferredLineItems,
-	].map(lineItemToPreviewLineItem);
-
-	const subtotal = sumValues(previewLineItems.map((line) => line.subtotal));
-	const total = sumValues(previewLineItems.map((line) => line.total));
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
+	const previewLineItems = [...nextCycleAutumnLineItems, ...deferredLineItems]
+		.map(lineItemToPreviewLineItem)
+		.map((lineItem) => roundPreviewLineItem({ lineItem, currency }));
+	const subtotal = sumPreviewLineAmounts({
+		amounts: previewLineItems.map((line) => line.subtotal),
+		currency,
+	});
+	const total = sumPreviewLineAmounts({
+		amounts: previewLineItems.map((line) => line.total),
+		currency,
+	});
 
 	return { previewLineItems, previewUsageLineItems, subtotal, total };
 };

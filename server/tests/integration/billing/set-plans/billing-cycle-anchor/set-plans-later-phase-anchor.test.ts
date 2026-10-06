@@ -146,9 +146,7 @@ test.concurrent(
 	},
 );
 
-// DISABLED: the kept-anchor next_cycle total isn't rounded to cents (2026-10-06);
-// re-enable once autumn#4304 merges.
-test.skip(`${chalk.yellowBright("set-plans later phase anchor: no anchor prorates the switch at the phase and keeps the original renewal")}`, async () => {
+test(`${chalk.yellowBright("set-plans later phase anchor: no anchor prorates the switch at the phase and keeps the original renewal")}`, async () => {
 	const premium = products.premium({
 		items: [items.monthlyMessages({ includedUsage: 500 })],
 	});

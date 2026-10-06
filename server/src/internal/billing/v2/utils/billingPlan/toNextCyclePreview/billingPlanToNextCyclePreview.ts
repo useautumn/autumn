@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	type BillingPlan,
 	type BillingPreviewResponse,
+	billingContextToCurrency,
 	cp,
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
@@ -14,6 +15,8 @@ import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
+import { roundPreviewLineItem } from "../preview/roundPreviewLineItem";
+import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
 import {
 	billingPlanToNextCycleLineItems,
 	type NextCycleLineItemOptions,
@@ -112,34 +115,38 @@ const getPlansRenewingThroughChange = ({
 const scaleNextCycleAmounts = ({
 	lineItemsResult,
 	prorationRatio,
+	currency,
 }: {
 	lineItemsResult: ReturnType<typeof billingPlanToNextCycleLineItems>;
 	prorationRatio: Decimal;
+	currency: string;
 }) => {
-	const previewLineItems = lineItemsResult.previewLineItems.map((item) => ({
-		...item,
-		subtotal: prorationRatio.mul(item.subtotal).toDecimalPlaces(2).toNumber(),
-		total: prorationRatio.mul(item.total).toDecimalPlaces(2).toNumber(),
-		discounts: item.discounts?.map((discount) => ({
-			...discount,
-			amount_off: prorationRatio
-				.mul(discount.amount_off)
-				.toDecimalPlaces(2)
-				.toNumber(),
-		})),
-	}));
+	const previewLineItems = lineItemsResult.previewLineItems.map((item) =>
+		roundPreviewLineItem({
+			lineItem: {
+				...item,
+				subtotal: prorationRatio.mul(item.subtotal).toNumber(),
+				total: prorationRatio.mul(item.total).toNumber(),
+				discounts: item.discounts.map((discount) => ({
+					...discount,
+					amount_off: prorationRatio.mul(discount.amount_off).toNumber(),
+				})),
+			},
+			currency,
+		}),
+	);
 
 	return {
 		...lineItemsResult,
 		previewLineItems,
-		subtotal: prorationRatio
-			.mul(lineItemsResult.subtotal)
-			.toDecimalPlaces(2)
-			.toNumber(),
-		total: prorationRatio
-			.mul(lineItemsResult.total)
-			.toDecimalPlaces(2)
-			.toNumber(),
+		subtotal: sumPreviewLineAmounts({
+			amounts: previewLineItems.map((item) => item.subtotal),
+			currency,
+		}),
+		total: sumPreviewLineAmounts({
+			amounts: previewLineItems.map((item) => item.total),
+			currency,
+		}),
 	};
 };
 
@@ -409,6 +416,7 @@ export const billingPlanToNextCyclePreview = ({
 		lineItemsResult = scaleNextCycleAmounts({
 			lineItemsResult,
 			prorationRatio,
+			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 		});
 	}
 
