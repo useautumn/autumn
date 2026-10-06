@@ -1,111 +1,60 @@
-import { expect, test } from "bun:test";
-import {
-	type CreateScheduleBillingContext,
-	type FreeTrial,
-	ms,
-} from "@autumn/shared";
+/** set_plans resolves once how the diff treats live rows; resetting the cycle now restarts every live plan. */
+
+import { describe, expect, test } from "bun:test";
+import type { CreateScheduleBillingContext } from "@autumn/shared";
 import type Stripe from "stripe";
 import { setupSetPlansPolicies } from "@/internal/billing/v2/actions/setPlans/setup/setupSetPlansPolicies";
 
-const billingContextWith = (
-	overrides: Partial<CreateScheduleBillingContext>,
-): CreateScheduleBillingContext =>
-	({
-		currentEpochMs: 0,
-		immediatePhase: { starts_at: 0, plans: [] },
-		...overrides,
-	}) as unknown as CreateScheduleBillingContext;
+const NOW = Date.UTC(2027, 2, 15, 12);
 
-test("live rows carry with or without a requested trial, which is patched onto them", () => {
-	const withTrial = billingContextWith({
-		trialContext: {
-			trialEndsAt: 1_790_000_000_000,
-			customFreeTrial: { length: 14 } as FreeTrial,
-			appliesToBilling: true,
-			cardRequired: true,
-		},
+const billingContextFor = ({
+	requestedBillingCycleAnchor,
+	replacedStripeSubscription,
+}: Partial<
+	Pick<
+		CreateScheduleBillingContext,
+		"requestedBillingCycleAnchor" | "replacedStripeSubscription"
+	>
+>) =>
+	({
+		currentEpochMs: NOW,
+		immediatePhase: { starts_at: NOW },
+		requestedBillingCycleAnchor,
+		replacedStripeSubscription,
+	}) as CreateScheduleBillingContext;
+
+const liveRowsFor = (billingContext: CreateScheduleBillingContext) =>
+	setupSetPlansPolicies({ billingContext, params: {} }).liveRows;
+
+describe("setupSetPlansPolicies liveRows", () => {
+	test("live rows carry on a live subscription", () => {
+		expect(liveRowsFor(billingContextFor({}))).toBe("carry");
 	});
 
-	expect(
-		setupSetPlansPolicies({ billingContext: withTrial, params: {} }).liveRows,
-	).toBe("carry");
-	expect(
-		setupSetPlansPolicies({
-			billingContext: billingContextWith({}),
-			params: {},
-		}).liveRows,
-	).toBe("carry");
-});
+	test("a cycle reset now recreates live rows, so kept plans are re-billed", () => {
+		expect(
+			liveRowsFor(billingContextFor({ requestedBillingCycleAnchor: "now" })),
+		).toBe("recreate");
+	});
 
-test("a future first phase ends undeclared live plans now, even when asked to retain them", () => {
-	const currentEpochMs = 1_800_000_000_000;
-	const startingAt = (startsAt: number) =>
-		billingContextWith({
-			currentEpochMs,
-			immediatePhase: { starts_at: startsAt, plans: [] },
-		});
+	test("a scheduled anchor keeps live rows carrying until the reset", () => {
+		expect(
+			liveRowsFor(
+				billingContextFor({ requestedBillingCycleAnchor: NOW + 86_400_000 }),
+			),
+		).toBe("carry");
+	});
 
-	expect(
-		setupSetPlansPolicies({
-			billingContext: startingAt(currentEpochMs + ms.days(7)),
-			params: { undeclared_plans: "retain" },
-		}).undeclared,
-	).toBe("end");
-	expect(
-		setupSetPlansPolicies({
-			billingContext: startingAt(currentEpochMs),
-			params: { undeclared_plans: "retain" },
-		}).undeclared,
-	).toBe("retain");
-});
-
-test("a backdate over a healthy subscription carries its live rows onto the recreated one", () => {
-	const currentEpochMs = 1_800_000_000_000;
-	const backdatedOver = (status: Stripe.Subscription.Status) =>
-		billingContextWith({
-			currentEpochMs,
-			immediatePhase: { starts_at: currentEpochMs - ms.days(20), plans: [] },
-			subscriptionBackdateStartMs: currentEpochMs - ms.days(20),
-			replacedStripeSubscription: {
-				id: "sub_live",
-				status,
-			} as Stripe.Subscription,
-		});
-
-	expect(
-		setupSetPlansPolicies({
-			billingContext: backdatedOver("active"),
-			params: {},
-		}).liveRows,
-	).toBe("carry");
-	expect(
-		setupSetPlansPolicies({
-			billingContext: backdatedOver("unpaid"),
-			params: {},
-		}).liveRows,
-	).toBe("recreate");
-});
-
-test("a backdate that restarts the cycle on its start recreates the live rows, so their paid time is credited", () => {
-	const currentEpochMs = 1_800_000_000_000;
-	const backdatedStart = currentEpochMs - ms.days(20);
-
-	expect(
-		setupSetPlansPolicies({
-			billingContext: billingContextWith({
-				currentEpochMs,
-				immediatePhase: {
-					starts_at: backdatedStart,
-					plans: [],
-					billing_cycle_anchor: "phase_start",
-				},
-				subscriptionBackdateStartMs: backdatedStart,
-				replacedStripeSubscription: {
-					id: "sub_live",
-					status: "active",
-				} as Stripe.Subscription,
-			}),
-			params: {},
-		}).liveRows,
-	).toBe("recreate");
+	test("a canceled replaced subscription recreates only when a paid plan starts", () => {
+		expect(
+			liveRowsFor(
+				billingContextFor({
+					replacedStripeSubscription: {
+						id: "sub_canceled",
+						status: "canceled",
+					} as Stripe.Subscription,
+				}),
+			),
+		).toBe("recreateWhenPaidRecurringStarts");
+	});
 });
