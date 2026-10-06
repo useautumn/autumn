@@ -1,3 +1,4 @@
+import { toAtomCatalogBody } from "./atomCatalogBody.js";
 import { retryWithBackoff } from "./retryWithBackoff.js";
 import type {
 	AtomClient,
@@ -103,7 +104,7 @@ export const createAtomClient = ({
 			postToAtom({
 				ctx,
 				path: "/v1/catalog.set",
-				body: { rows, read_at: readAt },
+				body: toAtomCatalogBody({ rows, readAt }),
 				delivery: ctx.catalog,
 			}),
 	};

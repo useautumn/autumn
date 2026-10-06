@@ -8,6 +8,14 @@ import { isStagingEnv } from "./staging.js";
 
 const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
 
+const alienOf = ({
+	apiKey,
+	project,
+}: {
+	apiKey: string | undefined;
+	project: string | undefined;
+}) => (apiKey && project ? { apiKey, project } : null);
+
 const tinybirdOf = ({
 	baseUrl,
 	token,
@@ -56,6 +64,11 @@ export function createHeraldEnv(
 			0,
 			Number(runtimeEnv.HERALD_CACHE_PUSH_COALESCE_MS ?? 100) || 0,
 		),
+		/** Absent where alien is not set up: herald then reaches Atoms over HTTP only. */
+		HERALD_ALIEN: alienOf({
+			apiKey: runtimeEnv.ALIEN_API_KEY,
+			project: runtimeEnv.ALIEN_PROJECT,
+		}),
 		/** Atoms only run on dev stacks and staging for now; production pushes will go through each org's queue. */
 		HERALD_ATOM_HTTP_PUSH:
 			runtimeEnv.NODE_ENV !== "production" || isStagingEnv({ runtimeEnv }),

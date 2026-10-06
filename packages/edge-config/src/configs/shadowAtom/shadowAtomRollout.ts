@@ -70,4 +70,4 @@ export const applyShadowAtomSettings = ({
 }: {
 	current: ShadowAtomConfig;
 	next: ShadowAtomSettings;
-}): ShadowAtomConfig => ({ ...current, endpointUrl: next.endpointUrl });
+}): ShadowAtomConfig => ({ ...current, ...next });

@@ -1,3 +1,4 @@
+import { SHADOW_ATOM_EXTERNAL_ID } from "@autumn/edge-config";
 import {
 	type ApiByocCache,
 	type AppEnv,
@@ -60,10 +61,8 @@ export const cacheNames = ({
 
 /** Our one shadow Atom's names. An org's external id always ends `.<env>` and its label reads `autumn-byoc-…`, so neither can match. */
 export const shadowAtomCacheNames = () => ({
-	externalId: toAlienExternalId({ parts: ["autumn-internal-shadow-atom"] }),
-	label: [cacheNamePrefix(), "autumn-internal-shadow-atom"]
-		.filter(Boolean)
-		.join("-"),
+	externalId: toAlienExternalId({ parts: [SHADOW_ATOM_EXTERNAL_ID] }),
+	label: [cacheNamePrefix(), SHADOW_ATOM_EXTERNAL_ID].filter(Boolean).join("-"),
 });
 
 /** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
