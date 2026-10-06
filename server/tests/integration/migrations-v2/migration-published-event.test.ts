@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ItemRunToPublish } from "@/internal/migrations/v2/batchOperations/execute/claim/listItemRunsToPublish.js";
 import { itemRunsToPageResult } from "@/internal/migrations/v2/batchOperations/itemChanges/itemRunsToPageResult.js";
 
@@ -17,16 +16,11 @@ test("a publisher that reloads an already-published success does not produce an 
 		skipReason: null,
 		changes: null,
 	};
-	const ctx = { features: [] } as unknown as AutumnContext;
 	const alreadyPublished = await itemRunsToPageResult({
-		ctx,
-		plan: { patches: [] },
 		itemRuns: [snapshot],
 	});
 	expect(alreadyPublished.succeeded).toEqual([]);
 	const pending = await itemRunsToPageResult({
-		ctx,
-		plan: { patches: [] },
 		itemRuns: [{ ...snapshot, changes: [{ kind: "license_pool_repointed" }] }],
 	});
 	expect(pending.succeeded).toEqual([customer]);

@@ -71,9 +71,9 @@ test("publishing an earlier add retains its original diff after the migration is
 				Array.from({ length: 5000 }, () => pending.unpublished_changes),
 			),
 		);
-		ctx.logger.info("migration recovery synthetic 5000-customer payload", {
-			data: { bytes: pageBytes, changesPerCustomer: 1 },
-		});
+		ctx.logger.info(
+			`migration recovery synthetic 5000-customer payload: ${pageBytes} bytes, 1 change/customer`,
+		);
 		const edited = await autumnV2_2.migrationsV2.update({
 			id: migration.id,
 			updates: {
