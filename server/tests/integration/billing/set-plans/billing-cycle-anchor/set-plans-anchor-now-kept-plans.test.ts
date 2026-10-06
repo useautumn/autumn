@@ -66,7 +66,7 @@ const sso = () =>
 	});
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans anchor now kept: the same plan with proration none charges a full new period and no credit")}`,
+	`${chalk.yellowBright("set-plans anchor now kept: the same plan with proration none charges nothing at the reset, like Stripe")}`,
 	async () => {
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -90,8 +90,9 @@ test.concurrent(
 			phases: [resetNowPhase({ planIds: [pro.id], prorationBehavior: "none" })],
 		};
 
+		// Stripe keeps an unchanged item through a reset under none: no new-period charge, no credit.
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.total).toBe(20);
+		expect(preview.total).toBe(0);
 		expectPreviewNextCycleCorrect({
 			preview,
 			startsAt: renewalAt,
@@ -103,7 +104,7 @@ test.concurrent(
 
 		await expectCustomerInvoiceCorrect({
 			customerId,
-			count: 2,
+			count: 1,
 			latestTotal: 20,
 		});
 		await expectStripeCycleCorrect({
