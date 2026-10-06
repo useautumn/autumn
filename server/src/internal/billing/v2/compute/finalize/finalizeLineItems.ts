@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
 import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
+import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
 import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
@@ -48,7 +49,11 @@ export const finalizeLineItems = ({
 	const skipsProration =
 		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
 	const resetsCycleNow = billingContext.requestedBillingCycleAnchor === "now";
-	if (skipsProration && !resetsCycleNow) return [];
+	if (skipsProration && !resetsCycleNow) {
+		const unbilledUsage = lineItems.filter(isUsageNoSubscriptionBilled);
+		if (unbilledUsage.length === 0) return [];
+		lineItems = unbilledUsage;
+	}
 
 	// Like Stripe, a cycle reset under none never credits and charges a new period only for the items it changes.
 	const billedLineItems = skipsProration
