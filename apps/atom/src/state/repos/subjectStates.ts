@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import type { HeldSubject } from "../types/heldSubject.js";
 import type { StoredSubject } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
@@ -14,17 +15,23 @@ type SubjectStateRow = {
 	orgJson: string;
 };
 
+const textBytes = (texts: string[]): number =>
+	texts.reduce((bytes, text) => bytes + text.length, 0);
+
 /** Rows were validated where they entered (the request that stored them), so reading only parses JSON. */
 const storedSubjectFromRow = ({
 	row,
 }: {
 	row: SubjectStateRow;
-}): StoredSubject => ({
-	state: JSON.parse(row.stateJson),
-	catalog: JSON.parse(row.catalogJson),
-	org: JSON.parse(row.orgJson),
-	logOffset: row.logOffset,
-	readAt: Number(row.readAt),
+}): HeldSubject => ({
+	subject: {
+		state: JSON.parse(row.stateJson),
+		catalog: JSON.parse(row.catalogJson),
+		org: JSON.parse(row.orgJson),
+		logOffset: row.logOffset,
+		readAt: Number(row.readAt),
+	},
+	bytes: textBytes([row.stateJson, row.catalogJson, row.orgJson]),
 });
 
 /** How many subjects the file holds: what a restart finds, or does not. */
@@ -45,7 +52,7 @@ export const readSubject = ({
 	ctx: SlotContext;
 	customerId: string;
 	entityId: string | null;
-}): StoredSubject | null => {
+}): HeldSubject | null => {
 	const row = ctx.sqliteDb
 		.query<SubjectStateRow, { customerId: string; entityId: string }>(`
 			SELECT
@@ -69,20 +76,26 @@ export const upsertSubjects = ({
 }: {
 	ctx: SlotContext;
 	subjects: StoredSubject[];
-}): boolean[] =>
+}): (number | null)[] =>
 	ctx.sqliteDb.transaction(() =>
 		subjects.map((subject) => upsertSubject({ ctx, subject })),
 	)();
 
-/** False when the subject was read before the one held, or at the same instant for an earlier change: a late push never undoes a newer one. */
+/**
+ * The bytes of row text the subject now holds; null when it was read before the one stored, or at the same instant
+ * for an earlier change: a late push never undoes a newer one.
+ */
 export const upsertSubject = ({
 	ctx,
 	subject,
 }: {
 	ctx: SlotContext;
 	subject: StoredSubject;
-}): boolean => {
+}): number | null => {
 	const { customerId, entityId } = subject.state.identity;
+	const stateJson = JSON.stringify(subject.state);
+	const catalogJson = JSON.stringify(subject.catalog);
+	const orgJson = JSON.stringify(subject.org);
 	const { changes } = ctx.sqliteDb
 		.query(`
 			INSERT INTO subject_states
@@ -104,9 +117,9 @@ export const upsertSubject = ({
 			entityId: entityId ?? CUSTOMER_ENTITY_ID,
 			logOffset: subject.logOffset,
 			readAt: subject.readAt,
-			stateJson: JSON.stringify(subject.state),
-			catalogJson: JSON.stringify(subject.catalog),
-			orgJson: JSON.stringify(subject.org),
+			stateJson,
+			catalogJson,
+			orgJson,
 		});
-	return changes > 0;
+	return changes > 0 ? textBytes([stateJson, catalogJson, orgJson]) : null;
 };

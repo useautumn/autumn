@@ -9,6 +9,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	freshHeld,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -21,7 +22,12 @@ const newFolder = () => {
 	return folder;
 };
 const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
-	const slots = openSlots({ folder, slotCount, owners: allSlotsOwnedHere });
+	const slots = openSlots({
+		folder,
+		slotCount,
+		owners: allSlotsOwnedHere,
+		held: freshHeld(),
+	});
 	opened.push(slots);
 	return slots;
 };

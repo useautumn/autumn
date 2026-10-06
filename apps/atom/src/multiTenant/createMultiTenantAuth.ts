@@ -2,6 +2,7 @@ import { hashToken } from "../auth/hashToken.js";
 import type { Auth } from "../auth/types/auth.js";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
+import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import {
 	atomFolderPath,
@@ -33,11 +34,13 @@ export const createMultiTenantAuth = ({
 	dataDir,
 	slotCount,
 	owners,
+	heldSubjects,
 	clock = () => performance.now(),
 }: {
 	dataDir: string;
 	slotCount: number;
 	owners: SlotOwners;
+	heldSubjects: HeldSubjects;
 	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
@@ -104,6 +107,7 @@ export const createMultiTenantAuth = ({
 			slotCount,
 			atomId: held.id,
 			owners,
+			held: heldSubjects,
 		});
 		return held.slots;
 	}

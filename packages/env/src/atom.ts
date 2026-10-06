@@ -11,6 +11,8 @@ const MAX_AUTOMATIC_THREADS = 8;
 const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
 /** The rest is left for the OS, the files' page cache and a busy moment. */
 const MEMORY_SHARE_FOR_THREADS = 0.75;
+/** A held subject's parsed, frozen objects take about this many times the bytes of its row text; conservative until measured on a live Atom. */
+const HELD_EXPANSION = 3;
 /** Checks far outnumber pushes, so a share of the threads also receive Autumn's pushes. */
 const RECEIVER_SHARE_OF_THREADS = 0.3;
 
@@ -31,6 +33,19 @@ const threadsMemoryAllows = ({
 }): number => {
 	const budget = memoryLimitBytes * MEMORY_SHARE_FOR_THREADS;
 	return Math.floor(budget / MEMORY_PER_THREAD_BYTES) - 1;
+};
+/** Row text each thread may hold parsed: the threads' memory share, less each thread's own, split between them and shrunk by the expansion. */
+const heldBytesPerThreadOf = ({
+	threads,
+	memoryLimitBytes,
+}: {
+	threads: number;
+	memoryLimitBytes: number;
+}): number => {
+	const forHeld =
+		memoryLimitBytes * MEMORY_SHARE_FOR_THREADS -
+		(threads + 1) * MEMORY_PER_THREAD_BYTES;
+	return Math.max(0, Math.floor(forHeld / threads / HELD_EXPANSION));
 };
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
@@ -146,6 +161,11 @@ export function createAtomEnv(
 			runtimeEnv,
 			threads,
 			receivesPushes,
+		}),
+		/** Bytes of row text each thread keeps parsed before it drops its least recently read subjects. */
+		ATOM_HELD_BYTES_PER_THREAD: heldBytesPerThreadOf({
+			threads,
+			memoryLimitBytes: machine.memoryLimitBytes,
 		}),
 		/** The pushes queue's URL where the AWS SDK is opted in to read it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),

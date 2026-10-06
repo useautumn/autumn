@@ -14,6 +14,7 @@ import {
 	checkRequestFor,
 	checkResponseOf,
 	forwardReasonOf,
+	freshHeld,
 	oldestApiVersion,
 	storedEntitySubjectWith,
 	storedSubjectWith,
@@ -22,7 +23,10 @@ import {
 
 const stores: { close(): void }[] = [];
 const createProcessor = () => {
-	const sqliteStore = openSqliteStore({ databasePath: ":memory:" });
+	const sqliteStore = openSqliteStore({
+		databasePath: ":memory:",
+		held: freshHeld(),
+	});
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
 	stores.push(sqliteStore, catalogStore);
 	const processor = createSlotProcessor({
