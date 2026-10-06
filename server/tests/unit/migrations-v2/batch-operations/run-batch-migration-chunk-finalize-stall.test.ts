@@ -183,10 +183,9 @@ mock.module(cancelTokenModulePath, () => ({
 const { runBatchMigrationChunk } = await import(
 	"@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js"
 );
-const { BatchMigrationStallError } =
-	await import(
-		"@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js"
-	);
+const { BatchMigrationStallError } = await import(
+	"@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js"
+);
 
 afterAll(() => {
 	mock.module(claimModulePath, () => realClaim);
