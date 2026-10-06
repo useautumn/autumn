@@ -3,6 +3,10 @@ import { createAtomEnv } from "./atom.js";
 
 const TOKEN_HASH = "a".repeat(64);
 const ADMIN_TOKEN_HASH = "b".repeat(64);
+const PUSHES_BINDING = JSON.stringify({
+	service: "sqs",
+	queueUrl: "https://sqs.us-east-1.amazonaws.com/1/pushes",
+});
 const MULTI_TENANT = {
 	ATOM_MODE: "multi_tenant",
 	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
@@ -119,7 +123,7 @@ describe("atom env", () => {
 
 	test("a multi-tenant Atom reads the push queue like a customer's once it is linked", () => {
 		const env = createAtomEnv(
-			{ ...MULTI_TENANT, ALIEN_PUSHES_BINDING: "{}" },
+			{ ...MULTI_TENANT, ALIEN_PUSHES_BINDING: PUSHES_BINDING },
 			{ availableCpus: 8, memoryLimitBytes: 16 * 1024 ** 3 },
 		);
 
@@ -132,7 +136,7 @@ describe("atom env", () => {
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
 				ATOM_THREADS: threads,
-				ALIEN_PUSHES_BINDING: "{}",
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
 			}).ATOM_PUSH_RECEIVERS;
 
 		// A lone thread serves and receives.
@@ -149,5 +153,31 @@ describe("atom env", () => {
 		});
 
 		expect(env.ATOM_PUSH_RECEIVERS).toBe(0);
+	});
+
+	test("ATOM_PUSH_RECEIVERS says how many threads receive, up to every thread", () => {
+		const receivers = ({ told }: { told: string }) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_THREADS: "7",
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
+				ATOM_PUSH_RECEIVERS: told,
+			}).ATOM_PUSH_RECEIVERS;
+
+		expect(receivers({ told: "7" })).toBe(7);
+		expect(receivers({ told: "9" })).toBe(7);
+	});
+
+	test("the AWS SDK reads the linked queue unless ATOM_PUSH_QUEUE_CLIENT=binding falls back to the binding", () => {
+		const queueUrl = (client?: string) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
+				ATOM_PUSH_QUEUE_CLIENT: client,
+			}).ATOM_SDK_PUSH_QUEUE_URL;
+
+		expect(queueUrl()).toBe("https://sqs.us-east-1.amazonaws.com/1/pushes");
+		expect(queueUrl("binding")).toBeNull();
+		expect(() => queueUrl("http")).toThrow("ATOM_PUSH_QUEUE_CLIENT");
 	});
 });
