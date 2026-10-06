@@ -54,7 +54,7 @@ export function createHeraldEnv(
 		HERALD_DEPLOYMENT: deployment,
 		HERALD_CACHE_PUSH_COALESCE_MS: Math.max(
 			0,
-			Number(runtimeEnv.HERALD_CACHE_PUSH_COALESCE_MS ?? 0) || 0,
+			Number(runtimeEnv.HERALD_CACHE_PUSH_COALESCE_MS ?? 100) || 0,
 		),
 		/** Atoms only run on dev stacks and staging for now; production pushes will go through each org's queue. */
 		HERALD_ATOM_HTTP_PUSH:
