@@ -15,6 +15,7 @@ import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
+import { roundPreviewLineItem } from "../preview/roundPreviewLineItem";
 import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
 import {
 	billingPlanToNextCycleLineItems,
@@ -120,16 +121,20 @@ const scaleNextCycleAmounts = ({
 	prorationRatio: Decimal;
 	currency: string;
 }) => {
-	// Lines stay unrounded like every other path; the totals round each once to minor units.
-	const previewLineItems = lineItemsResult.previewLineItems.map((item) => ({
-		...item,
-		subtotal: prorationRatio.mul(item.subtotal).toNumber(),
-		total: prorationRatio.mul(item.total).toNumber(),
-		discounts: item.discounts?.map((discount) => ({
-			...discount,
-			amount_off: prorationRatio.mul(discount.amount_off).toNumber(),
-		})),
-	}));
+	const previewLineItems = lineItemsResult.previewLineItems.map((item) =>
+		roundPreviewLineItem({
+			lineItem: {
+				...item,
+				subtotal: prorationRatio.mul(item.subtotal).toNumber(),
+				total: prorationRatio.mul(item.total).toNumber(),
+				discounts: item.discounts.map((discount) => ({
+					...discount,
+					amount_off: prorationRatio.mul(discount.amount_off).toNumber(),
+				})),
+			},
+			currency,
+		}),
+	);
 
 	return {
 		...lineItemsResult,
