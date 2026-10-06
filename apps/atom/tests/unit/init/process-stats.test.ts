@@ -127,6 +127,28 @@ describe("process stats", () => {
 		});
 	});
 
+	test("each publish sums the pushes' parse, apply and write times since the last", () => {
+		const statsDir = newStatsDir();
+		const phases = { parse: 1, apply: 2, write: 1 };
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+			pushPhaseTotals: () => phases,
+		});
+		phases.parse = 7;
+		phases.apply = 12;
+		phases.write = 5;
+		stats.publish();
+		stats.stop();
+
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			pushParseMs: 6,
+			pushApplyMs: 10,
+			pushWriteMs: 4,
+		});
+	});
+
 	test("a request waits behind those read before it in the same loop turn; a connection counts once", () => {
 		const statsDir = newStatsDir();
 		let now = 0;

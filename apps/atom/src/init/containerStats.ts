@@ -12,7 +12,8 @@ export type ContainerStats = {
 	cpuLimitCores: number | null;
 	memoryBytes: number | null;
 	memoryLimitBytes: number | null;
-	processes: { pid: number; rssBytes: number }[];
+	/** cpuSeconds is the process's own user + system time since it started, the supervisor's included. */
+	processes: { pid: number; rssBytes: number; cpuSeconds: number | null }[];
 };
 
 const readText = (path: string): string | null => {
@@ -44,6 +45,24 @@ const readCpuLimitCores = (cgroupDir: string): number | null => {
 	return Number(quota) / Number(period);
 };
 
+/** Linux counts in clock ticks of 1/100 s; fields 14 and 15 of stat, after the parenthesised name. */
+const CLOCK_TICKS_PER_SECOND = 100;
+
+const readProcessCpuSeconds = ({
+	procDir,
+	pid,
+}: {
+	procDir: string;
+	pid: string;
+}): number | null => {
+	const stat = readText(join(procDir, pid, "stat"));
+	const fields = stat?.slice(stat.lastIndexOf(")") + 2).split(" ");
+	const user = Number(fields?.[11]);
+	const system = Number(fields?.[12]);
+	if (!Number.isFinite(user) || !Number.isFinite(system)) return null;
+	return (user + system) / CLOCK_TICKS_PER_SECOND;
+};
+
 const readProcessRss = ({
 	cgroupDir,
 	procDir,
@@ -57,7 +76,13 @@ const readProcessRss = ({
 				/^VmRSS:\s+(\d+) kB$/m,
 			);
 			return rssKb
-				? [{ pid: Number(pid), rssBytes: Number(rssKb[1]) * 1024 }]
+				? [
+						{
+							pid: Number(pid),
+							rssBytes: Number(rssKb[1]) * 1024,
+							cpuSeconds: readProcessCpuSeconds({ procDir, pid }),
+						},
+					]
 				: [];
 		},
 	);

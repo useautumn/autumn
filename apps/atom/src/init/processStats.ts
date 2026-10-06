@@ -31,6 +31,10 @@ type Bucket = {
 	checkDecideMs: number;
 	checkRenderMs: number;
 	checkRespondMs: number;
+	/** Summed ms of pushes' synchronous work: body parse, validation and storing (writeMs is the stringify and SQL part of it). */
+	pushParseMs: number;
+	pushApplyMs: number;
+	pushWriteMs: number;
 	/** Connections that sent their first request here. */
 	newConnections: number;
 	/** How long a request sat behind others the loop handled first in the same burst: a floor on its wait. */
@@ -41,7 +45,7 @@ type Bucket = {
 /** Maxima over the trailing two seconds, so a reader polling every 2 s misses no stall. */
 export type ProcessStats = Bucket & { index: number; pid: number; at: string };
 
-const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
+export const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 
 const emptyBucket = (): Bucket => ({
 	loopLagMaxMs: 0,
@@ -60,6 +64,9 @@ const emptyBucket = (): Bucket => ({
 	checkDecideMs: 0,
 	checkRenderMs: 0,
 	checkRespondMs: 0,
+	pushParseMs: 0,
+	pushApplyMs: 0,
+	pushWriteMs: 0,
 	newConnections: 0,
 	queueWaitMaxMs: 0,
 	queueWaitTotalMs: 0,
@@ -82,6 +89,9 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	checkDecideMs: a.checkDecideMs + b.checkDecideMs,
 	checkRenderMs: a.checkRenderMs + b.checkRenderMs,
 	checkRespondMs: a.checkRespondMs + b.checkRespondMs,
+	pushParseMs: a.pushParseMs + b.pushParseMs,
+	pushApplyMs: a.pushApplyMs + b.pushApplyMs,
+	pushWriteMs: a.pushWriteMs + b.pushWriteMs,
 	newConnections: a.newConnections + b.newConnections,
 	queueWaitMaxMs: Math.max(a.queueWaitMaxMs, b.queueWaitMaxMs),
 	queueWaitTotalMs: a.queueWaitTotalMs + b.queueWaitTotalMs,
@@ -116,6 +126,7 @@ export type CheckPhaseTotals = {
 	render: number;
 	respond: number;
 };
+export type PushPhaseTotals = { parse: number; apply: number; write: number };
 
 /** A connection idle this long and then seen again counts as new; far longer than any keep-alive gap under load. */
 const CONNECTION_FORGOTTEN_AFTER_MS = 30_000;
@@ -129,6 +140,7 @@ export const startProcessStats = ({
 	now = () => new Date(),
 	subjectReadCounts = () => ({ reads: 0, parses: 0 }),
 	checkPhaseTotals = () => ({ read: 0, decide: 0, render: 0, respond: 0 }),
+	pushPhaseTotals = () => ({ parse: 0, apply: 0, write: 0 }),
 	afterLoopTurn = (callback: () => void) => setImmediate(callback),
 }: {
 	index: number;
@@ -138,6 +150,7 @@ export const startProcessStats = ({
 	now?: () => Date;
 	subjectReadCounts?: () => SubjectReadCounts;
 	checkPhaseTotals?: () => CheckPhaseTotals;
+	pushPhaseTotals?: () => PushPhaseTotals;
 	/** Runs once the loop has handled every request it read in this turn. */
 	afterLoopTurn?: (callback: () => void) => void;
 }): ProcessStatsRecorder & { publish(): void; probeLag(): void } => {
@@ -148,6 +161,7 @@ export const startProcessStats = ({
 	let probedAt = clock();
 	let publishedReads = { ...subjectReadCounts() };
 	let publishedPhases = { ...checkPhaseTotals() };
+	let publishedPushPhases = { ...pushPhaseTotals() };
 	const connectionSeenAt = new Map<string, number>();
 	let burstStartedAt: number | null = null;
 
@@ -199,6 +213,11 @@ export const startProcessStats = ({
 		current.checkRenderMs = phases.render - publishedPhases.render;
 		current.checkRespondMs = phases.respond - publishedPhases.respond;
 		publishedPhases = { ...phases };
+		const pushPhases = pushPhaseTotals();
+		current.pushParseMs = pushPhases.parse - publishedPushPhases.parse;
+		current.pushApplyMs = pushPhases.apply - publishedPushPhases.apply;
+		current.pushWriteMs = pushPhases.write - publishedPushPhases.write;
+		publishedPushPhases = { ...pushPhases };
 		forgetIdleConnections();
 		const stats: ProcessStats = {
 			index,
@@ -217,6 +236,9 @@ export const startProcessStats = ({
 			"checkDecideMs",
 			"checkRenderMs",
 			"checkRespondMs",
+			"pushParseMs",
+			"pushApplyMs",
+			"pushWriteMs",
 			"queueWaitMaxMs",
 			"queueWaitTotalMs",
 		] as const)
