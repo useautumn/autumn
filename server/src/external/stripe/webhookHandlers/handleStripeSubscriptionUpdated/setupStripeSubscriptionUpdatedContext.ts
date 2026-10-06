@@ -36,6 +36,7 @@ export const setupStripeSubscriptionUpdatedContext = async ({
 	return {
 		stripeSubscription,
 		previousAttributes,
+		eventBillingCycleAnchor: event.data.object.billing_cycle_anchor,
 		fullCustomer,
 		customerProducts: [...fullCustomer.customer_products],
 		nowMs,

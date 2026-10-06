@@ -6,6 +6,7 @@ import {
 	ms,
 	msToSeconds,
 	type SetPlansParamsV0Input,
+	secondsToMs,
 } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -17,7 +18,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { expectPreviewMatchesStripeUpcomingInvoice } from "../phase-proration/utils/phaseProrationUtils";
-import { expectCycleResetPhase } from "../utils/resyncUtils";
+import {
+	expectBillingCycleAnchorConsumed,
+	expectCycleResetPhase,
+} from "../utils/resyncUtils";
 import { findStripeSubscriptionByStatus } from "../utils/subscriptionStateUtils";
 
 test.concurrent(
@@ -105,6 +109,22 @@ test.concurrent(
 		expect(msToSeconds(preview.next_cycle?.starts_at ?? 0)).toBe(
 			subscription.items.data[0]?.current_period_end,
 		);
+
+		// No invoice carries the reset, so Autumn re-anchors on Stripe's anchor move itself.
+		await expectBillingCycleAnchorConsumed({
+			ctx,
+			customerId,
+			productId: pro.id,
+			anchorMs,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+			nextResetAt: secondsToMs(
+				subscription.items.data[0]?.current_period_end ?? 0,
+			),
+		});
 	},
 );
 
