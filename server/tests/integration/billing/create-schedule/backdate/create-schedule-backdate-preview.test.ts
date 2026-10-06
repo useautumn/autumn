@@ -273,7 +273,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule backdate preview: no proration still shows the forced subscription invoice and tax")}`,
+	`${chalk.yellowBright("create-schedule backdate preview: no proration charges nothing now, like Stripe")}`,
 	async () => {
 		const customerId = "create-schedule-backdate-preview-no-proration-tax";
 		const enterprise = products.base({
@@ -328,18 +328,11 @@ test.concurrent(
 
 		const preview = await previewCreateSchedule({ autumnV1, params });
 
-		expect(preview.subtotal).toBe(8_400);
-		expect(preview.line_items).toHaveLength(1);
-		expect(preview.tax?.status).toBe("complete");
-		expect(preview.tax?.total).toBeGreaterThan(0);
-		expect(preview.total).toBeCloseTo(
-			preview.subtotal + (preview.tax?.total ?? 0),
-			2,
-		);
+		expect(preview.line_items).toHaveLength(0);
+		expect(preview.total).toBe(0);
 
 		const response = await autumnV1.billing.createSchedule(params);
-		expect(response.invoice?.status).toBe("paid");
-		expect(response.invoice?.total).toBeCloseTo(preview.total, 2);
+		expect(response.invoice).toBeUndefined();
 	},
 	300_000,
 );
