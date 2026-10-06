@@ -62,7 +62,7 @@ export const openSqliteStore = ({
 			return held.subject;
 		}
 		subjectReadCounts.parses += 1;
-		const subject = deepFreeze(storedSubjectFromRow({ row }));
+		const subject = deepFreeze(storedSubjectFromRow({ ctx, row }));
 		if (parsed.size >= PARSED_SUBJECTS_PER_SLOT)
 			parsed.delete(parsed.keys().next().value as string);
 		parsed.set(key, { version, stamp, subject });

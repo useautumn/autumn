@@ -277,4 +277,28 @@ describe("sqlite store", () => {
 		writer.setSubject({ subject: subjectAt({ logOffset: 4n }) });
 		expect(read()?.logOffset).toBe(4n);
 	});
+	test("customers sharing a catalog store its text once, and each reads it back whole", () => {
+		const databasePath = slotPath();
+		const sqliteStore = openSqliteStore({ databasePath });
+		const catalog = {
+			...emptyCatalog,
+			features: { messages: { id: "messages" } },
+		} as unknown as StoredSubject["catalog"];
+		for (const customerId of ["cus_1", "cus_2"])
+			sqliteStore.setSubject({
+				subject: {
+					...subjectAt({ logOffset: 1n }),
+					state: createSubjectState({ identity: { ...identity, customerId } }),
+					catalog,
+				},
+			});
+
+		const texts = new Database(databasePath)
+			.query("SELECT count(*) AS n FROM shared_texts")
+			.get() as { n: number };
+		expect(texts.n).toBe(2);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_2", entityId: null })?.catalog,
+		).toEqual(catalog);
+	});
 });
