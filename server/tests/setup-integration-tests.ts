@@ -117,6 +117,20 @@ loadLocalEnv({ force: true });
 process.env.AUTUMN_API_URL ??= "http://localhost:8080";
 process.env.AUTUMN_PUBLIC_API_URL ??= "http://localhost:8080";
 
+if (process.env.TW_TEST_FILE && !process.env.UNIT_TESTS) {
+	const { tagTwTestFileRequests } = await import(
+		"./utils/tw/tagTwTestFileRequests"
+	);
+	await tagTwTestFileRequests({
+		fileTag: process.env.TW_TEST_FILE,
+		serverUrls: [
+			process.env.AUTUMN_TEST_BASE_URL,
+			process.env.AUTUMN_API_URL,
+			process.env.AUTUMN_PUBLIC_API_URL,
+		],
+	});
+}
+
 if (process.env.UNIT_TESTS) await seedMockedModulesForUnitLane();
 
 // Unit-only lanes don't set TESTS_ORG; silently skip there. Anything else

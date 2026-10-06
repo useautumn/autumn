@@ -18,7 +18,23 @@ export const baselineIsDue = ({
 }): boolean =>
 	!lastCreatedAt || now - lastCreatedAt.getTime() > BASELINE_INTERVAL_MS;
 
-/** Interval hook: start a full dev baseline run when the last one is more than 24h old. */
+const UTC_DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+/** True on a UTC day listed in `skipDays` (comma-separated, e.g. "sat,sun"; blank skips none). */
+export const isBaselineSkipDay = ({
+	now,
+	skipDays,
+}: {
+	now: number;
+	skipDays: string;
+}): boolean => {
+	const skipped = skipDays
+		.split(",")
+		.map((day) => day.trim().toLowerCase().slice(0, 3));
+	return skipped.includes(UTC_DAYS[new Date(now).getUTCDay()] ?? "");
+};
+
+/** Interval hook: start a full dev baseline run when the last one is more than 24h old, except on skip days. */
 export const scheduleBaselineRuns = async ({
 	ctx,
 }: {
@@ -31,8 +47,10 @@ export const scheduleBaselineRuns = async ({
 		.orderBy(desc(runs.createdAt))
 		.limit(1);
 
-	if (!baselineIsDue({ lastCreatedAt: lastRun?.createdAt, now: Date.now() }))
-		return null;
+	const now = Date.now();
+	const skipDays = process.env.TWD_BASELINE_SKIP_DAYS ?? "sat,sun";
+	if (isBaselineSkipDay({ now, skipDays })) return null;
+	if (!baselineIsDue({ lastCreatedAt: lastRun?.createdAt, now })) return null;
 
 	// Every push to dev is auto-warmed, so the newest warm image tracks dev's head.
 	const [devHead] = await ctx.db

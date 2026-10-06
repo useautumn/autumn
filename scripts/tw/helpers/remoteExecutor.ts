@@ -37,6 +37,11 @@ import {
 	setWorkerStatus,
 } from "../dashboard/hub.ts";
 import type { WorkerHandle } from "../types.ts";
+import {
+	createFileStatsReader,
+	type FileStats,
+	fileStatsWrapperSource,
+} from "./fileStats.ts";
 import type { WorkerPool } from "./pool.ts";
 import type { ProviderSandbox } from "./provider.ts";
 import { runStreaming } from "./provider.ts";
@@ -63,6 +68,12 @@ export type RemoteExecutorOptions = {
 	 * worker-relative path).
 	 */
 	toWorkerPath?: (localFile: string) => string;
+	/** Wraps each file in the stats wrapper and reports its `[tw-file-stats]` line. */
+	onFileStats?: (event: {
+		file: string;
+		worker: string;
+		stats: FileStats;
+	}) => void;
 };
 
 /**
@@ -95,6 +106,22 @@ export const buildTestArgv = (
 	return argv;
 };
 
+/** Same command, run under the stats wrapper with the file attempt's Stripe tag in its env. */
+export const withFileStatsWrapper = ({
+	argv,
+	fileTag,
+}: {
+	argv: string[];
+	fileTag: string;
+}): string[] => [
+	...TEST_ENV_PREFIX,
+	`TW_TEST_FILE=${fileTag}`,
+	"bun",
+	"-e",
+	fileStatsWrapperSource(),
+	...argv.slice(TEST_ENV_PREFIX.length),
+];
+
 /**
  * Turn a set of failed test names into a single `--test-name-pattern` regex.
  * Names are escaped (Bun treats the pattern as a regex) and OR-joined. The
@@ -120,6 +147,7 @@ export class RemoteExecutor implements TestExecutor {
 	private readonly pool: WorkerPool;
 	private readonly resolveSandbox: SandboxResolver;
 	private readonly toWorkerPath: (localFile: string) => string;
+	private readonly onFileStats: RemoteExecutorOptions["onFileStats"];
 
 	/**
 	 * Which worker last ran a given file, so a retry / reschedule can land on a
@@ -132,6 +160,7 @@ export class RemoteExecutor implements TestExecutor {
 		this.pool = opts.pool;
 		this.resolveSandbox = opts.resolveSandbox;
 		this.toWorkerPath = opts.toWorkerPath ?? ((file) => file);
+		this.onFileStats = opts.onFileStats;
 	}
 
 	/**
@@ -187,20 +216,35 @@ export class RemoteExecutor implements TestExecutor {
 				});
 			}
 
-			const argv = buildTestArgv(
+			const testArgv = buildTestArgv(
 				this.toWorkerPath(args.file),
 				args.failedTestNames,
 			);
+			const onFileStats = this.onFileStats;
+			const statsReader = onFileStats
+				? createFileStatsReader({
+						onStats: (stats) =>
+							onFileStats({ file: args.file, worker: worker.name, stats }),
+					})
+				: undefined;
+			const argv = statsReader
+				? withFileStatsWrapper({
+						argv: testArgv,
+						fileTag: crypto.randomUUID(),
+					})
+				: testArgv;
 
 			// Tee the raw test output to the dashboard's per-file buffer while still
 			// feeding the runner's parser (the per-file view shows this verbatim).
 			const tee = (text: string): void => {
 				appendFileOutput(args.file, text);
+				statsReader?.push(text);
 				args.onChunk(text);
 			};
 			const { exitCode, stderr } = await runStreaming(sandbox, argv, tee, {
 				signal: args.signal,
 			});
+			statsReader?.flush();
 			// Clean completion (real exit code, even if non-zero) — the worker is
 			// healthy, hand it back to the pool for the next file.
 			this.pool.release(worker);

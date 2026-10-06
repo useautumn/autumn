@@ -41,9 +41,9 @@ export const queuePositionSql = sql<
 	Number,
 );
 
-/** Distinct worker sandboxes a run booted; shown once it's finished and has released them. */
-const workersUsedSql =
-	sql<number>`(select count(*) from run_workers w where w.run_id = ${runs.id})`.mapWith(
+/** Most workers attached at once, from run_workers lifetimes; an end sorts before a start at the same instant. */
+export const peakWorkersSql =
+	sql<number>`(select coalesce(max(attached), 0) from (select sum(delta) over (order by at, delta) as attached from (select w.started_at as at, 1 as delta from run_workers w where w.run_id = ${runs.id} union all select coalesce(w.ended_at, ${runs.finishedAt}), -1 from run_workers w where w.run_id = ${runs.id} and coalesce(w.ended_at, ${runs.finishedAt}) is not null) lifetimes) running)`.mapWith(
 		Number,
 	);
 
@@ -53,7 +53,7 @@ const selectRuns = ({ ctx }: { ctx: TwdContext }) =>
 			run: runs,
 			email: users.email,
 			queuePosition: queuePositionSql,
-			workersUsed: workersUsedSql,
+			peakWorkers: peakWorkersSql,
 			/** Full µs precision; a JS Date would truncate it and skip rows in keyset paging. */
 			createdAtRaw: sql<string>`${runs.createdAt}::text`,
 		})
@@ -64,12 +64,12 @@ export const toRunSummary = ({
 	run,
 	email,
 	queuePosition = null,
-	workersUsed,
+	peakWorkers,
 }: {
 	run: RunRow;
 	email: string | null;
 	queuePosition?: number | null;
-	workersUsed?: number;
+	peakWorkers?: number;
 }): RunSummary => ({
 	id: run.id,
 	branch: run.branch,
@@ -80,8 +80,8 @@ export const toRunSummary = ({
 	repeat: run.repeat,
 	fileCount: run.fileCount,
 	workerCount:
-		isTerminalRunStatus({ status: run.status }) && workersUsed !== undefined
-			? workersUsed
+		isTerminalRunStatus({ status: run.status }) && peakWorkers !== undefined
+			? peakWorkers
 			: run.workerCount,
 	workersWanted: run.workersWanted,
 	queuePosition,
