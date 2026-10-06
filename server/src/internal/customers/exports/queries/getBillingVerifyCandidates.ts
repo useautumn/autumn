@@ -78,3 +78,75 @@ export const getSharedStripeCustomerIds = async ({
 
 	return new Set(rows.map((row) => row.stripeCustomerId));
 };
+
+/** The subset of these Stripe customer ids any Autumn customer points at. */
+export const getLinkedStripeCustomerIds = async ({
+	db,
+	orgId,
+	env,
+	stripeCustomerIds,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	stripeCustomerIds: string[];
+}): Promise<Set<string>> => {
+	if (stripeCustomerIds.length === 0) return new Set();
+
+	const stripeCustomerId = sql<string>`${customers.processor}->>'id'`;
+	const rows = await db
+		.selectDistinct({ stripeCustomerId })
+		.from(customers)
+		.where(
+			and(
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
+				inArray(stripeCustomerId, stripeCustomerIds),
+			),
+		);
+
+	return new Set(rows.map((row) => row.stripeCustomerId));
+};
+
+/** Autumn customer ids keyed by lowercased email. */
+export const getCustomerIdsByEmail = async ({
+	db,
+	orgId,
+	env,
+	emails,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	emails: string[];
+}): Promise<Map<string, string[]>> => {
+	if (emails.length === 0) return new Map();
+
+	const lowerEmail = sql<string>`lower(${customers.email})`;
+	const rows = await db
+		.select({
+			email: lowerEmail,
+			id: customers.id,
+			internalId: customers.internal_id,
+		})
+		.from(customers)
+		.where(
+			and(
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
+				inArray(
+					lowerEmail,
+					emails.map((email) => email.toLowerCase()),
+				),
+			),
+		);
+
+	const customerIdsByEmail = new Map<string, string[]>();
+	for (const row of rows) {
+		const customerId = row.id ?? row.internalId;
+		const existing = customerIdsByEmail.get(row.email);
+		if (existing) existing.push(customerId);
+		else customerIdsByEmail.set(row.email, [customerId]);
+	}
+	return customerIdsByEmail;
+};
