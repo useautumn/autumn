@@ -32,6 +32,7 @@ import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
+import { handleTrialingCycleResetErrors } from "./handleTrialingCycleResetErrors";
 import { assertNoBillingIntervalMix } from "./subscriptionScope/assertNoBillingIntervalMix";
 import { handleStripeSubscriptionScopeErrors } from "./subscriptionScope/handleStripeSubscriptionScopeErrors";
 import { validateSetPlansPhasePlans } from "./validateSetPlansPhasePlans";
@@ -82,6 +83,7 @@ export const handleSetPlansErrors = async ({
 
 	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
 	assertNoBillingCycleAnchorWithTrial({ billingContext });
+	handleTrialingCycleResetErrors({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,
 		endsAt: params.ends_at,
