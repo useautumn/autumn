@@ -278,6 +278,24 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		expect(describeReview(review)).toEqual(["now:kept:pro:h1"]);
 	});
 
+	test("a canceling plan re-listed with changed items is recreated and keeps its cancellation", () => {
+		const { diff } = expectAllInvariants({
+			rows: [
+				savedRow({ id: "pro_row", plan: pro, endsAt: C, canceling: true }),
+			],
+			desired: desiredTimeline({
+				segments: [desiredSegment({ plan: pro, hash: "h2" })],
+			}),
+			policies: policiesFor(),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h2:now-C",
+		]);
+		expect(diff.timeline[0]?.inheritsCancellation).toBe(true);
+	});
+
 	test("a canceling plan given an explicit later end runs to that end instead", () => {
 		const { diff } = expectAllInvariants({
 			rows: [
@@ -535,11 +553,17 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		expect(describeOperations(noBillingDiff)).toEqual([]);
 	});
 
-	test("a cycle reset now recreates a renewing plan but carries a canceling plan and a one-off purchase", () => {
+	test("a cycle reset now recreates renewing and canceling plans, moving the cancellation to the new period end, but carries a one-off purchase", () => {
 		const { diff } = expectAllInvariants({
 			rows: [
 				savedRow({ id: "pro_row", plan: pro }),
-				savedRow({ id: "sso_row", plan: sso, endsAt: C, canceling: true }),
+				savedRow({
+					id: "sso_row",
+					plan: sso,
+					endsAt: B,
+					periodEndsAtAfterReset: C,
+					canceling: true,
+				}),
 				savedRow({ id: "credits_row", plan: credits }),
 			],
 			desired: desiredTimeline({
@@ -554,7 +578,9 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 
 		expect(describeOperations(diff)).toEqual([
 			"expire:pro_row",
+			"expire:sso_row",
 			"insert:pro:h1:now-never",
+			"insert:sso:h1:now-C",
 		]);
 	});
 

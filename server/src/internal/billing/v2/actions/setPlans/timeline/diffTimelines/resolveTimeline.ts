@@ -1,5 +1,4 @@
 import {
-	earliestEnd,
 	groupByKey,
 	isAliveAt,
 	sortByStart,
@@ -14,8 +13,6 @@ import type { PlannedSegment } from "./plannedSegments";
 type CarryRules = {
 	policies: SetPlansPolicies;
 	liveRowsCarry: boolean;
-	/** A canceling row still carries when the others are recreated: it ends before a new cycle would bill. */
-	cancelingRowsCarry: boolean;
 	now: number;
 };
 
@@ -47,8 +44,7 @@ const liveRowCarries = ({
 		rules.policies.unbilledRows === "recreate" &&
 		!keepsCancellation;
 	if (startsStripeBilling) return false;
-	if (!rules.liveRowsCarry)
-		return rules.cancelingRowsCarry && keepsCancellation;
+	if (!rules.liveRowsCarry) return false;
 	if (liveRow.canceling && rules.policies.canceling === "recreate") {
 		return false;
 	}
@@ -82,7 +78,35 @@ const savedCarriesPlanned = ({
 	);
 };
 
-/** A plan re-listed with no end of its own keeps its cancel date; an explicit end replaces it. */
+/** A canceling plan re-listed with no end of its own keeps its cancellation, carried or recreated; an explicit end replaces it. */
+const keepsCancellation = ({
+	planned,
+	savedSegment,
+	policies,
+}: {
+	planned: PlannedSegment;
+	savedSegment: SavedSegment;
+	policies: SetPlansPolicies;
+}) =>
+	savedSegment.rows[0]?.canceling === true &&
+	policies.canceling === "keepCancellation" &&
+	planned.endsAt === null;
+
+/** Like Stripe's cancel_at_period_end, a kept cancellation lands at the period end, which a reset-now moves. */
+const keptCancellationEndsAt = ({
+	savedSegment,
+	policies,
+}: {
+	savedSegment: SavedSegment;
+	policies: SetPlansPolicies;
+}): number | null => {
+	const cycleResetsNow = policies.liveRows === "recreateRenewing";
+	const resetPeriodEndsAt = cycleResetsNow
+		? savedSegment.rows[0]?.periodEndsAtAfterReset
+		: undefined;
+	return resetPeriodEndsAt ?? savedSegment.endsAt;
+};
+
 const carriedEndsAt = ({
 	planned,
 	savedSegment,
@@ -91,24 +115,21 @@ const carriedEndsAt = ({
 	planned: PlannedSegment;
 	savedSegment: SavedSegment;
 	policies: SetPlansPolicies;
-}): number | null => {
-	const [liveRow] = savedSegment.rows;
-	const keepsCancellation =
-		liveRow?.canceling === true &&
-		policies.canceling === "keepCancellation" &&
-		planned.endsAt === null;
-	if (!keepsCancellation) return planned.endsAt;
-	return earliestEnd([planned.endsAt, savedSegment.endsAt]);
-};
+}): number | null =>
+	keepsCancellation({ planned, savedSegment, policies })
+		? keptCancellationEndsAt({ savedSegment, policies })
+		: planned.endsAt;
 
 const toResolvedSegment = ({
 	planned,
 	carriedBy,
 	endsAt,
+	inheritsCancellation,
 }: {
 	planned: PlannedSegment;
 	carriedBy?: SavedSegment;
 	endsAt: number | null;
+	inheritsCancellation?: boolean;
 }): ResolvedSegment => ({
 	id: resolvedSegmentId(planned),
 	key: planned.key,
@@ -122,6 +143,7 @@ const toResolvedSegment = ({
 	origin: planned.origin,
 	desired: planned.desired,
 	carriedBy,
+	inheritsCancellation,
 });
 
 const resolveKey = ({
@@ -140,9 +162,30 @@ const resolveKey = ({
 			savedCarriesPlanned({ savedSegment, planned: plannedSegment, rules }),
 		);
 		if (!carriedBy) {
+			const replaced = startsInFuture({
+				segment: plannedSegment,
+				now: rules.now,
+			})
+				? undefined
+				: uncarriedSaved.find((savedSegment) =>
+						isAliveAt({ segment: savedSegment, at: rules.now }),
+					);
+			const inheritsCancellation =
+				replaced !== undefined &&
+				keepsCancellation({
+					planned: plannedSegment,
+					savedSegment: replaced,
+					policies: rules.policies,
+				});
 			return toResolvedSegment({
 				planned: plannedSegment,
-				endsAt: plannedSegment.endsAt,
+				endsAt: inheritsCancellation
+					? keptCancellationEndsAt({
+							savedSegment: replaced,
+							policies: rules.policies,
+						})
+					: plannedSegment.endsAt,
+				inheritsCancellation,
 			});
 		}
 
@@ -301,7 +344,6 @@ export const resolveTimeline = ({
 			liveRowsCarry:
 				policies.liveRows !== "recreate" &&
 				policies.liveRows !== "recreateRenewing",
-			cancelingRowsCarry: policies.liveRows === "recreateRenewing",
 		},
 	});
 
@@ -313,6 +355,6 @@ export const resolveTimeline = ({
 	return resolveWithRules({
 		saved,
 		planned,
-		rules: { policies, now, liveRowsCarry: false, cancelingRowsCarry: false },
+		rules: { policies, now, liveRowsCarry: false },
 	});
 };

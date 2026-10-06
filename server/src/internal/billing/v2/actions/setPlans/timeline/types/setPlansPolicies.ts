@@ -8,7 +8,7 @@ export type SetPlansPolicies = {
 	canceling: "keepCancellation" | "recreate";
 	/** A past-due plan re-listed unchanged continues, or is recreated. */
 	pastDue: "continue" | "recreate";
-	/** Whether live rows may carry a desired plan; a replaced subscription may force recreation, a cycle reset now recreates the renewing ones. */
+	/** Whether live rows may carry a desired plan; a replaced subscription may force recreation, a cycle reset now recreates every recurring one. */
 	liveRows:
 		| "carry"
 		| "recreate"

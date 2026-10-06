@@ -45,6 +45,7 @@ export const savedRow = ({
 	entity = null,
 	startsAt = PAST,
 	endsAt = null,
+	periodEndsAtAfterReset = null,
 	scheduled,
 	canceling = false,
 	pastDue = false,
@@ -58,6 +59,7 @@ export const savedRow = ({
 	entity?: string | null;
 	startsAt?: number;
 	endsAt?: number | null;
+	periodEndsAtAfterReset?: number | null;
 	scheduled?: boolean;
 	canceling?: boolean;
 	pastDue?: boolean;
@@ -76,6 +78,7 @@ export const savedRow = ({
 		(testPlan.kind !== "free" && testPlan.kind !== "oneOff"),
 	startsAt,
 	endsAt,
+	periodEndsAtAfterReset,
 	scheduled: scheduled ?? startsAt > NOW,
 	canceling,
 	pastDue,

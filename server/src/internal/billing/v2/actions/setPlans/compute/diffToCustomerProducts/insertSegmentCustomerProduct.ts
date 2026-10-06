@@ -108,6 +108,11 @@ const insertImmediateCustomerProduct = ({
 		result: { insertCustomerProduct: customerProduct },
 		endedAt: segment.endsAt,
 	});
+	// Stripe keeps a pending cancellation through an item update, so the recreated row stays canceling.
+	if (segment.inheritsCancellation && replacedCustomerProduct) {
+		customerProduct.canceled = true;
+		customerProduct.canceled_at = replacedCustomerProduct.canceled_at;
+	}
 	if (billingContext.skipBillingChanges) {
 		customerProduct.scheduled_ids =
 			attachBillingContext.currentCustomerProduct?.scheduled_ids;
