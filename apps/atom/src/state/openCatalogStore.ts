@@ -59,7 +59,7 @@ export const openCatalogStore = ({
 	let sharedCatalog = readFromFile();
 	let dataVersion = readCatalogDataVersion({ ctx });
 
-	/** The held copy, read again from the file only when another process has written it. */
+	/** The held copy, read again from the file only when another thread has written it. */
 	function read(): SharedCatalog | null {
 		const currentVersion = readCatalogDataVersion({ ctx });
 		if (currentVersion !== dataVersion) {
@@ -70,7 +70,7 @@ export const openCatalogStore = ({
 	}
 
 	function set({ rows, readAt }: Parameters<CatalogStore["set"]>[0]): boolean {
-		// A push can arrive late, after a retry, or be beaten by another process: the file decides, under its write lock.
+		// A push can arrive late, after a retry, or be beaten by another thread: the file decides, under its write lock.
 		if (!replaceCatalog({ ctx, rows, readAt })) return false;
 		sharedCatalog = { catalog: catalogRowsToCatalog({ rows }), readAt };
 		return true;

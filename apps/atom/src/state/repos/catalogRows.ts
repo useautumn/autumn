@@ -19,7 +19,7 @@ export const readCatalogRows = ({
 		.all()
 		.map(({ rowJson }) => JSON.parse(rowJson));
 
-/** Moves whenever another connection, in this process or any other, changes the file; this connection's own writes leave it alone. */
+/** Moves whenever another connection changes the file; this connection's own writes leave it alone. */
 export const readCatalogDataVersion = ({
 	ctx,
 }: {
@@ -47,7 +47,7 @@ export const readCatalogReadAt = ({
 /**
  * The rows and their read time change together, so a reader never sees one without the other.
  * False when the file already holds a later read: the compare runs under the write lock, so two
- * processes replacing at once cannot both pass it.
+ * threads replacing at once cannot both pass it.
  */
 export const replaceCatalog = ({
 	ctx,

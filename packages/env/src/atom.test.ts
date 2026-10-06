@@ -79,66 +79,93 @@ describe("atom env", () => {
 		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
-	test("runs as many processes as both its CPUs and its memory allow, up to 8", () => {
+	test("runs as many threads as both its CPUs and its memory allow, up to 8", () => {
 		const GB = 1024 ** 3;
-		const processes = ({ cpus, memory }: { cpus: number; memory: number }) =>
+		const threads = ({ cpus, memory }: { cpus: number; memory: number }) =>
 			createAtomEnv(
 				{ ATOM_TOKEN_HASH: TOKEN_HASH },
 				{ availableCpus: cpus, memoryLimitBytes: memory },
-			).ATOM_PROCESSES;
+			).ATOM_THREADS;
 
 		// Half a CPU and 512 MB, as the stack is provisioned today.
-		expect(processes({ cpus: 1, memory: 0.5 * GB })).toBe(1);
-		expect(processes({ cpus: 4, memory: 2 * GB })).toBe(4);
-		// Eight processes would not fit in 1 GB: memory decides.
-		expect(processes({ cpus: 8, memory: 1 * GB })).toBe(2);
+		expect(threads({ cpus: 1, memory: 0.5 * GB })).toBe(1);
+		expect(threads({ cpus: 4, memory: 2 * GB })).toBe(4);
+		// Eight threads would not fit in 1 GB: memory decides.
+		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(2);
 		// A container with no limits sees the whole host: the cap decides.
-		expect(processes({ cpus: 64, memory: 256 * GB })).toBe(8);
+		expect(threads({ cpus: 64, memory: 256 * GB })).toBe(8);
 	});
 
-	test("is told how many processes to run when ATOM_PROCESSES is set", () => {
+	test("is told how many threads to run when ATOM_THREADS is set", () => {
 		const told = createAtomEnv(
-			{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PROCESSES: "12" },
+			{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_THREADS: "12" },
 			{ availableCpus: 2, memoryLimitBytes: 1024 ** 3 },
 		);
 
-		expect(told.ATOM_PROCESSES).toBe(12);
+		expect(told.ATOM_THREADS).toBe(12);
 	});
 
-	test("a multi-tenant Atom is always one process", () => {
+	test("a multi-tenant Atom sizes its threads like a customer's, and may be told how many", () => {
 		const multiTenant = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 16,
 			memoryLimitBytes: 64 * 1024 ** 3,
 		});
+		const small = createAtomEnv(MULTI_TENANT, {
+			availableCpus: 2,
+			memoryLimitBytes: 4 * 1024 ** 3,
+		});
+		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_THREADS: "3" });
 
-		expect(multiTenant.ATOM_PROCESSES).toBe(1);
-		expect(() =>
-			createAtomEnv({ ...MULTI_TENANT, ATOM_PROCESSES: "2" }),
-		).toThrow("one process");
+		expect(multiTenant.ATOM_THREADS).toBe(8);
+		expect(small.ATOM_THREADS).toBe(2);
+		expect(told.ATOM_THREADS).toBe(3);
 	});
 
-	test("about 30% of the processes receive pushes when the push queue is linked, at least one of each", () => {
-		const writers = ({ processes }: { processes: string }) =>
+	test("a multi-tenant Atom reads the push queue like a customer's once it is linked", () => {
+		const env = createAtomEnv(
+			{ ...MULTI_TENANT, ALIEN_PUSHES_BINDING: PUSHES_BINDING },
+			{ availableCpus: 8, memoryLimitBytes: 16 * 1024 ** 3 },
+		);
+
+		expect(env.ATOM_THREADS).toBe(8);
+		expect(env.ATOM_PUSH_RECEIVERS).toBe(2);
+	});
+
+	test("about 30% of the threads receive pushes when the push queue is linked, at least one of each", () => {
+		const receivers = ({ threads }: { threads: string }) =>
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
-				ATOM_PROCESSES: processes,
+				ATOM_THREADS: threads,
 				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
-			}).ATOM_WRITERS;
+			}).ATOM_PUSH_RECEIVERS;
 
-		// A lone process serves and receives.
-		expect(writers({ processes: "1" })).toBe(1);
-		expect(writers({ processes: "2" })).toBe(1);
-		expect(writers({ processes: "4" })).toBe(1);
-		expect(writers({ processes: "8" })).toBe(2);
+		// A lone thread serves and receives.
+		expect(receivers({ threads: "1" })).toBe(1);
+		expect(receivers({ threads: "2" })).toBe(1);
+		expect(receivers({ threads: "4" })).toBe(1);
+		expect(receivers({ threads: "8" })).toBe(2);
 	});
 
-	test("no process receives pushes when no push queue is linked", () => {
+	test("no thread receives pushes when no push queue is linked", () => {
 		const env = createAtomEnv({
 			ATOM_TOKEN_HASH: TOKEN_HASH,
-			ATOM_PROCESSES: "8",
+			ATOM_THREADS: "8",
 		});
 
-		expect(env.ATOM_WRITERS).toBe(0);
+		expect(env.ATOM_PUSH_RECEIVERS).toBe(0);
+	});
+
+	test("ATOM_PUSH_RECEIVERS says how many threads receive, up to every thread", () => {
+		const receivers = ({ told }: { told: string }) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_THREADS: "7",
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
+				ATOM_PUSH_RECEIVERS: told,
+			}).ATOM_PUSH_RECEIVERS;
+
+		expect(receivers({ told: "7" })).toBe(7);
+		expect(receivers({ told: "9" })).toBe(7);
 	});
 
 	test("the Alien binding reads the linked queue unless ATOM_PUSH_QUEUE_CLIENT=sdk opts into the AWS SDK", () => {

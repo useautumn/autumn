@@ -12,15 +12,37 @@ export class UnsupportedSchemaVersionError extends Error {
 	}
 }
 
-/** Several processes share each file. A writer waits this long for another's write before giving up. */
+/** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
 
+/** Threads opening a new file together each try to switch it to WAL; this many tries, this far apart, outlast the others. */
+const WAL_SWITCH_ATTEMPTS = 50;
+const WAL_SWITCH_RETRY_MS = 10;
+
+const isBusy = (error: unknown): boolean =>
+	error instanceof Error && "code" in error && error.code === "SQLITE_BUSY";
+
+/** Switching to WAL takes a lock the busy timeout does not wait for, so a busy switch is tried again. */
+const switchToWal = ({ database }: { database: Database }) => {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			database.run("PRAGMA journal_mode = WAL");
+			return;
+		} catch (error) {
+			if (!isBusy(error) || attempt >= WAL_SWITCH_ATTEMPTS) throw error;
+			Bun.sleepSync(WAL_SWITCH_RETRY_MS);
+		}
+	}
+};
+
 const configureDatabase = ({ database }: { database: Database }) => {
-	// First, before anything touches the file: another process may be recovering its log right now.
+	// First, before anything touches the file: another thread may be recovering its log right now.
 	database.run(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
-	database.run("PRAGMA journal_mode = WAL");
+	switchToWal({ database });
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
 	database.run("PRAGMA synchronous = NORMAL");
+	// The main thread checkpoints every file (startWalCheckpointer), so a commit never copies the log back itself.
+	database.run("PRAGMA wal_autocheckpoint = 0");
 };
 
 const initializeSchema = ({
