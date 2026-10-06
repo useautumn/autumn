@@ -116,6 +116,7 @@
 							"documentation/customers/payment-flow",
 							"documentation/customers/subscription-lifecycle",
 							"documentation/customers/updating-subscriptions",
+							"documentation/customers/tax",
 							"documentation/customers/custom-plans",
 							"documentation/customers/versioning",
 							"documentation/customers/edge-cases"
