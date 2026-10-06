@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, ErrCode } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -194,6 +194,7 @@ test.concurrent(`${chalk.yellowBright("error: update quantity for non-existent f
 
 	// Try to update a feature that doesn't exist in the subscription
 	await expectAutumnError({
+		errCode: ErrCode.InvalidOptions,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
