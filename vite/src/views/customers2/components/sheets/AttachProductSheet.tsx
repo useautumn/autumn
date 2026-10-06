@@ -352,6 +352,7 @@ function SendInvoiceContent() {
 				showBillingAddress &&
 				(taxStatus === "requires_location" || taxIncomplete)
 			}
+			onEmailSaved={() => previewQuery.refetch()}
 			productName={product?.name}
 			previewQuery={previewQuery}
 			isPending={isPending}

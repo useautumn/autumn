@@ -123,6 +123,7 @@ export function SendInvoiceStage({
 	scheduledStartDate,
 	billingAddressSection,
 	submitBlocked = false,
+	onEmailSaved,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -136,6 +137,7 @@ export function SendInvoiceStage({
 	scheduledStartDate?: number | null;
 	billingAddressSection?: ReactNode;
 	submitBlocked?: boolean;
+	onEmailSaved?: () => void;
 }) {
 	const { customer, refetch } = useCusQuery();
 	const { org } = useOrg();
@@ -170,6 +172,7 @@ export function SendInvoiceStage({
 				email: emailValue.trim(),
 			});
 			await refetch();
+			onEmailSaved?.();
 			setEmailSaved(true);
 			toast.success("Email saved");
 		} catch {
@@ -177,7 +180,7 @@ export function SendInvoiceStage({
 		} finally {
 			setEmailSaving(false);
 		}
-	}, [axiosInstance, customerId, emailValue, refetch]);
+	}, [axiosInstance, customerId, emailValue, refetch, onEmailSaved]);
 
 	const buildSubmitParams = (
 		finalizeInvoice: boolean,
@@ -363,6 +366,7 @@ export function SendInvoiceStageWithPreview({
 	scheduledStartDate,
 	billingAddressSection,
 	submitBlocked,
+	onEmailSaved,
 }: {
 	productName?: string;
 	previewQuery: PreviewSectionQuery;
@@ -377,6 +381,7 @@ export function SendInvoiceStageWithPreview({
 	scheduledStartDate?: number | null;
 	billingAddressSection?: ReactNode;
 	submitBlocked?: boolean;
+	onEmailSaved?: () => void;
 }) {
 	const effectiveScheduledStartDate = scheduledStartDate ?? null;
 
@@ -401,6 +406,7 @@ export function SendInvoiceStageWithPreview({
 			scheduledStartDate={effectiveScheduledStartDate}
 			billingAddressSection={billingAddressSection}
 			submitBlocked={submitBlocked}
+			onEmailSaved={onEmailSaved}
 		/>
 	);
 }
