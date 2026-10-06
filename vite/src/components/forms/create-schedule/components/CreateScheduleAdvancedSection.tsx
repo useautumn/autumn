@@ -9,6 +9,7 @@ import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvi
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 import { scheduleBillingCycleAnchorBounds } from "../utils/scheduleBillingCycleAnchorBounds";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
+import { ScheduleFreeTrialRow } from "./ScheduleFreeTrialRow";
 
 export function CreateScheduleAdvancedSection() {
 	const {
@@ -18,6 +19,7 @@ export function CreateScheduleAdvancedSection() {
 		nowMs,
 		backdatesLiveSubscription,
 		hasActiveSubscription,
+		canScheduleTrial,
 	} = useCreateScheduleFormContext();
 	const {
 		resetBillingCycle,
@@ -113,6 +115,7 @@ export function CreateScheduleAdvancedSection() {
 					onEndDateChange={(value) => form.setFieldValue("endDate", value)}
 				/>
 			)}
+			{canScheduleTrial && <ScheduleFreeTrialRow />}
 		</AdvancedSection>
 	);
 }

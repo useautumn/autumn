@@ -11,6 +11,12 @@ import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
+import {
+	FREE_TRIAL_LENGTH_FIELDS,
+	FreeTrialLengthFields,
+} from "@/components/forms/shared/FreeTrialLengthFields";
+import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
+import { toggledFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { AttachCurrencyRow } from "./AttachCurrencyRow";
@@ -102,6 +108,12 @@ export function AttachPlanOptions() {
 
 			<FreeTrialConfigRow
 				form={form}
+				lengthFields={
+					<FreeTrialLengthFields
+						form={form}
+						fields={FREE_TRIAL_LENGTH_FIELDS}
+					/>
+				}
 				description={
 					isMultiPlan
 						? "Let the customer try every selected plan before being charged"
@@ -112,25 +124,16 @@ export function AttachPlanOptions() {
 				trialCardRequired={!!trialCardRequired}
 				trialOnEnd={trialOnEnd}
 				onTrialOnEndChange={handleTrialOnEndChange}
-				onToggle={(enabled) => {
-					form.setFieldValue("trialEnabled", enabled);
-					if (enabled) {
-						if (!formValues.trialLength) {
-							const productTrial = product?.free_trial;
-							form.setFieldValue(
-								"trialLength",
-								productTrial
-									? Number(productTrial.length)
-									: FreeTrialConfigRow.DEFAULT_TRIAL_LENGTH,
-							);
-							if (productTrial?.duration) {
-								form.setFieldValue("trialDuration", productTrial.duration);
-							}
-						}
-					} else {
-						form.setFieldValue("trialLength", null);
-					}
-				}}
+				onToggle={(enabled) =>
+					applyFreeTrialFormValues({
+						form,
+						values: toggledFreeTrialFormValues({
+							enabled,
+							trialLength: formValues.trialLength,
+							catalogFreeTrial: product?.free_trial,
+						}),
+					})
+				}
 			/>
 
 			<ConfigRow

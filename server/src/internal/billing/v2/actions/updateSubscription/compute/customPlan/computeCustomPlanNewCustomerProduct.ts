@@ -94,6 +94,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 				currentCustomerProduct.scheduled_ids?.[0],
 			externalId: currentCustomerProduct.external_id ?? undefined,
 			processor: currentCustomerProduct.processor,
+			collectionMethod: currentCustomerProduct.collection_method,
 			startsAt: currentCustomerProduct.starts_at ?? undefined,
 			...cancelFields,
 

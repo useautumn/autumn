@@ -1,12 +1,12 @@
 import {
 	type BillingBehavior,
 	type CustomizePlanLicense,
-	FreeTrialDuration,
 	type PlanTiming,
 	type ProductItem,
 	RedirectModeSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { FreeTrialFormFieldsSchema } from "../shared/utils/freeTrialFormValues";
 import type { FormDiscount } from "./utils/discountUtils";
 import type { InvoiceBillingDetailsForm } from "./utils/invoiceBillingDetails";
 
@@ -48,10 +48,7 @@ export const AttachFormSchema = z.object({
 	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
-	trialLength: z.number().positive().nullable(),
-	trialDuration: z.enum(FreeTrialDuration),
-	trialEnabled: z.boolean(),
-	trialCardRequired: z.boolean(),
+	...FreeTrialFormFieldsSchema.shape,
 	trialOnEnd: z.enum(["bill", "revert"]),
 	planSchedule: z.custom<PlanTiming>().nullable(),
 	startDate: z.number().nullable(),

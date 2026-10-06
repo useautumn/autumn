@@ -99,6 +99,37 @@ test("the stripe-connect shard is capped at one worker and boots no service", ()
 	).toEqual([]);
 });
 
+test("routes integration replica-reads files to the pg-replica shard; unit replica tests stay pooled", async () => {
+	expect(
+		await detectCapabilities(
+			at("integration/replica-reads/replica-read-routing.test.ts"),
+		),
+	).toEqual(["pg-replica"]);
+	for (const file of [
+		"unit/replica-reads/resolveSubjectReadDbShare.test.ts",
+		"unit/replica-reads/wrapperReplicaGrant.test.ts",
+		"unit/db/replicaRoutingState.test.ts",
+	]) {
+		expect({ file, capabilities: await detectCapabilities(at(file)) }).toEqual({
+			file,
+			capabilities: [],
+		});
+	}
+});
+
+test("pg-replica workers get a standby and its URL, uncapped, with no supervised service", () => {
+	expect(capabilityWorkerEnv(["pg-replica"])).toEqual({
+		TW_CAPABILITIES: "pg-replica",
+		TW_PG_REPLICA: "1",
+		DATABASE_REPLICA_URL:
+			"postgresql://postgres:postgres@localhost:5433/autumn",
+	});
+	expect(maxWorkersFor(["pg-replica"])).toBeUndefined();
+	expect(workerCapabilityServices({ TW_CAPABILITIES: "pg-replica" })).toEqual(
+		[],
+	);
+});
+
 test("keeps files that only mention the IdP or MCP hosts on the normal pool", async () => {
 	for (const file of [
 		"unit/auth/sso-trusted-origins.test.ts",

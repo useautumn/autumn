@@ -4,7 +4,7 @@
  * Contract:
  *  - extending it with another no-card trial keeps it Autumn-only and keeps the bill marker
  *  - removing the trial (free_trial: null) bills the plan now into a Stripe sub
- *  - invoice mode on it is rejected, matching attach
+ *  - invoice mode on it is rejected: invoice mode is chosen when attaching the trial
  *  - canceling it at end of cycle expires it at trial end without billing
  */
 
@@ -133,7 +133,7 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
-			errMessage: "Cannot use invoice mode with a no-card free trial",
+			errMessage: "Cannot set invoice mode when updating a no-card free trial",
 			func: () =>
 				autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 					customer_id: customerId,

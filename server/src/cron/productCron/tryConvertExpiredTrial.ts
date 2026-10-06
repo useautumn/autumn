@@ -10,6 +10,11 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
+import { customerHasInvoiceEmail } from "@/internal/billing/v2/utils/invoiceMode/customerHasInvoiceEmail";
+import {
+	isInvoicedTrial,
+	trialConversionParams,
+} from "./trialConversionParams";
 
 /** billed: now on a Stripe sub. unbillable: expire the trial. retry: leave it for the next cron tick. */
 export type ExpiredTrialConversion = "billed" | "unbillable" | "retry";
@@ -23,6 +28,10 @@ const PAYMENT_FAILURE_CODES = new Set<string>([
 const isPaymentFailure = (error: unknown) =>
 	error instanceof Stripe.errors.StripeCardError ||
 	PAYMENT_FAILURE_CODES.has((error as { code?: string })?.code ?? "");
+
+const isMissingStripeResource = (error: unknown) =>
+	error instanceof Stripe.errors.StripeInvalidRequestError &&
+	error.code === "resource_missing";
 
 const isBillableTrial = (customerProduct: FullCusProduct) =>
 	!customerProduct.canceled &&
@@ -41,6 +50,65 @@ const customerHasPaymentMethod = async ({
 		stripeId: fullCustomer.processor?.id,
 	});
 	return Boolean(paymentMethod);
+};
+
+const fetchStripeCustomer = async ({
+	ctx,
+	fullCustomer,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+}): Promise<Stripe.Customer | undefined> => {
+	const stripeId = fullCustomer.processor?.id;
+	if (!stripeId) return undefined;
+
+	try {
+		const stripeCustomer = await createStripeCli({
+			org: ctx.org,
+			env: ctx.env,
+		}).customers.retrieve(stripeId);
+		return stripeCustomer.deleted ? undefined : stripeCustomer;
+	} catch (error) {
+		if (isMissingStripeResource(error)) return undefined;
+		throw error;
+	}
+};
+
+const customerCanReceiveInvoice = async ({
+	ctx,
+	fullCustomer,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+}) => {
+	if (customerHasInvoiceEmail({ fullCustomer })) return true;
+
+	const stripeCustomer = await fetchStripeCustomer({ ctx, fullCustomer });
+	return customerHasInvoiceEmail({ fullCustomer, stripeCustomer });
+};
+
+const canBillExpiredTrial = async ({
+	ctx,
+	fullCustomer,
+	customerProduct,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	customerProduct: FullCusProduct;
+}) => {
+	if (!isInvoicedTrial(customerProduct))
+		return customerHasPaymentMethod({ ctx, fullCustomer });
+
+	const canReceiveInvoice = await customerCanReceiveInvoice({
+		ctx,
+		fullCustomer,
+	});
+	if (!canReceiveInvoice) {
+		ctx.logger.warn(
+			`[productCron] customer has no email to invoice trial ${customerProduct.id}, expiring it`,
+		);
+	}
+	return canReceiveInvoice;
 };
 
 const customerProductToEntityId = ({
@@ -65,6 +133,10 @@ const billExpiredTrial = async ({
 	fullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
 }): Promise<ExpiredTrialConversion> => {
+	const { invoiceMode, paymentBehaviorIntent } = trialConversionParams({
+		customerProduct,
+	});
+
 	const { billingResult } = await billingActions.updateSubscription({
 		ctx,
 		params: {
@@ -73,9 +145,10 @@ const billExpiredTrial = async ({
 			entity_id: customerProductToEntityId({ fullCustomer, customerProduct }),
 			version: customerProduct.product.version,
 			redirect_mode: "if_required",
+			...(invoiceMode && { invoice_mode: invoiceMode }),
 		},
 		contextOverride: {
-			paymentBehaviorIntent: "error_if_incomplete",
+			...(paymentBehaviorIntent && { paymentBehaviorIntent }),
 			billingUpdatedTags: ["trial_ended"],
 		},
 		options: { skipAutumnCheckout: true },
@@ -88,7 +161,7 @@ const billExpiredTrial = async ({
 	return isBilled ? "billed" : "unbillable";
 };
 
-/** Bills a lapsed Autumn-managed no-card trial into Stripe when the customer has a card on file. */
+/** Bills a lapsed Autumn-managed no-card trial into Stripe: by card on file, or by invoice when attached in invoice mode. */
 export const tryConvertExpiredTrial = async ({
 	ctx,
 	fullCustomer,
@@ -101,7 +174,7 @@ export const tryConvertExpiredTrial = async ({
 	if (!isBillableTrial(customerProduct)) return "unbillable";
 
 	try {
-		if (!(await customerHasPaymentMethod({ ctx, fullCustomer })))
+		if (!(await canBillExpiredTrial({ ctx, fullCustomer, customerProduct })))
 			return "unbillable";
 
 		return await billExpiredTrial({ ctx, fullCustomer, customerProduct });

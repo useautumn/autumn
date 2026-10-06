@@ -26,10 +26,6 @@
 			"@scripts/*": ["./scripts/*"],
 			"@lua/*": ["./src/_luaScripts/*"],
 			"@tests/*": ["./tests/*"],
-			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
-			"autumn-js/backend/hono": ["../packages/autumn-js/src/backend/adapters/hono.ts"],
-			"@useautumn/sdk": ["../packages/sdk/src/index.ts"],
-			"@useautumn/sdk/*": ["../packages/sdk/src/*"],
 
 			// From shared package?
 			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],

@@ -11,6 +11,7 @@ import type {
 	WebhookUnCancellation,
 } from "@puzzmo/revenue-cat-webhook-types";
 import { type Context, Hono } from "hono";
+import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import { getRevenuecatWebhookSecret } from "./misc/getRevenuecatWebhookSecret";
 import {
@@ -33,6 +34,8 @@ export const revenuecatWebhookRouter = new Hono<RevenueCatWebhookHonoEnv>();
 revenuecatWebhookRouter.post(
 	"/:orgId/:env",
 	revenuecatSeederMiddleware,
+	// Before revenuecatLogMiddleware so its logger rebuild drops analytics' generic auth_type.
+	analyticsMiddleware,
 	revenuecatLogMiddleware,
 	revenuecatWebhookRefreshMiddleware,
 	traceEnrichMiddleware,
