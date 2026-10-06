@@ -1,6 +1,9 @@
 import {
 	type BillingContext,
 	CusProductStatus,
+	type FullCusProduct,
+	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
 	type PhaseProrationBehavior,
 	secondsToMs,
 	truncateMsToSecondPrecision,
@@ -20,22 +23,41 @@ const STRIPE_RESET_PRORATION_BEHAVIORS: Partial<
 	none: "none",
 };
 
-/** Where a scheduled plan change starts; its own proration rule decides those resets, not the live one. */
+/** Where a plan change scheduled on this schedule starts; its own proration rule decides those resets, not the live one. */
 const planChangeStarts = ({
 	billingContext,
+	stripeSubscriptionSchedule,
 }: {
 	billingContext: BillingContext;
-}) =>
-	new Set(
+	stripeSubscriptionSchedule: Stripe.SubscriptionSchedule;
+}) => {
+	const stripeSubscriptionId = billingContext.stripeSubscription?.id;
+	const isOnThisSchedule = (customerProduct: FullCusProduct) =>
+		isCustomerProductOnStripeSubscriptionSchedule({
+			customerProduct,
+			stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+		}) ||
+		(stripeSubscriptionId !== undefined &&
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId,
+			}) === true);
+
+	return new Set(
 		[
 			...billingContext.fullCustomer.customer_products
-				.filter(({ status }) => status === CusProductStatus.Scheduled)
+				.filter(
+					(customerProduct) =>
+						customerProduct.status === CusProductStatus.Scheduled &&
+						isOnThisSchedule(customerProduct),
+				)
 				.map(({ starts_at }) => starts_at),
 			...(isSetPlansBillingContext(billingContext)
 				? billingContext.scheduledPhaseContexts.map(({ startsAt }) => startsAt)
 				: []),
 		].map(truncateMsToSecondPrecision),
 	);
+};
 
 /**
  * The proration each pending anchor reset of the running plans carries on the live Stripe schedule,
@@ -49,7 +71,10 @@ export const liveScheduleAnchorResetProrations = ({
 	const { stripeSubscriptionSchedule, currentEpochMs } = billingContext;
 	if (!stripeSubscriptionSchedule) return [];
 
-	const excludedStarts = planChangeStarts({ billingContext });
+	const excludedStarts = planChangeStarts({
+		billingContext,
+		stripeSubscriptionSchedule,
+	});
 	return stripeSubscriptionSchedule.phases.flatMap((phase) => {
 		const startsAt = secondsToMs(phase.start_date);
 		const isPendingAnchorReset =

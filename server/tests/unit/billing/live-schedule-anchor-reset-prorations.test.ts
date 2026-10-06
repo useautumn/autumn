@@ -38,7 +38,11 @@ const billingContextFor = ({
 }) =>
 	({
 		currentEpochMs: NOW,
-		stripeSubscriptionSchedule: { phases } as Stripe.SubscriptionSchedule,
+		stripeSubscription: { id: "sub_a" } as Stripe.Subscription,
+		stripeSubscriptionSchedule: {
+			id: "sched_a",
+			phases,
+		} as unknown as Stripe.SubscriptionSchedule,
 		fullCustomer: { customer_products: customerProducts },
 	}) as unknown as BillingContext;
 
@@ -88,10 +92,29 @@ describe("liveScheduleAnchorResetProrations", () => {
 						{
 							status: CusProductStatus.Scheduled,
 							starts_at: ANCHOR,
+							scheduled_ids: ["sched_a"],
 						} as FullCusProduct,
 					],
 				}),
 			}),
 		).toEqual([]);
+	});
+
+	test("a plan scheduled on another subscription at the same time doesn't hide this reset", () => {
+		expect(
+			liveScheduleAnchorResetProrations({
+				billingContext: billingContextFor({
+					phases: [phase({ startsAt: ANCHOR, prorationBehavior: "none" })],
+					customerProducts: [
+						{
+							status: CusProductStatus.Scheduled,
+							starts_at: ANCHOR,
+							subscription_ids: ["sub_b"],
+							scheduled_ids: ["sched_b"],
+						} as FullCusProduct,
+					],
+				}),
+			}),
+		).toEqual([{ startsAt: ANCHOR, prorationBehavior: "none" }]);
 	});
 });
