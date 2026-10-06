@@ -11,6 +11,7 @@ import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
+import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
 
 // 31-day cycle; the switch leaves 11/31 of it, so each prorated line has sub-cent remainders.
@@ -109,5 +110,38 @@ describe("next cycle preview rounding", () => {
 
 		expect(nextCycle?.subtotal).toBe(1064);
 		expect(nextCycle?.total).toBe(1064);
+	});
+});
+
+describe("next cycle preview rounding for a scheduled anchor mid-period", () => {
+	test("JPY: rounds each scaled line to whole yen once, not to 2dp first", () => {
+		// Anchor Jan 13 01:00 bills 1497 x 289/744 = 581.4959…: ¥581, where 2dp first gives 581.50 -> ¥582.
+		const scheduledAnchorMs = Date.UTC(2026, 0, 13, 1);
+		const nextCycle = billingPlanToNextCyclePreview({
+			ctx: contexts.create({
+				org: { ...contexts.createOrg(), default_currency: "jpy" },
+			}),
+			billingContext: {
+				...contexts.createBilling({
+					customerProducts: [plan({ id: "pro", amount: 1497 })],
+					currentEpochMs,
+					billingCycleAnchorMs: anchorMs,
+					stripeSubscription: {
+						...stripeSubscriptions.create({ id: "sub_test" }),
+						billing_cycle_anchor: anchorMs / 1000,
+					},
+				}),
+				requestedBillingCycleAnchor: scheduledAnchorMs,
+			},
+			billingPlan: {
+				autumn: {
+					insertCustomerProducts: [],
+					lineItems: [],
+				} as unknown as AutumnBillingPlan,
+			} as BillingPlan,
+		}).nextCycle;
+
+		expect(nextCycle?.starts_at).toBe(scheduledAnchorMs);
+		expect(nextCycle?.total).toBe(581);
 	});
 });

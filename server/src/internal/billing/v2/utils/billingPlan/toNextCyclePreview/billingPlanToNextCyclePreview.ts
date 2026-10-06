@@ -120,16 +120,14 @@ const scaleNextCycleAmounts = ({
 	prorationRatio: Decimal;
 	currency: string;
 }) => {
+	// Lines stay unrounded like every other path; the totals round each once to minor units.
 	const previewLineItems = lineItemsResult.previewLineItems.map((item) => ({
 		...item,
-		subtotal: prorationRatio.mul(item.subtotal).toDecimalPlaces(2).toNumber(),
-		total: prorationRatio.mul(item.total).toDecimalPlaces(2).toNumber(),
+		subtotal: prorationRatio.mul(item.subtotal).toNumber(),
+		total: prorationRatio.mul(item.total).toNumber(),
 		discounts: item.discounts?.map((discount) => ({
 			...discount,
-			amount_off: prorationRatio
-				.mul(discount.amount_off)
-				.toDecimalPlaces(2)
-				.toNumber(),
+			amount_off: prorationRatio.mul(discount.amount_off).toNumber(),
 		})),
 	}));
 
