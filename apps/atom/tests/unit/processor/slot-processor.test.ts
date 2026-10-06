@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import type { CatalogRow } from "@autumn/balance-engine";
 import { CheckExpand } from "@autumn/shared";
+import {
+	createCatalogRowsFor,
+	createState,
+} from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
@@ -24,6 +29,7 @@ const createProcessor = () => {
 	});
 	return {
 		setSubject: processor.setSubject,
+		setCatalog: catalogStore.set,
 		check: ({ request }: { request: CheckRequest }) =>
 			checkResponseOf({ processor, request }),
 	};
@@ -210,5 +216,100 @@ describe("slot processor check on an entity", () => {
 				processor.check({ request: checkEntity({ requiredBalance: 1 }) }),
 			),
 		).toBe("entity_not_stored");
+	});
+});
+
+describe("each customer's own catalog slice", () => {
+	/** The fixture customer under another id, its plan's entitlements granting `allowance`. */
+	const customerWith = ({
+		customerId = "cus_1",
+		allowance,
+		isCustom = false,
+		readAt = 1000,
+	}: {
+		customerId?: string;
+		allowance: number;
+		isCustom?: boolean;
+		readAt?: number;
+	}) => {
+		const subject = structuredClone(storedSubjectWith({ balance: 10, readAt }));
+		subject.state.identity = { ...subject.state.identity, customerId };
+		for (const entitlement of Object.values(subject.catalog.entitlements))
+			Object.assign(entitlement, { allowance, is_custom: isCustom });
+		return subject;
+	};
+	const grantedFor = async ({
+		processor,
+		customerId = "cus_1",
+	}: {
+		processor: ReturnType<typeof createProcessor>;
+		customerId?: string;
+	}) =>
+		(
+			await processor.check({
+				request: checkRequestFor({ params: { customer_id: customerId } }),
+			})
+		).balance?.granted;
+	const planRows = createCatalogRowsFor({ state: createState() });
+	const rowsWithout = ({ table }: { table: CatalogRow["table"] }) =>
+		planRows.filter((row) => row.table !== table);
+
+	test("a catalog change reaches the customer with its next push", async () => {
+		const processor = createProcessor();
+		await processor.setSubject({ subject: customerWith({ allowance: 1000 }) });
+		expect(await grantedFor({ processor })).toBe(1000);
+
+		await processor.setSubject({
+			subject: customerWith({ allowance: 500, readAt: 2000 }),
+		});
+
+		expect(await grantedFor({ processor })).toBe(500);
+	});
+
+	test("two customers on one plan each answer from their own slice", async () => {
+		const processor = createProcessor();
+		for (const customerId of ["cus_a", "cus_b"])
+			await processor.setSubject({
+				subject: customerWith({ customerId, allowance: 1000 }),
+			});
+
+		await processor.setSubject({
+			subject: customerWith({
+				customerId: "cus_a",
+				allowance: 500,
+				readAt: 2000,
+			}),
+		});
+
+		expect(await grantedFor({ processor, customerId: "cus_a" })).toBe(500);
+		expect(await grantedFor({ processor, customerId: "cus_b" })).toBe(1000);
+	});
+
+	test("a custom-plan customer keeps its own rows when the shared catalog lacks them", async () => {
+		const processor = createProcessor();
+		await processor.setSubject({
+			subject: customerWith({ allowance: 300, isCustom: true }),
+		});
+
+		processor.setCatalog({
+			rows: rowsWithout({ table: "entitlements" }),
+			readAt: 2000,
+		});
+
+		expect(await grantedFor({ processor })).toBe(300);
+	});
+
+	test("after a plan update retires its rows (is_custom), the customer still answers from its own row", async () => {
+		const processor = createProcessor();
+		processor.setCatalog({ rows: planRows, readAt: 900 });
+		await processor.setSubject({ subject: customerWith({ allowance: 1000 }) });
+
+		// The retired rows are the customer's own now, so the org's newer catalog no longer carries them.
+		processor.setCatalog({
+			rows: rowsWithout({ table: "entitlements" }),
+			readAt: 2000,
+		});
+
+		expect(await grantedFor({ processor })).toBe(1000);
 	});
 });
