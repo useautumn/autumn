@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
+import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computeImmediateMultiProductPlan } from "../../common/immediateMultiProduct/computeImmediateMultiProductPlan";
 
 /** Computes the atomic Autumn plan for every requested product. */
@@ -15,7 +16,9 @@ export const computeMultiAttachPlan = ({
 	ctx: AutumnContext;
 	multiAttachBillingContext: MultiAttachBillingContext;
 }): AutumnBillingPlan => {
+	// Anchor first: a reset-now re-bills the subscription's unchanged plans, which finalizing must include.
 	const plan = applyBillingCycleAnchorToSharedSubscription({
+		ctx,
 		plan: computeImmediateMultiProductPlan({
 			ctx,
 			billingContext: multiAttachBillingContext,
@@ -46,6 +49,13 @@ export const computeMultiAttachPlan = ({
 					currency: resolvedCurrency,
 				}
 			: undefined;
+
+	plan.lineItems = finalizeLineItems({
+		ctx,
+		lineItems: plan.lineItems ?? [],
+		billingContext: multiAttachBillingContext,
+		autumnBillingPlan: plan,
+	});
 
 	return { ...plan, lockCustomerCurrency };
 };

@@ -207,18 +207,20 @@ export const computeAttachPlan = ({
 		oneOffPurchaseRebalance,
 	};
 
-	plan = finalizeAttachPlan({
-		ctx,
-		plan,
-		attachBillingContext,
-		params,
-	});
+	// Before finalizing: a reset-now re-bills the subscription's unchanged plans too.
 	plan = applyBillingCycleAnchorToSharedSubscription({
+		ctx,
 		plan,
 		billingContext: attachBillingContext,
 		stripeSubscriptionId:
 			attachBillingContext.stripeSubscription?.id ??
 			attachBillingContext.currentCustomerProduct?.subscription_ids?.[0],
+	});
+	plan = finalizeAttachPlan({
+		ctx,
+		plan,
+		attachBillingContext,
+		params,
 	});
 	plan.balanceTransitionPlan = computeAttachBalanceTransitionPlan({
 		attachBillingContext,

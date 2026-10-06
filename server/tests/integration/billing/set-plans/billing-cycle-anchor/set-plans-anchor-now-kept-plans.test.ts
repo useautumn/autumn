@@ -14,6 +14,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration";
+import { previewStripeTwinResetNowTotal } from "@tests/integration/billing/utils/stripe/previewStripeResetNow";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -355,7 +356,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans anchor now kept: resetting one entity's plan re-anchors the other entity's plan on the subscription")}`,
+	`${chalk.yellowBright("set-plans anchor now kept: resetting one entity's plan re-anchors and re-bills the other entity's plan on the subscription")}`,
 	async () => {
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -379,11 +380,12 @@ test.concurrent(
 			});
 
 		const renewalAt = addMonths(advancedTo, 1).getTime();
-		const expectedTotal = await calculateResetBillingCycleNowTotal({
+		// Stripe re-bills entity 2's unchanged plan too when the shared cycle resets now.
+		const expectedTotal = await previewStripeTwinResetNowTotal({
+			ctx,
 			customerId,
 			advancedTo,
-			oldAmount: 20,
-			newAmount: 50,
+			changes: [{ removeUnitAmount: 20, addUnitAmount: 50 }],
 		});
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
@@ -478,7 +480,7 @@ test.concurrent(
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
-		const { customerId, autumnV2_4, ctx } = await initScenario({
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
 			customerId: "set-plans-anchor-now-kept-canceling",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -496,13 +498,23 @@ test.concurrent(
 			phases: [resetNowPhase({ planIds: [pro.id] })],
 		};
 
-		// It ends on its cancel date, before a restarted cycle would bill anything, as in Stripe.
+		// Stripe still bills the extension to the new period end and moves the cancel there.
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 20,
+			newAmount: 20,
+		});
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.total).toBe(0);
+		expect(preview.total).toBe(expectedTotal);
 		await autumnV2_4.billing.setPlans(params);
 
 		await expectCustomerProducts({ customerId, canceling: [pro.id] });
-		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
 		const subscription = await findStripeSubscriptionByStatus({
 			ctx,
 			customerId,
