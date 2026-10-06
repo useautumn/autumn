@@ -4,8 +4,14 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, SetPlansParamsV0Input } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	SetPlansParamsV0Input,
+} from "@autumn/shared";
+import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -463,5 +469,99 @@ test.concurrent(
 			anchorMs: advancedTo,
 			periodEndMs: renewalAt,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now kept: a kept plan's pending cancellation survives the reset")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, autumnV2_4, ctx } = await initScenario({
+			customerId: "set-plans-anchor-now-kept-canceling",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.cancel({ productId: pro.id }),
+				s.advanceTestClock({ days: 10 }),
+			],
+		});
+		await expectCustomerProducts({ customerId, canceling: [pro.id] });
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [resetNowPhase({ planIds: [pro.id] })],
+		};
+
+		// It ends on its cancel date, before a restarted cycle would bill anything, as in Stripe.
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerProducts({ customerId, canceling: [pro.id] });
+		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+		const subscription = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		expect(
+			subscription.cancel_at !== null || subscription.cancel_at_period_end,
+		).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now kept: a re-listed one-off purchase is neither recharged nor duplicated")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const setupFee = products.oneOffAddOn({ id: "setup-fee", items: [] });
+		const { customerId, autumnV2_4, advancedTo } = await initScenario({
+			customerId: "set-plans-anchor-now-kept-one-off",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, setupFee] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({ productId: setupFee.id }),
+				s.advanceTestClock({ days: 10 }),
+			],
+		});
+
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 20,
+			newAmount: 20,
+		});
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [resetNowPhase({ planIds: [pro.id, setupFee.id] })],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: expectedTotal,
+		});
+		const customer = await autumnV2_4.customers.get<ApiCustomerV5>(customerId);
+		expect(
+			customer.subscriptions.filter(({ plan_id }) => plan_id === setupFee.id)
+				.length +
+				(customer.purchases ?? []).filter(
+					({ plan_id }) => plan_id === setupFee.id,
+				).length,
+		).toBe(1);
 	},
 );
