@@ -72,9 +72,16 @@ export function createCachePushQueue({
 	function enqueue({ subjects }: { subjects: CacheSubjectRef[] }): void {
 		for (const subject of subjects) {
 			const key = meteringIdentityToSubjectKey({ identity: subject.identity });
-			if (!isNewer({ next: subject, held: pending.get(key) })) continue;
+			const held = pending.get(key);
+			if (!isNewer({ next: subject, held })) continue;
 			pending.delete(key);
-			pending.set(key, subject);
+			pending.set(key, {
+				...subject,
+				oldestOccurredAt: Math.min(
+					held?.oldestOccurredAt ?? subject.oldestOccurredAt,
+					subject.oldestOccurredAt,
+				),
+			});
 		}
 		pump();
 	}
