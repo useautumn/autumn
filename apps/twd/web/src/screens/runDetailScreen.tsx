@@ -13,7 +13,7 @@ import {
 	RotateCcw,
 	Square,
 } from "lucide-react";
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { RunDetail } from "../../../src/api/contract.ts";
 import { splitRepetitionId } from "../../../src/internal/runs/repeat/repetitions.ts";
@@ -194,6 +194,45 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	);
 };
 
+/** Memoised so opening the timing sheet doesn't re-render every worker and file tooltip. */
+const RunCards = memo(
+	({
+		run,
+		live,
+		now,
+		p90,
+		onOpenFile,
+		onOpenWorker,
+	}: {
+		run: RunDetail;
+		live: boolean;
+		now: number;
+		p90: Map<string, number | null>;
+		onOpenFile: (file: string) => void;
+		onOpenWorker: (worker: string) => void;
+	}) => {
+		const queued = run.files.filter((f) => f.status === "queued").length;
+		return (
+			<div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+				<div className="flex min-h-0 min-w-0 flex-col gap-3 max-sm:h-[36rem]">
+					<WorkersCard run={run} live={live} onOpenWorker={onOpenWorker} />
+					<FilesCard run={run} live={live} p90={p90} onOpenFile={onOpenFile} />
+				</div>
+				<div className="flex min-h-0 min-w-0 flex-col gap-3 max-sm:h-[36rem]">
+					<FailuresCard run={run} live={live} onOpenFile={onOpenFile} />
+					<RunningCard
+						run={run}
+						live={live}
+						now={now}
+						queued={queued}
+						onOpenFile={onOpenFile}
+					/>
+				</div>
+			</div>
+		);
+	},
+);
+
 export const RunDetailScreen = () => {
 	const { id = "" } = useParams();
 	const run = useRun(id);
@@ -207,9 +246,17 @@ export const RunDetailScreen = () => {
 	const fileLog = useFileLog({ runId: id, file: openFile });
 	const [openWorker, setOpenWorker] = useState<string | null>(null);
 	const workerLog = useWorkerLog({ runId: id, worker: openWorker });
+	const p90 = useMemo(
+		() => new Map(catalog.data?.files.map((f) => [f.path, f.baselineP90Ms])),
+		[catalog.data],
+	);
+	const timing = useMemo(
+		() => (run.data ? summariseRunTiming(run.data, now) : null),
+		[run.data, now],
+	);
 
 	if (run.error) return <ErrorCallout error={run.error} />;
-	if (!run.data)
+	if (!run.data || !timing)
 		return (
 			<div className="flex flex-col gap-3">
 				<Skeleton className="h-4 w-40" />
@@ -219,13 +266,8 @@ export const RunDetailScreen = () => {
 		);
 
 	const r = run.data;
-	const p90 = new Map(
-		catalog.data?.files.map((f) => [f.path, f.baselineP90Ms]),
-	);
-	const timing = summariseRunTiming(r, now);
 	const running = r.files.filter((f) => f.status === "running").length;
 	const total = r.fileCount ?? r.files.length;
-	const queued = r.files.filter((f) => f.status === "queued").length;
 	const opened = r.files.find((f) => f.file === openFile);
 	const fromSheet = (open: (target: string) => void) => (target: string) => {
 		setTimingOpen(false);
@@ -245,22 +287,14 @@ export const RunDetailScreen = () => {
 				onOpenTiming={() => setTimingOpen(true)}
 			/>
 
-			<div className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-				<div className="flex min-h-0 min-w-0 flex-col gap-3 max-sm:h-[36rem]">
-					<WorkersCard run={r} live={live} onOpenWorker={setOpenWorker} />
-					<FilesCard run={r} live={live} p90={p90} onOpenFile={setOpenFile} />
-				</div>
-				<div className="flex min-h-0 min-w-0 flex-col gap-3 max-sm:h-[36rem]">
-					<FailuresCard run={r} live={live} onOpenFile={setOpenFile} />
-					<RunningCard
-						run={r}
-						live={live}
-						now={now}
-						queued={queued}
-						onOpenFile={setOpenFile}
-					/>
-				</div>
-			</div>
+			<RunCards
+				run={r}
+				live={live}
+				now={now}
+				p90={p90}
+				onOpenFile={setOpenFile}
+				onOpenWorker={setOpenWorker}
+			/>
 
 			<TimingSheet
 				open={timingOpen}

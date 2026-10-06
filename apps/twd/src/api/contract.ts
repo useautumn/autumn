@@ -214,6 +214,23 @@ export const RepeatStat = z.object({
 	failed: z.number(),
 });
 
+/** Per-file Stripe and resource totals from the run's `[tw-file-stats]` lines (every attempt). */
+export const RunResources = z.object({
+	/** File attempts that reported stats. */
+	attempts: z.number(),
+	stripeRequests: z.number(),
+	/** 429s Stripe returned (each was retried by the limiter). */
+	rateLimited: z.number(),
+	permitWaitP95Ms: z.number().nullable(),
+	permitWaitMaxMs: z.number().nullable(),
+	workerPeakRps: z.number().nullable(),
+	workerPeakInFlight: z.number().nullable(),
+	cpuCoreSeconds: z.number().nullable(),
+	cpuPeakCoresP95: z.number().nullable(),
+	memPeakMibP95: z.number().nullable(),
+	memPeakMibMax: z.number().nullable(),
+});
+
 export const RunDetail = RunSummary.extend({
 	phase: z.string().nullable(),
 	workers: z.array(WorkerState),
@@ -225,6 +242,8 @@ export const RunDetail = RunSummary.extend({
 	/** Live runs only: server estimate of the remaining wall time (median and p90); null while estimating. */
 	etaMs: z.number().nullable(),
 	etaP90Ms: z.number().nullable(),
+	/** Null until a file attempt reports stats. */
+	resources: RunResources.nullable().optional(),
 });
 
 export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);

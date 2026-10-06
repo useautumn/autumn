@@ -30,11 +30,11 @@ test("accrual prices each sandbox from create to terminate (or now) at sandbox r
 	for (const key of ENV_KEYS) delete process.env[key];
 	const { sql, params } = await captureAccrual();
 	expect(sql).toContain("coalesce(ended_at, now()) - started_at");
-	expect(params).toEqual([0.00003942, 0.00000667, 1.75, "run_1", "run_1"]);
+	expect(params).toEqual([0.00003942, 0.00000667, 1, "run_1", "run_1"]);
 });
 
 test("accrual uses the overridden region multiplier", async () => {
-	process.env.TWD_MODAL_REGION_MULTIPLIER = "1";
+	process.env.TWD_MODAL_REGION_MULTIPLIER = "1.75";
 	const { params } = await captureAccrual();
-	expect(params[2]).toBe(1);
+	expect(params[2]).toBe(1.75);
 });
