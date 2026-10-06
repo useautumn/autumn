@@ -1,4 +1,8 @@
-import type { RepeatStat, RunFile } from "../../../api/contract.ts";
+import {
+	isFailedFileStatus,
+	type RepeatStat,
+	type RunFile,
+} from "../../../api/contract.ts";
 import { TwdError } from "../../../http/apiError.ts";
 
 /** A repeat run's total size cap: about one mid-sized group sweep, so a flake check can't swamp the pool. */
@@ -77,8 +81,7 @@ export const summariseRepeats = ({
 			if (runFile.attempt > 1) stat.passedOnRetry++;
 			else stat.firstAttemptPassed++;
 		}
-		if (runFile.status === "failed" || runFile.status === "crashed")
-			stat.failed++;
+		if (isFailedFileStatus(runFile.status)) stat.failed++;
 		stats.set(file, stat);
 	}
 	return [...stats.values()];
