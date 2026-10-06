@@ -12,12 +12,14 @@ describe("self profile", () => {
 	test("a thread logs its own top functions and CPU each period, for a window of at most half of it", async () => {
 		type ProfileLine = { type: string; data: Record<string, unknown> };
 		const lines: ProfileLine[] = [];
+		const messages: string[] = [];
 		const logged = Promise.withResolvers<void>();
 		const profile = startSelfProfile({
 			everySeconds: 2,
 			index: 3,
 			logger: {
-				info: (fields: unknown) => {
+				info: (fields: unknown, message: unknown) => {
+					messages.push(String(message));
 					lines.push(fields as ProfileLine);
 					logged.resolve();
 				},
@@ -40,5 +42,11 @@ describe("self profile", () => {
 		expect(data.threadCpuCores as number).toBeGreaterThan(0);
 		expect((data.selfTop as unknown[]).length).toBeGreaterThan(0);
 		expect((data.inclusiveTop as unknown[]).length).toBeGreaterThan(0);
+		// The whole profile is on the one message line, which is all a deployed Atom's log keeps.
+		const [, json] = messages[0]?.split("Atom thread 3 profile ") ?? [];
+		expect(JSON.parse(json ?? "null")).toMatchObject({
+			index: 3,
+			selfTop: data.selfTop,
+		});
 	}, 10_000);
 });

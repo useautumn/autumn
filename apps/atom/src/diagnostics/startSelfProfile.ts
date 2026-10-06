@@ -3,6 +3,8 @@ import { profileProcess } from "./profileProcess.js";
 
 /** At most this long per profile, and never more than half the period, so sampling stays a small share of the thread. */
 const MAX_WINDOW_SECONDS = 10;
+/** Functions kept per list: container log lines split past 16 KB, and a split line can't be read back whole. */
+const TOP_LOGGED = 15;
 /** 1 kHz: enough samples in a 10 s window for the top functions, at a fraction of the default 2 kHz's overhead. */
 const SAMPLE_INTERVAL_MICROS = 1000;
 
@@ -33,9 +35,19 @@ export const startSelfProfile = ({
 				seconds: windowSeconds,
 				intervalMicros: SAMPLE_INTERVAL_MICROS,
 			});
+			if ("error" in profile) throw new Error(profile.error);
+			const { memory: _memory, ...kept } = profile;
+			const logged = {
+				index,
+				...kept,
+				selfTop: kept.selfTop.slice(0, TOP_LOGGED),
+				selfByCallerTop: kept.selfByCallerTop.slice(0, TOP_LOGGED),
+				inclusiveTop: kept.inclusiveTop.slice(0, TOP_LOGGED),
+			};
+			// In the message itself: a deployed Atom's console lines keep the message and drop `data`.
 			logger.info(
-				{ type: "atom_thread_profile", data: { index, ...profile } },
-				`Atom thread ${index} profile over ${windowSeconds}s`,
+				{ type: "atom_thread_profile", data: logged },
+				`Atom thread ${index} profile ${JSON.stringify(logged)}`,
 			);
 		} catch (error) {
 			logger.warn(
