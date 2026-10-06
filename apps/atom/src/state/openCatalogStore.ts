@@ -2,7 +2,6 @@ import type { Database } from "bun:sqlite";
 import { catalogRowsToCatalog } from "@autumn/balance-engine";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 import {
-	readCatalogDataVersion,
 	readCatalogReadAt,
 	readCatalogRows,
 	replaceCatalog,
@@ -34,7 +33,7 @@ const createCatalogSchema = ({ database }: { database: Database }) => {
 	`);
 };
 
-/** One catalog file per data folder. The file is the truth; the parsed copy is rebuilt from it on open. */
+/** One catalog file per data folder, written by one thread. The file is the truth; each thread holds it parsed. */
 export const openCatalogStore = ({
 	databasePath,
 }: {
@@ -57,28 +56,27 @@ export const openCatalogStore = ({
 	}
 
 	let sharedCatalog = readFromFile();
-	let dataVersion = readCatalogDataVersion({ ctx });
 
-	/** The held copy, read again from the file only when another thread has written it. */
-	function read(): SharedCatalog | null {
-		const currentVersion = readCatalogDataVersion({ ctx });
-		if (currentVersion !== dataVersion) {
-			sharedCatalog = readFromFile();
-			dataVersion = currentVersion;
-		}
-		return sharedCatalog;
-	}
-
-	function set({ rows, readAt }: Parameters<CatalogStore["set"]>[0]): boolean {
-		// A push can arrive late, after a retry, or be beaten by another thread: the file decides, under its write lock.
-		if (!replaceCatalog({ ctx, rows, readAt })) return false;
+	/** Every thread holds the catalog; only its owner thread writes the file, and hands the rows to the rest. */
+	function install({
+		rows,
+		readAt,
+	}: Parameters<CatalogStore["set"]>[0]): boolean {
+		if (sharedCatalog && readAt < sharedCatalog.readAt) return false;
 		sharedCatalog = { catalog: catalogRowsToCatalog({ rows }), readAt };
 		return true;
 	}
 
+	function set(params: Parameters<CatalogStore["set"]>[0]): boolean {
+		// A push can arrive late or after a retry: the file decides, under its write lock.
+		if (!replaceCatalog({ ctx, ...params })) return false;
+		return install(params);
+	}
+
 	return {
-		read,
+		read: () => sharedCatalog,
 		set,
+		install,
 		close: () => ctx.sqliteDb.close(true),
 	};
 };

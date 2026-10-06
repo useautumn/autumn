@@ -13,7 +13,7 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
-import { subjectBody } from "../utils/atomFixtures.js";
+import { allSlotsOwnedHere, subjectBody } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
@@ -59,6 +59,7 @@ const createDeployedApp = () => {
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
 		slotCount: 2,
+		owners: allSlotsOwnedHere,
 	});
 	opened.push(auth);
 	const { logger, logged } = createLogger();
@@ -72,7 +73,11 @@ const createDeployedApp = () => {
 
 /** Our multi-tenant Atom: no orgs until the admin token's holder registers one. */
 const createMultiTenantApp = () => {
-	const auth = createMultiTenantAuth({ dataDir: newDataDir(), slotCount: 2 });
+	const auth = createMultiTenantAuth({
+		dataDir: newDataDir(),
+		slotCount: 2,
+		owners: allSlotsOwnedHere,
+	});
 	opened.push(auth);
 	const { logger } = createLogger();
 	return createAtomApp({

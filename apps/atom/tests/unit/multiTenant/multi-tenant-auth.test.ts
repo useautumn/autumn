@@ -10,7 +10,9 @@ import {
 	TENANTS_REVALIDATE_MS,
 } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
+	allSlotsOwnedHere,
 	checkRequestFor,
+	checkResponseOf,
 	forwardReasonOf,
 	storedSubjectWith,
 	subjectPushOf,
@@ -24,7 +26,11 @@ const newDataDir = () => {
 	return dataDir;
 };
 const open = ({ dataDir }: { dataDir: string }) => {
-	const auth = createMultiTenantAuth({ dataDir, slotCount: 2 });
+	const auth = createMultiTenantAuth({
+		dataDir,
+		slotCount: 2,
+		owners: allSlotsOwnedHere,
+	});
 	opened.push(auth);
 	return auth;
 };
@@ -37,17 +43,34 @@ afterEach(() => {
 const tokenHash = (token: string) => hashToken({ token });
 
 /** Stores the fixture customer `cus_1`, holding 10 messages, through the token's Atom. */
-const storeCustomer = ({ auth, token }: { auth: Auth; token: string }) => {
-	auth
+const storeCustomer = async ({
+	auth,
+	token,
+}: {
+	auth: Auth;
+	token: string;
+}) => {
+	await auth
 		.authorize({ token })
 		?.processorFor({ customerId: "cus_1" })
 		.setSubject(subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }));
 };
-const checkCustomer = ({ auth, token }: { auth: Auth; token: string }) =>
-	auth
+const checkCustomer = async ({
+	auth,
+	token,
+}: {
+	auth: Auth;
+	token: string;
+}) => {
+	const processor = auth
 		.authorize({ token })
-		?.processorFor({ customerId: "cus_1" })
-		.check({ request: checkRequestFor({ params: { required_balance: 5 } }) });
+		?.processorFor({ customerId: "cus_1" });
+	if (!processor) return undefined;
+	return checkResponseOf({
+		processor,
+		request: checkRequestFor({ params: { required_balance: 5 } }),
+	});
+};
 
 describe("multi-tenant auth", () => {
 	test("a token opens the Atom it was put with, and no other", async () => {
@@ -62,13 +85,13 @@ describe("multi-tenant auth", () => {
 		const auth = open({ dataDir: newDataDir() });
 		auth.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
 		auth.putAtom({ id: "atom_b", tokenHash: tokenHash("token_b") });
-		storeCustomer({ auth, token: "token_a" });
+		await storeCustomer({ auth, token: "token_a" });
 
-		expect(checkCustomer({ auth, token: "token_a" })).toMatchObject({
+		expect(await checkCustomer({ auth, token: "token_a" })).toMatchObject({
 			allowed: true,
 		});
 		expect(
-			forwardReasonOf(() => checkCustomer({ auth, token: "token_b" })),
+			await forwardReasonOf(() => checkCustomer({ auth, token: "token_b" })),
 		).toBe("customer_not_stored");
 	});
 
@@ -76,12 +99,14 @@ describe("multi-tenant auth", () => {
 		const dataDir = newDataDir();
 		const first = open({ dataDir });
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
-		storeCustomer({ auth: first, token: "token_a" });
+		await storeCustomer({ auth: first, token: "token_a" });
 		first.close();
 
 		const reopened = open({ dataDir });
 
-		expect(checkCustomer({ auth: reopened, token: "token_a" })).toMatchObject({
+		expect(
+			await checkCustomer({ auth: reopened, token: "token_a" }),
+		).toMatchObject({
 			allowed: true,
 		});
 	});
@@ -89,12 +114,12 @@ describe("multi-tenant auth", () => {
 	test("putting an Atom again under a new token keeps its customers and retires the old token", async () => {
 		const auth = open({ dataDir: newDataDir() });
 		auth.putAtom({ id: "atom_a", tokenHash: tokenHash("token_old") });
-		storeCustomer({ auth, token: "token_old" });
+		await storeCustomer({ auth, token: "token_old" });
 
 		auth.putAtom({ id: "atom_a", tokenHash: tokenHash("token_new") });
 
 		expect(auth.authorize({ token: "token_old" })).toBeNull();
-		expect(checkCustomer({ auth, token: "token_new" })).toMatchObject({
+		expect(await checkCustomer({ auth, token: "token_new" })).toMatchObject({
 			allowed: true,
 		});
 	});
@@ -119,7 +144,7 @@ describe("multi-tenant auth", () => {
 
 		expect(readdirSync(join(dataDir, "atom_a"))).toEqual(["atom.json"]);
 
-		storeCustomer({ auth, token: "token_a" });
+		await storeCustomer({ auth, token: "token_a" });
 
 		expect(readdirSync(join(dataDir, "atom_a"))).toContain("catalog.sqlite");
 		expect(readdirSync(join(dataDir, "atom_b"))).toEqual(["atom.json"]);
@@ -147,60 +172,69 @@ describe("multi-tenant auth", () => {
 	});
 });
 
-/** Two threads over one data directory, on a clock the test moves. */
-const openTwoThreads = () => {
+/** Two processes over one data directory, on a clock the test moves. */
+const openTwoProcesses = () => {
 	const dataDir = newDataDir();
 	let now = 0;
 	const clock = () => now;
-	const openThread = () => {
-		const auth = createMultiTenantAuth({ dataDir, slotCount: 2, clock });
+	const openProcess = () => {
+		const auth = createMultiTenantAuth({
+			dataDir,
+			slotCount: 2,
+			owners: allSlotsOwnedHere,
+			clock,
+		});
 		opened.push(auth);
 		return auth;
 	};
 	return {
 		dataDir,
-		first: openThread(),
-		second: openThread(),
+		first: openProcess(),
+		second: openProcess(),
 		advance: (ms: number) => {
 			now += ms;
 		},
 	};
 };
 
-describe("multi-tenant auth across threads", () => {
-	test("an Atom put through one thread opens on another as soon as its token is asked for", async () => {
-		const { first, second, advance } = openTwoThreads();
+describe("multi-tenant auth across processes", () => {
+	test("an Atom put through one process opens on another as soon as its token is asked for", async () => {
+		const { first, second, advance } = openTwoProcesses();
 		advance(TENANTS_MISS_RESCAN_MS);
 
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
-		storeCustomer({ auth: first, token: "token_a" });
+		await storeCustomer({ auth: first, token: "token_a" });
 
-		expect(checkCustomer({ auth: second, token: "token_a" })).toMatchObject({
+		expect(
+			await checkCustomer({ auth: second, token: "token_a" }),
+		).toMatchObject({
 			allowed: true,
 		});
 		expect(second.hasAtom({ id: "atom_a" })).toBe(true);
 	});
 
-	test("a rotated token stops working on the other thread within the revalidate bound", async () => {
-		const { first, second, advance } = openTwoThreads();
+	test("a rotated token stops working on the other process within the revalidate bound", async () => {
+		const { first, second, advance } = openTwoProcesses();
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_old") });
 		advance(TENANTS_MISS_RESCAN_MS);
-		storeCustomer({ auth: second, token: "token_old" });
+		await storeCustomer({ auth: second, token: "token_old" });
 
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_new") });
 		advance(TENANTS_REVALIDATE_MS);
 
 		expect(second.authorize({ token: "token_old" })).toBeNull();
-		expect(checkCustomer({ auth: second, token: "token_new" })).toMatchObject({
+		expect(
+			await checkCustomer({ auth: second, token: "token_new" }),
+		).toMatchObject({
 			allowed: true,
 		});
 	});
 
-	test("an Atom deleted through one thread stops answering on the other, which leaves its folder gone", async () => {
-		const { dataDir, first, second, advance } = openTwoThreads();
+	test("an Atom deleted through one process stops answering on the other, which leaves its folder gone", async () => {
+		const { dataDir, first, second, advance } = openTwoProcesses();
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
 		advance(TENANTS_MISS_RESCAN_MS);
-		storeCustomer({ auth: second, token: "token_a" });
+		await storeCustomer({ auth: second, token: "token_a" });
 
 		first.removeAtom({ id: "atom_a" });
 		advance(TENANTS_REVALIDATE_MS);
@@ -210,8 +244,8 @@ describe("multi-tenant auth across threads", () => {
 		expect(existsSync(join(dataDir, "atom_a"))).toBe(false);
 	});
 
-	test("an Atom deleted before the other thread ever opened it is not recreated there", async () => {
-		const { dataDir, first, second, advance } = openTwoThreads();
+	test("an Atom deleted before the other process ever opened it is not recreated there", async () => {
+		const { dataDir, first, second, advance } = openTwoProcesses();
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
 		advance(TENANTS_MISS_RESCAN_MS);
 		second.authorize({ token: "token_unknown" });
@@ -223,7 +257,7 @@ describe("multi-tenant auth across threads", () => {
 	});
 
 	test("unknown tokens re-read the folders at most once per miss interval", async () => {
-		const { first, second, advance } = openTwoThreads();
+		const { first, second, advance } = openTwoProcesses();
 		advance(TENANTS_MISS_RESCAN_MS);
 		expect(second.authorize({ token: "token_bad" })).toBeNull();
 

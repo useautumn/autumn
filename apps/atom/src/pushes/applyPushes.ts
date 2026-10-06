@@ -4,7 +4,7 @@ import type { Slots } from "../slots/types/slots.js";
 
 /**
  * A subject as Autumn pushes it, over HTTP or the queue: routed by the customer id sent beside it and handed on as text,
- * so only its slot parses it. False when an older read was ignored.
+ * so only its owner thread parses it. False when an older read was ignored.
  */
 export const applySubjectPush = ({
 	slots,
@@ -15,7 +15,7 @@ export const applySubjectPush = ({
 	/** Null when an older Autumn sent none: then it is read from the body. */
 	customerId: string | null;
 	body: string;
-}): boolean => {
+}): Promise<boolean> => {
 	const routedTo = customerId ?? customerIdOfSubjectPush({ body });
 	return slots
 		.processorFor({ customerId: routedTo })
@@ -29,4 +29,4 @@ export const applyCatalogPush = ({
 }: {
 	slots: Slots;
 	body: unknown;
-}): boolean => slots.setCatalog(catalogBodyToSharedRows({ body }));
+}): Promise<boolean> => slots.setCatalog(catalogBodyToSharedRows({ body }));

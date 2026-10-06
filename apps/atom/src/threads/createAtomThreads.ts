@@ -1,7 +1,11 @@
 import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AtomServer } from "../init/types/atomServer.js";
-import type { ThreadControl, ThreadStatus } from "./types/threadMessages.js";
+import type {
+	PeerPorts,
+	ThreadControl,
+	ThreadStatus,
+} from "./types/threadMessages.js";
 
 /** How long a thread that died stays down before another takes its place, so one that cannot start does not spin. */
 const RESTART_DELAY_MS = 1000;
@@ -10,6 +14,30 @@ type AtomThreadsContext = {
 	/** A worker running this program again: off the main thread, it runs `runAtomThread`. */
 	spawnThread(): Worker;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
+};
+
+/** A channel per direction: each thread's calls and the other's answers never share a port. */
+const createPeerPorts = (): { mine: PeerPorts; theirs: PeerPorts } => {
+	const outbound = new MessageChannel();
+	const inbound = new MessageChannel();
+	return {
+		mine: { calls: outbound.port1, answers: inbound.port2 },
+		theirs: { calls: inbound.port1, answers: outbound.port2 },
+	};
+};
+
+const send = ({
+	worker,
+	control,
+}: {
+	worker: Worker;
+	control: ThreadControl;
+}): void => {
+	const transfer =
+		control.type === "peerJoined"
+			? [control.ports.calls, control.ports.answers]
+			: [];
+	worker.postMessage(control, transfer);
 };
 
 /** Settles on the thread's first word: ready, or gone before it got there. */
@@ -33,7 +61,7 @@ const stoppedOf = ({ worker }: { worker: Worker }): Promise<void> =>
 
 /**
  * Runs the Atom as `ATOM_THREADS` threads of one process sharing the port. The main thread serves nothing:
- * it starts the threads and replaces one that dies.
+ * it starts the threads, wires each pair, and replaces one that dies, telling the others while it is gone.
  */
 export const createAtomThreads = ({
 	ctx,
@@ -48,6 +76,7 @@ export const createAtomThreads = ({
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
 	let stopping = false;
 
+	/** Wired to every thread already running; those still to start wire themselves to it the same way. */
 	async function startThread({ index }: { index: number }): Promise<void> {
 		const worker = ctx.spawnThread();
 		threads[index] = worker;
@@ -58,24 +87,39 @@ export const createAtomThreads = ({
 			),
 		);
 		const ready = readyOf({ worker });
-		const init: ThreadControl = {
-			type: "init",
-			index,
-			env,
-			bootedAt,
-			restarts,
-		};
-		worker.postMessage(init);
+		send({
+			worker,
+			control: { type: "init", index, env, bootedAt, restarts },
+		});
+		threads.forEach((peer, peerIndex) => {
+			if (!peer || peerIndex === index) return;
+			const { mine, theirs } = createPeerPorts();
+			send({
+				worker,
+				control: { type: "peerJoined", index: peerIndex, ports: mine },
+			});
+			send({
+				worker: peer,
+				control: { type: "peerJoined", index, ports: theirs },
+			});
+		});
 		try {
 			await ready;
 		} catch (error) {
-			threads[index] = null;
+			removeThread({ index });
 			throw error;
 		}
 		worker.addEventListener("close", () => replaceThread({ index, worker }));
 	}
 
-	/** The other threads keep serving meanwhile; it keeps trying at the restart pace. */
+	/** The others fail its pending calls at once (503s) instead of waiting on a thread that is gone. */
+	function removeThread({ index }: { index: number }): void {
+		threads[index] = null;
+		for (const peer of threads)
+			if (peer) send({ worker: peer, control: { type: "peerLeft", index } });
+	}
+
+	/** Its customers get 503s until the new thread is ready; it keeps trying at the restart pace. */
 	async function replaceThread({
 		index,
 		worker,
@@ -84,7 +128,7 @@ export const createAtomThreads = ({
 		worker: Worker;
 	}): Promise<void> {
 		if (stopping || threads[index] !== worker) return;
-		threads[index] = null;
+		removeThread({ index });
 		ctx.logger.warn(
 			{ type: "atom_thread_died", data: { index } },
 			"An Atom thread died; starting another in its place",
@@ -118,15 +162,16 @@ export const createAtomThreads = ({
 		);
 	}
 
-	/** Each thread finishes its in-flight requests and closes its files before it ends. */
+	/** Each thread finishes its in-flight requests and closes its files before it ends; a call to one already gone fails at once. */
 	async function stop(): Promise<void> {
 		stopping = true;
-		const running = threads.filter((worker): worker is Worker => !!worker);
 		await Promise.all(
-			running.map(async (worker) => {
+			threads.map(async (worker, index) => {
+				if (!worker) return;
 				const stopped = stoppedOf({ worker });
-				worker.postMessage({ type: "stop" } satisfies ThreadControl);
+				send({ worker, control: { type: "stop" } });
 				await stopped;
+				removeThread({ index });
 				worker.terminate();
 			}),
 		);

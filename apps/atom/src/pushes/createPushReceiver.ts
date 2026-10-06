@@ -29,13 +29,13 @@ const isAbort = (error: unknown): boolean =>
 	error instanceof Error && error.name === "AbortError";
 
 /** The same apply the HTTP routes run; it throws only on a failure that may pass, so SQS delivers the push again. */
-const applyPush = ({
+const applyPush = async ({
 	ctx,
 	push,
 }: {
 	ctx: PushReceiverContext;
 	push: QueuedAtomPush;
-}): void => {
+}): Promise<void> => {
 	const slots = ctx.auth.slotsFor({ atomId: push.atomId });
 	if (!slots) {
 		ctx.logger.warn(
@@ -45,20 +45,24 @@ const applyPush = ({
 		return;
 	}
 	if (push.type === AtomPushType.SetSubject)
-		applySubjectPush({ slots, customerId: push.customerId, body: push.body });
-	else applyCatalogPush({ slots, body: JSON.parse(push.body) });
+		await applySubjectPush({
+			slots,
+			customerId: push.customerId,
+			body: push.body,
+		});
+	else await applyCatalogPush({ slots, body: JSON.parse(push.body) });
 };
 
-/** Whether the message is done with: applied, or one that can never apply, however often SQS delivers it. */
-const receivePush = ({
+/** Whether the message is done with: applied on the thread that owns its customer, or one that can never apply. */
+const receivePush = async ({
 	ctx,
 	message,
 }: {
 	ctx: PushReceiverContext;
 	message: PulledPush;
-}): boolean => {
+}): Promise<boolean> => {
 	try {
-		applyPush({ ctx, push: payloadToQueuedAtomPush(message) });
+		await applyPush({ ctx, push: payloadToQueuedAtomPush(message) });
 		return true;
 	} catch (error) {
 		if (isUnreadableRequest(error)) {
@@ -84,7 +88,7 @@ const settlePush = async ({
 	ctx: PushReceiverContext;
 	message: PulledPush;
 }): Promise<void> => {
-	if (!receivePush({ ctx, message })) return;
+	if (!(await receivePush({ ctx, message }))) return;
 	await ctx.pushQueue
 		.ack(message.receiptHandle)
 		.catch((error) =>

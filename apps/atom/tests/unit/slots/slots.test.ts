@@ -6,7 +6,9 @@ import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { openSlots } from "../../../src/slots/openSlots.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
 import {
+	allSlotsOwnedHere,
 	checkRequestFor,
+	checkResponseOf,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -19,7 +21,7 @@ const newFolder = () => {
 	return folder;
 };
 const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
-	const slots = openSlots({ folder, slotCount });
+	const slots = openSlots({ folder, slotCount, owners: allSlotsOwnedHere });
 	opened.push(slots);
 	return slots;
 };
@@ -37,7 +39,7 @@ const slotFilesIn = (folder: string) =>
 const customerIds = Array.from({ length: 2000 }, (_, i) => `cus_${i}`);
 
 describe("the slot a customer lives in", () => {
-	test("is always the same for the same customer, and always one of the slots", () => {
+	test("is always the same for the same customer, and always one of the slots", async () => {
 		for (const customerId of customerIds) {
 			const slot = customerIdToSlot({ customerId, slotCount: 128 });
 
@@ -47,7 +49,7 @@ describe("the slot a customer lives in", () => {
 		}
 	});
 
-	test("spreads customers over every slot, none holding far more than its share", () => {
+	test("spreads customers over every slot, none holding far more than its share", async () => {
 		const perSlot = new Array<number>(8).fill(0);
 		for (const customerId of customerIds)
 			perSlot[customerIdToSlot({ customerId, slotCount: 8 })]++;
@@ -59,7 +61,7 @@ describe("the slot a customer lives in", () => {
 });
 
 describe("a data folder's slots", () => {
-	test("there is one file per slot, named with the count it was split into", () => {
+	test("there is one file per slot, named with the count it was split into", async () => {
 		const folder = newFolder();
 
 		open({ folder, slotCount: 4 });
@@ -72,24 +74,25 @@ describe("a data folder's slots", () => {
 		]);
 	});
 
-	test("a customer is found again in the slot it was stored in", () => {
+	test("a customer is found again in the slot it was stored in", async () => {
 		const slots = open({ folder: newFolder(), slotCount: 4 });
 		const subject = storedSubjectWith({ balance: 10 });
 
-		slots
+		await slots
 			.processorFor({ customerId: "cus_1" })
 			.setSubject(subjectPushOf({ subject }));
-		const reply = slots
-			.processorFor({ customerId: "cus_1" })
-			.check({ request: checkRequestFor() });
+		const reply = await checkResponseOf({
+			processor: slots.processorFor({ customerId: "cus_1" }),
+			request: checkRequestFor(),
+		});
 
 		expect(reply.allowed).toBe(true);
 	});
 
-	test("customers and the count of slots survive a restart", () => {
+	test("customers and the count of slots survive a restart", async () => {
 		const folder = newFolder();
 		const first = open({ folder, slotCount: 4 });
-		first
+		await first
 			.processorFor({ customerId: "cus_1" })
 			.setSubject(
 				subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
@@ -99,17 +102,18 @@ describe("a data folder's slots", () => {
 
 		const reopened = open({ folder, slotCount: 4 });
 
-		expect(
-			reopened
-				.processorFor({ customerId: "cus_1" })
-				.check({ request: checkRequestFor() }).allowed,
-		).toBe(true);
+		const reply = await checkResponseOf({
+			processor: reopened.processorFor({ customerId: "cus_1" }),
+			request: checkRequestFor(),
+		});
+
+		expect(reply.allowed).toBe(true);
 	});
 
-	test("opened with a different count, the old files are dropped: customers would be looked for in the wrong ones", () => {
+	test("opened with a different count, the old files are dropped: customers would be looked for in the wrong ones", async () => {
 		const folder = newFolder();
 		const first = open({ folder, slotCount: 4 });
-		first
+		await first
 			.processorFor({ customerId: "cus_1" })
 			.setSubject(
 				subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),

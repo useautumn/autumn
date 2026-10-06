@@ -2,6 +2,7 @@ import { createSubjectState } from "@autumn/balance-engine";
 import {
 	ApiVersion,
 	ApiVersionClass,
+	type CheckResponseV3,
 	LATEST_VERSION,
 	OrgConfigSchema,
 	type SharedContext,
@@ -20,13 +21,24 @@ import {
 	type ForwardReason,
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
+import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
+import type { SlotOwners } from "../../../src/threads/owners/types/slotOwners.js";
 
 /** The org settings Autumn sends with every subject. */
 export const atomOrg: SharedContext["org"] = {
 	config: OrgConfigSchema.parse({}),
 	default_currency: "usd",
 };
+
+/** A check's response as the caller reads it, parsed from the JSON body Atom sends. */
+export const checkResponseOf = async ({
+	processor,
+	request,
+}: {
+	processor: SlotProcessor;
+	request: CheckRequest;
+}): Promise<CheckResponseV3> => JSON.parse(await processor.check({ request }));
 
 /** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
 export const subjectBody = ({ balance }: { balance: number }) => {
@@ -133,12 +145,27 @@ export const checkRequestFor = ({
 });
 
 /** The reason `run` left its request to the API; null when it answered itself. */
-export const forwardReasonOf = (run: () => unknown): ForwardReason | null => {
+export const forwardReasonOf = async (
+	run: () => unknown,
+): Promise<ForwardReason | null> => {
 	try {
-		run();
+		await run();
 		return null;
 	} catch (error) {
 		if (error instanceof CannotAnswerError) return error.reason;
 		throw error;
 	}
+};
+
+/** One thread owning every slot: an Atom run in a single thread, as its unit tests do. */
+const noOtherThread = ({ thread }: { thread: number }): never => {
+	throw new Error(`No thread ${thread}: this Atom runs in one thread`);
+};
+
+export const allSlotsOwnedHere: SlotOwners = {
+	index: 0,
+	threads: 1,
+	ownerOf: () => 0,
+	processorOn: noOtherThread,
+	catalogOn: noOtherThread,
 };

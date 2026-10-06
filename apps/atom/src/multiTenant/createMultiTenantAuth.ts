@@ -2,6 +2,7 @@ import { hashToken } from "../auth/hashToken.js";
 import type { Auth } from "../auth/types/auth.js";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
+import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import {
 	atomFolderPath,
 	hasAtomFile,
@@ -31,10 +32,12 @@ type HeldAtom = TenantAtom & { slots: Slots | null };
 export const createMultiTenantAuth = ({
 	dataDir,
 	slotCount,
+	owners,
 	clock = () => performance.now(),
 }: {
 	dataDir: string;
 	slotCount: number;
+	owners: SlotOwners;
 	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
@@ -99,6 +102,8 @@ export const createMultiTenantAuth = ({
 		held.slots = openSlots({
 			folder: atomFolderPath({ dataDir, id: held.id }),
 			slotCount,
+			atomId: held.id,
+			owners,
 		});
 		return held.slots;
 	}
@@ -111,7 +116,7 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
-	/** A queued push names its folder; a rescan picks up an Atom another thread registered since. */
+	/** A push or another thread's call names its folder; a rescan picks up an Atom registered since. */
 	function slotsFor({ atomId }: { atomId: string | null }): Slots | null {
 		if (atomId === null) return null;
 		if (!heldById.has(atomId) || clock() - scannedAt >= TENANTS_REVALIDATE_MS)
