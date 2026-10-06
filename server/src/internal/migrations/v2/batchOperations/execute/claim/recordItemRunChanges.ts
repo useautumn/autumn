@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { toMigrationItemChanges } from "../../itemChanges/toMigrationItemChanges.js";
+import type { BatchMigrationExecutionPlan } from "../../types/index.js";
 import type { BatchMigrationChanges } from "../types/batchMigrationChanges.js";
 
 /** The run no longer holds a changed customer's claim: the op must roll back
@@ -21,13 +22,15 @@ export const recordItemRunChanges = async ({
 	migrationInternalId,
 	migrationRunId,
 	changes,
+	plan,
 }: {
 	db: DrizzleCli;
 	migrationInternalId: string;
 	migrationRunId: string;
 	changes: BatchMigrationChanges;
+	plan?: BatchMigrationExecutionPlan;
 }): Promise<void> => {
-	const changesByCustomer = toMigrationItemChanges(changes);
+	const changesByCustomer = toMigrationItemChanges({ ...changes, plan });
 	if (changesByCustomer.size === 0) return;
 
 	const internalCustomerIds = [...changesByCustomer.keys()];

@@ -1,4 +1,6 @@
 import type { CusProductStatus } from "../cusProductModels/cusProductEnums.js";
+import type { EntitlementWithFeature } from "../productModels/entModels/entModels.js";
+import type { FullProductWithoutLicenses } from "../productModels/productModels.js";
 
 /** The changed customer product as it stood when the migration wrote it;
  * webhook plan snapshots are built from it. */
@@ -17,6 +19,8 @@ export type MigrationEntitlementCreated = MigrationChangedCustomerProduct & {
 	kind: "entitlement_created";
 	planId: string;
 	featureId: string;
+	entitlement: EntitlementWithFeature;
+	isOneOff: boolean;
 	granted: number | null;
 	/** After-write remaining; omitted when it equals granted. */
 	remaining?: number | null;
@@ -30,7 +34,8 @@ export type MigrationEntitlementDeleted = MigrationChangedCustomerProduct & {
 	kind: "entitlement_deleted";
 	planId: string;
 	featureId: string;
-	entitlementId: string;
+	entitlement: EntitlementWithFeature;
+	isOneOff: boolean;
 	granted?: number | null;
 	remaining?: number | null;
 	unlimited?: boolean;
@@ -40,8 +45,8 @@ export type MigrationEntitlementDeleted = MigrationChangedCustomerProduct & {
 export type MigrationCustomerProductRepointed =
 	MigrationChangedCustomerProduct & {
 		kind: "customer_product_repointed";
-		fromInternalProductId: string;
-		toInternalProductId: string;
+		fromProduct: FullProductWithoutLicenses;
+		toProduct: FullProductWithoutLicenses;
 	};
 
 /** Carries no diff on purpose: a pool repoint alone only busts the cache and

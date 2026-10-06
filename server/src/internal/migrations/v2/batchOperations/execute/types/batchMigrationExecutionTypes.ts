@@ -1,6 +1,5 @@
 import type {
 	EntitlementWithFeature,
-	FullProductWithoutLicenses,
 	MigrationCustomerProductRepointed,
 	MigrationEntitlementCreated,
 	MigrationEntitlementDeleted,
@@ -20,26 +19,26 @@ export type BatchMigrationPageCustomer = {
  * feature was absent before, so the row IS the customer's diff. */
 export type BatchMigrationInsertedItem = Omit<
 	MigrationEntitlementCreated,
-	"kind"
+	"kind" | "entitlement" | "isOneOff"
 > & {
 	internalCustomerId: string;
+	entitlement?: EntitlementWithFeature;
+	isOneOff?: boolean;
 };
 
 export type BatchMigrationRemovedItem = Omit<
 	MigrationEntitlementDeleted,
-	"kind" | "entitlementId"
+	"kind" | "isOneOff"
 > & {
 	internalCustomerId: string;
-	entitlement: EntitlementWithFeature;
+	isOneOff?: boolean;
 };
 
 export type BatchMigrationRepointedProduct = Omit<
 	MigrationCustomerProductRepointed,
-	"kind" | "fromInternalProductId" | "toInternalProductId"
+	"kind"
 > & {
 	internalCustomerId: string;
-	fromProduct: FullProductWithoutLicenses;
-	toProduct: FullProductWithoutLicenses;
 };
 
 export type BatchMigrationPageResult = {

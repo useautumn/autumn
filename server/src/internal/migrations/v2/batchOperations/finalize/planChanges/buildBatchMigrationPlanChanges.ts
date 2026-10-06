@@ -70,7 +70,7 @@ export const buildEntitlementLookup = ({
 		]),
 	);
 
-const buildOneOffByPlanId = ({
+export const buildOneOffByPlanId = ({
 	plan,
 }: {
 	plan: BatchMigrationExecutionPlan;

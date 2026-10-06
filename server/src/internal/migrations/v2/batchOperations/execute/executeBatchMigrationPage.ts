@@ -63,13 +63,6 @@ export const executeBatchMigrationPage = async ({
 
 	const pageInternalIds = customers.map((customer) => customer.internalId);
 	const now = Date.now();
-	const recordChanges: RecordBatchMigrationChanges = ({ db, changes }) =>
-		recordItemRunChanges({
-			db,
-			migrationInternalId,
-			migrationRunId,
-			changes,
-		});
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
 	const repointedProducts: BatchMigrationRepointedProduct[] = [];
@@ -79,6 +72,14 @@ export const executeBatchMigrationPage = async ({
 	const repointedIds = new Set<string>();
 
 	for (const patch of plan.patches) {
+		const recordChanges: RecordBatchMigrationChanges = ({ db, changes }) =>
+			recordItemRunChanges({
+				db,
+				migrationInternalId,
+				migrationRunId,
+				changes,
+				plan: { patches: [patch] },
+			});
 		// Op types stay ordered (removes, then replaces, then adds) but ops
 		// WITHIN a type run concurrently: each op owns one feature, and
 		// different features touch disjoint customer_entitlements rows.
