@@ -56,7 +56,12 @@ SQL >
             AND entity_id = {{ String(entity_id) }}
             {% end %}
             AND timestamp >= window_start AND timestamp <= window_end
-            AND (timestamp < full_hours_start OR timestamp >= full_hours_end)
+            {# The constant guard folds away an empty leading edge, so an hour-aligned start
+               scans only the trailing edge instead of the whole window. #}
+            AND (
+                (window_start < full_hours_start AND timestamp < full_hours_start)
+                OR timestamp >= full_hours_end
+            )
         GROUP BY event_name
     )
     GROUP BY event_name
