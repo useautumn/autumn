@@ -25,6 +25,9 @@ const params: WriterParams = JSON.parse(process.argv[2] ?? "{}");
 const client = createClient({
 	url: dbUrl({ db: params.db }).replace("libsql://", "https://"),
 	authToken: dbToken({ db: params.db, access: "full" }),
+	// A stuck server must end the run as errors, not hang the drain.
+	fetch: (input: RequestInfo, init?: RequestInit) =>
+		fetch(input, { ...init, signal: AbortSignal.timeout(10_000) }),
 });
 
 await client.batch(SUBJECT_STATES_DDL, "write");
