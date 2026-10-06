@@ -2,6 +2,7 @@ import type { RunDetail, RunFile } from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { summariseRunResources } from "../../profiles/repos/fileRunStats.ts";
 import { computeRunDrift } from "../../results/actions/computeRunDrift.ts";
+import { triageRunFailures } from "../../results/actions/triageRunFailures.ts";
 import { getLiveRun } from "../live/liveRuns.ts";
 import { summariseRepeats } from "../repeat/repetitions.ts";
 import {
@@ -11,7 +12,7 @@ import {
 } from "../repos/runsRepo.ts";
 import { readRunProgress } from "../types/runProgress.ts";
 
-/** Summary + live (or last persisted) worker grid + every planned file + drift. */
+/** Summary + live (or last persisted) worker grid + every planned file + drift + failure triage. */
 export const getRun = async ({
 	ctx,
 	runId,
@@ -50,6 +51,7 @@ export const getRun = async ({
 		files,
 		repeats: run.repeat > 1 ? summariseRepeats({ files }) : [],
 		drift: await computeRunDrift({ ctx, runId }),
+		failureTriage: await triageRunFailures({ ctx, files, repeat: run.repeat }),
 		milestones: progress.milestones ?? null,
 		etaMs: eta?.etaMs ?? null,
 		etaP90Ms: eta?.etaP90Ms ?? null,

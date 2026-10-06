@@ -24,6 +24,11 @@ const TwdEnvSchema = z.object({
 	GITHUB_WEBHOOK_SECRET: z.string().default(""),
 	/** Token the ingress map + worker callbacks authenticate with. */
 	TWD_INGRESS_TOKEN: z.string().default(DEV_INGRESS_TOKEN),
+	/** "true" retries ad-hoc failures even in files that failed every recent dev baseline run. */
+	TWD_RETRY_FAILS_ON_DEV: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
 	/** Local dev only: skip auth and act as this @useautumn.com email. */
 	TWD_DEV_AUTH_EMAIL: z.string().optional(),
 });

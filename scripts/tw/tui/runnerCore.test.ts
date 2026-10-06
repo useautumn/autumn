@@ -44,6 +44,31 @@ test("streamed stderr verdicts are counted once and retry failures remain visibl
 	});
 });
 
+test("a no-retry file's first failure is final and is not run again", async () => {
+	let attempts = 0;
+	const executor: TestExecutor = {
+		async run({ onChunk }) {
+			attempts++;
+			const stderr = "(fail) example [1ms]\n";
+			onChunk(stderr);
+			return { exitCode: 1, stderr };
+		},
+	};
+
+	await runSwarmTests(["known-red.test.ts"], executor, {
+		maxParallel: 1,
+		noRetry: new Set(["known-red.test.ts"]),
+	});
+
+	expect(attempts).toBe(1);
+	expect(getTuiState().files.get("known-red.test.ts")).toMatchObject({
+		status: "failed",
+		attempt: 1,
+		willRetry: false,
+		failedTests: [{ name: "example" }],
+	});
+});
+
 test("worker death rescheduling remains visible after a successful first test attempt", async () => {
 	let dispatches = 0;
 	const executor: TestExecutor = {

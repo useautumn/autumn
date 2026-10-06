@@ -81,6 +81,14 @@ set per-file p50/p90 + pass-rate; each finished run records `new_failures`
 duration > 1.5× dev p90. Scheduling is longest-first by dev p90; unseen files
 first.
 
+**Failure triage** — every failure, and every file retrying after a failed
+first attempt, is classified live by its dev baseline pass rate: `new_failure`
+(≥ 0.9), `flaky_on_dev` (between), `fails_on_dev` (≤ 0.1) or `no_dev_history`,
+with a one-line summary on `get_run`. Runs that don't feed the baseline don't
+retry files that failed every one of ≥ 3 recent dev baseline runs
+(`TWD_RETRY_FAILS_ON_DEV=true` restores the retry); baseline and repeat runs
+always retry.
+
 **Repeat (flake checks)** — `repeat: N` (1–50, files × N ≤ 200) plans each
 file as N work items `<file>#1…#N`, so every repetition gets its own worker when
 accounts allow, its own result row (`test_results.repetition`) and its own logs.
@@ -123,7 +131,7 @@ actions the REST routes call — no MCP-only behaviour.
 | `get_capacity`   | gate, accounts, live/queued runs, pool cap       |
 | `warm_branch`    | warm any pushed branch (no PR needed)            |
 | `start_run`      | branch + groups/files/grep → runId               |
-| `get_run`        | status, workers X/Y, queue position, failures, drift |
+| `get_run`        | status, workers X/Y, queue position, triaged failures, drift |
 | `wait_for_run`   | blocks up to N s, returns the same shape         |
 | `list_catalog`   | groups + files for selection                     |
 

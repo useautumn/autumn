@@ -41,6 +41,7 @@ import {
 	orderFilesLongestFirst,
 	recordFileResult,
 } from "../../results/actions/resultsApi.ts";
+import { selectNoRetryFiles } from "../../results/actions/selectNoRetryFiles.ts";
 import { loadEtaPriors } from "../eta/loadEtaPriors.ts";
 import { createRunEtaTracker } from "../eta/trackRunEta.ts";
 import {
@@ -409,6 +410,7 @@ export const handleSwarmJob: JobHandler = async ({
 				ctx.logger.warn("ETA estimate failed", { runId, error: String(error) });
 			}
 		}, ETA_MS);
+		const noRetryFiles = await selectNoRetryFiles({ ctx, run, files });
 		const [{ usableKeys }] = await ctx.db
 			.select({ usableKeys: count() })
 			.from(stripeKeys)
@@ -465,6 +467,9 @@ export const handleSwarmJob: JobHandler = async ({
 			files: files.map((testId) => toAbsoluteTestPath({ testId })),
 			testsDirAtSha,
 			grep: run.selection.grep,
+			noRetryFiles: noRetryFiles.map((testId) =>
+				toAbsoluteTestPath({ testId }),
+			),
 			accounts: parked.splice(0).map(toSwarmAccount),
 			workersWanted,
 			usableKeys,
