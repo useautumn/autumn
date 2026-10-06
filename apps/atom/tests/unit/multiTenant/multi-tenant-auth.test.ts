@@ -9,6 +9,7 @@ import {
 	checkRequestFor,
 	forwardReasonOf,
 	storedSubjectWith,
+	subjectPushOf,
 } from "../utils/atomFixtures.js";
 
 const opened: Auth[] = [];
@@ -36,7 +37,7 @@ const storeCustomer = ({ auth, token }: { auth: Auth; token: string }) => {
 	auth
 		.authorize({ token })
 		?.processorFor({ customerId: "cus_1" })
-		.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+		.setSubject(subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }));
 };
 const checkCustomer = ({ auth, token }: { auth: Auth; token: string }) =>
 	auth

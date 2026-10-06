@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { openSlots } from "../../../src/slots/openSlots.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
-import { checkRequestFor, storedSubjectWith } from "../utils/atomFixtures.js";
+import {
+	checkRequestFor,
+	storedSubjectWith,
+	subjectPushOf,
+} from "../utils/atomFixtures.js";
 
 const opened: Slots[] = [];
 const directories: string[] = [];
@@ -72,7 +76,9 @@ describe("a data folder's slots", () => {
 		const slots = open({ folder: newFolder(), slotCount: 4 });
 		const subject = storedSubjectWith({ balance: 10 });
 
-		slots.processorFor({ customerId: "cus_1" }).setSubject({ subject });
+		slots
+			.processorFor({ customerId: "cus_1" })
+			.setSubject(subjectPushOf({ subject }));
 		const reply = slots
 			.processorFor({ customerId: "cus_1" })
 			.check({ request: checkRequestFor() });
@@ -85,7 +91,9 @@ describe("a data folder's slots", () => {
 		const first = open({ folder, slotCount: 4 });
 		first
 			.processorFor({ customerId: "cus_1" })
-			.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+			.setSubject(
+				subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+			);
 		first.close();
 		opened.splice(0);
 
@@ -103,7 +111,9 @@ describe("a data folder's slots", () => {
 		const first = open({ folder, slotCount: 4 });
 		first
 			.processorFor({ customerId: "cus_1" })
-			.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+			.setSubject(
+				subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+			);
 		first.close();
 		opened.splice(0);
 

@@ -14,7 +14,11 @@ const envWith = ({
 	createAtomEnv({
 		ATOM_TOKEN_HASH: TOKEN_HASH,
 		ATOM_PROCESSES: String(processes),
-		...(linked && { ALIEN_PUSHES_BINDING: "{}" }),
+		...(linked && {
+			ALIEN_PUSHES_BINDING: JSON.stringify({
+				queueUrl: "https://sqs.us-east-1.amazonaws.com/1/pushes",
+			}),
+		}),
 	});
 
 describe("an Atom process's role", () => {

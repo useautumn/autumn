@@ -51,6 +51,12 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
+	/** A queued push names its folder. */
+	function slotsFor({ atomId }: { atomId: string | null }): Slots | null {
+		const held = atomId === null ? undefined : heldById.get(atomId);
+		return held ? slotsOf(held) : null;
+	}
+
 	function putAtom(tenantAtom: TenantAtom): void {
 		const held = heldById.get(tenantAtom.id);
 		if (held?.tokenHash === tenantAtom.tokenHash) return;
@@ -88,5 +94,5 @@ export const createMultiTenantAuth = ({
 	for (const tenantAtom of listTenantAtoms({ dataDir }))
 		hold({ ...tenantAtom, slots: null });
 
-	return { authorize, putAtom, hasAtom, removeAtom, close };
+	return { authorize, slotsFor, putAtom, hasAtom, removeAtom, close };
 };

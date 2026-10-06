@@ -1,12 +1,17 @@
 import type { Context, Next } from "hono";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
+/** A subject push is passed on as text, to be parsed by its customer's slot. */
+const SUBJECT_PUSH_PATH = "/v1/subjects.set";
+
 /** Reads the body once for every layer after it. Text, not JSON: the raw text stays cached for a forward. */
 export async function requestBodyMiddleware(
 	context: Context<AtomHttpEnv>,
 	next: Next,
 ): Promise<void> {
-	context.set("body", parseJson(await context.req.text()));
+	const text = await context.req.text();
+	if (context.req.path === SUBJECT_PUSH_PATH) return next();
+	context.set("body", parseJson(text));
 	await next();
 }
 
