@@ -40978,6 +40978,92 @@ paths:
                     inserted before the customer completes the hosted form. Set
                     it here rather than on `invoice_mode`, which only covers the
                     invoice-unpaid case.
+                tax:
+                  type: object
+                  properties:
+                    automatic_tax:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: Whether to calculate tax automatically through Stripe for this
+                            request. Defaults to the organization's automatic
+                            tax setting.
+                      required:
+                        - enabled
+                      description: Override the organization's automatic tax setting for this request.
+                        Can't be enabled together with rate_id or tax_rate_id.
+                    rate_id:
+                      type: string
+                      description: Stripe tax rate ID (txr_...) to apply instead of automatic tax.
+                        Takes precedence over the top-level tax_rate_id.
+                  description: Tax behavior for this attach. Use automatic_tax to turn automatic
+                    tax on or off for this request, or rate_id to apply a fixed
+                    tax rate.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      description: Billing address saved to the customer and used to calculate tax.
+                        Replaces the customer's whole address.
+                    tax_ids:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                              https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                          value:
+                            type: string
+                            description: The tax ID, e.g. DE123456789.
+                        required:
+                          - type
+                          - value
+                        title: BillingDetailsTaxId
+                      description: Tax IDs to add to the customer. IDs the customer already has are
+                        ignored, and existing IDs are never removed. To remove
+                        one, use customers.update or Stripe.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Customer tax exemption status. 'exempt' customers are never charged
+                        tax and need no address. 'reverse' applies reverse
+                        charge.
+                  description: Billing address, tax IDs and tax exemption to save to the customer
+                    before billing. Lets an invoice-mode attach supply the
+                    address automatic tax needs in the same call.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
@@ -52660,6 +52746,92 @@ paths:
                     inserted before the customer completes the hosted form. Set
                     it here rather than on `invoice_mode`, which only covers the
                     invoice-unpaid case.
+                tax:
+                  type: object
+                  properties:
+                    automatic_tax:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: Whether to calculate tax automatically through Stripe for this
+                            request. Defaults to the organization's automatic
+                            tax setting.
+                      required:
+                        - enabled
+                      description: Override the organization's automatic tax setting for this request.
+                        Can't be enabled together with rate_id or tax_rate_id.
+                    rate_id:
+                      type: string
+                      description: Stripe tax rate ID (txr_...) to apply instead of automatic tax.
+                        Takes precedence over the top-level tax_rate_id.
+                  description: Tax behavior for this attach. Use automatic_tax to turn automatic
+                    tax on or off for this request, or rate_id to apply a fixed
+                    tax rate.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      description: Billing address saved to the customer and used to calculate tax.
+                        Replaces the customer's whole address.
+                    tax_ids:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                              https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                          value:
+                            type: string
+                            description: The tax ID, e.g. DE123456789.
+                        required:
+                          - type
+                          - value
+                        title: BillingDetailsTaxId
+                      description: Tax IDs to add to the customer. IDs the customer already has are
+                        ignored, and existing IDs are never removed. To remove
+                        one, use customers.update or Stripe.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Customer tax exemption status. 'exempt' customers are never charged
+                        tax and need no address. 'reverse' applies reverse
+                        charge.
+                  description: Billing address, tax IDs and tax exemption to save to the customer
+                    before billing. Lets an invoice-mode attach supply the
+                    address automatic tax needs in the same call.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
@@ -53069,9 +53241,12 @@ paths:
                         enum:
                           - complete
                           - incomplete
+                          - requires_location
                         type: string
-                        description: Calculation status ('complete' when Stripe Tax succeeds or
-                          'incomplete' when Stripe Tax returned 0 or errored).
+                        description: Calculation status. 'complete' when tax was calculated,
+                          'incomplete' when the calculation errored,
+                          'requires_location' when the customer has no billing
+                          address to tax against.
                     required:
                       - total
                       - amount_inclusive
@@ -54577,9 +54752,12 @@ paths:
                         enum:
                           - complete
                           - incomplete
+                          - requires_location
                         type: string
-                        description: Calculation status ('complete' when Stripe Tax succeeds or
-                          'incomplete' when Stripe Tax returned 0 or errored).
+                        description: Calculation status. 'complete' when tax was calculated,
+                          'incomplete' when the calculation errored,
+                          'requires_location' when the customer has no billing
+                          address to tax against.
                     required:
                       - total
                       - amount_inclusive
@@ -60424,9 +60602,12 @@ paths:
                         enum:
                           - complete
                           - incomplete
+                          - requires_location
                         type: string
-                        description: Calculation status ('complete' when Stripe Tax succeeds or
-                          'incomplete' when Stripe Tax returned 0 or errored).
+                        description: Calculation status. 'complete' when tax was calculated,
+                          'incomplete' when the calculation errored,
+                          'requires_location' when the customer has no billing
+                          address to tax against.
                     required:
                       - total
                       - amount_inclusive
@@ -63937,6 +64118,92 @@ paths:
                     inserted before the customer completes the hosted form. Set
                     it here rather than on `invoice_mode`, which only covers the
                     invoice-unpaid case.
+                tax:
+                  type: object
+                  properties:
+                    automatic_tax:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: Whether to calculate tax automatically through Stripe for this
+                            request. Defaults to the organization's automatic
+                            tax setting.
+                      required:
+                        - enabled
+                      description: Override the organization's automatic tax setting for this request.
+                        Can't be enabled together with rate_id or tax_rate_id.
+                    rate_id:
+                      type: string
+                      description: Stripe tax rate ID (txr_...) to apply instead of automatic tax.
+                        Takes precedence over the top-level tax_rate_id.
+                  description: Tax behavior for this attach. Use automatic_tax to turn automatic
+                    tax on or off for this request, or rate_id to apply a fixed
+                    tax rate.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      description: Billing address saved to the customer and used to calculate tax.
+                        Replaces the customer's whole address.
+                    tax_ids:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                              https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                          value:
+                            type: string
+                            description: The tax ID, e.g. DE123456789.
+                        required:
+                          - type
+                          - value
+                        title: BillingDetailsTaxId
+                      description: Tax IDs to add to the customer. IDs the customer already has are
+                        ignored, and existing IDs are never removed. To remove
+                        one, use customers.update or Stripe.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Customer tax exemption status. 'exempt' customers are never charged
+                        tax and need no address. 'reverse' applies reverse
+                        charge.
+                  description: Billing address, tax IDs and tax exemption to save to the customer
+                    before billing. Lets an invoice-mode attach supply the
+                    address automatic tax needs in the same call.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
@@ -71603,6 +71870,7 @@ paths:
                                 enum:
                                   - complete
                                   - incomplete
+                                  - requires_location
                                 type: string
                             required:
                               - total
@@ -74183,6 +74451,7 @@ paths:
                                 enum:
                                   - complete
                                   - incomplete
+                                  - requires_location
                                 type: string
                             required:
                               - total

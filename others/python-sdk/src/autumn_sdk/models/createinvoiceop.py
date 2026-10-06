@@ -1866,6 +1866,7 @@ CreateInvoiceStatus = Union[
     Literal[
         "complete",
         "incomplete",
+        "requires_location",
     ],
     UnrecognizedStr,
 ]

@@ -915,6 +915,7 @@ export type CreateInvoiceLine = {
 export const CreateInvoiceStatus = {
   Complete: "complete",
   Incomplete: "incomplete",
+  RequiresLocation: "requires_location",
 } as const;
 export type CreateInvoiceStatus = OpenEnum<typeof CreateInvoiceStatus>;
 

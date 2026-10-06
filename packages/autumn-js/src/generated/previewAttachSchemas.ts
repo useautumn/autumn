@@ -131,6 +131,31 @@ export const previewAttachLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewAttachAutomaticTaxSchema = z.object({
+	enabled: z.boolean(),
+});
+
+export const previewAttachTaxRequestSchema = z.object({
+	automaticTax: z
+		.union([previewAttachAutomaticTaxSchema, z.undefined()])
+		.optional(),
+	rateId: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const previewAttachAddressSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postalCode: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const previewAttachBillingDetailsTaxIdSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
 export const previewAttachRemoveDiscountSchema = z.object({
 	rewardId: z.string(),
 });
@@ -508,6 +533,44 @@ export const previewAttachLicenseQuantityOutboundSchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewAttachAutomaticTaxOutboundSchema = z.object({
+	enabled: z.boolean(),
+});
+
+export const previewAttachTaxRequestOutboundSchema = z.object({
+	automatic_tax: z
+		.union([previewAttachAutomaticTaxOutboundSchema, z.undefined()])
+		.optional(),
+	rate_id: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const previewAttachAddressOutboundSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postal_code: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const previewAttachBillingDetailsTaxIdOutboundSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
+export const previewAttachBillingDetailsOutboundSchema = z.object({
+	address: z
+		.union([previewAttachAddressOutboundSchema, z.undefined()])
+		.optional(),
+	tax_ids: z
+		.union([
+			z.array(previewAttachBillingDetailsTaxIdOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	tax_exempt: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const previewAttachRemoveDiscountOutboundSchema = z.object({
 	reward_id: z.string(),
 });
@@ -839,6 +902,16 @@ export const previewAttachRedirectModeSchema = closedEnumSchema;
 
 export const previewAttachPlanScheduleSchema = closedEnumSchema;
 
+export const previewAttachTaxExemptSchema = closedEnumSchema;
+
+export const previewAttachBillingDetailsSchema = z.object({
+	address: z.union([previewAttachAddressSchema, z.undefined()]).optional(),
+	taxIds: z
+		.union([z.array(previewAttachBillingDetailsTaxIdSchema), z.undefined()])
+		.optional(),
+	taxExempt: z.union([previewAttachTaxExemptSchema, z.undefined()]).optional(),
+});
+
 export const previewAttachParamsSchema = z.object({
 	customerId: z.string(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -900,6 +973,10 @@ export const previewAttachParamsSchema = z.object({
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax: z.union([previewAttachTaxRequestSchema, z.undefined()]).optional(),
+	billingDetails: z
+		.union([previewAttachBillingDetailsSchema, z.undefined()])
+		.optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
@@ -930,7 +1007,7 @@ export const previewAttachCheckoutTypeSchema = openEnumSchema;
 
 export const previewAttachStatusSchema = openEnumSchema;
 
-export const previewAttachTaxSchema = z.object({
+export const previewAttachTaxResponseSchema = z.object({
 	total: z.number(),
 	amountInclusive: z.number(),
 	amountExclusive: z.number(),
@@ -951,7 +1028,7 @@ export const previewAttachResponseSchema = z.object({
 	outgoing: z.array(previewAttachOutgoingSchema),
 	redirectToCheckout: z.boolean(),
 	checkoutType: previewAttachCheckoutTypeSchema.nullable(),
-	tax: z.union([previewAttachTaxSchema, z.undefined()]).optional(),
+	tax: z.union([previewAttachTaxResponseSchema, z.undefined()]).optional(),
 	invoiceCredits: z
 		.union([previewAttachInvoiceCreditsSchema, z.undefined()])
 		.optional(),
@@ -1109,6 +1186,12 @@ export const previewAttachParamsOutboundSchema = z.object({
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax: z
+		.union([previewAttachTaxRequestOutboundSchema, z.undefined()])
+		.optional(),
+	billing_details: z
+		.union([previewAttachBillingDetailsOutboundSchema, z.undefined()])
+		.optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),

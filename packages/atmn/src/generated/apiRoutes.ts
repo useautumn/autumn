@@ -1186,6 +1186,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
 			},
 			{
+				name: "tax",
+				type: "json",
+				required: false,
+				description:
+					"Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.",
+			},
+			{
 				name: "tax_rate_id",
 				type: "string",
 				required: false,
@@ -1649,6 +1663,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
+			},
+			{
+				name: "tax",
+				type: "json",
+				required: false,
+				description:
+					"Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.",
 			},
 			{
 				name: "tax_rate_id",
@@ -2399,6 +2427,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
+			},
+			{
+				name: "tax",
+				type: "json",
+				required: false,
+				description:
+					"Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.",
 			},
 			{
 				name: "tax_rate_id",
