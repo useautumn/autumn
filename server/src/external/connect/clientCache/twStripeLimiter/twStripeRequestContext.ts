@@ -16,6 +16,24 @@ export const getTwStripeLane = (): TwStripeLane =>
 export const getTwStripeRequestDeadline = () =>
 	requestContext?.getStore()?.deadline;
 
+export const TW_TEST_FILE_HEADER = "x-tw-test-file";
+
+/** Test processes are tagged by env; server requests inherit the tag of the test call that caused them. */
+export const getTwStripeFileTag = (): string | undefined =>
+	requestContext?.getStore()?.fileTag ?? process.env.TW_TEST_FILE;
+
+export const withTwStripeFileTag = <T>({
+	fileTag,
+	run,
+}: {
+	fileTag: string | undefined;
+	run: () => T;
+}): T => {
+	if (!fileTag || !isTwWorkerMode()) return run();
+	const storage = getRequestContext();
+	return storage.run({ ...storage.getStore(), fileTag }, run);
+};
+
 export const withTwStripeRequestDeadline = <T>({
 	run,
 	timeoutMs,

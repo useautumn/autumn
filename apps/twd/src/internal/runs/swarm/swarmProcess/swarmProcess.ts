@@ -652,6 +652,14 @@ const main = async (init: SwarmInit) => {
 								resolveSandbox,
 								toWorkerPath: (file) =>
 									tw.run.toSandboxPath(splitRepetitionId({ id: file }).file),
+								onFileStats: ({ file, worker, stats }) =>
+									send({
+										type: "file_stats",
+										file: toTestId({ absolutePath: file }),
+										attempt: getTuiState().files.get(file)?.attempt ?? 1,
+										worker,
+										stats,
+									}),
 							}),
 						),
 					),
