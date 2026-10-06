@@ -66,6 +66,15 @@ test("publishing an earlier add retains its original diff after the migration is
 				),
 			);
 		expect(pending.unpublished_changes).toHaveLength(1);
+		const recorded = pending.unpublished_changes?.[0];
+		if (!recorded || recorded.kind !== "entitlement_created")
+			throw new Error("expected a created entitlement change");
+		const { entitlement, ...customerValues } = recorded;
+		const changeBytes = Buffer.byteLength(JSON.stringify(recorded));
+		const valueBytes = Buffer.byteLength(JSON.stringify(customerValues));
+		ctx.logger.info(
+			`migration recovery payload breakdown: ${changeBytes} bytes/change, ${changeBytes - valueBytes} definition bytes, ${valueBytes} customer-value bytes, ${Buffer.byteLength(JSON.stringify(entitlement.feature))} nested-feature bytes`,
+		);
 		const pageBytes = Buffer.byteLength(
 			JSON.stringify(
 				Array.from({ length: 5000 }, () => pending.unpublished_changes),
