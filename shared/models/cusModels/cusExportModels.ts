@@ -79,16 +79,45 @@ export const CustomerExportFieldsSchema = z
 		message: "Export fields must be unique",
 	});
 
-export const CustomerExportSnapshotSchema = z.object({
+export const CustomerExportScopeSchema = z.object({
 	search: z.string().default(""),
 	filters: CustomerListFiltersSchema.default({}),
-	/** Billing-issues only: also report Stripe customers no Autumn customer links to. */
-	include_unlinked_stripe_customers: z.boolean().optional(),
 });
 
-export type CustomerExportSnapshot = z.infer<
-	typeof CustomerExportSnapshotSchema
+export type CustomerExportScope = z.infer<typeof CustomerExportScopeSchema>;
+
+export const BillingVerifyExportSnapshotSchema =
+	CustomerExportScopeSchema.extend({
+		include_unlinked_stripe_customers: z.boolean().default(false),
+	});
+
+export const CustomersExportSpecSchema = z.object({
+	kind: z.literal(CustomerExportKind.Customers),
+	fields: CustomerExportFieldsSchema,
+	snapshot: CustomerExportScopeSchema,
+});
+
+export const BillingVerifyExportSpecSchema = z.object({
+	kind: z.literal(CustomerExportKind.BillingVerify),
+	fields: z.array(CustomerExportFieldSchema).max(0).default([]),
+	snapshot: BillingVerifyExportSnapshotSchema,
+});
+
+/** What an export produces; kind decides which fields and snapshot options apply. */
+export const CustomerExportSpecSchema = z.discriminatedUnion("kind", [
+	CustomersExportSpecSchema,
+	BillingVerifyExportSpecSchema,
+]);
+
+export type CustomerExportSpec = z.infer<typeof CustomerExportSpecSchema>;
+
+export type CustomersExportSpec = z.infer<typeof CustomersExportSpecSchema>;
+
+export type BillingVerifyExportSpec = z.infer<
+	typeof BillingVerifyExportSpecSchema
 >;
+
+export type CustomerExportSnapshot = CustomerExportSpec["snapshot"];
 
 export const BILLING_VERIFY_EXPORT_COLUMNS = [
 	{ key: "customer_id", header: "Customer ID" },

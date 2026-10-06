@@ -3,6 +3,7 @@ import type {
 	CustomerExportResponse,
 	DbCustomerExport,
 } from "@autumn/shared";
+import { customerExportToSpec } from "./customerExportToSpec.js";
 
 /** Keeps the S3 key out of API responses; downloads use a presigned URL. */
 export const customerExportToResponse = ({
@@ -17,15 +18,8 @@ export const customerExportToResponse = ({
 	publicAccessToken?: string | null;
 }): CustomerExportResponse => ({
 	id: customerExport.id,
-	kind: customerExport.kind,
+	...customerExportToSpec({ customerExport }),
 	status: customerExport.status,
-	fields: customerExport.fields,
-	snapshot: {
-		search: customerExport.snapshot?.search ?? "",
-		filters: customerExport.snapshot?.filters ?? {},
-		include_unlinked_stripe_customers:
-			customerExport.snapshot?.include_unlinked_stripe_customers ?? false,
-	},
 	requested_by_user_id: customerExport.requested_by_user_id,
 	row_count: customerExport.row_count,
 	byte_count: customerExport.byte_count,

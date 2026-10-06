@@ -234,7 +234,11 @@ test.concurrent(
 			},
 		});
 
-		const snapshot = { search: searchTerm, filters: {} };
+		const snapshot = {
+			search: searchTerm,
+			filters: {},
+			include_unlinked_stripe_customers: false,
+		};
 		const { population, totalCount } = await resolveCustomerExportPopulation({
 			db: ctx.db,
 			orgId: ctx.org.id,

@@ -1,11 +1,11 @@
 import { z } from "zod/v4";
 import {
-	CustomerExportFieldSchema,
+	BillingVerifyExportSpecSchema,
 	CustomerExportFieldsSchema,
 	CustomerExportKind,
 	CustomerExportKindSchema,
-	CustomerExportSnapshotSchema,
 	CustomerExportStatusSchema,
+	CustomersExportSpecSchema,
 } from "../../../models/cusModels/cusExportModels.js";
 import { CustomerListFiltersSchema } from "../customerListFilters.js";
 
@@ -120,30 +120,25 @@ export const runMetadataToCustomerExportProgress = ({
 	};
 };
 
-export const CustomerExportResponseSchema = z
-	.object({
-		id: z.string(),
-		kind: CustomerExportKindSchema,
-		status: CustomerExportStatusSchema,
-		fields: z.array(CustomerExportFieldSchema),
-		snapshot: CustomerExportSnapshotSchema,
-		requested_by_user_id: z.string().nullable(),
-		row_count: z.number().nullable(),
-		byte_count: z.number().nullable(),
-		error_message: z.string().nullable(),
-		created_at: z.number(),
-		started_at: z.number().nullable(),
-		completed_at: z.number().nullable(),
-		progress: CustomerExportProgressSchema.nullable(),
-		trigger_run_id: z.string().nullable(),
-		public_access_token: z.string().nullable(),
-	})
-	.refine(
-		({ kind, fields }) =>
-			kind !== CustomerExportKind.Customers ||
-			CustomerExportFieldsSchema.safeParse(fields).success,
-		{ message: "A customers export needs at least one unique field" },
-	);
+const CustomerExportResponseBaseSchema = z.object({
+	id: z.string(),
+	status: CustomerExportStatusSchema,
+	requested_by_user_id: z.string().nullable(),
+	row_count: z.number().nullable(),
+	byte_count: z.number().nullable(),
+	error_message: z.string().nullable(),
+	created_at: z.number(),
+	started_at: z.number().nullable(),
+	completed_at: z.number().nullable(),
+	progress: CustomerExportProgressSchema.nullable(),
+	trigger_run_id: z.string().nullable(),
+	public_access_token: z.string().nullable(),
+});
+
+export const CustomerExportResponseSchema = z.discriminatedUnion("kind", [
+	CustomersExportSpecSchema.extend(CustomerExportResponseBaseSchema.shape),
+	BillingVerifyExportSpecSchema.extend(CustomerExportResponseBaseSchema.shape),
+]);
 
 export type CustomerExportResponse = z.infer<
 	typeof CustomerExportResponseSchema
