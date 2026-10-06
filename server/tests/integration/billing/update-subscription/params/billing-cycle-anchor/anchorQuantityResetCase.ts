@@ -60,8 +60,10 @@ export const expectAnchorQuantityReset = async (
 	const before = await scenario.readProduct();
 	const oldAmount = 20 + (variant.old / 100) * 10;
 	const newAmount = 20 + (variant.next / 100) * (variant.volume ? 5 : 10);
+	// Under none, like Stripe, only the changed prepaid item is charged a new period; the kept $20 base isn't.
+	const changedItemAmount = newAmount - 20;
 	const expectedTotal = variant.none
-		? newAmount
+		? changedItemAmount
 		: await calculateResetBillingCycleNowTotal({
 				customerId,
 				advancedTo,
@@ -80,12 +82,16 @@ export const expectAnchorQuantityReset = async (
 			params,
 		);
 	expect(preview.total).toBeCloseTo(expectedTotal, 2);
-	expect(preview.line_items).toHaveLength(variant.none ? 2 : 4);
+	expect(preview.line_items).toHaveLength(variant.none ? 1 : 4);
 	const charges = preview.line_items
 		.filter((line) => line.total > 0)
 		.map((line) => line.total)
 		.sort((a, b) => a - b);
-	expect(charges).toEqual([20, newAmount - 20].sort((a, b) => a - b));
+	expect(charges).toEqual(
+		variant.none
+			? [changedItemAmount]
+			: [20, changedItemAmount].sort((a, b) => a - b),
+	);
 	expect(await scenario.readProduct()).toEqual(before);
 	expect(
 		await ctx.stripeCli.subscriptions.retrieve(scenario.subscription.id),

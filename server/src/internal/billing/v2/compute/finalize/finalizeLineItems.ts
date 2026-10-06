@@ -8,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
+import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
 import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
@@ -44,13 +45,15 @@ export const finalizeLineItems = ({
 		billingContext.stripeSubscription !== undefined ||
 		billingContextToNewSubscriptionAnchorMs({ billingContext }) !== undefined ||
 		isNewSubscriptionBackdate({ billingContext });
-	if (
-		billingContext.requestedProrationBehavior === "none" &&
-		hasProratedPeriod &&
-		!billingContext.anchorResetRefund?.noPartialRefund
-	) {
-		return [];
-	}
+	const skipsProration =
+		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
+	const resetsCycleNow = billingContext.anchorResetRefund?.noPartialRefund;
+	if (skipsProration && !resetsCycleNow) return [];
+
+	// Like Stripe, a cycle reset under none charges a new period only for the items it changes.
+	const billedLineItems = skipsProration
+		? dropUnchangedSubscriptionItemCharges({ ctx, billingContext, lineItems })
+		: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
@@ -61,7 +64,7 @@ export const finalizeLineItems = ({
 	// 1. Filter line items based on trial state transitions
 	let finalizedLineItems = filterLineItemsForTrialTransition({
 		ctx,
-		lineItems,
+		lineItems: billedLineItems,
 		billingContext,
 	});
 
