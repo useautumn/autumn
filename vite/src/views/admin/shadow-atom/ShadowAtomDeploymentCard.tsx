@@ -1,4 +1,6 @@
+import { findByocCacheMachine } from "@autumn/shared";
 import { Button } from "@autumn/ui";
+import { byocCacheMachineSummary } from "@/views/settings/sections/components/byocCache/byocCacheMachineDisplay";
 import { ShadowAtomMachineForm } from "./ShadowAtomMachineForm";
 import { ShadowAtomSecret } from "./ShadowAtomSecret";
 import { ShadowAtomStatusChip } from "./ShadowAtomStatusChip";
@@ -16,6 +18,15 @@ const Field = ({ label, value }: { label: string; value: string }) => (
 		<span className="truncate font-mono text-xs text-foreground">{value}</span>
 	</div>
 );
+
+/** A machine we do not offer (e.g. m7g.xlarge) shows only its size. */
+const machineSummary = (machine: ShadowAtomMachine | null): string => {
+	if (!machine) return "—";
+	const offered = findByocCacheMachine(machine);
+	return offered
+		? byocCacheMachineSummary(offered)
+		: `${machine.cpu} vCPU · ${machine.memory} GiB`;
+};
 
 /** Our shadow Atom: where it stands on alien, and create / resize / delete. */
 export const ShadowAtomDeploymentCard = ({
@@ -59,14 +70,7 @@ export const ShadowAtomDeploymentCard = ({
 		{deployment && (
 			<div className="grid gap-3 sm:grid-cols-3">
 				<Field label="Endpoint" value={deployment.endpoint_url ?? "—"} />
-				<Field
-					label="Machine"
-					value={
-						deployment.machine
-							? `${deployment.machine.cpu} vCPU · ${deployment.machine.memory} GiB`
-							: "—"
-					}
-				/>
+				<Field label="Machine" value={machineSummary(deployment.machine)} />
 				<Field
 					label="Deployment group"
 					value={deployment.deployment_group_id}
@@ -96,7 +100,7 @@ export const ShadowAtomDeploymentCard = ({
 
 		{deployment ? (
 			<ShadowAtomMachineForm
-				key={deployment.deployment_group_id}
+				key={`${deployment.deployment_group_id}:${deployment.machine?.cpu}x${deployment.machine?.memory}`}
 				current={deployment.machine}
 				submitLabel="Resize"
 				onSubmit={onResize}
