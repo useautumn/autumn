@@ -680,7 +680,7 @@ test.skip(`${chalk.yellowBright("set-plans custom anchor edges: usage tracked be
 });
 
 // DISABLED: phase 0's proration_behavior none doesn't reach the anchor's reset phase (D5, 2026-10-06);
-// re-enable once autumn#4305 merges.
+// re-enable once autumn#4305 and autumn#4312 (re-anchors balances at the anchor under none) merge.
 test.skip(`${chalk.yellowBright("set-plans custom anchor edges: proration none moves the cycle on the anchor without an invoice, then renews at full price")}`, async () => {
 	const { customerId, autumnV2_4, ctx, advancedTo, testClockId, pro } =
 		await livePro({ customerId: "set-plans-anchor-edge-none" });
@@ -727,6 +727,11 @@ test.skip(`${chalk.yellowBright("set-plans custom anchor edges: proration none m
 		customerId,
 		anchorMs,
 		periodEndMs: renewalAt,
+	});
+	await expectBalanceCorrect({
+		customerId,
+		featureId: TestFeature.Messages,
+		nextResetAt: renewalAt,
 	});
 
 	await advancePastCycleStart({
