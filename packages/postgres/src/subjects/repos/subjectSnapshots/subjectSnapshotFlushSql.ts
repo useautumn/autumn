@@ -47,6 +47,7 @@ const upsertsDocumentOf = ({
 			state_version: columns.stateVersion,
 			baseline_at: columns.baselineAt,
 			log_offset: columns.logOffset === null ? null : String(columns.logOffset),
+			stale: columns.stale ?? false,
 		});
 		return `${head.slice(0, -1)},"state":${stateJson}}`;
 	});
@@ -56,6 +57,7 @@ const upsertsDocumentOf = ({
 /**
  * A row whose customer or entity is already gone is skipped: an FK error would fail every row of the flush.
  * A row from an older log never replaces a newer one: a refresh read while a flush landed loses to that flush's row.
+ * A stale row keeps its state untouched and hides it with written_at 0; its offset still moves, so an older refresh loses.
  */
 const snapshotUpsertsCte = ({
 	upserts,
@@ -65,8 +67,8 @@ const snapshotUpsertsCte = ({
 	const document = upsertsDocumentOf({ upserts });
 	return sql`snapshot_upserts AS (
 			INSERT INTO subject_snapshots AS s (org_id, env, customer_id, entity_id, internal_customer_id, internal_entity_id, partition, partition_count, state_version, state, baseline_at, written_at, log_offset)
-			SELECT v.org_id, v.env, v.customer_id, v.entity_id, v.internal_customer_id, v.internal_entity_id, v.partition, v.partition_count, v.state_version, v.state, v.baseline_at, ROUND(date_part('epoch', now()) * 1000)::bigint, v.log_offset
-			FROM jsonb_to_recordset(${document}::text::jsonb) AS v(org_id text, env text, customer_id text, entity_id text, internal_customer_id text, internal_entity_id text, partition integer, partition_count integer, state_version integer, state jsonb, baseline_at bigint, log_offset bigint)
+			SELECT v.org_id, v.env, v.customer_id, v.entity_id, v.internal_customer_id, v.internal_entity_id, v.partition, v.partition_count, v.state_version, COALESCE(v.state, 'null'::jsonb), v.baseline_at, CASE WHEN v.stale THEN 0 ELSE ROUND(date_part('epoch', now()) * 1000)::bigint END, v.log_offset
+			FROM jsonb_to_recordset(${document}::text::jsonb) AS v(org_id text, env text, customer_id text, entity_id text, internal_customer_id text, internal_entity_id text, partition integer, partition_count integer, state_version integer, state jsonb, baseline_at bigint, log_offset bigint, stale boolean)
 			WHERE EXISTS (SELECT 1 FROM customers c WHERE c.internal_id = v.internal_customer_id)
 				AND (v.internal_entity_id IS NULL OR EXISTS (SELECT 1 FROM entities e WHERE e.internal_id = v.internal_entity_id))
 			ON CONFLICT (org_id, env, customer_id, entity_id) DO UPDATE SET
@@ -75,11 +77,11 @@ const snapshotUpsertsCte = ({
 				partition = EXCLUDED.partition,
 				partition_count = EXCLUDED.partition_count,
 				state_version = EXCLUDED.state_version,
-				state = EXCLUDED.state,
+				state = CASE WHEN EXCLUDED.written_at = 0 THEN s.state ELSE EXCLUDED.state END,
 				baseline_at = EXCLUDED.baseline_at,
 				written_at = EXCLUDED.written_at,
-				log_offset = EXCLUDED.log_offset
-			WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset
+				log_offset = CASE WHEN EXCLUDED.written_at = 0 THEN GREATEST(s.log_offset, EXCLUDED.log_offset) ELSE EXCLUDED.log_offset END
+			WHERE EXCLUDED.written_at = 0 OR s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset
 				OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count
 			RETURNING 1
 		)`;

@@ -7,6 +7,7 @@ import {
 	meteringIdentityToSubjectKey,
 	type TrackCommand,
 } from "@autumn/balance-engine";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_REWRITE_MS } from "@autumn/env/balanceWorkerConstants";
 import {
 	createEntityState,
 	entity,
@@ -58,14 +59,18 @@ const decideTrack = ({
 	};
 };
 
-/** The writer over a store with nothing resident; the store records the intent handed in with each apply. */
+/** The writer over a store with nothing resident; the store records the intent handed in with each apply.
+ *  Each track moves the writer's clock by `stepMs`, past the rewrite interval unless a test asks otherwise. */
 const createWriter = ({
 	mode = "write",
 	maxBytes,
+	stepMs = BALANCE_WORKER_SUBJECT_SNAPSHOT_REWRITE_MS,
 }: {
 	mode?: "off" | "write";
 	maxBytes?: number;
+	stepMs?: number;
 } = {}) => {
+	let clock = 0;
 	const subjectSnapshotsConfig = createSubjectSnapshotsStore({
 		mode,
 		...(maxBytes !== undefined && { maxBytes }),
@@ -110,6 +115,7 @@ const createWriter = ({
 				},
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => READ_AT },
+			now: () => clock,
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
 		},
 		config: {
@@ -133,6 +139,7 @@ const createWriter = ({
 			commandId,
 			featureId,
 		});
+		clock += stepMs;
 		return writer.decide({
 			command,
 			mutate: ({ state }) => decideTrack({ state, command }),
@@ -157,6 +164,9 @@ const createWriter = ({
 		applyGate,
 		track,
 		readWhole,
+		advance: (ms: number) => {
+			clock += ms;
+		},
 		rejectCommand: (id: string) => {
 			rejectNext = id;
 		},
@@ -348,6 +358,31 @@ describe("the writer's snapshot intent", () => {
 		readWhole({ balance: 100, baselineAt: 3 });
 		await track("t3").waitForStore();
 		expect(balanceOf(intents[2])).toEqual([99]);
+	});
+
+	test("within the rewrite interval a subject's next flush only marks its row stale; past it the row is written whole again", async () => {
+		const { intents, track, readWhole, advance } = createWriter({ stepMs: 1 });
+		readWhole();
+		await track("t1").waitForStore();
+		await track("t2").waitForStore();
+		advance(BALANCE_WORKER_SUBJECT_SNAPSHOT_REWRITE_MS);
+		await track("t3").waitForStore();
+
+		const entries = intents.map((intent) => intent?.get(customerKey));
+		if (entries.some((entry) => !entry || entry === "delete"))
+			throw new Error("expected states");
+		const [first, second, third] = entries as Exclude<
+			(typeof entries)[number],
+			"delete" | undefined
+		>[];
+		expect(balanceOf(intents[0])).toEqual([99]);
+		expect(first?.stale).toBeUndefined();
+		expect(second?.states).toEqual([]);
+		expect(
+			second?.stale?.map((state) => state.customerEntitlements[0]?.balance),
+		).toEqual([98]);
+		expect(balanceOf(intents[2])).toEqual([97]);
+		expect(third?.stale).toBeUndefined();
 	});
 
 	test("a state over the cap is decided from the map's weight: the customer deletes, and nothing of it is serialised", async () => {

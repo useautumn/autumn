@@ -459,6 +459,81 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		}
 	});
 
+	test("a stale row keeps its state but hides it and takes the flush's offset, so an older refresh cannot revive it; a stale subject with no row leaves a hidden one", async () => {
+		const seeded = await seedCustomer({ postgres });
+		const topic = topicOf();
+		try {
+			await insertPartitionProgress({
+				ctx: { db: postgres.db },
+				topic,
+				partition: 5,
+				nextOffset: 40n,
+			});
+			const internalEntityId = await seedEntity({ seeded, entityId: "seat_1" });
+			const staleOf = (upsert: SubjectSnapshotUpsert) => ({
+				...upsert,
+				stateJson: "null",
+				stale: true,
+			});
+			const read = () =>
+				readSubjectSnapshot({
+					ctx: { db: postgres.db, orgId: seeded.orgId, env: seeded.env },
+					customerId: seeded.identity.customerId,
+					entityId: null,
+					probe: { stateVersion: 1, writtenAfter: 0 },
+				});
+			await flushAt({
+				topic,
+				upserts: [upsertOf({ seeded, revision: 1, logOffset: 41n })],
+			});
+			expect(await read()).toEqual({ revision: 1, entityId: null });
+
+			await flushAt({
+				topic,
+				expectedOffset: 42n,
+				upserts: [
+					staleOf(upsertOf({ seeded, logOffset: 43n })),
+					staleOf(
+						upsertOf({
+							seeded,
+							entityId: "seat_1",
+							internalEntityId,
+							logOffset: 43n,
+						}),
+					),
+				],
+			});
+			const [own, seat] = await readSnapshots({ seeded });
+			expect(own?.state).toEqual({ revision: 1, entityId: null });
+			expect([own?.written_at, own?.log_offset].map(String)).toEqual([
+				"0",
+				"43",
+			]);
+			expect(seat?.state).toBeNull();
+			expect(String(seat?.written_at)).toBe("0");
+			expect(await read()).toBeNull();
+
+			await flushAt({
+				topic,
+				expectedOffset: 42n,
+				upserts: [upsertOf({ seeded, revision: 2, logOffset: 42n })],
+			});
+			expect(await read()).toBeNull();
+
+			await flushAt({
+				topic,
+				expectedOffset: 42n,
+				upserts: [upsertOf({ seeded, revision: 3, logOffset: 44n })],
+			});
+			expect(await read()).toEqual({ revision: 3, entityId: null });
+		} finally {
+			await postgres.db.execute(
+				sql`DELETE FROM entities WHERE internal_customer_id = ${seeded.internalCustomerId}`,
+			);
+			await seeded.cleanup();
+		}
+	});
+
 	test("a guard miss rolls the snapshot back with the rows", async () => {
 		const seeded = await seedCustomer({ postgres });
 		const topic = topicOf();

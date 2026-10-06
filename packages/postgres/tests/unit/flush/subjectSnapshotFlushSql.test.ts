@@ -81,8 +81,12 @@ describe("flushSql subject snapshots", () => {
 			"ON CONFLICT (org_id, env, customer_id, entity_id) DO UPDATE SET",
 		);
 		// A row from an older log never replaces a newer one; a row of unknown lineage, either way, is replaced.
+		// A stale row always lands: it keeps the state it has, hides it, and only moves its offset forward.
 		expect(sql).toContain(
-			"log_offset = EXCLUDED.log_offset WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count RETURNING 1",
+			"state = CASE WHEN EXCLUDED.written_at = 0 THEN s.state ELSE EXCLUDED.state END",
+		);
+		expect(sql).toContain(
+			"log_offset = CASE WHEN EXCLUDED.written_at = 0 THEN GREATEST(s.log_offset, EXCLUDED.log_offset) ELSE EXCLUDED.log_offset END WHERE EXCLUDED.written_at = 0 OR s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count RETURNING 1",
 		);
 		// A row whose customer or entity is gone is skipped, never an FK error that fails the flush.
 		expect(sql).toContain(
@@ -109,6 +113,7 @@ describe("flushSql subject snapshots", () => {
 				state: { revision: 4 },
 				baseline_at: 1_700_000_000_000,
 				log_offset: "40",
+				stale: false,
 			},
 			{
 				org_id: "org_1",
@@ -123,6 +128,7 @@ describe("flushSql subject snapshots", () => {
 				state: { revision: 4 },
 				baseline_at: 1_700_000_000_000,
 				log_offset: null,
+				stale: false,
 			},
 		]);
 	});
