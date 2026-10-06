@@ -71788,6 +71788,252 @@ paths:
       x-speakeasy-name-override: pay
       parameters:
         - *a5
+  /v1/invoices.issue_credit_note:
+    post:
+      operationId: issueCreditNote
+      description: "Issues a Stripe credit note against an open or paid invoice, for a
+        flat amount or for specific invoice lines. On an open invoice the credit
+        reduces what is still owed. On a paid invoice the credited money goes to
+        the chosen destination: the customer's balance (default), a refund, or a
+        record of money returned outside Stripe. Line amounts are pre-discount
+        and pre-tax, like the invoice's own item amounts. Pass preview to see
+        the credit note without issuing it."
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_id:
+                  type: string
+                  description: The Autumn invoice ID to credit. Must be open or paid.
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                  description: Total to credit across the whole invoice. Cannot be combined with
+                    lines.
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The invoice line item ID (invoice_li_...) from the invoice's items.
+                      amount:
+                        type: number
+                        exclusiveMinimum: 0
+                        description: Amount to credit on this line, pre-discount and pre-tax like the
+                          line's own amount. The line's discount share and tax
+                          are applied on top.
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                        description: Number of units of this line to credit.
+                    required:
+                      - id
+                    additionalProperties: false
+                  description: Credit specific invoice lines instead of a flat amount. Cannot be
+                    combined with amount. Unavailable on invoices recorded
+                    before line item storage.
+                destination:
+                  enum:
+                    - customer_balance
+                    - refund
+                    - out_of_band
+                  type: string
+                  description: Where already-paid money goes. customer_balance credits the
+                    customer's balance for their next invoice, refund returns it
+                    to the original payment method, and out_of_band records
+                    money returned outside Stripe.
+                  default: customer_balance
+                send_email:
+                  type: boolean
+                  default: true
+                  description: Email the credit note to the customer.
+                reason:
+                  enum:
+                    - duplicate
+                    - fraudulent
+                    - order_change
+                    - product_unsatisfactory
+                  type: string
+                  description: Reason shown on the credit note.
+                memo:
+                  type: string
+                  description: Memo printed on the credit note PDF.
+                preview:
+                  type: boolean
+                  description: Return the credit note that would be issued without creating it.
+              required:
+                - invoice_id
+              additionalProperties: false
+              title: IssueCreditNoteParams
+              examples:
+                - &a95
+                  invoice_id: inv_2b3c4d5e6f7g8h
+                  lines:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      amount: 20
+                  destination: refund
+                  send_email: true
+                  reason: product_unsatisfactory
+                  memo: Partial refund for degraded service
+            example: *a95
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credit_note:
+                    type: object
+                    properties:
+                      id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The Stripe credit note ID. Null on previews.
+                      invoice_id:
+                        type: string
+                        description: The Autumn invoice ID this credit note adjusts.
+                      number:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Credit note number shown on the PDF. Null on previews.
+                      status:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: issued or void. Null on previews.
+                      currency:
+                        type: string
+                      subtotal:
+                        type: number
+                      discount_amount:
+                        type: number
+                      tax_amount:
+                        type: number
+                      total:
+                        type: number
+                        description: Total credited, including discounts and tax.
+                      pre_payment_amount:
+                        type: number
+                        description: Portion that reduced the amount still owed on the invoice.
+                      post_payment_amount:
+                        type: number
+                        description: Portion of already-paid money returned to the customer.
+                      refund_amount:
+                        type: number
+                      credit_amount:
+                        type: number
+                      out_of_band_amount:
+                        type: number
+                      reason:
+                        anyOf:
+                          - enum:
+                              - duplicate
+                              - fraudulent
+                              - order_change
+                              - product_unsatisfactory
+                            type: string
+                          - type: "null"
+                      memo:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      pdf:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL of the credit note PDF. Null on previews.
+                      lines:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            invoice_line_item_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The credited invoice line item ID, if the credit targeted a line.
+                            description:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            quantity:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                            amount:
+                              type: number
+                              description: Amount credited on this line, pre-discount and pre-tax.
+                            discount_amount:
+                              type: number
+                          required:
+                            - invoice_line_item_id
+                            - description
+                            - quantity
+                            - amount
+                            - discount_amount
+                    required:
+                      - id
+                      - invoice_id
+                      - number
+                      - status
+                      - currency
+                      - subtotal
+                      - discount_amount
+                      - tax_amount
+                      - total
+                      - pre_payment_amount
+                      - post_payment_amount
+                      - refund_amount
+                      - credit_amount
+                      - out_of_band_amount
+                      - reason
+                      - memo
+                      - pdf
+                      - lines
+                required:
+                  - credit_note
+                examples:
+                  - &a96
+                    credit_note:
+                      id: cn_1MxvRqLkdIwHu7ixY0xbUcxk
+                      invoice_id: inv_2b3c4d5e6f7g8h
+                      number: ABC-0001-CN-01
+                      status: issued
+                      currency: usd
+                      subtotal: 20
+                      discount_amount: 0
+                      tax_amount: 0
+                      total: 20
+                      pre_payment_amount: 0
+                      post_payment_amount: 20
+                      refund_amount: 20
+                      credit_amount: 0
+                      out_of_band_amount: 0
+                      reason: product_unsatisfactory
+                      memo: Partial refund for degraded service
+                      pdf: https://pay.stripe.com/credit_notes/acct_123/test_456/pdf
+                      lines:
+                        - invoice_line_item_id: invoice_li_2b3c4d5e6f7g8h
+                          description: Pro plan
+                          quantity: null
+                          amount: 20
+                          discount_amount: 0
+              example: *a96
+      x-speakeasy-name-override: issueCreditNote
+      parameters:
+        - *a5
   /v1/invoices.reissue:
     post:
       operationId: reissueInvoice
@@ -72732,10 +72978,10 @@ paths:
                 - invoice_id
               title: ReissueInvoiceParams
               examples:
-                - &a95
+                - &a97
                   invoice_id: inv_2b3c4d5e6f7g8h
                   invoice_template_id: inv_tmpl_bank_transfer
-            example: *a95
+            example: *a97
       responses:
         "200":
           description: OK
@@ -73037,7 +73283,7 @@ paths:
                   - credit_note_id
                   - preview
                 examples:
-                  - &a96
+                  - &a98
                     invoice:
                       id: inv_3c4d5e6f7g8h9i
                       customer_id: cus_123
@@ -73087,7 +73333,7 @@ paths:
                       total: 29.99
                       amount_due: 29.99
                       due_date: 1761839877000
-              example: *a96
+              example: *a98
       x-speakeasy-name-override: reissue
       parameters:
         - *a5
@@ -73115,9 +73361,9 @@ paths:
                 - invoice_id
               title: VoidInvoiceParams
               examples:
-                - &a97
+                - &a99
                   invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a97
+            example: *a99
       responses:
         "200":
           description: OK
@@ -73283,7 +73529,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a98
+                  - &a100
                     invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
@@ -73323,7 +73569,7 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a98
+              example: *a100
       x-speakeasy-name-override: void
       parameters:
         - *a5
@@ -73370,13 +73616,13 @@ paths:
                 - entities
               title: AttachLicenseParams
               examples:
-                - &a99
+                - &a101
                   customer_id: cus_123
                   plan_id: seat_plan
                   entities:
                     - entity_id: user_123
                       name: Ada Lovelace
-            example: *a99
+            example: *a101
       responses:
         "200":
           description: OK
@@ -73420,12 +73666,12 @@ paths:
                 - entity_ids
               title: ReleaseLicenseParams
               examples:
-                - &a100
+                - &a102
                   customer_id: cus_123
                   license_plan_id: seat_plan
                   entity_ids:
                     - user_123
-            example: *a100
+            example: *a102
       responses:
         "200":
           description: OK
@@ -73467,10 +73713,10 @@ paths:
                 - customer_id
               title: ListLicenseAssignmentsParams
               examples:
-                - &a101
+                - &a103
                   customer_id: cus_123
                   active: true
-            example: *a101
+            example: *a103
       responses:
         "200":
           description: OK
@@ -73505,14 +73751,14 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a102
+                  - &a104
                     list:
                       - id: lic_asn_123
                         entity_id: user_123
                         license_plan_id: seat_plan
                         started_at: 1759247877000
                         ended_at: null
-              example: *a102
+              example: *a104
       x-speakeasy-name-override: listAssignments
       x-speakeasy-ignore: true
       parameters:
@@ -73538,9 +73784,9 @@ paths:
                 - customer_id
               title: ListLicensesParams
               examples:
-                - &a103
+                - &a105
                   customer_id: cus_123
-            example: *a103
+            example: *a105
       responses:
         "200":
           description: OK
@@ -73586,7 +73832,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a104
+                  - &a106
                     list:
                       - license_plan_id: seat_plan
                         parent_plan_id: pro_plan
@@ -73595,7 +73841,7 @@ paths:
                         usage: 3
                         remaining: 7
                         paid_quantity: 5
-              example: *a104
+              example: *a106
       x-speakeasy-name-override: list
       x-speakeasy-ignore: true
       parameters:
@@ -73821,1086 +74067,11 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a105
+                - &a107
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a105
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The unique identifier of the entity
-                  name:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The name of the entity
-                  customer_id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The customer ID this entity belongs to
-                  feature_id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The feature ID this entity belongs to
-                  created_at:
-                    type: number
-                    description: Unix timestamp when the entity was created
-                  env:
-                    enum:
-                      - sandbox
-                      - live
-                    type: string
-                    description: The environment (sandbox/live)
-                  subscriptions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: The unique identifier of this subscription. If a subscription_id
-                            was provided at attach time, it is used; otherwise,
-                            falls back to the internal ID.
-                        plan:
-                          $ref: "#/components/schemas/Plan"
-                          description: The full plan object if expanded.
-                        plan_id:
-                          type: string
-                          description: The unique identifier of the subscribed plan.
-                        auto_enable:
-                          type: boolean
-                          description: Whether the plan was automatically enabled for the customer.
-                        add_on:
-                          type: boolean
-                          description: Whether this is an add-on plan rather than a base subscription.
-                        status:
-                          enum:
-                            - active
-                            - scheduled
-                          type: string
-                          description: Current status of the subscription.
-                        past_due:
-                          type: boolean
-                          description: Whether the subscription has overdue payments.
-                        canceled_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the subscription was canceled, or null if not
-                            canceled.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the subscription will expire, or null if no expiry
-                            set.
-                        trial_ends_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the trial period ends, or null if not on trial.
-                        started_at:
-                          type: number
-                          description: Timestamp when the subscription started.
-                        current_period_start:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Start timestamp of the current billing period.
-                        current_period_end:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: End timestamp of the current billing period.
-                        quantity:
-                          type: number
-                          description: Number of units of this subscription (for per-seat plans).
-                        scope:
-                          enum:
-                            - customer
-                            - entity
-                          type: string
-                          description: Whether this subscription is attached at the customer level or
-                            entity level.
-                      required:
-                        - id
-                        - plan_id
-                        - auto_enable
-                        - add_on
-                        - status
-                        - past_due
-                        - canceled_at
-                        - expires_at
-                        - trial_ends_at
-                        - started_at
-                        - current_period_start
-                        - current_period_end
-                        - quantity
-                  purchases:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan:
-                          $ref: "#/components/schemas/Plan"
-                          description: The full plan object if expanded.
-                        plan_id:
-                          type: string
-                          description: The unique identifier of the purchased plan.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the purchase expires, or null for lifetime access.
-                        started_at:
-                          type: number
-                          description: Timestamp when the purchase was made.
-                        quantity:
-                          type: number
-                          description: Number of units purchased.
-                        scope:
-                          enum:
-                            - customer
-                            - entity
-                          type: string
-                          description: Whether this purchase is attached at the customer level or entity
-                            level.
-                      required:
-                        - plan_id
-                        - expires_at
-                        - started_at
-                        - quantity
-                  balances:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                  flags:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: The unique identifier for this flag.
-                        plan_id:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: The plan ID this flag originates from, or null for standalone
-                            flags.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when this flag expires, or null for no expiration.
-                        feature_id:
-                          type: string
-                          description: The feature ID this flag is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              description: The unique identifier for this feature, used in /check and /track
-                                calls.
-                            name:
-                              type: string
-                              description: Human-readable name displayed in the dashboard and billing UI.
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                                - ai_credit_system
-                              type: string
-                              description: "Feature type: 'boolean' for on/off access, 'metered' for
-                                usage-tracked features, 'credit_system' for
-                                unified credit pools, 'ai_credit_system' for
-                                model-based token pricing."
-                            consumable:
-                              type: boolean
-                              description: "For metered features: true if usage resets periodically (API
-                                calls, credits), false if allocated persistently
-                                (seats, storage)."
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                              description: Event names that trigger this feature's balance. Allows multiple
-                                features to respond to a single event.
-                            credit_schema:
-                              type: array
-                              items:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      metered_feature_id:
-                                        type: string
-                                        minLength: 1
-                                        description: ID of the metered feature that draws from this credit system.
-                                      billing_units:
-                                        type: number
-                                        exclusiveMinimum: 0
-                                        description: Number of metered-feature units priced together. Defaults to one
-                                          when omitted.
-                                      dimensions:
-                                        type: object
-                                        propertyNames:
-                                          type: string
-                                          minLength: 1
-                                          maxLength: 64
-                                        additionalProperties:
-                                          anyOf:
-                                            - type: object
-                                              properties:
-                                                match:
-                                                  type: object
-                                                  propertyNames:
-                                                    type: string
-                                                  additionalProperties:
-                                                    type: string
-                                                  description: Event properties this entry applies to. Every key must equal the
-                                                    tracked property, compared
-                                                    as strings.
-                                                priority:
-                                                  type: integer
-                                                  minimum: -9007199254740991
-                                                  maximum: 9007199254740991
-                                                  description: Breaks ties between dimensions that match the same number of keys.
-                                                    Higher wins.
-                                                tier_behavior:
-                                                  const: graduated
-                                                tiers:
-                                                  type: array
-                                                  minItems: 1
-                                                  items:
-                                                    type: object
-                                                    properties:
-                                                      to:
-                                                        anyOf:
-                                                          - type: number
-                                                            exclusiveMinimum: 0
-                                                          - enum:
-                                                              - inf
-                                                            type: string
-                                                        description: Inclusive upper usage boundary for this graduated tier. The final
-                                                          tier must be 'inf'.
-                                                      credit_cost:
-                                                        type: number
-                                                        minimum: 0
-                                                        description: Credits consumed per billing-unit group within this tier.
-                                                    required:
-                                                      - to
-                                                      - credit_cost
-                                              required:
-                                                - match
-                                                - tier_behavior
-                                                - tiers
-                                              additionalProperties: false
-                                            - type: object
-                                              properties:
-                                                match:
-                                                  type: object
-                                                  propertyNames:
-                                                    type: string
-                                                  additionalProperties:
-                                                    type: string
-                                                  description: Event properties this entry applies to. Every key must equal the
-                                                    tracked property, compared
-                                                    as strings.
-                                                priority:
-                                                  type: integer
-                                                  minimum: -9007199254740991
-                                                  maximum: 9007199254740991
-                                                  description: Breaks ties between dimensions that match the same number of keys.
-                                                    Higher wins.
-                                                credit_cost:
-                                                  type: number
-                                                  minimum: 0
-                                                  description: Credits consumed per billing-unit group when this dimension
-                                                    matches.
-                                              required:
-                                                - match
-                                                - credit_cost
-                                              additionalProperties: false
-                                        description: Named rates chosen by event properties. The most specific match
-                                          sets the rate; with no match the
-                                          item's own rate applies.
-                                      multipliers:
-                                        type: object
-                                        propertyNames:
-                                          type: string
-                                          minLength: 1
-                                          maxLength: 64
-                                        additionalProperties:
-                                          type: object
-                                          properties:
-                                            match:
-                                              type: object
-                                              propertyNames:
-                                                type: string
-                                              additionalProperties:
-                                                type: string
-                                              description: Event properties this entry applies to. Every key must equal the
-                                                tracked property, compared as
-                                                strings.
-                                            factor:
-                                              type: number
-                                              exclusiveMinimum: 0
-                                              description: Multiplies the matched rate. All matching multipliers stack.
-                                            add:
-                                              type: number
-                                              description: Added to the rate after every factor is applied, in credits per
-                                                billing-unit group.
-                                          required:
-                                            - match
-                                          additionalProperties: false
-                                        description: "Named adjustments chosen by event properties. Every match applies:
-                                          factors multiply, then adds are
-                                          summed."
-                                      tier_behavior:
-                                        const: graduated
-                                      tiers:
-                                        type: array
-                                        minItems: 1
-                                        items:
-                                          type: object
-                                          properties:
-                                            to:
-                                              anyOf:
-                                                - type: number
-                                                  exclusiveMinimum: 0
-                                                - enum:
-                                                    - inf
-                                                  type: string
-                                              description: Inclusive upper usage boundary for this graduated tier. The final
-                                                tier must be 'inf'.
-                                            credit_cost:
-                                              type: number
-                                              minimum: 0
-                                              description: Credits consumed per billing-unit group within this tier.
-                                          required:
-                                            - to
-                                            - credit_cost
-                                    required:
-                                      - metered_feature_id
-                                      - tier_behavior
-                                      - tiers
-                                    additionalProperties: false
-                                  - type: object
-                                    properties:
-                                      metered_feature_id:
-                                        type: string
-                                        minLength: 1
-                                        description: ID of the metered feature that draws from this credit system.
-                                      billing_units:
-                                        type: number
-                                        exclusiveMinimum: 0
-                                        description: Number of metered-feature units priced together. Defaults to one
-                                          when omitted.
-                                      dimensions:
-                                        type: object
-                                        propertyNames:
-                                          type: string
-                                          minLength: 1
-                                          maxLength: 64
-                                        additionalProperties:
-                                          anyOf:
-                                            - type: object
-                                              properties:
-                                                match:
-                                                  type: object
-                                                  propertyNames:
-                                                    type: string
-                                                  additionalProperties:
-                                                    type: string
-                                                  description: Event properties this entry applies to. Every key must equal the
-                                                    tracked property, compared
-                                                    as strings.
-                                                priority:
-                                                  type: integer
-                                                  minimum: -9007199254740991
-                                                  maximum: 9007199254740991
-                                                  description: Breaks ties between dimensions that match the same number of keys.
-                                                    Higher wins.
-                                                tier_behavior:
-                                                  const: graduated
-                                                tiers:
-                                                  type: array
-                                                  minItems: 1
-                                                  items:
-                                                    type: object
-                                                    properties:
-                                                      to:
-                                                        anyOf:
-                                                          - type: number
-                                                            exclusiveMinimum: 0
-                                                          - enum:
-                                                              - inf
-                                                            type: string
-                                                        description: Inclusive upper usage boundary for this graduated tier. The final
-                                                          tier must be 'inf'.
-                                                      credit_cost:
-                                                        type: number
-                                                        minimum: 0
-                                                        description: Credits consumed per billing-unit group within this tier.
-                                                    required:
-                                                      - to
-                                                      - credit_cost
-                                              required:
-                                                - match
-                                                - tier_behavior
-                                                - tiers
-                                              additionalProperties: false
-                                            - type: object
-                                              properties:
-                                                match:
-                                                  type: object
-                                                  propertyNames:
-                                                    type: string
-                                                  additionalProperties:
-                                                    type: string
-                                                  description: Event properties this entry applies to. Every key must equal the
-                                                    tracked property, compared
-                                                    as strings.
-                                                priority:
-                                                  type: integer
-                                                  minimum: -9007199254740991
-                                                  maximum: 9007199254740991
-                                                  description: Breaks ties between dimensions that match the same number of keys.
-                                                    Higher wins.
-                                                credit_cost:
-                                                  type: number
-                                                  minimum: 0
-                                                  description: Credits consumed per billing-unit group when this dimension
-                                                    matches.
-                                              required:
-                                                - match
-                                                - credit_cost
-                                              additionalProperties: false
-                                        description: Named rates chosen by event properties. The most specific match
-                                          sets the rate; with no match the
-                                          item's own rate applies.
-                                      multipliers:
-                                        type: object
-                                        propertyNames:
-                                          type: string
-                                          minLength: 1
-                                          maxLength: 64
-                                        additionalProperties:
-                                          type: object
-                                          properties:
-                                            match:
-                                              type: object
-                                              propertyNames:
-                                                type: string
-                                              additionalProperties:
-                                                type: string
-                                              description: Event properties this entry applies to. Every key must equal the
-                                                tracked property, compared as
-                                                strings.
-                                            factor:
-                                              type: number
-                                              exclusiveMinimum: 0
-                                              description: Multiplies the matched rate. All matching multipliers stack.
-                                            add:
-                                              type: number
-                                              description: Added to the rate after every factor is applied, in credits per
-                                                billing-unit group.
-                                          required:
-                                            - match
-                                          additionalProperties: false
-                                        description: "Named adjustments chosen by event properties. Every match applies:
-                                          factors multiply, then adds are
-                                          summed."
-                                      credit_cost:
-                                        type: number
-                                        minimum: 0
-                                        description: Credits consumed per billing-unit group.
-                                    required:
-                                      - metered_feature_id
-                                      - credit_cost
-                                    additionalProperties: false
-                                  - type: object
-                                    properties:
-                                      metered_feature_id:
-                                        const: ""
-                                      billing_units:
-                                        type: number
-                                        exclusiveMinimum: 0
-                                        description: Number of metered-feature units priced together. Defaults to one
-                                          when omitted.
-                                      dimensions:
-                                        type: object
-                                        propertyNames:
-                                          type: string
-                                          minLength: 1
-                                          maxLength: 64
-                                        additionalProperties:
-                                          anyOf:
-                                            - type: object
-                                              properties:
-                                                match:
-                                                  type: object
-                                                  propertyNames:
-                                                    type: string
-                                                  additionalProperties:
-                                                    type: string
-                                                  description: Event properties this entry applies to. Every key must equal the
-                                                    tracked property, compared
-                                                    as strings.
-                                                priority:
-                                                  type: integer
-                                                  minimum: -9007199254740991
-                                                  maximum: 9007199254740991
-                                                  description: Breaks ties between dimensions that match the same number of keys.
-                                                    Higher wins.
-                                                tier_behavior:
-                                                  const: graduated
-                                                tiers:
-                                                  type: array
-                                                  minItems: 1
-                                                  items:
-                                                    type: object
-                                                    properties:
-                                                      to:
-                                                        anyOf:
-                                                          - type: number
-                                                            exclusiveMinimum: 0
-                                                          - enum:
-                                                              - inf
-                                                            type: string
-                                                        description: Inclusive upper usage boundary for this graduated tier. The final
-                                                          tier must be 'inf'.
-                                                      credit_cost:
-                                                        type: number
-                                                        minimum: 0
-                                                        description: Credits consumed per billing-unit group within this tier.
-                                                    required:
-                                                      - to
-                                                      - credit_cost
-                                              required:
-                                                - match
-                                                - tier_behavior
-                                                - tiers
-                                              additionalProperties: false
-                                            - type: object
-                                              properties:
-                                                match:
-                                                  type: object
-                                                  propertyNames:
-                                                    type: string
-                                                  additionalProperties:
-                                                    type: string
-                                                  description: Event properties this entry applies to. Every key must equal the
-                                                    tracked property, compared
-                                                    as strings.
-                                                priority:
-                                                  type: integer
-                                                  minimum: -9007199254740991
-                                                  maximum: 9007199254740991
-                                                  description: Breaks ties between dimensions that match the same number of keys.
-                                                    Higher wins.
-                                                credit_cost:
-                                                  type: number
-                                                  minimum: 0
-                                                  description: Credits consumed per billing-unit group when this dimension
-                                                    matches.
-                                              required:
-                                                - match
-                                                - credit_cost
-                                              additionalProperties: false
-                                        description: Named rates chosen by event properties. The most specific match
-                                          sets the rate; with no match the
-                                          item's own rate applies.
-                                      multipliers:
-                                        type: object
-                                        propertyNames:
-                                          type: string
-                                          minLength: 1
-                                          maxLength: 64
-                                        additionalProperties:
-                                          type: object
-                                          properties:
-                                            match:
-                                              type: object
-                                              propertyNames:
-                                                type: string
-                                              additionalProperties:
-                                                type: string
-                                              description: Event properties this entry applies to. Every key must equal the
-                                                tracked property, compared as
-                                                strings.
-                                            factor:
-                                              type: number
-                                              exclusiveMinimum: 0
-                                              description: Multiplies the matched rate. All matching multipliers stack.
-                                            add:
-                                              type: number
-                                              description: Added to the rate after every factor is applied, in credits per
-                                                billing-unit group.
-                                          required:
-                                            - match
-                                          additionalProperties: false
-                                        description: "Named adjustments chosen by event properties. Every match applies:
-                                          factors multiply, then adds are
-                                          summed."
-                                      credit_cost:
-                                        type: number
-                                        minimum: 0
-                                        description: Credits consumed per billing-unit group.
-                                    required:
-                                      - metered_feature_id
-                                      - credit_cost
-                                    additionalProperties: false
-                              description: "For classic credit systems: maps metered features to flat or
-                                graduated credit costs."
-                            model_markups:
-                              anyOf:
-                                - type: object
-                                  propertyNames:
-                                    type: string
-                                    pattern: .+\/.+
-                                  additionalProperties:
-                                    type: object
-                                    properties:
-                                      markup:
-                                        type: number
-                                        minimum: -100
-                                      input_cost:
-                                        type: number
-                                        minimum: 0
-                                      output_cost:
-                                        type: number
-                                        minimum: 0
-                                - type: "null"
-                              description: Per-model markup overrides for AI credit systems.
-                            default_markup:
-                              type: number
-                              minimum: -100
-                              description: Default percentage markup for AI credit systems. Use -100 to make
-                                usage free.
-                            provider_markups:
-                              anyOf:
-                                - type: object
-                                  propertyNames:
-                                    type: string
-                                  additionalProperties:
-                                    type: object
-                                    properties:
-                                      markup:
-                                        type: number
-                                        minimum: -100
-                                    required:
-                                      - markup
-                                - type: "null"
-                              description: Per-provider default markup percentages for AI credit systems.
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: Singular form for UI display (e.g., 'API call', 'seat').
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
-                              description: Display names for the feature in billing UI and customer-facing
-                                components.
-                            archived:
-                              type: boolean
-                              description: Whether the feature is archived and hidden from the dashboard.
-                            processors:
-                              type: object
-                              properties:
-                                stripe:
-                                  type: object
-                                  properties:
-                                    product_id:
-                                      type: string
-                                      description: Stripe product ID this feature's usage prices bill under.
-                                    meter_id:
-                                      type: string
-                                      description: Stripe meter ID used to create this feature's metered price.
-                              x-atmn-mapping: true
-                              description: Processor mappings for this feature. Present when a Stripe product
-                                or meter is set.
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                      required:
-                        - id
-                        - plan_id
-                        - expires_at
-                        - feature_id
-                      examples:
-                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                          plan_id: pro_plan
-                          expires_at: null
-                          feature_id: dashboard
-                  billing_controls:
-                    type: object
-                    properties:
-                      spend_limits:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: Optional feature ID this spend limit applies to.
-                            enabled:
-                              type: boolean
-                              default: false
-                              description: Whether the overage spend limit is enabled.
-                            limit_type:
-                              enum:
-                                - absolute
-                                - usage_percentage
-                              type: string
-                              description: "How overage_limit is interpreted: an absolute overage cap
-                                (default) or a percentage of the main-plan
-                                allowance."
-                            overage_limit:
-                              type: number
-                              minimum: 0
-                              description: "Overage cap for the feature: absolute units, or a percent (e.g.
-                                120) when limit_type is usage_percentage."
-                            skip_overage_billing:
-                              type: boolean
-                              description: When true, overage for this feature is not posted to Stripe. Usage
-                                tracking and balance resets still behave
-                                normally.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                        description: List of spend limits per feature. Each entry caps overage
-                          (overage_limit) and/or per-interval usage
-                          (usage_limit).
-                      usage_limits:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature this usage limit applies to.
-                            enabled:
-                              type: boolean
-                              default: true
-                              description: Whether this usage limit is enabled.
-                            limit:
-                              type: number
-                              minimum: 0
-                              description: Maximum units allowed per interval.
-                            interval:
-                              enum:
-                                - day
-                                - week
-                                - month
-                                - year
-                              type: string
-                              description: Interval for the cap, aligned to the customer's billing cycle.
-                            anchor:
-                              enum:
-                                - billing_cycle
-                                - utc
-                              type: string
-                              description: Window alignment. 'billing_cycle' phases the interval to the
-                                customer's renewal time; 'utc' aligns to the UTC
-                                calendar.
-                            filter:
-                              type: object
-                              properties:
-                                properties:
-                                  type: object
-                                  propertyNames:
-                                    type: string
-                                    minLength: 1
-                                    maxLength: 64
-                                  additionalProperties:
-                                    type: string
-                              required:
-                                - properties
-                              description: When set, only usage from events whose properties match counts
-                                toward this cap. Omit to count all usage of the
-                                feature.
-                            usage:
-                              type: number
-                              minimum: 0
-                              description: Usage consumed in the active interval, stored in the usage-window
-                                counter.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                          required:
-                            - feature_id
-                            - limit
-                            - interval
-                        description: List of hard usage caps per feature for this entity. An entity
-                          entry overrides the customer's for that feature.
-                      usage_alerts:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature ID this alert applies to.
-                            enabled:
-                              type: boolean
-                              default: true
-                              description: Whether this usage alert is enabled.
-                            threshold:
-                              type: number
-                              minimum: 0
-                              description: The threshold value that triggers the alert. For usage or
-                                remaining, this is an absolute count. For
-                                usage_percentage or remaining_percentage, this
-                                is a percentage (0-100).
-                            threshold_type:
-                              enum:
-                                - usage
-                                - usage_percentage
-                                - remaining
-                                - remaining_percentage
-                              type: string
-                              description: Whether the threshold is an absolute count or a percentage of the
-                                usage allowance or remaining balance.
-                            basis:
-                              enum:
-                                - balance
-                                - included
-                                - recurring
-                                - usage_limit
-                              type: string
-                              default: balance
-                              description: "What 100% means. balance: every grant on the feature. included:
-                                the plan allowance only. recurring: grants that
-                                reset. usage_limit: the cap of the usage limit
-                                with the same feature and filter."
-                            filter:
-                              type: object
-                              properties:
-                                properties:
-                                  type: object
-                                  propertyNames:
-                                    type: string
-                                    minLength: 1
-                                    maxLength: 64
-                                  additionalProperties:
-                                    type: string
-                              required:
-                                - properties
-                              description: Only valid with basis usage_limit. Points the alert at the usage
-                                limit carrying the same filter.
-                            name:
-                              type: string
-                              description: Optional user-defined label to distinguish multiple alerts on the
-                                same feature.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                          required:
-                            - threshold
-                            - threshold_type
-                        description: List of usage alert configurations per feature.
-                      overage_allowed:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature ID this overage allowed control applies to.
-                            enabled:
-                              type: boolean
-                              default: false
-                              description: Whether overage is allowed for this feature.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                          required:
-                            - feature_id
-                        description: List of overage allowed controls per feature. When enabled, usage
-                          can exceed balance.
-                    description: Billing controls for the entity.
-                  invoices:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan_ids:
-                          type: array
-                          items:
-                            type: string
-                          description: Array of plan IDs included in this invoice
-                        stripe_id:
-                          type: string
-                          description: The Stripe invoice ID
-                        processor_type:
-                          enum:
-                            - stripe
-                            - revenuecat
-                          type: string
-                          default: stripe
-                          description: The billing processor that owns this invoice.
-                        status:
-                          type: string
-                          description: The status of the invoice
-                        total:
-                          type: number
-                          description: The total amount of the invoice
-                        currency:
-                          type: string
-                          description: The currency code for the invoice
-                        created_at:
-                          type: number
-                          description: Timestamp when the invoice was created
-                        hosted_invoice_url:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: URL to the Stripe-hosted invoice page
-                      required:
-                        - plan_ids
-                        - stripe_id
-                        - status
-                        - total
-                        - currency
-                        - created_at
-                    description: Invoices for this entity (only included when expand=invoices)
-                required:
-                  - id
-                  - name
-                  - created_at
-                  - env
-                  - subscriptions
-                  - purchases
-                  - balances
-                  - flags
-                examples:
-                  - &a106
-                    id: seat_42
-                    name: Seat 42
-                    customer_id: cus_123
-                    feature_id: seats
-                    created_at: 1771409161016
-                    env: sandbox
-                    subscriptions:
-                      - plan_id: pro_plan
-                        auto_enable: true
-                        add_on: false
-                        status: active
-                        past_due: false
-                        canceled_at: null
-                        expires_at: null
-                        trial_ends_at: null
-                        started_at: 1771431921437
-                        current_period_start: 1771431921437
-                        current_period_end: 1771999921437
-                        quantity: 1
-                    purchases: []
-                    balances:
-                      messages:
-                        feature_id: messages
-                        granted: 100
-                        remaining: 72
-                        usage: 28
-                        unlimited: false
-                        overage_allowed: false
-                        max_purchase: null
-                        next_reset_at: 1773851121437
-                        breakdown:
-                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                            plan_id: pro_plan
-                            included_grant: 100
-                            prepaid_grant: 0
-                            remaining: 72
-                            usage: 28
-                            unlimited: false
-                            reset:
-                              interval: month
-                              resets_at: 1773851121437
-                            price: null
-                            expires_at: null
-                    invoices: []
-              example: *a106
-      x-speakeasy-name-override: create
-      parameters:
-        - *a5
-  /v1/entities.get:
-    post:
-      operationId: getEntity
-      description: >-
-        Fetches an entity by its ID.
-
-
-        Use this to read one entity's current state. Pass customerId when you
-        want to scope the lookup to a specific customer.
-      tags:
-        - entities
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                customer_id:
-                  type: string
-                  description: The ID of the customer to create the entity for.
-                entity_id:
-                  type: string
-                  description: The ID of the entity.
-              required:
-                - entity_id
-              title: GetEntityParams
-              examples:
-                - &a107
-                  entity_id: seat_42
-                - customer_id: cus_123
-                  entity_id: seat_42
             example: *a107
       responses:
         "200":
@@ -75941,6 +75112,1081 @@ paths:
                             expires_at: null
                     invoices: []
               example: *a108
+      x-speakeasy-name-override: create
+      parameters:
+        - *a5
+  /v1/entities.get:
+    post:
+      operationId: getEntity
+      description: >-
+        Fetches an entity by its ID.
+
+
+        Use this to read one entity's current state. Pass customerId when you
+        want to scope the lookup to a specific customer.
+      tags:
+        - entities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer to create the entity for.
+                entity_id:
+                  type: string
+                  description: The ID of the entity.
+              required:
+                - entity_id
+              title: GetEntityParams
+              examples:
+                - &a109
+                  entity_id: seat_42
+                - customer_id: cus_123
+                  entity_id: seat_42
+            example: *a109
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The unique identifier of the entity
+                  name:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The name of the entity
+                  customer_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The customer ID this entity belongs to
+                  feature_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The feature ID this entity belongs to
+                  created_at:
+                    type: number
+                    description: Unix timestamp when the entity was created
+                  env:
+                    enum:
+                      - sandbox
+                      - live
+                    type: string
+                    description: The environment (sandbox/live)
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id
+                            was provided at attach time, it is used; otherwise,
+                            falls back to the internal ID.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the subscribed plan.
+                        auto_enable:
+                          type: boolean
+                          description: Whether the plan was automatically enabled for the customer.
+                        add_on:
+                          type: boolean
+                          description: Whether this is an add-on plan rather than a base subscription.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                          type: string
+                          description: Current status of the subscription.
+                        past_due:
+                          type: boolean
+                          description: Whether the subscription has overdue payments.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription was canceled, or null if not
+                            canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription will expire, or null if no expiry
+                            set.
+                        trial_ends_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the trial period ends, or null if not on trial.
+                        started_at:
+                          type: number
+                          description: Timestamp when the subscription started.
+                        current_period_start:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Start timestamp of the current billing period.
+                        current_period_end:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: End timestamp of the current billing period.
+                        quantity:
+                          type: number
+                          description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
+                      required:
+                        - id
+                        - plan_id
+                        - auto_enable
+                        - add_on
+                        - status
+                        - past_due
+                        - canceled_at
+                        - expires_at
+                        - trial_ends_at
+                        - started_at
+                        - current_period_start
+                        - current_period_end
+                        - quantity
+                  purchases:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the purchased plan.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the purchase expires, or null for lifetime access.
+                        started_at:
+                          type: number
+                          description: Timestamp when the purchase was made.
+                        quantity:
+                          type: number
+                          description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
+                      required:
+                        - plan_id
+                        - expires_at
+                        - started_at
+                        - quantity
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      $ref: "#/components/schemas/Balance"
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone
+                            flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track
+                                calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                                - ai_credit_system
+                              type: string
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for
+                                usage-tracked features, 'credit_system' for
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API
+                                calls, credits), false if allocated persistently
+                                (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple
+                                features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      metered_feature_id:
+                                        type: string
+                                        minLength: 1
+                                        description: ID of the metered feature that draws from this credit system.
+                                      billing_units:
+                                        type: number
+                                        exclusiveMinimum: 0
+                                        description: Number of metered-feature units priced together. Defaults to one
+                                          when omitted.
+                                      dimensions:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties:
+                                          anyOf:
+                                            - type: object
+                                              properties:
+                                                match:
+                                                  type: object
+                                                  propertyNames:
+                                                    type: string
+                                                  additionalProperties:
+                                                    type: string
+                                                  description: Event properties this entry applies to. Every key must equal the
+                                                    tracked property, compared
+                                                    as strings.
+                                                priority:
+                                                  type: integer
+                                                  minimum: -9007199254740991
+                                                  maximum: 9007199254740991
+                                                  description: Breaks ties between dimensions that match the same number of keys.
+                                                    Higher wins.
+                                                tier_behavior:
+                                                  const: graduated
+                                                tiers:
+                                                  type: array
+                                                  minItems: 1
+                                                  items:
+                                                    type: object
+                                                    properties:
+                                                      to:
+                                                        anyOf:
+                                                          - type: number
+                                                            exclusiveMinimum: 0
+                                                          - enum:
+                                                              - inf
+                                                            type: string
+                                                        description: Inclusive upper usage boundary for this graduated tier. The final
+                                                          tier must be 'inf'.
+                                                      credit_cost:
+                                                        type: number
+                                                        minimum: 0
+                                                        description: Credits consumed per billing-unit group within this tier.
+                                                    required:
+                                                      - to
+                                                      - credit_cost
+                                              required:
+                                                - match
+                                                - tier_behavior
+                                                - tiers
+                                              additionalProperties: false
+                                            - type: object
+                                              properties:
+                                                match:
+                                                  type: object
+                                                  propertyNames:
+                                                    type: string
+                                                  additionalProperties:
+                                                    type: string
+                                                  description: Event properties this entry applies to. Every key must equal the
+                                                    tracked property, compared
+                                                    as strings.
+                                                priority:
+                                                  type: integer
+                                                  minimum: -9007199254740991
+                                                  maximum: 9007199254740991
+                                                  description: Breaks ties between dimensions that match the same number of keys.
+                                                    Higher wins.
+                                                credit_cost:
+                                                  type: number
+                                                  minimum: 0
+                                                  description: Credits consumed per billing-unit group when this dimension
+                                                    matches.
+                                              required:
+                                                - match
+                                                - credit_cost
+                                              additionalProperties: false
+                                        description: Named rates chosen by event properties. The most specific match
+                                          sets the rate; with no match the
+                                          item's own rate applies.
+                                      multipliers:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            match:
+                                              type: object
+                                              propertyNames:
+                                                type: string
+                                              additionalProperties:
+                                                type: string
+                                              description: Event properties this entry applies to. Every key must equal the
+                                                tracked property, compared as
+                                                strings.
+                                            factor:
+                                              type: number
+                                              exclusiveMinimum: 0
+                                              description: Multiplies the matched rate. All matching multipliers stack.
+                                            add:
+                                              type: number
+                                              description: Added to the rate after every factor is applied, in credits per
+                                                billing-unit group.
+                                          required:
+                                            - match
+                                          additionalProperties: false
+                                        description: "Named adjustments chosen by event properties. Every match applies:
+                                          factors multiply, then adds are
+                                          summed."
+                                      tier_behavior:
+                                        const: graduated
+                                      tiers:
+                                        type: array
+                                        minItems: 1
+                                        items:
+                                          type: object
+                                          properties:
+                                            to:
+                                              anyOf:
+                                                - type: number
+                                                  exclusiveMinimum: 0
+                                                - enum:
+                                                    - inf
+                                                  type: string
+                                              description: Inclusive upper usage boundary for this graduated tier. The final
+                                                tier must be 'inf'.
+                                            credit_cost:
+                                              type: number
+                                              minimum: 0
+                                              description: Credits consumed per billing-unit group within this tier.
+                                          required:
+                                            - to
+                                            - credit_cost
+                                    required:
+                                      - metered_feature_id
+                                      - tier_behavior
+                                      - tiers
+                                    additionalProperties: false
+                                  - type: object
+                                    properties:
+                                      metered_feature_id:
+                                        type: string
+                                        minLength: 1
+                                        description: ID of the metered feature that draws from this credit system.
+                                      billing_units:
+                                        type: number
+                                        exclusiveMinimum: 0
+                                        description: Number of metered-feature units priced together. Defaults to one
+                                          when omitted.
+                                      dimensions:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties:
+                                          anyOf:
+                                            - type: object
+                                              properties:
+                                                match:
+                                                  type: object
+                                                  propertyNames:
+                                                    type: string
+                                                  additionalProperties:
+                                                    type: string
+                                                  description: Event properties this entry applies to. Every key must equal the
+                                                    tracked property, compared
+                                                    as strings.
+                                                priority:
+                                                  type: integer
+                                                  minimum: -9007199254740991
+                                                  maximum: 9007199254740991
+                                                  description: Breaks ties between dimensions that match the same number of keys.
+                                                    Higher wins.
+                                                tier_behavior:
+                                                  const: graduated
+                                                tiers:
+                                                  type: array
+                                                  minItems: 1
+                                                  items:
+                                                    type: object
+                                                    properties:
+                                                      to:
+                                                        anyOf:
+                                                          - type: number
+                                                            exclusiveMinimum: 0
+                                                          - enum:
+                                                              - inf
+                                                            type: string
+                                                        description: Inclusive upper usage boundary for this graduated tier. The final
+                                                          tier must be 'inf'.
+                                                      credit_cost:
+                                                        type: number
+                                                        minimum: 0
+                                                        description: Credits consumed per billing-unit group within this tier.
+                                                    required:
+                                                      - to
+                                                      - credit_cost
+                                              required:
+                                                - match
+                                                - tier_behavior
+                                                - tiers
+                                              additionalProperties: false
+                                            - type: object
+                                              properties:
+                                                match:
+                                                  type: object
+                                                  propertyNames:
+                                                    type: string
+                                                  additionalProperties:
+                                                    type: string
+                                                  description: Event properties this entry applies to. Every key must equal the
+                                                    tracked property, compared
+                                                    as strings.
+                                                priority:
+                                                  type: integer
+                                                  minimum: -9007199254740991
+                                                  maximum: 9007199254740991
+                                                  description: Breaks ties between dimensions that match the same number of keys.
+                                                    Higher wins.
+                                                credit_cost:
+                                                  type: number
+                                                  minimum: 0
+                                                  description: Credits consumed per billing-unit group when this dimension
+                                                    matches.
+                                              required:
+                                                - match
+                                                - credit_cost
+                                              additionalProperties: false
+                                        description: Named rates chosen by event properties. The most specific match
+                                          sets the rate; with no match the
+                                          item's own rate applies.
+                                      multipliers:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            match:
+                                              type: object
+                                              propertyNames:
+                                                type: string
+                                              additionalProperties:
+                                                type: string
+                                              description: Event properties this entry applies to. Every key must equal the
+                                                tracked property, compared as
+                                                strings.
+                                            factor:
+                                              type: number
+                                              exclusiveMinimum: 0
+                                              description: Multiplies the matched rate. All matching multipliers stack.
+                                            add:
+                                              type: number
+                                              description: Added to the rate after every factor is applied, in credits per
+                                                billing-unit group.
+                                          required:
+                                            - match
+                                          additionalProperties: false
+                                        description: "Named adjustments chosen by event properties. Every match applies:
+                                          factors multiply, then adds are
+                                          summed."
+                                      credit_cost:
+                                        type: number
+                                        minimum: 0
+                                        description: Credits consumed per billing-unit group.
+                                    required:
+                                      - metered_feature_id
+                                      - credit_cost
+                                    additionalProperties: false
+                                  - type: object
+                                    properties:
+                                      metered_feature_id:
+                                        const: ""
+                                      billing_units:
+                                        type: number
+                                        exclusiveMinimum: 0
+                                        description: Number of metered-feature units priced together. Defaults to one
+                                          when omitted.
+                                      dimensions:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties:
+                                          anyOf:
+                                            - type: object
+                                              properties:
+                                                match:
+                                                  type: object
+                                                  propertyNames:
+                                                    type: string
+                                                  additionalProperties:
+                                                    type: string
+                                                  description: Event properties this entry applies to. Every key must equal the
+                                                    tracked property, compared
+                                                    as strings.
+                                                priority:
+                                                  type: integer
+                                                  minimum: -9007199254740991
+                                                  maximum: 9007199254740991
+                                                  description: Breaks ties between dimensions that match the same number of keys.
+                                                    Higher wins.
+                                                tier_behavior:
+                                                  const: graduated
+                                                tiers:
+                                                  type: array
+                                                  minItems: 1
+                                                  items:
+                                                    type: object
+                                                    properties:
+                                                      to:
+                                                        anyOf:
+                                                          - type: number
+                                                            exclusiveMinimum: 0
+                                                          - enum:
+                                                              - inf
+                                                            type: string
+                                                        description: Inclusive upper usage boundary for this graduated tier. The final
+                                                          tier must be 'inf'.
+                                                      credit_cost:
+                                                        type: number
+                                                        minimum: 0
+                                                        description: Credits consumed per billing-unit group within this tier.
+                                                    required:
+                                                      - to
+                                                      - credit_cost
+                                              required:
+                                                - match
+                                                - tier_behavior
+                                                - tiers
+                                              additionalProperties: false
+                                            - type: object
+                                              properties:
+                                                match:
+                                                  type: object
+                                                  propertyNames:
+                                                    type: string
+                                                  additionalProperties:
+                                                    type: string
+                                                  description: Event properties this entry applies to. Every key must equal the
+                                                    tracked property, compared
+                                                    as strings.
+                                                priority:
+                                                  type: integer
+                                                  minimum: -9007199254740991
+                                                  maximum: 9007199254740991
+                                                  description: Breaks ties between dimensions that match the same number of keys.
+                                                    Higher wins.
+                                                credit_cost:
+                                                  type: number
+                                                  minimum: 0
+                                                  description: Credits consumed per billing-unit group when this dimension
+                                                    matches.
+                                              required:
+                                                - match
+                                                - credit_cost
+                                              additionalProperties: false
+                                        description: Named rates chosen by event properties. The most specific match
+                                          sets the rate; with no match the
+                                          item's own rate applies.
+                                      multipliers:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            match:
+                                              type: object
+                                              propertyNames:
+                                                type: string
+                                              additionalProperties:
+                                                type: string
+                                              description: Event properties this entry applies to. Every key must equal the
+                                                tracked property, compared as
+                                                strings.
+                                            factor:
+                                              type: number
+                                              exclusiveMinimum: 0
+                                              description: Multiplies the matched rate. All matching multipliers stack.
+                                            add:
+                                              type: number
+                                              description: Added to the rate after every factor is applied, in credits per
+                                                billing-unit group.
+                                          required:
+                                            - match
+                                          additionalProperties: false
+                                        description: "Named adjustments chosen by event properties. Every match applies:
+                                          factors multiply, then adds are
+                                          summed."
+                                      credit_cost:
+                                        type: number
+                                        minimum: 0
+                                        description: Credits consumed per billing-unit group.
+                                    required:
+                                      - metered_feature_id
+                                      - credit_cost
+                                    additionalProperties: false
+                              description: "For classic credit systems: maps metered features to flat or
+                                graduated credit costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                    pattern: .+\/.+
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing
+                                components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                            processors:
+                              type: object
+                              properties:
+                                stripe:
+                                  type: object
+                                  properties:
+                                    product_id:
+                                      type: string
+                                      description: Stripe product ID this feature's usage prices bill under.
+                                    meter_id:
+                                      type: string
+                                      description: Stripe meter ID used to create this feature's metered price.
+                              x-atmn-mapping: true
+                              description: Processor mappings for this feature. Present when a Stripe product
+                                or meter is set.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
+                  billing_controls:
+                    type: object
+                    properties:
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether the overage spend limit is enabled.
+                            limit_type:
+                              enum:
+                                - absolute
+                                - usage_percentage
+                              type: string
+                              description: "How overage_limit is interpreted: an absolute overage cap
+                                (default) or a percentage of the main-plan
+                                allowance."
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: "Overage cap for the feature: absolute units, or a percent (e.g.
+                                120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                        description: List of spend limits per feature. Each entry caps overage
+                          (overage_limit) and/or per-interval usage
+                          (usage_limit).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage limit is enabled.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - day
+                                - week
+                                - month
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties:
+                                    type: string
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Usage consumed in the active interval, stored in the usage-window
+                                counter.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of hard usage caps per feature for this entity. An entity
+                          entry overrides the customer's for that feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                                - remaining
+                                - remaining_percentage
+                              type: string
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
+                            basis:
+                              enum:
+                                - balance
+                                - included
+                                - recurring
+                                - usage_limit
+                              type: string
+                              default: balance
+                              description: "What 100% means. balance: every grant on the feature. included:
+                                the plan allowance only. recurring: grants that
+                                reset. usage_limit: the cap of the usage limit
+                                with the same feature and filter."
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties:
+                                    type: string
+                              required:
+                                - properties
+                              description: Only valid with basis usage_limit. Points the alert at the usage
+                                limit carrying the same filter.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
+                    description: Billing controls for the entity.
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                    description: Invoices for this entity (only included when expand=invoices)
+                required:
+                  - id
+                  - name
+                  - created_at
+                  - env
+                  - subscriptions
+                  - purchases
+                  - balances
+                  - flags
+                examples:
+                  - &a110
+                    id: seat_42
+                    name: Seat 42
+                    customer_id: cus_123
+                    feature_id: seats
+                    created_at: 1771409161016
+                    env: sandbox
+                    subscriptions:
+                      - plan_id: pro_plan
+                        auto_enable: true
+                        add_on: false
+                        status: active
+                        past_due: false
+                        canceled_at: null
+                        expires_at: null
+                        trial_ends_at: null
+                        started_at: 1771431921437
+                        current_period_start: 1771431921437
+                        current_period_end: 1771999921437
+                        quantity: 1
+                    purchases: []
+                    balances:
+                      messages:
+                        feature_id: messages
+                        granted: 100
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        overage_allowed: false
+                        max_purchase: null
+                        next_reset_at: 1773851121437
+                        breakdown:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            included_grant: 100
+                            prepaid_grant: 0
+                            remaining: 72
+                            usage: 28
+                            unlimited: false
+                            reset:
+                              interval: month
+                              resets_at: 1773851121437
+                            price: null
+                            expires_at: null
+                    invoices: []
+              example: *a110
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -76019,12 +76265,12 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a109
+                - &a111
                   start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a109
+            example: *a111
       responses:
         "200":
           description: OK
@@ -77039,7 +77285,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a110
+                  - &a112
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -77086,7 +77332,7 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a110
+              example: *a112
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -77352,7 +77598,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a111
+                - &a113
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -77361,7 +77607,7 @@ paths:
                         enabled: true
                         limit_type: usage_percentage
                         overage_limit: 120
-            example: *a111
+            example: *a113
       responses:
         "200":
           description: OK
@@ -78355,7 +78601,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a112
+                  - &a114
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -78400,7 +78646,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a112
+              example: *a114
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -78432,10 +78678,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a113
+                - &a115
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a113
+            example: *a115
       responses:
         "200":
           description: OK
@@ -78449,9 +78695,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a114
+                  - &a116
                     success: true
-              example: *a114
+              example: *a116
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -78479,10 +78725,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a115
+                - &a117
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a115
+            example: *a117
       responses:
         "200":
           description: OK
@@ -78505,11 +78751,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a116
+                  - &a118
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a116
+              example: *a118
       x-speakeasy-name-override: createCode
       parameters:
         - *a5
@@ -78537,10 +78783,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a117
+                - &a119
                   code: REF123
                   customer_id: cus_456
-            example: *a117
+            example: *a119
       responses:
         "200":
           description: OK
@@ -78563,11 +78809,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a118
+                  - &a120
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a118
+              example: *a120
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -78638,7 +78884,7 @@ paths:
               additionalProperties: false
               title: CreateReferralProgramParams
               examples:
-                - &a119
+                - &a121
                   id: refer_a_friend
                   reward_id: beta_credits_grant
                   redeem_on: customer_creation
@@ -78647,7 +78893,7 @@ paths:
                   plan_ids: null
                   exclude_trial: false
                   created_at: 1718000000000
-            example: *a119
+            example: *a121
       responses:
         "200":
           description: OK
@@ -78706,7 +78952,7 @@ paths:
                   - created_at
                 title: CreateReferralProgramResponse
                 examples:
-                  - &a120
+                  - &a122
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -78715,7 +78961,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a120
+              example: *a122
       x-speakeasy-name-override: createProgram
       parameters:
         - *a5
@@ -78733,8 +78979,8 @@ paths:
               type: object
               title: ListReferralProgramsParams
               examples:
-                - &a121 {}
-            example: *a121
+                - &a123 {}
+            example: *a123
       responses:
         "200":
           description: OK
@@ -78809,7 +79055,7 @@ paths:
                   - list
                 title: ListReferralProgramsResponse
                 examples:
-                  - &a122
+                  - &a124
                     list:
                       - id: refer_a_friend
                         reward_id: beta_credits_grant
@@ -78819,7 +79065,7 @@ paths:
                         plan_ids: null
                         exclude_trial: false
                         created_at: 1718000000000
-              example: *a122
+              example: *a124
       x-speakeasy-name-override: listPrograms
       parameters:
         - *a5
@@ -78902,7 +79148,7 @@ paths:
                   - created_at
                 title: GetReferralProgramResponse
                 examples:
-                  - &a123
+                  - &a125
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -78911,7 +79157,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a123
+              example: *a125
       x-speakeasy-name-override: getProgram
       parameters:
         - *a5
@@ -79034,7 +79280,7 @@ paths:
                   - created_at
                 title: UpdateReferralProgramResponse
                 examples:
-                  - &a124
+                  - &a126
                     id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
@@ -79043,7 +79289,7 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a124
+              example: *a126
       x-speakeasy-name-override: updateProgram
       parameters:
         - *a5
@@ -79082,9 +79328,9 @@ paths:
                   - success
                 title: DeleteReferralProgramResponse
                 examples:
-                  - &a125
+                  - &a127
                     success: true
-              example: *a125
+              example: *a127
       x-speakeasy-name-override: deleteProgram
       parameters:
         - *a5
@@ -79282,7 +79528,7 @@ paths:
               additionalProperties: false
               title: CreateRewardParams
               examples:
-                - &a126
+                - &a128
                   coupon:
                     id: summer_sale
                     name: Summer Sale
@@ -79294,7 +79540,7 @@ paths:
                     plan_ids: null
                     promo_codes:
                       - code: SUMMER20
-            example: *a126
+            example: *a128
       responses:
         "200":
           description: OK
@@ -79519,8 +79765,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a127 {}
-            example: *a127
+                - &a129 {}
+            example: *a129
       responses:
         "200":
           description: OK
@@ -79733,10 +79979,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a128
+                  - &a130
                     coupons: []
                     feature_grants: []
-              example: *a128
+              example: *a130
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -79966,7 +80212,7 @@ paths:
                 additionalProperties: false
                 title: GetRewardResponse
                 examples:
-                  - &a129
+                  - &a131
                     coupon:
                       id: summer_sale
                       name: Summer Sale
@@ -79983,7 +80229,7 @@ paths:
                           global_max_redemption: 100
                           first_time_transaction: false
                       created_at: 1718000000000
-              example: *a129
+              example: *a131
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -80296,7 +80542,7 @@ paths:
                 additionalProperties: false
                 title: UpdateRewardResponse
                 examples:
-                  - &a130
+                  - &a132
                     feature_grant:
                       id: beta_credits_grant
                       name: Beta Tester Credits
@@ -80310,7 +80556,7 @@ paths:
                             type: month
                             length: 1
                       created_at: 1718000000000
-              example: *a130
+              example: *a132
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -80349,9 +80595,9 @@ paths:
                   - success
                 title: DeleteRewardResponse
                 examples:
-                  - &a131
+                  - &a133
                     success: true
-              example: *a131
+              example: *a133
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -80379,10 +80625,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a132
+                - &a134
                   code: REWARD10
                   customer_id: cus_456
-            example: *a132
+            example: *a134
       responses:
         "200":
           description: OK
@@ -80413,12 +80659,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a133
+                  - &a135
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a133
+              example: *a135
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -80452,10 +80698,10 @@ paths:
                 - env
               title: GetStripeConnectionParams
               examples:
-                - &a134
+                - &a136
                   organization_slug: my-app
                   env: test
-            example: *a134
+            example: *a136
       responses:
         "200":
           description: OK
@@ -80486,14 +80732,14 @@ paths:
                   - connected_at
                 title: GetStripeConnectionResponse
                 examples:
-                  - &a135
+                  - &a137
                     connected: true
                     account_id: acct_example
                     connected_at: 1781113864000
                   - connected: false
                     account_id: null
                     connected_at: null
-              example: *a135
+              example: *a137
       x-speakeasy-name-override: getStripeConnection
       parameters:
         - *a5
@@ -80528,10 +80774,10 @@ paths:
                 - env
               title: DisconnectStripeParams
               examples:
-                - &a136
+                - &a138
                   organization_slug: my-app
                   env: test
-            example: *a136
+            example: *a138
       responses:
         "200":
           description: OK
@@ -80546,9 +80792,9 @@ paths:
                   - success
                 title: DisconnectStripeResponse
                 examples:
-                  - &a137
+                  - &a139
                     success: true
-              example: *a137
+              example: *a139
       x-speakeasy-name-override: disconnectStripe
       parameters:
         - *a5
@@ -80587,12 +80833,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a138
+                - &a140
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a138
+            example: *a140
       responses:
         "200":
           description: OK
@@ -80607,9 +80853,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a139
+                  - &a141
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a139
+              example: *a141
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -80649,13 +80895,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a140
+                - &a142
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a140
+            example: *a142
       responses:
         "200":
           description: OK
@@ -80721,7 +80967,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a141
+                  - &a143
                     results:
                       - plan_id: pro
                         status: synced
@@ -80732,7 +80978,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a141
+              example: *a143
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -80766,10 +81012,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a142
+                - &a144
                   organization_slug: acme
                   env: test
-            example: *a142
+            example: *a144
       responses:
         "200":
           description: OK
@@ -80832,7 +81078,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a143
+                  - &a145
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -80843,7 +81089,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a143
+              example: *a145
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -80875,67 +81121,8 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a144
+                - &a146
                   customer_id: cus_123
-            example: *a144
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                    description: Access token (1h, or non-expiring if indefinite), prefixed
-                      `am_jwt_`.
-                  refresh_token:
-                    type: string
-                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
-                  expires_at:
-                    anyOf:
-                      - type: number
-                      - type: "null"
-                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
-                  refresh_expires_at:
-                    type: number
-                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite
-                      tokens.
-                required:
-                  - access_token
-                  - expires_at
-                examples:
-                  - &a145
-                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
-                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
-                    expires_at: 1781113864000
-                    refresh_expires_at: 1781196664000
-              example: *a145
-      x-speakeasy-name-override: mint
-      parameters:
-        - *a5
-  /v1/keys.refresh:
-    post:
-      operationId: refreshKey
-      description: Exchanges a refresh token (sent as the Bearer credential) for a
-        freshly rotated access + refresh pair. Self-service for the token holder
-        — no secret key required. The previous refresh token is honored for one
-        rotation as a grace window; replaying an older one revokes the
-        customer's tokens.
-      tags:
-        - keys
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              title: RefreshKeyParams
-              description: No body. The refresh token is supplied as the Bearer credential;
-                the response is a freshly rotated access + refresh pair.
-              examples:
-                - &a146 {}
             example: *a146
       responses:
         "200":
@@ -80971,6 +81158,65 @@ paths:
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
               example: *a147
+      x-speakeasy-name-override: mint
+      parameters:
+        - *a5
+  /v1/keys.refresh:
+    post:
+      operationId: refreshKey
+      description: Exchanges a refresh token (sent as the Bearer credential) for a
+        freshly rotated access + refresh pair. Self-service for the token holder
+        — no secret key required. The previous refresh token is honored for one
+        rotation as a grace window; replaying an older one revokes the
+        customer's tokens.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RefreshKeyParams
+              description: No body. The refresh token is supplied as the Bearer credential;
+                the response is a freshly rotated access + refresh pair.
+              examples:
+                - &a148 {}
+            example: *a148
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Access token (1h, or non-expiring if indefinite), prefixed
+                      `am_jwt_`.
+                  refresh_token:
+                    type: string
+                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
+                  expires_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
+                  refresh_expires_at:
+                    type: number
+                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite
+                      tokens.
+                required:
+                  - access_token
+                  - expires_at
+                examples:
+                  - &a149
+                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    expires_at: 1781113864000
+                    refresh_expires_at: 1781196664000
+              example: *a149
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -80997,9 +81243,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a148
+                - &a150
                   customer_id: cus_123
-            example: *a148
+            example: *a150
       responses:
         "200":
           description: OK
@@ -81013,9 +81259,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a149
+                  - &a151
                     revoked: true
-              example: *a149
+              example: *a151
       x-speakeasy-name-override: revoke
       parameters:
         - *a5
@@ -81062,11 +81308,11 @@ paths:
                 - name
               title: CreateSandboxParams
               examples:
-                - &a150
+                - &a152
                   name: staging
                   color: blue
                   icon: Flask
-            example: *a150
+            example: *a152
       responses:
         "200":
           description: OK
@@ -81117,7 +81363,7 @@ paths:
                   - secret_key
                 title: CreateSandboxResponse
                 examples:
-                  - &a151
+                  - &a153
                     id: org_123
                     name: staging
                     slug: staging-abc123|org_456
@@ -81125,7 +81371,7 @@ paths:
                     color: blue
                     icon: Flask
                     secret_key: am_sk_test_abc123
-              example: *a151
+              example: *a153
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -81145,8 +81391,8 @@ paths:
               title: ListSandboxesParams
               description: No body. Lists every sandbox belonging to your organization.
               examples:
-                - &a152 {}
-            example: *a152
+                - &a154 {}
+            example: *a154
       responses:
         "200":
           description: OK
@@ -81199,7 +81445,7 @@ paths:
                   - list
                 title: ListSandboxesResponse
                 examples:
-                  - &a153
+                  - &a155
                     list:
                       - id: org_123
                         name: staging
@@ -81207,7 +81453,7 @@ paths:
                         created_at: 1781113864000
                         color: blue
                         icon: Flask
-              example: *a153
+              example: *a155
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -81233,9 +81479,9 @@ paths:
                 - id
               title: DeleteSandboxParams
               examples:
-                - &a154
+                - &a156
                   id: org_123
-            example: *a154
+            example: *a156
       responses:
         "200":
           description: OK
@@ -81251,9 +81497,9 @@ paths:
                   - success
                 title: DeleteSandboxResponse
                 examples:
-                  - &a155
+                  - &a157
                     success: true
-              example: *a155
+              example: *a157
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -81278,8 +81524,8 @@ paths:
               description: No body. Resets the sandbox the calling key belongs to — there is
                 no id to pass.
               examples:
-                - &a156 {}
-            example: *a156
+                - &a158 {}
+            example: *a158
       responses:
         "200":
           description: OK
@@ -81295,9 +81541,9 @@ paths:
                   - success
                 title: ResetSandboxResponse
                 examples:
-                  - &a157
+                  - &a159
                     success: true
-              example: *a157
+              example: *a159
       x-speakeasy-name-override: reset
       parameters:
         - *a5
@@ -81361,14 +81607,14 @@ paths:
                 - url
               title: CreateWebhookParams
               examples:
-                - &a158
+                - &a160
                   id: billing
                   url: https://example.com/webhooks/autumn
                   events:
                     - billing.updated
                     - invoice.finalized
                   description: Plan changes and invoices
-            example: *a158
+            example: *a160
       responses:
         "200":
           description: OK
@@ -81421,7 +81667,7 @@ paths:
                   - secret
                 title: CreateWebhookResponse
                 examples:
-                  - &a159
+                  - &a161
                     id: billing
                     url: https://example.com/webhooks/autumn
                     events:
@@ -81432,7 +81678,7 @@ paths:
                     created_at: 1781113864000
                     updated_at: 1781113864000
                     secret: whsec_abc123
-              example: *a159
+              example: *a161
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -81462,9 +81708,9 @@ paths:
                 - id
               title: GetWebhookParams
               examples:
-                - &a160
+                - &a162
                   id: billing
-            example: *a160
+            example: *a162
       responses:
         "200":
           description: OK
@@ -81511,7 +81757,7 @@ paths:
                   - updated_at
                 title: Webhook
                 examples:
-                  - &a161
+                  - &a163
                     id: billing
                     url: https://example.com/webhooks/autumn
                     events:
@@ -81521,7 +81767,7 @@ paths:
                     disabled: false
                     created_at: 1781113864000
                     updated_at: 1781113864000
-              example: *a161
+              example: *a163
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -81541,8 +81787,8 @@ paths:
               title: ListWebhooksParams
               description: No body. Lists every webhook in the environment of the calling key.
               examples:
-                - &a162 {}
-            example: *a162
+                - &a164 {}
+            example: *a164
       responses:
         "200":
           description: OK
@@ -81597,7 +81843,7 @@ paths:
                   - list
                 title: ListWebhooksResponse
                 examples:
-                  - &a163
+                  - &a165
                     list:
                       - id: billing
                         url: https://example.com/webhooks/autumn
@@ -81608,7 +81854,7 @@ paths:
                         disabled: false
                         created_at: 1781113864000
                         updated_at: 1781113864000
-              example: *a163
+              example: *a165
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -81670,10 +81916,10 @@ paths:
                 - id
               title: UpdateWebhookParams
               examples:
-                - &a164
+                - &a166
                   id: billing
                   disabled: true
-            example: *a164
+            example: *a166
       responses:
         "200":
           description: OK
@@ -81720,7 +81966,7 @@ paths:
                   - updated_at
                 title: Webhook
                 examples:
-                  - &a165
+                  - &a167
                     id: billing
                     url: https://example.com/webhooks/autumn
                     events:
@@ -81730,7 +81976,7 @@ paths:
                     disabled: true
                     created_at: 1781113864000
                     updated_at: 1781113864000
-              example: *a165
+              example: *a167
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -81759,9 +82005,9 @@ paths:
                 - id
               title: DeleteWebhookParams
               examples:
-                - &a166
+                - &a168
                   id: billing
-            example: *a166
+            example: *a168
       responses:
         "200":
           description: OK
@@ -81777,9 +82023,9 @@ paths:
                   - success
                 title: DeleteWebhookResponse
                 examples:
-                  - &a167
+                  - &a169
                     success: true
-              example: *a167
+              example: *a169
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -81859,7 +82105,7 @@ paths:
                 - webhooks
               title: SyncWebhooksParams
               examples:
-                - &a168
+                - &a170
                   webhooks:
                     - id: billing
                       url: https://example.com/webhooks/autumn
@@ -81867,7 +82113,7 @@ paths:
                         - billing.updated
                         - invoice.finalized
                       description: Plan changes and invoices
-            example: *a168
+            example: *a170
       responses:
         "200":
           description: OK
@@ -82236,7 +82482,7 @@ paths:
                   - errors
                 title: PreviewSyncWebhooksResponse
                 examples:
-                  - &a169
+                  - &a171
                     changes:
                       - action: create
                         id: billing
@@ -82251,7 +82497,7 @@ paths:
                           created_at: 1781113864000
                           updated_at: 1781113864000
                     errors: []
-              example: *a169
+              example: *a171
       x-speakeasy-name-override: previewSync
       parameters:
         - *a5
@@ -82334,7 +82580,7 @@ paths:
                 - webhooks
               title: SyncWebhooksParams
               examples:
-                - &a170
+                - &a172
                   webhooks:
                     - id: billing
                       url: https://example.com/webhooks/autumn
@@ -82342,7 +82588,7 @@ paths:
                         - billing.updated
                         - invoice.finalized
                       description: Plan changes and invoices
-            example: *a170
+            example: *a172
       responses:
         "200":
           description: OK
@@ -82432,7 +82678,7 @@ paths:
                   - errors
                 title: SyncWebhooksResponse
                 examples:
-                  - &a171
+                  - &a173
                     webhooks:
                       - id: billing
                         url: https://example.com/webhooks/autumn
@@ -82447,7 +82693,7 @@ paths:
                       - id: billing
                         secret: whsec_abc123
                     errors: []
-              example: *a171
+              example: *a173
       x-speakeasy-name-override: sync
       parameters:
         - *a5

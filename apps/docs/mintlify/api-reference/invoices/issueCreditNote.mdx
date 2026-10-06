@@ -1,0 +1,169 @@
+---
+title: "Issue Credit Note"
+openapi: "openapi POST /v1/invoices.issue_credit_note"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="invoice_id" type="string" required>
+  The Autumn invoice ID to credit. Must be open or paid.
+</DynamicParamField>
+
+<DynamicParamField body="amount" type="number">
+  Total to credit across the whole invoice. Cannot be combined with lines.
+</DynamicParamField>
+
+<DynamicParamField body="lines" type="object[]">
+  Credit specific invoice lines instead of a flat amount. Cannot be combined with amount. Unavailable on invoices recorded before line item storage.
+  <Expandable title="properties">
+    <DynamicParamField body="id" type="string" required>
+      The invoice line item ID (invoice_li_...) from the invoice's items.
+    </DynamicParamField>
+
+    <DynamicParamField body="amount" type="number">
+      Amount to credit on this line, pre-discount and pre-tax like the line's own amount. The line's discount share and tax are applied on top.
+    </DynamicParamField>
+
+    <DynamicParamField body="quantity" type="number">
+      Number of units of this line to credit.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="destination" type="'customer_balance' | 'refund' | 'out_of_band'">
+  Where already-paid money goes. customer_balance credits the customer's balance for their next invoice, refund returns it to the original payment method, and out_of_band records money returned outside Stripe.
+</DynamicParamField>
+
+<DynamicParamField body="send_email" type="boolean">
+  Email the credit note to the customer.
+</DynamicParamField>
+
+<DynamicParamField body="reason" type="'duplicate' | 'fraudulent' | 'order_change' | 'product_unsatisfactory'">
+  Reason shown on the credit note.
+</DynamicParamField>
+
+<DynamicParamField body="memo" type="string">
+  Memo printed on the credit note PDF.
+</DynamicParamField>
+
+<DynamicParamField body="preview" type="boolean">
+  Return the credit note that would be issued without creating it.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="credit_note" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string | null">
+      The Stripe credit note ID. Null on previews.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="invoice_id" type="string">
+      The Autumn invoice ID this credit note adjusts.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="number" type="string | null">
+      Credit note number shown on the PDF. Null on previews.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="string | null">
+      issued or void. Null on previews.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string" />
+
+    <DynamicResponseField name="subtotal" type="number" />
+
+    <DynamicResponseField name="discount_amount" type="number" />
+
+    <DynamicResponseField name="tax_amount" type="number" />
+
+    <DynamicResponseField name="total" type="number">
+      Total credited, including discounts and tax.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="pre_payment_amount" type="number">
+      Portion that reduced the amount still owed on the invoice.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="post_payment_amount" type="number">
+      Portion of already-paid money returned to the customer.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="refund_amount" type="number" />
+
+    <DynamicResponseField name="credit_amount" type="number" />
+
+    <DynamicResponseField name="out_of_band_amount" type="number" />
+
+    <DynamicResponseField name="reason" type="'duplicate' | 'fraudulent' | 'order_change' | 'product_unsatisfactory'" />
+
+    <DynamicResponseField name="memo" type="string | null" />
+
+    <DynamicResponseField name="pdf" type="string | null">
+      URL of the credit note PDF. Null on previews.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="lines" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="invoice_line_item_id" type="string | null">
+          The credited invoice line item ID, if the credit targeted a line.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="description" type="string | null" />
+
+        <DynamicResponseField name="quantity" type="number | null" />
+
+        <DynamicResponseField name="amount" type="number">
+          Amount credited on this line, pre-discount and pre-tax.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="discount_amount" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "credit_note": {
+    "id": "cn_1MxvRqLkdIwHu7ixY0xbUcxk",
+    "invoice_id": "inv_2b3c4d5e6f7g8h",
+    "number": "ABC-0001-CN-01",
+    "status": "issued",
+    "currency": "usd",
+    "subtotal": 20,
+    "discount_amount": 0,
+    "tax_amount": 0,
+    "total": 20,
+    "pre_payment_amount": 0,
+    "post_payment_amount": 20,
+    "refund_amount": 20,
+    "credit_amount": 0,
+    "out_of_band_amount": 0,
+    "reason": "product_unsatisfactory",
+    "memo": "Partial refund for degraded service",
+    "pdf": "https://pay.stripe.com/credit_notes/acct_123/test_456/pdf",
+    "lines": [
+      {
+        "invoice_line_item_id": "invoice_li_2b3c4d5e6f7g8h",
+        "description": "Pro plan",
+        "quantity": null,
+        "amount": 20,
+        "discount_amount": 0
+      }
+    ]
+  }
+}
+```
+</ResponseExample>

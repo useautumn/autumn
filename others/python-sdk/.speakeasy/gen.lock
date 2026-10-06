@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: 6c70f6872cca5180374df911dec6f15f
+  docChecksum: 061489236e2582df34858316a0650727
   docVersion: 2.4.0
   speakeasyVersion: 1.763.6
   generationVersion: 2.884.13
   releaseVersion: 1.1.0
   configChecksum: 16593a23b9d6e917b198473dd835d916
 persistentEdits:
-  generation_id: 908ddac3-7e04-4bb8-bd27-1afb9fe5166e
-  pristine_commit_hash: 04132100e46a8c082b8200ebd2c440df04dc3d88
-  pristine_tree_hash: 304c192ea240fbfaa9a798591899ed09c5c6d3ce
+  generation_id: 3d93f664-4530-41e1-9aec-e3b53fb5588a
+  pristine_commit_hash: c0902feaba7585bdf8eff0f5381058a5c78af165
+  pristine_tree_hash: 29af43a7b9ec349180c22788ceea515393a2d477
 features:
   python:
     additionalDependencies: 1.0.0
@@ -5382,6 +5382,18 @@ trackedFiles:
     id: e21aa941ce05
     last_write_checksum: sha1:cc9309fe7fda35619f095b35210756fce604ef56
     pristine_git_object: 44e0ee592406f5f5ee4d4dd487ee9577bf75c697
+  docs/models/creditnote.md:
+    id: 1d292d24543e
+    last_write_checksum: sha1:2e45f59490d8bbc570c01cc5d452c9981ace171c
+    pristine_git_object: 7a84362094526467bfd5a0130cb5ab7d9b8b5504
+  docs/models/creditnoteline.md:
+    id: 2d6c59e8f3bc
+    last_write_checksum: sha1:d08124db4617d8b3468e8cb0d383ced51c764a13
+    pristine_git_object: 26c45e05d5609357cf8113b738a2424e696a9644
+  docs/models/creditnotereason.md:
+    id: ac426a8746e4
+    last_write_checksum: sha1:2f65e1909beee0bf20c59092008b8436d9d3c2fd
+    pristine_git_object: ca33eb2c3b5e8fd0a942743896241a6238d05b99
   docs/models/creditschemaunscheduledplanadditem1.md:
     id: 8c41cd5a43bc
     last_write_checksum: sha1:19d922c283a24de644df8eb99879143fbdc29d15
@@ -6022,6 +6034,10 @@ trackedFiles:
     id: 6c5dda63a9a5
     last_write_checksum: sha1:31c7f1f07a4f96e5060ace8bee02d909267261a7
     pristine_git_object: 45d9a7ace784f3cc3d8c558e76d080836ab8cb74
+  docs/models/destination.md:
+    id: 687894272b1a
+    last_write_checksum: sha1:a5f0a0da24b73750a37ec3e9d2f3ae58c888d5c5
+    pristine_git_object: 01759107ad0c9d82f2992a1e9bcd3a838210f9e2
   docs/models/dfuflashparams.md:
     id: e021be4cec77
     last_write_checksum: sha1:ea4399914a3ec8b5f11a8999f8e3d3036061e881
@@ -8634,6 +8650,18 @@ trackedFiles:
     id: 65101f5a602e
     last_write_checksum: sha1:4960e7347d247e6b27d0d334de91cf0ed6656592
     pristine_git_object: 5ddea474bd3ad0abd486454bd71de0b08d221637
+  docs/models/issuecreditnoteglobals.md:
+    id: 65675544ffc2
+    last_write_checksum: sha1:c8331638209d3bc31ffe3b61e6075fac88a2709c
+    pristine_git_object: 423616c7daa4d3642e969d6ec853058b51642347
+  docs/models/issuecreditnoteparams.md:
+    id: 9af1f2264dec
+    last_write_checksum: sha1:65b915ecb4a5e82dc0f7fcf76a04a5726c519d47
+    pristine_git_object: 7c80d0d69991cf1c4688cb3af9f05072ad4184e6
+  docs/models/issuecreditnoteresponse.md:
+    id: 2140a6f9adc0
+    last_write_checksum: sha1:4c87a517121c2a807850f94e00880c82576de6ce
+    pristine_git_object: 3a2b97bec432b85fba63d42ab7192895f1b9d8e9
   docs/models/item.md:
     id: 40dd7473ab87
     last_write_checksum: sha1:267c669baf789131a7661782736eeba333e5870d
@@ -8678,6 +8706,10 @@ trackedFiles:
     id: 946ed7dd10b9
     last_write_checksum: sha1:d794f1a36d41bb20e39b53c92444fc3778d3cfe6
     pristine_git_object: ae8b776bcb44b70f7d57bb1f7257c58b0caf3959
+  docs/models/linerequest.md:
+    id: 1f2577092972
+    last_write_checksum: sha1:be0d8fa5afd69a11c344632d6d62092c06912053
+    pristine_git_object: bf7b49ab6ff7e1772466460b371c932759b4af45
   docs/models/lines.md:
     id: 34db4acca05a
     last_write_checksum: sha1:959e6be5a398c5b3e2203b609915e8a14da05ee1
@@ -15626,6 +15658,10 @@ trackedFiles:
     id: 71b7e124badc
     last_write_checksum: sha1:a938b35cfb32ff5d5f91b2ae13c9b853dc5f8a26
     pristine_git_object: db6b7b133f45c29190143e8a1ba0680cecdb8816
+  docs/models/reasonrequestbody.md:
+    id: 7c37c28dd33a
+    last_write_checksum: sha1:cf2c72ab01ad3b550b04e1097c84783276f89812
+    pristine_git_object: 6e194feaccc437a67719549b7f7cad3023f150b8
   docs/models/redeemreferralcodeglobals.md:
     id: 5640df85921d
     last_write_checksum: sha1:44f830b7a0730a261b0403ebb6a949d9ef7f1918
@@ -21372,8 +21408,8 @@ trackedFiles:
     pristine_git_object: 8c076be1d520ad5b1785877914e94286177209e9
   docs/sdks/invoices/README.md:
     id: a3f76a06eded
-    last_write_checksum: sha1:3d3115ccdf6826b339cc11f48fd9e0c1eb263a5a
-    pristine_git_object: 304f4f1f9d70d75aee06680658535ede13a86ece
+    last_write_checksum: sha1:6aab27af80b2f9fd1cb81190c7d40f4d658343c9
+    pristine_git_object: 6028488e650de10468cdbfa8e4a037be6ef1aed3
   docs/sdks/keys/README.md:
     id: 9a567cd0daf2
     last_write_checksum: sha1:8977c2514a4f034f190185179a17e1dc6d3f2c0f
@@ -21500,8 +21536,8 @@ trackedFiles:
     pristine_git_object: 89560b566073785535643e694c112bedbd3db13d
   src/autumn_sdk/invoices.py:
     id: 25223c7e4c52
-    last_write_checksum: sha1:08e55fa1cd45db2423a7a66200f31a131b2401bd
-    pristine_git_object: a4b9018ca326a3971fa730f85e8c95e4ef8d70ea
+    last_write_checksum: sha1:444d558e6ac7f688e385271a1cd4826f5f4fb08e
+    pristine_git_object: 6e2c87b0e2173fc71cd7df2a89d74fbfd408113b
   src/autumn_sdk/keys.py:
     id: 078ab2a6d01a
     last_write_checksum: sha1:809ab7ca51e2ebfead59fc15c2712747f74f38b0
@@ -21516,8 +21552,8 @@ trackedFiles:
     pristine_git_object: 5a6a41797e7c59da14e7852eafdc2462fca177db
   src/autumn_sdk/models/__init__.py:
     id: bcf3802243ff
-    last_write_checksum: sha1:4fddff45a5994ec09d8dd43f9b9b051e8381d49d
-    pristine_git_object: 8da494775b2c7d154313f8c9eba8501fe7044998
+    last_write_checksum: sha1:5e7a43f3ba1bb389f4418b98807f982fa0471780
+    pristine_git_object: 902de065459bdf2a2fe6923a4e35e8cf7b92c2ff
   src/autumn_sdk/models/advancetestclockop.py:
     id: 05ed97a4d4fe
     last_write_checksum: sha1:440c7dd1450b892802c467baf8871ecc70151761
@@ -21730,6 +21766,10 @@ trackedFiles:
     id: 4e33eb99f463
     last_write_checksum: sha1:c8febab901b815e80b2c42e250f97ea8896acb57
     pristine_git_object: 6b23c5efe26dcbaf61542e6648c2844863799801
+  src/autumn_sdk/models/issuecreditnoteop.py:
+    id: 5fd9101a5e17
+    last_write_checksum: sha1:f6e31445920b3ccf1434e22a9d337d308840ca9f
+    pristine_git_object: 4167e253ef7e3925a5a4913784bc11642018b729
   src/autumn_sdk/models/linkrevenuecatop.py:
     id: 8dd3e355d8d5
     last_write_checksum: sha1:6b4eb921c3db07664ce026a9c4d59874628420cd
@@ -23215,4 +23255,14 @@ examples:
       responses:
         "200":
           application/json: {"invoice": {"plan_ids": ["pro_plan"], "stripe_id": "in_1A2B3C4D5E6F7G8H", "processor_type": "stripe", "status": "open", "total": 29.99, "currency": "usd", "created_at": 1759247877000, "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456", "id": "inv_2b3c4d5e6f7g8h", "customer_id": "cus_123", "entity_id": null, "amount_paid": 29.99, "refunded_amount": 0, "items": [{"id": "invoice_li_2b3c4d5e6f7g8h", "description": "Pro plan", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": null, "feature_name": null, "quantity": null, "amount": 20, "entities": []}, {"id": "invoice_li_3c4d5e6f7g8h9i", "description": "AI credits", "period_start": 1759247877000, "period_end": 1761839877000, "plan_id": "pro_plan", "feature_id": "ai_credits", "feature_name": "AI Credits", "quantity": 4995, "amount": 9.99, "entities": [{"entity_id": "acme-docs-prod", "quantity": 4995, "amount": 9.99}]}]}}
+  issueCreditNote:
+    speakeasy-default-issue-credit-note:
+      parameters:
+        header:
+          x-api-version: "2.4.0"
+      requestBody:
+        application/json: {"invoice_id": "inv_2b3c4d5e6f7g8h", "lines": [{"id": "invoice_li_2b3c4d5e6f7g8h", "amount": 20}], "destination": "refund", "send_email": true, "reason": "product_unsatisfactory", "memo": "Partial refund for degraded service"}
+      responses:
+        "200":
+          application/json: {"credit_note": {"id": "cn_1MxvRqLkdIwHu7ixY0xbUcxk", "invoice_id": "inv_2b3c4d5e6f7g8h", "number": "ABC-0001-CN-01", "status": "issued", "currency": "usd", "subtotal": 20, "discount_amount": 0, "tax_amount": 0, "total": 20, "pre_payment_amount": 0, "post_payment_amount": 20, "refund_amount": 20, "credit_amount": 0, "out_of_band_amount": 0, "reason": "product_unsatisfactory", "memo": "Partial refund for degraded service", "pdf": "https://pay.stripe.com/credit_notes/acct_123/test_456/pdf", "lines": [{"invoice_line_item_id": "invoice_li_2b3c4d5e6f7g8h", "description": "Pro plan", "quantity": null, "amount": 20, "discount_amount": 0}]}}
 examplesVersion: 1.0.2
