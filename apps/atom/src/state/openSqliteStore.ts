@@ -1,8 +1,9 @@
+import { deepFreeze } from "./deepFreeze.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
-	readSlotDataVersion,
 	readSubject,
+	readSubjectVersion,
 	upsertSubject,
 	upsertSubjects,
 } from "./repos/subjectStates.js";
@@ -23,62 +24,46 @@ const subjectKey = ({
 	entityId: string | null;
 }): string => `${customerId}\u0000${entityId ?? ""}`;
 
-/** Frozen, because every later check shares the same copy: a mutation throws instead of changing another check's answer. */
-const deepFreeze = <T>(value: T): T => {
-	if (typeof value !== "object" || value === null || Object.isFrozen(value))
-		return value;
-	Object.freeze(value);
-	for (const child of Object.values(value)) deepFreeze(child);
-	return value;
-};
-
 export const openSqliteStore = ({
 	databasePath,
 }: {
 	databasePath: string;
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
-	// A check parses its subject's JSON once per change to the file, not once per check.
-	const parsed = new Map<string, StoredSubject | null>();
-	let parsedAtVersion = readSlotDataVersion({ ctx });
+	// A check parses its subject's row once per change to that row, not once per check: a push to one customer leaves the rest parsed.
+	const parsed = new Map<string, { version: string; subject: StoredSubject }>();
 
 	function readParsedSubject(params: {
 		customerId: string;
 		entityId: string | null;
 	}): StoredSubject | null {
-		const version = readSlotDataVersion({ ctx });
-		if (version !== parsedAtVersion) {
-			parsed.clear();
-			parsedAtVersion = version;
-		}
 		subjectReadCounts.reads += 1;
+		const version = readSubjectVersion({ ctx, ...params });
+		if (version === null) return null;
 		const key = subjectKey(params);
 		const held = parsed.get(key);
-		if (held !== undefined) {
-			parsed.delete(key);
+		parsed.delete(key);
+		if (held?.version === version) {
 			parsed.set(key, held);
-			return held;
+			return held.subject;
 		}
 		subjectReadCounts.parses += 1;
-		const read = readSubject({ ctx, ...params });
-		if (read === null) return null;
+		const subject = readSubject({ ctx, ...params });
+		if (subject === null) return null;
 		if (parsed.size >= PARSED_SUBJECTS_PER_SLOT)
 			parsed.delete(parsed.keys().next().value as string);
-		parsed.set(key, deepFreeze(read));
-		return read;
+		// Versioned by what was read, not the version checked first: a write in between is caught by the next check.
+		parsed.set(key, {
+			version: `${subject.readAt}:${subject.logOffset}`,
+			subject: deepFreeze(subject),
+		});
+		return subject;
 	}
 
 	return {
 		readSubject: readParsedSubject,
-		// This connection's own writes do not move the data version, so they drop the parsed copies themselves.
-		setSubject: (params) => {
-			parsed.clear();
-			return upsertSubject({ ctx, ...params });
-		},
-		setSubjects: (params) => {
-			parsed.clear();
-			return upsertSubjects({ ctx, ...params });
-		},
+		setSubject: (params) => upsertSubject({ ctx, ...params }),
+		setSubjects: (params) => upsertSubjects({ ctx, ...params }),
 		countSubjects: () => countSubjects({ ctx }),
 		close: () => ctx.sqliteDb.close(true),
 	};

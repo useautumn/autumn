@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import { parseSharedJson } from "../parseSharedJson.js";
 import type { StoredSubject } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
@@ -14,26 +15,38 @@ type SubjectStateRow = {
 	orgJson: string;
 };
 
-/** Rows were validated where they entered (the request that stored them), so reading only parses JSON. */
+/** Rows were validated where they entered (the request that stored them), so reading only parses JSON. The customer's own state is parsed per row; its catalog and org are mostly the org's, shared. */
 const storedSubjectFromRow = ({
 	row,
 }: {
 	row: SubjectStateRow;
 }): StoredSubject => ({
 	state: JSON.parse(row.stateJson),
-	catalog: JSON.parse(row.catalogJson),
-	org: JSON.parse(row.orgJson),
+	catalog: parseSharedJson(row.catalogJson),
+	org: parseSharedJson(row.orgJson),
 	logOffset: row.logOffset,
 	readAt: Number(row.readAt),
 });
 
-/** Moves whenever another connection, in this process or any other, commits to the file; this connection's own writes leave it alone. */
-export const readSlotDataVersion = ({ ctx }: { ctx: SlotContext }): bigint => {
+/** Which read of the subject the file holds: a change to the row always moves it, so a parsed copy at the same version is current. */
+export const readSubjectVersion = ({
+	ctx,
+	customerId,
+	entityId,
+}: {
+	ctx: SlotContext;
+	customerId: string;
+	entityId: string | null;
+}): string | null => {
 	const row = ctx.sqliteDb
-		.query<{ data_version: bigint }, []>("PRAGMA data_version")
-		.get();
-	if (!row) throw new Error("Unable to read the slot file's data version");
-	return row.data_version;
+		.query<
+			{ logOffset: bigint; readAt: bigint },
+			{ customerId: string; entityId: string }
+		>(
+			"SELECT log_offset AS logOffset, read_at AS readAt FROM subject_states WHERE customer_id = $customerId AND entity_id = $entityId",
+		)
+		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
+	return row ? `${row.readAt}:${row.logOffset}` : null;
 };
 
 /** How many subjects the file holds: what a restart finds, or does not. */

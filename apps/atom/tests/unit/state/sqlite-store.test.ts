@@ -232,4 +232,26 @@ describe("sqlite store", () => {
 		expect(Object.isFrozen(read?.state.identity)).toBe(true);
 		sqliteStore.close();
 	});
+
+	test("a push to one customer leaves another customer's parsed copy in place", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		const other: StoredSubject = {
+			...subjectAt({ logOffset: 1n }),
+			state: createSubjectState({
+				identity: { ...identity, customerId: "cus_2" },
+			}),
+		};
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		const first = sqliteStore.readSubject({
+			customerId: "cus_1",
+			entityId: null,
+		});
+
+		sqliteStore.setSubject({ subject: other });
+
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toBe(first);
+		sqliteStore.close();
+	});
 });
