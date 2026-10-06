@@ -1,7 +1,7 @@
 import type { BillingContext, PhaseProrationBehavior } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { firstPhaseAnchorResetProration } from "@/internal/billing/v2/actions/setPlans/utils/firstPhaseAnchorResetProration";
 import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
+import { requestedAnchorResetProration } from "@/internal/billing/v2/utils/schedulePhaseProration/requestedAnchorResetProration";
 import { listSchedulePhaseProrations } from "@/internal/customers/schedules/repos/listSchedulePhaseProrations";
 
 export type SchedulePhaseProration = {
@@ -25,11 +25,20 @@ export const setPlansPhaseProrations = ({
 	// A later phase starting on the anchor keeps its own proration, so it is listed first.
 	return [
 		...laterPhaseProrations,
-		...firstPhaseAnchorResetProration({ billingContext }),
+		...requestedAnchorResetProration({ billingContext }),
 	];
 };
 
-/** set_plans names each later phase's proration; any other action keeps what the saved schedule holds. */
+/** The prorations a request names: set_plans' phases, or any other action's anchor reset. */
+export const requestedPhaseProrations = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}): SchedulePhaseProration[] =>
+	setPlansPhaseProrations({ billingContext }) ??
+	requestedAnchorResetProration({ billingContext });
+
+/** set_plans names each phase's proration; any other action names its anchor reset's and keeps what the saved schedule holds. */
 export const resolveSchedulePhaseProrations = async ({
 	ctx,
 	billingContext,
@@ -37,12 +46,20 @@ export const resolveSchedulePhaseProrations = async ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 }): Promise<SchedulePhaseProration[]> => {
-	const requestedPhaseProrations = setPlansPhaseProrations({ billingContext });
-	if (requestedPhaseProrations) return requestedPhaseProrations;
-	if (!billingContext.stripeSubscriptionSchedule) return [];
+	const setPlansProrations = setPlansPhaseProrations({ billingContext });
+	if (setPlansProrations) return setPlansProrations;
 
-	return await listSchedulePhaseProrations({
-		ctx,
-		internalCustomerId: billingContext.fullCustomer.internal_id,
+	const anchorResetProrations = requestedAnchorResetProration({
+		billingContext,
 	});
+	if (!billingContext.stripeSubscriptionSchedule) return anchorResetProrations;
+
+	// The request's anchor reset wins over a saved phase starting at the same time.
+	return [
+		...anchorResetProrations,
+		...(await listSchedulePhaseProrations({
+			ctx,
+			internalCustomerId: billingContext.fullCustomer.internal_id,
+		})),
+	];
 };
