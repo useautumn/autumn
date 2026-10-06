@@ -14,6 +14,7 @@ import {
 	type CommitSummary,
 	decide,
 	listCommitsAfter,
+	selectBaseSha,
 } from "./deploy-gate";
 
 const repoRoot = join(import.meta.dir, "../..");
@@ -139,4 +140,65 @@ describe("deploy decision after a publish-bot commit", () => {
 			reason: "bun.lock changed",
 		});
 	}, 60_000);
+});
+
+describe("base build selection", () => {
+	const run = (
+		overrides: Partial<Parameters<typeof selectBaseSha>[0]["runs"][number]>,
+	) => ({
+		headSha: "a".repeat(40),
+		conclusion: "success",
+		event: "push",
+		headBranch: "main",
+		createdAt: "2026-10-06T10:00:00Z",
+		...overrides,
+	});
+
+	test("picks the newest successful main push, whatever order the API returns", () => {
+		expect(
+			selectBaseSha({
+				runs: [
+					run({ headSha: "stale", createdAt: "2026-09-24T10:00:00Z" }),
+					run({ headSha: "newest", createdAt: "2026-10-06T17:22:37Z" }),
+					run({ headSha: "older", createdAt: "2026-10-06T16:20:35Z" }),
+				],
+			}),
+		).toBe("newest");
+	});
+
+	test("ignores other branches, other events, and unsuccessful runs", () => {
+		expect(
+			selectBaseSha({
+				runs: [
+					run({
+						headSha: "dev",
+						headBranch: "dev",
+						createdAt: "2026-10-07T00:00:00Z",
+					}),
+					run({
+						headSha: "manual",
+						event: "workflow_dispatch",
+						createdAt: "2026-10-07T00:00:01Z",
+					}),
+					run({
+						headSha: "failed",
+						conclusion: "failure",
+						createdAt: "2026-10-07T00:00:02Z",
+					}),
+					run({
+						headSha: "running",
+						conclusion: "",
+						createdAt: "2026-10-07T00:00:03Z",
+					}),
+					run({ headSha: "good" }),
+				],
+			}),
+		).toBe("good");
+	});
+
+	test("returns an empty base when nothing qualifies", () => {
+		expect(selectBaseSha({ runs: [run({ conclusion: "cancelled" })] })).toBe(
+			"",
+		);
+	});
 });

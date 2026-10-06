@@ -32,6 +32,26 @@ const PUBLISH_SUBJECT = /^chore: publish generated files for \S+ \[skip ci\]$/;
 
 type AffectedPackage = { path: string; reason: { __typename: string } };
 
+export type BuildRun = {
+	headSha: string;
+	conclusion: string;
+	event: string;
+	headBranch: string;
+	createdAt: string;
+};
+
+// The API's branch/event/status filters return stale runs, so filter and order client-side.
+export const selectBaseSha = ({ runs }: { runs: BuildRun[] }) =>
+	runs
+		.filter(
+			(run) =>
+				run.headBranch === "main" &&
+				run.event === "push" &&
+				run.conclusion === "success",
+		)
+		.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0]
+		?.headSha ?? "";
+
 export type CommitSummary = { sha: string; author: string; subject: string };
 
 // First-parent commits after `baseSha`, oldest first.
@@ -201,7 +221,9 @@ export const decide = async ({
 
 if (import.meta.main) {
 	const root = join(import.meta.dir, "../..");
-	const baseSha = process.env.BASE_SHA ?? "";
+	const baseSha = selectBaseSha({
+		runs: JSON.parse(process.env.BUILD_RUNS ?? "[]"),
+	});
 	const { deploy, reason } = await decide({ root, baseSha });
 	console.log(`deploy=${deploy}: ${reason}`);
 	if (process.env.GITHUB_OUTPUT) {
