@@ -67,18 +67,18 @@ export function StatusCard({ status }: { status: StatusView }) {
 
 export function MigrationStatusCell({ view }: { view: MigrationRowView }) {
 	const { status } = view;
-	const pill = (
-		<div className="flex w-[156px] shrink-0">
-			<ViewChip chip={status.chip} ring={status.ring} />
+	const pillAndBar = (
+		<div className="flex w-full min-w-0 items-center gap-2.5 pr-2">
+			<div className="flex w-[156px] shrink-0">
+				<ViewChip chip={status.chip} ring={status.ring} />
+			</div>
+			<SegmentedBar bar={status.bar} />
 		</div>
 	);
 
 	return (
-		<div className="flex w-full min-w-0 items-center gap-2.5 pr-2">
-			<CellHoverCard trigger={pill}>
-				<StatusCard status={status} />
-			</CellHoverCard>
-			<SegmentedBar bar={status.bar} />
-		</div>
+		<CellHoverCard trigger={pillAndBar}>
+			<StatusCard status={status} />
+		</CellHoverCard>
 	);
 }

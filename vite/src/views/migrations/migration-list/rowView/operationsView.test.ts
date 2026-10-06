@@ -281,11 +281,43 @@ test("a boolean update shows no included amount", () => {
 	).toEqual([["updated"]]);
 });
 
-test("a one-off reset reads with a space before one-off", () => {
+test("an added item with nothing included never reads + 0", () => {
 	const credits = planVariantsOperations()?.modifications.find(
 		({ chip }) => chip.label === "Credits",
 	);
-	expect(credits?.chip.details).toEqual(["+ 0 one-off"]);
+	expect(credits?.chip.details).toEqual(["added"]);
+});
+
+test("an added paid item shows its price after any included amount", () => {
+	const detailsFor = (item: Record<string, unknown>) =>
+		view([
+			{
+				type: "update_plan",
+				plan_filter: { plan_id: "pro" },
+				customize: { add_items: [item] },
+			},
+		])?.modifications.map(({ chip }) => chip.details);
+
+	expect(
+		detailsFor({
+			feature_id: "credits",
+			included: 0,
+			price: {
+				amount: 10,
+				billing_units: 1000,
+				interval: "one_off",
+				billing_method: "prepaid",
+			},
+		}),
+	).toEqual([["$10 per 1,000 one-off"]]);
+	expect(
+		detailsFor({
+			feature_id: "credits",
+			included: 500,
+			reset: { interval: "month" },
+			price: { amount: 1, interval: "month", billing_method: "usage_based" },
+		}),
+	).toEqual([["+ 500/mo · $1/mo"]]);
 });
 
 test("every reset interval reads with a separator", () => {

@@ -95,21 +95,45 @@ const perInterval = (interval: string | undefined): string => {
 	return interval === ResetInterval.OneOff ? ` ${formatted}` : formatted;
 };
 
-/** Boolean features grant access, not an amount, so they carry no detail. */
-const addItemDetail = ({
-	item,
-	isBoolean,
-}: {
-	item: AddItem;
-	isBoolean: boolean;
-}): string | null => {
-	if (isBoolean) return null;
-	if (item.unlimited) return "+ unlimited";
-	if (item.included === undefined) return "added";
+const includedDetail = (item: AddItem): string | null => {
+	if (!item.included) return null;
 	const amount = item.included.toLocaleString("en-US");
 	return item.reset
 		? `+ ${amount}${perInterval(item.reset.interval)}`
 		: `+ ${amount} included`;
+};
+
+const priceDetail = ({
+	price,
+	catalog,
+}: {
+	price: AddItem["price"];
+	catalog: MigrationCatalog;
+}): string | null => {
+	if (!price) return null;
+	if (price.amount === undefined) return `tiered${perInterval(price.interval)}`;
+	const units = price.billing_units ?? 1;
+	const per = units > 1 ? ` per ${units.toLocaleString("en-US")}` : "";
+	return `${catalog.formatAmount(price.amount)}${per}${perInterval(price.interval)}`;
+};
+
+/** Booleans grant access, not an amount; an item adds its included amount and price, never "+ 0". */
+const addItemDetail = ({
+	item,
+	isBoolean,
+	catalog,
+}: {
+	item: AddItem;
+	isBoolean: boolean;
+	catalog: MigrationCatalog;
+}): string | null => {
+	if (isBoolean) return null;
+	if (item.unlimited) return "+ unlimited";
+	const parts = [
+		includedDetail(item),
+		priceDetail({ price: item.price, catalog }),
+	].filter((part) => part !== null);
+	return parts.length > 0 ? parts.join(" · ") : "added";
 };
 
 const priceModification = ({
@@ -201,7 +225,7 @@ const updatePlanModifications = ({
 			sign: "add" as const,
 			chip: itemChip(
 				item,
-				addItemDetail({ item, isBoolean: isBooleanItem(item) }),
+				addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
 			),
 		})),
 		...(customize?.update_items ?? []).map((item) => ({
