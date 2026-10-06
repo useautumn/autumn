@@ -78,10 +78,14 @@ export const upsertSubjects = ({
 }: {
 	ctx: SlotContext;
 	subjects: StoredSubject[];
-}): boolean[] =>
-	ctx.sqliteDb.transaction(() =>
+}): boolean[] => {
+	// One statement is already atomic: a transaction around it only adds a BEGIN and a COMMIT per push.
+	if (subjects.length === 1)
+		return subjects.map((subject) => upsertSubject({ ctx, subject }));
+	return ctx.sqliteDb.transaction(() =>
 		subjects.map((subject) => upsertSubject({ ctx, subject })),
 	)();
+};
 
 /** False when the subject was read before the one held, or at the same instant for an earlier change: a late push never undoes a newer one. */
 export const upsertSubject = ({

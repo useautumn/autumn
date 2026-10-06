@@ -50,7 +50,7 @@ describe("process stats", () => {
 	test("answered checks, forwards and pushes are timed separately; other paths are not counted", () => {
 		const statsDir = newStatsDir();
 		const { stats } = startStats({ statsDir });
-		const check = { path: "/v1/balances.check", forwarded: false };
+		const check = { path: "/v1/balances.check", forwarded: false, bytes: 0 };
 
 		stats.recordRequest({ ...check, durationMs: 3 });
 		stats.recordRequest({ ...check, durationMs: 9 });
@@ -59,11 +59,13 @@ describe("process stats", () => {
 			path: "/v1/subjects.set",
 			durationMs: 40,
 			forwarded: false,
+			bytes: 3000,
 		});
 		stats.recordRequest({
 			path: "/v1/atoms.get",
 			durationMs: 500,
 			forwarded: false,
+			bytes: 0,
 		});
 		stats.publish();
 		stats.stop();
@@ -75,6 +77,29 @@ describe("process stats", () => {
 			forwardMaxMs: 140,
 			pushes: 1,
 			pushMaxMs: 40,
+			checkTotalMs: 12,
+			pushTotalMs: 40,
+			pushBytes: 3000,
+		});
+	});
+
+	test("each publish counts the subject reads and parses since the last", () => {
+		const statsDir = newStatsDir();
+		const counts = { reads: 10, parses: 4 };
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+			subjectReadCounts: () => counts,
+		});
+		counts.reads = 25;
+		counts.parses = 6;
+		stats.publish();
+		stats.stop();
+
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			subjectReads: 15,
+			subjectParses: 2,
 		});
 	});
 
@@ -88,12 +113,14 @@ describe("process stats", () => {
 			path: "/v1/balances.check",
 			durationMs: 250,
 			forwarded: false,
+			bytes: 0,
 		});
 		stats.publish();
 		stats.recordRequest({
 			path: "/v1/balances.check",
 			durationMs: 2,
 			forwarded: false,
+			bytes: 0,
 		});
 		stats.publish();
 		expect(read()[0]).toMatchObject({ checks: 2, checkMaxMs: 250 });

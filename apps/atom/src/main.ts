@@ -7,6 +7,7 @@ import { startProcessStats } from "./init/processStats.js";
 import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
+import { subjectReadCounts } from "./state/openSqliteStore.js";
 
 /** How long a process that died stays down before another takes its place. */
 const RESTART_DELAY_MS = 1000;
@@ -25,6 +26,7 @@ function createAtom(): AtomServer {
 		const processStats = startProcessStats({
 			index: childIndex === undefined ? 0 : Number(childIndex),
 			logger,
+			subjectReadCounts: () => subjectReadCounts,
 		});
 		return createAtomServer({
 			ctx: { logger, processStats },
