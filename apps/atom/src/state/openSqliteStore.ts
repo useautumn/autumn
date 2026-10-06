@@ -13,6 +13,9 @@ import type { StoredSubject } from "./types/storedSubject.js";
 /** Every slot's subject reads on this thread, and how many read the file: published as the held copies' hit rate. */
 export const subjectReadCounts = { reads: 0, parses: 0 };
 
+/** Subjects held per slot, the least recently read dropped first: a thread owning ~18 of 128 slots holds ~37k at most. */
+const HELD_SUBJECTS_PER_SLOT = 2048;
+
 const subjectKey = ({
 	customerId,
 	entityId,
@@ -47,13 +50,24 @@ export const openSqliteStore = ({
 		subjectReadCounts.reads += 1;
 		const key = subjectKey(params);
 		const found = held.get(key);
-		if (found) return found;
+		if (found) {
+			held.delete(key);
+			held.set(key, found);
+			return found;
+		}
 		const row = readSubjectRow({ ctx, ...params });
 		if (row === null) return null;
 		subjectReadCounts.parses += 1;
 		const subject = deepFreeze(storedSubjectFromRow({ ctx, row }));
-		held.set(key, subject);
+		hold({ key, subject });
 		return subject;
+	}
+
+	function hold({ key, subject }: { key: string; subject: StoredSubject }) {
+		held.delete(key);
+		if (held.size >= HELD_SUBJECTS_PER_SLOT)
+			held.delete(held.keys().next().value as string);
+		held.set(key, subject);
 	}
 
 	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
@@ -61,7 +75,7 @@ export const openSqliteStore = ({
 		const writeStartedAt = performance.now();
 		const stored = upsertSubjects({ ctx, subjects });
 		for (const subject of stored)
-			if (subject) held.set(keyOf(subject), deepFreeze(subject));
+			if (subject) hold({ key: keyOf(subject), subject: deepFreeze(subject) });
 		pushPhaseMs.write += performance.now() - writeStartedAt;
 		return stored.map((subject) => subject !== null);
 	}

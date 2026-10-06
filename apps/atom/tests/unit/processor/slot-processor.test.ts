@@ -2,10 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { CheckExpand } from "@autumn/shared";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
+import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	checkRequestFor,
+	checkResponseOf,
 	forwardReasonOf,
 	oldestApiVersion,
 	storedEntitySubjectWith,
@@ -17,9 +19,14 @@ const createProcessor = () => {
 	const sqliteStore = openSqliteStore({ databasePath: ":memory:" });
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
 	stores.push(sqliteStore, catalogStore);
-	return createSlotProcessor({
+	const processor = createSlotProcessor({
 		ctx: { sqliteStore, catalogStore, logger: getAtomLogger() },
 	});
+	return {
+		setSubject: processor.setSubject,
+		check: ({ request }: { request: CheckRequest }) =>
+			checkResponseOf({ processor, request }),
+	};
 };
 afterEach(() => {
 	for (const store of stores.splice(0)) store.close();

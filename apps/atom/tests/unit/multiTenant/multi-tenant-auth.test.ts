@@ -11,6 +11,7 @@ import {
 } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
 	checkRequestFor,
+	checkResponseOf,
 	forwardReasonOf,
 	storedSubjectWith,
 } from "../utils/atomFixtures.js";
@@ -48,11 +49,22 @@ const storeCustomer = async ({
 		?.processorFor({ customerId: "cus_1" })
 		.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
 };
-const checkCustomer = ({ auth, token }: { auth: Auth; token: string }) =>
-	auth
+const checkCustomer = async ({
+	auth,
+	token,
+}: {
+	auth: Auth;
+	token: string;
+}) => {
+	const processor = auth
 		.authorize({ token })
-		?.processorFor({ customerId: "cus_1" })
-		.check({ request: checkRequestFor({ params: { required_balance: 5 } }) });
+		?.processorFor({ customerId: "cus_1" });
+	if (!processor) return undefined;
+	return checkResponseOf({
+		processor,
+		request: checkRequestFor({ params: { required_balance: 5 } }),
+	});
+};
 
 describe("multi-tenant auth", () => {
 	test("a token opens the Atom it was put with, and no other", async () => {

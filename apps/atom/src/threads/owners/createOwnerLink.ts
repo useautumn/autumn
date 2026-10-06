@@ -1,6 +1,9 @@
-import type { CheckResponseV3 } from "@autumn/shared";
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
-import { checkRequestToWire, replyToError } from "./ownerCallContract.js";
+import {
+	checkRequestToWire,
+	replyToError,
+	storedSubjectToWire,
+} from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type { OwnerCallBody, OwnerReply } from "./types/ownerCall.js";
 import type { CatalogCalls } from "./types/slotOwners.js";
@@ -31,13 +34,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		waiting.delete(reply.id);
 	}
 
-	async function call(body: OwnerCallBody): Promise<CheckResponseV3 | boolean> {
+	async function call(body: OwnerCallBody): Promise<string | boolean> {
 		if (!port || waiting.size >= MAX_CALLS_IN_FLIGHT)
 			throw new OwnerUnavailableError({ thread });
 		const id = nextId++;
 		const reply = Promise.withResolvers<OwnerReply>();
 		waiting.set(id, reply);
-		port.postMessage({ id, ...body });
+		port.postMessage(JSON.stringify({ id, ...body }));
 		const answered = await reply.promise;
 		if (!answered.ok) throw replyToError(answered);
 		return answered.value;
@@ -50,9 +53,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					type: "check",
 					atomId,
 					request: checkRequestToWire({ request }),
-				})) as CheckResponseV3,
+				})) as string,
 			setSubject: async ({ subject }) =>
-				(await call({ type: "setSubject", atomId, subject })) as boolean,
+				(await call({
+					type: "setSubject",
+					atomId,
+					subject: storedSubjectToWire({ subject }),
+				})) as boolean,
 		};
 	}
 
