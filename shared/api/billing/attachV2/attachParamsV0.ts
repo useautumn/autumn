@@ -1,3 +1,5 @@
+import { BillingDetailsBillingParamsSchema } from "@api/billing/common/billingDetailsBillingParams";
+import { TaxParamsSchema } from "@api/billing/common/taxParams";
 import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
@@ -42,6 +44,8 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	no_billing_changes: z.boolean().optional(),
 
 	tax_rate_id: z.string().optional(),
+	tax: TaxParamsSchema.optional(),
+	billing_details: BillingDetailsBillingParamsSchema.optional(),
 
 	license_quantities: z.array(LicenseQuantityParamsSchema).optional(),
 	currency: CurrencyCodeSchema.optional().meta({

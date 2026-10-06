@@ -38420,6 +38420,14 @@ paths:
         before the customer completes the hosted form. Set it here rather than
         on `invoice_mode`, which only covers the invoice-unpaid case. (optional)
 
+        @param tax - Tax behavior for this attach. Use automatic_tax to turn
+        automatic tax on or off for this request, or rate_id to apply a fixed
+        tax rate. (optional)
+
+        @param billingDetails - Billing address, tax IDs and tax exemption to
+        save to the customer before billing. Lets an invoice-mode attach supply
+        the address automatic tax needs in the same call. (optional)
+
         @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
         tax rate on the created subscription, invoice, or checkout session line
         items. (optional)
@@ -41073,6 +41081,92 @@ paths:
                     inserted before the customer completes the hosted form. Set
                     it here rather than on `invoice_mode`, which only covers the
                     invoice-unpaid case.
+                tax:
+                  type: object
+                  properties:
+                    automatic_tax:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: Whether to calculate tax automatically through Stripe for this
+                            request. Defaults to the organization's automatic
+                            tax setting.
+                      required:
+                        - enabled
+                      description: Override the organization's automatic tax setting for this request.
+                        Can't be enabled together with rate_id or tax_rate_id.
+                    rate_id:
+                      type: string
+                      description: Stripe tax rate ID (txr_...) to apply instead of automatic tax.
+                        Takes precedence over the top-level tax_rate_id.
+                  description: Tax behavior for this attach. Use automatic_tax to turn automatic
+                    tax on or off for this request, or rate_id to apply a fixed
+                    tax rate.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      description: Billing address saved to the customer and used to calculate tax.
+                        Replaces the customer's whole address.
+                    tax_ids:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                              https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                          value:
+                            type: string
+                            description: The tax ID, e.g. DE123456789.
+                        required:
+                          - type
+                          - value
+                        title: BillingDetailsTaxId
+                      description: Tax IDs to add to the customer. IDs the customer already has are
+                        ignored, and existing IDs are never removed. To remove
+                        one, use customers.update or Stripe.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Customer tax exemption status. 'exempt' customers are never charged
+                        tax and need no address. 'reverse' applies reverse
+                        charge.
+                  description: Billing address, tax IDs and tax exemption to save to the customer
+                    before billing. Lets an invoice-mode attach supply the
+                    address automatic tax needs in the same call.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
@@ -50151,6 +50245,14 @@ paths:
         before the customer completes the hosted form. Set it here rather than
         on `invoice_mode`, which only covers the invoice-unpaid case. (optional)
 
+        @param tax - Tax behavior for this attach. Use automatic_tax to turn
+        automatic tax on or off for this request, or rate_id to apply a fixed
+        tax rate. (optional)
+
+        @param billingDetails - Billing address, tax IDs and tax exemption to
+        save to the customer before billing. Lets an invoice-mode attach supply
+        the address automatic tax needs in the same call. (optional)
+
         @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
         tax rate on the created subscription, invoice, or checkout session line
         items. (optional)
@@ -52804,6 +52906,92 @@ paths:
                     inserted before the customer completes the hosted form. Set
                     it here rather than on `invoice_mode`, which only covers the
                     invoice-unpaid case.
+                tax:
+                  type: object
+                  properties:
+                    automatic_tax:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: Whether to calculate tax automatically through Stripe for this
+                            request. Defaults to the organization's automatic
+                            tax setting.
+                      required:
+                        - enabled
+                      description: Override the organization's automatic tax setting for this request.
+                        Can't be enabled together with rate_id or tax_rate_id.
+                    rate_id:
+                      type: string
+                      description: Stripe tax rate ID (txr_...) to apply instead of automatic tax.
+                        Takes precedence over the top-level tax_rate_id.
+                  description: Tax behavior for this attach. Use automatic_tax to turn automatic
+                    tax on or off for this request, or rate_id to apply a fixed
+                    tax rate.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      description: Billing address saved to the customer and used to calculate tax.
+                        Replaces the customer's whole address.
+                    tax_ids:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                              https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                          value:
+                            type: string
+                            description: The tax ID, e.g. DE123456789.
+                        required:
+                          - type
+                          - value
+                        title: BillingDetailsTaxId
+                      description: Tax IDs to add to the customer. IDs the customer already has are
+                        ignored, and existing IDs are never removed. To remove
+                        one, use customers.update or Stripe.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Customer tax exemption status. 'exempt' customers are never charged
+                        tax and need no address. 'reverse' applies reverse
+                        charge.
+                  description: Billing address, tax IDs and tax exemption to save to the customer
+                    before billing. Lets an invoice-mode attach supply the
+                    address automatic tax needs in the same call.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
@@ -53211,9 +53399,12 @@ paths:
                         enum:
                           - complete
                           - incomplete
+                          - requires_location
                         type: string
-                        description: Calculation status ('complete' when Stripe Tax succeeds or
-                          'incomplete' when Stripe Tax returned 0 or errored).
+                        description: Calculation status. 'complete' when tax was calculated,
+                          'incomplete' when the calculation errored,
+                          'requires_location' when the customer has no billing
+                          address to tax against.
                     required:
                       - total
                       - amount_inclusive
@@ -54712,9 +54903,12 @@ paths:
                         enum:
                           - complete
                           - incomplete
+                          - requires_location
                         type: string
-                        description: Calculation status ('complete' when Stripe Tax succeeds or
-                          'incomplete' when Stripe Tax returned 0 or errored).
+                        description: Calculation status. 'complete' when tax was calculated,
+                          'incomplete' when the calculation errored,
+                          'requires_location' when the customer has no billing
+                          address to tax against.
                     required:
                       - total
                       - amount_inclusive
@@ -60685,9 +60879,12 @@ paths:
                         enum:
                           - complete
                           - incomplete
+                          - requires_location
                         type: string
-                        description: Calculation status ('complete' when Stripe Tax succeeds or
-                          'incomplete' when Stripe Tax returned 0 or errored).
+                        description: Calculation status. 'complete' when tax was calculated,
+                          'incomplete' when the calculation errored,
+                          'requires_location' when the customer has no billing
+                          address to tax against.
                     required:
                       - total
                       - amount_inclusive
@@ -64069,6 +64266,92 @@ paths:
                     inserted before the customer completes the hosted form. Set
                     it here rather than on `invoice_mode`, which only covers the
                     invoice-unpaid case.
+                tax:
+                  type: object
+                  properties:
+                    automatic_tax:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: Whether to calculate tax automatically through Stripe for this
+                            request. Defaults to the organization's automatic
+                            tax setting.
+                      required:
+                        - enabled
+                      description: Override the organization's automatic tax setting for this request.
+                        Can't be enabled together with rate_id or tax_rate_id.
+                    rate_id:
+                      type: string
+                      description: Stripe tax rate ID (txr_...) to apply instead of automatic tax.
+                        Takes precedence over the top-level tax_rate_id.
+                  description: Tax behavior for this attach. Use automatic_tax to turn automatic
+                    tax on or off for this request, or rate_id to apply a fixed
+                    tax rate.
+                billing_details:
+                  type: object
+                  properties:
+                    address:
+                      type: object
+                      properties:
+                        line1:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        line2:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        city:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        state:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        postal_code:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        country:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: Two-letter country code (ISO 3166-1 alpha-2).
+                      description: Billing address saved to the customer and used to calculate tax.
+                        Replaces the customer's whole address.
+                    tax_ids:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See
+                              https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+                          value:
+                            type: string
+                            description: The tax ID, e.g. DE123456789.
+                        required:
+                          - type
+                          - value
+                        title: BillingDetailsTaxId
+                      description: Tax IDs to add to the customer. IDs the customer already has are
+                        ignored, and existing IDs are never removed. To remove
+                        one, use customers.update or Stripe.
+                    tax_exempt:
+                      enum:
+                        - none
+                        - exempt
+                        - reverse
+                      type: string
+                      description: Customer tax exemption status. 'exempt' customers are never charged
+                        tax and need no address. 'reverse' applies reverse
+                        charge.
+                  description: Billing address, tax IDs and tax exemption to save to the customer
+                    before billing. Lets an invoice-mode attach supply the
+                    address automatic tax needs in the same call.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
@@ -71480,6 +71763,7 @@ paths:
                                 enum:
                                   - complete
                                   - incomplete
+                                  - requires_location
                                 type: string
                             required:
                               - total
@@ -72631,6 +72915,248 @@ paths:
                               quantity: 4995
                               amount: 9.99
       x-speakeasy-name-override: pay
+      parameters:
+        - *a1
+  /v1/invoices.issue_credit_note:
+    post:
+      operationId: issueCreditNote
+      description: "Issues a Stripe credit note against an open or paid invoice, for a
+        flat amount or for specific invoice lines. On an open invoice the credit
+        reduces what is still owed. On a paid invoice the credited money goes to
+        the chosen destination: the customer's balance (default), a refund, or a
+        record of money returned outside Stripe. Line amounts are pre-discount
+        and pre-tax, like the invoice's own item amounts. Pass preview to see
+        the credit note without issuing it."
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_id:
+                  type: string
+                  description: The Autumn invoice ID to credit. Must be open or paid.
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                  description: Total to credit across the whole invoice. Cannot be combined with
+                    lines.
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The invoice line item ID (invoice_li_...) from the invoice's items.
+                      amount:
+                        type: number
+                        exclusiveMinimum: 0
+                        description: Amount to credit on this line, pre-discount and pre-tax like the
+                          line's own amount. The line's discount share and tax
+                          are applied on top.
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                        description: Number of units of this line to credit.
+                    required:
+                      - id
+                    additionalProperties: false
+                  description: Credit specific invoice lines instead of a flat amount. Cannot be
+                    combined with amount. Unavailable on invoices recorded
+                    before line item storage.
+                destination:
+                  enum:
+                    - customer_balance
+                    - refund
+                    - out_of_band
+                  type: string
+                  description: Where already-paid money goes. customer_balance credits the
+                    customer's balance for their next invoice, refund returns it
+                    to the original payment method, and out_of_band records
+                    money returned outside Stripe.
+                  default: customer_balance
+                send_email:
+                  type: boolean
+                  default: true
+                  description: Email the credit note to the customer.
+                reason:
+                  enum:
+                    - duplicate
+                    - fraudulent
+                    - order_change
+                    - product_unsatisfactory
+                  type: string
+                  description: Reason shown on the credit note.
+                memo:
+                  type: string
+                  description: Memo printed on the credit note PDF.
+                preview:
+                  type: boolean
+                  description: Return the credit note that would be issued without creating it.
+              required:
+                - invoice_id
+              additionalProperties: false
+              title: IssueCreditNoteParams
+              examples:
+                - invoice_id: inv_2b3c4d5e6f7g8h
+                  lines:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      amount: 20
+                  destination: refund
+                  send_email: true
+                  reason: product_unsatisfactory
+                  memo: Partial refund for degraded service
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credit_note:
+                    type: object
+                    properties:
+                      id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The Stripe credit note ID. Null on previews.
+                      invoice_id:
+                        type: string
+                        description: The Autumn invoice ID this credit note adjusts.
+                      number:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: Credit note number shown on the PDF. Null on previews.
+                      status:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: issued or void. Null on previews.
+                      currency:
+                        type: string
+                      subtotal:
+                        type: number
+                      discount_amount:
+                        type: number
+                      tax_amount:
+                        type: number
+                      total:
+                        type: number
+                        description: Total credited, including discounts and tax.
+                      pre_payment_amount:
+                        type: number
+                        description: Portion that reduced the amount still owed on the invoice.
+                      post_payment_amount:
+                        type: number
+                        description: Portion of already-paid money returned to the customer.
+                      refund_amount:
+                        type: number
+                      credit_amount:
+                        type: number
+                      out_of_band_amount:
+                        type: number
+                      reason:
+                        anyOf:
+                          - enum:
+                              - duplicate
+                              - fraudulent
+                              - order_change
+                              - product_unsatisfactory
+                            type: string
+                          - type: "null"
+                      memo:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      pdf:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL of the credit note PDF. Null on previews.
+                      lines:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            invoice_line_item_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The credited invoice line item ID, if the credit targeted a line.
+                            description:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            quantity:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                            amount:
+                              type: number
+                              description: Amount credited on this line, pre-discount and pre-tax.
+                            discount_amount:
+                              type: number
+                          required:
+                            - invoice_line_item_id
+                            - description
+                            - quantity
+                            - amount
+                            - discount_amount
+                    required:
+                      - id
+                      - invoice_id
+                      - number
+                      - status
+                      - currency
+                      - subtotal
+                      - discount_amount
+                      - tax_amount
+                      - total
+                      - pre_payment_amount
+                      - post_payment_amount
+                      - refund_amount
+                      - credit_amount
+                      - out_of_band_amount
+                      - reason
+                      - memo
+                      - pdf
+                      - lines
+                required:
+                  - credit_note
+                examples:
+                  - credit_note:
+                      id: cn_1MxvRqLkdIwHu7ixY0xbUcxk
+                      invoice_id: inv_2b3c4d5e6f7g8h
+                      number: ABC-0001-CN-01
+                      status: issued
+                      currency: usd
+                      subtotal: 20
+                      discount_amount: 0
+                      tax_amount: 0
+                      total: 20
+                      pre_payment_amount: 0
+                      post_payment_amount: 20
+                      refund_amount: 20
+                      credit_amount: 0
+                      out_of_band_amount: 0
+                      reason: product_unsatisfactory
+                      memo: Partial refund for degraded service
+                      pdf: https://pay.stripe.com/credit_notes/acct_123/test_456/pdf
+                      lines:
+                        - invoice_line_item_id: invoice_li_2b3c4d5e6f7g8h
+                          description: Pro plan
+                          quantity: null
+                          amount: 20
+                          discount_amount: 0
+      x-speakeasy-name-override: issueCreditNote
       parameters:
         - *a1
   /v1/invoices.reissue:
@@ -73825,6 +74351,7 @@ paths:
                                 enum:
                                   - complete
                                   - incomplete
+                                  - requires_location
                                 type: string
                             required:
                               - total

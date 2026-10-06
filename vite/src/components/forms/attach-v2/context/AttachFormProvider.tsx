@@ -1,11 +1,13 @@
 import type {
 	ApiDiscount,
+	AttachParamsV0,
 	CusProduct,
 	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
 	FullCustomer,
+	MultiAttachParamsV0,
 	ProductItem,
 	ProductV2,
 	TrialOnEnd,
@@ -98,6 +100,11 @@ interface AttachFormContextValue {
 	attachCurrency: UseAttachCurrencyReturn;
 
 	previewQuery: UseAttachPreviewReturn;
+	/** Preview with invoice mode on, so tax reflects the send_invoice path. */
+	invoicePreview: {
+		path: string;
+		requestBody: AttachParamsV0 | MultiAttachParamsV0 | null;
+	};
 	previewDiff: UsePreviewDiffReturn;
 
 	generation: BillingGenerationState;
@@ -518,6 +525,8 @@ export function AttachFormProvider({
 		disableProration,
 		currency: attachCurrency.requestCurrency,
 		removePlanIds: formValues.removePlanIds,
+		chargeTax: formValues.chargeTax,
+		billingDetails: formValues.billingDetails,
 	});
 	const {
 		requestBody: multiRequestBody,
@@ -566,6 +575,13 @@ export function AttachFormProvider({
 		path: billingOperation.previewPath,
 		requestBody: operationRequestBody,
 	});
+	const invoicePreview = useMemo(
+		() => ({
+			path: billingOperation.previewPath,
+			requestBody: buildOperationRequestBody({ useInvoice: true }),
+		}),
+		[billingOperation.previewPath, buildOperationRequestBody],
+	);
 	const isAutoSelectingImmediateSchedule =
 		!isMultiPlan &&
 		hasActiveSubscription &&
@@ -650,6 +666,7 @@ export function AttachFormProvider({
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
+			invoicePreview,
 			previewDiff,
 			generation,
 			planEditorProduct,
@@ -686,6 +703,7 @@ export function AttachFormProvider({
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
+			invoicePreview,
 			previewDiff,
 			generation,
 			planEditorProduct,

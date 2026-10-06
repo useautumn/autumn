@@ -128,6 +128,29 @@ export const attachLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const attachAutomaticTaxSchema = z.object({
+	enabled: z.boolean(),
+});
+
+export const attachTaxSchema = z.object({
+	automaticTax: z.union([attachAutomaticTaxSchema, z.undefined()]).optional(),
+	rateId: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const attachAddressSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postalCode: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const attachBillingDetailsTaxIdSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
 export const attachRemoveDiscountSchema = z.object({
 	rewardId: z.string(),
 });
@@ -411,6 +434,39 @@ export const attachCarryOverUsagesOutboundSchema = z.object({
 export const attachLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
+});
+
+export const attachAutomaticTaxOutboundSchema = z.object({
+	enabled: z.boolean(),
+});
+
+export const attachTaxOutboundSchema = z.object({
+	automatic_tax: z
+		.union([attachAutomaticTaxOutboundSchema, z.undefined()])
+		.optional(),
+	rate_id: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const attachAddressOutboundSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postal_code: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const attachBillingDetailsTaxIdOutboundSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
+export const attachBillingDetailsOutboundSchema = z.object({
+	address: z.union([attachAddressOutboundSchema, z.undefined()]).optional(),
+	tax_ids: z
+		.union([z.array(attachBillingDetailsTaxIdOutboundSchema), z.undefined()])
+		.optional(),
+	tax_exempt: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachRemoveDiscountOutboundSchema = z.object({
@@ -723,6 +779,16 @@ export const attachRedirectModeSchema = closedEnumSchema;
 
 export const attachPlanScheduleSchema = closedEnumSchema;
 
+export const attachTaxExemptSchema = closedEnumSchema;
+
+export const attachBillingDetailsSchema = z.object({
+	address: z.union([attachAddressSchema, z.undefined()]).optional(),
+	taxIds: z
+		.union([z.array(attachBillingDetailsTaxIdSchema), z.undefined()])
+		.optional(),
+	taxExempt: z.union([attachTaxExemptSchema, z.undefined()]).optional(),
+});
+
 export const attachParamsSchema = z.object({
 	customerId: z.string(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -775,6 +841,10 @@ export const attachParamsSchema = z.object({
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax: z.union([attachTaxSchema, z.undefined()]).optional(),
+	billingDetails: z
+		.union([attachBillingDetailsSchema, z.undefined()])
+		.optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
@@ -938,6 +1008,10 @@ export const attachParamsOutboundSchema = z.object({
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax: z.union([attachTaxOutboundSchema, z.undefined()]).optional(),
+	billing_details: z
+		.union([attachBillingDetailsOutboundSchema, z.undefined()])
+		.optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),

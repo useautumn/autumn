@@ -56,6 +56,7 @@ export * from "./get-webhook-op.js";
 export * from "./http-client-errors.js";
 export * from "./import-op.js";
 export * from "./insert-invoices-op.js";
+export * from "./issue-credit-note-op.js";
 export * from "./link-revenue-cat-op.js";
 export * from "./list-balances-op.js";
 export * from "./list-customers-op.js";

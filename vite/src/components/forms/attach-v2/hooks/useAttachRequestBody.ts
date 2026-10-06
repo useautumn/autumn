@@ -27,6 +27,10 @@ import {
 	filterValidDiscounts,
 } from "../utils/discountUtils";
 import { stripPricesFromItems } from "../utils/grantFreeUtils";
+import {
+	type InvoiceBillingDetailsForm,
+	invoiceBillingDetailsToParams,
+} from "../utils/invoiceBillingDetails";
 
 export interface BuildAttachRequestBodyParams {
 	customerId: string | undefined;
@@ -55,6 +59,8 @@ export interface BuildAttachRequestBodyParams {
 	discounts: FormDiscount[];
 	removedRewardIds?: string[];
 	noBillingChanges: boolean;
+	chargeTax?: boolean;
+	billingDetails?: InvoiceBillingDetailsForm;
 	enablePlanImmediately: boolean;
 	carryOverBalances: boolean;
 	carryOverBalanceFeatureIds: string[];
@@ -94,6 +100,8 @@ export function buildAttachRequestBody({
 	discounts,
 	removedRewardIds = [],
 	noBillingChanges,
+	chargeTax = true,
+	billingDetails,
 	enablePlanImmediately,
 	carryOverBalances,
 	carryOverBalanceFeatureIds = [],
@@ -227,6 +235,17 @@ export function buildAttachRequestBody({
 		body.no_billing_changes = true;
 	}
 
+	if (!chargeTax) {
+		body.tax = { automatic_tax: { enabled: false } };
+	}
+
+	const billingDetailsParams = billingDetails
+		? invoiceBillingDetailsToParams(billingDetails)
+		: undefined;
+	if (billingDetailsParams) {
+		body.billing_details = billingDetailsParams;
+	}
+
 	if (enablePlanImmediately) {
 		body.enable_product_immediately = true;
 	}
@@ -290,6 +309,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		discounts,
 		removedRewardIds,
 		noBillingChanges,
+		chargeTax,
+		billingDetails,
 		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
@@ -330,6 +351,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				discounts,
 				removedRewardIds,
 				noBillingChanges,
+				chargeTax,
+				billingDetails,
 				enablePlanImmediately,
 				carryOverBalances,
 				carryOverBalanceFeatureIds,
@@ -367,6 +390,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			discounts,
 			removedRewardIds,
 			noBillingChanges,
+			chargeTax,
+			billingDetails,
 			enablePlanImmediately,
 			carryOverBalances,
 			carryOverBalanceFeatureIds,

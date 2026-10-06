@@ -2591,10 +2591,11 @@ PreviewMultiAttachStatus = Union[
     Literal[
         "complete",
         "incomplete",
+        "requires_location",
     ],
     UnrecognizedStr,
 ]
-r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+r"""Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against."""
 
 
 class PreviewMultiAttachTaxTypedDict(TypedDict):
@@ -2609,7 +2610,7 @@ class PreviewMultiAttachTaxTypedDict(TypedDict):
     currency: str
     r"""Three-letter currency code."""
     status: PreviewMultiAttachStatus
-    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+    r"""Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against."""
 
 
 class PreviewMultiAttachTax(BaseModel):
@@ -2628,7 +2629,7 @@ class PreviewMultiAttachTax(BaseModel):
     r"""Three-letter currency code."""
 
     status: PreviewMultiAttachStatus
-    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+    r"""Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against."""
 
 
 class PreviewMultiAttachInvoiceCreditsTypedDict(TypedDict):

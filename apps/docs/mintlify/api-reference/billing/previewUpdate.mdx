@@ -4966,8 +4966,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Three-letter currency code.
     </DynamicResponseField>
 
-    <DynamicResponseField name="status" type="'complete' | 'incomplete'">
-      Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+    <DynamicResponseField name="status" type="'complete' | 'incomplete' | 'requires_location'">
+      Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
     </DynamicResponseField>
 
   </Expandable>

@@ -5,6 +5,7 @@
 import { invoicesCreate } from "../funcs/invoices-create.js";
 import { invoicesFinalize } from "../funcs/invoices-finalize.js";
 import { invoicesInsert } from "../funcs/invoices-insert.js";
+import { invoicesIssueCreditNote } from "../funcs/invoices-issue-credit-note.js";
 import { invoicesListTemplates } from "../funcs/invoices-list-templates.js";
 import { invoicesList } from "../funcs/invoices-list.js";
 import { invoicesPay } from "../funcs/invoices-pay.js";
@@ -93,6 +94,20 @@ export class Invoices extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.PayInvoiceResponse> {
     return unwrapAsync(invoicesPay(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Issues a Stripe credit note against an open or paid invoice, for a flat amount or for specific invoice lines. On an open invoice the credit reduces what is still owed. On a paid invoice the credited money goes to the chosen destination: the customer's balance (default), a refund, or a record of money returned outside Stripe. Line amounts are pre-discount and pre-tax, like the invoice's own item amounts. Pass preview to see the credit note without issuing it.
+   */
+  async issueCreditNote(
+    request: models.IssueCreditNoteParams,
+    options?: RequestOptions,
+  ): Promise<models.IssueCreditNoteResponse> {
+    return unwrapAsync(invoicesIssueCreditNote(
       this,
       request,
       options,

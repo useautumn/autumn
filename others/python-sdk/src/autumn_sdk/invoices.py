@@ -1267,6 +1267,232 @@ class Invoices(BaseSDK):
 
         raise errors.AutumnDefaultError("Unexpected response received", http_res)
 
+    def issue_credit_note(
+        self,
+        *,
+        invoice_id: str,
+        amount: Optional[float] = None,
+        lines: Optional[
+            Union[List[models.LineRequest], List[models.LineRequestTypedDict]]
+        ] = None,
+        destination: Optional[models.Destination] = "customer_balance",
+        send_email: Optional[bool] = True,
+        reason: Optional[models.ReasonRequestBody] = None,
+        memo: Optional[str] = None,
+        preview: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.IssueCreditNoteResponse:
+        r"""Issues a Stripe credit note against an open or paid invoice, for a flat amount or for specific invoice lines. On an open invoice the credit reduces what is still owed. On a paid invoice the credited money goes to the chosen destination: the customer's balance (default), a refund, or a record of money returned outside Stripe. Line amounts are pre-discount and pre-tax, like the invoice's own item amounts. Pass preview to see the credit note without issuing it.
+
+        :param invoice_id: The Autumn invoice ID to credit. Must be open or paid.
+        :param amount: Total to credit across the whole invoice. Cannot be combined with lines.
+        :param lines: Credit specific invoice lines instead of a flat amount. Cannot be combined with amount. Unavailable on invoices recorded before line item storage.
+        :param destination: Where already-paid money goes. customer_balance credits the customer's balance for their next invoice, refund returns it to the original payment method, and out_of_band records money returned outside Stripe.
+        :param send_email: Email the credit note to the customer.
+        :param reason: Reason shown on the credit note.
+        :param memo: Memo printed on the credit note PDF.
+        :param preview: Return the credit note that would be issued without creating it.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.IssueCreditNoteParams(
+            invoice_id=invoice_id,
+            amount=amount,
+            lines=utils.get_pydantic_model(lines, Optional[List[models.LineRequest]]),
+            destination=destination,
+            send_email=send_email,
+            reason=reason,
+            memo=memo,
+            preview=preview,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/invoices.issue_credit_note",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.IssueCreditNoteGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.IssueCreditNoteParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="issueCreditNote",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.IssueCreditNoteResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def issue_credit_note_async(
+        self,
+        *,
+        invoice_id: str,
+        amount: Optional[float] = None,
+        lines: Optional[
+            Union[List[models.LineRequest], List[models.LineRequestTypedDict]]
+        ] = None,
+        destination: Optional[models.Destination] = "customer_balance",
+        send_email: Optional[bool] = True,
+        reason: Optional[models.ReasonRequestBody] = None,
+        memo: Optional[str] = None,
+        preview: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.IssueCreditNoteResponse:
+        r"""Issues a Stripe credit note against an open or paid invoice, for a flat amount or for specific invoice lines. On an open invoice the credit reduces what is still owed. On a paid invoice the credited money goes to the chosen destination: the customer's balance (default), a refund, or a record of money returned outside Stripe. Line amounts are pre-discount and pre-tax, like the invoice's own item amounts. Pass preview to see the credit note without issuing it.
+
+        :param invoice_id: The Autumn invoice ID to credit. Must be open or paid.
+        :param amount: Total to credit across the whole invoice. Cannot be combined with lines.
+        :param lines: Credit specific invoice lines instead of a flat amount. Cannot be combined with amount. Unavailable on invoices recorded before line item storage.
+        :param destination: Where already-paid money goes. customer_balance credits the customer's balance for their next invoice, refund returns it to the original payment method, and out_of_band records money returned outside Stripe.
+        :param send_email: Email the credit note to the customer.
+        :param reason: Reason shown on the credit note.
+        :param memo: Memo printed on the credit note PDF.
+        :param preview: Return the credit note that would be issued without creating it.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.IssueCreditNoteParams(
+            invoice_id=invoice_id,
+            amount=amount,
+            lines=utils.get_pydantic_model(lines, Optional[List[models.LineRequest]]),
+            destination=destination,
+            send_email=send_email,
+            reason=reason,
+            memo=memo,
+            preview=preview,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/invoices.issue_credit_note",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.IssueCreditNoteGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.IssueCreditNoteParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="issueCreditNote",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.IssueCreditNoteResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
     def reissue(
         self,
         *,

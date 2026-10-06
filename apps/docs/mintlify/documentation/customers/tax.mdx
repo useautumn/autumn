@@ -1,0 +1,105 @@
+---
+title: "Tax"
+description: "Charge tax automatically with Stripe Tax, including on invoices"
+---
+
+When **Automatic tax** is turned on in your Autumn settings, Autumn asks Stripe Tax to calculate tax on every subscription, invoice and checkout it creates. Stripe works out the rate from where the customer is, so tax can only be calculated when Stripe knows the customer's location.
+
+## How the customer's location is collected
+
+| Flow | Where the location comes from |
+| --- | --- |
+| Stripe Checkout (`paymentUrl`) | Checkout asks the customer for their billing address and tax ID. Nothing to do on your side. |
+| Card on file | The billing address already saved on the customer. If there isn't one, the purchase goes through without tax. |
+| Invoice mode (`invoiceMode`) | The billing address saved on the customer, or the one you pass in `billingDetails`. If there isn't one, the request fails (see below). |
+
+Invoices are sent by email and never show the customer an address form, so in invoice mode Autumn refuses to send an invoice it can't tax rather than silently sending one without tax.
+
+## Invoice mode without an address
+
+If automatic tax is on and the customer has no billing address, an invoice-mode attach returns a `400`:
+
+```json
+{
+  "code": "customer_tax_location_missing",
+  "message": "Automatic tax is enabled but customer cus_123 has no billing address. Pass billing_details.address, set billing_details.tax_exempt to \"exempt\", or pass tax.automatic_tax.enabled: false.",
+  "details": { "customer_id": "cus_123" }
+}
+```
+
+There are three ways to resolve it, all on the same request.
+
+<CodeGroup>
+
+```typescript Add an address
+const response = await autumn.billing.attach({
+    customerId: "cus_123",
+    planId: "enterprise",
+    invoiceMode: { enabled: true },
+    billingDetails: {
+        address: {
+            line1: "1 Martin Place",
+            city: "Sydney",
+            state: "NSW",
+            postalCode: "2000",
+            country: "AU",
+        },
+        taxIds: [{ type: "au_abn", value: "12345678912" }],
+    },
+});
+```
+
+```typescript Tax-exempt customer
+const response = await autumn.billing.attach({
+    customerId: "cus_123",
+    planId: "enterprise",
+    invoiceMode: { enabled: true },
+    billingDetails: { taxExempt: "exempt" },
+});
+```
+
+```typescript Skip tax for this invoice
+const response = await autumn.billing.attach({
+    customerId: "cus_123",
+    planId: "enterprise",
+    invoiceMode: { enabled: true },
+    tax: { automaticTax: { enabled: false } },
+});
+```
+
+</CodeGroup>
+
+`billingDetails` is saved to the customer before billing runs, so later invoices and renewals are taxed against the same address. You can also set it ahead of time with [`customers.update`](/api-reference/customers/updateCustomer).
+
+## Billing details
+
+| Field | Behavior |
+| --- | --- |
+| `address` | Replaces the customer's whole billing address. `country` is required for tax. |
+| `taxIds` | Tax IDs to **add** to the customer. IDs the customer already has are ignored and existing IDs are never removed; remove them with `customers.update` or in Stripe. |
+| `taxExempt` | `none`, `exempt` or `reverse`. `exempt` customers are never charged tax and need no address. `reverse` applies reverse charge and still needs an address and a tax ID. |
+
+<Note>
+A tax ID can change the result. For example, a seller registered for Australian GST from overseas charges no GST to a customer with an ABN, so Stripe calculates $0 tax even though automatic tax is on.
+</Note>
+
+## Previewing tax
+
+[`previewAttach`](/api-reference/billing/previewAttach) returns a `tax` object when automatic tax applies. Pass the same `billingDetails` you plan to send and the preview calculates tax from them **without saving anything** to the customer, which is how you can show tax live while a form is being filled in.
+
+| `tax.status` | Meaning |
+| --- | --- |
+| `complete` | Tax was calculated. `tax.total` may be `0`. |
+| `requires_location` | The customer has no billing address. In invoice mode, executing this request will fail with `customer_tax_location_missing`. |
+| `incomplete` | Stripe couldn't calculate tax, for example because the address is invalid. |
+
+## Turning tax off for one request
+
+`tax.automaticTax.enabled: false` skips automatic tax for that request only and leaves your organization setting unchanged. It works for invoices, card payments and Stripe Checkout.
+
+To apply a fixed Stripe tax rate instead, pass `tax.rateId` (the top-level `taxRateId` still works, and `tax.rateId` wins if both are set). A tax rate can't be combined with `tax.automaticTax.enabled: true`; that request returns a `400`.
+
+## In the dashboard
+
+- **Review Changes → More Options → Charge Tax** turns tax off for a single attach. It only appears when Automatic tax is on.
+- **Send an Invoice** shows a Billing Address section when the customer has no address. Tax updates in the pricing preview as you type, and the address, tax ID and exemption are saved to the customer when you draft or send the invoice.

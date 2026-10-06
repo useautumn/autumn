@@ -51,6 +51,17 @@ const response = await autumn.billing.attach({
 });
 ```
 
+```typescript Send an invoice with tax
+const response = await autumn.billing.attach({
+    customerId: "cus_123",
+    planId: "enterprise_plan",
+    invoiceMode: { enabled: true },
+    billingDetails: {
+        address: { line1: "1 Martin Place", city: "Sydney", postalCode: "2000", country: "AU" },
+    },
+});
+```
+
 ```typescript Pass metadata to Stripe subscription
 const response = await autumn.billing.attach({
     customerId: "cus_123",
@@ -79,3 +90,8 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 Pass `currency` to bill the attach in a specific currency the plan offers via [`additional_currencies`](/documentation/concepts/plans#multiple-currencies). If omitted, Autumn uses the customer's currency, falling back to your organization's default.
 
 A customer who has paid is locked to their currency: passing a different one, or attaching a plan that doesn't offer a paid price in their currency, fails with a `currency_mismatch` error before any billing happens.
+
+### Tax
+
+When automatic tax is on for your organization, an invoice-mode attach needs a billing address on the customer. Without one it fails with `customer_tax_location_missing`. Pass `billingDetails` to save an address, tax IDs or a tax exemption to the customer in the same call, or `tax.automaticTax.enabled: false` to skip tax for this request. See [Tax](/documentation/customers/tax) for the full behavior.
+

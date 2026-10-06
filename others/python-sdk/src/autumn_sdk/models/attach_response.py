@@ -1329,6 +1329,176 @@ class AttachLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
+class AttachAutomaticTaxTypedDict(TypedDict):
+    r"""Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id."""
+
+    enabled: bool
+    r"""Whether to calculate tax automatically through Stripe for this request. Defaults to the organization's automatic tax setting."""
+
+
+class AttachAutomaticTax(BaseModel):
+    r"""Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id."""
+
+    enabled: bool
+    r"""Whether to calculate tax automatically through Stripe for this request. Defaults to the organization's automatic tax setting."""
+
+
+class AttachTaxTypedDict(TypedDict):
+    r"""Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate."""
+
+    automatic_tax: NotRequired[AttachAutomaticTaxTypedDict]
+    r"""Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id."""
+    rate_id: NotRequired[str]
+    r"""Stripe tax rate ID (txr_...) to apply instead of automatic tax. Takes precedence over the top-level tax_rate_id."""
+
+
+class AttachTax(BaseModel):
+    r"""Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate."""
+
+    automatic_tax: Optional[AttachAutomaticTax] = None
+    r"""Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id."""
+
+    rate_id: Optional[str] = None
+    r"""Stripe tax rate ID (txr_...) to apply instead of automatic tax. Takes precedence over the top-level tax_rate_id."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["automatic_tax", "rate_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class AttachAddressTypedDict(TypedDict):
+    r"""Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address."""
+
+    line1: NotRequired[Nullable[str]]
+    line2: NotRequired[Nullable[str]]
+    city: NotRequired[Nullable[str]]
+    state: NotRequired[Nullable[str]]
+    postal_code: NotRequired[Nullable[str]]
+    country: NotRequired[Nullable[str]]
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+
+class AttachAddress(BaseModel):
+    r"""Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address."""
+
+    line1: OptionalNullable[str] = UNSET
+
+    line2: OptionalNullable[str] = UNSET
+
+    city: OptionalNullable[str] = UNSET
+
+    state: OptionalNullable[str] = UNSET
+
+    postal_code: OptionalNullable[str] = UNSET
+
+    country: OptionalNullable[str] = UNSET
+    r"""Two-letter country code (ISO 3166-1 alpha-2)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        nullable_fields = set(
+            ["line1", "line2", "city", "state", "postal_code", "country"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class AttachBillingDetailsTaxIDTypedDict(TypedDict):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+class AttachBillingDetailsTaxID(BaseModel):
+    type: str
+    r"""Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id"""
+
+    value: str
+    r"""The tax ID, e.g. DE123456789."""
+
+
+AttachTaxExempt = Literal[
+    "none",
+    "exempt",
+    "reverse",
+]
+r"""Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge."""
+
+
+class AttachBillingDetailsTypedDict(TypedDict):
+    r"""Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call."""
+
+    address: NotRequired[AttachAddressTypedDict]
+    r"""Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address."""
+    tax_ids: NotRequired[List[AttachBillingDetailsTaxIDTypedDict]]
+    r"""Tax IDs to add to the customer. IDs the customer already has are ignored, and existing IDs are never removed. To remove one, use customers.update or Stripe."""
+    tax_exempt: NotRequired[AttachTaxExempt]
+    r"""Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge."""
+
+
+class AttachBillingDetails(BaseModel):
+    r"""Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call."""
+
+    address: Optional[AttachAddress] = None
+    r"""Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address."""
+
+    tax_ids: Optional[List[AttachBillingDetailsTaxID]] = None
+    r"""Tax IDs to add to the customer. IDs the customer already has are ignored, and existing IDs are never removed. To remove one, use customers.update or Stripe."""
+
+    tax_exempt: Optional[AttachTaxExempt] = None
+    r"""Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["address", "tax_ids", "tax_exempt"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class AttachRemoveDiscountTypedDict(TypedDict):
     r"""A discount to remove from the subscription. Discounts that are no longer applied are ignored."""
 
@@ -1400,6 +1570,10 @@ class AttachParamsTypedDict(TypedDict):
     r"""If true, skips any billing changes for the attach operation."""
     enable_plan_immediately: NotRequired[bool]
     r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case."""
+    tax: NotRequired[AttachTaxTypedDict]
+    r"""Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate."""
+    billing_details: NotRequired[AttachBillingDetailsTypedDict]
+    r"""Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call."""
     tax_rate_id: NotRequired[str]
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
     currency: NotRequired[str]
@@ -1495,6 +1669,12 @@ class AttachParams(BaseModel):
     enable_plan_immediately: Optional[bool] = None
     r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case."""
 
+    tax: Optional[AttachTax] = None
+    r"""Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate."""
+
+    billing_details: Optional[AttachBillingDetails] = None
+    r"""Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call."""
+
     tax_rate_id: Optional[str] = None
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
 
@@ -1537,6 +1717,8 @@ class AttachParams(BaseModel):
                 "metadata",
                 "no_billing_changes",
                 "enable_plan_immediately",
+                "tax",
+                "billing_details",
                 "tax_rate_id",
                 "currency",
                 "remove_plan_ids",

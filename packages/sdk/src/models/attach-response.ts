@@ -681,6 +681,87 @@ export type AttachLicenseQuantity = {
 };
 
 /**
+ * Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id.
+ */
+export type AttachAutomaticTax = {
+  /**
+   * Whether to calculate tax automatically through Stripe for this request. Defaults to the organization's automatic tax setting.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+ */
+export type AttachTax = {
+  /**
+   * Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id.
+   */
+  automaticTax?: AttachAutomaticTax | undefined;
+  /**
+   * Stripe tax rate ID (txr_...) to apply instead of automatic tax. Takes precedence over the top-level tax_rate_id.
+   */
+  rateId?: string | undefined;
+};
+
+/**
+ * Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address.
+ */
+export type AttachAddress = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postalCode?: string | null | undefined;
+  /**
+   * Two-letter country code (ISO 3166-1 alpha-2).
+   */
+  country?: string | null | undefined;
+};
+
+export type AttachBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+/**
+ * Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+ */
+export const AttachTaxExempt = {
+  None: "none",
+  Exempt: "exempt",
+  Reverse: "reverse",
+} as const;
+/**
+ * Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+ */
+export type AttachTaxExempt = ClosedEnum<typeof AttachTaxExempt>;
+
+/**
+ * Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
+ */
+export type AttachBillingDetails = {
+  /**
+   * Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address.
+   */
+  address?: AttachAddress | undefined;
+  /**
+   * Tax IDs to add to the customer. IDs the customer already has are ignored, and existing IDs are never removed. To remove one, use customers.update or Stripe.
+   */
+  taxIds?: Array<AttachBillingDetailsTaxId> | undefined;
+  /**
+   * Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+   */
+  taxExempt?: AttachTaxExempt | undefined;
+};
+
+/**
  * A discount to remove from the subscription. Discounts that are no longer applied are ignored.
  */
 export type AttachRemoveDiscount = {
@@ -803,6 +884,14 @@ export type AttachParams = {
    * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
    */
   enablePlanImmediately?: boolean | undefined;
+  /**
+   * Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+   */
+  tax?: AttachTax | undefined;
+  /**
+   * Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
+   */
+  billingDetails?: AttachBillingDetails | undefined;
   /**
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
@@ -2320,6 +2409,151 @@ export function attachLicenseQuantityToJSON(
 }
 
 /** @internal */
+export type AttachAutomaticTax$Outbound = {
+  enabled: boolean;
+};
+
+/** @internal */
+export const AttachAutomaticTax$outboundSchema: z.ZodMiniType<
+  AttachAutomaticTax$Outbound,
+  AttachAutomaticTax
+> = z.object({
+  enabled: z.boolean(),
+});
+
+export function attachAutomaticTaxToJSON(
+  attachAutomaticTax: AttachAutomaticTax,
+): string {
+  return JSON.stringify(
+    AttachAutomaticTax$outboundSchema.parse(attachAutomaticTax),
+  );
+}
+
+/** @internal */
+export type AttachTax$Outbound = {
+  automatic_tax?: AttachAutomaticTax$Outbound | undefined;
+  rate_id?: string | undefined;
+};
+
+/** @internal */
+export const AttachTax$outboundSchema: z.ZodMiniType<
+  AttachTax$Outbound,
+  AttachTax
+> = z.pipe(
+  z.object({
+    automaticTax: z.optional(z.lazy(() => AttachAutomaticTax$outboundSchema)),
+    rateId: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      automaticTax: "automatic_tax",
+      rateId: "rate_id",
+    });
+  }),
+);
+
+export function attachTaxToJSON(attachTax: AttachTax): string {
+  return JSON.stringify(AttachTax$outboundSchema.parse(attachTax));
+}
+
+/** @internal */
+export type AttachAddress$Outbound = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postal_code?: string | null | undefined;
+  country?: string | null | undefined;
+};
+
+/** @internal */
+export const AttachAddress$outboundSchema: z.ZodMiniType<
+  AttachAddress$Outbound,
+  AttachAddress
+> = z.pipe(
+  z.object({
+    line1: z.optional(z.nullable(z.string())),
+    line2: z.optional(z.nullable(z.string())),
+    city: z.optional(z.nullable(z.string())),
+    state: z.optional(z.nullable(z.string())),
+    postalCode: z.optional(z.nullable(z.string())),
+    country: z.optional(z.nullable(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      postalCode: "postal_code",
+    });
+  }),
+);
+
+export function attachAddressToJSON(attachAddress: AttachAddress): string {
+  return JSON.stringify(AttachAddress$outboundSchema.parse(attachAddress));
+}
+
+/** @internal */
+export type AttachBillingDetailsTaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const AttachBillingDetailsTaxId$outboundSchema: z.ZodMiniType<
+  AttachBillingDetailsTaxId$Outbound,
+  AttachBillingDetailsTaxId
+> = z.object({
+  type: z.string(),
+  value: z.string(),
+});
+
+export function attachBillingDetailsTaxIdToJSON(
+  attachBillingDetailsTaxId: AttachBillingDetailsTaxId,
+): string {
+  return JSON.stringify(
+    AttachBillingDetailsTaxId$outboundSchema.parse(attachBillingDetailsTaxId),
+  );
+}
+
+/** @internal */
+export const AttachTaxExempt$outboundSchema: z.ZodMiniEnum<
+  typeof AttachTaxExempt
+> = z.enum(AttachTaxExempt);
+
+/** @internal */
+export type AttachBillingDetails$Outbound = {
+  address?: AttachAddress$Outbound | undefined;
+  tax_ids?: Array<AttachBillingDetailsTaxId$Outbound> | undefined;
+  tax_exempt?: string | undefined;
+};
+
+/** @internal */
+export const AttachBillingDetails$outboundSchema: z.ZodMiniType<
+  AttachBillingDetails$Outbound,
+  AttachBillingDetails
+> = z.pipe(
+  z.object({
+    address: z.optional(z.lazy(() => AttachAddress$outboundSchema)),
+    taxIds: z.optional(
+      z.array(z.lazy(() => AttachBillingDetailsTaxId$outboundSchema)),
+    ),
+    taxExempt: z.optional(AttachTaxExempt$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      taxIds: "tax_ids",
+      taxExempt: "tax_exempt",
+    });
+  }),
+);
+
+export function attachBillingDetailsToJSON(
+  attachBillingDetails: AttachBillingDetails,
+): string {
+  return JSON.stringify(
+    AttachBillingDetails$outboundSchema.parse(attachBillingDetails),
+  );
+}
+
+/** @internal */
 export type AttachRemoveDiscount$Outbound = {
   reward_id: string;
 };
@@ -2377,6 +2611,8 @@ export type AttachParams$Outbound = {
   metadata?: { [k: string]: string } | undefined;
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
+  tax?: AttachTax$Outbound | undefined;
+  billing_details?: AttachBillingDetails$Outbound | undefined;
   tax_rate_id?: string | undefined;
   currency?: string | undefined;
   remove_plan_ids?: Array<string> | undefined;
@@ -2429,6 +2665,10 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.record(z.string(), z.string())),
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
+    tax: z.optional(z.lazy(() => AttachTax$outboundSchema)),
+    billingDetails: z.optional(
+      z.lazy(() => AttachBillingDetails$outboundSchema),
+    ),
     taxRateId: z.optional(z.string()),
     currency: z.optional(z.string()),
     removePlanIds: z.optional(z.array(z.string())),
@@ -2462,6 +2702,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       licenseQuantities: "license_quantities",
       noBillingChanges: "no_billing_changes",
       enablePlanImmediately: "enable_plan_immediately",
+      billingDetails: "billing_details",
       taxRateId: "tax_rate_id",
       removePlanIds: "remove_plan_ids",
       removeDiscounts: "remove_discounts",

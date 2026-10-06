@@ -127,8 +127,17 @@ export function TableContentVirtualized({
 				>
 					{/* One table with a sticky thead: separate header/body tables size their
 					    columns independently. Fixed layout pins them to the header row. */}
-					<Table className="p-0 w-full" style={{ minWidth: `${totalWidth}px` }}>
-						<TableHeader />
+					<Table
+						className="p-0 w-full h-auto"
+						style={{ minWidth: `${totalWidth}px` }}
+					>
+						{/* Mirrors the bottom edge below: rows only round off at the true first row. */}
+						<TableHeader
+							className={cn(
+								rows.length > 0 &&
+									"after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-2 after:rounded-t-lg after:border-x after:border-t after:border-table-surface-border after:shadow-[0_0_0_8px_var(--color-table-tray)] after:[clip-path:inset(0)]",
+							)}
+						/>
 						{React.Children.map(children, (child) =>
 							React.isValidElement(child)
 								? React.cloneElement(child, { key: visibleColumnKey })
@@ -137,6 +146,7 @@ export function TableContentVirtualized({
 					</Table>
 					{rows.length > 0 && (
 						// Rows only round off at the true last row, so this pins that edge to the viewport.
+						// Its sticky range ends where the table wrapper does, hence the wrapper's h-auto.
 						<div
 							aria-hidden
 							className="pointer-events-none sticky bottom-0 z-10 -mt-2 h-2 overflow-hidden"

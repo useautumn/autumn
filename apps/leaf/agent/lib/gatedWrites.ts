@@ -75,6 +75,13 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 	},
 	{
 		agents: ["leaf"],
+		previewTool: "previewIssueCreditNote",
+		scopes: ["billing:write"],
+		previewedRequestRequired: true,
+		toolName: "issueCreditNote",
+	},
+	{
+		agents: ["leaf"],
 		previewTool: "previewReissueInvoice",
 		scopes: ["billing:write"],
 		previewedRequestRequired: true,

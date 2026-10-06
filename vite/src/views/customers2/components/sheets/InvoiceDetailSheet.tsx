@@ -17,6 +17,7 @@ import {
 	PaperPlaneTiltIcon,
 	ProhibitIcon,
 	ReceiptIcon,
+	ReceiptXIcon,
 } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -300,6 +301,11 @@ export function InvoiceDetailSheet({
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Draft ||
 			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
+	const canIssueCreditNote =
+		invoiceIsStripe &&
+		!isReissuedDraft &&
+		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Paid);
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -385,6 +391,17 @@ export function InvoiceDetailSheet({
 	const menuActions: InvoiceSheetAction[] = [];
 	if (reissueAction && reissueAction !== primaryAction) {
 		menuActions.push({ ...reissueAction, label: "Reissue invoice" });
+	}
+	if (canIssueCreditNote) {
+		menuActions.push({
+			label: "Issue credit note",
+			icon: <ReceiptXIcon size={16} />,
+			onSelect: () =>
+				setSheet({
+					type: "invoice-credit-note",
+					data: { invoice, lineItems, taxedAmount },
+				}),
+		});
 	}
 	if (stripeInvoiceUrl) {
 		menuActions.push({

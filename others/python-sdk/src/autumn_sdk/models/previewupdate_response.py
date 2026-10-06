@@ -2034,10 +2034,11 @@ PreviewUpdateStatus = Union[
     Literal[
         "complete",
         "incomplete",
+        "requires_location",
     ],
     UnrecognizedStr,
 ]
-r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+r"""Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against."""
 
 
 class PreviewUpdateTaxTypedDict(TypedDict):
@@ -2052,7 +2053,7 @@ class PreviewUpdateTaxTypedDict(TypedDict):
     currency: str
     r"""Three-letter currency code."""
     status: PreviewUpdateStatus
-    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+    r"""Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against."""
 
 
 class PreviewUpdateTax(BaseModel):
@@ -2071,7 +2072,7 @@ class PreviewUpdateTax(BaseModel):
     r"""Three-letter currency code."""
 
     status: PreviewUpdateStatus
-    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+    r"""Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against."""
 
 
 class PreviewUpdateInvoiceCreditsTypedDict(TypedDict):

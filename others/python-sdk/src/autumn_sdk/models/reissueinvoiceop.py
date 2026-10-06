@@ -154,7 +154,7 @@ class ReissueInvoiceInvoiceRequestBody(BaseModel):
         return m
 
 
-class AddressTypedDict(TypedDict):
+class ReissueInvoiceAddressTypedDict(TypedDict):
     r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
 
     line1: NotRequired[str]
@@ -165,7 +165,7 @@ class AddressTypedDict(TypedDict):
     country: NotRequired[str]
 
 
-class Address(BaseModel):
+class ReissueInvoiceAddress(BaseModel):
     r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
 
     line1: Optional[str] = None
@@ -228,7 +228,7 @@ class ReissueInvoiceCustomerTypedDict(TypedDict):
     r"""Billing email. Same as update_customer_email; passing both with different values is rejected."""
     name: NotRequired[str]
     r"""Customer name shown on this and every later invoice."""
-    address: NotRequired[AddressTypedDict]
+    address: NotRequired[ReissueInvoiceAddressTypedDict]
     r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
     tax_ids: NotRequired[List[TaxIDTypedDict]]
     r"""The customer's own tax registrations, e.g. { type: 'eu_vat', value: 'FR123...' }. Replaces the existing set; pass an empty array to remove them."""
@@ -247,7 +247,7 @@ class ReissueInvoiceCustomer(BaseModel):
     name: Optional[str] = None
     r"""Customer name shown on this and every later invoice."""
 
-    address: Optional[Address] = None
+    address: Optional[ReissueInvoiceAddress] = None
     r"""Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement."""
 
     tax_ids: Optional[List[TaxID]] = None
@@ -2120,6 +2120,7 @@ ReissueInvoiceStatus = Union[
     Literal[
         "complete",
         "incomplete",
+        "requires_location",
     ],
     UnrecognizedStr,
 ]
