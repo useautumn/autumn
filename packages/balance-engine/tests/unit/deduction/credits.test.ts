@@ -252,7 +252,7 @@ describe("credit systems", () => {
 	);
 
 	test.concurrent(
-		"a zero rate charges the pool one credit per unit and leaves its rollovers untouched",
+		"a zero rate funds the units the feature's own rows leave for free and leaves its rollovers untouched",
 		() => {
 			const { creditRow, run } = creditsSystem({
 				schemaItem: { credit_amount: 0 },
@@ -288,8 +288,57 @@ describe("credit systems", () => {
 				]),
 			).toEqual([
 				["own", -3, 1],
-				["credits_row", -2, 1],
+				["credits_row", 0, 0],
 			]);
+			expect(balancesAfter(outcome)).toEqual([["own", { balance: 0 }]]);
+		},
+	);
+
+	test.concurrent(
+		"a refund lifts the feature's own rows before a zero rate absorbs what is left",
+		() => {
+			const { creditRow, run } = creditsSystem({
+				schemaItem: { credit_amount: 0 },
+			});
+			const outcome = run({
+				state: createSubjectState({
+					identity,
+					customerProducts: [createCustomerProduct()],
+					customerEntitlements: [
+						createCustomerEntitlement({ id: "own", balance: 4 }),
+						creditRow(100),
+					],
+				}),
+				value: -3,
+			});
+
+			expect(outcome).toMatchObject({ appliedValue: -3, remaining: 0 });
+			expect(balancesAfter(outcome)).toEqual([["own", { balance: 7 }]]);
+		},
+	);
+
+	test.concurrent(
+		"a zero rate is not capped by a credit allocation or the pool's own balance",
+		() => {
+			const { creditRow, run } = creditsSystem({
+				schemaItem: { credit_amount: 0 },
+			});
+			const outcome = run({
+				state: createSubjectState({
+					identity,
+					customerProducts: [createCustomerProduct()],
+					customerEntitlements: [creditRow(-5)],
+				}),
+				value: 7,
+				overageBehavior: "reject",
+			});
+
+			expect(outcome).toMatchObject({
+				appliedValue: 7,
+				remaining: 0,
+				rejected: false,
+			});
+			expect(balancesAfter(outcome)).toEqual([]);
 		},
 	);
 
