@@ -99,6 +99,7 @@ export const runAtomShadowCheck = async ({
 			entity_id: params.entity_id ?? null,
 			latency_ms: Math.round(performance.now() - startedAt),
 			atom_in_flight: atomRequestsInFlight(),
+			atom_shed: reply?.kind === "timeout" && reply.shed === true,
 			...answerFields({ apiResponse, reply }),
 			...outcome,
 		});
