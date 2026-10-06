@@ -166,6 +166,10 @@ export function createAtomEnv(
 			threads,
 			receivers,
 		}),
+		/** Seconds between each thread's self-profile, logged as its top functions; null (unset) never profiles. */
+		ATOM_PROFILE_EVERY_S: runtimeEnv.ATOM_PROFILE_EVERY_S?.trim()
+			? positiveInteger.parse(runtimeEnv.ATOM_PROFILE_EVERY_S)
+			: null,
 		/** The pushes queue the AWS SDK reads; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,

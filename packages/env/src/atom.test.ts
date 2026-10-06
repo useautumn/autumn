@@ -176,6 +176,16 @@ describe("atom env", () => {
 		);
 	});
 
+	test("threads profile themselves only when ATOM_PROFILE_EVERY_S is set", () => {
+		const every = (env: Record<string, string>) =>
+			createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH, ...env })
+				.ATOM_PROFILE_EVERY_S;
+
+		expect(every({})).toBeNull();
+		expect(every({ ATOM_PROFILE_EVERY_S: "60" })).toBe(60);
+		expect(() => every({ ATOM_PROFILE_EVERY_S: "0" })).toThrow();
+	});
+
 	test("ATOM_PUSH_RECEIVERS says how many threads receive, up to every thread", () => {
 		const receivers = ({ told }: { told: string }) =>
 			createAtomEnv({

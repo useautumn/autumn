@@ -46,6 +46,9 @@ type Bucket = {
 	queueWaitTotalMs: number;
 	/** This thread's own CPU, and the wall time it was measured over. */
 	cpuMs: number;
+	/** The kernel's share of cpuMs, and how often the thread blocked and was woken (voluntary context switches). */
+	cpuSystemMs: number;
+	wakeups: number;
 	windowMs: number;
 };
 
@@ -90,6 +93,8 @@ const emptyBucket = (): Bucket => ({
 	queueWaitMaxMs: 0,
 	queueWaitTotalMs: 0,
 	cpuMs: 0,
+	cpuSystemMs: 0,
+	wakeups: 0,
 	windowMs: 0,
 });
 
@@ -122,6 +127,8 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	queueWaitMaxMs: Math.max(a.queueWaitMaxMs, b.queueWaitMaxMs),
 	queueWaitTotalMs: a.queueWaitTotalMs + b.queueWaitTotalMs,
 	cpuMs: a.cpuMs + b.cpuMs,
+	cpuSystemMs: a.cpuSystemMs + b.cpuSystemMs,
+	wakeups: a.wakeups + b.wakeups,
 	windowMs: a.windowMs + b.windowMs,
 });
 
@@ -129,6 +136,18 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 const threadCpuMs = (): number => {
 	const { user, system } = process.threadCpuUsage();
 	return (user + system) / 1000;
+};
+
+/** The calling thread's kernel CPU and voluntary context switches so far; Linux only, zero elsewhere. */
+const threadKernelTotals = (): KernelTotals => {
+	const systemMs = process.threadCpuUsage().system / 1000;
+	try {
+		const status = readFileSync("/proc/thread-self/status", "utf8");
+		const switches = /voluntary_ctxt_switches:\s+(\d+)/.exec(status);
+		return { systemMs, wakeups: Number(switches?.[1] ?? 0) };
+	} catch {
+		return { systemMs, wakeups: 0 };
+	}
 };
 
 /** Requests answered since the process started, for a window a diagnostic opens and closes itself. */
@@ -168,6 +187,7 @@ export type PushPhaseTotals = {
 	write: number;
 };
 export type CheckOutcomeTotals = { timeouts: number; sheds: number };
+export type KernelTotals = { systemMs: number; wakeups: number };
 
 /** A connection idle this long and then seen again counts as new; far longer than any keep-alive gap under load. */
 const CONNECTION_FORGOTTEN_AFTER_MS = 30_000;
@@ -185,6 +205,7 @@ export const startProcessStats = ({
 	checkOutcomeTotals = () => ({ timeouts: 0, sheds: 0 }),
 	afterLoopTurn = (callback: () => void) => setImmediate(callback),
 	cpuMs = threadCpuMs,
+	kernelTotals = threadKernelTotals,
 }: {
 	index: number;
 	statsDir?: string;
@@ -198,6 +219,7 @@ export const startProcessStats = ({
 	/** Runs once the loop has handled every request it read in this turn. */
 	afterLoopTurn?: (callback: () => void) => void;
 	cpuMs?: () => number;
+	kernelTotals?: () => KernelTotals;
 }): ProcessStatsRecorder & { publish(): void; probeLag(): void } => {
 	mkdirSync(statsDir, { recursive: true });
 	const file = join(statsDir, `process-${index}.json`);
@@ -211,6 +233,7 @@ export const startProcessStats = ({
 	let publishedOutcomes: CheckOutcomeTotals = { timeouts: 0, sheds: 0 };
 	let publishedAt = clock();
 	let publishedCpuMs = cpuMs();
+	let publishedKernel = { ...kernelTotals() };
 	const connectionSeenAt = new Map<string, number>();
 	let burstStartedAt: number | null = null;
 
@@ -278,6 +301,10 @@ export const startProcessStats = ({
 		const cpuNow = cpuMs();
 		current.cpuMs = cpuNow - publishedCpuMs;
 		publishedCpuMs = cpuNow;
+		const kernel = { ...kernelTotals() };
+		current.cpuSystemMs = kernel.systemMs - publishedKernel.systemMs;
+		current.wakeups = kernel.wakeups - publishedKernel.wakeups;
+		publishedKernel = kernel;
 		forgetIdleConnections();
 		const window = mergeBuckets(previous, current);
 		const perSecond = window.windowMs > 0 ? 1000 / window.windowMs : 0;
@@ -309,6 +336,7 @@ export const startProcessStats = ({
 			"queueWaitMaxMs",
 			"queueWaitTotalMs",
 			"cpuMs",
+			"cpuSystemMs",
 			"windowMs",
 		] as const)
 			stats[key] = Math.round(stats[key]);
