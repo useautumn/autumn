@@ -10,6 +10,7 @@ import {
 	ms,
 } from "@autumn/shared";
 import chalk from "chalk";
+import { diffToCustomerProducts } from "@/internal/billing/v2/actions/setPlans/compute/diffToCustomerProducts/diffToCustomerProducts";
 import { setupSetPlansTimeline } from "@/internal/billing/v2/actions/setPlans/setup/setupSetPlansTimeline";
 import {
 	customerProductToInstanceConfig,
@@ -103,17 +104,30 @@ describe(chalk.yellowBright("set_plans catalog trial re-save"), () => {
 		expect(operationsFor(unchangedResave())).toEqual([]);
 	});
 
-	test("an explicit free trial still recreates the live plan", () => {
+	test("an explicit free trial keeps the live plan and patches the trial onto it", () => {
+		const customFreeTrial = catalogTrial({ product: proTrial });
 		const billingContext = {
 			...unchangedResave(),
-			trialContext: {
-				customFreeTrial: catalogTrial({ product: proTrial }),
-			},
+			trialContext: { customFreeTrial },
 		} as ReturnType<typeof unchangedResave>;
+		const { diff } = setupSetPlansTimeline({
+			ctx,
+			billingContext,
+			params: { undeclared_plans: "end" },
+		});
 
-		expect(operationsFor(billingContext)).toEqual([
-			"expire:cus_prod_pro-trial",
-			"insert:pro-trial@now",
-		]);
+		expect(describeOperations(diff)).toEqual([]);
+		expect(
+			diffToCustomerProducts({
+				ctx,
+				billingContext,
+				diff,
+			}).trialStartedCustomerProducts.map(
+				({ customerProduct, trialingCustomerProduct }) => [
+					customerProduct.id,
+					trialingCustomerProduct.free_trial_id,
+				],
+			),
+		).toEqual([[liveProTrial.id, customFreeTrial.id]]);
 	});
 });

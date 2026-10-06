@@ -8,6 +8,7 @@ import {
 	isFutureStartDate,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isAutumnManagedBillTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedBillTrialContext";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
@@ -96,6 +97,7 @@ const computeAttachNewCustomerProductResult = ({
 		billingStartsAt,
 		paymentMethod,
 		processorTypeOverride,
+		invoiceMode,
 	} = attachBillingContext;
 
 	// multiAttach / scheduled-activation contexts don't set the carry-over source;
@@ -109,9 +111,6 @@ const computeAttachNewCustomerProductResult = ({
 		paymentMethod !== undefined && paymentMethod.type !== "custom";
 	const shouldSendInvoiceForFutureStart =
 		isFutureStartDate(startsAt, currentEpochMs) && !hasAutoChargePaymentMethod;
-	const collectionMethod = shouldSendInvoiceForFutureStart
-		? CollectionMethod.SendInvoice
-		: undefined;
 
 	const existingUsagesConfig = resolveAttachExistingUsagesConfig({
 		ctx,
@@ -130,9 +129,14 @@ const computeAttachNewCustomerProductResult = ({
 		isRevertTrialContext({ trialContext }) && planTiming === "immediate";
 	// on_trial_end "bill" tells the product cron it owns this trial's end; legacy trials stay null.
 	const isAutumnManagedBillTrial =
-		Boolean(trialContext?.autumnManaged) &&
-		!isRevertTrialContext({ trialContext }) &&
+		isAutumnManagedBillTrialContext({ trialContext }) &&
 		planTiming === "immediate";
+	const shouldSendInvoiceAtTrialEnd =
+		isAutumnManagedBillTrial && Boolean(invoiceMode);
+	const collectionMethod =
+		shouldSendInvoiceForFutureStart || shouldSendInvoiceAtTrialEnd
+			? CollectionMethod.SendInvoice
+			: undefined;
 	const preservedBillingLinkage = params.no_billing_changes
 		? currentCustomerProduct
 		: undefined;

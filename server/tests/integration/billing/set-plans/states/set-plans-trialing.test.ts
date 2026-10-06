@@ -1,4 +1,4 @@
-/** set_plans on a trialing subscription keeps the trial in Stripe and Autumn, and `free_trial: null` ends it in both. */
+/** set_plans on a trialing subscription keeps the trial in Stripe and Autumn, and `free_trial: null` ends it in both and bills now. */
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, secondsToMs } from "@autumn/shared";
@@ -10,6 +10,7 @@ import {
 	expectSubscriptionNotTrialing,
 	expectSubscriptionTrialing,
 } from "@tests/integration/billing/utils/expect-customer-products/expectSubscriptionTrialing";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -89,6 +90,12 @@ test.concurrent(
 		await expectSubscriptionNotTrialing({
 			customer: await autumnV2_4.customers.get<ApiCustomerV5>(customerId),
 			productId: proTrial.id,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestStatus: "paid",
+			latestTotal: 20,
 		});
 	},
 );

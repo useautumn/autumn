@@ -3,8 +3,8 @@ import { useCallback, useMemo } from "react";
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { buildBillingPlan } from "@/components/forms/shared/utils/buildPlanCustomize";
+import { freeTrialFormValuesToParams } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
-import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import type { AttachAdditionalPlan } from "../attachFormSchema";
 import { filterValidDiscounts } from "../utils/discountUtils";
 import { stripPricesFromItems } from "../utils/grantFreeUtils";
@@ -134,8 +134,7 @@ export function buildAttachMultiRequestBody({
 			}),
 		),
 	];
-	const freeTrial = getFreeTrial({
-		removeTrial: false,
+	const freeTrial = freeTrialFormValuesToParams({
 		trialLength,
 		trialDuration,
 		trialEnabled,
@@ -148,14 +147,7 @@ export function buildAttachMultiRequestBody({
 		customer_id: customerId,
 		plans,
 		redirect_mode: redirectMode,
-		free_trial: freeTrial
-			? {
-					duration_length: freeTrial.length,
-					duration_type: freeTrial.duration,
-					card_required: freeTrial.card_required,
-					...(freeTrial.on_end ? { on_end: freeTrial.on_end } : {}),
-				}
-			: null,
+		free_trial: freeTrial ?? null,
 		...(prorationBehavior ? { billing_behavior: prorationBehavior } : {}),
 		...(entityId ? { entity_id: entityId } : {}),
 		...(currency ? { currency: currency.toLowerCase() } : {}),

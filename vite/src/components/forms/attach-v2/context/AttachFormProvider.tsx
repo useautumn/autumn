@@ -16,7 +16,6 @@ import {
 	ACTIVE_STATUSES,
 	CusProductStatus,
 	cusProductToPrices,
-	FreeTrialDuration,
 	isFreeProduct,
 	isFreeProductV2,
 	isOneOffProductV2,
@@ -36,6 +35,11 @@ import {
 } from "react";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
+import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
+import {
+	DISABLED_FREE_TRIAL_FORM_VALUES,
+	freeTrialToFormValues,
+} from "@/components/forms/shared/utils/freeTrialFormValues";
 import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -405,10 +409,10 @@ export function AttachFormProvider({
 			form.setFieldValue("addLicenses", null);
 			form.setFieldValue("licenseQuantities", {});
 			form.setFieldValue("version", undefined);
-			form.setFieldValue("trialEnabled", false);
-			form.setFieldValue("trialLength", null);
-			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
-			form.setFieldValue("trialCardRequired", true);
+			applyFreeTrialFormValues({
+				form,
+				values: DISABLED_FREE_TRIAL_FORM_VALUES,
+			});
 			form.setFieldValue("trialOnEnd", "revert");
 			form.setFieldValue("grantFree", false);
 			form.setFieldValue("currency", null);
@@ -427,16 +431,10 @@ export function AttachFormProvider({
 		setInitialPrepaidOptions(resolvedPrepaidOptions as Record<string, number>);
 
 		if (product.free_trial && !seededFirstRun) {
-			form.setFieldValue("trialEnabled", true);
-			form.setFieldValue("trialLength", Number(product.free_trial.length));
-			form.setFieldValue(
-				"trialDuration",
-				product.free_trial.duration as FreeTrialDuration,
-			);
-			form.setFieldValue(
-				"trialCardRequired",
-				Boolean(product.free_trial.card_required),
-			);
+			applyFreeTrialFormValues({
+				form,
+				values: freeTrialToFormValues({ freeTrial: product.free_trial }),
+			});
 			form.setFieldValue("trialOnEnd", product.free_trial.on_end ?? "revert");
 		}
 	}, [productId, product, form]);

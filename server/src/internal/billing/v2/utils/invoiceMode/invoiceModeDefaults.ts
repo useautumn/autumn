@@ -1,0 +1,1 @@
+export const DEFAULT_INVOICE_MODE_NET_TERMS_DAYS = 30;

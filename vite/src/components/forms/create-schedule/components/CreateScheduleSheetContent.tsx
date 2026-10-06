@@ -110,6 +110,8 @@ export function CreateScheduleReviewContent() {
 		preview,
 		error,
 		createsRecurringSubscription,
+		formValues,
+		canScheduleTrial,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
 
@@ -119,7 +121,11 @@ export function CreateScheduleReviewContent() {
 		isInvoiceOnlyStart,
 		label: invoiceButtonLabel,
 		zeroAmountReason: invoiceDisabledReason,
-	} = getInvoiceButtonState({ preview, createsRecurringSubscription });
+	} = getInvoiceButtonState({
+		preview,
+		createsRecurringSubscription,
+		trialEnabled: canScheduleTrial && formValues.trialEnabled,
+	});
 
 	const handleInvoiceButtonClick = () => {
 		if (isInvoiceOnlyStart) {

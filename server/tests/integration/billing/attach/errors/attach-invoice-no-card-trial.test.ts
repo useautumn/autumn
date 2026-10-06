@@ -1,134 +1,181 @@
 /**
- * Attach Invoice Mode + No-Card Trial Error Tests
+ * Attach Invoice Mode + No-Card Trial
  *
- * Stripe rejects a subscription that sets
- * `trial_settings.end_behavior.missing_payment_method: "cancel"` (what Autumn
- * sends for a no-card trial) together with `collection_method: "send_invoice"`
- * (what Autumn sends for invoice mode). Autumn must reject the combination
- * up front, in both preview and attach, instead of surfacing the raw Stripe
- * error at execution time.
+ * Contract:
+ *  - a no-card trial attached in invoice mode is accepted by preview and attach: it trials in
+ *    Autumn with no Stripe sub, and stores collection_method send_invoice for the trial-end invoice
+ *  - custom invoice options (finalize: false, invoice_template_id, non-default net_terms_days)
+ *    are rejected, since only the intent is stored for the trial-end invoice
+ *  - invoice mode still needs a customer email
+ *  - control: a card-required trial in invoice mode is unchanged
  */
 
-import { test } from "bun:test";
-import { type AttachParamsV1Input, FreeTrialDuration } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import {
+	type ApiCustomerV3,
+	type AttachParamsV1Input,
+	CollectionMethod,
+	FreeTrialDuration,
+	type InvoiceModeParams,
+	ms,
+} from "@autumn/shared";
+import { expectTrialCollectionMethod } from "@tests/integration/billing/attach/free-trial/no-card/utils/expectInvoicedTrialCorrect";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-const NO_CARD_TRIAL_INVOICE_MODE_ERROR =
-	"Cannot use invoice mode with a no-card free trial";
+const TRIAL_DAYS = 15;
+const TRIAL_INVOICE_OPTIONS_ERROR =
+	"Invoice mode with a no-card free trial sends a finalized invoice";
+const NO_EMAIL_ERROR = "has no email";
+
+const enterprisePlan = () =>
+	products.base({
+		id: "enterprise",
+		items: [items.monthlyPrice({ price: 50 })],
+	});
 
 const buildParams = ({
 	customerId,
 	planId,
 	cardRequired,
+	invoiceMode = {},
 }: {
 	customerId: string;
 	planId: string;
 	cardRequired: boolean;
+	invoiceMode?: Partial<InvoiceModeParams>;
 }): AttachParamsV1Input => ({
 	customer_id: customerId,
 	plan_id: planId,
 	redirect_mode: "if_required",
-	invoice_mode: {
-		enabled: true,
-		enable_plan_immediately: true,
-		finalize: false,
-	},
+	invoice_mode: { enabled: true, ...invoiceMode },
 	customize: {
 		free_trial: {
-			duration_length: 15,
+			duration_length: TRIAL_DAYS,
 			duration_type: FreeTrialDuration.Day,
 			card_required: cardRequired,
 		},
 	},
 });
 
-/**
- * Test 1: No-card trial + invoice mode is rejected by attach
- */
 test.concurrent(
-	`${chalk.yellowBright("error: invoice mode with no-card trial rejected on attach")}`,
+	`${chalk.yellowBright("attach-invoice-no-card-trial 1: preview and attach accept invoice mode, trial runs in Autumn")}`,
 	async () => {
-		const customerId = "err-inv-no-card-trial-attach";
+		const customerId = "inv-no-card-trial-attach";
+		const enterprise = enterprisePlan();
 
-		const enterprise = products.base({
-			id: "enterprise",
-			items: [items.monthlyPrice({ price: 50 })],
+		const { autumnV1, autumnV2_3, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [s.customer({}), s.products({ list: [enterprise] })],
+			actions: [],
 		});
 
-		const { autumnV2 } = await initScenario({
+		const params = buildParams({
 			customerId,
-			setup: [s.customer(), s.products({ list: [enterprise] })],
+			planId: enterprise.id,
+			cardRequired: false,
+		});
+
+		const preview =
+			await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(params);
+		expect(preview.total).toBe(0);
+
+		const result = await autumnV2_3.billing.attach<AttachParamsV1Input>(params);
+		expect(result.payment_url).toBeFalsy();
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductTrialing({
+			customer,
+			productId: enterprise.id,
+			trialEndsAt: advancedTo + ms.days(TRIAL_DAYS),
+		});
+		await expectCustomerInvoiceCorrect({ customer, count: 0 });
+		await expectSubCount({ ctx, customerId, count: 0 });
+		await expectTrialCollectionMethod({
+			ctx,
+			customerId,
+			productId: enterprise.id,
+			collectionMethod: CollectionMethod.SendInvoice,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("attach-invoice-no-card-trial 2: custom invoice options are rejected")}`,
+	async () => {
+		const customerId = "inv-no-card-trial-options";
+		const enterprise = enterprisePlan();
+
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({}), s.products({ list: [enterprise] })],
+			actions: [],
+		});
+
+		const customInvoiceOptions: Partial<InvoiceModeParams>[] = [
+			{ finalize: false },
+			{ net_terms_days: 45 },
+			{ invoice_template_id: "tmpl_unsupported_for_trial" },
+		];
+		for (const invoiceMode of customInvoiceOptions) {
+			const params = buildParams({
+				customerId,
+				planId: enterprise.id,
+				cardRequired: false,
+				invoiceMode,
+			});
+			await expectAutumnError({
+				errMessage: TRIAL_INVOICE_OPTIONS_ERROR,
+				func: () =>
+					autumnV2_3.billing.previewAttach<AttachParamsV1Input>(params),
+			});
+			await expectAutumnError({
+				errMessage: TRIAL_INVOICE_OPTIONS_ERROR,
+				func: () => autumnV2_3.billing.attach<AttachParamsV1Input>(params),
+			});
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("attach-invoice-no-card-trial 3: invoice mode needs a customer email")}`,
+	async () => {
+		const customerId = "inv-no-card-trial-no-email";
+		const enterprise = enterprisePlan();
+
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({ email: null }), s.products({ list: [enterprise] })],
 			actions: [],
 		});
 
 		await expectAutumnError({
-			func: async () => {
-				await autumnV2.billing.attach<AttachParamsV1Input>(
+			errMessage: NO_EMAIL_ERROR,
+			func: () =>
+				autumnV2_3.billing.attach<AttachParamsV1Input>(
 					buildParams({
 						customerId,
 						planId: enterprise.id,
 						cardRequired: false,
 					}),
-				);
-			},
-			errMessage: NO_CARD_TRIAL_INVOICE_MODE_ERROR,
+				),
 		});
 	},
 );
 
-/**
- * Test 2: No-card trial + invoice mode is rejected by preview too, so callers
- * (e.g. the Slack agent) learn about the conflict before approving anything.
- */
 test.concurrent(
-	`${chalk.yellowBright("error: invoice mode with no-card trial rejected on preview")}`,
-	async () => {
-		const customerId = "err-inv-no-card-trial-preview";
-
-		const enterprise = products.base({
-			id: "enterprise",
-			items: [items.monthlyPrice({ price: 50 })],
-		});
-
-		const { autumnV2 } = await initScenario({
-			customerId,
-			setup: [s.customer(), s.products({ list: [enterprise] })],
-			actions: [],
-		});
-
-		await expectAutumnError({
-			func: async () => {
-				await autumnV2.billing.previewAttach<AttachParamsV1Input>(
-					buildParams({
-						customerId,
-						planId: enterprise.id,
-						cardRequired: false,
-					}),
-				);
-			},
-			errMessage: NO_CARD_TRIAL_INVOICE_MODE_ERROR,
-		});
-	},
-);
-
-/**
- * Test 3 (control): card-required trial + invoice mode is allowed
- */
-test.concurrent(
-	`${chalk.yellowBright("control: invoice mode with card-required trial allowed")}`,
+	`${chalk.yellowBright("attach-invoice-no-card-trial 4 (control): card-required trial in invoice mode is allowed")}`,
 	async () => {
 		const customerId = "ctrl-inv-card-trial";
+		const enterprise = enterprisePlan();
 
-		const enterprise = products.base({
-			id: "enterprise",
-			items: [items.monthlyPrice({ price: 50 })],
-		});
-
-		const { autumnV2 } = await initScenario({
+		const { autumnV2_3 } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -137,11 +184,12 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2.billing.previewAttach<AttachParamsV1Input>(
+		await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(
 			buildParams({
 				customerId,
 				planId: enterprise.id,
 				cardRequired: true,
+				invoiceMode: { enable_plan_immediately: true, finalize: false },
 			}),
 		);
 	},

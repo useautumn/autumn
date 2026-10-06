@@ -21,6 +21,11 @@ import {
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
 import type { SetPlansSubscriptionTarget } from "@/components/forms/create-schedule/types/setPlansSubscriptionTarget";
+import {
+	defaultScheduleTrialFormValues,
+	findCatalogScheduleTrial,
+	findCurrentScheduleTrial,
+} from "@/components/forms/create-schedule/utils/scheduleFreeTrial";
 import { CustomerStatePlanEditor } from "@/components/forms/customer-state/components/CustomerStatePlanEditor";
 import {
 	customerProductsToCustomerState,
@@ -132,12 +137,14 @@ export function buildInitialValues({
 	stripeSubscriptionId,
 	stripeScheduleId,
 	schedules = [],
+	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
 	products: ProductV2[];
 	stripeSubscriptionId?: string | null;
 	stripeScheduleId?: string | null;
 	schedules?: FullCustomerSchedule[];
+	nowMs?: number;
 }): CustomerStateForm {
 	const customerProducts = scopeCustomerProducts({
 		customerProducts: customer?.customer_products ?? [],
@@ -187,6 +194,15 @@ export function buildInitialValues({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
+		...defaultScheduleTrialFormValues({
+			currentTrial: findCurrentScheduleTrial({ customerProducts, nowMs }),
+			catalogFreeTrial: findCatalogScheduleTrial({
+				phases,
+				products,
+				customerProducts: customer?.customer_products ?? [],
+			}),
+		}),
+		trialEdited: false,
 	};
 }
 
@@ -324,11 +340,19 @@ export function CreateScheduleSheet() {
 			stripeSubscriptionId: subscriptionTarget?.stripeSubscriptionId,
 			stripeScheduleId: subscriptionTarget?.stripeScheduleId,
 			schedules,
+			nowMs: testClockFrozenTimeMs,
 		});
 		// An approval seed is the proposed schedule itself — it replaces the
 		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
-	}, [fullCustomer, products, subscriptionTarget, seedOverrides, schedules]);
+	}, [
+		fullCustomer,
+		products,
+		subscriptionTarget,
+		seedOverrides,
+		schedules,
+		testClockFrozenTimeMs,
+	]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),

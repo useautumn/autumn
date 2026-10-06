@@ -18,6 +18,7 @@ import {
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
+import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { quantityRecordFrom } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import { applyCustomizeToProduct } from "./applyCustomizeToProduct";
 
@@ -114,6 +115,8 @@ export const syncProposalToCustomerState = ({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
+		...DISABLED_FREE_TRIAL_FORM_VALUES,
+		trialEdited: false,
 	} as const;
 	const scopedCustomerProducts = scopeCustomerProducts({
 		customerProducts,
