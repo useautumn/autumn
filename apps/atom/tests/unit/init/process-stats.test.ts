@@ -63,6 +63,43 @@ describe("process stats", () => {
 		});
 	});
 
+	test("each publish splits out the thread's kernel CPU and counts its wakeups since the last", () => {
+		const statsDir = newStatsDir();
+		const kernel = { systemMs: 50, wakeups: 1000 };
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+			kernelTotals: () => kernel,
+		});
+		kernel.systemMs = 170;
+		kernel.wakeups = 4200;
+		stats.publish();
+		stats.stop();
+
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			cpuSystemMs: 120,
+			wakeups: 3200,
+		});
+	});
+
+	test("the thread's own kernel CPU and wakeups are read on Linux", () => {
+		const statsDir = newStatsDir();
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+		});
+		Bun.sleepSync(5);
+		stats.publish();
+		stats.stop();
+
+		const published = createProcessStatsReader({ statsDir })()[0];
+		expect(published?.cpuSystemMs).toBeGreaterThanOrEqual(0);
+		if (process.platform === "linux")
+			expect(published?.wakeups).toBeGreaterThan(0);
+	});
+
 	test("a late event loop is recorded and a stall is logged once", () => {
 		const statsDir = newStatsDir();
 		const { stats, warned, advance } = startStats({ statsDir });
