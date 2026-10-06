@@ -21,6 +21,19 @@ const RECEIVE_LOOPS = 4;
 /** After a failed receive, so an unreachable queue is not polled in a tight loop. */
 const RECEIVE_RETRY_MS = 1_000;
 
+/** How the receive loop is bounded: pushes received and not yet acked, and how long one receive may take. */
+type PushReceiverLimits = {
+	/** Past this many, receiving waits for one to finish: a hung ack holds one slot, not the loop. */
+	maxPushesInFlight: number;
+	/** Above SQS's 20 s long poll: a receive still pending is left to finish on its own, and receiving goes on. */
+	receiveDeadlineMs: number;
+};
+
+const DEFAULT_LIMITS: PushReceiverLimits = {
+	maxPushesInFlight: 400,
+	receiveDeadlineMs: 25_000,
+};
+
 type PushReceiverContext = {
 	pushes: Pick<Queue, "receive" | "ack">;
 	auth: Pick<Auth, "slotsFor">;
@@ -28,6 +41,16 @@ type PushReceiverContext = {
 	sleep?: (ms: number) => Promise<unknown>;
 	processStats?: Pick<ProcessStatsRecorder, "recordRequest">;
 };
+
+/** An Alien error carries its code and the context of the call that failed; the message alone hides the cause. */
+const errorDetails = (error: unknown) =>
+	error instanceof Error
+		? {
+				code: "code" in error ? error.code : undefined,
+				context: "context" in error ? error.context : undefined,
+				cause: error.cause,
+			}
+		: { value: String(error) };
 
 /** Null for a payload no Autumn sent: SQS would deliver it forever, so it is acked and logged instead. */
 const decodePush = ({
@@ -101,58 +124,107 @@ const receivePush = async ({
 		return true;
 	} catch (error) {
 		ctx.logger.warn(
-			{ error, type: "atom_push_failed", data: { attempt: message.attempt } },
+			{
+				error,
+				type: "atom_push_failed",
+				data: { attempt: message.attempt, ...errorDetails(error) },
+			},
 			"A queued push was not applied; SQS will deliver it again",
 		);
 		return false;
 	}
 };
 
-/** Autumn's pushes read from the org's own queue, so nothing has to reach Atom from outside. */
-export const createPushReceiver = ({
+/** Applied, then acked; a push that may still apply later is left for SQS to deliver again. */
+const settlePush = async ({
 	ctx,
+	message,
 }: {
 	ctx: PushReceiverContext;
+	message: QueueMessage;
+}): Promise<void> => {
+	if (!(await receivePush({ ctx, message }))) return;
+	await ctx.pushes
+		.ack(message.receiptHandle)
+		.catch((error) =>
+			ctx.logger.warn(
+				{ error, type: "atom_push_ack_failed", data: errorDetails(error) },
+				"An applied push was not acked; SQS will deliver it again",
+			),
+		);
+};
+
+const RECEIVE_TIMED_OUT = Symbol("receiveTimedOut");
+
+/**
+ * Autumn's pushes read from the org's own queue, so nothing has to reach Atom from outside. Each loop only receives:
+ * every push is settled as its own task, so one slow apply or ack never holds up the pushes behind it.
+ */
+export const createPushReceiver = ({
+	ctx,
+	limits = DEFAULT_LIMITS,
+}: {
+	ctx: PushReceiverContext;
+	limits?: PushReceiverLimits;
 }): PushReceiver => {
-	const { pushes } = ctx;
+	const sleep = ctx.sleep ?? Bun.sleep;
+	const inFlight = new Set<Promise<void>>();
 	let stopping = false;
+
+	function settle(message: QueueMessage): void {
+		const task = settlePush({ ctx, message }).finally(() =>
+			inFlight.delete(task),
+		);
+		inFlight.add(task);
+	}
+
+	function receiveBatch(): Promise<QueueMessage[]> {
+		return ctx.pushes.receive(RECEIVE_BATCH).catch(async (error) => {
+			ctx.logger.warn(
+				{ error, type: "atom_push_receive_failed", data: errorDetails(error) },
+				"Receiving queued pushes failed; trying again",
+			);
+			await sleep(RECEIVE_RETRY_MS);
+			return [];
+		});
+	}
+
+	/** A receive past the deadline is not abandoned: whatever it returns later is still settled. */
+	async function receiveWithinDeadline(): Promise<QueueMessage[]> {
+		const received = receiveBatch();
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const deadline = new Promise<typeof RECEIVE_TIMED_OUT>((resolve) => {
+			timer = setTimeout(
+				() => resolve(RECEIVE_TIMED_OUT),
+				limits.receiveDeadlineMs,
+			);
+		});
+		const result = await Promise.race([received, deadline]);
+		clearTimeout(timer);
+		if (result !== RECEIVE_TIMED_OUT) return result;
+		ctx.logger.warn(
+			{ type: "atom_push_receive_slow", data: limits },
+			"A receive of queued pushes is still pending; receiving again",
+		);
+		void received.then((messages) => messages.forEach(settle));
+		return [];
+	}
 
 	async function receiveUntilStopped(): Promise<void> {
 		while (!stopping) {
-			const messages = await pushes
-				.receive(RECEIVE_BATCH)
-				.catch(async (error) => {
-					ctx.logger.warn(
-						{ error, type: "atom_push_receive_failed" },
-						"Receiving queued pushes failed; trying again",
-					);
-					await (ctx.sleep ?? Bun.sleep)(RECEIVE_RETRY_MS);
-					return [];
-				});
-			const applied = await Promise.all(
-				messages.map((message) => receivePush({ ctx, message })),
-			);
-			const done = messages.filter((_, index) => applied[index]);
-			await Promise.all(
-				done.map((message) =>
-					pushes
-						.ack(message.receiptHandle)
-						.catch((error) =>
-							ctx.logger.warn(
-								{ error, type: "atom_push_ack_failed" },
-								"An applied push was not acked; SQS will deliver it again",
-							),
-						),
-				),
-			);
+			while (inFlight.size >= limits.maxPushesInFlight)
+				await Promise.race(inFlight);
+			for (const message of await receiveWithinDeadline()) settle(message);
 		}
 	}
 
 	return {
+		/** Resolves once every loop has stopped and every push it received is settled. */
 		run: async () => {
 			await Promise.all(
 				Array.from({ length: RECEIVE_LOOPS }, receiveUntilStopped),
 			);
+			await Promise.all(inFlight);
 		},
 		stop: () => {
 			stopping = true;
