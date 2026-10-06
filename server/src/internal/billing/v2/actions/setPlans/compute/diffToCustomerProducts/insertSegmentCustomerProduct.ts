@@ -12,6 +12,8 @@ import { firstPhaseStartsInFuture } from "../../setup/classifyFirstPhaseStart";
 import { startsInFuture } from "../../timeline/timelineGuards";
 import type { ResolvedSegment } from "../../timeline/types/timelineDiff";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
+import { keptUsageCarryOverUsages } from "../keptUsageCarryOverUsages";
+import { keptUsageCustomerEntitlements } from "../keptUsageCustomerEntitlements";
 
 const findProductContext = ({
 	billingContext,
@@ -86,10 +88,26 @@ const insertImmediateCustomerProduct = ({
 		}),
 		...firstPhaseTiming({ billingContext, startsLater }),
 	};
+	const carryOverUsages =
+		replacedCustomerProduct && !startsLater
+			? keptUsageCarryOverUsages({
+					replacedCustomerProduct,
+					keptCustomerEntitlements: keptUsageCustomerEntitlements({
+						billingContext,
+						outgoingCustomerProduct: replacedCustomerProduct,
+						incomingPrices: attachBillingContext.attachProduct.prices,
+						incomingEntitlements:
+							attachBillingContext.attachProduct.entitlements,
+					}),
+				})
+			: undefined;
 	const customerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
-		params: { no_billing_changes: billingContext.skipBillingChanges },
+		params: {
+			no_billing_changes: billingContext.skipBillingChanges,
+			carry_over_usages: carryOverUsages,
+		},
 	});
 
 	if (replacedCustomerProduct && !startsLater) {

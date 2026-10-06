@@ -1,6 +1,8 @@
 import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
+	cusProductToEnts,
+	cusProductToPrices,
 	type FullCusProduct,
 	isFreeProduct,
 } from "@autumn/shared";
@@ -20,6 +22,7 @@ import {
 	type SetPlansCustomerProductChanges,
 } from "./diffToCustomerProducts/diffToCustomerProducts";
 import { diffToSchedule } from "./diffToSchedule";
+import { keptUsageCustomerEntitlements } from "./keptUsageCustomerEntitlements";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -92,12 +95,29 @@ export const computeSetPlansPlan = ({
 		(customerProduct) =>
 			!isOnUncollectedReplacedSubscription({ billingContext, customerProduct }),
 	);
+	const keptUsageCustomerEntitlementIds = new Set(
+		customerProductChanges.immediateReplacements.flatMap(
+			({ outgoingCustomerProduct, incomingCustomerProduct }) =>
+				keptUsageCustomerEntitlements({
+					billingContext,
+					outgoingCustomerProduct,
+					incomingPrices: cusProductToPrices({
+						cusProduct: incomingCustomerProduct,
+					}),
+					incomingEntitlements: cusProductToEnts({
+						cusProduct: incomingCustomerProduct,
+					}),
+				}).map(({ id }) => id),
+		),
+	);
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
 		deletedCustomerProducts: creditedCustomerProducts,
 		billingContext,
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
+		carriesUsage: (customerEntitlement) =>
+			keptUsageCustomerEntitlementIds.has(customerEntitlement.id),
 	});
 
 	const { trialStartedCustomerProducts } = customerProductChanges;

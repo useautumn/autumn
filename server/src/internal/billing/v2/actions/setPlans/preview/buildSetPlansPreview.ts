@@ -44,6 +44,7 @@ export const buildSetPlansPreview = async ({
 			billingContext,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
+			billedLineItems: billingPlan.autumn.lineItems ?? [],
 		}),
 		fetchPastDueOpenInvoices({ ctx, billingContext }),
 	]);
