@@ -112,6 +112,17 @@ describe("repetition ids", () => {
 });
 
 describe("summariseRepeats", () => {
+	test("a timed-out repetition counts as failed", () => {
+		const [stat] = summariseRepeats({
+			files: [
+				file({ file: "a.test.ts#1" }),
+				file({ file: "a.test.ts#2", status: "timed_out", attempt: 2 }),
+			],
+		});
+		expect(stat?.failed).toBe(1);
+		expect(stat?.done).toBe(2);
+	});
+
 	test("counts first-attempt passes per file as X/N", () => {
 		const stats = summariseRepeats({
 			files: [

@@ -123,6 +123,31 @@ export const setupPaymentLicenseQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const setupPaymentAutomaticTaxSchema = z.object({
+	enabled: z.boolean(),
+});
+
+export const setupPaymentTaxSchema = z.object({
+	automaticTax: z
+		.union([setupPaymentAutomaticTaxSchema, z.undefined()])
+		.optional(),
+	rateId: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddressSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postalCode: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const setupPaymentBillingDetailsTaxIdSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
 export const setupPaymentRemoveDiscountSchema = z.object({
 	rewardId: z.string(),
 });
@@ -392,6 +417,44 @@ export const setupPaymentCarryOverUsagesOutboundSchema = z.object({
 export const setupPaymentLicenseQuantityOutboundSchema = z.object({
 	license_plan_id: z.string(),
 	quantity: z.number(),
+});
+
+export const setupPaymentAutomaticTaxOutboundSchema = z.object({
+	enabled: z.boolean(),
+});
+
+export const setupPaymentTaxOutboundSchema = z.object({
+	automatic_tax: z
+		.union([setupPaymentAutomaticTaxOutboundSchema, z.undefined()])
+		.optional(),
+	rate_id: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddressOutboundSchema = z.object({
+	line1: z.union([z.string(), z.undefined()]).optional().nullable(),
+	line2: z.union([z.string(), z.undefined()]).optional().nullable(),
+	city: z.union([z.string(), z.undefined()]).optional().nullable(),
+	state: z.union([z.string(), z.undefined()]).optional().nullable(),
+	postal_code: z.union([z.string(), z.undefined()]).optional().nullable(),
+	country: z.union([z.string(), z.undefined()]).optional().nullable(),
+});
+
+export const setupPaymentBillingDetailsTaxIdOutboundSchema = z.object({
+	type: z.string(),
+	value: z.string(),
+});
+
+export const setupPaymentBillingDetailsOutboundSchema = z.object({
+	address: z
+		.union([setupPaymentAddressOutboundSchema, z.undefined()])
+		.optional(),
+	tax_ids: z
+		.union([
+			z.array(setupPaymentBillingDetailsTaxIdOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	tax_exempt: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentRemoveDiscountOutboundSchema = z.object({
@@ -717,6 +780,16 @@ export const setupPaymentCustomizeSchema = z.object({
 
 export const setupPaymentProrationBehaviorSchema = closedEnumSchema;
 
+export const setupPaymentTaxExemptSchema = closedEnumSchema;
+
+export const setupPaymentBillingDetailsSchema = z.object({
+	address: z.union([setupPaymentAddressSchema, z.undefined()]).optional(),
+	taxIds: z
+		.union([z.array(setupPaymentBillingDetailsTaxIdSchema), z.undefined()])
+		.optional(),
+	taxExempt: z.union([setupPaymentTaxExemptSchema, z.undefined()]).optional(),
+});
+
 export const setupPaymentParamsSchema = z.object({
 	customerId: z.string(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -764,6 +837,10 @@ export const setupPaymentParamsSchema = z.object({
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax: z.union([setupPaymentTaxSchema, z.undefined()]).optional(),
+	billingDetails: z
+		.union([setupPaymentBillingDetailsSchema, z.undefined()])
+		.optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
@@ -914,6 +991,10 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax: z.union([setupPaymentTaxOutboundSchema, z.undefined()]).optional(),
+	billing_details: z
+		.union([setupPaymentBillingDetailsOutboundSchema, z.undefined()])
+		.optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),

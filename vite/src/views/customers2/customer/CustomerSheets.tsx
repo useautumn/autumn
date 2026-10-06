@@ -26,6 +26,7 @@ import { BillingUsageLimitSheet } from "../components/sheets/BillingUsageLimitSh
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
 import { CreateInvoiceSheet } from "../components/sheets/CreateInvoiceSheet";
 import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
+import { CreditNoteInvoiceSheet } from "../components/sheets/CreditNoteInvoiceSheet";
 import { CustomerConfigSheet } from "../components/sheets/CustomerConfigSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { LicenseDetailSheet } from "../components/sheets/LicenseDetailSheet";
@@ -104,6 +105,8 @@ export function CustomerSheets() {
 			}
 			case "invoice-reissue":
 				return <ReissueInvoiceSheet />;
+			case "invoice-credit-note":
+				return <CreditNoteInvoiceSheet />;
 			case "create-invoice":
 				return <CreateInvoiceSheet />;
 			case "upcoming-invoice-detail": {

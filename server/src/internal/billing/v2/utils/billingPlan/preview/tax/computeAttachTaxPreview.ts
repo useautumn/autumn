@@ -10,6 +10,12 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	customerHasUsableTaxLocationForStripeTax,
+	isTaxExemptCustomer,
+	wantsStripeAutomaticTax,
+} from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
+import { billingDetailsToTaxCalculationCustomerDetails } from "@/internal/billing/v2/utils/tax/billingDetailsToTaxCalculationCustomerDetails";
 
 /**
  * Build-stage helper that computes a tax preview for an attach via Stripe Tax.
@@ -23,8 +29,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
  *  - flow is `stripe_checkout` (Stripe Checkout collects the address itself
  *    and computes tax during the buyer-facing form, so any pre-checkout
  *    preview here would diverge from what Stripe ultimately charges)
- *  - no Stripe customer exists (we only support previewing against an
- *    existing Stripe customer; Stripe's location waterfall needs it)
  *  - no `chargeImmediately` line items at all
  *
  * When the net taxable subtotal is negative, Stripe Tax is called with the
@@ -89,29 +93,45 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 	billingContext: BillingContext;
 	netSubtotal: number;
 }): Promise<PreviewTax | undefined> => {
-	if (!ctx.org.config.automatic_tax) return undefined;
+	if (!wantsStripeAutomaticTax({ ctx, billingContext })) return undefined;
 	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
-	if (!billingContext.stripeCustomer?.id) return undefined;
 
 	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const zeroTax = (status: PreviewTax["status"]): PreviewTax => ({
+		total: 0,
+		amount_inclusive: 0,
+		amount_exclusive: 0,
+		currency,
+		status,
+	});
 
-	if (netSubtotal === 0) {
-		return {
-			total: 0,
-			amount_inclusive: 0,
-			amount_exclusive: 0,
-			currency,
-			status: "complete",
-		};
+	if (netSubtotal === 0) return zeroTax("complete");
+
+	const customerDetails = billingDetailsToTaxCalculationCustomerDetails({
+		billingContext,
+	});
+	const hasTaxLocation =
+		customerDetails !== undefined ||
+		customerHasUsableTaxLocationForStripeTax(billingContext.stripeCustomer);
+	if (!hasTaxLocation) {
+		return zeroTax(
+			isTaxExemptCustomer({ billingContext })
+				? "complete"
+				: "requires_location",
+		);
 	}
+	const stripeCustomerId = billingContext.stripeCustomer?.id;
+
 	const taxSign = netSubtotal < 0 ? -1 : 1;
 	const taxableSubtotal = Math.abs(netSubtotal);
 
 	try {
 		const calc = await stripeCli.tax.calculations.create({
 			currency,
-			customer: billingContext.stripeCustomer.id,
+			...(customerDetails
+				? { customer_details: customerDetails }
+				: { customer: stripeCustomerId }),
 			line_items: [
 				{
 					amount: atmnToStripeAmount({
@@ -149,12 +169,6 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 		ctx.logger.warn(
 			`[computeAttachTaxPreview] Stripe Tax calculation failed; returning incomplete status: ${errMsg}`,
 		);
-		return {
-			total: 0,
-			amount_inclusive: 0,
-			amount_exclusive: 0,
-			currency,
-			status: "incomplete",
-		};
+		return zeroTax("incomplete");
 	}
 };

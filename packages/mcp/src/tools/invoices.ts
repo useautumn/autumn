@@ -1,6 +1,7 @@
 import {
 	CreateInvoiceParamsSchema,
 	FinalizeInvoiceParamsSchema,
+	IssueCreditNoteParamsSchema,
 	ListInvoicesParamsSchema,
 	ListInvoiceTemplatesParamsSchema,
 	PayInvoiceParamsSchema,
@@ -24,6 +25,9 @@ const createInvoiceRequestSchema = CreateInvoiceParamsSchema.omit({
 const reissueInvoiceRequestSchema = ReissueInvoiceParamsSchema.omit({
 	preview: true,
 });
+const issueCreditNoteRequestSchema = IssueCreditNoteParamsSchema.omit({
+	preview: true,
+});
 
 const endpoints = {
 	listInvoices: "/v1/invoices.list",
@@ -32,6 +36,8 @@ const endpoints = {
 	createInvoice: "/v1/invoices.create",
 	previewReissueInvoice: "/v1/invoices.reissue",
 	reissueInvoice: "/v1/invoices.reissue",
+	previewIssueCreditNote: "/v1/invoices.issue_credit_note",
+	issueCreditNote: "/v1/invoices.issue_credit_note",
 	finalizeInvoice: "/v1/invoices.finalize",
 	payInvoice: "/v1/invoices.pay",
 	voidInvoice: "/v1/invoices.void",
@@ -44,6 +50,8 @@ const schemas = {
 	createInvoice: createInvoiceRequestSchema,
 	previewReissueInvoice: reissueInvoiceRequestSchema,
 	reissueInvoice: reissueInvoiceRequestSchema,
+	previewIssueCreditNote: issueCreditNoteRequestSchema,
+	issueCreditNote: issueCreditNoteRequestSchema,
 	finalizeInvoice: FinalizeInvoiceParamsSchema,
 	payInvoice: PayInvoiceParamsSchema,
 	voidInvoice: VoidInvoiceParamsSchema,
@@ -120,6 +128,13 @@ const domain = {
 			}),
 			PREVIEW_FIELDS,
 		),
+		withFixedFields(
+			operation({
+				id: "previewIssueCreditNote",
+				description: `Preview a credit note on an open or paid invoice without issuing it: returns its total, discount, tax and where the money goes. Credit a flat amount or specific lines (line ids are the invoice_li_... ids from the invoice's items; line amounts are pre-discount and pre-tax like the item amounts). On a paid invoice, destination picks where the paid money goes: customer_balance (default), refund, or out_of_band. Draft and void invoices cannot be credited. ${INVOICE_ID_NOTE} Always preview the exact final request before issueCreditNote.`,
+			}),
+			PREVIEW_FIELDS,
+		),
 		operation({
 			id: "finalizeInvoice",
 			description: `Finalize a draft invoice so Stripe issues it: a send-invoice one is emailed to the customer, a charge-automatically one is charged. Only draft invoices can be finalized. ${INVOICE_ID_NOTE} Destructive billing write: confirm the invoice with the user first.`,
@@ -150,6 +165,14 @@ const domain = {
 				id: "reissueInvoice",
 				description:
 					"Void (or credit) an invoice and issue its replacement with the exact request previewed by previewReissueInvoice.",
+			}),
+			WRITE_FIELDS,
+		),
+		withFixedFields(
+			confirmedWrite({
+				id: "issueCreditNote",
+				description:
+					"Issue a credit note with the exact request previewed by previewIssueCreditNote. A refund destination returns real money to the customer's payment method.",
 			}),
 			WRITE_FIELDS,
 		),

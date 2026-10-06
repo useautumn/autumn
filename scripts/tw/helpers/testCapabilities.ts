@@ -3,7 +3,12 @@
 
 import { readFile } from "node:fs/promises";
 
-export type TestCapabilityId = "svix" | "ssoIdp" | "leaf" | "stripe-connect";
+export type TestCapabilityId =
+	| "svix"
+	| "ssoIdp"
+	| "leaf"
+	| "stripe-connect"
+	| "pg-replica";
 
 export type CapabilityService = {
 	name: string;
@@ -18,7 +23,9 @@ export type CapabilityService = {
 export type TestCapability = {
 	id: TestCapabilityId;
 	/** Matched against the test file's source. */
-	matches: RegExp;
+	matches?: RegExp;
+	/** Matched against the test file's path; either match routes the file. */
+	paths?: RegExp;
 	/** Added to the env of every worker on this capability's shard. */
 	workerEnv: Record<string, string>;
 	/** Started by worker/boot.ts on this capability's workers only. */
@@ -28,6 +35,9 @@ export type TestCapability = {
 };
 
 const SSO_IDP_DNS = "127.0.0.1:53535";
+
+/** The hot standby boot.ts starts on pg-replica workers; see image/start-replica.sh. */
+export const PG_REPLICA_PORT = 5433;
 
 /** A file matching several entries runs on a worker that has all of them. */
 export const TEST_CAPABILITIES: TestCapability[] = [
@@ -77,6 +87,15 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 		// One dedicated platform account, so its tests never run concurrently.
 		maxWorkers: 1,
 	},
+	{
+		id: "pg-replica",
+		// By path: unit tests fake the replica pool, only these need a real standby.
+		paths: /\/integration\/replica-reads\//,
+		workerEnv: {
+			TW_PG_REPLICA: "1",
+			DATABASE_REPLICA_URL: `postgresql://postgres:postgres@localhost:${PG_REPLICA_PORT}/autumn`,
+		},
+	},
 ];
 
 /** Max number of files read concurrently to keep file-descriptor pressure bounded. */
@@ -101,9 +120,9 @@ export const detectCapabilities = async (
 	} catch {
 		return [];
 	}
-	return TEST_CAPABILITIES.filter(({ matches }) => matches.test(source)).map(
-		({ id }) => id,
-	);
+	return TEST_CAPABILITIES.filter(
+		({ matches, paths }) => matches?.test(source) || paths?.test(file),
+	).map(({ id }) => id);
 };
 
 export type CapabilityShard = {

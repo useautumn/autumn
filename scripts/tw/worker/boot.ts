@@ -58,6 +58,7 @@ import {
 } from "../constants.js";
 import {
 	type CapabilityService,
+	PG_REPLICA_PORT,
 	workerCapabilityServices,
 } from "../helpers/testCapabilities.js";
 import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
@@ -334,6 +335,32 @@ const startNativeServices = async (repoRoot: string): Promise<void> => {
 	}
 };
 
+/** Starts a streaming hot standby of the worker's PostgreSQL (pg-replica shard only). */
+export const startPgReplica = async (repoRoot: string): Promise<void> => {
+	const startedAt = Date.now();
+	log(`starting PostgreSQL hot standby on :${PG_REPLICA_PORT}`);
+	const proc = spawn(
+		["bash", join(repoRoot, "scripts", "tw", "image", "start-replica.sh")],
+		{
+			cwd: repoRoot,
+			stdout: "inherit",
+			stderr: "inherit",
+			env: {
+				...process.env,
+				PG_PORT: String(PG_PORT),
+				REPLICA_PORT: String(PG_REPLICA_PORT),
+			} as Record<string, string>,
+		},
+	);
+	const exitCode = await proc.exited;
+	if (exitCode !== 0) {
+		throw new Error(
+			`[tw-boot] start-replica.sh exited with code ${exitCode} — PostgreSQL standby failed to start`,
+		);
+	}
+	log(`PostgreSQL standby streaming (+${Date.now() - startedAt}ms)`);
+};
+
 /**
  * Binds the orchestrator-created Svix app into the localhost org (plan §7/§9a).
  * The orchestrator now CREATES + RECORDS the one dedicated svix-shard app before
@@ -526,6 +553,11 @@ const main = async (): Promise<void> => {
 		throw new Error(
 			`[tw-boot] db migrate exited with code ${migrateExit} — schema self-heal failed`,
 		);
+	}
+
+	// 2c. Standby after migrations, so pg_basebackup copies the current schema.
+	if (isTruthyEnv(process.env.TW_PG_REPLICA)) {
+		await startPgReplica(repoRoot);
 	}
 
 	// 3. Bind the orchestrator-created Svix app (only when flagged). It only

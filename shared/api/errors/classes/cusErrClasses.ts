@@ -25,3 +25,15 @@ export class CustomerAlreadyExistsError extends RecaseError {
 		this.name = "CustomerAlreadyExistsError";
 	}
 }
+
+export class CustomerTaxLocationMissingError extends RecaseError {
+	constructor(opts: { customerId: string }) {
+		super({
+			message: `Automatic tax is enabled but customer ${opts.customerId} has no billing address. Pass billing_details.address, set billing_details.tax_exempt to "exempt", or pass tax.automatic_tax.enabled: false.`,
+			code: CusErrorCode.CustomerTaxLocationMissing,
+			statusCode: 400,
+			details: { customer_id: opts.customerId },
+		});
+		this.name = "CustomerTaxLocationMissingError";
+	}
+}

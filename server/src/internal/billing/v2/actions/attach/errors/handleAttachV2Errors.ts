@@ -25,6 +25,7 @@ import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
 import { handleRemoveDiscountsErrors } from "./handleRemoveDiscountsErrors";
+import { handleTaxLocationErrors } from "./handleTaxLocationErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
 export const handleAttachV2Errors = async ({
@@ -76,8 +77,9 @@ export const handleAttachV2Errors = async ({
 	// 4. Stripe checkout errors
 	handleStripeCheckoutErrors({ billingContext, autumnBillingPlan });
 
-	// 5. Invoice mode errors (deferred + downgrade)
-	handleAttachInvoiceModeErrors({ billingContext });
+	// 5. Invoice mode errors (deferred + downgrade, no-card trial invoice options)
+	handleAttachInvoiceModeErrors({ ctx, billingContext, params });
+	if (!preview) handleTaxLocationErrors({ ctx, billingContext, billingPlan });
 
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });

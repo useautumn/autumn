@@ -3,6 +3,7 @@ import {
 	CustomerStateFormSchema,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useAppForm } from "@/hooks/form/form";
 
 /**
@@ -23,8 +24,12 @@ export function useCustomerStateForm({
 		],
 		unscheduledPlans: [],
 		resetBillingCycle: false,
+		billingCycleAnchorMode: "now",
+		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
+		...DISABLED_FREE_TRIAL_FORM_VALUES,
+		trialEdited: false,
 	};
 
 	return useAppForm({

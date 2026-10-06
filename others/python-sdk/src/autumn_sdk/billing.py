@@ -77,6 +77,10 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
+        tax: Optional[Union[models.AttachTax, models.AttachTaxTypedDict]] = None,
+        billing_details: Optional[
+            Union[models.AttachBillingDetails, models.AttachBillingDetailsTypedDict]
+        ] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
@@ -123,6 +127,8 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+        :param tax: Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+        :param billing_details: Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
@@ -189,6 +195,10 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
+            tax=utils.get_pydantic_model(tax, Optional[models.AttachTax]),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.AttachBillingDetails]
+            ),
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
@@ -324,6 +334,10 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
+        tax: Optional[Union[models.AttachTax, models.AttachTaxTypedDict]] = None,
+        billing_details: Optional[
+            Union[models.AttachBillingDetails, models.AttachBillingDetailsTypedDict]
+        ] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
@@ -370,6 +384,8 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+        :param tax: Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+        :param billing_details: Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
@@ -436,6 +452,10 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
+            tax=utils.get_pydantic_model(tax, Optional[models.AttachTax]),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.AttachBillingDetails]
+            ),
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
@@ -1229,6 +1249,17 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
+        tax: Optional[
+            Union[
+                models.PreviewAttachTaxRequest, models.PreviewAttachTaxRequestTypedDict
+            ]
+        ] = None,
+        billing_details: Optional[
+            Union[
+                models.PreviewAttachBillingDetails,
+                models.PreviewAttachBillingDetailsTypedDict,
+            ]
+        ] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
@@ -1275,6 +1306,8 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+        :param tax: Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+        :param billing_details: Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
@@ -1342,6 +1375,10 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
+            tax=utils.get_pydantic_model(tax, Optional[models.PreviewAttachTaxRequest]),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.PreviewAttachBillingDetails]
+            ),
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
@@ -1487,6 +1524,17 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
+        tax: Optional[
+            Union[
+                models.PreviewAttachTaxRequest, models.PreviewAttachTaxRequestTypedDict
+            ]
+        ] = None,
+        billing_details: Optional[
+            Union[
+                models.PreviewAttachBillingDetails,
+                models.PreviewAttachBillingDetailsTypedDict,
+            ]
+        ] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
@@ -1533,6 +1581,8 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+        :param tax: Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+        :param billing_details: Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
@@ -1600,6 +1650,10 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
+            tax=utils.get_pydantic_model(tax, Optional[models.PreviewAttachTaxRequest]),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.PreviewAttachBillingDetails]
+            ),
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
@@ -3615,6 +3669,15 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
+        tax: Optional[
+            Union[models.SetupPaymentTax, models.SetupPaymentTaxTypedDict]
+        ] = None,
+        billing_details: Optional[
+            Union[
+                models.SetupPaymentBillingDetails,
+                models.SetupPaymentBillingDetailsTypedDict,
+            ]
+        ] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
@@ -3654,6 +3717,8 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+        :param tax: Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+        :param billing_details: Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
@@ -3713,6 +3778,10 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
+            tax=utils.get_pydantic_model(tax, Optional[models.SetupPaymentTax]),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.SetupPaymentBillingDetails]
+            ),
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,
@@ -3848,6 +3917,15 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
+        tax: Optional[
+            Union[models.SetupPaymentTax, models.SetupPaymentTaxTypedDict]
+        ] = None,
+        billing_details: Optional[
+            Union[
+                models.SetupPaymentBillingDetails,
+                models.SetupPaymentBillingDetailsTypedDict,
+            ]
+        ] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
         remove_plan_ids: Optional[List[str]] = None,
@@ -3887,6 +3965,8 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+        :param tax: Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+        :param billing_details: Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan. When no plan in the same group is being replaced, the attach takes over the subscription of the first paid plan listed here, unless `new_billing_subscription` is true (paid plans cannot be removed in that case). Any other paid plan must be billed on that same subscription (free plans can always be removed). Only allowed when the new plan starts immediately (not with `plan_schedule: end_of_cycle`, or a future `starts_at` without `enable_plan_immediately`).
@@ -3946,6 +4026,10 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
+            tax=utils.get_pydantic_model(tax, Optional[models.SetupPaymentTax]),
+            billing_details=utils.get_pydantic_model(
+                billing_details, Optional[models.SetupPaymentBillingDetails]
+            ),
             tax_rate_id=tax_rate_id,
             currency=currency,
             remove_plan_ids=remove_plan_ids,

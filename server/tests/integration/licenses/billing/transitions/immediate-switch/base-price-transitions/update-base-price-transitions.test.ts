@@ -6,6 +6,7 @@ import type {
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
@@ -338,7 +339,7 @@ test.concurrent(
 				params,
 			);
 		expect(preview.total).toBe(SEAT_COUNT * OLD_PRICE);
-		expect(preview.next_cycle).toBeUndefined();
+		expectPreviewNextCycleCorrect({ preview, total: SEAT_COUNT * OLD_PRICE });
 		await scenario.autumnV2_3.billing.update(params);
 
 		const assignments = await expectAssignmentBasePrices({

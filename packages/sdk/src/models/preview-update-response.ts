@@ -1087,14 +1087,15 @@ export const Intent = {
 export type Intent = OpenEnum<typeof Intent>;
 
 /**
- * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ * Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
  */
 export const PreviewUpdateStatus = {
   Complete: "complete",
   Incomplete: "incomplete",
+  RequiresLocation: "requires_location",
 } as const;
 /**
- * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ * Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
  */
 export type PreviewUpdateStatus = OpenEnum<typeof PreviewUpdateStatus>;
 
@@ -1119,7 +1120,7 @@ export type PreviewUpdateTax = {
    */
   currency: string;
   /**
-   * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+   * Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
    */
   status: PreviewUpdateStatus;
 };

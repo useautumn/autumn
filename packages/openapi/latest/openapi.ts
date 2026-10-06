@@ -180,6 +180,10 @@ async function generateOpenApiDocument({
 	return openApiDocument;
 }
 
+// Shared objects would otherwise become anchors/aliases, which strict parsers (yaml's maxAliasCount) reject.
+const stringifySpec = (document: unknown) =>
+	yaml.stringify(document, { aliasDuplicateObjects: false });
+
 /**
  * Generates and writes the full OpenAPI spec (with TypeScript JSDoc examples).
  * Used for the TypeScript SDK generation.
@@ -190,7 +194,7 @@ export const writeLatestOpenApi = async ({
 	outputFilePath: string;
 }) => {
 	const openApiDocument = await generateOpenApiDocument();
-	const yamlContent = yaml.stringify(openApiDocument);
+	const yamlContent = stringifySpec(openApiDocument);
 	writeFileSync(outputFilePath, yamlContent, "utf8");
 };
 
@@ -211,7 +215,7 @@ export const writeLatestOpenApiStripped = async ({
 		?.schemas as Record<string, unknown> | undefined;
 	transformNode(openApiDocument, schemas);
 
-	const yamlContent = yaml.stringify(openApiDocument);
+	const yamlContent = stringifySpec(openApiDocument);
 	writeFileSync(outputFilePath, yamlContent, "utf8");
 };
 
@@ -232,6 +236,6 @@ export const writeLatestOpenApiInternal = async ({
 		// sanitising, so including them would carry internal fields for nothing.
 		includeWebhooks: false,
 	});
-	const yamlContent = yaml.stringify(openApiDocument);
+	const yamlContent = stringifySpec(openApiDocument);
 	writeFileSync(outputFilePath, yamlContent, "utf8");
 };

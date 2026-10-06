@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ProductV2 } from "@autumn/shared";
+import { FreeTrialDuration, type ProductV2 } from "@autumn/shared";
 import { buildCreateScheduleRequestBody } from "../hooks/useCreateScheduleRequestBody";
 import { scheduleFormFromRequestBody } from "./scheduleFormFromRequestBody";
 
@@ -51,6 +51,43 @@ describe("scheduleFormFromRequestBody", () => {
 		expect(form?.phases?.[1]).toMatchObject({
 			plans: [{ productId: "enterprise", version: 2 }],
 			startsAt: 1790000000000,
+		});
+	});
+
+	test("loads a timestamp first-phase anchor as a custom billing cycle anchor", () => {
+		const anchorMs = 1790000000000;
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					plans: [{ plan_id: "scale" }],
+					starts_at: "now",
+				},
+			],
+		});
+		expect(form).toMatchObject({
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: anchorMs,
+		});
+	});
+
+	test("loads a phase_start first-phase anchor as a reset now", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [
+				{
+					billing_cycle_anchor: "phase_start",
+					plans: [{ plan_id: "scale" }],
+					starts_at: "now",
+				},
+			],
+		});
+		expect(form).toMatchObject({
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "now",
+			billingCycleAnchorDate: null,
 		});
 	});
 
@@ -344,5 +381,50 @@ describe("scheduleFormFromRequestBody", () => {
 		});
 
 		expect(form).toMatchObject({ endDate: null, resetBillingCycle: true });
+	});
+	test("round trips a free trial and a trial removal", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const freeTrial = {
+			card_required: true,
+			duration_length: 14,
+			duration_type: "day",
+		};
+		const form = scheduleFormFromRequestBody({
+			free_trial: freeTrial,
+			phases: [{ plans: [{ plan_id: "launch" }], starts_at: "now" }],
+		});
+		expect(form).toMatchObject({
+			trialCardRequired: true,
+			trialDuration: "day",
+			trialEnabled: true,
+			trialLength: 14,
+		});
+
+		const request = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			features: [],
+			nowMs: now,
+			phases: form?.phases ?? [],
+			products: [{ id: "launch", items: [] } as unknown as ProductV2],
+			freeTrial: {
+				trialCardRequired: form?.trialCardRequired ?? false,
+				trialDuration: form?.trialDuration ?? FreeTrialDuration.Month,
+				trialEnabled: form?.trialEnabled ?? false,
+				trialLength: form?.trialLength ?? null,
+			},
+		});
+		expect(request?.free_trial).toEqual(freeTrial);
+
+		expect(
+			scheduleFormFromRequestBody({
+				free_trial: null,
+				phases: [{ plans: [{ plan_id: "launch" }], starts_at: "now" }],
+			}),
+		).toMatchObject({ trialEnabled: false, trialLength: null });
+		expect(
+			scheduleFormFromRequestBody({
+				phases: [{ plans: [{ plan_id: "launch" }], starts_at: "now" }],
+			}),
+		).not.toHaveProperty("trialEnabled");
 	});
 });

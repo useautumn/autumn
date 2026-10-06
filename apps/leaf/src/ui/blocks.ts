@@ -455,6 +455,14 @@ const actionPhrases = ({
 					running: `Reissuing ${target}`,
 				};
 			}
+			case "issueCreditNote": {
+				return {
+					done: `Issued a credit note for ${invoiceLabel}`,
+					failed: `Couldn't issue a credit note for ${invoiceLabel}`,
+					pending: `Issue a credit note for ${invoiceLabel}`,
+					running: `Issuing a credit note for ${invoiceLabel}`,
+				};
+			}
 			case "finalizeInvoice": {
 				return {
 					done: `Finalized ${invoiceLabel}`,

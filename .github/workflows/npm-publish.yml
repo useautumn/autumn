@@ -47,6 +47,21 @@ on:
         required: false
         default: ""
         type: string
+      ref:
+        description: "Commit to build and publish; defaults to the triggering commit"
+        required: false
+        default: ""
+        type: string
+      patch-artifact:
+        description: "Artifact holding publish.patch (regenerated files and versions) to apply before building"
+        required: false
+        default: ""
+        type: string
+      create-tag:
+        description: "Tag the published commit; publish.yml tags its own bot commit instead"
+        required: false
+        default: true
+        type: boolean
     secrets:
       SPEAKEASY_API_KEY:
         required: false
@@ -69,13 +84,26 @@ jobs:
     env:
       # tsup's dts worker hits Node's default heap cap; runner has 16 GB
       NODE_OPTIONS: --max-old-space-size=8192
+      SOURCE_SHA: ${{ inputs.ref || github.sha }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Download publish patch
+        if: inputs.patch-artifact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.patch-artifact }}
+          path: ${{ runner.temp }}/publish-patch
+
+      - name: Apply publish patch
+        if: inputs.patch-artifact != ''
+        run: git apply --binary "$RUNNER_TEMP/publish-patch/publish.patch"
 
       - name: Resolve package
         id: pkg
@@ -127,7 +155,7 @@ jobs:
         if: steps.next-version.outputs.published != 'true'
         run: |
           cd ${{ inputs.package-dir }}
-          jq --arg version "${{ steps.next-version.outputs.version }}" --arg sha "$GITHUB_SHA" \
+          jq --arg version "${{ steps.next-version.outputs.version }}" --arg sha "$SOURCE_SHA" \
              '.version = $version | .gitHead = $sha' package.json > package.json.tmp
           mv package.json.tmp package.json
           echo "Updated package.json:"
@@ -213,16 +241,29 @@ jobs:
           echo "✅ Published $(jq -r '.name' package.json)@${{ steps.next-version.outputs.version }}"
 
       - name: Create git tag
-        if: inputs.dry-run != 'true' && inputs.publish-name-override == ''
+        if: inputs.dry-run != 'true' && inputs.publish-name-override == '' && inputs.create-tag
         run: |
           TAG_NAME="${{ steps.pkg.outputs.tag_prefix }}-v${{ steps.next-version.outputs.version }}"
           if git rev-parse --verify "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
-            test "$(git rev-parse "$TAG_NAME^{commit}")" = "$GITHUB_SHA"
+            test "$(git rev-parse "$TAG_NAME^{commit}")" = "$SOURCE_SHA"
           else
-            git tag "$TAG_NAME" "$GITHUB_SHA"
+            git tag "$TAG_NAME" "$SOURCE_SHA"
           fi
           git push origin "$TAG_NAME"
           echo "✅ Created and pushed tag: $TAG_NAME"
+
+      # publish.yml commits a package's version bump only when this marker exists.
+      - name: Mark published
+        if: success() && inputs.patch-artifact != ''
+        run: mkdir -p "$RUNNER_TEMP/published" && echo "${{ steps.next-version.outputs.version }}" > "$RUNNER_TEMP/published/version"
+
+      - name: Upload published marker
+        if: success() && inputs.patch-artifact != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-${{ steps.pkg.outputs.tag_prefix }}
+          path: ${{ runner.temp }}/published
+          retention-days: 7
 
       - name: Summary
         run: |

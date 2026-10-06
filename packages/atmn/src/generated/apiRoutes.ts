@@ -1186,6 +1186,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
 			},
 			{
+				name: "tax",
+				type: "json",
+				required: false,
+				description:
+					"Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.",
+			},
+			{
 				name: "tax_rate_id",
 				type: "string",
 				required: false,
@@ -1649,6 +1663,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
+			},
+			{
+				name: "tax",
+				type: "json",
+				required: false,
+				description:
+					"Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.",
 			},
 			{
 				name: "tax_rate_id",
@@ -2399,6 +2427,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.",
+			},
+			{
+				name: "tax",
+				type: "json",
+				required: false,
+				description:
+					"Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.",
+			},
+			{
+				name: "billing_details",
+				type: "json",
+				required: false,
+				description:
+					"Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.",
 			},
 			{
 				name: "tax_rate_id",
@@ -3433,6 +3475,68 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: true,
 				description: "The Autumn invoice ID to mark as paid.",
+			},
+		],
+	},
+	{
+		group: "invoices",
+		method: "issue_credit_note",
+		path: "/v1/invoices.issue_credit_note",
+		description:
+			"Issues a Stripe credit note against an open or paid invoice, for a flat amount or for specific invoice lines. On an open invoice the credit reduces what is still owed. On a paid invoice the credited money goes to the chosen destination: the customer's balance (default), a refund, or a record of money returned outside Stripe. Line amounts are pre-discount and pre-tax, like the invoice's own item amounts. Pass preview to see the credit note without issuing it.",
+		body: "object",
+		fields: [
+			{
+				name: "invoice_id",
+				type: "string",
+				required: true,
+				description: "The Autumn invoice ID to credit. Must be open or paid.",
+			},
+			{
+				name: "amount",
+				type: "number",
+				required: false,
+				description:
+					"Total to credit across the whole invoice. Cannot be combined with lines.",
+			},
+			{
+				name: "lines",
+				type: "json",
+				required: false,
+				description:
+					"Credit specific invoice lines instead of a flat amount. Cannot be combined with amount. Unavailable on invoices recorded before line item storage.",
+			},
+			{
+				name: "destination",
+				type: "string",
+				required: false,
+				description:
+					"Where already-paid money goes. customer_balance credits the customer's balance for their next invoice, refund returns it to the original payment method, and out_of_band records money returned outside Stripe.",
+			},
+			{
+				name: "send_email",
+				type: "boolean",
+				required: false,
+				description: "Email the credit note to the customer.",
+			},
+			{
+				name: "reason",
+				type: "string",
+				required: false,
+				description: "Reason shown on the credit note.",
+			},
+			{
+				name: "memo",
+				type: "string",
+				required: false,
+				description: "Memo printed on the credit note PDF.",
+			},
+			{
+				name: "preview",
+				type: "boolean",
+				required: false,
+				description:
+					"Return the credit note that would be issued without creating it.",
 			},
 		],
 	},

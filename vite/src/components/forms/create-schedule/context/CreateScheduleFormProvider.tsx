@@ -18,6 +18,7 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { CustomerStateProvider } from "@/components/forms/customer-state/CustomerStateProvider";
@@ -39,6 +40,8 @@ import {
 } from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
+import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
+import { pickFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -50,6 +53,14 @@ import {
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
+import {
+	type CurrentScheduleTrial,
+	canScheduleFreeTrial,
+	defaultScheduleTrialFormValues,
+	findCatalogScheduleTrial,
+	findCurrentScheduleTrial,
+	reseededScheduleTrialFormValues,
+} from "../utils/scheduleFreeTrial";
 import {
 	firstPhaseBackdatesLiveSubscription,
 	firstPhaseStartsLater,
@@ -70,9 +81,13 @@ interface CreateScheduleFormContextValue {
 	allowStartedPhaseBackdate: boolean;
 	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
 	backdatesLiveSubscription: boolean;
+	hasActiveSubscription: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
+	/** The trial the edited subscription is running now, if any. */
+	currentTrial: CurrentScheduleTrial | null;
+	canScheduleTrial: boolean;
 	isPending: boolean;
 	handleSubmit: () => void;
 	handleInvoiceSubmit: (params: SendInvoiceSubmitParams) => Promise<{
@@ -206,6 +221,45 @@ export function CreateScheduleFormProvider({
 	const createsRecurringSubscription =
 		!hasActiveSubscription && immediatePlansPaidRecurring;
 
+	const currentTrial = useMemo(
+		() =>
+			findCurrentScheduleTrial({
+				customerProducts: scopedCustomerProducts,
+				nowMs,
+			}),
+		[scopedCustomerProducts, nowMs],
+	);
+	const catalogFreeTrial = useMemo(
+		() =>
+			findCatalogScheduleTrial({
+				phases: formValues.phases,
+				products,
+				customerProducts: fullCustomer?.customer_products ?? [],
+			}),
+		[formValues.phases, products, fullCustomer?.customer_products],
+	);
+	const defaultTrialFormValues = useMemo(
+		() => defaultScheduleTrialFormValues({ currentTrial, catalogFreeTrial }),
+		[currentTrial, catalogFreeTrial],
+	);
+	const canScheduleTrial = canScheduleFreeTrial({
+		phases: formValues.phases,
+		nowMs,
+	});
+
+	const previousDefaultTrialFormValuesRef = useRef(defaultTrialFormValues);
+	useEffect(() => {
+		const reseededFormValues = reseededScheduleTrialFormValues({
+			trialEdited: form.store.state.values.trialEdited,
+			previousDefaultFormValues: previousDefaultTrialFormValuesRef.current,
+			defaultFormValues: defaultTrialFormValues,
+		});
+		previousDefaultTrialFormValuesRef.current = defaultTrialFormValues;
+		if (reseededFormValues) {
+			applyFreeTrialFormValues({ form, values: reseededFormValues });
+		}
+	}, [defaultTrialFormValues, form]);
+
 	const getPhases = useCallback(
 		() => form.store.state.values.phases,
 		[form.store],
@@ -223,6 +277,12 @@ export function CreateScheduleFormProvider({
 		[form.store, backdatesLiveSubscription],
 	);
 
+	const getBillingCycleAnchor = useCallback(() => {
+		const { billingCycleAnchorMode, billingCycleAnchorDate } =
+			form.store.state.values;
+		return { billingCycleAnchorMode, billingCycleAnchorDate };
+	}, [form.store]);
+
 	const getEndDate = useCallback(
 		() => form.store.state.values.endDate,
 		[form.store],
@@ -238,6 +298,18 @@ export function CreateScheduleFormProvider({
 		[allowFirstPhaseBackdate],
 	);
 
+	const { trialEnabled, trialLength, trialDuration, trialCardRequired } =
+		formValues;
+	const trialFormValues = useMemo(
+		() => ({ trialEnabled, trialLength, trialDuration, trialCardRequired }),
+		[trialEnabled, trialLength, trialDuration, trialCardRequired],
+	);
+
+	const getFreeTrial = useCallback(
+		() => pickFreeTrialFormValues(form.store.state.values),
+		[form.store],
+	);
+
 	const buildRequestBody = useBuildCreateScheduleRequestBody({
 		customerId,
 		products,
@@ -246,9 +318,13 @@ export function CreateScheduleFormProvider({
 		getPhases,
 		getUnscheduledPlans,
 		getResetBillingCycle,
+		getBillingCycleAnchor,
 		getEndDate,
 		getEnablePlanImmediately,
 		getAllowFirstPhaseBackdate,
+		getFreeTrial,
+		currentTrial,
+		catalogFreeTrial,
 		stripeSubscriptionId,
 	});
 
@@ -261,10 +337,15 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		resetBillingCycle:
 			formValues.resetBillingCycle && !backdatesLiveSubscription,
+		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
+		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,
 		stripeSubscriptionId,
+		freeTrial: trialFormValues,
+		currentTrial,
+		catalogFreeTrial,
 	});
 
 	// Clear stale backdates when the selected scope can no longer use them.
@@ -339,8 +420,11 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
+			hasActiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
+			currentTrial,
+			canScheduleTrial,
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
@@ -362,8 +446,11 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
+			hasActiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
+			currentTrial,
+			canScheduleTrial,
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,

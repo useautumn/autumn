@@ -1,4 +1,5 @@
 import { createInvoice } from "./create/createInvoice";
+import { issueCreditNote } from "./creditNote/issueCreditNote";
 import { finalizeInvoice } from "./finalizeInvoice";
 import { insertInvoices } from "./insertInvoices";
 import { payInvoiceOutOfBand } from "./payOutOfBand";
@@ -12,6 +13,7 @@ export const invoiceActions = {
 	create: createInvoice,
 	finalize: finalizeInvoice,
 	insert: insertInvoices,
+	issueCreditNote,
 	payOutOfBand: payInvoiceOutOfBand,
 	reissue: reissueInvoice,
 	upsertFromStripe: upsertInvoiceFromStripe,

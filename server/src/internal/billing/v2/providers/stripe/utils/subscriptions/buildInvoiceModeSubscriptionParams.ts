@@ -1,5 +1,6 @@
 import type { InvoiceMode, StripeSubscriptionAction } from "@autumn/shared";
 import type Stripe from "stripe";
+import { DEFAULT_INVOICE_MODE_NET_TERMS_DAYS } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeDefaults";
 
 type InvoiceModeSubscriptionParams = Pick<
 	Stripe.SubscriptionCreateParams,
@@ -17,7 +18,8 @@ export const buildInvoiceModeSubscriptionParams = ({
 
 	const params: InvoiceModeSubscriptionParams = {
 		collection_method: "send_invoice",
-		days_until_due: invoiceMode.daysUntilDue ?? 30,
+		days_until_due:
+			invoiceMode.daysUntilDue ?? DEFAULT_INVOICE_MODE_NET_TERMS_DAYS,
 	};
 
 	const actionPaymentSettings =

@@ -1,19 +1,22 @@
 import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { format } from "date-fns";
-import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
-import { MigrationStatusBadge } from "../migration/shared/MigrationStatusBadge";
+import { MigrationFilterCell } from "./cells/MigrationFilterCell";
+import { MigrationOperationsCell } from "./cells/MigrationOperationsCell";
+import { MigrationStatusCell } from "./cells/MigrationStatusCell";
 import { MigrationListRowToolbar } from "./MigrationListRowToolbar";
+import type { MigrationListRow } from "./rowView/deriveMigrationRowView";
+
+type CellProps = { row: Row<MigrationListRow> };
 
 export const createMigrationListColumns = (): ColumnDef<
-	MigrationWithRunInfo,
+	MigrationListRow,
 	unknown
 >[] => [
 	{
 		header: "ID",
-		size: 240,
+		size: 220,
 		accessorKey: "id",
-		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
+		cell: ({ row }: CellProps) => (
 			<div className="font-mono justify-start flex w-full group overflow-hidden">
 				<MiniCopyButton text={row.original.id} />
 			</div>
@@ -21,48 +24,31 @@ export const createMigrationListColumns = (): ColumnDef<
 	},
 	{
 		header: "Status",
-		size: 140,
-		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
-			<MigrationStatusBadge
-				status={row.original.status}
-				blockedBy={row.original.blocked_by}
-				labelBlocker={false}
-			/>
+		size: 200,
+		cell: ({ row }: CellProps) => (
+			<MigrationStatusCell view={row.original.view} />
 		),
 	},
 	{
 		header: "Filter",
-		size: 120,
-		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
-			<span className="text-xs text-tertiary-foreground">
-				{row.original.filter ? "Configured" : "—"}
-			</span>
+		size: 200,
+		cell: ({ row }: CellProps) => (
+			<MigrationFilterCell view={row.original.view} />
 		),
 	},
 	{
 		header: "Operations",
-		size: 120,
-		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
-			<span className="text-xs text-tertiary-foreground">
-				{row.original.operations ? "Configured" : "—"}
-			</span>
-		),
-	},
-	{
-		header: "Created",
-		size: 160,
-		accessorKey: "created_at",
-		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
-			<span className="text-xs text-tertiary-foreground">
-				{format(new Date(row.original.created_at), "PP")}
-			</span>
+		size: 360,
+		meta: { grow: true },
+		cell: ({ row }: CellProps) => (
+			<MigrationOperationsCell view={row.original.view} />
 		),
 	},
 	{
 		header: "",
 		accessorKey: "actions",
 		size: 40,
-		cell: ({ row }: { row: Row<MigrationWithRunInfo> }) => (
+		cell: ({ row }: CellProps) => (
 			<div
 				className="flex justify-end w-full pr-2"
 				onClick={(e) => e.stopPropagation()}

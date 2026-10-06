@@ -51,6 +51,17 @@ const response = await autumn.billing.attach({
 });
 ```
 
+```typescript Send an invoice with tax
+const response = await autumn.billing.attach({
+    customerId: "cus_123",
+    planId: "enterprise_plan",
+    invoiceMode: { enabled: true },
+    billingDetails: {
+        address: { line1: "1 Martin Place", city: "Sydney", postalCode: "2000", country: "AU" },
+    },
+});
+```
+
 ```typescript Pass metadata to Stripe subscription
 const response = await autumn.billing.attach({
     customerId: "cus_123",
@@ -79,6 +90,10 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 Pass `currency` to bill the attach in a specific currency the plan offers via [`additional_currencies`](/documentation/concepts/plans#multiple-currencies). If omitted, Autumn uses the customer's currency, falling back to your organization's default.
 
 A customer who has paid is locked to their currency: passing a different one, or attaching a plan that doesn't offer a paid price in their currency, fails with a `currency_mismatch` error before any billing happens.
+
+### Tax
+
+When automatic tax is on for your organization, an invoice-mode attach needs a billing address on the customer. Without one it fails with `customer_tax_location_missing`. Pass `billingDetails` to save an address, tax IDs or a tax exemption to the customer in the same call, or `tax.automaticTax.enabled: false` to skip tax for this request. See [Tax](/documentation/customers/tax) for the full behavior.
 
 ### Body Parameters
 
@@ -1475,6 +1490,70 @@ A customer who has paid is locked to their currency: passing a different one, or
 
 <DynamicParamField body="enable_plan_immediately" type="boolean">
   If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
+</DynamicParamField>
+
+<DynamicParamField body="tax" type="object">
+  Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+  <Expandable title="properties">
+    <DynamicParamField body="automatic_tax" type="object">
+      Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id.
+      <Expandable title="properties">
+        <DynamicParamField body="enabled" type="boolean" required>
+          Whether to calculate tax automatically through Stripe for this request. Defaults to the organization's automatic tax setting.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="rate_id" type="string">
+      Stripe tax rate ID (txr_...) to apply instead of automatic tax. Takes precedence over the top-level tax_rate_id.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="billing_details" type="object">
+  Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
+  <Expandable title="properties">
+    <DynamicParamField body="address" type="object">
+      Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address.
+      <Expandable title="properties">
+        <DynamicParamField body="line1" type="string | null" />
+
+        <DynamicParamField body="line2" type="string | null" />
+
+        <DynamicParamField body="city" type="string | null" />
+
+        <DynamicParamField body="state" type="string | null" />
+
+        <DynamicParamField body="postal_code" type="string | null" />
+
+        <DynamicParamField body="country" type="string | null">
+          Two-letter country code (ISO 3166-1 alpha-2).
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="tax_ids" type="object[]">
+      Tax IDs to add to the customer. IDs the customer already has are ignored, and existing IDs are never removed. To remove one, use customers.update or Stripe.
+      <Expandable title="properties">
+        <DynamicParamField body="type" type="string" required>
+          Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+        </DynamicParamField>
+
+        <DynamicParamField body="value" type="string" required>
+          The tax ID, e.g. DE123456789.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="tax_exempt" type="'none' | 'exempt' | 'reverse'">
+      Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+    </DynamicParamField>
+
+  </Expandable>
 </DynamicParamField>
 
 <DynamicParamField body="tax_rate_id" type="string">

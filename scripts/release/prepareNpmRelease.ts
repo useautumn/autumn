@@ -3,7 +3,7 @@ import { appendFileSync } from "node:fs";
 import { resolveNpmVersion } from "./resolveNpmVersion";
 
 const packageDirectory = process.env.PACKAGE_DIR;
-const commitSha = process.env.GITHUB_SHA;
+const commitSha = process.env.SOURCE_SHA || process.env.GITHUB_SHA;
 const output = process.env.GITHUB_OUTPUT;
 const tagPrefix = process.env.TAG_PREFIX;
 if (!packageDirectory || !commitSha || !output || !tagPrefix) {

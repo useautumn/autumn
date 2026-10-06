@@ -23,7 +23,16 @@ export const customerHasUsableTaxLocationForStripeTax = (
 	);
 };
 
-export const shouldEnableStripeAutomaticTax = ({
+export const isTaxExemptCustomer = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}) =>
+	(billingContext.billingDetails?.tax_exempt ??
+		billingContext.stripeCustomer?.tax_exempt) === "exempt";
+
+/** The request should be taxed automatically, ignoring whether a tax location exists yet. */
+export const wantsStripeAutomaticTax = ({
 	ctx,
 	billingContext,
 }: {
@@ -31,15 +40,39 @@ export const shouldEnableStripeAutomaticTax = ({
 	billingContext: BillingContext;
 }) => {
 	if (!ctx.org.config.automatic_tax) return false;
+	if (billingContext.automaticTaxEnabled === false) return false;
+	return !billingContext.taxRateId;
+};
 
-	// Invoice mode uses send_invoice and has no address collection UI.
-	if (billingContext.invoiceMode) return false;
+/** Invoice mode has no address collection, so a missing location must block instead of silently skipping tax. */
+export const requiresTaxLocation = ({
+	ctx,
+	billingContext,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+}) => {
+	if (!billingContext.invoiceMode) return false;
+	if (!wantsStripeAutomaticTax({ ctx, billingContext })) return false;
+	if (isTaxExemptCustomer({ billingContext })) return false;
+	if (billingContext.billingDetails?.address?.country) return false;
+	return !customerHasUsableTaxLocationForStripeTax(
+		billingContext.stripeCustomer,
+	);
+};
+
+export const shouldEnableStripeAutomaticTax = ({
+	ctx,
+	billingContext,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+}) => {
+	if (!wantsStripeAutomaticTax({ ctx, billingContext })) return false;
 
 	// Use only the already-fetched Stripe customer. If setup did not fetch one,
 	// do not fetch again on the write path.
-	if (!customerHasUsableTaxLocationForStripeTax(billingContext.stripeCustomer)) {
-		return false;
-	}
-
-	return true;
+	return customerHasUsableTaxLocationForStripeTax(
+		billingContext.stripeCustomer,
+	);
 };

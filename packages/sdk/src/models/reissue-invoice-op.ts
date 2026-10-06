@@ -84,7 +84,7 @@ export type ReissueInvoiceInvoiceRequestBody = {
 /**
  * Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement.
  */
-export type Address = {
+export type ReissueInvoiceAddress = {
   line1?: string | undefined;
   line2?: string | undefined;
   city?: string | undefined;
@@ -118,7 +118,7 @@ export type ReissueInvoiceCustomer = {
   /**
    * Billing address. Drives tax when the org uses Stripe Tax, and is snapshotted onto the replacement.
    */
-  address?: Address | undefined;
+  address?: ReissueInvoiceAddress | undefined;
   /**
    * The customer's own tax registrations, e.g. { type: 'eu_vat', value: 'FR123...' }. Replaces the existing set; pass an empty array to remove them.
    */
@@ -1017,6 +1017,7 @@ export type ReissueInvoiceLine = {
 export const ReissueInvoiceStatus = {
   Complete: "complete",
   Incomplete: "incomplete",
+  RequiresLocation: "requires_location",
 } as const;
 export type ReissueInvoiceStatus = OpenEnum<typeof ReissueInvoiceStatus>;
 
@@ -1165,7 +1166,7 @@ export function reissueInvoiceInvoiceRequestBodyToJSON(
 }
 
 /** @internal */
-export type Address$Outbound = {
+export type ReissueInvoiceAddress$Outbound = {
   line1?: string | undefined;
   line2?: string | undefined;
   city?: string | undefined;
@@ -1175,25 +1176,31 @@ export type Address$Outbound = {
 };
 
 /** @internal */
-export const Address$outboundSchema: z.ZodMiniType<Address$Outbound, Address> =
-  z.pipe(
-    z.object({
-      line1: z.optional(z.string()),
-      line2: z.optional(z.string()),
-      city: z.optional(z.string()),
-      state: z.optional(z.string()),
-      postalCode: z.optional(z.string()),
-      country: z.optional(z.string()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        postalCode: "postal_code",
-      });
-    }),
-  );
+export const ReissueInvoiceAddress$outboundSchema: z.ZodMiniType<
+  ReissueInvoiceAddress$Outbound,
+  ReissueInvoiceAddress
+> = z.pipe(
+  z.object({
+    line1: z.optional(z.string()),
+    line2: z.optional(z.string()),
+    city: z.optional(z.string()),
+    state: z.optional(z.string()),
+    postalCode: z.optional(z.string()),
+    country: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      postalCode: "postal_code",
+    });
+  }),
+);
 
-export function addressToJSON(address: Address): string {
-  return JSON.stringify(Address$outboundSchema.parse(address));
+export function reissueInvoiceAddressToJSON(
+  reissueInvoiceAddress: ReissueInvoiceAddress,
+): string {
+  return JSON.stringify(
+    ReissueInvoiceAddress$outboundSchema.parse(reissueInvoiceAddress),
+  );
 }
 
 /** @internal */
@@ -1242,7 +1249,7 @@ export function invoiceSettingsCustomFieldsToJSON(
 export type ReissueInvoiceCustomer$Outbound = {
   email?: string | undefined;
   name?: string | undefined;
-  address?: Address$Outbound | undefined;
+  address?: ReissueInvoiceAddress$Outbound | undefined;
   tax_ids?: Array<TaxId$Outbound> | undefined;
   invoice_settings_custom_fields?:
     | Array<InvoiceSettingsCustomFields$Outbound>
@@ -1258,7 +1265,7 @@ export const ReissueInvoiceCustomer$outboundSchema: z.ZodMiniType<
   z.object({
     email: z.optional(z.string()),
     name: z.optional(z.string()),
-    address: z.optional(z.lazy(() => Address$outboundSchema)),
+    address: z.optional(z.lazy(() => ReissueInvoiceAddress$outboundSchema)),
     taxIds: z.optional(z.array(z.lazy(() => TaxId$outboundSchema))),
     invoiceSettingsCustomFields: z.optional(z.nullable(z.array(z.lazy(() =>
       InvoiceSettingsCustomFields$outboundSchema

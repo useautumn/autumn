@@ -714,6 +714,87 @@ export type PreviewAttachLicenseQuantity = {
 };
 
 /**
+ * Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id.
+ */
+export type PreviewAttachAutomaticTax = {
+  /**
+   * Whether to calculate tax automatically through Stripe for this request. Defaults to the organization's automatic tax setting.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+ */
+export type PreviewAttachTaxRequest = {
+  /**
+   * Override the organization's automatic tax setting for this request. Can't be enabled together with rate_id or tax_rate_id.
+   */
+  automaticTax?: PreviewAttachAutomaticTax | undefined;
+  /**
+   * Stripe tax rate ID (txr_...) to apply instead of automatic tax. Takes precedence over the top-level tax_rate_id.
+   */
+  rateId?: string | undefined;
+};
+
+/**
+ * Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address.
+ */
+export type PreviewAttachAddress = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postalCode?: string | null | undefined;
+  /**
+   * Two-letter country code (ISO 3166-1 alpha-2).
+   */
+  country?: string | null | undefined;
+};
+
+export type PreviewAttachBillingDetailsTaxId = {
+  /**
+   * Stripe tax ID type, e.g. eu_vat, gb_vat, us_ein. See https://docs.stripe.com/billing/customer/tax-ids#supported-tax-id
+   */
+  type: string;
+  /**
+   * The tax ID, e.g. DE123456789.
+   */
+  value: string;
+};
+
+/**
+ * Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+ */
+export const PreviewAttachTaxExempt = {
+  None: "none",
+  Exempt: "exempt",
+  Reverse: "reverse",
+} as const;
+/**
+ * Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+ */
+export type PreviewAttachTaxExempt = ClosedEnum<typeof PreviewAttachTaxExempt>;
+
+/**
+ * Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
+ */
+export type PreviewAttachBillingDetails = {
+  /**
+   * Billing address saved to the customer and used to calculate tax. Replaces the customer's whole address.
+   */
+  address?: PreviewAttachAddress | undefined;
+  /**
+   * Tax IDs to add to the customer. IDs the customer already has are ignored, and existing IDs are never removed. To remove one, use customers.update or Stripe.
+   */
+  taxIds?: Array<PreviewAttachBillingDetailsTaxId> | undefined;
+  /**
+   * Customer tax exemption status. 'exempt' customers are never charged tax and need no address. 'reverse' applies reverse charge.
+   */
+  taxExempt?: PreviewAttachTaxExempt | undefined;
+};
+
+/**
  * A discount to remove from the subscription. Discounts that are no longer applied are ignored.
  */
 export type PreviewAttachRemoveDiscount = {
@@ -838,6 +919,14 @@ export type PreviewAttachParams = {
    * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
    */
   enablePlanImmediately?: boolean | undefined;
+  /**
+   * Tax behavior for this attach. Use automatic_tax to turn automatic tax on or off for this request, or rate_id to apply a fixed tax rate.
+   */
+  tax?: PreviewAttachTaxRequest | undefined;
+  /**
+   * Billing address, tax IDs and tax exemption to save to the customer before billing. Lets an invoice-mode attach supply the address automatic tax needs in the same call.
+   */
+  billingDetails?: PreviewAttachBillingDetails | undefined;
   /**
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
@@ -1114,21 +1203,22 @@ export type PreviewAttachCheckoutType = OpenEnum<
 >;
 
 /**
- * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ * Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
  */
 export const PreviewAttachStatus = {
   Complete: "complete",
   Incomplete: "incomplete",
+  RequiresLocation: "requires_location",
 } as const;
 /**
- * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ * Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
  */
 export type PreviewAttachStatus = OpenEnum<typeof PreviewAttachStatus>;
 
 /**
  * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
  */
-export type PreviewAttachTax = {
+export type PreviewAttachTaxResponse = {
   /**
    * Total tax amount in major currency units.
    */
@@ -1146,7 +1236,7 @@ export type PreviewAttachTax = {
    */
   currency: string;
   /**
-   * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+   * Calculation status. 'complete' when tax was calculated, 'incomplete' when the calculation errored, 'requires_location' when the customer has no billing address to tax against.
    */
   status: PreviewAttachStatus;
 };
@@ -1221,7 +1311,7 @@ export type PreviewAttachResponse = {
   /**
    * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
    */
-  tax?: PreviewAttachTax | undefined;
+  tax?: PreviewAttachTaxResponse | undefined;
   /**
    * Stripe customer invoice credits preview.
    */
@@ -2730,6 +2820,165 @@ export function previewAttachLicenseQuantityToJSON(
 }
 
 /** @internal */
+export type PreviewAttachAutomaticTax$Outbound = {
+  enabled: boolean;
+};
+
+/** @internal */
+export const PreviewAttachAutomaticTax$outboundSchema: z.ZodMiniType<
+  PreviewAttachAutomaticTax$Outbound,
+  PreviewAttachAutomaticTax
+> = z.object({
+  enabled: z.boolean(),
+});
+
+export function previewAttachAutomaticTaxToJSON(
+  previewAttachAutomaticTax: PreviewAttachAutomaticTax,
+): string {
+  return JSON.stringify(
+    PreviewAttachAutomaticTax$outboundSchema.parse(previewAttachAutomaticTax),
+  );
+}
+
+/** @internal */
+export type PreviewAttachTaxRequest$Outbound = {
+  automatic_tax?: PreviewAttachAutomaticTax$Outbound | undefined;
+  rate_id?: string | undefined;
+};
+
+/** @internal */
+export const PreviewAttachTaxRequest$outboundSchema: z.ZodMiniType<
+  PreviewAttachTaxRequest$Outbound,
+  PreviewAttachTaxRequest
+> = z.pipe(
+  z.object({
+    automaticTax: z.optional(
+      z.lazy(() => PreviewAttachAutomaticTax$outboundSchema),
+    ),
+    rateId: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      automaticTax: "automatic_tax",
+      rateId: "rate_id",
+    });
+  }),
+);
+
+export function previewAttachTaxRequestToJSON(
+  previewAttachTaxRequest: PreviewAttachTaxRequest,
+): string {
+  return JSON.stringify(
+    PreviewAttachTaxRequest$outboundSchema.parse(previewAttachTaxRequest),
+  );
+}
+
+/** @internal */
+export type PreviewAttachAddress$Outbound = {
+  line1?: string | null | undefined;
+  line2?: string | null | undefined;
+  city?: string | null | undefined;
+  state?: string | null | undefined;
+  postal_code?: string | null | undefined;
+  country?: string | null | undefined;
+};
+
+/** @internal */
+export const PreviewAttachAddress$outboundSchema: z.ZodMiniType<
+  PreviewAttachAddress$Outbound,
+  PreviewAttachAddress
+> = z.pipe(
+  z.object({
+    line1: z.optional(z.nullable(z.string())),
+    line2: z.optional(z.nullable(z.string())),
+    city: z.optional(z.nullable(z.string())),
+    state: z.optional(z.nullable(z.string())),
+    postalCode: z.optional(z.nullable(z.string())),
+    country: z.optional(z.nullable(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      postalCode: "postal_code",
+    });
+  }),
+);
+
+export function previewAttachAddressToJSON(
+  previewAttachAddress: PreviewAttachAddress,
+): string {
+  return JSON.stringify(
+    PreviewAttachAddress$outboundSchema.parse(previewAttachAddress),
+  );
+}
+
+/** @internal */
+export type PreviewAttachBillingDetailsTaxId$Outbound = {
+  type: string;
+  value: string;
+};
+
+/** @internal */
+export const PreviewAttachBillingDetailsTaxId$outboundSchema: z.ZodMiniType<
+  PreviewAttachBillingDetailsTaxId$Outbound,
+  PreviewAttachBillingDetailsTaxId
+> = z.object({
+  type: z.string(),
+  value: z.string(),
+});
+
+export function previewAttachBillingDetailsTaxIdToJSON(
+  previewAttachBillingDetailsTaxId: PreviewAttachBillingDetailsTaxId,
+): string {
+  return JSON.stringify(
+    PreviewAttachBillingDetailsTaxId$outboundSchema.parse(
+      previewAttachBillingDetailsTaxId,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewAttachTaxExempt$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachTaxExempt
+> = z.enum(PreviewAttachTaxExempt);
+
+/** @internal */
+export type PreviewAttachBillingDetails$Outbound = {
+  address?: PreviewAttachAddress$Outbound | undefined;
+  tax_ids?: Array<PreviewAttachBillingDetailsTaxId$Outbound> | undefined;
+  tax_exempt?: string | undefined;
+};
+
+/** @internal */
+export const PreviewAttachBillingDetails$outboundSchema: z.ZodMiniType<
+  PreviewAttachBillingDetails$Outbound,
+  PreviewAttachBillingDetails
+> = z.pipe(
+  z.object({
+    address: z.optional(z.lazy(() => PreviewAttachAddress$outboundSchema)),
+    taxIds: z.optional(
+      z.array(z.lazy(() => PreviewAttachBillingDetailsTaxId$outboundSchema)),
+    ),
+    taxExempt: z.optional(PreviewAttachTaxExempt$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      taxIds: "tax_ids",
+      taxExempt: "tax_exempt",
+    });
+  }),
+);
+
+export function previewAttachBillingDetailsToJSON(
+  previewAttachBillingDetails: PreviewAttachBillingDetails,
+): string {
+  return JSON.stringify(
+    PreviewAttachBillingDetails$outboundSchema.parse(
+      previewAttachBillingDetails,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachRemoveDiscount$Outbound = {
   reward_id: string;
 };
@@ -2791,6 +3040,8 @@ export type PreviewAttachParams$Outbound = {
   metadata?: { [k: string]: string } | undefined;
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
+  tax?: PreviewAttachTaxRequest$Outbound | undefined;
+  billing_details?: PreviewAttachBillingDetails$Outbound | undefined;
   tax_rate_id?: string | undefined;
   currency?: string | undefined;
   remove_plan_ids?: Array<string> | undefined;
@@ -2852,6 +3103,10 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.record(z.string(), z.string())),
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
+    tax: z.optional(z.lazy(() => PreviewAttachTaxRequest$outboundSchema)),
+    billingDetails: z.optional(
+      z.lazy(() => PreviewAttachBillingDetails$outboundSchema),
+    ),
     taxRateId: z.optional(z.string()),
     currency: z.optional(z.string()),
     removePlanIds: z.optional(z.array(z.string())),
@@ -2885,6 +3140,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       licenseQuantities: "license_quantities",
       noBillingChanges: "no_billing_changes",
       enablePlanImmediately: "enable_plan_immediately",
+      billingDetails: "billing_details",
       taxRateId: "tax_rate_id",
       removePlanIds: "remove_plan_ids",
       removeDiscounts: "remove_discounts",
@@ -3304,8 +3560,8 @@ export const PreviewAttachStatus$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PreviewAttachStatus);
 
 /** @internal */
-export const PreviewAttachTax$inboundSchema: z.ZodMiniType<
-  PreviewAttachTax,
+export const PreviewAttachTaxResponse$inboundSchema: z.ZodMiniType<
+  PreviewAttachTaxResponse,
   unknown
 > = z.pipe(
   z.object({
@@ -3323,13 +3579,13 @@ export const PreviewAttachTax$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewAttachTaxFromJSON(
+export function previewAttachTaxResponseFromJSON(
   jsonString: string,
-): SafeParseResult<PreviewAttachTax, SDKValidationError> {
+): SafeParseResult<PreviewAttachTaxResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PreviewAttachTax$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PreviewAttachTax' from JSON`,
+    (x) => PreviewAttachTaxResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachTaxResponse' from JSON`,
   );
 }
 
@@ -3373,7 +3629,7 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
     outgoing: z.array(z.lazy(() => PreviewAttachOutgoing$inboundSchema)),
     redirect_to_checkout: types.boolean(),
     checkout_type: types.nullable(PreviewAttachCheckoutType$inboundSchema),
-    tax: types.optional(z.lazy(() => PreviewAttachTax$inboundSchema)),
+    tax: types.optional(z.lazy(() => PreviewAttachTaxResponse$inboundSchema)),
     invoice_credits: types.optional(
       z.lazy(() => PreviewAttachInvoiceCredits$inboundSchema),
     ),

@@ -142,6 +142,7 @@ export * from "./others/apiInvoice/createInvoiceParams.js";
 export * from "./others/apiInvoice/finalizeInvoiceParams.js";
 export * from "./others/apiInvoice/insertInvoicesParams.js";
 export * from "./others/apiInvoice/insertInvoicesResponse.js";
+export * from "./others/apiInvoice/issueCreditNoteParams.js";
 export * from "./others/apiInvoice/listInvoicesParams.js";
 export * from "./others/apiInvoice/listInvoiceTemplatesParams.js";
 export * from "./others/apiInvoice/payInvoiceParams.js";

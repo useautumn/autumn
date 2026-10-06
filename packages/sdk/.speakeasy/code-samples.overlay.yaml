@@ -1150,6 +1150,37 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.issue_credit_note"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.4.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.issueCreditNote({
+                invoiceId: "inv_2b3c4d5e6f7g8h",
+                lines: [
+                  {
+                    id: "invoice_li_2b3c4d5e6f7g8h",
+                    amount: 20,
+                  },
+                ],
+                destination: "refund",
+                reason: "product_unsatisfactory",
+                memo: "Partial refund for degraded service",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/invoices.list"]["post"]
     update:
       x-codeSamples:

@@ -91,7 +91,11 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-prepaid-entities 1: 
 		billing_cycle_anchor: "now",
 	});
 	expect(preview.total).toBeCloseTo(expectedTotal, 0);
-	expectPreviewNextCycleCorrect({ preview, expectDefined: false });
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+		total: 95,
+	});
 
 	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
@@ -201,7 +205,10 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-prepaid-entities 2: 
 		billing_cycle_anchor: "now",
 	});
 	expect(preview.total).toBeCloseTo(expectedTotal, 0);
-	expectPreviewNextCycleCorrect({ preview, expectDefined: false });
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+	});
 
 	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,

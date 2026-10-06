@@ -16,7 +16,7 @@ const billingContextWith = (
 		...overrides,
 	}) as unknown as CreateScheduleBillingContext;
 
-test("a requested trial recreates live rows so every plan starts it; otherwise live rows carry", () => {
+test("live rows carry with or without a requested trial, which is patched onto them", () => {
 	const withTrial = billingContextWith({
 		trialContext: {
 			trialEndsAt: 1_790_000_000_000,
@@ -28,7 +28,7 @@ test("a requested trial recreates live rows so every plan starts it; otherwise l
 
 	expect(
 		setupSetPlansPolicies({ billingContext: withTrial, params: {} }).liveRows,
-	).toBe("recreate");
+	).toBe("carry");
 	expect(
 		setupSetPlansPolicies({
 			billingContext: billingContextWith({}),

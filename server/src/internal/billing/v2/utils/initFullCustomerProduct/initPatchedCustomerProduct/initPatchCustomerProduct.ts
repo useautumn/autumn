@@ -1,52 +1,16 @@
 import {
-	type AutumnBillingPlan,
 	cusProductToProduct,
 	type InsertCustomerEntitlement,
 	type PatchContext,
-	type TrialContext,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyCustomerProductItemsPatch } from "./applyCustomerProductItemsPatch";
+import {
+	applyTrialContextToPatchedCustomerProduct,
+	type PatchedCustomerProductUpdates,
+} from "./applyTrialContextToPatchedCustomerProduct";
 import { initPatchedCustomerEntitlementsAndPrices } from "./initPatchedCustomerEntitlementsAndPrices";
-
-type CustomerProductUpdates = NonNullable<
-	NonNullable<AutumnBillingPlan["updateCustomerProducts"]>[number]["updates"]
->;
-
-const applyTrialContextToPatchedCustomerProduct = ({
-	customerProduct,
-	trialContext,
-}: {
-	customerProduct: PatchContext["finalCustomerProduct"];
-	trialContext?: TrialContext;
-}): CustomerProductUpdates => {
-	if (!trialContext) return {};
-
-	if (trialContext.customFreeTrial) {
-		customerProduct.free_trial = trialContext.customFreeTrial;
-		customerProduct.free_trial_id = trialContext.customFreeTrial.id;
-		customerProduct.trial_ends_at = trialContext.trialEndsAt ?? null;
-
-		return {
-			free_trial_id: customerProduct.free_trial_id,
-			trial_ends_at: customerProduct.trial_ends_at,
-		};
-	}
-
-	if (trialContext.trialEndsAt === null) {
-		customerProduct.free_trial = null;
-		customerProduct.free_trial_id = null;
-		customerProduct.trial_ends_at = null;
-
-		return {
-			free_trial_id: null,
-			trial_ends_at: null,
-		};
-	}
-
-	return {};
-};
 
 /**
  * Materializes the added side of a patch-style custom plan update.
@@ -68,7 +32,7 @@ export const initPatchCustomerProduct = ({
 	patchContext: PatchContext;
 }): {
 	finalCustomerProduct: PatchContext["finalCustomerProduct"];
-	customerProductUpdates: CustomerProductUpdates;
+	customerProductUpdates: PatchedCustomerProductUpdates;
 	oneOffPrepaidCarryOverCustomerEntitlements: InsertCustomerEntitlement[];
 } => {
 	const {

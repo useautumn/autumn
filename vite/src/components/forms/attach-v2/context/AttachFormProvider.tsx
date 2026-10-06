@@ -1,11 +1,13 @@
 import type {
 	ApiDiscount,
+	AttachParamsV0,
 	CusProduct,
 	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
 	FullCustomer,
+	MultiAttachParamsV0,
 	ProductItem,
 	ProductV2,
 	TrialOnEnd,
@@ -14,7 +16,6 @@ import {
 	ACTIVE_STATUSES,
 	CusProductStatus,
 	cusProductToPrices,
-	FreeTrialDuration,
 	isFreeProduct,
 	isFreeProductV2,
 	isOneOffProductV2,
@@ -34,6 +35,11 @@ import {
 } from "react";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
+import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
+import {
+	DISABLED_FREE_TRIAL_FORM_VALUES,
+	freeTrialToFormValues,
+} from "@/components/forms/shared/utils/freeTrialFormValues";
 import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -98,6 +104,11 @@ interface AttachFormContextValue {
 	attachCurrency: UseAttachCurrencyReturn;
 
 	previewQuery: UseAttachPreviewReturn;
+	/** Preview with invoice mode on, so tax reflects the send_invoice path. */
+	invoicePreview: {
+		path: string;
+		requestBody: AttachParamsV0 | MultiAttachParamsV0 | null;
+	};
 	previewDiff: UsePreviewDiffReturn;
 
 	generation: BillingGenerationState;
@@ -398,10 +409,10 @@ export function AttachFormProvider({
 			form.setFieldValue("addLicenses", null);
 			form.setFieldValue("licenseQuantities", {});
 			form.setFieldValue("version", undefined);
-			form.setFieldValue("trialEnabled", false);
-			form.setFieldValue("trialLength", null);
-			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
-			form.setFieldValue("trialCardRequired", true);
+			applyFreeTrialFormValues({
+				form,
+				values: DISABLED_FREE_TRIAL_FORM_VALUES,
+			});
 			form.setFieldValue("trialOnEnd", "revert");
 			form.setFieldValue("grantFree", false);
 			form.setFieldValue("currency", null);
@@ -420,16 +431,10 @@ export function AttachFormProvider({
 		setInitialPrepaidOptions(resolvedPrepaidOptions as Record<string, number>);
 
 		if (product.free_trial && !seededFirstRun) {
-			form.setFieldValue("trialEnabled", true);
-			form.setFieldValue("trialLength", Number(product.free_trial.length));
-			form.setFieldValue(
-				"trialDuration",
-				product.free_trial.duration as FreeTrialDuration,
-			);
-			form.setFieldValue(
-				"trialCardRequired",
-				Boolean(product.free_trial.card_required),
-			);
+			applyFreeTrialFormValues({
+				form,
+				values: freeTrialToFormValues({ freeTrial: product.free_trial }),
+			});
 			form.setFieldValue("trialOnEnd", product.free_trial.on_end ?? "revert");
 		}
 	}, [productId, product, form]);
@@ -518,6 +523,8 @@ export function AttachFormProvider({
 		disableProration,
 		currency: attachCurrency.requestCurrency,
 		removePlanIds: formValues.removePlanIds,
+		chargeTax: formValues.chargeTax,
+		billingDetails: formValues.billingDetails,
 	});
 	const {
 		requestBody: multiRequestBody,
@@ -566,6 +573,13 @@ export function AttachFormProvider({
 		path: billingOperation.previewPath,
 		requestBody: operationRequestBody,
 	});
+	const invoicePreview = useMemo(
+		() => ({
+			path: billingOperation.previewPath,
+			requestBody: buildOperationRequestBody({ useInvoice: true }),
+		}),
+		[billingOperation.previewPath, buildOperationRequestBody],
+	);
 	const isAutoSelectingImmediateSchedule =
 		!isMultiPlan &&
 		hasActiveSubscription &&
@@ -650,6 +664,7 @@ export function AttachFormProvider({
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
+			invoicePreview,
 			previewDiff,
 			generation,
 			planEditorProduct,
@@ -686,6 +701,7 @@ export function AttachFormProvider({
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
+			invoicePreview,
 			previewDiff,
 			generation,
 			planEditorProduct,

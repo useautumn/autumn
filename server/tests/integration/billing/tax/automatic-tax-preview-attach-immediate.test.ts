@@ -14,7 +14,7 @@
  *    `response.tax.status === "complete"`, total > 0
  *  - auto_tax-off (default) → `response.tax === undefined`
  *  - auto_tax-on, customer with no resolvable location →
- *    `response.tax.status === "incomplete"`, totals all zero
+ *    `response.tax.status === "requires_location"`, totals all zero
  */
 
 import { expect, test } from "bun:test";
@@ -124,7 +124,7 @@ test.concurrent(`${chalk.yellowBright(
 });
 
 test.concurrent(`${chalk.yellowBright(
-	"automatic-tax-preview-attach-immediate (auto_tax on, no address): preview returns tax.status=incomplete with zeros",
+	"automatic-tax-preview-attach-immediate (auto_tax on, no address): preview returns tax.status=requires_location with zeros",
 )}`, async () => {
 	const customerId = "tax-preview-on-no-addr";
 	const proProd = products.pro({ id: "pro", items: [] });
@@ -157,11 +157,11 @@ test.concurrent(`${chalk.yellowBright(
 	})) as AttachPreviewResponse;
 
 	expect(preview.tax).toBeDefined();
-	expect(preview.tax?.status).toBe("incomplete");
+	expect(preview.tax?.status).toBe("requires_location");
 	expect(preview.tax?.total).toBe(0);
 	expect(preview.tax?.amount_exclusive).toBe(0);
 	expect(preview.tax?.amount_inclusive).toBe(0);
 	expect(preview.tax?.currency).toBe(preview.currency);
 
-	console.log(`[preview-tax] incomplete: currency=${preview.tax?.currency}`);
+	console.log(`[preview-tax] requires_location: currency=${preview.tax?.currency}`);
 });

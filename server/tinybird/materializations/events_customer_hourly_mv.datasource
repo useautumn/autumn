@@ -28,16 +28,4 @@ ENGINE "SummingMergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(hour)"
 ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, hour, internal_product_id"
 
-# BACKFILL skip
-
-FORWARD_QUERY >
-    SELECT
-        org_id,
-        env,
-        customer_id,
-        event_name,
-        entity_id,
-        coalesce(internal_product_id, '') AS internal_product_id,
-        hour,
-        total_value,
-        event_count
+BACKFILL skip
