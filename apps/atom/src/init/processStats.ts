@@ -26,6 +26,16 @@ type Bucket = {
 	/** Checks' subject reads, and how many of them parsed the row rather than reusing a parsed copy. */
 	subjectReads: number;
 	subjectParses: number;
+	/** Summed ms of each answered check's phases; what is left of checkTotalMs is auth, body and routing. */
+	checkReadMs: number;
+	checkDecideMs: number;
+	checkRenderMs: number;
+	checkRespondMs: number;
+	/** Connections that sent their first request here. */
+	newConnections: number;
+	/** How long a request sat behind others the loop handled first in the same burst: a floor on its wait. */
+	queueWaitMaxMs: number;
+	queueWaitTotalMs: number;
 };
 
 /** Maxima over the trailing two seconds, so a reader polling every 2 s misses no stall. */
@@ -46,6 +56,13 @@ const emptyBucket = (): Bucket => ({
 	pushBytes: 0,
 	subjectReads: 0,
 	subjectParses: 0,
+	checkReadMs: 0,
+	checkDecideMs: 0,
+	checkRenderMs: 0,
+	checkRespondMs: 0,
+	newConnections: 0,
+	queueWaitMaxMs: 0,
+	queueWaitTotalMs: 0,
 });
 
 const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
@@ -61,6 +78,13 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	pushBytes: a.pushBytes + b.pushBytes,
 	subjectReads: a.subjectReads + b.subjectReads,
 	subjectParses: a.subjectParses + b.subjectParses,
+	checkReadMs: a.checkReadMs + b.checkReadMs,
+	checkDecideMs: a.checkDecideMs + b.checkDecideMs,
+	checkRenderMs: a.checkRenderMs + b.checkRenderMs,
+	checkRespondMs: a.checkRespondMs + b.checkRespondMs,
+	newConnections: a.newConnections + b.newConnections,
+	queueWaitMaxMs: Math.max(a.queueWaitMaxMs, b.queueWaitMaxMs),
+	queueWaitTotalMs: a.queueWaitTotalMs + b.queueWaitTotalMs,
 });
 
 /** A lone process, with no supervisor, publishes where its own /health reads. */
@@ -79,11 +103,22 @@ export type ProcessStatsRecorder = {
 		forwarded: boolean;
 		bytes: number;
 	}): void;
+	/** Called as a request reaches the process, before any of its handling. */
+	noteArrival(params: { remote: string | null }): void;
 	stop(): void;
 };
 
 /** Running totals a process keeps elsewhere; each publish records how far they moved. */
 export type SubjectReadCounts = { reads: number; parses: number };
+export type CheckPhaseTotals = {
+	read: number;
+	decide: number;
+	render: number;
+	respond: number;
+};
+
+/** A connection idle this long and then seen again counts as new; far longer than any keep-alive gap under load. */
+const CONNECTION_FORGOTTEN_AFTER_MS = 30_000;
 
 /** Event-loop lag and request times per process: a stall with idle CPU shows here as lag without a slow handler. */
 export const startProcessStats = ({
@@ -93,6 +128,8 @@ export const startProcessStats = ({
 	clock = () => performance.now(),
 	now = () => new Date(),
 	subjectReadCounts = () => ({ reads: 0, parses: 0 }),
+	checkPhaseTotals = () => ({ read: 0, decide: 0, render: 0, respond: 0 }),
+	afterLoopTurn = (callback: () => void) => setImmediate(callback),
 }: {
 	index: number;
 	statsDir?: string;
@@ -100,6 +137,9 @@ export const startProcessStats = ({
 	clock?: () => number;
 	now?: () => Date;
 	subjectReadCounts?: () => SubjectReadCounts;
+	checkPhaseTotals?: () => CheckPhaseTotals;
+	/** Runs once the loop has handled every request it read in this turn. */
+	afterLoopTurn?: (callback: () => void) => void;
 }): ProcessStatsRecorder & { publish(): void; probeLag(): void } => {
 	mkdirSync(statsDir, { recursive: true });
 	const file = join(statsDir, `process-${index}.json`);
@@ -107,6 +147,34 @@ export const startProcessStats = ({
 	let previous = emptyBucket();
 	let probedAt = clock();
 	let publishedReads = { ...subjectReadCounts() };
+	let publishedPhases = { ...checkPhaseTotals() };
+	const connectionSeenAt = new Map<string, number>();
+	let burstStartedAt: number | null = null;
+
+	function endBurst(): void {
+		burstStartedAt = null;
+	}
+
+	/** Requests read in one loop turn are handled one after another; each waits for those before it. */
+	function noteArrival({ remote }: { remote: string | null }): void {
+		const at = clock();
+		if (burstStartedAt === null) {
+			burstStartedAt = at;
+			afterLoopTurn(endBurst);
+		}
+		const waitMs = at - burstStartedAt;
+		current.queueWaitMaxMs = Math.max(current.queueWaitMaxMs, waitMs);
+		current.queueWaitTotalMs += waitMs;
+		if (remote === null) return;
+		if (!connectionSeenAt.has(remote)) current.newConnections += 1;
+		connectionSeenAt.set(remote, at);
+	}
+
+	function forgetIdleConnections(): void {
+		const forgetBefore = clock() - CONNECTION_FORGOTTEN_AFTER_MS;
+		for (const [remote, seenAt] of connectionSeenAt)
+			if (seenAt < forgetBefore) connectionSeenAt.delete(remote);
+	}
 
 	function probeLag(): void {
 		const at = clock();
@@ -125,6 +193,13 @@ export const startProcessStats = ({
 		current.subjectReads = reads.reads - publishedReads.reads;
 		current.subjectParses = reads.parses - publishedReads.parses;
 		publishedReads = { ...reads };
+		const phases = checkPhaseTotals();
+		current.checkReadMs = phases.read - publishedPhases.read;
+		current.checkDecideMs = phases.decide - publishedPhases.decide;
+		current.checkRenderMs = phases.render - publishedPhases.render;
+		current.checkRespondMs = phases.respond - publishedPhases.respond;
+		publishedPhases = { ...phases };
+		forgetIdleConnections();
 		const stats: ProcessStats = {
 			index,
 			pid: process.pid,
@@ -138,6 +213,12 @@ export const startProcessStats = ({
 			"forwardMaxMs",
 			"checkTotalMs",
 			"pushTotalMs",
+			"checkReadMs",
+			"checkDecideMs",
+			"checkRenderMs",
+			"checkRespondMs",
+			"queueWaitMaxMs",
+			"queueWaitTotalMs",
 		] as const)
 			stats[key] = Math.round(stats[key]);
 		previous = current;
@@ -182,6 +263,7 @@ export const startProcessStats = ({
 
 	return {
 		recordRequest,
+		noteArrival,
 		publish,
 		probeLag,
 		stop: () => {

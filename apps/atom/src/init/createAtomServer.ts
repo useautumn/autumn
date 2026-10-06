@@ -77,7 +77,13 @@ export const createAtomServer = ({
 			port: env.ATOM_PORT,
 			// Several processes listen on the one port, and Linux gives each connection to one of them.
 			reusePort: env.ATOM_PROCESSES > 1,
-			fetch: app.fetch,
+			fetch: (request, server) => {
+				const remote = server.requestIP(request);
+				ctx.processStats?.noteArrival({
+					remote: remote ? `${remote.address}:${remote.port}` : null,
+				});
+				return app.fetch(request, server);
+			},
 		});
 		ctx.logger.info(
 			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT}`,

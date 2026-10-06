@@ -7,7 +7,9 @@ import { startProcessStats } from "./init/processStats.js";
 import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
+import { checkPhaseMs } from "./processor/actions/check/checkPhaseMs.js";
 import { subjectReadCounts } from "./state/openSqliteStore.js";
+import { startWalCheckpointer } from "./state/startWalCheckpointer.js";
 
 /** How long a process that died stays down before another takes its place. */
 const RESTART_DELAY_MS = 1000;
@@ -27,6 +29,7 @@ function createAtom(): AtomServer {
 			index: childIndex === undefined ? 0 : Number(childIndex),
 			logger,
 			subjectReadCounts: () => subjectReadCounts,
+			checkPhaseTotals: () => checkPhaseMs,
 		});
 		return createAtomServer({
 			ctx: { logger, processStats },
@@ -34,13 +37,24 @@ function createAtom(): AtomServer {
 		});
 	}
 	const { recordRestarts } = markAtomBoot();
-	return createAtomSupervisor({
+	const supervisor = createAtomSupervisor({
 		ctx: { spawnChild: spawnAtomChild, logger, recordRestarts },
 		config: {
 			processes: env.ATOM_PROCESSES,
 			restartDelayMs: RESTART_DELAY_MS,
 		},
 	});
+	const walCheckpointer = startWalCheckpointer({
+		dataDir: env.ATOM_DATA_DIR,
+		logger,
+	});
+	return {
+		start: supervisor.start,
+		stop: async () => {
+			await supervisor.stop();
+			walCheckpointer.stop();
+		},
+	};
 }
 
 async function main(): Promise<void> {
