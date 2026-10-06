@@ -55,6 +55,12 @@ test(`${chalk.yellowBright("invoice-mode metadata expiry: deferred invoices expi
 			stripeInvoice: draftInvoice,
 		}),
 	).toBeNull();
+	expect(
+		getDeferredBillingMetadataExpiresAt({
+			deferredInvoiceMode: false,
+			stripeInvoice: draftInvoice,
+		}),
+	).toBeNull();
 });
 
 test.concurrent(

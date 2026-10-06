@@ -2,7 +2,7 @@ import { MetadataType } from "@autumn/shared";
 import { handleInvoiceActionRequiredCompleted } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/handleStripeInvoiceMetadata/handleInvoiceActionRequiredCompleted.js";
 import { handleInvoiceCheckoutPaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/handleStripeInvoiceMetadata/handleInvoiceCheckoutPaid.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
-import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan.js";
+import { executeClaimedDeferredBillingPlan } from "@/internal/billing/v2/execute/executeClaimedDeferredBillingPlan.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
@@ -29,7 +29,7 @@ export const handleStripeInvoiceMetadata = async ({
 
 	// Handle deferred billing plan (v2 flow)
 	if (metadata.type === MetadataType.DeferredInvoice) {
-		await executeDeferredBillingPlan({
+		await executeClaimedDeferredBillingPlan({
 			ctx,
 			metadata,
 			stripeSubscription,
@@ -37,6 +37,12 @@ export const handleStripeInvoiceMetadata = async ({
 		});
 		invoicePaidContext.results.appliedBillingPlan = true;
 
+		return;
+	}
+
+	// invoice.finalized is activating this plan right now.
+	if (metadata.type === MetadataType.DeferredInvoiceProcessing) {
+		invoicePaidContext.results.appliedBillingPlan = true;
 		return;
 	}
 
