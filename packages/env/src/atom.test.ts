@@ -155,6 +155,27 @@ describe("atom env", () => {
 		expect(env.ATOM_PUSH_RECEIVERS).toBe(0);
 	});
 
+	test("receivers take no HTTP checks unless ATOM_PUSH_RECEIVERS_SERVE_HTTP=true; when every thread receives, all serve", () => {
+		const serveHttp = (env: Record<string, string>) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_THREADS: "7",
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
+				ATOM_PUSH_RECEIVERS: "2",
+				...env,
+			}).ATOM_PUSH_RECEIVERS_SERVE_HTTP;
+
+		expect(serveHttp({})).toBe(false);
+		expect(serveHttp({ ATOM_PUSH_RECEIVERS_SERVE_HTTP: "true" })).toBe(true);
+		expect(serveHttp({ ATOM_PUSH_RECEIVERS: "7" })).toBe(true);
+		expect(serveHttp({ ATOM_THREADS: "1", ATOM_PUSH_RECEIVERS: "1" })).toBe(
+			true,
+		);
+		expect(() => serveHttp({ ATOM_PUSH_RECEIVERS_SERVE_HTTP: "yes" })).toThrow(
+			"ATOM_PUSH_RECEIVERS_SERVE_HTTP",
+		);
+	});
+
 	test("ATOM_PUSH_RECEIVERS says how many threads receive, up to every thread", () => {
 		const receivers = ({ told }: { told: string }) =>
 			createAtomEnv({

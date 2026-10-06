@@ -4,11 +4,12 @@ import { createAtomServer } from "../init/createAtomServer.js";
 import { startProcessStats } from "../init/processStats.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { checkPhaseMs } from "../processor/actions/check/checkPhaseMs.js";
+import { checkTimeouts } from "../processor/actions/check/checkTimeouts.js";
 import { pushPhaseMs } from "../pushes/pushPhaseMs.js";
 import { subjectReadCounts } from "../state/openSqliteStore.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
-import { receivesPushes } from "./receivesPushes.js";
+import { receivesPushes, servesHttp } from "./receivesPushes.js";
 import type {
 	PeerPorts,
 	ThreadControl,
@@ -20,9 +21,19 @@ import type {
 const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
 	const logger = getAtomLogger();
-	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
+	const checkSheds = new Int32Array(init.checkSheds);
+	const owners = createSlotOwners({
+		index,
+		threads: env.ATOM_THREADS,
+		checkSheds,
+	});
 	const { auth, multiTenant } = openAuth({ env, owners });
 	const answerPorts = new Map<number, MessagePort>();
+	const receives = receivesPushes({
+		index,
+		threads: env.ATOM_THREADS,
+		receivers: env.ATOM_PUSH_RECEIVERS,
+	});
 	const server = createAtomServer({
 		ctx: {
 			auth,
@@ -38,14 +49,18 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 				subjectReadCounts: () => subjectReadCounts,
 				checkPhaseTotals: () => checkPhaseMs,
 				pushPhaseTotals: () => pushPhaseMs,
+				checkOutcomeTotals: () => ({
+					timeouts: checkTimeouts.count,
+					sheds: Atomics.load(checkSheds, index),
+				}),
 			}),
 		},
 		config: {
 			env,
-			receivesPushes: receivesPushes({
-				index,
-				threads: env.ATOM_THREADS,
-				receivers: env.ATOM_PUSH_RECEIVERS,
+			receivesPushes: receives,
+			servesHttp: servesHttp({
+				receives,
+				receiversServeHttp: env.ATOM_PUSH_RECEIVERS_SERVE_HTTP,
 			}),
 		},
 	});

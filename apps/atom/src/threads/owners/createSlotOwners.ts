@@ -5,15 +5,17 @@ import type { SlotOwners } from "./types/slotOwners.js";
 export const createSlotOwners = ({
 	index,
 	threads,
+	checkSheds,
 }: {
 	index: number;
 	threads: number;
+	checkSheds: Int32Array;
 }): SlotOwners & {
 	connect(params: { thread: number; port: MessagePort }): void;
 	disconnect(params: { thread: number }): void;
 } => {
 	const links: OwnerLink[] = Array.from({ length: threads }, (_, thread) =>
-		createOwnerLink({ thread }),
+		createOwnerLink({ thread, checkSheds }),
 	);
 	return {
 		index,
