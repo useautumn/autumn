@@ -1,3 +1,4 @@
+import { pushPhaseMs } from "../pushes/pushPhaseMs.js";
 import { deepFreeze } from "./deepFreeze.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
@@ -63,7 +64,12 @@ export const openSqliteStore = ({
 	return {
 		readSubject: readParsedSubject,
 		setSubject: (params) => upsertSubject({ ctx, ...params }),
-		setSubjects: (params) => upsertSubjects({ ctx, ...params }),
+		setSubjects: (params) => {
+			const writeStartedAt = performance.now();
+			const stored = upsertSubjects({ ctx, ...params });
+			pushPhaseMs.write += performance.now() - writeStartedAt;
+			return stored;
+		},
 		countSubjects: () => countSubjects({ ctx }),
 		close: () => ctx.sqliteDb.close(true),
 	};

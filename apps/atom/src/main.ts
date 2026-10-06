@@ -8,6 +8,7 @@ import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
 import { checkPhaseMs } from "./processor/actions/check/checkPhaseMs.js";
+import { pushPhaseMs } from "./pushes/pushPhaseMs.js";
 import { subjectReadCounts } from "./state/openSqliteStore.js";
 import { startWalCheckpointer } from "./state/startWalCheckpointer.js";
 
@@ -30,6 +31,7 @@ function createAtom(): AtomServer {
 			logger,
 			subjectReadCounts: () => subjectReadCounts,
 			checkPhaseTotals: () => checkPhaseMs,
+			pushPhaseTotals: () => pushPhaseMs,
 		});
 		return createAtomServer({
 			ctx: { logger, processStats },

@@ -23,21 +23,25 @@ const fakeContainer = ({
 	writeFileSync(join(cgroupDir, "memory.current"), "1073741824\n");
 	writeFileSync(join(cgroupDir, "memory.max"), `${memoryMax}\n`);
 	writeFileSync(join(cgroupDir, "cgroup.procs"), "1\n7\n");
-	for (const [pid, rssKb] of [
-		["1", 2048],
-		["7", 4096],
+	for (const [pid, rssKb, userTicks, systemTicks] of [
+		["1", 2048, 150, 50],
+		["7", 4096, 1200, 300],
 	] as const) {
 		mkdirSync(join(procDir, pid), { recursive: true });
 		writeFileSync(
 			join(procDir, pid, "status"),
 			`Name:\tbun\nVmRSS:\t   ${rssKb} kB\nThreads:\t4\n`,
 		);
+		writeFileSync(
+			join(procDir, pid, "stat"),
+			`${pid} (bun (atom)) S 0 1 1 0 -1 4194560 100 0 0 0 ${userTicks} ${systemTicks} 0 0 20 0 4 0 100 0 0\n`,
+		);
 	}
 	return { cgroupDir, procDir };
 };
 
 describe("container stats", () => {
-	test("reports cgroup CPU and memory usage against the container's limits", () => {
+	test("reports cgroup CPU and memory usage, and each process's own CPU, against the container's limits", () => {
 		const readStats = createContainerStatsReader(fakeContainer());
 
 		expect(readStats()).toEqual({
@@ -47,8 +51,8 @@ describe("container stats", () => {
 			memoryBytes: 1073741824,
 			memoryLimitBytes: 12884901888,
 			processes: [
-				{ pid: 1, rssBytes: 2048 * 1024 },
-				{ pid: 7, rssBytes: 4096 * 1024 },
+				{ pid: 1, rssBytes: 2048 * 1024, cpuSeconds: 2 },
+				{ pid: 7, rssBytes: 4096 * 1024, cpuSeconds: 15 },
 			],
 		});
 	});
