@@ -12,16 +12,15 @@ import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1,
 	type AttachPreviewResponse,
-	atmnToStripeAmount,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { createAmountCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
+import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { Decimal } from "decimal.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
 test.concurrent(
@@ -107,46 +106,43 @@ test.concurrent(
 			waitForSeconds: 15,
 		});
 
-		const preview = (await autumnV2_2.billing.previewAttach<AttachParamsV1>({
+		const downgradeParams: AttachParamsV1 = {
 			customer_id: customerId,
 			plan_id: `${proId}_${customerId}`,
 			redirect_mode: "never",
 			plan_schedule: "immediate",
 			tax_rate_id: taxRate.id,
-		})) as AttachPreviewResponse;
+		};
+		const preview = (await autumnV2_2.billing.previewAttach<AttachParamsV1>(
+			downgradeParams,
+		)) as AttachPreviewResponse;
 
 		const lineItemsTotal = preview.line_items.reduce(
 			(sum, item) => sum + item.total,
 			0,
 		);
-		// Stripe tax rates round tax per invoice line before summing the invoice.
-		const expectedTaxMinorUnits = preview.line_items.reduce(
-			(sum, lineItem) =>
-				sum +
-				new Decimal(
-					atmnToStripeAmount({
-						amount: lineItem.total,
-						currency: preview.tax?.currency,
-					}),
-				)
-					.times(20)
-					.div(100)
-					.round()
-					.toNumber(),
-			0,
-		);
-		const expectedTax = stripeToAtmnAmount({
-			amount: expectedTaxMinorUnits,
-			currency: preview.tax?.currency,
-		});
-
 		expect(lineItemsTotal).toBeLessThan(0);
 		expect(preview.tax).toBeDefined();
-		expect(preview.tax?.total).toBe(expectedTax);
-		expect(preview.tax?.amount_exclusive).toBe(expectedTax);
-		expect(preview.total).toBe(
-			Math.round((lineItemsTotal + expectedTax) * 100) / 100,
-		);
+
+		await autumnV2_2.billing.attach<AttachParamsV1>(downgradeParams);
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+		const latestInvoiceId =
+			typeof subscription.latest_invoice === "string"
+				? subscription.latest_invoice
+				: subscription.latest_invoice?.id;
+		expect(latestInvoiceId).toBeDefined();
+		const invoice = await stripeCli.invoices.retrieve(latestInvoiceId!);
+		const toAmount = (amount: number) =>
+			stripeToAtmnAmount({ amount, currency: invoice.currency });
+		const invoiceTax = toAmount(invoice.total - invoice.total_excluding_tax!);
+
+		expect(invoiceTax).toBeLessThan(0);
+		expect(preview.subtotal).toBe(toAmount(invoice.subtotal));
+		expect(preview.tax?.total).toBe(invoiceTax);
+		expect(preview.tax?.amount_exclusive).toBe(invoiceTax);
+		expect(preview.total).toBe(toAmount(invoice.total));
 	},
 	300_000,
 );
