@@ -96,7 +96,7 @@ test("pushes run up to the pool's cap at once, each subject once", async () => {
 	expect(pushed).toHaveLength(150);
 });
 
-test("a subject waiting twice is pushed once at its newest offset, and never beside its own push", async () => {
+test("a subject still waiting when it changes again is pushed once, at its newest offset", async () => {
 	pushed.length = 0;
 	closeGate();
 	const queue = createCachePushQueue({
@@ -106,7 +106,7 @@ test("a subject waiting twice is pushed once at its newest offset, and never bes
 			);
 			await pushSubjectToCache({ ctx: {} as never, cacheSubject });
 		},
-		concurrency: 4,
+		concurrency: 1,
 		maxPending: 100,
 	});
 	const subject = (offset: number) => ({

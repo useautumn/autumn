@@ -9,17 +9,10 @@ export type CachePushQueue = {
 	activeCount(): number;
 };
 
-const isNewer = ({
-	next,
-	held,
-}: {
-	next: CacheSubjectRef;
-	held: CacheSubjectRef | undefined;
-}) => !held || next.logOffset > held.logOffset;
-
 /**
- * Pushes subjects on a pool that runs apart from the slice that named them. A subject waiting twice is pushed once,
- * at its newest offset, and never while its own previous push is still in flight.
+ * Pushes subjects on a pool that runs apart from the slice that named them. A subject still waiting when it changes
+ * again is pushed once, at its newest offset. Pushes may land out of order: the Atom keeps the newest by its own
+ * read_at and log_offset guard, so order is not kept here.
  */
 export function createCachePushQueue({
 	push,
@@ -31,50 +24,39 @@ export function createCachePushQueue({
 	maxPending: number;
 }): CachePushQueue {
 	const pending = new Map<string, CacheSubjectRef>();
-	const inFlight = new Set<string>();
+	let active = 0;
 	let roomWaiters: (() => void)[] = [];
 
-	/** Pending is in first-queued order; a subject whose previous push is still in flight is passed over. */
-	function takeNext(): [string, CacheSubjectRef] | null {
-		for (const entry of pending) {
-			if (inFlight.has(entry[0])) continue;
-			pending.delete(entry[0]);
-			return entry;
+	function takeOldest(): CacheSubjectRef | undefined {
+		for (const [key, cacheSubject] of pending) {
+			pending.delete(key);
+			return cacheSubject;
 		}
-		return null;
 	}
 
-	function releaseRoomWaiters(): void {
+	function pump(): void {
+		while (active < concurrency) {
+			const cacheSubject = takeOldest();
+			if (!cacheSubject) return;
+			active++;
+			void push({ cacheSubject }).finally(onPushed);
+		}
+	}
+
+	function onPushed(): void {
+		active--;
+		pump();
 		if (pending.size >= maxPending) return;
 		const waiters = roomWaiters;
 		roomWaiters = [];
 		for (const resolve of waiters) resolve();
 	}
 
-	async function run([key, cacheSubject]: [string, CacheSubjectRef]) {
-		try {
-			await push({ cacheSubject });
-		} finally {
-			inFlight.delete(key);
-			pump();
-			releaseRoomWaiters();
-		}
-	}
-
-	function pump(): void {
-		while (inFlight.size < concurrency) {
-			const next = takeNext();
-			if (!next) return;
-			inFlight.add(next[0]);
-			void run(next);
-		}
-	}
-
 	function enqueue({ subjects }: { subjects: CacheSubjectRef[] }): void {
 		for (const subject of subjects) {
 			const key = meteringIdentityToSubjectKey({ identity: subject.identity });
 			const held = pending.get(key);
-			if (!isNewer({ next: subject, held })) continue;
+			if (held && held.logOffset >= subject.logOffset) continue;
 			pending.set(key, {
 				...subject,
 				oldestOccurredAt: Math.min(
@@ -95,6 +77,6 @@ export function createCachePushQueue({
 		enqueue,
 		waitForRoom,
 		pendingCount: () => pending.size,
-		activeCount: () => inFlight.size,
+		activeCount: () => active,
 	};
 }

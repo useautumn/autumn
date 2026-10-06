@@ -17,6 +17,7 @@ export const CACHE_PUSH_MAX_PENDING = 20_000;
 /**
  * Keeps each org's BYOC cache current: every subject a batch moved is re-read from its worker and written as it now stands.
  * A slice only queues its subjects; the pushes run on their own pool, so a slow push never holds a partition's next fetch.
+ * Out-of-order pushes are safe: the Atom keeps the newest subject by read_at, then log_offset.
  */
 export function createCachePushConsumer({
 	ctx,
