@@ -18,6 +18,7 @@ import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeCon
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
+import { linkStripeIdFromCustomerData } from "./linkStripeIdFromCustomerData.js";
 
 export const getOrCreateApiCustomerByRollout = async ({
 	ctx,
@@ -73,6 +74,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 					billingDetails,
 					entityId,
 					entityData: params.entity_data,
+					rerunAfterStripeLink: true,
 					run: async () => {
 						const subject = await readBalanceWorkerSubject({
 							ctx,
@@ -95,7 +97,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 			source,
 		});
 
-	const fullSubject = await shed503OnTransientError({
+	let fullSubject = await shed503OnTransientError({
 		ctx,
 		source: "get_or_create",
 		run: () => lookup({ skipCache: false }),
@@ -104,6 +106,13 @@ export const getOrCreateApiCustomerByRollout = async ({
 			: undefined,
 		onTransientError: queueRecovery,
 	});
+
+	const linkedStripeId = await linkStripeIdFromCustomerData({
+		ctx,
+		customer: fullSubject.customer,
+		customerData: params.customer_data,
+	});
+	if (linkedStripeId) fullSubject = await lookup({ skipCache: true });
 
 	await ensureStripeCustomerFromCustomerData({
 		ctx,
