@@ -12,6 +12,8 @@ timeout = 0
 NODE_ENV = "test"
 
 [install]
+# An exact pin that equals a workspace version (autumn-js on main) must still come from npm.
+linkWorkspacePackages = false
 # Only install package versions published at least 3 days ago
 minimumReleaseAge = 259200 # seconds
 # Newly released dependencies we intentionally pin; exempt from the age gate.

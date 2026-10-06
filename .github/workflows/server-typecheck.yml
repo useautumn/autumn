@@ -14,6 +14,31 @@ jobs:
     outputs:
       server: ${{ steps.filter.outputs.server }}
     steps:
+      # Generated code is produced on main by publish.yml; sync PRs from main and the bot are exempt.
+      - name: Checkout generated-paths list
+        if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            scripts/release
+
+      - name: Set up Bun
+        if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Block edits to generated paths
+        if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'
+        working-directory: .github/scripts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bun test check-generated-paths.test.ts
+          bun check-generated-paths.ts
+
       - name: Check changed files
         id: filter
         uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050

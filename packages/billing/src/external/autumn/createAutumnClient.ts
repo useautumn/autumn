@@ -1,4 +1,4 @@
-import { Autumn } from "@useautumn/sdk";
+import { Autumn } from "autumn-js";
 import type { TrackItem } from "../../actions/pushHourlyMeters/types/trackItem";
 import type { AutumnClient } from "../../types/autumnClient";
 
