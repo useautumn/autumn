@@ -82,9 +82,11 @@ export const publishBatchMigrationChanges = async ({
 			clearPublishedItemRunChanges({
 				db,
 				migrationInternalId,
-				internalCustomerIds: published.map(
-					(itemRun) => itemRun.customer.internalId,
-				),
+				publishedSnapshots: published.map((itemRun) => ({
+					internalCustomerId: itemRun.customer.internalId,
+					migrationRunId: itemRun.migrationRunId,
+					changes: itemRun.changes,
+				})),
 			}),
 		BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 	);

@@ -10,6 +10,7 @@ import type { BatchMigrationPageCustomer } from "../types/batchMigrationExecutio
 /** One customer's item run as the publisher reads it. */
 export type ItemRunToPublish = {
 	customer: BatchMigrationPageCustomer;
+	migrationRunId: string | null;
 	status: MigrationItemRunStatus;
 	skipReason: MigrationItemRunSkipReason | null;
 	changes: MigrationItemChange[] | null;
@@ -26,6 +27,7 @@ export const listItemRunsToPublish = async ({
 }): Promise<ItemRunToPublish[]> => {
 	const rows = await db.execute<{
 		item_id: string;
+		migration_run_id: string | null;
 		status: MigrationItemRunStatus;
 		skip_reason: MigrationItemRunSkipReason | null;
 		unpublished_changes: MigrationItemChange[] | null;
@@ -33,7 +35,7 @@ export const listItemRunsToPublish = async ({
 		name: string | null;
 		email: string | null;
 	}>(sql`
-		SELECT mir.item_id, mir.status, mir.skip_reason, mir.unpublished_changes,
+		SELECT mir.item_id, mir.migration_run_id, mir.status, mir.skip_reason, mir.unpublished_changes,
 			customer.id, customer.name, customer.email
 		FROM migration_item_runs AS mir
 		INNER JOIN customers AS customer ON customer.internal_id = mir.item_id
@@ -44,6 +46,7 @@ export const listItemRunsToPublish = async ({
 	`);
 
 	return rows.map((row) => ({
+		migrationRunId: row.migration_run_id,
 		customer: {
 			internalId: row.item_id,
 			id: row.id,
