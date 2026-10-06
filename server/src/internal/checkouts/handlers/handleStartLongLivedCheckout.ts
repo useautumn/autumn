@@ -1,8 +1,8 @@
 import {
-	type AttachParamsV1,
 	AffectedResource,
-	CheckoutAction,
+	type AttachParamsV1,
 	type Checkout,
+	CheckoutAction,
 	ErrCode,
 	InternalError,
 	RecaseError,
@@ -39,7 +39,8 @@ const getActiveStripeCheckoutUrl = async ({
 	try {
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 		const session = await stripeCli.checkout.sessions.retrieve(sessionId);
-		return session.status === "open" && isFuture(fromUnixTime(session.expires_at))
+		return session.status === "open" &&
+			isFuture(fromUnixTime(session.expires_at))
 			? session.url
 			: null;
 	} catch (error) {
@@ -77,7 +78,8 @@ export const handleStartLongLivedCheckout = createRoute({
 
 		if (!isLongLivedAttachCheckout(checkout)) {
 			throw new RecaseError({
-				message: "Long-lived checkout start only supports long-lived attach checkouts",
+				message:
+					"Long-lived checkout start only supports long-lived attach checkouts",
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -88,6 +90,19 @@ export const handleStartLongLivedCheckout = createRoute({
 			url: checkout.response?.payment_url,
 		});
 		if (activeUrl) return c.redirect(activeUrl, StatusCodes.SEE_OTHER);
+
+		const renewedResponse = await checkoutActions.renewLongLivedSession({
+			ctx,
+			checkout,
+		});
+		if (renewedResponse?.payment_url) {
+			await checkoutActions.updateDbAndCache({
+				ctx,
+				oldCheckout: checkout,
+				updates: { response: renewedResponse },
+			});
+			return c.redirect(renewedResponse.payment_url, StatusCodes.SEE_OTHER);
+		}
 
 		const { billingContext, billingResult } = await billingActions.attach({
 			ctx,

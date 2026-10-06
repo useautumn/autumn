@@ -43,7 +43,12 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 	const { metadata, stripeCheckoutSession, stripeSubscription, stripeInvoice } =
 		checkoutContext;
 
-	if (metadata?.type !== MetadataType.CheckoutSessionEnabledImmediately) return;
+	if (
+		metadata?.type !== MetadataType.CheckoutSessionEnabledImmediately &&
+		metadata?.type !== MetadataType.LongLivedCheckoutEnabledImmediately
+	) {
+		return;
+	}
 
 	ctx.logger.info(
 		`[checkout.completed] Handling enable_plan_immediately checkout: ${metadata.id}`,
