@@ -17,10 +17,30 @@ const BUSY_TIMEOUT_MS = 5000;
 /** Address space, not memory: a file larger than this reads the rest through ordinary reads. */
 const MMAP_BYTES = 256 * 1024 * 1024;
 
+/** Threads opening a new file together each try to switch it to WAL; this many tries, this far apart, outlast the others. */
+const WAL_SWITCH_ATTEMPTS = 50;
+const WAL_SWITCH_RETRY_MS = 10;
+
+const isBusy = (error: unknown): boolean =>
+	error instanceof Error && "code" in error && error.code === "SQLITE_BUSY";
+
+/** Switching to WAL takes a lock the busy timeout does not wait for, so a busy switch is tried again. */
+const switchToWal = ({ database }: { database: Database }) => {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			database.run("PRAGMA journal_mode = WAL");
+			return;
+		} catch (error) {
+			if (!isBusy(error) || attempt >= WAL_SWITCH_ATTEMPTS) throw error;
+			Bun.sleepSync(WAL_SWITCH_RETRY_MS);
+		}
+	}
+};
+
 const configureDatabase = ({ database }: { database: Database }) => {
 	// First, before anything touches the file: another connection may be recovering its log right now.
 	database.run(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
-	database.run("PRAGMA journal_mode = WAL");
+	switchToWal({ database });
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
 	database.run("PRAGMA synchronous = NORMAL");
 	// Pages come straight from the OS cache, not a copy in each connection's own page cache.
