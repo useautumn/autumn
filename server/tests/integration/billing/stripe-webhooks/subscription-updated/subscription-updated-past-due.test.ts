@@ -114,6 +114,7 @@ const syncManualPastDue = async ({
 		subscriptionUpdatedContext: {
 			stripeSubscription: pastDueSubscription,
 			previousAttributes,
+			eventBillingCycleAnchor: pastDueSubscription.billing_cycle_anchor,
 			fullCustomer,
 			customerProducts: [...fullCustomer.customer_products],
 			nowMs: Date.now(),

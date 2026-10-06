@@ -6,6 +6,8 @@ import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
 import { applyPooledBalanceTransitions } from "./tasks/applyPooledBalanceTransitions";
 import { autoSyncUpdatedSubscription } from "./tasks/autoSyncUpdatedSubscription.js";
+import { clearOrphanedBillingCycleAnchorResets } from "./tasks/clearOrphanedBillingCycleAnchorResets";
+import { consumeUninvoicedBillingCycleAnchorReset } from "./tasks/consumeUninvoicedBillingCycleAnchorReset";
 import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
 import { handleIgnorePastDue } from "./tasks/handleIgnorePastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
@@ -35,6 +37,15 @@ export const handleStripeSubscriptionUpdated = async ({
 
 	// 1. Handle schedule phase changes
 	await handleSchedulePhaseChanges({
+		ctx,
+		eventContext: subscriptionUpdatedContext,
+	});
+
+	await clearOrphanedBillingCycleAnchorResets({
+		ctx,
+		eventContext: subscriptionUpdatedContext,
+	});
+	await consumeUninvoicedBillingCycleAnchorReset({
 		ctx,
 		eventContext: subscriptionUpdatedContext,
 	});

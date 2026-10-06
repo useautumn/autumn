@@ -17,6 +17,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths, addYears } from "date-fns";
@@ -610,72 +611,80 @@ test(`${chalk.yellowBright("set-plans custom anchor edges: a monthly plan and an
 	});
 });
 
-// DISABLED: usage tracked before a scheduled anchor isn't billed on the anchor invoice ($9.68 vs $19.68; D3, 2026-10-06);
-// re-enable once Billy Acton's fix (ATMN-704) lands.
-test.skip(`${chalk.yellowBright("set-plans custom anchor edges: usage tracked before the anchor is billed once, on the anchor invoice")}`, async () => {
-	const pro = products.pro({
-		items: [items.consumableMessages({ includedUsage: 0 })],
-	});
-	const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
-		await initScenario({
-			customerId: "set-plans-anchor-edge-usage",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
-			],
-			actions: [
-				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 5 }),
-				s.track({
-					featureId: TestFeature.Messages,
-					value: 100,
-					timeout: 2000,
-				}),
-			],
+test.concurrent(
+	`${chalk.yellowBright("set-plans custom anchor edges: usage tracked before the anchor is billed once, on the anchor invoice")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.consumableMessages({ includedUsage: 0 })],
 		});
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-anchor-edge-usage",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id }),
+					s.advanceTestClock({ days: 5 }),
+					s.track({
+						featureId: TestFeature.Messages,
+						value: 100,
+						timeout: 2000,
+					}),
+				],
+			});
 
-	const anchorMs = advancedTo + ms.days(10);
-	const usageCharge = 10;
-	const { total: baseResetTotal } =
-		await calculateBillingCycleAnchorResetNextCycle({
+		const anchorMs = advancedTo + ms.days(10);
+		const usageCharge = 10;
+		const { total: baseResetTotal } =
+			await calculateBillingCycleAnchorResetNextCycle({
+				customerId,
+				billingCycleAnchorMs: anchorMs,
+				nextCycleAmount: 20,
+			});
+		const params = anchorParams({
 			customerId,
-			billingCycleAnchorMs: anchorMs,
-			nextCycleAmount: 20,
+			planId: pro.id,
+			anchorMs,
+			startsAt: advancedTo,
 		});
-	const params = anchorParams({
-		customerId,
-		planId: pro.id,
-		anchorMs,
-		startsAt: advancedTo,
-	});
 
-	const preview = await autumnV2_4.billing.previewSetPlans(params);
-	expect(preview.total).toBe(0);
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(0);
 
-	await autumnV2_4.billing.setPlans(params);
-	await advancePastCycleStart({
-		ctx,
-		testClockId: testClockId!,
-		cycleStartsAt: anchorMs,
-	});
-	await expectCustomerInvoiceCorrect({
-		customerId,
-		count: 2,
-		latestTotal: baseResetTotal + usageCharge,
-	});
+		await autumnV2_4.billing.setPlans(params);
+		// Stop while the anchor invoice is still a draft so invoice.created can add the usage line, as advanceToNextInvoice withPause does.
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: anchorMs + ms.minutes(1),
+			waitForSeconds: 30,
+		});
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: anchorMs,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: baseResetTotal + usageCharge,
+		});
 
-	const renewalAt = addMonths(anchorMs, 1).getTime();
-	await advancePastCycleStart({
-		ctx,
-		testClockId: testClockId!,
-		cycleStartsAt: renewalAt,
-	});
-	await expectCustomerInvoiceCorrect({
-		customerId,
-		count: 3,
-		latestTotal: 20,
-	});
-});
+		const renewalAt = addMonths(anchorMs, 1).getTime();
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: renewalAt,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: 20,
+		});
+	},
+);
 
 // DISABLED: phase 0's proration_behavior none doesn't reach the anchor's reset phase (D5, 2026-10-06);
 // re-enable once autumn#4305 and autumn#4312 (re-anchors balances at the anchor under none) merge.

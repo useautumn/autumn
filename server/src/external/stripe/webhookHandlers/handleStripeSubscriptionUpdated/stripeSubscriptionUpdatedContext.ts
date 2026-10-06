@@ -14,6 +14,8 @@ import type { StripeSubscriptionUpdateResults } from "./types/stripeSubscription
 export interface SubscriptionPreviousAttributes {
 	status?: Stripe.Subscription.Status;
 	latest_invoice?: string | Stripe.Invoice | null;
+	billing_cycle_anchor?: number;
+	schedule?: string | Stripe.SubscriptionSchedule | null;
 	cancel_at_period_end?: boolean;
 	cancel_at?: number | null;
 	canceled_at?: number | null;
@@ -25,6 +27,8 @@ export interface SubscriptionPreviousAttributes {
 export interface StripeSubscriptionUpdatedContext {
 	stripeSubscription: ExpandedStripeSubscription;
 	previousAttributes: SubscriptionPreviousAttributes;
+	/** The anchor as of this event; the fetched subscription may already be past a later event. */
+	eventBillingCycleAnchor: number;
 	fullCustomer: FullCustomer;
 	/**
 	 * Mutable list of customer products. Updated in place by the

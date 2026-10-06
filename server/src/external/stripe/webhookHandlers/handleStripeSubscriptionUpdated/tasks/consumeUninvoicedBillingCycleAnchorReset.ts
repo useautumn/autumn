@@ -1,0 +1,65 @@
+import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
+import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
+import { createAutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
+import { consumeBillingCycleAnchorReset } from "../../common/billingCycleAnchorReset/consumeBillingCycleAnchorReset";
+import { findBillingCycleAnchorResetCustomerProductIds } from "../../common/billingCycleAnchorReset/findBillingCycleAnchorResetCustomerProductIds";
+import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
+import { isUninvoicedBillingCycleAnchorMove } from "../isUninvoicedBillingCycleAnchorMove";
+import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
+
+/**
+ * A reset phase with proration_behavior none moves Stripe's anchor without an invoice, so
+ * invoice.created never consumes the pending reset; the anchor move itself does.
+ */
+export const consumeUninvoicedBillingCycleAnchorReset = async ({
+	ctx,
+	eventContext,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+}) => {
+	if (
+		!isUninvoicedBillingCycleAnchorMove({
+			subscriptionUpdatedContext: eventContext,
+		})
+	) {
+		return;
+	}
+
+	const { stripeSubscription, fullCustomer } = eventContext;
+	const customerProducts = eventContext.customerProducts.filter(
+		(customerProduct) =>
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId: stripeSubscription.id,
+			}) === true,
+	);
+	const billingCycleAnchorResetCustomerProductIds =
+		findBillingCycleAnchorResetCustomerProductIds({
+			stripeSubscription,
+			customerProducts,
+		});
+	if (billingCycleAnchorResetCustomerProductIds.length === 0) return;
+
+	const plan = createAutumnBillingPlanBuilder({
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
+	});
+	consumeBillingCycleAnchorReset({
+		eventContext: {
+			stripeSubscription,
+			customerProducts,
+			billingCycleAnchorResetCustomerProductIds,
+		},
+		plan,
+	});
+	const autumnBillingPlan = plan.build();
+	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
+
+	for (const {
+		customerProduct,
+		updates,
+	} of autumnBillingPlan.updateCustomerProducts ?? []) {
+		trackCustomerProductUpdate({ eventContext, customerProduct, updates });
+	}
+};

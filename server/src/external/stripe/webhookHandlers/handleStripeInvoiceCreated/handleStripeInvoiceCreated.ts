@@ -5,7 +5,7 @@ import {
 	storeRenewalLineItems,
 	upsertAutumnInvoice,
 } from "@/external/stripe/webhookHandlers/common";
-import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/consumeBillingCycleAnchorReset";
+import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/common/billingCycleAnchorReset/consumeBillingCycleAnchorReset";
 import { planScheduledPooledAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/planScheduledPooledAnchorReset";
 import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
 import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
