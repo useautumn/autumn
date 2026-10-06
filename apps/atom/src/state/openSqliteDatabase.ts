@@ -15,6 +15,8 @@ export class UnsupportedSchemaVersionError extends Error {
 
 /** Several processes share each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
+/** Address space, not memory: a file larger than this reads the rest through ordinary reads. */
+const MMAP_BYTES = 256 * 1024 * 1024;
 
 const configureDatabase = ({ database }: { database: Database }) => {
 	// First, before anything touches the file: another process may be recovering its log right now.
@@ -22,6 +24,8 @@ const configureDatabase = ({ database }: { database: Database }) => {
 	database.run("PRAGMA journal_mode = WAL");
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
 	database.run("PRAGMA synchronous = NORMAL");
+	// Pages come straight from the OS cache: another process's write empties this connection's own page cache.
+	database.run(`PRAGMA mmap_size = ${MMAP_BYTES}`);
 	if (process.env[ATOM_WAL_CHECKPOINTED_ELSEWHERE] === "1")
 		database.run("PRAGMA wal_autocheckpoint = 0");
 };
