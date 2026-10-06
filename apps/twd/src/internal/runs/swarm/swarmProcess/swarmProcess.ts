@@ -280,10 +280,12 @@ const main = async (init: SwarmInit) => {
 		name,
 		sandbox,
 		accountId,
+		createdAt,
 	}: {
 		name: string;
 		sandbox: ProviderSandbox;
 		accountId: string;
+		createdAt: Date;
 	}) => {
 		sandboxes.set(name, sandbox);
 		send({
@@ -291,6 +293,7 @@ const main = async (init: SwarmInit) => {
 			name,
 			sandboxId: sandbox.id ?? null,
 			accountId,
+			createdAt: createdAt.toISOString(),
 		});
 		if (teardownPromise)
 			void timeBoxed(() => tw.provider.deleteSandbox(sandbox));
@@ -305,8 +308,16 @@ const main = async (init: SwarmInit) => {
 	}) => {
 		const sandbox = sandboxes.get(name);
 		sandboxes.delete(name);
-		if (sandbox) await timeBoxed(() => tw.provider.deleteSandbox(sandbox));
-		send({ type: "worker_ended", name, accountId });
+		// Unconfirmed deletes leave endedAt unset; twd then bills the worker until run end.
+		let endedAt: string | undefined = sandbox
+			? undefined
+			: new Date().toISOString();
+		if (sandbox)
+			await timeBoxed(async () => {
+				await tw.provider.deleteSandbox(sandbox);
+				endedAt = new Date().toISOString();
+			});
+		send({ type: "worker_ended", name, accountId, endedAt });
 	};
 
 	process.once("SIGTERM", () => {
@@ -501,11 +512,17 @@ const main = async (init: SwarmInit) => {
 				tags: { owner: "twd", run: init.runId, kind: "bun-tw" },
 				signal,
 			};
+			let createdAt = new Date();
 			sandbox = await forkLimit(() =>
-				withTransientRetry({ run: () => tw.provider.forkWorker(forkOptions) }),
+				withTransientRetry({
+					run: () => {
+						createdAt = new Date();
+						return tw.provider.forkWorker(forkOptions);
+					},
+				}),
 			);
 			boot.mark(name, "forkDone");
-			track({ name, sandbox, accountId: account.accountId });
+			track({ name, sandbox, accountId: account.accountId, createdAt });
 			const publicUrl = await tw.provider.getPublicUrl(sandbox, SERVER_PORT);
 			boot.mark(name, "execStart");
 			await tw.run.waitForReady({ sandbox, name, signal });

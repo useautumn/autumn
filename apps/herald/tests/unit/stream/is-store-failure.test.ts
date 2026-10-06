@@ -61,3 +61,19 @@ test("a customer the worker does not know is the record's own failure", () => {
 	).toBe(false);
 	expect(isStoreFailure(workerError({ code: "INVALID_RESPONSE" }))).toBe(false);
 });
+
+test("Postgres answering with an error, or the driver giving up on it, is the store's failure", () => {
+	expect(
+		isStoreFailure(
+			Object.assign(new Error("duplicate key"), {
+				code: "23505",
+				severity: "ERROR",
+			}),
+		),
+	).toBe(true);
+	expect(isStoreFailure(new Error("Query read timeout"))).toBe(true);
+	expect(isStoreFailure(new Error("Connection terminated unexpectedly"))).toBe(
+		true,
+	);
+	expect(isStoreFailure(new Error("boom"))).toBe(false);
+});

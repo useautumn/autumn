@@ -119,7 +119,7 @@ test.concurrent("settings: push, pull, unmanaged", async () => {
 				{ features: feature },
 			)});\n`,
 		);
-		const untouched = runCli({
+		const untouched = await runCli({
 			cwd: scenario.cwd,
 			args: ["push", "--dry-run"],
 			secretKey: scenario.secretKey,

@@ -1,4 +1,8 @@
-import type { BillingInterval, FullCusProduct } from "@autumn/shared";
+import type {
+	BillingInterval,
+	FullCusProduct,
+	PhaseProrationBehavior,
+} from "@autumn/shared";
 
 export type SmallestInterval = {
 	interval: BillingInterval;
@@ -21,6 +25,7 @@ export type NextCycleEvent =
 			kind: "scheduled_start";
 			startsAtMs: number;
 			resetsBillingCycle: boolean;
+			prorationBehavior: PhaseProrationBehavior | undefined;
 			customerProducts: FullCusProduct[];
 	  } & NextCycleEventContext)
 	| ({
@@ -33,6 +38,7 @@ export type NextCycleEvent =
 			startsAtMs: number;
 			renewalBoundaryMs: number;
 			resetsBillingCycle: boolean;
+			prorationBehavior: PhaseProrationBehavior | undefined;
 			incomingCustomerProducts: FullCusProduct[];
 			outgoingCustomerProducts: FullCusProduct[];
 	  } & NextCycleEventContext);

@@ -7,6 +7,7 @@ import {
 	buildCountAndSumQuery,
 	hasCompleteUtcDay,
 	selectCountAndSumSource,
+	shouldRankGroupsFirst,
 	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
 	shouldUsePropertyCoverageCheck,
@@ -234,4 +235,45 @@ test("daily totals: preserve raw filtered and org-hourly query paths", () => {
 	expect(rawQuery).toContain("properties.kind::String");
 	expect(orgQuery).toContain("FROM events_org_hourly_mv");
 	expect(orgQuery).not.toContain("customer_id =");
+});
+
+test("rank-first: window-ranked org-wide customers and properties only", () => {
+	const base = {
+		useOrgDimensionRollup: false,
+		useOrgPropertyRollup: false,
+		groupRanking: "window" as const,
+	};
+
+	expect(
+		shouldRankGroupsFirst({
+			...base,
+			groupColumn: "customer_id",
+			useOrgDimensionRollup: true,
+		}),
+	).toBe(true);
+	expect(
+		shouldRankGroupsFirst({
+			...base,
+			groupColumn: "property",
+			useOrgPropertyRollup: true,
+		}),
+	).toBe(true);
+	expect(shouldRankGroupsFirst({ ...base, groupColumn: "property" })).toBe(
+		false,
+	);
+	expect(
+		shouldRankGroupsFirst({
+			...base,
+			groupColumn: "entity_id",
+			useOrgDimensionRollup: true,
+		}),
+	).toBe(false);
+	expect(
+		shouldRankGroupsFirst({
+			...base,
+			groupColumn: "property",
+			useOrgPropertyRollup: true,
+			groupRanking: "bin",
+		}),
+	).toBe(false);
 });

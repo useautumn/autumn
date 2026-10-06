@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
+import {
+	CUSTOMER_PRODUCT_LIMIT,
+	EXTRA_CUSTOMER_ENTITLEMENT_LIMIT,
+} from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { buildEntitySubjectScenario } from "./utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "./utils/withInsertedScenario.js";
@@ -142,41 +146,50 @@ describe(`${chalk.yellowBright("fullSubject ordering and limits")}`, () => {
 			external_id: `${scenario.customerEntitlements[0]!.external_id}_expired`,
 		};
 
-		const fillerProducts = Array.from({ length: 55 }, (_, index) => {
-			const suffix = index.toString().padStart(2, "0");
-			return {
-				...parentProduct,
-				internal_id: `${parentProduct.internal_id}_filler_${suffix}`,
-				id: `${parentProduct.id}_filler_${suffix}`,
-				name: `${parentProduct.name} Filler ${suffix}`,
-				is_add_on: false,
-				created_at: baseTime - index,
-			};
-		});
+		const fillerProducts = Array.from(
+			{ length: CUSTOMER_PRODUCT_LIMIT + 5 },
+			(_, index) => {
+				const suffix = index.toString().padStart(3, "0");
+				return {
+					...parentProduct,
+					internal_id: `${parentProduct.internal_id}_filler_${suffix}`,
+					id: `${parentProduct.id}_filler_${suffix}`,
+					name: `${parentProduct.name} Filler ${suffix}`,
+					is_add_on: false,
+					created_at: baseTime - index,
+				};
+			},
+		);
 		const fillerCustomerProducts = fillerProducts.map((product, index) => ({
 			...parentCustomerProduct,
 			id: `${parentCustomerProduct.id}_filler_${index
 				.toString()
-				.padStart(2, "0")}`,
+				.padStart(3, "0")}`,
 			internal_product_id: product.internal_id,
 			product_id: product.id,
 			created_at: baseTime - index,
 			status: CusProductStatus.Expired,
 		}));
 
-		const customerLooseEntitlements = Array.from({ length: 35 }, (_, index) => {
-			const suffix = index.toString().padStart(2, "0");
-			return {
-				...scenario.customerEntitlements[0]!,
-				id: `ce_${key}_loose_customer_${suffix}`,
-				customer_product_id: null,
-				entitlement_id: parentEntitlement.id,
-				internal_entity_id: null,
-				balance: index + 1,
-				created_at: baseTime + index,
-				external_id: `bal_${key}_loose_customer_${suffix}`,
-			};
-		});
+		const looseCustomerId = (index: number) =>
+			`ce_${key}_loose_customer_${index.toString().padStart(3, "0")}`;
+		const looseCustomerCount = EXTRA_CUSTOMER_ENTITLEMENT_LIMIT + 5;
+		const customerLooseEntitlements = Array.from(
+			{ length: looseCustomerCount },
+			(_, index) => {
+				const suffix = index.toString().padStart(3, "0");
+				return {
+					...scenario.customerEntitlements[0]!,
+					id: looseCustomerId(index),
+					customer_product_id: null,
+					entitlement_id: parentEntitlement.id,
+					internal_entity_id: null,
+					balance: index + 1,
+					created_at: baseTime + index,
+					external_id: `bal_${key}_loose_customer_${suffix}`,
+				};
+			},
+		);
 		const entityLooseEntitlements = Array.from({ length: 2 }, (_, index) => {
 			const suffix = index.toString().padStart(2, "0");
 			return {
@@ -277,7 +290,9 @@ describe(`${chalk.yellowBright("fullSubject ordering and limits")}`, () => {
 					inStatuses,
 				}))!;
 
-				expect(customerSubject.customer_products).toHaveLength(50);
+				expect(customerSubject.customer_products).toHaveLength(
+					CUSTOMER_PRODUCT_LIMIT,
+				);
 				expect(
 					customerSubject.customer_products
 						.slice(0, 4)
@@ -289,7 +304,9 @@ describe(`${chalk.yellowBright("fullSubject ordering and limits")}`, () => {
 					expiredCustomerProduct.id,
 				]);
 
-				expect(entitySubject.customer_products).toHaveLength(50);
+				expect(entitySubject.customer_products).toHaveLength(
+					CUSTOMER_PRODUCT_LIMIT,
+				);
 				expect(
 					entitySubject.customer_products
 						.slice(0, 5)
@@ -307,18 +324,22 @@ describe(`${chalk.yellowBright("fullSubject ordering and limits")}`, () => {
 					),
 				).not.toContain(unrelatedEntityCustomerProduct.id);
 
-				expect(customerSubject.extra_customer_entitlements).toHaveLength(30);
+				expect(customerSubject.extra_customer_entitlements).toHaveLength(
+					EXTRA_CUSTOMER_ENTITLEMENT_LIMIT,
+				);
 				expect(
 					customerSubject.extra_customer_entitlements
 						.slice(0, 3)
 						.map((customerEntitlement) => customerEntitlement.id),
 				).toEqual([
-					`ce_${key}_loose_customer_34`,
-					`ce_${key}_loose_customer_33`,
-					`ce_${key}_loose_customer_32`,
+					looseCustomerId(looseCustomerCount - 1),
+					looseCustomerId(looseCustomerCount - 2),
+					looseCustomerId(looseCustomerCount - 3),
 				]);
 
-				expect(entitySubject.extra_customer_entitlements).toHaveLength(30);
+				expect(entitySubject.extra_customer_entitlements).toHaveLength(
+					EXTRA_CUSTOMER_ENTITLEMENT_LIMIT,
+				);
 				expect(
 					entitySubject.extra_customer_entitlements
 						.slice(0, 4)
@@ -326,8 +347,8 @@ describe(`${chalk.yellowBright("fullSubject ordering and limits")}`, () => {
 				).toEqual([
 					`ce_${key}_loose_entity_01`,
 					`ce_${key}_loose_entity_00`,
-					`ce_${key}_loose_customer_34`,
-					`ce_${key}_loose_customer_33`,
+					looseCustomerId(looseCustomerCount - 1),
+					looseCustomerId(looseCustomerCount - 2),
 				]);
 			},
 		});

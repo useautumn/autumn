@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
+import type { QueryResult } from "pg";
 import { z } from "zod/v4";
 import { inlineSqlParams } from "../../common/inlineSqlParams.js";
 import { RowsInvalidError } from "../../common/parseRows.js";
@@ -7,6 +8,7 @@ import {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "../../common/postgresErrors.js";
+import { runInTransaction } from "../../common/runInTransaction.js";
 import { foldSubjectRowChanges } from "../../subjects/repos/applySubjectRowUpdates/foldSubjectRowChanges.js";
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
 import { subjectRowChangeLanded } from "../../subjects/types/subjectRowChange.js";
@@ -60,7 +62,7 @@ export const commitFlush = async ({
 	roundTrips = "transaction",
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "transaction" | "execute">;
+		db: Pick<PostgresDb, "$client" | "execute">;
 		/** Times the synchronous parts (folding the changes, building the statement) so a stall can be attributed to them. */
 		timing?: <Value>(label: string, run: () => Value) => Value;
 	};
@@ -172,11 +174,15 @@ const rolledBackOutcomeOf = ({
 	return null;
 };
 
-/** The rows of a simple query's last statement: a multi-statement query answers one result per statement. */
-const lastResultRows = ({ results }: { results: unknown[] }): unknown[] => {
-	const last = results.at(-1);
-	return Array.isArray(last) ? last : results;
-};
+type StatementResult = Pick<QueryResult, "rows">;
+
+/** The rows of a simple query's last statement: pg answers a multi-statement query with one result per statement. */
+const lastResultRows = ({
+	results,
+}: {
+	results: StatementResult | StatementResult[];
+}): unknown[] =>
+	(Array.isArray(results) ? results.at(-1) : results)?.rows ?? [];
 
 /**
  * One round trip: `SET LOCAL statement_timeout` and the statement share a simple query's implicit transaction, so a stale
@@ -189,7 +195,7 @@ const runFlushStatement = async ({
 	statementTimeoutMs,
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "transaction" | "execute">;
+		db: Pick<PostgresDb, "$client" | "execute">;
 		timing: <Value>(label: string, run: () => Value) => Value;
 	};
 	request: FlushRequest;
@@ -209,7 +215,7 @@ const runFlushStatement = async ({
 	// A value with no faithful literal keeps the bound statement, in the four-round-trip transaction.
 	if (statement === null)
 		return runFlushTransaction({ ctx, request, folded, statementTimeoutMs });
-	let results: unknown[];
+	let results: StatementResult | StatementResult[];
 	try {
 		results = await ctx.db.execute(
 			sql.raw(
@@ -233,7 +239,7 @@ const runFlushTransaction = async ({
 	statementTimeoutMs,
 }: {
 	ctx: {
-		db: Pick<PostgresDb, "transaction">;
+		db: Pick<PostgresDb, "$client">;
 		timing: <Value>(label: string, run: () => Value) => Value;
 	};
 	request: FlushRequest;
@@ -241,19 +247,22 @@ const runFlushTransaction = async ({
 	statementTimeoutMs: number;
 }): Promise<FlushOutcome> => {
 	try {
-		return await ctx.db.transaction(async (tx) => {
-			await tx.execute(
-				sql`SET LOCAL statement_timeout = ${sql.raw(String(Math.trunc(statementTimeoutMs)))}`,
-			);
-			const statement = ctx.timing("flush.sql", () =>
-				flushSql({ changes: folded, bookmarks: request.bookmarks }),
-			);
-			const rows = await tx.execute(statement);
-			const outcome = parseOutcome({ row: rows[0] });
-			assertBookmarksAdvanced({ request, outcome });
-			if (guardMissed({ folded, outcome }))
-				throw new FlushRolledBack({ outcome });
-			return outcome;
+		return await runInTransaction({
+			ctx,
+			run: async (tx) => {
+				await tx.execute(
+					sql`SET LOCAL statement_timeout = ${sql.raw(String(Math.trunc(statementTimeoutMs)))}`,
+				);
+				const statement = ctx.timing("flush.sql", () =>
+					flushSql({ changes: folded, bookmarks: request.bookmarks }),
+				);
+				const { rows } = await tx.execute(statement);
+				const outcome = parseOutcome({ row: rows[0] });
+				assertBookmarksAdvanced({ request, outcome });
+				if (guardMissed({ folded, outcome }))
+					throw new FlushRolledBack({ outcome });
+				return outcome;
+			},
 		});
 	} catch (cause) {
 		if (cause instanceof FlushRolledBack) return cause.outcome;

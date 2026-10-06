@@ -8,6 +8,20 @@ export type SchedulePhaseProration = {
 	prorationBehavior: PhaseProrationBehavior;
 };
 
+/** The later phases' prorations a set_plans request names; undefined for any other action. */
+export const setPlansPhaseProrations = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}): SchedulePhaseProration[] | undefined => {
+	if (!isSetPlansBillingContext(billingContext)) return undefined;
+
+	return billingContext.scheduledPhaseContexts.flatMap(
+		({ startsAt, prorationBehavior }) =>
+			prorationBehavior ? [{ startsAt, prorationBehavior }] : [],
+	);
+};
+
 /** set_plans names each later phase's proration; any other action keeps what the saved schedule holds. */
 export const resolveSchedulePhaseProrations = async ({
 	ctx,
@@ -16,12 +30,8 @@ export const resolveSchedulePhaseProrations = async ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 }): Promise<SchedulePhaseProration[]> => {
-	if (isSetPlansBillingContext(billingContext)) {
-		return billingContext.scheduledPhaseContexts.flatMap(
-			({ startsAt, prorationBehavior }) =>
-				prorationBehavior ? [{ startsAt, prorationBehavior }] : [],
-		);
-	}
+	const requestedPhaseProrations = setPlansPhaseProrations({ billingContext });
+	if (requestedPhaseProrations) return requestedPhaseProrations;
 	if (!billingContext.stripeSubscriptionSchedule) return [];
 
 	return await listSchedulePhaseProrations({

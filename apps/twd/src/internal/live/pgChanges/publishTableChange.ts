@@ -136,7 +136,7 @@ export const publishTableChange = async ({
 	if (table === "jobs") return publishJob({ ctx, jobId: id });
 	if (table === "warm_images") return publishWarm({ ctx, sha: id });
 	if (table === "stripe_accounts")
-		return publishLive({
+		return publishSignal({
 			topic: "accounts",
 			event: { type: "accounts.changed" },
 		});

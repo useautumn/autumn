@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { postgresSqlStateOf } from "../../../src/common/postgresErrors.js";
 import { createPostgresClient } from "../../../src/createPostgresClient.js";
 import {
 	commitFlush,
@@ -173,7 +174,7 @@ const SCENARIOS: Record<string, Scenario> = {
 	},
 	"a duplicate insert fails with Postgres's error and nothing lands": {
 		landed: false,
-		outcome: { error: "PostgresError", sqlState: "23505" },
+		outcome: { error: "DatabaseError", sqlState: "23505" },
 		request: {
 			changes: [
 				increment({ id: "ce_1", delta: -5 }),
@@ -208,7 +209,7 @@ const SCENARIOS: Record<string, Scenario> = {
 	"a value Postgres echoes as a rollback marker fails as the transaction does, and nothing lands":
 		{
 			landed: false,
-			outcome: { error: "PostgresError", sqlState: "22P02" },
+			outcome: { error: "DatabaseError", sqlState: "22P02" },
 			request: {
 				changes: [
 					{
@@ -244,14 +245,17 @@ describe.skipIf(!databaseUrl)(
 
 		beforeAll(async () => {
 			postgres = createPostgresClient({
+				ctx: { logger: console },
 				config: {
 					databaseUrl: databaseUrl as string,
+					applicationName: "flush-round-trips-test",
 					maxConnections: 2,
 					connectTimeout: 10,
 					idleTimeout: 30,
+					queryTimeout: 30,
 				},
 			});
-			await postgres.client.unsafe(SCHEMA);
+			await postgres.client.query(SCHEMA);
 		});
 
 		afterAll(async () => {
@@ -259,15 +263,21 @@ describe.skipIf(!databaseUrl)(
 		});
 
 		const snapshot = async () => ({
-			entitlements: await postgres.client.unsafe(
-				"SELECT id, balance::text, usage_attribution, entities FROM customer_entitlements ORDER BY id",
-			),
-			progress: await postgres.client.unsafe(
-				"SELECT topic, partition_id, next_offset::text, command_next_offset::text, owner_epoch::text, owner_fence_offset::text, claim_token FROM partition_progress ORDER BY topic, partition_id",
-			),
-			contributions: await postgres.client.unsafe(
-				"SELECT id, current_contribution::text, effective_at::text FROM pooled_balance_contributions ORDER BY id",
-			),
+			entitlements: (
+				await postgres.client.query(
+					"SELECT id, balance::text, usage_attribution, entities FROM customer_entitlements ORDER BY id",
+				)
+			).rows,
+			progress: (
+				await postgres.client.query(
+					"SELECT topic, partition_id, next_offset::text, command_next_offset::text, owner_epoch::text, owner_fence_offset::text, claim_token FROM partition_progress ORDER BY topic, partition_id",
+				)
+			).rows,
+			contributions: (
+				await postgres.client.query(
+					"SELECT id, current_contribution::text, effective_at::text FROM pooled_balance_contributions ORDER BY id",
+				)
+			).rows,
 		});
 
 		const runArm = async ({
@@ -277,7 +287,7 @@ describe.skipIf(!databaseUrl)(
 			request: FlushRequest;
 			roundTrips: FlushRoundTrips;
 		}) => {
-			await postgres.client.unsafe(SEED);
+			await postgres.client.query(SEED);
 			const before = await snapshot();
 			let outcome: unknown;
 			try {
@@ -290,8 +300,10 @@ describe.skipIf(!databaseUrl)(
 					}),
 				};
 			} catch (error) {
-				const { name, errno } = error as Error & { errno?: string };
-				outcome = { error: name, sqlState: errno ?? null };
+				outcome = {
+					error: (error as Error).constructor.name,
+					sqlState: postgresSqlStateOf({ error }),
+				};
 			}
 			return { outcome, before, after: await snapshot() };
 		};
@@ -314,11 +326,11 @@ describe.skipIf(!databaseUrl)(
 		}
 
 		test("a flush held behind a row lock is cancelled by its statement timeout, and nothing lands", async () => {
-			await postgres.client.unsafe(SEED);
+			await postgres.client.query(SEED);
 			const before = await snapshot();
-			const locker = await postgres.client.reserve();
+			const locker = await postgres.client.connect();
 			try {
-				await locker.unsafe(
+				await locker.query(
 					"BEGIN; SELECT * FROM partition_progress WHERE partition_id = 3 FOR UPDATE",
 				);
 				const startedAt = performance.now();
@@ -329,11 +341,11 @@ describe.skipIf(!databaseUrl)(
 					statementTimeoutMs: 200,
 					roundTrips: "single",
 				});
-				expect(flushed).rejects.toMatchObject({ errno: "57014" });
+				expect(flushed).rejects.toMatchObject({ code: "57014" });
 				await flushed.catch(() => undefined);
 				expect(performance.now() - startedAt).toBeLessThan(1_500);
 			} finally {
-				await locker.unsafe("ROLLBACK");
+				await locker.query("ROLLBACK");
 				locker.release();
 			}
 			expect(await snapshot()).toEqual(before);

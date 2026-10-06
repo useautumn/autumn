@@ -36,12 +36,13 @@ export const getBillingCycleAnchors = async ({
 	customerProductIds: string[];
 }): Promise<Record<string, number>> => {
 	if (customerProductIds.length === 0) return {};
+	const result = await ctx.db.execute(
+		billingCycleAnchorsSql({ ctx, customerProductIds }),
+	);
 	const rows = parseRows({
 		table: "subscriptions",
 		schema: billingCycleAnchorRowSchema,
-		rows: await ctx.db.execute(
-			billingCycleAnchorsSql({ ctx, customerProductIds }),
-		),
+		rows: result.rows,
 	});
 	return Object.fromEntries(
 		rows.map((row) => [row.customer_product_id, row.billing_cycle_anchor_ms]),

@@ -85,8 +85,16 @@ FAKECLOUD_PORT=4566 \
 # DynamoDB Local was replaced by fakecloud; drop the container on VMs that still run it.
 docker rm -f autumn-capy-dynamodb >/dev/null 2>&1 || true
 
-docker compose --env-file "$TRIGGER_ENV" \
-  -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger up -d
+# Trigger.dev is opt-in (`bun capy restart --trigger`). Its containers restart on
+# boot by themselves, so an opted-out machine stops them instead of skipping them.
+if [ -f "$CAPY_PREFIX/opt-ins/trigger" ]; then
+  docker compose --env-file "$TRIGGER_ENV" \
+    -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger up -d
+else
+  log "Trigger.dev not opted in; stopping its containers"
+  docker compose --env-file "$TRIGGER_ENV" \
+    -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger stop >/dev/null 2>&1 || true
+fi
 
 start_capy_kafka "[capy-startup]"
 

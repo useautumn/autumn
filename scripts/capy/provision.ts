@@ -44,6 +44,8 @@ import {
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 import { sh } from "../dw/helpers/shell.ts";
+import { getMachineId, stateForMachine } from "./machineIdentity.ts";
+import { isOptedIn } from "./optIns.ts";
 import {
 	capyEnvFiles,
 	DRAGONFLY_PORT,
@@ -98,20 +100,6 @@ function fatal(msg: string): never {
 
 function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 7);
-}
-
-function getMachineId(): string {
-	// Hostnames repeat across VMs cloned from one image, so identity is a
-	// minted id persisted for the lifetime of this machine's filesystem.
-	const idPath = join(CAPY_PREFIX, "machine-id");
-	if (existsSync(idPath)) {
-		const existing = readFileSync(idPath, "utf-8").trim();
-		if (existing) return existing;
-	}
-	const minted = `capy-${randomBytes(8).toString("hex")}`;
-	mkdirSync(CAPY_PREFIX, { recursive: true });
-	writeFileSync(idPath, `${minted}\n`, { mode: 0o600 });
-	return minted;
 }
 
 function deriveBranchName(machineId: string): string {
@@ -319,16 +307,16 @@ function writeEnvFile(relPath: string, managed: Record<string, string>): void {
 }
 
 function writeEnvFiles(
+	machineId: string,
 	databaseUrl: string,
 	secrets: NonNullable<State["secrets"]>,
-	triggerSecretKey: string,
-	triggerAccessToken: string,
+	trigger: { secretKey: string; accessToken: string } | undefined,
 ): void {
 	const { server, vite, checkout } = capyEnvFiles({
+		machineId,
 		databaseUrl,
 		secrets,
-		triggerSecretKey,
-		triggerAccessToken,
+		trigger,
 	});
 	writeEnvFile("server/.env.local", server);
 	writeEnvFile("vite/.env.local", vite);
@@ -669,23 +657,30 @@ async function main(): Promise<void> {
 		fatal("capy provision is disabled when NODE_ENV=production");
 	}
 
-	const machineId = getMachineId();
+	const machineId = getMachineId({ prefix: CAPY_PREFIX });
 	log(`branch=${deriveBranchName(machineId)}`);
 
 	// 1. Local services were started by capy-startup.sh. Wait for their
 	// published ports before provisioning anything that writes their URLs.
 	await waitForDragonfly();
+	const triggerOptedIn = isOptedIn({ name: "trigger" });
 	await Promise.all([
 		waitForHttpService("fakecloud", FAKECLOUD_PORT),
-		waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
+		triggerOptedIn && waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
 	]);
 	// fakecloud has no startup config for seeding queues; create them like bun dw does.
 	await ensureFakecloudQueues({ port: FAKECLOUD_PORT });
-	const trigger = ensureTriggerProject();
+	const trigger = triggerOptedIn ? ensureTriggerProject() : undefined;
 
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
-	const priorState = loadState();
+	const savedState = loadState();
+	const priorState = stateForMachine({ state: savedState, machineId });
+	if (savedState && !priorState) {
+		log(
+			`state.json belongs to ${savedState.machineId} (cloned from a snapshot) — provisioning this machine its own branch and secrets`,
+		);
+	}
 	const { state: nextState, created } = ensureNeonBranch(machineId, priorState);
 	if (!nextState.branchName) fatal("provisioning produced no branchName");
 	const directUrl = connectionString(nextState.branchName, { pooled: false });
@@ -712,12 +707,7 @@ async function main(): Promise<void> {
 	if (nextState.branchName) ensureChatDatabase(nextState.branchName);
 
 	// 3. Env files. preload-env.ts at every bun entry point auto-loads these.
-	writeEnvFiles(
-		nextState.databaseUrl,
-		nextState.secrets,
-		trigger.secretKey,
-		trigger.accessToken,
-	);
+	writeEnvFiles(machineId, nextState.databaseUrl, nextState.secrets, trigger);
 
 	runSetupTest(["--ensure"], directUrl);
 	runSetupTest(["--ensure-key"], directUrl);

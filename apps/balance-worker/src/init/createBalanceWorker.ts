@@ -384,7 +384,7 @@ export async function createBalanceWorker({
 		}
 		async function probePostgres(): Promise<void> {
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
-			await resources.postgres.client`select 1`;
+			await resources.postgres.client.query("select 1");
 		}
 		/** Closes the window: its per-partition commit lines go out, and its signals join the summary line. */
 		function windowSignals() {

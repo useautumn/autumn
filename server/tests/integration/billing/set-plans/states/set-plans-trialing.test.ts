@@ -44,8 +44,13 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans({
 			customer_id: customerId,
-			proration_behavior: "none",
-			phases: [{ starts_at: "now", plans: [{ plan_id: proTrial.id }] }],
+			phases: [
+				{
+					starts_at: "now",
+					proration_behavior: "none",
+					plans: [{ plan_id: proTrial.id }],
+				},
+			],
 		});
 
 		const updated = await ctx.stripeCli.subscriptions.retrieve(trialing.id);

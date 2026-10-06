@@ -4,14 +4,29 @@ import type {
 	LineItem,
 	PreviewLineItem,
 } from "@autumn/shared";
-import { sumValues } from "@autumn/shared";
-import { Decimal } from "decimal.js";
-import { customLineItemToPreviewLineItem } from "../../lineItems/customLineItemToPreviewLineItem";
+import {
+	atmnToStripeAmount,
+	stripeToAtmnAmount,
+	sumValues,
+} from "@autumn/shared";
 import { customLineItemsToLineItems } from "../../lineItems/customLineItemsToLineItems";
+import { customLineItemToPreviewLineItem } from "../../lineItems/customLineItemToPreviewLineItem";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 
-const roundAmount = ({ amount }: { amount: number }) =>
-	new Decimal(amount).toDP(2).toNumber();
+// Stripe charges each line in whole minor units, so round per line before summing.
+const sumLineAmounts = ({
+	amounts,
+	currency,
+}: {
+	amounts: number[];
+	currency: string;
+}) =>
+	stripeToAtmnAmount({
+		amount: sumValues(
+			amounts.map((amount) => atmnToStripeAmount({ amount, currency })),
+		),
+		currency,
+	});
 
 export const billingPlanToImmediatePreview = ({
 	billingContext,
@@ -46,16 +61,18 @@ export const billingPlanToImmediatePreview = ({
 				customLineItemsWithDiscounts[index],
 			),
 		);
-		const subtotal = roundAmount({
-			amount: sumValues(customLineItems.map((item) => item.amount)),
+		const subtotal = sumLineAmounts({
+			amounts: customLineItems.map((item) => item.amount),
+			currency,
 		});
 
 		return {
 			immediateLineItems,
 			previewLineItems,
 			subtotal,
-			total: roundAmount({
-				amount: sumValues(previewLineItems.map((line) => line.total)),
+			total: sumLineAmounts({
+				amounts: previewLineItems.map((line) => line.total),
+				currency,
 			}),
 		};
 	}
@@ -65,11 +82,13 @@ export const billingPlanToImmediatePreview = ({
 	return {
 		immediateLineItems,
 		previewLineItems,
-		subtotal: roundAmount({
-			amount: sumValues(previewLineItems.map((line) => line.subtotal)),
+		subtotal: sumLineAmounts({
+			amounts: previewLineItems.map((line) => line.subtotal),
+			currency,
 		}),
-		total: roundAmount({
-			amount: sumValues(previewLineItems.map((line) => line.total)),
+		total: sumLineAmounts({
+			amounts: previewLineItems.map((line) => line.total),
+			currency,
 		}),
 	};
 };

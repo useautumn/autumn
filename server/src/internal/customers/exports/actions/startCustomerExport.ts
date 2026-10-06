@@ -1,6 +1,5 @@
 import {
 	type CreateCustomerExportParams,
-	CustomerExportKind,
 	type CustomerExportResponse,
 	type DbCustomerExport,
 	ErrCode,
@@ -16,6 +15,7 @@ import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTas
 import { retryAsync } from "@/utils/retryAsync.js";
 import { CustomerExportService } from "../CustomerExportService.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
+import { createParamsToCustomerExportSpec } from "../customerExportToSpec.js";
 import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
 import { executeCustomerExport } from "../workflows/executeCustomerExport.js";
 
@@ -134,7 +134,6 @@ export const startCustomerExport = async ({
 	ctx: AutumnContext;
 	params: CreateCustomerExportParams;
 }): Promise<{ export: CustomerExportResponse }> => {
-	const { kind, search, filters } = params;
 	// Fail before creating a row a worker without S3 config could never publish.
 	getCustomerExportsS3Config();
 
@@ -143,10 +142,7 @@ export const startCustomerExport = async ({
 		logger: ctx.logger,
 		orgId: ctx.org.id,
 		env: ctx.env,
-		kind,
-		fields: params.kind === CustomerExportKind.Customers ? params.fields : [],
-		// The dashboard trims client-side; trimming here keeps direct API callers consistent.
-		snapshot: { search: search.trim(), filters },
+		...createParamsToCustomerExportSpec({ params }),
 		requestedByUserId: ctx.userId ?? ctx.user?.id,
 	});
 

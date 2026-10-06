@@ -1,4 +1,5 @@
 import { Readable } from "node:stream";
+import type { CustomersExportSpec } from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
 import type { CustomerExportRow } from "../../csv/createCustomerExportStringifier.js";
 import {
@@ -9,12 +10,9 @@ import { createOneOffProductLookup } from "../../queries/getOneOffProductLookup.
 import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
 import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
 
-export const createCustomerExportRowStream: CustomerExportRowStreamFactory = ({
-	ctx,
-	snapshot,
-	population,
-	onPageProcessed,
-}) => {
+export const createCustomerExportRowStream: CustomerExportRowStreamFactory<
+	CustomersExportSpec
+> = ({ ctx, snapshot, population, onPageProcessed }) => {
 	const readDb = dbReplica ?? ctx.db;
 	const oneOffProductLookup = createOneOffProductLookup({ db: readDb });
 

@@ -6,6 +6,7 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 	ms,
+	type PhaseProrationBehavior,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -96,6 +97,25 @@ const resolve = ({
 			billingContext.billingCycleAnchorMs === "now"
 				? billingContext.currentEpochMs
 				: billingContext.billingCycleAnchorMs,
+	});
+
+const setPlansContext = ({
+	phaseStartsAt,
+	prorationBehavior,
+}: {
+	phaseStartsAt: number;
+	prorationBehavior: PhaseProrationBehavior;
+}): BillingContext =>
+	Object.assign(buildContext(), {
+		immediatePhase: {},
+		scheduledPhaseContexts: [
+			{
+				startsAt: phaseStartsAt,
+				endsAt: undefined,
+				prorationBehavior,
+				productContexts: [],
+			},
+		],
 	});
 
 const productIds = (customerProducts: FullCusProduct[]) =>
@@ -320,6 +340,95 @@ describe("getNextCycleEvent", () => {
 		});
 
 		expect(event.kind).toBe("scheduled_change");
+	});
+
+	test("a kept-anchor phase start with proration none bills nothing, so the renewal is next", () => {
+		const scheduledAt = renewalBoundaryMs - ms.days(5);
+		const premium = cusProduct({
+			id: "premium",
+			startsAt: scheduledAt,
+			status: CusProductStatus.Scheduled,
+		});
+		const event = resolve({
+			billingContext: setPlansContext({
+				phaseStartsAt: scheduledAt,
+				prorationBehavior: "none",
+			}),
+			customerProducts: [
+				cusProduct({ id: "pro", endedAt: scheduledAt }),
+				premium,
+			],
+		});
+
+		expect(event.kind).toBe("renewal");
+		if (event.kind === "renewal") {
+			expect(event.startsAtMs).toBe(renewalBoundaryMs);
+			expect(productIds(event.customerProducts)).toEqual([premium.id]);
+		}
+	});
+
+	test("a first paid plan starting with proration none still bills its new cycle", () => {
+		const scheduledAt = renewalBoundaryMs - ms.days(5);
+		const event = resolve({
+			billingContext: setPlansContext({
+				phaseStartsAt: scheduledAt,
+				prorationBehavior: "none",
+			}),
+			customerProducts: [
+				cusProduct({
+					id: "pro",
+					startsAt: scheduledAt,
+					status: CusProductStatus.Scheduled,
+				}),
+			],
+		});
+
+		expect(event.kind).toBe("scheduled_start");
+	});
+
+	test("a switch on the renewal date with proration none still bills the renewal", () => {
+		const event = resolve({
+			billingContext: setPlansContext({
+				phaseStartsAt: renewalBoundaryMs,
+				prorationBehavior: "none",
+			}),
+			customerProducts: [
+				cusProduct({ id: "pro", endedAt: renewalBoundaryMs }),
+				cusProduct({
+					id: "premium",
+					startsAt: renewalBoundaryMs,
+					status: CusProductStatus.Scheduled,
+				}),
+			],
+		});
+
+		expect(event.kind).toBe("scheduled_change");
+		if (event.kind === "scheduled_change") {
+			expect(event.startsAtMs).toBe(renewalBoundaryMs);
+		}
+	});
+
+	test("a phase start carries the proration set_plans requested for it", () => {
+		const scheduledAt = renewalBoundaryMs - ms.days(5);
+		const event = resolve({
+			billingContext: setPlansContext({
+				phaseStartsAt: scheduledAt,
+				prorationBehavior: "prorate_immediately",
+			}),
+			customerProducts: [
+				cusProduct({ id: "pro", endedAt: scheduledAt }),
+				cusProduct({
+					id: "premium",
+					startsAt: scheduledAt,
+					status: CusProductStatus.Scheduled,
+				}),
+			],
+		});
+
+		expect(event.kind).toBe("scheduled_change");
+		if (event.kind === "scheduled_change") {
+			expect(event.prorationBehavior).toBe("prorate_immediately");
+		}
 	});
 
 	test("returns none without a recurring interval", () => {

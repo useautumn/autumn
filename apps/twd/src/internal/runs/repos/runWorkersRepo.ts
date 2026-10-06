@@ -3,19 +3,21 @@ import { runWorkers } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCostRates } from "../../costs/actions/getCostRates.ts";
 
-/** One row per worker sandbox, priced at the configured worker size. */
+/** One row per worker sandbox, priced at the configured worker size from when its create was requested. */
 export const insertRunWorker = async ({
 	ctx,
 	runId,
 	name,
 	sandboxId,
 	accountId,
+	startedAt,
 }: {
 	ctx: TwdContext;
 	runId: string;
 	name: string;
 	sandboxId: string | null;
 	accountId: string;
+	startedAt: Date;
 }) => {
 	const { workerCores, workerMemoryGib } = getCostRates();
 	await ctx.db.insert(runWorkers).values({
@@ -26,6 +28,7 @@ export const insertRunWorker = async ({
 		accountId,
 		cores: workerCores,
 		memoryGib: workerMemoryGib,
+		startedAt,
 	});
 };
 
@@ -34,14 +37,16 @@ export const endRunWorkers = async ({
 	ctx,
 	runId,
 	name,
+	endedAt = new Date(),
 }: {
 	ctx: TwdContext;
 	runId: string;
 	name?: string;
+	endedAt?: Date;
 }) => {
 	await ctx.db
 		.update(runWorkers)
-		.set({ endedAt: new Date() })
+		.set({ endedAt })
 		.where(
 			and(
 				eq(runWorkers.runId, runId),

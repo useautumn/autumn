@@ -30,6 +30,7 @@ export const CUSTOMER_EXPORTS_PAGE_SIZE = 5;
 const CustomerExportFormSchema = z.object({
 	fields: CustomerExportFieldsSchema,
 	restrictToCurrentFilters: z.boolean(),
+	includeUnlinkedStripeCustomers: z.boolean(),
 });
 
 export type CustomerExportSheetProps = {
@@ -82,6 +83,7 @@ export function useCustomerExportSheet({
 		defaultValues: {
 			fields: [...CUSTOMER_EXPORT_FIELD_ORDER],
 			restrictToCurrentFilters: true,
+			includeUnlinkedStripeCustomers: false,
 		},
 		validators: {
 			onChange: CustomerExportFormSchema,
@@ -98,7 +100,12 @@ export function useCustomerExportSheet({
 				await createExport.mutateAsync(
 					kind === CustomerExportKind.Customers
 						? { kind, fields: value.fields, ...scope }
-						: { kind, ...scope },
+						: {
+								kind,
+								...scope,
+								include_unlinked_stripe_customers:
+									value.includeUnlinkedStripeCustomers,
+							},
 				);
 				toast.success("Export started");
 			} catch (error) {

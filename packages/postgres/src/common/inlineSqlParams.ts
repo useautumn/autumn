@@ -3,23 +3,14 @@ import { PgDialect } from "drizzle-orm/pg-core";
 
 const dialect = new PgDialect();
 
-const INT4_MAX = 2 ** 31 - 1;
-
-/** A literal typed as Bun.sql would bind the value, or null when Bun's binding has no faithful literal. */
+/** pg binds a scalar as untyped text, so Postgres infers its type from where it lands, as it does for a quoted literal. */
 const literalOf = (value: unknown): string | null => {
 	if (value === null || value === undefined) return "NULL";
-	if (typeof value === "boolean") return value ? "true" : "false";
-	if (typeof value === "bigint") return `'${value}'::int8`;
-	if (typeof value === "number") {
-		if (Number.isInteger(value) && Math.abs(value) <= INT4_MAX)
-			return `'${value}'::int4`;
-		if (Number.isSafeInteger(value)) return `'${value}'::int8`;
-		return `'${value}'::float8`;
-	}
-	// Bun binds a string untyped, so Postgres infers its type from where it lands, as it does for a quoted literal.
-	if (typeof value === "string" && !value.includes("\0"))
-		return `E'${value.replaceAll("\\", "\\\\").replaceAll("'", "''")}'`;
-	return null;
+	if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+		return null;
+	const text = String(value);
+	if (text.includes("\0")) return null;
+	return `E'${text.replaceAll("\\", "\\\\").replaceAll("'", "''")}'`;
 };
 
 /**

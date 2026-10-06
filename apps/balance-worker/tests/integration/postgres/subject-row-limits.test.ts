@@ -44,7 +44,7 @@ describe.skipIf(!databaseUrl)("subject row limits", () => {
 		await postgres.db.execute(sql`INSERT INTO customer_products
 			(id, internal_customer_id, internal_product_id, product_id, created_at, starts_at, status, options, billing_version)
 			SELECT ${prefix} || '_' || lpad(n::text, 4, '0'), ${seeded.internalCustomerId}, ${seeded.internalProductId}, 'pro',
-				${Date.now()} + n, ${Date.now()} + n, 'active', ARRAY[]::jsonb[], 'v2'
+				${Date.now()}::bigint + n, ${Date.now()}::bigint + n, 'active', ARRAY[]::jsonb[], 'v2'
 			FROM generate_series(1, ${cap + 1}) AS n`);
 		try {
 			const envelope = await loadCustomer({ seeded });
@@ -73,7 +73,7 @@ describe.skipIf(!databaseUrl)("subject row limits", () => {
 		await postgres.db.execute(sql`INSERT INTO customer_entitlements
 			(id, internal_customer_id, customer_id, entitlement_id, internal_feature_id, feature_id, created_at, balance, adjustment)
 			SELECT ${prefix} || '_' || lpad(n::text, 4, '0'), ${seeded.internalCustomerId}, ${seeded.identity.customerId},
-				${seeded.entitlementId}, ${seeded.internalFeatureId}, ${seeded.featureId}, ${Date.now()} + n, 1, 0
+				${seeded.entitlementId}, ${seeded.internalFeatureId}, ${seeded.featureId}, ${Date.now()}::bigint + n, 1, 0
 			FROM generate_series(1, ${cap + 1}) AS n`);
 		try {
 			const envelope = await loadCustomer({ seeded });

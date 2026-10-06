@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { viteHmrClient } from "../packages/env/src/viteDev.js";
+import { sharedBundle } from "./viteSharedBundle.ts";
 
 // Defaults so the app works when no .env.local is present
 // (e.g. after `bun dw disable`). Real values from .env / infisical /
@@ -59,6 +60,9 @@ export default defineConfig({
 		pure: ["console.log"],
 	},
 	plugins: [
+		...(isCapyDev
+			? [sharedBundle({ sharedDir: path.resolve(__dirname, "../shared") })]
+			: []),
 		react(),
 		tailwindcss(), // Automatically reads paths from tsconfig.json
 		tsconfigPaths(),
@@ -120,7 +124,8 @@ export default defineConfig({
 			"@base-ui/react/tooltip",
 			"@base-ui/react/use-render",
 		],
-		// Exclude workspace dependencies from pre-bundling to avoid cache issues
+		// Exclude workspace dependencies from pre-bundling to avoid cache issues.
+		// Capy pre-bundles the third-party ones: unbundled they cost ~1,400 requests per page load.
 		exclude: [
 			"@autumn/shared",
 			"@autumn/atmn-old/skills",
@@ -129,13 +134,17 @@ export default defineConfig({
 			"better-auth",
 			"better-auth/react",
 			"@better-auth/stripe",
-			"zod/v4",
-			"drizzle-orm/pg-core",
-			"drizzle-orm",
-			"@date-fns/utc",
-			"date-fns",
 			"@orpc/contract",
 			"@autumn/ui",
+			...(isCapyDev
+				? []
+				: [
+						"zod/v4",
+						"drizzle-orm/pg-core",
+						"drizzle-orm",
+						"@date-fns/utc",
+						"date-fns",
+					]),
 		],
 	},
 
@@ -188,7 +197,8 @@ export default defineConfig({
 				}
 			: undefined,
 		watch: {
-			usePolling: true, // Required for file watching in Docker on Windows
+			// Required for Docker on Windows; Capy's Linux VMs get inotify instead of a 1s stat sweep.
+			usePolling: !isCapyDev,
 			interval: 1000,
 		},
 		hmr: isCapyDev
