@@ -4,8 +4,11 @@ import {
 	CheckoutCompletedError,
 	CheckoutStatus,
 	type DeferredAutumnBillingPlanData,
+	ErrCode,
 	InternalError,
+	RecaseError,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
@@ -15,6 +18,7 @@ import {
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { updateMetadataWithCheckoutSession } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
+import { toRenewableCheckoutSessionAction } from "../utils/toRenewableCheckoutSessionAction";
 import { updateCheckoutDbAndCache } from "./updateDbAndCache";
 
 const STRIPE_SESSION_ID_REGEX = /cs_(test|live)_[A-Za-z0-9]+/;
@@ -47,14 +51,28 @@ export const renewLongLivedCheckoutSession = async ({
 		? await MetadataService.get({ db: ctx.db, id: metadataId })
 		: null;
 
-	// Completion deletes the pending metadata, so its absence means the plan was paid.
-	if (!metadataId || !pendingMetadata) {
+	// A complete session may still have metadata while its webhook is in flight.
+	if (
+		previousSession.status === "complete" ||
+		!metadataId ||
+		!pendingMetadata
+	) {
 		await updateCheckoutDbAndCache({
 			ctx,
 			oldCheckout: checkout,
 			updates: { status: CheckoutStatus.Completed, completed_at: Date.now() },
 		});
 		throw new CheckoutCompletedError();
+	}
+
+	// The metadata's session owns the granted rows; a stale checkout read must not split them.
+	if (pendingMetadata.stripe_checkout_session_id !== previousSessionId) {
+		throw new RecaseError({
+			message:
+				"Checkout start already in progress for this customer, try again in a few seconds",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.CONFLICT,
+		});
 	}
 
 	const { billingContext, billingPlan } =
@@ -69,7 +87,9 @@ export const renewLongLivedCheckoutSession = async ({
 	const stripeCheckoutSession = await createStripeCheckoutSessionFromAction({
 		ctx,
 		billingContext,
-		checkoutSessionAction,
+		checkoutSessionAction: toRenewableCheckoutSessionAction({
+			checkoutSessionAction,
+		}),
 		metadataId,
 	});
 

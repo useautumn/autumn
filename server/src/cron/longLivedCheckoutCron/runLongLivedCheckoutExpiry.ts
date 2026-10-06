@@ -4,6 +4,7 @@ import {
 	MetadataType,
 	metadata,
 } from "@autumn/shared";
+import { addDays } from "date-fns";
 import { and, asc, eq, lt } from "drizzle-orm";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -39,6 +40,19 @@ const getExpiredLongLivedCheckoutMetadata = ({
 			.limit(PAGE_SIZE),
 	);
 
+const postponeExpiry = ({
+	cronContext,
+	pendingMetadata,
+}: {
+	cronContext: CronContext;
+	pendingMetadata: Metadata;
+}) =>
+	MetadataService.update({
+		db: cronContext.db,
+		id: pendingMetadata.id,
+		updates: { expires_at: addDays(Date.now(), 1).getTime() },
+	});
+
 const expireLongLivedCheckout = async ({
 	cronContext,
 	pendingMetadata,
@@ -59,6 +73,11 @@ const expireLongLivedCheckout = async ({
 	if (sessionId) {
 		const stripeCli = createStripeCli({ org: ctx.org, env });
 		const session = await stripeCli.checkout.sessions.retrieve(sessionId);
+		// Paid but not yet linked: leave it for the completion webhook and recheck later.
+		if (session.status === "complete") {
+			await postponeExpiry({ cronContext, pendingMetadata });
+			return;
+		}
 		if (session.status === "open") {
 			await stripeCli.checkout.sessions.expire(sessionId);
 		}
@@ -111,6 +130,7 @@ export const runLongLivedCheckoutExpiry = async ({
 				ctx.logger.error(
 					`[Long-lived checkout expiry] Failed for metadata ${pendingMetadata.id}: ${error}`,
 				);
+				await postponeExpiry({ cronContext: ctx, pendingMetadata });
 			}
 		}
 	} catch (error) {

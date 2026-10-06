@@ -8,6 +8,8 @@
  * - Paying through the link links the subscription onto that row; reopening the
  *   link afterwards no longer offers payment.
  * - Unpaid plans are expired by the cron once the link's 90 days pass.
+ * - A paid session whose webhook is still in flight is neither renewed nor expired.
+ * - Renewal drops absolute times (e.g. trial_end) that elapsed since link creation.
  */
 
 import { expect, test } from "bun:test";
@@ -15,7 +17,9 @@ import {
 	type ApiCustomerV3,
 	type AttachParamsV1Input,
 	CusProductStatus,
+	customerProducts,
 	customers,
+	type DeferredAutumnBillingPlanData,
 	metadata,
 } from "@autumn/shared";
 import {
@@ -42,13 +46,15 @@ type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
 const setupLongLivedScenario = async ({
 	customerId,
+	withTrial = false,
 }: {
 	customerId: string;
+	withTrial?: boolean;
 }) => {
-	const pro = products.pro({
-		id: `pro-${customerId}`,
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
+	const productItems = [items.monthlyMessages({ includedUsage: 100 })];
+	const pro = withTrial
+		? products.proWithTrial({ id: `pro-${customerId}`, items: productItems })
+		: products.pro({ id: `pro-${customerId}`, items: productItems });
 
 	const scenario = await initScenario({
 		customerId,
@@ -232,5 +238,101 @@ test.concurrent(
 			autumn: autumnV1,
 			productId: pro.id,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: paid session awaiting its webhook is neither expired nor renewed")}`,
+	async () => {
+		const customerId = "ll-eppi-paid-inflight";
+		const { ctx, pro, internalCustomerId, checkoutId } =
+			await setupLongLivedScenario({ customerId });
+
+		const stripeUrl = await startLongLivedCheckout(checkoutId);
+		const sessionId = getStripeSessionId(stripeUrl);
+		const pendingMetadata = await ctx.db.query.metadata.findFirst({
+			where: eq(metadata.stripe_checkout_session_id, sessionId),
+		});
+
+		await completeStripeCheckoutForm({ url: stripeUrl });
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["checkout.session.completed"],
+			objectId: sessionId,
+			until: async () => {
+				const row = await getActiveProRow({
+					ctx,
+					internalCustomerId,
+					productId: pro.id,
+				});
+				return (row?.subscription_ids ?? []).length === 1;
+			},
+		});
+
+		// Rewind Autumn to "paid in Stripe, completion webhook not yet processed", past the deadline.
+		const paidRow = await getActiveProRow({
+			ctx,
+			internalCustomerId,
+			productId: pro.id,
+		});
+		await ctx.db
+			.insert(metadata)
+			.values({ ...pendingMetadata!, expires_at: Date.now() - 1000 });
+		await ctx.db
+			.update(customerProducts)
+			.set({ subscription_ids: [] })
+			.where(eq(customerProducts.id, paidRow!.id));
+
+		// 1. The cron leaves the paid plan for the webhook and rechecks later.
+		await runLongLivedCheckoutExpiry({ ctx });
+		expect(
+			(await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }))
+				?.id,
+		).toBe(paidRow!.id);
+		const postponedMetadata = await ctx.db.query.metadata.findFirst({
+			where: eq(metadata.id, pendingMetadata!.id),
+		});
+		expect(Number(postponedMetadata?.expires_at)).toBeGreaterThan(Date.now());
+
+		// 2. Reopening does not offer payment again.
+		const reopen = await requestLongLivedCheckoutStart(checkoutId);
+		expect(reopen.status).toBe(409);
+		expect((await reopen.json()).code).toBe("checkout_completed");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: renewal drops an elapsed trial end")}`,
+	async () => {
+		const customerId = "ll-eppi-trial-elapsed";
+		const { ctx, checkoutId } = await setupLongLivedScenario({
+			customerId,
+			withTrial: true,
+		});
+
+		const sessionId = getStripeSessionId(
+			await startLongLivedCheckout(checkoutId),
+		);
+		const pendingMetadata = await ctx.db.query.metadata.findFirst({
+			where: eq(metadata.stripe_checkout_session_id, sessionId),
+		});
+		const data = pendingMetadata!.data as DeferredAutumnBillingPlanData;
+		const subscriptionData =
+			data.billingPlan.stripe.checkoutSessionAction!.params.subscription_data!;
+		expect(subscriptionData.trial_end).toBeDefined();
+
+		// Simulate opening the link after the quoted trial would have ended.
+		subscriptionData.trial_end = Math.floor(Date.now() / 1000) - 3600;
+		await ctx.db
+			.update(metadata)
+			.set({ data })
+			.where(eq(metadata.id, pendingMetadata!.id));
+		await ctx.stripeCli.checkout.sessions.expire(sessionId);
+
+		const renewedSessionId = getStripeSessionId(
+			await startLongLivedCheckout(checkoutId),
+		);
+		expect(renewedSessionId).not.toBe(sessionId);
 	},
 );
