@@ -187,4 +187,49 @@ describe("sqlite store", () => {
 		).toEqual(subjectAt({ logOffset: 5n }));
 		sqliteStore.close();
 	});
+
+	test("a subject another process writes is read on the next check, not the parsed copy", () => {
+		const databasePath = slotPath();
+		const reader = openSqliteStore({ databasePath });
+		const writer = openSqliteStore({ databasePath });
+		writer.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		const read = () =>
+			reader.readSubject({ customerId: "cus_1", entityId: null });
+		expect(read()?.logOffset).toBe(41n);
+
+		writer.setSubject({ subject: subjectAt({ logOffset: 42n }) });
+
+		expect(read()?.logOffset).toBe(42n);
+		reader.close();
+		writer.close();
+	});
+
+	test("a subject written through the same store is read back at once", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
+
+		sqliteStore.setSubjects({ subjects: [subjectAt({ logOffset: 43n })] });
+
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
+				?.logOffset,
+		).toBe(43n);
+		sqliteStore.close();
+	});
+
+	test("the parsed copy checks share cannot be changed by one of them", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		const read = sqliteStore.readSubject({
+			customerId: "cus_1",
+			entityId: null,
+		});
+
+		expect(() => {
+			(read as { readAt: number }).readAt = 0;
+		}).toThrow(TypeError);
+		expect(Object.isFrozen(read?.state.identity)).toBe(true);
+		sqliteStore.close();
+	});
 });
