@@ -28,6 +28,18 @@ export const atomOrg: SharedContext["org"] = {
 	default_currency: "usd",
 };
 
+/** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
+export const subjectBody = ({ balance }: { balance: number }) => {
+	const state = createState({ balance });
+	return {
+		state,
+		catalog: createCatalogFor({ state }),
+		org: atomOrg,
+		log_offset: "41",
+		read_at: 1700,
+	};
+};
+
 /** The fixture customer `cus_1` holding `balance` messages, as Atom stores it. */
 export const storedSubjectWith = ({
 	balance,

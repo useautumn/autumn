@@ -23,6 +23,9 @@ type Bucket = {
 	checkTotalMs: number;
 	pushTotalMs: number;
 	pushBytes: number;
+	/** A queued push's age when applied: from Autumn's read to now, so queue lag is read off /health. */
+	pushAgeMaxMs: number;
+	pushAgeTotalMs: number;
 	/** Checks' subject reads, and how many of them parsed the row rather than reusing a parsed copy. */
 	subjectReads: number;
 	subjectParses: number;
@@ -58,6 +61,8 @@ const emptyBucket = (): Bucket => ({
 	checkTotalMs: 0,
 	pushTotalMs: 0,
 	pushBytes: 0,
+	pushAgeMaxMs: 0,
+	pushAgeTotalMs: 0,
 	subjectReads: 0,
 	subjectParses: 0,
 	checkReadMs: 0,
@@ -83,6 +88,8 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	checkTotalMs: a.checkTotalMs + b.checkTotalMs,
 	pushTotalMs: a.pushTotalMs + b.pushTotalMs,
 	pushBytes: a.pushBytes + b.pushBytes,
+	pushAgeMaxMs: Math.max(a.pushAgeMaxMs, b.pushAgeMaxMs),
+	pushAgeTotalMs: a.pushAgeTotalMs + b.pushAgeTotalMs,
 	subjectReads: a.subjectReads + b.subjectReads,
 	subjectParses: a.subjectParses + b.subjectParses,
 	checkReadMs: a.checkReadMs + b.checkReadMs,
@@ -115,6 +122,8 @@ export type ProcessStatsRecorder = {
 		durationMs: number;
 		forwarded: boolean;
 		bytes: number;
+		/** Only a push read from the queue has an age. */
+		ageMs?: number;
 	}): void;
 	/** Called as a request reaches the process, before any of its handling. */
 	noteArrival(params: { remote: string | null }): void;
@@ -235,6 +244,8 @@ export const startProcessStats = ({
 			"forwardMaxMs",
 			"checkTotalMs",
 			"pushTotalMs",
+			"pushAgeMaxMs",
+			"pushAgeTotalMs",
 			"checkReadMs",
 			"checkDecideMs",
 			"checkRenderMs",
@@ -260,11 +271,13 @@ export const startProcessStats = ({
 		durationMs,
 		forwarded,
 		bytes,
+		ageMs,
 	}: {
 		path: string;
 		durationMs: number;
 		forwarded: boolean;
 		bytes: number;
+		ageMs?: number;
 	}): void {
 		if (forwarded) {
 			current.forwards += 1;
@@ -280,6 +293,10 @@ export const startProcessStats = ({
 			current.pushMaxMs = Math.max(current.pushMaxMs, durationMs);
 			current.pushTotalMs += durationMs;
 			current.pushBytes += bytes;
+			if (ageMs !== undefined) {
+				current.pushAgeMaxMs = Math.max(current.pushAgeMaxMs, ageMs);
+				current.pushAgeTotalMs += ageMs;
+			}
 		}
 	}
 

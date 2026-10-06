@@ -1,58 +1,107 @@
-import { type QueueMessage, queue } from "@alienplatform/bindings";
-import type { AutumnLogger } from "@autumn/logging";
+import type { Queue, QueueMessage } from "@alienplatform/bindings";
 import {
-	PushType,
-	queuePayloadToPushMessage,
-} from "../lib/contracts/pushMessageContract.js";
+	type AtomPushMessage,
+	AtomPushType,
+	payloadToAtomPushMessage,
+} from "@autumn/byoc";
+import type { AutumnLogger } from "@autumn/logging";
+import type { Auth } from "../auth/types/auth.js";
+import type { ProcessStatsRecorder } from "../init/processStats.js";
 import type { Slots } from "../slots/types/slots.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
+import { pushPhaseMs } from "./pushPhaseMs.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
 
 /** The queue `packages/alien/stacks/byoc/alien.json` links to Atom. */
-const PUSH_QUEUE = "pushes";
+export const PUSH_QUEUE = "pushes";
 /** SQS's most per receive. */
 const RECEIVE_BATCH = 10;
+/** Long polls in flight per writer process, so applying one batch never waits on the next receive. */
+const RECEIVE_LOOPS = 4;
 
 type PushReceiverContext = {
-	slots: Slots;
+	pushes: Pick<Queue, "receive" | "ack">;
+	auth: Pick<Auth, "pushSlots">;
 	logger: Pick<AutumnLogger, "warn">;
+	processStats?: Pick<ProcessStatsRecorder, "recordRequest">;
 };
 
-const applyPushMessage = ({
+/** Null for a payload no Autumn sent: SQS would deliver it forever, so it is acked and logged instead. */
+const decodePush = ({
 	ctx,
 	message,
 }: {
 	ctx: PushReceiverContext;
 	message: QueueMessage;
-}): void => {
-	const { type, body } = queuePayloadToPushMessage({
-		payload: message.payload,
-	});
-	if (type === PushType.SetSubject)
-		applySubjectPush({ slots: ctx.slots, body });
-	else applyCatalogPush({ slots: ctx.slots, body });
+}): AtomPushMessage | null => {
+	const parseStartedAt = performance.now();
+	try {
+		return payloadToAtomPushMessage({ payload: message.payload });
+	} catch (error) {
+		ctx.logger.warn(
+			{ error, type: "atom_push_invalid" },
+			"A queued push could not be read; it was dropped",
+		);
+		return null;
+	} finally {
+		pushPhaseMs.parse += performance.now() - parseStartedAt;
+	}
 };
 
-/** An applied push is acked; one that failed is left for SQS to deliver again, and the next is tried. */
-const receivePushes = async ({
+/** The same apply the HTTP routes run; it throws only on a failure that may pass, so SQS delivers the push again. */
+const applyPush = ({
 	ctx,
-	messages,
-	ack,
+	push,
+	slots,
+	bytes,
 }: {
 	ctx: PushReceiverContext;
-	messages: QueueMessage[];
-	ack: (receipt: string) => Promise<void>;
-}): Promise<void> => {
-	for (const message of messages) {
-		try {
-			applyPushMessage({ ctx, message });
-			await ack(message.receiptHandle);
-		} catch (error) {
-			ctx.logger.warn(
-				{ error, type: "atom_push_failed", data: { attempt: message.attempt } },
-				"A queued push was not applied; SQS will deliver it again",
-			);
-		}
+	push: AtomPushMessage;
+	slots: Slots;
+	bytes: number;
+}): void => {
+	const applyStartedAt = performance.now();
+	if (push.type === AtomPushType.SetSubject)
+		applySubjectPush({ slots, body: push.body });
+	else applyCatalogPush({ slots, body: push.body });
+	const durationMs = performance.now() - applyStartedAt;
+	pushPhaseMs.apply += durationMs;
+	ctx.processStats?.recordRequest({
+		path: `/v1/${push.type}`,
+		durationMs,
+		forwarded: false,
+		bytes,
+		ageMs: Date.now() - push.readAt,
+	});
+};
+
+/** Whether the message is done with: applied, or never applicable. */
+const receivePush = ({
+	ctx,
+	message,
+}: {
+	ctx: PushReceiverContext;
+	message: QueueMessage;
+}): boolean => {
+	const push = decodePush({ ctx, message });
+	if (!push) return true;
+	const slots = ctx.auth.pushSlots({ atomId: push.atomId });
+	if (!slots) {
+		ctx.logger.warn(
+			{ type: "atom_push_unrouted", data: { atomId: push.atomId } },
+			"A queued push names no folder this Atom holds; it was dropped",
+		);
+		return true;
+	}
+	try {
+		applyPush({ ctx, push, slots, bytes: message.payload.length });
+		return true;
+	} catch (error) {
+		ctx.logger.warn(
+			{ error, type: "atom_push_failed", data: { attempt: message.attempt } },
+			"A queued push was not applied; SQS will deliver it again",
+		);
+		return false;
 	}
 };
 
@@ -62,22 +111,34 @@ export const createPushReceiver = ({
 }: {
 	ctx: PushReceiverContext;
 }): PushReceiver => {
-	const pushes = queue(PUSH_QUEUE);
+	const { pushes } = ctx;
 	let stopping = false;
 
-	async function run(): Promise<void> {
+	async function receiveUntilStopped(): Promise<void> {
 		while (!stopping) {
 			const messages = await pushes.receive(RECEIVE_BATCH);
-			await receivePushes({
-				ctx,
-				messages,
-				ack: (receipt) => pushes.ack(receipt),
-			});
+			const done = messages.filter((message) => receivePush({ ctx, message }));
+			await Promise.all(
+				done.map((message) =>
+					pushes
+						.ack(message.receiptHandle)
+						.catch((error) =>
+							ctx.logger.warn(
+								{ error, type: "atom_push_ack_failed" },
+								"An applied push was not acked; SQS will deliver it again",
+							),
+						),
+				),
+			);
 		}
 	}
 
 	return {
-		run,
+		run: async () => {
+			await Promise.all(
+				Array.from({ length: RECEIVE_LOOPS }, receiveUntilStopped),
+			);
+		},
 		stop: () => {
 			stopping = true;
 		},

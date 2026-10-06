@@ -111,6 +111,15 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
+	/** A push names its folder; a rescan picks up an Atom another process registered since. */
+	function pushSlots({ atomId }: { atomId: string | null }): Slots | null {
+		if (atomId === null) return null;
+		if (!heldById.has(atomId) || clock() - scannedAt >= TENANTS_REVALIDATE_MS)
+			rescan();
+		const held = heldById.get(atomId);
+		return held ? slotsOf(held) : null;
+	}
+
 	/** Always written: what this process holds may be stale, and the file is what every other process reads. */
 	function putAtom(tenantAtom: TenantAtom): void {
 		writeTenantAtom({ dataDir, tenantAtom });
@@ -141,5 +150,5 @@ export const createMultiTenantAuth = ({
 
 	rescan();
 
-	return { authorize, putAtom, hasAtom, removeAtom, close };
+	return { authorize, pushSlots, putAtom, hasAtom, removeAtom, close };
 };

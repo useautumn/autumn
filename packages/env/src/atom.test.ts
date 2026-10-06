@@ -117,14 +117,14 @@ describe("atom env", () => {
 		expect(told.ATOM_PROCESSES).toBe(3);
 	});
 
-	test("a multi-tenant Atom never reads the push queue: every process serves, even with the queue linked", () => {
+	test("a multi-tenant Atom reads the push queue like a customer's once it is linked", () => {
 		const env = createAtomEnv(
 			{ ...MULTI_TENANT, ALIEN_PUSHES_BINDING: "{}" },
 			{ availableCpus: 8, memoryLimitBytes: 16 * 1024 ** 3 },
 		);
 
 		expect(env.ATOM_PROCESSES).toBe(8);
-		expect(env.ATOM_WRITERS).toBe(0);
+		expect(env.ATOM_WRITERS).toBe(2);
 	});
 
 	test("about 30% of the processes receive pushes when the push queue is linked, at least one of each", () => {

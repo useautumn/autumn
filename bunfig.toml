@@ -26,4 +26,10 @@ minimumReleaseAgeExcludes = [
 	"@vercel/sandbox",
 	"drizzle-orm",
 	"scraps-ui",
+	"@alienplatform/bindings",
+	"@alienplatform/bindings-darwin-arm64",
+	"@alienplatform/bindings-darwin-x64",
+	"@alienplatform/bindings-linux-arm64-gnu",
+	"@alienplatform/bindings-linux-x64-gnu",
+	"@alienplatform/core",
 ]
