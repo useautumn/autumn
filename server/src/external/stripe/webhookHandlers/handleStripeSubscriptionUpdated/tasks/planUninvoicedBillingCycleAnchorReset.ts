@@ -2,17 +2,17 @@ import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { createAutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
-import { consumeBillingCycleAnchorReset } from "../../common/billingCycleAnchorReset/consumeBillingCycleAnchorReset";
 import { findBillingCycleAnchorResetCustomerProductIds } from "../../common/billingCycleAnchorReset/findBillingCycleAnchorResetCustomerProductIds";
+import { planBillingCycleAnchorReset } from "../../common/billingCycleAnchorReset/planBillingCycleAnchorReset";
 import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
 import { isUninvoicedBillingCycleAnchorMove } from "../isUninvoicedBillingCycleAnchorMove";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
 /**
  * A reset phase with proration_behavior none moves Stripe's anchor without an invoice, so
- * invoice.created never consumes the pending reset; the anchor move itself does.
+ * invoice.created never plans the anchor reset; the anchor move itself does.
  */
-export const consumeUninvoicedBillingCycleAnchorReset = async ({
+export const planUninvoicedBillingCycleAnchorReset = async ({
 	ctx,
 	eventContext,
 }: {
@@ -45,11 +45,15 @@ export const consumeUninvoicedBillingCycleAnchorReset = async ({
 	const plan = createAutumnBillingPlanBuilder({
 		customerId: fullCustomer.id ?? fullCustomer.internal_id,
 	});
-	consumeBillingCycleAnchorReset({
+	planBillingCycleAnchorReset({
+		ctx,
 		eventContext: {
 			stripeSubscription,
+			stripeSubscriptionId: stripeSubscription.id,
+			fullCustomer,
 			customerProducts,
 			billingCycleAnchorResetCustomerProductIds,
+			nowMs: eventContext.nowMs,
 		},
 		plan,
 	});

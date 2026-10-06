@@ -27,16 +27,15 @@ await mockModuleWithRestore(
 	"@/internal/billing/v2/pooledBalances/compute/computeScheduledPooledAnchorResetPlan.js",
 	() => ({ computeScheduledPooledAnchorResetPlan: computePlan }),
 );
-const { planScheduledPooledAnchorReset } = await import(
+const { planPooledAnchorReset } = await import(
 	// @ts-expect-error Bun cache-busting query isolates module mocks.
-	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/planScheduledPooledAnchorReset.js?pooled-anchor-plan"
+	"@/external/stripe/webhookHandlers/common/billingCycleAnchorReset/planPooledAnchorReset.js?pooled-anchor-plan"
 );
 
 test("the scheduled anchor plan moves the reset boundary without refilling the pool", () => {
 	const product = customerProducts.create({ id: "completed_product" });
 	const other = customerProducts.create({ id: "pending_product" });
 	const eventContext = {
-		stripeInvoice: { billing_reason: "subscription_update" },
 		stripeSubscription: { billing_cycle_anchor: 2000 },
 		stripeSubscriptionId: "sub_123",
 		billingCycleAnchorResetCustomerProductIds: [product.id],
@@ -44,7 +43,7 @@ test("the scheduled anchor plan moves the reset boundary without refilling the p
 		fullCustomer: {},
 	} as unknown as InvoiceCreatedContext;
 	const plan = createAutumnBillingPlanBuilder({ customerId: "customer_123" });
-	planScheduledPooledAnchorReset({
+	planPooledAnchorReset({
 		ctx: contexts.create({}) as StripeWebhookContext,
 		eventContext,
 		plan,
@@ -66,12 +65,11 @@ test("the scheduled anchor plan moves the reset boundary without refilling the p
 	]);
 });
 
-test("a normal cycle invoice adds no pool reset to the plan", () => {
+test("an anchor move that re-anchored no product adds no pool reset to the plan", () => {
 	const plan = createAutumnBillingPlanBuilder({ customerId: "customer_123" });
-	planScheduledPooledAnchorReset({
+	planPooledAnchorReset({
 		ctx: contexts.create({}) as StripeWebhookContext,
 		eventContext: {
-			stripeInvoice: { billing_reason: "subscription_cycle" },
 			billingCycleAnchorResetCustomerProductIds: [],
 		} as unknown as InvoiceCreatedContext,
 		plan,

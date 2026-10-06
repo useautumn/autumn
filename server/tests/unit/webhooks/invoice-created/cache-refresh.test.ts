@@ -76,8 +76,8 @@ await mockModuleWithRestore(
 	() => ({ processAllocatedPricesForInvoiceCreated: processAllocated }),
 );
 await mockModuleWithRestore(
-	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/planScheduledPooledAnchorReset",
-	() => ({ planScheduledPooledAnchorReset: planPoolAnchorReset }),
+	"@/external/stripe/webhookHandlers/common/billingCycleAnchorReset/planPooledAnchorReset",
+	() => ({ planPooledAnchorReset: planPoolAnchorReset }),
 );
 await mockModuleWithRestore(
 	"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan",
@@ -175,7 +175,8 @@ test.each([
 		expect(processConsumable).toHaveBeenCalledTimes(1);
 		expect(processPrepaid).toHaveBeenCalledTimes(1);
 		expect(processAllocated).toHaveBeenCalledTimes(1);
-		expect(planPoolAnchorReset).toHaveBeenCalledTimes(1);
+		// No product re-anchored, so no invoice here plans an anchor reset.
+		expect(planPoolAnchorReset).not.toHaveBeenCalled();
 		expect(executePlan).not.toHaveBeenCalled();
 		expect(upsertInvoice).toHaveBeenCalledTimes(1);
 	},

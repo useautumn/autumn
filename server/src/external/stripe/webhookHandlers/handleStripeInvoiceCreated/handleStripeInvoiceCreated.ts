@@ -6,9 +6,10 @@ import {
 	upsertAutumnInvoice,
 } from "@/external/stripe/webhookHandlers/common";
 import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/common/billingCycleAnchorReset/consumeBillingCycleAnchorReset";
-import { planScheduledPooledAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/planScheduledPooledAnchorReset";
+import { planBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/common/billingCycleAnchorReset/planBillingCycleAnchorReset";
 import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
 import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
+import { isBillingCycleAnchorResetInvoice } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/isBillingCycleAnchorResetInvoice";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { createAutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
@@ -51,8 +52,11 @@ export const handleStripeInvoiceCreated = async ({
 	});
 	processPrepaidPricesForInvoiceCreated({ ctx, eventContext, plan });
 	processAllocatedPricesForInvoiceCreated({ ctx, eventContext, plan });
-	planScheduledPooledAnchorReset({ ctx, eventContext, plan });
-	consumeBillingCycleAnchorReset({ eventContext, plan });
+	if (isBillingCycleAnchorResetInvoice({ eventContext })) {
+		planBillingCycleAnchorReset({ ctx, eventContext, plan });
+	} else {
+		consumeBillingCycleAnchorReset({ eventContext, plan });
+	}
 
 	// 2. Land it as one step
 	if (plan.hasChanges()) {

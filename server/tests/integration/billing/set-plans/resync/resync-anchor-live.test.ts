@@ -8,6 +8,8 @@ import {
 	type SetPlansParamsV0Input,
 	secondsToMs,
 } from "@autumn/shared";
+import { getPooledBalanceDbState } from "@tests/integration/billing/pooled-balances/utils/getPooledBalanceDbState";
+import { setupAnchorQuantityScenario } from "@tests/integration/billing/update-subscription/params/billing-cycle-anchor/setupAnchorQuantityScenario";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -16,6 +18,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
 import { expectPreviewMatchesStripeUpcomingInvoice } from "../phase-proration/utils/phaseProrationUtils";
 import {
@@ -243,6 +246,134 @@ test.concurrent(
 			latestTotal: new Decimal(preview.next_cycle?.total ?? 0)
 				.toDecimalPlaces(2)
 				.toNumber(),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: a prepaid balance resets on a proration none anchor")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.prepaidMessages({ billingUnits: 100, price: 10 })],
+		});
+		const featureQuantities = [
+			{ feature_id: TestFeature.Messages, quantity: 200 },
+		];
+
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-resync-live-anchor-prepaid",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id, options: featureQuantities }),
+					s.track({
+						featureId: TestFeature.Messages,
+						value: 50,
+						timeout: 2000,
+					}),
+				],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id, feature_quantities: featureQuantities }],
+				},
+			],
+		});
+
+		await advanceToAnchor({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advancedTo,
+			anchorMs,
+		});
+
+		// No invoice carries this reset, so the anchor move itself resets the prepaid grant.
+		const subscription = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 200,
+			usage: 0,
+			nextResetAt: secondsToMs(
+				subscription.items.data[0]?.current_period_end ?? 0,
+			),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: a pooled balance re-anchors and refills on a proration none anchor")}`,
+	async () => {
+		const customerId = "set-plans-resync-live-anchor-pooled";
+		const scenario = await setupAnchorQuantityScenario({
+			customerId,
+			quantity: 500,
+			pooled: true,
+			prepaidItem: { ...items.prepaidMessages(), pooled: true },
+		});
+		const { autumnV2_4, ctx, target, advancedTo, plan } = scenario;
+		await autumnV2_4.track(
+			{ customer_id: customerId, feature_id: TestFeature.Messages, value: 40 },
+			{ timeout: 2000 },
+		);
+
+		const anchorMs = advancedTo + ms.days(7);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			entity_id: target.entity_id,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [
+						{
+							plan_id: plan.id,
+							feature_quantities: [
+								{ feature_id: TestFeature.Messages, quantity: 500 },
+							],
+						},
+					],
+				},
+			],
+		});
+
+		await advanceToAnchor({
+			stripeCli: ctx.stripeCli,
+			testClockId: scenario.testClockId!,
+			advancedTo,
+			anchorMs,
+		});
+
+		// No invoice carries this reset, so the anchor move itself re-anchors the pool.
+		const reanchored = await getPooledBalanceDbState({
+			db: ctx.db,
+			customerId,
+		});
+		expect(reanchored.poolCustomerEntitlements[0]?.reset_cycle_anchor).toBe(
+			anchorMs,
+		);
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_4,
+			featureId: TestFeature.Messages,
+			remaining: 500,
+			usage: 0,
+			nextResetAt: addMonths(anchorMs, 1).getTime(),
 		});
 	},
 );
