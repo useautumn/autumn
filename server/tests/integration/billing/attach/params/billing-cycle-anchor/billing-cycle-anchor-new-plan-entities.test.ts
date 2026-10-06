@@ -273,7 +273,10 @@ test.concurrent(
 		);
 
 		expect(preview.total).toBe(20);
-		expectPreviewNextCycleCorrect({ preview, expectDefined: false });
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: addMonths(advancedTo, 1).getTime(),
+		});
 
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,

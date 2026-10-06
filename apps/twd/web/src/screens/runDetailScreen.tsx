@@ -17,7 +17,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import type { Drift, RunDetail, RunFile } from "../../../src/api/contract.ts";
+import {
+	type Drift,
+	isFailedFileStatus,
+	type RunDetail,
+	type RunFile,
+} from "../../../src/api/contract.ts";
 import {
 	splitRepetitionId,
 	summariseRepeats,
@@ -70,8 +75,7 @@ const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
 const FILTERS = ["all", "failed", "drift", "running", "passed"] as const;
 type Filter = (typeof FILTERS)[number];
 
-const isFailure = (f: RunFile) =>
-	f.status === "failed" || f.status === "crashed";
+const isFailure = (f: RunFile) => isFailedFileStatus(f.status);
 const baseFile = (id: string) => splitRepetitionId({ id }).file;
 
 const WORKER_COLOR: Record<RunDetail["workers"][number]["status"], string> = {
@@ -425,6 +429,7 @@ export const RunDetailScreen = () => {
 	const repeats = r.repeat > 1 ? summariseRepeats({ files: r.files }) : [];
 	const failures = r.files.filter(isFailure);
 	const running = r.files.filter((f) => f.status === "running").length;
+	const timedOut = failures.filter((f) => f.status === "timed_out").length;
 	const total = r.fileCount ?? r.files.length;
 	const attention: AttentionRow[] = [
 		...failures.map((f) => ({ file: f, drift: driftByFile.get(f.file) })),
@@ -443,6 +448,7 @@ export const RunDetailScreen = () => {
 	const order: Record<RunFile["status"], number> = {
 		failed: 0,
 		crashed: 0,
+		timed_out: 0,
 		running: 1,
 		queued: 2,
 		passed: 3,
@@ -477,7 +483,7 @@ export const RunDetailScreen = () => {
 		{
 			id: "status",
 			header: "Status",
-			size: 90,
+			size: 104,
 			cell: ({ row: { original: f } }) => <FileStatusBadge status={f.status} />,
 		},
 		{
@@ -541,7 +547,7 @@ export const RunDetailScreen = () => {
 		{
 			id: "status",
 			header: "Status",
-			size: 90,
+			size: 104,
 			cell: ({ row: { original: a } }) => (
 				<FileStatusBadge status={a.file.status} />
 			),
@@ -600,6 +606,12 @@ export const RunDetailScreen = () => {
 								{num(r.failed)}
 							</span>{" "}
 							failed
+							{timedOut > 0 && (
+								<span className="text-amber-600 dark:text-amber-400">
+									{" "}
+									({num(timedOut)} timed out)
+								</span>
+							)}
 						</span>
 						{running > 0 && (
 							<span>

@@ -1,4 +1,4 @@
-import type { RunDetail } from "../../../api/contract.ts";
+import { isFailedFileStatus, type RunDetail } from "../../../api/contract.ts";
 
 const at = (iso: string | null | undefined) =>
 	iso ? Date.parse(iso) : undefined;
@@ -103,8 +103,8 @@ export const summariseRunTiming = (
 			const inBucket = timed.filter(
 				(f) => (f.durationMs ?? 0) >= min && (f.durationMs ?? 0) < b.maxMs,
 			);
-			const failed = inBucket.filter(
-				(f) => f.status === "failed" || f.status === "crashed",
+			const failed = inBucket.filter((f) =>
+				isFailedFileStatus(f.status),
 			).length;
 			return {
 				bucket: b.label,

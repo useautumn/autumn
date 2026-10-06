@@ -1,7 +1,11 @@
 import { resolve } from "node:path";
 import { resolveStripeConnectShard } from "@tw/helpers/stripeConnectShard.ts";
 import { count, eq } from "drizzle-orm";
-import type { RunEvent, RunMilestones } from "../../../api/contract.ts";
+import {
+	isFailedFileStatus,
+	type RunEvent,
+	type RunMilestones,
+} from "../../../api/contract.ts";
 import { jobs } from "../../../db/schema/jobs.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { RunStatus } from "../../../db/schema/runs.ts";
@@ -270,9 +274,7 @@ export const handleSwarmJob: JobHandler = async ({
 		const files = [...live.files.values()];
 		return {
 			passed: files.filter((file) => file.status === "passed").length,
-			failed: files.filter(
-				(file) => file.status === "failed" || file.status === "crashed",
-			).length,
+			failed: files.filter((file) => isFailedFileStatus(file.status)).length,
 		};
 	};
 

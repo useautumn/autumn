@@ -15,6 +15,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 /**
  * Paid-to-Paid with Trial Tests
@@ -60,7 +61,8 @@ test.concurrent(`${chalk.yellowBright("p2p-trial: remove trial while running")}`
 	// When trial is removed, next_cycle should start in ~1 month (regular billing)
 	expectPreviewNextCycleCorrect({
 		preview,
-		expectDefined: false,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+		total: 20,
 	});
 
 	await autumnV1.subscriptions.update(updateParams, { timeout: 5000 });

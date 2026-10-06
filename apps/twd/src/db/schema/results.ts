@@ -7,7 +7,12 @@ import {
 	timestamp,
 } from "drizzle-orm/pg-core";
 
-export type FileResultStatus = "passed" | "failed" | "crashed" | "skipped";
+export type FileResultStatus =
+	| "passed"
+	| "failed"
+	| "crashed"
+	| "timed_out"
+	| "skipped";
 
 /** Append-only: one row per file per run attempt. */
 export const testResults = pgTable(

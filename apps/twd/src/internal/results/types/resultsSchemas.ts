@@ -28,7 +28,7 @@ export const FileHistoryEntry = z.object({
 	runId: z.string(),
 	branch: z.string(),
 	sha: z.string(),
-	status: z.enum(["passed", "failed", "crashed", "skipped"]),
+	status: z.enum(["passed", "failed", "crashed", "timed_out", "skipped"]),
 	durationMs: z.number(),
 	attempt: z.number(),
 	/** Set when the result is one repetition of a repeat run. */

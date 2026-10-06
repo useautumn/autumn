@@ -252,6 +252,19 @@ jobs:
           git push origin "$TAG_NAME"
           echo "✅ Created and pushed tag: $TAG_NAME"
 
+      # publish.yml commits a package's version bump only when this marker exists.
+      - name: Mark published
+        if: success() && inputs.patch-artifact != ''
+        run: mkdir -p "$RUNNER_TEMP/published" && echo "${{ steps.next-version.outputs.version }}" > "$RUNNER_TEMP/published/version"
+
+      - name: Upload published marker
+        if: success() && inputs.patch-artifact != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-${{ steps.pkg.outputs.tag_prefix }}
+          path: ${{ runner.temp }}/published
+          retention-days: 7
+
       - name: Summary
         run: |
           echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY

@@ -55,7 +55,11 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-reset 1: pro to prem
 		billing_cycle_anchor: "now",
 	});
 	expect(preview.total).toBeCloseTo(expectedTotal, 0);
-	expectPreviewNextCycleCorrect({ preview, expectDefined: false });
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+		total: 50,
+	});
 
 	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,

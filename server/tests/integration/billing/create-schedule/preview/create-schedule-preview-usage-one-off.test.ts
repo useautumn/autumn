@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 import { expectPreviewToMatchCreateSchedule } from "./utils/createSchedulePreviewUtils";
 
 test.concurrent(
@@ -39,7 +41,11 @@ test.concurrent(
 				expect(
 					preview.line_items.every((lineItem) => lineItem.feature_id === null),
 				).toBe(true);
-				expect(preview.next_cycle).toBeUndefined();
+				expectPreviewNextCycleCorrect({
+					preview,
+					startsAt: addMonths(advancedTo, 1).getTime(),
+					total: 20,
+				});
 			},
 		});
 	},

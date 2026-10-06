@@ -48,6 +48,7 @@ import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
 import { pickShard } from "./pickShard.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import { setUpStripeConnectAccount } from "./setUpStripeConnectAccount.ts";
+import { classifyFailedFile, createTimeoutTracker } from "./timeoutTracker.ts";
 import {
 	loadTwModules,
 	type ProviderSandbox,
@@ -99,26 +100,33 @@ const finish = async ({
 	process.exit(exitCode);
 };
 
+const timeouts = createTimeoutTracker();
+
 const toRunFile = (file: TuiTestFile): { file: RunFile; final: boolean } => {
 	const final =
 		file.status === "passed" ||
 		file.status === "skipped" ||
 		(file.status === "failed" && !file.willRetry);
 	const worker = getWorkerOf(file.file) ?? null;
+	const failure =
+		final && file.status === "failed"
+			? classifyFailedFile({
+					attempt: file.attempt,
+					verdicts: file.passed + file.failed,
+					crashed: Boolean(file.crashError),
+					timeouts: timeouts.timeouts({ file: file.file }),
+				})
+			: null;
 	const status: RunFile["status"] =
 		file.status === "pending" || (file.status === "running" && !worker)
 			? "queued"
-			: file.status === "failed"
-				? final
-					? file.crashError
-						? "crashed"
-						: "failed"
-					: "running"
-				: file.status === "retrying"
+			: failure
+				? failure.status
+				: file.status === "failed" || file.status === "retrying"
 					? "running"
 					: file.status;
-	const failureSummary =
-		file.crashError?.slice(0, 2000) ??
+	const details =
+		file.crashError ??
 		(file.failedTests.length > 0
 			? file.failedTests
 					.map(
@@ -126,8 +134,10 @@ const toRunFile = (file: TuiTestFile): { file: RunFile; final: boolean } => {
 							`✗ ${test.name}${test.message ? `\n  ${test.message}` : ""}`,
 					)
 					.join("\n")
-					.slice(0, 2000)
 			: null);
+	const failureSummary =
+		[failure?.timeout, details].filter(Boolean).join("\n").slice(0, 2000) ||
+		null;
 	return {
 		final,
 		file: {
@@ -214,6 +224,11 @@ const main = async (init: SwarmInit) => {
 	onHubEvent((event) => {
 		if (event.type === "fileOutput") {
 			streamingFiles.add(event.file);
+			timeouts.record({
+				file: event.file,
+				attempt: getTuiState().files.get(event.file)?.attempt ?? 1,
+				chunk: event.chunk,
+			});
 			bufferOutput(
 				toTestId({ absolutePath: event.file }),
 				getWorkerOf(event.file) ?? null,

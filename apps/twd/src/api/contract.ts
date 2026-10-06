@@ -36,8 +36,15 @@ export const FileResultStatus = z.enum([
 	"passed",
 	"failed",
 	"crashed",
+	/** Hit bun's per-test timeout (or a retry died silently after one did). */
+	"timed_out",
 	"skipped",
 ]);
+
+/** Final statuses that count as a failure: the Failed filter, run outcome, drift and reruns. */
+const FAILED_FILE_STATUSES = ["failed", "crashed", "timed_out"] as const;
+export const isFailedFileStatus = (status: string) =>
+	(FAILED_FILE_STATUSES as readonly string[]).includes(status);
 
 export const DriftKind = z.enum(["new_failure", "slow"]);
 
@@ -525,7 +532,7 @@ export const ROUTES = {
 	fileLog: "GET /runs/:id/files/log?file=",
 	/** text/plain. No params = whole run; ?file= one file; ?worker= one worker (incl. its server output); ?scope=run orchestrator only. */
 	runLogs: "GET /runs/:id/logs",
-	/** text/plain: every failed/crashed file's output under a header. */
+	/** text/plain: every failed, crashed or timed-out file's output under a header. */
 	failedLogs: "GET /runs/:id/logs/failed",
 	cancelRun: "POST /runs/:id/cancel",
 	rerunFailed: "POST /runs/:id/rerun-failed",

@@ -13,6 +13,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
+import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import { getNextCycleEvent } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/getNextCycleEvent";
 
 const anchorMs = Date.UTC(2026, 0, 1);
@@ -122,13 +123,42 @@ const productIds = (customerProducts: FullCusProduct[]) =>
 	customerProducts.map((product) => product.id).sort();
 
 describe("getNextCycleEvent", () => {
-	test("keeps current behavior for an immediate new subscription with no future transition", () => {
+	test("returns a renewal one interval after now for a new subscription starting now", () => {
+		const products = [cusProduct({ id: "pro", startsAt: currentEpochMs })];
+
 		const event = resolve({
 			billingContext: buildContext({ billingCycleAnchorMs: "now" }),
-			customerProducts: [cusProduct({ id: "pro", startsAt: currentEpochMs })],
+			customerProducts: products,
 		});
 
-		expect(event.kind).toBe("none");
+		expect(event).toMatchObject({
+			kind: "renewal",
+			startsAtMs: Date.UTC(2026, 1, 11),
+		});
+		if (event.kind === "renewal") {
+			expect(productIds(event.customerProducts)).toEqual(productIds(products));
+		}
+	});
+
+	test("reset anchor to now on an existing subscription returns a renewal", () => {
+		const products = [cusProduct({ id: "pro" })];
+
+		const event = resolve({
+			billingContext: buildContext({
+				billingCycleAnchorMs: "now",
+				requestedBillingCycleAnchor: "now",
+				stripeSubscription: stripeSubscriptions.create({ id: "sub_live" }),
+			}),
+			customerProducts: products,
+		});
+
+		expect(event).toMatchObject({
+			kind: "renewal",
+			startsAtMs: Date.UTC(2026, 1, 11),
+		});
+		if (event.kind === "renewal") {
+			expect(productIds(event.customerProducts)).toEqual(productIds(products));
+		}
 	});
 
 	test("returns renewal with all products active at the boundary", () => {
