@@ -8,6 +8,7 @@ import {
 	type SetPlansParamsV0Input,
 } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
+import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -224,5 +225,120 @@ test.concurrent(
 				.toDecimalPlaces(2)
 				.toNumber(),
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: an add-on attached before the anchor keeps the anchor reset's proration none")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 50 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-resync-live-anchor-later-attach",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addOn] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
+		});
+		await expectCycleResetPhase({
+			ctx,
+			customerId,
+			anchorMs,
+			prorationBehavior: "none",
+		});
+
+		await autumnV2_4.billing.attach({
+			customer_id: customerId,
+			plan_id: addOn.id,
+		});
+
+		await expectCycleResetPhase({
+			ctx,
+			customerId,
+			anchorMs,
+			prorationBehavior: "none",
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: a discount added before the anchor keeps the anchor reset's proration none")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { customerId, autumnV1, autumnV2_4, ctx, advancedTo } =
+			await initScenario({
+				customerId: "set-plans-resync-live-anchor-later-discount",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [s.billing.attach({ productId: pro.id })],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
+		});
+
+		const coupon = await createPercentCoupon({
+			stripeCli: ctx.stripeCli,
+			percentOff: 50,
+			duration: "forever",
+		});
+		await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: pro.id,
+			discounts: [{ reward_id: coupon.id }],
+		});
+
+		await expectCycleResetPhase({
+			ctx,
+			customerId,
+			anchorMs,
+			prorationBehavior: "none",
+		});
+		const subscription = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		const upcomingInvoice = await ctx.stripeCli.invoices.createPreview({
+			subscription: subscription.id,
+		});
+		expect(
+			upcomingInvoice.lines.data.some(
+				(line) => line.parent?.subscription_item_details?.proration,
+			),
+		).toBe(false);
 	},
 );
