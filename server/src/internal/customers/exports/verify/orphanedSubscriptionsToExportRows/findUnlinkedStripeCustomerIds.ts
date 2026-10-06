@@ -1,24 +1,21 @@
-import { dbReplica } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getLinkedStripeCustomerIds } from "../../queries/getBillingVerifyCandidates.js";
+import { billingVerifyExportConfig } from "../billingVerifyExportConfig.js";
 import { retryExportDbRead } from "../retryExportDbRead.js";
-import type { BillingVerifySweep } from "../setupBillingVerifySweep.js";
-import { isBilledSubscription } from "./orphanToExportRow.js";
-import { toLookupBatches } from "./toLookupBatches.js";
+import { toBatches } from "./toBatches.js";
 
 /** Checked against every customer in the org, not the walked population, so a
  * customer created mid-run or linked under a shared id is never reported. */
 export const findUnlinkedStripeCustomerIds = async ({
 	ctx,
-	sweep,
+	db,
+	stripeCustomerIds,
 }: {
 	ctx: AutumnContext;
-	sweep: BillingVerifySweep;
+	db: DrizzleCli;
+	stripeCustomerIds: string[];
 }): Promise<string[]> => {
-	const billedStripeCustomerIds = [...sweep.sweptSubscriptions]
-		.filter(([, subscriptions]) => subscriptions.some(isBilledSubscription))
-		.map(([stripeCustomerId]) => stripeCustomerId);
-
 	const readLinkedStripeCustomerIds = retryExportDbRead({
 		logger: ctx.logger,
 		operation: "getLinkedStripeCustomerIds",
@@ -26,9 +23,12 @@ export const findUnlinkedStripeCustomerIds = async ({
 	});
 
 	const unlinked: string[] = [];
-	for (const batch of toLookupBatches(billedStripeCustomerIds)) {
+	for (const batch of toBatches({
+		items: stripeCustomerIds,
+		size: billingVerifyExportConfig.orphans.lookupBatchSize,
+	})) {
 		const linked = await readLinkedStripeCustomerIds({
-			db: dbReplica ?? ctx.db,
+			db,
 			orgId: ctx.org.id,
 			env: ctx.env,
 			stripeCustomerIds: batch,

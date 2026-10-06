@@ -26,17 +26,28 @@ export const readOrphanedStripeCustomer = async ({
 	const { timeoutMs, attempts, retryDelayMs, maxRetryDelayMs } =
 		billingVerifyExportConfig.orphans;
 
+	const listSubscriptions = async () => {
+		const subscriptions: Stripe.Subscription[] = [];
+		let startingAfter: string | undefined;
+		while (true) {
+			await pacer.takeSlot();
+			const page = await stripeCli.subscriptions.list({
+				customer: stripeCustomerId,
+				limit: STRIPE_LIST_PAGE_LIMIT,
+				starting_after: startingAfter,
+			});
+			subscriptions.push(...page.data);
+			if (!page.has_more) return subscriptions;
+			startingAfter = page.data[page.data.length - 1]?.id;
+		}
+	};
+
 	const readOnce = async () => {
 		await pacer.takeSlot();
 		const stripeCustomer = await stripeCli.customers.retrieve(stripeCustomerId);
 		if (stripeCustomer.deleted) return null;
 
-		await pacer.takeSlot();
-		const subscriptions = await stripeCli.subscriptions.list({
-			customer: stripeCustomerId,
-			limit: STRIPE_LIST_PAGE_LIMIT,
-		});
-		const billed = subscriptions.data.filter(isBilledSubscription);
+		const billed = (await listSubscriptions()).filter(isBilledSubscription);
 		if (billed.length === 0) return null;
 
 		return {

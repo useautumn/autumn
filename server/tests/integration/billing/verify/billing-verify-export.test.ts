@@ -572,16 +572,20 @@ test.concurrent(
 				trial_period_days: 30,
 			});
 
-			const rows = await orphanedSubscriptionsToExportRows({
-				ctx,
-				sweep: sweepOf({
-					ctx,
-					subscriptionsByStripeCustomerId: new Map([
-						[orphanStripeCustomer.id, [orphanSubscription]],
-						[linkedStripeCustomerId, [orphanSubscription]],
-					]),
-				}),
-			});
+			const rows = (
+				await Array.fromAsync(
+					orphanedSubscriptionsToExportRows({
+						ctx,
+						sweep: sweepOf({
+							ctx,
+							subscriptionsByStripeCustomerId: new Map([
+								[orphanStripeCustomer.id, [orphanSubscription]],
+								[linkedStripeCustomerId, [orphanSubscription]],
+							]),
+						}),
+					}),
+				)
+			).flat();
 
 			expect(rows).toHaveLength(1);
 			expect(rows[0]).toMatchObject({

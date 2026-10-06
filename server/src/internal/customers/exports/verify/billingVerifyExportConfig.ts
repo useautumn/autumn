@@ -26,6 +26,7 @@ type BillingVerifyExportConfig = {
 	orphans: {
 		concurrency: number;
 		lookupBatchSize: number;
+		rowBatchSize: number;
 		timeoutMs: number;
 		attempts: number;
 		retryDelayMs: number;
@@ -80,6 +81,7 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 	orphans: {
 		concurrency: 8,
 		lookupBatchSize: 1000,
+		rowBatchSize: 100,
 		timeoutMs: 10_000,
 		attempts: 3,
 		retryDelayMs: 2_000,

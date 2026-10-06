@@ -74,15 +74,16 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory<
 			for await (const rows of verified) yield* rows;
 
 			if (!snapshot.include_unlinked_stripe_customers) return;
-			const orphanRows = await orphanedSubscriptionsToExportRows({
+			for await (const orphanRows of orphanedSubscriptionsToExportRows({
 				ctx,
 				sweep,
-			});
-			await onPageProcessed({
-				customerCount: 0,
-				rowCount: orphanRows.length,
-			});
-			yield* orphanRows;
+			})) {
+				await onPageProcessed({
+					customerCount: 0,
+					rowCount: orphanRows.length,
+				});
+				yield* orphanRows;
+			}
 		};
 
 	return Readable.from(exportRows(), { objectMode: true });

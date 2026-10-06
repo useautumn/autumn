@@ -22,7 +22,8 @@ export function CustomerExportUnlinkedStripeToggle({
 			}
 		>
 			<span className="text-tertiary-foreground">
-				Include Stripe customers missing from Autumn
+				Include Stripe customers missing from Autumn (ignores search and
+				filters)
 			</span>
 		</CustomerExportOverviewRow>
 	);

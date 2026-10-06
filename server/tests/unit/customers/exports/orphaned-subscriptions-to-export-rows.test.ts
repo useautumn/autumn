@@ -143,3 +143,38 @@ describe("readOrphanedStripeCustomer", () => {
 		expect(result).toBeNull();
 	});
 });
+
+describe("readOrphanedStripeCustomer pagination", () => {
+	it("reads every subscription page before deciding what is billed", async () => {
+		const pages = [
+			{
+				data: [subscriptionWith({ id: "sub_canceled", status: "canceled" })],
+				has_more: true,
+			},
+			{
+				data: [subscriptionWith({ id: "sub_late", status: "active" })],
+				has_more: false,
+			},
+		];
+		const startingAfters: (string | undefined)[] = [];
+		const stripeCli = {
+			customers: { retrieve: async () => ({ name: "Jane", email: null }) },
+			subscriptions: {
+				list: async ({ starting_after }: { starting_after?: string }) => {
+					startingAfters.push(starting_after);
+					return pages[startingAfters.length - 1];
+				},
+			},
+		} as unknown as Stripe;
+
+		const result = await readOrphanedStripeCustomer({
+			ctx,
+			pacer,
+			stripeCustomerId: "cus_stripe_1",
+			stripeCli,
+		});
+
+		expect(startingAfters).toEqual([undefined, "sub_canceled"]);
+		expect(result?.subscriptionIds).toEqual(["sub_late"]);
+	});
+});
