@@ -63,6 +63,29 @@ const modeEnvOf = ({
 	};
 };
 
+/** Which client reads the pushes queue: the Alien binding, or the AWS SDK against the URL the binding names. */
+type PushQueueEnv =
+	| { ATOM_PUSH_QUEUE_CLIENT: "binding"; ATOM_PUSH_QUEUE_URL: null }
+	| { ATOM_PUSH_QUEUE_CLIENT: "sdk"; ATOM_PUSH_QUEUE_URL: string };
+
+const pushQueueEnvOf = ({
+	runtimeEnv,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}): PushQueueEnv => {
+	const client = runtimeEnv.ATOM_PUSH_QUEUE_CLIENT?.trim() || "binding";
+	if (client === "binding")
+		return { ATOM_PUSH_QUEUE_CLIENT: client, ATOM_PUSH_QUEUE_URL: null };
+	if (client !== "sdk")
+		throw new Error("ATOM_PUSH_QUEUE_CLIENT is either binding or sdk");
+	const queueUrl = JSON.parse(runtimeEnv.ALIEN_PUSHES_BINDING || "{}").queueUrl;
+	if (typeof queueUrl !== "string")
+		throw new Error(
+			"ATOM_PUSH_QUEUE_CLIENT=sdk needs ALIEN_PUSHES_BINDING's queueUrl",
+		);
+	return { ATOM_PUSH_QUEUE_CLIENT: client, ATOM_PUSH_QUEUE_URL: queueUrl };
+};
+
 /** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
  * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
@@ -120,6 +143,7 @@ export function createAtomEnv(
 		ATOM_THREADS: threads,
 		/** How many of them also read Autumn's pushes from the org's queue; 0 where no queue is linked. */
 		ATOM_PUSH_RECEIVERS: pushReceiversOf({ threads, receivesPushes }),
+		...pushQueueEnvOf({ runtimeEnv }),
 		...modeEnv,
 	};
 }

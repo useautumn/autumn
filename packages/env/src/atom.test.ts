@@ -150,4 +150,23 @@ describe("atom env", () => {
 
 		expect(env.ATOM_PUSH_RECEIVERS).toBe(0);
 	});
+
+	test("pushes are read through the binding unless ATOM_PUSH_QUEUE_CLIENT=sdk, which reads the binding's queue URL", () => {
+		const binding = JSON.stringify({
+			service: "sqs",
+			queueUrl: "https://sqs.us-east-1.amazonaws.com/1/pushes",
+		});
+		const env = (client?: string) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ALIEN_PUSHES_BINDING: binding,
+				ATOM_PUSH_QUEUE_CLIENT: client,
+			});
+
+		expect(env().ATOM_PUSH_QUEUE_CLIENT).toBe("binding");
+		expect(env("sdk").ATOM_PUSH_QUEUE_URL).toBe(
+			"https://sqs.us-east-1.amazonaws.com/1/pushes",
+		);
+		expect(() => env("http")).toThrow("ATOM_PUSH_QUEUE_CLIENT");
+	});
 });
