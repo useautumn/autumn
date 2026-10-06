@@ -27,19 +27,22 @@ const withEmptyLicenses = ({
 	product: FullProductWithoutLicenses;
 }): FullProduct => ({ ...product, licenses: [] });
 
-const resolveAppliedEntitlements = ({
+export const resolveAppliedEntitlements = ({
 	appliedItems,
 	entitlementLookup,
 }: {
 	appliedItems: ChangedItem[];
 	entitlementLookup: Map<string, EntitlementWithFeature>;
 }) =>
-	appliedItems.flatMap((item) => {
+	appliedItems.map((item) => {
 		const entitlement =
-			item.action === "deleted"
-				? item.entitlement
-				: entitlementLookup.get(`${item.planId}:${item.featureId}`);
-		return entitlement ? [{ entitlement, action: item.action }] : [];
+			item.entitlement ??
+			entitlementLookup.get(`${item.planId}:${item.featureId}`);
+		if (!entitlement)
+			throw new Error(
+				`batch-migration: missing entitlement snapshot for ${item.planId}:${item.featureId}`,
+			);
+		return { item, entitlement, action: item.action };
 	});
 
 const toMinimalPlanChange = ({
@@ -86,7 +89,6 @@ export const migratedProductToPlanChange = ({
 	repoint,
 	appliedItems,
 	entitlementLookup,
-	features,
 }: {
 	planId: string;
 	isOneOff: boolean;
@@ -99,16 +101,19 @@ export const migratedProductToPlanChange = ({
 	entitlementLookup: Map<string, EntitlementWithFeature>;
 	features: Feature[];
 }): CustomerPlanChange | undefined => {
+	const appliedEntitlements = resolveAppliedEntitlements({
+		appliedItems,
+		entitlementLookup,
+	});
 	const itemChanges = buildItemChanges({
-		changes: resolveAppliedEntitlements({ appliedItems, entitlementLookup }),
-		features,
+		changes: appliedEntitlements,
+		features: appliedEntitlements.map(({ entitlement }) => entitlement.feature),
 	});
 
 	if (repoint) {
 		const catalog = buildPlanChangeFromFullProducts({
 			from: withEmptyLicenses({ product: repoint.fromProduct }),
 			to: withEmptyLicenses({ product: repoint.toProduct }),
-			features,
 		});
 		const planChange = catalog
 			? { ...catalog, item_changes: itemChanges }

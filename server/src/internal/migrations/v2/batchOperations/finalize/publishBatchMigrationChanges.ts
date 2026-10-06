@@ -41,7 +41,7 @@ export const publishBatchMigrationChanges = async ({
 			listItemRunsToPublish({ db, migrationInternalId, internalCustomerIds }),
 		BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 	);
-	const pageResult = await itemRunsToPageResult({ ctx, plan, itemRuns });
+	const pageResult = itemRunsToPageResult({ itemRuns });
 
 	await invalidateBatchMigrationCaches({
 		ctx,

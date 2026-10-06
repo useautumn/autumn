@@ -5,6 +5,7 @@ import {
 	FeatureType,
 } from "@autumn/shared";
 import type { ChangedItem } from "./planChanges/buildBatchMigrationPlanChanges.js";
+import { resolveAppliedEntitlements } from "./planChanges/migratedProductToPlanChange.js";
 
 export type CustomerItemChanges = {
 	beforeBalances: Record<string, ApiBalanceV1>;
@@ -53,13 +54,10 @@ export const toCustomerItemChanges = ({
 		afterFlags: {},
 	};
 
-	for (const item of items) {
-		const entitlement =
-			item.action === "deleted"
-				? item.entitlement
-				: entitlementLookup.get(`${item.planId}:${item.featureId}`);
-		if (!entitlement) continue;
-
+	for (const { item, entitlement } of resolveAppliedEntitlements({
+		appliedItems: items,
+		entitlementLookup,
+	})) {
 		const isBefore = item.action === "deleted";
 		if (entitlement.feature.type === FeatureType.Boolean) {
 			const flags = isBefore ? changes.beforeFlags : changes.afterFlags;

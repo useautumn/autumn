@@ -42,15 +42,6 @@ export class EntitlementService {
 		return ents as EntitlementWithFeature[];
 	}
 
-	static async getByIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
-		if (ids.length === 0) return [];
-		const ents = await db.query.entitlements.findMany({
-			where: inArray(entitlements.id, ids),
-			with: { feature: true },
-		});
-		return ents as EntitlementWithFeature[];
-	}
-
 	static async getByFeature({
 		db,
 		internalFeatureId,
