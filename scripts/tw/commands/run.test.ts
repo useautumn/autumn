@@ -124,3 +124,33 @@ describe("buildWorkerEnv stripe-connect shard", () => {
 		).not.toHaveProperty("STRIPE_SANDBOX_CLIENT_ID");
 	});
 });
+
+describe("buildWorkerEnv pg-replica shard", () => {
+	const build = (capabilities: "pg-replica"[]) =>
+		buildWorkerEnv({
+			stripeAccountId: "acct_1",
+			stripeSecretKey: "sk_test_worker",
+			capabilities,
+			ingressUrl: "https://ingress.example.com",
+			ingressToken: "ingress-token",
+		});
+
+	beforeEach(() => {
+		for (const key of REQUIRED_SECRETS) process.env[key] ??= `test-${key}`;
+	});
+
+	test("points the shard's server and tests at the worker's own standby", () => {
+		const env = build(["pg-replica"]);
+		expect(env.TW_PG_REPLICA).toBe("1");
+		expect(env.DATABASE_REPLICA_URL).toBe(
+			"postgresql://postgres:postgres@localhost:5433/autumn",
+		);
+		expect(env.DATABASE_URL).not.toBe(env.DATABASE_REPLICA_URL);
+	});
+
+	test("normal workers get no replica", () => {
+		const env = build([]);
+		expect(env).not.toHaveProperty("TW_PG_REPLICA");
+		expect(env).not.toHaveProperty("DATABASE_REPLICA_URL");
+	});
+});
