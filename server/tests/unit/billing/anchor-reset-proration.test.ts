@@ -73,7 +73,6 @@ test("a pure anchor reset classifies with the reset phase's proration", () => {
 
 describe("computeScheduledAnchorResetPreview", () => {
 	const billingContext = {
-		requestedBillingCycleAnchor: anchorMs,
 		currentEpochMs: periodStartMs + 1000,
 		stripeSubscription: { billing_cycle_anchor: periodStartMs / 1000 },
 	} as unknown as BillingContext;
@@ -81,6 +80,7 @@ describe("computeScheduledAnchorResetPreview", () => {
 	test("by default, the anchor invoices each line's netted extra window", () => {
 		const result = computeScheduledAnchorResetPreview({
 			billingContext,
+			scheduledAnchor: anchorMs,
 			interval: BillingInterval.Month,
 			intervalCount: 1,
 		});

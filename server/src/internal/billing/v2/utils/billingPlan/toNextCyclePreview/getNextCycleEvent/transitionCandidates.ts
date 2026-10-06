@@ -1,10 +1,7 @@
 import type { BillingContext, FullCusProduct } from "@autumn/shared";
 import { buildTransitionPoints } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildTransitionPoints";
-import {
-	isFutureTimestamp,
-	normalizeMs,
-	timestampsEqual,
-} from "./timeUtils";
+import { pendingAnchorResets } from "./pendingAnchorResets";
+import { isFutureTimestamp, normalizeMs, timestampsEqual } from "./timeUtils";
 
 const getFutureTrialEndsAt = ({
 	billingContext,
@@ -28,7 +25,7 @@ const getFutureTrialEndsAt = ({
 	return trialEndsAt[0];
 };
 
-/** Builds preview candidates from Stripe schedule transitions plus trial ends. */
+/** Builds preview candidates from Stripe schedule transitions, anchor resets (requested or pending) and trial ends. */
 export const buildNextCycleTransitionPoints = ({
 	billingContext,
 	customerProducts,
@@ -48,10 +45,12 @@ export const buildNextCycleTransitionPoints = ({
 		customerProducts,
 		nowMs,
 		trialEndsAt,
-		newBillingCycleAnchorMs:
-			typeof billingContext.requestedBillingCycleAnchor === "number"
-				? billingContext.requestedBillingCycleAnchor
-				: undefined,
+		newBillingCycleAnchorMs: [
+			...(typeof billingContext.requestedBillingCycleAnchor === "number"
+				? [billingContext.requestedBillingCycleAnchor]
+				: []),
+			...pendingAnchorResets({ billingContext, customerProducts, nowMs }),
+		],
 	}).filter(
 		(timestamp): timestamp is number =>
 			typeof timestamp === "number" && timestamp > nowMs,
@@ -113,6 +112,7 @@ export const getExactTransitionTimestamp = ({
 			customerProduct.starts_at,
 			customerProduct.ended_at ?? undefined,
 			customerProduct.trial_ends_at ?? undefined,
+			customerProduct.billing_cycle_anchor_resets_at ?? undefined,
 		]),
 	].filter(
 		(timestamp): timestamp is number =>

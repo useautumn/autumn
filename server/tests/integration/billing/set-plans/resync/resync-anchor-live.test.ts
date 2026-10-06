@@ -662,3 +662,47 @@ test.concurrent(
 		).toBe(false);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: an add-on attach previewed before a proration none anchor previews Stripe's next invoice")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const addOn = products.recurringAddOn({
+			items: [items.monthlyWords({ includedUsage: 50 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-resync-live-anchor-attach-preview",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addOn] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
+		});
+
+		const attachParams = { customer_id: customerId, plan_id: addOn.id };
+		const preview = await autumnV2_4.billing.previewAttach(attachParams);
+		await autumnV2_4.billing.attach(attachParams);
+
+		await expectPreviewMatchesStripeUpcomingInvoice({
+			ctx,
+			customerId,
+			nextCycle: preview.next_cycle,
+		});
+	},
+);

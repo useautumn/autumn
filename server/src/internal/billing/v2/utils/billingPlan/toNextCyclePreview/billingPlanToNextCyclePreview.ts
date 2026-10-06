@@ -11,6 +11,7 @@ import {
 	timestampsMatch,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { SchedulePhaseProration } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import {
@@ -114,6 +115,7 @@ export const billingPlanToNextCyclePreview = ({
 	billingContext,
 	billingPlan,
 	customerProductFilter,
+	phaseProrations,
 	options,
 }: {
 	ctx: AutumnContext;
@@ -121,6 +123,8 @@ export const billingPlanToNextCyclePreview = ({
 	billingPlan: BillingPlan;
 	/** Scope the preview to a subset of products (e.g. one subscription's). */
 	customerProductFilter?: (customerProduct: FullCusProduct) => boolean;
+	/** From resolveSchedulePhaseProrations, so the preview prorates every phase start the way execute does. */
+	phaseProrations: SchedulePhaseProration[];
 	options?: NextCycleLineItemOptions;
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
@@ -161,6 +165,7 @@ export const billingPlanToNextCyclePreview = ({
 		billingContext,
 		customerProducts,
 		anchorMs: currentAnchorMs,
+		phaseProrations,
 	});
 	// An uninvoiced anchor reset moved the cycle before this event, so it bills from the new anchor.
 	const cycleBillingContext: BillingContext =
@@ -321,6 +326,7 @@ export const billingPlanToNextCyclePreview = ({
 	if (event.kind === "anchor_reset") {
 		const result = computeScheduledAnchorResetPreview({
 			billingContext: cycleBillingContext,
+			scheduledAnchor: event.startsAtMs,
 			interval: event.smallestInterval.interval,
 			intervalCount: event.smallestInterval.intervalCount,
 		});

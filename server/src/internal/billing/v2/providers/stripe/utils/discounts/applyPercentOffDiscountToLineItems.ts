@@ -1,7 +1,9 @@
-import type {
-	LineItem,
-	LineItemDiscount,
-	StripeDiscountWithCoupon,
+import {
+	atmnToStripeAmount,
+	type LineItem,
+	type LineItemDiscount,
+	type StripeDiscountWithCoupon,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
@@ -52,11 +54,18 @@ export const applyPercentOffDiscountToLineItems = ({
 					.toNumber()
 			: Math.abs(currentAmount);
 
-		// Calculate discount amount: |currentAmount| * (percentOff / 100)
-		const itemDiscount = new Decimal(discountableAmount)
-			.times(percentOff)
-			.dividedBy(100)
-			.toNumber();
+		// Stripe takes the percentage of the line's whole minor units and rounds it half up per line.
+		const { currency } = item.context;
+		const itemDiscount = stripeToAtmnAmount({
+			amount: new Decimal(
+				atmnToStripeAmount({ amount: discountableAmount, currency }),
+			)
+				.times(percentOff)
+				.dividedBy(100)
+				.toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
+				.toNumber(),
+			currency,
+		});
 
 		if (itemDiscount === 0) return item;
 

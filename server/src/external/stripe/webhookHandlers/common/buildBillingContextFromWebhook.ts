@@ -171,6 +171,7 @@ export const buildBillingContextForInvoicePreview = ({
 
 	stripeCustomer: stripeCustomer ?? stripeSubscription.customer,
 	stripeSubscription,
+	stripeSubscriptionSchedule: stripeSubscription.schedule ?? undefined,
 	stripeDiscounts,
 
 	billingVersion: BillingVersion.V2,

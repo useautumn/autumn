@@ -225,9 +225,8 @@ export const expectPreviewMatchesStripeUpcomingInvoice = async ({
 		customer: subscription.customer as string,
 		schedule: await activeSubscriptionScheduleId({ ctx, customerId }),
 	});
-	const upcomingInvoiceStartsAt =
-		Math.min(...upcomingInvoice.lines.data.map(({ period }) => period.start)) *
-		MS_PER_SECOND;
+	// Line periods cover the billed window (an anchor's extension starts at the old period end), so date it by `created`.
+	const upcomingInvoiceStartsAt = upcomingInvoice.created * MS_PER_SECOND;
 
 	expect({
 		startsAt: nextCycle && truncateMsToSecondPrecision(nextCycle.starts_at),

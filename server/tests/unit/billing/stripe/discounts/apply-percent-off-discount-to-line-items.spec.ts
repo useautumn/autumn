@@ -65,6 +65,20 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 			expect(result[0].discounts[0].amountOff).toBe(50);
 		});
 
+		test("the discount is rounded per line to whole minor units, half up, like Stripe", () => {
+			const lineItems = [lineItemFixtures.charge({ amount: 6.45 })];
+			const discount = discounts.fiftyPercentOff();
+
+			const result = applyPercentOffDiscountToLineItems({
+				lineItems,
+				discount,
+			});
+
+			// Stripe takes 50% of 645¢ as 323¢ and invoices 322¢.
+			expect(result[0].discounts[0].amountOff).toBe(3.23);
+			expect(result[0].amountAfterDiscounts).toBe(3.22);
+		});
+
 		test("zero percent_off returns unchanged items", () => {
 			const lineItems = [lineItemFixtures.charge({ amount: 100 })];
 			const discount = discounts.percentOff({ percentOff: 0 });

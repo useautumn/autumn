@@ -4,6 +4,7 @@ import {
 	msToSeconds,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
+import { expectPreviewMatchesStripeUpcomingInvoice } from "@tests/integration/billing/set-plans/phase-proration/utils/phaseProrationUtils";
 import { expectCycleResetPhase } from "@tests/integration/billing/set-plans/utils/resyncUtils";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
@@ -242,4 +243,45 @@ test(`${chalk.yellowBright("update-sub scheduled anchor 4: a quantity-only updat
 		),
 	).toBe(false);
 	expect(upcomingInvoice.total / 100).toBe(70);
+});
+
+test(`${chalk.yellowBright("update-sub scheduled anchor 5: a quantity update previewed before a pending anchor previews Stripe's anchor invoice")}`, async () => {
+	const customerId = "update-sub-anchor-future-quantity-preview";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.prepaidMessages({ billingUnits: 100, price: 10 })],
+	});
+
+	const { autumnV2_3, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+			}),
+		],
+	});
+	await autumnV2_3.subscriptions.update({
+		customer_id: customerId,
+		plan_id: pro.id,
+		billing_cycle_anchor: addDays(advancedTo, 10).getTime(),
+	} satisfies UpdateSubscriptionV1ParamsInput);
+
+	const quantityParams = {
+		customer_id: customerId,
+		plan_id: pro.id,
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+	} satisfies UpdateSubscriptionV1ParamsInput;
+	const preview = await autumnV2_3.subscriptions.previewUpdate(quantityParams);
+	await autumnV2_3.subscriptions.update(quantityParams);
+
+	await expectPreviewMatchesStripeUpcomingInvoice({
+		ctx,
+		customerId,
+		nextCycle: preview.next_cycle,
+	});
 });

@@ -30,15 +30,6 @@ export const setPlansPhaseProrations = ({
 	];
 };
 
-/** The prorations a request names: set_plans' phases, or any other action's anchor reset. */
-export const requestedPhaseProrations = ({
-	billingContext,
-}: {
-	billingContext: BillingContext;
-}): SchedulePhaseProration[] =>
-	setPlansPhaseProrations({ billingContext }) ??
-	requestedAnchorResetProration({ billingContext });
-
 /**
  * The prorations a schedule rebuild applies, first match wins: set_plans' phases, or a saved phase
  * starting there, then the request's anchor reset, then the anchor reset the live Stripe schedule holds.

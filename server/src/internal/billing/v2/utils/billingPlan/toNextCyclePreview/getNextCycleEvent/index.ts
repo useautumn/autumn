@@ -3,7 +3,7 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 } from "@autumn/shared";
-import { requestedPhaseProrations } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
+import type { SchedulePhaseProration } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 import { normalizeCustomerProductTimestamps } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/normalizeCustomerProductTimestamps";
 import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { classifyNextCycleEvent } from "./classifyNextCycleEvent";
@@ -20,11 +20,14 @@ export const getNextCycleEvent = ({
 	billingContext,
 	customerProducts,
 	anchorMs,
+	phaseProrations,
 	fromMs = billingContext.currentEpochMs,
 }: {
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	anchorMs: number;
+	/** From resolveSchedulePhaseProrations, the resolver execute builds the Stripe schedule with. */
+	phaseProrations: SchedulePhaseProration[];
 	/** Search for events after this time; defaults to now. */
 	fromMs?: number;
 }): NextCycleEvent => {
@@ -63,8 +66,6 @@ export const getNextCycleEvent = ({
 			...(renewalBoundaryMs > nowMs ? [renewalBoundaryMs] : []),
 		]),
 	).sort((a, b) => a - b);
-
-	const phaseProrations = requestedPhaseProrations({ billingContext });
 
 	for (const startsAtMs of candidateTimestamps) {
 		const event = classifyNextCycleEvent({

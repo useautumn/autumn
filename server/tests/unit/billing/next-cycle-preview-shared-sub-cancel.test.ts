@@ -87,6 +87,7 @@ const previewNextCycle = ({
 				lineItems: [],
 			} as unknown as AutumnBillingPlan,
 		} as BillingPlan,
+		phaseProrations: [],
 	}).nextCycle;
 
 describe("next cycle preview on a shared subscription", () => {

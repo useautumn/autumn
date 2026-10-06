@@ -19,6 +19,7 @@ import {
 import { buildBillingContextForInvoicePreview } from "@/external/stripe/webhookHandlers/common/buildBillingContextFromWebhook.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling.js";
+import { resolveSchedulePhaseProrations } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations.js";
 import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview.js";
 import { CusService } from "../../CusService.js";
 import { getFinalUsageInvoicePreview } from "./getFinalUsageInvoicePreview.js";
@@ -107,6 +108,10 @@ export const getCusInvoicePreviews = async ({
 					stripe: {},
 				},
 				customerProductFilter: isOnSubscription,
+				phaseProrations: await resolveSchedulePhaseProrations({
+					ctx,
+					billingContext,
+				}),
 				options: { chargeUsageLineItems: true },
 			});
 

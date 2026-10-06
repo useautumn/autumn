@@ -11,10 +11,13 @@ import type { AnchorResetProration } from "./prorateAnchorResetLineItem";
  * one at or past the period end leaves the normal full renewal as the next invoice. */
 export const computeScheduledAnchorResetPreview = ({
 	billingContext,
+	scheduledAnchor,
 	interval,
 	intervalCount,
 }: {
 	billingContext: BillingContext;
+	/** The reset event's own anchor: requested now, or already pending on the subscription. */
+	scheduledAnchor: number;
 	interval: BillingInterval;
 	intervalCount: number;
 }): {
@@ -22,8 +25,6 @@ export const computeScheduledAnchorResetPreview = ({
 	anchorResetProration: AnchorResetProration | undefined;
 	lineItemsBillingContext: BillingContext;
 } => {
-	const scheduledAnchor = billingContext.requestedBillingCycleAnchor as number;
-
 	const originalAnchorMs = billingContext.stripeSubscription
 		?.billing_cycle_anchor
 		? secondsToMs(billingContext.stripeSubscription.billing_cycle_anchor)

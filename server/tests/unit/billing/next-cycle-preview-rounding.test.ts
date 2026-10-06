@@ -13,6 +13,18 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
+import { requestPhaseProrations } from "./utils/requestPhaseProrations";
+
+const previewNextCycle = (
+	params: Omit<
+		Parameters<typeof billingPlanToNextCyclePreview>[0],
+		"phaseProrations"
+	>,
+) =>
+	billingPlanToNextCyclePreview({
+		...params,
+		phaseProrations: requestPhaseProrations(params.billingContext),
+	});
 
 // 31-day cycle; the switch leaves 11/31 of it, so each prorated line has sub-cent remainders.
 const anchorMs = Date.UTC(2026, 0, 1);
@@ -60,7 +72,7 @@ const previewMidCycleSwitch = ({
 	nextAmount: number;
 	currency: string;
 }) =>
-	billingPlanToNextCyclePreview({
+	previewNextCycle({
 		ctx: contexts.create({
 			org: { ...contexts.createOrg(), default_currency: currency },
 		}),
@@ -122,7 +134,7 @@ describe("next cycle preview rounding for a scheduled anchor mid-period", () => 
 	test("JPY: rounds each scaled line to whole yen once, not to 2dp first", () => {
 		// Anchor Jan 13 01:00 bills 1497 x 289/744 = 581.4959…: ¥581, where 2dp first gives 581.50 -> ¥582.
 		const scheduledAnchorMs = Date.UTC(2026, 0, 13, 1);
-		const nextCycle = billingPlanToNextCyclePreview({
+		const nextCycle = previewNextCycle({
 			ctx: contexts.create({
 				org: { ...contexts.createOrg(), default_currency: "jpy" },
 			}),

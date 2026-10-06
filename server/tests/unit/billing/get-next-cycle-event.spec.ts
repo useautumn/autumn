@@ -16,6 +16,7 @@ import { products } from "@tests/utils/fixtures/db/products";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import { findNextInvoicedCycleEvent } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/findNextInvoicedCycleEvent";
 import { getNextCycleEvent } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/getNextCycleEvent";
+import { requestPhaseProrations } from "./utils/requestPhaseProrations";
 
 const anchorMs = Date.UTC(2026, 0, 1);
 const currentEpochMs = Date.UTC(2026, 0, 11);
@@ -95,6 +96,7 @@ const resolve = ({
 	getNextCycleEvent({
 		billingContext,
 		customerProducts,
+		phaseProrations: requestPhaseProrations(billingContext),
 		anchorMs:
 			billingContext.billingCycleAnchorMs === "now"
 				? billingContext.currentEpochMs
@@ -467,11 +469,23 @@ describe("getNextCycleEvent", () => {
 			billingContext: buildContext(),
 			customerProducts: [cusProduct({ id: "one-off", oneOff: true })],
 			anchorMs,
+			phaseProrations: [],
 		});
 
 		expect(event.kind).toBe("none");
 	});
 });
+
+const findNextInvoiced = (
+	params: Omit<
+		Parameters<typeof findNextInvoicedCycleEvent>[0],
+		"phaseProrations"
+	>,
+) =>
+	findNextInvoicedCycleEvent({
+		...params,
+		phaseProrations: requestPhaseProrations(params.billingContext),
+	});
 
 describe("findNextInvoicedCycleEvent", () => {
 	const resetAt = currentEpochMs + ms.days(5);
@@ -503,7 +517,7 @@ describe("findNextInvoicedCycleEvent", () => {
 
 	test("a proration none reset invoices nothing, so a later prorated switch is next, on the moved anchor", () => {
 		const switchAt = resetAt + ms.days(5);
-		const { event, anchorMs: cycleAnchorMs } = findNextInvoicedCycleEvent({
+		const { event, anchorMs: cycleAnchorMs } = findNextInvoiced({
 			billingContext: anchorResetContext({
 				prorationBehavior: "none",
 				switchAt,
@@ -520,7 +534,7 @@ describe("findNextInvoicedCycleEvent", () => {
 	});
 
 	test("with nothing scheduled after a proration none reset, the next invoice is the moved cycle's renewal", () => {
-		const { event, anchorMs: cycleAnchorMs } = findNextInvoicedCycleEvent({
+		const { event, anchorMs: cycleAnchorMs } = findNextInvoiced({
 			billingContext: Object.assign(buildContext(), {
 				requestedBillingCycleAnchor: resetAt,
 				requestedProrationBehavior: "none",
@@ -544,7 +558,7 @@ describe("findNextInvoicedCycleEvent", () => {
 
 	test("a prorated reset is itself the next invoice", () => {
 		const switchAt = resetAt + ms.days(5);
-		const { event, anchorMs: cycleAnchorMs } = findNextInvoicedCycleEvent({
+		const { event, anchorMs: cycleAnchorMs } = findNextInvoiced({
 			billingContext: anchorResetContext({
 				prorationBehavior: "prorate_immediately",
 				switchAt,
