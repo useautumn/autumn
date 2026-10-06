@@ -14,6 +14,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 /**
  * Free Product with Trial Tests
@@ -297,7 +298,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 	// next_cycle should be ~1 month from now (regular billing cycle)
 	expectPreviewNextCycleCorrect({
 		preview,
-		expectDefined: false,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+		total: priceItem.price!,
 	});
 
 	await autumnV1.subscriptions.update(updateParams);
