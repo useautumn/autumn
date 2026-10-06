@@ -22,13 +22,7 @@ export type FilterView = {
 	groups: FilterRowView[][];
 };
 
-/** `hiddenCount` is how many of `chips` the cell leaves out of its one chip. */
-type RuleView = {
-	subject: string;
-	cell: ChipView;
-	chips: ChipView[];
-	hiddenCount?: number;
-};
+type RuleView = { subject: string; cell: ChipView; chips: ChipView[] };
 
 const BOOLEAN_RULES: Partial<
 	Record<FilterField, { tile: ChipView["tile"]; yes: string; no: string }>
@@ -104,11 +98,16 @@ const planRuleView = ({
 	const chips = planChips({ rule, catalog });
 	const prefix = isNegated(rule) ? "not" : undefined;
 	const [first] = chips;
+	const extraPlans = chips.length > 1 ? [`+${chips.length - 1}`] : [];
+	const cellDetails = [...(first.details ?? []), ...extraPlans];
 	return {
 		subject: `Plan ${OPERATOR_WORDS[rule.operator]}`,
-		cell: { label: first.label, prefix },
+		cell: {
+			...first,
+			prefix,
+			details: cellDetails.length > 0 ? cellDetails : undefined,
+		},
 		chips: chips.map((chip) => ({ ...chip, prefix })),
-		hiddenCount: chips.length - 1,
 	};
 };
 
@@ -124,7 +123,7 @@ const customerRuleView = (rule: FilterRule): RuleView => {
 	};
 	return {
 		subject: `Customer ${OPERATOR_WORDS[rule.operator]}`,
-		cell: { label: chip.label, prefix: excluded ? "not" : undefined },
+		cell: chip,
 		chips: [chip],
 	};
 };
@@ -197,11 +196,10 @@ export const deriveFilterView = ({
 		.filter((group) => group.length > 0);
 	const [firstGroup] = ruleGroups;
 	if (!firstGroup) return null;
-	const [headRule] = firstGroup;
 
 	return {
-		head: withoutTile(headRule.cell),
-		extraCount: ruleGroups.flat().length - 1 + (headRule.hiddenCount ?? 0),
+		head: withoutTile(firstGroup[0].cell),
+		extraCount: ruleGroups.flat().length - 1,
 		groups: ruleGroups.map((group, groupIndex) =>
 			group.map((rule, ruleIndex) => ({
 				label: rowLabel({ subject: rule.subject, groupIndex, ruleIndex }),

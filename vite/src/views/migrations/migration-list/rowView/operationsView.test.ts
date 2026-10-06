@@ -58,8 +58,10 @@ test("a price change reads previous to next per interval", () => {
 			},
 		},
 	]);
-	expect(result?.inline).toEqual({ label: "Base price" });
-	expect(result?.modifications[0].chip.details).toEqual(["$39 → $49/mo"]);
+	expect(result?.inline).toEqual({
+		label: "Base price",
+		details: ["$39 → $49/mo"],
+	});
 	expect(result?.modifications[0].chip.tile).toEqual({
 		tone: "amber",
 		glyph: "currencyCircleDollar",
@@ -224,7 +226,7 @@ test("multiple operations keep the version out of the inline slot and count the 
 		{ type: "add_plan", plan_id: "analytics_addon" },
 	]);
 	expect(result?.head).toEqual({ label: "Pro", details: ["→ v3"] });
-	expect(result?.inline).toEqual({ label: "Base price" });
+	expect(result?.inline?.details).toEqual(["$99 → $129/mo"]);
 	expect(result?.extraCount).toBe(3);
 	expect(
 		result?.modifications.map((modification) => modification.sign),

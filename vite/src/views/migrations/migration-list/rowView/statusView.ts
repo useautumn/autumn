@@ -45,8 +45,6 @@ export const SEGMENTS: Record<
 
 type Segment = { kind: SegmentKind; value: number };
 
-export type RunErrorView = { message: string; details: string | null };
-
 export type StatusView = {
 	ring: { tone: StatusTone; fraction: number };
 	chip: ChipView;
@@ -54,7 +52,7 @@ export type StatusView = {
 		chip: ChipView;
 		when: string;
 		note: string | null;
-		error: RunErrorView | null;
+		error: string | null;
 		legend: Segment[];
 	};
 };
@@ -214,17 +212,13 @@ const RUN_ERROR_MESSAGES: Record<MigrationRunErrorCode, string> = {
 };
 
 /** Codes newer than this dashboard fall back to the generic sentence. */
-const describeRunError = (
-	summary: MigrationListSummary,
-): RunErrorView | null => {
+const describeRunError = (summary: MigrationListSummary): string | null => {
 	const run = summary.latest_run;
 	if (!run?.error_code && !run?.error_message) return null;
-	return {
-		message:
-			RUN_ERROR_MESSAGES[run.error_code ?? "unknown"] ??
-			RUN_ERROR_MESSAGES.unknown,
-		details: run.error_message,
-	};
+	return (
+		RUN_ERROR_MESSAGES[run.error_code ?? "unknown"] ??
+		RUN_ERROR_MESSAGES.unknown
+	);
 };
 
 /** Terminal outcomes already read from the status chip, so they carry no verb. */

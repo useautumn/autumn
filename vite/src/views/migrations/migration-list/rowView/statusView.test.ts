@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import {
-	CACHE_INVALIDATION_ERROR_MESSAGE,
 	FIXTURE_NOW,
 	fixtureMigrations,
 } from "../preview/migrationListFixtures";
@@ -169,11 +168,8 @@ test("failed and canceled report where they stopped and what was not reached", (
 		chip: { label: "Failed", details: ["at 80%"] },
 		when: "Sep 15, 14:32 · after 18 minutes",
 		note: null,
-		error: {
-			message:
-				"Stripe returned an error, so the run stopped. Customers already migrated keep their changes.",
-			details: "Stripe rate limit exceeded",
-		},
+		error:
+			"Stripe returned an error, so the run stopped. Customers already migrated keep their changes.",
 		legend: [
 			{ kind: "migrated", value: 798 },
 			{ kind: "failed", value: 14 },
@@ -188,18 +184,16 @@ test("failed and canceled report where they stopped and what was not reached", (
 	});
 });
 
-test("a failed run explains its error code in plain words and keeps the raw error as details", () => {
+test("a failed run explains its error code in plain words", () => {
 	const view = statusOf("migration-credits-reset");
 	expect(pill("migration-credits-reset")).toEqual({
 		ring: { tone: "red", fraction: 881 / 904 },
 		label: "Failed",
 		detail: "at 97%",
 	});
-	expect(view.card.error).toEqual({
-		message:
-			"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
-		details: CACHE_INVALIDATION_ERROR_MESSAGE,
-	});
+	expect(view.card.error).toBe(
+		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
+	);
 	expect(view.card.legend).toEqual([
 		{ kind: "failed", value: 881 },
 		{ kind: "not_reached", value: 23 },
@@ -223,9 +217,7 @@ test("an unclassified error gets a generic sentence, never the raw message", () 
 		},
 		now: FIXTURE_NOW,
 	});
-	expect(view.card.error).toEqual({
-		message:
-			"The run stopped unexpectedly. Customers already migrated keep their changes.",
-		details: "Migration chunk made no progress before continuation",
-	});
+	expect(view.card.error).toBe(
+		"The run stopped unexpectedly. Customers already migrated keep their changes.",
+	);
 });

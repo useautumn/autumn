@@ -29,7 +29,7 @@ test("list cells render the derived filter, operations and status text", () => {
 	const id = "migration-starter-v2";
 	expect(renderCell({ id, header: "Filter" })).toBe("Starter +1");
 	expect(renderCell({ id, header: "Operations" })).toBe(
-		"Starter → v2 Base price +2",
+		"Starter → v2 Base price $39 → $49/mo +2",
 	);
 	expect(renderCell({ id, header: "Status" })).toBe("Failed at 80%");
 	expect(renderCell({ id: "migration-a7k", header: "Filter" })).toBe(
@@ -54,7 +54,7 @@ test("the status card badge draws the same icon as the row badge", () => {
 	expect(cardIcon).toBe(rowIcon);
 });
 
-test("a failed run's card leads with the plain sentence and folds the raw error away", () => {
+test("a failed run's card shows the plain sentence, never the raw error", () => {
 	const row = fixtureRows.find(
 		(candidate) => candidate.id === "migration-credits-reset",
 	);
@@ -65,6 +65,5 @@ test("a failed run's card leads with the plain sentence and folds the raw error 
 	expect(text).toContain(
 		"The run stopped before it could confirm every update.",
 	);
-	expect(text).toContain("Technical details");
 	expect(text).not.toContain(CACHE_INVALIDATION_ERROR_MESSAGE);
 });
