@@ -2,7 +2,6 @@ import {
 	type BillingContext,
 	type BillingPlan,
 	type BillingPreviewResponse,
-	billingContextToCurrency,
 	cp,
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
@@ -11,11 +10,9 @@ import {
 	isCustomerProductOnStripeSubscription,
 	timestampsMatch,
 } from "@autumn/shared";
-import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
-import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
 import {
 	billingPlanToNextCycleLineItems,
 	type NextCycleLineItemOptions,
@@ -27,6 +24,7 @@ import {
 	type NextCycleEvent,
 	type SmallestInterval,
 } from "./getNextCycleEvent";
+import type { AnchorResetProration } from "./prorateAnchorResetLineItem";
 
 export type NextCyclePreviewDebug = {
 	allCustomerProducts: FullCusProduct[];
@@ -109,42 +107,6 @@ const getPlansRenewingThroughChange = ({
 				}),
 			),
 	);
-};
-
-const scaleNextCycleAmounts = ({
-	lineItemsResult,
-	prorationRatio,
-	currency,
-}: {
-	lineItemsResult: ReturnType<typeof billingPlanToNextCycleLineItems>;
-	prorationRatio: Decimal;
-	currency: string;
-}) => {
-	const previewLineItems = lineItemsResult.previewLineItems.map((item) => ({
-		...item,
-		subtotal: prorationRatio.mul(item.subtotal).toDecimalPlaces(2).toNumber(),
-		total: prorationRatio.mul(item.total).toDecimalPlaces(2).toNumber(),
-		discounts: item.discounts?.map((discount) => ({
-			...discount,
-			amount_off: prorationRatio
-				.mul(discount.amount_off)
-				.toDecimalPlaces(2)
-				.toNumber(),
-		})),
-	}));
-
-	return {
-		...lineItemsResult,
-		previewLineItems,
-		subtotal: sumPreviewLineAmounts({
-			amounts: previewLineItems.map((item) => item.subtotal),
-			currency,
-		}),
-		total: sumPreviewLineAmounts({
-			amounts: previewLineItems.map((item) => item.total),
-			currency,
-		}),
-	};
 };
 
 export const billingPlanToNextCyclePreview = ({
@@ -347,7 +309,7 @@ export const billingPlanToNextCyclePreview = ({
 
 	let nextCycleStart: number;
 	let lineItemsBillingContext: BillingContext = billingContext;
-	let prorationRatio: Decimal | undefined;
+	let anchorResetProration: AnchorResetProration | undefined;
 	let nextCycleCustomerProducts: FullCusProduct[];
 
 	if (event.kind === "anchor_reset") {
@@ -357,7 +319,7 @@ export const billingPlanToNextCyclePreview = ({
 			intervalCount: event.smallestInterval.intervalCount,
 		});
 		nextCycleStart = result.nextCycleStart;
-		prorationRatio = result.prorationRatio;
+		anchorResetProration = result.anchorResetProration;
 		lineItemsBillingContext = result.lineItemsBillingContext;
 		nextCycleCustomerProducts = customerProducts;
 	} else {
@@ -381,7 +343,7 @@ export const billingPlanToNextCyclePreview = ({
 		customerProducts,
 		startsAtMs: nextCycleStart - MS_PER_SECOND,
 	});
-	let lineItemsResult = billingPlanToNextCycleLineItems({
+	const lineItemsResult = billingPlanToNextCycleLineItems({
 		ctx,
 		customerProducts: filteredCustomerProducts,
 		productsForUsageLineItems,
@@ -406,16 +368,9 @@ export const billingPlanToNextCyclePreview = ({
 					: lineItemsBillingContext.billingCycleAnchorMs,
 		},
 		nextCycleStart,
+		anchorResetProration,
 		options,
 	});
-
-	if (prorationRatio) {
-		lineItemsResult = scaleNextCycleAmounts({
-			lineItemsResult,
-			prorationRatio,
-			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
-		});
-	}
 
 	return {
 		nextCycle: {
