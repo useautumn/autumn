@@ -148,7 +148,7 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 					<RunLabel run={run} showSha={false} primaryClassName="" />
 				</h3>
 				<RunStatusBadge status={run.status} />
-				{run.purpose === "baseline" && <Pill tone="info">baseline</Pill>}
+				{run.baseline && <Pill tone="info">baseline</Pill>}
 				{run.repeat > 1 && <Pill tone="info">repeat ×{run.repeat}</Pill>}
 			</div>
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tertiary-foreground">

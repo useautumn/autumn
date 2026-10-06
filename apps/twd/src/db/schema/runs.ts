@@ -47,6 +47,10 @@ export const runs = pgTable(
 		maxWorkers: integer("max_workers"),
 		/** Times each selected file runs (flake checks); repeat runs never feed baselines or drift. */
 		repeat: integer("repeat").notNull().default(1),
+		/** Feeds the dev baseline: decided once at creation (see countsAsBaseline). */
+		isBaseline: boolean("is_baseline").notNull().default(false),
+		/** Files failing here that were not failing in the previous baseline; null until finished or without one. */
+		newFailures: integer("new_failures"),
 		costUsd: real("cost_usd").notNull().default(0),
 		workerSeconds: real("worker_seconds").notNull().default(0),
 		jobId: text("job_id"),
@@ -71,6 +75,7 @@ export const runs = pgTable(
 		index("runs_status_idx").on(t.status, t.createdAt),
 		index("runs_branch_idx").on(t.branch, t.createdAt),
 		index("runs_created_idx").on(t.createdAt, t.id),
+		index("runs_baseline_idx").on(t.isBaseline, t.finishedAt),
 	],
 );
 

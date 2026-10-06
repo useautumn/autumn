@@ -619,9 +619,11 @@ const makeFinishedRun = (i: number): RunDetail => {
 		: i % 4 === 0
 			? branches[0]
 			: pick(branches.slice(2), r);
-	const selection = baseline
-		? { groups: ["core", ...fixture.suites[1].groups] }
-		: pick(SELECTIONS, r);
+	const manualBaseline = !baseline && branch.name === "dev" && i % 9 === 4;
+	const selection =
+		baseline || manualBaseline
+			? { groups: ["core", ...fixture.suites[1].groups] }
+			: pick(SELECTIONS, r);
 	const list = filesForSelection(selection);
 	const workerCount = Math.min(list.length, 40 + Math.floor(r() * 160));
 	const failRate = r() < 0.45 ? 0 : 0.004 + r() * 0.02;
@@ -655,6 +657,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		pinnedSha: !baseline && i % 5 === 3,
 		status: cancelled ? "cancelled" : "passed",
 		purpose: baseline ? "baseline" : "adhoc",
+		baseline: baseline || manualBaseline,
 		selection,
 		repeat: 1,
 		fileCount: list.length,
@@ -664,6 +667,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		cost: costOf(workerSeconds, true),
 		passed: 0,
 		failed: 0,
+		newFailures: null,
 		createdBy: baseline ? SYSTEM : pickUser(r),
 		createdAt: iso(createdAt),
 		startedAt: iso(startedAt),
@@ -687,6 +691,8 @@ const makeFinishedRun = (i: number): RunDetail => {
 	};
 	summarize(run);
 	if (!cancelled && run.failed > 0) run.status = "failed";
+	if (!cancelled)
+		run.newFailures = run.drift.filter((d) => d.kind === "new_failure").length;
 	return run;
 };
 
@@ -849,6 +855,7 @@ const startLiveRun = ({
 		pinnedSha,
 		status: progress > 0 ? "running" : "queued",
 		purpose,
+		baseline: purpose === "baseline" && branch === "dev",
 		selection,
 		repeat,
 		fileCount: list.length,
@@ -858,6 +865,7 @@ const startLiveRun = ({
 		cost: costOf(progress > 0 ? attached * (progress * 11 * 60) : 0, false),
 		passed: 0,
 		failed: 0,
+		newFailures: null,
 		createdBy,
 		createdAt: iso(createdAt),
 		startedAt: progress > 0 ? iso(startedAt) : null,
@@ -1424,12 +1432,14 @@ export const handle = ({
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
 		const purpose = url.searchParams.get("purpose");
+		const baseline = url.searchParams.get("baseline");
 		const list = allSummaries()
 			.filter((r) =>
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
 			.filter((r) => !purpose || r.purpose === purpose)
+			.filter((r) => !baseline || r.baseline === (baseline === "true"))
 			.filter((r) => {
 				const outcome = url.searchParams.get("outcome") ?? "all";
 				if (outcome === "all") return true;
