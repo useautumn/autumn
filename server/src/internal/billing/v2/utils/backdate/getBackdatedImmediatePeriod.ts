@@ -7,7 +7,6 @@ import {
 	type Price,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { countBackdatedPeriodsForPrice } from "./countBackdatedPeriods";
 
 /**
  * The period the first invoice of a backdated subscription covers: from the
@@ -49,11 +48,14 @@ export const getBackdatedImmediatePeriod = ({
 	const firstCycleFraction = new Decimal(
 		firstCycleEnd - subscriptionBackdateStartMs,
 	).div(firstCycleEnd - firstCycleStart);
-	const fullCycles = countBackdatedPeriodsForPrice({
-		price,
-		startsAt: firstCycleEnd,
-		currentEpochMs,
-	});
+	let fullCycles = 0;
+	for (
+		let cycleStart = firstCycleEnd;
+		cycleStart < currentEpochMs;
+		cycleStart = getCycleEnd({ ...cycle, now: cycleStart })
+	) {
+		fullCycles += 1;
+	}
 
 	const end = getCycleEnd({
 		...cycle,

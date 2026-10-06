@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { prices } from "@tests/utils/fixtures/db/prices";
+import { Decimal } from "decimal.js";
 import { getBackdatedLineItemContext } from "@/internal/billing/v2/utils/lineItems/getBackdatedLineItemContext";
 
 const startsAt = Date.UTC(2026, 0, 1);
@@ -116,6 +117,47 @@ describe("backdated line item context", () => {
 				floor: startsAt,
 			}),
 		});
+	});
+
+	test("counts month-end cycles on the anchor's own boundaries, like Stripe", () => {
+		const monthEnd = Date.UTC(2026, 0, 31);
+		const backdatedContext = getBackdatedLineItemContext({
+			price: monthly,
+			billingContext: {
+				...contexts.createBilling({
+					currentEpochMs: Date.UTC(2026, 2, 29),
+					billingCycleAnchorMs: monthEnd,
+				}),
+				subscriptionBackdateStartMs: monthEnd,
+			},
+			billingPeriod,
+			direction: "charge",
+			billingTiming: "in_advance",
+		});
+
+		expect(backdatedContext?.backdate?.cycleCount).toBe(2);
+	});
+
+	test("counts the stub before a later anchor as its prorated fraction of a cycle", () => {
+		const backdatedStart = Date.UTC(2026, 0, 21);
+		const backdatedContext = getBackdatedLineItemContext({
+			price: monthly,
+			billingContext: {
+				...contexts.createBilling({
+					currentEpochMs: Date.UTC(2026, 2, 15),
+					billingCycleAnchorMs: Date.UTC(2026, 1, 1),
+				}),
+				subscriptionBackdateStartMs: backdatedStart,
+			},
+			billingPeriod,
+			direction: "charge",
+			billingTiming: "in_advance",
+		});
+
+		const januaryStubFraction = new Decimal(ms.days(11)).div(ms.days(31));
+		expect(backdatedContext?.backdate?.cycleCount).toBe(
+			januaryStubFraction.plus(2).toNumber(),
+		);
 	});
 
 	test("does not derive context without a backdated start", () => {

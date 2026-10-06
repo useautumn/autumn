@@ -1,6 +1,5 @@
 import { expect } from "bun:test";
 import {
-	addInterval,
 	BillingInterval,
 	getCycleEnd,
 	getCycleStart,
@@ -46,19 +45,26 @@ export const backdateParams = ({
 	startsAt,
 	prorationBehavior,
 	billingCycleAnchor,
+	featureQuantities,
 }: {
 	customerId: string;
 	planId: string;
 	startsAt: number;
 	prorationBehavior: BackdateProrationBehavior;
 	billingCycleAnchor?: number;
+	featureQuantities?: { feature_id: string; quantity: number }[];
 }): SetPlansParamsV0Input => ({
 	customer_id: customerId,
 	phases: [
 		{
 			proration_behavior: prorationBehavior,
 			starts_at: startsAt,
-			plans: [{ plan_id: planId }],
+			plans: [
+				{
+					plan_id: planId,
+					...(featureQuantities && { feature_quantities: featureQuantities }),
+				},
+			],
 			...(billingCycleAnchor !== undefined && {
 				billing_cycle_anchor: billingCycleAnchor,
 			}),
@@ -101,7 +107,7 @@ export const expectedNewBackdateCharge = ({
 	for (
 		let cycleStart = firstCycleEnd;
 		cycleStart <= nowMs;
-		cycleStart = addInterval({ from: cycleStart, interval })
+		cycleStart = getCycleEnd({ anchor, interval, now: cycleStart })
 	) {
 		total = total.plus(PRO_MONTHLY_PRICE);
 	}
@@ -165,4 +171,25 @@ export const expectNewBackdateBilledCorrect = async ({
 		count: expectedInvoiceTotals.length,
 		latestTotal: expectedInvoiceTotals[0],
 	});
+};
+
+/** The total Stripe will invoice at the subscription's next renewal, including any pending invoice items. */
+export const expectRenewalInvoiceTotal = async ({
+	ctx,
+	customerId,
+	total,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	total: number;
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const renewal = await ctx.stripeCli.invoices.createPreview({
+		subscription: subscription.id,
+	});
+	expect(toDollars(renewal.total)).toBe(total);
 };
