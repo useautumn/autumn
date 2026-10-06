@@ -235,10 +235,11 @@ export const billingPlanToNextCyclePreview = ({
 			priceFilters: { excludeOneOffPrices: true },
 		};
 
+		// The old plan's credit is what it last paid for: an uninvoiced reset moved its cycle without billing it.
 		const creditOldPlanUnusedTime = {
 			customerProducts: event.outgoingCustomerProducts,
 			direction: "refund" as const,
-			billingCycleAnchorMs: anchorMs,
+			billingCycleAnchorMs: currentAnchorMs,
 			filterBillingPeriodStart: false,
 			priceFilters: { excludeOneOffPrices: true },
 		};
