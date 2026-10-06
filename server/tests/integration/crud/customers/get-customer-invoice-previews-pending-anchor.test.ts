@@ -35,10 +35,11 @@ const stripeUpcomingInvoice = async ({
 		typeof subscription.schedule === "string"
 			? subscription.schedule
 			: subscription.schedule?.id;
-	if (!scheduleId) throw new Error(`${customerId} has no Stripe schedule`);
 	const invoice = await ctx.stripeCli.invoices.createPreview({
 		customer: subscription.customer as string,
-		schedule: scheduleId,
+		...(scheduleId
+			? { schedule: scheduleId }
+			: { subscription: subscription.id }),
 	});
 	// Line periods cover the billed window (an anchor's extension starts at the old period end), so date it by `created`.
 	return {
@@ -50,9 +51,11 @@ const stripeUpcomingInvoice = async ({
 const setPendingAnchor = async ({
 	customerId,
 	prorationBehavior,
+	releaseSchedule = false,
 }: {
 	customerId: string;
 	prorationBehavior?: "none";
+	releaseSchedule?: boolean;
 }) => {
 	const pro = products.pro({
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -80,6 +83,16 @@ const setPendingAnchor = async ({
 			},
 		],
 	} satisfies SetPlansParamsV0Input);
+	if (releaseSchedule) {
+		const subscription = await findStripeSubscriptionByStatus({
+			ctx: scenario.ctx,
+			customerId,
+			status: "active",
+		});
+		await scenario.ctx.stripeCli.subscriptionSchedules.release(
+			subscription.schedule as string,
+		);
+	}
 
 	const customer = await scenario.autumnV2_2.customers.get<ApiCustomerV5>(
 		customerId,
@@ -113,6 +126,22 @@ test.concurrent(
 		const { anchorMs, preview, stripeInvoice } = await setPendingAnchor({
 			customerId: "invoice-previews-pending-anchor-none",
 			prorationBehavior: "none",
+		});
+
+		expect(stripeInvoice.invoiceAt).toBeGreaterThan(anchorMs);
+		expect({
+			invoiceAt: preview && truncateMsToSecondPrecision(preview.invoice_at),
+			total: preview?.total,
+		}).toEqual(stripeInvoice);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("get-customer: invoice_previews ignores an anchor whose Stripe schedule was released")}`,
+	async () => {
+		const { anchorMs, preview, stripeInvoice } = await setPendingAnchor({
+			customerId: "invoice-previews-released-anchor",
+			releaseSchedule: true,
 		});
 
 		expect(stripeInvoice.invoiceAt).toBeGreaterThan(anchorMs);

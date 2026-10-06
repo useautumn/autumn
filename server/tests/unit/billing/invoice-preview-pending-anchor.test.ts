@@ -10,8 +10,17 @@ const customerProduct = (resetsAt: number | null) =>
 	({ billing_cycle_anchor_resets_at: resetsAt }) as FullCusProduct;
 
 const subscriptionWithPhases = (
-	phases: { start_date: number; proration_behavior?: string }[],
+	phases: {
+		start_date: number;
+		proration_behavior?: string;
+		billing_cycle_anchor?: string;
+	}[],
 ) => ({ schedule: { phases } }) as unknown as ExpandedStripeSubscription;
+
+const resetPhaseAt = (startsAtMs: number) => ({
+	start_date: startsAtMs / 1000,
+	billing_cycle_anchor: "phase_start",
+});
 
 describe("setupInvoicePreviewPendingAnchor", () => {
 	test("takes the earliest anchor reset still ahead of now", () => {
@@ -22,11 +31,26 @@ describe("setupInvoicePreviewPendingAnchor", () => {
 				customerProduct(anchorMs + 1000),
 				customerProduct(anchorMs),
 			],
-			stripeSubscription: subscriptionWithPhases([]),
+			stripeSubscription: subscriptionWithPhases([
+				resetPhaseAt(anchorMs),
+				resetPhaseAt(anchorMs + 1000),
+			]),
 			nowMs,
 		});
 
 		expect(pendingBillingCycleAnchorMs).toBe(anchorMs);
+	});
+
+	test("ignores a saved reset the Stripe schedule no longer restarts the cycle at", () => {
+		const { pendingBillingCycleAnchorMs } = setupInvoicePreviewPendingAnchor({
+			customerProducts: [customerProduct(anchorMs)],
+			stripeSubscription: {
+				schedule: null,
+			} as unknown as ExpandedStripeSubscription,
+			nowMs,
+		});
+
+		expect(pendingBillingCycleAnchorMs).toBeUndefined();
 	});
 
 	test("has no pending anchor once every reset has passed", () => {
