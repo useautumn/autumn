@@ -2,11 +2,9 @@ import {
 	type BillingContext,
 	type BillingInterval,
 	getCycleEnd,
-	type PhaseProrationBehavior,
 	secondsToMs,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
-import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import type { AnchorResetProration } from "./prorateAnchorResetLineItem";
 
 /** An anchor inside the current period starts the next cycle with per-line proration;
@@ -15,12 +13,10 @@ export const computeScheduledAnchorResetPreview = ({
 	billingContext,
 	interval,
 	intervalCount,
-	prorationBehavior,
 }: {
 	billingContext: BillingContext;
 	interval: BillingInterval;
 	intervalCount: number;
-	prorationBehavior: PhaseProrationBehavior | undefined;
 }): {
 	nextCycleStart: number;
 	anchorResetProration: AnchorResetProration | undefined;
@@ -51,24 +47,6 @@ export const computeScheduledAnchorResetPreview = ({
 			lineItemsBillingContext: {
 				...billingContext,
 				billingCycleAnchorMs: originalAnchorMs,
-			},
-		};
-	}
-
-	// Without proration Stripe moves the anchor without invoicing, so the
-	// first invoice is the new cycle's renewal at the full amount.
-	if (!phaseStartCreditsUnusedTime({ prorationBehavior })) {
-		return {
-			nextCycleStart: getCycleEnd({
-				anchor: scheduledAnchor,
-				interval,
-				intervalCount,
-				now: scheduledAnchor,
-			}),
-			anchorResetProration: undefined,
-			lineItemsBillingContext: {
-				...billingContext,
-				billingCycleAnchorMs: scheduledAnchor,
 			},
 		};
 	}

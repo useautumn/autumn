@@ -15,6 +15,8 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
+import { expectPreviewMatchesStripeUpcomingInvoice } from "../phase-proration/utils/phaseProrationUtils";
 import { expectCycleResetPhase } from "../utils/resyncUtils";
 import { findStripeSubscriptionByStatus } from "../utils/subscriptionStateUtils";
 
@@ -147,6 +149,80 @@ test.concurrent(
 			featureId: TestFeature.Words,
 			remaining: 50,
 			nextResetAt: anchorMs,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: after a proration none anchor, a later prorated switch is the next invoice")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-resync-live-anchor-then-switch",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium] }),
+				],
+				actions: [s.billing.attach({ productId: pro.id })],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		const switchAt = advancedTo + ms.days(20);
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					proration_behavior: "none",
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+				{
+					starts_at: switchAt,
+					proration_behavior: "prorate_immediately",
+					plans: [{ plan_id: premium.id }],
+				},
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		await autumnV2_4.billing.setPlans(params);
+		await expectCycleResetPhase({
+			ctx,
+			customerId,
+			anchorMs,
+			prorationBehavior: "none",
+		});
+
+		// The anchor invoices nothing, so Stripe's next invoice is the switch.
+		expect(msToSeconds(preview.next_cycle?.starts_at ?? 0)).toBe(
+			msToSeconds(switchAt),
+		);
+		await expectPreviewMatchesStripeUpcomingInvoice({
+			ctx,
+			customerId,
+			nextCycle: preview.next_cycle,
+		});
+
+		await advanceToAnchor({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advancedTo,
+			anchorMs: switchAt,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: new Decimal(preview.next_cycle?.total ?? 0)
+				.toDecimalPlaces(2)
+				.toNumber(),
 		});
 	},
 );

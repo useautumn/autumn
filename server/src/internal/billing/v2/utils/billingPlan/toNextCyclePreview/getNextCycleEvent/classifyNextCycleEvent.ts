@@ -90,6 +90,7 @@ export const classifyNextCycleEvent = ({
 		return {
 			kind: "anchor_reset",
 			smallestInterval,
+			startsAtMs: exactStartsAtMs,
 			prorationBehavior: resolvePhaseStartProrationBehavior({
 				phaseProrations,
 				phaseStartMs: exactStartsAtMs,
