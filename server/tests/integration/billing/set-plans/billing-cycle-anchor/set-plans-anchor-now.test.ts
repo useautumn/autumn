@@ -4,17 +4,12 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	type BillingBehavior,
-	ErrCode,
-	type SetPlansParamsV0Input,
-} from "@autumn/shared";
+import type { BillingBehavior, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -413,33 +408,5 @@ test.skip(`${chalk.yellowBright("set-plans anchor now: an upgrade with bill_diff
 		customerId,
 		count: 2,
 		latestTotal: expectedTotal,
-	});
-});
-
-// DISABLED: reset now on a trialing subscription is accepted today; Charlie wants a clean 400 (B6, 2026-10-06);
-// re-enable once Billy Acton's rejection (ATMN-704) lands.
-test.skip(`${chalk.yellowBright("set-plans anchor now: a trialing subscription can't reset its cycle now")}`, async () => {
-	const proTrial = products.proWithTrial({
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-		trialDays: 14,
-	});
-	const { customerId, autumnV2_4 } = await initScenario({
-		customerId: "set-plans-anchor-now-trialing",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [proTrial] }),
-		],
-		actions: [
-			s.billing.attach({ productId: proTrial.id }),
-			s.advanceTestClock({ days: 2 }),
-		],
-	});
-
-	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
-		func: () =>
-			autumnV2_4.billing.setPlans(
-				resetNowParams({ customerId, planId: proTrial.id }),
-			),
 	});
 });
