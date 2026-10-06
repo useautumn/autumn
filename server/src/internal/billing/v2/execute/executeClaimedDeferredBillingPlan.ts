@@ -1,13 +1,9 @@
 import type { DeferredAutumnBillingPlanData, Metadata } from "@autumn/shared";
 import type Stripe from "stripe";
-import { acquireLock } from "@/external/redis/utils/lockUtils/acquireLock";
-import { clearLock } from "@/external/redis/utils/lockUtils/clearLock";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeDeferredBillingPlan } from "@/internal/billing/v2/execute/executeDeferredBillingPlan";
+import { withDeferredBillingPlanLock } from "@/internal/billing/v2/execute/withDeferredBillingPlanLock";
 import { MetadataService } from "@/internal/metadata/MetadataService";
-
-// Outlives a normal execution; a crashed holder's lock expires so a Stripe retry can resume.
-const DEFERRED_PLAN_LOCK_TTL_MS = 5 * 60 * 1000;
 
 /** invoice.finalized and invoice.paid can race on the same deferred plan; only the lock holder executes it. */
 export const executeClaimedDeferredBillingPlan = async ({
@@ -24,34 +20,30 @@ export const executeClaimedDeferredBillingPlan = async ({
 	const data = metadata.data as DeferredAutumnBillingPlanData;
 	if (data.orgId !== ctx.org.id || data.env !== ctx.env) return false;
 
-	const lockKey = `lock:deferred-billing-plan:${ctx.org.id}:${ctx.env}:${metadata.id}`;
-	const token = crypto.randomUUID();
 	// A contender throws so its webhook is retried, and completes once the holder deleted the row.
-	await acquireLock({
-		lockKey,
-		token,
-		ttlMs: DEFERRED_PLAN_LOCK_TTL_MS,
-		errorMessage: `Deferred billing plan ${metadata.id} is already executing`,
-		failOpen: false,
+	return withDeferredBillingPlanLock({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		metadataId: metadata.id,
+		fn: async () => {
+			const current = await MetadataService.get({
+				db: ctx.db,
+				id: metadata.id,
+			});
+			if (!current) {
+				ctx.logger.info(
+					`[deferred-invoice] Metadata ${metadata.id} already handled, skipping`,
+				);
+				return false;
+			}
+
+			await executeDeferredBillingPlan({
+				ctx,
+				metadata: current,
+				stripeSubscription,
+				stripeInvoice,
+			});
+			return true;
+		},
 	});
-
-	try {
-		const current = await MetadataService.get({ db: ctx.db, id: metadata.id });
-		if (!current) {
-			ctx.logger.info(
-				`[deferred-invoice] Metadata ${metadata.id} already executed, skipping`,
-			);
-			return false;
-		}
-
-		await executeDeferredBillingPlan({
-			ctx,
-			metadata: current,
-			stripeSubscription,
-			stripeInvoice,
-		});
-		return true;
-	} finally {
-		await clearLock({ lockKey, token });
-	}
 };
