@@ -1,16 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type {
-	Branch,
-	Capacity,
-	Job,
-	KeysOverview,
-	LiveEvent,
-	LiveServerMessage,
-	RunDetail,
-	RunEvent,
-	RunFile,
-	RunSummary,
-	RunsPage,
+import {
+	type Branch,
+	type Capacity,
+	isFailedFileStatus,
+	type Job,
+	type KeysOverview,
+	type LiveEvent,
+	type LiveServerMessage,
+	type RunDetail,
+	type RunEvent,
+	type RunFile,
+	type RunSummary,
+	type RunsPage,
 } from "../../../src/api/contract.ts";
 import { qk, type RunsFilter } from "./hooks.ts";
 import { liveSocket } from "./live.ts";
@@ -60,6 +61,7 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 	const workers = new Map(run.workers.map((w) => [w.name, w]));
 	const files = new Map(run.files.map((f) => [f.file, f]));
 	let touchedFiles = false;
+	let { etaMs, etaP90Ms } = run;
 	for (const event of events) {
 		if (event.type === "status") {
 			status = event.status;
@@ -72,6 +74,8 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		} else if (event.type === "file") {
 			files.set(event.file.file, event.file);
 			touchedFiles = true;
+		} else if (event.type === "eta") {
+			({ etaMs, etaP90Ms } = event);
 		}
 	}
 	const fileList = touchedFiles ? [...files.values()] : run.files;
@@ -81,11 +85,13 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		phase,
 		finishedAt,
 		milestones,
+		etaMs: TERMINAL.has(status) ? null : etaMs,
+		etaP90Ms: TERMINAL.has(status) ? null : etaP90Ms,
 		workers: [...workers.values()],
 		files: fileList,
 		...(touchedFiles && {
 			passed: count(fileList, "passed"),
-			failed: count(fileList, "failed") + count(fileList, "crashed"),
+			failed: fileList.filter((f) => isFailedFileStatus(f.status)).length,
 		}),
 	};
 };

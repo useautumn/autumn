@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
-import { MAX_REPEAT, type RunDetail } from "../../../api/contract.ts";
+import {
+	isFailedFileStatus,
+	MAX_REPEAT,
+	type RunDetail,
+} from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { listCatalog } from "../../catalog/actions/listCatalog.ts";
@@ -35,7 +39,7 @@ const describeRepeats = (run: RunDetail) => {
 /** Agent-sized run view: counts, failures and drift only (never the full file list). */
 const summariseRun = (run: RunDetail) => {
 	const failures = run.files
-		.filter((f) => f.status === "failed" || f.status === "crashed")
+		.filter((f) => isFailedFileStatus(f.status))
 		.map((f) => ({
 			file: f.file,
 			status: f.status,
@@ -46,6 +50,7 @@ const summariseRun = (run: RunDetail) => {
 	const done = run.files.filter(
 		(f) => f.status !== "queued" && f.status !== "running",
 	).length;
+	const timedOut = failures.filter((f) => f.status === "timed_out").length;
 	const workers = `workers ${run.workerCount ?? 0}/${run.workersWanted ?? "?"}`;
 	const queue =
 		run.queuePosition === null
@@ -70,13 +75,15 @@ const summariseRun = (run: RunDetail) => {
 			done,
 			passed: run.passed,
 			failed: run.failed,
+			timedOut,
 		},
 		failures,
 		drift: run.drift,
+		eta: { etaMs: run.etaMs, etaP90Ms: run.etaP90Ms },
 		startedAt: run.startedAt,
 		finishedAt: run.finishedAt,
 	};
-	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).${describeRepeats(run)}`;
+	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed${timedOut ? ` (${timedOut} timed out)` : ""}, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).${run.etaMs === null ? "" : ` About ${Math.ceil(run.etaMs / 60_000)} min left (p90 ${Math.ceil((run.etaP90Ms ?? run.etaMs) / 60_000)} min).`}${describeRepeats(run)}`;
 	return { summary, data };
 };
 
@@ -208,7 +215,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, cost, pass/fail counts, failing files with failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted, boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, and drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),
@@ -315,7 +322,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_file_history",
 			description:
-				"How one test file's speed and stability changed over time, keyed by file path with commit metadata. Returns byCommit (oldest first: sha, branch, runs, p50Ms, maxMs, passRate), the dev baseline (p50/p90), and raw recent results (newest first). Use it to spot a commit that made a file slower or flaky. file is server/tests-relative, as list_catalog shows it.",
+				"How one test file's speed and stability changed over time, keyed by file path with commit metadata. Returns byCommit (oldest first: sha, branch, runs, p50Ms, maxMs, passRate), the dev baseline (p50/p90), and raw recent results (newest first; status passed|failed|crashed|timed_out|skipped, where timed_out means the file hit bun's per-test timeout). Use it to spot a commit that made a file slower or flaky. file is server/tests-relative, as list_catalog shows it.",
 			input: z.object({
 				file: z.string().min(1),
 				branch: z.string().optional(),

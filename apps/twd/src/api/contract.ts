@@ -36,8 +36,15 @@ export const FileResultStatus = z.enum([
 	"passed",
 	"failed",
 	"crashed",
+	/** Hit bun's per-test timeout (or a retry died silently after one did). */
+	"timed_out",
 	"skipped",
 ]);
+
+/** Final statuses that count as a failure: the Failed filter, run outcome, drift and reruns. */
+const FAILED_FILE_STATUSES = ["failed", "crashed", "timed_out"] as const;
+export const isFailedFileStatus = (status: string) =>
+	(FAILED_FILE_STATUSES as readonly string[]).includes(status);
 
 export const DriftKind = z.enum(["new_failure", "slow"]);
 
@@ -215,6 +222,9 @@ export const RunDetail = RunSummary.extend({
 	repeats: z.array(RepeatStat),
 	drift: z.array(Drift),
 	milestones: RunMilestones.nullable().optional(),
+	/** Live runs only: server estimate of the remaining wall time (median and p90); null while estimating. */
+	etaMs: z.number().nullable(),
+	etaP90Ms: z.number().nullable(),
 });
 
 export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);
@@ -245,6 +255,11 @@ export const RunEvent = z.discriminatedUnion("type", [
 	}),
 	z.object({ type: z.literal("worker"), worker: WorkerState }),
 	z.object({ type: z.literal("file"), file: RunFile }),
+	z.object({
+		type: z.literal("eta"),
+		etaMs: z.number().nullable(),
+		etaP90Ms: z.number().nullable(),
+	}),
 	z.object({
 		type: z.literal("log"),
 		file: z.string().nullable(),
@@ -525,7 +540,7 @@ export const ROUTES = {
 	fileLog: "GET /runs/:id/files/log?file=",
 	/** text/plain. No params = whole run; ?file= one file; ?worker= one worker (incl. its server output); ?scope=run orchestrator only. */
 	runLogs: "GET /runs/:id/logs",
-	/** text/plain: every failed/crashed file's output under a header. */
+	/** text/plain: every failed, crashed or timed-out file's output under a header. */
 	failedLogs: "GET /runs/:id/logs/failed",
 	cancelRun: "POST /runs/:id/cancel",
 	rerunFailed: "POST /runs/:id/rerun-failed",

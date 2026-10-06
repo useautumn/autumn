@@ -15,7 +15,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { addDays } from "date-fns";
+import { addDays, addMonths } from "date-fns";
 
 /**
  * Update Trial Edge Cases Tests
@@ -179,10 +179,11 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const finalTotal = priceItem.price! + updatedSeatsPrice;
 	expect(removeTrialPreview.total).toEqual(finalTotal - initialTotal);
 
-	// When trial is removed, next_cycle should not be defined (billing starts now)
+	// When trial is removed, billing starts now, so the next cycle is one month out
 	expectPreviewNextCycleCorrect({
 		preview: removeTrialPreview,
-		expectDefined: false,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+		total: finalTotal,
 	});
 
 	await autumnV1.subscriptions.update(removeTrialParams, { timeout: 5000 });

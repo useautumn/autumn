@@ -4,6 +4,7 @@ import {
 	Bot,
 	Check,
 	CircleAlert,
+	Clock,
 	Flame,
 	Hourglass,
 	LoaderCircle,
@@ -23,12 +24,13 @@ import { ApiRequestError } from "../api/client.ts";
 import { cn, handle, isAgentVia } from "../lib/format.ts";
 import { Tooltip } from "./ui.tsx";
 
-export type Tone = "ok" | "bad" | "warn" | "info" | "idle";
+export type Tone = "ok" | "bad" | "warn" | "amber" | "info" | "idle";
 
 export const TONE_TEXT: Record<Tone, string> = {
 	ok: "text-green-600 dark:text-green-500",
 	bad: "text-red-600 dark:text-red-400",
 	warn: "text-orange-600 dark:text-orange-400",
+	amber: "text-amber-600 dark:text-amber-400",
 	info: "text-blue-600 dark:text-blue-400",
 	idle: "text-subtle",
 };
@@ -36,6 +38,7 @@ export const TONE_BG: Record<Tone, string> = {
 	ok: "bg-green-500",
 	bad: "bg-red-500",
 	warn: "bg-orange-400",
+	amber: "bg-amber-500",
 	info: "bg-blue-500",
 	idle: "bg-subtle/60",
 };
@@ -63,6 +66,7 @@ const FILE_STATUS: Record<
 	passed: { tone: "ok", icon: Check },
 	failed: { tone: "bad", icon: X },
 	crashed: { tone: "bad", icon: AlertTriangle },
+	timed_out: { tone: "amber", icon: Clock },
 	skipped: { tone: "idle", icon: Minus },
 };
 
@@ -111,7 +115,7 @@ export const FileStatusBadge = ({
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center gap-1 text-xs font-medium capitalize",
+				"inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap capitalize",
 				TONE_TEXT[tone],
 			)}
 		>
@@ -119,7 +123,7 @@ export const FileStatusBadge = ({
 				className={cn("size-3", Icon === LoaderCircle && "animate-spin")}
 				strokeWidth={2.25}
 			/>
-			{status}
+			{label(status)}
 		</span>
 	);
 };

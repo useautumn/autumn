@@ -138,12 +138,13 @@ jobs:
   commit:
     name: Commit generated files
     needs: [prepare, publish]
+    # Runs even when a publish failed: generated files land, and only published packages keep their bump.
     # A dry run never writes to main: main must only carry versions that exist on npm.
     if: >-
       always() &&
       needs.prepare.result == 'success' &&
       needs.prepare.outputs.has-changes == 'true' &&
-      (needs.publish.result == 'success' || needs.publish.result == 'skipped') &&
+      needs.publish.result != 'cancelled' &&
       !(github.ref_name == 'main' && needs.prepare.outputs.dry-run == 'true')
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
@@ -167,15 +168,38 @@ jobs:
           name: publish-patch
           path: ${{ runner.temp }}/publish-patch
 
+      - name: Download published markers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: published-*
+          path: ${{ runner.temp }}/published
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Keep only published versions
+        id: published
+        env:
+          PACKAGES: ${{ needs.prepare.outputs.packages }}
+          PUBLISHED_DIR: ${{ runner.temp }}/published
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          mkdir -p "$PUBLISHED_DIR"
+          git apply --binary "$RUNNER_TEMP/publish-patch/publish.patch"
+          bun scripts/release/keepPublishedVersions.ts
+          git add -A
+          git diff --cached --stat
+
       - name: Commit and push
         env:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
           BRANCH: ${{ github.ref_name }}
-          PACKAGES: ${{ needs.prepare.outputs.packages }}
+          PACKAGES: ${{ steps.published.outputs.packages }}
         run: |
-          git apply --index --binary "$RUNNER_TEMP/publish-patch/publish.patch"
           BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
@@ -195,9 +219,9 @@ jobs:
           exit 1
 
       - name: Tag published versions
-        if: needs.prepare.outputs.dry-run != 'true' && needs.prepare.outputs.packages != '[]'
+        if: needs.prepare.outputs.dry-run != 'true' && steps.published.outputs.packages != '[]'
         env:
-          PACKAGES: ${{ needs.prepare.outputs.packages }}
+          PACKAGES: ${{ steps.published.outputs.packages }}
         run: |
           for tag in $(jq -r '.[] | "\(.tagPrefix)-v\(.version)"' <<< "$PACKAGES"); do
             git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null || git tag "${tag}" HEAD

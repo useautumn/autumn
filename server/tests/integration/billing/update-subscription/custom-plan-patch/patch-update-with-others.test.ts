@@ -53,6 +53,7 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 import { CusService } from "@/internal/customers/CusService";
 
 const expectExpiredCustomerProductCount = async ({
@@ -158,7 +159,7 @@ test.concurrent(`${chalk.yellowBright("patch with others: remove trial and patch
 		trialDays: 7,
 	});
 
-	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+	const { autumnV1, autumnV2_2, ctx, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -181,7 +182,11 @@ test.concurrent(`${chalk.yellowBright("patch with others: remove trial and patch
 			updateParams,
 		);
 	expect(preview.total).toBe(20);
-	expectPreviewNextCycleCorrect({ preview, expectDefined: false });
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: addMonths(advancedTo, 1).getTime(),
+		total: 20,
+	});
 
 	await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
 		updateParams,
