@@ -493,6 +493,29 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		]);
 	});
 
+	test("a cycle reset now recreates a renewing plan but carries a canceling plan and a one-off purchase", () => {
+		const { diff } = expectAllInvariants({
+			rows: [
+				savedRow({ id: "pro_row", plan: pro }),
+				savedRow({ id: "sso_row", plan: sso, endsAt: C, canceling: true }),
+				savedRow({ id: "credits_row", plan: credits }),
+			],
+			desired: desiredTimeline({
+				segments: [
+					desiredSegment({ plan: pro }),
+					desiredSegment({ plan: sso, planIndex: 1 }),
+					desiredSegment({ plan: credits, planIndex: 2 }),
+				],
+			}),
+			policies: policiesFor({ liveRows: "recreateRenewing" }),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h1:now-never",
+		]);
+	});
+
 	test("a replaced subscription recreates live plans when a paid plan starts", () => {
 		const { diff } = expectAllInvariants({
 			rows: [savedRow({ id: "sso_row", plan: sso })],

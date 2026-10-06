@@ -14,6 +14,8 @@ import type { PlannedSegment } from "./plannedSegments";
 type CarryRules = {
 	policies: SetPlansPolicies;
 	liveRowsCarry: boolean;
+	/** A canceling row still carries when the others are recreated: it ends before a new cycle would bill. */
+	cancelingRowsCarry: boolean;
 	now: number;
 };
 
@@ -35,7 +37,12 @@ const liveRowCarries = ({
 	rules: CarryRules;
 }) => {
 	if (planned.origin === "retained") return true;
-	if (!rules.liveRowsCarry) return false;
+	// A one-off purchase has no cycle to restart, so recreating it would only charge it again.
+	if (planned.lifetime) return true;
+	const keepsCancellation =
+		liveRow.canceling && rules.policies.canceling === "keepCancellation";
+	if (!rules.liveRowsCarry)
+		return rules.cancelingRowsCarry && keepsCancellation;
 	if (liveRow.canceling && rules.policies.canceling === "recreate") {
 		return false;
 	}
@@ -282,7 +289,14 @@ export const resolveTimeline = ({
 	const carrying = resolveWithRules({
 		saved,
 		planned,
-		rules: { policies, now, liveRowsCarry: policies.liveRows !== "recreate" },
+		rules: {
+			policies,
+			now,
+			liveRowsCarry:
+				policies.liveRows !== "recreate" &&
+				policies.liveRows !== "recreateRenewing",
+			cancelingRowsCarry: policies.liveRows === "recreateRenewing",
+		},
 	});
 
 	const recreatesLiveRows =
@@ -293,6 +307,6 @@ export const resolveTimeline = ({
 	return resolveWithRules({
 		saved,
 		planned,
-		rules: { policies, now, liveRowsCarry: false },
+		rules: { policies, now, liveRowsCarry: false, cancelingRowsCarry: false },
 	});
 };
