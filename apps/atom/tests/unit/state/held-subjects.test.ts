@@ -18,7 +18,7 @@ const hold = (
 	held: ReturnType<typeof createHeldSubjects>,
 	key: string,
 	bytes: number,
-) => held.hold({ key, subject: subjectOf(key), bytes });
+) => held.hold({ key, subject: subjectOf(key), bytes, sliceHash: "slice" });
 
 describe("held subjects", () => {
 	test("past the byte budget, the least recently read subjects are dropped until it fits", () => {

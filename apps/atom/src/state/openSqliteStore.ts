@@ -4,6 +4,8 @@ import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
 	readSubject as readSubjectRow,
+	type SubjectWrite,
+	subjectToSlice,
 	upsertSubjects,
 } from "./repos/subjectStates.js";
 import type { SqliteStore } from "./types/sqliteStore.js";
@@ -51,20 +53,32 @@ export const openSqliteStore = ({
 		if (read === null) return null;
 		// Frozen, because every check of the subject shares the copy.
 		const subject = deepFreeze(read.subject);
-		held.hold({ key, subject, bytes: read.bytes });
+		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
 		return subject;
+	}
+
+	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
+	function writeOf(subject: StoredSubject): SubjectWrite {
+		const slice = subjectToSlice({ subject });
+		const heldCopy = held.get(storePrefix + keyOf(subject));
+		if (heldCopy?.sliceHash !== slice.hash)
+			return { subject, slice, sliceStored: false };
+		const { catalog, org } = heldCopy.subject;
+		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
 	}
 
 	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
 	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
-		const storedBytes = upsertSubjects({ ctx, subjects });
-		subjects.forEach((subject, index) => {
+		const writes = subjects.map(writeOf);
+		const storedBytes = upsertSubjects({ ctx, writes });
+		writes.forEach(({ subject, slice }, index) => {
 			const bytes = storedBytes[index];
 			if (bytes === null || bytes === undefined) return;
 			held.hold({
 				key: storePrefix + keyOf(subject),
 				subject: deepFreeze(subject),
 				bytes,
+				sliceHash: slice.hash,
 			});
 		});
 		return storedBytes.map((bytes) => bytes !== null);
