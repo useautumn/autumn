@@ -1,6 +1,7 @@
 import type {
 	BillingContext,
 	FullCusEntWithFullCusProduct,
+	FullCusProduct,
 	LineItem,
 	UpdateCustomerEntitlement,
 } from "@autumn/shared";
@@ -43,6 +44,7 @@ export const eventContextToArrearLineItems = async ({
 	stripeDiscountable = true,
 	idempotencyScope,
 	invoiceCredits,
+	getShortenedPeriodAnchorMs,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: BaseWebhookEventContext;
@@ -57,6 +59,9 @@ export const eventContextToArrearLineItems = async ({
 		fullyOffsetOverage?: boolean;
 		includeLineItems?: boolean;
 	};
+	getShortenedPeriodAnchorMs?: (
+		customerProduct: FullCusProduct,
+	) => number | undefined;
 }): Promise<{
 	lineItems: LineItem[];
 	invoiceCreditLineItems: LineItem[];
@@ -89,6 +94,7 @@ export const eventContextToArrearLineItems = async ({
 				updateNextResetAt: true,
 				discountable: stripeDiscountable,
 				idempotencyScope,
+				shortenedPeriodAnchorMs: getShortenedPeriodAnchorMs?.(customerProduct),
 				invoiceCredits: invoiceCredits
 					? {
 							idempotencyScope: invoiceCredits.idempotencyScope,

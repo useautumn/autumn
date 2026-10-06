@@ -8,6 +8,7 @@ import {
 	type FullCusProduct,
 	fullCustomerToSkipOverageBilling,
 	getCycleEnd,
+	getCycleStart,
 	getEffectivePeriod,
 	getResetBalancesUpdate,
 	invoiceCreditCustomerEntitlementToLineItems,
@@ -16,6 +17,7 @@ import {
 	isV4Usage,
 	type LineItem,
 	type LineItemContext,
+	notNullish,
 	secondsToMs,
 	usagePriceToLineItem,
 } from "@autumn/shared";
@@ -52,6 +54,8 @@ export const customerProductToArrearLineItems = ({
 		includeZeroAmounts?: boolean;
 		/** Scopes usage line ids to e.g. a Stripe invoice so retries regenerate the same ids. */
 		idempotencyScope?: string;
+		/** Anchor of the period a billing cycle anchor move cut short; usage is charged from that period's start. */
+		shortenedPeriodAnchorMs?: number;
 		invoiceCredits?: {
 			idempotencyScope?: string;
 			fullyOffsetOverage?: boolean;
@@ -114,13 +118,29 @@ export const customerProductToArrearLineItems = ({
 		}
 
 		const billingPeriod = getLineItemBillingPeriod({ billingContext, price });
+		const shortenedPeriodStartMs =
+			options.shortenedPeriodAnchorMs === undefined
+				? undefined
+				: getCycleStart({
+						anchor: options.shortenedPeriodAnchorMs,
+						interval: price.config.interval,
+						intervalCount: price.config.interval_count ?? 1,
+						now: billingContext.currentEpochMs,
+					});
+		const usageStartFloors = [
+			subscriptionCreatedMs,
+			shortenedPeriodStartMs,
+		].filter(notNullish);
 		const effectivePeriod =
 			billingPeriod &&
 			getEffectivePeriod({
 				now: billingContext.currentEpochMs,
 				billingPeriod,
 				billingTiming: "in_arrear",
-				startFloor: subscriptionCreatedMs,
+				startFloor:
+					usageStartFloors.length > 0
+						? Math.max(...usageStartFloors)
+						: undefined,
 			});
 		const context: LineItemContext = {
 			price,

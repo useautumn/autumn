@@ -1,5 +1,6 @@
 import { secondsToMs } from "@autumn/shared";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext.js";
+import { isBillingCycleAnchorResetInvoice } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/isBillingCycleAnchorResetInvoice.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 import { computeScheduledPooledAnchorResetPlan } from "@/internal/billing/v2/pooledBalances/compute/computeScheduledPooledAnchorResetPlan.js";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
@@ -18,16 +19,11 @@ export const planScheduledPooledAnchorReset = ({
 	eventContext: InvoiceCreatedContext;
 	plan: AutumnBillingPlanBuilder;
 }): void => {
-	const { stripeInvoice, stripeSubscription, stripeSubscriptionId } =
-		eventContext;
+	const { stripeSubscription, stripeSubscriptionId } = eventContext;
+	if (!isBillingCycleAnchorResetInvoice({ eventContext })) return;
 	const completedResetIds = new Set(
 		eventContext.billingCycleAnchorResetCustomerProductIds,
 	);
-	if (
-		stripeInvoice.billing_reason !== "subscription_update" ||
-		completedResetIds.size === 0
-	)
-		return;
 
 	const pooledBalancePlan = computeScheduledPooledAnchorResetPlan({
 		ctx,

@@ -21,6 +21,7 @@ import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSub
 import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import { getCustomerPricesWithCustomerProducts } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/getCustomerPricesWithCustomerProducts";
+import { isBillingCycleAnchorResetInvoice } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/isBillingCycleAnchorResetInvoice";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing.js";
@@ -179,9 +180,9 @@ export const processPrepaidPricesForInvoiceCreated = ({
 	const anchorResetCustomerProductIds = new Set(
 		eventContext.billingCycleAnchorResetCustomerProductIds,
 	);
-	const isAnchorResetInvoice =
-		stripeInvoice.billing_reason === "subscription_update" &&
-		anchorResetCustomerProductIds.size > 0;
+	const isAnchorResetInvoice = isBillingCycleAnchorResetInvoice({
+		eventContext,
+	});
 	const isVercelSubscription = isStripeSubscriptionVercel(stripeSubscription);
 	if ((!isNewPeriod && !isAnchorResetInvoice) || isVercelSubscription) return;
 
