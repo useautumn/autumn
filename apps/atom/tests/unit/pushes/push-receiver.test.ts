@@ -2,12 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { QueueMessage } from "@alienplatform/bindings";
 import { AtomPushType, atomPushMessageToPayload } from "@autumn/byoc";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import { createPushReceiver } from "../../../src/pushes/createPushReceiver.js";
+import type { PulledPush } from "../../../src/pushQueue/types/pushQueue.js";
 import {
 	checkRequestFor,
 	checkResponseOf,
@@ -38,8 +38,7 @@ const subjectMessage = ({
 	atomId?: string | null;
 	customerId?: string;
 	payload?: string;
-}): QueueMessage => ({
-	payloadType: "text",
+}): PulledPush => ({
 	payload:
 		payload ??
 		atomPushMessageToPayload({
@@ -56,7 +55,7 @@ const subjectMessage = ({
 });
 
 /** Hands each batch out once, then stops the receiver on its next empty receive. */
-const fakeQueue = ({ batches }: { batches: QueueMessage[][] }) => {
+const fakeQueue = ({ batches }: { batches: PulledPush[][] }) => {
 	const acked: string[] = [];
 	let stop = () => {};
 	return {
@@ -65,7 +64,7 @@ const fakeQueue = ({ batches }: { batches: QueueMessage[][] }) => {
 			stop = callback;
 		},
 		queue: {
-			receive: async () => {
+			pull: async () => {
 				const batch = batches.shift();
 				if (!batch) stop();
 				return batch ?? [];
@@ -82,13 +81,13 @@ const drain = async ({
 	batches,
 }: {
 	auth: Auth;
-	batches: QueueMessage[][];
+	batches: PulledPush[][];
 }) => {
 	const fake = fakeQueue({ batches });
 	const warnings: string[] = [];
 	const receiver = createPushReceiver({
 		ctx: {
-			pushes: fake.queue,
+			pushQueue: fake.queue,
 			auth,
 			logger: {
 				warn: (fields) =>
@@ -198,8 +197,8 @@ describe("push receiver", () => {
 		const warnings: string[] = [];
 		const receiver = createPushReceiver({
 			ctx: {
-				pushes: {
-					receive: async () => {
+				pushQueue: {
+					pull: async () => {
 						calls += 1;
 						if (calls === 1) throw new Error("queue unreachable");
 						if (calls === 2) return [message];
@@ -252,8 +251,8 @@ describe("push receiver with a hung SQS call", () => {
 		let receives = 0;
 		const receiver = createPushReceiver({
 			ctx: {
-				pushes: {
-					receive: async () => {
+				pushQueue: {
+					pull: async () => {
 						receives += 1;
 						const call = receives;
 						if (call <= batches.length) return batches[call - 1] ?? [];
@@ -292,8 +291,8 @@ describe("push receiver with a hung SQS call", () => {
 		let receives = 0;
 		const receiver = createPushReceiver({
 			ctx: {
-				pushes: {
-					receive: async () => {
+				pushQueue: {
+					pull: async () => {
 						receives += 1;
 						await Bun.sleep(1);
 						return [subjectMessage({})];

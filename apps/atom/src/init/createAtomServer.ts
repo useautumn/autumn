@@ -1,10 +1,6 @@
-import { queue } from "@alienplatform/bindings";
 import { createAtomApp } from "../http/createAtomApp.js";
-import {
-	createPushReceiver,
-	PUSH_QUEUE,
-} from "../pushes/createPushReceiver.js";
-import { sdkPushQueueFor } from "../pushes/createSdkPushQueue.js";
+import { createPushReceiver } from "../pushes/createPushReceiver.js";
+import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import type {
 	AtomServer,
 	AtomServerConfig,
@@ -23,9 +19,7 @@ export const createAtomServer = ({
 	const pushReceiver = config.receivesPushes
 		? createPushReceiver({
 				ctx: {
-					pushes: env.ATOM_SDK_PUSH_QUEUE_URL
-						? sdkPushQueueFor({ queueUrl: env.ATOM_SDK_PUSH_QUEUE_URL })
-						: queue(PUSH_QUEUE),
+					pushQueue: getPushQueue({ env }),
 					auth: ctx.auth,
 					logger: ctx.logger,
 					processStats: ctx.processStats,
