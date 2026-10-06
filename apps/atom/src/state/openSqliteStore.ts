@@ -9,6 +9,9 @@ import {
 import type { SqliteStore } from "./types/sqliteStore.js";
 import type { StoredSubject } from "./types/storedSubject.js";
 
+/** Every slot's subject reads in this process, and how many parsed a row: published as the parsed copies' hit rate. */
+export const subjectReadCounts = { reads: 0, parses: 0 };
+
 /** Parsed subjects kept per slot, least recently read dropped first: bounds a process's memory however many customers it serves. */
 const PARSED_SUBJECTS_PER_SLOT = 64;
 
@@ -48,6 +51,7 @@ export const openSqliteStore = ({
 			parsed.clear();
 			parsedAtVersion = version;
 		}
+		subjectReadCounts.reads += 1;
 		const key = subjectKey(params);
 		const held = parsed.get(key);
 		if (held !== undefined) {
@@ -55,6 +59,7 @@ export const openSqliteStore = ({
 			parsed.set(key, held);
 			return held;
 		}
+		subjectReadCounts.parses += 1;
 		const read = readSubject({ ctx, ...params });
 		if (read === null) return null;
 		if (parsed.size >= PARSED_SUBJECTS_PER_SLOT)

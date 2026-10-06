@@ -19,6 +19,13 @@ type Bucket = {
 	checks: number;
 	pushes: number;
 	forwards: number;
+	/** Summed handler time, so time per check or push is a division, not a guess from CPU regressions. */
+	checkTotalMs: number;
+	pushTotalMs: number;
+	pushBytes: number;
+	/** Checks' subject reads, and how many of them parsed the row rather than reusing a parsed copy. */
+	subjectReads: number;
+	subjectParses: number;
 };
 
 /** Maxima over the trailing two seconds, so a reader polling every 2 s misses no stall. */
@@ -34,6 +41,11 @@ const emptyBucket = (): Bucket => ({
 	checks: 0,
 	pushes: 0,
 	forwards: 0,
+	checkTotalMs: 0,
+	pushTotalMs: 0,
+	pushBytes: 0,
+	subjectReads: 0,
+	subjectParses: 0,
 });
 
 const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
@@ -44,6 +56,11 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	checks: a.checks + b.checks,
 	pushes: a.pushes + b.pushes,
 	forwards: a.forwards + b.forwards,
+	checkTotalMs: a.checkTotalMs + b.checkTotalMs,
+	pushTotalMs: a.pushTotalMs + b.pushTotalMs,
+	pushBytes: a.pushBytes + b.pushBytes,
+	subjectReads: a.subjectReads + b.subjectReads,
+	subjectParses: a.subjectParses + b.subjectParses,
 });
 
 /** A lone process, with no supervisor, publishes where its own /health reads. */
@@ -60,9 +77,13 @@ export type ProcessStatsRecorder = {
 		path: string;
 		durationMs: number;
 		forwarded: boolean;
+		bytes: number;
 	}): void;
 	stop(): void;
 };
+
+/** Running totals a process keeps elsewhere; each publish records how far they moved. */
+export type SubjectReadCounts = { reads: number; parses: number };
 
 /** Event-loop lag and request times per process: a stall with idle CPU shows here as lag without a slow handler. */
 export const startProcessStats = ({
@@ -71,18 +92,21 @@ export const startProcessStats = ({
 	logger,
 	clock = () => performance.now(),
 	now = () => new Date(),
+	subjectReadCounts = () => ({ reads: 0, parses: 0 }),
 }: {
 	index: number;
 	statsDir?: string;
 	logger: { warn(fields: object, message: string): void };
 	clock?: () => number;
 	now?: () => Date;
+	subjectReadCounts?: () => SubjectReadCounts;
 }): ProcessStatsRecorder & { publish(): void; probeLag(): void } => {
 	mkdirSync(statsDir, { recursive: true });
 	const file = join(statsDir, `process-${index}.json`);
 	let current = emptyBucket();
 	let previous = emptyBucket();
 	let probedAt = clock();
+	let publishedReads = { ...subjectReadCounts() };
 
 	function probeLag(): void {
 		const at = clock();
@@ -97,13 +121,25 @@ export const startProcessStats = ({
 	}
 
 	function publish(): void {
+		const reads = subjectReadCounts();
+		current.subjectReads = reads.reads - publishedReads.reads;
+		current.subjectParses = reads.parses - publishedReads.parses;
+		publishedReads = { ...reads };
 		const stats: ProcessStats = {
 			index,
 			pid: process.pid,
 			at: now().toISOString(),
 			...mergeBuckets(previous, current),
 		};
-		stats.loopLagMaxMs = Math.round(stats.loopLagMaxMs);
+		for (const key of [
+			"loopLagMaxMs",
+			"checkMaxMs",
+			"pushMaxMs",
+			"forwardMaxMs",
+			"checkTotalMs",
+			"pushTotalMs",
+		] as const)
+			stats[key] = Math.round(stats[key]);
 		previous = current;
 		current = emptyBucket();
 		try {
@@ -117,10 +153,12 @@ export const startProcessStats = ({
 		path,
 		durationMs,
 		forwarded,
+		bytes,
 	}: {
 		path: string;
 		durationMs: number;
 		forwarded: boolean;
+		bytes: number;
 	}): void {
 		if (forwarded) {
 			current.forwards += 1;
@@ -128,9 +166,12 @@ export const startProcessStats = ({
 		} else if (path === "/v1/balances.check") {
 			current.checks += 1;
 			current.checkMaxMs = Math.max(current.checkMaxMs, durationMs);
+			current.checkTotalMs += durationMs;
 		} else if (PUSH_PATHS.has(path)) {
 			current.pushes += 1;
 			current.pushMaxMs = Math.max(current.pushMaxMs, durationMs);
+			current.pushTotalMs += durationMs;
+			current.pushBytes += bytes;
 		}
 	}
 

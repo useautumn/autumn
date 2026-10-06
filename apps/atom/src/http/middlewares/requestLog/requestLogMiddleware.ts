@@ -31,7 +31,7 @@ export function requestLogMiddleware({
 	handleError: ErrorHandler<AtomHttpEnv>;
 }): MiddlewareHandler<AtomHttpEnv> {
 	async function logRequest(context: Context<AtomHttpEnv>, next: Next) {
-		const startedAt = Date.now();
+		const startedAt = performance.now();
 		try {
 			await next();
 		} catch (cause) {
@@ -40,12 +40,14 @@ export function requestLogMiddleware({
 		if (UNLOGGED_PATHS.has(context.req.path)) return;
 
 		const statusCode = context.res.status;
-		const durationMs = Date.now() - startedAt;
+		const elapsedMs = performance.now() - startedAt;
+		const durationMs = Math.round(elapsedMs);
 		const forwarded = forwardedReason({ context });
 		ctx.processStats?.recordRequest({
 			path: context.req.path,
-			durationMs,
+			durationMs: elapsedMs,
 			forwarded: forwarded !== undefined,
+			bytes: Number(context.req.header("content-length") ?? 0),
 		});
 		if (
 			statusCode < 400 &&
