@@ -52,6 +52,10 @@ export function createHeraldEnv(
 		/** Absent where Svix is not set up: herald then decides webhooks and delivers none. */
 		HERALD_SVIX_API_KEY: runtimeEnv.SVIX_API_KEY || null,
 		HERALD_DEPLOYMENT: deployment,
+		HERALD_CACHE_PUSH_COALESCE_MS: Math.max(
+			0,
+			Number(runtimeEnv.HERALD_CACHE_PUSH_COALESCE_MS ?? 0) || 0,
+		),
 		/** Atoms only run on dev stacks and staging for now; production pushes will go through each org's queue. */
 		HERALD_ATOM_HTTP_PUSH:
 			runtimeEnv.NODE_ENV !== "production" || isStagingEnv({ runtimeEnv }),

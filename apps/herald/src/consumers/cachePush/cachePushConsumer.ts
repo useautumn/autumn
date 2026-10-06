@@ -26,6 +26,7 @@ export function createCachePushConsumer({
 		push: pushAndRecord,
 		concurrency: CACHE_PUSH_CONCURRENCY,
 		maxPending: CACHE_PUSH_MAX_PENDING,
+		coalesceMs: ctx.cachePushCoalesceMs,
 	});
 	const stats = createCachePushStats({
 		logger: ctx.logger,

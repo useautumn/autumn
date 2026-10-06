@@ -11,4 +11,6 @@ export type CachePushContext = ReadThroughCacheContext & {
 	balanceWorkerClient: Pick<BalanceWorkerClient, "readSubjectState">;
 	getAtomClient: GetAtomClient;
 	shadowAtomConfig: Pick<EdgeConfigStore<ShadowAtomConfig>, "get">;
+	/** How long a changed subject waits before its push, so a burst of changes is pushed once; 0 pushes at once. */
+	cachePushCoalesceMs?: number;
 };

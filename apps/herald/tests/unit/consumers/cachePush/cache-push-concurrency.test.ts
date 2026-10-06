@@ -184,3 +184,27 @@ test("a subject pushed once for several changes reports the age of its oldest ch
 	for (let i = 0; i < 50 && ages.length < 2; i++) await Bun.sleep(5);
 	expect(ages).toEqual([100, 200]);
 });
+
+test("with a coalesce window, a subject's burst of changes is pushed once, at its newest offset", async () => {
+	const pushedOffsets: bigint[] = [];
+	const queue = createCachePushQueue({
+		push: async ({ cacheSubject }) => {
+			pushedOffsets.push(cacheSubject.logOffset);
+		},
+		concurrency: 4,
+		maxPending: 100,
+		coalesceMs: 30,
+	});
+	const at = (offset: number) => ({
+		identity: identityOf("cus_burst"),
+		logOffset: BigInt(offset),
+		oldestOccurredAt: offset,
+	});
+	queue.enqueue({ subjects: [at(1)] });
+	await Bun.sleep(5);
+	queue.enqueue({ subjects: [at(2)] });
+	queue.enqueue({ subjects: [at(3)] });
+	expect(pushedOffsets).toEqual([]);
+	await Bun.sleep(60);
+	expect(pushedOffsets).toEqual([3n]);
+});
