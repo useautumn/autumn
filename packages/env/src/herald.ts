@@ -35,7 +35,7 @@ export function createHeraldEnv(
 			baseUrl: runtimeEnv.TINYBIRD_US_EAST_API_URL,
 			token: runtimeEnv.TINYBIRD_US_EAST_TOKEN,
 		}),
-		...createKafkaAuthEnv({ runtimeEnv }),
+		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "HERALD" }),
 		KAFKA_BROKERS: brokerList.parse(
 			runtimeEnv.KAFKA_BROKERS ?? LOCAL_KAFKA_BROKERS,
 		),

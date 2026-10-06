@@ -15,6 +15,12 @@ export type KafkaTransportConfig = Omit<
 	| "retry"
 >;
 
+export type KafkaSaslCredentials = {
+	mechanism: "scram-sha-256" | "scram-sha-512" | "plain";
+	username: string;
+	password: string;
+};
+
 export type KafkaTransaction = Pick<
 	Transaction,
 	"send" | "sendOffsets" | "commit" | "abort"

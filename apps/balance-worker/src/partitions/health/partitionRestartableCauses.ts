@@ -3,6 +3,7 @@ import {
 	KafkaTransactionStateUnknownError,
 } from "@autumn/kafka";
 import { FlushBookmarkConflictError } from "@autumn/postgres";
+import { KafkaJSProtocolError } from "kafkajs";
 import { MutationBatchNotCommittedError } from "../../processor/writer/writerErrors.js";
 import {
 	OwnedPartitionProducerFencedError,
@@ -58,8 +59,22 @@ function isRestartableMember(member: unknown): boolean {
 	return isPartitionRestartableCause({ cause: member });
 }
 
+const COORDINATOR_NOT_READY_TYPES = new Set([
+	"COORDINATOR_LOAD_IN_PROGRESS",
+	"COORDINATOR_NOT_AVAILABLE",
+	"NOT_COORDINATOR",
+]);
+
+function isCoordinatorNotReady(error: object): boolean {
+	return (
+		error instanceof KafkaJSProtocolError &&
+		COORDINATOR_NOT_READY_TYPES.has(error.type)
+	);
+}
+
 function isRestartableError(error: object): boolean {
 	return (
+		isCoordinatorNotReady(error) ||
 		error instanceof MutationBatchNotCommittedError ||
 		error instanceof KafkaBatchNotCommittedError ||
 		error instanceof KafkaTransactionStateUnknownError ||
