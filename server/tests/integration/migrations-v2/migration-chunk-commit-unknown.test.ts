@@ -105,14 +105,14 @@ mock.module(executeModulePath, () => ({
 
 mock.module(invalidateModulePath, () => ({
 	invalidateBatchMigrationCaches: async ({
-		pageResult,
+		customers,
 	}: {
-		pageResult: { succeeded: BatchMigrationPageCustomer[] };
+		customers: BatchMigrationPageCustomer[];
 	}) => {
 		invalidatedCustomerIds.push(
-			...pageResult.succeeded.map((customer) => customer.internalId),
+			...customers.map((customer) => customer.internalId),
 		);
-		return pageResult.succeeded.length;
+		return customers.length;
 	},
 }));
 
