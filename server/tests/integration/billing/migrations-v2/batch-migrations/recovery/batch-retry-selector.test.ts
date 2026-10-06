@@ -84,6 +84,14 @@ test("explicit failed-item retry reaches a customer whose committed removal inva
 		expect(normalRun.result?.processed).toBe(0);
 		expect((await read()).status).toBe(MigrationItemRunStatus.Failed);
 		expect((await read()).migration_run_id).toBe(failed.migrationRunId);
+		const narrowedRetry = await runRecoveryMigration({
+			ctx,
+			migration,
+			retryFailed: true,
+			only: ["unselected_customer"],
+		});
+		expect(narrowedRetry.result?.processed).toBe(0);
+		expect((await read()).status).toBe(MigrationItemRunStatus.Failed);
 		const retry = await runRecoveryMigration({
 			ctx,
 			migration,

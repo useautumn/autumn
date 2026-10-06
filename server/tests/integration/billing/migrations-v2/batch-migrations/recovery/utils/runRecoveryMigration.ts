@@ -9,10 +9,12 @@ export const runRecoveryMigration = async ({
 	ctx,
 	migration,
 	retryFailed = false,
+	only,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
 	retryFailed?: boolean;
+	only?: string[];
 }) => {
 	const { runMigrationInChunks } = await import(
 		"@/internal/migrations/v2/run/runMigrationInChunks.js"
@@ -25,6 +27,7 @@ export const runRecoveryMigration = async ({
 		dryRun: false,
 		controls: {
 			webhooks: { sendWebhooks: true },
+			...(only ? { only } : {}),
 			...(retryFailed ? { retryItemStatuses: ["failed" as const] } : {}),
 		},
 	}).then(
