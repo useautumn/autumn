@@ -41,13 +41,16 @@ const shadowWith = ({
 	endpointUrl,
 	percent = 100,
 	registered = true,
+	pushTransport = "http",
 }: {
 	endpointUrl: string | null;
 	percent?: number;
 	registered?: boolean;
+	pushTransport?: "http" | "queue";
 }): ShadowAtomConfig =>
 	ShadowAtomConfigSchema.parse({
 		endpointUrl,
+		pushTransport,
 		adminEncryptedToken: "encrypted_admin",
 		orgs: registered
 			? {
@@ -76,6 +79,7 @@ const createPushContext = ({
 }) => {
 	const reached: string[] = [];
 	const tokens: Record<string, string> = {};
+	const queues: Record<string, AtomConnection["queue"]> = {};
 	const logged: { level: "warn" | "error"; target: unknown }[] = [];
 	const logAt =
 		(level: "warn" | "error") => (meta: { data?: { target?: unknown } }) =>
@@ -127,13 +131,14 @@ const createPushContext = ({
 		shadowAtomConfig: { get: () => shadowAtom },
 		getAtomClient: ({ connection }: { connection: AtomConnection }) => {
 			tokens[connection.endpointUrl] = connection.encryptedToken;
+			queues[connection.endpointUrl] = connection.queue;
 			return {
 				setSubject: atomAt(connection.endpointUrl),
 				setCatalog: atomAt(connection.endpointUrl),
 			};
 		},
 	} as unknown as CachePushContext;
-	return { ctx, reached, logged, tokens };
+	return { ctx, reached, logged, tokens, queues };
 };
 
 const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
@@ -259,4 +264,22 @@ test("a failed push to an org's own Atom is an error; to our shadow Atom only a 
 			{ level, target },
 		]);
 	}
+});
+
+test("a shadow Atom set to the queue transport is pushed through its queue into the org's folder; the org's own Atom stays on HTTP", async () => {
+	const { ctx, queues } = createPushContext({
+		org: orgWith({ hasAtom: true }),
+		shadowAtom: shadowWith({
+			endpointUrl: SHADOW_ATOM,
+			pushTransport: "queue",
+		}),
+	});
+	await pushSubject({ ctx });
+	expect(queues).toEqual({
+		[ORG_ATOM]: null,
+		[SHADOW_ATOM]: {
+			externalId: "autumn-internal-shadow-atom",
+			atomId: "org_1.sandbox",
+		},
+	});
 });
