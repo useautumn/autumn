@@ -202,3 +202,96 @@ describe("push receiver", () => {
 		expect(await checkCustomer(auth.slots)).toMatchObject({ allowed: true });
 	});
 });
+
+describe("push receiver with a hung SQS call", () => {
+	const never = <T>() => new Promise<T>(() => {});
+	const openDeployed = () => {
+		const auth = createDeployedAuth({
+			dataDir: newDataDir(),
+			tokenHash: TOKEN_HASH,
+			slotCount: 2,
+		});
+		opened.push(auth);
+		return auth;
+	};
+	const until = async (condition: () => boolean) => {
+		for (let i = 0; i < 200 && !condition(); i++) await Bun.sleep(5);
+	};
+
+	test("acks and a receive that never return hold up nothing else: every other push is applied and acked", async () => {
+		// One hung ack per receive loop: a loop that waited on its batch's acks would stop receiving for good.
+		const batches = Array.from({ length: 4 }, () => [
+			subjectMessage({}),
+			subjectMessage({}),
+		]);
+		const later = [subjectMessage({}), subjectMessage({})];
+		const hung = new Set(batches.map(([message]) => message?.receiptHandle));
+		const acked: string[] = [];
+		const warnings: string[] = [];
+		let receives = 0;
+		const receiver = createPushReceiver({
+			ctx: {
+				pushes: {
+					receive: async () => {
+						receives += 1;
+						const call = receives;
+						if (call <= batches.length) return batches[call - 1] ?? [];
+						if (call === batches.length + 1) return never();
+						// A real receive waits on the network; an instant empty one would never yield to timers.
+						await Bun.sleep(1);
+						return call === batches.length + 2 ? later : [];
+					},
+					ack: async (receipt: string) => {
+						if (hung.has(receipt)) return never();
+						acked.push(receipt);
+					},
+				},
+				auth: openDeployed(),
+				logger: {
+					warn: (fields) =>
+						warnings.push(String((fields as { type: string }).type)),
+				},
+				sleep: async () => {},
+			},
+			limits: { maxPushesInFlight: 400, receiveDeadlineMs: 20 },
+		});
+
+		void receiver.run();
+		await until(() => acked.length === 6 && warnings.length > 0);
+		receiver.stop();
+
+		const expected = [...batches.map(([, message]) => message), ...later];
+		expect(acked.sort()).toEqual(
+			expected.map((message) => message?.receiptHandle ?? "").sort(),
+		);
+		expect(warnings).toContain("atom_push_receive_slow");
+	});
+
+	test("receiving waits once the pushes in flight reach the cap", async () => {
+		let receives = 0;
+		const receiver = createPushReceiver({
+			ctx: {
+				pushes: {
+					receive: async () => {
+						receives += 1;
+						await Bun.sleep(1);
+						return [subjectMessage({})];
+					},
+					ack: () => never(),
+				},
+				auth: openDeployed(),
+				logger: { warn: () => {} },
+				sleep: async () => {},
+			},
+			limits: { maxPushesInFlight: 3, receiveDeadlineMs: 1000 },
+		});
+
+		void receiver.run();
+		await Bun.sleep(100);
+		receiver.stop();
+
+		// Each of the 4 loops may hold one batch past the cap before it waits.
+		expect(receives).toBeGreaterThanOrEqual(3);
+		expect(receives).toBeLessThanOrEqual(3 + 4);
+	});
+});
