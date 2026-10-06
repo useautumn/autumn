@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	type BillingPlan,
 	type BillingPreviewResponse,
+	billingContextToCurrency,
 	cp,
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
@@ -14,6 +15,7 @@ import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
+import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
 import {
 	billingPlanToNextCycleLineItems,
 	type NextCycleLineItemOptions,
@@ -112,9 +114,11 @@ const getPlansRenewingThroughChange = ({
 const scaleNextCycleAmounts = ({
 	lineItemsResult,
 	prorationRatio,
+	currency,
 }: {
 	lineItemsResult: ReturnType<typeof billingPlanToNextCycleLineItems>;
 	prorationRatio: Decimal;
+	currency: string;
 }) => {
 	const previewLineItems = lineItemsResult.previewLineItems.map((item) => ({
 		...item,
@@ -132,14 +136,14 @@ const scaleNextCycleAmounts = ({
 	return {
 		...lineItemsResult,
 		previewLineItems,
-		subtotal: prorationRatio
-			.mul(lineItemsResult.subtotal)
-			.toDecimalPlaces(2)
-			.toNumber(),
-		total: prorationRatio
-			.mul(lineItemsResult.total)
-			.toDecimalPlaces(2)
-			.toNumber(),
+		subtotal: sumPreviewLineAmounts({
+			amounts: previewLineItems.map((item) => item.subtotal),
+			currency,
+		}),
+		total: sumPreviewLineAmounts({
+			amounts: previewLineItems.map((item) => item.total),
+			currency,
+		}),
 	};
 };
 
@@ -409,6 +413,7 @@ export const billingPlanToNextCyclePreview = ({
 		lineItemsResult = scaleNextCycleAmounts({
 			lineItemsResult,
 			prorationRatio,
+			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 		});
 	}
 
