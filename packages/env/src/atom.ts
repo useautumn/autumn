@@ -147,7 +147,7 @@ export function createAtomEnv(
 			threads,
 			receivesPushes,
 		}),
-				/** The pushes queue's URL where the AWS SDK is opted in to read it; null where the binding reads it or no queue is linked. */
+		/** The pushes queue's URL where the AWS SDK is opted in to read it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,
 	};

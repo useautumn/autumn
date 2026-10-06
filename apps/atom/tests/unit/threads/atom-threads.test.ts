@@ -17,10 +17,22 @@ afterEach(async () => {
 	for (const stop of stops.splice(0)) await stop();
 });
 
+/** A port nothing on this machine listens on right now. */
+const freePort = () => {
+	const probe = Bun.serve({
+		hostname: "127.0.0.1",
+		port: 0,
+		fetch: () => new Response(),
+	});
+	const { port } = probe;
+	probe.stop(true);
+	return port;
+};
+
 /** The Atom as main.ts runs it, on its own port and folder: the workers are main.ts started again. */
 const startAtom = async () => {
 	const dataDir = mkdtempSync(join(tmpdir(), "atom-threads-"));
-	const port = 20_000 + Math.floor(Math.random() * 20_000);
+	const port = freePort();
 	const env = createAtomEnv({
 		ATOM_TOKEN_HASH: hashToken({ token: ATOM_TOKEN }),
 		ATOM_DATA_DIR: dataDir,
