@@ -90,10 +90,9 @@ const showRecordUsageToast = ({
 			? `no ${feature} balance remaining`
 			: "a usage limit was reached";
 
+	// No reason here: a free (0-credit) feature lands in this branch as well as an exhausted or capped balance.
 	if (deducted <= 0) {
-		toast.warning("Usage recorded but not deducted", {
-			description: `The event was logged, but nothing was deducted because ${reason}.`,
-		});
+		toast.warning("Usage tracked without any balance deductions");
 		return;
 	}
 
