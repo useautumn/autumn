@@ -651,7 +651,12 @@ SQL >
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
         toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
         if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
+        {# Property series keep the raw trailing edge so counts line up with property_rollup_coverage. #}
+        {% if String(group_column, 'property') == 'property' %}
+        false AS end_is_live,
+        {% else %}
         window_end >= now() - INTERVAL 30 SECOND AS end_is_live,
+        {% end %}
         if(end_is_live, addHours(toStartOfHour(window_end), 1), toStartOfHour(window_end)) AS full_hours_end,
         {% if String(group_column, 'property') == 'property' %}
         arrayZip({{ Array(top_event_names, 'String', default='') }}, {{ Array(top_property_values, 'String', default='') }}) AS top_pairs

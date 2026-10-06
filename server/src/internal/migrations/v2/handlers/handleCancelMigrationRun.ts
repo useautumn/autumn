@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	MigrationRunErrorCode,
 	MigrationRunStatus,
 	RecaseError,
 	Scopes,
@@ -82,6 +83,7 @@ export const handleCancelMigrationRun = createRoute({
 					updates: {
 						status: MigrationRunStatus.Canceled,
 						error_message: "Canceled by user",
+						error_code: MigrationRunErrorCode.Canceled,
 						finished_at: Date.now(),
 					},
 				});
@@ -106,6 +108,7 @@ export const handleCancelMigrationRun = createRoute({
 				updates: {
 					status: MigrationRunStatus.Canceled,
 					error_message: "Canceled by user",
+					error_code: MigrationRunErrorCode.Canceled,
 					finished_at: Date.now(),
 				},
 			});

@@ -4,7 +4,9 @@ import type { AggregateGroupablePipeRow } from "@/external/tinybird/pipes/aggreg
 import {
 	type EventTotals,
 	groupedResultIsIncomplete,
+	groupedValueIsMateriallyShort,
 	propertyRollupCoverageIsIncomplete,
+	propertyRollupCoverageUnderReports,
 	reportsMoreThan,
 	sumAllRows,
 	sumGroupedRowsByEventName,
@@ -357,6 +359,56 @@ test(`${chalk.yellowBright(
 		propertyRollupCoverageIsIncomplete({
 			rows: [row({ groupValue: "a", totalValue: 89, eventCount: 89 })],
 			coverage: { action_calls: 90 },
+		}),
+	).toBe(true);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: grouped counts a few events ahead of coverage are ingestion lag",
+)}`, () => {
+	const rows = [
+		row({
+			groupValue: "key_1",
+			totalValue: 2_579_687_352,
+			eventCount: 2_579_687_352,
+		}),
+	];
+
+	expect(
+		propertyRollupCoverageUnderReports({
+			rows,
+			coverage: { action_calls: 2_579_685_200 },
+		}),
+	).toBe(false);
+	expect(
+		propertyRollupCoverageUnderReports({
+			rows,
+			coverage: { action_calls: 1_000_000_000 },
+		}),
+	).toBe(true);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: value gaps from events without the key never force a retry",
+)}`, () => {
+	// 0.3% of events lack the key and carry 0.9% of the value.
+	const rows = [
+		row({ groupValue: "key_1", totalValue: 9_910, eventCount: 997 }),
+	];
+
+	expect(
+		groupedValueIsMateriallyShort({
+			rows,
+			totals: { action_calls: { count: 1_000, sum: 10_000 } },
+			coverage: { action_calls: 997 },
+		}),
+	).toBe(false);
+	// With every event carrying the key, the same value gap is real loss.
+	expect(
+		groupedValueIsMateriallyShort({
+			rows,
+			totals: { action_calls: { count: 997, sum: 10_000 } },
+			coverage: { action_calls: 997 },
 		}),
 	).toBe(true);
 });

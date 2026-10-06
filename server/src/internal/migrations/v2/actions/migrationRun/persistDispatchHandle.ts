@@ -1,4 +1,4 @@
-import { MigrationRunStatus } from "@autumn/shared";
+import { MigrationRunErrorCode, MigrationRunStatus } from "@autumn/shared";
 import { runs } from "@trigger.dev/sdk/v3";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationRunRepo } from "../../repos/index.js";
@@ -55,6 +55,7 @@ const settleOrphanedRun = async ({
 			updates: {
 				status: MigrationRunStatus.Failed,
 				error_message: message,
+				error_code: MigrationRunErrorCode.DispatchFailed,
 				finished_at: Date.now(),
 			},
 		});

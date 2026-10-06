@@ -1,0 +1,1 @@
+ALTER TABLE "migration_runs" ADD COLUMN "error_code" text;
