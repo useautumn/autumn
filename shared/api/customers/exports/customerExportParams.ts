@@ -29,6 +29,7 @@ export const CreateCustomerExportParamsSchema = z.discriminatedUnion("kind", [
 	}),
 	ExportScopeParamsSchema.extend({
 		kind: z.literal(CustomerExportKind.BillingVerify),
+		include_unlinked_stripe_customers: z.boolean().optional().default(false),
 	}),
 ]);
 

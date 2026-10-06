@@ -23,6 +23,8 @@ export const customerExportToResponse = ({
 	snapshot: {
 		search: customerExport.snapshot?.search ?? "",
 		filters: customerExport.snapshot?.filters ?? {},
+		include_unlinked_stripe_customers:
+			customerExport.snapshot?.include_unlinked_stripe_customers ?? false,
 	},
 	requested_by_user_id: customerExport.requested_by_user_id,
 	row_count: customerExport.row_count,

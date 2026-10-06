@@ -7,7 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
-function OverviewRow({
+export function CustomerExportOverviewRow({
 	icon: RowIcon,
 	label,
 	children,
@@ -37,6 +37,7 @@ export function CustomerExportOverview({
 	isFilteredExport,
 	columnsAction,
 	scopeRow,
+	children,
 }: {
 	exportTotalCount: number | undefined;
 	isCountApproximate: boolean;
@@ -44,10 +45,11 @@ export function CustomerExportOverview({
 	isFilteredExport: boolean;
 	columnsAction: ReactNode;
 	scopeRow?: ReactNode;
+	children?: ReactNode;
 }) {
 	return (
 		<div className="flex flex-col gap-1">
-			<OverviewRow icon={UsersIcon} label="Customers">
+			<CustomerExportOverviewRow icon={UsersIcon} label="Customers">
 				{isCountLoading ? (
 					<Skeleton className="h-4 w-20 rounded" />
 				) : (
@@ -57,17 +59,23 @@ export function CustomerExportOverview({
 							: `${isCountApproximate ? "~" : ""}${exportTotalCount.toLocaleString()} ${exportTotalCount === 1 ? "customer" : "customers"}`}
 					</span>
 				)}
-			</OverviewRow>
+			</CustomerExportOverviewRow>
 
-			<OverviewRow icon={ColumnsIcon} label="Columns">
+			<CustomerExportOverviewRow icon={ColumnsIcon} label="Columns">
 				{columnsAction}
-			</OverviewRow>
+			</CustomerExportOverviewRow>
 
-			<OverviewRow icon={FunnelSimpleIcon} label="Scope" action={scopeRow}>
+			<CustomerExportOverviewRow
+				icon={FunnelSimpleIcon}
+				label="Scope"
+				action={scopeRow}
+			>
 				<span className="text-tertiary-foreground">
 					{isFilteredExport ? "Current search and filters" : "All customers"}
 				</span>
-			</OverviewRow>
+			</CustomerExportOverviewRow>
+
+			{children}
 		</div>
 	);
 }

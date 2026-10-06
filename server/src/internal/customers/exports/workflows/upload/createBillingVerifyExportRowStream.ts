@@ -6,6 +6,7 @@ import {
 import type { CustomerExportScalarRow } from "../../queries/getCustomerExportScalars.js";
 import { billingVerifyExportConfig } from "../../verify/billingVerifyExportConfig.js";
 import { filterBillingVerifyCandidates } from "../../verify/filterBillingVerifyCandidates.js";
+import { orphanedSubscriptionsToExportRows } from "../../verify/orphanedSubscriptionsToExportRows/orphanedSubscriptionsToExportRows.js";
 import { releaseSweptSubscriptions } from "../../verify/releaseSweptSubscriptions.js";
 import { setupBillingVerifySweep } from "../../verify/setupBillingVerifySweep.js";
 import { verifyCustomerToExportRows } from "../../verify/verifyCustomerToExportRows.js";
@@ -69,6 +70,17 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory 
 				});
 
 				for await (const rows of verified) yield* rows;
+
+				if (!snapshot.include_unlinked_stripe_customers) return;
+				const orphanRows = await orphanedSubscriptionsToExportRows({
+					ctx,
+					sweep,
+				});
+				await onPageProcessed({
+					customerCount: 0,
+					rowCount: orphanRows.length,
+				});
+				yield* orphanRows;
 			};
 
 		return Readable.from(exportRows(), { objectMode: true });

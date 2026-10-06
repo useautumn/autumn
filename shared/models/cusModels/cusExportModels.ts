@@ -82,6 +82,8 @@ export const CustomerExportFieldsSchema = z
 export const CustomerExportSnapshotSchema = z.object({
 	search: z.string().default(""),
 	filters: CustomerListFiltersSchema.default({}),
+	/** Billing-issues only: also report Stripe customers no Autumn customer links to. */
+	include_unlinked_stripe_customers: z.boolean().optional(),
 });
 
 export type CustomerExportSnapshot = z.infer<

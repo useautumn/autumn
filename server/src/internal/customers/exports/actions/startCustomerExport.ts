@@ -146,7 +146,13 @@ export const startCustomerExport = async ({
 		kind,
 		fields: params.kind === CustomerExportKind.Customers ? params.fields : [],
 		// The dashboard trims client-side; trimming here keeps direct API callers consistent.
-		snapshot: { search: search.trim(), filters },
+		snapshot: {
+			search: search.trim(),
+			filters,
+			include_unlinked_stripe_customers:
+				params.kind === CustomerExportKind.BillingVerify &&
+				params.include_unlinked_stripe_customers,
+		},
 		requestedByUserId: ctx.userId ?? ctx.user?.id,
 	});
 
