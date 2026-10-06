@@ -351,6 +351,7 @@ export const billingPlanToNextCyclePreview = ({
 			billingContext,
 			interval: event.smallestInterval.interval,
 			intervalCount: event.smallestInterval.intervalCount,
+			prorationBehavior: event.prorationBehavior,
 		});
 		nextCycleStart = result.nextCycleStart;
 		prorationRatio = result.prorationRatio;

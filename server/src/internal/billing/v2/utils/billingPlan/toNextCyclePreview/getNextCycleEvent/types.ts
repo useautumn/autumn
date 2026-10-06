@@ -15,7 +15,10 @@ type NextCycleEventContext = {
 
 export type NextCycleEvent =
 	| { kind: "none" }
-	| ({ kind: "anchor_reset" } & NextCycleEventContext)
+	| ({
+			kind: "anchor_reset";
+			prorationBehavior: PhaseProrationBehavior | undefined;
+	  } & NextCycleEventContext)
 	| ({
 			kind: "renewal";
 			startsAtMs: number;

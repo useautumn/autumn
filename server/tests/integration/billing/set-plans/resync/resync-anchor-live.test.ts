@@ -1,10 +1,14 @@
 /** A timestamp billing_cycle_anchor on a live subscription resets its cycle, and every plan on it, on the anchor. */
 
 import { expect, test } from "bun:test";
-import { formatMsToDate, ms, type SetPlansParamsV0Input } from "@autumn/shared";
+import {
+	formatMsToDate,
+	ms,
+	msToSeconds,
+	type SetPlansParamsV0Input,
+} from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { calculateBillingCycleAnchorResetNextCycle } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -12,9 +16,10 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { expectCycleResetPhase } from "../utils/resyncUtils";
+import { findStripeSubscriptionByStatus } from "../utils/subscriptionStateUtils";
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans resync live: a timestamp anchor resets the cycle through a schedule phase")}`,
+	`${chalk.yellowBright("set-plans resync live: a timestamp anchor with proration none resets the cycle without prorating")}`,
 	async () => {
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -31,12 +36,6 @@ test.concurrent(
 			});
 
 		const anchorMs = advancedTo + ms.days(10);
-		const expectedResetInvoice =
-			await calculateBillingCycleAnchorResetNextCycle({
-				customerId,
-				billingCycleAnchorMs: anchorMs,
-				nextCycleAmount: 20,
-			});
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
 			phases: [
@@ -62,7 +61,12 @@ test.concurrent(
 		await autumnV2_4.billing.setPlans(params);
 
 		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
-		await expectCycleResetPhase({ ctx, customerId, anchorMs });
+		await expectCycleResetPhase({
+			ctx,
+			customerId,
+			anchorMs,
+			prorationBehavior: "none",
+		});
 		await expectBalanceCorrect({
 			customerId,
 			featureId: TestFeature.Messages,
@@ -76,11 +80,29 @@ test.concurrent(
 			advancedTo,
 			anchorMs,
 		});
-		await expectCustomerInvoiceCorrect({
+
+		// Stripe moves the anchor without invoicing; the first invoice is the new cycle's full renewal.
+		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+		const subscription = await findStripeSubscriptionByStatus({
+			ctx,
 			customerId,
-			count: 2,
-			latestTotal: expectedResetInvoice.total,
+			status: "active",
 		});
+		expect(subscription.billing_cycle_anchor).toBe(msToSeconds(anchorMs));
+
+		const upcomingInvoice = await ctx.stripeCli.invoices.createPreview({
+			subscription: subscription.id,
+		});
+		expect(
+			upcomingInvoice.lines.data.some(
+				(line) => line.parent?.subscription_item_details?.proration,
+			),
+		).toBe(false);
+		expect(upcomingInvoice.total / 100).toBe(20);
+		expect(preview.next_cycle?.total).toBe(20);
+		expect(msToSeconds(preview.next_cycle?.starts_at ?? 0)).toBe(
+			subscription.items.data[0]?.current_period_end,
+		);
 	},
 );
 
