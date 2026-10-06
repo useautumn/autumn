@@ -1,6 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isTriggerConfigured } from "@/trigger/configureTrigger.js";
 import { sendMigrationWebhooksTask } from "@/trigger/migrations/sendMigrationWebhooksTask/sendMigrationWebhooksTask.js";
+import { hashJson } from "@/utils/hash/hashJson.js";
 import type { MigrationWebhookControls } from "../../cloudAdapter/types.js";
 import { sendMigrationWebhooks } from "../sendMigrationWebhooks.js";
 import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js";
@@ -23,11 +24,13 @@ export const chunkWebhookRecords = ({
 
 export const queueMigrationWebhooks = async ({
 	ctx,
+	migrationInternalId,
 	migrationRunId,
 	controls,
 	records,
 }: {
 	ctx: AutumnContext;
+	migrationInternalId: string;
 	migrationRunId: string;
 	controls: MigrationWebhookControls | undefined;
 	records: MigrationWebhookRecord[];
@@ -36,18 +39,20 @@ export const queueMigrationWebhooks = async ({
 
 	const batches = chunkWebhookRecords({ records });
 
-	const submissions = batches.map((batch, index) => ({
+	// Keyed by content: a republish of different records is never deduplicated away.
+	const submissions = batches.map((batch) => ({
 		payload: {
 			orgId: ctx.org.id,
 			env: ctx.env,
 			migrationRunId,
+			migrationInternalId,
 			concurrency: controls.webhookConcurrency,
 			eventTypes: controls.eventTypes,
 			records: batch,
 		},
 		options: {
 			concurrencyKey: migrationRunId,
-			idempotencyKey: `migration-webhooks:${migrationRunId}:${records[0]?.customerId}:${index}`,
+			idempotencyKey: `migration-webhooks:${migrationRunId}:${hashJson({ value: batch })}`,
 			idempotencyKeyTTL: "7d",
 		},
 	}));

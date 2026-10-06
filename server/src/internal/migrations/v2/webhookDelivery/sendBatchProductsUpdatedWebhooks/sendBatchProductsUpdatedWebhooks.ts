@@ -12,11 +12,13 @@ import { sendProductsUpdatedForRecord } from "./sendProductsUpdatedForRecord.js"
  */
 export const sendBatchProductsUpdatedWebhooks = async ({
 	ctx,
+	migrationInternalId,
 	migrationRunId,
 	records,
 	concurrency,
 }: {
 	ctx: AutumnContext;
+	migrationInternalId: string | undefined;
 	migrationRunId: string;
 	records: MigrationWebhookRecord[];
 	concurrency: number;
@@ -35,6 +37,7 @@ export const sendBatchProductsUpdatedWebhooks = async ({
 				try {
 					await sendProductsUpdatedForRecord({
 						ctx,
+						migrationInternalId,
 						record,
 						fullCustomer: fullCustomersByInternalId.get(
 							record.internalCustomerId,

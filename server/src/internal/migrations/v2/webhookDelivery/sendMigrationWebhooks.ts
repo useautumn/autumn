@@ -24,12 +24,13 @@ export const sendMigrationWebhooks = async ({
 	billingUpdated: DeliveryCounts;
 	productsUpdated: DeliveryCounts;
 }> => {
-	const { migrationRunId, records, concurrency } = payload;
+	const { migrationRunId, migrationInternalId, records, concurrency } = payload;
 	const eventTypes = new Set(payload.eventTypes);
 
 	const billingUpdated = eventTypes.has(WebhookEventType.BillingUpdated)
 		? await sendBatchBillingUpdatedWebhooks({
 				ctx,
+				migrationInternalId,
 				migrationRunId,
 				records,
 				concurrency,
@@ -40,6 +41,7 @@ export const sendMigrationWebhooks = async ({
 	)
 		? await sendBatchProductsUpdatedWebhooks({
 				ctx,
+				migrationInternalId,
 				migrationRunId,
 				records,
 				concurrency,

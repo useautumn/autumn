@@ -355,6 +355,25 @@ const expectStall = ({
 	return error as InstanceType<typeof BatchMigrationStallError>;
 };
 
+/** A failed publish no longer fails the chunk: it returns, warning which
+ * pages' changes are left for the run's sweep. */
+const expectPublishLeftForSweep = ({
+	outcome,
+	pages,
+}: {
+	outcome: Settled | typeof STUCK;
+	pages: string[];
+}) => {
+	expect(outcome).not.toBe(STUCK);
+	expect((outcome as Settled).kind).toBe("resolved");
+	const warning = logs.find(
+		(line) =>
+			line.message ===
+			"batch-migration: some pages' publishes did not complete; the run's sweep republishes them",
+	);
+	expect(warning?.data?.pages).toEqual(pages);
+};
+
 describe("runBatchMigrationChunk — deferred finalization that never settles", () => {
 	test("a single page whose publish never resolves does not park the chunk in drain()", async () => {
 		const never = createDeferred<number>();
@@ -369,12 +388,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		// an answer, and it must name the phase that stalled.
 		expect(scenario.executedPages).toEqual([1]);
 		expect(scenario.publishStarts).toEqual([1]);
-		const error = expectStall({ outcome, phase: "publish" });
-		expect(error.message).toContain("page 1");
-		expect(error.message).toContain("1 timed out");
-		expect(
-			logs.some((line) => line.message === "batch-migration: chunk finished"),
-		).toBe(false);
+		expectPublishLeftForSweep({ outcome, pages: ["page 1"] });
 
 		// Settled claims are never revoked: a succeeded customer stays succeeded.
 		expect(scenario.revokedIds).toEqual([]);
@@ -401,10 +415,12 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		});
 
 		// The settle() cap no longer blocks page 4 forever: every page commits,
-		// then the chunk fails naming the stalled finalization.
+		// then the chunk returns naming the publishes left for the sweep.
 		expect(scenario.executedPages).toEqual([1, 2, 3, 4]);
-		const error = expectStall({ outcome, phase: "publish" });
-		expect(error.message).toContain("4 page(s)");
+		expectPublishLeftForSweep({
+			outcome,
+			pages: ["page 1", "page 2", "page 3", "page 4"],
+		});
 
 		never.resolve(PAGE_SIZE);
 	});
@@ -422,8 +438,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			ms: 2_500,
 		});
 
-		const error = expectStall({ outcome, phase: "publish" });
-		expect(error.message).toContain("page 3");
+		expectPublishLeftForSweep({ outcome, pages: ["page 3"] });
 		expect(scenario.executedPages).toEqual([1, 2, 3, 4]);
 		expect(scenario.revokedIds).toEqual([]);
 
@@ -445,7 +460,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			ms: 1_500,
 		});
 
-		expectStall({ outcome, phase: "publish" });
+		expectPublishLeftForSweep({ outcome, pages: ["page 1"] });
 		const pageIds =
 			scenario.pages[0]?.map((customer) => customer.internalId) ?? [];
 		expect(scenario.publishCustomers.get(1)?.sort()).toEqual(
@@ -465,7 +480,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			promise: settle(runChunk()),
 			ms: 1_500,
 		});
-		expectStall({ outcome, phase: "publish" });
+		expectPublishLeftForSweep({ outcome, pages: ["page 1"] });
 
 		late.reject(new Error("redis gave up after the chunk moved on"));
 		// afterEach asserts no unhandledRejection reached the process.

@@ -245,7 +245,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("batch recovery: a failure after the marks keeps the customer succeeded with its changes unpublished")}`,
+	`${chalk.yellowBright("batch recovery: a failure after the marks keeps the customer succeeded and the run's sweep publishes it once")}`,
 	async () => {
 		const customerId = "batch-recovery-after-marks";
 		const plan = products.base({ id: "batch-recovery-after-marks", items: [] });
@@ -287,8 +287,12 @@ test.concurrent(
 				),
 			);
 		expect(itemRun.status).toBe(MigrationItemRunStatus.Succeeded);
-		expect(itemRun.unpublished_changes).toMatchObject([
-			{ kind: "entitlement_created", featureId: TestFeature.Workflows },
-		]);
+		expect(itemRun.unpublished_changes).toBeNull();
+		expect(
+			await listBillingUpdatedWebhooks({
+				playToken: webhook.playToken,
+				customerId,
+			}),
+		).toHaveLength(1);
 	},
 );

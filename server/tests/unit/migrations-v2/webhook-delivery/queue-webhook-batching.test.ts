@@ -20,6 +20,7 @@ import {
 	queueMigrationWebhooks,
 } from "@/internal/migrations/v2/webhookDelivery/utils/queueMigrationWebhooks.js";
 import * as triggerConfig from "@/trigger/configureTrigger.js";
+import { hashJson } from "@/utils/hash/hashJson.js";
 
 const ctx = {
 	org: { id: "org_test" },
@@ -149,6 +150,7 @@ describe("queueMigrationWebhooks", () => {
 				() =>
 					queueMigrationWebhooks({
 						ctx,
+						migrationInternalId: "mig_1",
 						migrationRunId: "run_1",
 						records,
 						controls: {
@@ -168,14 +170,14 @@ describe("queueMigrationWebhooks", () => {
 				else expect(await queued).toBe(100);
 				expect(requests).toHaveLength(2);
 				expect(submittedItems).toHaveLength(100);
-				const submittedRecords = submittedItems.flatMap((item, index) => {
+				const submittedRecords = submittedItems.flatMap((item) => {
 					const payload = JSON.parse(item.payload).json;
 					expect(payload.records).toHaveLength(50);
 					expect(payload.concurrency).toBe(1);
 					expect(item.options).toMatchObject({
 						concurrencyKey: "run_1",
 						idempotencyKeyOptions: {
-							key: `migration-webhooks:run_1:customer-0:${index}`,
+							key: `migration-webhooks:run_1:${hashJson({ value: payload.records })}`,
 							scope: "run",
 						},
 						idempotencyKeyTTL: "7d",
@@ -195,6 +197,7 @@ describe("queueMigrationWebhooks", () => {
 		expect(
 			await queueMigrationWebhooks({
 				ctx,
+				migrationInternalId: "mig_1",
 				migrationRunId: "run_1",
 				controls: {
 					sendWebhooks: false,
@@ -210,6 +213,7 @@ describe("queueMigrationWebhooks", () => {
 		expect(
 			await queueMigrationWebhooks({
 				ctx,
+				migrationInternalId: "mig_1",
 				migrationRunId: "run_1",
 				controls: undefined,
 				records: buildRecords(10),
@@ -221,6 +225,7 @@ describe("queueMigrationWebhooks", () => {
 		expect(
 			await queueMigrationWebhooks({
 				ctx,
+				migrationInternalId: "mig_1",
 				migrationRunId: "run_1",
 				controls: {
 					sendWebhooks: true,
