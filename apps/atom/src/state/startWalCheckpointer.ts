@@ -6,7 +6,12 @@ import { join } from "node:path";
 export const ATOM_WAL_CHECKPOINTED_ELSEWHERE =
 	"ATOM_WAL_CHECKPOINTED_ELSEWHERE";
 
-const CHECKPOINT_EVERY_MS = 1000;
+const TICK_MS = 1000;
+/**
+ * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
+ * next write restart the log, and that restart syncs the log header on the writing (serving) process.
+ */
+export const TICKS_PER_FILE = 30;
 const WAL_SUFFIX = "-wal";
 
 const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
@@ -55,17 +60,24 @@ export const startWalCheckpointer = ({
 		}
 	}
 
+	let tick = 0;
+
 	function checkpoint(): void {
-		const paths = new Set(listWalDatabases({ dataDir }));
+		const paths = listWalDatabases({ dataDir }).sort();
+		const listed = new Set(paths);
 		for (const [path, database] of open)
-			if (!paths.has(path)) {
+			if (!listed.has(path)) {
 				database.close();
 				open.delete(path);
 			}
-		for (const path of paths) checkpointOne({ path });
+		paths.forEach((path, index) => {
+			if (index % TICKS_PER_FILE === tick % TICKS_PER_FILE)
+				checkpointOne({ path });
+		});
+		tick += 1;
 	}
 
-	const timer = setInterval(checkpoint, CHECKPOINT_EVERY_MS);
+	const timer = setInterval(checkpoint, TICK_MS);
 	timer.unref?.();
 
 	return {
