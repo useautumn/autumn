@@ -272,6 +272,8 @@ const main = async (init: SwarmInit) => {
 	let stripeConnectSetup: Promise<unknown> | undefined;
 	let teardownPromise: Promise<void> | undefined;
 	const tearingDown = Promise.withResolvers<void>();
+	/** Culls in flight; teardown waits so exit never cuts a terminate short and leaks the sandbox. */
+	const retiring = new Set<Promise<void>>();
 
 	teardown = () => {
 		tearingDown.resolve();
@@ -287,6 +289,7 @@ const main = async (init: SwarmInit) => {
 				),
 				// An in-flight sub-account create must report its id before exit; twd deletes it.
 				timeBoxed(() => stripeConnectSetup ?? Promise.resolve()),
+				...retiring,
 			]);
 		})();
 		return teardownPromise;
@@ -314,7 +317,12 @@ const main = async (init: SwarmInit) => {
 			void timeBoxed(() => tw.provider.deleteSandbox(sandbox));
 	};
 	/** Culled, dead or failed worker: delete its sandbox, then hand its account back early. */
-	const retire = async ({
+	const retire = (worker: { name: string; accountId: string }) => {
+		const retired = retireNow(worker).finally(() => retiring.delete(retired));
+		retiring.add(retired);
+		return retired;
+	};
+	const retireNow = async ({
 		name,
 		accountId,
 	}: {
@@ -450,7 +458,6 @@ const main = async (init: SwarmInit) => {
 			makeShard({ capabilities, files, target: capabilityWorkers[index] ?? 0 }),
 		),
 	];
-	const [normalShard] = shards;
 	const stripeConnectShard = stripeConnectPlan
 		? makeShard({ ...stripeConnectPlan, target: 1, dedicated: true })
 		: undefined;
@@ -467,16 +474,19 @@ const main = async (init: SwarmInit) => {
 	let firstFailure: string | undefined;
 	let nextWorkerIdx = 0;
 	let lastDemand: number | undefined;
-	let stopCulling: (() => void) | undefined;
+	const stopCulling = new Map<Shard, () => void>();
 	const currentDemand = () =>
 		teardownPromise || breaker.tripped()
 			? 0
 			: shards.reduce((sum, shard) => sum + shortfall(shard), 0);
-	/** Tell twd how many more accounts help; once none do, the tail starts culling idle workers. */
+	/** Tell twd how many more accounts help; once none do, every shard culls its idle workers. */
 	const reportDemand = () => {
 		const demand = currentDemand();
-		if (demand === 0 && !stopCulling && normalShard.pool.size > 0) {
-			stopCulling = tw.run.startCulling(normalShard.pool, resolveSandbox);
+		if (demand === 0) {
+			for (const shard of shards) {
+				if (shard.pool.size === 0 || stopCulling.has(shard)) continue;
+				stopCulling.set(shard, tw.run.startCulling(shard.pool, resolveSandbox));
+			}
 		}
 		if (demand === lastDemand) return;
 		lastDemand = demand;
@@ -657,6 +667,9 @@ const main = async (init: SwarmInit) => {
 					),
 			{ maxParallel: shard.files.length, totalFiles },
 		);
+		// Nothing left to retry here, so even the idle floor is waste while other shards finish.
+		for (const worker of shard.pool.cullIdle(shard.pool.size, 0))
+			setWorkerStatus(worker.name, "dead");
 	};
 
 	/** One worker on the shard's own platform account: lazy webhook, a run-scoped sub-account, its client_id. */
@@ -789,7 +802,7 @@ const main = async (init: SwarmInit) => {
 		clearInterval(outputTimer);
 		flushOutput();
 		flushFiles();
-		stopCulling?.();
+		for (const stop of stopCulling.values()) stop();
 		for (const shard of shards) shard.pool.close();
 	}
 };
