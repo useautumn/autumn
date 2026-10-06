@@ -1,0 +1,99 @@
+# Paths the Publish workflow regenerates and commits to main.
+# PRs into dev must not edit them, except entries under `# sync-only`.
+# Root-anchored globs: `*` = one segment, `**` = any depth, trailing `/` = whole directory.
+
+# OpenAPI specs (bun api)
+packages/openapi/openapi.yml
+packages/openapi/openapi-stripped.yml
+packages/openapi/openapi-internal.yml
+
+# TypeScript SDK (Speakeasy); src/hooks/* other than these three are hand-written
+packages/sdk/.devcontainer/
+packages/sdk/.gitattributes
+packages/sdk/.npmignore
+packages/sdk/.speakeasy/gen.lock
+packages/sdk/.speakeasy/out.openapi.yaml
+packages/sdk/.speakeasy/workflow.lock
+packages/sdk/FUNCTIONS.md
+packages/sdk/README.md
+packages/sdk/RUNTIMES.md
+packages/sdk/USAGE.md
+packages/sdk/eslint.config.mjs
+packages/sdk/examples/README.md
+packages/sdk/examples/check.example.ts
+packages/sdk/examples/package.json
+packages/sdk/jsr.json
+packages/sdk/tsconfig.json
+packages/sdk/src/core.ts
+packages/sdk/src/index.ts
+packages/sdk/src/funcs/
+packages/sdk/src/lib/
+packages/sdk/src/models/
+packages/sdk/src/sdk/
+packages/sdk/src/types/
+packages/sdk/src/hooks/hooks.ts
+packages/sdk/src/hooks/index.ts
+packages/sdk/src/hooks/types.ts
+
+# Python SDK (Speakeasy); src/autumn_sdk/_hooks/* other than these three are hand-written
+others/python-sdk/.gitattributes
+others/python-sdk/.speakeasy/gen.lock
+others/python-sdk/.vscode/
+others/python-sdk/README.md
+others/python-sdk/USAGE.md
+others/python-sdk/py.typed
+others/python-sdk/pylintrc
+others/python-sdk/pyproject.toml
+others/python-sdk/scripts/publish.sh
+others/python-sdk/src/autumn_sdk/*.py
+others/python-sdk/src/autumn_sdk/py.typed
+others/python-sdk/src/autumn_sdk/errors/
+others/python-sdk/src/autumn_sdk/models/
+others/python-sdk/src/autumn_sdk/types/
+others/python-sdk/src/autumn_sdk/utils/
+others/python-sdk/src/autumn_sdk/_hooks/__init__.py
+others/python-sdk/src/autumn_sdk/_hooks/sdkhooks.py
+others/python-sdk/src/autumn_sdk/_hooks/types.py
+
+# Docs and API reference (Mintlify deploys from main); kebab-case pages are hand-written
+apps/docs/mintlify/api/openapi.yml
+apps/docs/mintlify/snippets/svix-transforms/
+apps/docs/mintlify/api-reference/balances/
+apps/docs/mintlify/api-reference/billing/
+apps/docs/mintlify/api-reference/core/
+apps/docs/mintlify/api-reference/entities/
+apps/docs/mintlify/api-reference/events/
+apps/docs/mintlify/api-reference/features/
+apps/docs/mintlify/api-reference/invoices/
+apps/docs/mintlify/api-reference/keys/
+apps/docs/mintlify/api-reference/licenses/
+apps/docs/mintlify/api-reference/logs/
+apps/docs/mintlify/api-reference/plans/
+apps/docs/mintlify/api-reference/referrals/
+apps/docs/mintlify/api-reference/rewards/
+apps/docs/mintlify/api-reference/sandboxes/
+apps/docs/mintlify/api-reference/webhooks/
+apps/docs/mintlify/api-reference/customers/*Customer.mdx
+apps/docs/mintlify/api-reference/customers/*Customers.mdx
+apps/docs/mintlify/api-reference/customers/advanceTestClock.mdx
+apps/docs/mintlify/api-reference/customers/listPurchases.mdx
+apps/docs/mintlify/api-reference/customers/listSubscriptions.mdx
+apps/docs/mintlify/api-reference/platform/disconnectStripe.mdx
+apps/docs/mintlify/api-reference/platform/getRevenueCatKeys.mdx
+apps/docs/mintlify/api-reference/platform/getStripeConnection.mdx
+apps/docs/mintlify/api-reference/platform/linkRevenueCat.mdx
+apps/docs/mintlify/api-reference/platform/syncRevenueCat.mdx
+
+# autumn-js schemas, atmn client, agent docs / MCP
+packages/autumn-js/src/generated/
+packages/atmn/src/generated/
+packages/agent-docs/generated/
+packages/agent-docs/src/generated/
+
+# Committed by the bot, but PRs may edit them (dependencies). Keep this section last.
+# sync-only
+bun.lock
+packages/autumn-js/package.json
+packages/atmn/package.json
+packages/gateway/package.json
+packages/sdk/package.json
