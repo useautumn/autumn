@@ -3,7 +3,7 @@ import {
 	DeleteMessageCommand,
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
-import { createSdkPushQueue } from "../../../src/pushes/createSdkPushQueue.js";
+import { createSqsPushQueue } from "../../../src/pushQueue/sqs/createSqsPushQueue.js";
 
 const QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123456789012/pushes";
 
@@ -23,8 +23,8 @@ const fakeSqs = ({ messages }: { messages: object[] }) => {
 	};
 };
 
-describe("sdk push queue", () => {
-	test("a receive long-polls the binding's queue and reads each message as the binding would", async () => {
+describe("SQS push queue", () => {
+	test("a pull long-polls the binding's queue for SQS's most per receive, with each message's delivery count", async () => {
 		const { sqs, sent } = fakeSqs({
 			messages: [
 				{
@@ -35,14 +35,12 @@ describe("sdk push queue", () => {
 			],
 		});
 
-		const received = await createSdkPushQueue({
-			ctx: { sqs },
-			queueUrl: QUEUE_URL,
-		}).receive(10);
+		const pulled = await createSqsPushQueue({
+			ctx: { sqs, queueUrl: QUEUE_URL },
+		}).pull();
 
-		expect(received).toEqual([
+		expect(pulled).toEqual([
 			{
-				payloadType: "text",
 				payload: '{"type":"set_subject"}',
 				receiptHandle: "receipt_1",
 				attempt: 3,
@@ -59,7 +57,7 @@ describe("sdk push queue", () => {
 	test("an ack deletes the message by its receipt handle", async () => {
 		const { sqs, sent } = fakeSqs({ messages: [] });
 
-		await createSdkPushQueue({ ctx: { sqs }, queueUrl: QUEUE_URL }).ack(
+		await createSqsPushQueue({ ctx: { sqs, queueUrl: QUEUE_URL } }).ack(
 			"receipt_1",
 		);
 

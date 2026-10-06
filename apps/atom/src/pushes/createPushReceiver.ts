@@ -1,4 +1,3 @@
-import type { Queue, QueueMessage } from "@alienplatform/bindings";
 import {
 	AtomPushType,
 	payloadToQueuedAtomPush,
@@ -8,15 +7,12 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../auth/types/auth.js";
 import type { ProcessStatsRecorder } from "../init/processStats.js";
 import { isUnreadableRequest } from "../lib/contracts/invalidPushError.js";
+import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
 import type { Slots } from "../slots/types/slots.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
 import { pushPhaseMs } from "./pushPhaseMs.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
 
-/** The queue `packages/alien/stacks/byoc/alien.json` links to Atom. */
-export const PUSH_QUEUE = "pushes";
-/** SQS's most per receive. */
-const RECEIVE_BATCH = 10;
 /** Long polls in flight per receiving thread, so applying one batch never waits on the next receive. */
 const RECEIVE_LOOPS = 4;
 /** After a failed receive, so an unreachable queue is not polled in a tight loop. */
@@ -36,7 +32,7 @@ const DEFAULT_LIMITS: PushReceiverLimits = {
 };
 
 type PushReceiverContext = {
-	pushes: Pick<Queue, "receive" | "ack">;
+	pushQueue: PushQueue;
 	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
 	sleep?: (ms: number) => Promise<unknown>;
@@ -59,7 +55,7 @@ const decodePush = ({
 	message,
 }: {
 	ctx: PushReceiverContext;
-	message: QueueMessage;
+	message: PulledPush;
 }): QueuedAtomPush | null => {
 	const parseStartedAt = performance.now();
 	try {
@@ -111,7 +107,7 @@ const receivePush = async ({
 	message,
 }: {
 	ctx: PushReceiverContext;
-	message: QueueMessage;
+	message: PulledPush;
 }): Promise<boolean> => {
 	const push = decodePush({ ctx, message });
 	if (!push) return true;
@@ -152,10 +148,10 @@ const settlePush = async ({
 	message,
 }: {
 	ctx: PushReceiverContext;
-	message: QueueMessage;
+	message: PulledPush;
 }): Promise<void> => {
 	if (!(await receivePush({ ctx, message }))) return;
-	await ctx.pushes
+	await ctx.pushQueue
 		.ack(message.receiptHandle)
 		.catch((error) =>
 			ctx.logger.warn(
@@ -182,15 +178,15 @@ export const createPushReceiver = ({
 	const inFlight = new Set<Promise<void>>();
 	let stopping = false;
 
-	function settle(message: QueueMessage): void {
+	function settle(message: PulledPush): void {
 		const task = settlePush({ ctx, message }).finally(() =>
 			inFlight.delete(task),
 		);
 		inFlight.add(task);
 	}
 
-	function receiveBatch(): Promise<QueueMessage[]> {
-		return ctx.pushes.receive(RECEIVE_BATCH).catch(async (error) => {
+	function receiveBatch(): Promise<PulledPush[]> {
+		return ctx.pushQueue.pull().catch(async (error) => {
 			ctx.logger.warn(
 				{ error, type: "atom_push_receive_failed", data: errorDetails(error) },
 				"Receiving queued pushes failed; trying again",
@@ -201,7 +197,7 @@ export const createPushReceiver = ({
 	}
 
 	/** A receive past the deadline is not abandoned: whatever it returns later is still settled. */
-	async function receiveWithinDeadline(): Promise<QueueMessage[]> {
+	async function receiveWithinDeadline(): Promise<PulledPush[]> {
 		const received = receiveBatch();
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		const deadline = new Promise<typeof RECEIVE_TIMED_OUT>((resolve) => {
