@@ -37,9 +37,11 @@ export const applyTwStripeConcurrencyLimit = ({
 			getTwStripeRequestDeadline() ??
 			createTwStripeRequestDeadline({ timeoutMs: args[7] });
 		// Redis is never initialized or imported by the production request path.
-		const { acquireTwStripePermit } = await import(
-			"./twStripeLimiter/acquireTwStripePermit"
-		);
+		const [{ acquireTwStripePermit }, { startTwStripeFileStats }] =
+			await Promise.all([
+				import("./twStripeLimiter/acquireTwStripePermit"),
+				import("./twStripeLimiter/recordTwStripeFileStats"),
+			]);
 		const headers = args[4] as Record<string, unknown>;
 		const authorization = headers.Authorization ?? headers.authorization;
 		const stripeAccount =
@@ -66,9 +68,15 @@ export const applyTwStripeConcurrencyLimit = ({
 				requestTimeoutMs: args[7],
 				signal: deadline.signal,
 			});
+			const fileStats = await startTwStripeFileStats({
+				waitMs: permit.waitMs,
+				leaseMs: Math.max(args[7], 1000) + 5000,
+			});
 			const startedAt = performance.now();
 			let networkMs = 0;
-			let response: Awaited<ReturnType<StripeHttpClient["makeRequest"]>>;
+			let response:
+				| Awaited<ReturnType<StripeHttpClient["makeRequest"]>>
+				| undefined;
 			try {
 				const requestArgs: MakeRequestArgs = [...args];
 				requestArgs[7] = Math.min(args[7], deadline.remainingMs());
@@ -76,6 +84,11 @@ export const applyTwStripeConcurrencyLimit = ({
 				networkMs = Math.round(performance.now() - startedAt);
 			} finally {
 				await permit.release();
+				await fileStats.finish({
+					status: response?.getStatusCode(),
+					rateLimitedReason:
+						response?.getHeaders()["stripe-rate-limited-reason"],
+				});
 			}
 			if (process.env.TW_STRIPE_TRACE === "1") {
 				const responseHeaders = response.getHeaders();

@@ -9,6 +9,7 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
+import { isStripeInvoiceForNewPeriod } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
@@ -23,6 +24,7 @@ import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billi
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
+import { isBillingCycleAnchorResetInvoice } from "../utils/isBillingCycleAnchorResetInvoice";
 
 const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
 
@@ -427,21 +429,35 @@ export const processConsumablePricesForInvoiceCreated = async ({
 }): Promise<LineItem[]> => {
 	const { stripeInvoice, stripeSubscription } = eventContext;
 
-	const isPeriodicInvoice =
-		stripeInvoice.billing_reason === "subscription_cycle";
+	const isPeriodicInvoice = isStripeInvoiceForNewPeriod(stripeInvoice);
+	const isAnchorResetInvoice = isBillingCycleAnchorResetInvoice({
+		eventContext,
+	});
 
 	const trialJustEnded = hasTrialJustEnded({ stripeSubscription });
 
-	if (!isPeriodicInvoice) return [];
+	if (!isPeriodicInvoice && !isAnchorResetInvoice) return [];
 
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
 	const billingCycleAnchorMs = secondsToMs(
 		stripeSubscription.billing_cycle_anchor,
 	);
 
+	// Like Stripe's metered items, an anchor move bills the usage of the period it cuts short, only on re-anchored products.
+	const anchorResetCustomerProductIds = new Set(
+		eventContext.billingCycleAnchorResetCustomerProductIds,
+	);
+	const isPeriodClosedByInvoice = ({
+		customer_product,
+	}: FullCusEntWithFullCusProduct) =>
+		isPeriodicInvoice ||
+		(customer_product !== null &&
+			anchorResetCustomerProductIds.has(customer_product.id));
+
 	const consumableCustomerEntitlementFilter = (
 		cusEnt: FullCusEntWithFullCusProduct,
 	) =>
+		isPeriodClosedByInvoice(cusEnt) &&
 		customerEntitlementShouldBeBilled({
 			cusEnt,
 			invoicePeriodEndMs,
@@ -450,6 +466,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	const invoiceCreditCustomerEntitlementFilter = (
 		customerEntitlement: FullCusEntWithFullCusProduct,
 	) =>
+		isPeriodClosedByInvoice(customerEntitlement) &&
 		isCustomerEntitlementDueAtInvoice({
 			customerEntitlement,
 			invoicePeriodEndMs,
