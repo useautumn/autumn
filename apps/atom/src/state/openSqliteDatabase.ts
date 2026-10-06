@@ -71,13 +71,9 @@ const initializeSchema = ({
 	if (version === undefined) {
 		throw new Error("Unable to read SQLite schema version");
 	}
-	if (version > BigInt(schemaVersion)) {
-		throw new UnsupportedSchemaVersionError({ databasePath, version });
-	}
-
 	const migrate = database.transaction(() => {
-		// An older file is a copy of what Autumn holds: it is emptied and sent again, never migrated.
-		if (version < BigInt(schemaVersion)) dropSchema({ database });
+		// Any other version is a copy of what Autumn holds: it is emptied and sent again, never migrated.
+		if (version !== BigInt(schemaVersion)) dropSchema({ database });
 		createSchema({ database });
 		database.run(`PRAGMA user_version = ${schemaVersion}`);
 	});
