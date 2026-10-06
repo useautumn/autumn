@@ -6,6 +6,7 @@ import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
+import { rebalanceConnectionsMiddleware } from "./middlewares/rebalanceConnectionsMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
@@ -14,7 +15,11 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
-	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
+	app.use(
+		rebalanceConnectionsMiddleware(),
+		requestLogMiddleware({ ctx, handleError }),
+		requestBodyMiddleware,
+	);
 	app.get("/health", receiveHealth);
 	if (ctx.multiTenant) mountMultiTenantRoutes({ app, ctx: ctx.multiTenant });
 
