@@ -37,6 +37,9 @@ import {
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { stripeForKey } from "../../keys/stripeForKey.ts";
+import { getWorkerClass } from "../../profiles/actions/getWorkerClass.ts";
+import { updateFileProfiles } from "../../profiles/actions/updateFileProfiles.ts";
+import { insertFileRunStats } from "../../profiles/repos/fileRunStats.ts";
 import { onRunFinished } from "../../results/actions/refreshBaselines.ts";
 import {
 	orderFilesLongestFirst,
@@ -283,6 +286,7 @@ export const handleSwarmJob: JobHandler = async ({
 
 	const sandboxIds: string[] = [];
 	const workers = new Set<string>();
+	const workerClass = getWorkerClass();
 	const shardAccountIds: string[] = [];
 	let shardLeaseHeld = false;
 	let checkpointed = 0;
@@ -563,6 +567,18 @@ export const handleSwarmJob: JobHandler = async ({
 					const grew = message.workers > demand.wants;
 					demand.wants = abort.signal.aborted ? 0 : message.workers;
 					if (grew) kickAllocator();
+				} else if (message.type === "file_stats") {
+					enqueueWrite(() =>
+						insertFileRunStats({
+							ctx,
+							runId,
+							file: message.file,
+							attempt: message.attempt,
+							worker: message.worker,
+							workerClass,
+							stats: message.stats,
+						}),
+					);
 				} else if (message.type === "file") {
 					eta?.noteFile({ file: message.file, now: Date.now() });
 					if (message.final)
@@ -678,6 +694,12 @@ export const handleSwarmJob: JobHandler = async ({
 		retireLiveRun({ runId });
 		await onRunFinished({ ctx, runId }).catch((error: unknown) =>
 			ctx.logger.warn("baseline refresh failed", {
+				runId,
+				error: String(error),
+			}),
+		);
+		await updateFileProfiles({ ctx, runId }).catch((error: unknown) =>
+			ctx.logger.warn("file profile update failed", {
 				runId,
 				error: String(error),
 			}),
