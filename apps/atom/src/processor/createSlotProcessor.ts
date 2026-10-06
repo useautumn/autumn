@@ -1,3 +1,5 @@
+import { subjectPushToStoredSubject } from "../lib/contracts/subjectContract.js";
+import { pushPhaseMs } from "../pushes/pushPhaseMs.js";
 import { check } from "./actions/check/check.js";
 import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
@@ -13,5 +15,12 @@ export const createSlotProcessor = ({
 }): SlotProcessor => ({
 	check: async (params) =>
 		checkResponseToJson({ response: check({ ctx, ...params }) }),
-	setSubject: async (params) => setSubject({ ctx, ...params }),
+	setSubject: async (params) => {
+		const startedAt = performance.now();
+		try {
+			return setSubject({ ctx, subject: subjectPushToStoredSubject(params) });
+		} finally {
+			pushPhaseMs.owner += performance.now() - startedAt;
+		}
+	},
 });

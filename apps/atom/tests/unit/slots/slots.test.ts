@@ -9,6 +9,7 @@ import {
 	checkRequestFor,
 	checkResponseOf,
 	storedSubjectWith,
+	subjectPushOf,
 } from "../utils/atomFixtures.js";
 
 const opened: Slots[] = [];
@@ -76,7 +77,9 @@ describe("a data folder's slots", () => {
 		const slots = open({ folder: newFolder(), slotCount: 4 });
 		const subject = storedSubjectWith({ balance: 10 });
 
-		await slots.processorFor({ customerId: "cus_1" }).setSubject({ subject });
+		await slots
+			.processorFor({ customerId: "cus_1" })
+			.setSubject(subjectPushOf({ subject }));
 		const reply = await checkResponseOf({
 			processor: slots.processorFor({ customerId: "cus_1" }),
 			request: checkRequestFor(),
@@ -90,7 +93,9 @@ describe("a data folder's slots", () => {
 		const first = open({ folder, slotCount: 4 });
 		await first
 			.processorFor({ customerId: "cus_1" })
-			.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+			.setSubject(
+				subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+			);
 		first.close();
 		opened.splice(0);
 
@@ -109,7 +114,9 @@ describe("a data folder's slots", () => {
 		const first = open({ folder, slotCount: 4 });
 		await first
 			.processorFor({ customerId: "cus_1" })
-			.setSubject({ subject: storedSubjectWith({ balance: 10 }) });
+			.setSubject(
+				subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+			);
 		first.close();
 		opened.splice(0);
 

@@ -1,12 +1,13 @@
 import type { Queue, QueueMessage } from "@alienplatform/bindings";
 import {
-	type AtomPushMessage,
 	AtomPushType,
-	payloadToAtomPushMessage,
+	payloadToQueuedAtomPush,
+	type QueuedAtomPush,
 } from "@autumn/byoc";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../auth/types/auth.js";
 import type { ProcessStatsRecorder } from "../init/processStats.js";
+import { isUnreadableRequest } from "../lib/contracts/invalidPushError.js";
 import type { Slots } from "../slots/types/slots.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
 import { pushPhaseMs } from "./pushPhaseMs.js";
@@ -59,10 +60,10 @@ const decodePush = ({
 }: {
 	ctx: PushReceiverContext;
 	message: QueueMessage;
-}): AtomPushMessage | null => {
+}): QueuedAtomPush | null => {
 	const parseStartedAt = performance.now();
 	try {
-		return payloadToAtomPushMessage({ payload: message.payload });
+		return payloadToQueuedAtomPush({ payload: message.payload });
 	} catch (error) {
 		ctx.logger.warn(
 			{ error, type: "atom_push_invalid" },
@@ -82,16 +83,19 @@ const applyPush = async ({
 	bytes,
 }: {
 	ctx: PushReceiverContext;
-	push: AtomPushMessage;
+	push: QueuedAtomPush;
 	slots: Slots;
 	bytes: number;
 }): Promise<void> => {
 	const applyStartedAt = performance.now();
 	if (push.type === AtomPushType.SetSubject)
-		await applySubjectPush({ slots, body: push.body });
-	else await applyCatalogPush({ slots, body: push.body });
+		await applySubjectPush({
+			slots,
+			customerId: push.customerId,
+			body: push.body,
+		});
+	else await applyCatalogPush({ slots, body: JSON.parse(push.body) });
 	const durationMs = performance.now() - applyStartedAt;
-	pushPhaseMs.apply += durationMs;
 	ctx.processStats?.recordRequest({
 		path: `/v1/${push.type}`,
 		durationMs,
@@ -123,6 +127,13 @@ const receivePush = async ({
 		await applyPush({ ctx, push, slots, bytes: message.payload.length });
 		return true;
 	} catch (error) {
+		if (isUnreadableRequest(error)) {
+			ctx.logger.warn(
+				{ error, type: "atom_push_invalid" },
+				"A queued push could not be applied as sent; it was dropped",
+			);
+			return true;
+		}
 		ctx.logger.warn(
 			{
 				error,

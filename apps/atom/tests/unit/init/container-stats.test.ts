@@ -46,6 +46,7 @@ describe("container stats", () => {
 
 		expect(readStats()).toEqual({
 			cpuUsageSeconds: 2.5,
+			cpuCores: null,
 			cpuThrottledSeconds: 0.75,
 			cpuLimitCores: 7,
 			memoryBytes: 1073741824,
@@ -77,6 +78,7 @@ describe("container stats", () => {
 
 		expect(readStats()).toEqual({
 			cpuUsageSeconds: null,
+			cpuCores: null,
 			cpuThrottledSeconds: null,
 			cpuLimitCores: null,
 			memoryBytes: null,
@@ -99,5 +101,23 @@ describe("container stats", () => {
 		expect(readStats().memoryBytes).toBe(1073741824);
 		now = 1000;
 		expect(readStats().memoryBytes).toBe(2147483648);
+	});
+
+	test("the container's cores are its CPU use since the previous read", () => {
+		const container = fakeContainer();
+		let now = 0;
+		const readStats = createContainerStatsReader({
+			...container,
+			clock: () => now,
+		});
+
+		readStats();
+		writeFileSync(
+			join(container.cgroupDir, "cpu.stat"),
+			"usage_usec 5500000\nthrottled_usec 750000\n",
+		);
+		now = 2000;
+
+		expect(readStats().cpuCores).toBe(1.5);
 	});
 });

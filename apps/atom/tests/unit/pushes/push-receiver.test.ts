@@ -44,6 +44,7 @@ const subjectMessage = ({
 			message: {
 				type: AtomPushType.SetSubject,
 				atomId,
+				customerId: "cus_1",
 				readAt: Date.now(),
 				body: subjectBody({ balance: 10 }),
 			},

@@ -1,3 +1,4 @@
+import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import { toAtomCatalogBody } from "./atomCatalogBody.js";
 import { retryWithBackoff } from "./retryWithBackoff.js";
 import type {
@@ -31,11 +32,13 @@ const postOnce = async ({
 	ctx,
 	path,
 	body,
+	headers,
 	timeoutMs,
 }: {
 	ctx: AtomClientContext;
 	path: string;
 	body: unknown;
+	headers: Record<string, string>;
 	timeoutMs: number;
 }): Promise<void> => {
 	const url = new URL(path, ctx.endpointUrl);
@@ -44,6 +47,7 @@ const postOnce = async ({
 		headers: {
 			"content-type": "application/json",
 			"x-atom-token": ctx.token,
+			...headers,
 		},
 		body: JSON.stringify(body),
 		signal: AbortSignal.timeout(timeoutMs),
@@ -57,15 +61,17 @@ const postToAtom = ({
 	ctx,
 	path,
 	body,
+	headers = {},
 	delivery,
 }: {
 	ctx: AtomClientContext;
 	path: string;
 	body: unknown;
+	headers?: Record<string, string>;
 	delivery: AtomDelivery;
 }): Promise<void> => {
 	const run = () =>
-		postOnce({ ctx, path, body, timeoutMs: delivery.timeoutMs });
+		postOnce({ ctx, path, body, headers, timeoutMs: delivery.timeoutMs });
 	if (!delivery.retry) return run();
 	return retryWithBackoff({
 		policy: delivery.retry,
@@ -98,6 +104,9 @@ export const createAtomClient = ({
 				ctx,
 				path: "/v1/subjects.set",
 				body,
+				headers: {
+					[ATOM_CUSTOMER_ID_HEADER]: body.state.identity.customerId,
+				},
 				delivery: ctx.subjects,
 			}),
 		setCatalog: ({ rows, readAt }) =>
