@@ -42,8 +42,11 @@ export const invoiceBillingDetailsToParams = (
 	);
 	const taxIdValue = form.taxIdValue.trim();
 
+	// Exempt hides the address fields, so never send an address the user can't see.
+	const sendsAddress = Boolean(form.country) && form.taxExempt !== "exempt";
+
 	return {
-		...(form.country
+		...(sendsAddress
 			? {
 					address: {
 						country: form.country,
