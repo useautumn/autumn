@@ -3,6 +3,7 @@ import {
 	type MigrationListItemCounts,
 	type MigrationListSummary,
 	type MigrationRun,
+	MigrationRunErrorCode,
 	MigrationRunStatus,
 } from "@autumn/shared";
 import type { MigrationItemRunCountRow } from "../../repos/index.js";
@@ -47,6 +48,14 @@ const runOutcomeActivity = (
 	if (run.status === MigrationRunStatus.Canceled)
 		return { kind: "canceled", at };
 	return { kind: "finished", at };
+};
+
+/** Runs recorded before `error_code` existed carry only the raw message. */
+const runErrorCode = (
+	run: MigrationRunWithKind,
+): MigrationRunErrorCode | null => {
+	if (run.error_code) return run.error_code;
+	return run.error_message ? MigrationRunErrorCode.Unknown : null;
 };
 
 /** Live runs of other migrations that hold or precede this queued Run All. */
@@ -108,6 +117,7 @@ export const summarizeMigration = ({
 					started_at: runAll.started_at,
 					finished_at: runAll.finished_at,
 					error_message: runAll.error_message,
+					error_code: runErrorCode(runAll),
 					counts: countsForRun(runAll),
 				}
 			: null,

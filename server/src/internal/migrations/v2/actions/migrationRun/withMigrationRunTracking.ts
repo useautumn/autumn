@@ -1,10 +1,11 @@
-import { MigrationRunStatus } from "@autumn/shared";
+import { MigrationRunErrorCode, MigrationRunStatus } from "@autumn/shared";
 import {
 	clearMigrationCancelRequested,
 	isMigrationCancelRequested,
 } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationItemRunRepo, migrationRunRepo } from "../../repos/index.js";
+import { classifyMigrationRunError } from "./classifyMigrationRunError.js";
 import { resolveRunOutcomeStatus } from "./resolveRunOutcomeStatus.js";
 import { settleLeftoverClaims } from "./settleLeftoverClaims.js";
 
@@ -87,7 +88,10 @@ export const withMigrationRunTracking = async <T>({
 			updates: {
 				status: outcomeStatus,
 				finished_at: Date.now(),
-				...(cancelRequested && { error_message: "Canceled by user" }),
+				...(cancelRequested && {
+					error_message: "Canceled by user",
+					error_code: MigrationRunErrorCode.Canceled,
+				}),
 			},
 		});
 		await settleLeftoverClaims({ ctx, migrationRunId });
@@ -111,6 +115,7 @@ export const withMigrationRunTracking = async <T>({
 			updates: {
 				status: MigrationRunStatus.Failed,
 				error_message: error instanceof Error ? error.message : String(error),
+				error_code: classifyMigrationRunError({ error }),
 				finished_at: Date.now(),
 			},
 		});

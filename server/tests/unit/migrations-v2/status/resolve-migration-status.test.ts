@@ -27,6 +27,7 @@ const run = (overrides: Partial<MigrationRun>): MigrationRun => ({
 	lazy_run: false,
 	trigger_run_id: null,
 	error_message: null,
+	error_code: null,
 	only_ids: null,
 	target_limit: null,
 	created_at: 1,

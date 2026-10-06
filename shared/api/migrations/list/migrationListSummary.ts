@@ -1,4 +1,7 @@
-import type { MigrationRunStatus } from "../../../models/migrationV2Models/migrationRunTable.js";
+import type {
+	MigrationRunErrorCode,
+	MigrationRunStatus,
+} from "../../../models/migrationV2Models/migrationRunTable.js";
 
 export type MigrationListItemCounts = {
 	total: number;
@@ -29,6 +32,8 @@ export type MigrationListSummary = {
 		started_at: number | null;
 		finished_at: number | null;
 		error_message: string | null;
+		/** Null when the run has not failed; `unknown` for unclassified errors. */
+		error_code: MigrationRunErrorCode | null;
 		counts: MigrationListItemCounts;
 	} | null;
 	latest_dry_run: {
