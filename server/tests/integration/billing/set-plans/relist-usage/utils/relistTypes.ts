@@ -83,6 +83,8 @@ export const relistBilling = (observation: RelistObservation) => {
 		renewalTotal: sum(observation.renewal),
 		renewalMessages: observation.renewal.flatMap((invoice) => invoice.messages),
 		messagesUsage: observation.balance.messagesUsage,
+		periodEnd: observation.subscription?.periodEnd ?? null,
+		nextCycle: observation.preview.nextCycle,
 	};
 };
 

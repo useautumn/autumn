@@ -6,6 +6,7 @@ import {
 	type RelistAnchor,
 	type RelistBilling,
 	type RelistChange,
+	type RelistDate,
 	type RelistProration,
 	relistBilling,
 } from "./relistTypes";
@@ -74,6 +75,9 @@ type StripeTimeline = {
 	renewalCents: number;
 	renewalUsage: boolean;
 	usageAfterChange: number;
+	periodEnd: RelistDate;
+	/** The next licensed charge: Autumn's next_cycle never includes usage. */
+	nextCycle: { startsAt: RelistDate; cents: number } | null;
 };
 
 const liveTimeline = ({
@@ -134,6 +138,10 @@ const liveTimeline = ({
 			renewalCents: renewalLicensedCents,
 			renewalUsage: false,
 			usageAfterChange: 0,
+			periodEnd: "change+1mo",
+			nextCycle: cancelsAtRenewal
+				? null
+				: { startsAt: "change+1mo", cents: sumCents(after) },
 		};
 	}
 
@@ -142,6 +150,7 @@ const liveTimeline = ({
 		executeCents: proratedChangeCents + (usageBilledAtChange ? usageCents : 0),
 		executeUsage: usageBilledAtChange,
 		usageAfterChange: meteredKept ? RELIST.tracked : 0,
+		periodEnd: "period_start+1mo" as RelistDate,
 	};
 
 	if (anchor === "custom") {
@@ -159,6 +168,9 @@ const liveTimeline = ({
 			anchorUsage: meteredKept,
 			renewalCents: renewalLicensedCents,
 			renewalUsage: false,
+			nextCycle: billsNow
+				? { startsAt: "custom_anchor", cents: sumCents(after, extension) }
+				: { startsAt: "custom_anchor+1mo", cents: sumCents(after) },
 		};
 	}
 
@@ -168,6 +180,9 @@ const liveTimeline = ({
 		anchorUsage: false,
 		renewalCents: renewalLicensedCents + (meteredKept ? usageCents : 0),
 		renewalUsage: meteredKept,
+		nextCycle: cancelsAtRenewal
+			? null
+			: { startsAt: "period_start+1mo", cents: sumCents(after) },
 	};
 };
 
@@ -205,6 +220,8 @@ const noSubTimeline = ({
 			renewalCents: sumCents(after),
 			renewalUsage: false,
 			usageAfterChange: 0,
+			periodEnd: "custom_anchor",
+			nextCycle: { startsAt: "custom_anchor", cents: sumCents(after) },
 		};
 	}
 	return {
@@ -215,6 +232,8 @@ const noSubTimeline = ({
 		renewalCents: sumCents(after),
 		renewalUsage: false,
 		usageAfterChange: 0,
+		periodEnd: "change+1mo",
+		nextCycle: { startsAt: "change+1mo", cents: sumCents(after) },
 	};
 };
 
@@ -266,6 +285,11 @@ export const expectedRelistBilling = ({
 			: 0,
 		renewalMessages: renewalObserved ? usageLine(timeline.renewalUsage) : [],
 		messagesUsage: timeline.usageAfterChange,
+		periodEnd: timeline.periodEnd,
+		nextCycle: timeline.nextCycle && {
+			startsAt: timeline.nextCycle.startsAt,
+			total: dollars(timeline.nextCycle.cents),
+		},
 	};
 };
 
@@ -289,35 +313,11 @@ export const stripeTreatsAlike = (
 		expectedRelistBilling({ ...args, run: args.changed }),
 	);
 
-/** Autumn's own promises: preview total is what execute invoices; next_cycle is the next licensed charge. */
-export const expectPreviewMatchesExecution = ({
-	run,
-	checkNextCycle = true,
-}: {
-	run: RelistRun;
-	checkNextCycle?: boolean;
-}) => {
-	const { observation } = run;
-	const billing = relistBilling(observation);
-	const firstCycle = observation.atAnchor.length
-		? observation.atAnchor
-		: observation.renewal;
-	const firstCycleLicensed =
-		Math.round(
-			firstCycle.reduce(
-				(total, invoice) =>
-					total +
-					invoice.total -
-					invoice.messages.reduce((sum, amount) => sum + amount, 0),
-				0,
-			) * 100,
-		) / 100;
-	expect(observation.preview.total).toBe(billing.executeTotal);
-	if (checkNextCycle && firstCycle.length) {
-		expect(observation.preview.nextCycle?.total ?? null).toBe(
-			firstCycleLicensed,
-		);
-	}
+/** Autumn's own promise: the preview total is exactly what execute invoices. */
+export const expectPreviewMatchesExecution = ({ run }: { run: RelistRun }) => {
+	expect(run.observation.preview.total).toBe(
+		relistBilling(run.observation).executeTotal,
+	);
 };
 
 export const expectRelistMatchesStripe = (args: {

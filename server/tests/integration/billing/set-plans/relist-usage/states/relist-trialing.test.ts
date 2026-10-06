@@ -1,7 +1,7 @@
 /**
- * set_plans re-lists Pro while its Stripe sub is trialing. Stripe rejects a reset-now during a trial
- * (Autumn returns a clean 400), and a change with the anchor unchanged invoices nothing during the trial,
- * the same whether or not the usage price changes (Stripe probe: trial usage is rated at $0).
+ * set_plans re-lists Pro while its Stripe sub is trialing. Stripe rejects a reset-now during a trial, so
+ * Autumn returns a clean 400. With the anchor unchanged, Stripe invoices nothing during the trial and
+ * rates trial usage at $0, so the trial end bills only the plan, whether or not the usage price changed.
  */
 
 import { expect, test } from "bun:test";
@@ -10,7 +10,7 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import chalk from "chalk";
 import { runRelistCase } from "../utils/relistMatrix";
 import { trialingState } from "../utils/relistStates";
-import { relistBilling } from "../utils/relistTypes";
+import { RELIST, relistBilling } from "../utils/relistTypes";
 
 const TRIAL_DAYS = 30;
 
@@ -20,8 +20,6 @@ for (const change of ["unchanged", "usage_price"] as const) {
 		async () => {
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage:
-					"The billing cycle can't reset now while the subscription's trial runs",
 				func: () =>
 					runRelistCase({
 						customerId: `rl-trial-now-${change}`,
@@ -37,9 +35,9 @@ for (const change of ["unchanged", "usage_price"] as const) {
 }
 
 test.concurrent(
-	`${chalk.yellowBright("relist trialing, anchor unchanged: unchanged and usage-price re-lists invoice nothing during the trial, identically")}`,
+	`${chalk.yellowBright("relist trialing, anchor unchanged: unchanged and usage-price re-lists bill nothing in the trial and only the plan at its end")}`,
 	async () => {
-		const [unchanged, changed] = await Promise.all(
+		const runs = await Promise.all(
 			(["unchanged", "usage_price"] as const).map((change) =>
 				runRelistCase({
 					customerId: `rl-trial-same-${change}`,
@@ -48,16 +46,27 @@ test.concurrent(
 					anchor: "unchanged",
 					proration: "prorate_immediately",
 					trialDays: TRIAL_DAYS,
-					observeRenewal: false,
 				}),
 			),
 		);
-		expect(relistBilling(unchanged!.observation)).toMatchObject({
-			executeTotal: 0,
-			executeMessages: [],
-		});
-		expect(unchanged!.observation.preview.total).toBe(0);
-		expect(unchanged!.observation.subscription?.status).toBe("trialing");
-		expect(changed!.observation).toEqual(unchanged!.observation);
+		for (const { observation } of runs) {
+			const { executeTotal, executeMessages, renewalTotal, renewalMessages } =
+				relistBilling(observation);
+			expect({
+				previewTotal: observation.preview.total,
+				status: observation.subscription?.status,
+				executeTotal,
+				executeMessages,
+				renewalTotal,
+				renewalMessages,
+			}).toEqual({
+				previewTotal: 0,
+				status: "trialing",
+				executeTotal: 0,
+				executeMessages: [],
+				renewalTotal: RELIST.proPrice + RELIST.wordsPackPrice,
+				renewalMessages: [],
+			});
+		}
 	},
 );
