@@ -6,7 +6,7 @@ export const GENERATED_PATHS_FILE = ".github/generated-paths.txt";
 const SYNC_ONLY_MARKER = "# sync-only";
 
 // "pr-check" drops everything after `# sync-only`: bot-bumped files that feature PRs may still edit.
-export type GeneratedPathsScope = "all" | "pr-check";
+export type GeneratedPathsScope = "all" | "pr-check" | "sync-only";
 
 export const parseGeneratedPaths = ({
 	text,
@@ -17,10 +17,13 @@ export const parseGeneratedPaths = ({
 }) => {
 	const lines = text.split("\n").map((line) => line.trim());
 	const syncOnlyStart = lines.indexOf(SYNC_ONLY_MARKER);
+	const split = syncOnlyStart === -1 ? lines.length : syncOnlyStart;
 	const scoped =
-		scope === "pr-check" && syncOnlyStart !== -1
-			? lines.slice(0, syncOnlyStart)
-			: lines;
+		scope === "pr-check"
+			? lines.slice(0, split)
+			: scope === "sync-only"
+				? lines.slice(split)
+				: lines;
 	return scoped.filter((line) => line !== "" && !line.startsWith("#"));
 };
 

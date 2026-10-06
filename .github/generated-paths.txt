@@ -1,5 +1,6 @@
 # Paths the Publish workflow regenerates and commits to main.
-# PRs into dev must not edit them, except entries under `# sync-only`.
+# PRs into dev must not edit them, except entries under `# sync-only`. Files a generator
+# owns (Speakeasy gen.lock, API-reference marker, generated/ folders) count too.
 # Root-anchored globs: `*` = one segment, `**` = any depth, trailing `/` = whole directory.
 
 # OpenAPI specs (bun api)
@@ -93,6 +94,7 @@ packages/agent-docs/src/generated/
 # Committed by the bot, but PRs may edit them (dependencies). Keep this section last.
 # sync-only
 bun.lock
+apps/docs/mintlify/docs.json
 packages/autumn-js/package.json
 packages/atmn/package.json
 packages/gateway/package.json

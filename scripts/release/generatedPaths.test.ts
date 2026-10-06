@@ -59,6 +59,10 @@ describe("generated path globs", () => {
 			"packages/*/package.json",
 		]);
 		expect(parseGeneratedPaths({ text, scope: "pr-check" })).toEqual(["sdk/"]);
+		expect(parseGeneratedPaths({ text, scope: "sync-only" })).toEqual([
+			"bun.lock",
+			"packages/*/package.json",
+		]);
 	});
 
 	test("comments and blank lines are ignored", () => {
@@ -134,7 +138,6 @@ describe(".github/generated-paths.txt", () => {
 
 	test.each([
 		"packages/openapi/api.ts",
-		"apps/docs/mintlify/docs.json",
 		"packages/autumn-js/src/index.ts",
 		"packages/atmn/src/cli.ts",
 		"shared/index.ts",
@@ -145,6 +148,7 @@ describe(".github/generated-paths.txt", () => {
 	const prCheckPatterns = loadGeneratedPaths({ root, scope: "pr-check" });
 	test.each([
 		"bun.lock",
+		"apps/docs/mintlify/docs.json",
 		"packages/autumn-js/package.json",
 		"packages/atmn/package.json",
 		"packages/gateway/package.json",
