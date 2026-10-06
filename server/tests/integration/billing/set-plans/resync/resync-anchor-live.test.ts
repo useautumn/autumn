@@ -201,6 +201,20 @@ test.concurrent(
 			prorationBehavior: "none",
 		});
 
+		{
+			const dumpSub = await findStripeSubscriptionByStatus({ ctx, customerId, status: "active" });
+			const dumpScheduleId = typeof dumpSub.schedule === "string" ? dumpSub.schedule : dumpSub.schedule?.id;
+			for (const delayMs of [0, 15000]) {
+				await new Promise((resolve) => setTimeout(resolve, delayMs));
+				const sched = await ctx.stripeCli.subscriptionSchedules.retrieve(dumpScheduleId!);
+				console.log("DEBUG4315 sched", delayMs, JSON.stringify(sched.phases.map((phase) => ({ start: phase.start_date, end: phase.end_date, anchor: phase.billing_cycle_anchor, proration: phase.proration_behavior, items: phase.items.map((item) => item.price) }))));
+				const up = await ctx.stripeCli.invoices.createPreview({ customer: dumpSub.customer as string, schedule: dumpScheduleId! });
+				console.log("DEBUG4315 upcoming", delayMs, up.total, up.created, JSON.stringify(up.lines.data.map((line) => ({ amount: line.amount, desc: line.description, proration: line.parent?.subscription_item_details?.proration, start: line.period.start, end: line.period.end }))));
+				const pending = await ctx.stripeCli.invoiceItems.list({ customer: dumpSub.customer as string, pending: true });
+				console.log("DEBUG4315 pending", delayMs, JSON.stringify(pending.data.map((item) => ({ amount: item.amount, desc: item.description }))));
+			}
+			console.log("DEBUG4315 preview", JSON.stringify(preview.next_cycle));
+		}
 		// The anchor invoices nothing, so Stripe's next invoice is the switch.
 		expect(msToSeconds(preview.next_cycle?.starts_at ?? 0)).toBe(
 			msToSeconds(switchAt),
