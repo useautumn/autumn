@@ -130,6 +130,48 @@ test("a standby whose preparation failed restarts the partition alone: it holds 
 	expect(isPartitionRestartableCause({ cause })).toBe(true);
 });
 
+function coordinatorNotReady({
+	type,
+	code,
+}: {
+	type: string;
+	code: number;
+}): Error {
+	return new KafkaJSNumberOfRetriesExceeded(
+		new KafkaJSProtocolError(
+			Object.assign(new Error(`coordinator not ready: ${type}`), {
+				type,
+				code,
+				retriable: true,
+			}),
+		),
+		{ retryCount: 8, retryTime: 1000 },
+	);
+}
+
+test("a producer the coordinator could not yet initialise restarts the partition alone: it wrote nothing", () => {
+	for (const refusal of [
+		{ type: "COORDINATOR_LOAD_IN_PROGRESS", code: 14 },
+		{ type: "COORDINATOR_NOT_AVAILABLE", code: 15 },
+		{ type: "NOT_COORDINATOR", code: 16 },
+	]) {
+		const cause = new OwnedPartitionRecoveryRequiredError({
+			topic,
+			partition,
+			cause: coordinatorNotReady(refusal),
+		});
+		expect(isPartitionRestartableCause({ cause })).toBe(true);
+	}
+});
+
+test("any other refusal the broker gave up retrying still stops the service", () => {
+	const cause = new OwnedPartitionRecoveryRequiredError({
+		topic,
+		partition,
+		cause: coordinatorNotReady({ type: "UNKNOWN_SERVER_ERROR", code: -1 }),
+	});
+	expect(isPartitionRestartableCause({ cause })).toBe(false);
+});
 test("anything else keeps stopping the service", () => {
 	const store = new OwnedPartitionRecoveryRequiredError({
 		topic,

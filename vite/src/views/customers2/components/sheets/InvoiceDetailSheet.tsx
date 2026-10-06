@@ -78,10 +78,9 @@ const resolveFeatureName = ({
 	featureId,
 	features,
 }: {
-	featureId: string | null;
+	featureId: string;
 	features: Feature[];
 }): string => {
-	if (!featureId) return "Base Price";
 	const feature = features.find((f) => f.id === featureId);
 	return feature?.name ?? featureId;
 };
@@ -194,39 +193,6 @@ export function InvoiceDetailSheet({
 
 		const result: ProductGroup[] = [];
 		for (const [productKey, items] of byProduct) {
-			const groups = new Map<string, LineItemGroup>();
-
-			for (const item of items) {
-				const groupKey = item.stripe_subscription_item_id ?? item.id;
-				const isBasePrice = !item.feature_id;
-				const chargedAmount = item.amount_after_discounts ?? item.amount;
-
-				const existing = groups.get(groupKey);
-				if (existing) {
-					existing.items.push(item);
-					existing.totalAmount += chargedAmount;
-				} else {
-					groups.set(groupKey, {
-						groupKey,
-						label: isBasePrice
-							? "Base Price"
-							: resolveFeatureName({
-									featureId: item.feature_id,
-									features,
-								}),
-						isBasePrice,
-						items: [item],
-						totalAmount: chargedAmount,
-					});
-				}
-			}
-
-			const sortedGroups = Array.from(groups.values()).sort((a, b) => {
-				if (a.isBasePrice && !b.isBasePrice) return -1;
-				if (!a.isBasePrice && b.isBasePrice) return 1;
-				return a.label.localeCompare(b.label);
-			});
-
 			const productId = productKey === "__unknown__" ? null : productKey;
 			const product = products?.find((p) => p.id === productId);
 			const invoiceProductId =
@@ -242,6 +208,39 @@ export function InvoiceDetailSheet({
 				productId ??
 				invoiceProductId ??
 				"Custom Item";
+
+			const groups = new Map<string, LineItemGroup>();
+
+			for (const item of items) {
+				const groupKey = item.stripe_subscription_item_id ?? item.id;
+				const isBasePrice = !item.feature_id;
+				const chargedAmount = item.amount_after_discounts ?? item.amount;
+
+				const existing = groups.get(groupKey);
+				if (existing) {
+					existing.items.push(item);
+					existing.totalAmount += chargedAmount;
+				} else {
+					groups.set(groupKey, {
+						groupKey,
+						label: item.feature_id
+							? resolveFeatureName({
+									featureId: item.feature_id,
+									features,
+								})
+							: productName,
+						isBasePrice,
+						items: [item],
+						totalAmount: chargedAmount,
+					});
+				}
+			}
+
+			const sortedGroups = Array.from(groups.values()).sort((a, b) => {
+				if (a.isBasePrice && !b.isBasePrice) return -1;
+				if (!a.isBasePrice && b.isBasePrice) return 1;
+				return a.label.localeCompare(b.label);
+			});
 
 			result.push({
 				productId,

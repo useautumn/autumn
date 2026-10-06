@@ -94,6 +94,27 @@ async function withThread<T>({
 }
 
 describe("threaded producers", () => {
+	test("SCRAM credentials reach the producer thread, so its client signs in like the decide thread's", async () => {
+		const remote = createThreadedProducers({
+			ctx: { logger, onFatal: noFatal },
+			config: {
+				...clientConfig,
+				clientId: "scram-client",
+				authMode: "scram",
+				sasl: {
+					mechanism: "scram-sha-256",
+					username: "balance-worker",
+					password: "test-password",
+				},
+				threadUrl,
+				sendRingBytes: 4 << 20,
+				ackRingBytes: 1 << 20,
+			},
+		});
+		await remote.start();
+		await remote.stop();
+	});
+
 	test("request ids wrap within u32, so sends past 2^32 requests still find their acks", async () => {
 		let scope: ThreadedProducersScope | undefined;
 		const original = threadProducer.createThreadProducer;

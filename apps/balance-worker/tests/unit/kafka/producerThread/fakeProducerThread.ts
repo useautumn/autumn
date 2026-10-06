@@ -6,7 +6,7 @@
  *  electing → retries exhausted around LEADER_NOT_AVAILABLE (fate unknown, a leader election)
  *  crash    → the thread exits
  *  anything else → one metadata entry with a per-partition base offset
- * A clientId of "bad-client" makes the thread fail to start.
+ * A clientId of "bad-client" makes the thread fail to start; "scram-client" starts only with its SCRAM credentials.
  */
 import type { KafkaProducerClient } from "@autumn/kafka";
 import {
@@ -148,6 +148,13 @@ self.onmessage = (
 	if (loop) return;
 	if (message.clientId === "bad-client") {
 		postMessage({ kind: "error", message: "bad client id" });
+		return;
+	}
+	if (
+		message.clientId === "scram-client" &&
+		(message.authMode !== "scram" || !message.sasl?.password)
+	) {
+		postMessage({ kind: "error", message: "SCRAM credentials missing" });
 		return;
 	}
 	loop = startProducerLoop({

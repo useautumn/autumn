@@ -6,18 +6,23 @@ import {
 	writeKafkaTokenLine,
 } from "./kafkaTokens.js";
 import { describeMskToken, type KafkaTokenInfo } from "./mskTokenInfo.js";
-import type { KafkaTransportConfig } from "./types/kafkaClient.js";
+import type {
+	KafkaSaslCredentials,
+	KafkaTransportConfig,
+} from "./types/kafkaClient.js";
 
 export function createKafkaTransport({
 	authMode,
 	region,
+	sasl,
 	generateToken = generateAuthToken,
 	onToken = writeKafkaTokenLine,
 	tokens = processKafkaTokens,
 	now = Date.now,
 }: {
-	authMode: "none" | "msk_iam";
+	authMode: "none" | "msk_iam" | "scram" | "plain";
 	region?: string;
+	sasl?: KafkaSaslCredentials;
 	generateToken?: typeof generateAuthToken;
 	/** Told about every token signed, so a refusal can be read against the key and lifetime the client presented. */
 	onToken?(info: KafkaTokenInfo): void;
@@ -25,6 +30,8 @@ export function createKafkaTransport({
 	now?: () => number;
 }): KafkaTransportConfig {
 	if (authMode === "none") return {};
+	if (authMode === "scram" || authMode === "plain")
+		return createSaslTransport({ sasl });
 	if (authMode !== "msk_iam") {
 		throw new Error("Unsupported Kafka authentication mode");
 	}
@@ -51,4 +58,29 @@ export function createKafkaTransport({
 		ssl: true,
 		sasl: { mechanism: "oauthbearer", oauthBearerProvider },
 	};
+}
+
+function createSaslTransport({
+	sasl,
+}: {
+	sasl?: KafkaSaslCredentials;
+}): KafkaTransportConfig {
+	if (!sasl?.username.trim() || !sasl.password) {
+		throw new Error("SASL authentication requires a username and password");
+	}
+	const { username, password } = sasl;
+	switch (sasl.mechanism) {
+		case "plain":
+			return { ssl: true, sasl: { mechanism: "plain", username, password } };
+		case "scram-sha-512":
+			return {
+				ssl: true,
+				sasl: { mechanism: "scram-sha-512", username, password },
+			};
+		case "scram-sha-256":
+			return {
+				ssl: true,
+				sasl: { mechanism: "scram-sha-256", username, password },
+			};
+	}
 }

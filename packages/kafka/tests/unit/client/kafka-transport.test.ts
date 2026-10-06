@@ -32,6 +32,58 @@ test("local transport never resolves AWS credentials", () => {
 	expect(calls).toBe(0);
 });
 
+test("SCRAM uses TLS with its credentials and never signs an IAM token", () => {
+	let calls = 0;
+	async function generateToken(): Promise<never> {
+		calls++;
+		throw new Error("SCRAM must not sign an IAM token");
+	}
+	const scram = {
+		mechanism: "scram-sha-256" as const,
+		username: "tf-redpanda-staging-server",
+		password: "secret",
+	};
+	expect(
+		createKafkaTransport({ authMode: "scram", sasl: scram, generateToken }),
+	).toEqual({ ssl: true, sasl: scram });
+	expect(calls).toBe(0);
+});
+
+test("SCRAM without a username and password is refused", () => {
+	expect(() => createKafkaTransport({ authMode: "scram" })).toThrow(
+		"SASL authentication requires a username and password",
+	);
+	expect(() =>
+		createKafkaTransport({
+			authMode: "scram",
+			sasl: { mechanism: "scram-sha-512", username: "", password: "secret" },
+		}),
+	).toThrow("SASL authentication requires a username and password");
+});
+
+test("PLAIN uses TLS with its credentials and never signs an IAM token", () => {
+	let calls = 0;
+	async function generateToken(): Promise<never> {
+		calls++;
+		throw new Error("PLAIN must not sign an IAM token");
+	}
+	const sasl = {
+		mechanism: "plain" as const,
+		username: "confluent-api-key",
+		password: "secret",
+	};
+	expect(
+		createKafkaTransport({ authMode: "plain", sasl, generateToken }),
+	).toEqual({ ssl: true, sasl });
+	expect(calls).toBe(0);
+});
+
+test("PLAIN without a username and password is refused", () => {
+	expect(() => createKafkaTransport({ authMode: "plain" })).toThrow(
+		"SASL authentication requires a username and password",
+	);
+});
+
 test("IAM uses TLS and signs lazily for every authentication", async () => {
 	const requests: GenerateAuthTokenOptions[] = [];
 	async function generateToken(options: GenerateAuthTokenOptions) {

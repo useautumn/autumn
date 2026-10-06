@@ -815,11 +815,28 @@ const startLiveRun = ({
 	const wanted = Math.min(list.length, workerCap);
 	const attached = queuedForMs ? 0 : Math.min(wanted, startWorkers);
 	const runId = `run_${hex(10)}`;
-	const createdAt = Date.now() - progress * 11 * MIN;
+	const now = Date.now();
+	const createdAt = now - progress * 11 * MIN;
+	const startedAt = createdAt + 70_000;
 	const done = Math.floor(list.length * progress);
-	const files: RunFile[] = list
+	const boots = Array.from({ length: attached }, () => mockBoot());
+	const readyAt = boots.map((b) => startedAt + (b.totalMs ?? 0));
+	const finished = list
 		.slice(0, done)
 		.map((f, j) => finishedFile(f, rand, workerName(j % attached), 0.012));
+	// Lay finished files end to end per worker, squeezed to end before now.
+	const cursor = [...readyAt];
+	const ends = finished.map((f, j) => {
+		cursor[j % attached] += f.durationMs ?? 0;
+		return cursor[j % attached];
+	});
+	const last = Math.max(startedAt + 1, ...ends);
+	const squeeze = Math.min(1, (now - 10_000 - startedAt) / (last - startedAt));
+	const at = (ms: number) => startedAt + (ms - startedAt) * squeeze;
+	const files: RunFile[] = finished.map((f, j) => ({
+		...f,
+		finishedAt: iso(at(ends[j])),
+	}));
 	const running = progress > 0 ? list.slice(done, done + attached) : [];
 	const queuePosition = queuedForMs
 		? runs.filter((r) => r.queuePosition !== null).length + 1
@@ -842,7 +859,7 @@ const startLiveRun = ({
 		failed: 0,
 		createdBy,
 		createdAt: iso(createdAt),
-		startedAt: progress > 0 ? iso(createdAt + 70_000) : null,
+		startedAt: progress > 0 ? iso(startedAt) : null,
 		finishedAt: null,
 		phase:
 			progress > 0
@@ -858,6 +875,10 @@ const startLiveRun = ({
 					? ("ready" as const)
 					: ("provisioning" as const),
 			file: running[w] ?? null,
+			...(progress > 0 && {
+				boot: boots[w],
+				readyAt: iso(at(readyAt[w])),
+			}),
 		})),
 		files: [
 			...files,
@@ -884,6 +905,10 @@ const startLiveRun = ({
 		],
 		repeats: [],
 		drift: [],
+		milestones:
+			progress > 0
+				? { warmReadyAt: iso(createdAt + 45_000), accountsAt: iso(startedAt) }
+				: null,
 		etaMs: null,
 		etaP90Ms: null,
 	};
@@ -897,7 +922,7 @@ const startLiveRun = ({
 		readyAt: createdAt + queuedForMs,
 		workerSeconds: run.cost.workerSeconds,
 		fileStartedAt: new Map(
-			running.map((file) => [file, Date.now() - rand() * 60_000]),
+			running.map((file, w) => [file, Math.min(now - 1_000, at(cursor[w]))]),
 		),
 	});
 	return run;
@@ -1034,8 +1059,20 @@ const tickRun = (run: RunDetail) => {
 
 	if (run.status === "queued" && ageMs > 3_000)
 		return setStatus(run, "warming", "building tw-warm image");
-	if (run.status === "warming" && ageMs > 9_000)
-		return setStatus(run, "provisioning", `booting 0/${run.workers.length}`);
+	if (run.status === "warming" && ageMs > 9_000) {
+		run.milestones = {
+			warmReadyAt: iso(Date.now()),
+			accountsAt: iso(Date.now()),
+		};
+		run.status = "provisioning";
+		run.phase = `booting 0/${run.workers.length}`;
+		return emit(run.id, {
+			type: "status",
+			status: run.status,
+			phase: run.phase,
+			milestones: run.milestones,
+		});
+	}
 	if (run.status === "provisioning") {
 		bootWorkers(run);
 		const up = run.workers.filter((w) => w.status === "ready").length;

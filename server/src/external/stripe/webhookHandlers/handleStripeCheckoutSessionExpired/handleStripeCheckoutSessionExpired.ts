@@ -5,6 +5,7 @@ import {
 	expireCustomerProducts,
 	expirePendingCustomerProducts,
 } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
+import { LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -24,6 +25,9 @@ export const handleStripeCheckoutSessionExpired = async ({
 	event: Stripe.CheckoutSessionExpiredEvent;
 }) => {
 	const session = event.data.object;
+
+	// Long-lived links keep their grant until the link expires (see runLongLivedCheckoutExpiry).
+	if (session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY]) return;
 
 	const cusProducts = await CusProductService.getByStripeCheckoutSessionId({
 		db: ctx.db,
