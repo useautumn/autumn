@@ -187,3 +187,59 @@ test(`${chalk.yellowBright("update-sub scheduled anchor 3: proration none moves 
 		subscription.items.data[0]?.current_period_end,
 	);
 });
+
+test(`${chalk.yellowBright("update-sub scheduled anchor 4: a quantity-only update before a proration none anchor keeps it none")}`, async () => {
+	const customerId = "update-sub-anchor-future-none-quantity";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.prepaidMessages({ billingUnits: 100, price: 10 })],
+	});
+
+	const { autumnV2_3, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+			}),
+		],
+	});
+	const anchorMs = addDays(advancedTo, 10).getTime();
+	await autumnV2_3.subscriptions.update({
+		customer_id: customerId,
+		plan_id: pro.id,
+		billing_cycle_anchor: anchorMs,
+		proration_behavior: "none",
+	} satisfies UpdateSubscriptionV1ParamsInput);
+
+	await autumnV2_3.subscriptions.update({
+		customer_id: customerId,
+		plan_id: pro.id,
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+	} satisfies UpdateSubscriptionV1ParamsInput);
+
+	await expectCycleResetPhase({
+		ctx,
+		customerId,
+		anchorMs,
+		prorationBehavior: "none",
+	});
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const upcomingInvoice = await ctx.stripeCli.invoices.createPreview({
+		subscription: subscription.id,
+	});
+	expect(
+		upcomingInvoice.lines.data.some(
+			(line) => line.parent?.subscription_item_details?.proration,
+		),
+	).toBe(false);
+	expect(upcomingInvoice.total / 100).toBe(70);
+});

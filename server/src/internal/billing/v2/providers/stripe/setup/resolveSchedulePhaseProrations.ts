@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { requestedAnchorResetProration } from "@/internal/billing/v2/utils/schedulePhaseProration/requestedAnchorResetProration";
 import { listSchedulePhaseProrations } from "@/internal/customers/schedules/repos/listSchedulePhaseProrations";
+import { liveScheduleAnchorResetProrations } from "./liveScheduleAnchorResetProrations";
 
 export type SchedulePhaseProration = {
 	startsAt: number;
@@ -38,7 +39,10 @@ export const requestedPhaseProrations = ({
 	setPlansPhaseProrations({ billingContext }) ??
 	requestedAnchorResetProration({ billingContext });
 
-/** set_plans names each phase's proration; any other action names its anchor reset's and keeps what the saved schedule holds. */
+/**
+ * The prorations a schedule rebuild applies, first match wins: set_plans' phases, or a saved phase
+ * starting there, then the request's anchor reset, then the anchor reset the live Stripe schedule holds.
+ */
 export const resolveSchedulePhaseProrations = async ({
 	ctx,
 	billingContext,
@@ -46,20 +50,23 @@ export const resolveSchedulePhaseProrations = async ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 }): Promise<SchedulePhaseProration[]> => {
-	const setPlansProrations = setPlansPhaseProrations({ billingContext });
-	if (setPlansProrations) return setPlansProrations;
-
-	const anchorResetProrations = requestedAnchorResetProration({
+	const liveResetProrations = liveScheduleAnchorResetProrations({
 		billingContext,
 	});
-	if (!billingContext.stripeSubscriptionSchedule) return anchorResetProrations;
 
-	// The request's anchor reset wins over a saved phase starting at the same time.
+	const setPlansProrations = setPlansPhaseProrations({ billingContext });
+	if (setPlansProrations)
+		return [...setPlansProrations, ...liveResetProrations];
+
+	const savedPhaseProrations = billingContext.stripeSubscriptionSchedule
+		? await listSchedulePhaseProrations({
+				ctx,
+				internalCustomerId: billingContext.fullCustomer.internal_id,
+			})
+		: [];
 	return [
-		...anchorResetProrations,
-		...(await listSchedulePhaseProrations({
-			ctx,
-			internalCustomerId: billingContext.fullCustomer.internal_id,
-		})),
+		...savedPhaseProrations,
+		...requestedAnchorResetProration({ billingContext }),
+		...liveResetProrations,
 	];
 };
