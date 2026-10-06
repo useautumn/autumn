@@ -10,6 +10,9 @@
  *   B. add_items with a feature NOT on the plan -> entitlement added,
  *      catalog items untouched.
  *   C. remove_items alone -> entitlement absent from the synced product.
+ *
+ * Subs carry autumn_managed_at so the sub.created auto-sync skips them; otherwise
+ * it can attach catalog Pro first and the customize sync adds a second Pro beside it.
  */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, CustomizePlanV1 } from "@autumn/shared";
@@ -23,6 +26,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { createStripeSubscriptionFromProduct } from "./utils/syncTestUtils";
 
 const syncWithCustomize = async ({
@@ -69,6 +73,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: pro.id,
+			metadata: buildAutumnSubscriptionMetadata({}),
 		});
 
 		await syncWithCustomize({
@@ -126,6 +131,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: pro.id,
+			metadata: buildAutumnSubscriptionMetadata({}),
 		});
 
 		await syncWithCustomize({
@@ -190,6 +196,7 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: pro.id,
+			metadata: buildAutumnSubscriptionMetadata({}),
 		});
 
 		await syncWithCustomize({
