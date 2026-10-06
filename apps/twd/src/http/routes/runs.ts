@@ -3,16 +3,21 @@ import { streamSSE } from "hono/streaming";
 import { type ZodTypeAny, z } from "zod";
 import {
 	CreateRunBody,
+	ListBranchesQuery,
 	ListRunsQuery,
 	type RunEvent,
 	type RunFile,
+	RunStatsQuery,
 	type WorkerState,
 } from "../../api/contract.ts";
 import type { RunStatus } from "../../db/schema/runs.ts";
 import { cancelRun } from "../../internal/runs/actions/cancelRun.ts";
 import { createRun } from "../../internal/runs/actions/createRun.ts";
 import { getRun } from "../../internal/runs/actions/getRun.ts";
-import { listRunsPage } from "../../internal/runs/actions/listRuns.ts";
+import {
+	listBranchesPage,
+	listRunsPage,
+} from "../../internal/runs/actions/listRuns.ts";
 import { rerunFailed } from "../../internal/runs/actions/rerunFailed.ts";
 import {
 	getLiveRun,
@@ -23,6 +28,7 @@ import {
 	getRunLogs,
 } from "../../internal/runs/logs/getRunLogs.ts";
 import {
+	getRunStatsSince,
 	getRunWithEmail,
 	isTerminalRunStatus,
 } from "../../internal/runs/repos/runsRepo.ts";
@@ -66,6 +72,20 @@ export const runsRoutes = new Hono<TwdHono>()
 			}),
 		),
 	)
+	.get("/runs/branches", async (c) =>
+		c.json(
+			await listBranchesPage({
+				ctx: c.get("ctx"),
+				...parse({ schema: ListBranchesQuery, input: c.req.query() }),
+			}),
+		),
+	)
+	.get("/runs/stats", async (c) => {
+		const { since } = parse({ schema: RunStatsQuery, input: c.req.query() });
+		return c.json(
+			await getRunStatsSince({ ctx: c.get("ctx"), since: new Date(since) }),
+		);
+	})
 	.post("/runs", async (c) => {
 		const body = parse({
 			schema: CreateRunBody,

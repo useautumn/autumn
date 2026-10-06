@@ -133,16 +133,17 @@ export const WorkerBoot = z.object({
 	steps: z.array(z.object({ step: z.string(), ms: z.number() })),
 	totalMs: z.number().nullable(),
 });
+export const WorkerStatus = z.enum([
+	"provisioning",
+	"booting",
+	"ready",
+	"busy",
+	"dead",
+	"failed",
+]);
 export const WorkerState = z.object({
 	name: z.string(),
-	status: z.enum([
-		"provisioning",
-		"booting",
-		"ready",
-		"busy",
-		"dead",
-		"failed",
-	]),
+	status: WorkerStatus,
 	file: z.string().nullable(),
 	boot: WorkerBoot.nullable().optional(),
 	/** When the worker was mapped and serving. */
@@ -166,6 +167,12 @@ export const RunFile = z.object({
 	failureSummary: z.string().nullable(),
 	/** When twd saw the file's final result (latest attempt). */
 	finishedAt: z.string().nullable().optional(),
+});
+
+/** A live run as this process sees it: workers by status and the server ETA. */
+export const RunLive = z.object({
+	workers: z.record(WorkerStatus, z.number()),
+	etaMs: z.number().nullable(),
 });
 
 /** Modal compute cost of a run: Σ worker lifetime × (cores × core rate + GiB × memory rate). */
@@ -202,6 +209,8 @@ export const RunSummary = z.object({
 	failed: z.number(),
 	/** Failing files that were not failing in the previous baseline; null while live or with no baseline to compare. */
 	newFailures: z.number().nullable(),
+	/** Null once finished (or when the run is not live in this process). */
+	live: RunLive.nullable(),
 	createdBy: ActorRef,
 	createdAt: z.string(),
 	startedAt: z.string().nullable(),
@@ -244,6 +253,8 @@ export const ListRunsQuery = z.object({
 		.optional(),
 	/** Substring match on branch name. */
 	branch: z.string().optional(),
+	/** Exact branch name (a branch's history). */
+	exactBranch: z.string().optional(),
 	/** Opaque `nextCursor` from the previous page. */
 	cursor: z.string().optional(),
 	limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -253,6 +264,27 @@ export const RunsPage = z.object({
 	nextCursor: z.string().nullable(),
 	total: z.number(),
 });
+
+/** Most recent finished runs kept per branch on GET /runs/branches. */
+export const BRANCH_HISTORY_RUNS = 12;
+export const ListBranchesQuery = z.object({
+	/** Substring match on branch name. */
+	branch: z.string().optional(),
+	/** Opaque `nextCursor` from the previous page. */
+	cursor: z.string().optional(),
+	limit: z.coerce.number().int().min(1).max(100).default(30),
+});
+/** Branches by their latest finished run, newest first, each with its last finished runs (newest first). */
+export const BranchesPage = z.object({
+	branches: z.array(
+		z.object({ branch: z.string(), runs: z.array(RunSummary) }),
+	),
+	nextCursor: z.string().nullable(),
+});
+
+export const RunStatsQuery = z.object({ since: z.string().datetime() });
+/** Runs created since `since` and their cost so far (live runs still accruing). */
+export const RunStats = z.object({ runs: z.number(), usd: z.number() });
 
 /** SSE event on GET /runs/:id/events. */
 export const RunEvent = z.discriminatedUnion("type", [
@@ -543,6 +575,8 @@ export const ROUTES = {
 
 	// runs (http/routes/runs.ts)
 	listRuns: "GET /runs",
+	runBranches: "GET /runs/branches",
+	runStats: "GET /runs/stats?since=",
 	createRun: "POST /runs",
 	getRun: "GET /runs/:id",
 	runEvents: "GET /runs/:id/events",
@@ -601,6 +635,9 @@ export type Branch = z.infer<typeof Branch>;
 export type CreateRunBody = z.infer<typeof CreateRunBody>;
 export type RunSummary = z.infer<typeof RunSummary>;
 export type RunsPage = z.infer<typeof RunsPage>;
+export type BranchesPage = z.infer<typeof BranchesPage>;
+export type RunStats = z.infer<typeof RunStats>;
+export type RunLive = z.infer<typeof RunLive>;
 export type RunDetail = z.infer<typeof RunDetail>;
 export type RunFile = z.infer<typeof RunFile>;
 export type RepeatStat = z.infer<typeof RepeatStat>;
