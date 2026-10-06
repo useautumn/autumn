@@ -21,6 +21,8 @@ import chalk from "chalk";
 const ONE_OFF_COUNT = 10;
 const RECURRING_ADDON_COUNT = 10;
 const ONE_OFF_ADDON_COUNT = 10;
+// The default 8s post-attach settle × 31 attaches overran bun's 300s test timeout on twd.
+const ATTACH_SETTLE_MS = 0;
 
 test(`${chalk.yellowBright("scenario: customer with many plans (all types)")}`, async () => {
 	const subscription = products.pro({
@@ -65,12 +67,20 @@ test(`${chalk.yellowBright("scenario: customer with many plans (all types)")}`, 
 			s.products({ list: allProducts, prefix: "mp" }),
 		],
 		actions: [
-			s.attach({ productId: subscription.id }),
-			...oneOffs.map((p) => s.attach({ productId: p.id })),
-			...recurringAddOns.map((p) =>
-				s.attach({ productId: p.id, newBillingSubscription: true }),
+			s.attach({ productId: subscription.id, timeout: ATTACH_SETTLE_MS }),
+			...oneOffs.map((p) =>
+				s.attach({ productId: p.id, timeout: ATTACH_SETTLE_MS }),
 			),
-			...oneOffAddOns.map((p) => s.attach({ productId: p.id })),
+			...recurringAddOns.map((p) =>
+				s.attach({
+					productId: p.id,
+					newBillingSubscription: true,
+					timeout: ATTACH_SETTLE_MS,
+				}),
+			),
+			...oneOffAddOns.map((p) =>
+				s.attach({ productId: p.id, timeout: ATTACH_SETTLE_MS }),
+			),
 		],
 	});
 });
