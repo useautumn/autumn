@@ -43,7 +43,10 @@ const createClient = () => {
 				},
 			},
 			http,
-			logger: { warn: (fields) => warnings.push(String(fields.type)) },
+			logger: {
+				warn: (fields) =>
+					warnings.push(String((fields as { type: string }).type)),
+			},
 		},
 		atomId: "org_1.sandbox",
 	});

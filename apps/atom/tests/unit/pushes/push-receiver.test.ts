@@ -86,7 +86,11 @@ const drain = async ({
 		ctx: {
 			pushes: fake.queue,
 			auth,
-			logger: { warn: (fields) => warnings.push(String(fields.type)) },
+			logger: {
+				warn: (fields) =>
+					warnings.push(String((fields as { type: string }).type)),
+			},
+			sleep: async () => {},
 		},
 	});
 	fake.onDrained(receiver.stop);
@@ -154,5 +158,42 @@ describe("push receiver", () => {
 			"atom_push_invalid",
 			"atom_push_unrouted",
 		]);
+	});
+
+	test("a failed receive is logged and retried, never ending the receiver", async () => {
+		const auth = createDeployedAuth({
+			dataDir: newDataDir(),
+			tokenHash: TOKEN_HASH,
+			slotCount: 2,
+		});
+		opened.push(auth);
+		const message = subjectMessage({});
+		let calls = 0;
+		const warnings: string[] = [];
+		const receiver = createPushReceiver({
+			ctx: {
+				pushes: {
+					receive: async () => {
+						calls += 1;
+						if (calls === 1) throw new Error("queue unreachable");
+						if (calls === 2) return [message];
+						receiver.stop();
+						return [];
+					},
+					ack: async () => {},
+				},
+				auth,
+				logger: {
+					warn: (fields) =>
+						warnings.push(String((fields as { type: string }).type)),
+				},
+				sleep: async () => {},
+			},
+		});
+
+		await receiver.run();
+
+		expect(warnings).toContain("atom_push_receive_failed");
+		expect(checkCustomer(auth.slots)).toMatchObject({ allowed: true });
 	});
 });
