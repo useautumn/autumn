@@ -6,9 +6,11 @@ import {
 	type LineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
 import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
+import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
 import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
@@ -51,7 +53,14 @@ export const finalizeLineItems = ({
 	const skipsProration =
 		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
 	const resetsCycleNow = billingContext.anchorResetRefund?.noPartialRefund;
-	if (skipsProration && !resetsCycleNow) return [];
+	if (skipsProration && !resetsCycleNow) {
+		// set_plans only: usage of a plan no subscription billed is still owed under none.
+		const unbilledUsage = isSetPlansBillingContext(billingContext)
+			? lineItems.filter(isUsageNoSubscriptionBilled)
+			: [];
+		if (unbilledUsage.length === 0) return [];
+		lineItems = unbilledUsage;
+	}
 
 	const billedLineItems =
 		skipsProration && dropsUnchangedItemChargesAtReset
