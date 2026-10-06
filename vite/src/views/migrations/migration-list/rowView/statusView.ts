@@ -2,6 +2,7 @@ import type {
 	MigrationListActivityKind,
 	MigrationListItemCounts,
 	MigrationListSummary,
+	MigrationRunErrorCode,
 	MigrationRunStatus,
 	MigrationStatus,
 } from "@autumn/shared";
@@ -51,6 +52,8 @@ export const BAR_TRACKS = {
 
 type Segment = { kind: SegmentKind; value: number };
 
+export type RunErrorView = { message: string; details: string | null };
+
 export type StatusView = {
 	ring: { tone: StatusTone; fraction: number };
 	chip: ChipView;
@@ -59,7 +62,7 @@ export type StatusView = {
 		chip: ChipView;
 		when: string;
 		note: string | null;
-		error: string | null;
+		error: RunErrorView | null;
 		legend: Segment[];
 	};
 };
@@ -221,6 +224,38 @@ const PILLS: Record<
 	}),
 };
 
+const RUN_ERROR_MESSAGES: Record<MigrationRunErrorCode, string> = {
+	cache_invalidation_incomplete:
+		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
+	stripe_error:
+		"Stripe returned an error, so the run stopped. Customers already migrated keep their changes.",
+	timed_out:
+		"The run took too long and stopped. Customers already migrated keep their changes.",
+	canceled:
+		"The run was canceled before it finished. Customers already migrated keep their changes.",
+	interrupted:
+		"The run was interrupted before it finished. Customers already migrated keep their changes.",
+	dispatch_failed: "The run couldn't be started. Try running it again.",
+	page_limit_exceeded:
+		"The run matched more customers than one run can process. Narrow the filter and run it again.",
+	unknown:
+		"The run stopped unexpectedly. Customers already migrated keep their changes.",
+};
+
+/** Codes newer than this dashboard fall back to the generic sentence. */
+const describeRunError = (
+	summary: MigrationListSummary,
+): RunErrorView | null => {
+	const run = summary.latest_run;
+	if (!run?.error_code && !run?.error_message) return null;
+	return {
+		message:
+			RUN_ERROR_MESSAGES[run.error_code ?? "unknown"] ??
+			RUN_ERROR_MESSAGES.unknown,
+		details: run.error_message,
+	};
+};
+
 /** Terminal outcomes already read from the status chip, so they carry no verb. */
 const ACTIVITY_VERBS: Record<MigrationListActivityKind, string | null> = {
 	created: "Created",
@@ -298,10 +333,7 @@ export const deriveStatusView = ({
 			chip: chipWith(cardDetail ?? detail),
 			when: describeWhen({ summary, now }),
 			note: isFinished ? laterMatchesNote(summary) : null,
-			error:
-				status === "failed"
-					? (summary.latest_run?.error_message ?? null)
-					: null,
+			error: status === "failed" ? describeRunError(summary) : null,
 			legend: visibleSegments.filter((segment) => SEGMENTS[segment.kind].label),
 		},
 	};

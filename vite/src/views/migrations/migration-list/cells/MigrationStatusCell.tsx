@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
 import { BAR_TRACKS, SEGMENTS, type StatusView } from "../rowView/statusView";
+import { RunErrorNotice } from "./RunErrorNotice";
 import { CellHoverCard, PopoverSeparator, ViewChip } from "./ViewChip";
 
 function SegmentedBar({ bar }: { bar: StatusView["bar"] }) {
@@ -36,11 +37,7 @@ export function StatusCard({ status }: { status: StatusView }) {
 			{card.note && (
 				<span className="text-tertiary-foreground">{card.note}</span>
 			)}
-			{card.error && (
-				<span className="text-[13px] leading-[18px] font-medium text-foreground">
-					{card.error}
-				</span>
-			)}
+			{card.error && <RunErrorNotice error={card.error} />}
 			{card.legend.length > 0 && <PopoverSeparator />}
 			{card.legend.map((segment) => (
 				<div

@@ -16,6 +16,9 @@ import {
 	toMigrationListRows,
 } from "../rowView/deriveMigrationRowView";
 
+export const CACHE_INVALIDATION_ERROR_MESSAGE =
+	"Error in run-batch-migration-chunk: batch-migration: cache invalidation did not complete for 1 page(s) (0 timed out; page 1); checkpoints revoked for retry where the revoke succeeded (see per-page logs)";
+
 export const FIXTURE_NOW = new Date(2026, 8, 29, 12, 0).getTime();
 
 const MINUTE = 60_000;
@@ -233,6 +236,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: minutesAgo(12),
 				finished_at: null,
 				error_message: null,
+				error_code: null,
 				counts: counts({
 					succeeded: 280,
 					no_updates_needed: 20,
@@ -279,6 +283,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: null,
 				finished_at: null,
 				error_message: null,
+				error_code: null,
 				counts: counts({}),
 			},
 			queue_position: 1,
@@ -386,6 +391,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: on({ day: 22, minute: 2 }),
 				finished_at: on({ day: 22, minute: 40 }),
 				error_message: null,
+				error_code: null,
 				counts: counts({ succeeded: 3391, ineligible: 9 }),
 			},
 			last_activity: { kind: "finished", at: on({ day: 22, minute: 40 }) },
@@ -411,6 +417,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: on({ day: 4, minute: 1 }),
 				finished_at: on({ day: 4, minute: 12 }),
 				error_message: null,
+				error_code: null,
 				counts: counts({ succeeded: 998, failed: 2 }),
 			},
 			last_activity: { kind: "finished", at: on({ day: 4, minute: 12 }) },
@@ -449,6 +456,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: on({ day: 18, minute: 1 }),
 				finished_at: on({ day: 18, minute: 6 }),
 				error_message: null,
+				error_code: null,
 				counts: counts({ no_updates_needed: 540 }),
 			},
 			last_activity: { kind: "finished", at: on({ day: 18, minute: 6 }) },
@@ -474,6 +482,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: on({ day: 10, minute: 0 }),
 				finished_at: on({ day: 10, minute: 7 }),
 				error_message: null,
+				error_code: null,
 				counts: counts({ succeeded: 120 }),
 			},
 			last_activity: { kind: "canceled", at: on({ day: 10, minute: 7 }) },
@@ -515,11 +524,49 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: on({ day: 15, hour: 14, minute: 14 }),
 				finished_at: on({ day: 15, hour: 14, minute: 32 }),
 				error_message: "Stripe rate limit exceeded",
+				error_code: "stripe_error",
 				counts: counts({ succeeded: 798, failed: 14 }),
 			},
 			last_activity: {
 				kind: "failed",
 				at: on({ day: 15, hour: 14, minute: 32 }),
+			},
+		}),
+	}),
+	migration({
+		id: "migration-credits-reset",
+		status: "failed",
+		filter: { customer: { plan: { plan_id: "growth" } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: "growth" },
+					customize: {
+						add_items: [
+							{
+								feature_id: "credits",
+								included: 2000,
+								reset: { interval: "month" },
+							},
+						],
+					},
+				},
+			],
+		} as Operations,
+		runSummary: summary({
+			customer_count: 904,
+			latest_run: {
+				status: "failed",
+				started_at: on({ day: 24, hour: 9, minute: 2 }),
+				finished_at: on({ day: 24, hour: 9, minute: 9 }),
+				error_message: CACHE_INVALIDATION_ERROR_MESSAGE,
+				error_code: "cache_invalidation_incomplete",
+				counts: counts({ failed: 881 }),
+			},
+			last_activity: {
+				kind: "failed",
+				at: on({ day: 24, hour: 9, minute: 9 }),
 			},
 		}),
 	}),
@@ -552,6 +599,7 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				started_at: on({ day: 20, hour: 17, minute: 59 }),
 				finished_at: on({ day: 20, hour: 18, minute: 2 }),
 				error_message: null,
+				error_code: null,
 				counts: counts({ succeeded: 884, ineligible: 1, failed: 1 }),
 			},
 			last_activity: {

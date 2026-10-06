@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+	CACHE_INVALIDATION_ERROR_MESSAGE,
 	FIXTURE_NOW,
 	fixtureMigrations,
 } from "../preview/migrationListFixtures";
@@ -183,7 +184,11 @@ test("failed and canceled report where they stopped and what was not reached", (
 		chip: { label: "Failed", details: ["at 80%"] },
 		when: "Sep 15, 14:32 · after 18 minutes",
 		note: null,
-		error: "Stripe rate limit exceeded",
+		error: {
+			message:
+				"Stripe returned an error, so the run stopped. Customers already migrated keep their changes.",
+			details: "Stripe rate limit exceeded",
+		},
 		legend: [
 			{ kind: "migrated", value: 798 },
 			{ kind: "failed", value: 14 },
@@ -195,5 +200,47 @@ test("failed and canceled report where they stopped and what was not reached", (
 		ring: { tone: "neutral", fraction: 120 / 900 },
 		label: "Canceled",
 		detail: "at 13%",
+	});
+});
+
+test("a failed run explains its error code in plain words and keeps the raw error as details", () => {
+	const view = statusOf("migration-credits-reset");
+	expect(pill("migration-credits-reset")).toEqual({
+		ring: { tone: "red", fraction: 881 / 904 },
+		label: "Failed",
+		detail: "at 97%",
+	});
+	expect(view.card.error).toEqual({
+		message:
+			"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
+		details: CACHE_INVALIDATION_ERROR_MESSAGE,
+	});
+	expect(view.card.legend).toEqual([
+		{ kind: "failed", value: 881 },
+		{ kind: "not_reached", value: 23 },
+	]);
+});
+
+test("an unclassified error gets a generic sentence, never the raw message", () => {
+	const migration = fixtureMigrations.find(
+		(candidate) => candidate.id === "migration-credits-reset",
+	);
+	if (!migration?.summary.latest_run) throw new Error("fixture missing");
+	const view = deriveStatusView({
+		status: "failed",
+		summary: {
+			...migration.summary,
+			latest_run: {
+				...migration.summary.latest_run,
+				error_message: "Migration chunk made no progress before continuation",
+				error_code: "unknown",
+			},
+		},
+		now: FIXTURE_NOW,
+	});
+	expect(view.card.error).toEqual({
+		message:
+			"The run stopped unexpectedly. Customers already migrated keep their changes.",
+		details: "Migration chunk made no progress before continuation",
 	});
 });

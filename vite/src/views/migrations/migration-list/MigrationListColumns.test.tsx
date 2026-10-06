@@ -3,7 +3,10 @@ import type { Row } from "@tanstack/react-table";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MigrationStatusCell, StatusCard } from "./cells/MigrationStatusCell";
 import { createMigrationListColumns } from "./MigrationListColumns";
-import { fixtureRows } from "./preview/migrationListFixtures";
+import {
+	CACHE_INVALIDATION_ERROR_MESSAGE,
+	fixtureRows,
+} from "./preview/migrationListFixtures";
 import type { MigrationListRow } from "./rowView/deriveMigrationRowView";
 
 const renderCell = ({ id, header }: { id: string; header: string }) => {
@@ -49,4 +52,19 @@ test("the status card badge draws the same icon as the row badge", () => {
 	);
 	expect(rowIcon).toBeDefined();
 	expect(cardIcon).toBe(rowIcon);
+});
+
+test("a failed run's card leads with the plain sentence and folds the raw error away", () => {
+	const row = fixtureRows.find(
+		(candidate) => candidate.id === "migration-credits-reset",
+	);
+	if (!row) throw new Error("credits reset fixture missing");
+	const text = renderToStaticMarkup(<StatusCard status={row.view.status} />)
+		.replace(/<[^>]+>/g, " ")
+		.replace(/\s+/g, " ");
+	expect(text).toContain(
+		"The run stopped before it could confirm every update.",
+	);
+	expect(text).toContain("Technical details");
+	expect(text).not.toContain(CACHE_INVALIDATION_ERROR_MESSAGE);
 });
