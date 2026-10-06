@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import type { Drift } from "../../../api/contract.ts";
+import { type Drift, isFailedFileStatus } from "../../../api/contract.ts";
 import { runs } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
@@ -50,7 +50,7 @@ export const computeRunDrift = async ({
 
 	const drift: Drift[] = [];
 	for (const row of rows) {
-		const failed = row.status === "failed" || row.status === "crashed";
+		const failed = isFailedFileStatus(row.status);
 		if (failed && row.pass_rate >= NEW_FAILURE_MIN_PASS_RATE) {
 			drift.push({
 				file: row.file,
