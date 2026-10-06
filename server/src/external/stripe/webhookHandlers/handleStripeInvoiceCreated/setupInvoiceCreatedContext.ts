@@ -3,8 +3,6 @@ import {
 	type FullCustomer,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
-	secondsToMs,
-	timestampsMatch,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
@@ -28,6 +26,7 @@ import {
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import type { InvoiceUpsertResult } from "@/internal/invoices/actions/types/invoiceUpsertResult";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
+import { findBillingCycleAnchorResetCustomerProductIds } from "../common/billingCycleAnchorReset/findBillingCycleAnchorResetCustomerProductIds";
 
 export interface InvoiceCreatedContext {
 	stripeInvoice: ExpandedStripeInvoice<
@@ -153,17 +152,11 @@ export const setupInvoiceCreatedContext = async ({
 		stripeId: stripeSubscription.customer.id,
 	});
 
-	const stripeAnchorMs = secondsToMs(stripeSubscription.billing_cycle_anchor);
-	const billingCycleAnchorResetCustomerProductIds = customerProducts
-		.filter(
-			(customerProduct) =>
-				typeof customerProduct.billing_cycle_anchor_resets_at === "number" &&
-				timestampsMatch(
-					customerProduct.billing_cycle_anchor_resets_at,
-					stripeAnchorMs,
-				),
-		)
-		.map((customerProduct) => customerProduct.id);
+	const billingCycleAnchorResetCustomerProductIds =
+		findBillingCycleAnchorResetCustomerProductIds({
+			stripeSubscription,
+			customerProducts,
+		});
 
 	return {
 		stripeInvoice,

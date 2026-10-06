@@ -187,6 +187,35 @@ export const expectCycleResetPhase = async ({
 	}
 };
 
+/** The plan's cycle, and every resetting balance on it, now runs from the anchor Stripe moved to. */
+export const expectBillingCycleAnchorConsumed = async ({
+	ctx,
+	customerId,
+	productId,
+	anchorMs,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	productId: string;
+	anchorMs: number;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const customerProduct = findActiveCustomerProductById({
+		fullCus: fullCustomer,
+		productId,
+	});
+	const stripeAnchorMs = secondsToMs(msToSeconds(anchorMs));
+	expect(customerProduct?.billing_cycle_anchor).toBe(stripeAnchorMs);
+	expect(customerProduct?.billing_cycle_anchor_resets_at).toBeNull();
+	for (const customerEntitlement of customerProduct?.customer_entitlements ??
+		[]) {
+		expect(customerEntitlement.reset_cycle_anchor).toBe(stripeAnchorMs);
+	}
+};
+
 export const expectPlansEndAt = async ({
 	ctx,
 	customerId,

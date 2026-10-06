@@ -2,8 +2,8 @@ import { beforeEach, expect, test } from "bun:test";
 import { EntInterval, FeatureType } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
+import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/common/billingCycleAnchorReset/consumeBillingCycleAnchorReset";
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
-import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/consumeBillingCycleAnchorReset";
 import {
 	type AutumnBillingPlanBuilder,
 	createAutumnBillingPlanBuilder,
