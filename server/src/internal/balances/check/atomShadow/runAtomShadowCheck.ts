@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import { type CheckParams, stripInternalFields } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isAtomAnswerableCheck, shadowAtomTarget } from "./atomShadowGuards.js";
-import { sendCheckToAtom } from "./sendCheckToAtom.js";
+import { atomRequestsInFlight, sendCheckToAtom } from "./sendCheckToAtom.js";
 import type {
 	AtomCheckReply,
 	AtomShadowOutcome,
@@ -98,6 +98,7 @@ export const runAtomShadowCheck = async ({
 			customer_id: params.customer_id,
 			entity_id: params.entity_id ?? null,
 			latency_ms: Math.round(performance.now() - startedAt),
+			atom_in_flight: atomRequestsInFlight(),
 			...answerFields({ apiResponse, reply }),
 			...outcome,
 		});

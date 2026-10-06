@@ -12,6 +12,11 @@ const ATOM_SHADOW_ABANDON_MS = 5_000;
 /** Set when Atom had the API answer instead, so the body is not Atom's own. */
 const FORWARDED_HEADER = "x-atom-forwarded";
 
+let requestsInFlight = 0;
+
+/** This process's Atom requests still open, late ones past their timeout included. */
+export const atomRequestsInFlight = () => requestsInFlight;
+
 const errorToReason = (error: unknown): string =>
 	error instanceof Error ? error.name : "unknown_failure";
 
@@ -47,6 +52,7 @@ const requestCheck = async ({
 	search,
 	apiVersion,
 }: Parameters<typeof sendCheckToAtom>[0]): Promise<AtomCheckReply> => {
+	requestsInFlight++;
 	try {
 		const response = await fetch(
 			new URL(`/v1/balances.check${search}`, target.endpointUrl),
@@ -72,5 +78,7 @@ const requestCheck = async ({
 	} catch (error) {
 		if (errorToReason(error) === "TimeoutError") return { kind: "timeout" };
 		return { kind: "atom_error", reason: errorToReason(error) };
+	} finally {
+		requestsInFlight--;
 	}
 };
