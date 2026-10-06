@@ -17,7 +17,6 @@ minimumReleaseAge = 259200 # seconds
 # Newly released dependencies we intentionally pin; exempt from the age gate.
 minimumReleaseAgeExcludes = [
 	"ai",
-	"autumn-js",
 	"eve",
 	"@ai-sdk/harness",
 	"@ai-sdk/harness-claude-code",

@@ -22,7 +22,7 @@
 		"@autumn/axiom": "workspace:*",
 		"@autumn/fx": "workspace:*",
 		"@autumn/logging": "workspace:*",
-		"autumn-js": "1.3.55",
+		"autumn-js": "1.3.50",
 		"drizzle-orm": "catalog:",
 		"zod": "^3.25.23"
 	},
