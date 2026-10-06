@@ -5,7 +5,6 @@ import type { MigrationWebhookControls } from "@/internal/migrations/v2/cloudAda
 import { queueMigrationWebhooks } from "@/internal/migrations/v2/webhookDelivery/utils/queueMigrationWebhooks.js";
 import {
 	clearPublishedItemRunChanges,
-	type ItemRunsToPublishScope,
 	listItemRunsToPublish,
 } from "../execute/claim/index.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "../execute/utils/batchMigrationExecutionConstants.js";
@@ -23,7 +22,7 @@ export const publishBatchMigrationChanges = async ({
 	migrationRunId,
 	plan,
 	webhooks,
-	scope,
+	internalCustomerIds,
 	invalidateSkipped = false,
 }: {
 	ctx: AutumnContext;
@@ -31,14 +30,15 @@ export const publishBatchMigrationChanges = async ({
 	migrationRunId: string;
 	plan: BatchMigrationExecutionPlan;
 	webhooks?: MigrationWebhookControls;
-	scope: ItemRunsToPublishScope;
+	internalCustomerIds: string[];
 	/** Also bust skipped customers: rows that failed before changes were
 	 * recorded can be converged yet still cached stale. */
 	invalidateSkipped?: boolean;
 }): Promise<void> => {
 	const itemRuns = await withStatementTimeout(
 		ctx.db,
-		(db) => listItemRunsToPublish({ db, migrationInternalId, scope }),
+		(db) =>
+			listItemRunsToPublish({ db, migrationInternalId, internalCustomerIds }),
 		BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 	);
 	const pageResult = await itemRunsToPageResult({ ctx, plan, itemRuns });

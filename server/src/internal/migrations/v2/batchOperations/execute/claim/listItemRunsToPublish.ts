@@ -15,26 +15,15 @@ export type ItemRunToPublish = {
 	changes: MigrationItemChange[] | null;
 };
 
-/** A page publishes its own customers; a sweep publishes every item run of
- * the migration still holding changes. */
-export type ItemRunsToPublishScope =
-	| { internalCustomerIds: string[] }
-	| { unpublished: true };
-
 export const listItemRunsToPublish = async ({
 	db,
 	migrationInternalId,
-	scope,
+	internalCustomerIds,
 }: {
 	db: DrizzleCli;
 	migrationInternalId: string;
-	scope: ItemRunsToPublishScope;
+	internalCustomerIds: string[];
 }): Promise<ItemRunToPublish[]> => {
-	const scopeSql =
-		"internalCustomerIds" in scope
-			? sql`mir.item_id = ANY(${sql.param(scope.internalCustomerIds)}::text[])`
-			: sql`mir.unpublished_changes IS NOT NULL`;
-
 	const rows = await db.execute<{
 		item_id: string;
 		status: MigrationItemRunStatus;
@@ -51,7 +40,7 @@ export const listItemRunsToPublish = async ({
 		WHERE mir.migration_internal_id = ${migrationInternalId}
 			AND mir.item_kind = 'customer'
 			AND mir.dry_run = false
-			AND ${scopeSql}
+			AND mir.item_id = ANY(${sql.param(internalCustomerIds)}::text[])
 	`);
 
 	return rows.map((row) => ({

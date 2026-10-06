@@ -523,11 +523,9 @@ const runNextBatchMigrationPage = async ({
 				migrationRunId,
 				plan,
 				webhooks,
-				scope: {
-					internalCustomerIds: page.customers.map(
-						(customer) => customer.internalId,
-					),
-				},
+				internalCustomerIds: page.customers.map(
+					(customer) => customer.internalId,
+				),
 				invalidateSkipped,
 			}),
 	});

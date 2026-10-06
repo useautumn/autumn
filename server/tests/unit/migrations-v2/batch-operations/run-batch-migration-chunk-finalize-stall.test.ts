@@ -154,14 +154,14 @@ mock.module(invalidateModulePath, () => ({
 
 mock.module(publishModulePath, () => ({
 	publishBatchMigrationChanges: async ({
-		scope,
+		internalCustomerIds,
 		invalidateSkipped,
 	}: {
-		scope: { internalCustomerIds: string[] };
+		internalCustomerIds: string[];
 		invalidateSkipped?: boolean;
 	}) => {
 		const page = pageOf(
-			scope.internalCustomerIds.map((internalId) => ({
+			internalCustomerIds.map((internalId) => ({
 				internalId,
 				id: null,
 				name: null,
@@ -169,7 +169,7 @@ mock.module(publishModulePath, () => ({
 			})),
 		);
 		scenario.publishStarts.push(page);
-		scenario.publishCustomers.set(page, scope.internalCustomerIds);
+		scenario.publishCustomers.set(page, internalCustomerIds);
 		scenario.publishInvalidatesSkipped = invalidateSkipped === true;
 		return scenario.publish(page);
 	},
