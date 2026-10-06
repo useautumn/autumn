@@ -35,9 +35,16 @@ export type SetPlansCustomerProductChanges = {
 	trialStartedCustomerProducts: TrialStartedCustomerProduct[];
 	deleteCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
+	/** Rows ending now paired with the row that replaces them now. */
+	immediateReplacements: ImmediateReplacement[];
 	keptCustomerProducts: FullCusProduct[];
 	/** The row each resolved segment runs on once the plan executes. */
 	customerProductIdBySegmentId: Map<string, string>;
+};
+
+export type ImmediateReplacement = {
+	outgoingCustomerProduct: FullCusProduct;
+	incomingCustomerProduct: FullCusProduct;
 };
 
 export type TrialStartedCustomerProduct = {
@@ -342,22 +349,33 @@ export const diffToCustomerProducts = ({
 
 	const immediateInsertCustomerProducts: FullCusProduct[] = [];
 	const scheduledInsertCustomerProducts: FullCusProduct[] = [];
+	const immediateReplacements: ImmediateReplacement[] = [];
 	for (const insert of operations.insert) {
 		const segment = segmentsById.get(insert.segmentId);
 		if (!segment) throw new Error(`set_plans diff names ${insert.segmentId}`);
 
 		const replacedOperation = expired.find(({ key }) => key === insert.key);
+		const replacedCustomerProduct = replacedOperation
+			? customerProductFor(replacedOperation.customerProductId)
+			: undefined;
 		const customerProduct = insertSegmentCustomerProduct({
 			ctx,
 			billingContext,
 			segment,
-			replacedCustomerProduct: replacedOperation
-				? customerProductFor(replacedOperation.customerProductId)
-				: undefined,
+			replacedCustomerProduct,
 		});
 		customerProductIdBySegmentId.set(segment.id, customerProduct.id);
-		if (insert.startsNow) immediateInsertCustomerProducts.push(customerProduct);
-		else scheduledInsertCustomerProducts.push(customerProduct);
+		if (!insert.startsNow) {
+			scheduledInsertCustomerProducts.push(customerProduct);
+			continue;
+		}
+		immediateInsertCustomerProducts.push(customerProduct);
+		if (replacedCustomerProduct) {
+			immediateReplacements.push({
+				outgoingCustomerProduct: replacedCustomerProduct,
+				incomingCustomerProduct: customerProduct,
+			});
+		}
 	}
 
 	return {
@@ -370,6 +388,7 @@ export const diffToCustomerProducts = ({
 			customerProductFor(customerProductId),
 		),
 		outgoingCustomerProducts,
+		immediateReplacements,
 		keptCustomerProducts,
 		customerProductIdBySegmentId,
 	};
