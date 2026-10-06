@@ -21,7 +21,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BackdateGapRun } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
-import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
 import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
@@ -95,17 +94,6 @@ export const customerProductToLineItems = ({
 			billingPeriod,
 			now: currentEpochMs,
 		});
-
-		if (direction === "refund" && billingPeriod) {
-			const action = augmentBillingContextForAnchorResetRefund({
-				currentEpochMs,
-				billingPeriod,
-				anchorResetRefund: billingContext.anchorResetRefund,
-			});
-
-			if (action.type === "skip") continue;
-			if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
-		}
 
 		const backdatedLineItemContext = getBackdatedLineItemContext({
 			price,

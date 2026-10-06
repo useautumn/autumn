@@ -47,12 +47,20 @@ export const finalizeLineItems = ({
 		isNewSubscriptionBackdate({ billingContext });
 	const skipsProration =
 		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
-	const resetsCycleNow = billingContext.anchorResetRefund?.noPartialRefund;
+	const resetsCycleNow = billingContext.requestedBillingCycleAnchor === "now";
 	if (skipsProration && !resetsCycleNow) return [];
 
-	// Like Stripe, a cycle reset under none charges a new period only for the items it changes.
+	// Like Stripe, a cycle reset under none never credits and charges a new period only for the items it changes.
 	const billedLineItems = skipsProration
-		? dropUnchangedSubscriptionItemCharges({ ctx, billingContext, lineItems })
+		? dropUnchangedSubscriptionItemCharges({
+				ctx,
+				billingContext,
+				lineItems: lineItems.filter(
+					({ context }) =>
+						context.direction === "charge" ||
+						context.billingTiming === "in_arrear",
+				),
+			})
 		: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely

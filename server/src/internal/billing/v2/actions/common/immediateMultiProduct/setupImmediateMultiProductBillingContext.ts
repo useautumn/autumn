@@ -31,7 +31,6 @@ import { resolveReplacedStripeSubscription } from "@/internal/billing/v2/actions
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
-import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
@@ -513,10 +512,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 		requestedBillingCycleAnchor,
 		// Multi-attach has no carry_over_balances param, so there is no reset
 		// cycle to round the refund to — only the no-partial-refund flag applies.
-		anchorResetRefund: setupAnchorResetRefund({
-			billingCycleAnchor: params.billing_cycle_anchor,
-			prorationBehavior: params.billing_behavior,
-		}),
 		stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,

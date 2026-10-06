@@ -7,7 +7,6 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow.js";
-import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund.js";
 import { chargeRowToRefundLineItem } from "./chargeRowToRefundLineItem.js";
 import {
 	computeAlreadyRefundedByCharge,
@@ -91,24 +90,15 @@ export const storedInvoiceCreditForPrice = ({
 		const periodEnd = chargeRow.effective_period_end;
 		if (periodStart == null || periodEnd == null) continue;
 
-		const action = augmentBillingContextForAnchorResetRefund({
-			currentEpochMs: now,
-			billingPeriod: { start: periodStart, end: periodEnd },
-			anchorResetRefund: billingContext.anchorResetRefund,
-		});
 		consumedChargeRowIds?.add(chargeRow.id);
 		coveredSeats +=
 			(chargeRow.paid_quantity ?? 0) /
 			Math.max(chargeRow.customer_product_ids.length, 1);
-		if (action.type === "skip") continue;
-		const effectiveNow =
-			action.type === "use_snapped_now"
-				? action.snappedNow
-				: billingContextToProrationNow({
-						billingContext,
-						billingPeriod: { start: periodStart, end: periodEnd },
-						now,
-					});
+		const effectiveNow = billingContextToProrationNow({
+			billingContext,
+			billingPeriod: { start: periodStart, end: periodEnd },
+			now,
+		});
 		const alreadyRefunded = alreadyRefundedByCharge.get(chargeRow.id) ?? 0;
 		const creditAmount = computeProratedCredit({
 			chargeRow: {

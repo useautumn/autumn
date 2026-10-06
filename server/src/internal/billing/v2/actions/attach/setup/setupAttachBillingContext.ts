@@ -32,7 +32,6 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/markAutumnManagedTrialContext";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
-import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
 import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
 import { overlayAttachRuntimeBalances } from "./overlayAttachRuntimeBalances.js";
@@ -407,12 +406,5 @@ export const setupAttachBillingContext = async ({
 		storedChargeLineItems,
 		storedRefundLineItems,
 		customerLicenseBillingContext,
-
-		anchorResetRefund: setupAnchorResetRefund({
-			billingCycleAnchor: params.billing_cycle_anchor,
-			prorationBehavior: params.proration_behavior,
-			outgoingCustomerProduct: currentCustomerProduct,
-			carryOverBalances: params.carry_over_balances,
-		}),
 	};
 };

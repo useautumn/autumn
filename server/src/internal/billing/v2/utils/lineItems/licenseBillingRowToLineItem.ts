@@ -12,7 +12,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { BackdateGapRun } from "@/internal/billing/v2/utils/backdate/getBackdateGapLineItemContext";
 import { billingContextToProrationNow } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow.js";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection.js";
-import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund.js";
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod.js";
 
@@ -47,20 +46,11 @@ export const licenseBillingRowToLineItem = ({
 		price: licenseBillingRow.price,
 	});
 
-	let effectiveNow = billingContextToProrationNow({
+	const effectiveNow = billingContextToProrationNow({
 		billingContext,
 		billingPeriod,
 		now: billingContext.currentEpochMs,
 	});
-	if (direction === "refund" && billingPeriod) {
-		const action = augmentBillingContextForAnchorResetRefund({
-			currentEpochMs: effectiveNow,
-			billingPeriod,
-			anchorResetRefund: billingContext.anchorResetRefund,
-		});
-		if (action.type === "skip") return undefined;
-		if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
-	}
 	// Seats outside a backdate gap keep billing their own current cycle, even on a backdated subscription.
 	const backdateGapLineItemContext =
 		backdateGapRun &&

@@ -1,27 +1,18 @@
 import { expect, test } from "bun:test";
 import type {
+	ApiCustomerV3,
 	ApiCustomerV5,
 	AttachParamsV1Input,
 	AttachPreviewResponse,
 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-const _expectTotalEqual = ({
-	actual,
-	expected,
-	tolerance = 0.01,
-}: {
-	actual: number;
-	expected: number;
-	tolerance?: number;
-}) => {
-	expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
-};
 
 test.concurrent(
 	`${chalk.yellowBright("anchor-reset-carry-over 4b: monthly -> monthly stored charge (no refund)")}`,
@@ -36,7 +27,7 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 500 })],
 		});
 
-		const { autumnV2_2, ctx } = await initScenario({
+		const { autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ testClock: true, paymentMethod: "success" }),
@@ -46,6 +37,7 @@ test.concurrent(
 				s.billing.attach({ productId: pro.id }),
 				s.advanceTestClock({ toNextInvoice: true }),
 				s.advanceTestClock({ days: 14 }),
+				s.track({ featureId: TestFeature.Messages, value: 30, timeout: 2000 }),
 			],
 		});
 
@@ -81,6 +73,13 @@ test.concurrent(
 			notPresent: [pro.id],
 		});
 
+		// The 70 messages left on the old plan carry onto the new plan's 500.
+		expectCustomerFeatureCorrect({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			featureId: TestFeature.Messages,
+			balance: 570,
+			usage: 0,
+		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 	300_000,

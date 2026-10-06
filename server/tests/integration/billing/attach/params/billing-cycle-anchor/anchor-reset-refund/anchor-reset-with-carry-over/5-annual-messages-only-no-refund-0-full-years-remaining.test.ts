@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	AttachParamsV1Input,
+} from "@autumn/shared";
 import { ProductItemInterval } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -9,18 +14,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
-
-const _expectTotalEqual = ({
-	actual,
-	expected,
-	tolerance = 0.01,
-}: {
-	actual: number;
-	expected: number;
-	tolerance?: number;
-}) => {
-	expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
-};
 
 test.concurrent(
 	`${chalk.yellowBright("anchor-reset-carry-over 5: annual messages only (no refund - 0 full years remaining)")}`,
@@ -47,7 +40,7 @@ test.concurrent(
 			],
 		});
 
-		const { autumnV2_2, ctx } = await initScenario({
+		const { autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -56,6 +49,7 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: proAnnual.id }),
 				s.advanceTestClock({ months: 2, days: 15 }),
+				s.track({ featureId: TestFeature.Messages, value: 30, timeout: 2000 }),
 			],
 		});
 
@@ -90,6 +84,13 @@ test.concurrent(
 			notPresent: [proAnnual.id],
 		});
 
+		// The 70 messages left on the old plan carry onto the new plan's 500.
+		expectCustomerFeatureCorrect({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			featureId: TestFeature.Messages,
+			balance: 570,
+			usage: 0,
+		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

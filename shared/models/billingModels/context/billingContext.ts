@@ -51,14 +51,6 @@ export interface TrialContext {
 	autumnManaged?: boolean;
 }
 
-export interface AnchorResetRefund {
-	noPartialRefund: boolean;
-	refundCycle?: {
-		interval: EntInterval;
-		intervalCount: number;
-	};
-}
-
 export interface BillingContext {
 	fullCustomer: FullCustomer;
 	fullProducts: FullProduct[];
@@ -151,8 +143,6 @@ export interface BillingContext {
 	/** Names the customer product an action settles, so a paid invoice resolves
 	 * back to the one product it covers. */
 	actionCustomerProductId?: string;
-
-	anchorResetRefund?: AnchorResetRefund;
 
 	storedChargeLineItems?: DbInvoiceLineItem[];
 	storedRefundLineItems?: DbInvoiceLineItem[];

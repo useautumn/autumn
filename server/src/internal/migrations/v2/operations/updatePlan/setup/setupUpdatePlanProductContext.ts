@@ -14,7 +14,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { planOffersCurrency } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors.js";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext.js";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities.js";
-import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund.js";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext.js";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext.js";
 import { setupMigrationOperationBillingContext } from "@/internal/migrations/v2/run/migrateCustomer/setup/index.js";
@@ -230,11 +229,6 @@ export const setupUpdatePlanProductContext = async ({
 		// instead, same mechanism attach/updateSubscription previews use.
 		dryRunStripe: context.preview,
 		checkoutMode: null,
-		anchorResetRefund: setupAnchorResetRefund({
-			billingCycleAnchor: params.billing_cycle_anchor,
-			prorationBehavior: params.proration_behavior,
-			outgoingCustomerProduct: targetCustomerProduct,
-		}),
 	};
 
 	return {

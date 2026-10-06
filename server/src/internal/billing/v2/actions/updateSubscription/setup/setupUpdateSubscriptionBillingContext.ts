@@ -16,7 +16,6 @@ import { setupStripeBillingContext } from "@/internal/billing/v2/providers/strip
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
-import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import {
 	setupCancelAction,
@@ -317,12 +316,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		storedRefundLineItems,
 
 		checkoutMode,
-
-		anchorResetRefund: setupAnchorResetRefund({
-			billingCycleAnchor: params.billing_cycle_anchor,
-			prorationBehavior: params.proration_behavior,
-			outgoingCustomerProduct: customerProduct,
-		}),
 
 		chargeExistingOverages: contextOverride.chargeExistingOverages,
 		skipExistingUsageCarry: contextOverride.skipExistingUsageCarry,
