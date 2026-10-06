@@ -69,7 +69,11 @@ export function createCachePushConsumer({
 	}: {
 		records: StreamRecord[];
 	}): Promise<void> {
-		queue.enqueue({ subjects: recordsToCacheSubjects({ records }) });
+		const subjects = recordsToCacheSubjects({ records });
+		const now = Date.now();
+		for (const { oldestOccurredAt } of subjects)
+			stats.recordEnqueue({ ageMs: now - oldestOccurredAt });
+		queue.enqueue({ subjects });
 		await queue.waitForRoom();
 	}
 

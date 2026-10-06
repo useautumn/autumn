@@ -39,6 +39,7 @@ export function createCachePushStats({
 	let sends: number[] = [];
 	let totals: number[] = [];
 	let ages: number[] = [];
+	let enqueueAges: number[] = [];
 	let backdated = 0;
 	let skipped = 0;
 	let failed = 0;
@@ -58,6 +59,7 @@ export function createCachePushStats({
 					sendMs: summarize(sends),
 					totalMs: summarize(totals),
 					recordAgeMs: summarize(ages),
+					enqueueAgeMs: summarize(enqueueAges),
 					backdated,
 					...queueDepth(),
 				},
@@ -69,6 +71,7 @@ export function createCachePushStats({
 		sends = [];
 		totals = [];
 		ages = [];
+		enqueueAges = [];
 		backdated = 0;
 		skipped = 0;
 		failed = 0;
@@ -92,6 +95,10 @@ export function createCachePushStats({
 			totals.push(totalMs);
 			if (ageMs > MAX_PLAUSIBLE_AGE_MS) backdated++;
 			else ages.push(ageMs);
+		},
+		/** From the change's request to herald queueing it: the balance worker's commit plus herald's fetch. */
+		recordEnqueue: ({ ageMs }: { ageMs: number }) => {
+			if (ageMs <= MAX_PLAUSIBLE_AGE_MS) enqueueAges.push(ageMs);
 		},
 		recordSkip: () => {
 			skipped++;
