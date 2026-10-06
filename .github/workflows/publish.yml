@@ -1,0 +1,205 @@
+name: Publish
+
+# Main is the only place generated code is produced: regenerate, publish changed npm packages,
+# then commit the output and versions back with [skip ci] so main always matches npm.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "npm publish --dry-run (always on outside main)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      force-packages:
+        description: "Comma-separated packages to publish even if unchanged (autumn-js, atmn, @useautumn/gateway)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  queue: max
+  cancel-in-progress: false
+
+env:
+  # Real publishes happen only from main; every other ref is forced to a dry run.
+  DRY_RUN: ${{ github.ref_name != 'main' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == 'true') }}
+
+jobs:
+  prepare:
+    name: Regenerate and plan
+    if: github.event_name != 'push' || github.event.head_commit.author.name != 'autumn-codegen[bot]'
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      packages: ${{ steps.plan.outputs.packages }}
+      has-changes: ${{ steps.patch.outputs.has-changes }}
+      dry-run: ${{ env.DRY_RUN }}
+    steps:
+      # The branch tip, not the triggering commit, so a queued run builds on the previous bot commit.
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Record source commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Speakeasy CLI
+        env:
+          VERSION: 1.798.0
+        run: |
+          curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
+          speakeasy --version
+
+      - name: Regenerate
+        env:
+          SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+        run: |
+          bun api
+          bun -F @autumn/agent-docs gen
+          bun -F @autumn/atmn-generator generate
+
+      - name: Plan packages and versions
+        id: plan
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          FORCE_PACKAGES: ${{ inputs.force-packages }}
+        run: bun scripts/release/planPublish.ts
+
+      - name: Update lockfile versions
+        run: bun install --lockfile-only
+
+      - name: Stage generated files
+        run: bun scripts/release/stagePublish.ts
+
+      - name: Build patch
+        id: patch
+        run: |
+          git diff --cached --binary > "$RUNNER_TEMP/publish.patch"
+          git diff --cached --stat
+          if [ -s "$RUNNER_TEMP/publish.patch" ]; then
+            echo "has-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-changes=false" >> "$GITHUB_OUTPUT"
+            echo "Generated files and versions already match."
+          fi
+
+      - name: Upload patch
+        if: steps.patch.outputs.has-changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-patch
+          path: ${{ runner.temp }}/publish.patch
+          retention-days: 7
+
+  publish:
+    name: Publish ${{ matrix.package.name }}
+    needs: prepare
+    if: needs.prepare.outputs.packages != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.prepare.outputs.packages) }}
+    uses: ./.github/workflows/npm-publish.yml
+    permissions:
+      id-token: write
+      contents: write
+    with:
+      package-dir: ${{ matrix.package.dir }}
+      ref: ${{ needs.prepare.outputs.sha }}
+      patch-artifact: publish-patch
+      create-tag: false
+      build-command: ${{ matrix.package.name == 'autumn-js' && 'bun js:build' || '' }}
+      typecheck-command: ${{ matrix.package.name == 'autumn-js' && 'bun js:ts' || '' }}
+      test-command: ${{ matrix.package.name == 'autumn-js' && 'cd packages/sdk && bun test' || '' }}
+      dry-run: ${{ needs.prepare.outputs.dry-run }}
+
+  commit:
+    name: Commit generated files
+    needs: [prepare, publish]
+    # A dry run never writes to main: main must only carry versions that exist on npm.
+    if: >-
+      always() &&
+      needs.prepare.result == 'success' &&
+      needs.prepare.outputs.has-changes == 'true' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped') &&
+      !(github.ref_name == 'main' && needs.prepare.outputs.dry-run == 'true')
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Create app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CODEGEN_APP_ID || secrets.CODEGEN_APP_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Download patch
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-patch
+          path: ${{ runner.temp }}/publish-patch
+
+      - name: Commit and push
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+          BRANCH: ${{ github.ref_name }}
+          PACKAGES: ${{ needs.prepare.outputs.packages }}
+        run: |
+          git apply --index --binary "$RUNNER_TEMP/publish-patch/publish.patch"
+          BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          VERSIONS=$(jq -r '.[] | "\(.name)@\(.version)"' <<< "$PACKAGES")
+          git commit -m "chore: publish generated files for ${SOURCE_SHA::8} [skip ci]" -m "${VERSIONS:-No npm releases.}"
+          # Main may move while we publish; replay the bot commit on top and retry.
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:refs/heads/${BRANCH}"; then
+              echo "Pushed $(git rev-parse HEAD) to ${BRANCH}"
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}); rebasing onto origin/${BRANCH}."
+            git fetch origin "${BRANCH}"
+            git rebase "origin/${BRANCH}"
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Tag published versions
+        if: needs.prepare.outputs.dry-run != 'true' && needs.prepare.outputs.packages != '[]'
+        env:
+          PACKAGES: ${{ needs.prepare.outputs.packages }}
+        run: |
+          for tag in $(jq -r '.[] | "\(.tagPrefix)-v\(.version)"' <<< "$PACKAGES"); do
+            git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null || git tag "${tag}" HEAD
+            git push origin "refs/tags/${tag}"
+          done
