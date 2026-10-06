@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { ATOM_WAL_CHECKPOINTED_ELSEWHERE } from "./startWalCheckpointer.js";
 
 export class UnsupportedSchemaVersionError extends Error {
 	constructor({
@@ -21,6 +22,8 @@ const configureDatabase = ({ database }: { database: Database }) => {
 	database.run("PRAGMA journal_mode = WAL");
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
 	database.run("PRAGMA synchronous = NORMAL");
+	if (process.env[ATOM_WAL_CHECKPOINTED_ELSEWHERE] === "1")
+		database.run("PRAGMA wal_autocheckpoint = 0");
 };
 
 const initializeSchema = ({

@@ -103,6 +103,60 @@ describe("process stats", () => {
 		});
 	});
 
+	test("each publish sums the answered checks' phase times since the last", () => {
+		const statsDir = newStatsDir();
+		const phases = { read: 5, decide: 1, render: 2, respond: 3 };
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+			checkPhaseTotals: () => phases,
+		});
+		phases.read = 9;
+		phases.decide = 11;
+		phases.render = 22;
+		phases.respond = 4;
+		stats.publish();
+		stats.stop();
+
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			checkReadMs: 4,
+			checkDecideMs: 10,
+			checkRenderMs: 20,
+			checkRespondMs: 1,
+		});
+	});
+
+	test("a request waits behind those read before it in the same loop turn; a connection counts once", () => {
+		const statsDir = newStatsDir();
+		let now = 0;
+		const turnEnds: Array<() => void> = [];
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+			clock: () => now,
+			afterLoopTurn: (callback) => turnEnds.push(callback),
+		});
+
+		stats.noteArrival({ remote: "10.0.0.1:5000" });
+		now += 4;
+		stats.noteArrival({ remote: "10.0.0.1:5001" });
+		now += 6;
+		stats.noteArrival({ remote: "10.0.0.1:5000" });
+		for (const end of turnEnds.splice(0)) end();
+		now += 50;
+		stats.noteArrival({ remote: "10.0.0.1:5001" });
+		stats.publish();
+		stats.stop();
+
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			newConnections: 2,
+			queueWaitMaxMs: 10,
+			queueWaitTotalMs: 14,
+		});
+	});
+
 	test("each publish covers the trailing two seconds, so a 2 s poll misses no stall", () => {
 		const statsDir = newStatsDir();
 		const { stats } = startStats({ statsDir });

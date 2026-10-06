@@ -1,3 +1,4 @@
+import { ATOM_WAL_CHECKPOINTED_ELSEWHERE } from "../state/startWalCheckpointer.js";
 import type { AtomChild } from "./types/atomSupervisor.js";
 
 /** Set on a process the supervisor started, so it serves instead of supervising. */
@@ -8,7 +9,11 @@ export const spawnAtomChild = ({ index }: { index: number }): AtomChild => {
 	const child = Bun.spawn(
 		[process.execPath, ...process.execArgv, ...process.argv.slice(1)],
 		{
-			env: { ...process.env, [ATOM_CHILD_INDEX]: String(index) },
+			env: {
+				...process.env,
+				[ATOM_CHILD_INDEX]: String(index),
+				[ATOM_WAL_CHECKPOINTED_ELSEWHERE]: "1",
+			},
 			stdin: "ignore",
 			stdout: "inherit",
 			stderr: "inherit",
