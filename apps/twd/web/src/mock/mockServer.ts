@@ -23,6 +23,11 @@ import type {
 import { CreateRunBody } from "../../../src/api/contract.ts";
 import { TwdError } from "../../../src/http/apiError.ts";
 import {
+	createDurationModel,
+	type EtaPriors,
+	estimateRunEta,
+} from "../../../src/internal/runs/eta/estimateRunEta.ts";
+import {
 	planWorkItems,
 	splitRepetitionId,
 	summariseRepeats,
@@ -127,6 +132,28 @@ const catalog: Catalog = (() => {
 })();
 const p90 = new Map(catalog.files.map((f) => [f.path, f.baselineP90Ms]));
 const groupFiles = new Map<string, string[]>();
+const MOCK_ETA_PRIORS: EtaPriors = {
+	model: createDurationModel({
+		baselines: new Map(
+			catalog.files.flatMap((f) =>
+				f.baselineP90Ms === null
+					? []
+					: [
+							[
+								f.path,
+								{
+									p50Ms: Math.round(f.baselineP90Ms * 0.7),
+									p90Ms: f.baselineP90Ms,
+									passRate: 0.985,
+								},
+							] as const,
+						],
+			),
+		),
+	}),
+	bootP50Ms: 25_000,
+	teardownP50Ms: 60_000,
+};
 for (const g of fixture.groups) groupFiles.set(g.name, g.files);
 for (const s of fixture.suites)
 	groupFiles.set(s.name, [
@@ -395,6 +422,8 @@ type Sim = {
 	/** When the run left the account queue; phases time from here. */
 	readyAt: number;
 	workerSeconds: number;
+	/** When each running file landed on its worker. */
+	fileStartedAt: Map<string, number>;
 };
 const runs: RunDetail[] = [];
 const sims = new Map<string, Sim>();
@@ -492,6 +521,8 @@ const summary = (run: RunDetail): RunSummary => {
 		files: _f,
 		drift: _d,
 		repeats: _r,
+		etaMs: _eta,
+		etaP90Ms: _etaP90,
 		...rest
 	} = run;
 	return rest;
@@ -633,6 +664,8 @@ const makeFinishedRun = (i: number): RunDetail => {
 			warmReadyAt: iso(createdAt + (startedAt - createdAt) * 0.6),
 			accountsAt: iso(startedAt),
 		},
+		etaMs: null,
+		etaP90Ms: null,
 	};
 	summarize(run);
 	if (!cancelled && run.failed > 0) run.status = "failed";
@@ -834,6 +867,8 @@ const startLiveRun = ({
 		],
 		repeats: [],
 		drift: [],
+		etaMs: null,
+		etaP90Ms: null,
 	};
 	summarize(run);
 	claim({ count: attached, runId, heldBy: createdBy.email });
@@ -844,6 +879,9 @@ const startLiveRun = ({
 		ticks: 0,
 		readyAt: createdAt + queuedForMs,
 		workerSeconds: run.cost.workerSeconds,
+		fileStartedAt: new Map(
+			running.map((file) => [file, Date.now() - rand() * 60_000]),
+		),
 	});
 	return run;
 };
@@ -868,6 +906,8 @@ const setStatus = (
 	run.status = status;
 	run.phase = phase;
 	if (TERMINAL.has(status)) {
+		run.etaMs = null;
+		run.etaP90Ms = null;
 		run.finishedAt = iso(Date.now());
 		run.cost = { ...run.cost, final: true };
 	}
@@ -922,6 +962,31 @@ const bootWorkers = (run: RunDetail) => {
 	const waiting = run.workers.filter((w) => w.status === "provisioning");
 	for (const w of waiting.slice(0, 6))
 		setWorker(run, { ...w, status: "booting" });
+};
+
+/** The same estimator twd runs server-side, fed the mock catalog's baselines. */
+const updateEta = (run: RunDetail, sim: Sim) => {
+	const eta = estimateRunEta({
+		now: Date.now(),
+		files: run.files.map((f) => ({
+			file: f.file,
+			status: f.status,
+			durationMs: f.durationMs,
+			finishedAt: f.finishedAt ? Date.parse(f.finishedAt) : null,
+			startedAt: sim.fileStartedAt.get(f.file) ?? null,
+			worker: f.worker,
+			attempt: f.attempt,
+		})),
+		workers: run.workers,
+		moreWorkersWanted: Math.max(
+			0,
+			(run.workersWanted ?? 0) - run.workers.length,
+		),
+		priors: MOCK_ETA_PRIORS,
+	});
+	run.etaMs = eta?.etaMs ?? null;
+	run.etaP90Ms = eta?.etaP90Ms ?? null;
+	emit(run.id, { type: "eta", etaMs: run.etaMs, etaP90Ms: run.etaP90Ms });
 };
 
 const tickRun = (run: RunDetail) => {
@@ -1000,6 +1065,7 @@ const tickRun = (run: RunDetail) => {
 		}
 		const next = w.status === "ready" ? sim.queue.shift() : undefined;
 		if (next) {
+			sim.fileStartedAt.set(next, Date.now());
 			setFile(run, {
 				file: next,
 				status: "running",
@@ -1014,6 +1080,7 @@ const tickRun = (run: RunDetail) => {
 		}
 	}
 	summarize(run);
+	if (sim.ticks % 3 === 0) updateEta(run, sim);
 	const finished = run.files.filter(
 		(f) => f.status !== "running" && f.status !== "queued",
 	).length;

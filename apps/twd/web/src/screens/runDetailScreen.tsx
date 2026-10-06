@@ -64,6 +64,7 @@ import { useNow } from "../lib/useNow.ts";
 import { BootBreakdown } from "./runDetail/bootBreakdown.tsx";
 import { FileHistoryChart } from "./runDetail/fileHistoryChart.tsx";
 import { RepeatsPanel } from "./runDetail/repeatsPanel.tsx";
+import { RunEta } from "./runDetail/runEta.tsx";
 import { RunTimingPanel } from "./runDetail/runTiming.tsx";
 
 const TERMINAL = new Set(["passed", "failed", "cancelled", "errored"]);
@@ -610,6 +611,7 @@ export const RunDetailScreen = () => {
 							</span>
 						)}
 						<span className="text-subtle">of {num(total)} files</span>
+						<RunEta run={r} now={now} />
 					</div>
 					{r.phase && (
 						<span className="flex items-center gap-2 text-tiny-id text-tertiary-foreground">

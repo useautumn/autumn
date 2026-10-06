@@ -38,6 +38,8 @@ import {
 	orderFilesLongestFirst,
 	recordFileResult,
 } from "../../results/actions/resultsApi.ts";
+import { loadEtaPriors } from "../eta/loadEtaPriors.ts";
+import { createRunEtaTracker } from "../eta/trackRunEta.ts";
 import {
 	openLiveRun,
 	publishRunEvent,
@@ -69,6 +71,7 @@ const WARM_POLL_MS = 5_000;
 const FLUSH_MS = 2_000;
 const ACCRUE_MS = 10_000;
 const LOG_TAIL_CHARS = 8_000;
+const ETA_MS = 5_000;
 
 /** `committed`: accounts may be claimed / sandboxes may exist for this run. */
 type SwarmJobState = {
@@ -362,11 +365,46 @@ export const handleSwarmJob: JobHandler = async ({
 	const flushTimer = setInterval(flush, FLUSH_MS);
 	const logWriter = createRunLogWriter({ ctx, runId });
 	const accrueTimer = setInterval(() => void accrue(), ACCRUE_MS);
+	let etaTimer: ReturnType<typeof setInterval> | undefined;
 	try {
 		const files = await orderFilesLongestFirst({
 			ctx,
 			files: progress.plannedFiles ?? [],
 		});
+		const etaPriors = await loadEtaPriors({ ctx }).catch((error: unknown) => {
+			ctx.logger.warn("loading ETA priors failed", {
+				runId,
+				error: String(error),
+			});
+			return null;
+		});
+		const eta =
+			etaPriors &&
+			createRunEtaTracker({ priors: etaPriors, plannedFiles: files });
+		let lastEta = "";
+		etaTimer = setInterval(() => {
+			if (!eta) return;
+			try {
+				const next = eta.estimate({
+					live,
+					moreWorkersWanted: demand.wants,
+					now: Date.now(),
+				});
+				const key = JSON.stringify(next);
+				if (key === lastEta) return;
+				lastEta = key;
+				publishRunEvent({
+					runId,
+					event: {
+						type: "eta",
+						etaMs: next?.etaMs ?? null,
+						etaP90Ms: next?.etaP90Ms ?? null,
+					},
+				});
+			} catch (error) {
+				ctx.logger.warn("ETA estimate failed", { runId, error: String(error) });
+			}
+		}, ETA_MS);
 		const [{ usableKeys }] = await ctx.db
 			.select({ usableKeys: count() })
 			.from(stripeKeys)
@@ -524,6 +562,7 @@ export const handleSwarmJob: JobHandler = async ({
 					demand.wants = abort.signal.aborted ? 0 : message.workers;
 					if (grew) kickAllocator();
 				} else if (message.type === "file") {
+					eta?.noteFile({ file: message.file, now: Date.now() });
 					if (message.final)
 						fileFinishedAt.set(message.file.file, new Date().toISOString());
 					const file = {
@@ -586,6 +625,7 @@ export const handleSwarmJob: JobHandler = async ({
 		sendToChild = undefined;
 		unregister();
 		clearInterval(flushTimer);
+		clearInterval(etaTimer);
 		await logWriter.close();
 		clearInterval(accrueTimer);
 		if (exitCode !== 0) await terminateSandboxes({ sandboxIds });
