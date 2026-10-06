@@ -17,8 +17,7 @@ export class BatchMigrationStallError extends Error {
 	}
 }
 
-/** Committed pages whose cache invalidation did not land; their checkpoints
- * were revoked so a retry re-invalidates them. */
+/** Committed pages whose cache invalidation did not land. */
 export class BatchMigrationCacheInvalidationError extends BatchMigrationStallError {
 	constructor({ message }: { message: string }) {
 		super({ phase: "finalize_caches", message });

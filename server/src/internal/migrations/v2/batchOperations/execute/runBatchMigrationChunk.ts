@@ -311,7 +311,7 @@ export const runBatchMigrationChunk = async ({
 			(failure) => failure.timedOut,
 		).length;
 		throw new BatchMigrationCacheInvalidationError({
-			message: `batch-migration: cache invalidation did not complete for ${cachesDrained.failures.length} page(s) (${timedOut} timed out; ${cachesDrained.failures.map((failure) => failure.label).join(", ")}); checkpoints revoked for retry where the revoke succeeded (see per-page logs)`,
+			message: `batch-migration: cache invalidation did not complete for ${cachesDrained.failures.length} page(s) (${timedOut} timed out; ${cachesDrained.failures.map((failure) => failure.label).join(", ")})`,
 		});
 	}
 	// "finished" means every page's side effects landed, not just the loop.
@@ -545,46 +545,6 @@ const runNextBatchMigrationPage = async ({
 	// A retried customer may already be converged (skipped) yet carry a stale
 	// cache from the interrupted attempt, so retries invalidate skipped too.
 	const invalidateSkipped = (controls?.retryItemStatuses?.length ?? 0) > 0;
-	const revokeCheckpoints = async (error: unknown) => {
-		const internalCustomerIds = [
-			...pageResult.succeeded,
-			...(invalidateSkipped ? pageResult.skipped : []),
-		].map((customer) => customer.internalId);
-		const logData = {
-			migrationRunId,
-			page: pageNumber,
-			customers: internalCustomerIds.length,
-			sampleCustomerIds: internalCustomerIds.slice(0, 5),
-			error: error instanceof Error ? error.message : String(error),
-		};
-		try {
-			const revoked = await failPageItemRunsBounded({
-				ctx,
-				migrationInternalId,
-				migrationRunId,
-				internalCustomerIds,
-				timeoutMs: recoveryWriteMs,
-			});
-			ctx.logger.error(
-				"batch-migration: page cache invalidation incomplete — checkpoints revoked for retry",
-				{ data: { ...logData, revoked } },
-			);
-		} catch (revokeError) {
-			ctx.logger.error(
-				"batch-migration: page cache invalidation incomplete AND checkpoint revoke failed — customers may hold stale caches",
-				{
-					data: {
-						...logData,
-						revokeError:
-							revokeError instanceof Error
-								? revokeError.message
-								: String(revokeError),
-					},
-				},
-			);
-			throw revokeError;
-		}
-	};
 
 	enterStage("finalize");
 	await timePhase({
@@ -602,12 +562,7 @@ const runNextBatchMigrationPage = async ({
 				phases: pagePhases,
 				invalidateSkipped,
 				deferEvents: (emit) => eventsDefer({ label, run: emit }),
-				deferCaches: (invalidate) =>
-					cachesDefer({
-						label,
-						run: invalidate,
-						onFailure: revokeCheckpoints,
-					}),
+				deferCaches: (invalidate) => cachesDefer({ label, run: invalidate }),
 			}),
 	});
 	enterStage("settle");
