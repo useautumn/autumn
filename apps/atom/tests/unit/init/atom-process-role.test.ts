@@ -57,7 +57,7 @@ describe("an Atom process's role", () => {
 		});
 	});
 
-	test("a multi-tenant Atom runs a process per core and every one serves, its pushes arriving over HTTP", () => {
+	test("a multi-tenant Atom with its queue linked splits writers from servers like an org's", () => {
 		const env = createAtomEnv(
 			{
 				ATOM_MODE: "multi_tenant",
@@ -71,8 +71,7 @@ describe("an Atom process's role", () => {
 		);
 
 		expect(env.ATOM_PROCESSES).toBe(8);
-		expect(
-			roles.every((role) => role.servesChecks && !role.receivesPushes),
-		).toBe(true);
+		expect(roles.filter((role) => role.receivesPushes)).toHaveLength(2);
+		expect(roles.filter((role) => role.servesChecks)).toHaveLength(6);
 	});
 });
