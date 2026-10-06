@@ -22,6 +22,9 @@ jobs:
           sparse-checkout: |
             .github
             scripts/release
+            packages/sdk/.speakeasy
+            others/python-sdk/.speakeasy
+            apps/docs/mintlify/api-reference
 
       - name: Set up Bun
         if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { GENERATED_PAGE } from "./generatorOwnership.test";
 import { stagePublish } from "./stagePublish";
 
 const repos: string[] = [];
@@ -26,7 +27,7 @@ const createRepo = async () => {
 	await write(
 		root,
 		".github/generated-paths.txt",
-		"packages/sdk/src/models/\n# sync-only\nbun.lock\npackages/*/package.json\n",
+		"packages/sdk/src/models/\n# sync-only\nbun.lock\napps/docs/docs.json\npackages/*/package.json\n",
 	);
 	await write(root, "packages/sdk/src/models/a.ts", "a\n");
 	await write(root, "packages/sdk/src/hooks/custom.ts", "custom\n");
@@ -48,6 +49,7 @@ describe("stage publish", () => {
 
 		const result = stagePublish({ root });
 
+		expect(result.unlisted).toEqual([]);
 		expect(result.staged).toEqual([
 			"bun.lock",
 			"packages/gateway/package.json",
@@ -70,18 +72,48 @@ describe("stage publish", () => {
 		);
 	});
 
-	test("leaves unlisted changes unstaged and reports them", async () => {
+	test("stages a new generated page in a new API reference folder", async () => {
 		const root = await createRepo();
+		const page = "apps/docs/mintlify/api-reference/newGroup/newThing.mdx";
+		await write(root, page, GENERATED_PAGE);
+		expect(stagePublish({ root })).toEqual({ staged: [page], unlisted: [] });
+	});
+
+	test("stages docs.json from the sync-only section", async () => {
+		const root = await createRepo();
+		await write(root, "apps/docs/docs.json", '{"nav":["webhooks"]}\n');
+		expect(stagePublish({ root })).toEqual({
+			staged: ["apps/docs/docs.json"],
+			unlisted: [],
+		});
+	});
+
+	test("reports unknown changes and stages nothing", async () => {
+		const root = await createRepo();
+		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
 		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
-		await write(root, "apps/docs/docs.json", '{"nav":1}\n');
+		await write(root, "server/new.ts", "x\n");
 
 		const result = stagePublish({ root });
 
-		expect(result.staged).toEqual([]);
 		expect(result.unlisted).toEqual([
-			"apps/docs/docs.json",
 			"packages/sdk/src/hooks/custom.ts",
+			"server/new.ts",
 		]);
+		expect(result.staged).toEqual([]);
 		expect(git(root, "diff", "--cached", "--name-only")).toBe("");
+	});
+
+	test("the CLI fails and names each unknown file", async () => {
+		const root = await createRepo();
+		await write(root, "server/new.ts", "x\n");
+		const run = Bun.spawnSync(
+			["bun", join(import.meta.dir, "stagePublish.ts"), root],
+			{ cwd: root },
+		);
+		expect(run.exitCode).toBe(1);
+		expect(run.stdout.toString() + run.stderr.toString()).toContain(
+			"server/new.ts",
+		);
 	});
 });

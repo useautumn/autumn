@@ -4,18 +4,27 @@ import {
 	isGeneratedPath,
 	parseGeneratedPaths,
 } from "../../scripts/release/generatedPaths";
+import { loadGeneratorOwnership } from "../../scripts/release/generatorOwnership";
 
 export const findGeneratedEdits = ({
 	list,
 	files,
+	isGeneratorOwned = () => false,
 }: {
 	list: string;
 	files: string[];
+	isGeneratorOwned?: (path: string) => boolean;
 }) => {
 	const patterns = parseGeneratedPaths({ text: list, scope: "pr-check" });
+	const editable = parseGeneratedPaths({ text: list, scope: "sync-only" });
 	return files
 		.map((file) => file.trim())
-		.filter((path) => path !== "" && isGeneratedPath({ patterns, path }));
+		.filter(
+			(path) =>
+				path !== "" &&
+				!isGeneratedPath({ patterns: editable, path }) &&
+				(isGeneratedPath({ patterns, path }) || isGeneratorOwned(path)),
+		);
 };
 
 export const listPullRequestFiles = async ({
@@ -56,6 +65,7 @@ if (import.meta.main) {
 	const root = join(import.meta.dir, "../..");
 	const edits = findGeneratedEdits({
 		list: await Bun.file(join(root, GENERATED_PATHS_FILE)).text(),
+		isGeneratorOwned: loadGeneratorOwnership({ root }),
 		files: await listPullRequestFiles({
 			ctx: { fetch },
 			repository: GITHUB_REPOSITORY,
