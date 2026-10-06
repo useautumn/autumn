@@ -11,6 +11,7 @@ import {
 	timestampsMatch,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { SchedulePhaseProration } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import {
@@ -114,6 +115,7 @@ export const billingPlanToNextCyclePreview = ({
 	billingContext,
 	billingPlan,
 	customerProductFilter,
+	schedulePhaseProrations,
 	options,
 }: {
 	ctx: AutumnContext;
@@ -121,6 +123,8 @@ export const billingPlanToNextCyclePreview = ({
 	billingPlan: BillingPlan;
 	/** Scope the preview to a subset of products (e.g. one subscription's). */
 	customerProductFilter?: (customerProduct: FullCusProduct) => boolean;
+	/** The saved schedule's phase prorations, for previews made outside a set_plans request. */
+	schedulePhaseProrations?: SchedulePhaseProration[];
 	options?: NextCycleLineItemOptions;
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
@@ -161,6 +165,7 @@ export const billingPlanToNextCyclePreview = ({
 		billingContext,
 		customerProducts,
 		anchorMs,
+		schedulePhaseProrations,
 	});
 
 	const baseDebug = {

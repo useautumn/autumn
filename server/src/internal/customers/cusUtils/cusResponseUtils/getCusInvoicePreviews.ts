@@ -22,6 +22,7 @@ import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/s
 import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview.js";
 import { CusService } from "../../CusService.js";
 import { getFinalUsageInvoicePreview } from "./getFinalUsageInvoicePreview.js";
+import { setupInvoicePreviewPendingAnchor } from "./setupInvoicePreviewPendingAnchor.js";
 
 /**
  * Previews the upcoming invoice for each of the customer's Stripe
@@ -88,13 +89,24 @@ export const getCusInvoicePreviews = async ({
 				extractStripeDiscounts({ ctx, stripeSubscription, stripeCustomer }),
 			]);
 
-			const billingContext = buildBillingContextForInvoicePreview({
-				fullCustomer,
-				stripeSubscription,
-				stripeCustomer,
-				stripeDiscounts,
-				nowMs,
-			});
+			const { pendingBillingCycleAnchorMs, schedulePhaseProrations } =
+				setupInvoicePreviewPendingAnchor({
+					customerProducts:
+						fullCustomer.customer_products.filter(isOnSubscription),
+					stripeSubscription,
+					nowMs,
+				});
+			const billingContext = {
+				...buildBillingContextForInvoicePreview({
+					fullCustomer,
+					stripeSubscription,
+					stripeCustomer,
+					stripeDiscounts,
+					nowMs,
+				}),
+				// The next-cycle preview reads a scheduled reset from the requested anchor.
+				requestedBillingCycleAnchor: pendingBillingCycleAnchorMs,
+			};
 
 			const { nextCycle } = billingPlanToNextCyclePreview({
 				ctx,
@@ -107,6 +119,7 @@ export const getCusInvoicePreviews = async ({
 					stripe: {},
 				},
 				customerProductFilter: isOnSubscription,
+				schedulePhaseProrations,
 				options: { chargeUsageLineItems: true },
 			});
 

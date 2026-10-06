@@ -3,7 +3,10 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 } from "@autumn/shared";
-import { setPlansPhaseProrations } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
+import {
+	type SchedulePhaseProration,
+	setPlansPhaseProrations,
+} from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 import { normalizeCustomerProductTimestamps } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/normalizeCustomerProductTimestamps";
 import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { classifyNextCycleEvent } from "./classifyNextCycleEvent";
@@ -20,10 +23,12 @@ export const getNextCycleEvent = ({
 	billingContext,
 	customerProducts,
 	anchorMs,
+	schedulePhaseProrations,
 }: {
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	anchorMs: number;
+	schedulePhaseProrations?: SchedulePhaseProration[];
 }): NextCycleEvent => {
 	const { currentEpochMs } = billingContext;
 	const nowMs = normalizeMs(currentEpochMs);
@@ -61,7 +66,10 @@ export const getNextCycleEvent = ({
 		]),
 	).sort((a, b) => a - b);
 
-	const phaseProrations = setPlansPhaseProrations({ billingContext }) ?? [];
+	const phaseProrations =
+		setPlansPhaseProrations({ billingContext }) ??
+		schedulePhaseProrations ??
+		[];
 
 	for (const startsAtMs of candidateTimestamps) {
 		const event = classifyNextCycleEvent({
