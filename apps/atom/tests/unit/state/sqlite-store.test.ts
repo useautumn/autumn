@@ -321,4 +321,22 @@ describe("sqlite store", () => {
 		expect(tables.map(({ name }) => name)).toEqual(["subject_states"]);
 		sqliteStore.close();
 	});
+
+	test("a file from a newer Atom is emptied, so rolling back to an older Atom keeps accepting pushes", () => {
+		const databasePath = slotPath();
+
+		const newer = new Database(databasePath, { create: true });
+		newer.run(
+			"CREATE TABLE subject_states (customer_id TEXT PRIMARY KEY, state_json TEXT)",
+		);
+		newer.run("INSERT INTO subject_states VALUES ('cus_1', '{}')");
+		newer.run("PRAGMA user_version = 99");
+		newer.close();
+
+		const sqliteStore = openSqliteStore({ databasePath });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
+
+		expect(sqliteStore.countSubjects()).toBe(1);
+		sqliteStore.close();
+	});
 });
