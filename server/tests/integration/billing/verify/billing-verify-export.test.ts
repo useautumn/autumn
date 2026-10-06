@@ -11,8 +11,8 @@
  *   - The producer walks the filtered population and emits a CSV holding
  *     only the drifted customer.
  *   - A real org-wide sweep screens customers to the same rows as live reads.
- *   - A customer with nothing on Stripe is never loaded;
- *     one with a Stripe-linked plan always is.
+ *   - A customer with nothing on Stripe is never loaded; one with a
+ *     Stripe-linked plan or a swept Stripe subscription always is.
  *   - A customer with a scheduled plan change verifies clean through the
  *     memoized reader, which serves both of verify's schedule reads.
  *   - A billing_verify job runs to completion: published to S3, downloadable
@@ -42,7 +42,7 @@ import { downloadCustomerExport } from "@/internal/customers/exports/actions/dow
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService";
 import { resolveCustomerExportPopulation } from "@/internal/customers/exports/queries/getCustomerExportScalars";
 import { createBillingVerifyStripeReader } from "@/internal/customers/exports/verify/createBillingVerifyStripeReader";
-import { filterBillingVerifyCandidates } from "@/internal/customers/exports/verify/filterBillingVerifyCandidates";
+import { loadBillingVerifyCandidates } from "@/internal/customers/exports/verify/loadBillingVerifyCandidates";
 import { orphanedSubscriptionsToExportRows } from "@/internal/customers/exports/verify/orphanedSubscriptionsToExportRows/orphanedSubscriptionsToExportRows";
 import { STRIPE_CUSTOMER_NOT_IN_AUTUMN } from "@/internal/customers/exports/verify/orphanedSubscriptionsToExportRows/orphanToExportRow";
 import {
@@ -346,17 +346,42 @@ test.concurrent(
 			email: idleCustomer.email ?? null,
 			processor: idleCustomer.processor ?? null,
 		};
-		const scalars = [subscribed.scalar, idleScalar];
 		const { ctx } = subscribed;
-
-		const { candidates } = await filterBillingVerifyCandidates({
-			ctx,
-			scalars,
-			sweep: sweepOf({ ctx, subscriptionsByStripeCustomerId: new Map() }),
+		const { population } = await resolveCustomerExportPopulation({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			snapshot: { search: "", filters: {} },
+			createdAtCutoff: Date.now(),
 		});
-		expect(candidates.map((scalar) => scalar.id)).toEqual([
-			subscribed.scalar.id,
-		]);
+		const candidateIds = async ({
+			sweptStripeCustomerIds,
+		}: {
+			sweptStripeCustomerIds: string[];
+		}) => {
+			const { candidates } = await loadBillingVerifyCandidates({
+				ctx,
+				snapshot: { search: "", filters: {} },
+				population,
+				sweep: sweepOf({
+					ctx,
+					subscriptionsByStripeCustomerId: new Map(
+						sweptStripeCustomerIds.map((id) => [id, []]),
+					),
+				}),
+			});
+			return candidates.map((scalar) => scalar.id);
+		};
+
+		const linkedOnly = await candidateIds({ sweptStripeCustomerIds: [] });
+		expect(linkedOnly).toContain(subscribed.scalar.id);
+		expect(linkedOnly).not.toContain(idleScalar.id);
+
+		const idleStripeCustomerId = idleScalar.processor?.id ?? "";
+		expect(idleStripeCustomerId).not.toBe("");
+		expect(
+			await candidateIds({ sweptStripeCustomerIds: [idleStripeCustomerId] }),
+		).toContain(idleScalar.id);
 	},
 );
 

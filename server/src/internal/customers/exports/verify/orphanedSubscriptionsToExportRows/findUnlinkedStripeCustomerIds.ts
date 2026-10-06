@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getLinkedStripeCustomerIds } from "../../queries/getBillingVerifyCandidates.js";
 import { billingVerifyExportConfig } from "../billingVerifyExportConfig.js";
 import { retryExportDbRead } from "../retryExportDbRead.js";
-import { toBatches } from "./toBatches.js";
+import { toBatches } from "../toBatches.js";
 
 /** Checked against every customer in the org, not the walked population, so a
  * customer created mid-run or linked under a shared id is never reported. */

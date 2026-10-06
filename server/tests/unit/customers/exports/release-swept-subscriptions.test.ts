@@ -1,8 +1,7 @@
 /**
  * The sweep holds every Stripe subscription for the whole run, which is the
- * export's peak memory. The walk is a forward keyset scan, so a verified page's
- * subscriptions are unreachable — except under a Stripe id shared by a customer
- * on a later page.
+ * export's peak memory. A verified batch's subscriptions are unreachable —
+ * except under a Stripe id shared by a customer in a later batch.
  */
 
 import { describe, expect, it } from "bun:test";

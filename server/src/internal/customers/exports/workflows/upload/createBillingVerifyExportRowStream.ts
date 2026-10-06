@@ -4,16 +4,25 @@ import {
 	type BillingVerifyExportSpec,
 	CustomerExportPhase,
 } from "@autumn/shared";
-import type { CustomerExportScalarRow } from "../../queries/getCustomerExportScalars.js";
+import {
+	CUSTOMER_EXPORT_PAGE_SIZE,
+	type CustomerExportScalarRow,
+} from "../../queries/getCustomerExportScalars.js";
 import { billingVerifyExportConfig } from "../../verify/billingVerifyExportConfig.js";
-import { filterBillingVerifyCandidates } from "../../verify/filterBillingVerifyCandidates.js";
+import { loadBillingVerifyCandidates } from "../../verify/loadBillingVerifyCandidates.js";
 import { orphanedSubscriptionsToExportRows } from "../../verify/orphanedSubscriptionsToExportRows/orphanedSubscriptionsToExportRows.js";
 import { releaseSweptSubscriptions } from "../../verify/releaseSweptSubscriptions.js";
 import { setupBillingVerifySweep } from "../../verify/setupBillingVerifySweep.js";
+import { toBatches } from "../../verify/toBatches.js";
 import { verifyCustomerToExportRows } from "../../verify/verifyCustomerToExportRows.js";
 import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
 import { mapStreamWithConcurrency } from "./mapStreamWithConcurrency.js";
-import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
+
+const candidateBatches = async function* (
+	candidates: CustomerExportScalarRow[],
+): AsyncGenerator<CustomerExportScalarRow[]> {
+	yield* toBatches({ items: candidates, size: CUSTOMER_EXPORT_PAGE_SIZE });
+};
 
 export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory<
 	BillingVerifyExportSpec
@@ -26,46 +35,29 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory<
 				onSubscriptionsScanned: (count) =>
 					progress?.incrementProcessedRows(count),
 			});
+			const { candidates, sharedStripeCustomerIds } =
+				await loadBillingVerifyCandidates({
+					ctx,
+					snapshot,
+					population,
+					sweep,
+				});
+			await progress?.setTotalRows(candidates.length);
 			await progress?.setPhase(CustomerExportPhase.Exporting);
 
-			const pages = walkCustomerExportPages({
-				ctx,
-				snapshot,
-				population,
-			});
-
-			const pageContexts: Array<{
-				scalars: CustomerExportScalarRow[];
-				sharedStripeCustomerIds: Set<string>;
-			}> = [];
-
-			// Candidates cluster heavily in the oldest customers, so batching the
-			// pool per page would leave it idle for most of the walk and then
-			// bottleneck on the tail.
-			const candidateBatches = async function* () {
-				for await (const scalars of pages) {
-					const { candidates, sharedStripeCustomerIds } =
-						await filterBillingVerifyCandidates({ ctx, scalars, sweep });
-					pageContexts.push({ scalars, sharedStripeCustomerIds });
-					yield candidates;
-				}
-			};
-
 			const verified = mapStreamWithConcurrency({
-				batches: candidateBatches(),
+				batches: candidateBatches(candidates),
 				concurrency: billingVerifyExportConfig.customer.concurrency,
 				run: (scalar: CustomerExportScalarRow) =>
 					verifyCustomerToExportRows({ ctx, scalar, sweep }),
-				onBatchSettled: async ({ results }) => {
-					const page = pageContexts.shift();
-					if (!page) return;
+				onBatchSettled: async ({ batch, results }) => {
 					releaseSweptSubscriptions({
 						sweep,
-						scalars: page.scalars,
-						sharedStripeCustomerIds: page.sharedStripeCustomerIds,
+						scalars: batch,
+						sharedStripeCustomerIds,
 					});
 					await onPageProcessed({
-						customerCount: page.scalars.length,
+						customerCount: batch.length,
 						rowCount: results.reduce((total, rows) => total + rows.length, 0),
 					});
 				},
