@@ -22,6 +22,7 @@ import { stopBlueGreenSlotStorePolling } from "../queue/blueGreen/blueGreenSlotS
 import { shutdownSqsSendBatchers } from "../queue/queueUtils.js";
 import { runExpiredGrantCleanup } from "./grantCron/runExpiredGrantCleanup.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
+import { runLongLivedCheckoutExpiry } from "./longLivedCheckoutCron/runLongLivedCheckoutExpiry";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
@@ -85,6 +86,7 @@ const main = async () => {
 		runProductCron({ ctx }),
 		runInvoiceCron({ ctx }),
 		runOneOffExpiry({ ctx }),
+		runLongLivedCheckoutExpiry({ ctx }),
 	]);
 };
 
