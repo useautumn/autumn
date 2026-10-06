@@ -4,11 +4,8 @@ import { advanceStripeTestClock } from "@tests/utils/stripeUtils/testClock/advan
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { addDays, addMonths } from "date-fns";
 import { CusService } from "@/internal/customers/CusService";
-import {
-	RELIST,
-	type RelistScenario,
-	type RelistStateSetup,
-} from "./relistMatrix";
+import type { RelistScenario, RelistStateSetup } from "./relistMatrix";
+import { RELIST } from "./relistTypes";
 
 const attachPro = async ({
 	scenario,
@@ -171,11 +168,25 @@ export const pastDueState: RelistStateSetup = async ({ scenario }) => {
 /** Pro on one Stripe sub and the add-on on a second sub. */
 export const multiSubState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario });
+	const stripeCustomerId = (
+		await CusService.getFull({
+			ctx: scenario.ctx,
+			idOrInternalId: scenario.customerId,
+		})
+	).processor!.id;
+	const [proSubscription] = (
+		await scenario.ctx.stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+		})
+	).data;
 	await scenario.autumnV1.billing.attach({
 		customer_id: scenario.customerId,
 		product_id: scenario.catalog.addOn.id,
 		entity_id: scenario.entityId,
 		new_billing_subscription: true,
 	});
-	return { periodStartMs: scenario.clockStartMs };
+	return {
+		periodStartMs: scenario.clockStartMs,
+		params: { stripe_subscription_id: proSubscription!.id },
+	};
 };

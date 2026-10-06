@@ -16,45 +16,15 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { addDays, addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
-
-/** Shapes mirror handoffs/ATMN-746 (plain-Stripe ground truth): Pro $20 + 100 messages incl, $0.10 over. */
-export const RELIST = {
-	proPrice: 20,
-	changedProPrice: 30,
-	premiumPrice: 50,
-	addOnPrice: 10,
-	includedMessages: 100,
-	premiumIncludedMessages: 500,
-	unitPrice: 0.1,
-	changedUnitPrice: 0.15,
-	wordsPackPrice: 10,
-	wordsPackSize: 100,
-	wordsQuantity: 100,
-	changedWordsQuantity: 200,
-	tracked: 150,
-	changeAfterDays: 10,
-	customAnchorAfterDays: 20,
-} as const;
-
-export type RelistChange =
-	| "unchanged"
-	| "base_price"
-	| "usage_price"
-	| "prepaid_quantity"
-	| "swap"
-	| "drop"
-	| "add";
-export type RelistAnchor = "unchanged" | "now" | "custom";
-export type RelistProration =
-	| "prorate_immediately"
-	| "none"
-	| "bill_difference";
-
-export const RELIST_PRORATIONS: RelistProration[] = [
-	"prorate_immediately",
-	"none",
-	"bill_difference",
-];
+import {
+	type InvoiceSummary,
+	RELIST,
+	type RelistAnchor,
+	type RelistChange,
+	type RelistDate,
+	type RelistObservation,
+	type RelistProration,
+} from "./relistTypes";
 
 export const relistCatalog = ({ trialDays }: { trialDays?: number } = {}) => {
 	const pro = products.base({
@@ -173,41 +143,10 @@ export const relistPlans = ({
 	}
 };
 
-/** Clock-relative labels so two runs on different clocks compare equal. */
-export type RelistDate =
-	| "period_start"
-	| "change"
-	| "custom_anchor"
-	| "period_start+1mo"
-	| "change+1mo"
-	| "custom_anchor+1mo"
-	| string;
-
-type InvoiceSummary = { total: number; messages: number[] };
-
-export type RelistObservation = {
-	preview: {
-		total: number;
-		lines: string[];
-		nextCycle: { startsAt: RelistDate; total: number } | null;
-	};
-	execute: InvoiceSummary[];
-	subscription: {
-		status: string;
-		anchor: RelistDate;
-		periodEnd: RelistDate;
-		cancelAtPeriodEnd: boolean;
-		licensed: string[];
-		metered: number;
-	} | null;
-	balance: { messagesUsage: number; messagesRemaining: number };
-	atAnchor: InvoiceSummary[];
-	renewal: InvoiceSummary[];
-};
-
-export type RelistStateSetup = (args: {
-	scenario: RelistScenario;
-}) => Promise<{ periodStartMs: number }>;
+export type RelistStateSetup = (args: { scenario: RelistScenario }) => Promise<{
+	periodStartMs: number;
+	params?: Partial<SetPlansParamsV0Input>;
+}>;
 
 export type RelistScenario = Awaited<ReturnType<typeof initRelistScenario>>;
 
@@ -331,7 +270,7 @@ export const runRelistCase = async ({
 	proration,
 	entity = false,
 	trialDays,
-	extraParams,
+	observeRenewal = true,
 }: {
 	customerId: string;
 	setupState: RelistStateSetup;
@@ -340,14 +279,14 @@ export const runRelistCase = async ({
 	proration: RelistProration;
 	entity?: boolean;
 	trialDays?: number;
-	extraParams?: Partial<SetPlansParamsV0Input>;
+	observeRenewal?: boolean;
 }) => {
 	const scenario = await initRelistScenario({ customerId, entity, trialDays });
 	const { autumnV1, autumnV2_4, ctx, testClockId, entityId, catalog } =
 		scenario;
 	const stripeCli = ctx.stripeCli;
 
-	const { periodStartMs } = await setupState({ scenario });
+	const { periodStartMs, params: stateParams } = await setupState({ scenario });
 	await autumnV1.track(
 		{
 			customer_id: customerId,
@@ -393,7 +332,7 @@ export const runRelistCase = async ({
 	const params: SetPlansParamsV0Input = {
 		customer_id: customerId,
 		...(entityId && { entity_id: entityId }),
-		...extraParams,
+		...stateParams,
 		phases: [
 			{
 				starts_at: "now",
@@ -412,7 +351,14 @@ export const runRelistCase = async ({
 	await autumnV2_4.billing.setPlans(params);
 	const execute = await takeNewInvoices();
 
-	const [sub] = await liveSubscriptions({ stripeCli, stripeCustomerId });
+	// The sub carrying Pro's metered price, so a second sub (multi-sub state) is never mistaken for it.
+	const subs = await liveSubscriptions({ stripeCli, stripeCustomerId });
+	const sub =
+		subs.find((candidate) =>
+			candidate.items.data.some(
+				(item) => item.price.recurring?.usage_type === "metered",
+			),
+		) ?? subs[0];
 	const feature = (
 		entityId
 			? (await autumnV1.entities.get(customerId, entityId)).features
@@ -445,7 +391,7 @@ export const runRelistCase = async ({
 		atAnchor = await takeNewInvoices();
 		nextCycleMs = addMonths(customAnchorMs, 1).getTime();
 	}
-	if (sub) {
+	if (sub && observeRenewal) {
 		await advanceToNextInvoice({
 			stripeCli,
 			testClockId: testClockId!,
@@ -524,42 +470,4 @@ export const runRelistPair = async ({
 		}),
 	]);
 	return { unchanged, changed };
-};
-
-/** Totals and usage lines across the timeline: what Stripe ground truth pins. */
-export const relistBilling = (observation: RelistObservation) => {
-	const sum = (invoices: InvoiceSummary[]) =>
-		Math.round(
-			invoices.reduce((total, invoice) => total + invoice.total, 0) * 100,
-		) / 100;
-	return {
-		executeTotal: sum(observation.execute),
-		executeMessages: observation.execute.flatMap((invoice) => invoice.messages),
-		anchorTotal: sum(observation.atAnchor),
-		anchorMessages: observation.atAnchor.flatMap((invoice) => invoice.messages),
-		renewalTotal: sum(observation.renewal),
-		renewalMessages: observation.renewal.flatMap((invoice) => invoice.messages),
-		messagesUsage: observation.balance.messagesUsage,
-	};
-};
-
-export type RelistBilling = ReturnType<typeof relistBilling>;
-
-/** Autumn's own promises, independent of Stripe: the preview is what execute bills and what renews. */
-export const relistPreviewMatchesExecution = (
-	observation: RelistObservation,
-) => ({
-	previewTotal: observation.preview.total,
-	nextCycleTotal: observation.preview.nextCycle?.total ?? null,
-});
-
-export const relistExecutionTotals = (observation: RelistObservation) => {
-	const billing = relistBilling(observation);
-	const firstCycle = observation.atAnchor.length
-		? billing.anchorTotal
-		: billing.renewalTotal;
-	return {
-		previewTotal: billing.executeTotal,
-		nextCycleTotal: observation.preview.nextCycle ? firstCycle : null,
-	};
 };
