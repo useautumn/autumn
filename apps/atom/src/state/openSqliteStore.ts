@@ -1,6 +1,7 @@
 import { pushPhaseMs } from "../pushes/pushPhaseMs.js";
 import { deepFreeze } from "./deepFreeze.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
+import { openVersionStamps } from "./openVersionStamps.js";
 import {
 	countSubjects,
 	readSubject,
@@ -31,21 +32,30 @@ export const openSqliteStore = ({
 	databasePath: string;
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
+	const stamps = openVersionStamps({
+		path: databasePath === ":memory:" ? null : `${databasePath}-stamps`,
+	});
 	// A check parses its subject's row once per change to that row, not once per check: a push to one customer leaves the rest parsed.
-	const parsed = new Map<string, { version: string; subject: StoredSubject }>();
+	const parsed = new Map<
+		string,
+		{ version: string; stamp: number; subject: StoredSubject }
+	>();
 
 	function readParsedSubject(params: {
 		customerId: string;
 		entityId: string | null;
 	}): StoredSubject | null {
 		subjectReadCounts.reads += 1;
+		const key = subjectKey(params);
+		const stamp = stamps.read({ key });
+		const held = parsed.get(key);
+		// No write to the row's bucket since the copy was read: the copy is the row, without asking SQLite.
+		if (held?.stamp === stamp) return held.subject;
 		const version = readSubjectVersion({ ctx, ...params });
 		if (version === null) return null;
-		const key = subjectKey(params);
-		const held = parsed.get(key);
 		parsed.delete(key);
 		if (held?.version === version) {
-			parsed.set(key, held);
+			parsed.set(key, { ...held, stamp });
 			return held.subject;
 		}
 		subjectReadCounts.parses += 1;
@@ -56,17 +66,34 @@ export const openSqliteStore = ({
 		// Versioned by what was read, not the version checked first: a write in between is caught by the next check.
 		parsed.set(key, {
 			version: `${subject.readAt}:${subject.logOffset}`,
+			stamp,
 			subject: deepFreeze(subject),
 		});
 		return subject;
 	}
 
+	/** After the commit, never before: a reader that sees the old stamp is serving the row as it was before this write. */
+	function bumpStamps({ subjects }: { subjects: StoredSubject[] }): void {
+		for (const { state } of subjects)
+			stamps.bump({
+				key: subjectKey({
+					customerId: state.identity.customerId,
+					entityId: state.identity.entityId ?? null,
+				}),
+			});
+	}
+
 	return {
 		readSubject: readParsedSubject,
-		setSubject: (params) => upsertSubject({ ctx, ...params }),
+		setSubject: (params) => {
+			const stored = upsertSubject({ ctx, ...params });
+			bumpStamps({ subjects: [params.subject] });
+			return stored;
+		},
 		setSubjects: (params) => {
 			const writeStartedAt = performance.now();
 			const stored = upsertSubjects({ ctx, ...params });
+			bumpStamps(params);
 			pushPhaseMs.write += performance.now() - writeStartedAt;
 			return stored;
 		},

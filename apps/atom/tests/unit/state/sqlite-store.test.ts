@@ -254,4 +254,27 @@ describe("sqlite store", () => {
 		).toBe(first);
 		sqliteStore.close();
 	});
+	test("a write by another process is read on the next check, and an unchanged row is served without asking the file", () => {
+		const databasePath = slotPath();
+		const writer = openSqliteStore({ databasePath });
+		const reader = openSqliteStore({ databasePath });
+		const read = () =>
+			reader.readSubject({ customerId: "cus_1", entityId: null });
+		writer.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+
+		const first = read();
+		expect(first?.logOffset).toBe(1n);
+		expect(read()).toBe(first as StoredSubject);
+
+		writer.setSubjects({ subjects: [subjectAt({ logOffset: 2n })] });
+		expect(read()?.logOffset).toBe(2n);
+
+		// A row written behind the stamps' back is not seen until a stamped write: the stamp, not the file, says when to look.
+		new Database(databasePath).run(
+			"UPDATE subject_states SET log_offset = 3 WHERE customer_id = 'cus_1'",
+		);
+		expect(read()?.logOffset).toBe(2n);
+		writer.setSubject({ subject: subjectAt({ logOffset: 4n }) });
+		expect(read()?.logOffset).toBe(4n);
+	});
 });
