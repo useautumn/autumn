@@ -97,6 +97,9 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	queueWaitTotalMs: a.queueWaitTotalMs + b.queueWaitTotalMs,
 });
 
+/** Requests answered since the process started, for a window a diagnostic opens and closes itself. */
+export const servedTotals = { checks: 0, pushes: 0 };
+
 /** A lone process, with no supervisor, publishes where its own /health reads. */
 export const atomStatsDir = ({
 	env = process.env,
@@ -267,10 +270,12 @@ export const startProcessStats = ({
 			current.forwards += 1;
 			current.forwardMaxMs = Math.max(current.forwardMaxMs, durationMs);
 		} else if (path === "/v1/balances.check") {
+			servedTotals.checks += 1;
 			current.checks += 1;
 			current.checkMaxMs = Math.max(current.checkMaxMs, durationMs);
 			current.checkTotalMs += durationMs;
 		} else if (PUSH_PATHS.has(path)) {
+			servedTotals.pushes += 1;
 			current.pushes += 1;
 			current.pushMaxMs = Math.max(current.pushMaxMs, durationMs);
 			current.pushTotalMs += durationMs;

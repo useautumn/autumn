@@ -10,7 +10,12 @@ import {
 } from "./requestLogLine.js";
 
 /** Answered for a load balancer's probe every second; nothing to learn from it. */
-const UNLOGGED_PATHS = new Set(["/health"]);
+const UNLOGGED_PATHS = new Set([
+	"/health",
+	"/health/profile",
+	"/health/bench",
+	"/health/floor",
+]);
 /** A check Atom answered itself is logged one time in a hundred: at peak a line each was a sixth of a process's CPU. */
 const ANSWERED_CHECK_LOG_SAMPLE_RATE = 0.01;
 
