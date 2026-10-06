@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { nonEmptyStringSchema, timestampSchema } from "../common/primitives.js";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
+import { commandActorSchema } from "./commandActor.js";
 
 /** What every command carries; each command adds its `type` and params. */
 export const baseCommandSchema = z.object({
@@ -8,6 +9,7 @@ export const baseCommandSchema = z.object({
 	requestId: nonEmptyStringSchema,
 	identity: meteringIdentitySchema,
 	occurredAt: timestampSchema,
+	actor: commandActorSchema.optional(),
 });
 
 export type BaseCommand = z.infer<typeof baseCommandSchema>;
