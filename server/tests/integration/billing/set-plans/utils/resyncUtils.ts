@@ -5,6 +5,7 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
+import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { timeout } from "@/utils/genUtils";
@@ -157,10 +158,12 @@ export const expectCycleResetPhase = async ({
 	ctx,
 	customerId,
 	anchorMs,
+	prorationBehavior,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	anchorMs: number;
+	prorationBehavior?: Stripe.SubscriptionSchedule.Phase.ProrationBehavior;
 }) => {
 	const subscription = await findStripeSubscriptionByStatus({
 		ctx,
@@ -179,6 +182,9 @@ export const expectCycleResetPhase = async ({
 		(phase) => phase.start_date === msToSeconds(anchorMs),
 	);
 	expect(resetPhase?.billing_cycle_anchor).toBe("phase_start");
+	if (prorationBehavior) {
+		expect(resetPhase?.proration_behavior).toBe(prorationBehavior);
+	}
 };
 
 export const expectPlansEndAt = async ({

@@ -317,6 +317,7 @@ export const billingPlanToNextCyclePreview = ({
 			billingContext,
 			interval: event.smallestInterval.interval,
 			intervalCount: event.smallestInterval.intervalCount,
+			prorationBehavior: event.prorationBehavior,
 		});
 		nextCycleStart = result.nextCycleStart;
 		anchorResetProration = result.anchorResetProration;
@@ -347,18 +348,18 @@ export const billingPlanToNextCyclePreview = ({
 		ctx,
 		customerProducts: filteredCustomerProducts,
 		productsForUsageLineItems,
-		lineItemSpecs:
-			event.kind === "anchor_reset"
-				? [
-						{
-							customerProducts: filteredCustomerProducts,
-							direction: "charge",
-							billingCycleAnchorMs: nextCycleStart,
-							filterBillingPeriodStart: false,
-							priceFilters: { excludeOneOffPrices: true },
-						},
-					]
-				: undefined,
+		// Only an anchor inside the period restarts every item there; otherwise it's a renewal.
+		lineItemSpecs: anchorResetProration
+			? [
+					{
+						customerProducts: filteredCustomerProducts,
+						direction: "charge",
+						billingCycleAnchorMs: nextCycleStart,
+						filterBillingPeriodStart: false,
+						priceFilters: { excludeOneOffPrices: true },
+					},
+				]
+			: undefined,
 		autumnBillingPlan: billingPlan.autumn,
 		billingContext: {
 			...lineItemsBillingContext,
