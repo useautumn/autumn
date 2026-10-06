@@ -7,15 +7,19 @@ import {
 	type SetPlansPreviewResponse,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
-import { hoursToFinalizeInvoice } from "@tests/utils/constants";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceStripeTestClock } from "@tests/utils/stripeUtils/testClock/advanceStripeTestClock";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { addDays, addHours, addMonths } from "date-fns";
+import { addDays, addMonths } from "date-fns";
 import type Stripe from "stripe";
+import { getMiscRedis } from "@/external/redis/initRedis";
+import { buildStripeWebhookEventKey } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware";
 import { CusService } from "@/internal/customers/CusService";
+
+const NO_INVOICE_GRACE_MS = 20_000;
+
 import {
 	type InvoiceSummary,
 	RELIST,
@@ -232,29 +236,55 @@ const liveSubscriptions = async ({
 		(sub) => !["canceled", "incomplete_expired"].includes(sub.status),
 	);
 
-/** Advances onto an invoice date, lets Autumn's invoice.created work land, then finalizes. */
-const advanceThroughInvoiceAt = async ({
-	stripeCli,
-	testClockId,
+/** Advances onto an invoice date and waits until Autumn has processed every invoice.created it produced. */
+const advanceOntoInvoice = async ({
+	scenario,
+	stripeCustomerId,
 	atMs,
 }: {
-	stripeCli: Stripe;
-	testClockId: string;
+	scenario: RelistScenario;
+	stripeCustomerId: string;
 	atMs: number;
 }) => {
+	const { ctx, testClockId } = scenario;
+	const since = Date.now();
 	await advanceStripeTestClock({
-		stripeCli,
-		testClockId,
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
 		targetSeconds: Math.floor(atMs / 1000),
-		minimumWaitMs: 50_000,
 	});
-	await advanceStripeTestClock({
-		stripeCli,
-		testClockId,
-		targetSeconds: Math.floor(
-			addHours(atMs, hoursToFinalizeInvoice).getTime() / 1000,
-		),
-		minimumWaitMs: 30_000,
+	await waitForStripeWebhook({
+		stripeCli: ctx.stripeCli,
+		env: ctx.env,
+		types: ["invoice.created"],
+		since,
+		customerStripeId: stripeCustomerId,
+		until: async () => {
+			const events = (
+				await ctx.stripeCli.events.list({
+					type: "invoice.created",
+					created: { gte: Math.floor(since / 1000) - 5 },
+					limit: 100,
+				})
+			).data.filter(
+				(event) =>
+					(event.data.object as Stripe.Invoice).customer === stripeCustomerId,
+			);
+			// A sub without a metered or changed item can cross an anchor with no invoice at all.
+			if (events.length === 0) return Date.now() - since > NO_INVOICE_GRACE_MS;
+			const statuses = await Promise.all(
+				events.map((event) =>
+					getMiscRedis().get(
+						buildStripeWebhookEventKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							eventId: event.id,
+						}),
+					),
+				),
+			);
+			return statuses.every((status) => status === "completed");
+		},
 	});
 };
 
@@ -383,21 +413,16 @@ export const runRelistCase = async ({
 		? Math.max(...sub.items.data.map((item) => item.current_period_end)) * 1000
 		: addMonths(changeAtMs, 1).getTime();
 	if (sub && anchor === "custom") {
-		await advanceThroughInvoiceAt({
-			stripeCli,
-			testClockId: testClockId!,
+		await advanceOntoInvoice({
+			scenario,
+			stripeCustomerId,
 			atMs: customAnchorMs,
 		});
 		atAnchor = await takeNewInvoices();
 		nextCycleMs = addMonths(customAnchorMs, 1).getTime();
 	}
 	if (sub && observeRenewal) {
-		await advanceToNextInvoice({
-			stripeCli,
-			testClockId: testClockId!,
-			currentEpochMs: addMonths(nextCycleMs, -1).getTime(),
-			withPause: true,
-		});
+		await advanceOntoInvoice({ scenario, stripeCustomerId, atMs: nextCycleMs });
 	}
 	const renewal = await takeNewInvoices();
 
