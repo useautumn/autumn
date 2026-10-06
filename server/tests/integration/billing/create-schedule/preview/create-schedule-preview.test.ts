@@ -10,6 +10,7 @@ import {
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -392,7 +393,11 @@ test.concurrent(
 				expect(
 					preview.line_items.every((lineItem) => lineItem.feature_id === null),
 				).toBe(true);
-				expect(preview.next_cycle).toBeUndefined();
+				expectPreviewNextCycleCorrect({
+					preview,
+					startsAt: addMonths(advancedTo, 1).getTime(),
+					total: 20,
+				});
 			},
 		});
 	},

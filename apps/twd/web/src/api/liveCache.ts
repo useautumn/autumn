@@ -1,16 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type {
-	Branch,
-	Capacity,
-	Job,
-	KeysOverview,
-	LiveEvent,
-	LiveServerMessage,
-	RunDetail,
-	RunEvent,
-	RunFile,
-	RunSummary,
-	RunsPage,
+import {
+	type Branch,
+	type Capacity,
+	isFailedFileStatus,
+	type Job,
+	type KeysOverview,
+	type LiveEvent,
+	type LiveServerMessage,
+	type RunDetail,
+	type RunEvent,
+	type RunFile,
+	type RunSummary,
+	type RunsPage,
 } from "../../../src/api/contract.ts";
 import { qk, type RunsFilter } from "./hooks.ts";
 import { liveSocket } from "./live.ts";
@@ -90,7 +91,7 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		files: fileList,
 		...(touchedFiles && {
 			passed: count(fileList, "passed"),
-			failed: count(fileList, "failed") + count(fileList, "crashed"),
+			failed: fileList.filter((f) => isFailedFileStatus(f.status)).length,
 		}),
 	};
 };

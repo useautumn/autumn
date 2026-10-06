@@ -20,10 +20,7 @@ export const expectLicenseAttachPreviewCorrect = ({
 	total: number;
 }) => {
 	expect(preview.total).toEqual(total);
-	expectPreviewNextCycleCorrect({
-		preview,
-		expectDefined: false,
-	});
+	expectPreviewNextCycleCorrect({ preview });
 };
 
 const quantityLabel = (quantity: number) => `${quantity}x Base Price`;

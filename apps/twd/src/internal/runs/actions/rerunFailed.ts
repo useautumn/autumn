@@ -1,11 +1,11 @@
-import type { RunSummary } from "../../../api/contract.ts";
+import { isFailedFileStatus, type RunSummary } from "../../../api/contract.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { splitRepetitionId } from "../repeat/repetitions.ts";
 import { createRun } from "./createRun.ts";
 import { getRun } from "./getRun.ts";
 
-/** New run on the same branch + sha with only the failed/crashed files. */
+/** New run on the same branch + sha with only the failed, crashed and timed-out files. */
 export const rerunFailed = async ({
 	ctx,
 	runId,
@@ -17,7 +17,7 @@ export const rerunFailed = async ({
 	const failed = [
 		...new Set(
 			run.files
-				.filter((file) => file.status === "failed" || file.status === "crashed")
+				.filter((file) => isFailedFileStatus(file.status))
 				.map((file) => splitRepetitionId({ id: file.file }).file),
 		),
 	];
@@ -25,7 +25,7 @@ export const rerunFailed = async ({
 		throw new TwdError({
 			status: 409,
 			code: "no_failed_files",
-			message: `Run ${runId} has no failed or crashed files${run.finishedAt ? "" : " yet"}.`,
+			message: `Run ${runId} has no failed, crashed or timed-out files${run.finishedAt ? "" : " yet"}.`,
 			next: run.finishedAt
 				? "Nothing to rerun."
 				: "Wait for the run to finish (GET /runs/:id), then retry.",

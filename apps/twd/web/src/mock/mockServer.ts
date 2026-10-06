@@ -20,7 +20,10 @@ import type {
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
-import { CreateRunBody } from "../../../src/api/contract.ts";
+import {
+	CreateRunBody,
+	isFailedFileStatus,
+} from "../../../src/api/contract.ts";
 import { TwdError } from "../../../src/http/apiError.ts";
 import {
 	createDurationModel,
@@ -468,15 +471,31 @@ const finishedFile = (
 	const slow = r() < 0.02;
 	const tests = 2 + Math.floor(r() * 14);
 	const failedTests = failed ? 1 + Math.floor(r() * 2) : 0;
+	const kind = failed ? r() : 1;
+	const status: RunFile["status"] = !failed
+		? "passed"
+		: kind < 0.15
+			? "crashed"
+			: kind < 0.35
+				? "timed_out"
+				: "failed";
+	const durationMs = Math.round(base * (slow ? 1.7 + r() : 0.55 + r() * 0.5));
+	const attempt = failed && r() < 0.5 ? 2 : 1;
 	return {
 		file,
-		status: failed ? (r() < 0.15 ? "crashed" : "failed") : "passed",
-		durationMs: Math.round(base * (slow ? 1.7 + r() : 0.55 + r() * 0.5)),
-		attempt: failed && r() < 0.5 ? 2 : 1,
+		status,
+		durationMs:
+			status === "timed_out" ? 300_000 + (durationMs % 4_000) : durationMs,
+		attempt,
 		passedTests: tests - failedTests,
 		failedTests,
 		worker,
-		failureSummary: failed ? pick(FAILURES, r) : null,
+		failureSummary:
+			status === "timed_out"
+				? `timed out after 300000ms (attempt ${attempt})\n✗ ${file.split("/").pop()} > settles every plan`
+				: failed
+					? pick(FAILURES, r)
+					: null,
 	};
 };
 
@@ -484,7 +503,7 @@ const computeDrift = (files: RunFile[]): Drift[] =>
 	files.flatMap((f): Drift[] => {
 		const base = p90.get(f.file);
 		const r = rng(hash(f.file));
-		if ((f.status === "failed" || f.status === "crashed") && r() < 0.7)
+		if (isFailedFileStatus(f.status) && r() < 0.7)
 			return [
 				{
 					file: f.file,
@@ -507,9 +526,7 @@ const computeDrift = (files: RunFile[]): Drift[] =>
 
 const summarize = (run: RunDetail) => {
 	run.passed = run.files.filter((f) => f.status === "passed").length;
-	run.failed = run.files.filter(
-		(f) => f.status === "failed" || f.status === "crashed",
-	).length;
+	run.failed = run.files.filter((f) => isFailedFileStatus(f.status)).length;
 	run.drift = run.repeat > 1 ? [] : computeDrift(run.files);
 	run.repeats = run.repeat > 1 ? summariseRepeats({ files: run.files }) : [];
 };
@@ -1465,9 +1482,7 @@ export const handle = ({
 			);
 		if (method === "GET" && seg.length === 2) return ok(run);
 		if (method === "GET" && seg[2] === "logs" && seg[3] === "failed") {
-			const failed = run.files.filter(
-				(f) => f.status === "failed" || f.status === "crashed",
-			);
+			const failed = run.files.filter((f) => isFailedFileStatus(f.status));
 			return ok(
 				failed
 					.map(
@@ -1521,7 +1536,7 @@ export const handle = ({
 			const failed = [
 				...new Set(
 					run.files
-						.filter((f) => f.status === "failed" || f.status === "crashed")
+						.filter((f) => isFailedFileStatus(f.status))
 						.map((f) => splitRepetitionId({ id: f.file }).file),
 				),
 			];

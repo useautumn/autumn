@@ -125,7 +125,7 @@ const printEvent = (event: z.infer<typeof RunEvent>) => {
 		console.log(`» ${event.status}${event.phase ? ` (${event.phase})` : ""}`);
 	else if (event.type === "file")
 		console.log(
-			`  ${event.file.status.padEnd(8)} ${event.file.file}${event.file.durationMs === null ? "" : ` ${(event.file.durationMs / 1000).toFixed(1)}s`}${event.file.failureSummary ? `\n    ${safeText(event.file.failureSummary)}` : ""}`,
+			`  ${event.file.status.padEnd(9)} ${event.file.file}${event.file.durationMs === null ? "" : ` ${(event.file.durationMs / 1000).toFixed(1)}s`}${event.file.failureSummary ? `\n    ${safeText(event.file.failureSummary)}` : ""}`,
 		);
 	else if (event.type === "log")
 		console.log(

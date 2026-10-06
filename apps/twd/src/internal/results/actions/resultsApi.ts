@@ -14,6 +14,7 @@ const FINAL_STATUSES: FileResultStatus[] = [
 	"passed",
 	"failed",
 	"crashed",
+	"timed_out",
 	"skipped",
 ];
 
