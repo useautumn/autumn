@@ -17,7 +17,7 @@ const fakeContainer = ({
 	mkdirSync(cgroupDir);
 	writeFileSync(
 		join(cgroupDir, "cpu.stat"),
-		"usage_usec 2500000\nuser_usec 2000000\nsystem_usec 500000\n",
+		"usage_usec 2500000\nuser_usec 2000000\nsystem_usec 500000\nnr_periods 40\nnr_throttled 3\nthrottled_usec 750000\n",
 	);
 	writeFileSync(join(cgroupDir, "cpu.max"), `${cpuMax}\n`);
 	writeFileSync(join(cgroupDir, "memory.current"), "1073741824\n");
@@ -42,6 +42,7 @@ describe("container stats", () => {
 
 		expect(readStats()).toEqual({
 			cpuUsageSeconds: 2.5,
+			cpuThrottledSeconds: 0.75,
 			cpuLimitCores: 7,
 			memoryBytes: 1073741824,
 			memoryLimitBytes: 12884901888,
@@ -72,6 +73,7 @@ describe("container stats", () => {
 
 		expect(readStats()).toEqual({
 			cpuUsageSeconds: null,
+			cpuThrottledSeconds: null,
 			cpuLimitCores: null,
 			memoryBytes: null,
 			memoryLimitBytes: null,

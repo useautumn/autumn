@@ -7,6 +7,8 @@ const STATS_READ_EVERY_MS = 1000;
 /** cgroup v2 usage of the whole container; a limit is null when unset ("max") or unreadable. */
 export type ContainerStats = {
 	cpuUsageSeconds: number | null;
+	/** Cumulative time the CPU limit held the container back: rising at below-limit usage means bursts hit the quota. */
+	cpuThrottledSeconds: number | null;
 	cpuLimitCores: number | null;
 	memoryBytes: number | null;
 	memoryLimitBytes: number | null;
@@ -24,11 +26,15 @@ const readText = (path: string): string | null => {
 const toBytes = (text: string | null): number | null =>
 	text === null || text === "max" ? null : Number(text);
 
-const readCpuUsageSeconds = (cgroupDir: string): number | null => {
-	const usage = readText(join(cgroupDir, "cpu.stat"))?.match(
-		/^usage_usec (\d+)$/m,
-	);
-	return usage ? Number(usage[1]) / 1e6 : null;
+const readCpuStatSeconds = ({
+	cpuStat,
+	field,
+}: {
+	cpuStat: string | null;
+	field: "usage_usec" | "throttled_usec";
+}): number | null => {
+	const value = cpuStat?.match(new RegExp(`^${field} (\\d+)$`, "m"));
+	return value ? Number(value[1]) / 1e6 : null;
 };
 
 const readCpuLimitCores = (cgroupDir: string): number | null => {
@@ -71,8 +77,13 @@ export const createContainerStatsReader = ({
 	return () => {
 		if (stats && clock() - readAt < STATS_READ_EVERY_MS) return stats;
 		readAt = clock();
+		const cpuStat = readText(join(cgroupDir, "cpu.stat"));
 		stats = {
-			cpuUsageSeconds: readCpuUsageSeconds(cgroupDir),
+			cpuUsageSeconds: readCpuStatSeconds({ cpuStat, field: "usage_usec" }),
+			cpuThrottledSeconds: readCpuStatSeconds({
+				cpuStat,
+				field: "throttled_usec",
+			}),
 			cpuLimitCores: readCpuLimitCores(cgroupDir),
 			memoryBytes: toBytes(readText(join(cgroupDir, "memory.current"))),
 			memoryLimitBytes: toBytes(readText(join(cgroupDir, "memory.max"))),
