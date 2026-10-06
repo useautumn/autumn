@@ -605,6 +605,7 @@ export const aggregate = async ({
 						rollupIsIncomplete = groupedValueIsMateriallyShort({
 							rows: result.data,
 							totals,
+							coverage,
 						});
 					} else {
 						rollupIsIncomplete = shortfall === "major";

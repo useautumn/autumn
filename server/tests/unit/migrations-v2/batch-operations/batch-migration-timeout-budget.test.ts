@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { isTransientDbError } from "@/db/dbUtils.js";
-import { BatchMigrationStallError } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
+import { BatchMigrationStallError } from "@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js";
 import {
 	BATCH_MIGRATION_CHUNK_FINALIZE_RESERVE_MS,
 	BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS,

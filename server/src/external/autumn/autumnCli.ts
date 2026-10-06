@@ -47,6 +47,7 @@ import {
 	type Migration,
 	type MigrationFilter,
 	type MigrationItemRun,
+	type MigrationListSummary,
 	type MigrationRun,
 	type MigrationStatus,
 	type MultiUpdateParamsV0Input,
@@ -84,6 +85,7 @@ export type MigrationListItem = Migration & {
 	blocked_by: string | null;
 	has_live_runs: boolean;
 	batch_eligible: boolean;
+	summary: MigrationListSummary;
 };
 
 export type MigrationRunItemCounts = {

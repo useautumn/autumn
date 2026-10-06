@@ -23,6 +23,17 @@ type BillingVerifyExportConfig = {
 		attempts: number;
 		requestsPerSecond: number;
 	};
+	orphans: {
+		concurrency: number;
+		lookupBatchSize: number;
+		rowBatchSize: number;
+		timeoutMs: number;
+		attempts: number;
+		retryDelayMs: number;
+		maxRetryDelayMs: number;
+		requestsPerSecond: number;
+		sandboxRequestsPerSecond: number;
+	};
 };
 
 /** Callers override only what a test needs to vary. */
@@ -66,5 +77,16 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		timeoutMs: 10_000,
 		attempts: 1,
 		requestsPerSecond: 40,
+	},
+	orphans: {
+		concurrency: 8,
+		lookupBatchSize: 1000,
+		rowBatchSize: 100,
+		timeoutMs: 10_000,
+		attempts: 3,
+		retryDelayMs: 2_000,
+		maxRetryDelayMs: 20_000,
+		requestsPerSecond: 25,
+		sandboxRequestsPerSecond: 5,
 	},
 };

@@ -23,6 +23,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -127,7 +128,9 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 1: trialing pro to premium 
 	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 	// Count is 2: initial trial ($0) + upgrade ($0)
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customerId,
+		autumn: autumnV1,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		count: 2,
 		latestTotal: 0,
 	});
@@ -233,7 +236,9 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 2: trialing pro to premium 
 
 	// Verify invoice for premium
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customerId,
+		autumn: autumnV1,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		count: 2,
 		latestTotal: 50,
 	});
@@ -343,10 +348,11 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 3: non-trialing pro to prem
 		resetsAt: advancedTo + ms.days(14),
 	});
 
-	await timeout(4000);
 	// Verify invoices: pro charge ($20) + refund (-$20)
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customerId,
+		autumn: autumnV1,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		count: 3,
 		invoiceIndex: 1,
 		latestTotal: -20,
@@ -471,7 +477,9 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 4: mid-trial upgrade to pre
 	// Verify NO paid invoice generated - both are $0 trial invoices
 	// Count is 2: initial trial ($0) + upgrade ($0)
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customerId,
+		autumn: autumnV1,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		count: 2,
 		latestTotal: 0,
 	});

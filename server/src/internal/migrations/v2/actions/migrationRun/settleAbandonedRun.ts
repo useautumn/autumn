@@ -1,6 +1,7 @@
 import {
 	ACTIVE_MIGRATION_RUN_STATUSES,
 	type MigrationRun,
+	MigrationRunErrorCode,
 	MigrationRunStatus,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -26,6 +27,7 @@ export const settleAbandonedRun = async ({
 			updates: {
 				status: MigrationRunStatus.Failed,
 				error_message: ABANDONED_MESSAGE,
+				error_code: MigrationRunErrorCode.Interrupted,
 				finished_at: now,
 			},
 			onlyIfStatusIn: ACTIVE_MIGRATION_RUN_STATUSES,

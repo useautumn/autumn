@@ -24,6 +24,21 @@ export const MigrationRunStatus = {
 export type MigrationRunStatus =
 	(typeof MigrationRunStatus)[keyof typeof MigrationRunStatus];
 
+/** Stable failure kind of a run, classified where the error is recorded. */
+export const MigrationRunErrorCode = {
+	CacheInvalidationIncomplete: "cache_invalidation_incomplete",
+	StripeError: "stripe_error",
+	TimedOut: "timed_out",
+	Canceled: "canceled",
+	Interrupted: "interrupted",
+	DispatchFailed: "dispatch_failed",
+	PageLimitExceeded: "page_limit_exceeded",
+	Unknown: "unknown",
+} as const;
+
+export type MigrationRunErrorCode =
+	(typeof MigrationRunErrorCode)[keyof typeof MigrationRunErrorCode];
+
 export const ACTIVE_MIGRATION_RUN_STATUSES = [
 	MigrationRunStatus.Queued,
 	MigrationRunStatus.Running,
@@ -62,6 +77,7 @@ export const migrationRuns = pgTable(
 		lazy_run: boolean().notNull().default(false),
 		trigger_run_id: text(),
 		error_message: text(),
+		error_code: text().$type<MigrationRunErrorCode>(),
 		/** When set, the run only processes items with these IDs (the `only`
 		 *  param on /migrations.run). Item kind matches the operation scope
 		 *  — typically customer IDs for customer ops, plan IDs for plan
