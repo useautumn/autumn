@@ -7,6 +7,8 @@ export type CachePushTiming = {
 };
 
 const STATS_EVERY_MS = 10_000;
+/** A change requested further back than this was backdated by its caller, not delayed by the pipeline. */
+const MAX_PLAUSIBLE_AGE_MS = 60_000;
 
 const percentile = ({ sorted, p }: { sorted: number[]; p: number }) =>
 	sorted.length === 0
@@ -36,6 +38,8 @@ export function createCachePushStats({
 	let reads: number[] = [];
 	let sends: number[] = [];
 	let totals: number[] = [];
+	let ages: number[] = [];
+	let backdated = 0;
 	let skipped = 0;
 	let failed = 0;
 
@@ -53,6 +57,8 @@ export function createCachePushStats({
 					readMs: summarize(reads),
 					sendMs: summarize(sends),
 					totalMs: summarize(totals),
+					recordAgeMs: summarize(ages),
+					backdated,
 					...queueDepth(),
 				},
 			},
@@ -62,6 +68,8 @@ export function createCachePushStats({
 		reads = [];
 		sends = [];
 		totals = [];
+		ages = [];
+		backdated = 0;
 		skipped = 0;
 		failed = 0;
 	}
@@ -70,17 +78,20 @@ export function createCachePushStats({
 	timer.unref?.();
 
 	return {
-		/** totalMs is from the subject leaving the queue to its push settling, so it includes event-loop wait. */
+		/** totalMs is from the subject leaving the queue to its push settling; ageMs is from the change's request to that settle. */
 		recordPush: ({
 			targetsMs,
 			readMs,
 			sendMs,
 			totalMs,
-		}: CachePushTiming & { totalMs: number }) => {
+			ageMs,
+		}: CachePushTiming & { totalMs: number; ageMs: number }) => {
 			targets.push(targetsMs);
 			reads.push(readMs);
 			sends.push(sendMs);
 			totals.push(totalMs);
+			if (ageMs > MAX_PLAUSIBLE_AGE_MS) backdated++;
+			else ages.push(ageMs);
 		},
 		recordSkip: () => {
 			skipped++;
