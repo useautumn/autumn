@@ -496,7 +496,7 @@ test.concurrent(
 		expectLicenseDiscountPreviewCorrect({
 			preview,
 			total: 20,
-			nextCycleTotal: null,
+			nextCycleTotal: 20,
 		});
 
 		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(params);
