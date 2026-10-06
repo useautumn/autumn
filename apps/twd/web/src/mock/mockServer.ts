@@ -425,6 +425,7 @@ type Sim = {
 	/** When the run left the account queue; phases time from here. */
 	readyAt: number;
 	workerSeconds: number;
+	peakWorkers: number;
 	/** When each running file landed on its worker. */
 	fileStartedAt: Map<string, number>;
 };
@@ -551,7 +552,7 @@ const summary = (run: RunDetail): RunSummary => {
 const RATES: Costs["rates"] = {
 	usdPerCoreSecond: 0.00003942,
 	usdPerGibSecond: 0.00000667,
-	regionMultiplier: 1.75,
+	regionMultiplier: 1,
 	workerCores: 2,
 	workerMemoryGib: 4,
 };
@@ -921,6 +922,7 @@ const startLiveRun = ({
 		ticks: 0,
 		readyAt: createdAt + queuedForMs,
 		workerSeconds: run.cost.workerSeconds,
+		peakWorkers: run.workerCount ?? 0,
 		fileStartedAt: new Map(
 			running.map((file, w) => [file, Math.min(now - 1_000, at(cursor[w]))]),
 		),
@@ -1053,6 +1055,7 @@ const tickRun = (run: RunDetail) => {
 	}
 	const alive = run.workers.filter((w) => w.status !== "dead").length;
 	run.workerCount = alive;
+	sim.peakWorkers = Math.max(sim.peakWorkers, alive);
 	sim.workerSeconds += alive;
 	run.cost = costOf(sim.workerSeconds, false);
 	const ageMs = Date.now() - sim.readyAt;
@@ -1144,7 +1147,7 @@ const tickRun = (run: RunDetail) => {
 		for (const w of run.workers)
 			setWorker(run, { ...w, status: "dead", file: null });
 		releaseAccounts((a) => a.runId === run.id);
-		run.workerCount = 0;
+		run.workerCount = sim.peakWorkers;
 		setStatus(run, run.failed ? "failed" : "passed", null);
 		sims.delete(run.id);
 	}

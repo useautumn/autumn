@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
-import { msToSeconds } from "@autumn/shared";
-import { getBillingPeriod } from "@tests/integration/billing/utils/proration";
+import { msToSeconds, stripeToAtmnAmount } from "@autumn/shared";
+import { calculateProration } from "@tests/integration/billing/utils/proration";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -52,23 +52,51 @@ export const advancePastCycleStart = async ({
 		advanceTo: addHours(cycleStartsAt, hoursToFinalizeInvoice).getTime(),
 	});
 
-/**
- * Stripe's invoice for an anchor reset with proration: the full new cycle less the unused
- * time of the running period, prorated over that period's own length.
- */
-export const calculateStripeAnchorResetTotal = async ({
+/** The previewed next_cycle total is what Stripe's own upcoming invoice for the schedule charges. */
+export const expectNextCycleTotalMatchesStripe = async ({
+	ctx,
 	customerId,
-	anchorMs,
-	amount,
+	nextCycleTotal,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	nextCycleTotal?: number;
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const scheduleId =
+		typeof subscription.schedule === "string"
+			? subscription.schedule
+			: subscription.schedule?.id;
+	if (!scheduleId) throw new Error(`${customerId} has no Stripe schedule`);
+	const upcomingInvoice = await ctx.stripeCli.invoices.createPreview({
+		customer: subscription.customer as string,
+		schedule: scheduleId,
+	});
+	expect(nextCycleTotal).toBe(
+		stripeToAtmnAmount({ amount: upcomingInvoice.total, currency: "usd" }),
+	);
+};
+
+/** Stripe's switch proration: the new plan's charge and the old plan's credit, each rounded to cents. */
+export const calculateStripeProratedSwitch = async ({
+	customerId,
+	advancedTo,
+	oldAmount,
+	newAmount,
 }: {
 	customerId: string;
-	anchorMs: number;
-	amount: number;
+	advancedTo: number;
+	oldAmount: number;
+	newAmount: number;
 }) => {
-	const { billingPeriod } = await getBillingPeriod({ customerId });
-	const unusedCredit = new Decimal(amount)
-		.mul(billingPeriod.end - msToSeconds(anchorMs) * 1000)
-		.div(billingPeriod.end - billingPeriod.start)
-		.toDecimalPlaces(2);
-	return new Decimal(amount).minus(unusedCredit).toNumber();
+	const [charge, credit] = await Promise.all(
+		[newAmount, oldAmount].map((amount) =>
+			calculateProration({ customerId, advancedTo, amount }),
+		),
+	);
+	return new Decimal(charge).minus(credit).toNumber();
 };
