@@ -12,6 +12,8 @@ export type SavedRow = {
 	customerProductId: string;
 	startsAt: number;
 	endsAt: number | null;
+	/** A reset-now moves a period-end cancellation here. */
+	periodEndsAtAfterReset: number | null;
 	scheduled: boolean;
 	canceling: boolean;
 	pastDue: boolean;

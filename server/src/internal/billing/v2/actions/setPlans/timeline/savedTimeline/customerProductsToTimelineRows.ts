@@ -12,6 +12,7 @@ import { isUnbilledByStripe } from "../../utils/isUnbilledByStripe";
 import type { ConfigInterner } from "../instanceConfig/createConfigInterner";
 import { customerProductToInstanceConfig } from "../instanceConfig/instanceConfigs";
 import type { TimelineRow } from "../types/timelineRow";
+import { periodEndsAtAfterReset } from "./periodEndsAtAfterReset";
 
 const isTimelineStatus = (customerProduct: FullCusProduct) =>
 	customerProductHasActiveStatus(customerProduct) ||
@@ -63,6 +64,9 @@ export const customerProductToTimelineRow = ({
 		}) === true,
 	startsAt: savedStartsAt({ customerProduct, now }),
 	endsAt: toSeconds(customerProduct.ended_at),
+	periodEndsAtAfterReset: toSeconds(
+		periodEndsAtAfterReset({ customerProduct, now }),
+	),
 	scheduled: customerProduct.status === CusProductStatus.Scheduled,
 	canceling: isCustomerProductCanceling(customerProduct),
 	pastDue: customerProduct.status === CusProductStatus.PastDue,
