@@ -9,6 +9,7 @@ import {
 	text,
 	timestamp,
 } from "drizzle-orm/pg-core";
+import type { RunSizing } from "../../api/contract.ts";
 
 export type RunStatus =
 	| "queued"
@@ -45,6 +46,10 @@ export const runs = pgTable(
 		workersWanted: integer("workers_wanted"),
 		/** Caller-chosen worker cap; null = one per file. */
 		maxWorkers: integer("max_workers"),
+		/** Caller-chosen files per worker; null with maxWorkers null = Auto. */
+		maxFilesPerWorker: integer("max_files_per_worker"),
+		/** What the swarm chose and why; null until it sizes the run. */
+		sizing: jsonb("sizing").$type<RunSizing>(),
 		/** Times each selected file runs (flake checks); repeat runs never feed baselines or drift. */
 		repeat: integer("repeat").notNull().default(1),
 		costUsd: real("cost_usd").notNull().default(0),

@@ -70,6 +70,7 @@ export const createRun = async ({
 			selection: body.selection,
 			purpose: body.purpose,
 			maxWorkers: body.maxWorkers ?? null,
+			maxFilesPerWorker: body.maxFilesPerWorker ?? null,
 			repeat: body.repeat,
 			fileCount: files.length,
 			progress,

@@ -45,6 +45,7 @@ const toSample = ({
 			durationMs: stats.wallMs,
 			failure: stats.exitCode === 0 ? 0 : 1,
 			hung,
+			packed: stats.concurrentMax > 1,
 			metrics: statsToProfileMetrics(stats),
 		};
 	if (!result || result.attempt !== 1) return null;
@@ -52,6 +53,7 @@ const toSample = ({
 		durationMs: result.durationMs,
 		failure: result.status === "passed" ? 0 : 1,
 		hung,
+		packed: false,
 		metrics: null,
 	};
 };

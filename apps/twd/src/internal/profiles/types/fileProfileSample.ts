@@ -7,6 +7,8 @@ export type FileProfileSample = {
 	failure: number;
 	/** Timed out or crashed: the duration only ever pushes the mean up. */
 	hung: boolean;
+	/** Ran while another file shared its worker. */
+	packed: boolean;
 	/** Null when the attempt printed no `[tw-file-stats]` line. */
 	metrics: ProfileMetrics | null;
 };

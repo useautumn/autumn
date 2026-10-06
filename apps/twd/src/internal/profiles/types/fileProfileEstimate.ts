@@ -10,5 +10,7 @@ export type FileProfileEstimate = {
 	durationMs: number;
 	durationP90Ms: number;
 	failRate: number;
+	/** First-attempt fail rate while sharing a worker; null if it never shared one. */
+	packedFailRate: number | null;
 	metrics: ProfileMetrics;
 };

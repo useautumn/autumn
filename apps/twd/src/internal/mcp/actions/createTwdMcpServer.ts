@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import {
 	isFailedFileStatus,
+	MAX_FILES_PER_WORKER,
 	MAX_REPEAT,
 	type RunDetail,
 } from "../../../api/contract.ts";
@@ -84,6 +85,7 @@ const summariseRun = (run: RunDetail) => {
 		drift: run.drift,
 		eta: { etaMs: run.etaMs, etaP90Ms: run.etaP90Ms },
 		resources: run.resources ?? null,
+		sizing: run.sizing ?? null,
 		startedAt: run.startedAt,
 		finishedAt: run.finishedAt,
 	};
@@ -179,7 +181,16 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 						.max(5_000)
 						.optional()
 						.describe(
-							"Cap on workers; default one per file (bounded by the Stripe key budget).",
+							"Cap on workers, one file each. Exclusive with max_files_per_worker; leave both unset for Auto (the default).",
+						),
+					max_files_per_worker: z
+						.number()
+						.int()
+						.min(1)
+						.max(MAX_FILES_PER_WORKER)
+						.optional()
+						.describe(
+							"Files each worker runs at once (org-mutating and learned-solo files still run alone). Exclusive with max_workers; leave both unset for Auto, which picks files per worker and worker count from measured per-file Stripe/CPU/memory profiles. Not with repeat > 1.",
 						),
 					repeat: z
 						.number()
@@ -199,6 +210,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 				files,
 				grep,
 				max_workers,
+				max_files_per_worker,
 				repeat,
 			}) => {
 				const run = await createRun({
@@ -206,6 +218,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 					branch,
 					sha,
 					maxWorkers: max_workers,
+					maxFilesPerWorker: max_files_per_worker,
 					repeat,
 					selection: { groups, files, grep },
 					purpose: "adhoc",
@@ -219,7 +232,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted (once finished: peak attached at once vs wanted), boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90), and resources (per-file stats totals: Stripe requests, 429s, permit-wait p95/max, worker peak rps/in-flight, CPU core-seconds and p95 peak cores, p95/max peak memory; null until files report). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted (once finished: peak attached at once vs wanted), boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90), sizing (how Auto or the caller's cap chose files per worker and worker count: mode, filesPerWorker, workers, packed/solo files, target vs predicted wall, per-worker limits and expected load, the binding resource, and reasons), and resources (per-file stats totals: Stripe requests, 429s, permit-wait p95/max, worker peak rps/in-flight, CPU core-seconds and p95 peak cores, p95/max peak memory; null until files report). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),

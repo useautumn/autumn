@@ -193,10 +193,12 @@ export class RemoteExecutor implements TestExecutor {
 		const isWorkerDeathReschedule =
 			isRerun && args.failedTestNames === undefined;
 
+		// On a packed worker a rerun gets the worker to itself, so co-tenants can't be blamed twice.
 		const worker = isRerun
 			? await this.pool.acquireDifferentFrom(
 					lastWorker,
 					isWorkerDeathReschedule,
+					this.pool.slots > 1,
 				)
 			: await this.pool.acquire();
 

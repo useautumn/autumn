@@ -111,14 +111,23 @@ export const Branch = z.object({
 /** Flake checks only: 50 clean first attempts bound a flake rate near 6% (95% confidence). */
 export const MAX_REPEAT = 50;
 
+export const MAX_FILES_PER_WORKER = 8;
+
 export const CreateRunBody = z
 	.object({
 		branch: z.string().min(1),
 		/** Defaults to the branch head. */
 		sha: z.string().optional(),
 		selection: RunSelection,
-		/** Cap on workers for this run (default: one per file, bounded by the key budget). */
+		/** Cap on workers, one file each. Exclusive with maxFilesPerWorker; neither = Auto sizing. */
 		maxWorkers: z.number().int().min(1).max(5_000).optional(),
+		/** Files each worker runs at once (one worker per that many files). Exclusive with maxWorkers. */
+		maxFilesPerWorker: z
+			.number()
+			.int()
+			.min(1)
+			.max(MAX_FILES_PER_WORKER)
+			.optional(),
 		purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
 		/** Runs each selected file N times, each as its own work item; only for checking a flaky test. */
 		repeat: z.number().int().min(1).max(MAX_REPEAT).default(1),
@@ -126,6 +135,18 @@ export const CreateRunBody = z
 	.refine((body) => body.purpose !== "baseline" || body.repeat === 1, {
 		message: "baseline runs cannot repeat",
 		path: ["repeat"],
+	})
+	.refine(
+		(body) =>
+			body.maxWorkers === undefined || body.maxFilesPerWorker === undefined,
+		{
+			message: "set maxWorkers or maxFilesPerWorker, not both (neither = Auto)",
+			path: ["maxFilesPerWorker"],
+		},
+	)
+	.refine((body) => body.repeat === 1 || (body.maxFilesPerWorker ?? 1) === 1, {
+		message: "repeat runs keep one file per worker (repetitions share ids)",
+		path: ["maxFilesPerWorker"],
 	});
 
 export const WorkerBoot = z.object({
@@ -231,6 +252,39 @@ export const RunResources = z.object({
 	memPeakMibMax: z.number().nullable(),
 });
 
+/** How a run chose its worker count and files per worker; see sizing/README.md for the formula. */
+export const RunSizing = z.object({
+	mode: z.enum(["auto", "max_workers", "max_files_per_worker"]),
+	/** Files per worker on the packed shard; every other shard runs one per worker. */
+	filesPerWorker: z.number(),
+	workers: z.number(),
+	packedFiles: z.number(),
+	soloFiles: z.number(),
+	/** Wall time the worker count was sized for (LPT over profile p90s), and its prediction. */
+	targetWallMs: z.number().nullable(),
+	predictedWallMs: z.number().nullable(),
+	/** Per-worker ceilings and the share of them packing may use. */
+	limits: z.object({
+		headroom: z.number(),
+		stripeRps: z.number(),
+		stripeInFlight: z.number(),
+		cores: z.number(),
+		memoryMib: z.number(),
+	}),
+	/** Expected per-worker load at the chosen files per worker (mean + 2σ·√k, overhead included). */
+	load: z
+		.object({
+			stripeRps: z.number(),
+			stripeInFlight: z.number(),
+			cores: z.number(),
+			memoryMib: z.number(),
+		})
+		.nullable(),
+	/** The resource that stopped files per worker growing; null when it hit the cap or never packed. */
+	binding: z.string().nullable(),
+	reasons: z.array(z.string()),
+});
+
 export const RunDetail = RunSummary.extend({
 	phase: z.string().nullable(),
 	workers: z.array(WorkerState),
@@ -244,6 +298,8 @@ export const RunDetail = RunSummary.extend({
 	etaP90Ms: z.number().nullable(),
 	/** Null until a file attempt reports stats. */
 	resources: RunResources.nullable().optional(),
+	/** Set once the run has sized itself (after it leaves the queue). */
+	sizing: RunSizing.nullable().optional(),
 });
 
 export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);
@@ -612,6 +668,7 @@ export type CreateRunBody = z.infer<typeof CreateRunBody>;
 export type RunSummary = z.infer<typeof RunSummary>;
 export type RunsPage = z.infer<typeof RunsPage>;
 export type RunDetail = z.infer<typeof RunDetail>;
+export type RunSizing = z.infer<typeof RunSizing>;
 export type RunFile = z.infer<typeof RunFile>;
 export type RepeatStat = z.infer<typeof RepeatStat>;
 export type RunEvent = z.infer<typeof RunEvent>;
