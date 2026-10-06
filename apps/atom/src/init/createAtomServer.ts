@@ -1,31 +1,28 @@
+import { queue } from "@alienplatform/bindings";
 import type { AtomEnv } from "@autumn/env/atom";
 import { createDeployedAuth } from "../auth/createDeployedAuth.js";
 import type { Auth } from "../auth/types/auth.js";
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
 import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
-import { createPushReceiver } from "../pushes/createPushReceiver.js";
-import type { PushReceiver } from "../pushes/types/pushReceiver.js";
-import type { AtomProcessRole } from "./types/atomProcessRole.js";
+import {
+	createPushReceiver,
+	PUSH_QUEUE,
+} from "../pushes/createPushReceiver.js";
 import type {
 	AtomServer,
 	AtomServerConfig,
 	AtomServerDependencies,
 } from "./types/atomServer.js";
 
-/** An org's deployment is given its one token hash, and its writers lease Autumn's pushes; a multi-tenant Atom adds orgs as the admin registers them. */
+/** An org's deployment is given its one token hash; a multi-tenant Atom adds orgs as the admin registers them. */
 const openAuth = ({
-	ctx,
 	env,
-	role,
 }: {
-	ctx: AtomServerDependencies;
 	env: AtomEnv;
-	role: AtomProcessRole;
 }): {
 	auth: Auth;
 	multiTenant?: MultiTenantContext;
-	pushReceiver?: PushReceiver;
 } => {
 	if (env.ATOM_MODE === "deployed") {
 		const auth = createDeployedAuth({
@@ -33,12 +30,7 @@ const openAuth = ({
 			tokenHash: env.ATOM_TOKEN_HASH,
 			slotCount: env.ATOM_SLOT_COUNT,
 		});
-		const pushReceiver = role.receivesPushes
-			? createPushReceiver({
-					ctx: { slots: auth.slots, logger: ctx.logger },
-				})
-			: undefined;
-		return { auth, pushReceiver };
+		return { auth };
 	}
 	const auth = createMultiTenantAuth({
 		dataDir: env.ATOM_DATA_DIR,
@@ -58,7 +50,17 @@ export const createAtomServer = ({
 	config: AtomServerConfig;
 }): AtomServer => {
 	const { env, role } = config;
-	const { auth, multiTenant, pushReceiver } = openAuth({ ctx, env, role });
+	const { auth, multiTenant } = openAuth({ env });
+	const pushReceiver = role.receivesPushes
+		? createPushReceiver({
+				ctx: {
+					pushes: queue(PUSH_QUEUE),
+					auth,
+					logger: ctx.logger,
+					processStats: ctx.processStats,
+				},
+			})
+		: undefined;
 	const app = createAtomApp({
 		ctx: {
 			auth,

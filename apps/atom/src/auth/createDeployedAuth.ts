@@ -22,5 +22,10 @@ export const createDeployedAuth = ({
 		return tokenMatchesHash({ token, expectedHash: tokenHash }) ? slots : null;
 	}
 
-	return { authorize, slots, close: () => slots.close() };
+	/** A push naming a tenant was meant for a multi-tenant Atom, never this one. */
+	function pushSlots({ atomId }: { atomId: string | null }) {
+		return atomId === null ? slots : null;
+	}
+
+	return { authorize, pushSlots, slots, close: () => slots.close() };
 };

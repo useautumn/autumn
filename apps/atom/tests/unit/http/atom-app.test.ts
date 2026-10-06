@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LATEST_VERSION } from "@autumn/shared";
 import {
-	createCatalogFor,
 	createCatalogRowsFor,
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
@@ -13,7 +12,7 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
-import { atomOrg } from "../utils/atomFixtures.js";
+import { subjectBody } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
@@ -106,18 +105,6 @@ const post = ({
 
 const withToken = (token: string | null): Record<string, string> =>
 	token ? { "x-atom-token": token } : {};
-
-/** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
-const subjectBody = ({ balance }: { balance: number }) => {
-	const state = createState({ balance });
-	return {
-		state,
-		catalog: createCatalogFor({ state }),
-		org: atomOrg,
-		log_offset: "41",
-		read_at: 1700,
-	};
-};
 
 const setSubject = ({
 	balance,

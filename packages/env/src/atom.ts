@@ -104,10 +104,8 @@ export function createAtomEnv(
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
 	const modeEnv = modeEnvOf({ runtimeEnv });
 	const processes = processesOf({ runtimeEnv, machine });
-	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom gets each org's pushes over HTTP instead.
-	const receivesPushes =
-		modeEnv.ATOM_MODE === "deployed" &&
-		Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
+	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom's pushes name the org's folder.
+	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),
