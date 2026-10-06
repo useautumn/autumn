@@ -31,7 +31,8 @@ export const createEventsDb = ({
 	});
 	const ctx = { db: postgres.db };
 	return {
-		insertUsageEvents: ({ events }) => insertUsageEvents({ ctx, events }),
+		insertUsageEvents: ({ events }) =>
+			insertUsageEvents({ ctx: { client: postgres.client }, events }),
 		readUnsentToTinybirdIds: ({ ids }) => readUnsentToTinybirdIds({ ctx, ids }),
 		markSentToTinybird: ({ ids, at }) => markSentToTinybird({ ctx, ids, at }),
 		ping: async () => {

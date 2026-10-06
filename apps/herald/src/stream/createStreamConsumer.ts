@@ -6,6 +6,7 @@ import {
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
 	type MeteringStaleRecord,
+	parseTrustedMeteringRecord,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import { type PostgresExecutor, readPartitionProgress } from "@autumn/postgres";
@@ -147,6 +148,8 @@ export function createStreamConsumer({
 				onRecordError,
 				onStaleRecord,
 				readOwnerFence,
+				// Herald follows a log its writer validated, so only the shape its readers lean on is checked.
+				parseRecord: parseTrustedMeteringRecord,
 			},
 		},
 		config: {

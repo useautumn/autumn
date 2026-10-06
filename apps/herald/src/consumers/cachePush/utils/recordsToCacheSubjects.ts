@@ -14,11 +14,18 @@ export const recordsToCacheSubjects = ({
 		const identities = record.identity.entityId
 			? [record.identity, customerIdentity]
 			: [customerIdentity];
-		for (const identity of identities)
-			latestBySubjectKey.set(meteringIdentityToSubjectKey({ identity }), {
+		for (const identity of identities) {
+			const key = meteringIdentityToSubjectKey({ identity });
+			const held = latestBySubjectKey.get(key);
+			latestBySubjectKey.set(key, {
 				identity,
 				logOffset: position.offset,
+				oldestOccurredAt: Math.min(
+					held?.oldestOccurredAt ?? Number.POSITIVE_INFINITY,
+					record.command.occurredAt,
+				),
 			});
+		}
 	}
 	return [...latestBySubjectKey.values()];
 };
