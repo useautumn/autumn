@@ -10,6 +10,7 @@ import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/com
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
 import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
+import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
 import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/utils/billingContext/billingContextToNewSubscriptionAnchorMs";
 
 /**
@@ -37,11 +38,12 @@ export const finalizeLineItems = ({
 		return [];
 	}
 
-	// "none" skips prorated charges: mid-cycle changes on a subscription, or the stub
-	// before a new subscription's anchor.
+	// "none" skips prorated charges: mid-cycle changes on a subscription, the stub
+	// before a new subscription's anchor, or a new subscription's backdated cycles.
 	const hasProratedPeriod =
 		billingContext.stripeSubscription !== undefined ||
-		billingContextToNewSubscriptionAnchorMs({ billingContext }) !== undefined;
+		billingContextToNewSubscriptionAnchorMs({ billingContext }) !== undefined ||
+		isNewSubscriptionBackdate({ billingContext });
 	if (
 		billingContext.requestedProrationBehavior === "none" &&
 		hasProratedPeriod &&
