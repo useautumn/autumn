@@ -26,6 +26,8 @@ export interface SubscriptionPreviousAttributes {
 export interface StripeSubscriptionUpdatedContext {
 	stripeSubscription: ExpandedStripeSubscription;
 	previousAttributes: SubscriptionPreviousAttributes;
+	/** The anchor as of this event; the fetched subscription may already be past a later event. */
+	eventBillingCycleAnchor: number;
 	fullCustomer: FullCustomer;
 	/**
 	 * Mutable list of customer products. Updated in place by the

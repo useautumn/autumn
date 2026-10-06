@@ -5,6 +5,7 @@ import { createAutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/bill
 import { consumeBillingCycleAnchorReset } from "../../common/billingCycleAnchorReset/consumeBillingCycleAnchorReset";
 import { findBillingCycleAnchorResetCustomerProductIds } from "../../common/billingCycleAnchorReset/findBillingCycleAnchorResetCustomerProductIds";
 import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
+import { isUninvoicedBillingCycleAnchorMove } from "../isUninvoicedBillingCycleAnchorMove";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
 /**
@@ -18,12 +19,15 @@ export const consumeUninvoicedBillingCycleAnchorReset = async ({
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionUpdatedContext;
 }) => {
-	const { previousAttributes, stripeSubscription, fullCustomer } = eventContext;
-	const anchorMoved = previousAttributes?.billing_cycle_anchor !== undefined;
-	// A move that raised an invoice is consumed by invoice.created, alongside its balance resets.
-	const raisedInvoice = previousAttributes?.latest_invoice !== undefined;
-	if (!anchorMoved || raisedInvoice) return;
+	if (
+		!isUninvoicedBillingCycleAnchorMove({
+			subscriptionUpdatedContext: eventContext,
+		})
+	) {
+		return;
+	}
 
+	const { stripeSubscription, fullCustomer } = eventContext;
 	const customerProducts = eventContext.customerProducts.filter(
 		(customerProduct) =>
 			isCustomerProductOnStripeSubscription({

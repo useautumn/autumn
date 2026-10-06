@@ -34,6 +34,7 @@ const makeUpdatedContext = ({
 		stripeSubscription:
 			{} as StripeSubscriptionUpdatedContext["stripeSubscription"],
 		previousAttributes: {},
+		eventBillingCycleAnchor: 0,
 		insertedCustomerProducts: inserted,
 		updatedCustomerProducts: updated,
 		deletedCustomerProducts: deleted,
