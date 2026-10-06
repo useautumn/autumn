@@ -1,0 +1,35 @@
+name: ATMN Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/atmn/**"
+      - "packages/atmn-generator/**"
+      - "packages/agent-docs/**"
+      - "packages/openapi/**"
+      - "shared/**"
+      - "apps/docs/mintlify/**"
+
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Dry run (no actual publish)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  publish:
+    uses: ./.github/workflows/npm-publish.yml
+    permissions:
+      id-token: write
+      contents: write
+    with:
+      package-dir: packages/atmn
+      pre-build-command: bun api --spec-only && bun -F @autumn/agent-docs gen && bun -F @autumn/atmn-generator generate
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}
