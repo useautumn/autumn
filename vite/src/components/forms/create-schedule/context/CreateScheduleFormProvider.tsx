@@ -70,6 +70,7 @@ interface CreateScheduleFormContextValue {
 	allowStartedPhaseBackdate: boolean;
 	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
 	backdatesLiveSubscription: boolean;
+	hasActiveSubscription: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -223,6 +224,12 @@ export function CreateScheduleFormProvider({
 		[form.store, backdatesLiveSubscription],
 	);
 
+	const getBillingCycleAnchor = useCallback(() => {
+		const { billingCycleAnchorMode, billingCycleAnchorDate } =
+			form.store.state.values;
+		return { billingCycleAnchorMode, billingCycleAnchorDate };
+	}, [form.store]);
+
 	const getEndDate = useCallback(
 		() => form.store.state.values.endDate,
 		[form.store],
@@ -246,6 +253,7 @@ export function CreateScheduleFormProvider({
 		getPhases,
 		getUnscheduledPlans,
 		getResetBillingCycle,
+		getBillingCycleAnchor,
 		getEndDate,
 		getEnablePlanImmediately,
 		getAllowFirstPhaseBackdate,
@@ -261,6 +269,8 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		resetBillingCycle:
 			formValues.resetBillingCycle && !backdatesLiveSubscription,
+		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
+		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,
@@ -339,6 +349,7 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
+			hasActiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,
@@ -362,6 +373,7 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
+			hasActiveSubscription,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			isPending,

@@ -9,6 +9,7 @@ import {
 } from "@/components/forms/customer-state/customerStateSchema";
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
+import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 import { phaseToBillingCycleAnchor } from "../utils/phaseBillingCycleAnchor";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
@@ -21,6 +22,8 @@ export function buildCreateScheduleRequestBody({
 	features,
 	nowMs,
 	resetBillingCycle,
+	billingCycleAnchorMode,
+	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
@@ -33,6 +36,8 @@ export function buildCreateScheduleRequestBody({
 	features: Feature[];
 	nowMs?: number;
 	resetBillingCycle?: boolean;
+	billingCycleAnchorMode?: BillingCycleAnchorMode;
+	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
@@ -42,6 +47,13 @@ export function buildCreateScheduleRequestBody({
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const startsLater = firstPhaseStartsLater({ phases, nowMs: now });
+	// A first phase starting later anchors on its own start, so only one starting now takes a date.
+	const usesCustomAnchor = billingCycleAnchorMode === "custom" && !startsLater;
+	const customAnchor = usesCustomAnchor
+		? (billingCycleAnchorDate ?? null)
+		: null;
+	const resetsFirstPhaseCycle =
+		!!resetBillingCycle && (!usesCustomAnchor || customAnchor !== null);
 
 	const toApiPlan = (plan: CustomerStatePlan) =>
 		customerStatePlanToApiPlan({ plan, products, features });
@@ -95,7 +107,8 @@ export function buildCreateScheduleRequestBody({
 			const billingCycleAnchor = phaseToBillingCycleAnchor({
 				phase: { keepsCycleAnchor },
 				isFirstPhase,
-				resetBillingCycle: !!resetBillingCycle,
+				resetBillingCycle: resetsFirstPhaseCycle,
+				customAnchor,
 			});
 			return {
 				...apiPhase,
@@ -146,6 +159,8 @@ export function useCreateScheduleRequestBody({
 	features,
 	nowMs,
 	resetBillingCycle,
+	billingCycleAnchorMode,
+	billingCycleAnchorDate,
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
@@ -158,6 +173,8 @@ export function useCreateScheduleRequestBody({
 	features: Feature[];
 	nowMs?: number;
 	resetBillingCycle?: boolean;
+	billingCycleAnchorMode?: BillingCycleAnchorMode;
+	billingCycleAnchorDate?: number | null;
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
@@ -173,6 +190,8 @@ export function useCreateScheduleRequestBody({
 				features,
 				nowMs,
 				resetBillingCycle,
+				billingCycleAnchorMode,
+				billingCycleAnchorDate,
 				endDate,
 				allowFirstPhaseBackdate,
 				enablePlanImmediately,
@@ -186,6 +205,8 @@ export function useCreateScheduleRequestBody({
 			features,
 			nowMs,
 			resetBillingCycle,
+			billingCycleAnchorMode,
+			billingCycleAnchorDate,
 			endDate,
 			allowFirstPhaseBackdate,
 			enablePlanImmediately,
@@ -202,6 +223,7 @@ export function useBuildCreateScheduleRequestBody({
 	getPhases,
 	getUnscheduledPlans,
 	getResetBillingCycle,
+	getBillingCycleAnchor,
 	getEndDate,
 	getEnablePlanImmediately,
 	getAllowFirstPhaseBackdate,
@@ -214,6 +236,10 @@ export function useBuildCreateScheduleRequestBody({
 	getPhases: () => CustomerStatePhase[];
 	getUnscheduledPlans?: () => CustomerStatePlan[];
 	getResetBillingCycle?: () => boolean;
+	getBillingCycleAnchor?: () => Pick<
+		CustomerStateForm,
+		"billingCycleAnchorMode" | "billingCycleAnchorDate"
+	>;
 	getEndDate?: () => CustomerStateForm["endDate"];
 	getEnablePlanImmediately?: () => boolean;
 	getAllowFirstPhaseBackdate?: () => boolean;
@@ -231,6 +257,7 @@ export function useBuildCreateScheduleRequestBody({
 					features,
 					nowMs,
 					resetBillingCycle: getResetBillingCycle?.() ?? false,
+					...getBillingCycleAnchor?.(),
 					endDate: getEndDate?.(),
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
 					enablePlanImmediately: getEnablePlanImmediately?.() ?? false,
@@ -244,6 +271,7 @@ export function useBuildCreateScheduleRequestBody({
 			getPhases,
 			getUnscheduledPlans,
 			getResetBillingCycle,
+			getBillingCycleAnchor,
 			getEndDate,
 			getEnablePlanImmediately,
 			getAllowFirstPhaseBackdate,

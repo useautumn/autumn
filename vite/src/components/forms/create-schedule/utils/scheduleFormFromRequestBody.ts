@@ -136,13 +136,17 @@ export const scheduleFormFromRequestBody = (
 	});
 	if (!phases.length) return undefined;
 	const firstPhase = requestRecord(request.phases[0]);
+	const firstPhaseAnchor =
+		firstPhase?.billing_cycle_anchor ?? request.billing_cycle_anchor;
+	const customAnchor =
+		typeof firstPhaseAnchor === "number" ? firstPhaseAnchor : null;
 	return {
 		enablePlanImmediately: request.enable_plan_immediately === true,
 		endDate: readNumber("ends_at")(request) ?? null,
 		phases,
-		resetBillingCycle:
-			(firstPhase?.billing_cycle_anchor ?? request.billing_cycle_anchor) !==
-			undefined,
+		resetBillingCycle: firstPhaseAnchor !== undefined,
+		billingCycleAnchorMode: customAnchor === null ? "now" : "custom",
+		billingCycleAnchorDate: customAnchor,
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
 	};
 };

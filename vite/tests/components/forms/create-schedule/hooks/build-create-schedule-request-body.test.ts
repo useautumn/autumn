@@ -432,6 +432,59 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
 	});
 
+	test("anchors the first phase's cycle on a custom date, leaving later phases resetting at their start", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const customAnchor = Date.UTC(2027, 0, 15);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({ startsAt: now }),
+				schedulePhase({ startsAt: Date.UTC(2027, 2, 1) }),
+			],
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: customAnchor,
+		});
+
+		expect(result!.phases[0].billing_cycle_anchor).toBe(customAnchor);
+		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("sends no custom anchor when the billing cycle reset is off", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now })],
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: false,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
+		});
+
+		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
+	});
+
+	test("a first phase starting later never sends a custom anchor date", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: Date.UTC(2027, 1, 1) })],
+			products: paidProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: Date.UTC(2027, 1, 15),
+		});
+
+		expect(result!.phases[0].billing_cycle_anchor).toBe("phase_start");
+	});
+
 	test("omits the first phase's anchor when the billing cycle reset is off", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const result = buildCreateScheduleRequestBody({

@@ -203,6 +203,8 @@ export const CustomerStateFormSchema = z
 		/** Billed with the first phase, then left alone by the schedule. */
 		unscheduledPlans: z.array(CustomerStatePlanSchema),
 		resetBillingCycle: z.boolean(),
+		billingCycleAnchorMode: z.enum(["now", "custom"]),
+		billingCycleAnchorDate: z.number().nullable(),
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),
 	})
