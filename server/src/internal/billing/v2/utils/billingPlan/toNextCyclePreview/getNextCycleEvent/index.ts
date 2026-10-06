@@ -25,7 +25,7 @@ export const getNextCycleEvent = ({
 	customerProducts: FullCusProduct[];
 	anchorMs: number;
 }): NextCycleEvent => {
-	const { billingCycleAnchorMs, currentEpochMs } = billingContext;
+	const { currentEpochMs } = billingContext;
 	const nowMs = normalizeMs(currentEpochMs);
 	const normalizedCustomerProducts = customerProducts.map(
 		normalizeCustomerProductTimestamps,
@@ -54,14 +54,10 @@ export const getNextCycleEvent = ({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
 	});
-	const shouldShowRenewal =
-		billingCycleAnchorMs !== "now" || transitionTimestamps.length > 0;
 	const candidateTimestamps = Array.from(
 		new Set([
 			...transitionTimestamps,
-			...(shouldShowRenewal && renewalBoundaryMs > nowMs
-				? [renewalBoundaryMs]
-				: []),
+			...(renewalBoundaryMs > nowMs ? [renewalBoundaryMs] : []),
 		]),
 	).sort((a, b) => a - b);
 
