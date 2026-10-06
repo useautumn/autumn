@@ -14,9 +14,25 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+
+const expectStripeInvoicePaid = ({
+	ctx,
+	invoiceId,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	invoiceId?: string;
+}) => {
+	expect(invoiceId).toBeDefined();
+	return pollUntilAsserted({
+		fetch: () => ctx.stripeCli.invoices.retrieve(invoiceId!),
+		assert: (invoice) => expect(invoice.status).toBe("paid"),
+		timeoutMs: 60_000,
+	});
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NEW PLAN - 3DS Required
@@ -32,7 +48,7 @@ test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 		items: [messagesItem, priceItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "authenticate" }),
@@ -55,6 +71,7 @@ test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
 	await completeInvoiceConfirmation({ url: result.payment_url! });
+	await expectStripeInvoicePaid({ ctx, invoiceId: result.invoice?.stripe_id });
 
 	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
 	const customerAfter = (await expectProductActive({
@@ -100,7 +117,7 @@ test.concurrent(`${chalk.yellowBright("3ds 2: upgrade")}`, async () => {
 		items: [premiumMessagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -133,6 +150,7 @@ test.concurrent(`${chalk.yellowBright("3ds 2: upgrade")}`, async () => {
 	});
 
 	await completeInvoiceConfirmation({ url: result.payment_url! });
+	await expectStripeInvoicePaid({ ctx, invoiceId: result.invoice?.stripe_id });
 
 	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
 	const customerAfter = (await expectProductActive({
@@ -169,7 +187,7 @@ test.concurrent(`${chalk.yellowBright("3ds 3: one-off")}`, async () => {
 		items: [oneOffMessagesItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "authenticate" }),
@@ -193,6 +211,7 @@ test.concurrent(`${chalk.yellowBright("3ds 3: one-off")}`, async () => {
 	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
 	await completeInvoiceConfirmation({ url: result.payment_url! });
+	await expectStripeInvoicePaid({ ctx, invoiceId: result.invoice?.stripe_id });
 
 	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
 	const customerAfter = (await expectProductActive({
