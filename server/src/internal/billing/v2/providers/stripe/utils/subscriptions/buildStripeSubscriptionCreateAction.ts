@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isBackdateRecreate } from "@/internal/billing/v2/actions/setPlans/utils/isBackdateRecreate";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
 import { buildStripeNewSubscriptionAnchorParams } from "./buildStripeNewSubscriptionAnchorParams";
 import { willStripeSubscriptionInvoiceEndOfCycle } from "./willStripeSubscriptionInvoiceEndOfCycle";
 
@@ -29,6 +30,10 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const freeTrialNoCardRequired = trialContext?.cardRequired === false;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
+
+	const skipsBackdatedCycles =
+		billingContext.requestedProrationBehavior === "none" &&
+		isNewSubscriptionBackdate({ billingContext });
 
 	const willCreateInvoiceEndOfCycle = willStripeSubscriptionInvoiceEndOfCycle({
 		ctx,
@@ -68,6 +73,8 @@ export const buildStripeSubscriptionCreateAction = ({
 				: addInvoiceItems,
 
 		trial_end: trialEndsAt ? msToSeconds(trialEndsAt) : undefined,
+
+		...(skipsBackdatedCycles && { proration_behavior: "none" }),
 
 		...buildStripeNewSubscriptionAnchorParams({ billingContext }),
 
