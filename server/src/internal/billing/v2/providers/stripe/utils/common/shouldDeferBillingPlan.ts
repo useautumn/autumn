@@ -28,5 +28,7 @@ export const shouldDeferBillingPlan = ({
 		return true;
 	}
 
-	return deferredInvoiceMode || Boolean(requiredAction);
+	// A past_due subscription is already in dunning: like Stripe, the change applies and its invoice stays open.
+	const isInDunning = billingContext.stripeSubscription?.status === "past_due";
+	return deferredInvoiceMode || (Boolean(requiredAction) && !isInDunning);
 };
