@@ -19,6 +19,10 @@ import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLine
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
 import { roundPreviewLineItem } from "../preview/roundPreviewLineItem";
 import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
+import {
+	type AnchorResetProration,
+	prorateAnchorResetLineItem,
+} from "./prorateAnchorResetLineItem";
 
 export type NextCycleLineItemOptions = {
 	/**
@@ -100,6 +104,7 @@ export const billingPlanToNextCycleLineItems = ({
 	autumnBillingPlan,
 	billingContext,
 	nextCycleStart,
+	anchorResetProration,
 	options = {},
 }: {
 	ctx: AutumnContext;
@@ -109,6 +114,8 @@ export const billingPlanToNextCycleLineItems = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	nextCycleStart: number;
+	/** Set when the cycle starts at a mid-period anchor: lines bill only their extra window. */
+	anchorResetProration?: AnchorResetProration;
 	options?: NextCycleLineItemOptions;
 }) => {
 	const disableOverageBilling = shouldDisableOverageBilling({
@@ -159,6 +166,12 @@ export const billingPlanToNextCycleLineItems = ({
 	nextCycleAutumnLineItems = prefixRefundDescriptions({
 		lineItems: nextCycleAutumnLineItems,
 	});
+	// Before usage and discounts: only the cycle's own charges shrink to the extra window.
+	if (anchorResetProration) {
+		nextCycleAutumnLineItems = nextCycleAutumnLineItems.map((lineItem) =>
+			prorateAnchorResetLineItem({ lineItem, anchorResetProration }),
+		);
+	}
 
 	// Folded in before the discount pass so an amount-off coupon spreads across
 	// usage and recurring charges together, as it will on the real invoice.

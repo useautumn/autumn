@@ -78,7 +78,7 @@ describe("computeScheduledAnchorResetPreview", () => {
 		stripeSubscription: { billing_cycle_anchor: periodStartMs / 1000 },
 	} as unknown as BillingContext;
 
-	test("by default, the anchor invoices the netted extra window", () => {
+	test("by default, the anchor invoices each line's netted extra window", () => {
 		const result = computeScheduledAnchorResetPreview({
 			billingContext,
 			interval: BillingInterval.Month,
@@ -86,6 +86,9 @@ describe("computeScheduledAnchorResetPreview", () => {
 		});
 
 		expect(result.nextCycleStart).toBe(anchorMs);
-		expect(result.prorationRatio?.toNumber()).toBeCloseTo(10 / 31, 6);
+		expect(result.anchorResetProration).toEqual({
+			originalAnchorMs: periodStartMs,
+			currentEpochMs: periodStartMs + 1000,
+		});
 	});
 });

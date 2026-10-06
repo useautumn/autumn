@@ -548,9 +548,7 @@ test.concurrent(
 	},
 );
 
-// DISABLED: the anchor-reset preview scales the annual line by the monthly ratio ($125.81 vs Stripe's $19.54; D2, 2026-10-06);
-// re-enable once Billy Acton's fix (ATMN-704) lands.
-test.skip(`${chalk.yellowBright("set-plans custom anchor edges: a monthly plan and an annual add-on on one subscription reset on the anchor, billed as previewed")}`, async () => {
+test(`${chalk.yellowBright("set-plans custom anchor edges: a monthly plan and an annual add-on on one subscription reset on the anchor, billed as previewed")}`, async () => {
 	const pro = products.pro({
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
