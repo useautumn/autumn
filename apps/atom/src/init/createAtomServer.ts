@@ -23,10 +23,9 @@ export const createAtomServer = ({
 	const pushReceiver = config.receivesPushes
 		? createPushReceiver({
 				ctx: {
-					pushes:
-						env.ATOM_PUSH_QUEUE_CLIENT === "sdk"
-							? sdkPushQueueFor({ queueUrl: env.ATOM_PUSH_QUEUE_URL })
-							: queue(PUSH_QUEUE),
+					pushes: env.ATOM_SDK_PUSH_QUEUE_URL
+						? sdkPushQueueFor({ queueUrl: env.ATOM_SDK_PUSH_QUEUE_URL })
+						: queue(PUSH_QUEUE),
 					auth: ctx.auth,
 					logger: ctx.logger,
 					processStats: ctx.processStats,

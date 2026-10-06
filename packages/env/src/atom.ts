@@ -63,27 +63,23 @@ const modeEnvOf = ({
 	};
 };
 
-/** Which client reads the pushes queue: the Alien binding, or the AWS SDK against the URL the binding names. */
-type PushQueueEnv =
-	| { ATOM_PUSH_QUEUE_CLIENT: "binding"; ATOM_PUSH_QUEUE_URL: null }
-	| { ATOM_PUSH_QUEUE_CLIENT: "sdk"; ATOM_PUSH_QUEUE_URL: string };
-
-const pushQueueEnvOf = ({
+/** The SDK reads the linked queue unless ATOM_PUSH_QUEUE_CLIENT=binding falls back to the Alien binding's own client. */
+const sdkPushQueueUrlOf = ({
 	runtimeEnv,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
-}): PushQueueEnv => {
-	const client = runtimeEnv.ATOM_PUSH_QUEUE_CLIENT?.trim() || "binding";
-	if (client === "binding")
-		return { ATOM_PUSH_QUEUE_CLIENT: client, ATOM_PUSH_QUEUE_URL: null };
-	if (client !== "sdk")
-		throw new Error("ATOM_PUSH_QUEUE_CLIENT is either binding or sdk");
-	const queueUrl = JSON.parse(runtimeEnv.ALIEN_PUSHES_BINDING || "{}").queueUrl;
+}): string | null => {
+	const client = runtimeEnv.ATOM_PUSH_QUEUE_CLIENT?.trim() || "sdk";
+	if (client !== "sdk" && client !== "binding")
+		throw new Error("ATOM_PUSH_QUEUE_CLIENT is either sdk or binding");
+	const binding = runtimeEnv.ALIEN_PUSHES_BINDING?.trim();
+	if (client === "binding" || !binding) return null;
+	const queueUrl = JSON.parse(binding).queueUrl;
 	if (typeof queueUrl !== "string")
 		throw new Error(
-			"ATOM_PUSH_QUEUE_CLIENT=sdk needs ALIEN_PUSHES_BINDING's queueUrl",
+			"ALIEN_PUSHES_BINDING names no queueUrl for the SDK to read",
 		);
-	return { ATOM_PUSH_QUEUE_CLIENT: client, ATOM_PUSH_QUEUE_URL: queueUrl };
+	return queueUrl;
 };
 
 /** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
@@ -105,15 +101,19 @@ const threadsOf = ({
 	return Math.max(1, allowed);
 };
 
-/** One thread both serves and receives; past that, about a third also receive, and at least one only serves. */
+/** ATOM_PUSH_RECEIVERS when set; otherwise one thread both serves and receives, and past that about a third also receive. */
 const pushReceiversOf = ({
+	runtimeEnv,
 	threads,
 	receivesPushes,
 }: {
+	runtimeEnv: Record<string, string | undefined>;
 	threads: number;
 	receivesPushes: boolean;
 }): number => {
 	if (!receivesPushes) return 0;
+	const told = runtimeEnv.ATOM_PUSH_RECEIVERS;
+	if (told) return Math.min(positiveInteger.parse(told), threads);
 	if (threads === 1) return 1;
 	const share = Math.round(threads * RECEIVER_SHARE_OF_THREADS);
 	return Math.min(Math.max(share, 1), threads - 1);
@@ -142,8 +142,13 @@ export function createAtomEnv(
 		/** How many threads serve checks on the shared port, each owning its share of the slots. */
 		ATOM_THREADS: threads,
 		/** How many of them also read Autumn's pushes from the org's queue; 0 where no queue is linked. */
-		ATOM_PUSH_RECEIVERS: pushReceiversOf({ threads, receivesPushes }),
-		...pushQueueEnvOf({ runtimeEnv }),
+		ATOM_PUSH_RECEIVERS: pushReceiversOf({
+			runtimeEnv,
+			threads,
+			receivesPushes,
+		}),
+		/** The pushes queue the AWS SDK reads; null where the binding reads it or no queue is linked. */
+		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,
 	};
 }
