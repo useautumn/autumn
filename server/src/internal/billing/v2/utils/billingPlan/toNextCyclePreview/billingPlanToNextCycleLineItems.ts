@@ -17,6 +17,7 @@ import { customerProductToArrearLineItems } from "../../lineItems/customerProduc
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
+import { roundPreviewLineItem } from "../preview/roundPreviewLineItem";
 import { sumPreviewLineAmounts } from "../preview/sumPreviewLineAmounts";
 import {
 	type AnchorResetProration,
@@ -210,12 +211,10 @@ export const billingPlanToNextCycleLineItems = ({
 		});
 	}
 
-	const previewLineItems = [
-		...nextCycleAutumnLineItems,
-		...deferredLineItems,
-	].map(lineItemToPreviewLineItem);
-
 	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
+	const previewLineItems = [...nextCycleAutumnLineItems, ...deferredLineItems]
+		.map(lineItemToPreviewLineItem)
+		.map((lineItem) => roundPreviewLineItem({ lineItem, currency }));
 	const subtotal = sumPreviewLineAmounts({
 		amounts: previewLineItems.map((line) => line.subtotal),
 		currency,

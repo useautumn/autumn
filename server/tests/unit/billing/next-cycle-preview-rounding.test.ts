@@ -95,7 +95,9 @@ describe("next cycle preview rounding", () => {
 		});
 
 		expect(nextCycle?.starts_at).toBe(switchMs);
-		expect(nextCycle?.line_items).toHaveLength(2);
+		expect(nextCycle?.line_items.map((lineItem) => lineItem.total)).toEqual([
+			17.74, -7.1,
+		]);
 		expect(nextCycle?.subtotal).toBe(10.64);
 		expect(nextCycle?.total).toBe(10.64);
 	});
@@ -108,6 +110,9 @@ describe("next cycle preview rounding", () => {
 			currency: "jpy",
 		});
 
+		expect(nextCycle?.line_items.map((lineItem) => lineItem.total)).toEqual([
+			1774, -710,
+		]);
 		expect(nextCycle?.subtotal).toBe(1064);
 		expect(nextCycle?.total).toBe(1064);
 	});
@@ -142,6 +147,9 @@ describe("next cycle preview rounding for a scheduled anchor mid-period", () => 
 		}).nextCycle;
 
 		expect(nextCycle?.starts_at).toBe(scheduledAnchorMs);
+		expect(nextCycle?.line_items.map((lineItem) => lineItem.total)).toEqual([
+			581,
+		]);
 		expect(nextCycle?.total).toBe(581);
 	});
 });
