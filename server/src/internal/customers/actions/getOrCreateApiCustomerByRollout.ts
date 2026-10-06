@@ -62,7 +62,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	) {
 		const customerId = params.customer_id;
 		const entityId = params.entity_id;
-		const fullSubject = await shed503OnTransientError({
+		let fullSubject = await shed503OnTransientError({
 			ctx,
 			source: "get_or_create",
 			onTransientError: queueRecovery,
@@ -74,7 +74,6 @@ export const getOrCreateApiCustomerByRollout = async ({
 					billingDetails,
 					entityId,
 					entityData: params.entity_data,
-					rerunAfterStripeLink: true,
 					run: async () => {
 						const subject = await readBalanceWorkerSubject({
 							ctx,
@@ -85,6 +84,18 @@ export const getOrCreateApiCustomerByRollout = async ({
 					},
 				}),
 		});
+		if (
+			await linkStripeIdFromCustomerData({
+				ctx,
+				customer: fullSubject.customer,
+				customerData: params.customer_data,
+			})
+		)
+			fullSubject = await readBalanceWorkerSubject({
+				ctx,
+				customerId,
+				entityId,
+			});
 		return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
 	}
 
@@ -107,12 +118,14 @@ export const getOrCreateApiCustomerByRollout = async ({
 		onTransientError: queueRecovery,
 	});
 
-	const linkedStripeId = await linkStripeIdFromCustomerData({
-		ctx,
-		customer: fullSubject.customer,
-		customerData: params.customer_data,
-	});
-	if (linkedStripeId) fullSubject = await lookup({ skipCache: true });
+	if (
+		await linkStripeIdFromCustomerData({
+			ctx,
+			customer: fullSubject.customer,
+			customerData: params.customer_data,
+		})
+	)
+		fullSubject = await lookup({ skipCache: true });
 
 	await ensureStripeCustomerFromCustomerData({
 		ctx,

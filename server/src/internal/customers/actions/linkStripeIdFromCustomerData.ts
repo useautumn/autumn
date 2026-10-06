@@ -13,28 +13,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerData.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
-const writeProcessor = async ({
-	ctx,
-	customer,
-	processor,
-}: {
-	ctx: AutumnContext;
-	customer: Customer;
-	processor: NonNullable<Customer["processor"]>;
-}) => {
-	const customerId = customer.id ?? customer.internal_id;
-	await executeAutumnBillingPlan({
-		ctx,
-		autumnBillingPlan: {
-			customerId,
-			insertCustomerProducts: [],
-			updateCustomer: { customer, updates: { processor } },
-		},
-	});
-	await updateCachedCustomerData({ ctx, customerId, updates: { processor } });
-};
-
-/** The customer row as committed, after the worker lands any link a concurrent request wrote. */
+/** The committed row, after the worker lands any link a concurrent request wrote. */
 const readCommittedCustomer = async ({
 	ctx,
 	customerId,
@@ -52,47 +31,7 @@ const readCommittedCustomer = async ({
 	});
 };
 
-/** Another customer already linked to this Stripe customer would split its webhooks between two accounts. */
-const isLinkedToAnotherCustomer = async ({
-	ctx,
-	customer,
-	stripeCustomerId,
-}: {
-	ctx: AutumnContext;
-	customer: Customer;
-	stripeCustomerId: string;
-}) => {
-	const owner = await CusService.getByStripeId({
-		ctx,
-		stripeId: stripeCustomerId,
-	});
-	return Boolean(owner && owner.internal_id !== customer.internal_id);
-};
-
-/** Stripe reads first, so a failed read leaves the customer unlinked and a retry imports; imported rows keep the link webhooks need. */
-const linkAndImport = async ({
-	ctx,
-	customer,
-	stripeCustomerId,
-}: {
-	ctx: AutumnContext;
-	customer: Customer;
-	stripeCustomerId: string;
-}) => {
-	const syncCandidates = await prepareAutoSyncStripeCustomer({
-		ctx,
-		customerId: customer.id ?? customer.internal_id,
-		stripeCustomerId,
-	});
-	await writeProcessor({
-		ctx,
-		customer,
-		processor: { id: stripeCustomerId, type: ProcessorType.Stripe },
-	});
-	await syncAutoSyncCandidates({ ctx, syncCandidates });
-};
-
-/** Links an existing, unlinked customer to the `stripe_id` it is sent and imports that Stripe customer's billing, as creation does. */
+/** Links an existing customer with no Stripe customer to the `stripe_id` it is sent and imports its billing, as creation does. Resolves whether it linked. */
 export const linkStripeIdFromCustomerData = async ({
 	ctx,
 	customer,
@@ -107,14 +46,14 @@ export const linkStripeIdFromCustomerData = async ({
 		return false;
 
 	const customerId = customer.id ?? customer.internal_id;
-	const skipLink = (reason: string) => {
+	const skip = (reason: string) => {
 		ctx.logger.warn(
 			`[linkStripeIdFromCustomerData] not linking ${customerId} to ${stripeCustomerId}: ${reason}`,
 		);
 		return false;
 	};
 	if (customer.processor?.id)
-		return skipLink(`already linked to ${customer.processor.id}`);
+		return skip(`already linked to ${customer.processor.id}`);
 
 	return withStripeSyncCustomerLock({
 		ctx,
@@ -122,25 +61,37 @@ export const linkStripeIdFromCustomerData = async ({
 		run: async () => {
 			const committed = await readCommittedCustomer({ ctx, customerId });
 			if (!committed) return false;
-			const linkedId = committed.processor?.id;
-			if (linkedId === stripeCustomerId) {
-				Object.assign(customer, { processor: committed.processor });
-				return true;
-			}
-			if (linkedId) return skipLink(`already linked to ${linkedId}`);
-			if (
-				await isLinkedToAnotherCustomer({
-					ctx,
-					customer: committed,
-					stripeCustomerId,
-				})
-			)
-				return skipLink("another customer is linked to it");
-
-			await linkAndImport({ ctx, customer: committed, stripeCustomerId });
-			Object.assign(customer, {
-				processor: { id: stripeCustomerId, type: ProcessorType.Stripe },
+			if (committed.processor?.id === stripeCustomerId) return true;
+			if (committed.processor?.id)
+				return skip(`already linked to ${committed.processor.id}`);
+			const owner = await CusService.getByStripeId({
+				ctx,
+				stripeId: stripeCustomerId,
 			});
+			if (owner && owner.internal_id !== committed.internal_id)
+				return skip("another customer is linked to it");
+
+			// Stripe reads first, so a failed read leaves the customer unlinked for a retry.
+			const syncCandidates = await prepareAutoSyncStripeCustomer({
+				ctx,
+				customerId,
+				stripeCustomerId,
+			});
+			const processor = { id: stripeCustomerId, type: ProcessorType.Stripe };
+			await executeAutumnBillingPlan({
+				ctx,
+				autumnBillingPlan: {
+					customerId,
+					insertCustomerProducts: [],
+					updateCustomer: { customer: committed, updates: { processor } },
+				},
+			});
+			await updateCachedCustomerData({
+				ctx,
+				customerId,
+				updates: { processor },
+			});
+			await syncAutoSyncCandidates({ ctx, syncCandidates });
 			return true;
 		},
 	});

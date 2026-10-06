@@ -15,7 +15,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { createCustomerWithDefaults } from "@/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.js";
 import { linkStripeCustomer } from "@/internal/customers/actions/linkStripeCustomer.js";
-import { linkStripeIdFromCustomerData } from "@/internal/customers/actions/linkStripeIdFromCustomerData.js";
 import { customerDataToCustomerUpdates } from "@/internal/customers/actions/updateCustomerData.js";
 import { createEntitiesV2 } from "@/internal/entities/actions/createEntitiesV2/createEntitiesV2.js";
 
@@ -76,7 +75,7 @@ export const apiVersionCreatesCustomer = ({
 	ctx: AutumnContext;
 }): boolean => !ctx.apiVersion.gte(ApiVersion.V2_1);
 
-/** Fill empty name/email, link an unlinked customer to its `stripe_id`, create the Stripe customer on `create_in_stripe` or billing details, then write the billing details to it. Resolves whether `stripe_id` was linked. */
+/** Fill empty name/email, and create the Stripe customer on `create_in_stripe` or billing details, then write the billing details to it. */
 const applyCustomerData = async ({
 	ctx,
 	customer,
@@ -87,7 +86,7 @@ const applyCustomerData = async ({
 	customer: WorkerCustomer | Customer;
 	customerData?: CustomerData;
 	billingDetails?: BillingDetailsParams;
-}): Promise<boolean> => {
+}): Promise<void> => {
 	const customerRow = CustomerSchema.parse(customer);
 	const updates = customerData
 		? customerDataToCustomerUpdates({
@@ -108,25 +107,17 @@ const applyCustomerData = async ({
 	// Callers render the row `run` read, so mirror each write onto it, as the legacy path does.
 	Object.assign(customer, updates);
 
-	const updatedRow = { ...customerRow, ...updates };
-	const linkedStripeId = await linkStripeIdFromCustomerData({
-		ctx,
-		customer: updatedRow,
-		customerData,
-	});
-	Object.assign(customer, { processor: updatedRow.processor });
-
 	const needsStripeCustomer =
 		customerData?.create_in_stripe || billingDetails !== undefined;
-	if (!needsStripeCustomer) return linkedStripeId;
+	if (!needsStripeCustomer) return;
 
+	const updatedRow = { ...customerRow, ...updates };
 	const stripeCustomerId =
 		updatedRow.processor?.id ??
 		(await linkStripeCustomer({ ctx, customer: updatedRow }))?.id;
 	Object.assign(customer, { processor: updatedRow.processor });
 	if (billingDetails && stripeCustomerId)
 		await updateStripeBillingDetails({ ctx, stripeCustomerId, billingDetails });
-	return linkedStripeId;
 };
 
 /** A missing customer implies its entity is missing too, so one miss says everything a run needs created. */
@@ -198,7 +189,6 @@ export const withCreateIfMissing = async <Result>({
 	entityId,
 	entityData,
 	createEnabled = true,
-	rerunAfterStripeLink = false,
 	run,
 }: {
 	ctx: AutumnContext;
@@ -208,8 +198,6 @@ export const withCreateIfMissing = async <Result>({
 	entityId?: string | null;
 	entityData?: EntityData;
 	createEnabled?: boolean;
-	/** Re-read after a `stripe_id` link imports billing; only for a `run` that reads, never one that tracks. */
-	rerunAfterStripeLink?: boolean;
 	run: () => Promise<RunWithCustomer<Result>>;
 }): Promise<Result> => {
 	const { result, customer } = await runOrCreate({
@@ -221,12 +209,7 @@ export const withCreateIfMissing = async <Result>({
 		createEnabled,
 		run,
 	});
-	if (!(customerData || billingDetails) || !customer) return result;
-	const linkedStripeId = await applyCustomerData({
-		ctx,
-		customer,
-		customerData,
-		billingDetails,
-	});
-	return linkedStripeId && rerunAfterStripeLink ? (await run()).result : result;
+	if ((customerData || billingDetails) && customer)
+		await applyCustomerData({ ctx, customer, customerData, billingDetails });
+	return result;
 };
