@@ -200,7 +200,7 @@ const createFakeKafka = ({
 			payload: { error: new Error("boom"), restart, groupId: "g" },
 		} as ConsumerCrashEvent);
 
-	return { kafka, events, deliver, crash, runConfig: () => runConfig };
+	return { kafka, events, deliver, crash };
 };
 
 const recordType = (payload: unknown) => {
@@ -407,18 +407,4 @@ test("a consumer crash kafkajs will not restart is reported; one it restarts is 
 	expect(crashes).toEqual([]);
 	crash({ restart: false });
 	expect(crashes).toEqual(["usage-events"]);
-});
-
-test("a job can work more partitions at once than herald's default", async () => {
-	const job = (partitionsConsumedConcurrently?: number): StreamConsumer => ({
-		name: "job",
-		partitionsConsumedConcurrently,
-		handle: async () => {},
-	});
-	const wide = await startConsumer({ job: job(32) });
-	const narrow = await startConsumer({ job: job() });
-	expect(wide.runConfig()?.partitionsConsumedConcurrently).toBe(32);
-	expect(narrow.runConfig()?.partitionsConsumedConcurrently).toBe(8);
-	await wide.consumer.stop();
-	await narrow.consumer.stop();
 });

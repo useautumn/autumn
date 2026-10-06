@@ -8,8 +8,6 @@ export type StreamRecord = MeteringRecordApplication;
 export type StreamConsumer = {
 	/** Names the job's consumer group, so every job keeps a place in the log of its own. */
 	name: string;
-	/** Partitions this job works at once; defaults to herald's small follower setting. */
-	partitionsConsumedConcurrently?: number;
 	/** One partition's records, in order. A job must make a slice it has seen before harmless. */
 	handle(params: { records: StreamRecord[] }): Promise<void>;
 };
