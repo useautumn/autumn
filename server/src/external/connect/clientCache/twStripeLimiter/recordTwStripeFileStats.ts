@@ -39,6 +39,7 @@ export const startTwStripeFileStats = async ({
 		process.env.TW_TEST_FILE ? "test" : "server",
 	];
 	const redis = getTwStripeRedis();
+	const admittedAt = performance.now();
 	await redis
 		.eval(
 			statsScript,
@@ -69,7 +70,7 @@ export const startTwStripeFileStats = async ({
 					...keys,
 					"release",
 					...base,
-					0,
+					Math.round(performance.now() - admittedAt),
 					leaseMs,
 					"",
 					status === 429 ? "1" : "0",

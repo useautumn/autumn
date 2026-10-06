@@ -31,12 +31,16 @@ afterEach(() => {
 	}
 });
 
-const createClient = ({ status = 200 }: { status?: number } = {}) =>
+const createClient = ({
+	status = 200,
+	delayMs = 0,
+}: { status?: number; delayMs?: number } = {}) =>
 	applyTwStripeConcurrencyLimit({
 		client: new Stripe(`sk_test_file_stats_${crypto.randomUUID()}`, {
 			maxNetworkRetries: 0,
-			httpClient: Stripe.createFetchHttpClient(async () =>
-				Response.json(
+			httpClient: Stripe.createFetchHttpClient(async () => {
+				await Bun.sleep(delayMs);
+				return Response.json(
 					status === 429
 						? { error: { type: "invalid_request_error", code: "rate_limit" } }
 						: { object: "balance" },
@@ -47,8 +51,8 @@ const createClient = ({ status = 200 }: { status?: number } = {}) =>
 								? { "stripe-rate-limited-reason": "global-rate" }
 								: {},
 					},
-				),
-			),
+				);
+			}),
 		}),
 	});
 
@@ -58,13 +62,14 @@ const readFileHash = (fileTag: string) =>
 test("test-process requests count against the file in TW_TEST_FILE", async () => {
 	const fileTag = `file-${crypto.randomUUID()}`;
 	process.env.TW_TEST_FILE = fileTag;
-	const client = createClient();
+	const client = createClient({ delayMs: 50 });
 	await Promise.all([client.balance.retrieve(), client.balance.retrieve()]);
 
 	const stats = await readFileHash(fileTag);
 	expect(Number(stats.req_test)).toBe(2);
 	expect(stats.req_server).toBeUndefined();
 	expect(Number(stats.inflight_max)).toBeGreaterThanOrEqual(1);
+	expect(Number(stats.busy_ms)).toBeGreaterThanOrEqual(90);
 	const perSecond = Object.entries(stats)
 		.filter(([name]) => name.startsWith("s:"))
 		.reduce((sum, [, value]) => sum + Number(value), 0);

@@ -19,8 +19,14 @@ local function track(key)
 end
 
 if operation == 'release' then
+  -- On release ARGV[5] is the request's network time, summed into busy time (mean in-flight = busy / wall).
   redis.call('ZREM', machineInFlight, id)
-  if attributed then redis.call('ZREM', fileInFlight, id) end
+  if attributed then
+    redis.call('ZREM', fileInFlight, id)
+    redis.call('HINCRBY', fileStats, 'busy_ms', waitMs)
+  else
+    redis.call('HINCRBY', machineStats, 'ub:' .. second, waitMs)
+  end
   if rateLimited then
     redis.call('HINCRBY', machineStats, 'r:' .. second, 1)
     if attributed then

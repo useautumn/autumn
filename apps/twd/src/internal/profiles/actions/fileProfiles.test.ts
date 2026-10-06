@@ -30,6 +30,7 @@ const stats = (overrides: {
 		peakRps: overrides.peakRps ?? 4,
 		meanRps: 4,
 		peakInFlight: 2,
+		meanInFlight: 0.5,
 		rateLimited: 0,
 		rateLimitedReasons: {},
 		permitWaitMs: 100,

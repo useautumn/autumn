@@ -4,6 +4,7 @@ export const MEAN_METRICS = [
 	"stripeTestRequests",
 	"stripeServerRequests",
 	"stripeMeanRps",
+	"stripeMeanInFlight",
 	"rateLimited",
 	"permitWaitMs",
 	"cpuCoreSeconds",

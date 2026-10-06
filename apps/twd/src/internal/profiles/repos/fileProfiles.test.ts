@@ -35,6 +35,7 @@ const stats = ({
 		peakRps: 3,
 		meanRps: requests / (wallMs / 1000),
 		peakInFlight: 2,
+		meanInFlight: 0.5,
 		rateLimited: 1,
 		rateLimitedReasons: { "global-rate": 1 },
 		permitWaitMs: 40,

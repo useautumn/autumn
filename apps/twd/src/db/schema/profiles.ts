@@ -46,6 +46,7 @@ export const fileProfiles = pgTable(
 		stripeTestRequests: real("stripe_test_requests"),
 		stripeServerRequests: real("stripe_server_requests"),
 		stripeMeanRps: real("stripe_mean_rps"),
+		stripeMeanInFlight: real("stripe_mean_in_flight"),
 		stripePeakRps: real("stripe_peak_rps"),
 		stripePeakInFlight: real("stripe_peak_in_flight"),
 		workerPeakRps: real("worker_peak_rps"),

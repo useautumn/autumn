@@ -17,6 +17,7 @@ export const statsToProfileMetrics = (stats: FileStats): ProfileMetrics => ({
 	stripeTestRequests: stats.stripe?.testRequests ?? null,
 	stripeServerRequests: stats.stripe?.serverRequests ?? null,
 	stripeMeanRps: stats.stripe?.meanRps ?? null,
+	stripeMeanInFlight: stats.stripe?.meanInFlight ?? null,
 	rateLimited: stats.stripe?.rateLimited ?? null,
 	permitWaitMs: stats.stripe?.permitWaitMs ?? null,
 	cpuCoreSeconds: stats.cpu.coreSeconds,

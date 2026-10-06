@@ -32,6 +32,8 @@ export type MachineSeconds = {
 	untagged: number[];
 	untaggedWaitMs: number[];
 	untagged429: number[];
+	/** Network time of untagged requests (ms), for mean in-flight. */
+	untaggedBusyMs: number[];
 	/** Tagged requests from every file on the worker. */
 	tagged: number[];
 	/** Worker-wide peak in-flight and 429s. */
@@ -56,6 +58,8 @@ export type FileStats = {
 		peakRps: number;
 		meanRps: number;
 		peakInFlight: number;
+		/** Time-averaged requests in flight: network time / wall time. */
+		meanInFlight: number;
 		rateLimited: number;
 		rateLimitedReasons: Record<string, number>;
 		permitWaitMs: number;
@@ -206,6 +210,7 @@ export const summariseFileStats = ({
 	let apportioned = 0;
 	let apportionedWaitMs = 0;
 	let apportioned429 = 0;
+	let apportionedBusyMs = 0;
 	let peakRps = 0;
 	let machinePeakRps = 0;
 	for (let i = 0; i < seconds; i++) {
@@ -216,6 +221,7 @@ export const summariseFileStats = ({
 		apportioned += untagged * share;
 		apportionedWaitMs += (machine.untaggedWaitMs[i] ?? 0) * share;
 		apportioned429 += (machine.untagged429[i] ?? 0) * share;
+		apportionedBusyMs += (machine.untaggedBusyMs[i] ?? 0) * share;
 		peakRps = Math.max(peakRps, own + untagged * share);
 		machinePeakRps = Math.max(machinePeakRps, tagged + untagged);
 	}
@@ -243,6 +249,9 @@ export const summariseFileStats = ({
 			peakRps: round(peakRps),
 			meanRps: round(wallMs > 0 ? requests / (wallMs / 1000) : 0),
 			peakInFlight: field("inflight_max"),
+			meanInFlight: round(
+				wallMs > 0 ? (field("busy_ms") + apportionedBusyMs) / wallMs : 0,
+			),
 			rateLimited: round(field("r429") + apportioned429),
 			rateLimitedReasons,
 			permitWaitMs: round(field("wait_sum") + apportionedWaitMs, 0),
@@ -283,7 +292,7 @@ const readStripeCounters = async ({
 		(_, i) => firstSecond + i,
 	);
 	const machineFields = (prefix: string) => window.map((s) => `${prefix}:${s}`);
-	const prefixes = ["u", "uw", "ur", "a", "i", "r"];
+	const prefixes = ["u", "uw", "ur", "ub", "a", "i", "r"];
 	const [fileHash, machineValues, alive] = await withDeadline(
 		Promise.all([
 			redis.send("HGETALL", [`tw:fs:file:${fileTag}`]) as Promise<Record<
@@ -307,9 +316,10 @@ const readStripeCounters = async ({
 		untagged: column(0),
 		untaggedWaitMs: column(1),
 		untagged429: column(2),
-		tagged: column(3),
-		inFlight: column(4),
-		rateLimited: column(5),
+		untaggedBusyMs: column(3),
+		tagged: column(4),
+		inFlight: column(5),
+		rateLimited: column(6),
 		alive: alive.map(Number),
 	};
 	return { fileHash: fileHash ?? {}, machine };

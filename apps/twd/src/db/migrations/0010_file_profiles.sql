@@ -10,6 +10,7 @@ CREATE TABLE "file_profiles" (
 	"stripe_test_requests" real,
 	"stripe_server_requests" real,
 	"stripe_mean_rps" real,
+	"stripe_mean_in_flight" real,
 	"stripe_peak_rps" real,
 	"stripe_peak_in_flight" real,
 	"worker_peak_rps" real,
