@@ -2,12 +2,10 @@ import {
 	type BillingContext,
 	type BillingInterval,
 	getCycleEnd,
-	type PhaseProrationBehavior,
 	secondsToMs,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 
 /**
  * Compute the next cycle start, billing context override, and proration ratio
@@ -15,20 +13,17 @@ import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedul
  *
  * When the anchor resets before the current period ends, Stripe charges only
  * the prorated "extra" window that extends beyond the original period end.
- * With proration_behavior none, Stripe invoices nothing at the anchor. When it
- * resets at or after the period end, the next invoice is the normal renewal at
- * the original period end with full amount.
+ * When it resets at or after the period end, the next invoice is the normal
+ * renewal at the original period end with full amount.
  */
 export const computeScheduledAnchorResetPreview = ({
 	billingContext,
 	interval,
 	intervalCount,
-	prorationBehavior,
 }: {
 	billingContext: BillingContext;
 	interval: BillingInterval;
 	intervalCount: number;
-	prorationBehavior: PhaseProrationBehavior | undefined;
 }): {
 	nextCycleStart: number;
 	prorationRatio: Decimal | undefined;
@@ -60,19 +55,6 @@ export const computeScheduledAnchorResetPreview = ({
 			intervalCount,
 			now: scheduledAnchor,
 		});
-
-		// Without proration Stripe moves the anchor without invoicing, so the
-		// first invoice is the new cycle's renewal at the full amount.
-		if (!phaseStartCreditsUnusedTime({ prorationBehavior })) {
-			return {
-				nextCycleStart: newCycleEnd,
-				prorationRatio: undefined,
-				lineItemsBillingContext: {
-					...billingContext,
-					billingCycleAnchorMs: scheduledAnchor,
-				},
-			};
-		}
 
 		const normalizedNewCycleEnd = truncateMsToSecondPrecision(newCycleEnd);
 		const extraWindow = new Decimal(normalizedNewCycleEnd).minus(
