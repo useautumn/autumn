@@ -151,7 +151,9 @@ export function createStreamConsumer({
 		},
 		config: {
 			topic: config.topic,
-			partitionsConsumedConcurrently: PARTITIONS_CONSUMED_CONCURRENTLY,
+			partitionsConsumedConcurrently:
+				streamConsumer.partitionsConsumedConcurrently ??
+				PARTITIONS_CONSUMED_CONCURRENTLY,
 			recordsPerSlice: config.recordsPerSlice ?? RECORDS_PER_SLICE,
 		},
 	});

@@ -8,6 +8,8 @@ import { recordsToCacheSubjects } from "./utils/recordsToCacheSubjects.js";
 
 /** Subjects in a slice are distinct, so they push independently; one at a time capped herald at ~1/push latency per partition. */
 export const CACHE_PUSH_CONCURRENCY = 16;
+/** A slice holds a few subjects and each push is a read plus a round trip, so throughput scales with partitions in flight. */
+export const CACHE_PUSH_PARTITIONS_CONCURRENTLY = 32;
 
 /** Keeps each org's BYOC cache current: every subject a batch moved is re-read from its worker and written as it now stands. */
 export function createCachePushConsumer({
@@ -34,5 +36,9 @@ export function createCachePushConsumer({
 		);
 	}
 
-	return { name: "cache-push", handle };
+	return {
+		name: "cache-push",
+		partitionsConsumedConcurrently: CACHE_PUSH_PARTITIONS_CONCURRENTLY,
+		handle,
+	};
 }
