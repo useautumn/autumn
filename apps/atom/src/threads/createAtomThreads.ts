@@ -74,6 +74,9 @@ export const createAtomThreads = ({
 	const threads: (Worker | null)[] = Array(env.ATOM_THREADS).fill(null);
 	const bootedAt = new Date().toISOString();
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+	const checkSheds = new SharedArrayBuffer(
+		Int32Array.BYTES_PER_ELEMENT * env.ATOM_THREADS,
+	);
 	let stopping = false;
 
 	/** Wired to every thread already running; those still to start wire themselves to it the same way. */
@@ -89,7 +92,7 @@ export const createAtomThreads = ({
 		const ready = readyOf({ worker });
 		send({
 			worker,
-			control: { type: "init", index, env, bootedAt, restarts },
+			control: { type: "init", index, env, bootedAt, restarts, checkSheds },
 		});
 		threads.forEach((peer, peerIndex) => {
 			if (!peer || peerIndex === index) return;
@@ -156,8 +159,11 @@ export const createAtomThreads = ({
 			await stop();
 			throw error;
 		}
+		const httpThreads = env.ATOM_PUSH_RECEIVERS_SERVE_HTTP
+			? env.ATOM_THREADS
+			: env.ATOM_THREADS - env.ATOM_PUSH_RECEIVERS;
 		ctx.logger.info(
-			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT} on ${env.ATOM_THREADS} threads`,
+			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT} on ${httpThreads} of ${env.ATOM_THREADS} threads (${env.ATOM_PUSH_RECEIVERS} receive pushes)`,
 		);
 	}
 

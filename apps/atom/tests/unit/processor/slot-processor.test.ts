@@ -6,6 +6,10 @@ import {
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
+import {
+	CHECK_TIMEOUT_MS,
+	checkTimeouts,
+} from "../../../src/processor/actions/check/checkTimeouts.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
@@ -43,6 +47,25 @@ const checkBalance = ({ requiredBalance }: { requiredBalance: number }) =>
 	checkRequestFor({ params: { required_balance: requiredBalance } });
 
 describe("slot processor check", () => {
+	test("a check answered CHECK_TIMEOUT_MS or more after it reached the Atom counts as its owner's timeout", async () => {
+		const processor = createProcessor();
+		await processor.setSubject(
+			subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+		);
+		const before = checkTimeouts.count;
+		const reachedAt = ({ msAgo }: { msAgo: number }) => ({
+			...checkBalance({ requiredBalance: 1 }),
+			occurredAt: Date.now() - msAgo,
+		});
+
+		await processor.check({ request: reachedAt({ msAgo: 0 }) });
+		expect(checkTimeouts.count).toBe(before);
+		await processor.check({
+			request: reachedAt({ msAgo: CHECK_TIMEOUT_MS + 50 }),
+		});
+		expect(checkTimeouts.count).toBe(before + 1);
+	});
+
 	test("a requirement within the stored balance is allowed, answered as the API answers", async () => {
 		const processor = createProcessor();
 		await processor.setSubject(

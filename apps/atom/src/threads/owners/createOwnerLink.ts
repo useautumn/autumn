@@ -17,7 +17,14 @@ export type OwnerLink = {
 	disconnect(): void;
 };
 
-export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
+export const createOwnerLink = ({
+	thread,
+	checkSheds,
+}: {
+	thread: number;
+	/** Shed checks per owner thread, shared by every thread so the owner's /health reads its own. */
+	checkSheds: Int32Array;
+}): OwnerLink => {
 	const waiting = new Map<
 		number,
 		ReturnType<typeof Promise.withResolvers<OwnerReply>>
@@ -32,8 +39,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	}
 
 	async function call(body: OwnerCallBody): Promise<string | boolean> {
-		if (!port || waiting.size >= MAX_CALLS_IN_FLIGHT)
+		if (!port || waiting.size >= MAX_CALLS_IN_FLIGHT) {
+			if (body.type === "check") Atomics.add(checkSheds, thread, 1);
 			throw new OwnerUnavailableError({ thread });
+		}
 		const id = nextId++;
 		const reply = Promise.withResolvers<OwnerReply>();
 		waiting.set(id, reply);

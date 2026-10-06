@@ -36,6 +36,9 @@ type Bucket = {
 	pushHopWaitMs: number;
 	pushOwnerMs: number;
 	pushWriteMs: number;
+	/** Checks this thread owned that were answered 300 ms or more after reaching the Atom, or refused because it was behind. */
+	checkTimeouts: number;
+	checkSheds: number;
 	/** Connections that sent their first request here. */
 	newConnections: number;
 	/** How long a request sat behind others the loop handled first in the same burst: a floor on its wait. */
@@ -81,6 +84,8 @@ const emptyBucket = (): Bucket => ({
 	pushHopWaitMs: 0,
 	pushOwnerMs: 0,
 	pushWriteMs: 0,
+	checkTimeouts: 0,
+	checkSheds: 0,
 	newConnections: 0,
 	queueWaitMaxMs: 0,
 	queueWaitTotalMs: 0,
@@ -111,6 +116,8 @@ const mergeBuckets = (a: Bucket, b: Bucket): Bucket => ({
 	pushHopWaitMs: a.pushHopWaitMs + b.pushHopWaitMs,
 	pushOwnerMs: a.pushOwnerMs + b.pushOwnerMs,
 	pushWriteMs: a.pushWriteMs + b.pushWriteMs,
+	checkTimeouts: a.checkTimeouts + b.checkTimeouts,
+	checkSheds: a.checkSheds + b.checkSheds,
 	newConnections: a.newConnections + b.newConnections,
 	queueWaitMaxMs: Math.max(a.queueWaitMaxMs, b.queueWaitMaxMs),
 	queueWaitTotalMs: a.queueWaitTotalMs + b.queueWaitTotalMs,
@@ -160,6 +167,7 @@ export type PushPhaseTotals = {
 	owner: number;
 	write: number;
 };
+export type CheckOutcomeTotals = { timeouts: number; sheds: number };
 
 /** A connection idle this long and then seen again counts as new; far longer than any keep-alive gap under load. */
 const CONNECTION_FORGOTTEN_AFTER_MS = 30_000;
@@ -174,6 +182,7 @@ export const startProcessStats = ({
 	subjectReadCounts = () => ({ reads: 0, parses: 0 }),
 	checkPhaseTotals = () => ({ read: 0, decide: 0, render: 0, respond: 0 }),
 	pushPhaseTotals = () => ({ parse: 0, hopWait: 0, owner: 0, write: 0 }),
+	checkOutcomeTotals = () => ({ timeouts: 0, sheds: 0 }),
 	afterLoopTurn = (callback: () => void) => setImmediate(callback),
 	cpuMs = threadCpuMs,
 }: {
@@ -185,6 +194,7 @@ export const startProcessStats = ({
 	subjectReadCounts?: () => SubjectReadCounts;
 	checkPhaseTotals?: () => CheckPhaseTotals;
 	pushPhaseTotals?: () => PushPhaseTotals;
+	checkOutcomeTotals?: () => CheckOutcomeTotals;
 	/** Runs once the loop has handled every request it read in this turn. */
 	afterLoopTurn?: (callback: () => void) => void;
 	cpuMs?: () => number;
@@ -197,6 +207,8 @@ export const startProcessStats = ({
 	let publishedReads = { ...subjectReadCounts() };
 	let publishedPhases = { ...checkPhaseTotals() };
 	let publishedPushPhases = { ...pushPhaseTotals() };
+	// From zero: checks shed while a thread was down show in its replacement's first publish.
+	let publishedOutcomes: CheckOutcomeTotals = { timeouts: 0, sheds: 0 };
 	let publishedAt = clock();
 	let publishedCpuMs = cpuMs();
 	const connectionSeenAt = new Map<string, number>();
@@ -256,6 +268,10 @@ export const startProcessStats = ({
 		current.pushOwnerMs = pushPhases.owner - publishedPushPhases.owner;
 		current.pushWriteMs = pushPhases.write - publishedPushPhases.write;
 		publishedPushPhases = { ...pushPhases };
+		const outcomes = checkOutcomeTotals();
+		current.checkTimeouts = outcomes.timeouts - publishedOutcomes.timeouts;
+		current.checkSheds = outcomes.sheds - publishedOutcomes.sheds;
+		publishedOutcomes = { ...outcomes };
 		const at = clock();
 		current.windowMs = at - publishedAt;
 		publishedAt = at;

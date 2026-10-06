@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { receivesPushes } from "../../../src/threads/receivesPushes.js";
+import {
+	receivesPushes,
+	servesHttp,
+} from "../../../src/threads/receivesPushes.js";
 
 const receiving = ({
 	threads,
@@ -23,5 +26,15 @@ describe("push receivers", () => {
 		]);
 		expect(receiving({ threads: 1, receivers: 1 })).toEqual([0]);
 		expect(receiving({ threads: 7, receivers: 0 })).toEqual([]);
+	});
+
+	test("a receiver opens no listener unless receivers are told to serve HTTP; every other thread serves", () => {
+		expect(servesHttp({ receives: true, receiversServeHttp: false })).toBe(
+			false,
+		);
+		expect(servesHttp({ receives: true, receiversServeHttp: true })).toBe(true);
+		expect(servesHttp({ receives: false, receiversServeHttp: false })).toBe(
+			true,
+		);
 	});
 });

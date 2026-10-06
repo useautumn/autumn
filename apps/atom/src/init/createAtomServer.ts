@@ -62,9 +62,9 @@ export const createAtomServer = ({
 		});
 	}
 
-	/** Receiving is async I/O beside serving, so a thread that receives pushes still answers checks. */
+	/** Receiving is async I/O beside serving; a receiver that serves no HTTP still answers its own customers' checks. */
 	async function start(): Promise<void> {
-		listen();
+		if (config.servesHttp) listen();
 		receiving = pushReceiver?.run();
 	}
 

@@ -11,3 +11,12 @@ export const receivesPushes = ({
 	threads: number;
 	receivers: number;
 }): boolean => index >= threads - receivers;
+
+/** A receiver opens no listener unless told to, so its loop is left to pushes and the checks it owns. */
+export const servesHttp = ({
+	receives,
+	receiversServeHttp,
+}: {
+	receives: boolean;
+	receiversServeHttp: boolean;
+}): boolean => !receives || receiversServeHttp;

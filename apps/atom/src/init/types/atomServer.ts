@@ -19,4 +19,9 @@ export type AtomServerDependencies = {
 	health: AtomHealthSource;
 };
 
-export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };
+export type AtomServerConfig = {
+	env: AtomEnv;
+	receivesPushes: boolean;
+	/** Whether this thread listens on the shared port; one that does not still answers the checks it owns. */
+	servesHttp: boolean;
+};

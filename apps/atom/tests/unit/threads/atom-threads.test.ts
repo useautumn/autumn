@@ -217,5 +217,16 @@ describe("an Atom of several threads", () => {
 		expect(await after.json()).toMatchObject({ allowed: true });
 		const health = await (await fetch(`${url}/health`)).json();
 		expect(health.restarts).toBe(1);
+		// The 503s are counted against the owner that was down, read off /health once its replacement publishes.
+		let shedOnOwner = 0;
+		const publishedBy = Date.now() + 5_000;
+		while (shedOnOwner === 0 && Date.now() < publishedBy) {
+			await Bun.sleep(250);
+			const { processTimings } = await (await fetch(`${url}/health`)).json();
+			shedOnOwner =
+				processTimings.find((stats: { index: number }) => stats.index === 1)
+					?.checkSheds ?? 0;
+		}
+		expect(shedOnOwner).toBeGreaterThan(0);
 	}, 20_000);
 });

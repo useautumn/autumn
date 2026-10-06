@@ -119,6 +119,22 @@ const pushReceiversOf = ({
 	return Math.min(Math.max(share, 1), threads - 1);
 };
 
+/** Receivers leave HTTP to the other threads unless told ATOM_PUSH_RECEIVERS_SERVE_HTTP=true; when every thread receives, every thread serves. */
+const receiversServeHttpOf = ({
+	runtimeEnv,
+	threads,
+	receivers,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+	threads: number;
+	receivers: number;
+}): boolean => {
+	const told = runtimeEnv.ATOM_PUSH_RECEIVERS_SERVE_HTTP?.trim() || "false";
+	if (told !== "true" && told !== "false")
+		throw new Error("ATOM_PUSH_RECEIVERS_SERVE_HTTP is either true or false");
+	return told === "true" || receivers >= threads;
+};
+
 /** What Atom reads: where it listens, its data directory, the Autumn API it forwards to, and which tokens it answers to. */
 export function createAtomEnv(
 	runtimeEnv: Record<string, string | undefined>,
@@ -129,6 +145,7 @@ export function createAtomEnv(
 	const threads = threadsOf({ runtimeEnv, machine });
 	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom's pushes name the org's folder.
 	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
+	const receivers = pushReceiversOf({ runtimeEnv, threads, receivesPushes });
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),
@@ -142,10 +159,12 @@ export function createAtomEnv(
 		/** How many threads serve checks on the shared port, each owning its share of the slots. */
 		ATOM_THREADS: threads,
 		/** How many of them also read Autumn's pushes from the org's queue; 0 where no queue is linked. */
-		ATOM_PUSH_RECEIVERS: pushReceiversOf({
+		ATOM_PUSH_RECEIVERS: receivers,
+		/** Whether the receiving threads also take HTTP checks; off, the other threads take every check. */
+		ATOM_PUSH_RECEIVERS_SERVE_HTTP: receiversServeHttpOf({
 			runtimeEnv,
 			threads,
-			receivesPushes,
+			receivers,
 		}),
 		/** The pushes queue the AWS SDK reads; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),

@@ -185,6 +185,28 @@ describe("process stats", () => {
 		});
 	});
 
+	test("each publish counts the owned checks that timed out or were shed since the last, from zero", () => {
+		const statsDir = newStatsDir();
+		const outcomes = { timeouts: 0, sheds: 3 };
+		const stats = startProcessStats({
+			index: 0,
+			statsDir,
+			logger: { warn: () => {} },
+			checkOutcomeTotals: () => outcomes,
+		});
+		outcomes.timeouts = 2;
+		stats.publish();
+		outcomes.sheds = 5;
+		stats.publish();
+		stats.stop();
+
+		// The trailing two seconds: both publishes, so the sheds counted before the first one are kept.
+		expect(createProcessStatsReader({ statsDir })()[0]).toMatchObject({
+			checkTimeouts: 2,
+			checkSheds: 5,
+		});
+	});
+
 	test("a request waits behind those read before it in the same loop turn; a connection counts once", () => {
 		const statsDir = newStatsDir();
 		let now = 0;
