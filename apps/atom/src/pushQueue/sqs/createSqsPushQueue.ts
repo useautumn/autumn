@@ -1,4 +1,3 @@
-import type { SqsExecutor } from "@autumn/sqs";
 import {
 	DeleteMessageCommand,
 	type Message,
@@ -6,8 +5,9 @@ import {
 } from "@aws-sdk/client-sqs";
 import { LONG_POLL_SECONDS, MAX_PUSHES_PER_PULL } from "../sqsLimits.js";
 import type { PulledPush, PushQueue } from "../types/pushQueue.js";
+import type { SqsClient } from "./types/sqsClient.js";
 
-type SqsPushQueueContext = { sqs: SqsExecutor; queueUrl: string };
+type SqsPushQueueContext = { sqs: SqsClient; queueUrl: string };
 
 const messageToPulledPush = (message: Message): PulledPush => ({
 	payload: message.Body ?? "",
