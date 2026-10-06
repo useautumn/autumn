@@ -15,7 +15,7 @@ export const fixedPriceToDescription = ({
 	price: Price; // must be fixed price
 	currency?: string;
 	context: LineItemContext;
-	/** Quantity lines mirror the feature-usage format ("Pro - 150 credits"). */
+	/** Quantity lines read "3x Pro". */
 	quantity?: number;
 }): string => {
 	const config = price.config as FixedPriceConfig;
@@ -25,11 +25,10 @@ export const fixedPriceToDescription = ({
 	// biome-ignore lint/correctness/noUnusedVariables: Might be used in the future
 	const amount = formatAmount({ currency, amount: config.amount });
 
-	const label =
+	let description =
 		quantity === undefined
-			? "Base Price"
-			: `${numberWithCommas(quantity)}x Base Price`;
-	let description = `${product.name} - ${label}`;
+			? product.name
+			: `${numberWithCommas(quantity)}x ${product.name}`;
 
 	if (!isOneOffPrice(price)) {
 		const periodDescription = lineItemToPeriodDescription({
