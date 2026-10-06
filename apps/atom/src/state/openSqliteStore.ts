@@ -5,7 +5,9 @@ import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
 	readSubjectRow,
+	type SubjectWrite,
 	storedSubjectFromRow,
+	subjectToSlice,
 	upsertSubjects,
 } from "./repos/subjectStates.js";
 import type { SqliteStore } from "./types/sqliteStore.js";
@@ -51,27 +53,39 @@ export const openSqliteStore = ({
 		subjectReadCounts.reads += 1;
 		const key = storePrefix + subjectKey(params);
 		const found = held.get(key);
-		if (found) return found;
+		if (found) return found.subject;
 		const row = readSubjectRow({ ctx, ...params });
 		if (row === null) return null;
 		subjectReadCounts.parses += 1;
-		const { subject, bytes } = storedSubjectFromRow({ row });
+		const { subject, bytes, sliceHash } = storedSubjectFromRow({ row });
 		// Frozen, because every check of the subject shares the copy.
-		held.hold({ key, subject: deepFreeze(subject), bytes });
+		held.hold({ key, subject: deepFreeze(subject), bytes, sliceHash });
 		return subject;
+	}
+
+	/** A slice the held copy already has is stored as it is: its row stays, and its frozen catalog and org are reused. */
+	function writeOf(subject: StoredSubject): SubjectWrite {
+		const slice = subjectToSlice({ subject });
+		const heldCopy = held.get(storePrefix + keyOf(subject));
+		if (heldCopy?.sliceHash !== slice.hash)
+			return { subject, slice, sliceStored: false };
+		const { catalog, org } = heldCopy.subject;
+		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
 	}
 
 	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
 	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
 		const writeStartedAt = performance.now();
-		const storedBytes = upsertSubjects({ ctx, subjects });
-		subjects.forEach((subject, index) => {
+		const writes = subjects.map(writeOf);
+		const storedBytes = upsertSubjects({ ctx, writes });
+		writes.forEach(({ subject, slice }, index) => {
 			const bytes = storedBytes[index];
 			if (bytes === null || bytes === undefined) return;
 			held.hold({
 				key: storePrefix + keyOf(subject),
 				subject: deepFreeze(subject),
 				bytes,
+				sliceHash: slice.hash,
 			});
 		});
 		pushPhaseMs.write += performance.now() - writeStartedAt;

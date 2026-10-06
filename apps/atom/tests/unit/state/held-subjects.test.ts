@@ -18,7 +18,7 @@ const hold = (
 	held: ReturnType<typeof createHeldSubjects>,
 	key: string,
 	bytes: number,
-) => held.hold({ key, subject: subjectOf(key), bytes });
+) => held.hold({ key, subject: subjectOf(key), bytes, sliceHash: "slice" });
 
 describe("held subjects", () => {
 	test("past the byte budget, the least recently read subjects are dropped until it fits", () => {
@@ -30,8 +30,8 @@ describe("held subjects", () => {
 		hold(held, "c", 40);
 
 		expect(held.get("b")).toBeUndefined();
-		expect(held.get("a")?.state.identity.customerId).toBe("a");
-		expect(held.get("c")?.state.identity.customerId).toBe("c");
+		expect(held.get("a")?.subject.state.identity.customerId).toBe("a");
+		expect(held.get("c")?.subject.state.identity.customerId).toBe("c");
 		expect(held.bytes).toBe(80);
 	});
 

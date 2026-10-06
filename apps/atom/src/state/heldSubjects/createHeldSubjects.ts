@@ -1,5 +1,4 @@
 import type { HeldSubject } from "../types/heldSubject.js";
-import type { StoredSubject } from "../types/storedSubject.js";
 import type { HeldSubjects } from "./types/heldSubjects.js";
 
 export const createHeldSubjects = ({
@@ -18,22 +17,18 @@ export const createHeldSubjects = ({
 		bytes -= found.bytes;
 	}
 
-	function get(key: string): StoredSubject | undefined {
+	function get(key: string): HeldSubject | undefined {
 		const found = held.get(key);
 		if (!found) return undefined;
 		held.delete(key);
 		held.set(key, found);
-		return found.subject;
+		return found;
 	}
 
-	function hold({
-		key,
-		subject,
-		bytes: subjectBytes,
-	}: { key: string } & HeldSubject) {
+	function hold({ key, ...entry }: { key: string } & HeldSubject) {
 		drop(key);
-		held.set(key, { subject, bytes: subjectBytes });
-		bytes += subjectBytes;
+		held.set(key, entry);
+		bytes += entry.bytes;
 		for (const leastRecent of held.keys()) {
 			if (bytes <= budgetBytes || leastRecent === key) break;
 			drop(leastRecent);
