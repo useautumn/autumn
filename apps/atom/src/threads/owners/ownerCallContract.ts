@@ -1,12 +1,27 @@
-import { ApiVersionClass } from "@autumn/shared";
+import { type ApiVersion, ApiVersionClass } from "@autumn/shared";
 import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
-import type { CheckRequestOnWire, OwnerReply } from "./types/ownerCall.js";
+import type { StoredSubject } from "../../state/types/storedSubject.js";
+import type {
+	CheckRequestOnWire,
+	OwnerReply,
+	StoredSubjectOnWire,
+} from "./types/ownerCall.js";
 
-/** A structured clone drops the version's class, so it crosses by name and is rebuilt on the owner. */
+/** One instance per version on the owner: building one sorts the version registry. */
+const apiVersions = new Map<ApiVersion, ApiVersionClass>();
+
+const apiVersionOf = (version: ApiVersion): ApiVersionClass => {
+	const held = apiVersions.get(version);
+	if (held) return held;
+	const apiVersion = new ApiVersionClass(version);
+	apiVersions.set(version, apiVersion);
+	return apiVersion;
+};
+
 export const checkRequestToWire = ({
 	request,
 }: {
@@ -22,10 +37,23 @@ export const wireToCheckRequest = ({
 	request: CheckRequestOnWire;
 }): CheckRequest => ({
 	...request,
-	apiVersion: request.apiVersion
-		? new ApiVersionClass(request.apiVersion)
-		: null,
+	apiVersion: request.apiVersion ? apiVersionOf(request.apiVersion) : null,
 });
+
+export const storedSubjectToWire = ({
+	subject,
+}: {
+	subject: StoredSubject;
+}): StoredSubjectOnWire => ({
+	...subject,
+	logOffset: subject.logOffset.toString(),
+});
+
+export const wireToStoredSubject = ({
+	subject,
+}: {
+	subject: StoredSubjectOnWire;
+}): StoredSubject => ({ ...subject, logOffset: BigInt(subject.logOffset) });
 
 export const errorToReply = ({
 	id,

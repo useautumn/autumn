@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { openSlots } from "../../../src/slots/openSlots.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
-import { checkRequestFor, storedSubjectWith } from "../utils/atomFixtures.js";
+import {
+	checkRequestFor,
+	checkResponseOf,
+	storedSubjectWith,
+} from "../utils/atomFixtures.js";
 
 const opened: Slots[] = [];
 const directories: string[] = [];
@@ -73,9 +77,10 @@ describe("a data folder's slots", () => {
 		const subject = storedSubjectWith({ balance: 10 });
 
 		await slots.processorFor({ customerId: "cus_1" }).setSubject({ subject });
-		const reply = await slots
-			.processorFor({ customerId: "cus_1" })
-			.check({ request: checkRequestFor() });
+		const reply = await checkResponseOf({
+			processor: slots.processorFor({ customerId: "cus_1" }),
+			request: checkRequestFor(),
+		});
 
 		expect(reply.allowed).toBe(true);
 	});
@@ -91,9 +96,10 @@ describe("a data folder's slots", () => {
 
 		const reopened = open({ folder, slotCount: 4 });
 
-		const reply = await reopened
-			.processorFor({ customerId: "cus_1" })
-			.check({ request: checkRequestFor() });
+		const reply = await checkResponseOf({
+			processor: reopened.processorFor({ customerId: "cus_1" }),
+			request: checkRequestFor(),
+		});
 
 		expect(reply.allowed).toBe(true);
 	});

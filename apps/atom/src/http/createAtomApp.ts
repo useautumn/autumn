@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { adminTokenMiddleware } from "../multiTenant/adminTokenMiddleware.js";
 import { mountMultiTenantRoutes } from "../multiTenant/mountMultiTenantRoutes.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
@@ -26,10 +27,18 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 		requestBodyMiddleware,
 	);
 	app.get("/health", receiveHealth({ ctx }));
-	app.get("/health/profile", receiveProfile);
-	app.post("/health/floor", receiveFloor);
+	// Diagnostics read the Atom's own data and CPU: the deployment's token opens them, or a multi-tenant Atom's admin token.
+	const diagnosticsOnly = ctx.multiTenant
+		? adminTokenMiddleware({ ctx: ctx.multiTenant })
+		: atomTokenMiddleware({ ctx });
+	app.get("/health/profile", diagnosticsOnly, receiveProfile);
+	app.post("/health/floor", diagnosticsOnly, receiveFloor);
 	if (ctx.dataDir)
-		app.get("/health/bench", receiveBench({ dataDir: ctx.dataDir }));
+		app.get(
+			"/health/bench",
+			diagnosticsOnly,
+			receiveBench({ dataDir: ctx.dataDir }),
+		);
 	if (ctx.multiTenant) mountMultiTenantRoutes({ app, ctx: ctx.multiTenant });
 
 	// Everything else needs the Atom token: the customer's app asks, Autumn keeps the subjects current.

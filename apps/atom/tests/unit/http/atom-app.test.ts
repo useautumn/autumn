@@ -519,6 +519,23 @@ describe("the request line", () => {
 		});
 	});
 
+	test("the diagnostics answer only the Atom's token; a multi-tenant Atom's, only the admin token", async () => {
+		const { app } = createDeployedApp();
+		const multiTenant = createMultiTenantApp();
+		const floor = (target: typeof app, headers: Record<string, string>) =>
+			target.request("/health/floor", { method: "POST", headers });
+
+		expect((await app.request("/health/profile?seconds=0")).status).toBe(401);
+		expect((await floor(app, {})).status).toBe(401);
+		expect((await floor(app, { "x-atom-token": ATOM_TOKEN })).status).toBe(200);
+		expect(
+			(await floor(multiTenant, { "x-atom-token": ATOM_TOKEN })).status,
+		).toBe(401);
+		expect(
+			(await floor(multiTenant, { "x-atom-admin-token": ADMIN_TOKEN })).status,
+		).toBe(200);
+	});
+
 	test("the health probe is not logged", async () => {
 		const { app, logged } = createDeployedApp();
 

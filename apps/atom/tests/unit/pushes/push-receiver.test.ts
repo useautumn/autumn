@@ -10,6 +10,7 @@ import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenan
 import { createPushReceiver } from "../../../src/pushes/createPushReceiver.js";
 import {
 	checkRequestFor,
+	checkResponseOf,
 	forwardReasonOf,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -98,10 +99,14 @@ const drain = async ({
 	return { acked: fake.acked, warnings };
 };
 
-const checkCustomer = (slots: ReturnType<Auth["authorize"]>) =>
-	slots
-		?.processorFor({ customerId: "cus_1" })
-		.check({ request: checkRequestFor({ params: { required_balance: 5 } }) });
+const checkCustomer = async (slots: ReturnType<Auth["authorize"]>) => {
+	const processor = slots?.processorFor({ customerId: "cus_1" });
+	if (!processor) return undefined;
+	return checkResponseOf({
+		processor,
+		request: checkRequestFor({ params: { required_balance: 5 } }),
+	});
+};
 
 describe("push receiver", () => {
 	test("an org's Atom applies a queued subject through the HTTP route's apply, then acks it", async () => {
