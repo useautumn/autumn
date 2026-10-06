@@ -1,9 +1,11 @@
 import { expect } from "bun:test";
 import { msToSeconds, stripeToAtmnAmount } from "@autumn/shared";
+import { calculateProration } from "@tests/integration/billing/utils/proration";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { addHours } from "date-fns";
+import { Decimal } from "decimal.js";
 import { findStripeSubscriptionByStatus } from "../../utils/subscriptionStateUtils";
 
 /** The live Stripe subscription's cycle, to the second: its anchor (when given) and the current period's end. */
@@ -77,4 +79,24 @@ export const expectNextCycleTotalMatchesStripe = async ({
 	expect(nextCycleTotal).toBe(
 		stripeToAtmnAmount({ amount: upcomingInvoice.total, currency: "usd" }),
 	);
+};
+
+/** Stripe's switch proration: the new plan's charge and the old plan's credit, each rounded to cents. */
+export const calculateStripeProratedSwitch = async ({
+	customerId,
+	advancedTo,
+	oldAmount,
+	newAmount,
+}: {
+	customerId: string;
+	advancedTo: number;
+	oldAmount: number;
+	newAmount: number;
+}) => {
+	const [charge, credit] = await Promise.all(
+		[newAmount, oldAmount].map((amount) =>
+			calculateProration({ customerId, advancedTo, amount }),
+		),
+	);
+	return new Decimal(charge).minus(credit).toNumber();
 };
