@@ -12,6 +12,7 @@ packages/openapi/openapi-internal.yml
 packages/sdk/.devcontainer/
 packages/sdk/.gitattributes
 packages/sdk/.npmignore
+packages/sdk/.speakeasy/code-samples.overlay.yaml
 packages/sdk/.speakeasy/gen.lock
 packages/sdk/.speakeasy/out.openapi.yaml
 packages/sdk/.speakeasy/workflow.lock
@@ -38,6 +39,7 @@ packages/sdk/src/hooks/types.ts
 
 # Python SDK (Speakeasy); src/autumn_sdk/_hooks/* other than these three are hand-written
 others/python-sdk/.gitattributes
+others/python-sdk/.speakeasy/code-samples.overlay.yaml
 others/python-sdk/.speakeasy/gen.lock
 others/python-sdk/.vscode/
 others/python-sdk/README.md

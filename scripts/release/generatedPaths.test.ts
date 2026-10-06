@@ -127,6 +127,8 @@ describe(".github/generated-paths.txt", () => {
 		"packages/openapi/openapi-stripped.yml",
 		"packages/openapi/openapi-internal.yml",
 		"apps/docs/mintlify/api/openapi.yml",
+		"packages/sdk/.speakeasy/code-samples.overlay.yaml",
+		"others/python-sdk/.speakeasy/code-samples.overlay.yaml",
 		"apps/docs/mintlify/snippets/svix-transforms/slack.mdx",
 		"packages/autumn-js/src/generated/schemas.ts",
 		"packages/atmn/src/generated/apiRoutes.ts",
