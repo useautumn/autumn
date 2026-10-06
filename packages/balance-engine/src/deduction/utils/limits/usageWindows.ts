@@ -10,6 +10,7 @@ import type { DeductionContext } from "../../types/deductionContext.js";
 import type { DeductionDelta } from "../../types/deductionDelta.js";
 import type { DeductionRow } from "../../types/deductionRow.js";
 import type { DeductionState } from "../../types/deductionState.js";
+import { isFreeRow } from "../classifyDeductionUtils.js";
 import { deductionRowToRateUnits } from "../convertDeductionUtils.js";
 import { creditRateUnitsForCreditChange } from "../credits/creditRateUnitsForCreditChange.js";
 
@@ -96,6 +97,9 @@ export const deductionRowToUsageWindowHeadroom = ({
 	let allowed: Decimal | null = null;
 	for (const limit of context.usageWindowLimits) {
 		if (!appliesTo({ limit, row })) continue;
+		// A zero rate spends no credits, so a balance cap never binds it.
+		if (limit.dimension_type === "balance" && row && isFreeRow({ row }))
+			continue;
 		const headroom = headroomOf({ context, deductionState, limit });
 		// Balance caps are in credits; the row's rate converts them to tracked units.
 		const units =

@@ -11,6 +11,8 @@ import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
 import { mergePreservedSchedulePhases } from "../subscriptionScope/mergePreservedSchedulePhases";
+import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
+import { carrySavedProrationBehaviors } from "./carrySavedProrationBehaviors";
 
 /**
  * A customer holds one schedule, so a new one replaces everything queued. Scope
@@ -41,6 +43,7 @@ export const getExistingScheduleState = async ({
 		.select({
 			starts_at: schedulePhases.starts_at,
 			customer_product_ids: schedulePhases.customer_product_ids,
+			proration_behavior: schedulePhases.proration_behavior,
 		})
 		.from(schedulePhases)
 		.where(inArray(schedulePhases.schedule_id, scheduleIds));
@@ -53,6 +56,7 @@ export const getExistingScheduleState = async ({
 		existingPhases: existingPhases.map((phase) => ({
 			startsAt: phase.starts_at,
 			customerProductIds: phase.customer_product_ids,
+			prorationBehavior: phase.proration_behavior,
 		})),
 	};
 };
@@ -96,7 +100,7 @@ export const persistSetPlansSchedule = async ({
 	customerId: CreateScheduleParamsV0["customer_id"];
 	currentEpochMs: number;
 	fullCustomer: FullCustomer;
-	phases: { startsAt: number; customerProductIds: string[] }[];
+	phases: SchedulePhasePlan[];
 	preservedCustomerProductIds?: string[];
 	deleteDroppedScheduledRows?: boolean;
 }) => {
@@ -109,10 +113,13 @@ export const persistSetPlansSchedule = async ({
 			internalCustomerId: fullCustomer.internal_id,
 		});
 
-		const persistedPhases = mergePreservedSchedulePhases({
-			phases,
-			existingPhases: existingScheduleState.existingPhases,
-			preservedCustomerProductIds: new Set(preservedCustomerProductIds),
+		const persistedPhases = carrySavedProrationBehaviors({
+			phases: mergePreservedSchedulePhases({
+				phases,
+				existingPhases: existingScheduleState.existingPhases,
+				preservedCustomerProductIds: new Set(preservedCustomerProductIds),
+			}),
+			savedPhases: existingScheduleState.existingPhases,
 		});
 
 		if (deleteDroppedScheduledRows) {
@@ -147,6 +154,7 @@ export const persistSetPlansSchedule = async ({
 			phase_id: generateId("phase"),
 			starts_at: phase.startsAt,
 			customer_product_ids: phase.customerProductIds,
+			proration_behavior: phase.prorationBehavior,
 		}));
 
 		await txDb.insert(schedulePhases).values(
@@ -155,6 +163,7 @@ export const persistSetPlansSchedule = async ({
 				schedule_id: scheduleId,
 				starts_at: phase.starts_at,
 				customer_product_ids: phase.customer_product_ids,
+				proration_behavior: phase.proration_behavior,
 				created_at: currentEpochMs,
 			})),
 		);

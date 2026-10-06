@@ -1,28 +1,109 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
+import { isPostgresConnectionFailure } from "../../src/common/postgresErrors.js";
+import { runInTransaction } from "../../src/common/runInTransaction.js";
+import { createPostgresClient } from "../../src/createPostgresClient.js";
+import type { PostgresClient } from "../../src/types/postgresClient.js";
 import {
-	createPostgresClient,
-	sqlOptionsOf,
-} from "../../src/createPostgresClient.js";
+	type FakePostgresServer,
+	startFakePostgresServer,
+} from "../fixtures/fakePostgresServer.js";
 
-const config = {
-	databaseUrl: "postgres://user:secret@127.0.0.1:1/never",
-	maxConnections: 2,
-	connectTimeout: 1,
-	idleTimeout: 30,
+const QUERY_TIMEOUT_SECONDS = 1;
+const logger = { warn: () => {} };
+
+const elapsedMs = async (run: () => Promise<unknown>) => {
+	const startedAt = performance.now();
+	await run().catch(() => {});
+	return performance.now() - startedAt;
 };
 
 describe("createPostgresClient", () => {
-	test("opens lazily and closes without ever connecting", async () => {
-		const { db, close } = createPostgresClient({ config });
+	let server: FakePostgresServer;
+	let postgres: PostgresClient;
 
-		expect(db.query.customerEntitlements).toBeDefined();
-		await expect(close()).resolves.toBeUndefined();
+	beforeEach(async () => {
+		server = await startFakePostgresServer();
+		postgres = createPostgresClient({
+			ctx: { logger },
+			config: {
+				databaseUrl: server.url,
+				applicationName: "postgres-test",
+				maxConnections: 1,
+				connectTimeout: 1,
+				idleTimeout: 30,
+				queryTimeout: QUERY_TIMEOUT_SECONDS,
+			},
+		});
 	});
 
-	test("never ends a connection by age unless asked, since Bun fails every query still on it", () => {
-		expect(sqlOptionsOf({ config }).maxLifetime).toBe(0);
-		expect(
-			sqlOptionsOf({ config: { ...config, maxLifetime: 60 } }),
-		).toMatchObject({ maxLifetime: 60 });
+	/** Drizzle's query is a thenable, not a promise; `expect().rejects` wants the promise. */
+	const selectOne = () => Promise.resolve(postgres.db.execute(sql`select 1`));
+
+	afterEach(async () => {
+		await postgres.close();
+		await server.close();
+	});
+
+	test("opens lazily and closes without ever connecting", () => {
+		expect(postgres.db.query.customerEntitlements).toBeDefined();
+		expect(server.connections()).toBe(0);
+	});
+
+	test("a query on a silent connection fails at the query timeout, not the idle timeout", async () => {
+		await selectOne();
+		server.silenceOpenConnections();
+
+		const startedAt = performance.now();
+		const error = await selectOne().catch((cause: unknown) => cause);
+
+		expect(performance.now() - startedAt).toBeLessThan(
+			QUERY_TIMEOUT_SECONDS * 1000 + 500,
+		);
+		expect(error).toBeInstanceOf(Error);
+		expect((error as Error).message).toBe("Query read timeout");
+		expect(isPostgresConnectionFailure({ error })).toBe(true);
+	});
+
+	test("a query that timed out leaves the pool, so the next query gets a live connection", async () => {
+		await selectOne();
+		server.silenceOpenConnections();
+		await expect(selectOne()).rejects.toThrow();
+
+		await expect(selectOne()).resolves.toBeDefined();
+		expect(server.connections()).toBe(2);
+	});
+
+	test("a transaction that timed out leaves the pool, within two query timeouts (its rollback waits one)", async () => {
+		const failedAfterMs = await elapsedMs(() =>
+			runInTransaction({
+				ctx: { db: postgres.db },
+				run: async (tx) => {
+					server.silenceOpenConnections();
+					await tx.execute(sql`select 1`);
+				},
+			}),
+		);
+		expect(failedAfterMs).toBeLessThan(2 * QUERY_TIMEOUT_SECONDS * 1000 + 500);
+
+		await expect(selectOne()).resolves.toBeDefined();
+		expect(server.connections()).toBe(2);
+	});
+
+	test("a transaction that fails in Postgres keeps its connection", async () => {
+		await expect(
+			runInTransaction({
+				ctx: { db: postgres.db },
+				run: async () => {
+					throw Object.assign(new Error("duplicate key"), {
+						code: "23505",
+						severity: "ERROR",
+					});
+				},
+			}),
+		).rejects.toThrow("duplicate key");
+
+		await selectOne();
+		expect(server.connections()).toBe(1);
 	});
 });

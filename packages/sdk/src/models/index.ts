@@ -78,7 +78,7 @@ export * from "./multi-attach-op.js";
 export * from "./multi-update-op.js";
 export * from "./open-customer-portal-op.js";
 export * from "./pay-invoice-op.js";
-export * from "./phase-start-add-item-feature-override.js";
+export * from "./phase-add-item-feature-override-2.js";
 export * from "./plan-variant-details-billing-controls-1.js";
 export * from "./plan.js";
 export * from "./preview-attach-response.js";

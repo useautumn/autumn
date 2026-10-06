@@ -119,9 +119,17 @@ export const computeSetPlansPlan = ({
 
 	const phases = diffToSchedule({
 		diff: timeline.diff,
-		phaseStarts: [
-			billingContext.immediatePhase.starts_at,
-			...billingContext.scheduledPhaseContexts.map(({ startsAt }) => startsAt),
+		requestedPhases: [
+			{
+				startsAt: billingContext.immediatePhase.starts_at,
+				prorationBehavior: null,
+			},
+			...billingContext.scheduledPhaseContexts.map(
+				({ startsAt, prorationBehavior }) => ({
+					startsAt,
+					prorationBehavior: prorationBehavior ?? null,
+				}),
+			),
 		],
 		customerProductIdBySegmentId:
 			customerProductChanges.customerProductIdBySegmentId,

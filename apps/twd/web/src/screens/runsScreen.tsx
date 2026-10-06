@@ -1,10 +1,11 @@
 import { TablePaginationFooter } from "@autumn/ui/components/table/table-pagination-footer";
 import { useCursorPagination } from "@autumn/ui/components/table/use-cursor-pagination";
 import { buttonVariants } from "@autumn/ui/components/ui/button";
+import { Switch } from "@autumn/ui/components/ui/switch";
 import { PlayIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { RunSummary } from "../../../src/api/contract.ts";
 import { type RunsFilter, useRuns } from "../api/hooks.ts";
@@ -28,6 +29,7 @@ import {
 } from "../components/ui.tsx";
 import { cn, elapsed, num, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
+import { BaselinePassRateChart } from "./runs/baselinePassRateChart.tsx";
 
 const FINISHED_FILTERS = ["all", "passed", "failed", "cancelled"] as const;
 type FinishedFilter = (typeof FINISHED_FILTERS)[number];
@@ -211,10 +213,13 @@ export const RunsScreen = () => {
 	const [params, setParams] = useSearchParams();
 	const branch = params.get("branch") ?? "";
 	const finishedFilter = (params.get("status") ?? "all") as FinishedFilter;
+	const baselinesOnly = params.get("baselines") === "1";
+	const baselinesToggleId = useId();
 	const live = usePagedRuns({ status: "live", branch: branch || undefined });
 	const finished = usePagedRuns({
 		status: "finished",
 		outcome: finishedFilter,
+		purpose: baselinesOnly ? "baseline" : undefined,
 		branch: branch || undefined,
 	});
 	const now = useNow();
@@ -222,7 +227,7 @@ export const RunsScreen = () => {
 
 	const setParam = (key: string, value: string) => {
 		const next = new URLSearchParams(params);
-		if (value && value !== "all") next.set(key, value);
+		if (value && value !== "all" && value !== "0") next.set(key, value);
 		else next.delete(key);
 		setParams(next, { replace: true });
 	};
@@ -261,39 +266,65 @@ export const RunsScreen = () => {
 				className="mb-4"
 			/>
 
-			<SectionTag>
-				Live{" "}
-				<span className="text-subtle tabular-nums">
-					{live.page ? num(live.page.total) : ""}
-				</span>
-			</SectionTag>
-			<DataTable
-				data={live.page?.runs}
-				isLoading={live.query.isLoading}
-				footer={live.footer}
-				columns={columns}
-				getRowHref={href}
-				emptyText={
-					branch
-						? `No live runs on “${branch}”`
-						: "Nothing running. Runs appear here the moment they are queued."
-				}
-			/>
+			<div className="flex min-h-0 shrink-0 flex-col sm:max-h-[35%]">
+				<SectionTag>
+					Live{" "}
+					<span className="text-subtle tabular-nums">
+						{live.page ? num(live.page.total) : ""}
+					</span>
+				</SectionTag>
+				<DataTable
+					fill
+					data={live.page?.runs}
+					isLoading={live.query.isLoading}
+					footer={live.footer}
+					columns={columns}
+					getRowHref={href}
+					emptyText={
+						branch
+							? `No live runs on “${branch}”`
+							: "Nothing running. Runs appear here the moment they are queued."
+					}
+				/>
+			</div>
 
-			<SectionTag className="mt-6">
-				Finished{" "}
-				<span className="text-subtle tabular-nums">
-					{finished.page ? num(finished.page.total) : ""}
-				</span>
-			</SectionTag>
-			<DataTable
-				data={finished.page?.runs}
-				isLoading={finished.query.isLoading}
-				footer={finished.footer}
-				columns={columns}
-				getRowHref={href}
-				emptyText="No finished runs match. Clear the branch or status filter to see more."
-			/>
+			<div className="mt-6 flex min-h-0 flex-1 flex-col">
+				<div className="mb-2 flex items-center justify-between gap-2">
+					<SectionTag className="mb-0">
+						Finished{" "}
+						<span className="text-subtle tabular-nums">
+							{finished.page ? num(finished.page.total) : ""}
+						</span>
+					</SectionTag>
+					<label
+						htmlFor={baselinesToggleId}
+						className="flex cursor-pointer items-center gap-2 text-xs text-tertiary-foreground"
+					>
+						<Switch
+							id={baselinesToggleId}
+							checked={baselinesOnly}
+							onCheckedChange={(on) => setParam("baselines", on ? "1" : "0")}
+						/>
+						Baselines only
+					</label>
+				</div>
+				{baselinesOnly && (
+					<BaselinePassRateChart branch={branch || undefined} />
+				)}
+				<DataTable
+					fill
+					data={finished.page?.runs}
+					isLoading={finished.query.isLoading}
+					footer={finished.footer}
+					columns={columns}
+					getRowHref={href}
+					emptyText={
+						baselinesOnly
+							? "No finished baseline runs match. Clear the branch or status filter to see more."
+							: "No finished runs match. Clear the branch or status filter to see more."
+					}
+				/>
+			</div>
 		</>
 	);
 };

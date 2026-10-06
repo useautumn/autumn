@@ -52,6 +52,8 @@ export const CustomerStatePhaseSchema = z.object({
 	plans: z.array(CustomerStatePlanSchema).min(1),
 	/** Later phases reset the billing cycle at their start unless this is set. */
 	keepsCycleAnchor: z.boolean().optional(),
+	/** The first phase's is the request's proration; a later phase's bills its start. */
+	prorationBehavior: BillingBehaviorSchema.nullable().optional(),
 });
 
 export type CustomerStatePhase = z.infer<typeof CustomerStatePhaseSchema>;
@@ -62,19 +64,6 @@ export function hasPersistedCreateSchedule({
 	phases: CustomerStatePhase[];
 }) {
 	return phases[0]?.persistedStartsAt != null;
-}
-
-export function hasMultipleImmediateSchedulePlans({
-	phases,
-}: {
-	phases: CustomerStatePhase[];
-}) {
-	const immediatePhase = phases.find((phase) =>
-		phase.plans.some((plan) => plan.productId),
-	);
-	return (
-		(immediatePhase?.plans.filter((plan) => plan.productId).length ?? 0) > 1
-	);
 }
 
 export function getCurrentCreateSchedulePhaseIndex({
@@ -213,10 +202,7 @@ export const CustomerStateFormSchema = z
 		phases: z.array(CustomerStatePhaseSchema).min(1),
 		/** Billed with the first phase, then left alone by the schedule. */
 		unscheduledPlans: z.array(CustomerStatePlanSchema),
-		billingBehavior: BillingBehaviorSchema.nullable(),
 		resetBillingCycle: z.boolean(),
-		billingCycleAnchorMode: z.enum(["now", "custom"]),
-		billingCycleAnchorDate: z.number().nullable(),
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),
 	})

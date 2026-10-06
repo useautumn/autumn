@@ -4,7 +4,11 @@ import { entities } from "../../fixtures/entities/index.js";
 import { responses } from "../../fixtures/responses.js";
 import type { EvalSetup } from "../../fixtures/types.js";
 import type { EvalTrace } from "../tracing/types.js";
-import type { AutumnApiMock, AutumnApiMockOverrides } from "./types.js";
+import type {
+	AutumnApiMock,
+	AutumnApiMockHandler,
+	AutumnApiMockOverrides,
+} from "./types.js";
 
 const serverURL = "http://localhost:8080";
 
@@ -16,7 +20,9 @@ const endpointToTool = {
 	"/v1/billing.create_schedule": "createSchedule",
 	"/v1/billing.preview_attach": "previewAttach",
 	"/v1/billing.preview_create_schedule": "previewCreateSchedule",
+	"/v1/billing.preview_set_plans": "previewSetPlans",
 	"/v1/billing.preview_update": "previewUpdateSubscription",
+	"/v1/billing.set_plans": "setPlans",
 	"/v1/billing.update": "updateSubscription",
 	"/v1/customers.get": "getCustomer",
 	"/v1/customers.get_or_create": "getOrCreateCustomer",
@@ -99,6 +105,13 @@ const normalizeScheduleBody = (body: Record<string, unknown>) => ({
 		: body.phases,
 });
 
+const SCHEDULE_TOOL_NAMES = new Set<string>([
+	"createSchedule",
+	"previewCreateSchedule",
+	"previewSetPlans",
+	"setPlans",
+]);
+
 // The real API rejects entity ids the customer does not have.
 const findAttachEntityError = ({
 	body,
@@ -115,6 +128,32 @@ const findAttachEntityError = ({
 		(entity) => entity.id === entityId && entity.customer_id === customerId,
 	);
 	return entity ? null : { error: `entity ${entityId} not found for customer` };
+};
+
+// createSchedule and setPlans share one engine, so they mock the same way.
+const scheduleWrite: AutumnApiMockHandler = ({ body, setup }) => {
+	const customerId = getString(body, "customer_id");
+	const customer = setup.customers.find(
+		(customer) => customer.id === customerId,
+	);
+	if (!customer) return { error: "customer not found" };
+	return responses.createScheduleSuccess({
+		customerId,
+		entityId: getString(body, "entity_id") || null,
+		phases: body.phases,
+	});
+};
+
+const schedulePreview: AutumnApiMockHandler = ({ body, setup }) => {
+	const customerId = getString(body, "customer_id");
+	const customer = setup.customers.find(
+		(customer) => customer.id === customerId,
+	);
+	if (!customer) return { error: "customer not found" };
+	return responses.createSchedulePreview({
+		customerId,
+		phases: body.phases,
+	});
 };
 
 const defaultHandlers = {
@@ -184,18 +223,7 @@ const defaultHandlers = {
 		setup.entities.push(created);
 		return created;
 	},
-	createSchedule: ({ body, setup }) => {
-		const customerId = getString(body, "customer_id");
-		const customer = setup.customers.find(
-			(customer) => customer.id === customerId,
-		);
-		if (!customer) return { error: "customer not found" };
-		return responses.createScheduleSuccess({
-			customerId,
-			entityId: getString(body, "entity_id") || null,
-			phases: body.phases,
-		});
-	},
+	createSchedule: scheduleWrite,
 	getCustomer: ({ body, setup }) => {
 		const customer = setup.customers.find(
 			(customer) => customer.id === getString(body, "customer_id"),
@@ -290,17 +318,8 @@ const defaultHandlers = {
 		if (entityError) return entityError;
 		return responses.attachPreview({ customer, plan, request: body });
 	},
-	previewCreateSchedule: ({ body, setup }) => {
-		const customerId = getString(body, "customer_id");
-		const customer = setup.customers.find(
-			(customer) => customer.id === customerId,
-		);
-		if (!customer) return { error: "customer not found" };
-		return responses.createSchedulePreview({
-			customerId,
-			phases: body.phases,
-		});
-	},
+	previewCreateSchedule: schedulePreview,
+	previewSetPlans: schedulePreview,
 	previewUpdateSubscription: ({ body, setup }) => {
 		const customerId = getString(body, "customer_id");
 		const planId = getString(body, "plan_id");
@@ -365,6 +384,7 @@ const defaultHandlers = {
 		});
 		return setup.agentRules;
 	},
+	setPlans: scheduleWrite,
 } satisfies AutumnApiMockOverrides;
 
 export const createAutumnApiMock = ({
@@ -389,7 +409,7 @@ export const createAutumnApiMock = ({
 			endpointToTool[endpoint as keyof typeof endpointToTool] ?? null;
 		const rawBody = JSON.parse(String(init?.body ?? "{}"));
 		const body =
-			toolName === "previewCreateSchedule" || toolName === "createSchedule"
+			toolName && SCHEDULE_TOOL_NAMES.has(toolName)
 				? normalizeScheduleBody(rawBody)
 				: rawBody;
 		const call = { body, endpoint, toolName };

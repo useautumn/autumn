@@ -40,7 +40,16 @@ type MessageAdmission =
 	| { skip: true }
 	| { skip: false; trustedBot?: ChatTrustedBot };
 
-/** People always get through; a bot only when the workspace trusts it. */
+/** Slackbot posts workspace notices (e.g. "X was added to this channel by
+ * @Autumn") under this user id without a `bot_id`, so the adapter reports
+ * them as people; its own `isSystem` check looks for a different id. */
+const SLACKBOT_USER_ID = "USLACKBOT";
+
+export const isSlackbotNotice = (message: Message) =>
+	message.author.userId === SLACKBOT_USER_ID;
+
+/** People always get through; a bot only when the workspace trusts it, and
+ * Slackbot's notices never do, even when they tag the agent. */
 const admitMessage = async ({
 	findTrustedBot,
 	message,
@@ -48,6 +57,13 @@ const admitMessage = async ({
 	findTrustedBot: typeof findTrustedBotAuthor;
 	message: Message;
 }): Promise<MessageAdmission> => {
+	if (isSlackbotNotice(message)) {
+		rootLogger.info("Skipping Slackbot notice", {
+			event: "leaf.slack_message_skipped",
+			data: { reason: "slackbot_notice" },
+		});
+		return { skip: true };
+	}
 	if (message.author.isBot !== true) return { skip: false };
 	const trustedBot = await findTrustedBot({ message });
 	if (trustedBot) {

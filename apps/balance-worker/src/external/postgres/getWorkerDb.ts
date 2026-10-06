@@ -12,6 +12,7 @@ import {
 	listPooledBalancesWithoutOtherContributions,
 	type PostgresClient,
 	type PostgresClientConfig,
+	type PostgresLogger,
 	readPartitionProgress,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
@@ -33,21 +34,26 @@ export const workerPostgresClientConfig = ({
 	>;
 }): PostgresClientConfig => ({
 	databaseUrl: env.DATABASE_URL,
+	applicationName: "autumn-balance-worker",
 	maxConnections: env.BALANCE_WORKER_DATABASE_POOL_SIZE,
 	connectTimeout: 10,
 	idleTimeout: 30,
+	// Past the role's 2s statement_timeout plus bouncer queueing: only a connection that went silent waits this long.
+	queryTimeout: 5,
 });
 
 /** One pool per worker, closed with it; its size counts against the fleet's PgBouncer client budget. */
 export const createWorkerPostgresClient = ({
+	ctx,
 	env,
 }: {
+	ctx: { logger?: PostgresLogger };
 	env: Pick<
 		BalanceWorkerEnv,
 		"DATABASE_URL" | "BALANCE_WORKER_DATABASE_POOL_SIZE"
 	>;
 }): PostgresClient =>
-	createPostgresClient({ config: workerPostgresClientConfig({ env }) });
+	createPostgresClient({ ctx, config: workerPostgresClientConfig({ env }) });
 
 type WorkerDbContext = {
 	postgres: Pick<PostgresClient, "db">;

@@ -6,6 +6,7 @@ import {
 	FlushBookmarkConflictError,
 } from "../../../src/flush/repos/commitFlush.js";
 import type { FlushRequest } from "../../../src/flush/types/flush.js";
+import { databaseError } from "../../fixtures/databaseError.js";
 
 const request: FlushRequest = {
 	changes: [
@@ -33,11 +34,11 @@ const request: FlushRequest = {
 	],
 };
 
-/** Bun's server error for the rollback cast, as Postgres words it. */
+/** Postgres's error for the rollback cast, as it words it. */
 const castError = (text: string) =>
-	Object.assign(new Error(`invalid input syntax for type integer: "${text}"`), {
-		errno: "22P02",
-		code: "ERR_POSTGRES_SERVER_ERROR",
+	databaseError({
+		message: `invalid input syntax for type integer: "${text}"`,
+		code: "22P02",
 	});
 
 const dialect = new PgDialect();
@@ -51,13 +52,15 @@ const markerOf = (query: SQL): string => {
 	return marker;
 };
 
-const single = ({ execute }: { execute: (query: SQL) => Promise<unknown[]> }) =>
+const single = ({ execute }: { execute: (query: SQL) => Promise<unknown> }) =>
 	commitFlush({
 		ctx: {
 			db: {
 				execute,
-				transaction: () => {
-					throw new Error("the single-statement flush opened a transaction");
+				$client: {
+					connect: () => {
+						throw new Error("the single-statement flush opened a transaction");
+					},
 				},
 			} as never,
 		},
@@ -72,7 +75,7 @@ describe("commitFlush with roundTrips single", () => {
 		const result = await single({
 			execute: async () => {
 				statements++;
-				return [{ applied: [1, 1], bookmarks: 1 }];
+				return [{ rows: [] }, { rows: [{ applied: [1, 1], bookmarks: 1 }] }];
 			},
 		});
 		expect(statements).toBe(1);
@@ -101,12 +104,10 @@ describe("commitFlush with roundTrips single", () => {
 	test("a rollback worded in another lc_messages language still names the row that did not land", async () => {
 		const result = await single({
 			execute: async (query) => {
-				throw Object.assign(
-					new Error(
-						`ungültige Eingabesyntax für Typ integer: »${markerOf(query)}1:1,0«`,
-					),
-					{ errno: "22P02", code: "ERR_POSTGRES_SERVER_ERROR" },
-				);
+				throw databaseError({
+					message: `ungültige Eingabesyntax für Typ integer: »${markerOf(query)}1:1,0«`,
+					code: "22P02",
+				});
 			},
 		});
 		expect(result).toEqual({ applied: [true, false] });
@@ -133,7 +134,7 @@ describe("commitFlush with roundTrips single", () => {
 		const caught = await single({
 			execute: async (query) => {
 				thrown = Object.assign(castError(`${markerOf(query)}1:1,1`), {
-					errno: "57014",
+					code: "57014",
 				});
 				throw thrown;
 			},
@@ -142,9 +143,7 @@ describe("commitFlush with roundTrips single", () => {
 	});
 
 	test("any other Postgres error comes out unchanged", async () => {
-		const unique = Object.assign(new Error("duplicate key"), {
-			errno: "23505",
-		});
+		const unique = databaseError({ message: "duplicate key", code: "23505" });
 		await expect(
 			single({
 				execute: async () => {

@@ -9,3 +9,19 @@ export const BillingBehaviorSchema = z
 	});
 
 export type BillingBehavior = z.infer<typeof BillingBehaviorSchema>;
+
+export const PhaseProrationBehaviorSchema = BillingBehaviorSchema.exclude(
+	["bill_difference"],
+	{
+		error:
+			"A later phase's proration_behavior must be 'prorate_immediately' or 'none'. 'bill_difference' is only supported on the immediate phase.",
+	},
+).meta({
+	title: "PhaseProrationBehavior",
+	description:
+		"How the change when a later phase starts is billed. 'prorate_immediately' invoices the prorated difference at the phase start, 'none' skips it.",
+});
+
+export type PhaseProrationBehavior = z.infer<
+	typeof PhaseProrationBehaviorSchema
+>;

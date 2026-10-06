@@ -58,7 +58,22 @@ describe("getAgentIdOAuthConfigs", () => {
 				clientSecret: "secret_123",
 				scopes: ["openid", "email", "profile"],
 				pkce: true,
+				mapProfileToUser: expect.any(Function),
 			},
 		]);
+	});
+
+	test("names an agent from its profile, falling back to its inbox", () => {
+		setEnv({
+			AGENTID_CLIENT_ID: "client_123",
+			AGENTID_CLIENT_SECRET: "secret_123",
+		});
+		const [config] = getAgentIdOAuthConfigs();
+		expect(
+			config?.mapProfileToUser?.({ name: "Support Bot", email: "a@x.to" }),
+		).toEqual({ name: "Support Bot" });
+		expect(
+			config?.mapProfileToUser?.({ email: "support@acme.agentmail.to" }),
+		).toEqual({ name: "support" });
 	});
 });

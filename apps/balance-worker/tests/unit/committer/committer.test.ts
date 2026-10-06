@@ -29,7 +29,10 @@ function createGatedDb({
 	staleIds = new Set<string>(),
 	transientFailures = 0,
 	transientError = () =>
-		Object.assign(new Error("connection reset"), { errno: "08006" }),
+		Object.assign(new Error("connection reset"), {
+			code: "08006",
+			severity: "FATAL",
+		}),
 	progress = async () => null,
 }: {
 	failWhen?: (updates: readonly SubjectRowChange[]) => Error | null;
@@ -390,7 +393,7 @@ describe("committer", () => {
 				new Error(
 					'duplicate key value violates unique constraint "balance_locks_org_env_lock_id_key"',
 				),
-				{ errno: "23505" },
+				{ code: "23505", severity: "ERROR" },
 			);
 		};
 		const committer = createCommitter({
@@ -487,13 +490,10 @@ describe("committer", () => {
 		expect(infos[0]).toContain("after 7 attempts");
 	});
 
-	test("a connection Bun's driver lost mid-flush is retried with its rows, not skipped as a refused record", async () => {
+	test("a connection the driver lost mid-flush is retried with its rows, not skipped as a refused record", async () => {
 		const fake = createGatedDb({
 			transientFailures: 1,
-			transientError: () =>
-				Object.assign(new Error("Connection closed"), {
-					code: "ERR_POSTGRES_CONNECTION_CLOSED",
-				}),
+			transientError: () => new Error("Connection terminated unexpectedly"),
 		});
 		fake.openGate();
 		const committer = createCommitter({
@@ -520,10 +520,7 @@ describe("committer", () => {
 	test("a retry that finds the bookmark where this flush would leave it is the earlier attempt having landed: nothing is skipped or recovered", async () => {
 		const fake = createGatedDb({
 			transientFailures: 1,
-			transientError: () =>
-				Object.assign(new Error("Max lifetime timeout reached after 30m"), {
-					code: "ERR_POSTGRES_LIFETIME_TIMEOUT",
-				}),
+			transientError: () => new Error("Query read timeout"),
 			failWhen: () =>
 				new FlushBookmarkConflictError({ expected: 1, advanced: 0 }),
 			progress: async () => ({
@@ -571,10 +568,7 @@ describe("committer", () => {
 		]) {
 			const fake = createGatedDb({
 				transientFailures: 1,
-				transientError: () =>
-					Object.assign(new Error("Connection closed"), {
-						code: "ERR_POSTGRES_CONNECTION_CLOSED",
-					}),
+				transientError: () => new Error("Connection terminated unexpectedly"),
 				failWhen: () =>
 					new FlushBookmarkConflictError({ expected: 1, advanced: 0 }),
 				progress: async () =>
@@ -637,8 +631,8 @@ describe("committer", () => {
 			failWhen: (updates) =>
 				updates.length > 0
 					? Object.assign(new Error("duplicate key"), {
-							code: "ERR_POSTGRES_SERVER_ERROR",
-							errno: "23505",
+							code: "23505",
+							severity: "ERROR",
 						})
 					: null,
 		});

@@ -3,13 +3,13 @@ import { sql } from "drizzle-orm";
 import { inlineSqlParams } from "../../../src/common/inlineSqlParams.js";
 
 describe("inlineSqlParams", () => {
-	test("each value becomes a literal typed as Bun.sql binds it", () => {
+	test("each value becomes the untyped text literal pg binds it as", () => {
 		expect(
 			inlineSqlParams({
 				statement: sql`SELECT ${5}, ${-3}, ${2 ** 40}, ${0.5}, ${7n}, ${true}, ${null}, ${"x"}`,
 			}),
 		).toBe(
-			"SELECT '5'::int4, '-3'::int4, '1099511627776'::int8, '0.5'::float8, '7'::int8, true, NULL, E'x'",
+			"SELECT E'5', E'-3', E'1099511627776', E'0.5', E'7', E'true', NULL, E'x'",
 		);
 	});
 

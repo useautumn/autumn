@@ -23,7 +23,7 @@ export const getEntitySubjectRows = async ({
 	asOfTimestampMs: number;
 }): Promise<SubjectRowsEnvelope[]> => {
 	if (entityIds.length === 0) return [];
-	const rows = await ctx.db.execute(
+	const { rows } = await ctx.db.execute(
 		entitySubjectRowsSql({
 			ctx,
 			customerId,

@@ -15,7 +15,7 @@ describe("createWorkerDb", () => {
 		const timings = createDatabaseTimings();
 		const db = createWorkerDb({
 			ctx: {
-				postgres: { db: { execute: async () => [] } as never },
+				postgres: { db: { execute: async () => ({ rows: [] }) } as never },
 				subjectLoads: {
 					run: async (load) => {
 						gated.push("subject_rows");
@@ -38,7 +38,7 @@ describe("createWorkerDb", () => {
 		const timings = createDatabaseTimings();
 		const db = createWorkerDb({
 			ctx: {
-				postgres: { db: { execute: async () => [] } as never },
+				postgres: { db: { execute: async () => ({ rows: [] }) } as never },
 				subjectLoads: {
 					run: async (load) => {
 						gated.push("entity_rows");

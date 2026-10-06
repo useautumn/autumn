@@ -37,7 +37,7 @@ import {
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil, timeout } from "@tests/utils/genUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -49,8 +49,8 @@ import { ProductService } from "@/internal/products/ProductService.js";
 
 const EXPIRY = { duration: EntitlementDuration.Month, length: 2 };
 
-/** Auto top-up runs through SQS, so the assertions wait for the worker. */
-const AUTO_TOPUP_WAIT_MS = 20000;
+/** Auto top-up runs through SQS; ceiling for the poll, which exits once it lands. */
+const AUTO_TOPUP_SETTLE_MS = 90_000;
 
 const expiringItem = {
 	feature_id: TestFeature.Messages,
@@ -319,12 +319,18 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		const fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			withEntities: true,
+		// The job queues behind this file's concurrent Stripe work; a fixed sleep raced it.
+		const fullCustomer = await pollUntil({
+			fetch: () =>
+				CusService.getFull({
+					ctx,
+					idOrInternalId: customerId,
+					withEntities: true,
+				}),
+			until: (fullCustomer) =>
+				messageRows({ fullCustomer, planId }).grants.length >= 2,
+			timeoutMs: AUTO_TOPUP_SETTLE_MS,
 		});
 		const { customerProduct, keystones, grants } = messageRows({
 			fullCustomer,
@@ -351,8 +357,13 @@ test.concurrent(
 			)?.quantity,
 		).toBe(1);
 
-		// the cache saw the new row
-		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		// the cache saw the new row (the job drops it right after the insert)
+		const customer = await pollUntil({
+			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+			until: (customer) =>
+				customer.balances[TestFeature.Messages].remaining === 115,
+			timeoutMs: 10_000,
+		});
 		expect(customer.balances[TestFeature.Messages].remaining).toBe(115);
 		expect(customerProduct?.is_custom).toBe(false);
 	},

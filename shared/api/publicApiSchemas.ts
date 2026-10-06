@@ -3,7 +3,10 @@ export { AttachParamsV1Schema } from "./billing/attachV2/attachParamsV1.js";
 export {
 	CreateScheduleParamsV0Schema,
 	CreateSchedulePhaseSchema,
+	createScheduleTimingIssues,
+	schedulePhaseBillingIssues,
 } from "./billing/createSchedule/createScheduleParamsV0.js";
+export { SetPlansParamsV0Schema } from "./billing/setPlans/setPlansParamsV0.js";
 export { UpdateSubscriptionV1ParamsSchema } from "./billing/updateSubscription/updateSubscriptionV1Params.js";
 export {
 	CatalogGetMappingsParamsSchema,

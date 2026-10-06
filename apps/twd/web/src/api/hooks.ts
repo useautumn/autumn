@@ -19,6 +19,7 @@ import {
 	Job,
 	KeysOverview,
 	Me,
+	RetryBrokenAccountsResponse,
 	RunDetail,
 	RunSummary,
 	RunsPage,
@@ -50,6 +51,7 @@ export type CostsFilter = { from: string; bucket: "day" | "week" };
 export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
+	purpose?: RunSummary["purpose"];
 	branch?: string;
 	cursor?: string;
 	limit: number;
@@ -395,6 +397,23 @@ export const useNukeAccounts = () => {
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: qk.accounts });
 			qc.invalidateQueries({ queryKey: qk.capacity });
+		},
+	});
+};
+
+export const useRetryBrokenAccounts = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			api({
+				method: "POST",
+				path: "/accounts/retry-broken",
+				schema: RetryBrokenAccountsResponse,
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: qk.accounts });
+			qc.invalidateQueries({ queryKey: qk.capacity });
+			qc.invalidateQueries({ queryKey: qk.keys });
 		},
 	});
 };

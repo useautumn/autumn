@@ -4,6 +4,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadLocalEnv } from "@server/utils/envUtils.js";
+import {
+	machineIdForBinding,
+	readCapyBindingId,
+} from "./capy/machineIdentity.ts";
 
 loadLocalEnv();
 
@@ -15,17 +19,37 @@ if (process.env.PW_MODE !== "1") {
 		fileURLToPath(new URL(".", import.meta.url)),
 		"..",
 	);
-	for (const rel of [
+	const parseEnvFile = (rel: string) => {
+		const abs = join(__preloadRoot, rel);
+		if (!existsSync(abs)) return [];
+		return readFileSync(abs, "utf-8")
+			.split(/\r?\n/)
+			.map((line) => line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/))
+			.filter((m): m is RegExpMatchArray => m !== null);
+	};
+	const envFiles = [
 		"server/.env.local",
 		"vite/.env.local",
 		"apps/checkout/.env.local",
-	]) {
-		const abs = join(__preloadRoot, rel);
-		if (!existsSync(abs)) continue;
-		const contents = readFileSync(abs, "utf-8");
-		for (const line of contents.split(/\r?\n/)) {
-			const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-			if (!m) continue;
+	].map(parseEnvFile);
+
+	// On Capy, env files baked into a snapshot point at another machine's Neon branch.
+	const bindingId = readCapyBindingId();
+	const stampedMachineId = envFiles[0].find(
+		(m) => m[1] === "CAPY_MACHINE_ID",
+	)?.[2];
+	const isForeignCapyEnv =
+		bindingId !== undefined &&
+		envFiles[0].length > 0 &&
+		stampedMachineId !== machineIdForBinding(bindingId);
+	if (isForeignCapyEnv) {
+		console.warn(
+			"[preload-env] ignoring .env.local files provisioned for another Capy machine; run `bun capy` to provision this one",
+		);
+	}
+
+	for (const entries of isForeignCapyEnv ? [] : envFiles) {
+		for (const m of entries) {
 			// AUTUMN_DB_DIRECT callers inject DATABASE_URL for a DB that
 			// .env.local may not describe yet (fresh branch provisioning).
 			if (process.env.AUTUMN_DB_DIRECT === "1" && m[1] === "DATABASE_URL")

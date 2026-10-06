@@ -2,16 +2,18 @@ import type { CustomerStatePhase } from "@/components/forms/customer-state/custo
 
 const PHASE_START = "phase_start";
 
-/** A later phase resets the billing cycle at its start unless it keeps the cycle anchor. */
+/** The first phase resets its cycle when asked to; a later phase does unless it keeps the cycle anchor. */
 export const phaseToBillingCycleAnchor = ({
 	phase,
 	isFirstPhase,
+	resetBillingCycle,
 }: {
 	phase: Pick<CustomerStatePhase, "keepsCycleAnchor">;
 	isFirstPhase: boolean;
+	resetBillingCycle: boolean;
 }): typeof PHASE_START | undefined => {
-	if (isFirstPhase || phase.keepsCycleAnchor) return undefined;
-	return PHASE_START;
+	const resets = isFirstPhase ? resetBillingCycle : !phase.keepsCycleAnchor;
+	return resets ? PHASE_START : undefined;
 };
 
 export const billingCycleAnchorToKeepsCycleAnchor = ({

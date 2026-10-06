@@ -15,6 +15,10 @@ export const isRefund = ({
 	deductionState: DeductionState;
 }): boolean => deductionState.remaining.lt(0);
 
+/** A flat zero rate: the row funds whatever reaches it without moving its balance. */
+export const isFreeRow = ({ row }: { row: DeductionRow }): boolean =>
+	row.rateCard === null && row.creditCost === 0;
+
 /** "overflow" drops the floors; "cap" and "reject" keep them. */
 export const allowsNegative = ({
 	deductionState,

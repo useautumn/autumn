@@ -2566,8 +2566,12 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       </Expandable>
     </DynamicParamField>
 
-    <DynamicParamField body="billing_cycle_anchor" type="'phase_start'">
-      Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+    <DynamicParamField body="billing_cycle_anchor" type="any">
+      Pass 'phase_start' to reset the billing cycle when this phase starts. On the first phase, a future timestamp in epoch milliseconds anchors the cycle on that date instead.
+    </DynamicParamField>
+
+    <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
+      How the change when this phase starts is billed. 'prorate_immediately' charges or credits the prorated difference, 'none' skips it. The first phase also takes 'bill_difference', which charges or credits the full-period price difference.
     </DynamicParamField>
 
   </Expandable>

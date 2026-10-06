@@ -15,6 +15,8 @@ const billingToolNames = new Set([
 	"createSchedule",
 	"previewAttach",
 	"previewCreateSchedule",
+	"previewSetPlans",
+	"setPlans",
 ]);
 
 const monthNames = [

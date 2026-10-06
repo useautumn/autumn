@@ -12,6 +12,7 @@ import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "../common/customizePlan/customizePlanV1";
+import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 
 export enum StartingAfterDuration {
 	Month = "month",
@@ -31,7 +32,10 @@ const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	},
 );
 
-export const PhaseBillingCycleAnchorSchema = z.enum(["phase_start"]);
+export const PhaseBillingCycleAnchorSchema = z.union([
+	z.literal("phase_start"),
+	UnixMsTimestampSchema,
+]);
 
 export const CreateSchedulePlanSchema = z.object({
 	plan_id: z.string().meta({
@@ -89,7 +93,11 @@ export const CreateSchedulePhaseSchema = z
 		}),
 		billing_cycle_anchor: PhaseBillingCycleAnchorSchema.optional().meta({
 			description:
-				"Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.",
+				"Pass 'phase_start' to reset the billing cycle when this phase starts. On the first phase, a future timestamp in epoch milliseconds anchors the cycle on that date instead.",
+		}),
+		proration_behavior: BillingBehaviorSchema.optional().meta({
+			description:
+				"How the change when this phase starts is billed. 'prorate_immediately' charges or credits the prorated difference, 'none' skips it. The first phase also takes 'bill_difference', which charges or credits the full-period price difference.",
 		}),
 	})
 	.check((ctx) => {
@@ -166,6 +174,55 @@ export const createScheduleTimingIssues = (
 	return issues;
 };
 
+/** Later phases bill their start through Stripe, which neither charges a full difference nor anchors on a date. */
+export const schedulePhaseBillingIssues = ({
+	phases,
+	immediatePhaseFieldsOnRequest = false,
+}: {
+	phases: readonly {
+		proration_behavior?: string;
+		billing_cycle_anchor?: string | number;
+	}[];
+	immediatePhaseFieldsOnRequest?: boolean;
+}): { message: string; path: (string | number)[] }[] =>
+	phases.flatMap((phase, index) => {
+		const issues: { message: string; path: (string | number)[] }[] = [];
+		const isFirstPhase = index === 0;
+		if (isFirstPhase && immediatePhaseFieldsOnRequest) {
+			if (phase.proration_behavior !== undefined) {
+				issues.push({
+					message:
+						"proration_behavior cannot be set on the first phase. Use the top-level billing_behavior instead.",
+					path: ["phases", index, "proration_behavior"],
+				});
+			}
+			if (typeof phase.billing_cycle_anchor === "number") {
+				issues.push({
+					message:
+						"A timestamp billing_cycle_anchor cannot be set on the first phase. Use the top-level billing_cycle_anchor instead.",
+					path: ["phases", index, "billing_cycle_anchor"],
+				});
+			}
+			return issues;
+		}
+		if (isFirstPhase) return issues;
+		if (phase.proration_behavior === "bill_difference") {
+			issues.push({
+				message:
+					"'bill_difference' is only supported on the first phase. A later phase's proration_behavior must be 'prorate_immediately' or 'none'.",
+				path: ["phases", index, "proration_behavior"],
+			});
+		}
+		if (typeof phase.billing_cycle_anchor === "number") {
+			issues.push({
+				message:
+					"A timestamp billing_cycle_anchor is only supported on the first phase. Later phases take 'phase_start'.",
+				path: ["phases", index, "billing_cycle_anchor"],
+			});
+		}
+		return issues;
+	});
+
 export const CreateScheduleParamsV0BaseSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer to create the schedule for.",
@@ -233,7 +290,14 @@ export const CreateScheduleParamsV0BaseSchema = z.object({
 
 export const CreateScheduleParamsV0Schema =
 	CreateScheduleParamsV0BaseSchema.check((ctx) => {
-		for (const issue of createScheduleTimingIssues(ctx.value.phases)) {
+		const issues = [
+			...createScheduleTimingIssues(ctx.value.phases),
+			...schedulePhaseBillingIssues({
+				phases: ctx.value.phases,
+				immediatePhaseFieldsOnRequest: true,
+			}),
+		];
+		for (const issue of issues) {
 			ctx.issues.push({ code: "custom", input: ctx.value, ...issue });
 		}
 	});

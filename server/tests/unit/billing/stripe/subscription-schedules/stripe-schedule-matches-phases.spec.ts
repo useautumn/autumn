@@ -14,15 +14,18 @@ const livePhase = ({
 	start,
 	end,
 	price,
+	prorationBehavior = "create_prorations",
 }: {
 	start: number;
 	end: number;
 	price: string;
+	prorationBehavior?: Stripe.SubscriptionSchedule.Phase.ProrationBehavior;
 }) =>
 	({
 		start_date: start,
 		end_date: end,
 		items: [{ price, quantity: 1 }],
+		proration_behavior: prorationBehavior,
 	}) as unknown as Stripe.SubscriptionSchedule.Phase;
 
 const liveSchedule = ({
@@ -30,11 +33,13 @@ const liveSchedule = ({
 	lastEnd,
 	status = "active",
 	firstStart = NOW_SECONDS - 100,
+	nextPhaseProrationBehavior,
 }: {
 	endBehavior: Stripe.SubscriptionSchedule.EndBehavior;
 	lastEnd: number;
 	status?: Stripe.SubscriptionSchedule.Status;
 	firstStart?: number;
+	nextPhaseProrationBehavior?: Stripe.SubscriptionSchedule.Phase.ProrationBehavior;
 }) =>
 	({
 		status,
@@ -45,24 +50,33 @@ const liveSchedule = ({
 				end: NEXT_PHASE,
 				price: "price_pro",
 			}),
-			livePhase({ start: NEXT_PHASE, end: lastEnd, price: "price_premium" }),
+			livePhase({
+				start: NEXT_PHASE,
+				end: lastEnd,
+				price: "price_premium",
+				prorationBehavior: nextPhaseProrationBehavior,
+			}),
 		],
 	}) as unknown as Stripe.SubscriptionSchedule;
 
 const requestedPhases = ({
 	lastEnd,
+	nextPhaseProrationBehavior,
 }: {
 	lastEnd?: number;
+	nextPhaseProrationBehavior?: Stripe.SubscriptionScheduleUpdateParams.Phase.ProrationBehavior;
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => [
 	{
 		start_date: NOW_SECONDS - 100,
 		end_date: NEXT_PHASE,
 		items: [{ price: "price_pro", quantity: 1 }],
+		proration_behavior: "none",
 	},
 	{
 		start_date: NEXT_PHASE,
 		end_date: lastEnd,
 		items: [{ price: "price_premium", quantity: 1 }],
+		proration_behavior: nextPhaseProrationBehavior,
 	},
 ];
 
@@ -124,6 +138,32 @@ describe(chalk.yellowBright("stripeScheduleMatchesPhases"), () => {
 					lastEnd: OLD_END,
 					firstStart: NOW_SECONDS - 7 * 86_400,
 				}),
+				phases: requestedPhases({}),
+				endBehavior: "release",
+				nowMs: NOW_SECONDS * 1000,
+			}),
+		).toBe(true);
+	});
+
+	test("a later phase whose proration changed is a change", () => {
+		expect(
+			stripeScheduleMatchesPhases({
+				schedule: liveSchedule({
+					endBehavior: "release",
+					lastEnd: OLD_END,
+					nextPhaseProrationBehavior: "always_invoice",
+				}),
+				phases: requestedPhases({ nextPhaseProrationBehavior: "none" }),
+				endBehavior: "release",
+				nowMs: NOW_SECONDS * 1000,
+			}),
+		).toBe(false);
+	});
+
+	test("an unset proration matches Stripe's default, and the started phase's is ignored", () => {
+		expect(
+			stripeScheduleMatchesPhases({
+				schedule: liveSchedule({ endBehavior: "release", lastEnd: OLD_END }),
 				phases: requestedPhases({}),
 				endBehavior: "release",
 				nowMs: NOW_SECONDS * 1000,

@@ -47,6 +47,7 @@ const matches = (run: RunSummary, filter: RunsFilter) =>
 	(!filter.outcome ||
 		filter.outcome === "all" ||
 		!!OUTCOMES[filter.outcome]?.includes(run.status)) &&
+	(!filter.purpose || run.purpose === filter.purpose) &&
 	(!filter.branch ||
 		run.branch.toLowerCase().includes(filter.branch.toLowerCase()));
 
@@ -225,6 +226,7 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 			return;
 		case "accounts.changed":
 			qc.invalidateQueries({ queryKey: qk.accounts });
+			qc.invalidateQueries({ queryKey: qk.keys });
 			return;
 		case "warm.updated":
 			qc.setQueryData<Branch[]>(qk.branches, (branches) =>

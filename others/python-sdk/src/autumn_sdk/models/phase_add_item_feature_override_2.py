@@ -1251,7 +1251,7 @@ StartsAt2 = TypeAliasType("StartsAt2", Union[float, str])
 r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
 
 
-PhaseStartDurationType = Literal[
+PhaseDurationType2 = Literal[
     "month",
     "year",
 ]
@@ -1261,7 +1261,7 @@ r"""The duration unit to offset this phase from the prior phase."""
 class StartingAfter2TypedDict(TypedDict):
     r"""Relative start offset from the previous resolved schedule phase."""
 
-    duration_type: PhaseStartDurationType
+    duration_type: PhaseDurationType2
     r"""The duration unit to offset this phase from the prior phase."""
     duration_count: int
     r"""How many duration_type periods after the prior phase to start."""
@@ -1270,14 +1270,14 @@ class StartingAfter2TypedDict(TypedDict):
 class StartingAfter2(BaseModel):
     r"""Relative start offset from the previous resolved schedule phase."""
 
-    duration_type: PhaseStartDurationType
+    duration_type: PhaseDurationType2
     r"""The duration unit to offset this phase from the prior phase."""
 
     duration_count: int
     r"""How many duration_type periods after the prior phase to start."""
 
 
-class PhaseStartFeatureQuantityTypedDict(TypedDict):
+class PhaseFeatureQuantity2TypedDict(TypedDict):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -1288,7 +1288,7 @@ class PhaseStartFeatureQuantityTypedDict(TypedDict):
     r"""Whether the customer can adjust the quantity."""
 
 
-class PhaseStartFeatureQuantity(BaseModel):
+class PhaseFeatureQuantity2(BaseModel):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -1317,14 +1317,14 @@ class PhaseStartFeatureQuantity(BaseModel):
         return m
 
 
-class PhaseStartLicenseQuantityTypedDict(TypedDict):
+class PhaseLicenseQuantity2TypedDict(TypedDict):
     license_plan_id: str
     r"""The license plan to set seat quantity for."""
     quantity: int
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
-class PhaseStartLicenseQuantity(BaseModel):
+class PhaseLicenseQuantity2(BaseModel):
     license_plan_id: str
     r"""The license plan to set seat quantity for."""
 
@@ -1332,7 +1332,7 @@ class PhaseStartLicenseQuantity(BaseModel):
     r"""Total seats for the license, inclusive of the plan's included amount — seats beyond it are paid."""
 
 
-PhaseStartPriceInterval = Literal[
+PhasePriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -1343,14 +1343,14 @@ PhaseStartPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class PhaseStartAdditionalCurrencyTypedDict(TypedDict):
+class PhaseAdditionalCurrency2TypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class PhaseStartAdditionalCurrency(BaseModel):
+class PhaseAdditionalCurrency2(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1358,32 +1358,32 @@ class PhaseStartAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class PhaseStartBasePriceTypedDict(TypedDict):
+class PhaseBasePrice2TypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
-    interval: PhaseStartPriceInterval
+    interval: PhasePriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[PhaseStartAdditionalCurrencyTypedDict]]
+    additional_currencies: NotRequired[List[PhaseAdditionalCurrency2TypedDict]]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class PhaseStartBasePrice(BaseModel):
+class PhaseBasePrice2(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
-    interval: PhaseStartPriceInterval
+    interval: PhasePriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[PhaseStartAdditionalCurrency]] = None
+    additional_currencies: Optional[List[PhaseAdditionalCurrency2]] = None
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
     @model_serializer(mode="wrap")
@@ -1403,15 +1403,15 @@ class PhaseStartBasePrice(BaseModel):
         return m
 
 
-class PhaseStartItemThresholdBillingTypedDict(TypedDict):
+class PhaseItemThresholdBilling2TypedDict(TypedDict):
     threshold: float
 
 
-class PhaseStartItemThresholdBilling(BaseModel):
+class PhaseItemThresholdBilling2(BaseModel):
     threshold: float
 
 
-PhaseStartItemResetInterval = Literal[
+PhaseItemResetInterval2 = Literal[
     "one_off",
     "minute",
     "hour",
@@ -1425,19 +1425,19 @@ PhaseStartItemResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class PhaseStartItemResetTypedDict(TypedDict):
+class PhaseItemReset2TypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PhaseStartItemResetInterval
+    interval: PhaseItemResetInterval2
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class PhaseStartItemReset(BaseModel):
+class PhaseItemReset2(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PhaseStartItemResetInterval
+    interval: PhaseItemResetInterval2
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = 1
@@ -1460,14 +1460,14 @@ class PhaseStartItemReset(BaseModel):
         return m
 
 
-class PhaseStartItemAdditionalCurrencyTypedDict(TypedDict):
+class PhaseItemAdditionalCurrency2TypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class PhaseStartItemAdditionalCurrency(BaseModel):
+class PhaseItemAdditionalCurrency2(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1475,15 +1475,15 @@ class PhaseStartItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-PhaseStartItemPriceToTypedDict = TypeAliasType(
-    "PhaseStartItemPriceToTypedDict", Union[float, str]
+PhaseItemPriceTo2TypedDict = TypeAliasType(
+    "PhaseItemPriceTo2TypedDict", Union[float, str]
 )
 
 
-PhaseStartItemPriceTo = TypeAliasType("PhaseStartItemPriceTo", Union[float, str])
+PhaseItemPriceTo2 = TypeAliasType("PhaseItemPriceTo2", Union[float, str])
 
 
-class PhaseStartItemTierAdditionalCurrencyTypedDict(TypedDict):
+class PhaseItemTierAdditionalCurrency2TypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -1492,7 +1492,7 @@ class PhaseStartItemTierAdditionalCurrencyTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class PhaseStartItemTierAdditionalCurrency(BaseModel):
+class PhaseItemTierAdditionalCurrency2(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -1519,24 +1519,22 @@ class PhaseStartItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class PhaseStartItemPriceTierTypedDict(TypedDict):
-    to: PhaseStartItemPriceToTypedDict
+class PhaseItemPriceTier2TypedDict(TypedDict):
+    to: PhaseItemPriceTo2TypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
-    additional_currencies: NotRequired[
-        List[PhaseStartItemTierAdditionalCurrencyTypedDict]
-    ]
+    additional_currencies: NotRequired[List[PhaseItemTierAdditionalCurrency2TypedDict]]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class PhaseStartItemPriceTier(BaseModel):
-    to: PhaseStartItemPriceTo
+class PhaseItemPriceTier2(BaseModel):
+    to: PhaseItemPriceTo2
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[PhaseStartItemTierAdditionalCurrency]] = None
+    additional_currencies: Optional[List[PhaseItemTierAdditionalCurrency2]] = None
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
     @model_serializer(mode="wrap")
@@ -1556,13 +1554,13 @@ class PhaseStartItemPriceTier(BaseModel):
         return m
 
 
-PhaseStartItemTierBehavior = Literal[
+PhaseItemTierBehavior2 = Literal[
     "graduated",
     "volume",
 ]
 
 
-PhaseStartItemPriceInterval = Literal[
+PhaseItemPriceInterval2 = Literal[
     "one_off",
     "week",
     "month",
@@ -1573,27 +1571,27 @@ PhaseStartItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-PhaseStartItemBillingMethod = Literal[
+PhaseItemBillingMethod2 = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class PhaseStartItemPriceTypedDict(TypedDict):
+class PhaseItemPrice2TypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: PhaseStartItemPriceInterval
+    interval: PhaseItemPriceInterval2
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: PhaseStartItemBillingMethod
+    billing_method: PhaseItemBillingMethod2
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[List[PhaseStartItemAdditionalCurrencyTypedDict]]
+    additional_currencies: NotRequired[List[PhaseItemAdditionalCurrency2TypedDict]]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[PhaseStartItemPriceTierTypedDict]]
+    tiers: NotRequired[List[PhaseItemPriceTier2TypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[PhaseStartItemTierBehavior]
+    tier_behavior: NotRequired[PhaseItemTierBehavior2]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -1602,25 +1600,25 @@ class PhaseStartItemPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class PhaseStartItemPrice(BaseModel):
+class PhaseItemPrice2(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: PhaseStartItemPriceInterval
+    interval: PhaseItemPriceInterval2
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: PhaseStartItemBillingMethod
+    billing_method: PhaseItemBillingMethod2
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[PhaseStartItemAdditionalCurrency]] = None
+    additional_currencies: Optional[List[PhaseItemAdditionalCurrency2]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[PhaseStartItemPriceTier]] = None
+    tiers: Optional[List[PhaseItemPriceTier2]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[PhaseStartItemTierBehavior] = None
+    tier_behavior: Optional[PhaseItemTierBehavior2] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -1667,7 +1665,7 @@ class PhaseStartItemPrice(BaseModel):
         return m
 
 
-PhaseStartItemOnIncrease = Literal[
+PhaseItemOnIncrease2 = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -1676,7 +1674,7 @@ PhaseStartItemOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-PhaseStartItemOnDecrease = Literal[
+PhaseItemOnDecrease2 = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -1686,36 +1684,36 @@ PhaseStartItemOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class PhaseStartItemProrationTypedDict(TypedDict):
+class PhaseItemProration2TypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: PhaseStartItemOnIncrease
+    on_increase: PhaseItemOnIncrease2
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: PhaseStartItemOnDecrease
+    on_decrease: PhaseItemOnDecrease2
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class PhaseStartItemProration(BaseModel):
+class PhaseItemProration2(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: PhaseStartItemOnIncrease
+    on_increase: PhaseItemOnIncrease2
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: PhaseStartItemOnDecrease
+    on_decrease: PhaseItemOnDecrease2
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-PhaseStartItemExpiryDurationType = Literal[
+PhaseItemExpiryDurationType2 = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class PhaseStartItemRolloverTypedDict(TypedDict):
+class PhaseItemRollover2TypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: PhaseStartItemExpiryDurationType
+    expiry_duration_type: PhaseItemExpiryDurationType2
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -1725,10 +1723,10 @@ class PhaseStartItemRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class PhaseStartItemRollover(BaseModel):
+class PhaseItemRollover2(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: PhaseStartItemExpiryDurationType
+    expiry_duration_type: PhaseItemExpiryDurationType2
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -1757,7 +1755,7 @@ class PhaseStartItemRollover(BaseModel):
         return m
 
 
-PhaseStartItemDuration = Literal[
+PhaseItemDuration2 = Literal[
     "day",
     "week",
     "month",
@@ -1765,33 +1763,33 @@ PhaseStartItemDuration = Literal[
 ]
 
 
-class PhaseStartItemExpiryTypedDict(TypedDict):
+class PhaseItemExpiry2TypedDict(TypedDict):
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    duration: PhaseStartItemDuration
+    duration: PhaseItemDuration2
     length: float
 
 
-class PhaseStartItemExpiry(BaseModel):
+class PhaseItemExpiry2(BaseModel):
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    duration: PhaseStartItemDuration
+    duration: PhaseItemDuration2
 
     length: float
 
 
-PhaseStartDimensionsItemMatch4TypedDict = TypeAliasType(
-    "PhaseStartDimensionsItemMatch4TypedDict", Union[str, float, bool]
+PhaseDimensionsItemMatch4TypedDict = TypeAliasType(
+    "PhaseDimensionsItemMatch4TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsItemMatch4 = TypeAliasType(
-    "PhaseStartDimensionsItemMatch4", Union[str, float, bool]
+PhaseDimensionsItemMatch4 = TypeAliasType(
+    "PhaseDimensionsItemMatch4", Union[str, float, bool]
 )
 
 
-class PhaseStartDimensionsItem4TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsItemMatch4TypedDict]
+class PhaseDimensionsItem4TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsItemMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -1799,8 +1797,8 @@ class PhaseStartDimensionsItem4TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class PhaseStartDimensionsItem4(BaseModel):
-    match: Dict[str, PhaseStartDimensionsItemMatch4]
+class PhaseDimensionsItem4(BaseModel):
+    match: Dict[str, PhaseDimensionsItemMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -1826,61 +1824,60 @@ class PhaseStartDimensionsItem4(BaseModel):
         return m
 
 
-PhaseStartDimensionsItemMatch3TypedDict = TypeAliasType(
-    "PhaseStartDimensionsItemMatch3TypedDict", Union[str, float, bool]
+PhaseDimensionsItemMatch3TypedDict = TypeAliasType(
+    "PhaseDimensionsItemMatch3TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsItemMatch3 = TypeAliasType(
-    "PhaseStartDimensionsItemMatch3", Union[str, float, bool]
+PhaseDimensionsItemMatch3 = TypeAliasType(
+    "PhaseDimensionsItemMatch3", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsToItemEnum2 = Literal["inf",]
+PhaseDimensionsToItemEnum2 = Literal["inf",]
 
 
-PhaseStartDimensionsItemToUnion2TypedDict = TypeAliasType(
-    "PhaseStartDimensionsItemToUnion2TypedDict",
-    Union[float, PhaseStartDimensionsToItemEnum2],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-PhaseStartDimensionsItemToUnion2 = TypeAliasType(
-    "PhaseStartDimensionsItemToUnion2", Union[float, PhaseStartDimensionsToItemEnum2]
+PhaseDimensionsItemToUnion2TypedDict = TypeAliasType(
+    "PhaseDimensionsItemToUnion2TypedDict", Union[float, PhaseDimensionsToItemEnum2]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class PhaseStartDimensionsItemTier2TypedDict(TypedDict):
-    to: PhaseStartDimensionsItemToUnion2TypedDict
+PhaseDimensionsItemToUnion2 = TypeAliasType(
+    "PhaseDimensionsItemToUnion2", Union[float, PhaseDimensionsToItemEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PhaseDimensionsItemTier2TypedDict(TypedDict):
+    to: PhaseDimensionsItemToUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsItemTier2(BaseModel):
-    to: PhaseStartDimensionsItemToUnion2
+class PhaseDimensionsItemTier2(BaseModel):
+    to: PhaseDimensionsItemToUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsItem3TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsItemMatch3TypedDict]
+class PhaseDimensionsItem3TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsItemMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[PhaseStartDimensionsItemTier2TypedDict]
+    tiers: List[PhaseDimensionsItemTier2TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class PhaseStartDimensionsItem3(BaseModel):
-    match: Dict[str, PhaseStartDimensionsItemMatch3]
+class PhaseDimensionsItem3(BaseModel):
+    match: Dict[str, PhaseDimensionsItemMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[PhaseStartDimensionsItemTier2]
+    tiers: List[PhaseDimensionsItemTier2]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -1907,30 +1904,29 @@ class PhaseStartDimensionsItem3(BaseModel):
         return m
 
 
-PhaseStartItemDimensionsUnion2TypedDict = TypeAliasType(
-    "PhaseStartItemDimensionsUnion2TypedDict",
-    Union[PhaseStartDimensionsItem4TypedDict, PhaseStartDimensionsItem3TypedDict],
+PhaseItemDimensionsUnion4TypedDict = TypeAliasType(
+    "PhaseItemDimensionsUnion4TypedDict",
+    Union[PhaseDimensionsItem4TypedDict, PhaseDimensionsItem3TypedDict],
 )
 
 
-PhaseStartItemDimensionsUnion2 = TypeAliasType(
-    "PhaseStartItemDimensionsUnion2",
-    Union[PhaseStartDimensionsItem4, PhaseStartDimensionsItem3],
+PhaseItemDimensionsUnion4 = TypeAliasType(
+    "PhaseItemDimensionsUnion4", Union[PhaseDimensionsItem4, PhaseDimensionsItem3]
 )
 
 
-PhaseStartItemMultipliersMatch2TypedDict = TypeAliasType(
-    "PhaseStartItemMultipliersMatch2TypedDict", Union[str, float, bool]
+PhaseItemMultipliersMatch4TypedDict = TypeAliasType(
+    "PhaseItemMultipliersMatch4TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartItemMultipliersMatch2 = TypeAliasType(
-    "PhaseStartItemMultipliersMatch2", Union[str, float, bool]
+PhaseItemMultipliersMatch4 = TypeAliasType(
+    "PhaseItemMultipliersMatch4", Union[str, float, bool]
 )
 
 
-class PhaseStartItemMultipliers2TypedDict(TypedDict):
-    match: Dict[str, PhaseStartItemMultipliersMatch2TypedDict]
+class PhaseItemMultipliers4TypedDict(TypedDict):
+    match: Dict[str, PhaseItemMultipliersMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
     r"""Multiplies the matched rate. All matching multipliers stack."""
@@ -1938,8 +1934,8 @@ class PhaseStartItemMultipliers2TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class PhaseStartItemMultipliers2(BaseModel):
-    match: Dict[str, PhaseStartItemMultipliersMatch2]
+class PhaseItemMultipliers4(BaseModel):
+    match: Dict[str, PhaseItemMultipliersMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     factor: Optional[float] = None
@@ -1965,20 +1961,20 @@ class PhaseStartItemMultipliers2(BaseModel):
         return m
 
 
-class PhaseStartCreditSchemaItem2TypedDict(TypedDict):
+class PhaseCreditSchemaItem2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, PhaseStartItemDimensionsUnion2TypedDict]]
+    dimensions: NotRequired[Dict[str, PhaseItemDimensionsUnion4TypedDict]]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, PhaseStartItemMultipliers2TypedDict]]
+    multipliers: NotRequired[Dict[str, PhaseItemMultipliers4TypedDict]]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
-class PhaseStartCreditSchemaItem2(BaseModel):
+class PhaseCreditSchemaItem2(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
@@ -1988,10 +1984,10 @@ class PhaseStartCreditSchemaItem2(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, PhaseStartItemDimensionsUnion2]] = None
+    dimensions: Optional[Dict[str, PhaseItemDimensionsUnion4]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, PhaseStartItemMultipliers2]] = None
+    multipliers: Optional[Dict[str, PhaseItemMultipliers4]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     @model_serializer(mode="wrap")
@@ -2011,18 +2007,18 @@ class PhaseStartCreditSchemaItem2(BaseModel):
         return m
 
 
-PhaseStartDimensionsItemMatch2TypedDict = TypeAliasType(
-    "PhaseStartDimensionsItemMatch2TypedDict", Union[str, float, bool]
+PhaseDimensionsItemMatch2TypedDict = TypeAliasType(
+    "PhaseDimensionsItemMatch2TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsItemMatch2 = TypeAliasType(
-    "PhaseStartDimensionsItemMatch2", Union[str, float, bool]
+PhaseDimensionsItemMatch2 = TypeAliasType(
+    "PhaseDimensionsItemMatch2", Union[str, float, bool]
 )
 
 
-class PhaseStartDimensionsItem2TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsItemMatch2TypedDict]
+class PhaseDimensionsItem2TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsItemMatch2TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -2030,8 +2026,8 @@ class PhaseStartDimensionsItem2TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class PhaseStartDimensionsItem2(BaseModel):
-    match: Dict[str, PhaseStartDimensionsItemMatch2]
+class PhaseDimensionsItem2(BaseModel):
+    match: Dict[str, PhaseDimensionsItemMatch2]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -2057,61 +2053,60 @@ class PhaseStartDimensionsItem2(BaseModel):
         return m
 
 
-PhaseStartDimensionsItemMatch1TypedDict = TypeAliasType(
-    "PhaseStartDimensionsItemMatch1TypedDict", Union[str, float, bool]
+PhaseDimensionsItemMatch1TypedDict = TypeAliasType(
+    "PhaseDimensionsItemMatch1TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsItemMatch1 = TypeAliasType(
-    "PhaseStartDimensionsItemMatch1", Union[str, float, bool]
+PhaseDimensionsItemMatch1 = TypeAliasType(
+    "PhaseDimensionsItemMatch1", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsToItemEnum1 = Literal["inf",]
+PhaseDimensionsToItemEnum1 = Literal["inf",]
 
 
-PhaseStartDimensionsItemToUnion1TypedDict = TypeAliasType(
-    "PhaseStartDimensionsItemToUnion1TypedDict",
-    Union[float, PhaseStartDimensionsToItemEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-PhaseStartDimensionsItemToUnion1 = TypeAliasType(
-    "PhaseStartDimensionsItemToUnion1", Union[float, PhaseStartDimensionsToItemEnum1]
+PhaseDimensionsItemToUnion1TypedDict = TypeAliasType(
+    "PhaseDimensionsItemToUnion1TypedDict", Union[float, PhaseDimensionsToItemEnum1]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class PhaseStartDimensionsItemTier1TypedDict(TypedDict):
-    to: PhaseStartDimensionsItemToUnion1TypedDict
+PhaseDimensionsItemToUnion1 = TypeAliasType(
+    "PhaseDimensionsItemToUnion1", Union[float, PhaseDimensionsToItemEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PhaseDimensionsItemTier1TypedDict(TypedDict):
+    to: PhaseDimensionsItemToUnion1TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsItemTier1(BaseModel):
-    to: PhaseStartDimensionsItemToUnion1
+class PhaseDimensionsItemTier1(BaseModel):
+    to: PhaseDimensionsItemToUnion1
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsItem1TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsItemMatch1TypedDict]
+class PhaseDimensionsItem1TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsItemMatch1TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[PhaseStartDimensionsItemTier1TypedDict]
+    tiers: List[PhaseDimensionsItemTier1TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class PhaseStartDimensionsItem1(BaseModel):
-    match: Dict[str, PhaseStartDimensionsItemMatch1]
+class PhaseDimensionsItem1(BaseModel):
+    match: Dict[str, PhaseDimensionsItemMatch1]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[PhaseStartDimensionsItemTier1]
+    tiers: List[PhaseDimensionsItemTier1]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -2138,30 +2133,29 @@ class PhaseStartDimensionsItem1(BaseModel):
         return m
 
 
-PhaseStartItemDimensionsUnion1TypedDict = TypeAliasType(
-    "PhaseStartItemDimensionsUnion1TypedDict",
-    Union[PhaseStartDimensionsItem2TypedDict, PhaseStartDimensionsItem1TypedDict],
+PhaseItemDimensionsUnion3TypedDict = TypeAliasType(
+    "PhaseItemDimensionsUnion3TypedDict",
+    Union[PhaseDimensionsItem2TypedDict, PhaseDimensionsItem1TypedDict],
 )
 
 
-PhaseStartItemDimensionsUnion1 = TypeAliasType(
-    "PhaseStartItemDimensionsUnion1",
-    Union[PhaseStartDimensionsItem2, PhaseStartDimensionsItem1],
+PhaseItemDimensionsUnion3 = TypeAliasType(
+    "PhaseItemDimensionsUnion3", Union[PhaseDimensionsItem2, PhaseDimensionsItem1]
 )
 
 
-PhaseStartItemMultipliersMatch1TypedDict = TypeAliasType(
-    "PhaseStartItemMultipliersMatch1TypedDict", Union[str, float, bool]
+PhaseItemMultipliersMatch3TypedDict = TypeAliasType(
+    "PhaseItemMultipliersMatch3TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartItemMultipliersMatch1 = TypeAliasType(
-    "PhaseStartItemMultipliersMatch1", Union[str, float, bool]
+PhaseItemMultipliersMatch3 = TypeAliasType(
+    "PhaseItemMultipliersMatch3", Union[str, float, bool]
 )
 
 
-class PhaseStartItemMultipliers1TypedDict(TypedDict):
-    match: Dict[str, PhaseStartItemMultipliersMatch1TypedDict]
+class PhaseItemMultipliers3TypedDict(TypedDict):
+    match: Dict[str, PhaseItemMultipliersMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
     r"""Multiplies the matched rate. All matching multipliers stack."""
@@ -2169,8 +2163,8 @@ class PhaseStartItemMultipliers1TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class PhaseStartItemMultipliers1(BaseModel):
-    match: Dict[str, PhaseStartItemMultipliersMatch1]
+class PhaseItemMultipliers3(BaseModel):
+    match: Dict[str, PhaseItemMultipliersMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     factor: Optional[float] = None
@@ -2196,62 +2190,62 @@ class PhaseStartItemMultipliers1(BaseModel):
         return m
 
 
-PhaseStartToItemEnum = Literal["inf",]
+PhaseToItemEnum = Literal["inf",]
 
 
-PhaseStartItemFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "PhaseStartItemFeatureOverrideToUnionTypedDict", Union[float, PhaseStartToItemEnum]
+PhaseItemFeatureOverrideToUnion2TypedDict = TypeAliasType(
+    "PhaseItemFeatureOverrideToUnion2TypedDict", Union[float, PhaseToItemEnum]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-PhaseStartItemFeatureOverrideToUnion = TypeAliasType(
-    "PhaseStartItemFeatureOverrideToUnion", Union[float, PhaseStartToItemEnum]
+PhaseItemFeatureOverrideToUnion2 = TypeAliasType(
+    "PhaseItemFeatureOverrideToUnion2", Union[float, PhaseToItemEnum]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class PhaseStartItemFeatureOverrideTierTypedDict(TypedDict):
-    to: PhaseStartItemFeatureOverrideToUnionTypedDict
+class PhaseItemFeatureOverrideTier2TypedDict(TypedDict):
+    to: PhaseItemFeatureOverrideToUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartItemFeatureOverrideTier(BaseModel):
-    to: PhaseStartItemFeatureOverrideToUnion
+class PhaseItemFeatureOverrideTier2(BaseModel):
+    to: PhaseItemFeatureOverrideToUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartCreditSchemaItem1TypedDict(TypedDict):
+class PhaseCreditSchemaItem1TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[PhaseStartItemFeatureOverrideTierTypedDict]
+    tiers: List[PhaseItemFeatureOverrideTier2TypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, PhaseStartItemDimensionsUnion1TypedDict]]
+    dimensions: NotRequired[Dict[str, PhaseItemDimensionsUnion3TypedDict]]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, PhaseStartItemMultipliers1TypedDict]]
+    multipliers: NotRequired[Dict[str, PhaseItemMultipliers3TypedDict]]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
-class PhaseStartCreditSchemaItem1(BaseModel):
+class PhaseCreditSchemaItem1(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
-    tiers: List[PhaseStartItemFeatureOverrideTier]
+    tiers: List[PhaseItemFeatureOverrideTier2]
 
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, PhaseStartItemDimensionsUnion1]] = None
+    dimensions: Optional[Dict[str, PhaseItemDimensionsUnion3]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, PhaseStartItemMultipliers1]] = None
+    multipliers: Optional[Dict[str, PhaseItemMultipliers3]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     tier_behavior: Annotated[
@@ -2276,33 +2270,32 @@ class PhaseStartCreditSchemaItem1(BaseModel):
         return m
 
 
-PhaseStartItemCreditSchemaUnionTypedDict = TypeAliasType(
-    "PhaseStartItemCreditSchemaUnionTypedDict",
-    Union[PhaseStartCreditSchemaItem2TypedDict, PhaseStartCreditSchemaItem1TypedDict],
+PhaseItemCreditSchemaUnion2TypedDict = TypeAliasType(
+    "PhaseItemCreditSchemaUnion2TypedDict",
+    Union[PhaseCreditSchemaItem2TypedDict, PhaseCreditSchemaItem1TypedDict],
 )
 
 
-PhaseStartItemCreditSchemaUnion = TypeAliasType(
-    "PhaseStartItemCreditSchemaUnion",
-    Union[PhaseStartCreditSchemaItem2, PhaseStartCreditSchemaItem1],
+PhaseItemCreditSchemaUnion2 = TypeAliasType(
+    "PhaseItemCreditSchemaUnion2", Union[PhaseCreditSchemaItem2, PhaseCreditSchemaItem1]
 )
 
 
-class PhaseStartItemProviderMarkupsTypedDict(TypedDict):
+class PhaseItemProviderMarkups2TypedDict(TypedDict):
     markup: float
 
 
-class PhaseStartItemProviderMarkups(BaseModel):
+class PhaseItemProviderMarkups2(BaseModel):
     markup: float
 
 
-class PhaseStartItemModelMarkupsTypedDict(TypedDict):
+class PhaseItemModelMarkups2TypedDict(TypedDict):
     markup: NotRequired[float]
     input_cost: NotRequired[float]
     output_cost: NotRequired[float]
 
 
-class PhaseStartItemModelMarkups(BaseModel):
+class PhaseItemModelMarkups2(BaseModel):
     markup: Optional[float] = None
 
     input_cost: Optional[float] = None
@@ -2326,29 +2319,29 @@ class PhaseStartItemModelMarkups(BaseModel):
         return m
 
 
-class PhaseStartItemMarkupsTypedDict(TypedDict):
+class PhaseItemMarkups2TypedDict(TypedDict):
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     default_markup: NotRequired[float]
     r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
     provider_markups: NotRequired[
-        Nullable[Dict[str, PhaseStartItemProviderMarkupsTypedDict]]
+        Nullable[Dict[str, PhaseItemProviderMarkups2TypedDict]]
     ]
     r"""Per-provider markup percentages for customers on this plan."""
-    model_markups: NotRequired[Nullable[Dict[str, PhaseStartItemModelMarkupsTypedDict]]]
+    model_markups: NotRequired[Nullable[Dict[str, PhaseItemModelMarkups2TypedDict]]]
     r"""Per-model markup overrides for customers on this plan."""
 
 
-class PhaseStartItemMarkups(BaseModel):
+class PhaseItemMarkups2(BaseModel):
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     default_markup: Optional[float] = None
     r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
 
-    provider_markups: OptionalNullable[Dict[str, PhaseStartItemProviderMarkups]] = UNSET
+    provider_markups: OptionalNullable[Dict[str, PhaseItemProviderMarkups2]] = UNSET
     r"""Per-provider markup percentages for customers on this plan."""
 
-    model_markups: OptionalNullable[Dict[str, PhaseStartItemModelMarkups]] = UNSET
+    model_markups: OptionalNullable[Dict[str, PhaseItemModelMarkups2]] = UNSET
     r"""Per-model markup overrides for customers on this plan."""
 
     @model_serializer(mode="wrap")
@@ -2377,22 +2370,22 @@ class PhaseStartItemMarkups(BaseModel):
         return m
 
 
-class PhaseStartItemFeatureOverrideTypedDict(TypedDict):
+class PhaseItemFeatureOverride2TypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: NotRequired[List[PhaseStartItemCreditSchemaUnionTypedDict]]
+    credit_schema: NotRequired[List[PhaseItemCreditSchemaUnion2TypedDict]]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
-    markups: NotRequired[PhaseStartItemMarkupsTypedDict]
+    markups: NotRequired[PhaseItemMarkups2TypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
 
-class PhaseStartItemFeatureOverride(BaseModel):
+class PhaseItemFeatureOverride2(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: Optional[List[PhaseStartItemCreditSchemaUnion]] = None
+    credit_schema: Optional[List[PhaseItemCreditSchemaUnion2]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
-    markups: Optional[PhaseStartItemMarkups] = None
+    markups: Optional[PhaseItemMarkups2] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     @model_serializer(mode="wrap")
@@ -2412,12 +2405,12 @@ class PhaseStartItemFeatureOverride(BaseModel):
         return m
 
 
-class PhaseStartItemPlanItemTypedDict(TypedDict):
+class PhaseItemPlanItem2TypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
     r"""The ID of the feature to configure."""
-    threshold_billing: NotRequired[Nullable[PhaseStartItemThresholdBillingTypedDict]]
+    threshold_billing: NotRequired[Nullable[PhaseItemThresholdBilling2TypedDict]]
     r"""Bills this many feature units when outstanding overage reaches it."""
     included: NotRequired[float]
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
@@ -2425,27 +2418,27 @@ class PhaseStartItemPlanItemTypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[PhaseStartItemResetTypedDict]
+    reset: NotRequired[PhaseItemReset2TypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[PhaseStartItemPriceTypedDict]
+    price: NotRequired[PhaseItemPrice2TypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[PhaseStartItemProrationTypedDict]
+    proration: NotRequired[PhaseItemProration2TypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[PhaseStartItemRolloverTypedDict]
+    rollover: NotRequired[PhaseItemRollover2TypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
-    expiry: NotRequired[PhaseStartItemExpiryTypedDict]
+    expiry: NotRequired[PhaseItemExpiry2TypedDict]
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
-    feature_override: NotRequired[PhaseStartItemFeatureOverrideTypedDict]
+    feature_override: NotRequired[PhaseItemFeatureOverride2TypedDict]
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
 
-class PhaseStartItemPlanItem(BaseModel):
+class PhaseItemPlanItem2(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
     r"""The ID of the feature to configure."""
 
-    threshold_billing: OptionalNullable[PhaseStartItemThresholdBilling] = UNSET
+    threshold_billing: OptionalNullable[PhaseItemThresholdBilling2] = UNSET
     r"""Bills this many feature units when outstanding overage reaches it."""
 
     included: Optional[float] = None
@@ -2457,22 +2450,22 @@ class PhaseStartItemPlanItem(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[PhaseStartItemReset] = None
+    reset: Optional[PhaseItemReset2] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[PhaseStartItemPrice] = None
+    price: Optional[PhaseItemPrice2] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[PhaseStartItemProration] = None
+    proration: Optional[PhaseItemProration2] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[PhaseStartItemRollover] = None
+    rollover: Optional[PhaseItemRollover2] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry: Optional[PhaseStartItemExpiry] = None
+    expiry: Optional[PhaseItemExpiry2] = None
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    feature_override: Optional[PhaseStartItemFeatureOverride] = None
+    feature_override: Optional[PhaseItemFeatureOverride2] = None
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     @model_serializer(mode="wrap")
@@ -2514,15 +2507,15 @@ class PhaseStartItemPlanItem(BaseModel):
         return m
 
 
-class PhaseStartAddItemThresholdBillingTypedDict(TypedDict):
+class PhaseAddItemThresholdBilling2TypedDict(TypedDict):
     threshold: float
 
 
-class PhaseStartAddItemThresholdBilling(BaseModel):
+class PhaseAddItemThresholdBilling2(BaseModel):
     threshold: float
 
 
-PhaseStartAddItemResetInterval = Literal[
+PhaseAddItemResetInterval2 = Literal[
     "one_off",
     "minute",
     "hour",
@@ -2536,19 +2529,19 @@ PhaseStartAddItemResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class PhaseStartAddItemResetTypedDict(TypedDict):
+class PhaseAddItemReset2TypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PhaseStartAddItemResetInterval
+    interval: PhaseAddItemResetInterval2
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class PhaseStartAddItemReset(BaseModel):
+class PhaseAddItemReset2(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PhaseStartAddItemResetInterval
+    interval: PhaseAddItemResetInterval2
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = 1
@@ -2571,14 +2564,14 @@ class PhaseStartAddItemReset(BaseModel):
         return m
 
 
-class PhaseStartAddItemAdditionalCurrencyTypedDict(TypedDict):
+class PhaseAddItemAdditionalCurrency2TypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class PhaseStartAddItemAdditionalCurrency(BaseModel):
+class PhaseAddItemAdditionalCurrency2(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2586,15 +2579,15 @@ class PhaseStartAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-PhaseStartAddItemPriceToTypedDict = TypeAliasType(
-    "PhaseStartAddItemPriceToTypedDict", Union[float, str]
+PhaseAddItemPriceTo2TypedDict = TypeAliasType(
+    "PhaseAddItemPriceTo2TypedDict", Union[float, str]
 )
 
 
-PhaseStartAddItemPriceTo = TypeAliasType("PhaseStartAddItemPriceTo", Union[float, str])
+PhaseAddItemPriceTo2 = TypeAliasType("PhaseAddItemPriceTo2", Union[float, str])
 
 
-class PhaseStartAddItemTierAdditionalCurrencyTypedDict(TypedDict):
+class PhaseAddItemTierAdditionalCurrency2TypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: NotRequired[float]
@@ -2603,7 +2596,7 @@ class PhaseStartAddItemTierAdditionalCurrencyTypedDict(TypedDict):
     r"""Flat amount for this tier in this currency, if the tier uses one."""
 
 
-class PhaseStartAddItemTierAdditionalCurrency(BaseModel):
+class PhaseAddItemTierAdditionalCurrency2(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -2630,26 +2623,24 @@ class PhaseStartAddItemTierAdditionalCurrency(BaseModel):
         return m
 
 
-class PhaseStartAddItemPriceTierTypedDict(TypedDict):
-    to: PhaseStartAddItemPriceToTypedDict
+class PhaseAddItemPriceTier2TypedDict(TypedDict):
+    to: PhaseAddItemPriceTo2TypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
     additional_currencies: NotRequired[
-        List[PhaseStartAddItemTierAdditionalCurrencyTypedDict]
+        List[PhaseAddItemTierAdditionalCurrency2TypedDict]
     ]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
-class PhaseStartAddItemPriceTier(BaseModel):
-    to: PhaseStartAddItemPriceTo
+class PhaseAddItemPriceTier2(BaseModel):
+    to: PhaseAddItemPriceTo2
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[PhaseStartAddItemTierAdditionalCurrency]] = (
-        None
-    )
+    additional_currencies: Optional[List[PhaseAddItemTierAdditionalCurrency2]] = None
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
     @model_serializer(mode="wrap")
@@ -2669,13 +2660,13 @@ class PhaseStartAddItemPriceTier(BaseModel):
         return m
 
 
-PhaseStartAddItemTierBehavior = Literal[
+PhaseAddItemTierBehavior2 = Literal[
     "graduated",
     "volume",
 ]
 
 
-PhaseStartAddItemPriceInterval = Literal[
+PhaseAddItemPriceInterval2 = Literal[
     "one_off",
     "week",
     "month",
@@ -2686,29 +2677,27 @@ PhaseStartAddItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-PhaseStartAddItemBillingMethod = Literal[
+PhaseAddItemBillingMethod2 = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class PhaseStartAddItemPriceTypedDict(TypedDict):
+class PhaseAddItemPrice2TypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: PhaseStartAddItemPriceInterval
+    interval: PhaseAddItemPriceInterval2
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: PhaseStartAddItemBillingMethod
+    billing_method: PhaseAddItemBillingMethod2
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[PhaseStartAddItemAdditionalCurrencyTypedDict]
-    ]
+    additional_currencies: NotRequired[List[PhaseAddItemAdditionalCurrency2TypedDict]]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[PhaseStartAddItemPriceTierTypedDict]]
+    tiers: NotRequired[List[PhaseAddItemPriceTier2TypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[PhaseStartAddItemTierBehavior]
+    tier_behavior: NotRequired[PhaseAddItemTierBehavior2]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -2717,25 +2706,25 @@ class PhaseStartAddItemPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class PhaseStartAddItemPrice(BaseModel):
+class PhaseAddItemPrice2(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: PhaseStartAddItemPriceInterval
+    interval: PhaseAddItemPriceInterval2
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: PhaseStartAddItemBillingMethod
+    billing_method: PhaseAddItemBillingMethod2
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[PhaseStartAddItemAdditionalCurrency]] = None
+    additional_currencies: Optional[List[PhaseAddItemAdditionalCurrency2]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[PhaseStartAddItemPriceTier]] = None
+    tiers: Optional[List[PhaseAddItemPriceTier2]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[PhaseStartAddItemTierBehavior] = None
+    tier_behavior: Optional[PhaseAddItemTierBehavior2] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -2782,7 +2771,7 @@ class PhaseStartAddItemPrice(BaseModel):
         return m
 
 
-PhaseStartAddItemOnIncrease = Literal[
+PhaseAddItemOnIncrease2 = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -2791,7 +2780,7 @@ PhaseStartAddItemOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-PhaseStartAddItemOnDecrease = Literal[
+PhaseAddItemOnDecrease2 = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -2801,36 +2790,36 @@ PhaseStartAddItemOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class PhaseStartAddItemProrationTypedDict(TypedDict):
+class PhaseAddItemProration2TypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: PhaseStartAddItemOnIncrease
+    on_increase: PhaseAddItemOnIncrease2
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: PhaseStartAddItemOnDecrease
+    on_decrease: PhaseAddItemOnDecrease2
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class PhaseStartAddItemProration(BaseModel):
+class PhaseAddItemProration2(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: PhaseStartAddItemOnIncrease
+    on_increase: PhaseAddItemOnIncrease2
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: PhaseStartAddItemOnDecrease
+    on_decrease: PhaseAddItemOnDecrease2
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-PhaseStartAddItemExpiryDurationType = Literal[
+PhaseAddItemExpiryDurationType2 = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class PhaseStartAddItemRolloverTypedDict(TypedDict):
+class PhaseAddItemRollover2TypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: PhaseStartAddItemExpiryDurationType
+    expiry_duration_type: PhaseAddItemExpiryDurationType2
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -2840,10 +2829,10 @@ class PhaseStartAddItemRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class PhaseStartAddItemRollover(BaseModel):
+class PhaseAddItemRollover2(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: PhaseStartAddItemExpiryDurationType
+    expiry_duration_type: PhaseAddItemExpiryDurationType2
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -2872,7 +2861,7 @@ class PhaseStartAddItemRollover(BaseModel):
         return m
 
 
-PhaseStartAddItemDuration = Literal[
+PhaseAddItemDuration2 = Literal[
     "day",
     "week",
     "month",
@@ -2880,33 +2869,33 @@ PhaseStartAddItemDuration = Literal[
 ]
 
 
-class PhaseStartAddItemExpiryTypedDict(TypedDict):
+class PhaseAddItemExpiry2TypedDict(TypedDict):
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    duration: PhaseStartAddItemDuration
+    duration: PhaseAddItemDuration2
     length: float
 
 
-class PhaseStartAddItemExpiry(BaseModel):
+class PhaseAddItemExpiry2(BaseModel):
     r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
 
-    duration: PhaseStartAddItemDuration
+    duration: PhaseAddItemDuration2
 
     length: float
 
 
-PhaseStartDimensionsAddItemMatch4TypedDict = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch4TypedDict", Union[str, float, bool]
+PhaseDimensionsAddItemMatch4TypedDict = TypeAliasType(
+    "PhaseDimensionsAddItemMatch4TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsAddItemMatch4 = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch4", Union[str, float, bool]
+PhaseDimensionsAddItemMatch4 = TypeAliasType(
+    "PhaseDimensionsAddItemMatch4", Union[str, float, bool]
 )
 
 
-class PhaseStartDimensionsAddItem4TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch4TypedDict]
+class PhaseDimensionsAddItem4TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsAddItemMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -2914,8 +2903,8 @@ class PhaseStartDimensionsAddItem4TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class PhaseStartDimensionsAddItem4(BaseModel):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch4]
+class PhaseDimensionsAddItem4(BaseModel):
+    match: Dict[str, PhaseDimensionsAddItemMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -2941,62 +2930,61 @@ class PhaseStartDimensionsAddItem4(BaseModel):
         return m
 
 
-PhaseStartDimensionsAddItemMatch3TypedDict = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch3TypedDict", Union[str, float, bool]
+PhaseDimensionsAddItemMatch3TypedDict = TypeAliasType(
+    "PhaseDimensionsAddItemMatch3TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsAddItemMatch3 = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch3", Union[str, float, bool]
+PhaseDimensionsAddItemMatch3 = TypeAliasType(
+    "PhaseDimensionsAddItemMatch3", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsToAddItemEnum2 = Literal["inf",]
+PhaseDimensionsToAddItemEnum2 = Literal["inf",]
 
 
-PhaseStartDimensionsAddItemToUnion2TypedDict = TypeAliasType(
-    "PhaseStartDimensionsAddItemToUnion2TypedDict",
-    Union[float, PhaseStartDimensionsToAddItemEnum2],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-PhaseStartDimensionsAddItemToUnion2 = TypeAliasType(
-    "PhaseStartDimensionsAddItemToUnion2",
-    Union[float, PhaseStartDimensionsToAddItemEnum2],
+PhaseDimensionsAddItemToUnion2TypedDict = TypeAliasType(
+    "PhaseDimensionsAddItemToUnion2TypedDict",
+    Union[float, PhaseDimensionsToAddItemEnum2],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class PhaseStartDimensionsAddItemTier2TypedDict(TypedDict):
-    to: PhaseStartDimensionsAddItemToUnion2TypedDict
+PhaseDimensionsAddItemToUnion2 = TypeAliasType(
+    "PhaseDimensionsAddItemToUnion2", Union[float, PhaseDimensionsToAddItemEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PhaseDimensionsAddItemTier2TypedDict(TypedDict):
+    to: PhaseDimensionsAddItemToUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsAddItemTier2(BaseModel):
-    to: PhaseStartDimensionsAddItemToUnion2
+class PhaseDimensionsAddItemTier2(BaseModel):
+    to: PhaseDimensionsAddItemToUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsAddItem3TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch3TypedDict]
+class PhaseDimensionsAddItem3TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsAddItemMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[PhaseStartDimensionsAddItemTier2TypedDict]
+    tiers: List[PhaseDimensionsAddItemTier2TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class PhaseStartDimensionsAddItem3(BaseModel):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch3]
+class PhaseDimensionsAddItem3(BaseModel):
+    match: Dict[str, PhaseDimensionsAddItemMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[PhaseStartDimensionsAddItemTier2]
+    tiers: List[PhaseDimensionsAddItemTier2]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -3023,30 +3011,30 @@ class PhaseStartDimensionsAddItem3(BaseModel):
         return m
 
 
-PhaseStartAddItemDimensionsUnion2TypedDict = TypeAliasType(
-    "PhaseStartAddItemDimensionsUnion2TypedDict",
-    Union[PhaseStartDimensionsAddItem4TypedDict, PhaseStartDimensionsAddItem3TypedDict],
+PhaseAddItemDimensionsUnion4TypedDict = TypeAliasType(
+    "PhaseAddItemDimensionsUnion4TypedDict",
+    Union[PhaseDimensionsAddItem4TypedDict, PhaseDimensionsAddItem3TypedDict],
 )
 
 
-PhaseStartAddItemDimensionsUnion2 = TypeAliasType(
-    "PhaseStartAddItemDimensionsUnion2",
-    Union[PhaseStartDimensionsAddItem4, PhaseStartDimensionsAddItem3],
+PhaseAddItemDimensionsUnion4 = TypeAliasType(
+    "PhaseAddItemDimensionsUnion4",
+    Union[PhaseDimensionsAddItem4, PhaseDimensionsAddItem3],
 )
 
 
-PhaseStartAddItemMultipliersMatch2TypedDict = TypeAliasType(
-    "PhaseStartAddItemMultipliersMatch2TypedDict", Union[str, float, bool]
+PhaseAddItemMultipliersMatch4TypedDict = TypeAliasType(
+    "PhaseAddItemMultipliersMatch4TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartAddItemMultipliersMatch2 = TypeAliasType(
-    "PhaseStartAddItemMultipliersMatch2", Union[str, float, bool]
+PhaseAddItemMultipliersMatch4 = TypeAliasType(
+    "PhaseAddItemMultipliersMatch4", Union[str, float, bool]
 )
 
 
-class PhaseStartAddItemMultipliers2TypedDict(TypedDict):
-    match: Dict[str, PhaseStartAddItemMultipliersMatch2TypedDict]
+class PhaseAddItemMultipliers4TypedDict(TypedDict):
+    match: Dict[str, PhaseAddItemMultipliersMatch4TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
     r"""Multiplies the matched rate. All matching multipliers stack."""
@@ -3054,8 +3042,8 @@ class PhaseStartAddItemMultipliers2TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class PhaseStartAddItemMultipliers2(BaseModel):
-    match: Dict[str, PhaseStartAddItemMultipliersMatch2]
+class PhaseAddItemMultipliers4(BaseModel):
+    match: Dict[str, PhaseAddItemMultipliersMatch4]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     factor: Optional[float] = None
@@ -3081,20 +3069,20 @@ class PhaseStartAddItemMultipliers2(BaseModel):
         return m
 
 
-class PhaseStartCreditSchemaAddItem2TypedDict(TypedDict):
+class PhaseCreditSchemaAddItem2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, PhaseStartAddItemDimensionsUnion2TypedDict]]
+    dimensions: NotRequired[Dict[str, PhaseAddItemDimensionsUnion4TypedDict]]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, PhaseStartAddItemMultipliers2TypedDict]]
+    multipliers: NotRequired[Dict[str, PhaseAddItemMultipliers4TypedDict]]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
 
-class PhaseStartCreditSchemaAddItem2(BaseModel):
+class PhaseCreditSchemaAddItem2(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
@@ -3104,10 +3092,10 @@ class PhaseStartCreditSchemaAddItem2(BaseModel):
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, PhaseStartAddItemDimensionsUnion2]] = None
+    dimensions: Optional[Dict[str, PhaseAddItemDimensionsUnion4]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, PhaseStartAddItemMultipliers2]] = None
+    multipliers: Optional[Dict[str, PhaseAddItemMultipliers4]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     @model_serializer(mode="wrap")
@@ -3127,18 +3115,18 @@ class PhaseStartCreditSchemaAddItem2(BaseModel):
         return m
 
 
-PhaseStartDimensionsAddItemMatch2TypedDict = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch2TypedDict", Union[str, float, bool]
+PhaseDimensionsAddItemMatch2TypedDict = TypeAliasType(
+    "PhaseDimensionsAddItemMatch2TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsAddItemMatch2 = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch2", Union[str, float, bool]
+PhaseDimensionsAddItemMatch2 = TypeAliasType(
+    "PhaseDimensionsAddItemMatch2", Union[str, float, bool]
 )
 
 
-class PhaseStartDimensionsAddItem2TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch2TypedDict]
+class PhaseDimensionsAddItem2TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsAddItemMatch2TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     credit_cost: float
     r"""Credits consumed per billing-unit group when this dimension matches."""
@@ -3146,8 +3134,8 @@ class PhaseStartDimensionsAddItem2TypedDict(TypedDict):
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
 
 
-class PhaseStartDimensionsAddItem2(BaseModel):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch2]
+class PhaseDimensionsAddItem2(BaseModel):
+    match: Dict[str, PhaseDimensionsAddItemMatch2]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     credit_cost: float
@@ -3173,62 +3161,61 @@ class PhaseStartDimensionsAddItem2(BaseModel):
         return m
 
 
-PhaseStartDimensionsAddItemMatch1TypedDict = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch1TypedDict", Union[str, float, bool]
+PhaseDimensionsAddItemMatch1TypedDict = TypeAliasType(
+    "PhaseDimensionsAddItemMatch1TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsAddItemMatch1 = TypeAliasType(
-    "PhaseStartDimensionsAddItemMatch1", Union[str, float, bool]
+PhaseDimensionsAddItemMatch1 = TypeAliasType(
+    "PhaseDimensionsAddItemMatch1", Union[str, float, bool]
 )
 
 
-PhaseStartDimensionsToAddItemEnum1 = Literal["inf",]
+PhaseDimensionsToAddItemEnum1 = Literal["inf",]
 
 
-PhaseStartDimensionsAddItemToUnion1TypedDict = TypeAliasType(
-    "PhaseStartDimensionsAddItemToUnion1TypedDict",
-    Union[float, PhaseStartDimensionsToAddItemEnum1],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-PhaseStartDimensionsAddItemToUnion1 = TypeAliasType(
-    "PhaseStartDimensionsAddItemToUnion1",
-    Union[float, PhaseStartDimensionsToAddItemEnum1],
+PhaseDimensionsAddItemToUnion1TypedDict = TypeAliasType(
+    "PhaseDimensionsAddItemToUnion1TypedDict",
+    Union[float, PhaseDimensionsToAddItemEnum1],
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class PhaseStartDimensionsAddItemTier1TypedDict(TypedDict):
-    to: PhaseStartDimensionsAddItemToUnion1TypedDict
+PhaseDimensionsAddItemToUnion1 = TypeAliasType(
+    "PhaseDimensionsAddItemToUnion1", Union[float, PhaseDimensionsToAddItemEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class PhaseDimensionsAddItemTier1TypedDict(TypedDict):
+    to: PhaseDimensionsAddItemToUnion1TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsAddItemTier1(BaseModel):
-    to: PhaseStartDimensionsAddItemToUnion1
+class PhaseDimensionsAddItemTier1(BaseModel):
+    to: PhaseDimensionsAddItemToUnion1
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartDimensionsAddItem1TypedDict(TypedDict):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch1TypedDict]
+class PhaseDimensionsAddItem1TypedDict(TypedDict):
+    match: Dict[str, PhaseDimensionsAddItemMatch1TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[PhaseStartDimensionsAddItemTier1TypedDict]
+    tiers: List[PhaseDimensionsAddItemTier1TypedDict]
     priority: NotRequired[int]
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
     tier_behavior: Literal["graduated"]
 
 
-class PhaseStartDimensionsAddItem1(BaseModel):
-    match: Dict[str, PhaseStartDimensionsAddItemMatch1]
+class PhaseDimensionsAddItem1(BaseModel):
+    match: Dict[str, PhaseDimensionsAddItemMatch1]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
-    tiers: List[PhaseStartDimensionsAddItemTier1]
+    tiers: List[PhaseDimensionsAddItemTier1]
 
     priority: Optional[int] = None
     r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
@@ -3255,30 +3242,30 @@ class PhaseStartDimensionsAddItem1(BaseModel):
         return m
 
 
-PhaseStartAddItemDimensionsUnion1TypedDict = TypeAliasType(
-    "PhaseStartAddItemDimensionsUnion1TypedDict",
-    Union[PhaseStartDimensionsAddItem2TypedDict, PhaseStartDimensionsAddItem1TypedDict],
+PhaseAddItemDimensionsUnion3TypedDict = TypeAliasType(
+    "PhaseAddItemDimensionsUnion3TypedDict",
+    Union[PhaseDimensionsAddItem2TypedDict, PhaseDimensionsAddItem1TypedDict],
 )
 
 
-PhaseStartAddItemDimensionsUnion1 = TypeAliasType(
-    "PhaseStartAddItemDimensionsUnion1",
-    Union[PhaseStartDimensionsAddItem2, PhaseStartDimensionsAddItem1],
+PhaseAddItemDimensionsUnion3 = TypeAliasType(
+    "PhaseAddItemDimensionsUnion3",
+    Union[PhaseDimensionsAddItem2, PhaseDimensionsAddItem1],
 )
 
 
-PhaseStartAddItemMultipliersMatch1TypedDict = TypeAliasType(
-    "PhaseStartAddItemMultipliersMatch1TypedDict", Union[str, float, bool]
+PhaseAddItemMultipliersMatch3TypedDict = TypeAliasType(
+    "PhaseAddItemMultipliersMatch3TypedDict", Union[str, float, bool]
 )
 
 
-PhaseStartAddItemMultipliersMatch1 = TypeAliasType(
-    "PhaseStartAddItemMultipliersMatch1", Union[str, float, bool]
+PhaseAddItemMultipliersMatch3 = TypeAliasType(
+    "PhaseAddItemMultipliersMatch3", Union[str, float, bool]
 )
 
 
-class PhaseStartAddItemMultipliers1TypedDict(TypedDict):
-    match: Dict[str, PhaseStartAddItemMultipliersMatch1TypedDict]
+class PhaseAddItemMultipliers3TypedDict(TypedDict):
+    match: Dict[str, PhaseAddItemMultipliersMatch3TypedDict]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
     factor: NotRequired[float]
     r"""Multiplies the matched rate. All matching multipliers stack."""
@@ -3286,8 +3273,8 @@ class PhaseStartAddItemMultipliers1TypedDict(TypedDict):
     r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
 
 
-class PhaseStartAddItemMultipliers1(BaseModel):
-    match: Dict[str, PhaseStartAddItemMultipliersMatch1]
+class PhaseAddItemMultipliers3(BaseModel):
+    match: Dict[str, PhaseAddItemMultipliersMatch3]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
 
     factor: Optional[float] = None
@@ -3313,63 +3300,62 @@ class PhaseStartAddItemMultipliers1(BaseModel):
         return m
 
 
-PhaseStartToAddItemEnum = Literal["inf",]
+PhaseToAddItemEnum = Literal["inf",]
 
 
-PhaseStartAddItemFeatureOverrideToUnionTypedDict = TypeAliasType(
-    "PhaseStartAddItemFeatureOverrideToUnionTypedDict",
-    Union[float, PhaseStartToAddItemEnum],
+PhaseAddItemFeatureOverrideToUnion2TypedDict = TypeAliasType(
+    "PhaseAddItemFeatureOverrideToUnion2TypedDict", Union[float, PhaseToAddItemEnum]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-PhaseStartAddItemFeatureOverrideToUnion = TypeAliasType(
-    "PhaseStartAddItemFeatureOverrideToUnion", Union[float, PhaseStartToAddItemEnum]
+PhaseAddItemFeatureOverrideToUnion2 = TypeAliasType(
+    "PhaseAddItemFeatureOverrideToUnion2", Union[float, PhaseToAddItemEnum]
 )
 r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
 
-class PhaseStartAddItemFeatureOverrideTierTypedDict(TypedDict):
-    to: PhaseStartAddItemFeatureOverrideToUnionTypedDict
+class PhaseAddItemFeatureOverrideTier2TypedDict(TypedDict):
+    to: PhaseAddItemFeatureOverrideToUnion2TypedDict
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartAddItemFeatureOverrideTier(BaseModel):
-    to: PhaseStartAddItemFeatureOverrideToUnion
+class PhaseAddItemFeatureOverrideTier2(BaseModel):
+    to: PhaseAddItemFeatureOverrideToUnion2
     r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
 
     credit_cost: float
     r"""Credits consumed per billing-unit group within this tier."""
 
 
-class PhaseStartCreditSchemaAddItem1TypedDict(TypedDict):
+class PhaseCreditSchemaAddItem1TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
-    tiers: List[PhaseStartAddItemFeatureOverrideTierTypedDict]
+    tiers: List[PhaseAddItemFeatureOverrideTier2TypedDict]
     billing_units: NotRequired[float]
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
-    dimensions: NotRequired[Dict[str, PhaseStartAddItemDimensionsUnion1TypedDict]]
+    dimensions: NotRequired[Dict[str, PhaseAddItemDimensionsUnion3TypedDict]]
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
-    multipliers: NotRequired[Dict[str, PhaseStartAddItemMultipliers1TypedDict]]
+    multipliers: NotRequired[Dict[str, PhaseAddItemMultipliers3TypedDict]]
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
     tier_behavior: Literal["graduated"]
 
 
-class PhaseStartCreditSchemaAddItem1(BaseModel):
+class PhaseCreditSchemaAddItem1(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
-    tiers: List[PhaseStartAddItemFeatureOverrideTier]
+    tiers: List[PhaseAddItemFeatureOverrideTier2]
 
     billing_units: Optional[float] = None
     r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
-    dimensions: Optional[Dict[str, PhaseStartAddItemDimensionsUnion1]] = None
+    dimensions: Optional[Dict[str, PhaseAddItemDimensionsUnion3]] = None
     r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
 
-    multipliers: Optional[Dict[str, PhaseStartAddItemMultipliers1]] = None
+    multipliers: Optional[Dict[str, PhaseAddItemMultipliers3]] = None
     r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
 
     tier_behavior: Annotated[
@@ -3394,35 +3380,33 @@ class PhaseStartCreditSchemaAddItem1(BaseModel):
         return m
 
 
-PhaseStartAddItemCreditSchemaUnionTypedDict = TypeAliasType(
-    "PhaseStartAddItemCreditSchemaUnionTypedDict",
-    Union[
-        PhaseStartCreditSchemaAddItem2TypedDict, PhaseStartCreditSchemaAddItem1TypedDict
-    ],
+PhaseAddItemCreditSchemaUnion2TypedDict = TypeAliasType(
+    "PhaseAddItemCreditSchemaUnion2TypedDict",
+    Union[PhaseCreditSchemaAddItem2TypedDict, PhaseCreditSchemaAddItem1TypedDict],
 )
 
 
-PhaseStartAddItemCreditSchemaUnion = TypeAliasType(
-    "PhaseStartAddItemCreditSchemaUnion",
-    Union[PhaseStartCreditSchemaAddItem2, PhaseStartCreditSchemaAddItem1],
+PhaseAddItemCreditSchemaUnion2 = TypeAliasType(
+    "PhaseAddItemCreditSchemaUnion2",
+    Union[PhaseCreditSchemaAddItem2, PhaseCreditSchemaAddItem1],
 )
 
 
-class PhaseStartAddItemProviderMarkupsTypedDict(TypedDict):
+class PhaseAddItemProviderMarkups2TypedDict(TypedDict):
     markup: float
 
 
-class PhaseStartAddItemProviderMarkups(BaseModel):
+class PhaseAddItemProviderMarkups2(BaseModel):
     markup: float
 
 
-class PhaseStartAddItemModelMarkupsTypedDict(TypedDict):
+class PhaseAddItemModelMarkups2TypedDict(TypedDict):
     markup: NotRequired[float]
     input_cost: NotRequired[float]
     output_cost: NotRequired[float]
 
 
-class PhaseStartAddItemModelMarkups(BaseModel):
+class PhaseAddItemModelMarkups2(BaseModel):
     markup: Optional[float] = None
 
     input_cost: Optional[float] = None
@@ -3446,33 +3430,29 @@ class PhaseStartAddItemModelMarkups(BaseModel):
         return m
 
 
-class PhaseStartAddItemMarkupsTypedDict(TypedDict):
+class PhaseAddItemMarkups2TypedDict(TypedDict):
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     default_markup: NotRequired[float]
     r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
     provider_markups: NotRequired[
-        Nullable[Dict[str, PhaseStartAddItemProviderMarkupsTypedDict]]
+        Nullable[Dict[str, PhaseAddItemProviderMarkups2TypedDict]]
     ]
     r"""Per-provider markup percentages for customers on this plan."""
-    model_markups: NotRequired[
-        Nullable[Dict[str, PhaseStartAddItemModelMarkupsTypedDict]]
-    ]
+    model_markups: NotRequired[Nullable[Dict[str, PhaseAddItemModelMarkups2TypedDict]]]
     r"""Per-model markup overrides for customers on this plan."""
 
 
-class PhaseStartAddItemMarkups(BaseModel):
+class PhaseAddItemMarkups2(BaseModel):
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     default_markup: Optional[float] = None
     r"""Default percentage markup for customers on this plan. Use -100 to make usage free."""
 
-    provider_markups: OptionalNullable[Dict[str, PhaseStartAddItemProviderMarkups]] = (
-        UNSET
-    )
+    provider_markups: OptionalNullable[Dict[str, PhaseAddItemProviderMarkups2]] = UNSET
     r"""Per-provider markup percentages for customers on this plan."""
 
-    model_markups: OptionalNullable[Dict[str, PhaseStartAddItemModelMarkups]] = UNSET
+    model_markups: OptionalNullable[Dict[str, PhaseAddItemModelMarkups2]] = UNSET
     r"""Per-model markup overrides for customers on this plan."""
 
     @model_serializer(mode="wrap")
@@ -3501,22 +3481,22 @@ class PhaseStartAddItemMarkups(BaseModel):
         return m
 
 
-class PhaseStartAddItemFeatureOverrideTypedDict(TypedDict):
+class PhaseAddItemFeatureOverride2TypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: NotRequired[List[PhaseStartAddItemCreditSchemaUnionTypedDict]]
+    credit_schema: NotRequired[List[PhaseAddItemCreditSchemaUnion2TypedDict]]
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
-    markups: NotRequired[PhaseStartAddItemMarkupsTypedDict]
+    markups: NotRequired[PhaseAddItemMarkups2TypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
 
-class PhaseStartAddItemFeatureOverride(BaseModel):
+class PhaseAddItemFeatureOverride2(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
-    credit_schema: Optional[List[PhaseStartAddItemCreditSchemaUnion]] = None
+    credit_schema: Optional[List[PhaseAddItemCreditSchemaUnion2]] = None
     r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
 
-    markups: Optional[PhaseStartAddItemMarkups] = None
+    markups: Optional[PhaseAddItemMarkups2] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
     @model_serializer(mode="wrap")
@@ -3549,26 +3529,26 @@ try:
 except NameError:
     pass
 try:
-    PhaseStartDimensionsItem3.model_rebuild()
+    PhaseDimensionsItem3.model_rebuild()
 except NameError:
     pass
 try:
-    PhaseStartDimensionsItem1.model_rebuild()
+    PhaseDimensionsItem1.model_rebuild()
 except NameError:
     pass
 try:
-    PhaseStartCreditSchemaItem1.model_rebuild()
+    PhaseCreditSchemaItem1.model_rebuild()
 except NameError:
     pass
 try:
-    PhaseStartDimensionsAddItem3.model_rebuild()
+    PhaseDimensionsAddItem3.model_rebuild()
 except NameError:
     pass
 try:
-    PhaseStartDimensionsAddItem1.model_rebuild()
+    PhaseDimensionsAddItem1.model_rebuild()
 except NameError:
     pass
 try:
-    PhaseStartCreditSchemaAddItem1.model_rebuild()
+    PhaseCreditSchemaAddItem1.model_rebuild()
 except NameError:
     pass

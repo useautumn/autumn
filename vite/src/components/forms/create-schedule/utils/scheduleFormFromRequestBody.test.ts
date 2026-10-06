@@ -6,12 +6,12 @@ import { scheduleFormFromRequestBody } from "./scheduleFormFromRequestBody";
 describe("scheduleFormFromRequestBody", () => {
 	test("maps phases, plans, and top-level flags", () => {
 		const form = scheduleFormFromRequestBody({
-			proration_behavior: "none",
-			billing_cycle_anchor: "now",
 			customer_id: "cus_1",
 			enable_plan_immediately: true,
 			phases: [
 				{
+					proration_behavior: "none",
+					billing_cycle_anchor: "phase_start",
 					plans: [
 						{
 							feature_quantities: [{ feature_id: "seats", quantity: 5 }],
@@ -29,7 +29,6 @@ describe("scheduleFormFromRequestBody", () => {
 			unscheduled_plans: [{ plan_id: "support-addon" }],
 		});
 		expect(form).toMatchObject({
-			billingBehavior: "none",
 			enablePlanImmediately: true,
 			resetBillingCycle: true,
 			unscheduledPlans: [
@@ -46,6 +45,7 @@ describe("scheduleFormFromRequestBody", () => {
 					productId: "scale",
 				},
 			],
+			prorationBehavior: "none",
 			startsAt: null,
 		});
 		expect(form?.phases?.[1]).toMatchObject({
@@ -67,6 +67,44 @@ describe("scheduleFormFromRequestBody", () => {
 		const second = form?.phases?.[1]?.startsAt;
 		expect(typeof second).toBe("number");
 		expect(second).toBeGreaterThan(1780000000000);
+	});
+
+	test("round trips each phase's proration on that phase", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const product = { id: "pro", items: [] } as unknown as ProductV2;
+		const request = {
+			customer_id: "cus_1",
+			phases: [
+				{
+					plans: [{ plan_id: "pro" }],
+					starts_at: now,
+					proration_behavior: "none",
+				},
+				{
+					plans: [{ plan_id: "pro" }],
+					starts_at: Date.UTC(2027, 2, 1),
+					proration_behavior: "prorate_immediately",
+				},
+				{ plans: [{ plan_id: "pro" }], starts_at: Date.UTC(2027, 4, 1) },
+			],
+		};
+		const form = scheduleFormFromRequestBody(request);
+		expect(form?.phases?.map((phase) => phase.prorationBehavior)).toEqual([
+			"none",
+			"prorate_immediately",
+			null,
+		]);
+
+		const rebuilt = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: form?.phases ?? [],
+			products: [product],
+			features: [],
+			nowMs: now,
+		});
+		expect(rebuilt?.phases[0]?.proration_behavior).toBe("none");
+		expect(rebuilt?.phases[1]?.proration_behavior).toBe("prorate_immediately");
+		expect(rebuilt?.phases[2]).not.toHaveProperty("proration_behavior");
 	});
 
 	test("returns undefined without phases", () => {
@@ -271,16 +309,19 @@ describe("scheduleFormFromRequestBody", () => {
 		expect(request).not.toHaveProperty("billing_cycle_anchor");
 	});
 
-	test("round trips a custom billing cycle anchor and ends_at", () => {
+	test("round trips the first phase's cycle reset and ends_at", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const form = scheduleFormFromRequestBody({
-			billing_cycle_anchor: Date.UTC(2027, 0, 15),
 			ends_at: Date.UTC(2027, 6, 1),
-			phases: [{ plans: [{ plan_id: "launch" }], starts_at: now }],
+			phases: [
+				{
+					plans: [{ plan_id: "launch" }],
+					starts_at: now,
+					billing_cycle_anchor: "phase_start",
+				},
+			],
 		});
 		expect(form).toMatchObject({
-			billingCycleAnchorDate: Date.UTC(2027, 0, 15),
-			billingCycleAnchorMode: "custom",
 			endDate: Date.UTC(2027, 6, 1),
 			resetBillingCycle: true,
 		});
@@ -293,23 +334,15 @@ describe("scheduleFormFromRequestBody", () => {
 			phases: form?.phases ?? [],
 			products: [{ id: "launch", items: [] } as unknown as ProductV2],
 		});
-		expect(request).toMatchObject({
-			billing_cycle_anchor: Date.UTC(2027, 0, 15),
-			ends_at: Date.UTC(2027, 6, 1),
-		});
+		expect(request?.phases[0]?.billing_cycle_anchor).toBe("phase_start");
 	});
 
-	test("maps a now anchor without an end date", () => {
+	test("maps a generated create_schedule anchor onto the reset", () => {
 		const form = scheduleFormFromRequestBody({
 			billing_cycle_anchor: "now",
 			phases: [{ plans: [{ plan_id: "launch" }], starts_at: "now" }],
 		});
 
-		expect(form).toMatchObject({
-			billingCycleAnchorMode: "now",
-			endDate: null,
-			resetBillingCycle: true,
-		});
-		expect(form).not.toHaveProperty("billingCycleAnchorDate");
+		expect(form).toMatchObject({ endDate: null, resetBillingCycle: true });
 	});
 });

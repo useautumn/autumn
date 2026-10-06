@@ -120,6 +120,19 @@ test.concurrent(
 		const listed = ApiRewardsListV0Schema.parse(
 			await autumnV2_2.post("/rewards.list", {}),
 		);
-		expect(listed.feature_grants).toContainEqual(created.feature_grant);
+		// Grants are keyed by feature, not ordered: the list reads them in DB order.
+		const sortGrants = <T extends { grants: { feature_id: string }[] }>(
+			featureGrant: T,
+		) => ({
+			...featureGrant,
+			grants: [...featureGrant.grants].sort((a, b) =>
+				a.feature_id.localeCompare(b.feature_id),
+			),
+		});
+		const listedGrant = listed.feature_grants.find(
+			({ id }) => id === created.feature_grant?.id,
+		);
+		if (!listedGrant) throw new Error("Expected the grant in rewards.list");
+		expect(sortGrants(listedGrant)).toEqual(sortGrants(created.feature_grant));
 	},
 );

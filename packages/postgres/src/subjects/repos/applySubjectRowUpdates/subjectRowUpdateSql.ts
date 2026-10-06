@@ -23,7 +23,7 @@ import type {
 /** Balances are numeric read as JS numbers; the engine rounds at 1e-10, so equality is a tolerance. */
 const NUMERIC_TOLERANCE = 1e-9;
 
-/** Bun.sql binds JS numbers as float8, which would turn `numeric + $n` into float arithmetic. */
+/** pg binds a number as untyped text; the cast keeps `$set + $delta` numeric arithmetic. */
 const numericSql = (value: unknown): SQL => sql`${value}::numeric`;
 
 type ColumnInfo = {
@@ -98,7 +98,7 @@ const columnOf = ({
 };
 
 const jsonSql = (value: unknown): SQL =>
-	// Bound as text first: the driver would JSON-encode a string aimed straight at jsonb.
+	// Travels as JSON text and is cast, so a string value stays a JSON string.
 	sql`${value === null ? null : JSON.stringify(value)}::text::jsonb`;
 
 /** `ARRAY[...]::<type>[]`, each element bound as its base column would be; the driver cannot infer an array's element type. */

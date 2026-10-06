@@ -97,9 +97,12 @@ for (const { prorationBehavior, daysBeforeLiveStart, productPrefix } of [
 				.toNumber();
 			const params: SetPlansParamsV0Input = {
 				customer_id: customerId,
-				proration_behavior: prorationBehavior,
 				phases: [
-					{ starts_at: backdatedStart, plans: [{ plan_id: parent.id }] },
+					{
+						proration_behavior: prorationBehavior,
+						starts_at: backdatedStart,
+						plans: [{ plan_id: parent.id }],
+					},
 				],
 			};
 

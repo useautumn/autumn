@@ -43,9 +43,10 @@ authenticates the Stripe CLI without interactive login.
 
 ## Runtime services
 
-Startup launches Dragonfly and fakecloud from `scripts/setup/dw.compose.yml`,
-the Trigger.dev control plane in `scripts/setup/trigger.compose.yml`, and a
-native Apache Kafka broker from `scripts/setup/capy-kafka.sh`:
+Startup launches Dragonfly and fakecloud from `scripts/setup/dw.compose.yml`
+and a native Apache Kafka broker from `scripts/setup/capy-kafka.sh`. The
+Trigger.dev control plane in `scripts/setup/trigger.compose.yml` starts only
+when opted in (see below); otherwise Startup stops its containers:
 
 | Port | Service |
 | --- | --- |
@@ -67,9 +68,28 @@ the root `package.json`. Startup creates its datastore credentials in
 `server/.env.local`. `bun dev` therefore keeps using the repository's existing
 local Trigger worker, but its queues and run data are isolated to this VM
 instead of the shared Trigger.dev cloud project.
-The control plane uses about 2 GB of RAM after startup on the standard 16 GB
-Capy VM; the source worker and application stack bring steady-state use to
-about 9 GB on the current image.
+The control plane uses about 2.4 GB of RAM, so it is opt-in.
+
+## Slim stack and opt-ins
+
+`bun capy` starts a slim stack by default: Vite, the server, one worker
+process, cron, the balance worker and `stripe listen` (about 4.5 GB used on a
+16 GB VM, versus 11.5 GB for the full stack). Opt-ins are marker files in
+`~/.autumn-capy/opt-ins/`, toggled with `bun capy restart --<name>` and
+`bun capy restart --no-<name>`:
+
+| Opt-in | Adds |
+| --- | --- |
+| `trigger` | Trigger.dev control plane and the `trigger dev` worker |
+| `eve` | Eve and leaf/chat |
+| `checkout` | Checkout app |
+| `atom` | Herald and the local Atom stand-in |
+| `alien` | `ALIEN_API_KEY` in the stack's environment |
+
+On Capy the dashboard also keeps Vite's dependency cache across restarts,
+serves `@autumn/shared` as one incrementally rebuilt bundle
+(`vite/viteSharedBundle.ts`), and watches files with inotify instead of
+polling.
 
 The application remains opt-in. Run the Setup command `dev` or `bun dev` when a
 task needs the full stack:

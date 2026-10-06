@@ -3,6 +3,7 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 } from "@autumn/shared";
+import { setPlansPhaseProrations } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 import { normalizeCustomerProductTimestamps } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/normalizeCustomerProductTimestamps";
 import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { classifyNextCycleEvent } from "./classifyNextCycleEvent";
@@ -64,6 +65,8 @@ export const getNextCycleEvent = ({
 		]),
 	).sort((a, b) => a - b);
 
+	const phaseProrations = setPlansPhaseProrations({ billingContext }) ?? [];
+
 	for (const startsAtMs of candidateTimestamps) {
 		const event = classifyNextCycleEvent({
 			billingContext,
@@ -72,6 +75,7 @@ export const getNextCycleEvent = ({
 			startsAtMs,
 			renewalBoundaryMs,
 			smallestInterval,
+			phaseProrations,
 		});
 
 		if (event) return event;

@@ -1,7 +1,6 @@
 import type {
 	CreateScheduleBillingContext,
 	FullCusProduct,
-	SetPlansParamsV0,
 } from "@autumn/shared";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -44,12 +43,12 @@ const currentRecurringCustomerProduct = ({
 export const setupSetPlansBillingCycleAnchor = ({
 	billingContext,
 	timeline,
-	params,
 }: {
 	billingContext: CreateScheduleBillingContext;
 	timeline: SetPlansTimeline;
-	params: SetPlansParamsV0;
 }): SetPlansAnchorFields => {
+	const { requestedBillingCycleAnchor, requestedProrationBehavior } =
+		billingContext;
 	const outgoingCustomerProduct = currentRecurringCustomerProduct({
 		billingContext,
 		timeline,
@@ -57,12 +56,12 @@ export const setupSetPlansBillingCycleAnchor = ({
 	const [firstProduct] = billingContext.fullProducts;
 
 	const anchorResetRefund = setupAnchorResetRefund({
-		billingCycleAnchor: params.billing_cycle_anchor,
-		prorationBehavior: params.proration_behavior,
+		billingCycleAnchor: requestedBillingCycleAnchor,
+		prorationBehavior: requestedProrationBehavior,
 		outgoingCustomerProduct,
 	});
 
-	if (params.billing_cycle_anchor === undefined || !firstProduct) {
+	if (requestedBillingCycleAnchor === undefined || !firstProduct) {
 		return {
 			billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
 			resetCycleAnchorMs: billingContext.resetCycleAnchorMs,
@@ -79,7 +78,7 @@ export const setupSetPlansBillingCycleAnchor = ({
 			newFullProduct: firstProduct,
 			trialContext: billingContext.trialContext,
 			currentEpochMs: billingContext.currentEpochMs,
-			requestedBillingCycleAnchor: params.billing_cycle_anchor,
+			requestedBillingCycleAnchor,
 		});
 
 	return {

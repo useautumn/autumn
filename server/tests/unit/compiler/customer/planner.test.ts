@@ -56,7 +56,7 @@ describe("customer filter planner", () => {
 				SELECT p.internal_id FROM products p
 				WHERE p.org_id = ? AND p.env = ?
 				AND p.id = ?
-				) SELECT DISTINCT c.internal_id, c.id, c.name, c.email, c.org_id, c.env
+				) SELECT DISTINCT c.internal_id, c.id, c.name, c.email, c.org_id, c.env, c.processor, c.processors
 				FROM plan_products pp
 				JOIN customer_products cp ON cp.internal_product_id = pp.internal_id
 				JOIN customers c ON c.internal_id = cp.internal_customer_id

@@ -11,7 +11,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 import {
 	getCustomerSchedulesByScope,
@@ -183,7 +183,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule: entity schedule replaces customer schedule; plan-level entity_id preserved")}`,
+	`${chalk.yellowBright("create-schedule: entity schedule keeps customer-level plans in the one customer schedule")}`,
 	async () => {
 		const pro = products.pro({
 			id: "pro",
@@ -258,42 +258,36 @@ test.concurrent(
 			Object.values(entitySchedules).map((schedule) => schedule.id),
 		).toEqual([entityScheduleId]);
 
-		const replacedScheduledProducts = await ctx.db
-			.select()
-			.from(customerProducts)
-			.where(
-				inArray(
-					customerProducts.id,
-					customerSchedule.phases[1]!.customer_product_ids,
-				),
-			);
-		expect(replacedScheduledProducts).toHaveLength(0);
+		// An entity request leaves customer-level plans out of scope, so they fold into the one schedule.
+		const customerPlanIds = customerSchedule.phases.flatMap(
+			(phase) => phase.customer_product_ids,
+		);
+		const mergedPlanIds = entitySchedule.phases.flatMap(
+			(phase) => phase.customer_product_ids,
+		);
+		expect(mergedPlanIds).toEqual(expect.arrayContaining(customerPlanIds));
 
-		// Every product the replaced schedule placed ends now, including its started plan.
-		const replacedOpeningProducts = await ctx.db
+		// A plan repeated in the next phase continues on its live row instead of queuing a new one.
+		const customerProductRows = await ctx.db
 			.select()
 			.from(customerProducts)
-			.where(
-				inArray(
-					customerProducts.id,
-					customerSchedule.phases[0]!.customer_product_ids,
-				),
-			);
-		expect(replacedOpeningProducts).toHaveLength(1);
-		expect(replacedOpeningProducts[0]!.product_id).toBe(pro.id);
-		expect(replacedOpeningProducts[0]!.status).toBe(CusProductStatus.Expired);
+			.where(inArray(customerProducts.id, customerPlanIds));
+		expect(customerProductRows).toHaveLength(1);
+		expect(customerProductRows[0]!.product_id).toBe(pro.id);
+		expect(customerProductRows[0]!.status).toBe(CusProductStatus.Active);
+		expect(customerProductRows[0]!.internal_entity_id).toBeNull();
 
-		const entityScheduledProducts = await ctx.db
+		const entityProductRows = await ctx.db
 			.select()
 			.from(customerProducts)
 			.where(
-				inArray(
-					customerProducts.id,
-					entitySchedule.phases[1]!.customer_product_ids,
+				and(
+					inArray(customerProducts.id, mergedPlanIds),
+					eq(customerProducts.product_id, addon.id),
 				),
 			);
-		expect(entityScheduledProducts).toHaveLength(1);
-		expect(entityScheduledProducts[0]!.status).toBe(CusProductStatus.Scheduled);
-		expect(entityScheduledProducts[0]!.entity_id).toBe(entityId);
+		expect(entityProductRows).toHaveLength(1);
+		expect(entityProductRows[0]!.status).toBe(CusProductStatus.Active);
+		expect(entityProductRows[0]!.entity_id).toBe(entityId);
 	},
 );

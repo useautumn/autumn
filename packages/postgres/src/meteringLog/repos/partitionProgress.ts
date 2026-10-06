@@ -39,7 +39,7 @@ export const readPartitionProgress = async ({
 }: {
 	ctx: ProgressContext;
 } & PartitionPosition): Promise<PartitionProgressRow | null> => {
-	const rows = await ctx.db.execute(sql`
+	const { rows } = await ctx.db.execute(sql`
 		SELECT next_offset, command_next_offset, owner_epoch, owner_fence_offset, claim_token
 		FROM partition_progress
 		WHERE topic = ${topic} AND partition_id = ${partition}

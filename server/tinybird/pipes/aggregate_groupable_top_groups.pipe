@@ -1,0 +1,113 @@
+DESCRIPTION >
+    Top max_groups customers (or property values when group_column = 'property') per event over the
+    whole window, for org-wide grouping with group_ranking='window'. The server passes them to
+    aggregate_groupable, which then builds per-period series only for these groups.
+
+TOKEN "aggregate_groupable_top_groups_read" READ
+
+NODE group_totals
+DESCRIPTION >
+    Window total per group: customers read complete UTC days from the daily rollup and remaining full
+    hours from the org dimension rollup; property values read the org property rollup. Both include a
+    live final hour from the rollup and read partial edge hours from raw events.
+SQL >
+    %
+    WITH
+        toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
+        toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
+        if(window_start = toStartOfHour(window_start), toStartOfHour(window_start), addHours(toStartOfHour(window_start), 1)) AS full_hours_start,
+        window_end >= now() - INTERVAL 30 SECOND AS end_is_live,
+        if(end_is_live, addHours(toStartOfHour(window_end), 1), toStartOfHour(window_end)) AS full_hours_end,
+        if(full_hours_start = toStartOfDay(full_hours_start), toStartOfDay(full_hours_start), addDays(toStartOfDay(full_hours_start), 1)) AS full_days_start,
+        toStartOfDay(full_hours_end) AS full_days_end
+    {% if String(group_column, 'customer_id') == 'property' %}
+    SELECT event_name, group_value, sum(value) AS total
+    FROM (
+        SELECT event_name, property_value AS group_value, sumMerge(total_value) AS value
+        FROM events_org_property_hourly_mv
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND property_key = {{ String(property_key, '') }}
+            AND property_value != ''
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
+        GROUP BY event_name, group_value
+
+        UNION ALL
+
+        SELECT
+            event_name,
+            {{ column('properties.' + String(property_key, '')) }}::String AS group_value,
+            sum(toFloat64(coalesce(value, 1))) AS value
+        FROM events
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND timestamp >= window_start
+            AND timestamp <= window_end
+            AND (
+                (window_start < full_hours_start AND timestamp < full_hours_start)
+                OR (NOT end_is_live AND timestamp >= full_hours_end)
+            )
+            AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
+            AND {{ column('properties.' + String(property_key, '')) }}::String != ''
+        GROUP BY event_name, group_value
+    )
+    GROUP BY event_name, group_value
+    {% else %}
+    SELECT event_name, group_value, sum(value) AS total
+    FROM (
+        SELECT event_name, customer_id AS group_value, sumMerge(total_value) AS value
+        FROM events_customer_daily_mv
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND day >= full_days_start
+            AND day < full_days_end
+        GROUP BY event_name, group_value
+
+        UNION ALL
+
+        SELECT event_name, group_value, sumMerge(total_value) AS value
+        FROM events_org_dimension_hourly_mv
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND dimension = 'customer_id'
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND hour >= full_hours_start
+            AND hour < full_hours_end
+            AND NOT (hour >= full_days_start AND hour < full_days_end)
+        GROUP BY event_name, group_value
+
+        UNION ALL
+
+        SELECT event_name, customer_id AS group_value, sum(toFloat64(coalesce(value, 1))) AS value
+        FROM events
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND timestamp >= window_start
+            AND timestamp <= window_end
+            AND (
+                (window_start < full_hours_start AND timestamp < full_hours_start)
+                OR (NOT end_is_live AND timestamp >= full_hours_end)
+            )
+        GROUP BY event_name, group_value
+    )
+    GROUP BY event_name, group_value
+    {% end %}
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT event_name, group_value
+    FROM group_totals
+    ORDER BY event_name, total DESC, group_value ASC
+    LIMIT {{ Int32(max_groups, 9) }} BY event_name

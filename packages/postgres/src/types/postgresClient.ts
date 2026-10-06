@@ -1,14 +1,14 @@
 import type { schemas } from "@autumn/shared";
-import type { SQL } from "bun";
 import type { SQL as DrizzleSql } from "drizzle-orm";
-import type { drizzle } from "drizzle-orm/bun-sql";
+import type { drizzle } from "drizzle-orm/node-postgres";
+import type { Pool, QueryResult } from "pg";
 
-/** Drizzle over Bun's SQL driver; `execute` returns rows directly, no normalising wrapper. */
-export type PostgresDb = ReturnType<typeof drizzle<typeof schemas>>;
+/** Drizzle over a node-postgres pool; `execute` answers pg's `QueryResult`, rows on `.rows`. */
+export type PostgresDb = ReturnType<typeof drizzle<typeof schemas, Pool>>;
 
 /** What a repo runs against: the pool, a transaction opened on it, or a test double. */
 export type PostgresExecutor = {
-	execute(query: DrizzleSql): Promise<Record<string, unknown>[]>;
+	execute(query: DrizzleSql): Promise<Pick<QueryResult, "rows">>;
 };
 
 /** What every repo takes as `ctx`: the pool plus the tenant its query is scoped to. */
@@ -18,25 +18,28 @@ export type PostgresContext = {
 	env: string;
 };
 
+/** The one call the pool makes; any app logger satisfies it. */
+export type PostgresLogger = {
+	warn: (message: string, fields: Record<string, unknown>) => void;
+};
+
 export type PostgresClient = {
 	db: PostgresDb;
-	client: SQL;
+	client: Pool;
 	close(): Promise<void>;
 };
 
 export type PostgresClientConfig = {
 	databaseUrl: string;
+	/** Names the pool's connections in pg_stat_activity and the bouncer's logs. */
+	applicationName: string;
 	/** Pool ceiling; counts against the PgBouncer max_client_conn budget per process. */
 	maxConnections: number;
-	/** Seconds to wait when establishing a connection. */
+	/** Seconds to wait for a connection, whether opening one or queued on a full pool. */
 	connectTimeout: number;
 	/** Seconds an idle connection stays open. */
 	idleTimeout: number;
-	maxLifetime?: number;
-	/** Off by default because every deployed connection goes through PgBouncer in
-	 *  transaction pooling mode, where a statement prepared on one backend
-	 *  connection is absent when the next query lands on another. That surfaces as
-	 *  a missing-prepared-statement error naming the bouncer, and it poisons the
-	 *  surrounding transaction. Only turn it on against a direct connection. */
-	usePreparedStatements?: boolean;
+	/** Seconds a query may wait for its answer: the client's read deadline, since a statement that never reached
+	 *  Postgres can't hit its statement_timeout. */
+	queryTimeout: number;
 };
