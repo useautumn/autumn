@@ -62,7 +62,7 @@ export function createHeraldEnv(
 		HERALD_DEPLOYMENT: deployment,
 		HERALD_CACHE_PUSH_COALESCE_MS: Math.max(
 			0,
-			Number(runtimeEnv.HERALD_CACHE_PUSH_COALESCE_MS ?? 100) || 0,
+			Number(runtimeEnv.HERALD_CACHE_PUSH_COALESCE_MS ?? 0) || 0,
 		),
 		/** Absent where alien is not set up: herald then reaches Atoms over HTTP only. */
 		HERALD_ALIEN: alienOf({
