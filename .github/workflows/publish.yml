@@ -203,3 +203,88 @@ jobs:
             git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null || git tag "${tag}" HEAD
             git push origin "refs/tags/${tag}"
           done
+
+  bump-autumn-js:
+    name: Bump autumn-js pin on dev
+    needs: [prepare, commit]
+    if: >-
+      always() &&
+      needs.commit.result == 'success' &&
+      contains(fromJSON(needs.prepare.outputs.packages).*.name, 'autumn-js')
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    env:
+      BUMP_BRANCH: bot/bump-autumn-js
+      PACKAGES: ${{ needs.prepare.outputs.packages }}
+    steps:
+      - name: Create app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CODEGEN_APP_ID || secrets.CODEGEN_APP_ID }}
+          private-key: ${{ secrets.CODEGEN_APP_PRIVATE_KEY }}
+
+      - name: Checkout publish scripts
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          path: publisher
+          sparse-checkout: scripts/release
+
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Pin autumn-js
+        id: pin
+        run: |
+          VERSION=$(jq -r '.[] | select(.name == "autumn-js") | .version' <<< "$PACKAGES")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          (cd publisher/scripts/release && bun pinAutumnJs.ts "$GITHUB_WORKSPACE/dev" "$VERSION")
+          cd dev
+          # A dry run's version is not on npm, so only the manifests change.
+          if [ "$DRY_RUN" != "true" ]; then
+            for attempt in 1 2 3 4 5 6; do
+              bun install --lockfile-only && break
+              echo "npm has not served autumn-js@${VERSION} yet; retrying."
+              sleep $((attempt * 10))
+            done
+          fi
+          git diff --stat
+
+      - name: Open or update bump PR
+        working-directory: dev
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ steps.pin.outputs.version }}
+        run: |
+          if git diff --quiet; then
+            echo "dev already pins autumn-js@${VERSION}."
+            exit 0
+          fi
+          EXISTING=$(gh pr list --head "$BUMP_BRANCH" --base dev --state open --json number --jq '.[0].number // empty')
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: would ${EXISTING:+update #}${EXISTING:-open a PR} on ${BUMP_BRANCH} bumping autumn-js to ${VERSION}."
+            exit 0
+          fi
+          BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git switch -c "$BUMP_BRANCH"
+          git commit -am "chore: bump autumn-js to ${VERSION}"
+          git push --force origin "$BUMP_BRANCH"
+          TITLE="chore: bump autumn-js to ${VERSION}"
+          BODY="Pins \`autumn-js@${VERSION}\` (just published from main) in \`server\` and \`packages/billing\`, and updates \`bun.lock\`."
+          if [ -n "$EXISTING" ]; then
+            gh pr edit "$EXISTING" --title "$TITLE" --body "$BODY"
+          else
+            gh pr create --base dev --head "$BUMP_BRANCH" --title "$TITLE" --body "$BODY"
+          fi
