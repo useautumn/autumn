@@ -20,12 +20,15 @@ export const getNextCycleEvent = ({
 	billingContext,
 	customerProducts,
 	anchorMs,
+	fromMs = billingContext.currentEpochMs,
 }: {
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	anchorMs: number;
+	/** Search for events after this time; defaults to now. */
+	fromMs?: number;
 }): NextCycleEvent => {
-	const { currentEpochMs } = billingContext;
+	const currentEpochMs = fromMs;
 	const nowMs = normalizeMs(currentEpochMs);
 	const normalizedCustomerProducts = customerProducts.map(
 		normalizeCustomerProductTimestamps,

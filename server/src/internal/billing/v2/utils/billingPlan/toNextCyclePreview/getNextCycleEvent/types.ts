@@ -17,6 +17,7 @@ export type NextCycleEvent =
 	| { kind: "none" }
 	| ({
 			kind: "anchor_reset";
+			startsAtMs: number;
 			prorationBehavior: PhaseProrationBehavior | undefined;
 	  } & NextCycleEventContext)
 	| ({
