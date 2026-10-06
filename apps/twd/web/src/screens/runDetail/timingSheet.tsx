@@ -5,6 +5,7 @@ import {
 	SheetTitle,
 } from "@autumn/ui/components/ui/sheet";
 import { X } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { RunDetail } from "../../../../src/api/contract.ts";
 import type { RunTiming } from "../../../../src/internal/runs/timing/summariseRunTiming.ts";
 import type { LogLine } from "../../api/liveCache.ts";
@@ -50,42 +51,27 @@ const LiveLog = ({
 	</div>
 );
 
-/** Timing & boot, opened from the ETA chip: a left sheet over the main content only. */
-export const TimingSheet = ({
-	open,
-	onOpenChange,
-	run,
-	timing,
-	live,
-	log,
-	onOpenFile,
-	onOpenWorker,
-}: {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
+type SheetBodyProps = {
 	run: RunDetail;
 	timing: RunTiming;
 	live: boolean;
 	log: LogLine[];
 	onOpenFile: (file: string) => void;
 	onOpenWorker: (worker: string) => void;
-}) => {
-	const { marks } = timing;
-	const marksLine = [
-		marks.lastWorkerReady !== null &&
-			`all workers up ${mmss(marks.lastWorkerReady)}`,
-		marks.halfFilesDone !== null && `50% at ${mmss(marks.halfFilesDone)}`,
-		marks.ninetyFilesDone !== null && `90% at ${mmss(marks.ninetyFilesDone)}`,
-	].filter(Boolean);
-	const hasFiles = timing.completion.length > 0;
-	return (
-		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent
-				side="left"
-				hideCloseButton
-				overlayClassName="absolute"
-				className="absolute top-2 bottom-2 left-3 w-[calc(100%-1.5rem)] gap-4 overflow-y-auto rounded-2xl border border-border/40 bg-card p-4 shadow-(--overlay-dialog-shadow) sm:max-w-md"
-			>
+};
+
+const SheetBody = memo(
+	({ run, timing, live, log, onOpenFile, onOpenWorker }: SheetBodyProps) => {
+		const { marks } = timing;
+		const marksLine = [
+			marks.lastWorkerReady !== null &&
+				`all workers up ${mmss(marks.lastWorkerReady)}`,
+			marks.halfFilesDone !== null && `50% at ${mmss(marks.halfFilesDone)}`,
+			marks.ninetyFilesDone !== null && `90% at ${mmss(marks.ninetyFilesDone)}`,
+		].filter(Boolean);
+		const hasFiles = timing.completion.length > 0;
+		return (
+			<>
 				<div className="flex items-center gap-3">
 					<SheetTitle className="text-[15px]">Timing & boot</SheetTitle>
 					<span className="ml-auto text-xs text-tertiary-foreground tabular-nums">
@@ -146,6 +132,47 @@ export const TimingSheet = ({
 						workers, plus retries and teardown. ± is the gap to p90.
 					</p>
 				)}
+			</>
+		);
+	},
+);
+
+const whenIdle = (run: () => void) => {
+	if (typeof window.requestIdleCallback !== "function") {
+		const id = window.setTimeout(run, 200);
+		return () => window.clearTimeout(id);
+	}
+	const id = window.requestIdleCallback(run, { timeout: 1_000 });
+	return () => window.cancelIdleCallback(id);
+};
+
+/** Timing & boot, opened from the ETA chip: a left sheet over the main content only. */
+export const TimingSheet = ({
+	open,
+	onOpenChange,
+	...body
+}: SheetBodyProps & {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) => {
+	// Mounted once the page is idle and kept mounted, so opening only reveals it.
+	const [primed, setPrimed] = useState(false);
+	useEffect(() => whenIdle(() => setPrimed(true)), []);
+	// While closed the body keeps its last props, so live ticks don't re-render the charts.
+	const shown = useRef(body);
+	if (open) shown.current = body;
+	return (
+		<Sheet open={open} onOpenChange={onOpenChange}>
+			<SheetContent
+				side="left"
+				hideCloseButton
+				keepMounted={primed}
+				// Laid out but invisible while closed, so the charts keep their size instead of remounting.
+				render={(props) => <div {...props} hidden={false} />}
+				overlayClassName="absolute"
+				className="not-data-ending-style:data-closed:invisible absolute top-2 bottom-2 left-3 w-[calc(100%-1.5rem)] gap-4 overflow-y-auto rounded-2xl border border-border/40 bg-card p-4 shadow-(--overlay-dialog-shadow) sm:max-w-md"
+			>
+				<SheetBody {...shown.current} />
 			</SheetContent>
 		</Sheet>
 	);

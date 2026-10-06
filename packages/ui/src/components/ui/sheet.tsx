@@ -97,15 +97,18 @@ function SheetContent({
 	hideCloseButton = false,
 	overlayClassName,
 	portalContainer,
+	keepMounted,
 	...props
 }: SheetPrimitive.Popup.Props & {
 	side?: "top" | "right" | "bottom" | "left";
 	hideCloseButton?: boolean;
 	overlayClassName?: string;
 	portalContainer?: HTMLElement | null;
+	/** Keep the content mounted (hidden) while closed, so reopening skips the mount. */
+	keepMounted?: boolean;
 }) {
 	return (
-		<SheetPortal container={portalContainer}>
+		<SheetPortal container={portalContainer} keepMounted={keepMounted}>
 			<SheetOverlay className={overlayClassName} />
 			<SheetPrimitive.Popup
 				data-slot="sheet-content"

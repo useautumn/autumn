@@ -4,7 +4,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { SetPlansParamsV0Input } from "@autumn/shared";
+import type { BillingBehavior, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration";
@@ -24,16 +24,19 @@ const resetNowParams = ({
 	customerId,
 	planId,
 	quantity,
+	prorationBehavior,
 }: {
 	customerId: string;
 	planId: string;
 	quantity?: number;
+	prorationBehavior?: BillingBehavior;
 }): SetPlansParamsV0Input => ({
 	customer_id: customerId,
 	phases: [
 		{
 			starts_at: "now",
 			billing_cycle_anchor: "phase_start",
+			...(prorationBehavior && { proration_behavior: prorationBehavior }),
 			plans: [
 				{
 					plan_id: planId,
@@ -318,6 +321,96 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			remaining: 300,
 			nextResetAt: addMonths(renewalAt, 1).getTime(),
+		});
+	},
+);
+
+const setupLiveUpgrade = ({ customerId }: { customerId: string }) => {
+	const pro = products.pro({
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const premium = products.premium({
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+	return initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.advanceTestClock({ days: 10 }),
+		],
+	}).then((scenario) => ({ ...scenario, pro, premium }));
+};
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now: an upgrade with proration none charges the new full cycle with no credit")}`,
+	async () => {
+		const { customerId, autumnV2_4, ctx, advancedTo, premium } =
+			await setupLiveUpgrade({ customerId: "set-plans-anchor-now-none" });
+
+		const renewalAt = addMonths(advancedTo, 1).getTime();
+		const params = resetNowParams({
+			customerId,
+			planId: premium.id,
+			prorationBehavior: "none",
+		});
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(50);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: renewalAt,
+			total: 50,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: 50,
+		});
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: advancedTo,
+			periodEndMs: renewalAt,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now: an upgrade with bill_difference credits only the unused old period")}`,
+	async () => {
+		const { customerId, autumnV2_4, advancedTo, premium } =
+			await setupLiveUpgrade({
+				customerId: "set-plans-anchor-now-bill-difference",
+			});
+
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 20,
+			newAmount: 50,
+		});
+		const params = resetNowParams({
+			customerId,
+			planId: premium.id,
+			prorationBehavior: "bill_difference",
+		});
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+
+		await autumnV2_4.billing.setPlans(params);
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
 		});
 	},
 );
