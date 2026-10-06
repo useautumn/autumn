@@ -88,6 +88,8 @@ export const CustomerEntitlementSchema = z.object({
 	reset_by_invoice: z.boolean().nullable().optional(),
 	reset_cycle_anchor: z.number().nullable().optional(),
 	next_reset_at: z.number().nullable(),
+	// Optional for cached rows written before reset-aware lock receipts.
+	balance_reset_at: z.number().nullish(),
 	adjustment: z.number().nullish().default(0),
 
 	// Expiry for loose entitlements (entitlements without reset intervals)

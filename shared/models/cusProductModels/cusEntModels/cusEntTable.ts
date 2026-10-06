@@ -42,6 +42,8 @@ export const customerEntitlements = pgTable(
 		created_at: numeric({ mode: "number" }).notNull(),
 		reset_cycle_anchor: numeric({ mode: "number" }),
 		next_reset_at: numeric({ mode: "number" }),
+		// The boundary of the last applied refill, independent of schedule edits.
+		balance_reset_at: numeric({ mode: "number" }),
 		usage_allowed: boolean("usage_allowed").default(false),
 		separate_interval: boolean("separate_interval").notNull().default(false),
 		is_pooled_balance: boolean("is_pooled_balance").notNull().default(false),

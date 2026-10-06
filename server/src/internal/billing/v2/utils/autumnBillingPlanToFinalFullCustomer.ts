@@ -95,6 +95,9 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 				if (update.updates.next_reset_at !== undefined) {
 					entitlement.next_reset_at = update.updates.next_reset_at;
 				}
+				if (update.updates.balance_reset_at !== undefined) {
+					entitlement.balance_reset_at = update.updates.balance_reset_at;
+				}
 
 				if (update.updates.balance !== undefined) {
 					entitlement.balance = update.updates.balance;

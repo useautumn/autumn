@@ -57,6 +57,7 @@ DECLARE
   uw_windows jsonb;
   
   db_next_reset_at bigint;
+  db_balance_reset_at bigint;
   db_entity_count int;
   db_cache_version int;
   
@@ -121,12 +122,13 @@ BEGIN
       -- Get current DB values for conflict detection
       SELECT 
         ce.next_reset_at,
+        ce.balance_reset_at,
         CASE 
           WHEN ce.entities IS NULL OR jsonb_typeof(ce.entities) != 'object' THEN 0
           ELSE (SELECT count(*) FROM jsonb_object_keys(ce.entities))::int
         END,
         COALESCE(ce.cache_version, 0)
-      INTO db_next_reset_at, db_entity_count, db_cache_version
+      INTO db_next_reset_at, db_balance_reset_at, db_entity_count, db_cache_version
       FROM customer_entitlements ce
       WHERE ce.id = ent_id;
       
@@ -137,6 +139,12 @@ BEGIN
           ent_id, ent_next_reset_at, db_next_reset_at;
       END IF;
       
+      -- An actual refill can keep the schedule unchanged. Reject its old balance
+      -- even then; pre-migration cached rows have the initial null generation.
+      IF (ent_obj->>'balance_reset_at')::bigint IS DISTINCT FROM db_balance_reset_at THEN
+        RAISE EXCEPTION 'RESET_AT_MISMATCH cus_ent_id:% balance reset generation changed', ent_id;
+      END IF;
+
       -- Guard 2: Check entity count mismatch (indicates entity was added/removed after cache)
       IF ent_entity_count != COALESCE(db_entity_count, 0) THEN
         RAISE EXCEPTION 'ENTITY_COUNT_MISMATCH cus_ent_id:% cache_count:% db_count:%',

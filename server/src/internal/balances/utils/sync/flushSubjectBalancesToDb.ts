@@ -31,6 +31,7 @@ export interface SyncEntry {
 	entities: Record<string, EntityBalance> | null;
 	usage_attribution: UsageAttribution;
 	next_reset_at: number | null;
+	balance_reset_at: number | null;
 	entity_count: number;
 	cache_version: number | null;
 }
@@ -54,6 +55,7 @@ export const subjectBalanceToSyncEntry = ({
 	entities: subjectBalance.entities ?? null,
 	usage_attribution: subjectBalance.usage_attribution ?? {},
 	next_reset_at: subjectBalance.next_reset_at ?? null,
+	balance_reset_at: subjectBalance.balance_reset_at ?? null,
 	entity_count: subjectBalance.entities
 		? Object.keys(subjectBalance.entities).length
 		: 0,

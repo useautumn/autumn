@@ -198,6 +198,7 @@ export const customerProductToArrearLineItems = ({
 			customerEntitlement,
 			updates: {
 				...resetBalancesUpdate,
+				balance_reset_at: billingPeriod?.end ?? billingContext.currentEpochMs,
 				next_reset_at:
 					options.updateNextResetAt === false ? undefined : nextResetAt,
 			},

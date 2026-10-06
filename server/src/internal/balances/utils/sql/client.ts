@@ -11,6 +11,7 @@ export type ResetCusEntParam = {
 	entities: Record<string, EntityBalance> | null;
 	usage_attribution: UsageAttribution;
 	next_reset_at: number;
+	balance_reset_at: number;
 	rollover_insert: Pick<
 		Rollover,
 		"id" | "cus_ent_id" | "balance" | "usage" | "expires_at" | "entities"
@@ -24,6 +25,7 @@ export type AppliedCusEntReset = {
 	entities: Record<string, EntityBalance> | null;
 	usage_attribution: UsageAttribution;
 	next_reset_at: number;
+	balance_reset_at: number | null;
 	cache_version: number;
 	rollover: Pick<
 		Rollover,

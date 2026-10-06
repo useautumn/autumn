@@ -90,6 +90,7 @@ export const applyResetResults = async ({
 		if (updates.entities !== null) original.entities = updates.entities;
 		original.usage_attribution = updates.usage_attribution;
 		original.next_reset_at = updates.next_reset_at;
+		original.balance_reset_at = updates.balance_reset_at;
 
 		if (!result.rolloverInsert) continue;
 

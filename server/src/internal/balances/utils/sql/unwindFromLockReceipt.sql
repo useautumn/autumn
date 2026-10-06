@@ -28,6 +28,7 @@ DECLARE
   credit_cost numeric;
   usage_attribution_delta jsonb;
   current_usage_attribution jsonb;
+  current_balance_reset_at numeric;
   rate_card_unwind_change jsonb;
   unwind_credit_cost numeric;
 
@@ -94,6 +95,18 @@ BEGIN
 
     IF unwind_iteration_value <= 0 THEN
       CONTINUE;
+    END IF;
+
+    IF item_target_type = 'customer_entitlement' AND item ? 'balance_reset_at' THEN
+      SELECT ce.balance_reset_at INTO current_balance_reset_at
+      FROM customer_entitlements ce WHERE ce.id = customer_entitlement_id
+      FOR UPDATE;
+      IF FOUND AND COALESCE(current_balance_reset_at, 0) IS DISTINCT FROM (item->>'balance_reset_at')::numeric THEN
+        -- This share expired at refill. Do not compensate it against current
+        -- entitlements, or mutate the new cycle's rate-card attribution.
+        remaining_value := remaining_value - unwind_iteration_value;
+        CONTINUE;
+      END IF;
     END IF;
 
     credits_to_unwind := unwind_iteration_value * credit_cost;

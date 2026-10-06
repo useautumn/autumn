@@ -102,6 +102,10 @@ local function apply_next_reset_at_update(params)
 	if not is_absent(update.next_reset_at) then
 		subject_balance.next_reset_at = update.next_reset_at
 	end
+
+  if not is_absent(update.balance_reset_at) then
+    subject_balance.balance_reset_at = update.balance_reset_at
+  end
 end
 
 local function apply_reset_cycle_anchor_update(params)

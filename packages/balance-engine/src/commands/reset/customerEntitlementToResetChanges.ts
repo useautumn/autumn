@@ -110,7 +110,11 @@ export const customerEntitlementToResetChanges = ({
 				id: row.id,
 				// The cycle that ended is the guard: a row already moved on refuses a second refill.
 				before: { next_reset_at: cycleEndedAt },
-				after: { ...balances, next_reset_at: nextResetAt },
+				after: {
+					...balances,
+					next_reset_at: nextResetAt,
+					balance_reset_at: cycleEndedAt,
+				},
 			},
 			...customerEntitlementToRolloverChanges({ row, cycleEndedAt }),
 		],

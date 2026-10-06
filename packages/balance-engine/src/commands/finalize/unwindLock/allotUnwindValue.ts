@@ -1,28 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { DeductionDelta } from "../../../deduction/types/deductionDelta.js";
 import type { WorkerFullSubject } from "../../../models/subject/workerFullSubject.js";
-
-/** The ids of every balance row the subject still holds; a lock's delta on anything else has nothing to land on. */
-const heldRowIdsOf = ({
-	fullSubject,
-}: {
-	fullSubject: WorkerFullSubject;
-}): Set<string> => {
-	// Unfiltered on purpose: a row that has expired since the lock still takes its refund.
-	const customerEntitlements = [
-		...fullSubject.customer_products.flatMap(
-			(customerProduct) => customerProduct.customer_entitlements,
-		),
-		...fullSubject.extra_customer_entitlements,
-		...fullSubject.pooled_customer_entitlements,
-	];
-	return new Set(
-		customerEntitlements.flatMap((customerEntitlement) => [
-			customerEntitlement.id,
-			...customerEntitlement.rollovers.map((rollover) => rollover.id),
-		]),
-	);
-};
+import { fullSubjectToHeldRows } from "../../../utils/subjectUtils/convertSubjectUtils.js";
 
 /** Spreads `unwindValue` over the lock's deltas, newest first: how much of each to give back, and what no held row can take. */
 export const allotUnwindValue = ({
@@ -37,7 +16,18 @@ export const allotUnwindValue = ({
 	allotments: { delta: DeductionDelta; taken: Decimal }[];
 	skippedValue: number;
 } => {
-	const heldRowIds = heldRowIdsOf({ fullSubject });
+	// Keep expired/past-due rows eligible as before; only an actual refill makes
+	// their reservation stale. Rollover rows have their own identity.
+	const heldRows = fullSubjectToHeldRows({ fullSubject });
+	const heldRowIds = new Set(
+		heldRows.flatMap((row) => [
+			row.id,
+			...row.rollovers.map((rollover) => rollover.id),
+		]),
+	);
+	const resetAtById = new Map(
+		heldRows.map((row) => [row.id, row.balance_reset_at ?? 0]),
+	);
 	const allotments: { delta: DeductionDelta; taken: Decimal }[] = [];
 	let remaining = new Decimal(unwindValue);
 	let skipped = new Decimal(0);
@@ -48,6 +38,15 @@ export const allotUnwindValue = ({
 		if (deltaMagnitude.isZero()) continue;
 		const taken = Decimal.min(remaining, deltaMagnitude);
 		remaining = remaining.minus(taken);
+		// A refill replaced this hold. Consume its share without refunding it or
+		// forwarding it to another live row through missing-row compensation.
+		if (
+			delta.table === "customerEntitlements" &&
+			delta.balanceResetAt !== undefined &&
+			resetAtById.has(delta.id) &&
+			delta.balanceResetAt !== resetAtById.get(delta.id)
+		)
+			continue;
 		if (heldRowIds.has(delta.id)) allotments.push({ delta, taken });
 		else skipped = skipped.plus(taken);
 	}

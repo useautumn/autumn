@@ -3,7 +3,9 @@ import { CusProductStatus, ResetInterval } from "@autumn/shared";
 import {
 	applyMutation,
 	computeFinalize,
+	computeReset,
 	computeTrack,
+	computeUpdateBalance,
 	type FinalizeCommand,
 	LockNotFoundError,
 	type SubjectState,
@@ -16,6 +18,7 @@ import {
 	createState,
 	createSubjectFor,
 	createTrackCommand,
+	createUpdateBalanceCommand,
 	identity,
 	occurredAt,
 	org,
@@ -117,6 +120,166 @@ describe("splitFinalize", () => {
 });
 
 describe("computeFinalize", () => {
+	test("changing only the reset schedule preserves a valid refund", () => {
+		const locked = takeLock({
+			state: createState({
+				customerEntitlements: [
+					{
+						...createCustomerEntitlement({ balance: 1000 }),
+						next_reset_at: occurredAt + 1000,
+					},
+				],
+			}),
+			value: 600,
+		});
+		const reschedule = computeUpdateBalance({
+			fullSubject: createSubjectFor({ state: locked.state }),
+			command: {
+				...createUpdateBalanceCommand(),
+				nextResetAt: occurredAt + 2000,
+			},
+		});
+		if (!reschedule) throw new Error("Expected a schedule update");
+		const scheduled = applyMutation({
+			state: locked.state,
+			mutation: reschedule,
+		});
+		const { state } = finalize({
+			state: scheduled,
+			lock: locked.lock,
+			finalValue: 20,
+		});
+		expect(balanceOf({ state })).toBe(980);
+	});
+
+	test("receipts written before reset markers keep their existing refund behavior", () => {
+		const locked = takeLock({ state: createState(), value: 8 });
+		const legacyLock = {
+			...locked.lock,
+			deltas: locked.lock.deltas.map(
+				({ balanceResetAt: _, ...delta }) => delta,
+			),
+		};
+		const { state } = finalize({
+			state: locked.state,
+			lock: legacyLock,
+			finalValue: 0,
+		});
+		expect(balanceOf({ state })).toBe(10);
+	});
+
+	test("a negative reservation does not debit a refilled balance on release", () => {
+		const locked = takeLock({
+			state: createState({ balance: 1000 }),
+			value: -600,
+			overageBehavior: "overflow",
+		});
+		const refilled = {
+			...locked.state,
+			customerEntitlements: locked.state.customerEntitlements.map((row) => ({
+				...row,
+				balance: 1000,
+				balance_reset_at: occurredAt + 1,
+			})),
+		};
+		const { state } = finalize({
+			state: refilled,
+			lock: locked.lock,
+			finalValue: 0,
+		});
+		expect(balanceOf({ state })).toBe(1000);
+		expect(state.openLocks).toEqual([]);
+	});
+
+	test("a mixed lock refunds only the unrefilled source, without forwarding expired credits", () => {
+		const locked = takeLock({
+			state: createState({
+				customerEntitlements: [
+					createCustomerEntitlement({ id: "a", balance: 500 }),
+					createCustomerEntitlement({ id: "b", balance: 500 }),
+				],
+			}),
+			value: 600,
+		});
+		const last = locked.lock.deltas.at(-1);
+		const first = locked.lock.deltas[0];
+		if (!last || !first) throw new Error("Expected two funding sources");
+		const refilled = {
+			...locked.state,
+			customerEntitlements: locked.state.customerEntitlements.map((row) =>
+				row.id === last.id
+					? { ...row, balance: 1000, balance_reset_at: occurredAt + 1 }
+					: row,
+			),
+		};
+		const { state } = finalize({
+			state: refilled,
+			lock: locked.lock,
+			finalValue: 20,
+		});
+		expect(balanceOf({ state, id: last.id })).toBe(1000);
+		expect(balanceOf({ state, id: first.id })).toBe(480);
+	});
+
+	test.each([0, 20, 600, 650])(
+		"finalizing a previous-cycle lock at %s does not refund the new cycle",
+		(finalValue) => {
+			const locked = takeLock({
+				state: createState({
+					customerEntitlements: [
+						{
+							...createCustomerEntitlement({ balance: 1000 }),
+							next_reset_at: occurredAt + 1,
+						},
+					],
+				}),
+				value: 600,
+			});
+			expect(balanceOf({ state: locked.state })).toBe(400);
+			expect(locked.lock.deltas[0]?.balanceResetAt).toBe(0);
+			const reset = computeReset({
+				fullSubject: createSubjectFor({ state: locked.state }),
+				command: {
+					schemaVersion: 1,
+					type: "reset",
+					commandId: "cmd_reset",
+					requestId: "req_reset",
+					identity,
+					org,
+					occurredAt: occurredAt + 2,
+				},
+			});
+			if (!reset) throw new Error("Expected a monthly reset");
+			const resetState = applyMutation({
+				state: locked.state,
+				mutation: reset,
+			});
+			expect(balanceOf({ state: resetState })).toBe(1000);
+			// Fresh usage must not be erased by settling the previous cycle's hold.
+			const freshUsage = computeTrack({
+				fullSubject: createSubjectFor({ state: resetState }),
+				command: {
+					...createTrackCommand({ value: 100 }),
+					occurredAt: occurredAt + 3,
+				},
+			});
+			const current = applyMutation({
+				state: resetState,
+				mutation: freshUsage,
+			});
+			const mutation = computeFinalize({
+				fullSubject: createSubjectFor({ state: current }),
+				command: {
+					...finalizeCommand({ lock: locked.lock, finalValue }),
+					occurredAt: occurredAt + 4,
+				},
+			});
+			const state = applyMutation({ state: current, mutation });
+			expect(balanceOf({ state })).toBe(900 - Math.max(0, finalValue - 600));
+			expect(state.openLocks).toEqual([]);
+		},
+	);
+
 	test.concurrent("a confirm below the lock gives the difference back", () => {
 		const locked = takeLock({ state: createState(), value: 8 });
 		expect(balanceOf({ state: locked.state })).toBe(2);

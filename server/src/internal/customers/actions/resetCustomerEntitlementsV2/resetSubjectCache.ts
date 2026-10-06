@@ -14,6 +14,7 @@ interface SubjectBalanceUpdate {
 	entities: Record<string, unknown> | null;
 	usage_attribution: UsageAttribution;
 	next_reset_at: number | null;
+	balance_reset_at: number;
 	expected_next_reset_at: number | null;
 	pooled_granted: number | null;
 	rollover_insert: unknown | null;
@@ -67,6 +68,7 @@ export const resetSubjectCache = async ({
 				entities: reset.entities,
 				usage_attribution: reset.usage_attribution,
 				next_reset_at: reset.next_reset_at,
+				balance_reset_at: reset.balance_reset_at,
 				expected_next_reset_at: oldNextResetAts[reset.cus_ent_id] ?? null,
 				pooled_granted: pooledGrantedByCusEntId?.[reset.cus_ent_id] ?? null,
 				rollover_insert: reset.rollover_insert,

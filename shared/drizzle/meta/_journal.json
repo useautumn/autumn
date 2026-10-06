@@ -666,6 +666,13 @@
       "when": 1791221190254,
       "tag": "0094_lovely_texas_twister",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1791264193612,
+      "tag": "0095_lock_balance_reset_period",
+      "breakpoints": true
     }
   ]
 }

@@ -879,6 +879,17 @@ BEGIN
     WHERE r.id = ANY(final_rollover_ids);
   END IF;
 
+  -- All referenced entitlements are still locked. Capture the refill generation
+  -- with the debit, rather than from the caller's possibly stale snapshot.
+  SELECT COALESCE(jsonb_agg(
+    CASE WHEN entry.value->>'target_type' = 'customer_entitlement'
+      THEN entry.value || jsonb_build_object('balance_reset_at', COALESCE(ce.balance_reset_at, 0))
+      ELSE entry.value END ORDER BY entry.ordinality
+  ), '[]'::jsonb)
+  INTO mutation_logs_json
+  FROM jsonb_array_elements(mutation_logs_json) WITH ORDINALITY AS entry(value, ordinality)
+  LEFT JOIN customer_entitlements ce ON ce.id = entry.value->>'customer_entitlement_id';
+
   -- Build final result
   result_json := jsonb_build_object(
     'updates', updates_json,

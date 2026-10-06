@@ -33,6 +33,7 @@
         usage_attribution: object | null,
         reset_cycle_anchor: number | null,
         next_reset_at: number | null,
+        balance_reset_at: number | nil,
         expected_next_reset_at: number | null,
         pooled_granted: number | null,
         rollover_insert: { id, cus_ent_id, balance, usage, expires_at, entities } | null,

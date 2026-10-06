@@ -47,6 +47,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 	updates: z
 		.object({
 			next_reset_at: z.number().optional(),
+			balance_reset_at: z.number().optional(),
 			reset_cycle_anchor: z.number().nullable().optional(),
 			adjustment: z.number().optional(),
 			entities: z.record(z.string(), EntityBalanceSchema).nullish(),

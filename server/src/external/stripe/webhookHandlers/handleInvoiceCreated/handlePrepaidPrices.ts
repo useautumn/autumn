@@ -131,6 +131,7 @@ export const handlePrepaidPrices = async ({
 		id: cusEnt.id,
 		updates: {
 			...resetUpdate,
+			balance_reset_at: start * 1000,
 			next_reset_at: end * 1000,
 		},
 	});

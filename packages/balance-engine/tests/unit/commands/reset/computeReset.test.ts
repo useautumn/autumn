@@ -108,6 +108,7 @@ describe("computeReset", () => {
 					adjustment: 0,
 					usage_attribution: {},
 					next_reset_at: nextMonthAfterAsOf({ from: asOf - 1 }),
+					balance_reset_at: asOf - 1,
 				},
 			},
 		]);
@@ -212,6 +213,7 @@ describe("computeReset", () => {
 				ent_b: { id: "ent_b", balance: ALLOWANCE, adjustment: 0 },
 			},
 			usage_attribution: {},
+			balance_reset_at: asOf - 1,
 			next_reset_at: nextMonthAfterAsOf({ from: asOf - 1 }),
 		});
 	});

@@ -11,6 +11,7 @@
 --     - entities: jsonb (null if non-entity)
 --     - usage_attribution: jsonb (cleared to {} for the new cycle)
 --     - next_reset_at: bigint (new next_reset_at value)
+--     - balance_reset_at: bigint (the boundary this refill settles; old callers use the locked row's boundary)
 --     - rollover_insert: jsonb object or null, with fields:
 --         id, cus_ent_id, balance, usage, expires_at, entities
 --
@@ -100,11 +101,12 @@ BEGIN
       adjustment = COALESCE(new_adjustment, ce.adjustment),
       entities = COALESCE(new_entities, ce.entities),
       usage_attribution = new_usage_attribution,
+      balance_reset_at = COALESCE((reset_obj->>'balance_reset_at')::numeric, db_next_reset_at),
       next_reset_at = new_next_reset_at
     WHERE ce.id = ent_id
     RETURNING ce.balance, ce.additional_balance, ce.adjustment, ce.entities,
               ce.usage_attribution,
-              ce.next_reset_at, ce.cache_version
+              ce.next_reset_at, ce.balance_reset_at, ce.cache_version
     INTO updated_row;
 
     -- Insert rollover row if provided
@@ -131,6 +133,7 @@ BEGIN
         'entities', updated_row.entities,
         'usage_attribution', updated_row.usage_attribution,
         'next_reset_at', updated_row.next_reset_at,
+        'balance_reset_at', updated_row.balance_reset_at,
         'rollover', CASE
           WHEN rollover_obj IS NOT NULL AND rollover_obj != 'null'::jsonb THEN rollover_obj
           ELSE NULL

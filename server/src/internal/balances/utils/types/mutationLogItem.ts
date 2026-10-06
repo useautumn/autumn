@@ -16,5 +16,7 @@ export interface MutationLogItem {
 	adjustment_delta: number;
 	usage_delta: number;
 	value_delta: number;
+	/** Last actual refill at reservation. Missing on legacy receipts; 0 means no refill yet. */
+	balance_reset_at?: number;
 	usage_attribution_delta?: UsageAttributionDelta;
 }

@@ -139,6 +139,7 @@ const processPrepaidPrice = ({
 		customerEntitlement,
 		updates: {
 			...resetUpdate,
+			balance_reset_at: start * 1000,
 			...(isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
 				? { balance: 0, additional_balance: 0, adjustment: 0, entities: null }
 				: {}),

@@ -983,6 +983,10 @@ export class CusBatchService {
 						(ce: any) => ({
 							...ce,
 							created_at: normalizeTimestamp(ce.created_at),
+							balance_reset_at:
+								ce.balance_reset_at == null
+									? null
+									: normalizeTimestamp(ce.balance_reset_at),
 							next_reset_at: ce.next_reset_at
 								? normalizeTimestamp(ce.next_reset_at)
 								: null,

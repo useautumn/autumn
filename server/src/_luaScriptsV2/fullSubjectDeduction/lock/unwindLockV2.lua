@@ -202,6 +202,22 @@ local function unwind_lock_item_iteration(params)
   local customer_entitlement_id = normalize_lock_item_id(
     item.customer_entitlement_id
   )
+  local ent_data = context.customer_entitlements[customer_entitlement_id]
+  -- nil means a legacy receipt; 0 is the known initial generation.
+  if item.target_type == 'customer_entitlement' and ent_data
+      and item.balance_reset_at ~= nil
+      and safe_number(item.balance_reset_at)
+        ~= safe_number(ent_data.subject_balance.balance_reset_at)
+  then
+    -- Consume the expired share, including for negative locks. It must not reach
+    -- missing-row compensation or decrement this cycle's usage-window counters.
+    return {
+      applied = false,
+      unwind_iteration_value = unwind_iteration_value,
+      remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
+      error = nil,
+    }
+  end
   local rate_card_unwind_change = calculate_rate_card_unwind_change({
     context = context,
     customer_entitlement_id = customer_entitlement_id,
