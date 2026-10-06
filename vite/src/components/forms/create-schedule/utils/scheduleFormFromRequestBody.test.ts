@@ -54,6 +54,43 @@ describe("scheduleFormFromRequestBody", () => {
 		});
 	});
 
+	test("loads a timestamp first-phase anchor as a custom billing cycle anchor", () => {
+		const anchorMs = 1790000000000;
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					plans: [{ plan_id: "scale" }],
+					starts_at: "now",
+				},
+			],
+		});
+		expect(form).toMatchObject({
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: anchorMs,
+		});
+	});
+
+	test("loads a phase_start first-phase anchor as a reset now", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [
+				{
+					billing_cycle_anchor: "phase_start",
+					plans: [{ plan_id: "scale" }],
+					starts_at: "now",
+				},
+			],
+		});
+		expect(form).toMatchObject({
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "now",
+			billingCycleAnchorDate: null,
+		});
+	});
+
 	test("folds starting_after offsets from the prior phase", () => {
 		const form = scheduleFormFromRequestBody({
 			phases: [

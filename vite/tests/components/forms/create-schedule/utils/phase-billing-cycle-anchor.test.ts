@@ -37,6 +37,28 @@ describe("phaseToBillingCycleAnchor", () => {
 			phaseToBillingCycleAnchor({ ...firstPhase, resetBillingCycle: true }),
 		).toBe("phase_start");
 	});
+
+	test("the first phase anchors on a custom date when one is given", () => {
+		expect(
+			phaseToBillingCycleAnchor({
+				phase: { keepsCycleAnchor: false },
+				isFirstPhase: true,
+				resetBillingCycle: true,
+				customAnchor: 1_790_000_000_000,
+			}),
+		).toBe(1_790_000_000_000);
+	});
+
+	test("a later phase ignores the first phase's custom date", () => {
+		expect(
+			phaseToBillingCycleAnchor({
+				phase: { keepsCycleAnchor: false },
+				isFirstPhase: false,
+				resetBillingCycle: true,
+				customAnchor: 1_790_000_000_000,
+			}),
+		).toBe("phase_start");
+	});
 });
 
 describe("billingCycleAnchorToKeepsCycleAnchor", () => {

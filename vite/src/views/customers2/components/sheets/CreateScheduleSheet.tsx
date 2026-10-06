@@ -183,6 +183,8 @@ export function buildInitialValues({
 		phases,
 		unscheduledPlans: seededState.unscheduledPlans,
 		resetBillingCycle: false,
+		billingCycleAnchorMode: "now",
+		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
 	};

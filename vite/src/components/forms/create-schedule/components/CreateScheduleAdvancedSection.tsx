@@ -1,19 +1,32 @@
 import { Switch } from "@autumn/ui";
 import { AdvancedSection } from "@/components/forms/shared/advanced-section";
-import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
+import { scheduleBillingCycleAnchorBounds } from "../utils/scheduleBillingCycleAnchorBounds";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 
 export function CreateScheduleAdvancedSection() {
-	const { form, formValues, products, nowMs, backdatesLiveSubscription } =
-		useCreateScheduleFormContext();
-	const { resetBillingCycle, endDate, phases, enablePlanImmediately } =
-		formValues;
+	const {
+		form,
+		formValues,
+		products,
+		nowMs,
+		backdatesLiveSubscription,
+		hasActiveSubscription,
+	} = useCreateScheduleFormContext();
+	const {
+		resetBillingCycle,
+		billingCycleAnchorMode,
+		billingCycleAnchorDate,
+		endDate,
+		phases,
+		enablePlanImmediately,
+	} = formValues;
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",
@@ -31,6 +44,12 @@ export function CreateScheduleAdvancedSection() {
 		: rules.resetBillingCycle;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
+	const anchorBounds = scheduleBillingCycleAnchorBounds({
+		phases,
+		endDate,
+		nowMs,
+		hasActiveSubscription,
+	});
 
 	return (
 		<AdvancedSection>
@@ -68,17 +87,22 @@ export function CreateScheduleAdvancedSection() {
 				/>
 			)}
 			{rules.resetBillingCycle.visible && (
-				<ConfigRow
-					title="Reset Billing Cycle"
-					description="Restart the billing cycle when the first phase starts"
-					action={
-						<BillingOptionToggle
-							rule={resetRule}
-							checked={resetBillingCycle && !backdatesLiveSubscription}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("resetBillingCycle", checked)
-							}
-						/>
+				<BillingCycleAnchorConfigRow
+					rule={resetRule}
+					enabled={resetBillingCycle && !backdatesLiveSubscription}
+					mode={anchorBounds.allowCustomAnchor ? billingCycleAnchorMode : "now"}
+					customAnchor={billingCycleAnchorDate}
+					allowCustomAnchor={anchorBounds.allowCustomAnchor}
+					minUnixDate={anchorBounds.minUnixDate}
+					maxUnixDate={anchorBounds.maxUnixDate}
+					onEnabledChange={(enabled) =>
+						form.setFieldValue("resetBillingCycle", enabled)
+					}
+					onModeChange={(mode) =>
+						form.setFieldValue("billingCycleAnchorMode", mode)
+					}
+					onCustomAnchorChange={(anchor) =>
+						form.setFieldValue("billingCycleAnchorDate", anchor)
 					}
 				/>
 			)}
