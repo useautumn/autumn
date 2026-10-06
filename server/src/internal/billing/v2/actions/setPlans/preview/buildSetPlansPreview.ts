@@ -1,4 +1,8 @@
-import type { SetPlansPreviewResponse } from "@autumn/shared";
+import {
+	customerProductHasActiveStatus,
+	filterCustomerProductsByStripeSubscriptionId,
+	type SetPlansPreviewResponse,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
@@ -104,6 +108,13 @@ export const buildSetPlansPreview = async ({
 			liveOpenInvoices,
 			lineItems: billingPlan.autumn.lineItems,
 			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
+			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			liveCustomerProducts: billingContext.stripeSubscription
+				? filterCustomerProductsByStripeSubscriptionId({
+						customerProducts: billingContext.fullCustomer.customer_products,
+						stripeSubscriptionId: billingContext.stripeSubscription.id,
+					}).filter(customerProductHasActiveStatus)
+				: [],
 		}),
 	};
 };

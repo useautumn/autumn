@@ -198,6 +198,7 @@ export const computeSetPlansPlan = ({
 		lockCustomerCurrency,
 	};
 	const autumnBillingPlan = applyBillingCycleAnchorToSharedSubscription({
+		ctx,
 		plan: baseAutumnBillingPlan,
 		billingContext,
 	});
