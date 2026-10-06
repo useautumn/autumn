@@ -7,17 +7,17 @@ import {
 	BillingInterval,
 	type FullCusProduct,
 } from "@autumn/shared";
-import { firstPhaseAnchorResetProration } from "@/internal/billing/v2/actions/setPlans/utils/firstPhaseAnchorResetProration";
 import { computeScheduledAnchorResetPreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/computeScheduledAnchorResetPreview";
 import { classifyNextCycleEvent } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/getNextCycleEvent/classifyNextCycleEvent";
+import { requestedAnchorResetProration } from "@/internal/billing/v2/utils/schedulePhaseProration/requestedAnchorResetProration";
 
 const periodStartMs = Date.UTC(2026, 9, 6, 12);
 const anchorMs = Date.UTC(2026, 9, 16, 12);
 
-describe("firstPhaseAnchorResetProration", () => {
-	test("a timestamp anchor carries the first phase's none onto its reset phase", () => {
+describe("requestedAnchorResetProration", () => {
+	test("a timestamp anchor carries the requested none onto its reset phase", () => {
 		expect(
-			firstPhaseAnchorResetProration({
+			requestedAnchorResetProration({
 				billingContext: {
 					requestedBillingCycleAnchor: anchorMs,
 					requestedProrationBehavior: "none",
@@ -28,7 +28,7 @@ describe("firstPhaseAnchorResetProration", () => {
 
 	test("reset now and bill_difference leave the reset phase to the default rule", () => {
 		expect(
-			firstPhaseAnchorResetProration({
+			requestedAnchorResetProration({
 				billingContext: {
 					requestedBillingCycleAnchor: "now",
 					requestedProrationBehavior: "none",
@@ -36,7 +36,7 @@ describe("firstPhaseAnchorResetProration", () => {
 			}),
 		).toEqual([]);
 		expect(
-			firstPhaseAnchorResetProration({
+			requestedAnchorResetProration({
 				billingContext: {
 					requestedBillingCycleAnchor: anchorMs,
 					requestedProrationBehavior: "bill_difference",
