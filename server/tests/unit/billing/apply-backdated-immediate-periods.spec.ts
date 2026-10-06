@@ -119,6 +119,27 @@ describe("backdated line item context", () => {
 		});
 	});
 
+	test("counts the cycle starting exactly at creation, as Stripe bills its current period", () => {
+		const backdatedContext = getBackdatedLineItemContext({
+			price: monthly,
+			billingContext: {
+				...contexts.createBilling({
+					currentEpochMs: Date.UTC(2026, 2, 1),
+					billingCycleAnchorMs: Date.UTC(2026, 1, 1),
+				}),
+				subscriptionBackdateStartMs: Date.UTC(2026, 0, 21),
+			},
+			billingPeriod,
+			direction: "charge",
+			billingTiming: "in_advance",
+		});
+
+		const januaryStubFraction = new Decimal(ms.days(11)).div(ms.days(31));
+		expect(backdatedContext?.backdate?.cycleCount).toBe(
+			januaryStubFraction.plus(2).toNumber(),
+		);
+	});
+
 	test("counts month-end cycles on the anchor's own boundaries, like Stripe", () => {
 		const monthEnd = Date.UTC(2026, 0, 31);
 		const backdatedContext = getBackdatedLineItemContext({

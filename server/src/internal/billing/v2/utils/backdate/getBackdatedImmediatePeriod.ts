@@ -51,7 +51,7 @@ export const getBackdatedImmediatePeriod = ({
 	let fullCycles = 0;
 	for (
 		let cycleStart = firstCycleEnd;
-		cycleStart < currentEpochMs;
+		cycleStart <= currentEpochMs;
 		cycleStart = getCycleEnd({ ...cycle, now: cycleStart })
 	) {
 		fullCycles += 1;
