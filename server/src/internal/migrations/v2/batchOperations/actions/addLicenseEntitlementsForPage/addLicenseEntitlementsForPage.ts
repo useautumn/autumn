@@ -1,7 +1,7 @@
 import { isResettingEntitlement } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "../../execute/utils/batchMigrationExecutionConstants.js";
 import {

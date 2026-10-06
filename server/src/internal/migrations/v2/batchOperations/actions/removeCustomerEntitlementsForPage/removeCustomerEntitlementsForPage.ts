@@ -1,6 +1,5 @@
 import type { Feature, FullProductWithoutLicenses } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
 import type { BatchMigrationRemovedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
@@ -10,6 +9,7 @@ import {
 } from "@/internal/migrations/v2/batchOperations/execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { BatchMigrationExecutionRemove } from "@/internal/migrations/v2/batchOperations/types/index.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { toRemovedItem } from "../utils/toRemovedItem.js";
 import { deleteCustomerEntitlementRows } from "./deleteCustomerEntitlementRows.js";
 import { selectRemoveCandidateRows } from "./selectRemoveCandidateRows.js";

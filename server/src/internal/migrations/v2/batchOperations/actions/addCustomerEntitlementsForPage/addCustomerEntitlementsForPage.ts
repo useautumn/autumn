@@ -3,7 +3,6 @@ import {
 	isResettingEntitlement,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
 import type { BatchMigrationInsertedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
@@ -19,6 +18,7 @@ import {
 	enrichCustomerEntitlementCycles,
 } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 import { generateId } from "@/utils/genUtils.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { insertCustomerEntitlementRows } from "./insertCustomerEntitlementRows.js";
 import { selectAddCandidateRows } from "./selectAddCandidateRows.js";
 
