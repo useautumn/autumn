@@ -199,13 +199,10 @@ export const computeSetPlansPlan = ({
 		pooledBalancePlan,
 		lockCustomerCurrency,
 	};
-	const autumnBillingPlan =
-		typeof billingContext.requestedBillingCycleAnchor === "number"
-			? applyBillingCycleAnchorToSharedSubscription({
-					plan: baseAutumnBillingPlan,
-					billingContext,
-				})
-			: baseAutumnBillingPlan;
+	const autumnBillingPlan = applyBillingCycleAnchorToSharedSubscription({
+		plan: baseAutumnBillingPlan,
+		billingContext,
+	});
 
 	autumnBillingPlan.lineItems = finalizeLineItems({
 		ctx,
