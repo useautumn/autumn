@@ -32,9 +32,11 @@ const newDataDir = () => {
 
 const subjectMessage = ({
 	atomId = null,
+	customerId = "cus_1",
 	payload,
 }: {
 	atomId?: string | null;
+	customerId?: string;
 	payload?: string;
 }): QueueMessage => ({
 	payloadType: "text",
@@ -44,7 +46,7 @@ const subjectMessage = ({
 			message: {
 				type: AtomPushType.SetSubject,
 				atomId,
-				customerId: "cus_1",
+				customerId,
 				readAt: Date.now(),
 				body: subjectBody({ balance: 10 }),
 			},
@@ -123,6 +125,24 @@ describe("push receiver", () => {
 
 		expect(acked).toEqual([message.receiptHandle]);
 		expect(await checkCustomer(auth.slots)).toMatchObject({ allowed: true });
+	});
+
+	test("a queued push routed to another customer than it holds is dropped, never redelivered", async () => {
+		const auth = createDeployedAuth({
+			dataDir: newDataDir(),
+			tokenHash: TOKEN_HASH,
+			slotCount: 2,
+		});
+		opened.push(auth);
+		const message = subjectMessage({ customerId: "cus_2" });
+
+		const { acked, warnings } = await drain({ auth, batches: [[message]] });
+
+		expect(acked).toEqual([message.receiptHandle]);
+		expect(warnings).toEqual(["atom_push_invalid"]);
+		expect(await forwardReasonOf(() => checkCustomer(auth.slots))).toBe(
+			"customer_not_stored",
+		);
 	});
 
 	test("a multi-tenant Atom applies a push to the folder it names", async () => {
