@@ -1299,11 +1299,13 @@ export const handle = ({
 	if (route === "GET /runs") {
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
+		const purpose = url.searchParams.get("purpose");
 		const list = allSummaries()
 			.filter((r) =>
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
+			.filter((r) => !purpose || r.purpose === purpose)
 			.filter((r) => {
 				const outcome = url.searchParams.get("outcome") ?? "all";
 				if (outcome === "all") return true;

@@ -34,6 +34,7 @@ import {
 	NavLink,
 	Outlet,
 	useLocation,
+	useMatches,
 	useNavigate,
 } from "react-router-dom";
 import { ApiRequestError, isMock } from "../api/client.ts";
@@ -44,6 +45,11 @@ import { ErrorCallout, StatusDot, type Tone } from "./status.tsx";
 import { Skeleton, Tooltip } from "./ui.tsx";
 
 const ICON_STROKE = 1.5;
+
+/** Route handle for list pages that fit the viewport and scroll their table instead (sm and up). */
+export const FILL_PAGE = { fill: true };
+const isFillPage = (handle: unknown) =>
+	(handle as typeof FILL_PAGE | undefined)?.fill === true;
 
 /** Autumn's sidebar row (vite/src/views/main-sidebar/sidebarRowClass.ts). */
 const rowClass = (isActive: boolean) =>
@@ -303,6 +309,7 @@ export const AppShell = () => {
 	// Keyed to the path it was opened on, so navigating closes it without an effect.
 	const [menuOpenedAt, setMenuOpenedAt] = useState<string | null>(null);
 	const menuOpen = menuOpenedAt === location.pathname;
+	const fill = useMatches().some((m) => isFillPage(m.handle));
 	useLiveTopics(!signedOut && "capacity");
 
 	if (signedOut)
@@ -352,10 +359,15 @@ export const AppShell = () => {
 				<div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden sm:rounded-xl sm:border">
 					<div
 						data-main-content
-						className="relative h-full w-full overflow-auto bg-background"
+						className={cn(
+							"relative h-full w-full overflow-auto bg-background",
+							fill && "sm:overflow-hidden",
+						)}
 					>
-						<PageContainer className="min-h-full">
-							<div className="flex flex-1 flex-col">
+						<PageContainer
+							className={cn("min-h-full", fill && "sm:h-full sm:min-h-0")}
+						>
+							<div className="flex min-h-0 flex-1 flex-col">
 								{me.error ? <ErrorCallout error={me.error} /> : <Outlet />}
 							</div>
 						</PageContainer>

@@ -51,6 +51,7 @@ export type CostsFilter = { from: string; bucket: "day" | "week" };
 export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
+	purpose?: RunSummary["purpose"];
 	branch?: string;
 	cursor?: string;
 	limit: number;
