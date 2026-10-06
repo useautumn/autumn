@@ -78,8 +78,9 @@ export const meteringTopic: TopicSchema<MeteringRecord> = {
 	serialize: serializeMeteringRecord,
 };
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null && !Array.isArray(value);
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /** The fields a reader leans on, checked without the full schema: the writer validated the record before appending it. */
 function isMutationShaped(payload: unknown): payload is MeteringRecord {
