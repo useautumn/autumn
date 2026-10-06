@@ -30,7 +30,7 @@ test("a single plan is a plain chip with no extras", () => {
 	});
 });
 
-test("versions fold into one chip per plan, extra plans count inside the head", () => {
+test("versions fold into one chip per plan, the cell drops them and counts extra plans", () => {
 	const result = view({
 		customer: {
 			plan: {
@@ -42,10 +42,8 @@ test("versions fold into one chip per plan, extra plans count inside the head", 
 			},
 		},
 	});
-	expect(result?.head).toEqual({
-		label: "Pro",
-		details: ["v1, v2", "+1"],
-	});
+	expect(result?.head).toEqual({ label: "Pro" });
+	expect(result?.extraCount).toBe(1);
 	expect(result?.groups[0][0]).toEqual({
 		label: "Where plan in",
 		chips: [
@@ -89,6 +87,9 @@ test("customer in and not in become person chips, exclusions sort last", () => {
 		},
 	});
 	expect(excluded?.head.label).toBe("Starter");
+	expect(
+		view({ customer: { customer_id: { $nin: ["cus_a", "cus_b"] } } })?.head,
+	).toEqual({ label: "2 customers", prefix: "not" });
 	expect(excluded?.groups[0][1]).toEqual({
 		label: "And customer not in",
 		chips: [
@@ -167,7 +168,8 @@ test("a plan filter on ten plans caps its chips and counts the rest", () => {
 	const result = view({
 		customer: { plan: { plan_id: { $in: TEN_PLAN_VARIANTS } } },
 	});
-	expect(result?.head).toEqual({ label: "Hobby", details: ["+9"] });
+	expect(result?.head).toEqual({ label: "Hobby" });
+	expect(result?.extraCount).toBe(9);
 	expect(result?.groups).toEqual([
 		[
 			{

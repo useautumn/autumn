@@ -20,12 +20,11 @@ type SegmentKind =
 	| "not_reached"
 	| "would_change"
 	| "would_fail"
-	| "sampled"
-	| "untouched";
+	| "sampled";
 
 export const SEGMENTS: Record<
 	SegmentKind,
-	{ className: string; label: string | null }
+	{ className: string; label: string }
 > = {
 	migrated: { className: "bg-[#30A46C]", label: "Migrated" },
 	up_to_date: {
@@ -42,13 +41,7 @@ export const SEGMENTS: Record<
 	would_change: { className: "bg-[#3E8BD9]/55", label: "Would change" },
 	would_fail: { className: "bg-[#E8742C]/70", label: "Would fail" },
 	sampled: { className: "bg-[#30A46C]", label: "Migrated in sample" },
-	untouched: { className: "bg-transparent", label: null },
 };
-
-export const BAR_TRACKS = {
-	run: SEGMENTS.not_reached.className,
-	preview: "bg-black/[0.05] dark:bg-[#1f1f1f]",
-} as const;
 
 type Segment = { kind: SegmentKind; value: number };
 
@@ -57,7 +50,6 @@ export type RunErrorView = { message: string; details: string | null };
 export type StatusView = {
 	ring: { tone: StatusTone; fraction: number };
 	chip: ChipView;
-	bar: { track: keyof typeof BAR_TRACKS; segments: Segment[] };
 	card: {
 		chip: ChipView;
 		when: string;
@@ -128,22 +120,8 @@ const draftSegments = (summary: MigrationListSummary): Segment[] => {
 		return [
 			{ kind: "would_change", value: dryRun.would_change },
 			{ kind: "would_fail", value: dryRun.would_fail },
-			{
-				kind: "untouched",
-				value: Math.max(
-					dryRun.previewed - dryRun.would_change - dryRun.would_fail,
-					0,
-				),
-			},
 		];
-	if (sample)
-		return [
-			{ kind: "sampled", value: sample.size },
-			{
-				kind: "untouched",
-				value: Math.max((summary.customer_count ?? 0) - sample.size, 0),
-			},
-		];
+	if (sample) return [{ kind: "sampled", value: sample.size }];
 	return [];
 };
 
@@ -170,7 +148,6 @@ type Pill = {
 	cardDetail?: string;
 	fraction: number;
 	tone?: StatusTone;
-	track: keyof typeof BAR_TRACKS;
 };
 
 const PILLS: Record<
@@ -181,7 +158,6 @@ const PILLS: Record<
 		label: "Draft",
 		cardDetail: previewOutcome(summary),
 		fraction: 0,
-		track: "preview",
 	}),
 	waiting: ({ summary }) => ({
 		label: "Waiting",
@@ -190,13 +166,11 @@ const PILLS: Record<
 				? undefined
 				: `· ${summary.queue_position} ahead`,
 		fraction: 0,
-		track: "run",
 	}),
 	running: ({ progress }) => ({
 		label: "Running",
 		detail: progress.percent,
 		fraction: progress.fraction,
-		track: "run",
 	}),
 	run: ({ progress }) => {
 		const { failed } = progress.counts;
@@ -206,21 +180,18 @@ const PILLS: Record<
 				failed > 0 ? `· ${failed.toLocaleString("en-US")} failed` : undefined,
 			fraction: 1,
 			tone: failed > 0 ? "amber" : "green",
-			track: "run",
 		};
 	},
-	no_changes: () => ({ label: "No changes", fraction: 1, track: "run" }),
+	no_changes: () => ({ label: "No changes", fraction: 1 }),
 	failed: ({ progress }) => ({
 		label: "Failed",
 		detail: `at ${progress.percent}`,
 		fraction: progress.fraction,
-		track: "run",
 	}),
 	canceled: ({ progress }) => ({
 		label: "Canceled",
 		detail: `at ${progress.percent}`,
 		fraction: progress.fraction,
-		track: "run",
 	}),
 };
 
@@ -315,11 +286,9 @@ export const deriveStatusView = ({
 		cardDetail,
 		fraction,
 		tone = indicator.tone,
-		track,
 	} = PILLS[status]({ summary, progress });
 	const segments =
-		track === "preview" ? draftSegments(summary) : progress.segments;
-	const visibleSegments = segments.filter((segment) => segment.value > 0);
+		status === "draft" ? draftSegments(summary) : progress.segments;
 	const chipWith = (text: string | undefined): ChipView => ({
 		label,
 		details: text === undefined ? undefined : [text],
@@ -328,13 +297,12 @@ export const deriveStatusView = ({
 	return {
 		ring: { tone, fraction },
 		chip: chipWith(detail),
-		bar: { track, segments: visibleSegments },
 		card: {
 			chip: chipWith(cardDetail ?? detail),
 			when: describeWhen({ summary, now }),
 			note: isFinished ? laterMatchesNote(summary) : null,
 			error: status === "failed" ? describeRunError(summary) : null,
-			legend: visibleSegments.filter((segment) => SEGMENTS[segment.kind].label),
+			legend: segments.filter((segment) => segment.value > 0),
 		},
 	};
 };

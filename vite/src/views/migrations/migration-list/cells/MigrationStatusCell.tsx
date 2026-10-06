@@ -1,30 +1,8 @@
 import { cn } from "@/lib/utils";
 import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
-import { BAR_TRACKS, SEGMENTS, type StatusView } from "../rowView/statusView";
+import { SEGMENTS, type StatusView } from "../rowView/statusView";
 import { RunErrorNotice } from "./RunErrorNotice";
 import { CellHoverCard, PopoverSeparator, ViewChip } from "./ViewChip";
-
-function SegmentedBar({ bar }: { bar: StatusView["bar"] }) {
-	return (
-		<div
-			className={cn(
-				"flex h-1.5 min-w-0 max-w-[140px] flex-1 gap-px overflow-clip rounded-full",
-				BAR_TRACKS[bar.track],
-			)}
-		>
-			{bar.segments.map((segment) => (
-				<div
-					key={segment.kind}
-					className={cn(
-						"h-1.5 min-w-0.5 basis-0",
-						SEGMENTS[segment.kind].className,
-					)}
-					style={{ flexGrow: segment.value }}
-				/>
-			))}
-		</div>
-	);
-}
 
 export function StatusCard({ status }: { status: StatusView }) {
 	const { card, ring } = status;
@@ -64,17 +42,14 @@ export function StatusCard({ status }: { status: StatusView }) {
 
 export function MigrationStatusCell({ view }: { view: MigrationRowView }) {
 	const { status } = view;
-	const pillAndBar = (
-		<div className="flex w-full min-w-0 items-center gap-2.5 pr-2">
-			<div className="flex w-[156px] shrink-0">
-				<ViewChip chip={status.chip} ring={status.ring} />
-			</div>
-			<SegmentedBar bar={status.bar} />
-		</div>
-	);
-
 	return (
-		<CellHoverCard trigger={pillAndBar}>
+		<CellHoverCard
+			trigger={
+				<div className="flex min-w-0">
+					<ViewChip chip={status.chip} ring={status.ring} />
+				</div>
+			}
+		>
 			<StatusCard status={status} />
 		</CellHoverCard>
 	);

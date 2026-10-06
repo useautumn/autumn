@@ -24,7 +24,7 @@ export const createMigrationListColumns = (): ColumnDef<
 	},
 	{
 		header: "Status",
-		size: 290,
+		size: 200,
 		cell: ({ row }: CellProps) => (
 			<MigrationStatusCell view={row.original.view} />
 		),

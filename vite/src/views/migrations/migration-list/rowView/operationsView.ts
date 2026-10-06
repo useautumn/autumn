@@ -285,7 +285,7 @@ export const deriveOperationsView = ({
 
 	return {
 		head: withoutTile(head),
-		inline: firstInline ? withoutTile(firstInline.chip) : null,
+		inline: firstInline ? { label: firstInline.chip.label } : null,
 		extraCount: Math.max(inlineCandidates.length - 1, 0),
 		subtitle: firstUpdate
 			? `Update ${pluralize({ count: targetNames.length, noun: "plan" })}`

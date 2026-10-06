@@ -28,28 +28,25 @@ test("running shows percent of the filter count, with in-flight and not-reached 
 		label: "Running",
 		detail: "25%",
 	});
-	expect(view.bar).toEqual({
-		track: "run",
-		segments: [
-			{ kind: "migrated", value: 280 },
-			{ kind: "up_to_date", value: 20 },
-			{ kind: "skipped", value: 4 },
-			{ kind: "failed", value: 8 },
-			{ kind: "in_flight", value: 24 },
-			{ kind: "not_reached", value: 912 },
-		],
-	});
+	expect(view.card.legend).toEqual([
+		{ kind: "migrated", value: 280 },
+		{ kind: "up_to_date", value: 20 },
+		{ kind: "skipped", value: 4 },
+		{ kind: "failed", value: 8 },
+		{ kind: "in_flight", value: 24 },
+		{ kind: "not_reached", value: 912 },
+	]);
 	expect(view.card?.when).toBe("Started 12 minutes ago");
 });
 
-test("waiting shows how many runs are ahead over an unreached bar", () => {
+test("waiting shows how many runs are ahead with every customer unreached", () => {
 	const view = statusOf("migration-enterprise-seats");
 	expect(pill("migration-enterprise-seats")).toEqual({
 		ring: { tone: "yellow", fraction: 0 },
 		label: "Waiting",
 		detail: "· 1 ahead",
 	});
-	expect(view.bar.segments).toEqual([{ kind: "not_reached", value: 86 }]);
+	expect(view.card.legend).toEqual([{ kind: "not_reached", value: 86 }]);
 });
 
 test("draft badges stay plain; the card names the dry run or sample", () => {
@@ -57,10 +54,6 @@ test("draft badges stay plain; the card names the dry run or sample", () => {
 		ring: { tone: "neutral", fraction: 0 },
 		label: "Draft",
 		detail: undefined,
-	});
-	expect(statusOf("migration-a7k").bar).toEqual({
-		track: "preview",
-		segments: [],
 	});
 	expect(statusOf("migration-a7k").card).toEqual({
 		chip: { label: "Draft", details: undefined },
@@ -74,7 +67,7 @@ test("draft badges stay plain; the card names the dry run or sample", () => {
 	const dry = statusOf("migration-starter-dry");
 	expect(pill("migration-starter-dry").detail).toBeUndefined();
 	expect(dry.card.chip.details).toEqual(["· dry run"]);
-	expect(dry.bar.segments).toEqual([
+	expect(dry.card.legend).toEqual([
 		{ kind: "would_change", value: 57 },
 		{ kind: "would_fail", value: 3 },
 	]);
@@ -82,14 +75,10 @@ test("draft badges stay plain; the card names the dry run or sample", () => {
 	const sample = statusOf("migration-hobby-backfill");
 	expect(pill("migration-hobby-backfill").detail).toBeUndefined();
 	expect(sample.card.chip.details).toEqual(["· sample"]);
-	expect(sample.bar.segments).toEqual([
-		{ kind: "sampled", value: 10 },
-		{ kind: "untouched", value: 3110 },
-	]);
 	expect(sample.card?.legend).toEqual([{ kind: "sampled", value: 10 }]);
 });
 
-test("a dry run where few customers would change keeps the unchanged rest in the bar", () => {
+test("a dry run where few customers would change lists only the changed ones", () => {
 	const view = deriveStatusView({
 		status: "draft",
 		summary: {
@@ -108,10 +97,6 @@ test("a dry run where few customers would change keeps the unchanged rest in the
 		},
 		now: FIXTURE_NOW,
 	});
-	expect(view.bar.segments).toEqual([
-		{ kind: "would_change", value: 1 },
-		{ kind: "untouched", value: 99 },
-	]);
 	expect(view.card?.legend).toEqual([{ kind: "would_change", value: 1 }]);
 });
 
@@ -153,7 +138,7 @@ test("completed is green when clean and amber with the failed count", () => {
 
 test("a completed run with later filter matches reports them instead of not reached", () => {
 	const view = statusOf("migration-plan-variants");
-	expect(view.bar.segments).toEqual([
+	expect(view.card.legend).toEqual([
 		{ kind: "migrated", value: 884 },
 		{ kind: "skipped", value: 1 },
 		{ kind: "failed", value: 1 },
@@ -163,14 +148,14 @@ test("a completed run with later filter matches reports them instead of not reac
 	);
 });
 
-test("no changes is a full neutral ring over an up-to-date bar", () => {
+test("no changes is a full neutral ring with every customer up to date", () => {
 	const view = statusOf("migration-api-credits-topup");
 	expect(pill("migration-api-credits-topup")).toEqual({
 		ring: { tone: "neutral", fraction: 1 },
 		label: "No changes",
 		detail: undefined,
 	});
-	expect(view.bar.segments).toEqual([{ kind: "up_to_date", value: 540 }]);
+	expect(view.card.legend).toEqual([{ kind: "up_to_date", value: 540 }]);
 });
 
 test("failed and canceled report where they stopped and what was not reached", () => {
