@@ -169,18 +169,18 @@ initEval<EvalMetadata>({
 						"listCustomers",
 						"listEntities",
 						"listPlans",
-						"previewCreateSchedule",
-						"createSchedule",
+						"previewSetPlans",
+						"setPlans",
 					],
 				}),
 				billing.previewBeforeWrite({
 					preview: {
 						body: expectedScheduleRequest,
-						toolName: "previewCreateSchedule",
+						toolName: "previewSetPlans",
 					},
 					write: {
 						body: expectedScheduleRequest,
-						toolName: "createSchedule",
+						toolName: "setPlans",
 					},
 				}),
 				api.calledInOrder({
@@ -191,23 +191,23 @@ initEval<EvalMetadata>({
 						},
 						{
 							body: expectedScheduleRequest,
-							toolName: "previewCreateSchedule",
+							toolName: "previewSetPlans",
 						},
 					],
 				}),
 				api.calledAfterApproval({
 					call: {
 						body: expectedScheduleRequest,
-						toolName: "createSchedule",
+						toolName: "setPlans",
 					},
 				}),
 				api.bodyNumberFields({
 					paths: ["phases.*.starts_at"],
-					toolName: "previewCreateSchedule",
+					toolName: "previewSetPlans",
 				}),
 				api.bodyNumberFields({
 					paths: ["phases.*.starts_at"],
-					toolName: "createSchedule",
+					toolName: "setPlans",
 				}),
 				response.mentions({
 					phrases: [

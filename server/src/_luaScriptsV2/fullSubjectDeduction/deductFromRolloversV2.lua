@@ -197,15 +197,13 @@ local function deduct_from_rollovers(params)
     local credit_cost = is_nil(rollover_obj.credit_cost)
         and 1
       or safe_number(rollover_obj.credit_cost)
-    if is_nil(rollover_obj.rate_card) and credit_cost == 0 then
-      -- Zero credit cost (e.g. -100% markup AI model): usage is free, leave rollovers untouched.
-      logger.log("  Rollover %s credit_cost=0 - free deduction, skipping", rollover_id)
-      remaining = 0
-      break
-    end
-
     local rollover_data = context.rollovers[rollover_id]
-    if not rollover_data then
+    if is_nil(rollover_obj.rate_card) and credit_cost == 0 then
+      -- Zero credit cost (e.g. a 0-credit schema item, -100% markup AI model):
+      -- usage is free, so the rollover is left untouched and the owning row's
+      -- main pass funds the units without moving its balance.
+      logger.log("  Rollover %s credit_cost=0 - free usage, skipping", rollover_id)
+    elseif not rollover_data then
       logger.log("  Rollover %s not found in context", rollover_id)
     else
       -- ========================================================================

@@ -19,7 +19,9 @@ export type AutumnEvalToolName =
 	| "listPlans"
 	| "previewAttach"
 	| "previewCreateSchedule"
+	| "previewSetPlans"
 	| "previewUpdateSubscription"
+	| "setPlans"
 	| "updateAgentRules"
 	| "updateCustomer"
 	| "updateSubscription";

@@ -347,6 +347,27 @@ BEGIN
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
     is_unlimited := COALESCE((ent_obj->>'unlimited')::boolean, false);
 
+    -- A flat zero rate is free usage: the row funds every unit that reaches it
+    -- without moving its balance, whatever that balance is (unlimited or not).
+    -- Logged at zero credits so a lock receipt still holds the units.
+    IF rate_card IS NULL AND credit_cost = 0 THEN
+      mutation_logs_json := mutation_logs_json || jsonb_build_array(
+        jsonb_build_object(
+          'target_type', 'customer_entitlement',
+          'customer_entitlement_id', ent_id,
+          'rollover_id', NULL,
+          'entity_id', NULL,
+          'credit_cost', 0,
+          'balance_delta', 0,
+          'adjustment_delta', 0,
+          'usage_delta', 0,
+          'value_delta', remaining_amount
+        )
+      );
+      remaining_amount := 0;
+      EXIT;
+    END IF;
+
     -- Unlimited sink: absorb the entire remaining amount (positive or negative)
     -- into this entitlement. Rollovers and additional_balance are intentionally
     -- untouched (reset windows are TS-suppressed).

@@ -592,22 +592,29 @@ export const noAttachBeforePreview = ({ output }: { output: EvalOutput }) => {
 		: 0;
 };
 
-export const noCreateScheduleBeforePreview = ({
+const SCHEDULE_WRITE_PREVIEWS = [
+	{ preview: "previewCreateSchedule", write: "createSchedule" },
+	{ preview: "previewSetPlans", write: "setPlans" },
+] as const;
+
+export const noScheduleWriteBeforePreview = ({
 	output,
 }: {
 	output: EvalOutput;
-}) => {
-	const createIndex = output.apiCalls.findIndex(
-		(call) => call.toolName === "createSchedule",
-	);
-	const previewIndex = output.apiCalls.findIndex(
-		(call) => call.toolName === "previewCreateSchedule",
-	);
-	return createIndex === -1 ||
-		(previewIndex !== -1 && previewIndex < createIndex)
+}) =>
+	SCHEDULE_WRITE_PREVIEWS.every(({ preview, write }) => {
+		const writeIndex = output.apiCalls.findIndex(
+			(call) => call.toolName === write,
+		);
+		const previewIndex = output.apiCalls.findIndex(
+			(call) => call.toolName === preview,
+		);
+		return (
+			writeIndex === -1 || (previewIndex !== -1 && previewIndex < writeIndex)
+		);
+	})
 		? 1
 		: 0;
-};
 
 export const noUpdateSubscriptionBeforePreview = ({
 	output,
@@ -626,16 +633,14 @@ export const noUpdateSubscriptionBeforePreview = ({
 		: 0;
 };
 
+const SCHEDULE_TOOL_NAMES = new Set<string>(
+	SCHEDULE_WRITE_PREVIEWS.flatMap(({ preview, write }) => [preview, write]),
+);
+
 export const noScheduleCalls = ({ output }: { output: EvalOutput }) =>
 	output.apiCalls.every(
-		(call) =>
-			call.toolName !== "previewCreateSchedule" &&
-			call.toolName !== "createSchedule",
-	) &&
-	output.toolCalls.every(
-		(call) =>
-			call.name !== "previewCreateSchedule" && call.name !== "createSchedule",
-	)
+		(call) => !call.toolName || !SCHEDULE_TOOL_NAMES.has(call.toolName),
+	) && output.toolCalls.every((call) => !SCHEDULE_TOOL_NAMES.has(call.name))
 		? 1
 		: 0;
 
@@ -731,8 +736,8 @@ export const billingAttachScores = (): EvalScorer[] => standardEvalScores();
 export const billingScheduleScores = (): EvalScorer[] => [
 	...standardEvalScores(),
 	namedScorer({
-		name: "Preview before create schedule",
-		score: noCreateScheduleBeforePreview,
+		name: "Preview before schedule write",
+		score: noScheduleWriteBeforePreview,
 	}),
 ];
 

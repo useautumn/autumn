@@ -191,16 +191,25 @@ export const LogDetailPane = ({
 						/>
 					</Link>
 				</GridRow>
-				{event.deductions?.map((deduction) => (
-					<GridRow key={deduction.balance_id} label="Balance">
-						<span className="flex-1 min-w-0 truncate text-foreground">
-							{nameFor(deduction.feature_id)}
-							<span className="pl-1.5 text-subtle tabular-nums">
-								−{deduction.value.toLocaleString()}
+				{event.deductions?.length ? (
+					event.deductions.map((deduction) => (
+						<GridRow key={deduction.balance_id} label="Balance">
+							<span className="flex-1 min-w-0 truncate text-foreground">
+								{nameFor(deduction.feature_id)}
+								<span className="pl-1.5 text-subtle tabular-nums">
+									−{deduction.value.toLocaleString()}
+								</span>
 							</span>
+						</GridRow>
+					))
+				) : (
+					// Nothing was deducted (a free feature, or no balance to draw from): say so rather than hide the row.
+					<GridRow label="Balance">
+						<span className="flex-1 min-w-0 truncate text-subtle tabular-nums">
+							0
 						</span>
 					</GridRow>
-				))}
+				)}
 				<GridRow label="Event ID">
 					<span
 						className="flex-1 min-w-0 truncate font-mono text-xs text-muted-foreground"

@@ -91,7 +91,11 @@ export const addCustomerEntitlementsForPage = async ({
 						limit,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0)
+				return {
+					rows: candidates,
+					result: { insertedItems: [], excludedInternalCustomerIds: [] },
+				};
 			assertWithinCeiling(candidates.length);
 
 			const inserted = await enrichAndInsertCandidates({
@@ -104,10 +108,11 @@ export const addCustomerEntitlementsForPage = async ({
 				resetting,
 				candidates,
 			});
-			for (const id of inserted.excludedInternalCustomerIds)
-				excludedIds.add(id);
-			insertedItems.push(...inserted.insertedItems);
-			return candidates;
+			return { rows: candidates, result: inserted };
+		},
+		onCommit: (result) => {
+			for (const id of result.excludedInternalCustomerIds) excludedIds.add(id);
+			insertedItems.push(...result.insertedItems);
 		},
 	});
 

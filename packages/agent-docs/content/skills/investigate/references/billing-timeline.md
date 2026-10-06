@@ -21,7 +21,7 @@ Billing activity is on RPC-style dotted routes; older orgs may also have REST-st
 | Multi-attach | `/v1/billing.multi_attach` | — |
 | Setup payment method | `/v1/billing.setup_payment` | `/v1/billing/setup_payment` |
 | Customer portal | `/v1/billing.open_customer_portal` | — |
-| Schedules | `/v1/billing.create_schedule`, `/v1/billing.preview_create_schedule` | — |
+| Schedules | `/v1/billing.set_plans`, `/v1/billing.preview_set_plans`, `/v1/billing.create_schedule`, `/v1/billing.preview_create_schedule` | — |
 
 Filter with `request_path contains 'billing'` to cover all of them — plus `request_path == '/v1/attach'` for older orgs still on the bare legacy path, which `contains 'billing'` misses. A specific segment like `request_path contains 'billing.attach'` also works.
 

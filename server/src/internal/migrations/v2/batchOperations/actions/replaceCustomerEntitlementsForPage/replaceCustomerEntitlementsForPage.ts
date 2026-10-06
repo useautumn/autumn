@@ -110,6 +110,16 @@ export const replaceCustomerEntitlementsForPage = async ({
 			limit,
 			assertWithinCeiling,
 		}) => {
+			const pageInsertedItems: BatchMigrationInsertedItem[] = [];
+			const pageRemovedItems: BatchMigrationRemovedItem[] = [];
+			const pageExcludedIds = new Set<string>();
+			const pageReplacedIds = new Set<string>();
+			const result = {
+				insertedItems: pageInsertedItems,
+				removedItems: pageRemovedItems,
+				excludedIds: pageExcludedIds,
+				replacedIds: pageReplacedIds,
+			};
 			const candidates = await timePhase({
 				phases,
 				phase: "candidates",
@@ -127,7 +137,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 						limit,
 					}),
 			});
-			if (candidates.length === 0) return candidates;
+			if (candidates.length === 0) return { rows: candidates, result };
 			assertWithinCeiling(candidates.length);
 
 			const { rows, excludedInternalCustomerIds } = resetting
@@ -144,7 +154,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 						})),
 						excludedInternalCustomerIds: [],
 					};
-			for (const id of excludedInternalCustomerIds) excludedIds.add(id);
+			for (const id of excludedInternalCustomerIds) pageExcludedIds.add(id);
 
 			const groups = groupFilterReplaceRows({ rows, toEntitlement });
 			const patchedGroups = await timePhase({
@@ -169,7 +179,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 			for (const [index, patched] of patchedGroups.entries()) {
 				const group = groups[index];
 				if (!group) continue;
-				for (const id of patched.internalCustomerIds) replacedIds.add(id);
+				for (const id of patched.internalCustomerIds) pageReplacedIds.add(id);
 				for (const id of patched.updatedIds) {
 					updatedIdToPatch.set(id, group.patch);
 				}
@@ -182,10 +192,10 @@ export const replaceCustomerEntitlementsForPage = async ({
 				if (!customerEntitlementPatch) continue;
 				const fromEntitlement = row.liveDefinition;
 				if (!fromEntitlement) continue;
-				removedItems.push(
+				pageRemovedItems.push(
 					toRemovedItem({ row, planId: fromProduct.id, fromEntitlement }),
 				);
-				insertedItems.push(
+				pageInsertedItems.push(
 					toInsertedItem({
 						row,
 						planId: fromProduct.id,
@@ -194,7 +204,13 @@ export const replaceCustomerEntitlementsForPage = async ({
 					}),
 				);
 			}
-			return candidates;
+			return { rows: candidates, result };
+		},
+		onCommit: (result) => {
+			for (const id of result.excludedIds) excludedIds.add(id);
+			for (const id of result.replacedIds) replacedIds.add(id);
+			insertedItems.push(...result.insertedItems);
+			removedItems.push(...result.removedItems);
 		},
 	});
 
