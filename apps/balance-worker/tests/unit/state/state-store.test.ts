@@ -268,6 +268,43 @@ describe("state store", () => {
 		}
 	});
 
+	test.concurrent("stores a record without its effects or its summary", () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = seedCustomer({ store: fixture.store });
+			const mutation = createTrackMutation({ state });
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 1n,
+				mutation: {
+					...mutation,
+					effects: [
+						{
+							type: "auto_topup",
+							featureId: "messages",
+							reason: "balance_below_threshold",
+						},
+					],
+					summary: [
+						{
+							featureId: "messages",
+							entityId: null,
+							before: { granted: 1000, remaining: 10, usage: 990 },
+							after: { granted: 1000, remaining: 5, usage: 995 },
+						},
+					],
+				},
+			});
+			expect(
+				fixture.store.readReceipt({ identity, mutationId: mutation.id }),
+			).toEqual(mutation);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test.concurrent("applies a durable mutation batch in one transaction", () => {
 		const fixture = createStoreFixture();
 		try {

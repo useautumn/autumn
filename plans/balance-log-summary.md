@@ -85,7 +85,7 @@ Balance log summary
 - an entity view of a customer-level row (same numbers as the customer's; the command's entity is named instead)
 - writes outside the worker (`plans/balance-history.md` says what history does without them)
 
-### 1 · [ ] record → the per-view summary on every record (schema only)
+### 1 · [x] record → the per-view summary on every record (schema only)
 
 **goal** — a record can say, per feature view it moved, granted / remaining / usage before and after; optional, so every record on the log today still parses
 **steps** — `summary` on the mutation record · one entry per (feature, entity-or-null) view · totals as `getApiBalanceV2` reports them · per-row before/after on every command but track · a fixture builder that stamps it the way the worker will
@@ -168,8 +168,8 @@ applyBillingPlan    + intent: { action: "new" | "upgrade" | "downgrade" | "renew
 ### 3 · [ ] worker → stamp the summary
 
 **goal** — the worker fills `summary` from the states on either side of a decision; it ships only when a load run at 4x the measured prod track rate holds µs/track within 10% of baseline on typical (≤ ~990µs) and 15% on heavy, because every track pays for it on the one thread and a slower worker churns ownership
-**steps** — touched views from `changes` only, a deleted row's feature resolved through `from` · render each view from `from` and `to` in `onStateAdvanced` · `benchmark:track` before and after, typical and heavy
-**verify** — cd apps/balance-worker && bun benchmark:track --scenario=typical · bun benchmark:track --scenario=heavy · cd apps/balance-worker && bun test · manual: ≤ 990µs typical, ≤ 2,750µs heavy, at ~1,500 tracks/s per worker
+**steps** — stamping behind a flag, off by default: turning it off is the rollback · stamp only once task 1's accept release is live on herald and on both worker fleets, because the metering topic decodes records with the strict record schema and a reader before it skips a stamped record, losing its usage event, webhook and auto top-up · once stamped records sit within the log's retention, no reader rolls back below task 1 · touched views from `changes` only, a deleted row's feature resolved through `from` · render each view from `from` and `to` in `onStateAdvanced` · the summary joins `effects` on the log copy only; the store, receipts and checkpoints keep dropping both · `benchmark:track` before and after, typical and heavy
+**verify** — cd apps/balance-worker && bun benchmark:track --scenario=typical · bun benchmark:track --scenario=heavy · cd apps/balance-worker && bun test · manual: task 1 live on herald and both fleets before the flag goes on · ≤ 990µs typical, ≤ 2,750µs heavy, at ~1,500 tracks/s per worker
 
 **scenarios** — one decision: how many views rendered
 - typical track, 2 plans × 6 features · one view, two renders
@@ -177,6 +177,10 @@ applyBillingPlan    + intent: { action: "new" | "upgrade" | "downgrade" | "renew
 - `applyBillingPlan` replacing 12 features · twelve views
 - heavy, 4 plans × 15 features, upgrade · the cost ceiling
 - `balances.delete` on a row · feature found in `from`, not in `to`
+
+**scenarios** — deploy order
+- herald on the build before task 1 reads a stamped record
+- the flag turned off with stamped records still on the log
 
 ## Open
 

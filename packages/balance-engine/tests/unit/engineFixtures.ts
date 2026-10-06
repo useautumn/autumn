@@ -13,6 +13,8 @@ import {
 	catalogRowsToCatalog,
 	createSubjectState,
 	type MutationRecord,
+	type MutationSummary,
+	type MutationSummaryView,
 	parseCheckCommand,
 	parseDeleteBalanceCommand,
 	parseInitializeRequest,
@@ -30,6 +32,28 @@ import {
 	type WorkerFullSubject,
 	type WorkerPooledBalance,
 } from "../../src/balanceEngine.js";
+
+export const createSummaryView = ({
+	featureId = "messages",
+	entityId = null,
+	before = { granted: 1000, remaining: 10, usage: 990 },
+	after = { granted: 1000, remaining: 5, usage: 995 },
+	rows,
+}: Partial<MutationSummaryView> = {}): MutationSummaryView => ({
+	featureId,
+	entityId,
+	before,
+	after,
+	...(rows ? { rows } : {}),
+});
+
+export const withSummary = <T extends object>({
+	mutation,
+	views,
+}: {
+	mutation: T;
+	views: MutationSummary;
+}): T & { summary: MutationSummary } => ({ ...mutation, summary: views });
 
 export const identity = {
 	orgId: "org_1",
