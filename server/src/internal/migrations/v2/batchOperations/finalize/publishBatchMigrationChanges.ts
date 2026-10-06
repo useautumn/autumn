@@ -7,6 +7,7 @@ import {
 	clearPublishedItemRunChanges,
 	listItemRunsToPublish,
 } from "../execute/claim/index.js";
+import { BatchMigrationCacheInvalidationError } from "../execute/errors/batchMigrationErrors.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "../execute/utils/batchMigrationExecutionConstants.js";
 import { itemRunsToPageResult } from "../itemChanges/itemRunsToPageResult.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
@@ -53,6 +54,12 @@ export const publishBatchMigrationChanges = async ({
 						itemRun.status === MigrationItemRunStatus.Skipped),
 			)
 			.map((itemRun) => itemRun.customer),
+	}).catch((error: unknown) => {
+		const failure = new BatchMigrationCacheInvalidationError({
+			message: "batch-migration: cache invalidation did not complete",
+		});
+		failure.cause = error;
+		throw failure;
 	});
 	await emitBatchMigrationItemEvents({
 		ctx,
