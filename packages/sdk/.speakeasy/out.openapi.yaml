@@ -5606,8 +5606,7 @@ paths:
                 $ref: "#/components/schemas/Customer"
       x-speakeasy-name-override: getOrCreate
       parameters:
-        - &a1
-          name: x-api-version
+        - name: x-api-version
           in: header
           required: true
           schema:
@@ -7235,7 +7234,13 @@ paths:
                       disable_overage_billing: false
       x-speakeasy-name-override: get
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.list:
     post:
       operationId: listCustomers
@@ -8549,7 +8554,13 @@ paths:
                     next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.update:
     post:
       operationId: updateCustomer
@@ -10205,7 +10216,13 @@ paths:
                       disable_overage_billing: false
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.delete:
     post:
       operationId: deleteCustomer
@@ -10247,7 +10264,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.advance_test_clock:
     post:
       operationId: advanceTestClock
@@ -10302,7 +10325,13 @@ paths:
                 title: AdvanceTestClockResponse
       x-speakeasy-name-override: advanceTestClock
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/subscriptions.list:
     post:
       operationId: listSubscriptions
@@ -10490,7 +10519,13 @@ paths:
                     next_cursor: null
       x-speakeasy-name-override: listSubscriptions
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/purchases.list:
     post:
       operationId: listPurchases
@@ -10633,7 +10668,13 @@ paths:
                     next_cursor: null
       x-speakeasy-name-override: listPurchases
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.create:
     post:
       operationId: createPlan
@@ -15580,7 +15621,13 @@ paths:
                     metadata: {}
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.get:
     post:
       operationId: getPlan
@@ -18927,7 +18974,13 @@ paths:
                     metadata: {}
       x-speakeasy-name-override: get
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.list:
     post:
       operationId: listPlans
@@ -24836,7 +24889,13 @@ paths:
                             included: 3
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.update:
     post:
       operationId: updatePlan
@@ -31376,7 +31435,13 @@ paths:
                     metadata: {}
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.delete:
     post:
       operationId: deletePlan
@@ -31454,7 +31519,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.create:
     post:
       operationId: createFeature
@@ -32385,7 +32456,13 @@ paths:
                       plural: API calls
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.get:
     post:
       operationId: getFeature
@@ -32914,7 +32991,13 @@ paths:
                       plural: API calls
       x-speakeasy-name-override: get
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.list:
     post:
       operationId: listFeatures
@@ -33443,7 +33526,13 @@ paths:
                           plural: credits
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.update:
     post:
       operationId: updateFeature
@@ -34371,7 +34460,13 @@ paths:
                       plural: API calls
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.delete:
     post:
       operationId: deleteFeature
@@ -34430,7 +34525,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.attach:
     post:
       operationId: attach
@@ -37057,7 +37158,13 @@ paths:
                     payment_url: https://checkout.stripe.com/...
       x-speakeasy-name-override: attach
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.create_schedule:
     post:
       operationId: createSchedule
@@ -43785,7 +43892,13 @@ paths:
                     payment_url: null
       x-speakeasy-name-override: createSchedule
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.multi_attach:
     post:
       operationId: multiAttach
@@ -44850,7 +44963,13 @@ paths:
                     payment_url: null
       x-speakeasy-name-override: multiAttach
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_attach:
     post:
       operationId: previewAttach
@@ -47770,7 +47889,13 @@ paths:
                     currency: usd
       x-speakeasy-name-override: previewAttach
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_multi_attach:
     post:
       operationId: previewMultiAttach
@@ -49132,7 +49257,13 @@ paths:
                     currency: usd
       x-speakeasy-name-override: previewMultiAttach
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.update:
     post:
       operationId: billingUpdate
@@ -51633,7 +51764,13 @@ paths:
                     payment_url: null
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_update:
     post:
       operationId: previewUpdate
@@ -54419,7 +54556,13 @@ paths:
                     currency: usd
       x-speakeasy-name-override: previewUpdate
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.multi_update:
     post:
       operationId: multiUpdate
@@ -54600,7 +54743,13 @@ paths:
                     payment_url: null
       x-speakeasy-name-override: multiUpdate
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_multi_update:
     post:
       operationId: previewMultiUpdate
@@ -55072,7 +55221,13 @@ paths:
                           - addon_seats
       x-speakeasy-name-override: previewMultiUpdate
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.open_customer_portal:
     post:
       operationId: openCustomerPortal
@@ -55123,7 +55278,13 @@ paths:
                     url: https://billing.stripe.com/session/...
       x-speakeasy-name-override: openCustomerPortal
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.setup_payment:
     post:
       operationId: setupPayment
@@ -57546,7 +57707,13 @@ paths:
                     url: https://checkout.stripe.com/...
       x-speakeasy-name-override: setupPayment
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.verify:
     post:
       operationId: verify
@@ -58367,7 +58534,13 @@ paths:
                         mismatches: []
       x-speakeasy-name-override: verify
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.import:
     post:
       operationId: import
@@ -58683,7 +58856,13 @@ paths:
                         disable_overage_billing: false
       x-speakeasy-name-override: import
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.create:
     post:
       operationId: createBalance
@@ -58789,7 +58968,13 @@ paths:
                   - success
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.list:
     post:
       operationId: listBalances
@@ -59079,7 +59264,13 @@ paths:
                     next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.update:
     post:
       operationId: updateBalance
@@ -59158,7 +59349,13 @@ paths:
                   - success
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.delete:
     post:
       operationId: deleteBalance
@@ -59220,7 +59417,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.finalize:
     post:
       operationId: finalizeLock
@@ -59289,7 +59492,13 @@ paths:
                   - success
       x-speakeasy-name-override: finalize
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.check:
     post:
       operationId: check
@@ -61650,7 +61859,13 @@ paths:
                           expires_at: null
       x-speakeasy-name-override: check
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.track:
     post:
       operationId: track
@@ -62013,7 +62228,13 @@ paths:
                         value: 1
       x-speakeasy-name-override: track
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.track_tokens:
     post:
       operationId: trackTokens
@@ -62420,7 +62641,13 @@ paths:
                         value: 0.006
       x-speakeasy-name-override: trackTokens
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.batch_track:
     post:
       operationId: batchTrack
@@ -62515,7 +62742,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: batchTrack
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/events.list:
     post:
       operationId: listEvents
@@ -62723,7 +62956,13 @@ paths:
                     next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/events.aggregate:
     post:
       operationId: aggregateEvents
@@ -63034,7 +63273,13 @@ paths:
                         sum: 15
       x-speakeasy-name-override: aggregate
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/logs.search:
     post:
       operationId: searchRequestLogs
@@ -63232,7 +63477,13 @@ paths:
                           allowed: true
       x-speakeasy-name-override: search
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.create:
     post:
       operationId: createInvoice
@@ -64290,7 +64541,13 @@ paths:
                       due_date: 1761839877000
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.finalize:
     post:
       operationId: finalizeInvoice
@@ -64509,7 +64766,13 @@ paths:
                               amount: 9.99
       x-speakeasy-name-override: finalize
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.insert:
     post:
       operationId: insertInvoices
@@ -64696,7 +64959,13 @@ paths:
                         hosted_invoice_url: https://billing.example.com/invoices/legacy-123
       x-speakeasy-name-override: insert
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.list:
     post:
       operationId: listInvoices
@@ -64966,7 +65235,13 @@ paths:
                     next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.listTemplates:
     post:
       operationId: listInvoiceTemplates
@@ -65066,7 +65341,13 @@ paths:
                     has_more: false
       x-speakeasy-name-override: listTemplates
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.pay:
     post:
       operationId: payInvoice
@@ -65285,7 +65566,13 @@ paths:
                               amount: 9.99
       x-speakeasy-name-override: pay
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.issue_credit_note:
     post:
       operationId: issueCreditNote
@@ -65513,7 +65800,13 @@ paths:
                           discount_amount: 0
       x-speakeasy-name-override: issueCreditNote
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.reissue:
     post:
       operationId: reissueInvoice
@@ -66681,7 +66974,13 @@ paths:
                       due_date: 1761839877000
       x-speakeasy-name-override: reissue
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.void:
     post:
       operationId: voidInvoice
@@ -66900,7 +67199,13 @@ paths:
                               amount: 9.99
       x-speakeasy-name-override: void
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.attach:
     post:
       operationId: attachLicense
@@ -66962,7 +67267,13 @@ paths:
                   - success
       x-speakeasy-name-override: attach
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.release:
     post:
       operationId: releaseLicense
@@ -67009,7 +67320,13 @@ paths:
                   - success
       x-speakeasy-name-override: release
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.list_assignments:
     post:
       operationId: listLicenseAssignments
@@ -67081,7 +67398,13 @@ paths:
       x-speakeasy-name-override: listAssignments
       x-speakeasy-ignore: true
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.list:
     post:
       operationId: listLicenses
@@ -67160,7 +67483,13 @@ paths:
       x-speakeasy-name-override: list
       x-speakeasy-ignore: true
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.create:
     post:
       operationId: createEntity
@@ -68341,7 +68670,13 @@ paths:
                     invoices: []
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.get:
     post:
       operationId: getEntity
@@ -69347,7 +69682,13 @@ paths:
                     invoices: []
       x-speakeasy-name-override: get
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.list:
     post:
       operationId: listEntities
@@ -70418,7 +70759,13 @@ paths:
                     next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.update:
     post:
       operationId: updateEntity
@@ -71617,7 +71964,13 @@ paths:
                     invoices: []
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.delete:
     post:
       operationId: deleteEntity
@@ -71682,7 +72035,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referrals.create_code:
     post:
       operationId: createReferralCode
@@ -71736,7 +72095,13 @@ paths:
                     created_at: 123
       x-speakeasy-name-override: createCode
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referrals.redeem_code:
     post:
       operationId: redeemReferralCode
@@ -71790,7 +72155,13 @@ paths:
                     reward_id: <string>
       x-speakeasy-name-override: redeemCode
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.create:
     post:
       operationId: createReferralProgram
@@ -71927,7 +72298,13 @@ paths:
                     created_at: 1718000000000
       x-speakeasy-name-override: createProgram
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.list:
     post:
       operationId: listReferralPrograms
@@ -72024,7 +72401,13 @@ paths:
                         created_at: 1718000000000
       x-speakeasy-name-override: listPrograms
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.get:
     post:
       operationId: getReferralProgram
@@ -72110,7 +72493,13 @@ paths:
                     created_at: 1718000000000
       x-speakeasy-name-override: getProgram
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.update:
     post:
       operationId: updateReferralProgram
@@ -72233,7 +72622,13 @@ paths:
                     created_at: 1718000000000
       x-speakeasy-name-override: updateProgram
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.delete:
     post:
       operationId: deleteReferralProgram
@@ -72272,7 +72667,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: deleteProgram
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.create:
     post:
       operationId: createReward
@@ -72674,7 +73075,13 @@ paths:
                 additionalProperties: false
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.list:
     post:
       operationId: listRewards
@@ -72897,7 +73304,13 @@ paths:
                     feature_grants: []
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.get:
     post:
       operationId: getReward
@@ -73133,7 +73546,13 @@ paths:
                       created_at: 1718000000000
       x-speakeasy-name-override: get
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.update:
     post:
       operationId: updateReward
@@ -73447,7 +73866,13 @@ paths:
                       created_at: 1718000000000
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.delete:
     post:
       operationId: deleteReward
@@ -73486,7 +73911,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.redeem:
     post:
       operationId: redeemRewardCode
@@ -73549,7 +73980,13 @@ paths:
                         balance: 100
       x-speakeasy-name-override: redeemCode
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.get_stripe_connection:
     post:
       operationId: getStripeConnection
@@ -73615,7 +74052,13 @@ paths:
                     connected_at: null
       x-speakeasy-name-override: getStripeConnection
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.disconnect_stripe:
     post:
       operationId: disconnectStripe
@@ -73663,7 +74106,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: disconnectStripe
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.link_revenuecat:
     post:
       operationId: linkRevenueCat
@@ -73720,7 +74169,13 @@ paths:
                   - oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
       x-speakeasy-name-override: linkRevenueCat
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.sync_revenuecat:
     post:
       operationId: syncRevenueCat
@@ -73836,7 +74291,13 @@ paths:
                             price: set
       x-speakeasy-name-override: syncRevenueCat
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.get_revenuecat_keys:
     post:
       operationId: getRevenueCatKeys
@@ -73939,7 +74400,13 @@ paths:
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/keys.mint:
     post:
       operationId: mintKey
@@ -73996,7 +74463,13 @@ paths:
                     refresh_expires_at: 1781196664000
       x-speakeasy-name-override: mint
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/keys.refresh:
     post:
       operationId: refreshKey
@@ -74045,7 +74518,13 @@ paths:
                     refresh_expires_at: 1781196664000
       x-speakeasy-name-override: refresh
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/keys.revoke:
     post:
       operationId: revokeKey
@@ -74083,7 +74562,13 @@ paths:
                   - revoked: true
       x-speakeasy-name-override: revoke
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.create:
     post:
       operationId: createSandbox
@@ -74183,7 +74668,13 @@ paths:
                     secret_key: am_sk_test_abc123
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.list:
     post:
       operationId: listSandboxes
@@ -74261,7 +74752,13 @@ paths:
                         icon: Flask
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.delete:
     post:
       operationId: deleteSandbox
@@ -74302,7 +74799,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.reset:
     post:
       operationId: resetSandbox
@@ -74337,7 +74840,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: reset
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.create:
     post:
       operationId: createWebhook
@@ -74458,7 +74967,13 @@ paths:
                     secret: whsec_abc123
       x-speakeasy-name-override: create
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.get:
     post:
       operationId: getWebhook
@@ -74537,7 +75052,13 @@ paths:
                     updated_at: 1781113864000
       x-speakeasy-name-override: get
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.list:
     post:
       operationId: listWebhooks
@@ -74617,7 +75138,13 @@ paths:
                         updated_at: 1781113864000
       x-speakeasy-name-override: list
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.update:
     post:
       operationId: updateWebhook
@@ -74726,7 +75253,13 @@ paths:
                     updated_at: 1781113864000
       x-speakeasy-name-override: update
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.delete:
     post:
       operationId: deleteWebhook
@@ -74769,7 +75302,13 @@ paths:
                   - success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.preview_sync:
     post:
       operationId: previewSyncWebhooks
@@ -75194,7 +75733,13 @@ paths:
                     errors: []
       x-speakeasy-name-override: previewSync
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.sync:
     post:
       operationId: syncWebhooks
@@ -75365,7 +75910,13 @@ paths:
                     errors: []
       x-speakeasy-name-override: sync
       parameters:
-        - *a1
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
 security:
   - secretKey: []
 x-speakeasy-globals:
