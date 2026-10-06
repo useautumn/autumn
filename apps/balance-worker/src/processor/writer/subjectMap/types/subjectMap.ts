@@ -19,6 +19,9 @@ export type SubjectMap = {
 	}): void;
 	/** Null until the subject's rows were read whole from Postgres. */
 	readBaselineAt(params: { subjectKey: string }): number | null;
+	/** When this resident subject's snapshot row was last written whole; null since it became resident. */
+	readSnapshotWrittenAt(params: { subjectKey: string }): number | null;
+	noteSnapshotWritten(params: { subjectKey: string; at: number }): void;
 	/** The resident state's serialised size as the map already weighed it; 0 when nothing is resident. */
 	readBytes(params: { subjectKey: string }): number;
 	/** Held while a mutation is pending for the subject; released once the store holds it. */

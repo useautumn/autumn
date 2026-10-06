@@ -4,6 +4,8 @@ import type { SubjectState } from "@autumn/balance-engine";
 export type SnapshotIntentEntry =
 	| {
 			states: SubjectState[];
+			/** Subjects whose row was written whole within the rewrite interval: this flush only marks it stale. */
+			stale?: SubjectState[];
 			baselineAt: number;
 			/** Each refreshed subject's last included offset; absent, the flush's own last record is used. */
 			logOffsets?: ReadonlyMap<string, bigint>;

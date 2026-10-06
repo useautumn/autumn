@@ -14,6 +14,8 @@ export type SubjectSnapshotUpsert = {
 	baselineAt: number;
 	/** The last log offset the state includes: a flush's last record, or the bookmark a refresh read under, less one. */
 	logOffset: bigint | null;
+	/** The row's state no longer holds: it is kept but hidden (written_at 0), and `stateJson` is not written. */
+	stale?: boolean;
 };
 
 /** What one flush does to `subject_snapshots`; a customer is in one list or the other, never both. */

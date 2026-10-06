@@ -14,6 +14,7 @@ type Entry = {
 	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
+	snapshotWrittenAt: number | null;
 };
 
 const weigh = ({ value }: { value: unknown }): number =>
@@ -113,6 +114,7 @@ export const createSubjectMap = ({
 			pins: 0,
 			evictOnUnpin: false,
 			baselineAt: null,
+			snapshotWrittenAt: null,
 		};
 		entries.set(subjectKey, created);
 		return created;
@@ -227,6 +229,20 @@ export const createSubjectMap = ({
 	const readBytes = ({ subjectKey }: { subjectKey: string }) =>
 		entries.get(subjectKey)?.bytes ?? 0;
 
+	const readSnapshotWrittenAt = ({ subjectKey }: { subjectKey: string }) =>
+		entries.get(subjectKey)?.snapshotWrittenAt ?? null;
+
+	const noteSnapshotWritten = ({
+		subjectKey,
+		at,
+	}: {
+		subjectKey: string;
+		at: number;
+	}) => {
+		const entry = entries.get(subjectKey);
+		if (entry) entry.snapshotWrittenAt = at;
+	};
+
 	// Only an evict's drops reach `onEvicted`: a drop for space leaves rows Postgres still holds true.
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
 		let pinned = 0;
@@ -253,6 +269,8 @@ export const createSubjectMap = ({
 		setState,
 		readBaselineAt,
 		readBytes,
+		readSnapshotWrittenAt,
+		noteSnapshotWritten,
 		pin,
 		unpin,
 		evictCustomer,
