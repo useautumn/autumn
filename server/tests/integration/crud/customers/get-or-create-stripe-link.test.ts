@@ -17,6 +17,7 @@ import {
 	getFirstStripePriceId,
 } from "@tests/integration/billing/sync/utils/syncTestUtils";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -248,5 +249,35 @@ test.concurrent(
 		});
 
 		expect(result.stripe_id).toBeNull();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("get_or_create stripe link: a failed Stripe read leaves the customer unlinked for a retry")}`,
+	async () => {
+		const customerId = "goc-stripe-link-failed-read";
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [s.deleteCustomer({ customerId })],
+			actions: [],
+		});
+		await getOrCreateCustomer({ autumn: autumnV2_3, customerId });
+		const stripeCustomer = await createStripeCustomer({ ctx, customerId });
+		await ctx.stripeCli.customers.del(stripeCustomer.id);
+
+		await expectAutumnError({
+			errMessage: `No such customer: '${stripeCustomer.id}'`,
+			func: () =>
+				getOrCreateCustomer({
+					autumn: autumnV2_3,
+					customerId,
+					stripeId: stripeCustomer.id,
+				}),
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		expect(fullCustomer.processor?.id).toBeUndefined();
 	},
 );

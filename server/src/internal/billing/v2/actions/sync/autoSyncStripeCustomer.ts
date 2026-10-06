@@ -5,20 +5,18 @@ import { syncV2 } from "./syncV2";
 import { logAutoSyncSkip } from "./utils/logAutoSyncSkip";
 import { withStripeSyncCustomerLock } from "./utils/withStripeSyncCustomerLock";
 
-export const autoSyncStripeCustomer = async ({
+export type AutoSyncCandidates = Awaited<
+	ReturnType<typeof prepareAutoSyncStripeCustomer>
+>;
+
+/** Imports each eligible prepared subscription or schedule; the writes, after the Stripe reads in prepare. */
+export const syncAutoSyncCandidates = async ({
 	ctx,
-	customerId,
-	stripeCustomerId,
+	syncCandidates,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
-	stripeCustomerId: string;
+	syncCandidates: AutoSyncCandidates;
 }) => {
-	const syncCandidates = await prepareAutoSyncStripeCustomer({
-		ctx,
-		customerId,
-		stripeCustomerId,
-	});
 	for (const syncCandidate of syncCandidates) {
 		if (!syncCandidate) continue;
 		const { match, params } = syncCandidate;
@@ -40,6 +38,23 @@ export const autoSyncStripeCustomer = async ({
 			tags: ["sync:customer.create"],
 		});
 	}
+};
+
+const autoSyncStripeCustomer = async ({
+	ctx,
+	customerId,
+	stripeCustomerId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	stripeCustomerId: string;
+}) => {
+	const syncCandidates = await prepareAutoSyncStripeCustomer({
+		ctx,
+		customerId,
+		stripeCustomerId,
+	});
+	await syncAutoSyncCandidates({ ctx, syncCandidates });
 };
 
 export const autoSyncStripeCustomerWithLock = (params: {

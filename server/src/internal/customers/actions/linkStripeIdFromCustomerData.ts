@@ -3,10 +3,10 @@ import {
 	type CustomerData,
 	ProcessorType,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
-import { autoSyncStripeCustomer } from "@/internal/billing/v2/actions/sync/autoSyncStripeCustomer.js";
+import { syncAutoSyncCandidates } from "@/internal/billing/v2/actions/sync/autoSyncStripeCustomer.js";
+import { prepareAutoSyncStripeCustomer } from "@/internal/billing/v2/actions/sync/setup/prepareAutoSyncStripeCustomer.js";
 import { withStripeSyncCustomerLock } from "@/internal/billing/v2/actions/sync/utils/withStripeSyncCustomerLock.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -20,7 +20,7 @@ const writeProcessor = async ({
 }: {
 	ctx: AutumnContext;
 	customer: Customer;
-	processor: Customer["processor"];
+	processor: NonNullable<Customer["processor"]>;
 }) => {
 	const customerId = customer.id ?? customer.internal_id;
 	await executeAutumnBillingPlan({
@@ -69,7 +69,7 @@ const isLinkedToAnotherCustomer = async ({
 	return Boolean(owner && owner.internal_id !== customer.internal_id);
 };
 
-/** Link and import as one step: a failed import unlinks again, so a retry of the same `stripe_id` imports. */
+/** Stripe reads first, so a failed read leaves the customer unlinked and a retry imports; imported rows keep the link webhooks need. */
 const linkAndImport = async ({
 	ctx,
 	customer,
@@ -79,19 +79,17 @@ const linkAndImport = async ({
 	customer: Customer;
 	stripeCustomerId: string;
 }) => {
-	const customerId = customer.id ?? customer.internal_id;
-	const processor = { id: stripeCustomerId, type: ProcessorType.Stripe };
-	await writeProcessor({ ctx, customer, processor });
-	try {
-		await autoSyncStripeCustomer({ ctx, customerId, stripeCustomerId });
-	} catch (error) {
-		await writeProcessor({
-			ctx,
-			customer: { ...customer, processor },
-			processor: null,
-		});
-		throw error;
-	}
+	const syncCandidates = await prepareAutoSyncStripeCustomer({
+		ctx,
+		customerId: customer.id ?? customer.internal_id,
+		stripeCustomerId,
+	});
+	await writeProcessor({
+		ctx,
+		customer,
+		processor: { id: stripeCustomerId, type: ProcessorType.Stripe },
+	});
+	await syncAutoSyncCandidates({ ctx, syncCandidates });
 };
 
 /** Links an existing, unlinked customer to the `stripe_id` it is sent and imports that Stripe customer's billing, as creation does. */
@@ -117,11 +115,6 @@ export const linkStripeIdFromCustomerData = async ({
 	};
 	if (customer.processor?.id)
 		return skipLink(`already linked to ${customer.processor.id}`);
-
-	// Reject an unknown Stripe customer before the link is written.
-	await createStripeCli({ org: ctx.org, env: ctx.env }).customers.retrieve(
-		stripeCustomerId,
-	);
 
 	return withStripeSyncCustomerLock({
 		ctx,
