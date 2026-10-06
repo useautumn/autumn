@@ -1,9 +1,9 @@
 import { z } from "zod/v4";
+import { EntitySchema } from "../../cusModels/entityModels/entityModels";
 import { FullCustomerEntitlementSchema } from "../../cusProductModels/cusEntModels/cusEntModels";
 import { FullCustomerPriceSchema } from "../../cusProductModels/cusPriceModels/cusPriceModels";
 import { FullCusProductSchema } from "../../cusProductModels/cusProductModels";
 import { FeatureSchema } from "../../featureModels/featureModels";
-import { EntitySchema } from "../../cusModels/entityModels/entityModels";
 import { PriceSchema } from "../../productModels/priceModels/priceModels";
 import { ProductSchema } from "../../productModels/productModels";
 
@@ -30,6 +30,7 @@ export const LineItemContextSchema = z.object({
 	billingTiming: z.enum(["in_arrear", "in_advance"]),
 	discountable: z.boolean().optional(), // If true, let Stripe auto-apply discounts to this line item
 	backdate: LineItemBackdateSchema.optional(),
+	endsAt: z.number().optional(), // In-advance charge stops here when the product ends before the period does
 
 	// Entity references (optional - not all line items have these)
 	entity: EntitySchema.optional(),

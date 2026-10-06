@@ -8,7 +8,7 @@ import type { BillingPeriod } from "../../../../models/billingModels/lineItem/li
  *
  * - In-arrear: billing for past usage (start → now), clipped at `startFloor`
  *   (the subscription's creation) since nothing was used before it existed
- * - In-advance: billing for future usage (now → end)
+ * - In-advance: billing for future usage (now → end), cut at `endsAt`
  *
  * @example
  * // Mid-cycle upgrade on Feb 15 (cycle is Feb 1 - Mar 1)
@@ -25,11 +25,13 @@ export const getEffectivePeriod = ({
 	billingPeriod,
 	billingTiming,
 	startFloor,
+	endsAt,
 }: {
 	now: number;
 	billingPeriod: BillingPeriod;
 	billingTiming: "in_arrear" | "in_advance";
 	startFloor?: number;
+	endsAt?: number;
 }): BillingPeriod => {
 	if (billingTiming === "in_arrear") {
 		const start =
@@ -38,6 +40,9 @@ export const getEffectivePeriod = ({
 				: Math.max(billingPeriod.start, startFloor);
 		return { start, end: now };
 	}
-	// Billing for future usage: now → end
-	return { start: now, end: billingPeriod.end };
+	// Billing for future usage: now → end, or until the product ends first
+	return {
+		start: now,
+		end: Math.min(billingPeriod.end, endsAt ?? billingPeriod.end),
+	};
 };
