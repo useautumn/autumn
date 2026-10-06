@@ -153,6 +153,8 @@ const planRow = ({
 		endedAt,
 		options,
 		internalEntityId,
+		// A running paid plan is billed on a Stripe subscription.
+		subscriptionIds: status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 		customerEntitlements: balances(rowId),
 		customerPrices: product.prices.map((price) =>
 			prices.createCustomer({ price, customerProductId: rowId }),
@@ -340,6 +342,7 @@ const proOnWords = ({ allowance }: { allowance: number }) => {
 		productId: "pro",
 		product,
 		startsAt: NOW - ms.days(10),
+		subscriptionIds: ["sub_live"],
 		customerEntitlements: [
 			wordsBalance({ customerProductId: "cp_pro", allowance }),
 		],

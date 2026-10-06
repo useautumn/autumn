@@ -131,3 +131,18 @@ test("a scheduled anchor keeps live rows carrying until the reset", () => {
 		}).liveRows,
 	).toBe("carry");
 });
+
+test("a plan no Stripe subscription bills is recreated, unless the request makes no billing changes", () => {
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({}),
+			params: {},
+		}).unbilledRows,
+	).toBe("recreate");
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({ skipBillingChanges: true }),
+			params: {},
+		}).unbilledRows,
+	).toBe("carry");
+});

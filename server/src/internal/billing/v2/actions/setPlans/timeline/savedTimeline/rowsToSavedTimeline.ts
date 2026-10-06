@@ -68,6 +68,7 @@ const toSavedRow = (row: TimelineRow): SavedRow => ({
 	scheduled: row.scheduled,
 	canceling: row.canceling,
 	pastDue: row.pastDue,
+	unbilledByStripe: row.unbilledByStripe,
 });
 
 const toSavedSegment = ({

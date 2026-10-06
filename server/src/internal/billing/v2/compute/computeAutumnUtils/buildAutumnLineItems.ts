@@ -20,6 +20,7 @@ export const buildAutumnLineItems = ({
 	billingContext,
 	includeArrearLineItems = false,
 	carriesUsage,
+	creditsUnusedTime = () => true,
 }: {
 	ctx: AutumnContext;
 	newCustomerProducts: FullCusProduct[];
@@ -29,6 +30,8 @@ export const buildAutumnLineItems = ({
 	includeArrearLineItems?: boolean;
 	/** Usage the incoming plan carries is billed at its period end, not here. */
 	carriesUsage?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
+	/** A plan nothing was charged for has no unused time to credit. */
+	creditsUnusedTime?: (customerProduct: FullCusProduct) => boolean;
 }) => {
 	const { logger } = ctx;
 	const customerProductsToDelete = [
@@ -73,14 +76,16 @@ export const buildAutumnLineItems = ({
 	arrearLineItems = arrearLineItems.filter((lineItem) => lineItem.amount !== 0);
 
 	// Get line items for ongoing cus product
-	const deletedLineItems = customerProductsToDelete.flatMap((customerProduct) =>
-		getRefundLineItems({
-			ctx,
-			customerProduct,
-			billingContext,
-			priceFilters: { excludeOneOffPrices: true },
-		}),
-	);
+	const deletedLineItems = customerProductsToDelete
+		.filter(creditsUnusedTime)
+		.flatMap((customerProduct) =>
+			getRefundLineItems({
+				ctx,
+				customerProduct,
+				billingContext,
+				priceFilters: { excludeOneOffPrices: true },
+			}),
+		);
 
 	const newLineItems = newCustomerProducts.flatMap((newCustomerProduct) =>
 		customerProductToLineItems({

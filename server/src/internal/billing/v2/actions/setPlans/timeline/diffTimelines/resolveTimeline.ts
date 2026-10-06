@@ -41,6 +41,12 @@ const liveRowCarries = ({
 	if (planned.lifetime) return true;
 	const keepsCancellation =
 		liveRow.canceling && rules.policies.canceling === "keepCancellation";
+	// No Stripe period is open for the plan, so even an unchanged listing starts one, like a new price would.
+	const startsStripeBilling =
+		liveRow.unbilledByStripe &&
+		rules.policies.unbilledRows === "recreate" &&
+		!keepsCancellation;
+	if (startsStripeBilling) return false;
 	if (!rules.liveRowsCarry)
 		return rules.cancelingRowsCarry && keepsCancellation;
 	if (liveRow.canceling && rules.policies.canceling === "recreate") {

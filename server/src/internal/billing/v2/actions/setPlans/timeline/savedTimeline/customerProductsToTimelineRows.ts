@@ -8,6 +8,7 @@ import {
 	isCustomerProductOnStripeSubscription,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
+import { isUnbilledByStripe } from "../../utils/isUnbilledByStripe";
 import type { ConfigInterner } from "../instanceConfig/createConfigInterner";
 import { customerProductToInstanceConfig } from "../instanceConfig/instanceConfigs";
 import type { TimelineRow } from "../types/timelineRow";
@@ -65,6 +66,7 @@ export const customerProductToTimelineRow = ({
 	scheduled: customerProduct.status === CusProductStatus.Scheduled,
 	canceling: isCustomerProductCanceling(customerProduct),
 	pastDue: customerProduct.status === CusProductStatus.PastDue,
+	unbilledByStripe: isUnbilledByStripe({ customerProduct, now }),
 	externalId: customerProduct.external_id ?? null,
 });
 

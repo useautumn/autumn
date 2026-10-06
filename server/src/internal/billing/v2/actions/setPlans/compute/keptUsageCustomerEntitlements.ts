@@ -8,6 +8,7 @@ import {
 	isCustomerProductOnStripeSubscription,
 	type Price,
 } from "@autumn/shared";
+import { isUnbilledByStripe } from "../utils/isUnbilledByStripe";
 
 /** A replaced row on a cancelled subscription ends with it; its usage never moves to the new one. */
 const isOnReplacedSubscription = ({
@@ -42,8 +43,17 @@ export const keptUsageCustomerEntitlements = ({
 	incomingPrices: Price[];
 	incomingEntitlements: Entitlement[];
 }): FullCustomerEntitlement[] => {
+	// Both start a new Stripe period, so the old one's usage is billed now, never carried.
 	const resetsCycleNow = billingContext.requestedBillingCycleAnchor === "now";
 	if (resetsCycleNow) return [];
+	if (
+		isUnbilledByStripe({
+			customerProduct: outgoingCustomerProduct,
+			now: billingContext.currentEpochMs,
+		})
+	) {
+		return [];
+	}
 	if (
 		isOnReplacedSubscription({
 			billingContext,

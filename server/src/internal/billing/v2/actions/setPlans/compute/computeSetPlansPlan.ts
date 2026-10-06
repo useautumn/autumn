@@ -7,6 +7,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isUnbilledByStripe } from "@/internal/billing/v2/actions/setPlans/utils/isUnbilledByStripe";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
@@ -118,6 +119,11 @@ export const computeSetPlansPlan = ({
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
 		carriesUsage: (customerEntitlement) =>
 			keptUsageCustomerEntitlementIds.has(customerEntitlement.id),
+		creditsUnusedTime: (customerProduct) =>
+			!isUnbilledByStripe({
+				customerProduct,
+				now: billingContext.currentEpochMs,
+			}),
 	});
 
 	const { trialStartedCustomerProducts } = customerProductChanges;

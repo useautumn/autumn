@@ -757,7 +757,11 @@ describe(chalk.yellowBright("computeSetPlansPlan: future first phase"), () => {
 		expect(autumnBillingPlan.lineItems ?? []).toEqual([]);
 		expect(immediatePhaseTransition.incomingCustomerProducts).toEqual([]);
 		expect(phases).toEqual([
-			{ startsAt, customerProductIds: [scheduled!.id], prorationBehavior: null },
+			{
+				startsAt,
+				customerProductIds: [scheduled!.id],
+				prorationBehavior: null,
+			},
 		]);
 	});
 
