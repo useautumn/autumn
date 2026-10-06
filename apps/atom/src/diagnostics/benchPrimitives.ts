@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { readdirSync } from "node:fs";
+import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { deepFreeze } from "../state/deepFreeze.js";
 
@@ -31,6 +31,40 @@ const timePerCall = <T>(items: T[], fn: (item: T) => unknown): number => {
 	return (
 		Math.round(((performance.now() - startedAt) * 1000 * 100) / calls) / 100
 	);
+};
+
+/** Upserts sampled rows into a scratch file beside the slots: the same volume and settings, never a real slot. */
+const timeScratchUpserts = ({
+	dataDir,
+	rows,
+}: {
+	dataDir: string;
+	rows: SampleRow[];
+}): number => {
+	const path = join(dataDir, "diagnostics-scratch.sqlite");
+	const database = new Database(path, { create: true });
+	try {
+		database.run("PRAGMA journal_mode = WAL");
+		database.run("PRAGMA synchronous = NORMAL");
+		database.run(
+			"CREATE TABLE IF NOT EXISTS t (k TEXT PRIMARY KEY, a TEXT, b TEXT, c TEXT) WITHOUT ROWID",
+		);
+		const upsert = database.query(
+			"INSERT INTO t (k, a, b, c) VALUES (?, ?, ?, ?) ON CONFLICT (k) DO UPDATE SET a = excluded.a, b = excluded.b, c = excluded.c",
+		);
+		return timePerCall(rows, (row) =>
+			upsert.run(
+				`${row.customerId}:${row.entityId}`,
+				row.stateJson,
+				row.catalogJson,
+				row.orgJson,
+			),
+		);
+	} finally {
+		database.close();
+		for (const suffix of ["", "-wal", "-shm"])
+			rmSync(`${path}${suffix}`, { force: true });
+	}
 };
 
 const median = (values: number[]): number =>
@@ -95,6 +129,11 @@ export const benchPrimitives = ({ dataDir }: { dataDir: string }) => {
 					deepFreeze(JSON.parse(row.stateJson)),
 				),
 				parseCatalog: timePerCall(rows, (row) => JSON.parse(row.catalogJson)),
+				stringifyCatalog: timePerCall(
+					rows.map((row) => JSON.parse(row.catalogJson)),
+					(catalog) => JSON.stringify(catalog),
+				),
+				sqliteUpsertScratch: timeScratchUpserts({ dataDir, rows }),
 				stringifyState: timePerCall(
 					rows.map((row) => JSON.parse(row.stateJson)),
 					(state) => JSON.stringify(state),
