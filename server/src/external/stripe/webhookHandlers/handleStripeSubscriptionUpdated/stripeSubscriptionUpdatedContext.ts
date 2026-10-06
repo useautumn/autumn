@@ -15,6 +15,7 @@ export interface SubscriptionPreviousAttributes {
 	status?: Stripe.Subscription.Status;
 	latest_invoice?: string | Stripe.Invoice | null;
 	billing_cycle_anchor?: number;
+	schedule?: string | Stripe.SubscriptionSchedule | null;
 	cancel_at_period_end?: boolean;
 	cancel_at?: number | null;
 	canceled_at?: number | null;
