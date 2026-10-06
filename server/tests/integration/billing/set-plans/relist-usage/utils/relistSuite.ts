@@ -37,6 +37,7 @@ export const defineRelistSuite = ({
 	entity,
 	trialDays,
 	otherRenewals,
+	cancelsAtRenewal,
 	expectRun,
 	observeRenewal = anchor !== "custom",
 }: {
@@ -49,6 +50,7 @@ export const defineRelistSuite = ({
 	entity?: boolean;
 	trialDays?: number;
 	otherRenewals?: number;
+	cancelsAtRenewal?: boolean;
 	/** State-specific checks on every run, e.g. a re-list clears cancel_at_period_end. */
 	expectRun?: (run: RelistRun) => void;
 	/** Custom anchors stop at the anchor invoice; past_due subs are left to dunning. */
@@ -57,6 +59,7 @@ export const defineRelistSuite = ({
 	const options: RelistExpectationOptions = {
 		renewalObserved: observeRenewal,
 		otherRenewals,
+		cancelsAtRenewal,
 	};
 	const run = (change: RelistChange) =>
 		runRelistCase({

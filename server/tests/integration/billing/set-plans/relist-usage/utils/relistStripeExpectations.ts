@@ -12,7 +12,8 @@ import {
 
 /**
  * Stripe's behaviour for each re-list, from plain-Stripe test clocks (handoffs/ATMN-746/stripe-relist-wide.md,
- * stripe-relist-no-sub.md). Autumn's prorate_immediately and bill_difference map to always_invoice.
+ * stripe-relist-no-sub.md). prorate_immediately maps to always_invoice. bill_difference has no Stripe
+ * equivalent: per decision D8 it credits only the unused old period and charges the new item in full.
  */
 
 type LicensedItem = { key: string; amount: number };
@@ -78,18 +79,21 @@ type StripeTimeline = {
 const liveTimeline = ({
 	change,
 	anchor,
-	billsNow,
+	proration,
+	cancelsAtRenewal,
 	periodStartMs,
 	changeAtMs,
 	customAnchorMs,
 }: {
 	change: RelistChange;
 	anchor: RelistAnchor;
-	billsNow: boolean;
+	proration: RelistProration;
+	cancelsAtRenewal: boolean;
 	periodStartMs: number;
 	changeAtMs: number;
 	customAnchorMs: number;
 }): StripeTimeline => {
+	const billsNow = proration !== "none";
 	const { items: after, meteredKept } = AFTER[change];
 	const periodEndMs = addMonths(periodStartMs, 1).getTime();
 	const unusedRatio = ratioBetween({
@@ -101,9 +105,14 @@ const liveTimeline = ({
 	const added = after.filter((item) => !has(BEFORE, item));
 	const removed = BEFORE.filter((item) => !has(after, item));
 	const usageCents = cents(OVERAGE);
+	const addedCents =
+		proration === "bill_difference"
+			? sumCents(added)
+			: sumCents(added, unusedRatio);
 	const proratedChangeCents = billsNow
-		? sumCents(added, unusedRatio) - sumCents(removed, unusedRatio)
+		? addedCents - sumCents(removed, unusedRatio)
 		: 0;
+	const renewalLicensedCents = cancelsAtRenewal ? 0 : sumCents(after);
 
 	if (anchor === "now") {
 		const newEndMs = addMonths(changeAtMs, 1).getTime();
@@ -122,7 +131,7 @@ const liveTimeline = ({
 			executeUsage: true,
 			anchorCents: 0,
 			anchorUsage: false,
-			renewalCents: sumCents(after),
+			renewalCents: renewalLicensedCents,
 			renewalUsage: false,
 			usageAfterChange: 0,
 		};
@@ -148,7 +157,7 @@ const liveTimeline = ({
 				(billsNow ? sumCents(after, extension) : 0) +
 				(meteredKept ? usageCents : 0),
 			anchorUsage: meteredKept,
-			renewalCents: sumCents(after),
+			renewalCents: renewalLicensedCents,
 			renewalUsage: false,
 		};
 	}
@@ -157,7 +166,7 @@ const liveTimeline = ({
 		...atChange,
 		anchorCents: 0,
 		anchorUsage: false,
-		renewalCents: sumCents(after) + (meteredKept ? usageCents : 0),
+		renewalCents: renewalLicensedCents + (meteredKept ? usageCents : 0),
 		renewalUsage: meteredKept,
 	};
 };
@@ -216,6 +225,8 @@ export type RelistExpectationOptions = {
 	renewalObserved?: boolean;
 	/** Renewals of other subs the customer keeps (multi-sub state). */
 	otherRenewals?: number;
+	/** The plan is canceling: a re-list keeps the cancellation, so the period end bills only kept usage. */
+	cancelsAtRenewal?: boolean;
 };
 
 export const expectedRelistBilling = ({
@@ -226,6 +237,7 @@ export const expectedRelistBilling = ({
 	run,
 	renewalObserved = true,
 	otherRenewals = 0,
+	cancelsAtRenewal = false,
 }: {
 	state: RelistStripeState;
 	change: RelistChange;
@@ -239,7 +251,8 @@ export const expectedRelistBilling = ({
 			: liveTimeline({
 					change,
 					anchor,
-					billsNow: proration !== "none",
+					proration,
+					cancelsAtRenewal,
 					...run,
 				});
 	const usageLine = (billed: boolean) => (billed ? [OVERAGE] : []);

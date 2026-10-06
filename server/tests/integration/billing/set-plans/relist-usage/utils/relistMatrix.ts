@@ -71,27 +71,16 @@ const wordsQuantity = (quantity: number) => [
 	{ feature_id: TestFeature.Words, quantity },
 ];
 
-const proItemsWithUsagePrice = (unitPrice: number) => [
-	{
-		feature_id: TestFeature.Messages,
-		included: RELIST.includedMessages,
-		price: {
-			amount: unitPrice,
-			interval: BillingInterval.Month,
-			billing_method: BillingMethod.UsageBased,
-			billing_units: 1,
-		},
+const messagesItem = (unitPrice: number) => ({
+	feature_id: TestFeature.Messages,
+	included: RELIST.includedMessages,
+	price: {
+		amount: unitPrice,
+		interval: BillingInterval.Month,
+		billing_method: BillingMethod.UsageBased,
+		billing_units: 1,
 	},
-	{
-		feature_id: TestFeature.Words,
-		price: {
-			amount: RELIST.wordsPackPrice,
-			interval: BillingInterval.Month,
-			billing_method: BillingMethod.Prepaid,
-			billing_units: RELIST.wordsPackSize,
-		},
-	},
-];
+});
 
 type PhasePlan = SetPlansParamsV0Input["phases"][number]["plans"][number];
 
@@ -127,7 +116,8 @@ export const relistPlans = ({
 				{
 					...pro,
 					customize: {
-						items: proItemsWithUsagePrice(RELIST.changedUnitPrice),
+						remove_items: [{ feature_id: TestFeature.Messages }],
+						add_items: [messagesItem(RELIST.changedUnitPrice)],
 					},
 				},
 			];
