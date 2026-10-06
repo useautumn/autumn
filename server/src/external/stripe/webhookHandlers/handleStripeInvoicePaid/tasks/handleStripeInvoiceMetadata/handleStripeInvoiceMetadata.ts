@@ -40,12 +40,6 @@ export const handleStripeInvoiceMetadata = async ({
 		return;
 	}
 
-	// invoice.finalized is activating this plan right now.
-	if (metadata.type === MetadataType.DeferredInvoiceProcessing) {
-		invoicePaidContext.results.appliedBillingPlan = true;
-		return;
-	}
-
 	// Legacy v1 flows below
 	const data = metadata.data as unknown as AttachParams;
 	const reqMatch =

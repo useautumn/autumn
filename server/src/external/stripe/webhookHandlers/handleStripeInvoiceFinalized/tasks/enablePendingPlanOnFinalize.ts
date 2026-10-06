@@ -47,6 +47,9 @@ const isReceivableForPendingPlan = async ({
 	metadata: Metadata;
 	stripeInvoice: Stripe.Invoice;
 }): Promise<boolean> => {
+	// Parked before the replacement is issued, so it can still match the pointer mid-reissue.
+	if (stripeInvoice.metadata?.autumn_reissued_to) return false;
+
 	if (metadata.stripe_invoice_id === stripeInvoice.id) return true;
 
 	const replacesPendingInvoice =

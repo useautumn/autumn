@@ -8,6 +8,7 @@
  *   later invoices.pay          → no second activation (balance unchanged)
  *   credit balance covers total → finalize pays instantly; finalized + paid race, plan activates once
  *   reissued draft              → the replacement's finalize activates the plan
+ *   parked reissued original    → finalizing it in Stripe never activates the plan
  */
 
 import { expect, test } from "bun:test";
@@ -273,6 +274,52 @@ test.concurrent(
 					replacement.stripe_id,
 				);
 			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("draft-imm finalize: finalizing a parked reissued original in Stripe keeps the plan pending")}`,
+	async () => {
+		const customerId = "draft-imm-reissue-parked";
+		const productId = "pro-draft-imm-reissue-parked";
+		const scenario = await setupDraftImmediate({
+			customerId,
+			planId: productId,
+		});
+		const { planId } = scenario;
+
+		const draft = await attachDraftImmediate({ scenario, customerId, planId });
+		const pending = await expectPendingPlan({ scenario, planId });
+
+		const { invoice: replacement } = (await scenario.autumnV2_3.post(
+			"/invoices.reissue",
+			{ invoice_id: draft.id, issue_method: "draft" },
+		)) as InvoiceResponse;
+		expect(replacement.status).toBe("draft");
+
+		await ctx.stripeCli.invoices.finalizeInvoice(draft.stripe_id);
+
+		// The original's row turns open once its invoice.finalized webhook has run.
+		await pollUntilAsserted({
+			timeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			fetch: async () =>
+				(
+					(await scenario.autumnV2_3.post("/invoices.list", {
+						customer_id: customerId,
+					})) as { list: ApiListInvoiceV1[] }
+				).list.find((invoice) => invoice.id === draft.id),
+			assert: (original) => expect(original?.status).toBe("open"),
+		});
+		await expectPendingPlan({ scenario, planId });
+
+		await ctx.stripeCli.invoices.finalizeInvoice(replacement.stripe_id);
+
+		await expectPlanActivatedOnce({
+			scenario,
+			customerId,
+			planId,
+			metadataId: pending.metadata_id ?? "",
 		});
 	},
 );
