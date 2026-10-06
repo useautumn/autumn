@@ -21,6 +21,7 @@ export const updateSubjectBalanceCache = async ({
 		entities?: Record<string, unknown> | null;
 		reset_cycle_anchor?: number | null;
 		next_reset_at?: number | null;
+		balance_reset_at?: number | null;
 	};
 }) => {
 	const { redisV2 } = ctx;
@@ -48,6 +49,7 @@ export const updateSubjectBalanceCache = async ({
 							entities: updates.entities ?? null,
 							reset_cycle_anchor: updates.reset_cycle_anchor ?? null,
 							next_reset_at: updates.next_reset_at ?? null,
+							balance_reset_at: updates.balance_reset_at,
 							expected_next_reset_at: null,
 							rollover_insert: null,
 							rollover_overwrites: null,

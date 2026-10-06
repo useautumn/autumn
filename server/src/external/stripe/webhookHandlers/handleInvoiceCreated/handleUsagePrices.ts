@@ -155,6 +155,7 @@ export const handleUsagePrices = async ({
 		id: relatedCusEnt.id,
 		updates: {
 			...resetBalancesUpdate,
+			balance_reset_at: start * 1000,
 			adjustment: 0,
 			next_reset_at: relatedCusEnt.next_reset_at ? end * 1000 : null,
 		},

@@ -40,6 +40,7 @@ export const updateCusEntDbAndCache = async ({
 			entities: updates.entities,
 			reset_cycle_anchor: updates.reset_cycle_anchor,
 			next_reset_at: updates.next_reset_at,
+			balance_reset_at: updates.balance_reset_at,
 		},
 	});
 };

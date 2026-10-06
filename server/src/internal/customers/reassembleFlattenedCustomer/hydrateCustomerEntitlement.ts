@@ -1,5 +1,9 @@
 import type { LookupMaps } from "./buildLookupMaps.js";
-import { toFloat, toNullableTimestamp, toTimestamp } from "./normalizeFields.js";
+import {
+	toFloat,
+	toNullableTimestamp,
+	toTimestamp,
+} from "./normalizeFields.js";
 import type { FlatCustomerEntitlement } from "./types.js";
 
 export const hydrateCustomerEntitlement = (
@@ -16,6 +20,7 @@ export const hydrateCustomerEntitlement = (
 				...ce,
 				created_at: toTimestamp(ce.created_at),
 				next_reset_at: toNullableTimestamp(ce.next_reset_at),
+				balance_reset_at: toNullableTimestamp(ce.balance_reset_at),
 				balance: toFloat(ce.balance),
 				adjustment: toFloat(ce.adjustment),
 			}

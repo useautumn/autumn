@@ -73,6 +73,7 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		pooled_balance: subjectBalance.pooled_balance,
 		reset_cycle_anchor: subjectBalance.reset_cycle_anchor,
 		next_reset_at: subjectBalance.next_reset_at,
+		balance_reset_at: subjectBalance.balance_reset_at,
 		adjustment: subjectBalance.adjustment,
 		expires_at: subjectBalance.expires_at,
 		cache_version: subjectBalance.cache_version ?? 0,

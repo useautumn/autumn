@@ -18,6 +18,8 @@ export const deductionDeltaSchema = z
 		/** In the tracked feature's units: what of the caller's value this delta covered. */
 		valueDelta: finiteNumberSchema,
 		creditCost: finiteNumberSchema,
+		/** Last applied refill when reserved. Absent on legacy receipts; 0 before the first refill. */
+		balanceResetAt: finiteNumberSchema.optional(),
 		/** Units and credits this delta charged to the owning row's rate card, when it has one. */
 		usageAttributionDelta: z
 			.object({

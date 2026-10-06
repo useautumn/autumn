@@ -23,6 +23,7 @@ export type ResetUpdates = {
 	entities: Record<string, EntityBalance> | null;
 	usage_attribution: UsageAttribution;
 	next_reset_at: number;
+	balance_reset_at: number;
 };
 
 export type ProcessResetResult = {
@@ -123,6 +124,7 @@ export const processReset = async ({
 					entities: resetBalanceUpdate.entities,
 					usage_attribution: resetBalanceUpdate.usage_attribution,
 					next_reset_at: nextResetAt,
+					balance_reset_at: cusEnt.next_reset_at,
 				}
 			: {
 					balance: resetBalanceUpdate.balance,
@@ -131,6 +133,7 @@ export const processReset = async ({
 					entities: null,
 					usage_attribution: resetBalanceUpdate.usage_attribution,
 					next_reset_at: nextResetAt,
+					balance_reset_at: cusEnt.next_reset_at,
 				};
 
 	let rolloverInsert:

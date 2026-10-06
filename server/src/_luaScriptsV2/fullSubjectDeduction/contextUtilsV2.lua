@@ -179,6 +179,12 @@ local function append_mutation_log(params)
     mutation_log.usage_attribution_delta = params.usage_attribution_delta
   end
 
+  if params.target_type == 'customer_entitlement' then
+    local ent_data = context.customer_entitlements[params.customer_entitlement_id]
+    -- A numeric initial generation survives Upstash's null-dropping re-encode.
+    mutation_log.balance_reset_at = ent_data and safe_number(ent_data.subject_balance.balance_reset_at) or 0
+  end
+
   table.insert(context.mutation_logs, mutation_log)
 end
 

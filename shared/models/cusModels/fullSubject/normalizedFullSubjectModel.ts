@@ -90,6 +90,7 @@ export type SubjectBalance = {
 	pooled_balance?: DbPooledBalance;
 	reset_cycle_anchor: number | null;
 	next_reset_at: number | null;
+	balance_reset_at?: number | null;
 	expires_at: number | null;
 	external_id: string | null;
 	metadata?: CustomerEntitlementMetadata | null;

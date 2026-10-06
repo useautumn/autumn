@@ -46,6 +46,7 @@ const updateCustomerEntitlements = async ({
 				'{}'::jsonb
 			),
 			next_reset_at = reset_update.next_reset_at,
+			balance_reset_at = reset_update.expected_next_reset_at,
 			cache_version = COALESCE(customer_entitlement.cache_version, 0) + 1
 		FROM jsonb_to_recordset(${JSON.stringify(updates)}::jsonb) AS reset_update(
 			id text,

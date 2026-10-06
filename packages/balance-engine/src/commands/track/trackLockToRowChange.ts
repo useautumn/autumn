@@ -28,7 +28,13 @@ export const trackLockToRowChange = ({
 		feature_id: command.featureId,
 		overage_behavior: command.overageBehavior,
 		properties: command.properties,
-		deltas: outcome.deltas,
+		deltas: outcome.deltas.map((delta) => {
+			if (delta.table !== "customerEntitlements") return delta;
+			const row = outcome.context.customerEntitlements.find(
+				(row) => row.id === delta.id,
+			);
+			return { ...delta, balanceResetAt: row?.balance_reset_at ?? 0 };
+		}),
 		expires_at: lock.expiresAt,
 		expiry_action: lock.expiryAction,
 		created_at: command.occurredAt,
