@@ -44,6 +44,8 @@ export type MigrationCustomerProductRepointed =
 		toInternalProductId: string;
 	};
 
+/** Carries no diff on purpose: a pool repoint alone only busts the cache and
+ * succeeds the customer; item diffs come from the license entitlement changes. */
 export type MigrationLicensePoolRepointed = {
 	kind: "license_pool_repointed";
 };
