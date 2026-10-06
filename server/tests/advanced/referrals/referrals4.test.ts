@@ -103,7 +103,6 @@ test(`${chalk.yellowBright("referrals4: free product referrals delayed by trial"
 			addDays(new Date(), 7),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
 	});
 
 	const redemptionAfterTrial = await autumnV1.redemptions.get(redemption.id);

@@ -85,7 +85,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: scheduleStartsAt,
-			waitForSeconds: 30,
 		});
 
 		await autumnV1.billing.createSchedule({
@@ -114,7 +113,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: badQuarterlyStartsAt,
-			waitForSeconds: 30,
 		});
 
 		const stripeCustomerId = customer.processor?.id;
@@ -162,7 +160,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: postCorrectionPreviewAt,
-			waitForSeconds: 30,
 		});
 
 		await previewCreateSchedule({
@@ -226,7 +223,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: noChargeCheckAt,
-			waitForSeconds: 30,
 		});
 		const invoicesAfterAugust = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId!,
@@ -245,7 +241,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: paidStartsAt,
-			waitForSeconds: 30,
 		});
 		const invoicesAfterOctober = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId!,

@@ -190,7 +190,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfMonths: 1,
-			minimumWaitForSeconds: 30,
 		});
 
 		// Verify: Pro is active with correct features

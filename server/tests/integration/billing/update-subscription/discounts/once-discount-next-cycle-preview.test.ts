@@ -108,7 +108,6 @@ test.concurrent(
 			testClockId: testClockId!,
 			numberOfMonths: 1,
 			numberOfHours: 2,
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

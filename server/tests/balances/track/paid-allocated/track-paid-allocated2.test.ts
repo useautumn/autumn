@@ -66,7 +66,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing track usage for cont use`)}
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await autumn.track({

@@ -52,7 +52,6 @@ test.failing(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addWeeks(curUnix, 2).getTime(),
-			waitForSeconds: 15,
 		});
 
 		await autumnV1.usage({
@@ -101,7 +100,6 @@ test.failing(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addWeeks(curUnix, 1).getTime(),
-			waitForSeconds: 15,
 		});
 
 		await autumnV1.usage({

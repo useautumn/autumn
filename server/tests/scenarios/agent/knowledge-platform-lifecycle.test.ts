@@ -28,7 +28,7 @@ test(`${chalk.yellowBright("agent: knowledge platform customer mid-cycle trialin
 		],
 		actions: [
 			s.billing.attach({ productId: scaleTrial.id }),
-			s.advanceTestClock({ days: 7, waitForSeconds: 15 }),
+			s.advanceTestClock({ days: 7 }),
 		],
 	});
 
@@ -53,7 +53,7 @@ test(`${chalk.yellowBright("agent: knowledge platform customer on paid scale")}`
 		],
 		actions: [
 			s.billing.attach({ productId: plans.scale.id }),
-			s.advanceTestClock({ days: 7, waitForSeconds: 15 }),
+			s.advanceTestClock({ days: 7 }),
 		],
 	});
 

@@ -69,7 +69,7 @@ test(
 			setup: [s.customer({}), s.products({ list: [free, trialProduct] })],
 			actions: [
 				s.billing.attach({ productId: trialProduct.id }),
-				s.advanceTestClock({ days: 5, waitForSeconds: 30 }),
+				s.advanceTestClock({ days: 5 }),
 			],
 		});
 
@@ -139,7 +139,6 @@ test(
 			stripeCli: scenarioCtx.stripeCli,
 			testClockId,
 			numberOfDays: 5,
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -184,7 +183,7 @@ test(
 			setup: [s.customer({}), s.products({ list: [free, trialProduct] })],
 			actions: [
 				s.billing.attach({ productId: trialProduct.id }),
-				s.advanceTestClock({ days: 1, waitForSeconds: 30 }),
+				s.advanceTestClock({ days: 1 }),
 			],
 		});
 

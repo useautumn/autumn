@@ -97,7 +97,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfDays: 5,
-			waitForSeconds: 30,
 		});
 		await autumnV2_3.billing.multiAttach({
 			customer_id: customerId,

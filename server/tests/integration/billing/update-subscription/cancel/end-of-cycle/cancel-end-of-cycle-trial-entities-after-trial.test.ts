@@ -60,7 +60,7 @@ test.concurrent(
 				actions: [
 					s.attach({ productId: proTrial.id, entityIndex: 0 }),
 					s.attach({ productId: proTrial.id, entityIndex: 1 }),
-					s.advanceTestClock({ days: 12, waitForSeconds: 30 }),
+					s.advanceTestClock({ days: 12 }),
 				],
 			});
 

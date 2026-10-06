@@ -64,7 +64,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: editAt,
-			waitForSeconds: 30,
 		});
 
 		const response = await autumnV1.billing.createSchedule({

@@ -114,7 +114,6 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(curUnix, 2).getTime(),
-			waitForSeconds: 5,
 		});
 		return;
 

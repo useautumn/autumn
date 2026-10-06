@@ -173,7 +173,6 @@ export const setupPausedPro = async ({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: advancedTo + ms.days(trialDays + 1),
-		waitForSeconds: 30,
 	});
 	const paused = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
 	expect(paused.status).toBe("paused");

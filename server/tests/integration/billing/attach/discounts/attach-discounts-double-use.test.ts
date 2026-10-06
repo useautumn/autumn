@@ -99,7 +99,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 			addMonths(new Date(advancedTo), 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
 	});
 
 	// Cycle 2: Upgrade with same discount — should succeed, duplicate silently ignored
@@ -208,7 +207,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 			addMonths(new Date(advancedTo), 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
 	});
 
 	// Cycle 2: multiAttach addon with same discount — should succeed, duplicate silently ignored

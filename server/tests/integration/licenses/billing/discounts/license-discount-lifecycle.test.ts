@@ -85,7 +85,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: billingPeriod.end,
-			waitForSeconds: 30,
 		});
 		customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
@@ -224,7 +223,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: (billingPeriod.start + billingPeriod.end) / 2,
-			waitForSeconds: 20,
 		});
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,

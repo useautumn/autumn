@@ -52,7 +52,6 @@ test.concurrent(
 		await advanceClock(ctx, {
 			testClockId,
 			advanceTo: Date.now(),
-			waitForSeconds: 40,
 		});
 
 		const sub = await ctx.stripeCli.subscriptions.retrieve(subscriptionId);

@@ -185,13 +185,11 @@ export const advanceClock = async (
 		advanceTo,
 		numberOfDays,
 		numberOfMonths,
-		waitForSeconds,
 	}: {
 		testClockId: string;
 		advanceTo?: number;
 		numberOfDays?: number;
 		numberOfMonths?: number;
-		waitForSeconds?: number;
 	},
 ): Promise<number> =>
 	advanceTestClock({
@@ -200,7 +198,6 @@ export const advanceClock = async (
 		advanceTo,
 		numberOfDays,
 		numberOfMonths,
-		waitForSeconds,
 	});
 
 export const NOW = Date.now();

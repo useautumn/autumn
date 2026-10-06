@@ -76,7 +76,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await autumnV1.entities.create(customerId, newEntities);
@@ -110,7 +109,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addWeeks(curUnix, 1).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await timeout(5000);
@@ -201,7 +199,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await autumnV1.entities.delete(customerId, firstEntities[0].id);

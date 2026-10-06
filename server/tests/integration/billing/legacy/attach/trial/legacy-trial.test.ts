@@ -203,7 +203,6 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 2: upgrade after trial ends 
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addDays(new Date(), 12).getTime(),
-		waitForSeconds: 30,
 	});
 
 	// Get checkout total for comparison
@@ -578,7 +577,6 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 6: trial to trial upgrade wi
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addDays(new Date(), 3).getTime(),
-		waitForSeconds: 10,
 	});
 
 	// Upgrade to Premium with trial

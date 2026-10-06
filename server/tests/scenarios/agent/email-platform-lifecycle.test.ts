@@ -29,7 +29,7 @@ test(`${chalk.yellowBright("agent: email platform customer on paid pro")}`, asyn
 				productId: plans.pro.id,
 				options: [{ feature_id: featureIds.emails, quantity: 50_000 }],
 			}),
-			s.advanceTestClock({ days: 7, waitForSeconds: 15 }),
+			s.advanceTestClock({ days: 7 }),
 		],
 	});
 

@@ -51,7 +51,7 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: initialPlan.id }),
-				s.advanceTestClock({ months: 1, waitForSeconds: 30 }),
+				s.advanceTestClock({ months: 1 }),
 				s.billing.attach({
 					productId: controlledPlan.id,
 					planSchedule: "immediate",

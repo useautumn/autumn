@@ -93,7 +93,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 15,
 	});
 
 	// Stripe leaves a send_invoice renewal in draft for an hour of clock time.
@@ -102,7 +101,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 		testClockId: testClockId!,
 		startingFrom: new Date(renewedAt),
 		numberOfHours: 2,
-		waitForSeconds: 15,
 	});
 
 	const renewal = await waitForOpenInvoice({

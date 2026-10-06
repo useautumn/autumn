@@ -195,7 +195,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: advancedTo + ms.days(35),
-			waitForSeconds: 30,
 		});
 
 		const afterRenewal = await CusService.getFull({

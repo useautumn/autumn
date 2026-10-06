@@ -53,7 +53,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: advancedTo + ms.days(10),
-			waitForSeconds: 20,
 		});
 
 		const live = await liveSubscriptionPeriod({ ctx, customerId });

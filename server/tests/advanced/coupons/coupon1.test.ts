@@ -96,7 +96,6 @@ const simulateOneCycle = async ({
 			addMonths(curUnix, 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
 	});
 
 	const customer = await autumn.customers.get(customerId);

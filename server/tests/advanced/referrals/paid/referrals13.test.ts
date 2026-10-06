@@ -58,7 +58,7 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		],
 		actions: [
 			s.attach({ productId: proProd.id }),
-			s.advanceTestClock({ days: 10, waitForSeconds: 10 }),
+			s.advanceTestClock({ days: 10 }),
 			s.referral.createCode(),
 		],
 	});
@@ -68,7 +68,6 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		await advanceTestClock({
 			testClockId: testClockIds[redeemerId],
 			numberOfDays: 10,
-			waitForSeconds: 10,
 			stripeCli: ctx.stripeCli,
 		});
 	}
@@ -114,7 +113,6 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 			advanceTestClock({
 				testClockId: clockId,
 				numberOfDays: 31,
-				waitForSeconds: 25,
 				stripeCli: ctx.stripeCli,
 			}),
 		),

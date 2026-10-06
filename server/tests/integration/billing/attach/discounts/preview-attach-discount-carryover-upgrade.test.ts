@@ -86,14 +86,12 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
 			numberOfMonths: 1,
-			waitForSeconds: 30,
 		});
 		advancedTo = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: 15,
-			waitForSeconds: 20,
 		});
 
 		const preview = (await autumnV2_2.billing.previewAttach({

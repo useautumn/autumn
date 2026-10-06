@@ -94,7 +94,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 			stripeCli,
 			testClockId: testClockID,
 			advanceTo: advancedTo,
-			waitForSeconds: 10,
 		});
 
 		const customer = await autumn.customers.get(customerId);

@@ -191,7 +191,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate next cycle on up
 			addMonths(new Date(), 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
 	});
 
 	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);

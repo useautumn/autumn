@@ -103,7 +103,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfDays: 5,
-			waitForSeconds: 15,
 		});
 
 		const downgradeParams: AttachParamsV1 = {

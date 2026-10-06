@@ -33,14 +33,12 @@ const advanceToNextCycle = async ({
 		stripeCli,
 		testClockId,
 		advanceTo: cycleEnd.getTime(),
-		waitForSeconds: 30,
 	});
 	await advanceTestClock({
 		stripeCli,
 		testClockId,
 		numberOfHours: hoursToFinalizeInvoice,
 		startingFrom: cycleEnd,
-		waitForSeconds: 30,
 	});
 };
 

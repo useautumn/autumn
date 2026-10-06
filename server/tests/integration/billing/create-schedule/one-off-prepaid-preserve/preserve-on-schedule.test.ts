@@ -164,7 +164,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: now + ms.days(16),
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

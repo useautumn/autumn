@@ -94,7 +94,6 @@ test(`${chalk.yellowBright("prorate-nc3: pending invoice items match prorated am
 		testClockId: testClockId!,
 		startingFrom: new Date(advancedTo),
 		numberOfWeeks: 1,
-		waitForSeconds: 30,
 	});
 
 	const trackRes2: TrackResponseV2 = await autumnV2.track({

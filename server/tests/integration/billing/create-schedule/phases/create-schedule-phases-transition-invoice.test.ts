@@ -195,7 +195,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: transitionAt,
-			waitForSeconds: 30,
 		});
 
 		await expectCustomerProducts({
@@ -235,7 +234,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: billingPeriod.end,
-			waitForSeconds: 30,
 		});
 
 		await expectCustomerProducts({

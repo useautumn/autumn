@@ -349,14 +349,12 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: cycleEnd.getTime(),
-			waitForSeconds: 30,
 		});
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			numberOfHours: hoursToFinalizeInvoice,
 			startingFrom: cycleEnd,
-			waitForSeconds: 30,
 		});
 		await expectLiveLicensePools({ autumn: autumnV2_2, customerId, pools: [] });
 

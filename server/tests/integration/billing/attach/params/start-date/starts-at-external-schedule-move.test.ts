@@ -129,7 +129,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: editedStartSec * 1000 + ms.hours(1),
-		waitForSeconds: 30,
 	});
 
 	const activatedProduct = await pollUntil({

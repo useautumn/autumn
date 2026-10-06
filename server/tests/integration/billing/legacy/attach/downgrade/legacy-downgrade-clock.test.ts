@@ -76,7 +76,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfMonths: 1,
-			minimumWaitForSeconds: 30,
 		});
 
 		// Verify: Pro is active, Premium is gone
@@ -158,7 +157,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfMonths: 1,
-			minimumWaitForSeconds: 30,
 		});
 
 		// Verify: Free is active

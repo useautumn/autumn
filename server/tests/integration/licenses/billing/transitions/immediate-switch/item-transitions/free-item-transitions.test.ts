@@ -213,7 +213,6 @@ test.concurrent(
 			stripeCli: scenario.ctx.stripeCli,
 			testClockId: scenario.testClockId,
 			advanceTo: addDays(new Date(scenario.advancedTo), 10).getTime(),
-			waitForSeconds: 5,
 		});
 		const { subscription: subscriptionBefore } = await getStripeSubscription({
 			customerId: scenario.customerId,

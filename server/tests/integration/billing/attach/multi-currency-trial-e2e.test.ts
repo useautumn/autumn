@@ -64,7 +64,6 @@ test.concurrent(
 			testClockId: testClockId as string,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: 10,
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

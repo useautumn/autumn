@@ -102,14 +102,12 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addMonths(new Date(advancedTo ?? Date.now()), 1).getTime(),
-			waitForSeconds: 30,
 		});
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			numberOfHours: hoursToFinalizeInvoice,
 			startingFrom: addMonths(new Date(advancedTo ?? Date.now()), 1),
-			waitForSeconds: 30,
 		});
 
 		// Cycle preserved across the switch: anchor re-points, count carried.

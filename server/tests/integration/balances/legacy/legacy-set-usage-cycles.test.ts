@@ -81,7 +81,6 @@ test.concurrent(
 					stripeCli: ctx.stripeCli,
 					testClockId: testClockId!,
 					advanceTo: addDays(curUnix, daysToAdvance).getTime(),
-					waitForSeconds: 10,
 				});
 
 				const customer =
@@ -130,7 +129,6 @@ test.concurrent(
 				stripeCli: ctx.stripeCli,
 				testClockId: testClockId!,
 				advanceTo: addHours(end * 1000, hoursToFinalizeInvoice).getTime(),
-				waitForSeconds: 30,
 			});
 
 			const cusAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);

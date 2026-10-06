@@ -102,7 +102,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for prepaid messa
 			stripeCli,
 			testClockId,
 			advanceTo: addMonths(new Date(), 1).getTime(),
-			minimumWaitForSeconds: 20,
 		});
 
 		const cus = await autumn.customers.get(customerId);

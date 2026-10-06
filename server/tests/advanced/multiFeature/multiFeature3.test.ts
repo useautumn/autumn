@@ -146,7 +146,6 @@ describe(`${chalk.yellowBright(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo,
-			minimumWaitForSeconds: 20,
 		});
 
 		const { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({

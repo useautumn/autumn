@@ -91,13 +91,11 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfWeeks: 6,
-			minimumWaitForSeconds: 30,
 		});
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addWeeks(advancedTo, 8).getTime(),
-			minimumWaitForSeconds: 30,
 		});
 
 		// Verify: Pro (monthly) is active

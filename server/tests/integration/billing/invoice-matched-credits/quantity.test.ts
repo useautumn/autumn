@@ -47,14 +47,12 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
 			numberOfMonths: 1,
-			waitForSeconds: 30,
 		});
 		advancedTo = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: 15,
-			waitForSeconds: 20,
 		});
 
 		const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(
@@ -132,7 +130,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
 			numberOfMonths: 1,
-			waitForSeconds: 30,
 		});
 
 		// Mid-cycle increase: creates a SECOND stored charge row for this price.
@@ -141,7 +138,6 @@ test.concurrent(
 			testClockId: testClockId as string,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: 10,
-			waitForSeconds: 20,
 		});
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
@@ -156,7 +152,6 @@ test.concurrent(
 			testClockId: testClockId as string,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: 10,
-			waitForSeconds: 20,
 		});
 
 		const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(

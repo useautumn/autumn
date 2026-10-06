@@ -146,14 +146,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach with new version`)}`
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addMonths(curUnix, 1).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumn.customers.get(customerId);

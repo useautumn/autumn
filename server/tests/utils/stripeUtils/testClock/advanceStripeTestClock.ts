@@ -4,21 +4,33 @@ import { createTestWait } from "../../testWait/createTestWait";
 import { getTestClockQueue } from "./getTestClockQueue";
 import { runStripeClockRequest } from "./runStripeClockRequest";
 import { waitForStripeClockReady } from "./waitForStripeClockReady";
+import { waitForTestClockWebhooks } from "./waitForTestClockWebhooks";
+
+// Stripe stamps events with its own clock; the margin keeps local skew from hiding this advance's events.
+const CLOCK_SKEW_MARGIN_MS = 60_000;
 
 export const advanceStripeTestClock = async ({
 	stripeCli,
 	testClockId,
 	targetSeconds,
-	minimumWaitMs = 0,
-	settleMs = 0,
+	afterReady = ({ wait, advancedAtMs }) =>
+		waitForTestClockWebhooks({
+			stripeCli,
+			testClockId,
+			sinceMs: advancedAtMs - CLOCK_SKEW_MARGIN_MS,
+			wait,
+		}),
 	timeoutMs = 180_000,
 	signal,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	targetSeconds: number;
-	minimumWaitMs?: number;
-	settleMs?: number;
+	/** Runs once the clock is ready, before the next advance of this clock may start. */
+	afterReady?: (params: {
+		wait: ReturnType<typeof createTestWait>;
+		advancedAtMs: number;
+	}) => Promise<unknown>;
 	timeoutMs?: number;
 	signal?: AbortSignal;
 }) => {
@@ -44,6 +56,7 @@ export const advanceStripeTestClock = async ({
 			throw new Error(
 				`Stripe test clock target must be after ${clock.frozen_time}`,
 			);
+		const advancedAtMs = Date.now();
 		try {
 			await runStripeClockRequest({
 				wait,
@@ -58,22 +71,18 @@ export const advanceStripeTestClock = async ({
 						},
 					),
 			});
-			const submittedAt = performance.now();
 			await waitForStripeClockReady({
 				stripeCli,
 				testClockId,
 				targetSeconds,
 				wait,
 			});
-			const remainingMinimumMs =
-				minimumWaitMs - (performance.now() - submittedAt);
-			if (remainingMinimumMs > 0) await wait.sleep(remainingMinimumMs);
-			if (settleMs > 0) await wait.sleep(settleMs);
 		} catch (cause) {
 			// An interrupted write may still finish at Stripe; don't advance this clock again.
 			queue.failedAdvance = { cause };
 			throw cause;
 		}
+		await afterReady({ wait, advancedAtMs });
 	};
 
 	try {

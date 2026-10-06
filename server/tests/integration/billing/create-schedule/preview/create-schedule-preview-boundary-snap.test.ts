@@ -115,7 +115,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: renewalAt + ms.days(1),
-			waitForSeconds: 30,
 		});
 
 		const stripeInvoices = await ctx.stripeCli.invoices.list({

@@ -33,7 +33,7 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-				s.advanceTestClock({ days: 10, waitForSeconds: 15 }),
+				s.advanceTestClock({ days: 10 }),
 			],
 		});
 

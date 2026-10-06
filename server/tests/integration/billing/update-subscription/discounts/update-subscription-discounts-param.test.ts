@@ -126,7 +126,6 @@ test.concurrent(
 			testClockId,
 			numberOfMonths: 1,
 			numberOfHours: 2,
-			waitForSeconds: 30,
 		});
 
 		const customerAfterRenewal =

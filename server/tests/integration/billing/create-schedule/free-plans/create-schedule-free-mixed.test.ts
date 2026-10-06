@@ -69,7 +69,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addHours(freeAStartsAt, 1).getTime(),
-			waitForSeconds: 30,
 		});
 		await expectCustomerProducts({
 			customerId,
@@ -83,7 +82,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addHours(freeBStartsAt, 1).getTime(),
-			waitForSeconds: 30,
 		});
 		await expectCustomerProducts({
 			customerId,

@@ -19,7 +19,7 @@ import { advanceStripeTestClock } from "./stripeUtils/testClock/advanceStripeTes
 import { waitForStripeClockReady } from "./stripeUtils/testClock/waitForStripeClockReady";
 import { createTestWait } from "./testWait/createTestWait";
 
-const STRIPE_TEST_CLOCK_TIMING = 20_000;
+const METER_AGGREGATION_WAIT_MS = 200_000;
 
 export const waitForClockReady = async ({
 	stripeCli,
@@ -169,8 +169,6 @@ export const advanceTestClock = async ({
 	numberOfHours,
 	numberOfMonths,
 	advanceTo,
-	waitForSeconds,
-	minimumWaitForSeconds,
 	signal,
 	timeoutMs,
 }: {
@@ -182,8 +180,6 @@ export const advanceTestClock = async ({
 	numberOfHours?: number;
 	numberOfMonths?: number;
 	advanceTo?: number;
-	waitForSeconds?: number;
-	minimumWaitForSeconds?: number;
 	signal?: AbortSignal;
 	timeoutMs?: number;
 }) => {
@@ -220,14 +216,10 @@ export const advanceTestClock = async ({
 	}
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
-	const defaultSettleSeconds =
-		minimumWaitForSeconds === undefined ? STRIPE_TEST_CLOCK_TIMING / 1000 : 0;
 	await advanceStripeTestClock({
 		stripeCli,
 		testClockId,
 		targetSeconds: Math.floor(advanceTo / 1000),
-		minimumWaitMs: (minimumWaitForSeconds ?? 0) * 1000,
-		settleMs: (waitForSeconds ?? defaultSettleSeconds) * 1000,
 		signal,
 		timeoutMs,
 	});
@@ -265,14 +257,8 @@ export const advanceClockForInvoice = async ({
 		: addMonths(startingFrom, 1).getTime();
 	const paymentTime = addDays(new Date(invoiceTime), 4).getTime();
 	const stages = [
-		{
-			targetSeconds: Math.ceil(invoiceTime / 1000),
-			settleMs: waitForMeterUpdate ? 200_000 : STRIPE_TEST_CLOCK_TIMING,
-		},
-		{
-			targetSeconds: Math.floor(paymentTime / 1000),
-			settleMs: STRIPE_TEST_CLOCK_TIMING,
-		},
+		Math.ceil(invoiceTime / 1000),
+		Math.floor(paymentTime / 1000),
 	];
 	const wait = createTestWait({
 		timeoutMs,
@@ -280,14 +266,17 @@ export const advanceClockForInvoice = async ({
 		description: `Advance invoice clock ${testClockId}`,
 	});
 	try {
-		for (const stage of stages) {
+		for (const targetSeconds of stages) {
 			await advanceStripeTestClock({
 				stripeCli,
 				testClockId,
-				...stage,
+				targetSeconds,
 				signal: wait.signal,
 				timeoutMs: wait.remainingMs(),
 			});
+			// Stripe aggregates meter events on its own schedule and emits no event when it's done.
+			if (waitForMeterUpdate && targetSeconds === stages[0])
+				await wait.sleep(METER_AGGREGATION_WAIT_MS);
 		}
 		return paymentTime;
 	} finally {
@@ -321,7 +310,6 @@ export const advanceMonths = async ({
 				"   - Advancing to: ",
 				format(advanceTo, "dd MMM yyyy HH:mm:ss"),
 			);
-			const startedAt = performance.now();
 			await advanceStripeTestClock({
 				stripeCli,
 				testClockId,
@@ -329,8 +317,6 @@ export const advanceMonths = async ({
 				signal: wait.signal,
 				timeoutMs: wait.remainingMs(),
 			});
-			const remainingSettleMs = 15_000 - (performance.now() - startedAt);
-			if (remainingSettleMs > 0) await wait.sleep(remainingSettleMs);
 		}
 	} finally {
 		wait.close();

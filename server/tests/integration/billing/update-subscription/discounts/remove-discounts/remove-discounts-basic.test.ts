@@ -156,7 +156,6 @@ test.concurrent(
 			testClockId: testClockId!,
 			numberOfMonths: 1,
 			numberOfHours: 2,
-			waitForSeconds: 30,
 		});
 
 		await expectCustomerInvoiceCorrect({

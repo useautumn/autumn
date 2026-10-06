@@ -97,7 +97,6 @@ const completeScheduledRetainedTransition = async ({
 		stripeCli: scenario.ctx.stripeCli,
 		testClockId: scenario.testClockId,
 		advanceTo: billingPeriod.end,
-		waitForSeconds: 10,
 	});
 	await advanceTestClock({
 		stripeCli: scenario.ctx.stripeCli,
@@ -106,7 +105,6 @@ const completeScheduledRetainedTransition = async ({
 			new Date(billingPeriod.end),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 10,
 	});
 
 	const assignmentsAfter = await pollUntil({

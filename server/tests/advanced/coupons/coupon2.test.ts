@@ -141,7 +141,6 @@ test(
 				addMonths(new Date(), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			minimumWaitForSeconds: 20,
 		});
 
 		const customerAfterCycle = await autumn.customers.get(customerId);

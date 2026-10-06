@@ -53,7 +53,7 @@ test.concurrent(
 				}),
 				s.removePaymentMethod(),
 				s.attachPaymentMethod({ type: "fail" }),
-				s.advanceTestClock({ weeks: 6, waitForSeconds: 30 }),
+				s.advanceTestClock({ weeks: 6 }),
 			],
 		});
 
