@@ -222,6 +222,9 @@ export const RunDetail = RunSummary.extend({
 	repeats: z.array(RepeatStat),
 	drift: z.array(Drift),
 	milestones: RunMilestones.nullable().optional(),
+	/** Live runs only: server estimate of the remaining wall time (median and p90); null while estimating. */
+	etaMs: z.number().nullable(),
+	etaP90Ms: z.number().nullable(),
 });
 
 export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);
@@ -252,6 +255,11 @@ export const RunEvent = z.discriminatedUnion("type", [
 	}),
 	z.object({ type: z.literal("worker"), worker: WorkerState }),
 	z.object({ type: z.literal("file"), file: RunFile }),
+	z.object({
+		type: z.literal("eta"),
+		etaMs: z.number().nullable(),
+		etaP90Ms: z.number().nullable(),
+	}),
 	z.object({
 		type: z.literal("log"),
 		file: z.string().nullable(),

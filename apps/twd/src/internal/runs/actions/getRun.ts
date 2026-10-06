@@ -3,7 +3,11 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { computeRunDrift } from "../../results/actions/computeRunDrift.ts";
 import { getLiveRun } from "../live/liveRuns.ts";
 import { summariseRepeats } from "../repeat/repetitions.ts";
-import { getRunWithEmail, toRunSummary } from "../repos/runsRepo.ts";
+import {
+	getRunWithEmail,
+	isTerminalRunStatus,
+	toRunSummary,
+} from "../repos/runsRepo.ts";
 import { readRunProgress } from "../types/runProgress.ts";
 
 /** Summary + live (or last persisted) worker grid + every planned file + drift. */
@@ -18,6 +22,7 @@ export const getRun = async ({
 	const { run } = found;
 	const progress = readRunProgress({ progress: run.progress });
 	const live = getLiveRun({ runId });
+	const eta = isTerminalRunStatus({ status: run.status }) ? null : live?.eta;
 	const known = new Map<string, RunFile>(
 		(live ? [...live.files.values()] : (progress.files ?? [])).map((file) => [
 			file.file,
@@ -45,5 +50,7 @@ export const getRun = async ({
 		repeats: run.repeat > 1 ? summariseRepeats({ files }) : [],
 		drift: await computeRunDrift({ ctx, runId }),
 		milestones: progress.milestones ?? null,
+		etaMs: eta?.etaMs ?? null,
+		etaP90Ms: eta?.etaP90Ms ?? null,
 	};
 };
