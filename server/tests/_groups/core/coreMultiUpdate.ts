@@ -6,7 +6,8 @@ export const coreMultiUpdate: TestGroup = {
 	tier: "core",
 	paths: [
 		// Main + add-on EOC/immediate cancels in one call (incl. consumable overage)
-		"billing/multi-update/basic/multi-update-basic.test.ts",
+		"billing/multi-update/basic/multi-update-basic-survivors.test.ts",
+		"billing/multi-update/basic/multi-update-basic-cancel-all.test.ts",
 		// Uncancel composed with cancel in one call (cancel_at collision case)
 		"billing/multi-update/uncancel/multi-update-uncancel.test.ts",
 		// Immediate + EOC mixed on one subscription
