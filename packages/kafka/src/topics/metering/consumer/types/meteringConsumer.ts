@@ -82,6 +82,12 @@ export type MeteringRecordsHandler = {
 		offset: bigint;
 	}): boolean;
 	applyRecords(slice: MeteringRecordSlice): void | Promise<void>;
+	/** Replaces the full schema parse, e.g. with a cheaper or shared one; throw to reject the record. */
+	parseRecord?(params: {
+		position: { topic: string; partition: number; offset: bigint };
+		key: Buffer | null;
+		value: Buffer | null;
+	}): MeteringRecord;
 	/** A record that will not decode: throw to fail the slice, or return to drop that one record. */
 	onRecordError?(failure: MeteringRecordFailure): void;
 	onStaleRecord?(record: MeteringStaleRecord): void;

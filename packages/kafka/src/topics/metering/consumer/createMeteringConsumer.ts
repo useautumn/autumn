@@ -170,6 +170,7 @@ export function createMeteringConsumer({
 
 	/** Decodes a slice for a slice handler: fence markers pass unread, a declined or undecodable record is dropped. */
 	function bindApplyRecords(handler: MeteringRecordsHandler) {
+		const parseRecord = handler.parseRecord ?? parseMeteringRecord;
 		return applyRecords;
 		async function applyRecords(slice: TopicRecordSlice): Promise<void> {
 			const applications: MeteringRecordApplication[] = [];
@@ -201,7 +202,8 @@ export function createMeteringConsumer({
 					}
 					applications.push({
 						position,
-						record: parseMeteringRecord({
+						record: parseRecord({
+							position,
 							key: message.key,
 							value: message.value,
 						}),

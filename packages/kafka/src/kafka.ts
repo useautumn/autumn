@@ -177,6 +177,7 @@ export type {
 export {
 	meteringTopic,
 	parseMeteringRecord,
+	parseTrustedMeteringRecord,
 	serializeMeteringRecord,
 } from "./topics/metering/meteringTopic.js";
 export type { OwnerHeaders } from "./topics/metering/ownerHeaders.js";
