@@ -80,6 +80,12 @@ export const createAtomThreads = ({
 	async function startThread({ index }: { index: number }): Promise<void> {
 		const worker = ctx.spawnThread();
 		threads[index] = worker;
+		worker.addEventListener("error", (event: ErrorEvent) =>
+			ctx.logger.error(
+				{ type: "atom_thread_failed", error: event.error, data: { index } },
+				`Atom thread ${index} failed: ${event.message}`,
+			),
+		);
 		const ready = readyOf({ worker });
 		send({
 			worker,

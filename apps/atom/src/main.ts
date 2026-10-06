@@ -11,7 +11,8 @@ function createAtom(): AtomServer {
 	const env = getAtomEnv();
 	const logger = getAtomLogger();
 	const threads = createAtomThreads({
-		ctx: { spawnThread: () => new Worker(import.meta.url), logger },
+		// The program's entry, not this module: Alien's build wraps main.ts in a bootstrap, and a non-entry module's URL is its source path.
+		ctx: { spawnThread: () => new Worker(Bun.main), logger },
 		config: { env },
 	});
 	const walCheckpointer = startWalCheckpointer({
@@ -64,6 +65,6 @@ function reportError({ cause }: { cause: unknown }): void {
 	getAtomLogger().error({ error: cause, type: "atom_failed" }, "Atom failed");
 }
 
-// One program for every thread: a compiled Atom is a single file, so a serving thread is this one started again.
+// One program for every thread: a compiled Atom is a single file, so a serving thread is the program started again.
 if (isMainThread) void main();
 else runAtomThread();
