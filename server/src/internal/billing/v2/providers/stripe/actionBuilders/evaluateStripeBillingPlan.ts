@@ -13,6 +13,7 @@ import { buildCustomerProductsForStripe } from "@/internal/billing/v2/providers/
 import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeRefundAction.js";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
 import { validateStripeSubscriptionActionOwnership } from "@/internal/billing/v2/providers/stripe/utils/connect/validateStripeSubscriptionActionOwnership";
+import { lineItemsNoSubscriptionBilled } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsNoSubscriptionBilled";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/actionBuilders/buildStripeCheckoutSessionAction";
@@ -130,6 +131,13 @@ export const evaluateStripeBillingPlan = async ({
 				billingContext,
 			});
 		}
+	} else if (!stripeCheckoutSessionAction) {
+		// Subscription invoices only bill their own items; lines of a plan no subscription billed need their own.
+		stripeInvoiceAction = buildStripeInvoiceAction({
+			lineItems: lineItemsNoSubscriptionBilled({ autumnBillingPlan }),
+			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
+			stripeDiscounts: billingContext.stripeDiscounts ?? [],
+		});
 	}
 
 	return {
