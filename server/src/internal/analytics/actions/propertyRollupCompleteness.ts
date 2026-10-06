@@ -60,6 +60,18 @@ const countRowsByEventName = ({
 const RETRY_SHORTFALL_RATIO = 0.005;
 const RETRY_SHORTFALL_FLOOR = 10_000;
 
+// Events ingested between the grouped and coverage queries can put a few more
+// events in the groups than in coverage; that is lag, not an empty coverage rollup.
+const INGESTION_LAG_RATIO = 0.0001;
+
+const isWithinIngestionLag = ({
+	difference,
+	reference,
+}: {
+	difference: number;
+	reference: number;
+}): boolean => difference <= reference * INGESTION_LAG_RATIO;
+
 export type CoverageShortfall = "none" | "minor" | "major";
 
 export const propertyRollupCoverageShortfall = ({
@@ -88,20 +100,22 @@ export const propertyRollupCoverageShortfall = ({
 };
 
 /**
- * Value-only judgement for a minor count shortfall. The all-events totals also
- * count events without the key, so their count proves nothing here; only a
- * material share of value missing from the groups is worth the ungated scan.
+ * Value-only judgement for a minor count shortfall. When some events lack the key,
+ * the all-events value gap is theirs too and can't attribute loss to the gate.
  */
 export const groupedValueIsMateriallyShort = ({
 	rows,
 	totals,
+	coverage,
 }: {
 	rows: AggregateGroupablePipeRow[];
 	totals: EventTotals;
+	coverage: Record<string, number>;
 }): boolean => {
 	const groupedSums = sumGroupedRowsByEventName({ rows });
 	return Object.entries(totals).some(([eventName, total]) => {
 		if (total.sum <= 0) return false;
+		if (total.count > (coverage[eventName] ?? 0)) return false;
 		const missing = total.sum - (groupedSums[eventName] ?? 0);
 		return missing / total.sum >= RETRY_SHORTFALL_RATIO;
 	});
@@ -130,9 +144,14 @@ export const propertyRollupCoverageUnderReports = ({
 	const groupedCounts = countRowsByEventName({ rows });
 	if (!groupedCounts) return false;
 
-	return Object.entries(groupedCounts).some(
-		([eventName, groupedCount]) => groupedCount > (coverage[eventName] ?? 0),
-	);
+	return Object.entries(groupedCounts).some(([eventName, groupedCount]) => {
+		const coverageCount = coverage[eventName] ?? 0;
+		if (groupedCount <= coverageCount) return false;
+		return !isWithinIngestionLag({
+			difference: groupedCount - coverageCount,
+			reference: coverageCount,
+		});
+	});
 };
 
 const totalEventCount = ({
