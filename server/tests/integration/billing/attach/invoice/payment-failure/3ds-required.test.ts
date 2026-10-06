@@ -11,9 +11,10 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -55,12 +56,13 @@ test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 
-	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({
-		customer: customerAfter,
+	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
+	const customerAfter = (await expectProductActive({
+		customerId,
+		autumn: autumnV1,
 		productId: pro.id,
-	});
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+	})) as ApiCustomerV3;
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -71,9 +73,11 @@ test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 	});
 
 	await expectCustomerInvoiceCorrect({
-		customer: customerAfter,
+		customerId,
+		autumn: autumnV1,
 		count: 1,
 		latestStatus: "paid",
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 });
 
@@ -130,12 +134,13 @@ test.concurrent(`${chalk.yellowBright("3ds 2: upgrade")}`, async () => {
 
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 
-	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({
-		customer: customerAfter,
+	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
+	const customerAfter = (await expectProductActive({
+		customerId,
+		autumn: autumnV1,
 		productId: premium.id,
-	});
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+	})) as ApiCustomerV3;
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -189,12 +194,13 @@ test.concurrent(`${chalk.yellowBright("3ds 3: one-off")}`, async () => {
 
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 
-	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({
-		customer: customerAfter,
+	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
+	const customerAfter = (await expectProductActive({
+		customerId,
+		autumn: autumnV1,
 		productId: oneOff.id,
-	});
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+	})) as ApiCustomerV3;
 
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -204,8 +210,10 @@ test.concurrent(`${chalk.yellowBright("3ds 3: one-off")}`, async () => {
 	});
 
 	await expectCustomerInvoiceCorrect({
-		customer: customerAfter,
+		customerId,
+		autumn: autumnV1,
 		count: 1,
 		latestStatus: "paid",
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 });
