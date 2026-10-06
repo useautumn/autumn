@@ -12,6 +12,8 @@ export type AtomHttpContext = {
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
 	processStats?: Pick<ProcessStatsRecorder, "recordRequest">;
+	/** Where the slot files are, for the staging diagnostics' primitive bench. */
+	dataDir?: string;
 };
 
 /** How a request failed, as its error response said; the request line carries it. */

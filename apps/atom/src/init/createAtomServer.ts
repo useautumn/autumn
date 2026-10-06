@@ -66,6 +66,7 @@ export const createAtomServer = ({
 			logger: ctx.logger,
 			processStats: ctx.processStats,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
+			dataDir: env.ATOM_DATA_DIR,
 		},
 	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
