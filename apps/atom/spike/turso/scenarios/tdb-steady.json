@@ -1,0 +1,18 @@
+{
+	"name": "tdb-steady",
+	"db": "spike-tursodb",
+	"engine": "ts",
+	"readers": 4,
+	"seconds": 45,
+	"pollMs": 10000,
+	"warmupS": 8,
+	"writer": {
+		"ratePerSec": 50,
+		"rowsPerRequest": 5,
+		"maxInFlight": 2,
+		"keys": 2000,
+		"bytes": 6000,
+		"seconds": 30
+	},
+	"pointReads": 3000
+}
