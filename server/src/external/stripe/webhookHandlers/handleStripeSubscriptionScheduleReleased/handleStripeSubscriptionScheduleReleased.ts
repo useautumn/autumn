@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import type { StripeScheduleReleasedContext } from "./stripeScheduleReleasedContext.js";
+import { clearReleasedScheduleAnchorResets } from "./tasks/clearReleasedScheduleAnchorResets.js";
 import { detachReleasedSchedulePhases } from "./tasks/detachReleasedSchedulePhases.js";
 
 export const handleStripeSubscriptionScheduleReleased = async ({
@@ -16,6 +17,7 @@ export const handleStripeSubscriptionScheduleReleased = async ({
 	};
 
 	await detachReleasedSchedulePhases({ ctx, eventContext });
+	await clearReleasedScheduleAnchorResets({ ctx, eventContext });
 
 	ctx.handlerResult = { type: event.type, context: eventContext };
 };

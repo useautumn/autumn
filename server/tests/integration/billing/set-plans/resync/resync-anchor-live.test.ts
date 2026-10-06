@@ -2,6 +2,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	findActiveCustomerProductById,
 	formatMsToDate,
 	ms,
 	msToSeconds,
@@ -16,16 +17,21 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
+import { AUTUMN_STRIPE_METADATA_KEYS } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
+import { CusService } from "@/internal/customers/CusService";
 import { expectPreviewMatchesStripeUpcomingInvoice } from "../phase-proration/utils/phaseProrationUtils";
 import {
 	expectBillingCycleAnchorConsumed,
 	expectCycleResetPhase,
 } from "../utils/resyncUtils";
 import { findStripeSubscriptionByStatus } from "../utils/subscriptionStateUtils";
+
+const RELEASE_WEBHOOK_SETTLE_MS = 15_000;
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans resync live: a timestamp anchor with proration none resets the cycle without prorating")}`,
@@ -375,5 +381,168 @@ test.concurrent(
 			usage: 0,
 			nextResetAt: addMonths(anchorMs, 1).getTime(),
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: a schedule released outside Autumn before the anchor drops the pending reset")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-resync-live-anchor-released",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [s.billing.attach({ productId: pro.id })],
+			});
+		const before = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
+		});
+		await expectCycleResetPhase({ ctx, customerId, anchorMs });
+
+		const scheduled = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		const scheduleId =
+			typeof scheduled.schedule === "string"
+				? scheduled.schedule
+				: scheduled.schedule?.id;
+		if (!scheduleId) throw new Error("Live subscription has no schedule");
+		// A schedule Autumn doesn't own: restore won't rebuild it, so its reset is gone for good.
+		await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
+			metadata: { [AUTUMN_STRIPE_METADATA_KEYS.managedAt]: "" },
+		});
+		await ctx.stripeCli.subscriptionSchedules.release(scheduleId);
+
+		// Stripe will never reset there now, so Autumn drops the pending reset.
+		const periodEndMs = secondsToMs(
+			before.items.data[0]?.current_period_end ?? 0,
+		);
+		await pollUntilAsserted({
+			fetch: () => CusService.getFull({ ctx, idOrInternalId: customerId }),
+			assert: (fullCustomer) => {
+				const customerProduct = findActiveCustomerProductById({
+					fullCus: fullCustomer,
+					productId: pro.id,
+				});
+				expect(customerProduct?.billing_cycle_anchor_resets_at).toBeNull();
+			},
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			nextResetAt: periodEndMs,
+		});
+
+		await advanceToAnchor({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advancedTo,
+			anchorMs,
+		});
+
+		const after = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		expect(after.billing_cycle_anchor).toBe(before.billing_cycle_anchor);
+		await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		expect(
+			findActiveCustomerProductById({
+				fullCus: fullCustomer,
+				productId: pro.id,
+			})?.billing_cycle_anchor,
+		).toBe(secondsToMs(before.billing_cycle_anchor));
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+			nextResetAt: periodEndMs,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans resync live: a released Autumn schedule keeps its pending reset, and restore rebuilds it")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { customerId, autumnV2_4, autumnV2_2, ctx, advancedTo } =
+			await initScenario({
+				customerId: "set-plans-resync-live-anchor-released-managed",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [s.billing.attach({ productId: pro.id })],
+			});
+
+		const anchorMs = advancedTo + ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [
+				{
+					billing_cycle_anchor: anchorMs,
+					starts_at: "now",
+					plans: [{ plan_id: pro.id }],
+				},
+			],
+		});
+		const scheduled = await findStripeSubscriptionByStatus({
+			ctx,
+			customerId,
+			status: "active",
+		});
+		const scheduleId =
+			typeof scheduled.schedule === "string"
+				? scheduled.schedule
+				: scheduled.schedule?.id;
+		if (!scheduleId) throw new Error("Live subscription has no schedule");
+		await ctx.stripeCli.subscriptionSchedules.release(scheduleId);
+		// Nothing observable changes on a kept reset, so settle on the release webhook.
+		await timeout(RELEASE_WEBHOOK_SETTLE_MS);
+
+		// Like its phases, an Autumn schedule's pending reset survives the release for restore.
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		expect(
+			findActiveCustomerProductById({
+				fullCus: fullCustomer,
+				productId: pro.id,
+			})?.billing_cycle_anchor_resets_at,
+		).toBe(secondsToMs(msToSeconds(anchorMs)));
+
+		await autumnV2_2.billing.restore({ customer_id: customerId });
+		await expectCycleResetPhase({ ctx, customerId, anchorMs });
 	},
 );

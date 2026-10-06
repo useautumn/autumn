@@ -10,4 +10,5 @@ export const shouldPreserveScheduleReleasedCache = ({
 	eventContext: StripeScheduleReleasedContext;
 }): boolean =>
 	isAutumnOriginatedStripeEvent({ event }) &&
-	!eventContext.results.detachedSchedulePhases;
+	!eventContext.results.detachedSchedulePhases &&
+	!eventContext.results.clearedAnchorResets;
