@@ -74,7 +74,8 @@ local function get_available_from_usage_windows(params)
             requested_units = params.requested_units,
             allowed_credit_change = headroom,
           })
-        else
+        elseif credit_cost ~= 0 then
+          -- A zero rate spends no credits, so a balance cap never binds it.
           units = headroom / credit_cost
         end
       end

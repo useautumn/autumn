@@ -14,7 +14,7 @@ import type { DeductionSelection } from "../types/deductionRequest.js";
 export type CreditCost = {
 	creditCost: number;
 	rateCard: CreditRateCard | null;
-	/** A zero rate is free usage: rollovers are left untouched and the main balance charges one credit per unit, as the Lua fallback does. */
+	/** A zero rate is free usage: rollovers are left untouched and the main balance funds the units without moving. */
 	skipsRollovers: boolean;
 };
 
@@ -55,7 +55,7 @@ export const resolveCreditCost = ({
 			eventProperties,
 		});
 		return {
-			creditCost: creditCost === 0 ? 1 : creditCost,
+			creditCost,
 			rateCard,
 			skipsRollovers: creditCost === 0 && rateCard === null,
 		};
