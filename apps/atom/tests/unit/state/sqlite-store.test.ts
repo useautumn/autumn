@@ -188,20 +188,24 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("a subject another process writes is read on the next check, not the parsed copy", () => {
+	test("a subject is read from the file once, then served from the copy held", () => {
 		const databasePath = slotPath();
-		const reader = openSqliteStore({ databasePath });
 		const writer = openSqliteStore({ databasePath });
 		writer.setSubject({ subject: subjectAt({ logOffset: 41n }) });
-		const read = () =>
-			reader.readSubject({ customerId: "cus_1", entityId: null });
-		expect(read()?.logOffset).toBe(41n);
-
-		writer.setSubject({ subject: subjectAt({ logOffset: 42n }) });
-
-		expect(read()?.logOffset).toBe(42n);
-		reader.close();
 		writer.close();
+		const sqliteStore = openSqliteStore({ databasePath });
+		const read = () =>
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
+
+		const first = read();
+
+		expect(first?.logOffset).toBe(41n);
+		// Only the slot's owner writes its file: a row changed behind the store's back is not looked for.
+		new Database(databasePath).run(
+			"UPDATE subject_states SET log_offset = 3 WHERE customer_id = 'cus_1'",
+		);
+		expect(read()).toBe(first as StoredSubject);
+		sqliteStore.close();
 	});
 
 	test("a subject written through the same store is read back at once", () => {
@@ -254,29 +258,21 @@ describe("sqlite store", () => {
 		).toBe(first);
 		sqliteStore.close();
 	});
-	test("a write by another process is read on the next check, and an unchanged row is served without asking the file", () => {
-		const databasePath = slotPath();
-		const writer = openSqliteStore({ databasePath });
-		const reader = openSqliteStore({ databasePath });
+	test("a write installs the subject it stored; one ignored as older leaves the newer copy held", () => {
+		const sqliteStore = openSqliteStore({ databasePath: slotPath() });
 		const read = () =>
-			reader.readSubject({ customerId: "cus_1", entityId: null });
-		writer.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
+		const held = read();
 
-		const first = read();
-		expect(first?.logOffset).toBe(1n);
-		expect(read()).toBe(first as StoredSubject);
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
 
-		writer.setSubjects({ subjects: [subjectAt({ logOffset: 2n })] });
-		expect(read()?.logOffset).toBe(2n);
-
-		// A row written behind the stamps' back is not seen until a stamped write: the stamp, not the file, says when to look.
-		new Database(databasePath).run(
-			"UPDATE subject_states SET log_offset = 3 WHERE customer_id = 'cus_1'",
-		);
-		expect(read()?.logOffset).toBe(2n);
-		writer.setSubject({ subject: subjectAt({ logOffset: 4n }) });
-		expect(read()?.logOffset).toBe(4n);
+		expect(read()).toBe(held as StoredSubject);
+		expect(held?.logOffset).toBe(2n);
+		expect(Object.isFrozen(held?.state)).toBe(true);
+		sqliteStore.close();
 	});
+
 	test("customers sharing a catalog store its text once, and each reads it back whole", () => {
 		const databasePath = slotPath();
 		const sqliteStore = openSqliteStore({ databasePath });

@@ -66,7 +66,7 @@ const applyPush = async ({
 	const applyStartedAt = performance.now();
 	if (push.type === AtomPushType.SetSubject)
 		await applySubjectPush({ slots, body: push.body });
-	else applyCatalogPush({ slots, body: push.body });
+	else await applyCatalogPush({ slots, body: push.body });
 	const durationMs = performance.now() - applyStartedAt;
 	pushPhaseMs.apply += durationMs;
 	ctx.processStats?.recordRequest({

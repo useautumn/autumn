@@ -3,6 +3,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAtomEnv } from "@autumn/env/atom";
+import {
+	createCatalogRowsFor,
+	createState,
+} from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import { createAtomThreads } from "../../../src/threads/createAtomThreads.js";
@@ -28,6 +32,7 @@ const startAtom = async () => {
 		ATOM_PORT: String(port),
 		ATOM_THREADS: String(THREADS),
 		ATOM_SLOT_COUNT: "16",
+		AUTUMN_API_URL: "http://127.0.0.1:9",
 	});
 	const workers: Worker[] = [];
 	const atom = createAtomThreads({
@@ -74,14 +79,17 @@ const post = ({
 		body: JSON.stringify(body),
 	});
 
+/** Without features, the customer's own catalog cannot answer a check: the shared catalog must. */
 const pushCustomer = ({
 	url,
 	customerId,
 	balance,
+	withFeatures = true,
 }: {
 	url: string;
 	customerId: string;
 	balance: number;
+	withFeatures?: boolean;
 }) => {
 	const body = subjectBody({ balance });
 	return post({
@@ -93,6 +101,7 @@ const pushCustomer = ({
 				...body.state,
 				identity: { ...body.state.identity, customerId },
 			},
+			catalog: withFeatures ? body.catalog : { ...body.catalog, features: {} },
 		},
 	});
 };
@@ -138,6 +147,37 @@ describe("an Atom of several threads", () => {
 					balance: { remaining: i },
 				});
 			}
+	}, 20_000);
+
+	test("the shared catalog is stored once and held by every thread, so each owner answers from it", async () => {
+		const { url } = await startAtom();
+		for (const customerId of customerIds)
+			await pushCustomer({ url, customerId, balance: 3, withFeatures: false });
+		const rows = createCatalogRowsFor({ state: createState() });
+
+		const stored = await post({
+			url,
+			path: "/v1/catalog.set",
+			body: { rows, read_at: 1800 },
+		});
+		const older = await Promise.all(
+			Array.from({ length: THREADS * 2 }, () =>
+				post({ url, path: "/v1/catalog.set", body: { rows, read_at: 1750 } }),
+			),
+		);
+
+		expect(await stored.json()).toEqual({ stored: true });
+		for (const response of older)
+			expect(await response.json()).toEqual({ stored: false });
+		expect(new Set(customerIds.map(ownerOf)).size).toBe(THREADS);
+		for (const customerId of customerIds) {
+			const response = await checkCustomer({
+				url,
+				customerId,
+				requiredBalance: 3,
+			});
+			expect(await response.json()).toMatchObject({ allowed: true });
+		}
 	}, 20_000);
 
 	test("a thread that dies is replaced: its customers get 503s meanwhile, then answers again", async () => {
