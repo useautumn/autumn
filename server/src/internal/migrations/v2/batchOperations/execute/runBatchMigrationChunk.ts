@@ -11,6 +11,7 @@ import {
 	type MigrationRuntimeWithEventId,
 } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { invalidateBatchMigrationCaches } from "../finalize/invalidateBatchMigrationCaches.js";
+import { publishBatchMigrationChanges } from "../finalize/publishBatchMigrationChanges.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import {
 	claimNextBatchMigrationPage,
@@ -21,12 +22,10 @@ import {
 	type MigrationPageDb,
 } from "./database/createMigrationPageDb.js";
 import {
-	BatchMigrationCacheInvalidationError,
 	BatchMigrationPageLimitError,
 	BatchMigrationStallError,
 } from "./errors/batchMigrationErrors.js";
 import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
-import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type {
 	BatchMigrationChunkResult,
 	BatchMigrationPageCustomer,
@@ -44,12 +43,9 @@ import {
 } from "./utils/batchMigrationExecutionConstants.js";
 import {
 	createDeferredSideEffects,
-	type DeferredOperation,
+	type DeferredSideEffects,
 } from "./utils/deferredSideEffects.js";
-import {
-	type BatchMigrationPagePhases,
-	timePhase,
-} from "./utils/pagePhaseTimings.js";
+import type { BatchMigrationPagePhases } from "./utils/pagePhaseTimings.js";
 
 export type BatchMigrationChunkTimeouts = {
 	pageMs?: number;
@@ -61,7 +57,7 @@ export type BatchMigrationChunkTimeouts = {
 	recoveryWriteMs?: number;
 };
 
-type PageStage = "claim" | "execute" | "finalize" | "settle";
+type PageStage = "claim" | "execute" | "settle";
 
 type LoopOutcome =
 	| { ok: true; result: BatchMigrationChunkResult }
@@ -142,21 +138,13 @@ export const runBatchMigrationChunk = async ({
 		},
 	});
 
-	// Post-commit side effects run off the page's critical path and are drained
-	// before the chunk returns.
-	const deferredLogData = { migrationRunId };
-	const events = createDeferredSideEffects({
-		phase: "finalize_events_drain",
+	// Each page publishes its committed changes off the critical path; the
+	// chunk drains every publish before it returns.
+	const publishes = createDeferredSideEffects({
+		phase: "publish_drain",
 		phases: chunkPhases,
 		logger: ctx.logger,
-		logData: deferredLogData,
-		timeoutMs: deferredOperationTimeoutMs,
-	});
-	const caches = createDeferredSideEffects({
-		phase: "finalize_caches_drain",
-		phases: chunkPhases,
-		logger: ctx.logger,
-		logData: deferredLogData,
+		logData: { migrationRunId },
 		timeoutMs: deferredOperationTimeoutMs,
 	});
 
@@ -175,8 +163,7 @@ export const runBatchMigrationChunk = async ({
 		stageMs: Date.now() - progress.stageStartedAt,
 		sinceLastPageMs: Date.now() - progress.lastPageFinishedAt,
 		pagePhases: progress.pagePhases,
-		cachesPending: caches.pending(),
-		eventsPending: events.pending(),
+		publishesPending: publishes.pending(),
 	});
 	const stallWatchdog = setInterval(() => {
 		if (Date.now() - progress.lastPageFinishedAt < stallLogMs) return;
@@ -243,10 +230,7 @@ export const runBatchMigrationChunk = async ({
 						controls,
 						webhooks,
 						progress,
-						recoveryWriteMs,
-						eventsDefer: events.defer,
-						cachesDefer: caches.defer,
-						settle: () => Promise.all([caches.settle(), events.settle()]),
+						publishes,
 					}),
 				onTimeout: () => {
 					ctx.logger.error("batch-migration: page stalled", {
@@ -304,14 +288,15 @@ export const runBatchMigrationChunk = async ({
 		(error: unknown): LoopOutcome => ({ ok: false, error }),
 	);
 	clearInterval(stallWatchdog);
-	const [cachesDrained] = await Promise.all([caches.drain(), events.drain()]);
+	const drained = await publishes.drain();
 	if (!loop.ok) throw loop.error;
-	if (cachesDrained.failures.length > 0) {
-		const timedOut = cachesDrained.failures.filter(
+	if (drained.failures.length > 0) {
+		const timedOut = drained.failures.filter(
 			(failure) => failure.timedOut,
 		).length;
-		throw new BatchMigrationCacheInvalidationError({
-			message: `batch-migration: cache invalidation did not complete for ${cachesDrained.failures.length} page(s) (${timedOut} timed out; ${cachesDrained.failures.map((failure) => failure.label).join(", ")})`,
+		throw new BatchMigrationStallError({
+			phase: "publish",
+			message: `batch-migration: publishing did not complete for ${drained.failures.length} page(s) (${timedOut} timed out; ${drained.failures.map((failure) => failure.label).join(", ")})`,
 		});
 	}
 	// "finished" means every page's side effects landed, not just the loop.
@@ -431,16 +416,7 @@ const invalidateFailedPageCaches = async ({
 	try {
 		await withTimeout({
 			timeoutMs: recoveryWriteMs,
-			fn: () =>
-				invalidateBatchMigrationCaches({
-					ctx,
-					pageResult: {
-						succeeded: customers,
-						skipped: [],
-						insertedItems: [],
-						removedItems: [],
-					},
-				}),
+			fn: () => invalidateBatchMigrationCaches({ ctx, customers }),
 			timeoutMessage: `batch-migration: invalidating ${customers.length} failed-page caches exceeded ${recoveryWriteMs}ms`,
 		});
 	} catch (error) {
@@ -468,7 +444,7 @@ type NextPageOutcome =
 			pagePhases: BatchMigrationPagePhases;
 	  };
 
-/** One claim → execute → finalize. The cursor advances only on success. */
+/** One claim → execute → publish. The cursor advances only on success. */
 const runNextBatchMigrationPage = async ({
 	ctx,
 	pageDb,
@@ -481,10 +457,7 @@ const runNextBatchMigrationPage = async ({
 	controls,
 	webhooks,
 	progress,
-	recoveryWriteMs,
-	eventsDefer,
-	cachesDefer,
-	settle,
+	publishes,
 }: {
 	ctx: AutumnContext;
 	pageDb: MigrationPageDb;
@@ -497,10 +470,7 @@ const runNextBatchMigrationPage = async ({
 	controls?: MigrationRunControls;
 	webhooks?: MigrationWebhookControls;
 	progress: ChunkProgress;
-	recoveryWriteMs: number;
-	eventsDefer: (operation: DeferredOperation) => void;
-	cachesDefer: (operation: DeferredOperation) => void;
-	settle: () => Promise<unknown>;
+	publishes: DeferredSideEffects;
 }): Promise<NextPageOutcome> => {
 	const pageCtx = { ...ctx, db: pageDb.db };
 	const pagePhases: BatchMigrationPagePhases = {};
@@ -541,32 +511,28 @@ const runNextBatchMigrationPage = async ({
 		phases: pagePhases,
 	});
 
-	const label = `page ${pageNumber}`;
 	// A retried customer may already be converged (skipped) yet carry a stale
-	// cache from the interrupted attempt, so retries invalidate skipped too.
+	// cache from an interrupted attempt that predates recorded changes.
 	const invalidateSkipped = (controls?.retryItemStatuses?.length ?? 0) > 0;
-
-	enterStage("finalize");
-	await timePhase({
-		phases: pagePhases,
-		phase: "finalize",
+	publishes.defer({
+		label: `page ${pageNumber}`,
 		run: () =>
-			finalizeBatchMigrationPage({
-				ctx: pageCtx,
-				assertActive: pageDb.assertActive,
+			publishBatchMigrationChanges({
+				ctx,
 				migrationInternalId,
 				migrationRunId,
 				plan,
-				pageResult,
 				webhooks,
-				phases: pagePhases,
+				scope: {
+					internalCustomerIds: page.customers.map(
+						(customer) => customer.internalId,
+					),
+				},
 				invalidateSkipped,
-				deferEvents: (emit) => eventsDefer({ label, run: emit }),
-				deferCaches: (invalidate) => cachesDefer({ label, run: invalidate }),
 			}),
 	});
 	enterStage("settle");
-	await settle();
+	await publishes.settle();
 
 	return {
 		kind: "executed",

@@ -1,5 +1,4 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
-import type { BatchMigrationPageResult } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
 
 const batchInvalidateModulePath =
 	"@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
@@ -52,13 +51,7 @@ const customer = (id: string) => ({
 	email: null,
 });
 
-const pageResult: BatchMigrationPageResult = {
-	succeeded: [customer("cus_a"), customer("cus_b")],
-	skipped: [customer("cus_converged")],
-	insertedItems: [],
-	removedItems: [],
-	repointedProducts: [],
-};
+const changedCustomers = [customer("cus_a"), customer("cus_b")];
 
 const buildCtx = () => {
 	const infoLogs: { message: string; data?: Record<string, unknown> }[] = [];
@@ -80,31 +73,20 @@ const buildCtx = () => {
 };
 
 describe("invalidateBatchMigrationCaches", () => {
-	test("busts only mutated customers on a normal run", async () => {
+	test("busts exactly the customers it is given", async () => {
 		const { ctx } = buildCtx();
 		const invalidated = await invalidateBatchMigrationCaches({
 			ctx,
-			pageResult,
+			customers: changedCustomers,
 		});
 		expect(invalidated).toBe(2);
 		expect(receivedCustomerIds).toEqual(["cus_a", "cus_b"]);
 		expect(receivedCommandTimeoutMs).toBe(10_000);
 	});
 
-	test("also busts skipped customers when a retry re-claims them", async () => {
-		const { ctx } = buildCtx();
-		const invalidated = await invalidateBatchMigrationCaches({
-			ctx,
-			pageResult,
-			includeSkipped: true,
-		});
-		expect(invalidated).toBe(3);
-		expect(receivedCustomerIds).toEqual(["cus_a", "cus_b", "cus_converged"]);
-	});
-
 	test("logs the Postgres/Redis split for every page", async () => {
 		const { ctx, infoLogs } = buildCtx();
-		await invalidateBatchMigrationCaches({ ctx, pageResult });
+		await invalidateBatchMigrationCaches({ ctx, customers: changedCustomers });
 		const line = infoLogs.find(
 			(entry) => entry.message === "batch-migration: page caches invalidated",
 		);
