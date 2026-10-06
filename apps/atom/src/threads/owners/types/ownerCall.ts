@@ -1,3 +1,4 @@
+import type { CatalogRow } from "@autumn/balance-engine";
 import type { ApiVersion, CheckResponseV3 } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
@@ -12,7 +13,12 @@ export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
 export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
 	| { type: "setSubject"; subject: StoredSubject }
+	| { type: "setCatalog"; catalog: CatalogUpdate }
+	| { type: "installCatalog"; catalog: CatalogUpdate }
 );
+
+/** The whole shared catalog, as Autumn sent it. */
+export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 
 /** Numbered by the caller, which matches the reply to it. */
 export type OwnerCall = OwnerCallBody & { id: number };

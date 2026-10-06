@@ -22,4 +22,4 @@ export const applyCatalogPush = ({
 }: {
 	slots: Slots;
 	body: unknown;
-}): boolean => slots.setCatalog(catalogBodyToSharedRows({ body }));
+}): Promise<boolean> => slots.setCatalog(catalogBodyToSharedRows({ body }));

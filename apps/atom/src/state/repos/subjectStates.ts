@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { parseSharedJson, sharedTextHash } from "../parseSharedJson.js";
+import { sharedJson, sharedTextHash } from "../sharedJson.js";
 import type { StoredSubject } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
@@ -24,13 +24,13 @@ export const storedSubjectFromRow = ({
 	row: SubjectStateRow;
 }): StoredSubject => ({
 	state: JSON.parse(row.stateJson),
-	catalog: parseSharedJson({
+	catalog: sharedJson({
 		hash: row.catalogHash,
-		readText: () => readSharedText({ ctx, hash: row.catalogHash }),
+		load: () => JSON.parse(readSharedText({ ctx, hash: row.catalogHash })),
 	}),
-	org: parseSharedJson({
+	org: sharedJson({
 		hash: row.orgHash,
-		readText: () => readSharedText({ ctx, hash: row.orgHash }),
+		load: () => JSON.parse(readSharedText({ ctx, hash: row.orgHash })),
 	}),
 	logOffset: row.logOffset,
 	readAt: Number(row.readAt),
@@ -56,26 +56,27 @@ const readSharedText = ({
 /** Hashes each connection has stored or seen stored: texts are never removed, so these need no second write. */
 const storedHashes = new WeakMap<Database, Set<string>>();
 
-/** Stores the value's text once per file, before any row names it; a text already there is left as it is. */
-const storeSharedText = ({
+/** Stores the value's text once per file, before any row names it; the value held is the one copy for its hash. */
+const storeSharedText = <T>({
 	ctx,
 	value,
 }: {
 	ctx: SlotContext;
-	value: unknown;
-}): string => {
+	value: T;
+}): { hash: string; held: T } => {
 	const text = JSON.stringify(value);
 	const hash = sharedTextHash(text);
+	const held = sharedJson({ hash, load: () => value });
 	const known = storedHashes.get(ctx.sqliteDb) ?? new Set<string>();
 	storedHashes.set(ctx.sqliteDb, known);
-	if (known.has(hash)) return hash;
+	if (known.has(hash)) return { hash, held };
 	ctx.sqliteDb
 		.query(
 			"INSERT OR IGNORE INTO shared_texts (hash, text) VALUES ($hash, $text)",
 		)
 		.run({ hash, text });
 	known.add(hash);
-	return hash;
+	return { hash, held };
 };
 
 /** How many subjects the file holds: what a restart finds, or does not. */
@@ -88,11 +89,7 @@ export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	return Number(row?.count ?? 0);
 };
 
-/** Which read of the subject a row holds: a change to the row always moves it, so a parsed copy at the same version is current. */
-export const subjectRowVersion = ({ row }: { row: SubjectStateRow }): string =>
-	`${row.readAt}:${row.logOffset}`;
-
-/** The row as stored, unparsed: a caller holding a parsed copy at the same version skips the parse. */
+/** The row as stored, unparsed. */
 export const readSubjectRow = ({
 	ctx,
 	customerId,
@@ -122,7 +119,7 @@ export const upsertSubjects = ({
 }: {
 	ctx: SlotContext;
 	subjects: StoredSubject[];
-}): boolean[] => {
+}): (StoredSubject | null)[] => {
 	// One statement is already atomic: a transaction around it only adds a BEGIN and a COMMIT per push.
 	if (subjects.length === 1)
 		return subjects.map((subject) => upsertSubject({ ctx, subject }));
@@ -131,15 +128,20 @@ export const upsertSubjects = ({
 	)();
 };
 
-/** False when the subject was read before the one held, or at the same instant for an earlier change: a late push never undoes a newer one. */
+/**
+ * The subject as it is now held, its catalog and org the one copy per text; null when it was read before the one
+ * stored, or at the same instant for an earlier change: a late push never undoes a newer one.
+ */
 export const upsertSubject = ({
 	ctx,
 	subject,
 }: {
 	ctx: SlotContext;
 	subject: StoredSubject;
-}): boolean => {
+}): StoredSubject | null => {
 	const { customerId, entityId } = subject.state.identity;
+	const catalog = storeSharedText({ ctx, value: subject.catalog });
+	const org = storeSharedText({ ctx, value: subject.org });
 	const { changes } = ctx.sqliteDb
 		.query(`
 			INSERT INTO subject_states
@@ -162,8 +164,9 @@ export const upsertSubject = ({
 			logOffset: subject.logOffset,
 			readAt: subject.readAt,
 			stateJson: JSON.stringify(subject.state),
-			catalogHash: storeSharedText({ ctx, value: subject.catalog }),
-			orgHash: storeSharedText({ ctx, value: subject.org }),
+			catalogHash: catalog.hash,
+			orgHash: org.hash,
 		});
-	return changes > 0;
+	if (changes === 0) return null;
+	return { ...subject, catalog: catalog.held, org: org.held };
 };

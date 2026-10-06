@@ -3,6 +3,7 @@ import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
 import { checkRequestToWire, replyToError } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type { OwnerCallBody, OwnerReply } from "./types/ownerCall.js";
+import type { CatalogCalls } from "./types/slotOwners.js";
 
 /** Calls waiting on one owner, per calling thread: past this the owner is behind, and a 503 beats a growing queue. */
 const MAX_CALLS_IN_FLIGHT = 256;
@@ -10,6 +11,7 @@ const MAX_CALLS_IN_FLIGHT = 256;
 /** This thread's line to one other thread: its calls, matched to replies by id. */
 export type OwnerLink = {
 	processorFor(params: { atomId: string | null }): SlotProcessor;
+	catalogFor(params: { atomId: string | null }): CatalogCalls;
 	connect(params: { port: MessagePort }): void;
 	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
@@ -54,6 +56,15 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		};
 	}
 
+	function catalogFor({ atomId }: { atomId: string | null }): CatalogCalls {
+		return {
+			setCatalog: async (catalog) =>
+				(await call({ type: "setCatalog", atomId, catalog })) as boolean,
+			installCatalog: async (catalog) =>
+				(await call({ type: "installCatalog", atomId, catalog })) as boolean,
+		};
+	}
+
 	function connect({ port: next }: { port: MessagePort }): void {
 		port = next;
 		port.onmessage = receiveReply;
@@ -67,5 +78,5 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		waiting.clear();
 	}
 
-	return { processorFor, connect, disconnect };
+	return { processorFor, catalogFor, connect, disconnect };
 };

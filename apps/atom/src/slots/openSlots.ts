@@ -7,6 +7,7 @@ import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SqliteStore } from "../state/types/sqliteStore.js";
 import { allSlotsOwnedHere } from "../threads/owners/allSlotsOwnedHere.js";
+import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
 import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
@@ -98,10 +99,31 @@ export const openSlots = ({
 		catalogStore.close();
 	}
 
+	/** The catalog's file belongs to slot 0's owner, which hands each stored catalog to every other thread. */
+	async function setCatalog(params: CatalogUpdate): Promise<boolean> {
+		const catalogOwner = owners.ownerOf({ slot: 0 });
+		if (catalogOwner !== owners.index)
+			return owners
+				.catalogOn({ thread: catalogOwner, atomId })
+				.setCatalog(params);
+		if (!catalogStore.set(params)) return false;
+		const others = Array.from(
+			{ length: owners.threads },
+			(_, thread) => thread,
+		).filter((thread) => thread !== owners.index);
+		await Promise.all(
+			others.map((thread) =>
+				owners.catalogOn({ thread, atomId }).installCatalog(params),
+			),
+		);
+		return true;
+	}
+
 	return {
 		processorFor: ({ customerId }) =>
 			slots[customerIdToSlot({ customerId, slotCount })].processor,
-		setCatalog: (params) => catalogStore.set(params),
+		setCatalog,
+		installCatalog: (params) => catalogStore.install(params),
 		close,
 	};
 };
