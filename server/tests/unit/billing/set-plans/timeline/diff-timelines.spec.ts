@@ -493,6 +493,48 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		]);
 	});
 
+	test("a paid plan no Stripe subscription bills is recreated when re-listed unchanged, like a changed one", () => {
+		const unbilledPro = () =>
+			savedRow({
+				id: "pro_row",
+				plan: pro,
+				onLiveSubscription: false,
+				unbilledByStripe: true,
+			});
+		const desired = desiredTimeline({
+			segments: [desiredSegment({ plan: pro })],
+		});
+		const changedDesired = desiredTimeline({
+			segments: [desiredSegment({ plan: pro, hash: "h2" })],
+		});
+
+		const { diff } = expectAllInvariants({
+			rows: [unbilledPro()],
+			desired,
+			policies: policiesFor(),
+		});
+		const { diff: changedDiff } = expectAllInvariants({
+			rows: [unbilledPro()],
+			desired: changedDesired,
+			policies: policiesFor(),
+		});
+		const { diff: noBillingDiff } = expectAllInvariants({
+			rows: [unbilledPro()],
+			desired,
+			policies: policiesFor({ unbilledRows: "carry" }),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h1:now-never",
+		]);
+		expect(describeOperations(changedDiff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h2:now-never",
+		]);
+		expect(describeOperations(noBillingDiff)).toEqual([]);
+	});
+
 	test("a cycle reset now recreates a renewing plan but carries a canceling plan and a one-off purchase", () => {
 		const { diff } = expectAllInvariants({
 			rows: [

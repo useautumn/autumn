@@ -47,4 +47,5 @@ export const setupSetPlansPolicies = ({
 	canceling: "keepCancellation",
 	pastDue: "continue",
 	liveRows: liveRowsPolicy({ billingContext }),
+	unbilledRows: billingContext.skipBillingChanges ? "carry" : "recreate",
 });

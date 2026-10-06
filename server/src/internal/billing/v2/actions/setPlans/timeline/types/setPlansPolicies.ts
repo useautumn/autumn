@@ -14,4 +14,6 @@ export type SetPlansPolicies = {
 		| "recreate"
 		| "recreateRenewing"
 		| "recreateWhenPaidRecurringStarts";
+	/** A plan no Stripe subscription bills is recreated, starting its subscription; no_billing_changes keeps it. */
+	unbilledRows: "carry" | "recreate";
 };

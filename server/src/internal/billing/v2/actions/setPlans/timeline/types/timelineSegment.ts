@@ -15,6 +15,8 @@ export type SavedRow = {
 	scheduled: boolean;
 	canceling: boolean;
 	pastDue: boolean;
+	/** A running paid plan no Stripe subscription bills. */
+	unbilledByStripe: boolean;
 };
 
 /** A run of contiguous rows granting one instance the same config. */

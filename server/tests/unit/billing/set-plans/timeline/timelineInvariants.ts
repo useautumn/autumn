@@ -66,6 +66,7 @@ const segmentRow = (segment: ResolvedSegment): TimelineRow => ({
 	scheduled: segment.startsAt > NOW,
 	canceling: false,
 	pastDue: false,
+	unbilledByStripe: false,
 	externalId: null,
 });
 

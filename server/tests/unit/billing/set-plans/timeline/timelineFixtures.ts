@@ -48,6 +48,7 @@ export const savedRow = ({
 	scheduled,
 	canceling = false,
 	pastDue = false,
+	unbilledByStripe = false,
 	onLiveSubscription,
 	externalId = null,
 }: {
@@ -60,6 +61,7 @@ export const savedRow = ({
 	scheduled?: boolean;
 	canceling?: boolean;
 	pastDue?: boolean;
+	unbilledByStripe?: boolean;
 	onLiveSubscription?: boolean;
 	externalId?: string | null;
 }): TimelineRow => ({
@@ -77,6 +79,7 @@ export const savedRow = ({
 	scheduled: scheduled ?? startsAt > NOW,
 	canceling,
 	pastDue,
+	unbilledByStripe,
 	externalId,
 });
 
@@ -135,5 +138,6 @@ export const policiesFor = ({
 	canceling: "keepCancellation",
 	pastDue: "continue",
 	liveRows: "carry",
+	unbilledRows: "recreate",
 	...overrides,
 });

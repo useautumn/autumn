@@ -2,7 +2,6 @@ import type {
 	CreateScheduleBillingContext,
 	FullCusProduct,
 } from "@autumn/shared";
-import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { isAliveAt } from "../timeline/timelineGuards";
@@ -10,7 +9,7 @@ import type { SetPlansTimeline } from "../types/setPlansTimeline";
 
 type SetPlansAnchorFields = Pick<
 	CreateScheduleBillingContext,
-	"billingCycleAnchorMs" | "resetCycleAnchorMs" | "anchorResetRefund"
+	"billingCycleAnchorMs" | "resetCycleAnchorMs"
 >;
 
 /** The running recurring plan whose cycle an anchor reset restarts: a main plan before an add-on. */
@@ -55,17 +54,10 @@ export const setupSetPlansBillingCycleAnchor = ({
 	});
 	const [firstProduct] = billingContext.fullProducts;
 
-	const anchorResetRefund = setupAnchorResetRefund({
-		billingCycleAnchor: requestedBillingCycleAnchor,
-		prorationBehavior: requestedProrationBehavior,
-		outgoingCustomerProduct,
-	});
-
 	if (requestedBillingCycleAnchor === undefined || !firstProduct) {
 		return {
 			billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
 			resetCycleAnchorMs: billingContext.resetCycleAnchorMs,
-			anchorResetRefund,
 		};
 	}
 
@@ -88,6 +80,5 @@ export const setupSetPlansBillingCycleAnchor = ({
 			customerProduct: undefined,
 			newFullProduct: firstProduct,
 		}),
-		anchorResetRefund,
 	};
 };

@@ -5,6 +5,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isUnbilledByStripe } from "@/internal/billing/v2/actions/setPlans/utils/isUnbilledByStripe";
 import { carriesOverUsage } from "@/internal/billing/v2/compute/carryOverUsages/carriesOverUsage";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
@@ -115,6 +116,11 @@ export const computeSetPlansPlan = ({
 				carryOverUsages: billingContext.carryOverUsages,
 				sourceCustomerProductIds: carryOverSourceCustomerProductIds,
 				customerEntitlement,
+			}),
+		creditsUnusedTime: (customerProduct) =>
+			!isUnbilledByStripe({
+				customerProduct,
+				now: billingContext.currentEpochMs,
 			}),
 	});
 
