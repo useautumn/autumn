@@ -1,6 +1,10 @@
 import { expect } from "bun:test";
 import type { BillingChangeResponse, CustomerPlanChange } from "@autumn/shared";
-import { waitForWebhook } from "@tests/integration/utils/svixWebhookTestUtils.js";
+import {
+	getPlayHistory,
+	parseEventBody,
+	waitForWebhook,
+} from "@tests/integration/utils/svixWebhookTestUtils.js";
 
 export type BillingUpdatedPayload = {
 	type: string;
@@ -61,6 +65,37 @@ export const waitForBillingUpdatedWebhook = async ({
 		logWebhook: false,
 	});
 	return result?.payload.data ?? null;
+};
+
+/** Every migration billing.updated Play received for `customerId`, read after
+ * `settleMs` so a late duplicate delivery is counted too. */
+export const listBillingUpdatedWebhooks = async ({
+	playToken,
+	customerId,
+	settleMs = 5_000,
+}: {
+	playToken: string;
+	customerId: string;
+	settleMs?: number;
+}): Promise<BillingChangeResponse[]> => {
+	await new Promise((resolve) => setTimeout(resolve, settleMs));
+	const deliveries: BillingChangeResponse[] = [];
+	let iterator: string | undefined;
+	for (let page = 0; page < 20; page++) {
+		const history = await getPlayHistory({ token: playToken, iterator });
+		for (const event of history.data) {
+			const payload = parseEventBody<BillingUpdatedPayload>(event);
+			if (
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				hasUpdatedChange(payload)
+			)
+				deliveries.push(payload.data);
+		}
+		if (history.data.length === 0 || history.iterator === iterator) break;
+		iterator = history.iterator;
+	}
+	return deliveries;
 };
 
 type PlanChangeExpectation = {
