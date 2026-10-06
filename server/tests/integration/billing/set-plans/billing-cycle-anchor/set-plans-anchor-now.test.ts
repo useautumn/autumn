@@ -1,0 +1,323 @@
+/**
+ * A first phase starting now with billing_cycle_anchor 'phase_start' resets the live cycle now:
+ * Stripe bills the full new cycle less the old cycle's unused time, then renews one interval later.
+ */
+
+import { expect, test } from "bun:test";
+import type { SetPlansParamsV0Input } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+import { addMonths, addYears } from "date-fns";
+import {
+	advancePastCycleStart,
+	expectStripeCycleCorrect,
+} from "./utils/anchorCycleUtils";
+
+const resetNowParams = ({
+	customerId,
+	planId,
+	quantity,
+}: {
+	customerId: string;
+	planId: string;
+	quantity?: number;
+}): SetPlansParamsV0Input => ({
+	customer_id: customerId,
+	phases: [
+		{
+			starts_at: "now",
+			billing_cycle_anchor: "phase_start",
+			plans: [
+				{
+					plan_id: planId,
+					...(quantity !== undefined && {
+						feature_quantities: [
+							{ feature_id: TestFeature.Messages, quantity },
+						],
+					}),
+				},
+			],
+		},
+	],
+});
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now: an upgrade mid-cycle bills the new cycle less unused time, then renews a month later")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-anchor-now-upgrade",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium] }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id }),
+					s.advanceTestClock({ days: 10 }),
+				],
+			});
+
+		const renewalAt = addMonths(advancedTo, 1).getTime();
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 20,
+			newAmount: 50,
+		});
+		const params = resetNowParams({ customerId, planId: premium.id });
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: renewalAt,
+			total: 50,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: advancedTo,
+			periodEndMs: renewalAt,
+		});
+
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: renewalAt,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: 50,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now: the same plan restarts its cycle now, billed as previewed")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-anchor-now-same-plan",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.advanceTestClock({ days: 10 }),
+			],
+		});
+
+		const renewalAt = addMonths(advancedTo, 1).getTime();
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 20,
+			newAmount: 20,
+		});
+		const params = resetNowParams({ customerId, planId: pro.id });
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: renewalAt,
+			total: 20,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: advancedTo,
+			periodEndMs: renewalAt,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			nextResetAt: renewalAt,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now: an annual plan restarts its year now, billed as previewed")}`,
+	async () => {
+		const proAnnual = products.proAnnual({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-anchor-now-annual",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proAnnual] }),
+			],
+			actions: [
+				s.billing.attach({ productId: proAnnual.id }),
+				s.advanceTestClock({ days: 40 }),
+			],
+		});
+
+		const renewalAt = addYears(advancedTo, 1).getTime();
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 200,
+			newAmount: 200,
+			interval: "year",
+		});
+		const params = resetNowParams({ customerId, planId: proAnnual.id });
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: renewalAt,
+			total: 200,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: advancedTo,
+			periodEndMs: renewalAt,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			nextResetAt: addMonths(advancedTo, 1).getTime(),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now: a prepaid plan restarts its paid cycle with a full balance, refilled again at renewal")}`,
+	async () => {
+		const pro = products.pro({
+			items: [items.prepaidMessages({ billingUnits: 100, price: 10 })],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo, testClockId } =
+			await initScenario({
+				customerId: "set-plans-anchor-now-prepaid",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro] }),
+				],
+				actions: [
+					s.billing.attach({
+						productId: pro.id,
+						options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+					}),
+					s.advanceTestClock({ days: 10 }),
+					s.track({
+						featureId: TestFeature.Messages,
+						value: 100,
+						timeout: 2000,
+					}),
+				],
+			});
+
+		const renewalAt = addMonths(advancedTo, 1).getTime();
+		const expectedTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 50,
+			newAmount: 50,
+		});
+		const params = resetNowParams({
+			customerId,
+			planId: pro.id,
+			quantity: 300,
+		});
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+		expectPreviewNextCycleCorrect({
+			preview,
+			startsAt: renewalAt,
+			total: 50,
+			toleranceMs: 1000,
+		});
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: advancedTo,
+			periodEndMs: renewalAt,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 300,
+			nextResetAt: renewalAt,
+		});
+
+		await autumnV2_4.track(
+			{ customer_id: customerId, feature_id: TestFeature.Messages, value: 120 },
+			{ timeout: 2000 },
+		);
+		await advancePastCycleStart({
+			ctx,
+			testClockId: testClockId!,
+			cycleStartsAt: renewalAt,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 3,
+			latestTotal: 50,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 300,
+			nextResetAt: addMonths(renewalAt, 1).getTime(),
+		});
+	},
+);
