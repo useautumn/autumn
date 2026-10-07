@@ -380,7 +380,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: transitionAt,
-			waitForSeconds: 30,
 		});
 
 		const customerAfterTransition =
@@ -542,7 +541,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: transitionAt,
-			waitForSeconds: 30,
 		});
 
 		const customerAfterTransition =

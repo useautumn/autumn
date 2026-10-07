@@ -105,7 +105,7 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 10, waitForSeconds: 15 }),
+				s.advanceTestClock({ days: 10 }),
 			],
 		});
 
@@ -166,7 +166,7 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: pro.id }),
-				s.advanceTestClock({ days: 7, waitForSeconds: 15 }),
+				s.advanceTestClock({ days: 7 }),
 			],
 		});
 
@@ -277,7 +277,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: phaseStartsAt + ms.hours(1),
-			waitForSeconds: 15,
 		});
 
 		const subscriptionAfter = await ctx.stripeCli.subscriptions.retrieve(

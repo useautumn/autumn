@@ -74,7 +74,7 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		],
 		actions: [
 			s.attach({ productId: premiumProd.id }),
-			s.advanceTestClock({ days: 10, waitForSeconds: 5 }),
+			s.advanceTestClock({ days: 10 }),
 			s.referral.createCode(),
 		],
 	});
@@ -84,7 +84,6 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		await advanceTestClock({
 			testClockId: testClockIds[redeemerId],
 			numberOfDays: 10,
-			waitForSeconds: 5,
 			stripeCli: ctx.stripeCli,
 		});
 	}
@@ -138,7 +137,6 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 			advanceTestClock({
 				testClockId: clockId,
 				numberOfDays: 31,
-				waitForSeconds: 25,
 				stripeCli: ctx.stripeCli,
 			}),
 		),

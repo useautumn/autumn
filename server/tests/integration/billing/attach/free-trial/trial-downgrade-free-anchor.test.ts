@@ -95,7 +95,6 @@ test.concurrent(
 			testClockId: testClockId!,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: DAYS_INTO_TRIAL,
-			waitForSeconds: 15,
 		});
 
 		// Downgrade to Free via legacy REST /v1/attach (what production did).
@@ -149,7 +148,6 @@ test.concurrent(
 			testClockId: testClockId!,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: DAYS_INTO_TRIAL,
-			waitForSeconds: 15,
 		});
 
 		// Downgrade to Free via native V2 billing.attach.

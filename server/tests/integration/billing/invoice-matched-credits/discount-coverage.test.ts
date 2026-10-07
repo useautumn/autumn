@@ -106,7 +106,6 @@ test.concurrent(
 				addMonths(new Date(advancedTo), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await advanceTestClock({
@@ -181,7 +180,6 @@ test.concurrent(
 				addMonths(new Date(advancedTo), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
 		});
 
 		const preview = (await autumnV2_2.billing.previewAttach({
@@ -249,7 +247,6 @@ test.concurrent(
 				addMonths(new Date(advancedTo), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await advanceTestClock({

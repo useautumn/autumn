@@ -51,7 +51,6 @@ test.concurrent(
 			stripeCli: scenario.ctx.stripeCli,
 			testClockId: scenario.testClockId,
 			advanceTo: billingPeriod.end,
-			waitForSeconds: 10,
 		});
 		await advanceTestClock({
 			stripeCli: scenario.ctx.stripeCli,
@@ -60,7 +59,6 @@ test.concurrent(
 				new Date(billingPeriod.end),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 10,
 		});
 
 		const assignments = await pollUntil({

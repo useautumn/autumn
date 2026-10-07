@@ -58,12 +58,10 @@ export const advanceToNextPhase = async ({
 		stripeCli: scenario.ctx.stripeCli,
 		testClockId: scenario.testClockId,
 		advanceTo: phaseStart.getTime(),
-		waitForSeconds: 10,
 	});
 	await advanceTestClock({
 		stripeCli: scenario.ctx.stripeCli,
 		testClockId: scenario.testClockId,
 		advanceTo: addHours(phaseStart, hoursToFinalizeInvoice).getTime(),
-		waitForSeconds: 10,
 	});
 };

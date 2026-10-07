@@ -443,7 +443,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: billingPeriod.end,
-			waitForSeconds: 30,
 		});
 
 		const params: UpdateSubscriptionV1ParamsInput = {

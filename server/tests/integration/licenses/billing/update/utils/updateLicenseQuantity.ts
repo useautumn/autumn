@@ -1,0 +1,4 @@
+export const DEV_SEAT_PRICE = 20;
+export const INCLUDED_SEATS = 1;
+export const ATTACHED_SEATS = 3;
+export const ATTACHED_PAID_SEATS = ATTACHED_SEATS - INCLUDED_SEATS;

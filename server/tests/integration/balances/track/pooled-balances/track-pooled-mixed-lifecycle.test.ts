@@ -62,7 +62,6 @@ test.concurrent(
 			testClockId,
 			startingFrom: new Date(advancedTo),
 			numberOfDays: 10,
-			waitForSeconds: 5,
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
@@ -86,7 +85,6 @@ test.concurrent(
 			testClockId,
 			startingFrom: new Date(firstAdvance),
 			numberOfDays: 10,
-			waitForSeconds: 5,
 		});
 		const afterSecondAdvance =
 			await autumnV2_2.customers.get<ApiCustomerV5>(customerId);

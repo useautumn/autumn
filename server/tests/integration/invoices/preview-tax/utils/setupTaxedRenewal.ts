@@ -47,14 +47,12 @@ export const setupTaxedRenewal = async ({
 		stripeCli: stripe,
 		testClockId: scenario.testClockId!,
 		numberOfMonths: 1,
-		waitForSeconds: 15,
 	});
 	await advanceTestClock({
 		stripeCli: stripe,
 		testClockId: scenario.testClockId!,
 		startingFrom: new Date(renewedAt),
 		numberOfHours: 2,
-		waitForSeconds: 15,
 	});
 	for (let attempt = 0; attempt < 30; attempt++) {
 		const { list } = (await scenario.autumnV2_4.post("/invoices.list", {

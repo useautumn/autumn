@@ -196,7 +196,6 @@ test(`${chalk.yellowBright("sync-scenario: clock advanced 2 weeks")}`, async () 
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfWeeks: 2,
-		waitForSeconds: 15,
 	});
 });
 
@@ -243,7 +242,6 @@ test(`${chalk.yellowBright("sync-scenario: trialing subscription")}`, async () =
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 3,
-		waitForSeconds: 15,
 	});
 });
 

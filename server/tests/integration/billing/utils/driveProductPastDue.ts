@@ -59,7 +59,6 @@ export const driveProductPastDue = async ({
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			finalizeMinimumWaitMs: 0,
 		});
 		const settled = await waitForFailedRenewalWebhookEffects({
 			ctx,

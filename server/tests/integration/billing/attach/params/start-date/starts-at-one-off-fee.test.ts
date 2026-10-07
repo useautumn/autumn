@@ -220,7 +220,6 @@ test.concurrent(`${chalk.yellowBright("starts_at one-off: fee is invoiced in ful
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addHours(startDate, 1).getTime(),
-		waitForSeconds: 30,
 	});
 
 	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(

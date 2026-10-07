@@ -68,7 +68,7 @@ test.concurrent(
 				),
 				// The third customer attaches 10 days into the shared test clock —
 				// their billing anchor genuinely differs from the first two.
-				s.advanceTestClock({ days: 10, waitForSeconds: 30 }),
+				s.advanceTestClock({ days: 10 }),
 				s.billing.attach({ customerId: midCycleId, productId: pro.id }),
 			],
 		});

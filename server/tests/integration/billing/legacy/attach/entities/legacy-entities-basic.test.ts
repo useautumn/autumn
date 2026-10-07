@@ -464,7 +464,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfMonths: 1,
-			minimumWaitForSeconds: 30,
 		});
 
 		// Verify entity 1 has Pro active

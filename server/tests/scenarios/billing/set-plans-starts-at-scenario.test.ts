@@ -102,7 +102,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addMonths(advancedTo, 1).getTime() + ms.days(AGED_DAYS),
-			waitForSeconds: 20,
 		});
 	},
 );

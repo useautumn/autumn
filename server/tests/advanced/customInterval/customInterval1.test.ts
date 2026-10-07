@@ -90,7 +90,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 			stripeCli,
 			testClockId,
 			advanceTo: addMonths(new Date(), 1).getTime(),
-			minimumWaitForSeconds: 15,
 		});
 
 		await attachAndExpectCorrect({
@@ -113,7 +112,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval and interva
 				addMonths(new Date(curUnix), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			minimumWaitForSeconds: 30,
 		});
 
 		const customer2 = await autumn.customers.get(customerId);

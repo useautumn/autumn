@@ -429,7 +429,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfWeeks: 2,
-		waitForSeconds: 15,
 	});
 
 	// 3. Fetch sync proposals — subscription should still be active
@@ -526,7 +525,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 3,
-		waitForSeconds: 15,
 	});
 
 	// 4. Fetch sync proposals

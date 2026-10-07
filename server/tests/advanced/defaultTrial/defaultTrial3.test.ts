@@ -95,7 +95,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 				addDays(new Date(), 7),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumn.customers.get(customerId);

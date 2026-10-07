@@ -97,13 +97,11 @@ test.concurrent(
 			stripeCli: scenario.ctx.stripeCli,
 			testClockId: scenario.testClockId,
 			advanceTo: cycleEnd.getTime(),
-			waitForSeconds: 10,
 		});
 		await advanceTestClock({
 			stripeCli: scenario.ctx.stripeCli,
 			testClockId: scenario.testClockId,
 			advanceTo: addHours(cycleEnd, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 10,
 		});
 
 		const customer =

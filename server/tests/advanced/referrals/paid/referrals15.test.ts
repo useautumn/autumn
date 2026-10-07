@@ -93,7 +93,6 @@ test(`${chalk.yellowBright(
 		stripeCli: testCtx.stripeCli,
 		testClockId: redeemerClockId,
 		numberOfDays: 10,
-		waitForSeconds: 10,
 	});
 
 	// Create referral code

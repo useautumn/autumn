@@ -520,7 +520,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: now + ms.days(16),
-			waitForSeconds: 30,
 		});
 
 		const activatedProduct = await ctx.db.query.customerProducts.findFirst({
@@ -670,7 +669,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: now + ms.days(16),
-			waitForSeconds: 30,
 		});
 
 		const activatedFutureCustomerProduct =

@@ -90,7 +90,6 @@ test.concurrent(
 				addMonths(new Date(advancedTo), 1),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			waitForSeconds: 30,
 		});
 
 		const renewed = await ctx.stripeCli.subscriptions.retrieve(subscription.id);

@@ -158,7 +158,6 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(new Date(), 2).getTime(),
-			waitForSeconds: 10,
 		});
 
 		await autumn.entities.create(customerId, entities);

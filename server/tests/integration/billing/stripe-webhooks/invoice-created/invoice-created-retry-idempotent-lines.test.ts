@@ -130,7 +130,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			numberOfMonths: 1,
-			waitForSeconds: 60,
 		});
 
 		const { fullCustomer: customerAfterCycle } = await getMessagesEntitlement({
@@ -240,7 +239,6 @@ test.concurrent(
 			testClockId,
 			startingFrom: new Date(cycleBoundaryMs),
 			numberOfHours: hoursToFinalizeInvoice,
-			waitForSeconds: 30,
 		});
 		const invoiceAfterFinalize = await ctx.stripeCli.invoices.retrieve(
 			cycleInvoice.id,
@@ -337,7 +335,6 @@ test.concurrent(
 			startingFrom: new Date(cycleBoundaryMs),
 			numberOfMonths: 1,
 			numberOfHours: hoursToFinalizeInvoice,
-			waitForSeconds: 60,
 		});
 		const invoicesAfterNextCycle = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId,

@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { addMonths } from "date-fns";
 import type Stripe from "stripe";
-import { advanceTestClock } from "../../utils/stripeUtils";
 import { advanceStripeTestClock } from "../../utils/stripeUtils/testClock/advanceStripeTestClock";
 import { waitForStripeClockReady } from "../../utils/stripeUtils/testClock/waitForStripeClockReady";
 import { createTestWait } from "../../utils/testWait/createTestWait";
@@ -21,28 +19,13 @@ const createClockFixture = () => {
 			},
 		},
 	} as unknown as Stripe;
-	return { stripeCli, targets, testClockId: randomUUID() };
-};
-
-test("the legacy caller migration preserves the target and overlaps its existing wait", async () => {
-	const fixture = createClockFixture();
-	const startingFrom = new Date("2026-01-31T12:00:00.000Z");
-	const expectedTarget = addMonths(startingFrom, 1).getTime();
-	const retrieve = fixture.stripeCli.testHelpers.testClocks.retrieve;
-	fixture.stripeCli.testHelpers.testClocks.retrieve = async (id) => {
-		if (fixture.targets.length) await Bun.sleep(300);
-		return retrieve(id);
+	return {
+		stripeCli,
+		targets,
+		testClockId: randomUUID(),
+		afterReady: async () => {},
 	};
-	const target = await advanceTestClock({
-		...fixture,
-		startingFrom,
-		numberOfMonths: 1,
-		minimumWaitForSeconds: 0.4,
-		timeoutMs: 600,
-	});
-	expect(target).toBe(expectedTarget);
-	expect(fixture.targets).toEqual([expectedTarget / 1000]);
-});
+};
 
 test("an aborted clock operation never submits a Stripe request", async () => {
 	const fixture = createClockFixture();
@@ -223,75 +206,36 @@ test("an interrupted write prevents later advances even if its response arrives 
 	expect(writes).toBe(1);
 });
 
-test("the minimum webhook wait overlaps clock readiness instead of stacking", async () => {
+test("the settle step runs after readiness and before the next advance of the same clock", async () => {
 	const fixture = createClockFixture();
-	const retrieve = fixture.stripeCli.testHelpers.testClocks.retrieve;
-	fixture.stripeCli.testHelpers.testClocks.retrieve = async (id) => {
-		if (fixture.targets.length > 0) await Bun.sleep(600);
-		return retrieve(id);
-	};
-	const startedAt = performance.now();
-	await advanceStripeTestClock({
+	const settled = Promise.withResolvers<void>();
+	const order: string[] = [];
+	const first = advanceStripeTestClock({
 		...fixture,
 		targetSeconds: 200,
-		minimumWaitMs: 800,
-		timeoutMs: 1_200,
+		afterReady: async () => {
+			order.push(`settling at ${fixture.targets.at(-1)}`);
+			await settled.promise;
+		},
 	});
-	expect(performance.now() - startedAt).toBeGreaterThanOrEqual(790);
+	const second = advanceStripeTestClock({ ...fixture, targetSeconds: 300 });
+	await Bun.sleep(20);
 	expect(fixture.targets).toEqual([200]);
+	settled.resolve();
+	await Promise.all([first, second]);
+	expect(order).toEqual(["settling at 200"]);
+	expect(fixture.targets).toEqual([200, 300]);
 });
 
-test("an elapsed minimum wait cannot replace clock readiness", async () => {
-	const fixture = createClockFixture();
-	const retrieve = fixture.stripeCli.testHelpers.testClocks.retrieve;
-	const releaseRead = Promise.withResolvers<void>();
-	fixture.stripeCli.testHelpers.testClocks.retrieve = async (id) => {
-		if (fixture.targets.length > 0) await releaseRead.promise;
-		return retrieve(id);
-	};
-	let finished = false;
-	const pending = advanceStripeTestClock({
-		...fixture,
-		targetSeconds: 200,
-		minimumWaitMs: 20,
-	}).then(() => {
-		finished = true;
-	});
-	try {
-		await Bun.sleep(50);
-		expect(fixture.targets).toEqual([200]);
-		expect(finished).toBe(false);
-	} finally {
-		releaseRead.resolve();
-		await pending;
-	}
-	expect(finished).toBe(true);
-});
-
-test("the operation deadline bounds the minimum webhook wait", async () => {
+test("the operation deadline bounds the settle step", async () => {
 	const fixture = createClockFixture();
 	await expect(
 		advanceStripeTestClock({
 			...fixture,
 			targetSeconds: 200,
-			minimumWaitMs: 10_000,
+			afterReady: ({ wait }) => wait.sleep(10_000),
 			timeoutMs: 30,
 		}),
 	).rejects.toThrow("exceeded 30ms");
-	expect(fixture.targets).toEqual([200]);
-});
-
-test("cancellation interrupts the minimum webhook wait", async () => {
-	const fixture = createClockFixture();
-	const controller = new AbortController();
-	const pending = advanceStripeTestClock({
-		...fixture,
-		targetSeconds: 200,
-		minimumWaitMs: 10_000,
-		signal: controller.signal,
-	});
-	await Bun.sleep(10);
-	controller.abort(new Error("test cancelled"));
-	await expect(pending).rejects.toThrow("test cancelled");
 	expect(fixture.targets).toEqual([200]);
 });

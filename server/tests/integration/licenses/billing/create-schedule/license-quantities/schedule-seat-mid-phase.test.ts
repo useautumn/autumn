@@ -101,7 +101,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: scenario.testClockId,
 			advanceTo: midPhaseAt,
-			waitForSeconds: 10,
 		});
 
 		const updateParams: UpdateSubscriptionV1ParamsInput = {

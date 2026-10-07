@@ -83,7 +83,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on arrear p
 				addMonths(new Date(), 2),
 				hoursToFinalizeInvoice,
 			).getTime(),
-			minimumWaitForSeconds: 30,
 		});
 
 		const invoiceAmount = await getExpectedInvoiceTotal({

@@ -92,7 +92,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 			stripeCli,
 			testClockId,
 			advanceTo: addDays(new Date(), 20).getTime(),
-			minimumWaitForSeconds: 15,
 		});
 
 		const wordBillingSets = 2;

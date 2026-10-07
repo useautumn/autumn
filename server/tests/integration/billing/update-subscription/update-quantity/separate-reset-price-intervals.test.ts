@@ -425,7 +425,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addHours(addMonths(advancedTo, 3), 2).getTime(),
-			waitForSeconds: 30,
 		});
 
 		const rawStateAfterQuarterlyInvoice = await getSplitCustomerProductState({

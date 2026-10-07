@@ -87,7 +87,6 @@ test(`${chalk.yellowBright("migrations update_items: cycle anchor survives mid-c
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 30,
-		waitForSeconds: 30,
 	});
 
 	const afterReset = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);

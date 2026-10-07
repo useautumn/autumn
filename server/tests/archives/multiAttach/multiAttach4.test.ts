@@ -222,7 +222,6 @@ describe(`${chalk.yellowBright("multiAttach4: Testing multi attach for annual pr
 			stripeCli,
 			testClockId,
 			advanceTo: addDays(new Date(), 8).getTime(),
-			waitForSeconds: 30,
 		});
 
 		await expectSubToBeCorrect({

@@ -363,7 +363,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			advanceTo: addHours(nextCycleStart, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 30,
 		});
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

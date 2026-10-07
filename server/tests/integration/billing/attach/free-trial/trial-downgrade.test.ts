@@ -158,7 +158,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pr
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 20,
-		waitForSeconds: 30,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -304,7 +303,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 20,
-		waitForSeconds: 30,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -717,7 +715,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 20,
-		waitForSeconds: 30,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);

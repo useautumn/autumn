@@ -61,7 +61,6 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async (
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId ?? "",
 		numberOfDays: 18,
-		waitForSeconds: 30,
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);

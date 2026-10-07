@@ -112,7 +112,6 @@ describe(`${chalk.yellowBright(`contUse/update/${testCase}: Testing update cont 
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: addWeeks(new Date(), 1).getTime(),
-			waitForSeconds: 5,
 		});
 
 		const customItems = replaceItems({

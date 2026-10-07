@@ -676,7 +676,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: test clock start links and act
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addHours(startDate, 1).getTime(),
-		waitForSeconds: 30,
 	});
 
 	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(

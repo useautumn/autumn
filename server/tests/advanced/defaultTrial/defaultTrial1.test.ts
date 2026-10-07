@@ -104,7 +104,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure default trials are 
 				stripeCli,
 				testClockId: testClockID,
 				numberOfDays: 8,
-				waitForSeconds: 10,
 			});
 
 			const customer = await autumn.customers.get(customerId);

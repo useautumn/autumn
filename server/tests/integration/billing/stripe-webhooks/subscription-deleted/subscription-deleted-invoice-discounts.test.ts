@@ -153,7 +153,6 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: customer-level disc
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 30,
 	});
 
 	// Verify product is removed from entity
@@ -288,7 +287,6 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: subscription-level 
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 30,
 	});
 
 	// Verify product is removed from entity
@@ -597,7 +595,6 @@ test.concurrent(`${chalk.yellowBright("sub.deleted discount: consumable price on
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		advanceTo: addMonths(new Date(), 1).getTime(),
-		waitForSeconds: 30,
 	});
 
 	// Verify product is removed from entity

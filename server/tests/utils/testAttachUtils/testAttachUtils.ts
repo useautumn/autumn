@@ -148,7 +148,6 @@ export const advanceToNextInvoice = async ({
 	currentEpochMs,
 	withPause = false,
 	beforeFinalize,
-	finalizeMinimumWaitMs = 30_000,
 	timeoutMs = 180_000,
 	signal,
 }: {
@@ -157,8 +156,6 @@ export const advanceToNextInvoice = async ({
 	currentEpochMs?: number;
 	withPause?: boolean;
 	beforeFinalize?: () => Promise<unknown>;
-	/** Pass 0 only when the caller polls for the webhook effects it needs. */
-	finalizeMinimumWaitMs?: number;
 	timeoutMs?: number;
 	signal?: AbortSignal;
 }): Promise<number> => {
@@ -168,25 +165,21 @@ export const advanceToNextInvoice = async ({
 		invoiceTime,
 		hoursToFinalizeInvoice,
 	).getTime();
-	// Clock readiness does not guarantee Autumn's webhook work has finished.
-	const stages = [
-		...(withPause || beforeFinalize
-			? [{ targetMs: invoiceTime, minimumWaitMs: withPause ? 50_000 : 0 }]
-			: []),
-		{ targetMs: finalizationTime, minimumWaitMs: finalizeMinimumWaitMs },
-	];
+	const stages =
+		withPause || beforeFinalize
+			? [invoiceTime, finalizationTime]
+			: [finalizationTime];
 	const wait = createTestWait({
 		timeoutMs,
 		signal,
 		description: `Advance to next invoice on clock ${testClockId}`,
 	});
 	try {
-		for (const { targetMs, minimumWaitMs } of stages) {
+		for (const targetMs of stages) {
 			await advanceStripeTestClock({
 				stripeCli,
 				testClockId,
 				targetSeconds: Math.floor(targetMs / 1000),
-				minimumWaitMs,
 				signal: wait.signal,
 				timeoutMs: wait.remainingMs(),
 			});

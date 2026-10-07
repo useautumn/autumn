@@ -188,7 +188,6 @@ export const advancePastPhaseStartAndGetInvoices = async ({
 		stripeCli: ctx.stripeCli,
 		testClockId,
 		advanceTo: laterPhaseStartsAt + ms.hours(2),
-		waitForSeconds: 30,
 	});
 
 	// Stripe's server-side subscription/created filters miss the test-clock invoice raised at the phase start.

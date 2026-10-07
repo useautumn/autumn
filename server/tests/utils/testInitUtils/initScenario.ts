@@ -130,7 +130,6 @@ type AdvanceClockAction = {
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
-	waitForSeconds?: number;
 };
 
 type AttachPaymentMethodAction = {
@@ -522,7 +521,6 @@ const cancel = ({
  * Advance the Stripe test clock. Successive calls chain from the previous endpoint.
  * @example s.advanceTestClock({ days: 15 })
  * @example s.advanceTestClock({ toNextInvoice: true })
- * @example s.advanceTestClock({ days: 8, waitForSeconds: 30 })
  */
 const advanceTestClock = ({
 	days,
@@ -530,14 +528,12 @@ const advanceTestClock = ({
 	hours,
 	months,
 	toNextInvoice,
-	waitForSeconds,
 }: {
 	days?: number;
 	weeks?: number;
 	hours?: number;
 	months?: number;
 	toNextInvoice?: boolean;
-	waitForSeconds?: number;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -550,7 +546,6 @@ const advanceTestClock = ({
 				hours,
 				months,
 				toNextInvoice,
-				waitForSeconds,
 			},
 		],
 	});
@@ -1578,7 +1573,6 @@ export async function initScenario({
 						addMonths(baseDate, 1),
 						hoursToFinalizeInvoice,
 					).getTime(),
-					waitForSeconds: 30,
 				});
 			} else {
 				advancedTo = await advanceTestClockFn({
@@ -1589,7 +1583,6 @@ export async function initScenario({
 					numberOfWeeks: action.weeks,
 					numberOfHours: action.hours,
 					numberOfMonths: action.months,
-					waitForSeconds: action.waitForSeconds,
 				});
 			}
 		} else if (action.type === "attachPaymentMethod") {
@@ -1691,13 +1684,11 @@ export async function initScenario({
 					stripeCli: ctx.stripeCli,
 					testClockId,
 					advanceTo: addMonths(startingFrom, 1).getTime(),
-					waitForSeconds: 15,
 				});
 				await advanceTestClockFn({
 					stripeCli: ctx.stripeCli,
 					testClockId,
 					advanceTo: addHours(advancedTo, hoursToFinalizeInvoice).getTime(),
-					waitForSeconds: 15,
 				});
 			} else {
 				advancedTo = await advanceTestClockFn({
@@ -1707,7 +1698,6 @@ export async function initScenario({
 						addMonths(startingFrom, 1),
 						hoursToFinalizeInvoice,
 					).getTime(),
-					waitForSeconds: 30,
 				});
 			}
 		} else if (action.type === "billingAttach") {

@@ -152,7 +152,6 @@ export const activateFutureStart = async ({
 		stripeCli: ctx.stripeCli,
 		testClockId,
 		advanceTo: addHours(startsAt, 1).getTime(),
-		waitForSeconds: 30,
 	});
 
 	const schedule =

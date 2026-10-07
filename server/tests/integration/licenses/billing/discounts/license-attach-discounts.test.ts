@@ -350,7 +350,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: firstBillingPeriod.end,
-			waitForSeconds: 30,
 		});
 		const { billingPeriod: renewedBillingPeriod } = await getBillingPeriod({
 			customerId,
@@ -359,7 +358,6 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId,
 			advanceTo: (renewedBillingPeriod.start + renewedBillingPeriod.end) / 2,
-			waitForSeconds: 20,
 		});
 
 		const params: AttachParamsV1Input = {

@@ -2,6 +2,7 @@ import type { AppEnv } from "@autumn/shared";
 import { timeout } from "@tests/utils/genUtils.js";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect.js";
 import type Stripe from "stripe";
+import { postStripeEventToWorker } from "./postStripeEventToWorker";
 
 /** Stripe delivers to ONE shared ingress sandbox before the µVM, and retries a
  * miss on its own backoff — so give up on delivery well before the deadline and
@@ -17,9 +18,6 @@ export const checkoutSessionIdFromUrl = (url: string): string => {
 	if (!id) throw new Error(`No checkout session id in URL: ${url}`);
 	return id;
 };
-
-const backendUrl = () =>
-	process.env.AUTUMN_BACKEND_URL || "http://localhost:8080";
 
 /**
  * Waits for Autumn to reflect a Stripe webhook, and self-delivers if it doesn't.
@@ -173,23 +171,7 @@ const replayStripeEvents = async ({
 
 	const statuses: string[] = [];
 	for (const event of mine.reverse()) {
-		const response = await fetch(
-			// NO org_id: with it, getStripeWebhookSecret takes the DB path and tw
-			// deliberately stores no connect secret, so the request 500s before
-			// skip-verify is even consulted. The ingress omits it too.
-			`${backendUrl()}/webhooks/connect/${env}`,
-			{
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify(event),
-			},
-		);
-		// The body carries the handler's own error; µVM stdout stops at the health
-		// check, so this response is the only channel for it.
-		const detail = response.ok
-			? ""
-			: `: ${(await response.text()).slice(0, 300)}`;
-		statuses.push(`${event.id}→${response.status}${detail}`);
+		statuses.push(await postStripeEventToWorker({ env, event }));
 	}
 	// Statuses travel in the caller's error because µVM stdout never reaches the
 	// orchestrator; a 200 that changes nothing is a very different bug from a 4xx.

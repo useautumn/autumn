@@ -128,7 +128,6 @@ test(`${chalk.yellowBright("referrals2: immediate referral redemption with perce
 		testClockId: testClockId!,
 		advanceTo: advanceTo.getTime(),
 		stripeCli: ctx.stripeCli,
-		waitForSeconds: 30,
 	});
 
 	const { invoices } = await autumnV1.customers.get(mainCustomerId);

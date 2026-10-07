@@ -236,7 +236,6 @@ test.concurrent(
 			testClockId,
 			startingFrom: new Date(scenarioStart),
 			numberOfDays: 14,
-			waitForSeconds: 30,
 		});
 
 		const expectedProrationTotal = await calculateCrossIntervalUpgrade({
