@@ -122,8 +122,7 @@ export function MetadataEditor() {
 						folding: true,
 						scrollBeyondLastLine: false,
 						fontSize: 12,
-						fontFamily:
-							"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+						fontFamily: "var(--font-mono)",
 						tabSize: 2,
 						wordWrap: "on",
 						renderLineHighlight: "none",

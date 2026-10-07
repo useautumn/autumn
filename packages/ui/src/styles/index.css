@@ -1,8 +1,7 @@
 /* Import inter */
 /** biome-ignore-all lint/suspicious/noUnknownAtRules: ok */
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Nabla&family=Noto+Sans+Cuneiform&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap");
 
@@ -562,6 +561,10 @@
 	--color-destructive-border: var(--destructive-border);
 
 	--color-input-background: var(--input-background);
+
+	--font-mono:
+		"Paper Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+		monospace;
 
 	/* --font-weight-regular: 450; */
 	--font-weight-normal: 450;

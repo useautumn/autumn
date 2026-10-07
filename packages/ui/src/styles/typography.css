@@ -1,3 +1,11 @@
+@font-face {
+	font-family: "Paper Mono";
+	src: url("./fonts/PaperMono.woff2") format("woff2");
+	font-weight: 100 800;
+	font-style: normal;
+	font-display: swap;
+}
+
 /* Typography Classes */
 .text-giga {
 	font-size: 23px;
@@ -64,7 +72,7 @@
 	/* color: var(--color-tertiary-foreground); */
 
 	/* Tiny ID */
-	font-family: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
+	font-family: var(--font-mono);
 	font-size: 11px;
 	font-style: normal;
 	font-weight: 500;
