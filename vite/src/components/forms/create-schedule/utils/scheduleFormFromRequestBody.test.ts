@@ -150,6 +150,61 @@ describe("scheduleFormFromRequestBody", () => {
 		).toBeUndefined();
 	});
 
+	test("loads carry_over_usages with its feature ids", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			carry_over_usages: { enabled: true, feature_ids: ["messages"] },
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: "now" }],
+		});
+		expect(form).toMatchObject({
+			carryOverUsages: true,
+			carryOverUsageFeatureIds: ["messages"],
+		});
+	});
+
+	test("loads carry_over_usages without feature ids as every feature", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			carry_over_usages: { enabled: true },
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: "now" }],
+		});
+		expect(form?.carryOverUsages).toBe(true);
+		expect(form?.carryOverUsageFeatureIds).toBeUndefined();
+	});
+
+	test("leaves carry-over off when the request disables or omits it", () => {
+		const phases = [{ plans: [{ plan_id: "pro" }], starts_at: "now" }];
+		for (const carry_over_usages of [{ enabled: false }, undefined]) {
+			const form = scheduleFormFromRequestBody({
+				customer_id: "cus_1",
+				carry_over_usages,
+				phases,
+			});
+			expect(form?.carryOverUsages).toBeUndefined();
+			expect(form?.carryOverUsageFeatureIds).toBeUndefined();
+		}
+	});
+
+	test("round trips carry_over_usages through the request builder", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const request = {
+			customer_id: "cus_1",
+			carry_over_usages: { enabled: true, feature_ids: ["messages"] },
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: now }],
+		};
+		const form = scheduleFormFromRequestBody(request);
+		const rebuilt = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: form?.phases ?? [],
+			products: [{ id: "pro", items: [] } as unknown as ProductV2],
+			features: [],
+			nowMs: now,
+			carryOverUsages: form?.carryOverUsages,
+			carryOverUsageFeatureIds: form?.carryOverUsageFeatureIds,
+		});
+		expect(rebuilt?.carry_over_usages).toEqual(request.carry_over_usages);
+	});
+
 	test("round trips generated custom items into schedule API customize params", () => {
 		const now = Date.UTC(2027, 0, 1);
 		const form = scheduleFormFromRequestBody({

@@ -1,6 +1,8 @@
+import { featureUtils, isBooleanFeature } from "@autumn/shared";
 import { Switch } from "@autumn/ui";
 import { AdvancedSection } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
+import { CarryOverConfigRow } from "@/components/forms/shared/CarryOverConfigRow";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
@@ -16,9 +18,11 @@ export function CreateScheduleAdvancedSection() {
 		form,
 		formValues,
 		products,
+		features,
 		nowMs,
 		backdatesLiveSubscription,
 		hasActiveSubscription,
+		replacesPlanNow,
 		canScheduleTrial,
 	} = useCreateScheduleFormContext();
 	const {
@@ -28,12 +32,15 @@ export function CreateScheduleAdvancedSection() {
 		endDate,
 		phases,
 		enablePlanImmediately,
+		carryOverUsages,
+		carryOverUsageFeatureIds,
 	} = formValues;
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",
 		state: {
 			hasPaidRecurringPlan: hasPaidRecurringSchedulePlan({ phases, products }),
+			replacesPlanNow,
 		},
 	});
 	const resetRule = backdatesLiveSubscription
@@ -113,6 +120,25 @@ export function CreateScheduleAdvancedSection() {
 					endDate={endDate}
 					minUnixDate={endDateMin}
 					onEndDateChange={(value) => form.setFieldValue("endDate", value)}
+				/>
+			)}
+			{rules.carryOverUsages.visible && (
+				<CarryOverConfigRow
+					title="Carry Over Usages"
+					description="Preserve existing usage counts when switching plans"
+					features={features.filter(
+						(feature) =>
+							!isBooleanFeature({ feature }) &&
+							!featureUtils.isAllocated(feature),
+					)}
+					value={{
+						enabled: carryOverUsages,
+						featureIds: carryOverUsageFeatureIds,
+					}}
+					onChange={({ enabled, featureIds }) => {
+						form.setFieldValue("carryOverUsages", enabled);
+						form.setFieldValue("carryOverUsageFeatureIds", featureIds);
+					}}
 				/>
 			)}
 			{canScheduleTrial && <ScheduleFreeTrialRow />}
