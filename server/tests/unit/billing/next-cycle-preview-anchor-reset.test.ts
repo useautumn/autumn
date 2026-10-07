@@ -12,19 +12,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
-import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
-import { requestPhaseProrations } from "./utils/requestPhaseProrations";
-
-const previewNextCycle = (
-	params: Omit<
-		Parameters<typeof billingPlanToNextCyclePreview>[0],
-		"phaseProrations"
-	>,
-) =>
-	billingPlanToNextCyclePreview({
-		...params,
-		phaseProrations: requestPhaseProrations(params.billingContext),
-	});
+import { previewNextCycle } from "./utils/requestPhaseProrations";
 
 // Monthly period Jan 1–Feb 1 and annual Jan 1 2026–2027; the anchor restarts both on Jan 21.
 const originalAnchorMs = Date.UTC(2026, 0, 1);

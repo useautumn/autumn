@@ -11,19 +11,7 @@ import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
-import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
-import { requestPhaseProrations } from "./utils/requestPhaseProrations";
-
-const previewNextCycle = (
-	params: Omit<
-		Parameters<typeof billingPlanToNextCyclePreview>[0],
-		"phaseProrations"
-	>,
-) =>
-	billingPlanToNextCyclePreview({
-		...params,
-		phaseProrations: requestPhaseProrations(params.billingContext),
-	});
+import { previewNextCycle } from "./utils/requestPhaseProrations";
 
 const anchorMs = Date.UTC(2026, 0, 1);
 const currentEpochMs = Date.UTC(2026, 0, 11);

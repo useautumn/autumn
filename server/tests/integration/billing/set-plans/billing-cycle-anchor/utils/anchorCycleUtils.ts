@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
-import { msToSeconds, stripeToAtmnAmount } from "@autumn/shared";
+import {
+	msToSeconds,
+	type SetPlansParamsV0Input,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
 import {
 	calculateProration,
 	calculateProrationFromPeriod,
@@ -171,3 +175,17 @@ export const expectStripeItemPeriodEnd = async ({
 	const item = await findStripeItemByInterval({ ctx, customerId, interval });
 	expect(item.current_period_end).toBe(msToSeconds(periodEndMs));
 };
+
+/** A phase that starts now and resets the billing cycle there. */
+export const resetNowPhase = ({
+	planIds,
+	prorationBehavior,
+}: {
+	planIds: string[];
+	prorationBehavior?: "none" | "bill_difference";
+}): SetPlansParamsV0Input["phases"][number] => ({
+	starts_at: "now",
+	billing_cycle_anchor: "phase_start",
+	...(prorationBehavior && { proration_behavior: prorationBehavior }),
+	plans: planIds.map((planId) => ({ plan_id: planId })),
+});

@@ -27,20 +27,8 @@ import {
 	calculateItemResetNowTotal,
 	expectStripeCycleCorrect,
 	expectStripeItemPeriodEnd,
+	resetNowPhase,
 } from "./utils/anchorCycleUtils";
-
-const resetNowPhase = ({
-	planIds,
-	prorationBehavior,
-}: {
-	planIds: string[];
-	prorationBehavior?: "none" | "bill_difference";
-}): SetPlansParamsV0Input["phases"][number] => ({
-	starts_at: "now",
-	billing_cycle_anchor: "phase_start",
-	...(prorationBehavior && { proration_behavior: prorationBehavior }),
-	plans: planIds.map((planId) => ({ plan_id: planId })),
-});
 
 const pro540 = () =>
 	products.base({

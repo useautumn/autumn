@@ -16,20 +16,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
-import { expectStripeCycleCorrect } from "./utils/anchorCycleUtils";
-
-const resetNowPhase = ({
-	planIds,
-	prorationBehavior,
-}: {
-	planIds: string[];
-	prorationBehavior?: "none";
-}): SetPlansParamsV0Input["phases"][number] => ({
-	starts_at: "now",
-	billing_cycle_anchor: "phase_start",
-	...(prorationBehavior && { proration_behavior: prorationBehavior }),
-	plans: planIds.map((planId) => ({ plan_id: planId })),
-});
+import {
+	expectStripeCycleCorrect,
+	resetNowPhase,
+} from "./utils/anchorCycleUtils";
 
 const entityPlans = () => ({
 	pro: products.pro({
