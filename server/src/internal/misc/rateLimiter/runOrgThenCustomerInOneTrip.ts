@@ -22,7 +22,7 @@ export const runOrgThenCustomerInOneTrip = async ({
 	next: Next;
 	type: RateLimitType;
 	orgType: RateLimitType;
-	overLimit?: "degrade";
+	overLimit?: "degrade" | "reject";
 	key: string;
 	orgKey: string;
 }) => {
