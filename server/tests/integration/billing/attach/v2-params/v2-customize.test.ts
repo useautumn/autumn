@@ -4,7 +4,7 @@ import type {
 	AttachParamsV1Input,
 	CheckResponseV3,
 } from "@autumn/shared";
-import { BillingMethod, TierInfinite } from "@autumn/shared";
+import { BillingInterval, BillingMethod, TierInfinite } from "@autumn/shared";
 import {
 	expectCustomerFeatureCorrect,
 	expectCustomerFeatureExists,
@@ -12,6 +12,7 @@ import {
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -475,5 +476,43 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: tiered prepaid with 
 		customer,
 		count: 1,
 		latestTotal: PREPAID_PRICE,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("v2-customize attach: a priced boolean feature is rejected")}`, async () => {
+	const customerId = "v2-attach-customize-priced-boolean";
+	const base = products.base({
+		id: "base",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const { autumnV2 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [base] }),
+		],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errMessage: "Boolean features cannot be priced",
+		func: () =>
+			autumnV2.billing.previewAttach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: base.id,
+				redirect_mode: "if_required",
+				customize: {
+					items: [
+						{
+							feature_id: TestFeature.Dashboard,
+							price: {
+								amount: 10,
+								interval: BillingInterval.Month,
+								billing_method: BillingMethod.Prepaid,
+							},
+						},
+					],
+				},
+			}),
 	});
 });

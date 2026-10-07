@@ -467,3 +467,32 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: ACCEPT valid volume-base
 		],
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOLEAN FEATURES: never priced
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("boolean RPC: REJECT a priced boolean feature")}`, async () => {
+	const productId = `err_bool_price_${getSuffix()}`;
+	await expectAutumnError({
+		errMessage: "Boolean features cannot be priced",
+		func: async () => {
+			await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+				plan_id: productId,
+				name: `Test ${productId}`,
+				group: `grp_${productId}`,
+				auto_enable: false,
+				items: [
+					{
+						feature_id: TestFeature.Dashboard,
+						price: {
+							amount: 10,
+							interval: BillingInterval.Month,
+							billing_method: BillingMethod.Prepaid,
+						},
+					},
+				],
+			});
+		},
+	});
+});

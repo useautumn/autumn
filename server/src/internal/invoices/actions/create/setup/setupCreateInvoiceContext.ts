@@ -23,6 +23,7 @@ import {
 	fetchNamedStripePrices,
 	type NamedStripePrices,
 } from "./fetchNamedStripePrices";
+import { validateInvoiceCustomizeItems } from "./validateInvoiceCustomizeItems";
 
 export type InvoicePlanContext = {
 	/** Distinguishes two entries for the same plan id. */
@@ -110,6 +111,7 @@ export const setupCreateInvoiceContext = async ({
 		});
 	}
 	rejectInvalidInvoiceDates({ params, nowMs: Date.now() });
+	validateInvoiceCustomizeItems({ ctx, params });
 
 	// A preview must not write: no customer is created or updated for one.
 	const fullCustomer = await getOrCreateCustomer({

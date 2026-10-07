@@ -183,6 +183,14 @@ const invalidRequests: [string, Omit<PlanParams, "plan_id">][] = [
 		}),
 	],
 	[
+		"a priced boolean feature",
+		customizedLine({
+			featureId: TestFeature.Dashboard,
+			price: prepaid({ amount: 10 }),
+			quantity: 1,
+		}),
+	],
+	[
 		"billing_units 0 on a plan feature",
 		customizedLine({
 			featureId: TestFeature.Users,
@@ -528,6 +536,15 @@ const invalidLicenseRequests: [string, Parameters<typeof invoiceLicense>[0]][] =
 				featureId: TestFeature.Users,
 				customizeItems: [
 					{ feature_id: TestFeature.Users, price: prepaid({ amount: -2 }) },
+				],
+			},
+		],
+		[
+			"a priced boolean license item",
+			{
+				featureId: TestFeature.Dashboard,
+				customizeItems: [
+					{ feature_id: TestFeature.Dashboard, price: prepaid({ amount: 10 }) },
 				],
 			},
 		],

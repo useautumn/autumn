@@ -70,6 +70,14 @@ const validateProductItem = ({
 		});
 	}
 
+	if (feature?.type === FeatureType.Boolean && isFeaturePriceItem(item)) {
+		throw new RecaseError({
+			message: `Boolean features cannot be priced (feature: ${item.feature_id})`,
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	validateItemFeatureOverride({ item, feature, features });
 
 	if (isFeaturePriceItem(item) && item.included_usage === Infinite) {
