@@ -12,6 +12,7 @@ import {
 } from "@/components/forms/update-subscription-v2";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -29,7 +30,7 @@ function SheetContent() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex flex-col h-full overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={isCancelMode ? "Cancel Subscription" : "Uncancel Subscription"}
 					description={
@@ -60,7 +61,7 @@ function SheetContent() {
 				{isCancelMode && <CancelAdvancedSection />}
 				{isCancelMode ? <CancelPreviewSection /> : <UncancelPreviewSection />}
 				<UncancelFooter />
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

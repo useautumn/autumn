@@ -46,6 +46,7 @@ import {
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -444,7 +445,7 @@ function SheetContent() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex flex-col h-full overflow-y-auto">
+			<SheetBody>
 				<StageContent />
 
 				{planEditorProduct && (
@@ -459,7 +460,7 @@ function SheetContent() {
 						}
 					/>
 				)}
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

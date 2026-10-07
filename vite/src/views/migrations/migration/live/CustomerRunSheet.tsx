@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { navigateTo } from "@/utils/genUtils";
@@ -159,7 +160,7 @@ export function CustomerRunSheet({
 		latestLiveEvent?.timestamp ?? latestDryEvent?.timestamp;
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
+		<SheetBody>
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
@@ -332,6 +333,6 @@ export function CustomerRunSheet({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</SheetBody>
 	);
 }

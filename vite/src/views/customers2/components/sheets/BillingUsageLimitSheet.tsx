@@ -23,6 +23,7 @@ import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorToo
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -240,7 +241,7 @@ export function BillingUsageLimitSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={isEdit ? "Edit Usage Limit" : "Add Usage Limit"}
 					description="Hard-cap how much of a feature can be used per interval, regardless of remaining balance."
@@ -364,7 +365,7 @@ export function BillingUsageLimitSheet() {
 						{isEdit ? "Save" : "Add"}
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }
