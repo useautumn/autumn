@@ -1,32 +1,26 @@
 import {
 	type BillingMethod,
 	type FullProduct,
+	type InvoiceCustomizeItem,
 	type InvoiceFeatureQuantity,
 	type Price,
 	planItemV1ToPriceAndEnt,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { InvoicePlanContext } from "../setup/setupCreateInvoiceContext";
 import {
 	findInvoiceFeaturePrice,
 	findOptionalInvoiceFeaturePrice,
 } from "./findInvoiceFeaturePrice";
 
-type InvoiceItemPrice = NonNullable<
-	NonNullable<
-		NonNullable<InvoicePlanContext["params"]["customize"]>["items"]
-	>[number]["price"]
->;
+type InvoiceItemPrice = NonNullable<InvoiceCustomizeItem["price"]>;
 
 const findCustomizedPrice = ({
-	plan,
+	customizeItems,
 	featureId,
 }: {
-	plan: InvoicePlanContext;
+	customizeItems?: InvoiceCustomizeItem[];
 	featureId: string;
-}) =>
-	plan.params.customize?.items?.find((item) => item.feature_id === featureId)
-		?.price;
+}) => customizeItems?.find((item) => item.feature_id === featureId)?.price;
 
 /** Overlays the invoice's pricing on the catalog price, keeping its Stripe mappings. */
 const overlayCustomizedPrice = ({
@@ -96,18 +90,18 @@ const mintCustomizedPrice = ({
  */
 export const resolveInvoiceFeaturePrice = ({
 	ctx,
-	plan,
+	customizeItems,
 	product,
 	entry,
 }: {
 	ctx: AutumnContext;
-	plan: InvoicePlanContext;
+	customizeItems?: InvoiceCustomizeItem[];
 	product: FullProduct;
 	entry: InvoiceFeatureQuantity;
 }): Price | null => {
 	const featureId = entry.feature_id;
 	const billingBehavior: BillingMethod = entry.billing_behavior;
-	const override = findCustomizedPrice({ plan, featureId });
+	const override = findCustomizedPrice({ customizeItems, featureId });
 	const catalogPrice = findOptionalInvoiceFeaturePrice({
 		prices: product.prices,
 		featureId,

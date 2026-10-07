@@ -4,6 +4,7 @@ import {
 	ErrCode,
 	type Feature,
 	type FullProduct,
+	type InvoiceCustomizeItem,
 	type InvoiceFeatureQuantity,
 	type LineItem,
 	type LineItemContext,
@@ -113,32 +114,31 @@ const toLine = ({
 };
 
 const customizedCreditSystem = ({
-	plan,
+	customizeItems,
 	feature,
 }: {
-	plan: InvoicePlanContext;
+	customizeItems?: InvoiceCustomizeItem[];
 	feature: Feature;
 }): Feature => {
-	const schema = plan.params.customize?.items?.find(
-		(item) => item.feature_id === feature.id,
-	)?.feature_override?.credit_schema;
+	const schema = customizeItems?.find((item) => item.feature_id === feature.id)
+		?.feature_override?.credit_schema;
 	if (!schema) return feature;
 	return { ...feature, config: { ...feature.config, schema } };
 };
 
 const billableUnitsFor = ({
-	plan,
+	customizeItems,
 	entry,
 	feature,
 }: {
-	plan: InvoicePlanContext;
+	customizeItems?: InvoiceCustomizeItem[];
 	entry: InvoiceFeatureQuantity;
 	feature: Feature;
 }): { units: number; alreadyMoney: boolean } => {
 	if (entry.quantity !== undefined) {
 		return { units: entry.quantity, alreadyMoney: false };
 	}
-	const creditSystem = customizedCreditSystem({ plan, feature });
+	const creditSystem = customizedCreditSystem({ customizeItems, feature });
 	const credits = usageEntriesToCredits({
 		creditSystem,
 		entries: entry.usage ?? [],
@@ -150,17 +150,20 @@ const billableUnitsFor = ({
 	};
 };
 
+/** `customizeItems` must belong to `product`'s own entry: a license is never priced by its parent's items. */
 const computeFeatureLine = ({
 	ctx,
 	invoiceContext,
-	plan,
+	planKey,
+	customizeItems,
 	product,
 	entry,
 	nowMs,
 }: {
 	ctx: AutumnContext;
 	invoiceContext: CreateInvoiceContext;
-	plan: InvoicePlanContext;
+	planKey: string;
+	customizeItems?: InvoiceCustomizeItem[];
 	product: FullProduct;
 	entry: InvoiceFeatureQuantity;
 	nowMs: number;
@@ -176,13 +179,22 @@ const computeFeatureLine = ({
 		});
 	}
 
-	const price = resolveInvoiceFeaturePrice({ ctx, plan, product, entry });
+	const price = resolveInvoiceFeaturePrice({
+		ctx,
+		customizeItems,
+		product,
+		entry,
+	});
 	if (!price) return undefined;
 
-	const { units, alreadyMoney } = billableUnitsFor({ plan, entry, feature });
+	const { units, alreadyMoney } = billableUnitsFor({
+		customizeItems,
+		entry,
+		feature,
+	});
 	if (units <= 0) return undefined;
 
-	const namedPriceId = plan.params.customize?.items?.find(
+	const namedPriceId = customizeItems?.find(
 		(item) => item.feature_id === entry.feature_id,
 	)?.price?.processors?.stripe?.price_id;
 	const named = namedPriceId
@@ -234,7 +246,7 @@ const computeFeatureLine = ({
 		}),
 		quantity: units,
 		prorated: prorate && Boolean(invoiceContext.period),
-		planKey: plan.planKey,
+		planKey,
 		planId: product.id,
 		featureId: feature.id,
 		stripePriceId: namedPriceId,
@@ -306,7 +318,8 @@ const computePlanLines = ({
 		const line = computeFeatureLine({
 			ctx,
 			invoiceContext,
-			plan,
+			planKey: plan.planKey,
+			customizeItems: params.customize?.items,
 			product: fullProduct,
 			entry,
 			nowMs,
@@ -371,7 +384,7 @@ const computePlanLines = ({
 			const line = computeFeatureLine({
 				ctx,
 				invoiceContext,
-				plan,
+				planKey: plan.planKey,
 				product: resolved.licenseProduct,
 				entry,
 				nowMs,

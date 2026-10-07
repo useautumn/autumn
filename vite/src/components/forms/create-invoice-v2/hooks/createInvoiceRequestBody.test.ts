@@ -247,6 +247,45 @@ describe("buildCreateInvoiceRequestBody", () => {
 		]);
 	});
 
+	test("derives a license feature's billing_behavior from the license plan, not the parent", () => {
+		const editorItems = [
+			{ feature_id: "credits", usage_model: UsageModel.Prepaid },
+			{ feature_id: "exports", usage_model: UsageModel.Prepaid },
+		] as CreateInvoiceForm["plans"][number]["items"];
+
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			catalogItemsByPlanId: new Map([
+				["pro", planItems ?? undefined],
+				["editor", editorItems ?? undefined],
+			]),
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						licenses: [
+							{
+								_id: "l1",
+								licensePlanId: "editor",
+								quantity: 1,
+								featureQuantities: { credits: 100, exports: 5 },
+								featureUsage: {},
+								prorate: undefined,
+							},
+						],
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0].license_quantities?.[0].feature_quantities).toEqual(
+			[
+				{ feature_id: "credits", billing_behavior: "prepaid", quantity: 100 },
+				{ feature_id: "exports", billing_behavior: "prepaid", quantity: 5 },
+			],
+		);
+	});
+
 	test("sends the period as a pair and flags preview", () => {
 		const body = buildCreateInvoiceRequestBody({
 			customerId: "cus_1",

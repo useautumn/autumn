@@ -46,18 +46,25 @@ const toLicenseQuantity = ({
 
 const toPlanParams = ({
 	plan,
-	catalogItems,
+	catalogItemsByPlanId,
 }: {
 	plan: FormInvoicePlan;
-	catalogItems: ProductItem[] | undefined;
+	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
 }): InvoicePlanParams | null => {
 	if (!plan.planId) return null;
 
 	// An uncustomized plan has no items, so behavior comes from the catalog plan.
-	const pricedItems = plan.items ?? catalogItems ?? null;
+	const pricedItems =
+		plan.items ?? catalogItemsByPlanId?.get(plan.planId) ?? null;
 
+	// The server prices license features through the license plan, never the parent.
 	const licenses = plan.licenses
-		.map((license) => toLicenseQuantity({ license, items: pricedItems }))
+		.map((license) =>
+			toLicenseQuantity({
+				license,
+				items: catalogItemsByPlanId?.get(license.licensePlanId) ?? null,
+			}),
+		)
 		.filter((license): license is InvoiceLicenseQuantity => license !== null);
 
 	const customize = plan.isCustom
@@ -93,12 +100,7 @@ export function buildCreateInvoiceRequestBody({
 	if (!customerId) return null;
 
 	const plans = form.plans
-		.map((plan) =>
-			toPlanParams({
-				plan,
-				catalogItems: catalogItemsByPlanId?.get(plan.planId),
-			}),
-		)
+		.map((plan) => toPlanParams({ plan, catalogItemsByPlanId }))
 		.filter((plan): plan is InvoicePlanParams => plan !== null);
 
 	const customLineItems = form.customLineItems
