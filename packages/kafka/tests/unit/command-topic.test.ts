@@ -1,12 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import type { EvictCommand, TrackCommand } from "@autumn/balance-engine";
+import type {
+	EvictCommand,
+	ResetCommand,
+	TrackCommand,
+	UpdateBalanceCommand,
+} from "@autumn/balance-engine";
 import {
 	meteringIdentityToPartitionKey,
 	parseEvictCommand,
+	parseResetCommand,
 	parseTrackCommand,
+	parseUpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import { CompressionTypes, type ProducerRecord } from "kafkajs";
 import {
+	type CommandRecord,
 	createCommandPublisher,
 	InvalidRecordError,
 	parseCommandRecord,
@@ -49,6 +57,51 @@ const evict: EvictCommand = parseEvictCommand({
 	},
 });
 
+const reset: ResetCommand = parseResetCommand({
+	input: {
+		schemaVersion: 1,
+		type: "reset",
+		org: track.org,
+		commandId: "cmd_reset",
+		requestId: "req_reset",
+		identity: testIdentity,
+		occurredAt: 1_700_000_000_000,
+	},
+});
+
+const updateBalance: UpdateBalanceCommand = parseUpdateBalanceCommand({
+	input: {
+		schemaVersion: 1,
+		type: "updateBalance",
+		org: track.org,
+		commandId: "cmd_update",
+		requestId: "req_update",
+		identity: testIdentity,
+		featureId: "messages",
+		internalFeatureId: "feat_messages",
+		remaining: 10,
+		occurredAt: 1_700_000_000_000,
+	},
+});
+
+/** The command as a newer server sends it: a field this build does not know, at the top and nested. */
+const fromNewerServer = (command: CommandRecord) => ({
+	...command,
+	futureField: true,
+	identity: { ...command.identity, futureIdentityField: "eu" },
+});
+
+const serializeRaw = ({ payload }: { payload: unknown }) => ({
+	key: serializeCommandRecord({ record: payload as CommandRecord }).key,
+	value: Buffer.from(
+		JSON.stringify({
+			schemaVersion: 1,
+			type: (payload as CommandRecord).type,
+			payload,
+		}),
+	),
+});
+
 describe("command topic", () => {
 	test("a command round-trips, keyed like the metering log", () => {
 		const serialized = serializeCommandRecord({ record: track });
@@ -64,6 +117,34 @@ describe("command topic", () => {
 			meteringIdentityToPartitionKey({ identity: evict.identity }),
 		);
 		expect(parseCommandRecord(serialized)).toEqual(evict);
+	});
+
+	test("a queued command from a newer server is read without its unknown fields, and they are reported", () => {
+		for (const command of [track, reset, updateBalance, evict]) {
+			const reported: { commandType: string; keyPaths: string[] }[] = [];
+			const parsed = parseCommandRecord({
+				...serializeRaw({ payload: fromNewerServer(command) }),
+				onUnknownKeys: (unknownKeys) => reported.push(unknownKeys),
+			});
+
+			expect(parsed).toEqual(command);
+			expect(reported).toEqual([
+				{
+					commandType: command.type,
+					keyPaths: ["futureField", "identity.futureIdentityField"],
+				},
+			]);
+		}
+	});
+
+	test("an unknown field does not excuse a missing or mistyped one", () => {
+		const { featureId: _, ...missingFeature } = fromNewerServer(track);
+		const mistyped = { ...fromNewerServer(track), value: "two" };
+		for (const payload of [missingFeature, mistyped]) {
+			expect(() => parseCommandRecord(serializeRaw({ payload }))).toThrow(
+				InvalidRecordError,
+			);
+		}
 	});
 
 	test("a record with another command's key, or an unknown command type, is invalid", () => {

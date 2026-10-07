@@ -26,7 +26,9 @@ export function parseInbound<Parsed>({
 		const unknownKeys = unknownKeysOnly({ cause, within });
 		if (!unknownKeys) throw cause;
 		const parsed = parse({ input: withoutKeys({ input, unknownKeys }) });
-		onUnknownKeys?.({ keyPaths: [...new Set(unknownKeys.map(keyPathOf))] });
+		onUnknownKeys?.({
+			keyPaths: [...new Set(unknownKeys.map(keyPathOf))].sort(),
+		});
 		return parsed;
 	}
 }

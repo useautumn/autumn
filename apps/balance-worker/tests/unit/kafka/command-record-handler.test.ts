@@ -207,6 +207,22 @@ describe("command record handler", () => {
 		expect(logs).toEqual([]);
 	});
 
+	test("a queued track and evict from a newer server are consumed without their unknown fields, not skipped", async () => {
+		const { handler, tracked, evicted, logs } = createFixture();
+		const fromNewerServer = <Queued extends TrackCommand | EvictCommand>(
+			queued: Queued,
+		) => ({ ...queued, futureField: true }) as Queued;
+
+		await handler.applyRecord(recordOf({ command: fromNewerServer(command) }));
+		await handler.applyRecord(
+			recordOf({ command: fromNewerServer(evictCommand) }),
+		);
+
+		expect(tracked).toEqual([command]);
+		expect(evicted).toEqual([evictCommand]);
+		expect(logs).not.toContain("warn:Queued command skipped: unreadable");
+	});
+
 	test("the record's offset belongs to the execution, not the track command, and the bookmark skips a batch that starts below it", async () => {
 		const { handler, sources } = createFixture({ commandNextOffset: 5n });
 		await handler.applyRecord(recordOf({ command }));

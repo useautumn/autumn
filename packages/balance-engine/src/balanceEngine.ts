@@ -182,7 +182,7 @@ export type {
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
-export { type OnUnknownKeys, parseInbound } from "./parseInbound.js";
+export { parseInbound } from "./parseInbound.js";
 export {
 	parseApplyBillingPlanRequest,
 	parseCatalog,

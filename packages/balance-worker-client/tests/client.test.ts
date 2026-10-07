@@ -7,6 +7,7 @@ import {
 	parseInitializeRequest,
 } from "@autumn/balance-engine";
 import {
+	BalanceWorkerClientError,
 	createBalanceWorkerClient,
 	type PartitionOwner,
 	type TrackReply,
@@ -296,8 +297,8 @@ async function rejectsUnknownHttpErrors(): Promise<void> {
 			body: { error: { code: "NOT_READY", message: "Wrong status" } },
 		},
 		{
-			status: 409,
-			body: { error: { code: "invented", message: "Invalid code" } },
+			status: 302,
+			body: { error: { code: "FROM_A_NEWER_WORKER", message: "No status" } },
 		},
 		{ status: 502, body: { error: "upstream" } },
 		{ status: 409, body: null },
@@ -311,6 +312,34 @@ async function rejectsUnknownHttpErrors(): Promise<void> {
 		await expect(fixture.client.track({ command })).rejects.toMatchObject({
 			code: "INVALID_RESPONSE",
 			outcome: "unknown",
+		});
+		expect(fixture.stats().refreshes).toBe(0);
+		expect(fixture.stats().requests).toHaveLength(1);
+	}
+}
+
+async function toleratesNewerWorkerCodes(): Promise<void> {
+	for (const [status, outcome] of [
+		[409, "not_submitted"],
+		[503, "unknown"],
+	] as const) {
+		const fixture = createFixture({
+			responses: [
+				{
+					status,
+					body: { error: { code: "FROM_A_NEWER_WORKER", message: "New" } },
+				},
+			],
+		});
+		const failure = await fixture.client
+			.track({ command })
+			.catch((error: unknown) => error);
+		expect(failure).toBeInstanceOf(BalanceWorkerClientError);
+		expect(failure).toMatchObject({
+			code: "WORKER_ERROR",
+			outcome,
+			workerCode: undefined,
+			message: "Worker error FROM_A_NEWER_WORKER: New",
 		});
 		expect(fixture.stats().refreshes).toBe(0);
 		expect(fixture.stats().requests).toHaveLength(1);
@@ -418,6 +447,10 @@ test(
 test(
 	"does not interpret proxy or status-mismatched errors as stale ownership",
 	rejectsUnknownHttpErrors,
+);
+test(
+	"a code from a newer worker is a worker error its status classifies, not an invalid response",
+	toleratesNewerWorkerCodes,
 );
 test(
 	"never retries ambiguous transport failures",

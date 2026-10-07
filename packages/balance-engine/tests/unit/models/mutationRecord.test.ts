@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	applyMutation,
 	computeTrack,
 	type MutationEffect,
 	parseMutationRecord,
@@ -58,5 +59,47 @@ describe("mutation record effects", () => {
 				effects: [{ type: "cache_push", customerId: "cus_1" }],
 			}),
 		).toThrow();
+	});
+});
+
+/** The record as a newer writer logs it: its command carries fields this build does not know. */
+const fromNewerWriter = () => {
+	const logged = JSON.parse(JSON.stringify(record));
+	logged.command.futureField = true;
+	logged.command.org.config.future_setting = "on";
+	return logged;
+};
+
+describe("a record from a newer writer", () => {
+	test("replays: unknown keys anywhere in its command are dropped", () => {
+		const parsed = parseMutationRecord({ input: fromNewerWriter() });
+
+		expect(parsed).toEqual(record);
+		expect(applyMutation({ state: createState(), mutation: parsed })).toEqual(
+			applyMutation({ state: createState(), mutation: record }),
+		);
+	});
+
+	test("is still refused for an unknown key in its changes: replay must derive the same rows", () => {
+		const logged = fromNewerWriter();
+		logged.changes[0].futureField = true;
+
+		expect(() => parseMutationRecord({ input: logged })).toThrow(
+			"Unrecognized key",
+		);
+	});
+
+	test("is still refused for an unknown key on the record, its receipt or its source", () => {
+		const onRecord = { ...fromNewerWriter(), futureField: true };
+		const onReceipt = fromNewerWriter();
+		onReceipt.receipt.futureField = true;
+		const onSource = {
+			...fromNewerWriter(),
+			source: { commandOffset: "7", futureField: true },
+		};
+
+		for (const input of [onRecord, onReceipt, onSource]) {
+			expect(() => parseMutationRecord({ input })).toThrow("Unrecognized key");
+		}
 	});
 });

@@ -10,7 +10,9 @@ import {
 	type InitializeRequest,
 	type LoggedEvictCommand,
 	type MeteringIdentity,
+	type MutationRecord,
 	meteringIdentityToPartitionKey,
+	parseMutationRecord,
 	parseTrackCommand,
 	type SubjectState,
 	type TrackCommand,
@@ -895,6 +897,52 @@ describe("partition writer", () => {
 			});
 
 			expect(decision).toMatchObject({ state: { revision: 1 } });
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
+	test("accepts an already-applied position whose receipt was read back without a newer server's fields", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new RecordingCommittedAppender();
+			let followerApplied: MutationRecord | null = null;
+			const followerAheadStore: PartitionProcessorScope["ctx"]["stateStore"] = {
+				...fixture.store,
+				readReceipt: () =>
+					followerApplied &&
+					parseMutationRecord({
+						input: JSON.parse(JSON.stringify(followerApplied)),
+					}),
+				applyDurableMutations: ({ records }) =>
+					records.map(({ mutation }) => {
+						followerApplied = mutation;
+						return {
+							kind: "position_already_applied" as const,
+							nextOffset: 0n,
+						};
+					}),
+			};
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: followerAheadStore,
+				appender,
+				limits: defaultLimits,
+			});
+			// HTTP track is never re-parsed, so a newer server's field rides on the pending mutation.
+			const command = {
+				...createCommand({ commandId: "cmd_newer" }),
+				futureField: true,
+			} as TrackCommand;
+
+			await writer.submitTrack({ command });
+			// A receipt mismatch would have put the partition into recovery, refusing the next track.
+			const next = await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_after" }),
+			});
+
+			expect(next).toMatchObject({ result: { status: "applied" } });
 		} finally {
 			closeFixture(fixture);
 		}
