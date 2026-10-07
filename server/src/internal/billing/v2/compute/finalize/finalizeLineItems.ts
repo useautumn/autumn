@@ -15,6 +15,7 @@ import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/fina
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
 import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/utils/billingContext/billingContextToNewSubscriptionAnchorMs";
+import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 /**
  * Finalizes line items for a billing plan by:
@@ -50,8 +51,16 @@ export const finalizeLineItems = ({
 		billingContext.stripeSubscription !== undefined ||
 		billingContextToNewSubscriptionAnchorMs({ billingContext }) !== undefined ||
 		isNewSubscriptionBackdate({ billingContext });
+	// set_plans only: like Stripe's trial_end now, ending a trial in place bills the full period under none too.
+	const { isTrialing, willBeTrialing } = getTrialStateTransition({
+		billingContext,
+	});
+	const billsTrialEnd =
+		resetsLikeStripeUnderNone && isTrialing && !willBeTrialing;
 	const skipsProration =
-		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
+		billingContext.requestedProrationBehavior === "none" &&
+		hasProratedPeriod &&
+		!billsTrialEnd;
 	const resetsCycleNow = resetsLikeStripeUnderNone
 		? billingContext.requestedBillingCycleAnchor === "now"
 		: billingContext.anchorResetRefund?.noPartialRefund;

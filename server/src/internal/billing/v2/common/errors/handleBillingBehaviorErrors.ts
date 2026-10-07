@@ -15,9 +15,12 @@ import {
 export const handleProrationBehaviorErrors = ({
 	billingContext,
 	billingPlan,
+	billsTrialEndUnderNone = false,
 }: {
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	/** Like Stripe's trial_end now, ending a trial bills the full period whatever the proration_behavior. */
+	billsTrialEndUnderNone?: boolean;
 }) => {
 	if (billingContext.requestedProrationBehavior !== "none") return;
 
@@ -28,8 +31,10 @@ export const handleProrationBehaviorErrors = ({
 	const { isTrialing, willBeTrialing } = getTrialStateTransition({
 		billingContext,
 	});
+	const endsTrial = isTrialing && !willBeTrialing;
+	if (endsTrial && billsTrialEndUnderNone) return;
 
-	if (isTrialing && !willBeTrialing) {
+	if (endsTrial) {
 		throw new RecaseError({
 			message:
 				"Cannot set proration_behavior to 'none' when removing a free trial",

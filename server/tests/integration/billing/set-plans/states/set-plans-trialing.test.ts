@@ -1,4 +1,7 @@
-/** set_plans on a trialing subscription keeps the trial in Stripe and Autumn, and `free_trial: null` ends it in both and bills now. */
+/**
+ * set_plans on a trialing subscription keeps the trial in Stripe and Autumn, and `free_trial: null` ends it in both and bills now.
+ * Like Stripe's update with trial_end now, the full period is billed whatever the proration_behavior.
+ */
 
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, secondsToMs } from "@autumn/shared";
@@ -86,6 +89,44 @@ test.concurrent(
 		const ended = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
 		expect(ended.status).toBe("active");
 		expect(secondsToMs(ended.trial_end!)).toBeLessThanOrEqual(advancedTo);
+		await expectSubscriptionNotTrialing({
+			customer: await autumnV2_4.customers.get<ApiCustomerV5>(customerId),
+			productId: proTrial.id,
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestStatus: "paid",
+			latestTotal: 20,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans trialing: free_trial null with proration none still bills the full period now, like Stripe")}`,
+	async () => {
+		const { customerId, autumnV2_4, ctx, proTrial, trialing } =
+			await setupTrialingPro({ customerId: "set-plans-trial-ended-none" });
+
+		const setPlansParams = {
+			customer_id: customerId,
+			free_trial: null,
+			phases: [
+				{
+					starts_at: "now" as const,
+					proration_behavior: "none" as const,
+					plans: [{ plan_id: proTrial.id }],
+				},
+			],
+		};
+		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
+		expectPreviewWarning({ preview, type: "trial_ended" });
+		expect(preview.total).toBe(20);
+
+		await autumnV2_4.billing.setPlans(setPlansParams);
+
+		const ended = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
+		expect(ended.status).toBe("active");
 		await expectSubscriptionNotTrialing({
 			customer: await autumnV2_4.customers.get<ApiCustomerV5>(customerId),
 			productId: proTrial.id,

@@ -9,43 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans guards: proration_behavior none rejected when removing a live trial")}`,
-	async () => {
-		const proTrial = products.proWithTrial({
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-			trialDays: 14,
-		});
-
-		const { customerId, autumnV2_4 } = await initScenario({
-			customerId: "set-plans-guard-proration",
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [proTrial] }),
-			],
-			actions: [s.billing.attach({ productId: proTrial.id })],
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage:
-				"Cannot set proration_behavior to 'none' when removing a free trial",
-			func: () =>
-				autumnV2_4.billing.setPlans({
-					customer_id: customerId,
-					free_trial: null,
-					phases: [
-						{
-							starts_at: "now",
-							proration_behavior: "none",
-							plans: [{ plan_id: proTrial.id }],
-						},
-					],
-				}),
-		});
-	},
-);
-
-test.concurrent(
 	`${chalk.yellowBright("set-plans guards: duplicate subscription_id within one phase is rejected")}`,
 	async () => {
 		const pro = products.pro({
