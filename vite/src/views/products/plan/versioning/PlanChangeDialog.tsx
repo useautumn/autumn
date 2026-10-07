@@ -35,7 +35,7 @@ import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents"
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -294,7 +294,7 @@ export default function PlanChangeDialog({
 	const { setQueryStates } = useProductQueryState();
 	const { products, invalidate: invalidateProducts } = useProductsQuery();
 	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
-	const { invalidate: invalidateMigrations } = useMigrationsQuery();
+	const { invalidate: invalidateMigrations } = useMigrationMutations();
 	const { org } = useOrg();
 
 	const [step, setStep] = useState<StepKey>("review");

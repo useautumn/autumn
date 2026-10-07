@@ -58,13 +58,14 @@ import {
 	useMigrationFilterPreview,
 } from "@/hooks/queries/useMigrationFilterPreview";
 import {
+	type RetryableMigrationItemRunStatus,
+	useMigrationMutations,
+} from "@/hooks/queries/useMigrationMutations";
+import { useMigrationQuery } from "@/hooks/queries/useMigrationQuery";
+import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
 } from "@/hooks/queries/useMigrationRunsQuery";
-import {
-	type RetryableMigrationItemRunStatus,
-	useMigrationsQuery,
-} from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
 import {
 	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
@@ -286,10 +287,9 @@ export function MigrationLiveView({
 		customerIds: [] as string[],
 		running: null as "dry" | "live" | null,
 	});
-	const { cancelRun, isCanceling, migrations } = useMigrationsQuery();
-	const batchEligible =
-		migrations.find((candidate) => candidate.id === migrationId)
-			?.batch_eligible ?? false;
+	const { cancelRun, isCanceling } = useMigrationMutations();
+	const { migration } = useMigrationQuery({ migrationId });
+	const batchEligible = migration?.batch_eligible ?? false;
 
 	const handleExecutionStatusesChange = useCallback(
 		(statuses: ExecutionStatus[]) => {
