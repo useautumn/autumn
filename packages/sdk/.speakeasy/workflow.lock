@@ -23,14 +23,14 @@ targets:
         sourceRevisionDigest: sha256:0f9fe241bb13d1d8709cf4cd5904bf3c298813d772ab46e747afdac3194a24cb
         sourceBlobDigest: sha256:da7e3ff7c75ad65b9e17a1d72de4e431a9fde6eb3ebe78be289877b1eb2754ff
         codeSamplesNamespace: autumn-api-typescript-code-samples
-        codeSamplesRevisionDigest: sha256:c7e11a28ef5871eaafd1514f72f460357ccf10e13ef3bf066041f21d96a9cba6
+        codeSamplesRevisionDigest: sha256:f5b9ca358b04631a75166961c588686aa3b23699cbb537fb539dc399f427bb73
     autumn-python:
         source: Autumn API Stripped
         sourceNamespace: autumn-api-stripped
         sourceRevisionDigest: sha256:b1ff7c3a89480638db397964788d6d66a465d886f466323974b725fcf5825efa
         sourceBlobDigest: sha256:8564e053473d7af3299ed743926ec2b2daae5509f9ec8207bbc90e5b5c342358
         codeSamplesNamespace: autumn-api-python-code-samples
-        codeSamplesRevisionDigest: sha256:9608f7306053f173543147a085f06180415eb8c17185aa3ddee657ff0ca82ead
+        codeSamplesRevisionDigest: sha256:0380afa9ed09687cd0a9aee7e62e4036c196b9d9673811dafb240eeb1e858424
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: 1.763.6
