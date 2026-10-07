@@ -5,7 +5,7 @@ import { debounce } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
 import { getBackendErr } from "@/utils/genUtils";
 import { inheritPlanFilterIntoOperations } from "./shared/inheritPlanFilter";
 
@@ -52,7 +52,7 @@ export function useMigrationEditorForm({
 }: {
 	migration: Migration;
 }) {
-	const { updateMigration } = useMigrationsQuery();
+	const { updateMigration } = useMigrationMutations();
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const showErrors = useRef(false);
 
