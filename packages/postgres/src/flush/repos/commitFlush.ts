@@ -13,7 +13,11 @@ import { foldSubjectRowChanges } from "../../subjects/repos/applySubjectRowUpdat
 import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js";
 import { subjectRowChangeLanded } from "../../subjects/types/subjectRowChange.js";
 import type { PostgresDb } from "../../types/postgresClient.js";
-import type { FlushRequest, FlushResult } from "../types/flush.js";
+import type {
+	DeletedSubjectSnapshot,
+	FlushRequest,
+	FlushResult,
+} from "../types/flush.js";
 import {
 	FLUSH_ROLLBACK_MARKER,
 	flushSql,
@@ -29,12 +33,35 @@ export class FlushBookmarkConflictError extends Error {
 }
 
 const count = z.union([z.number(), z.string(), z.bigint()]).transform(Number);
+const deletedSubjectSchema = z
+	.object({
+		org_id: z.string(),
+		env: z.string(),
+		customer_id: z.string(),
+		entity_id: z.string(),
+	})
+	.transform(
+		(row): DeletedSubjectSnapshot => ({
+			orgId: row.org_id,
+			env: row.env,
+			customerId: row.customer_id,
+			entityId: row.entity_id === "" ? null : row.entity_id,
+		}),
+	);
+const deletedSubjects = z.union([
+	z.array(deletedSubjectSchema),
+	z
+		.string()
+		.transform((text) => z.array(deletedSubjectSchema).parse(JSON.parse(text))),
+]);
 const outcomeSchema = z.object({
 	applied: z.union([
 		z.array(count),
 		z.string().transform((text) => z.array(count).parse(JSON.parse(text))),
 	]),
 	bookmarks: count,
+	snapshot_upserts: count.optional(),
+	snapshot_deletes: deletedSubjects.optional(),
 });
 
 /** Carries the outcome out of a transaction that must not commit: a stale row means nothing of the flush lands. */
@@ -74,7 +101,10 @@ export const commitFlush = async ({
 	const { folded, foldedIndexOf } = time("flush.fold", () =>
 		foldSubjectRowChanges({ changes: request.changes }),
 	);
-	if (request.bookmarks.length === 0)
+	const snapshotWrites =
+		(request.snapshots?.upserts.length ?? 0) +
+		(request.snapshots?.deletes.length ?? 0);
+	if (request.bookmarks.length === 0 && snapshotWrites === 0)
 		return { applied: foldedIndexOf.map(() => true) };
 
 	const outcome =
@@ -96,10 +126,16 @@ export const commitFlush = async ({
 	);
 
 	// A change folded away (inserted then deleted in this flush) applied by definition.
+	const applied = foldedIndexOf.map(
+		(index) => index === null || landed[index] === true,
+	);
+	if (snapshotWrites === 0) return { applied };
 	return {
-		applied: foldedIndexOf.map(
-			(index) => index === null || landed[index] === true,
-		),
+		applied,
+		snapshots: {
+			upserted: outcome.snapshot_upserts ?? 0,
+			deleted: outcome.snapshot_deletes ?? [],
+		},
 	};
 };
 
@@ -208,6 +244,7 @@ const runFlushStatement = async ({
 			statement: singleStatementFlushSql({
 				changes: folded,
 				bookmarks: request.bookmarks,
+				snapshots: request.snapshots,
 				nonce,
 			}),
 		}),
@@ -254,7 +291,11 @@ const runFlushTransaction = async ({
 					sql`SET LOCAL statement_timeout = ${sql.raw(String(Math.trunc(statementTimeoutMs)))}`,
 				);
 				const statement = ctx.timing("flush.sql", () =>
-					flushSql({ changes: folded, bookmarks: request.bookmarks }),
+					flushSql({
+						changes: folded,
+						bookmarks: request.bookmarks,
+						snapshots: request.snapshots,
+					}),
 				);
 				const { rows } = await tx.execute(statement);
 				const outcome = parseOutcome({ row: rows[0] });
@@ -265,7 +306,9 @@ const runFlushTransaction = async ({
 			},
 		});
 	} catch (cause) {
-		if (cause instanceof FlushRolledBack) return cause.outcome;
+		// Nothing of a rolled-back flush landed, its snapshot writes included.
+		if (cause instanceof FlushRolledBack)
+			return { ...cause.outcome, snapshot_upserts: 0, snapshot_deletes: [] };
 		throw cause;
 	}
 };

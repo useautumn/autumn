@@ -1,6 +1,7 @@
-import { ZodError } from "zod/v4";
+import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
+import { OwnerUnavailableError } from "../../../threads/owners/ownerUnavailableError.js";
 
-export type AtomErrorStatus = 400 | 500;
+export type AtomErrorStatus = 400 | 500 | 503;
 
 /** How a failure Atom answers itself is told to the caller: the status and error body, in the API's own shape. */
 export const atomErrorOf = ({
@@ -9,8 +10,11 @@ export const atomErrorOf = ({
 	cause: Error;
 }): { status: AtomErrorStatus; code: string; message: string } => {
 	// A push Atom cannot read is the sender's to fix.
-	if (cause instanceof ZodError || cause instanceof SyntaxError)
+	if (isUnreadableRequest(cause))
 		return { status: 400, code: "invalid_request", message: cause.message };
+	// Passes once the thread is back: Autumn's server asks its API meanwhile, and a push is sent again.
+	if (cause instanceof OwnerUnavailableError)
+		return { status: 503, code: "atom_unavailable", message: cause.message };
 	return {
 		status: 500,
 		code: "internal_error",

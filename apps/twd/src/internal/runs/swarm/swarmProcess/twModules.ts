@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import type { FileStats } from "@tw/worker/runTestFileWithStats.ts";
 import { REPO_ROOT } from "../../../catalog/repoPaths.ts";
 
 /**
@@ -88,6 +89,11 @@ export type TwModules = {
 			pool: WorkerPool;
 			resolveSandbox: (worker: WorkerHandle) => ProviderSandbox | undefined;
 			toWorkerPath?: (localFile: string) => string;
+			onFileStats?: (event: {
+				file: string;
+				worker: string;
+				stats: FileStats;
+			}) => void;
 		}) => TestExecutor;
 	};
 	ingress: {

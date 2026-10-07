@@ -2,6 +2,7 @@ import type { Catalog, SubjectState } from "@autumn/balance-engine";
 import type { SharedContext } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { StoredSubject } from "../../state/types/storedSubject.js";
+import { InvalidPushError, isUnreadableRequest } from "./invalidPushError.js";
 import { sentAs } from "./sentAs.js";
 
 // Autumn built these rows, so Atom confirms only the fields it reads itself and stores the rest as sent:
@@ -29,12 +30,28 @@ const subjectBodySchema = z.object({
 	read_at: z.number().int().nonnegative(),
 });
 
-export const subjectBodyToStoredSubject = ({
+const parsePush = <T>(read: () => T): T => {
+	try {
+		return read();
+	} catch (error) {
+		if (!isUnreadableRequest(error)) throw error;
+		throw new InvalidPushError((error as Error).message);
+	}
+};
+
+/** The body as JSON text, parsed once on the customer's owner thread; one holding another customer than it was routed by is refused. */
+export const subjectPushToStoredSubject = ({
+	customerId,
 	body,
 }: {
-	body: unknown;
+	customerId: string;
+	body: string;
 }): StoredSubject => {
-	const parsed = subjectBodySchema.parse(body);
+	const parsed = parsePush(() => subjectBodySchema.parse(JSON.parse(body)));
+	if (parsed.state.identity.customerId !== customerId)
+		throw new InvalidPushError(
+			`A push routed to customer ${customerId} holds customer ${parsed.state.identity.customerId}`,
+		);
 	return {
 		state: parsed.state,
 		catalog: parsed.catalog,

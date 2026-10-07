@@ -39,3 +39,48 @@ describe("WorkerPool at swarm width", () => {
 		expect(got?.name).toBe("w2");
 	});
 });
+
+describe("WorkerPool with several files per worker", () => {
+	test("files spread to the least-loaded worker and stack up to the slot count", async () => {
+		const pool = new WorkerPool([worker(1), worker(2)], 2);
+		const granted = await Promise.all(
+			Array.from({ length: 4 }, () => pool.acquire()),
+		);
+		expect(granted.map((w) => w.name).sort()).toEqual(["w1", "w1", "w2", "w2"]);
+		let fifth: WorkerHandle | undefined;
+		void pool.acquire().then((w) => {
+			fifth = w;
+		});
+		await Bun.sleep(5);
+		expect(fifth).toBeUndefined();
+	});
+
+	test("an exclusive rerun waits for an empty worker and blocks co-tenants until released", async () => {
+		const pool = new WorkerPool([worker(1), worker(2)], 2);
+		const onW1 = await pool.acquire();
+		const onW2 = await pool.acquire();
+		expect([onW1.name, onW2.name].sort()).toEqual(["w1", "w2"]);
+
+		let rerun: WorkerHandle | undefined;
+		void pool.acquireDifferentFrom("w1", false, true).then((w) => {
+			rerun = w;
+		});
+		await Bun.sleep(5);
+		expect(rerun).toBeUndefined();
+
+		pool.release(onW2);
+		await Bun.sleep(5);
+		expect(rerun?.name).toBe("w2");
+		expect(rerun?.inFlight).toBe(2);
+
+		let tenant: WorkerHandle | undefined;
+		void pool.acquire().then((w) => {
+			tenant = w;
+		});
+		await Bun.sleep(5);
+		expect(tenant?.name).toBe("w1");
+
+		pool.release(rerun as WorkerHandle);
+		expect(pool.all.find((w) => w.name === "w2")?.inFlight).toBe(0);
+	});
+});

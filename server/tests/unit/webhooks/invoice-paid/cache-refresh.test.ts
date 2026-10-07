@@ -115,10 +115,11 @@ await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 	},
 }));
 await mockModuleWithRestore(
-	"@/internal/billing/v2/execute/executeDeferredBillingPlan.js",
+	"@/internal/billing/v2/execute/executeClaimedDeferredBillingPlan.js",
 	() => ({
-		executeDeferredBillingPlan: async () => {
+		executeClaimedDeferredBillingPlan: async () => {
 			state.billingWrites++;
+			return true;
 		},
 	}),
 );

@@ -31,7 +31,7 @@ test("list cells render the derived filter, operations and status text", () => {
 	expect(renderCell({ id, header: "Operations" })).toBe(
 		"Starter → v2 Base price $39 → $49/mo +2",
 	);
-	expect(renderCell({ id, header: "Status" })).toBe("Failed at 80%");
+	expect(renderCell({ id, header: "Status" })).toBe("Incomplete at 80%");
 	expect(renderCell({ id: "migration-a7k", header: "Filter" })).toBe(
 		"No filter",
 	);

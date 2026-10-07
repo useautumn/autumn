@@ -10,7 +10,7 @@ export const STATUS_INDICATORS: Record<
 	running: { tone: "green", glyph: "play" },
 	run: { tone: "blue", glyph: "check" },
 	no_changes: { tone: "neutral", glyph: "minus" },
-	failed: { tone: "red", glyph: "x" },
+	failed: { tone: "orange", glyph: "alert" },
 	canceled: { tone: "neutral", glyph: "ban" },
 };
 
@@ -41,7 +41,7 @@ export function statusLabel({
 		running: "Running",
 		run: "Run",
 		no_changes: "No changes",
-		failed: "Failed",
+		failed: "Incomplete",
 		canceled: "Canceled",
 	}[status];
 }

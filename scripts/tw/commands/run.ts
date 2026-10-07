@@ -244,26 +244,30 @@ const TEARDOWN_PER_RESOURCE_TIMEOUT_MS = 20_000;
 const TEARDOWN_STRIPE_CONCURRENCY = 16;
 const TEARDOWN_SANDBOX_CONCURRENCY = 16;
 
-/**
- * Demand-tracked culling. During the RUN phase, idle workers beyond a buffer are
- * terminated early so we stop paying for ~N idle sandboxes while a few stragglers
- * finish. The buffer is a FRACTION of the initial pool (default 30%) kept idle as
- * retry/worker-death headroom; busy workers are never culled and the pool never
- * drops below the buffer. Tune `TW_CULL_BUFFER_FRACTION`; disable with `TW_DISABLE_CULL=1`.
- */
-const CULL_IDLE_BUFFER_FRACTION = Number(
-	process.env.TW_CULL_BUFFER_FRACTION ?? 0.3,
-);
+/** Idle workers kept per pool even when nothing is busy; override with `TW_CULL_IDLE_FLOOR`. */
+const CULL_IDLE_FLOOR = Number(process.env.TW_CULL_IDLE_FLOOR ?? 4);
 const CULL_INTERVAL_MS = 2000;
 const CULL_DISABLED = process.env.TW_DISABLE_CULL === "1";
 
 /**
- * Demand-tracked cull loop for a worker pool. Keeps `CULL_IDLE_BUFFER_FRACTION` of
- * the INITIAL pool size as idle retry/death headroom + every busy worker, and
- * terminates idle workers beyond that every {@link CULL_INTERVAL_MS}. The pool's
- * `cullIdle` only ever removes idle workers and never drops below the buffer, so
- * retries always have spare capacity. Returns a stop function; no-op if disabled.
+ * Removes idle workers beyond max(floor, busy): each running file needs at most one
+ * spare worker for its retry or worker-death reschedule. Busy workers are never touched.
  */
+export const cullExcessIdle = ({
+	pool,
+	floor = CULL_IDLE_FLOOR,
+}: {
+	pool: WorkerPool;
+	floor?: number;
+}): { culled: WorkerHandle[]; reserve: number } => {
+	const busy = pool.size - pool.idleCount;
+	const reserve = Math.max(floor, busy);
+	const excess = pool.idleCount - reserve;
+	if (excess <= 0) return { culled: [], reserve };
+	return { culled: pool.cullIdle(excess, busy + reserve), reserve };
+};
+
+/** Runs {@link cullExcessIdle} every {@link CULL_INTERVAL_MS}; returns a stop function. */
 export const startCulling = (
 	pool: WorkerPool,
 	resolveSandbox: (worker: WorkerHandle) => ProviderSandbox | undefined,
@@ -273,17 +277,9 @@ export const startCulling = (
 			/* culling disabled */
 		};
 	}
-	const bufferCount = Math.max(
-		1,
-		Math.ceil(pool.size * CULL_IDLE_BUFFER_FRACTION),
-	);
 	let culledTotal = 0;
 	const timer = setInterval(() => {
-		const excess = pool.idleCount - bufferCount;
-		if (excess <= 0) {
-			return;
-		}
-		const culled = pool.cullIdle(excess, bufferCount);
+		const { culled, reserve } = cullExcessIdle({ pool });
 		for (const worker of culled) {
 			setWorkerStatus(worker.name, "dead");
 			const sandbox = resolveSandbox(worker);
@@ -296,7 +292,7 @@ export const startCulling = (
 		if (culled.length > 0) {
 			culledTotal += culled.length;
 			milestone(
-				`cull: freed ${culled.length} idle worker(s) → pool ${pool.size} (keeping ${bufferCount} idle buffer; ${culledTotal} culled total)`,
+				`cull: freed ${culled.length} idle worker(s) → pool ${pool.size} (keeping ${reserve} idle; ${culledTotal} culled total)`,
 			);
 		}
 	}, CULL_INTERVAL_MS);
@@ -1899,9 +1895,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const pools = runShards.map(
 			({ handles, slots }) => new WorkerPool(handles, slots),
 		);
-		const normalPool = pools[pools.length - 1];
-
-		const stopCulling = startCulling(normalPool, resolveSandbox);
+		const stopCulling = pools.map((pool) => startCulling(pool, resolveSandbox));
 		markPhase("first test dispatched");
 		milestone(
 			"run: executing tests across both pools — live progress in the dashboard",
@@ -1928,7 +1922,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				],
 			});
 		} finally {
-			stopCulling();
+			for (const stop of stopCulling) stop();
 			for (const pool of pools) pool.close();
 		}
 

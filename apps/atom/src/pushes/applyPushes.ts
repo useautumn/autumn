@@ -1,19 +1,20 @@
 import { catalogBodyToSharedRows } from "../lib/contracts/catalogContract.js";
-import { subjectBodyToStoredSubject } from "../lib/contracts/subjectContract.js";
 import type { Slots } from "../slots/types/slots.js";
 
-/** A subject as Autumn pushes it, over HTTP or as a command; false when an older read was ignored. */
+/**
+ * A subject as Autumn pushes it, over HTTP or the queue: routed by the customer id sent beside it and handed on as text,
+ * so only its owner thread parses it. False when an older read was ignored.
+ */
 export const applySubjectPush = ({
 	slots,
+	customerId,
 	body,
 }: {
 	slots: Slots;
-	body: unknown;
-}): boolean => {
-	const subject = subjectBodyToStoredSubject({ body });
-	const { customerId } = subject.state.identity;
-	return slots.processorFor({ customerId }).setSubject({ subject });
-};
+	customerId: string;
+	body: string;
+}): Promise<boolean> =>
+	slots.processorFor({ customerId }).setSubject({ customerId, body });
 
 /** The shared catalog as Autumn pushes it; false when an older read was ignored. */
 export const applyCatalogPush = ({
@@ -22,4 +23,4 @@ export const applyCatalogPush = ({
 }: {
 	slots: Slots;
 	body: unknown;
-}): boolean => slots.setCatalog(catalogBodyToSharedRows({ body }));
+}): Promise<boolean> => slots.setCatalog(catalogBodyToSharedRows({ body }));

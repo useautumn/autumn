@@ -9,6 +9,20 @@ export const meteringIdentityToPartitionKey = ({
 }): string =>
 	JSON.stringify([identity.orgId, identity.env, identity.customerId]);
 
+/** The customer the partition key names: the identity's customer part, entityId null. */
+export const partitionKeyToMeteringIdentity = ({
+	partitionKey,
+}: {
+	partitionKey: string;
+}): MeteringIdentity => {
+	const [orgId, env, customerId] = JSON.parse(partitionKey) as [
+		string,
+		string,
+		string,
+	];
+	return { orgId, env, customerId, entityId: null };
+};
+
 /** The customer's key, suffixed by the entity when the identity names an entity. */
 export const meteringIdentityToSubjectKey = ({
 	identity,

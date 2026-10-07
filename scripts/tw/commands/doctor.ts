@@ -285,7 +285,7 @@ export const doctor = async (): Promise<number> => {
 
 	section("defaults");
 	info(
-		`provider modalv2 · workers ${DEFAULT_WORKERS} (--max) · per-worker ${DEFAULT_PER_WORKER} · region ${process.env.TW_MODAL_REGION ?? "us-east-1"}`,
+		`provider modalv2 · workers ${DEFAULT_WORKERS} (--max) · per-worker ${DEFAULT_PER_WORKER} · region ${process.env.TW_MODAL_REGION || "unpinned"}`,
 	);
 
 	console.log("");

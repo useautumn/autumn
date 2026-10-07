@@ -1,5 +1,5 @@
 import {
-	getCachedOrgWithFeatures,
+	readThroughOrgWithFeatures,
 	setCachedOrgWithFeatures,
 } from "@autumn/cache";
 import type { AppEnv } from "@autumn/shared";
@@ -38,17 +38,17 @@ export const getOrgWithFeaturesCached = async ({
 	skipCache?: boolean;
 	requestId?: string;
 }): Promise<OrgWithFeatures | null> => {
-	if (!skipCache) {
-		const cached = await getCachedOrgWithFeatures<OrgWithFeatures>({
+	const load = () => OrgService.getWithFeatures({ db, orgId, env });
+	if (!skipCache)
+		return readThroughOrgWithFeatures({
 			ctx: getMiscCacheContext(),
 			orgId,
 			env,
+			load,
 			requestId,
 		});
-		if (cached) return cached;
-	}
 
-	const fresh = await OrgService.getWithFeatures({ db, orgId, env });
+	const fresh = await load();
 	if (!fresh) return null;
 
 	await setCachedOrgWithFeatures({

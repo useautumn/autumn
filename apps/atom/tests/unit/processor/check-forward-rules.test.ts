@@ -38,12 +38,15 @@ const forwardedRequests: [ForwardReason, CheckRequest][] = [
 ];
 
 describe("which checks Atom answers itself", () => {
-	test.each(forwardedRequests)("%s goes to the API", (reason, request) => {
-		expect(checkForwardReason({ request })).toBe(reason);
-		expect(
-			forwardReasonOf(() => checkRequestToAnswerableCheck({ request })),
-		).toBe(reason);
-	});
+	test.each(forwardedRequests)(
+		"%s goes to the API",
+		async (reason, request) => {
+			expect(checkForwardReason({ request })).toBe(reason);
+			expect(
+				await forwardReasonOf(() => checkRequestToAnswerableCheck({ request })),
+			).toBe(reason);
+		},
+	);
 
 	test("a plain feature check is Atom's, with the balance it needs defaulting to 1", () => {
 		const request = checkRequestFor();

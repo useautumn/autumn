@@ -99,7 +99,8 @@ export const WorkersCard = ({
 			className="shrink-0"
 			right={
 				<span className="text-xs font-medium text-foreground tabular-nums">
-					{num(run.workers.length)}
+					{!live && "peak "}
+					{num(run.workerCount ?? 0)}
 					{run.workersWanted !== null && ` / ${num(run.workersWanted)}`}
 				</span>
 			}

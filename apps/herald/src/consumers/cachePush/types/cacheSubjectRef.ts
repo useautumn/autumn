@@ -4,4 +4,6 @@ import type { MeteringIdentity } from "@autumn/balance-engine";
 export type CacheSubjectRef = {
 	identity: MeteringIdentity;
 	logOffset: bigint;
+	/** When the earliest change not yet pushed was requested, so a push can report how stale the Atom was. */
+	oldestOccurredAt: number;
 };

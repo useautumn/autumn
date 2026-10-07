@@ -39,11 +39,13 @@
       "name": "@autumn/atom",
       "version": "0.0.1",
       "dependencies": {
-        "@alienplatform/bindings": "3.3.25",
+        "@alienplatform/bindings": "3.3.28",
         "@autumn/balance-engine": "workspace:*",
+        "@autumn/byoc": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@aws-sdk/client-sqs": "^3.958.0",
         "hono": "^4.13.5",
         "zod": "^3.25.23",
       },
@@ -138,6 +140,7 @@
       "name": "@autumn/herald",
       "version": "0.0.1",
       "dependencies": {
+        "@alienplatform/bindings": "3.3.28",
         "@autumn/auto-topup": "workspace:*",
         "@autumn/balance-engine": "workspace:*",
         "@autumn/balance-webhooks": "workspace:*",
@@ -1447,17 +1450,17 @@
 
     "@alcalzone/ansi-tokenize": ["@alcalzone/ansi-tokenize@0.2.5", "", { "dependencies": { "ansi-styles": "^6.2.1", "is-fullwidth-code-point": "^5.0.0" } }, "sha512-3NX/MpTdroi0aKz134A6RC2Gb2iXVECN4QaAXnvCIxxIm3C3AVB1mkUe8NaaiyvOpDfsrqWhYtj+Q6a62RrTsw=="],
 
-    "@alienplatform/bindings": ["@alienplatform/bindings@3.3.25", "", { "dependencies": { "@alienplatform/core": "^3.3.25" }, "optionalDependencies": { "@alienplatform/bindings-darwin-arm64": "3.3.25", "@alienplatform/bindings-darwin-x64": "3.3.25", "@alienplatform/bindings-linux-arm64-gnu": "3.3.25", "@alienplatform/bindings-linux-x64-gnu": "3.3.25" } }, "sha512-jjWYd8L/vKwrbzg0gw7cV7LfojkDjsMpuD3EFD8S03nCeTPC3JeRIvwA9RxPvJfmNzlbAx8Ef5h4c86LI2jS5Q=="],
+    "@alienplatform/bindings": ["@alienplatform/bindings@3.3.28", "", { "dependencies": { "@alienplatform/core": "^3.3.28" }, "optionalDependencies": { "@alienplatform/bindings-darwin-arm64": "3.3.28", "@alienplatform/bindings-darwin-x64": "3.3.28", "@alienplatform/bindings-linux-arm64-gnu": "3.3.28", "@alienplatform/bindings-linux-x64-gnu": "3.3.28" } }, "sha512-rmK3FCcW8UBds7/W1+iQ8OU9zbG+O4VAkTsu7tnvFl3YSpn4b/Ey1lf/3JFm1Zs2I5DP+pIRdbTMO1O4uZV2Ow=="],
 
-    "@alienplatform/bindings-darwin-arm64": ["@alienplatform/bindings-darwin-arm64@3.3.25", "", { "os": "darwin", "cpu": "arm64" }, "sha512-B/CsEHMGy68FyAIoZRlhlBj353IRK1Yz/nZg50Bfm5/dsXVgfqGSWTp9rFRfKwRneXq6W5sf+HNU4fJFx7P7/Q=="],
+    "@alienplatform/bindings-darwin-arm64": ["@alienplatform/bindings-darwin-arm64@3.3.28", "", { "os": "darwin", "cpu": "arm64" }, "sha512-F1Z5gY669S8isOCBtNi4PGRcmbqxbHAezGnJSpjrDfrOKH6D01ev64uYfzeNF9P89FWN/umOHlSwtT0W0vRJJg=="],
 
-    "@alienplatform/bindings-darwin-x64": ["@alienplatform/bindings-darwin-x64@3.3.25", "", { "os": "darwin", "cpu": "x64" }, "sha512-6rUzNW+DwK6OcbBw60Hjs7Es7VrmbLgO/lCvkoyCuVUKeeqsq1owkr5gMBY81b6UVSCdebUog0knI6g4aot9Eg=="],
+    "@alienplatform/bindings-darwin-x64": ["@alienplatform/bindings-darwin-x64@3.3.28", "", { "os": "darwin", "cpu": "x64" }, "sha512-gZSSGLzL8wN6y9Mak9vW6asTei+rp5XeFlub4bisyfqUEtcVVxyBVyAW9YTTQr7thSpMUPVPCbrFua43XhCc3Q=="],
 
-    "@alienplatform/bindings-linux-arm64-gnu": ["@alienplatform/bindings-linux-arm64-gnu@3.3.25", "", { "os": "linux", "cpu": "arm64" }, "sha512-6BL+iaa4TOrcitKy+wrWr9WPF7lQR/pifEILee7c5prk4Kej0AMnsTjplvIGB8apZlWsXcq/Z/Ybt+NrpFoOrA=="],
+    "@alienplatform/bindings-linux-arm64-gnu": ["@alienplatform/bindings-linux-arm64-gnu@3.3.28", "", { "os": "linux", "cpu": "arm64" }, "sha512-hWIEId4gcJ4JJqjvtAthMUCzk+IXrYHPuDfnjxb9s3TcpNbh4gFgQg6qM3QH/DeKR6sY7wgUTbakTx4+BOv1oQ=="],
 
-    "@alienplatform/bindings-linux-x64-gnu": ["@alienplatform/bindings-linux-x64-gnu@3.3.25", "", { "os": "linux", "cpu": "x64" }, "sha512-1CXW3WD17heTPF7h2Q8cDx7nPkFMefkuWwHuSwQEVFMwsNo/KdH9+HM53YV930J/jRdrxvXB+rwYLhBnxgbZQw=="],
+    "@alienplatform/bindings-linux-x64-gnu": ["@alienplatform/bindings-linux-x64-gnu@3.3.28", "", { "os": "linux", "cpu": "x64" }, "sha512-RE0/L/ZfPD9JHEdj5Iky4mq70ftohX9WJJEuESPDiKC9wVCn/VFayQ8WkoIDCcBgGjz2VIGS5vXF1gdJ//OeJA=="],
 
-    "@alienplatform/core": ["@alienplatform/core@3.3.25", "", { "dependencies": { "@openapi-contrib/json-schema-to-openapi-schema": "^4.0.0", "serialize-error": "^12.0.0", "zod": "4.5.2" } }, "sha512-NwxeuBehgMNjxlqtOZu7KDWK+9Xb5z9eSSBejSMJVl+rcAW0zF++EYJfeBLVvockChsq+3wT6fpc0sarrmZ32Q=="],
+    "@alienplatform/core": ["@alienplatform/core@3.3.29", "", { "dependencies": { "@openapi-contrib/json-schema-to-openapi-schema": "^4.0.0", "serialize-error": "^12.0.0", "zod": "^4.5.2" } }, "sha512-LPsMbwaEAJPNe9d2+QGHgUyWrh/9N7mKIklURb6F/4KFUirlQTsBgwxBRfraDAX3OzPL70/gAuAjKV98W6tdnw=="],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 

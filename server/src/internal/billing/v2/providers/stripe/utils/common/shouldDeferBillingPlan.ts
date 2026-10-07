@@ -4,6 +4,7 @@ import type {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
+import { isPlanEnabledOnFinalize } from "@/internal/billing/v2/utils/billingContext/isPlanEnabledOnFinalize";
 
 export const shouldDeferBillingPlan = ({
 	billingContext,
@@ -19,6 +20,13 @@ export const shouldDeferBillingPlan = ({
 	});
 
 	if (latestStripeInvoice.status === "paid") return false;
+
+	if (
+		latestStripeInvoice.status === "draft" &&
+		isPlanEnabledOnFinalize({ billingContext })
+	) {
+		return true;
+	}
 
 	return deferredInvoiceMode || Boolean(requiredAction);
 };

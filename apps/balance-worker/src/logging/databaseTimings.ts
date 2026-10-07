@@ -1,9 +1,11 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { SubjectLoadGate } from "../external/postgres/createSubjectLoadGate.js";
+import type { SnapshotRefreshCounts } from "../processor/subject/snapshotRefresh/types/snapshotRefreshQueue.js";
 import { percentileOf, sampleInto } from "./sampleWindow.js";
 
 export type DatabaseQueryKind =
 	| "subject_rows"
+	| "subject_snapshot"
 	| "entity_rows"
 	| "catalog_rows"
 	| "billing_anchors"
@@ -21,6 +23,17 @@ export type DatabaseTimingsSummary = {
 	>;
 	subjectLoadWait: Distribution;
 	errorCodes: Record<string, number>;
+	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
+	subjectSnapshots?: SubjectSnapshotCounts;
+};
+
+type SubjectSnapshotCounts = {
+	upserted: number;
+	deleted: number;
+	hits: number;
+	misses: number;
+	/** Present only in a window where an evict rebuilt rows. */
+	refreshes?: SnapshotRefreshCounts;
 };
 
 type SampledWindow = { count: number; max: number; samples: number[] };
@@ -75,6 +88,7 @@ export function createDatabaseTimings() {
 	>();
 	let subjectLoadWait = emptySampled();
 	let errorCodes: Record<string, number> = {};
+	let subjectSnapshots: SubjectSnapshotCounts | null = null;
 
 	function queryStarted(): void {
 		inFlight += 1;
@@ -107,6 +121,32 @@ export function createDatabaseTimings() {
 		addSample({ window: subjectLoadWait, value: waitMs });
 	}
 
+	function recordSubjectSnapshots(
+		counts: Partial<Omit<SubjectSnapshotCounts, "refreshes">>,
+	): void {
+		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
+		subjectSnapshots.upserted += counts.upserted ?? 0;
+		subjectSnapshots.deleted += counts.deleted ?? 0;
+		subjectSnapshots.hits += counts.hits ?? 0;
+		subjectSnapshots.misses += counts.misses ?? 0;
+	}
+
+	function recordSnapshotRefreshes(
+		counts: Partial<SnapshotRefreshCounts>,
+	): void {
+		subjectSnapshots ??= { upserted: 0, deleted: 0, hits: 0, misses: 0 };
+		const refreshes = (subjectSnapshots.refreshes ??= {
+			queued: 0,
+			refreshed: 0,
+			skipped: 0,
+			failed: 0,
+		});
+		for (const field of Object.keys(
+			refreshes,
+		) as (keyof SnapshotRefreshCounts)[])
+			refreshes[field] += counts[field] ?? 0;
+	}
+
 	function drain(): DatabaseTimingsSummary {
 		const summary: DatabaseTimingsSummary = {
 			inFlightMax,
@@ -121,7 +161,9 @@ export function createDatabaseTimings() {
 			),
 			subjectLoadWait: distributionOf({ window: subjectLoadWait }),
 			errorCodes,
+			...(subjectSnapshots ? { subjectSnapshots } : undefined),
 		};
+		subjectSnapshots = null;
 		inFlightMax = inFlight;
 		queries = new Map();
 		subjectLoadWait = emptySampled();
@@ -129,7 +171,14 @@ export function createDatabaseTimings() {
 		return summary;
 	}
 
-	return { queryStarted, queryFinished, recordSubjectLoadWait, drain };
+	return {
+		queryStarted,
+		queryFinished,
+		recordSubjectLoadWait,
+		recordSubjectSnapshots,
+		recordSnapshotRefreshes,
+		drain,
+	};
 }
 
 export type DatabaseTimings = ReturnType<typeof createDatabaseTimings>;

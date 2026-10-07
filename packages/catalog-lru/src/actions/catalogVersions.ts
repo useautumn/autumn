@@ -46,6 +46,7 @@ export const bumpCatalogVersions = ({
 	env: string;
 }): void => {
 	const { catalogVersions } = scope.state;
+	scope.state.changeCount += 1;
 	for (const invalidated of [orgScope({ orgId }), orgEnvScope({ orgId, env })])
 		catalogVersions.set(
 			invalidated,

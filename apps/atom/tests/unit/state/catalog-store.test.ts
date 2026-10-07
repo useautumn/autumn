@@ -109,26 +109,23 @@ describe("catalog store", () => {
 		after.close();
 	});
 
-	test("a catalog another process wrote is seen on the next read", () => {
+	test("a catalog its owner thread stored is installed without writing the file again", () => {
 		const databasePath = catalogPath();
-		const written = openCatalogStore({ databasePath });
-		const reading = openCatalogStore({ databasePath });
-		expect(reading.read()).toBeNull();
+		const owner = openCatalogStore({ databasePath });
+		const other = openCatalogStore({ databasePath });
+		owner.set({ rows, readAt: 1700 });
 
-		written.set({ rows, readAt: 1700 });
-		const first = reading.read();
-		written.set({ rows: features, readAt: 1800 });
+		expect(other.install({ rows: features, readAt: 1800 })).toBe(true);
+		expect(other.install({ rows, readAt: 1750 })).toBe(false);
 
-		expect(first).toEqual({
-			catalog: catalogRowsToCatalog({ rows }),
-			readAt: 1700,
-		});
-		expect(reading.read()).toEqual({
+		expect(other.read()).toEqual({
 			catalog: catalogRowsToCatalog({ rows: features }),
 			readAt: 1800,
 		});
-		written.close();
-		reading.close();
+		// The file still holds what the owner wrote: a reopened store reads that.
+		expect(openCatalogStore({ databasePath }).read()?.readAt).toBe(1700);
+		owner.close();
+		other.close();
 	});
 
 	test("a catalog nobody changed is not read from the file again", () => {
