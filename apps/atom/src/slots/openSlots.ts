@@ -8,7 +8,7 @@ import { customerIdToSlot } from "./customerIdToSlot.js";
 import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
 import type { Slots } from "./types/slots.js";
 
-const CATALOG_FILE = "catalog.sqlite";
+export const CATALOG_FILE = "catalog.sqlite";
 
 /** The filesystem the folder sits on, as Linux lists it: a volume shows as its device, the container's own disk as overlay. */
 const mountOf = ({ folder }: { folder: string }): string | null => {
