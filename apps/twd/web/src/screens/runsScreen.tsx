@@ -55,7 +55,7 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 		cell: ({ row: { original: run } }) => (
 			<div className="flex min-w-0 items-center gap-2 pr-4">
 				<RunLabel run={run} />
-				{run.purpose === "baseline" && (
+				{run.baseline && (
 					<Pill tone="info" className="shrink-0">
 						baseline
 					</Pill>
@@ -219,7 +219,7 @@ export const RunsScreen = () => {
 	const finished = usePagedRuns({
 		status: "finished",
 		outcome: finishedFilter,
-		purpose: baselinesOnly ? "baseline" : undefined,
+		baseline: baselinesOnly || undefined,
 		branch: branch || undefined,
 	});
 	const now = useNow();

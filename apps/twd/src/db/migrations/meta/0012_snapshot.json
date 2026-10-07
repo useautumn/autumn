@@ -1,6 +1,6 @@
 {
-  "id": "2cb3c7c1-e7d7-4080-ba85-af412ce2657d",
-  "prevId": "cab1bf32-ad6e-4a76-b65e-6fba849f9c87",
+  "id": "de180257-1302-47e2-be0f-f8793a991896",
+  "prevId": "2cb3c7c1-e7d7-4080-ba85-af412ce2657d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -655,6 +655,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "packed_samples": {
+          "name": "packed_samples",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "packed_fail_rate": {
+          "name": "packed_fail_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
         },
         "stripe_requests": {
           "name": "stripe_requests",
@@ -1343,6 +1356,18 @@
         "max_workers": {
           "name": "max_workers",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "max_files_per_worker": {
+          "name": "max_files_per_worker",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sizing": {
+          "name": "sizing",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

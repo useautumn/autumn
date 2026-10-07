@@ -11,7 +11,7 @@ import { listFileProfiles } from "./fileProfiles.ts";
 import { insertFileRunStats, summariseRunResources } from "./fileRunStats.ts";
 
 const testDatabaseUrl = process.env.TWD_TEST_DATABASE_URL;
-const MIGRATIONS = ["0010_file_profiles.sql", "0011_run_sizing.sql"].map(
+const MIGRATIONS = ["0010_file_profiles.sql", "0012_run_sizing.sql"].map(
 	(name) => join(import.meta.dir, "../../../db/migrations", name),
 );
 

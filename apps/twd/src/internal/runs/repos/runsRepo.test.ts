@@ -18,6 +18,8 @@ const runRow = ({
 	selection: { groups: ["core"] },
 	status,
 	purpose: "baseline",
+	isBaseline: true,
+	newFailures: null,
 	workersWanted: 588,
 	maxWorkers: null,
 	maxFilesPerWorker: null,

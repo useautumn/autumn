@@ -205,6 +205,8 @@ export const RunSummary = z.object({
 	pinnedSha: z.boolean(),
 	status: RunStatus,
 	purpose: z.enum(["adhoc", "baseline"]),
+	/** Feeds the dev baseline: scheduled, or a full-suite dev run at dev's GitHub HEAD when it started. */
+	baseline: z.boolean(),
 	selection: RunSelection,
 	/** Times each selected file runs; > 1 only for flake checks. */
 	repeat: z.number(),
@@ -219,6 +221,8 @@ export const RunSummary = z.object({
 	cost: RunCost,
 	passed: z.number(),
 	failed: z.number(),
+	/** Failing files that were not failing in the previous baseline; null while live or with no baseline to compare. */
+	newFailures: z.number().nullable(),
 	createdBy: ActorRef,
 	createdAt: z.string(),
 	startedAt: z.string().nullable(),
@@ -308,6 +312,11 @@ export const ListRunsQuery = z.object({
 	/** Narrows finished runs; "failed" includes errored. */
 	outcome: RunOutcome.default("all"),
 	purpose: z.enum(["adhoc", "baseline"]).optional(),
+	/** "true" = only runs that feed the dev baseline (see RunSummary.baseline). */
+	baseline: z
+		.enum(["true", "false"])
+		.transform((value) => value === "true")
+		.optional(),
 	/** Substring match on branch name. */
 	branch: z.string().optional(),
 	/** Opaque `nextCursor` from the previous page. */

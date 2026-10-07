@@ -52,14 +52,17 @@ export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
 	purpose?: RunSummary["purpose"];
+	/** Only runs that feed (true) or don't feed (false) the dev baseline. */
+	baseline?: boolean;
 	branch?: string;
 	cursor?: string;
 	limit: number;
 };
 
-const qs = (params: Record<string, string | number | undefined>) => {
+const qs = (params: Record<string, string | number | boolean | undefined>) => {
 	const entries = Object.entries(params).filter(
-		(e): e is [string, string | number] => e[1] !== undefined && e[1] !== "",
+		(e): e is [string, string | number | boolean] =>
+			e[1] !== undefined && e[1] !== "",
 	);
 	return entries.length
 		? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)]))}`
