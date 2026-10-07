@@ -1,5 +1,6 @@
 import {
 	AffectedResource,
+	ApiVersion,
 	RouteGroup,
 	Scopes,
 	TrackTokensParamsSchema,
@@ -15,8 +16,11 @@ import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanc
 export const handleTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
 	routeGroup: RouteGroup.Balances,
-	body: TrackTokensParamsSchema,
-	resource: AffectedResource.Track,
+	versionedBody: {
+		latest: TrackTokensParamsSchema,
+		[ApiVersion.V2_4]: TrackTokensParamsSchema,
+	},
+	resource: AffectedResource.TrackTokens,
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
@@ -25,6 +29,7 @@ export const handleTrackTokens = createRoute({
 			ctx,
 			input: body,
 		});
+		const isAsync = trackBody.async !== false;
 
 		if (
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: trackBody.customer_id })
@@ -32,12 +37,12 @@ export const handleTrackTokens = createRoute({
 			const { result, status } = await trackOnBalanceWorker({
 				ctx,
 				body: trackBody,
-				isAsync: trackBody.async === true,
+				isAsync,
 			});
 			return c.json(result, status);
 		}
 
-		if (trackBody.async === true) {
+		if (isAsync) {
 			await runAsyncTrack({ ctx, body: trackBody });
 			return c.json(getQueuedTrackResponse({ ctx, body: trackBody }), 202);
 		}

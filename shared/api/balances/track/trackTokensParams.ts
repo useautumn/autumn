@@ -61,7 +61,7 @@ export const TrackTokensParamsSchema = z.object({
 	}),
 	async: z.boolean().optional().meta({
 		description:
-			"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
+			"Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.",
 	}),
 });
 
