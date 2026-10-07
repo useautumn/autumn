@@ -161,11 +161,11 @@ test("failed and canceled report where they stopped and what was not reached", (
 	const failed = statusOf("migration-starter-v2");
 	expect(pill("migration-starter-v2")).toEqual({
 		ring: { tone: "red", fraction: 812 / 1020 },
-		label: "Failed",
+		label: "Incomplete",
 		detail: "at 80%",
 	});
 	expect(failed.card).toEqual({
-		chip: { label: "Failed", details: ["at 80%"] },
+		chip: { label: "Incomplete", details: ["at 80%"] },
 		when: "Sep 15, 14:32 · after 18 minutes",
 		note: null,
 		error:
@@ -188,7 +188,7 @@ test("a failed run explains its error code in plain words", () => {
 	const view = statusOf("migration-credits-reset");
 	expect(pill("migration-credits-reset")).toEqual({
 		ring: { tone: "red", fraction: 881 / 904 },
-		label: "Failed",
+		label: "Incomplete",
 		detail: "at 97%",
 	});
 	expect(view.card.error).toBe(

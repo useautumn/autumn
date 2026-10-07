@@ -182,7 +182,7 @@ const PILLS: Record<
 	},
 	no_changes: () => ({ label: "No changes", fraction: 1 }),
 	failed: ({ progress }) => ({
-		label: "Failed",
+		label: "Incomplete",
 		detail: `at ${progress.percent}`,
 		fraction: progress.fraction,
 	}),
