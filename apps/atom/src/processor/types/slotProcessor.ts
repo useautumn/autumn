@@ -9,8 +9,13 @@ export type SlotProcessorContext = {
 	logger: AutumnLogger;
 };
 
-/** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */
-export type CheckAnswer = { json: string; allowed: boolean };
+/** A check's response as the JSON body it is sent as, with its verdict and whose it was, for the request line and counts. */
+export type CheckAnswer = {
+	json: string;
+	allowed: boolean;
+	orgId: string;
+	featureId: string;
+};
 
 /** Everything one slot does: decide checks, and take in the subjects Autumn sends. Answered here, or on the thread that owns the slot. */
 export type SlotProcessor = {

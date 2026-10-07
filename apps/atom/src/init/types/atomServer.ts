@@ -3,6 +3,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
+import type { CheckCounts } from "../../threads/stats/checkCounts.js";
 import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 import type { AtomHealthSource } from "../atomHealth.js";
 
@@ -18,6 +19,7 @@ export type AtomServerDependencies = {
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	health: AtomHealthSource;
 	counters: ThreadCounters;
+	checkCounts: CheckCounts;
 	held: HeldSubjects;
 };
 

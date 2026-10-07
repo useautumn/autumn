@@ -21,11 +21,8 @@ const COUNTED_PATHS = {
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
 
-/**
- * The outermost layer: every request leaves one line, `[status] METHOD path Nms`, with who it was about, what came
- * back and, when it failed, how. An error thrown below becomes its response here first, so it is logged too. Only a
- * failure's line reads the response; an answered check's carries just the verdict its handler set.
- */
+/** The outermost layer: one line per request, `[status] METHOD path Nms`, with who it was about, what came back and how it
+ * failed. Allowed checks, most of the traffic, are only sampled, and say at what rate; denies and failures are all kept. */
 export function requestLogMiddleware({
 	ctx,
 	handleError,
@@ -44,6 +41,9 @@ export function requestLogMiddleware({
 		const counted =
 			COUNTED_PATHS[context.req.path as keyof typeof COUNTED_PATHS];
 		if (counted) ctx.counters.add(counted);
+		const verdict = context.get("verdict");
+		if (verdict) ctx.checkCounts.add(verdict);
+		if (verdict?.allowed && Math.random() >= ctx.allowLogSampleRate) return;
 
 		const statusCode = context.res.status;
 		const durationMs = Date.now() - startedAt;
@@ -60,9 +60,8 @@ export function requestLogMiddleware({
 					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
 				}),
 			},
-			// Every answered check is logged, slim, for the rollout: it costs ~12 µs/check (~13% of check capacity).
-			// Remove it, or sample answered checks again, when that capacity is needed.
 			res: await loggedResponseOf({ context }),
+			...(verdict?.allowed && { sample_rate: ctx.allowLogSampleRate }),
 			...(forwarded && { forwarded }),
 			...(failure && {
 				errorCode: failure.code,

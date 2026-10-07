@@ -212,4 +212,18 @@ describe("atom env", () => {
 		for (const bad of ["0", "-5", "NaN", "abc", "1.5", "999", "3000000000"])
 			expect(() => everyMs(bad)).toThrow();
 	});
+
+	test("1% of allowed checks are logged unless told otherwise; a rate outside 0 to 1 is refused", () => {
+		const sampleRate = (value?: string) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_ALLOW_LOG_SAMPLE_RATE: value,
+			}).ATOM_ALLOW_LOG_SAMPLE_RATE;
+
+		expect(sampleRate()).toBe(0.01);
+		expect(sampleRate("1")).toBe(1);
+		expect(sampleRate("0")).toBe(0);
+		for (const bad of ["-0.1", "1.5", "abc"])
+			expect(() => sampleRate(bad)).toThrow();
+	});
 });

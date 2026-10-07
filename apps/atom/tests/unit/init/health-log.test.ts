@@ -4,6 +4,7 @@ import {
 	readAtomHealth,
 } from "../../../src/init/atomHealth.js";
 import { startHealthLog } from "../../../src/init/startHealthLog.js";
+import { createCheckCountsBuffer } from "../../../src/threads/stats/checkCounts.js";
 import { createThreadStatsBuffer } from "../../../src/threads/stats/threadStats.js";
 
 const EVERY_MS = 10;
@@ -12,6 +13,7 @@ const source: AtomHealthSource = {
 	bootedAt: "2026-10-07T00:00:00.000Z",
 	restarts: new Int32Array(new SharedArrayBuffer(4)),
 	threadStats: createThreadStatsBuffer({ threads: 2 }),
+	checkCounts: createCheckCountsBuffer({ threads: 2 }),
 };
 /** `Atomics.load` on a plain object throws, so reading this one's health fails. */
 const unreadable = {

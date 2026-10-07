@@ -14,6 +14,10 @@ import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
+	createCheckCountsBuffer,
+	openCheckCounts,
+} from "../../../src/threads/stats/checkCounts.js";
+import {
 	createThreadStatsBuffer,
 	openThreadCounters,
 } from "../../../src/threads/stats/threadStats.js";
@@ -28,12 +32,15 @@ const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
 const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
+const CHECK_COUNTS = createCheckCountsBuffer({ threads: 1 });
 const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
 	threadStats: THREAD_STATS,
+	checkCounts: CHECK_COUNTS,
 };
 const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
+const checkCounts = openCheckCounts({ buffer: CHECK_COUNTS, index: 0 });
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -64,8 +71,12 @@ const createLogger = () => {
 	};
 };
 
-/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder. */
-const createDeployedApp = () => {
+/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder. Every allowed check is logged unless told otherwise. */
+const createDeployedApp = ({
+	allowLogSampleRate = 1,
+}: {
+	allowLogSampleRate?: number;
+} = {}) => {
 	const auth = createDeployedAuth({
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
@@ -83,6 +94,8 @@ const createDeployedApp = () => {
 				autumnApiUrl: AUTUMN_API_URL,
 				health: HEALTH,
 				counters,
+				checkCounts,
+				allowLogSampleRate,
 			},
 		}),
 		logged,
@@ -107,6 +120,8 @@ const createMultiTenantApp = () => {
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
 			counters,
+			checkCounts,
+			allowLogSampleRate: 1,
 		},
 	});
 };
@@ -489,7 +504,7 @@ describe("the request line", () => {
 		});
 	});
 
-	test("every answered check leaves a line with its verdict at res.allowed, where its body has it, and no body", async () => {
+	test("an answered check's line has its verdict at res.allowed, where its body has it, and no body; an allow says its sample rate", async () => {
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 
@@ -505,6 +520,7 @@ describe("the request line", () => {
 			[2, false],
 		] as const) {
 			expect(logged[index]?.fields).toEqual({
+				...(allowed && { sample_rate: 1 }),
 				statusCode: 200,
 				durationMs: expect.any(Number),
 				req: {
@@ -520,6 +536,38 @@ describe("the request line", () => {
 				/^\[200\] POST \/v1\/balances\.check \d+ms$/,
 			);
 		}
+	});
+
+	test("allowed checks are logged at the sample rate; every deny is logged, and every check is counted by org and feature", async () => {
+		const { app, logged } = createDeployedApp({ allowLogSampleRate: 0 });
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		const countsBefore = (await (await app.request("/health")).json())
+			.checkCounts;
+
+		for (let i = 0; i < 3; i++)
+			await app.request("/v1/balances.check", checkMessages());
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
+		);
+		const { checkCounts: counts } = await (await app.request("/health")).json();
+
+		expect(logged.map((line) => line.fields)).toEqual([
+			expect.objectContaining({
+				req: expect.objectContaining({ path: "/v1/subjects.set" }),
+			}),
+			expect.objectContaining({ res: { allowed: false } }),
+		]);
+		expect(logged[1]?.fields).not.toHaveProperty("sample_rate");
+		const messagesBefore = countsBefore.top.find(
+			(count: { featureId: string }) => count.featureId === "messages",
+		) ?? { allowed: 0, denied: 0 };
+		expect(counts.top).toContainEqual({
+			orgId: "org_1",
+			featureId: "messages",
+			allowed: messagesBefore.allowed + 3,
+			denied: messagesBefore.denied + 1,
+		});
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {

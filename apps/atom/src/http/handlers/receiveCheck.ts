@@ -15,8 +15,8 @@ export async function receiveCheck(context: Context<AtomHttpEnv>) {
 	const processor = context
 		.get("slots")
 		.processorFor({ customerId: request.params.customer_id });
-	// Already the response's JSON, wherever the owner thread built it; the verdict is for the request line.
-	const { json, allowed } = await processor.check({ request });
-	context.set("allowed", allowed);
+	// Already the response's JSON, wherever the owner thread built it; the verdict is for the request line and counts.
+	const { json, ...verdict } = await processor.check({ request });
+	context.set("verdict", verdict);
 	return context.body(json, 200, { "content-type": "application/json" });
 }
