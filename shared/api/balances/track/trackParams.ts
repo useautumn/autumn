@@ -57,7 +57,7 @@ const TrackParamsBaseSchema = BalanceParamsBaseSchema.extend({
 
 	async: z.boolean().optional().meta({
 		description:
-			"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
+			"Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.",
 	}),
 });
 
@@ -71,6 +71,9 @@ export type TrackQuery = z.infer<typeof TrackQuerySchema>;
 
 // Only batch track exposes the key: each item dedups on its own.
 export const BatchTrackItemSchema = TrackParamsBaseSchema.extend({
+	async: z.boolean().optional().meta({
+		description: "Ignored: batch track always queues its items.",
+	}),
 	idempotency_key: z.string().optional().meta({
 		description:
 			"Deduplicates this item: a second track with the same key within 24 hours is ignored.",
