@@ -6,10 +6,7 @@ const referencesNewCoupon = (phase: SchedulePhase) =>
 	Array.isArray(phase.discounts) &&
 	phase.discounts.some((discount) => discount.coupon && !discount.discount);
 
-/**
- * Points each phase's new coupon at the discount the subscription update just created for it.
- * Every phase then shares one discount, so the coupon's duration runs once across the schedule instead of restarting per phase.
- */
+/** Every phase shares the subscription's discount, so the coupon's duration runs once instead of restarting per phase. */
 export const linkPhaseDiscountsToSubscription = async ({
 	stripeCli,
 	subscriptionId,

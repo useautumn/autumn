@@ -151,7 +151,6 @@ const keptCustomerEntitlementsFor = ({
 	});
 };
 
-/** The row the request inserts for a segment it doesn't find running, and the usage it keeps from the row it replaces. */
 export const insertSegmentCustomerProduct = ({
 	ctx,
 	billingContext,

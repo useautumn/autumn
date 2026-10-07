@@ -5,10 +5,7 @@ import type { BillingCycleAnchorResetContext } from "./billingCycleAnchorResetCo
 import { consumeBillingCycleAnchorReset } from "./consumeBillingCycleAnchorReset";
 import { planPooledAnchorReset } from "./planPooledAnchorReset";
 
-/**
- * A landed anchor move starts a new cycle for the re-anchored products: their prepaid grants refill,
- * their pools re-anchor, and they bill from Stripe's anchor. Invoiced or not, the plan is the same.
- */
+/** Invoiced or not, a landed anchor move plans the same reset. */
 export const planBillingCycleAnchorReset = ({
 	ctx,
 	eventContext,

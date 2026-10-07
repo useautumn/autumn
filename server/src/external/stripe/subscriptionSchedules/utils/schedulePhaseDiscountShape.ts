@@ -13,7 +13,6 @@ const phaseDiscountRef = (discount: PhaseDiscount) =>
 	idOf(discount.promotion_code) ??
 	"";
 
-/** A phase's discounts as a comparable string: the discount, coupon or promotion code each applies, order-independent. */
 export const schedulePhaseDiscountShape = (phase: {
 	discounts?: PhaseDiscount[] | "" | null;
 }) => JSON.stringify((phase.discounts || []).map(phaseDiscountRef).sort());

@@ -54,7 +54,6 @@ export const customerProductToArrearLineItems = ({
 		includeZeroAmounts?: boolean;
 		/** Scopes usage line ids to e.g. a Stripe invoice so retries regenerate the same ids. */
 		idempotencyScope?: string;
-		/** Anchor of the period a billing cycle anchor move cut short; usage is charged from that period's start. */
 		shortenedPeriodAnchorMs?: number;
 		invoiceCredits?: {
 			idempotencyScope?: string;

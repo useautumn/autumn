@@ -4,7 +4,7 @@ import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/ha
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
-/** A cycle invoice starts every product's new period, so every prepaid grant refills. Anchor moves refill in planBillingCycleAnchorReset. */
+/** A cycle invoice starts every product's new period, so every prepaid grant refills. */
 export const processPrepaidPricesForInvoiceCreated = ({
 	ctx,
 	eventContext,

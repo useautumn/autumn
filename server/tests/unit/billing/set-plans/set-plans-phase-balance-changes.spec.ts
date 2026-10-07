@@ -153,7 +153,6 @@ const planRow = ({
 		endedAt,
 		options,
 		internalEntityId,
-		// A running paid plan is billed on a Stripe subscription.
 		subscriptionIds: status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 		customerEntitlements: balances(rowId),
 		customerPrices: product.prices.map((price) =>

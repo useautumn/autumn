@@ -11,10 +11,7 @@ import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/li
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 import { getRefundLineItems } from "@/internal/billing/v2/utils/lineItems/getRefundLineItems";
 
-/**
- * Restarts a plan the request didn't change on a subscription whose cycle resets now, as Stripe does for
- * every item: unused time credited, a full new period charged, accrued usage billed and balances refilled.
- */
+/** Re-bills a plan the request didn't change, as Stripe restarts every item when the cycle resets now. */
 export const computeSharedSubscriptionResetBilling = ({
 	ctx,
 	billingContext,

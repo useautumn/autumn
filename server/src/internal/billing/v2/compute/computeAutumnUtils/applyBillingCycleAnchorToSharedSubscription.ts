@@ -76,7 +76,7 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 		});
 	};
 
-	// Stripe closes every item's period when the cycle resets now; finalizeLineItems waives the flat lines under none.
+	// Stripe closes every item's period when the cycle resets now.
 	const rebillsUnchangedPlans =
 		billingContext.requestedBillingCycleAnchor === "now";
 	const isRebilledByReset = (customerProduct: FullCusProduct) =>

@@ -10,7 +10,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 
-/** The plan already bills a usage price's arrears when one of its lines charges that customer price. */
 const isBilledByPlan = ({
 	lineItem,
 	billedLineItems,
@@ -37,7 +36,6 @@ export const fetchReplacedSubscriptionPreviewInputs = async ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	outgoingCustomerProducts: FullCusProduct[];
-	/** The immediate invoice's lines, so a warning never contradicts a charge. */
 	billedLineItems: LineItem[];
 }) => {
 	const replacedStripeSubscription = billingContext.replacedStripeSubscription;

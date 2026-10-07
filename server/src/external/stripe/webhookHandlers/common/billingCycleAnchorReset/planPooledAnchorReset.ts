@@ -4,10 +4,7 @@ import { computeScheduledPooledAnchorResetPlan } from "@/internal/billing/v2/poo
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import type { BillingCycleAnchorResetContext } from "./billingCycleAnchorResetContext";
 
-/**
- * A completed anchor move re-anchors the pools its products feed: shares move to the new cycle and the
- * pool row's cycle ends now, so the next read's lazy reset refills it.
- */
+/** The pool row's cycle ends now, so the next read's lazy reset refills it. */
 export const planPooledAnchorReset = ({
 	ctx,
 	eventContext,

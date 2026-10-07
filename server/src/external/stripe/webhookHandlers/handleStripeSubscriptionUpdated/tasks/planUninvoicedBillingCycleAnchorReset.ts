@@ -8,10 +8,7 @@ import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpd
 import { isUninvoicedBillingCycleAnchorMove } from "../isUninvoicedBillingCycleAnchorMove";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
-/**
- * A reset phase with proration_behavior none moves Stripe's anchor without an invoice, so
- * invoice.created never plans the anchor reset; the anchor move itself does.
- */
+/** Under proration_behavior none Stripe moves the anchor without an invoice, so invoice.created never sees the reset. */
 export const planUninvoicedBillingCycleAnchorReset = async ({
 	ctx,
 	eventContext,

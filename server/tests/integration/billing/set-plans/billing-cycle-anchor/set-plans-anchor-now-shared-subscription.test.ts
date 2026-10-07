@@ -1,7 +1,4 @@
-/**
- * Resetting the cycle now restarts every item on the Stripe subscription, so plans the request
- * didn't change (other entities' plans, retained undeclared plans) are re-billed the way Stripe would.
- */
+/** A reset-now restarts every item on the Stripe subscription, so plans the request didn't change are re-billed too. */
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, SetPlansParamsV0Input } from "@autumn/shared";

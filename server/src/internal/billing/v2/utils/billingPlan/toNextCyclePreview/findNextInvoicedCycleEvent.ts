@@ -4,10 +4,7 @@ import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedul
 import { getNextCycleEvent, type NextCycleEvent } from "./getNextCycleEvent";
 import { normalizeMs, SECOND_MS } from "./getNextCycleEvent/timeUtils";
 
-/**
- * The next event Stripe invoices, with the cycle anchor it bills from. An anchor reset under
- * proration_behavior none moves the anchor without an invoice, so the search resumes from it.
- */
+/** An anchor reset under proration_behavior none moves the anchor without an invoice, so the search resumes from it. */
 export const findNextInvoicedCycleEvent = ({
 	billingContext,
 	customerProducts,

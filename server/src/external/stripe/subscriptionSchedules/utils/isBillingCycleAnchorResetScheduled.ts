@@ -1,7 +1,6 @@
 import { secondsToMs, timestampsMatch } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Stripe's live schedule still restarts the cycle at this reset: a phase_start phase begins in that second. */
 export const isBillingCycleAnchorResetScheduled = ({
 	resetsAt,
 	stripeSubscriptionSchedule,

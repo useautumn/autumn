@@ -125,7 +125,6 @@ export const setPlansPreviewToWarnings = ({
 	lineItems?: LineItem[];
 	stripeSubscriptionScope?: StripeSubscriptionScope;
 	resetsCycleNow?: boolean;
-	/** Plans live on the subscription before the request. */
 	liveCustomerProducts?: FullCusProduct[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);

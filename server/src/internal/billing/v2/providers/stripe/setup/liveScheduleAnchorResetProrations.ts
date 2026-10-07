@@ -23,7 +23,7 @@ const STRIPE_RESET_PRORATION_BEHAVIORS: Partial<
 	none: "none",
 };
 
-/** Where a plan change scheduled on this schedule starts; its own proration rule decides those resets, not the live one. */
+/** A scheduled plan change's own proration decides resets at its start, not the live schedule's. */
 const planChangeStarts = ({
 	billingContext,
 	stripeSubscriptionSchedule,
@@ -59,10 +59,7 @@ const planChangeStarts = ({
 	);
 };
 
-/**
- * The proration each pending anchor reset of the running plans carries on the live Stripe schedule,
- * so rebuilding the schedule keeps it whichever action scheduled the reset.
- */
+/** Keeps a pending reset's proration through a schedule rebuild, whichever action scheduled it. */
 export const liveScheduleAnchorResetProrations = ({
 	billingContext,
 }: {

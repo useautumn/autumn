@@ -21,7 +21,6 @@ export type ResolvedSegment = InstanceIdentity & {
 	desired?: DesiredSegment;
 	/** The saved segment whose rows carry this one; absent when a row is inserted. */
 	carriedBy?: SavedSegment;
-	/** The inserted row takes over the cancellation of the canceling row it replaces. */
 	inheritsCancellation?: boolean;
 };
 

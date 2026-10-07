@@ -41,7 +41,6 @@ const toPriceData = ({
 	},
 });
 
-/** The twin's items with the changes applied: one unit off a matching item, one new item per added unit. */
 const applyChangesToTwinItems = ({
 	twinSubscription,
 	changes,
@@ -83,10 +82,7 @@ const applyChangesToTwinItems = ({
 	];
 };
 
-/**
- * What Stripe invoices at a reset-now on a Stripe-native twin of the customer's live
- * subscription. A preview on Autumn's subscription is skewed: in flexible mode Stripe only credits what it billed itself.
- */
+/** Previewed on a Stripe-native twin, since in flexible mode Stripe only credits what it billed itself. */
 export const previewStripeTwinResetNowTotal = async ({
 	ctx,
 	customerId,

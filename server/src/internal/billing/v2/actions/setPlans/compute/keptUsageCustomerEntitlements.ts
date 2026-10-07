@@ -10,10 +10,7 @@ import {
 import { isOnReplacedSubscription } from "../utils/isOnReplacedSubscription";
 import { isUnbilledByStripe } from "../utils/isUnbilledByStripe";
 
-/**
- * Usage rows the replacement keeps on the same usage price and allowance. Stripe leaves such a metered item in
- * place, so its usage stays for the period-end invoice; a reset now closes that period and bills it instead.
- */
+/** Stripe leaves a metered item on the same price in place, so its usage stays for the period-end invoice. */
 export const keptUsageCustomerEntitlements = ({
 	billingContext,
 	outgoingCustomerProduct,
@@ -25,7 +22,7 @@ export const keptUsageCustomerEntitlements = ({
 	incomingPrices: Price[];
 	incomingEntitlements: Entitlement[];
 }): FullCustomerEntitlement[] => {
-	// Both start a new Stripe period, so the old one's usage is billed now, never carried.
+	// A reset now or an unbilled plan starts a new Stripe period, so the old usage is billed now, never carried.
 	const resetsCycleNow = billingContext.requestedBillingCycleAnchor === "now";
 	if (resetsCycleNow) return [];
 	if (

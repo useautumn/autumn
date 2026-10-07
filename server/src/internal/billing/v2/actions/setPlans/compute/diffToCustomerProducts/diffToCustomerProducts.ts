@@ -35,7 +35,6 @@ export type SetPlansCustomerProductChanges = {
 	trialStartedCustomerProducts: TrialStartedCustomerProduct[];
 	deleteCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
-	/** Usage rows a replacement starting now keeps on the same price, so it carries to renewal instead of billing now. */
 	keptUsageCustomerEntitlementIds: Set<string>;
 	keptCustomerProducts: FullCusProduct[];
 	/** The row each resolved segment runs on once the plan executes. */

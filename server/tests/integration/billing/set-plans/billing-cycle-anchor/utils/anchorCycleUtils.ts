@@ -108,7 +108,6 @@ export const calculateStripeProratedSwitch = async ({
 	return new Decimal(charge).minus(credit).toNumber();
 };
 
-/** The live subscription item billed on this interval, on a subscription that mixes intervals. */
 const findStripeItemByInterval = async ({
 	ctx,
 	customerId,
@@ -176,7 +175,6 @@ export const expectStripeItemPeriodEnd = async ({
 	expect(item.current_period_end).toBe(msToSeconds(periodEndMs));
 };
 
-/** A phase that starts now and resets the billing cycle there. */
 export const resetNowPhase = ({
 	planIds,
 	prorationBehavior,

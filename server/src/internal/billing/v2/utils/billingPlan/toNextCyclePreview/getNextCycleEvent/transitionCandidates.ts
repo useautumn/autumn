@@ -25,7 +25,6 @@ const getFutureTrialEndsAt = ({
 	return trialEndsAt[0];
 };
 
-/** Builds preview candidates from Stripe schedule transitions, anchor resets (requested or pending) and trial ends. */
 export const buildNextCycleTransitionPoints = ({
 	billingContext,
 	customerProducts,

@@ -21,7 +21,6 @@ export const billingPlanToAttachPreview = async ({
 		| MultiAttachBillingContext
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
-	/** Scope next_cycle to a subset of products (e.g. one subscription's). */
 	nextCycleCustomerProductFilter?: (customerProduct: FullCusProduct) => boolean;
 }): Promise<AttachPreviewResponse> => {
 	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(

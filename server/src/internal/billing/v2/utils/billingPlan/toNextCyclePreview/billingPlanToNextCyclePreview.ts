@@ -123,7 +123,6 @@ export const billingPlanToNextCyclePreview = ({
 	billingPlan: BillingPlan;
 	/** Scope the preview to a subset of products (e.g. one subscription's). */
 	customerProductFilter?: (customerProduct: FullCusProduct) => boolean;
-	/** From resolveSchedulePhaseProrations, so the preview prorates every phase start the way execute does. */
 	phaseProrations: SchedulePhaseProration[];
 	options?: NextCycleLineItemOptions;
 }): NextCyclePreviewResult => {

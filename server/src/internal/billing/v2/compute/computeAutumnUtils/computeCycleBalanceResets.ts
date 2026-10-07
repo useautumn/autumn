@@ -10,7 +10,6 @@ import {
 } from "@autumn/shared";
 import { initCustomerEntitlementBalance } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementBalance";
 
-/** Refills every cycle-resetting balance to its full grant, as a new billing period starts. */
 export const computeCycleBalanceResets = ({
 	billingContext,
 	customerProduct,

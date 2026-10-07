@@ -114,7 +114,6 @@ export const billingPlanToNextCycleLineItems = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	nextCycleStart: number;
-	/** Set when the cycle starts at a mid-period anchor: lines bill only their extra window. */
 	anchorResetProration?: AnchorResetProration;
 	options?: NextCycleLineItemOptions;
 }) => {

@@ -1,7 +1,4 @@
-/**
- * invoice_previews with a scheduled billing_cycle_anchor pending: the next invoice is the one Stripe's own
- * upcoming invoice for the schedule shows, at the anchor (prorated) or, under none, a full renewal after it.
- */
+/** invoice_previews with a pending billing_cycle_anchor matches Stripe's upcoming invoice for the schedule. */
 
 import { expect, test } from "bun:test";
 import {

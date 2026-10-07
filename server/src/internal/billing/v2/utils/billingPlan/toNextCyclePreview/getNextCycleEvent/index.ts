@@ -26,9 +26,7 @@ export const getNextCycleEvent = ({
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	anchorMs: number;
-	/** From resolveSchedulePhaseProrations, the resolver execute builds the Stripe schedule with. */
 	phaseProrations: SchedulePhaseProration[];
-	/** Search for events after this time; defaults to now. */
 	fromMs?: number;
 }): NextCycleEvent => {
 	const currentEpochMs = fromMs;

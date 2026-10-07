@@ -1,5 +1,5 @@
-/** What set_plans does with overage accrued on a plan it changes, mirroring Stripe flexible billing
- * (handoffs/ATMN-729/stripe-usage-on-switch.md). Pro: $20/mo, 100 messages included, $0.10 over; 150 tracked = $5. */
+/** set_plans and overage accrued on a plan it changes, mirroring Stripe flexible billing.
+ * Pro: $20/mo, 100 messages included, $0.10 over; 150 tracked = $5. */
 
 import { expect, test } from "bun:test";
 import {
@@ -51,7 +51,6 @@ const setupProInOverage = async ({ customerId }: { customerId: string }) => {
 	return { ...scenario, pro, premium, addOn };
 };
 
-/** Messages usage lines across every Stripe invoice the customer has, in dollars. */
 const invoicedMessagesAmounts = async ({
 	ctx,
 	customerId,
@@ -82,7 +81,6 @@ const previewMessagesAmounts = (preview: SetPlansPreviewResponse) =>
 const previewWarnsUsageNotBilled = (preview: SetPlansPreviewResponse) =>
 	preview.warnings.some((warning) => warning.type === "usage_not_billed");
 
-/** Previews then runs set_plans, returning what the preview showed and what Stripe invoiced for overage. */
 const previewAndSetPlans = async ({
 	scenario,
 	params,

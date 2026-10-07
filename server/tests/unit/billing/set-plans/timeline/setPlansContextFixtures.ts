@@ -45,7 +45,6 @@ export const running = ({
 	startsAt = NOW - ms.days(10),
 	endedAt = null,
 	internalEntityId,
-	// A running paid plan is billed on a Stripe subscription.
 	subscriptionIds = status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 }: {
 	product: FullProduct;

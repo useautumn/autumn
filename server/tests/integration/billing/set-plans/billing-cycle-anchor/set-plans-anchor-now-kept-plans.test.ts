@@ -1,7 +1,4 @@
-/**
- * Resetting the cycle now restarts every plan on the subscription, so plans the request keeps are
- * billed like changed ones: unused time credited, a full new period charged, balances re-anchored.
- */
+/** A reset-now restarts every plan on the subscription, so kept plans are billed like changed ones. */
 
 import { expect, test } from "bun:test";
 import type {

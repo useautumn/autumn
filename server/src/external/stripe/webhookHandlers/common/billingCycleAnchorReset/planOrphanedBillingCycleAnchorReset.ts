@@ -6,10 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
-/**
- * Drops a reset Stripe will never make: the product keeps its cycle, and balances clamped to the reset
- * go back to their own next cycle end.
- */
+/** The product keeps its cycle; balances clamped to the dropped reset go back to their own next cycle end. */
 export const planOrphanedBillingCycleAnchorReset = ({
 	customerProduct,
 	nowMs,

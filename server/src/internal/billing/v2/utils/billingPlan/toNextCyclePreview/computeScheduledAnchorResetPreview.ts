@@ -16,7 +16,6 @@ export const computeScheduledAnchorResetPreview = ({
 	intervalCount,
 }: {
 	billingContext: BillingContext;
-	/** The reset event's own anchor: requested now, or already pending on the subscription. */
 	scheduledAnchor: number;
 	interval: BillingInterval;
 	intervalCount: number;

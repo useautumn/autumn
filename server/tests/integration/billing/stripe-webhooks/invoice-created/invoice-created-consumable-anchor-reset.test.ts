@@ -1,7 +1,4 @@
-/**
- * A scheduled billing cycle anchor move bills the usage of the period it cuts short on the anchor invoice.
- * The usage line covers that period: from the last renewal to the anchor, never from a cycle of the new anchor.
- */
+/** A scheduled anchor move bills the cut-short period's usage, from the last renewal to the anchor, on the anchor invoice. */
 
 import { expect, test } from "bun:test";
 import { ms, secondsToMs } from "@autumn/shared";

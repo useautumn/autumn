@@ -8,12 +8,11 @@ export type SetPlansPolicies = {
 	canceling: "keepCancellation" | "recreate";
 	/** A past-due plan re-listed unchanged continues, or is recreated. */
 	pastDue: "continue" | "recreate";
-	/** Whether live rows may carry a desired plan; a replaced subscription may force recreation, a cycle reset now recreates every recurring one. */
+	/** Whether live rows may carry a desired plan; a replaced subscription may force recreation. */
 	liveRows:
 		| "carry"
 		| "recreate"
 		| "recreateRenewing"
 		| "recreateWhenPaidRecurringStarts";
-	/** A plan no Stripe subscription bills is recreated, starting its subscription; no_billing_changes keeps it. */
 	unbilledRows: "carry" | "recreate";
 };

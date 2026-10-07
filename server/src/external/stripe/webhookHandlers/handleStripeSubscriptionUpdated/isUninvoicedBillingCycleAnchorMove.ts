@@ -1,6 +1,5 @@
 import type { StripeSubscriptionUpdatedContext } from "./stripeSubscriptionUpdatedContext";
 
-/** This event moved the anchor without an invoice, and the subscription hasn't moved again since. */
 export const isUninvoicedBillingCycleAnchorMove = ({
 	subscriptionUpdatedContext,
 }: {

@@ -25,7 +25,6 @@ import { getCustomerPricesWithCustomerProducts } from "@/external/stripe/webhook
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
-/** What a prepaid refill reads: the subscription's new period, the clock, and which products just re-anchored. */
 type PrepaidCycleResetContext = Pick<
 	InvoiceCreatedContext,
 	"stripeSubscription" | "nowMs" | "billingCycleAnchorResetCustomerProductIds"
@@ -170,7 +169,7 @@ const processPrepaidPrice = ({
 	});
 };
 
-/** Plans the new cycle of every prepaid grant on these products; a re-anchored product's grants move to Stripe's anchor too. */
+/** A re-anchored product's grants also move to Stripe's anchor. */
 export const planPrepaidCycleResets = ({
 	ctx,
 	eventContext,

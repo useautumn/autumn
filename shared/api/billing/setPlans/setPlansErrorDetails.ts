@@ -104,7 +104,6 @@ export type SetPlansBackdateConflict = z.infer<
 	typeof SetPlansBackdateConflictSchema
 >["conflict"];
 
-/** Stripe can't reset a trialing subscription's cycle now: the trial end anchors it. */
 export const SetPlansTrialingCycleResetSchema = z.object({
 	type: z.literal("trialing_cycle_reset"),
 	trial_ends_at: z.number(),

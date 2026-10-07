@@ -4,7 +4,6 @@ import {
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 
-/** The row runs on the Stripe subscription this request replaces. */
 export const isOnReplacedSubscription = ({
 	billingContext,
 	customerProduct,

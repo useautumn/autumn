@@ -1,10 +1,7 @@
 import type { BillingContext, FullCusProduct } from "@autumn/shared";
 import { isBillingCycleAnchorResetScheduled } from "@/external/stripe/subscriptionSchedules/utils/isBillingCycleAnchorResetScheduled";
 
-/**
- * Saved anchor resets still ahead that the live Stripe schedule restarts the cycle at.
- * A stale billing_cycle_anchor_resets_at (e.g. a released schedule) is not a reset Stripe will bill.
- */
+/** A stale billing_cycle_anchor_resets_at (e.g. a released schedule) is not a reset Stripe will bill. */
 export const pendingAnchorResets = ({
 	billingContext,
 	customerProducts,

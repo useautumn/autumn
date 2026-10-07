@@ -13,10 +13,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * billing_cycle_anchor "now" + proration_behavior "none" with carry_over_balances, like Stripe: the new plan's
- * items are charged a full new period and the outgoing plan is credited nothing. Carried balances still move.
- */
+/** Reset-now + none with carry_over_balances: the new plan is charged in full, the old one credited nothing, balances carry. */
 
 test.concurrent(
 	`${chalk.yellowBright("anchor-reset-carry-over 4: monthly messages + one-off prepaid -> monthly charges the new plan in full, credits nothing and carries the balance")}`,

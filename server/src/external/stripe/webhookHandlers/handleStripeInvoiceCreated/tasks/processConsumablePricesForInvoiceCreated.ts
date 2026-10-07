@@ -454,7 +454,6 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		isPeriodicInvoice ||
 		(customer_product !== null &&
 			anchorResetCustomerProductIds.has(customer_product.id));
-	// The re-anchored product's usage covers the period the move cut short, which started on its previous anchor.
 	const getShortenedPeriodAnchorMs = (customerProduct: FullCusProduct) =>
 		anchorResetCustomerProductIds.has(customerProduct.id)
 			? (customerProduct.billing_cycle_anchor ?? undefined)

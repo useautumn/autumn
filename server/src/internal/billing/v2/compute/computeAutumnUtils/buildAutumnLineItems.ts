@@ -28,9 +28,7 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts?: FullCusProduct[];
 	billingContext: BillingContext;
 	includeArrearLineItems?: boolean;
-	/** Usage the incoming plan carries is billed at its period end, not here. */
 	carriesUsage?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
-	/** A plan nothing was charged for has no unused time to credit. */
 	creditsUnusedTime?: (customerProduct: FullCusProduct) => boolean;
 }) => {
 	const { logger } = ctx;

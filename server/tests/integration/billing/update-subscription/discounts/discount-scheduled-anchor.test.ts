@@ -1,9 +1,5 @@
-/**
- * A discount added by update_subscription while a pending billing cycle anchor keeps the subscription on a schedule
- * reaches every schedule phase the coupon's duration covers.
- * Plain Stripe keeps a coupon added to a scheduled subscription on the current phase only; Autumn owns the schedule,
- * so it carries the coupon as it would last on the same subscription without one.
- */
+/** A coupon added while a pending anchor keeps the subscription on a schedule reaches every phase its duration covers,
+ * as it would on an unscheduled subscription; plain Stripe keeps it on the current phase only. */
 
 import { expect, test } from "bun:test";
 import {

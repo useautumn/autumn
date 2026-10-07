@@ -24,7 +24,6 @@ export const resolvedSegmentId = ({
 	startsAt: number;
 }) => `${key}@${startsAt}`;
 
-/** The policy keeps a canceling live plan's cancellation through a re-list. */
 const keepsLiveCancellation = ({
 	liveRow,
 	policies,
@@ -130,7 +129,6 @@ const carriedEndsAt = ({
 		? keptCancellationEndsAt({ savedSegment, policies })
 		: planned.endsAt;
 
-/** The live plan a recreated segment replaces now, when it keeps that plan's cancellation. */
 const findInheritedCancellation = ({
 	planned,
 	savedSegments,

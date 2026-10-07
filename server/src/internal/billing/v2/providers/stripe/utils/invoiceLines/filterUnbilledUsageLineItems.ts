@@ -1,10 +1,7 @@
 import type { AutumnBillingPlan, LineItem } from "@autumn/shared";
 import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
 
-/**
- * Accrued usage of a replaced plan no Stripe subscription billed, which no subscription invoice carries.
- * Its unused-time credits stay out: Stripe never charged that plan, so there is nothing to refund.
- */
+/** Credits stay out: Stripe never charged a plan no subscription billed, so there is nothing to refund. */
 export const filterUnbilledUsageLineItems = ({
 	autumnBillingPlan,
 }: {

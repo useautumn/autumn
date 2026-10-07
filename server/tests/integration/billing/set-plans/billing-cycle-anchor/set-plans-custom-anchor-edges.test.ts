@@ -654,7 +654,7 @@ test.concurrent(
 		expect(preview.total).toBe(0);
 
 		await autumnV2_4.billing.setPlans(params);
-		// Stop while the anchor invoice is still a draft so invoice.created can add the usage line, as advanceToNextInvoice withPause does.
+		// Stop while the anchor invoice is still a draft so invoice.created can add the usage line.
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,

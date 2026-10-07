@@ -4,10 +4,7 @@ import {
 } from "@autumn/shared";
 import type { SchedulePhaseProration } from "@/internal/billing/v2/providers/stripe/setup/resolveSchedulePhaseProrations";
 
-/**
- * The request's proration, carried onto the schedule phase that resets the live cycle on its
- * timestamp anchor. Stripe applies a phase's own proration_behavior when that phase starts.
- */
+/** Stripe applies a phase's own proration_behavior when that phase starts. */
 export const requestedAnchorResetProration = ({
 	billingContext,
 }: {

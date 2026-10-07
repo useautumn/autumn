@@ -10,10 +10,7 @@ import { isOrphanedBillingCycleAnchorReset } from "../../common/billingCycleAnch
 import { planOrphanedBillingCycleAnchorReset } from "../../common/billingCycleAnchorReset/planOrphanedBillingCycleAnchorReset";
 import type { StripeScheduleReleasedContext } from "../stripeScheduleReleasedContext.js";
 
-/**
- * A released schedule takes its pending anchor resets with it, so Autumn drops them too. Like the
- * phase detach, Autumn-managed schedules keep theirs: restore rebuilds the reset with its phases.
- */
+/** A released schedule takes its pending anchor resets with it, so Autumn drops them too. */
 export const clearReleasedScheduleAnchorResets = async ({
 	ctx,
 	eventContext,

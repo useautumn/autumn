@@ -87,7 +87,6 @@ const previewAmounts = (preview: SetPlansPreviewResponse) => ({
 		.map((lineItem) => lineItem.total),
 });
 
-/** Every Stripe invoice line the customer has, split into messages and other lines, in dollars. */
 const invoicedAmounts = async ({
 	scenario,
 }: {
@@ -140,7 +139,6 @@ const messagesUsage = async ({
 	return customer.features[TestFeature.Messages]?.usage;
 };
 
-/** Re-lists pro, as it is or customized, and reports what Autumn and Stripe billed. */
 const relistPro = async ({
 	customerId,
 	customize,

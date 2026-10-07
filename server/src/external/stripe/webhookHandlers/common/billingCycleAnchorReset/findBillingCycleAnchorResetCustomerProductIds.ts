@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Products whose pending anchor reset is the anchor the Stripe subscription now has. */
 export const findBillingCycleAnchorResetCustomerProductIds = ({
 	stripeSubscription,
 	customerProducts,

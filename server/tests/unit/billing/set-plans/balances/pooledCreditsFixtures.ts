@@ -183,7 +183,6 @@ export const entityRow = ({
 		endedAt,
 		internalEntityId: entity.internal_id,
 		entityId: entity.id ?? undefined,
-		// A running paid plan is billed on a Stripe subscription.
 		subscriptionIds: status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 		customerEntitlements: product.entitlements.map((entitlement) => {
 			const customerEntitlement = customerEntitlements.create({

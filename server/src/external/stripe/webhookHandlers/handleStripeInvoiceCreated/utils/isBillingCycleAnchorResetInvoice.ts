@@ -1,6 +1,6 @@
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 
-/** Stripe raises the scheduled anchor move as a subscription_update invoice; it closes the re-anchored products' shortened period. */
+/** Stripe raises a scheduled anchor move as a subscription_update invoice. */
 export const isBillingCycleAnchorResetInvoice = ({
 	eventContext,
 }: {

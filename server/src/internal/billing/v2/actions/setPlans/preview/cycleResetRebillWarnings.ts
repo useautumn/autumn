@@ -34,19 +34,14 @@ const listedLabels = (labels: string[]): SetPlansTextPart[] =>
 			: [punctuationText(","), boldText(label)];
 	});
 
-/**
- * A reset-now restarts every item on the subscription, as Stripe does, so plans the request
- * didn't change (other entities', kept or retained plans) are re-billed too.
- */
+/** A reset-now restarts every item on the subscription, as Stripe does, so unchanged plans are re-billed too. */
 export const cycleResetRebillWarnings = ({
 	resetsCycleNow,
 	lineItems,
 	liveCustomerProducts,
 }: {
 	resetsCycleNow: boolean;
-	/** The line items the immediate invoice bills. */
 	lineItems: LineItem[];
-	/** Plans live on the subscription before the request. */
 	liveCustomerProducts: FullCusProduct[];
 }): Omit<SetPlansPreviewWarning, "severity">[] => {
 	if (!resetsCycleNow) return [];
