@@ -9,7 +9,21 @@ import { describeRateLimitPolicy } from "./golden/describeRateLimitPolicy.js";
 import {
 	describeAllGoldenRoutes,
 	GOLDEN_ROUTES,
+	toEnvironmentStableLimit,
 } from "./golden/goldenRateLimitRequests.js";
+
+const toEnvironmentStableDefaults = (
+	defaults: Record<string, { limit: number; windowMs: number; scope: string }>,
+) =>
+	Object.fromEntries(
+		Object.entries(defaults).map(([name, entry]) => [
+			name,
+			{
+				...entry,
+				limit: toEnvironmentStableLimit({ name, limit: entry.limit }),
+			},
+		]),
+	);
 
 const toGoldenPath = (url: string) =>
 	url.replace(":customer_id", "cus_golden").replace(":entity_id", "ent_golden");
@@ -46,6 +60,8 @@ describe("rate-limit golden resolution", () => {
 
 	test("admin defaults match the recorded layer defaults", () => {
 		expect(listRateLimitDefaults()).toEqual(listLegacyAdminDefaults());
-		expect(listRateLimitDefaults()).toMatchSnapshot();
+		expect(
+			toEnvironmentStableDefaults(listRateLimitDefaults()),
+		).toMatchSnapshot();
 	});
 });

@@ -6,7 +6,7 @@ export type GoldenLayer = {
 	scope: "perOrg" | "perCustomer";
 	name: string;
 	overrideKey: string;
-	limit: number;
+	limit: number | string;
 	windowMs: number;
 	key: string;
 	keyWithoutCustomerId: string;
@@ -106,6 +106,31 @@ export const createGoldenCtx = ({
 	customerId,
 });
 
+// general reads NODE_ENV when the policy module loads; unit shards import it under either value.
+export const toEnvironmentStableLimit = ({
+	name,
+	limit,
+}: {
+	name: string;
+	limit: number | string;
+}) => {
+	if (name !== "general") return limit;
+	if (limit !== 25 && limit !== 1000) {
+		throw new Error(`unexpected general limit ${limit}`);
+	}
+	return "25 (1000 in development)";
+};
+
+const toEnvironmentStableResolution = (
+	resolution: GoldenResolution,
+): GoldenResolution => ({
+	...resolution,
+	layers: resolution.layers.map((layer) => ({
+		...layer,
+		limit: toEnvironmentStableLimit(layer),
+	})),
+});
+
 const groupVersionsByResolution = ({
 	goldenRoute,
 	describeRateLimit,
@@ -118,7 +143,9 @@ const groupVersionsByResolution = ({
 		{ versions: string[]; resolution: GoldenResolution }
 	>();
 	for (const apiVersion of GOLDEN_VERSIONS) {
-		const resolution = describeRateLimit({ route: goldenRoute, apiVersion });
+		const resolution = toEnvironmentStableResolution(
+			describeRateLimit({ route: goldenRoute, apiVersion }),
+		);
 		const serialized = JSON.stringify(resolution);
 		const group = groups.get(serialized) ?? { versions: [], resolution };
 		group.versions.push(apiVersion ?? "none");
