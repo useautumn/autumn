@@ -20,6 +20,7 @@ import {
 	normalizeRetryItemStatuses,
 	type RetryableMigrationItemRunStatus,
 } from "../../run/utils/retryItemStatuses.js";
+import { withMigrationPhase } from "../../run/utils/withMigrationPhase.js";
 
 export type MigrationItemTrackingResult = {
 	itemPreview: MigrationItemPreview | null;
@@ -130,16 +131,20 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 	run: () => Promise<T>;
 }): Promise<T | undefined> => {
 	try {
-		const result = await run();
+		const result = await withMigrationPhase({ phase: "customer", run });
 
-		await markItemRunFinished({
-			ctx,
-			migrationInternalId,
-			migrationRunId,
-			dryRun,
-			item,
-			status: result.status,
-			skipReason: result.skipReason,
+		await withMigrationPhase({
+			phase: "settle",
+			run: () =>
+				markItemRunFinished({
+					ctx,
+					migrationInternalId,
+					migrationRunId,
+					dryRun,
+					item,
+					status: result.status,
+					skipReason: result.skipReason,
+				}),
 		});
 
 		await recordMigrationItemEvent({
@@ -205,13 +210,17 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 			return;
 		}
 
-		await migrationItemRunRepo.markFailed({
-			ctx,
-			migrationInternalId,
-			migrationRunId,
-			dryRun,
-			itemKind: item.kind,
-			itemId: item.internal_id,
+		await withMigrationPhase({
+			phase: "settle",
+			run: () =>
+				migrationItemRunRepo.markFailed({
+					ctx,
+					migrationInternalId,
+					migrationRunId,
+					dryRun,
+					itemKind: item.kind,
+					itemId: item.internal_id,
+				}),
 		});
 
 		await recordMigrationItemEvent({
@@ -253,15 +262,20 @@ export const withMigrationItemTracking = async <
 		const retryStatuses = normalizeRetryItemStatuses({
 			retryItemStatuses,
 		});
-		const claim = await migrationItemRunRepo.claim({
-			ctx,
-			migrationInternalId,
-			migrationRunId,
-			dryRun,
-			itemKind: item.kind,
-			itemId: item.internal_id,
-			claimBehavior: retryStatuses.length > 0 ? "retry_statuses" : "claim_new",
-			retryStatuses,
+		const claim = await withMigrationPhase({
+			phase: "claim",
+			run: () =>
+				migrationItemRunRepo.claim({
+					ctx,
+					migrationInternalId,
+					migrationRunId,
+					dryRun,
+					itemKind: item.kind,
+					itemId: item.internal_id,
+					claimBehavior:
+						retryStatuses.length > 0 ? "retry_statuses" : "claim_new",
+					retryStatuses,
+				}),
 		});
 
 		if (!claim.claimed) {
