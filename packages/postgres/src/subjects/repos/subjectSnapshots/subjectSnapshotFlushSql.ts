@@ -3,6 +3,7 @@ import type {
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "../../types/subjectSnapshot.js";
+import { subjectSnapshotStateHex } from "./subjectSnapshotState.js";
 
 /** Every row of each customer goes, and the statement says which: the subjects an evict rebuilds. COLLATE "C" so the PK serves the join. */
 const deleteSubjectSnapshotsOfCustomersCte = ({
@@ -27,15 +28,13 @@ const deleteSubjectSnapshotsOfCustomersCte = ({
 		)`;
 };
 
-/** Built by hand so each state, already a JSON string, is spliced in rather than encoded a second time. */
 const upsertsDocumentOf = ({
 	upserts,
 }: {
 	upserts: readonly SubjectSnapshotUpsert[];
-}): string => {
-	const rows = upserts.map((row) => {
-		const { stateJson, ...columns } = row;
-		const head = JSON.stringify({
+}): string =>
+	JSON.stringify(
+		upserts.map(({ stateJson, ...columns }) => ({
 			org_id: columns.orgId,
 			env: columns.env,
 			customer_id: columns.customerId,
@@ -47,11 +46,9 @@ const upsertsDocumentOf = ({
 			state_version: columns.stateVersion,
 			baseline_at: columns.baselineAt,
 			log_offset: columns.logOffset === null ? null : String(columns.logOffset),
-		});
-		return `${head.slice(0, -1)},"state":${stateJson}}`;
-	});
-	return `[${rows.join(",")}]`;
-};
+			state: subjectSnapshotStateHex({ stateJson }),
+		})),
+	);
 
 /**
  * A row whose customer or entity is already gone is skipped: an FK error would fail every row of the flush.
@@ -66,7 +63,7 @@ const snapshotUpsertsCte = ({
 	return sql`snapshot_upserts AS (
 			INSERT INTO subject_snapshots AS s (org_id, env, customer_id, entity_id, internal_customer_id, internal_entity_id, partition, partition_count, state_version, state, baseline_at, written_at, log_offset)
 			SELECT v.org_id, v.env, v.customer_id, v.entity_id, v.internal_customer_id, v.internal_entity_id, v.partition, v.partition_count, v.state_version, v.state, v.baseline_at, ROUND(date_part('epoch', now()) * 1000)::bigint, v.log_offset
-			FROM jsonb_to_recordset(${document}::text::jsonb) AS v(org_id text, env text, customer_id text, entity_id text, internal_customer_id text, internal_entity_id text, partition integer, partition_count integer, state_version integer, state jsonb, baseline_at bigint, log_offset bigint)
+			FROM jsonb_to_recordset(${document}::text::jsonb) AS v(org_id text, env text, customer_id text, entity_id text, internal_customer_id text, internal_entity_id text, partition integer, partition_count integer, state_version integer, state bytea, baseline_at bigint, log_offset bigint)
 			WHERE EXISTS (SELECT 1 FROM customers c WHERE c.internal_id = v.internal_customer_id)
 				AND (v.internal_entity_id IS NULL OR EXISTS (SELECT 1 FROM entities e WHERE e.internal_id = v.internal_entity_id))
 			ON CONFLICT (org_id, env, customer_id, entity_id) DO UPDATE SET

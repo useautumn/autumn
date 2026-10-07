@@ -10,6 +10,8 @@ import {
 	readPartitionProgress,
 	readSubjectSnapshot,
 	type SubjectSnapshotUpsert,
+	subjectSnapshotStateHex,
+	subjectSnapshotStateOf,
 } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { readSubjectSnapshotSql } from "../../../../../packages/postgres/src/subjects/repos/subjectSnapshots/readSubjectSnapshot.js";
@@ -28,6 +30,7 @@ import {
 
 const databaseUrl = readWorktreeDatabaseUrl();
 const PARTITION_COUNT = 64;
+const EMPTY_STATE = subjectSnapshotStateHex({ stateJson: "{}" });
 
 type SnapshotRow = {
 	org_id: string;
@@ -108,10 +111,15 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		seeded: SeededCustomer;
 	}): Promise<SnapshotRow[]> =>
 		(
-			await postgres.db.execute(
-				sql`SELECT * FROM subject_snapshots WHERE org_id = ${seeded.orgId} ORDER BY entity_id`,
-			)
-		).rows as SnapshotRow[];
+			(
+				await postgres.db.execute(
+					sql`SELECT * FROM subject_snapshots WHERE org_id = ${seeded.orgId} ORDER BY entity_id`,
+				)
+			).rows as (SnapshotRow & { state: Uint8Array })[]
+		).map((row) => ({
+			...row,
+			state: subjectSnapshotStateOf({ stored: row.state }),
+		}));
 
 	const flushAt = async ({
 		topic,
@@ -192,7 +200,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		});
 		try {
 			await postgres.db.execute(sql`INSERT INTO subject_snapshots (org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
-				SELECT ${seeded.orgId}, ${seeded.env}, 'cus_storm_' || i, '', ${seeded.internalCustomerId}, 0, 64, 1, '{}'::jsonb, 0, 0 FROM generate_series(0, 9999) i`);
+				SELECT ${seeded.orgId}, ${seeded.env}, 'cus_storm_' || i, '', ${seeded.internalCustomerId}, 0, 64, 1, ${EMPTY_STATE}::bytea, 0, 0 FROM generate_series(0, 9999) i`);
 			const deletes = store.snapshotQueues;
 			if (!deletes) throw new Error("Expected snapshot writes");
 			const startedAt = performance.now();
@@ -852,7 +860,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`INSERT INTO subject_snapshots
 						(org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
-						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, 0
+						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, ${EMPTY_STATE}::bytea, 0, 0
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`ANALYZE subject_snapshots`);
 					const deletes = Array.from({ length: 200 }, (_, index) => ({
@@ -906,7 +914,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`INSERT INTO subject_snapshots
 						(org_id, env, customer_id, entity_id, internal_customer_id, partition, partition_count, state_version, state, baseline_at, written_at)
-						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, '{}'::jsonb, 0, ROUND(date_part('epoch', now()) * 1000)::bigint
+						SELECT ${seeded.orgId}, 'live', 'cus_' || n, '', ${seeded.orgId} || '_c' || n, n % 64, 64, 1, ${EMPTY_STATE}::bytea, 0, ROUND(date_part('epoch', now()) * 1000)::bigint
 						FROM generate_series(1, 20000) AS n`);
 					await tx.execute(sql`ANALYZE subject_snapshots`);
 					const ctx = { db: tx, orgId: seeded.orgId, env: "live" };

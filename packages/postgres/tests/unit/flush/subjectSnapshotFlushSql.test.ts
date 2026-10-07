@@ -3,6 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { commitFlush } from "../../../src/flush/repos/commitFlush.js";
 import { flushSql } from "../../../src/flush/repos/flushSql.js";
 import type { FlushRequest } from "../../../src/flush/types/flush.js";
+import { subjectSnapshotStateOf } from "../../../src/subjects/repos/subjectSnapshots/subjectSnapshotState.js";
 import type { SubjectSnapshotUpsert } from "../../../src/subjects/types/subjectSnapshot.js";
 
 const dialect = new PgDialect();
@@ -95,7 +96,16 @@ describe("flushSql subject snapshots", () => {
 		expect(JSON.parse(deletes)).toEqual([
 			{ org_id: "org_1", env: "live", customer_id: "cus_9" },
 		]);
-		expect(JSON.parse(upserts)).toEqual([
+		// Each state goes as bytea hex of its zstd-compressed JSON.
+		const rows: Record<string, unknown>[] = (
+			JSON.parse(upserts) as { state: string }[]
+		).map((row) => ({
+			...row,
+			state: subjectSnapshotStateOf({
+				stored: Buffer.from(row.state.slice(2), "hex"),
+			}),
+		}));
+		expect(rows).toEqual([
 			{
 				org_id: "org_1",
 				env: "sandbox",

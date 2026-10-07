@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
+import { subjectSnapshotStateHex } from "@autumn/postgres";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { createWorkerDb } from "../../../src/external/postgres/getWorkerDb.js";
@@ -65,7 +66,8 @@ describe("createWorkerDb", () => {
 			},
 		});
 		expect(await db.readSubjectSnapshot({ identity })).toBeNull();
-		answer = [{ state: { revision: 0 } }];
+		const stored = subjectSnapshotStateHex({ stateJson: '{"revision":0}' });
+		answer = [{ state: Buffer.from(stored.slice(2), "hex") }];
 		expect(await db.readSubjectSnapshot({ identity })).toEqual({
 			revision: 0,
 		});

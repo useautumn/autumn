@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
 	bigint,
+	customType,
 	foreignKey,
 	index,
 	integer,
-	jsonb,
 	pgTable,
 	primaryKey,
 	text,
@@ -12,6 +12,8 @@ import {
 import { collatePgColumn } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
+
+const bytea = customType<{ data: Uint8Array }>({ dataType: () => "bytea" });
 
 /** A balance worker subject's resident state, kept by its committer so a cold load is one row; keyed by the identity the worker holds. */
 export const subjectSnapshots = pgTable(
@@ -28,7 +30,8 @@ export const subjectSnapshots = pgTable(
 		partition: integer("partition").notNull(),
 		partition_count: integer("partition_count").notNull(),
 		state_version: integer("state_version").notNull(),
-		state: jsonb("state").notNull(),
+		/** The state's JSON, zstd-compressed; STORAGE MAIN (migration 0097) keeps it inline rather than TOASTed. */
+		state: bytea("state").notNull(),
 		/** When the subject's lineage was last read whole from Postgres; ages the row, a flush never refreshes it. */
 		baseline_at: bigint("baseline_at", { mode: "number" }).notNull(),
 		written_at: bigint("written_at", { mode: "number" }).notNull(),

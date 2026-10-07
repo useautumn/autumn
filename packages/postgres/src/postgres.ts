@@ -58,6 +58,10 @@ export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.j
 export { SUBJECT_ROW_LIMITS } from "./subjects/repos/getSubjectRows/subjectRowLimits.js";
 export { readEntitySubjectSnapshots } from "./subjects/repos/subjectSnapshots/readEntitySubjectSnapshots.js";
 export { readSubjectSnapshot } from "./subjects/repos/subjectSnapshots/readSubjectSnapshot.js";
+export {
+	subjectSnapshotStateHex,
+	subjectSnapshotStateOf,
+} from "./subjects/repos/subjectSnapshots/subjectSnapshotState.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";
 export {
 	type SubjectRowChange,

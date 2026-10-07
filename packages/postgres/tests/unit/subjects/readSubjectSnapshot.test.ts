@@ -4,6 +4,7 @@ import {
 	readSubjectSnapshot,
 	readSubjectSnapshotSql,
 } from "../../../src/subjects/repos/subjectSnapshots/readSubjectSnapshot.js";
+import { subjectSnapshotStateHex } from "../../../src/subjects/repos/subjectSnapshots/subjectSnapshotState.js";
 
 const dialect = new PgDialect();
 const flatten = (sql: string) => sql.replace(/\s+/g, " ").trim();
@@ -33,7 +34,7 @@ describe("readSubjectSnapshot", () => {
 		]);
 	});
 
-	test("the state as stored when the row exists, else null", async () => {
+	test("the stored state decompressed when the row exists, else null", async () => {
 		let answer: Record<string, unknown>[] = [];
 		const db = { execute: async () => ({ rows: answer }) };
 		expect(
@@ -44,7 +45,8 @@ describe("readSubjectSnapshot", () => {
 				probe: { stateVersion: 1, writtenAfter: 0 },
 			}),
 		).toBeNull();
-		answer = [{ state: { revision: 0 } }];
+		const hex = subjectSnapshotStateHex({ stateJson: '{"revision":0}' });
+		answer = [{ state: Buffer.from(hex.slice(2), "hex") }];
 		expect(
 			await readSubjectSnapshot({
 				ctx: { ...ctx, db },

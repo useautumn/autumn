@@ -4,6 +4,7 @@ import {
 	type SubjectSnapshotProbe,
 	subjectSnapshotProbeSql,
 } from "./readSubjectSnapshot.js";
+import { subjectSnapshotStateOf } from "./subjectSnapshotState.js";
 
 /**
  * The snapshot states the probe allows of the customer's entities named, by entity id; an entity with no row, or a row
@@ -31,9 +32,9 @@ export const readEntitySubjectSnapshots = async ({
 		AND s.entity_id = ANY(${idList})
 		AND ${subjectSnapshotProbeSql({ probe })}`);
 	return new Map(
-		(rows as { entity_id: string; state: unknown }[]).map((row) => [
+		(rows as { entity_id: string; state: Uint8Array }[]).map((row) => [
 			row.entity_id,
-			row.state,
+			subjectSnapshotStateOf({ stored: row.state }),
 		]),
 	);
 };

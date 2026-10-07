@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
+import { subjectSnapshotStateOf } from "./subjectSnapshotState.js";
 
 /** Which rows a probe may answer with: this build's version, written after the moment the table was last trusted from. */
 export type SubjectSnapshotProbe = {
@@ -31,7 +32,8 @@ export const readSubjectSnapshot = async ({
 	const { rows } = await ctx.db.execute(
 		readSubjectSnapshotSql({ ctx, customerId, entityId, probe }),
 	);
-	return rows[0]?.state ?? null;
+	const stored = (rows[0] as { state: Uint8Array } | undefined)?.state;
+	return stored ? subjectSnapshotStateOf({ stored }) : null;
 };
 
 /** COLLATE "C" on the probe side so the primary key, which is "C", serves the lookup. */
