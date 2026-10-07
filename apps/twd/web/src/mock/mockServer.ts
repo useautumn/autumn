@@ -549,7 +549,15 @@ const summary = (run: RunDetail): RunSummary => {
 	if (!isLive(run)) return { ...rest, live: null };
 	const workers: RunLive["workers"] = {};
 	for (const w of run.workers) workers[w.status] = (workers[w.status] ?? 0) + 1;
-	return { ...rest, live: { workers, etaMs: run.etaMs } };
+	const unspawned = Math.max(0, (run.workersWanted ?? 0) - run.workers.length);
+	return {
+		...rest,
+		live: {
+			workers,
+			etaMs: run.etaMs,
+			accountsPending: run.status === "warming" ? 0 : unspawned,
+		},
+	};
 };
 
 // ---- costs ----------------------------------------------------------------
@@ -1190,7 +1198,7 @@ startLiveRun({
 	workerCap: 24,
 	pinnedSha: true,
 });
-// A long branch stuck building its image, sized only once the swarm starts (as twd does).
+// A long branch stuck building its image: sized at warm start, but no accounts asked for until the build lands.
 startLiveRun({
 	branch: "capy/revenuecat-customer-products-are-not-synced-after-transfer",
 	sha: hex(40),
@@ -1199,7 +1207,7 @@ startLiveRun({
 	workerCap: 3,
 	startWorkers: 0,
 	warmForMs: Number.POSITIVE_INFINITY,
-}).workersWanted = null;
+});
 startLiveRun({
 	branch: "fix/cross-group-license-carry",
 	sha: branches[3].sha,
@@ -1338,7 +1346,6 @@ const capacity = (): Capacity => {
 		slotsAwaitingWarm: live
 			.filter((r) => r.status === "warming")
 			.reduce((sum, r) => sum + (r.workersWanted ?? 0), 0),
-		freeAccounts: counts.clean,
 		poolCap: usableKeys * 3,
 		maxFilesNow: gate.state === "draining" ? 0 : counts.clean,
 		warmBuilds: branches.filter((b) => b.warm === "building").length,

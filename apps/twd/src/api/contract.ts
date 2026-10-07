@@ -190,10 +190,12 @@ export const RunFile = z.object({
 	finishedAt: z.string().nullable().optional(),
 });
 
-/** A live run as this process sees it: workers by status and the server ETA. */
+/** A live run as this process sees it: workers by status, the server ETA, and accounts it is still asking for. */
 export const RunLive = z.object({
 	workers: z.record(WorkerStatus, z.number()),
 	etaMs: z.number().nullable(),
+	/** Accounts the allocator still owes this run; 0 when it isn't asking (warming, or fully supplied). */
+	accountsPending: z.number(),
 });
 
 /** Modal compute cost of a run: Σ worker lifetime × (cores × core rate + GiB × memory rate). */
@@ -488,8 +490,6 @@ export const Capacity = z.object({
 	accountsWanted: z.number(),
 	/** Worker slots of warming runs: they ask for accounts once their image is built. */
 	slotsAwaitingWarm: z.number(),
-	/** Clean accounts a run could take right now, within the per-key cap. */
-	freeAccounts: z.number(),
 	/** Pool ceiling: usable keys × per-key cap. */
 	poolCap: z.number(),
 	/** Largest run (in files) that can start right now without waiting. */

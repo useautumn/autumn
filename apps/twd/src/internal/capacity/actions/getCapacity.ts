@@ -3,8 +3,8 @@ import type { Capacity } from "../../../api/contract.ts";
 import { stripeKeys } from "../../../db/schema/keys.ts";
 import { runs, warmImages } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { getRunDemand } from "../../accounts/allocator/accountAllocator.ts";
 import { ACCOUNTS_PER_KEY_CAP } from "../../accounts/allocator/poolLimits.ts";
+import { getRunDemand } from "../../accounts/allocator/runDemands.ts";
 import {
 	countAccountsByKey,
 	countHeldAccountsByRun,
@@ -73,7 +73,6 @@ export const getCapacity = async ({
 		queuedRuns: queuedRuns.length,
 		accountsWanted,
 		slotsAwaitingWarm,
-		freeAccounts: freeNow,
 		poolCap: keys.length * ACCOUNTS_PER_KEY_CAP,
 		maxFilesNow:
 			gate.state === "draining" ||

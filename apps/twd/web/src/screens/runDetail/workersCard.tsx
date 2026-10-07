@@ -1,7 +1,6 @@
 import { Hourglass } from "lucide-react";
 import type { RunDetail } from "../../../../src/api/contract.ts";
 import { summariseBoot } from "../../../../src/internal/runs/boot/summariseBoot.ts";
-import { useCapacity } from "../../api/hooks.ts";
 import { Tooltip } from "../../components/ui.tsx";
 import { cn, formatMs, num } from "../../lib/format.ts";
 import { EmptyNote, RunCard } from "./runCard.tsx";
@@ -78,18 +77,23 @@ const WorkerGrid = ({
 	);
 };
 
-/** What a sized-but-unspawned worker slot is waiting on; accounts only when the run is queued or the pool is dry. */
-const pendingSlotLabel = ({
+/** Splits sized-but-unspawned slots by what they wait on, from this run's own allocator demand. */
+const pendingSlots = ({
 	run,
-	freeAccounts,
+	unspawned,
 }: {
 	run: RunDetail;
-	freeAccounts: number | undefined;
+	unspawned: number;
 }) => {
-	if (run.status === "warming") return "waiting for warm build";
-	if (run.queuePosition !== null || freeAccounts === 0)
-		return "waiting for accounts";
-	return "booting";
+	if (run.status === "warming")
+		return [{ label: "waiting for warm build", count: unspawned }];
+	const owed =
+		run.live?.accountsPending ?? (run.queuePosition !== null ? unspawned : 0);
+	const forAccounts = Math.min(unspawned, owed);
+	return [
+		{ label: "waiting for accounts", count: forAccounts },
+		{ label: "booting", count: unspawned - forAccounts },
+	];
 };
 
 /** Worker squares (click one for its log), a status legend, and boot p50 · p90. */
@@ -108,7 +112,6 @@ export const WorkersCard = ({
 		counts.set(w.status, (counts.get(w.status) ?? 0) + 1);
 	const boot = summariseBoot(run.workers);
 	const waiting = Math.max(0, wanted - run.workers.length);
-	const freeAccounts = useCapacity().data?.freeAccounts;
 	return (
 		<RunCard
 			title="Workers"
@@ -149,12 +152,14 @@ export const WorkersCard = ({
 								{num(counts.get(s) ?? 0)} {s}
 							</span>
 						))}
-						{waiting > 0 && (
-							<span className="flex items-center gap-1.5">
-								<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
-								{num(waiting)} {pendingSlotLabel({ run, freeAccounts })}
-							</span>
-						)}
+						{pendingSlots({ run, unspawned: waiting })
+							.filter((slot) => slot.count > 0)
+							.map((slot) => (
+								<span key={slot.label} className="flex items-center gap-1.5">
+									<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
+									{num(slot.count)} {slot.label}
+								</span>
+							))}
 					</div>
 					{boot && (
 						<span className="text-subtle">
