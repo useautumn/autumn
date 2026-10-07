@@ -305,4 +305,121 @@ describe("sqlite store", () => {
 		expect(Object.isFrozen(held?.state)).toBe(true);
 		sqliteStore.close();
 	});
+
+	test("each row holds its own catalog slice and org, and reads back whole after a restart", () => {
+		const databasePath = slotPath();
+		const catalog = {
+			...emptyCatalog,
+			features: { messages: { id: "messages" } },
+		} as unknown as StoredSubject["catalog"];
+		const subjects = ["cus_1", "cus_2"].map(
+			(customerId): StoredSubject => ({
+				...subjectAt({ logOffset: 1n }),
+				state: createSubjectState({ identity: { ...identity, customerId } }),
+				catalog,
+			}),
+		);
+		const writer = openSqliteStore({ databasePath, held: freshHeld() });
+		writer.setSubjects({ subjects });
+		writer.close();
+
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+
+		expect(
+			reopened.readSubject({ customerId: "cus_2", entityId: null }),
+		).toEqual(subjects[1] as StoredSubject);
+		const slices = new Database(databasePath)
+			.query("SELECT customer_id AS customerId FROM subject_slices")
+			.all() as { customerId: string }[];
+		expect(slices.map(({ customerId }) => customerId)).toEqual([
+			"cus_1",
+			"cus_2",
+		]);
+		reopened.close();
+	});
+
+	test("a file from a newer Atom is emptied, so rolling back to an older Atom keeps accepting pushes", () => {
+		const databasePath = slotPath();
+
+		const newer = new Database(databasePath, { create: true });
+		newer.run(
+			"CREATE TABLE subject_states (customer_id TEXT PRIMARY KEY, state_json TEXT)",
+		);
+		newer.run("INSERT INTO subject_states VALUES ('cus_1', '{}')");
+		newer.run("PRAGMA user_version = 99");
+		newer.close();
+
+		const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
+
+		expect(sqliteStore.countSubjects()).toBe(1);
+		sqliteStore.close();
+	});
+
+	test("a push whose slice is unchanged reuses the held catalog and org, and rewrites only the state", () => {
+		const sqliteStore = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		const read = () =>
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
+		// Each push parses its own copy, equal to the last.
+		const pushAt = (logOffset: bigint): StoredSubject => ({
+			...structuredClone(subjectAt({ logOffset })),
+			logOffset,
+		});
+		sqliteStore.setSubject({ subject: pushAt(1n) });
+		const first = read();
+
+		sqliteStore.setSubject({ subject: pushAt(2n) });
+
+		const second = read();
+		expect(second?.logOffset).toBe(2n);
+		expect(second?.state).not.toBe(first?.state as StoredSubject["state"]);
+		expect(second?.catalog).toBe(first?.catalog as StoredSubject["catalog"]);
+		expect(second?.org).toBe(first?.org as StoredSubject["org"]);
+		sqliteStore.close();
+	});
+
+	test("a push whose slice changed rewrites it, and reads back with the new slice after a restart", () => {
+		const databasePath = slotPath();
+		const writer = openSqliteStore({ databasePath, held: freshHeld() });
+		writer.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		const changed: StoredSubject = {
+			...subjectAt({ logOffset: 2n }),
+			catalog: {
+				...emptyCatalog,
+				features: { messages: { id: "messages" } },
+			} as unknown as StoredSubject["catalog"],
+		};
+
+		writer.setSubject({ subject: changed });
+		const held = writer.readSubject({ customerId: "cus_1", entityId: null });
+		writer.close();
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+
+		expect(held?.catalog).toEqual(changed.catalog);
+		expect(
+			reopened.readSubject({ customerId: "cus_1", entityId: null }),
+		).toEqual(changed);
+		reopened.close();
+	});
+
+	test("a file of an earlier schema number is emptied", () => {
+		const databasePath = slotPath();
+		const older = new Database(databasePath, { create: true });
+		older.run(
+			"CREATE TABLE subject_states (customer_id TEXT, entity_id TEXT, state_json TEXT, catalog_json TEXT, org_json TEXT)",
+		);
+		older.run(
+			"INSERT INTO subject_states VALUES ('cus_1', '', '{}', '{}', '{}')",
+		);
+		older.run("PRAGMA user_version = 4");
+		older.close();
+
+		const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
+
+		expect(sqliteStore.countSubjects()).toBe(0);
+		sqliteStore.close();
+	});
 });

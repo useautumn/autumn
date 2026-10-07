@@ -1,17 +1,5 @@
 import { Database } from "bun:sqlite";
 
-export class UnsupportedSchemaVersionError extends Error {
-	constructor({
-		databasePath,
-		version,
-	}: { databasePath: string; version: bigint }) {
-		super(
-			`${databasePath} has schema version ${version}, newer than this Atom supports`,
-		);
-		this.name = "UnsupportedSchemaVersionError";
-	}
-}
-
 /** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
 
@@ -47,13 +35,11 @@ const configureDatabase = ({ database }: { database: Database }) => {
 
 const initializeSchema = ({
 	database,
-	databasePath,
 	schemaVersion,
 	dropSchema,
 	createSchema,
 }: {
 	database: Database;
-	databasePath: string;
 	schemaVersion: number;
 	dropSchema: (params: { database: Database }) => void;
 	createSchema: (params: { database: Database }) => void;
@@ -67,13 +53,9 @@ const initializeSchema = ({
 	if (version === undefined) {
 		throw new Error("Unable to read SQLite schema version");
 	}
-	if (version > BigInt(schemaVersion)) {
-		throw new UnsupportedSchemaVersionError({ databasePath, version });
-	}
-
 	const migrate = database.transaction(() => {
-		// An older file is a copy of what Autumn holds: it is emptied and sent again, never migrated.
-		if (version < BigInt(schemaVersion)) dropSchema({ database });
+		// Any other version is a copy of what Autumn holds: it is emptied and sent again, never migrated, so a rollback keeps accepting pushes.
+		if (version !== BigInt(schemaVersion)) dropSchema({ database });
 		createSchema({ database });
 		database.run(`PRAGMA user_version = ${schemaVersion}`);
 	});
@@ -81,7 +63,7 @@ const initializeSchema = ({
 	migrate.exclusive();
 };
 
-/** Opens one of Atom's SQLite files with its schema in place; a file from a newer Atom is refused. */
+/** Opens one of Atom's SQLite files with its schema in place; a file of any other version is emptied. */
 export const openSqliteDatabase = ({
 	databasePath,
 	schemaVersion,
@@ -104,7 +86,6 @@ export const openSqliteDatabase = ({
 		configureDatabase({ database });
 		initializeSchema({
 			database,
-			databasePath,
 			schemaVersion,
 			dropSchema,
 			createSchema,
