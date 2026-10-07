@@ -24,7 +24,6 @@ export type OwnerLink = {
 	connect(params: { port: MessagePort }): void;
 	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
-	waiting(): number;
 };
 
 export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
@@ -110,11 +109,5 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	);
 	sweep.unref();
 
-	return {
-		processorFor,
-		catalogFor,
-		connect,
-		disconnect,
-		waiting: () => waiting.size,
-	};
+	return { processorFor, catalogFor, connect, disconnect };
 };

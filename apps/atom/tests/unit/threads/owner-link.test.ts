@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createOwnerLink } from "../../../src/threads/owners/createOwnerLink.js";
 import { OwnerUnavailableError } from "../../../src/threads/owners/ownerUnavailableError.js";
 
-test("a full link sheds pushes but still delivers a catalog install, and counts what waits on it", async () => {
+test("a full link sheds pushes but still delivers a catalog install", async () => {
 	const { port1, port2 } = new MessageChannel();
 	const received: string[] = [];
 	port2.onmessage = (event: MessageEvent) => {
@@ -22,7 +22,6 @@ test("a full link sheds pushes but still delivers a catalog install, and counts 
 	await expect(
 		processor.setSubject({ customerId: "cus_shed", body: "{}" }),
 	).rejects.toBeInstanceOf(OwnerUnavailableError);
-	expect(link.waiting()).toBe(512);
 	const install = link
 		.catalogFor({ atomId: null })
 		.installCatalog({ rows: [], readAt: 1 })
@@ -36,5 +35,4 @@ test("a full link sheds pushes but still delivers a catalog install, and counts 
 	link.disconnect();
 	port2.close();
 	await Promise.all([...unanswered, install]);
-	expect(link.waiting()).toBe(0);
 });

@@ -30,7 +30,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			},
 			counters: openThreadCounters({ buffer: init.stats, index }),
 			held,
-			owners,
 		},
 		config: {
 			env,
