@@ -28,15 +28,11 @@ await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: mockLogger,
 }));
 
-import {
-	RateLimitScope,
-	RateLimitType,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
-import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
+import { createLayerLimiter } from "@/internal/misc/rateLimiter/layerLimiter/createLayerLimiter.js";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-describe("rateLimitFactory", () => {
+describe("createLayerLimiter", () => {
 	beforeEach(() => {
 		mockState.shouldUseRedis = false;
 		mockState.warnings = [];
@@ -44,15 +40,9 @@ describe("rateLimitFactory", () => {
 
 	test("fails open and warns when Redis is unavailable", async () => {
 		let nextCalls = 0;
-		const middleware = rateLimitFactory({
-			type: RateLimitType.General,
-			config: {
-				name: "test",
-				limit: 5,
-				windowMs: 1000,
-				notInRedis: false,
-				scope: RateLimitScope.Org,
-			},
+		const middleware = createLayerLimiter({
+			layer: { name: "test", limit: 5, windowMs: 1000 },
+			scope: "perOrg",
 		});
 
 		await middleware({} as never, async () => {
@@ -67,16 +57,15 @@ describe("rateLimitFactory", () => {
 
 	test("returns 429 without Retry-After for an over-limit establish route", async () => {
 		const app = new Hono<HonoEnv>();
-		const middleware = rateLimitFactory({
-			type: RateLimitType.CheckOrg,
-			config: {
+		const middleware = createLayerLimiter({
+			layer: {
 				name: "test-check-org",
 				limit: 1,
 				windowMs: 60_000,
-				notInRedis: true,
-				scope: RateLimitScope.Org,
-				overLimit: "degrade",
+				counted: "perPod",
+				overLimit: "rejectAndQueueCreate",
 			},
+			scope: "perOrg",
 		});
 
 		app.use("*", async (c, next) => {
@@ -103,6 +92,43 @@ describe("rateLimitFactory", () => {
 			code: "rate_limit_exceeded",
 			env: "live",
 		});
+	});
+
+	test("serves an over-limit degrade request and flags the context", async () => {
+		const app = new Hono<HonoEnv>();
+		const middleware = createLayerLimiter({
+			layer: {
+				name: "test-track-org",
+				limit: 1,
+				windowMs: 60_000,
+				counted: "perPod",
+				overLimit: "degrade",
+			},
+			scope: "perOrg",
+		});
+		const degradedFlags: (boolean | undefined)[] = [];
+
+		app.use("*", async (c, next) => {
+			c.set("ctx", {
+				env: "live",
+				org: { id: "org_123", slug: "test-org" },
+			} as never);
+			return middleware(c as never, next);
+		});
+		app.post("/v1/track", (c) => {
+			degradedFlags.push(c.get("ctx").orgRateLimitDegraded);
+			return c.json({ success: true });
+		});
+
+		const firstResponse = await app.request("/v1/track", { method: "POST" });
+		const degradedResponse = await app.request("/v1/track", {
+			method: "POST",
+		});
+
+		expect(firstResponse.status).toBe(200);
+		expect(degradedResponse.status).toBe(200);
+		expect(degradedResponse.headers.get("Retry-After")).toBeNull();
+		expect(degradedFlags).toEqual([undefined, true]);
 	});
 });
 

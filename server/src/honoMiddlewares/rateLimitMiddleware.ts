@@ -1,76 +1,79 @@
 import type { Context, Env, Next } from "hono";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import {
-	getLimiterForType,
-	getRateLimitKey,
-	setRateLimitKeyInContext,
-} from "@/internal/misc/rateLimiter/rateLimitFactory";
-import {
-	getOrgAggregateType,
-	getRateLimitType,
-	RateLimitType,
-} from "../internal/misc/rateLimiter/rateLimitConfigs";
+import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { getLayerLimiter } from "@/internal/misc/rateLimiter/layerLimiter/getLayerLimiter";
+import { resolveRateLimitPolicy } from "@/internal/misc/rateLimiter/policies/resolveRateLimitPolicy";
+import type { RateLimitLayer } from "@/internal/misc/rateLimiter/policies/types/rateLimitLayer";
 
-/**
- * In-memory rate limiting middleware for Hono
- * Uses different rate limits based on endpoint type (General, Track, Check)
- */
+const isTestsOrgRequest = ({ ctx }: { ctx: AutumnContext }) => {
+	const isTestEnv =
+		process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+	return isTestEnv && ctx.org?.id === process.env.TESTS_ORG_ID;
+};
+
+/** The org limiter wraps the customer limiter, so both must pass. */
+const runOrgThenCustomerLimiters = async ({
+	c,
+	next,
+	perOrg,
+	perCustomer,
+}: {
+	c: Context<HonoEnv>;
+	next: Next;
+	perOrg: RateLimitLayer;
+	perCustomer: RateLimitLayer;
+}) => {
+	const ctx = c.get("ctx");
+	const skipsCustomerLimiter =
+		perCustomer.skipWithoutCustomerId === true && !ctx.customerId;
+	const orgLimiter = getLayerLimiter({ layer: perOrg, scope: "perOrg" });
+	const customerLimiter = getLayerLimiter({
+		layer: perCustomer,
+		scope: "perCustomer",
+	});
+
+	let innerResponse: Response | undefined;
+	const orgResponse = await orgLimiter(c as Context<Env>, async () => {
+		if (skipsCustomerLimiter) {
+			innerResponse = (await next()) ?? undefined;
+			return;
+		}
+		innerResponse =
+			(await customerLimiter(c as Context<Env>, next)) ?? undefined;
+	});
+
+	// hono-rate-limiter discards next()'s return, so re-surface an inner 429.
+	return orgResponse ?? innerResponse;
+};
+
 export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
 	try {
-		// 1. Determine rate limit type based on endpoint
-		const rateLimitType = getRateLimitType(c);
-
-		if (
-			rateLimitType === RateLimitType.Attach &&
-			(process.env.NODE_ENV === "development" ||
-				process.env.NODE_ENV === "test") &&
-			ctx.org?.id === process.env.TESTS_ORG_ID
-		) {
+		const policy = resolveRateLimitPolicy({
+			method: c.req.method,
+			path: c.req.path,
+		});
+		if (policy.skipForTestsOrg && isTestsOrgRequest({ ctx })) {
 			return await next();
 		}
 
-		// 2. Get rate limit key based on type
-		const rateLimitKey = getRateLimitKey({ c, rateLimitType });
-
-		// 3. Store key in context for keyGenerator to access
-		setRateLimitKeyInContext(c as Context, rateLimitKey);
-
-		// 4. Get the appropriate limiter for this type
-		const limiter = getLimiterForType(rateLimitType);
-
-		const aggregateType = getOrgAggregateType(rateLimitType);
-		if (!aggregateType) {
-			// 5. Apply rate limiting
-			return await limiter(c as Context<Env>, next);
+		const { perOrg, perCustomer } = policy;
+		if (perOrg && perCustomer) {
+			return await runOrgThenCustomerLimiters({ c, next, perOrg, perCustomer });
 		}
-
-		// 5. Org-aggregate limiter wraps the per-customer one; the key slot is
-		// swapped between them since keyGenerator reads it at execution time.
-		setRateLimitKeyInContext(
-			c as Context,
-			getRateLimitKey({ c, rateLimitType: aggregateType }),
-		);
-		const aggregateLimiter = getLimiterForType(aggregateType);
-		const skipPrimaryLimiter =
-			rateLimitType === RateLimitType.EntitiesList && !ctx.customerId;
-
-		let innerResponse: Response | undefined;
-		const aggregateResponse = await aggregateLimiter(
-			c as Context<Env>,
-			async () => {
-				if (skipPrimaryLimiter) {
-					innerResponse = (await next()) ?? undefined;
-					return;
-				}
-				setRateLimitKeyInContext(c as Context, rateLimitKey);
-				innerResponse = (await limiter(c as Context<Env>, next)) ?? undefined;
-			},
-		);
-
-		// hono-rate-limiter discards next()'s return, so re-surface an inner 429.
-		return aggregateResponse ?? innerResponse;
+		if (perOrg) {
+			return await getLayerLimiter({ layer: perOrg, scope: "perOrg" })(
+				c as Context<Env>,
+				next,
+			);
+		}
+		if (perCustomer) {
+			return await getLayerLimiter({
+				layer: perCustomer,
+				scope: "perCustomer",
+			})(c as Context<Env>, next);
+		}
+		return await next();
 	} catch (error) {
 		ctx.logger.error(
 			`Error checking rate limit, error: ${error}. Bypassing for now`,

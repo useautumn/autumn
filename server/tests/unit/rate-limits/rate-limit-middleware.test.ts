@@ -1,25 +1,22 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import type { RateLimitLayer } from "@/internal/misc/rateLimiter/policies/types/rateLimitLayer.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Red: unscoped entity lists entered the shared `:undefined` customer bucket.
 // Green: only customer-scoped lists enter the inner customer limiter.
-const limiterCalls: RateLimitType[] = [];
+const limiterCalls: string[] = [];
 
 await mockModuleWithRestore(
-	"@/internal/misc/rateLimiter/rateLimitFactory",
+	"@/internal/misc/rateLimiter/layerLimiter/getLayerLimiter",
 	() => ({
-		getLimiterForType:
-			(type: RateLimitType) =>
+		getLayerLimiter:
+			({ layer }: { layer: RateLimitLayer }) =>
 			async (_c: unknown, next: () => Promise<void>) => {
-				limiterCalls.push(type);
+				limiterCalls.push(layer.name);
 				await next();
 			},
-		getRateLimitKey: ({ rateLimitType }: { rateLimitType: RateLimitType }) =>
-			`key:${rateLimitType}`,
-		setRateLimitKeyInContext: () => undefined,
 	}),
 );
 
@@ -52,17 +49,14 @@ describe("rateLimitMiddleware", () => {
 		const response = await requestEntitiesList({});
 
 		expect(response.status).toBe(200);
-		expect(limiterCalls).toEqual([RateLimitType.ListCustomers]);
+		expect(limiterCalls).toEqual(["list_customers"]);
 	});
 
 	test("uses both limiters for a customer-scoped entities list", async () => {
 		const response = await requestEntitiesList({ customerId: "cus_123" });
 
 		expect(response.status).toBe(200);
-		expect(limiterCalls).toEqual([
-			RateLimitType.ListCustomers,
-			RateLimitType.EntitiesList,
-		]);
+		expect(limiterCalls).toEqual(["list_customers", "entities_list"]);
 	});
 });
 
