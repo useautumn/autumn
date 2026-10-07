@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { ApiVersion, ApiVersionClass } from "@autumn/shared";
 import type { Context } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { _setAsyncTrackConfigForTesting } from "@/internal/misc/asyncTrack/asyncTrackStore.js";
 import {
 	getRateLimitRouteGroup,
 	RATE_LIMIT_CONFIGS,
@@ -9,19 +10,25 @@ import {
 	RateLimitType,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
+const ASYNC_ORG_ID = "org_async_override";
+
 const typeFor = ({
 	spec,
 	apiVersion,
 	body,
+	orgId = "org_123",
 }: {
 	spec: string;
 	apiVersion: ApiVersion;
 	body: Record<string, unknown>;
+	orgId?: string;
 }) => {
 	const [method, path] = spec.split(" ");
 	const ctx = {
 		apiVersion: new ApiVersionClass(apiVersion),
 		requestBody: body,
+		org: { id: orgId, slug: `${orgId}-slug` },
+		features: [],
 	};
 	return getRateLimitRouteGroup({
 		req: { method, path },
@@ -33,6 +40,8 @@ const TRACK_SPECS = [
 	"POST /v1/balances.track",
 	"POST /v1/track",
 	"POST /v1/events",
+];
+const TRACK_TOKENS_SPECS = [
 	"POST /v1/balances.track_tokens",
 	"POST /v1/track_tokens",
 ];
@@ -41,19 +50,19 @@ const CHECK_SPECS = [
 	"POST /v1/check",
 	"POST /v1/entitled",
 ];
+const ALL_VERSIONS = [ApiVersion.V2_5, ApiVersion.V2_4, ApiVersion.V1_2];
 const lockBody = { lock: { enabled: true, lock_id: "lock_1" } };
 
-describe("2.5 synchronous balance write limits", () => {
-	test("track and track_tokens with async: false use SyncBalanceWrite", () => {
-		for (const spec of TRACK_SPECS) {
+afterEach(() => {
+	_setAsyncTrackConfigForTesting({ config: { enabledOrgIds: [] } });
+});
+
+describe("synchronous balance write limits", () => {
+	test("2.5 track and track_tokens use SyncBalanceWrite only with async: false", () => {
+		for (const spec of [...TRACK_SPECS, ...TRACK_TOKENS_SPECS]) {
 			expect(
 				typeFor({ spec, apiVersion: ApiVersion.V2_5, body: { async: false } }),
 			).toBe(RateLimitType.SyncBalanceWrite);
-		}
-	});
-
-	test("default and async: true track keep Track", () => {
-		for (const spec of TRACK_SPECS) {
 			for (const body of [{}, { async: true }]) {
 				expect(typeFor({ spec, apiVersion: ApiVersion.V2_5, body })).toBe(
 					RateLimitType.Track,
@@ -62,35 +71,43 @@ describe("2.5 synchronous balance write limits", () => {
 		}
 	});
 
-	test("check with lock or send_event uses SyncBalanceWrite", () => {
-		for (const spec of CHECK_SPECS) {
-			for (const body of [lockBody, { send_event: true }]) {
-				expect(typeFor({ spec, apiVersion: ApiVersion.V2_5, body })).toBe(
+	test("2.4 and older default tracks are sync, so they use SyncBalanceWrite", () => {
+		for (const apiVersion of [ApiVersion.V2_4, ApiVersion.V1_2]) {
+			for (const spec of [...TRACK_SPECS, ...TRACK_TOKENS_SPECS]) {
+				expect(typeFor({ spec, apiVersion, body: {} })).toBe(
 					RateLimitType.SyncBalanceWrite,
 				);
-			}
-		}
-	});
-
-	test("a plain check keeps Check", () => {
-		for (const spec of CHECK_SPECS) {
-			for (const body of [{}, { send_event: false }]) {
-				expect(typeFor({ spec, apiVersion: ApiVersion.V2_5, body })).toBe(
-					RateLimitType.CheckCustomerGet,
-				);
-			}
-		}
-	});
-
-	test("2.4 and older are unchanged for sync writes", () => {
-		for (const apiVersion of [ApiVersion.V2_4, ApiVersion.V1_2]) {
-			for (const spec of TRACK_SPECS) {
-				expect(typeFor({ spec, apiVersion, body: { async: false } })).toBe(
+				expect(typeFor({ spec, apiVersion, body: { async: true } })).toBe(
 					RateLimitType.Track,
 				);
 			}
+		}
+	});
+
+	test("an org on the async override stays on Track, as its tracks queue", () => {
+		_setAsyncTrackConfigForTesting({
+			config: { enabledOrgIds: [ASYNC_ORG_ID] },
+		});
+		for (const apiVersion of ALL_VERSIONS) {
+			for (const spec of TRACK_SPECS) {
+				for (const body of [{}, { async: false }]) {
+					expect(typeFor({ spec, apiVersion, body, orgId: ASYNC_ORG_ID })).toBe(
+						RateLimitType.Track,
+					);
+				}
+			}
+		}
+	});
+
+	test("checks with lock or send_event use SyncBalanceWrite on every version", () => {
+		for (const apiVersion of ALL_VERSIONS) {
 			for (const spec of CHECK_SPECS) {
 				for (const body of [lockBody, { send_event: true }]) {
+					expect(typeFor({ spec, apiVersion, body })).toBe(
+						RateLimitType.SyncBalanceWrite,
+					);
+				}
+				for (const body of [{}, { send_event: false }]) {
 					expect(typeFor({ spec, apiVersion, body })).toBe(
 						RateLimitType.CheckCustomerGet,
 					);
@@ -106,14 +123,14 @@ describe("2.5 synchronous balance write limits", () => {
 			"POST /v1/usage",
 		]) {
 			expect(
-				typeFor({ spec, apiVersion: ApiVersion.V2_5, body: { async: false } }),
+				typeFor({ spec, apiVersion: ApiVersion.V2_4, body: { async: false } }),
 			).toBe(RateLimitType.Track);
 		}
 	});
 
-	test("500/s per customer under a 120k/min org cap, both in Redis and rejecting", () => {
+	test("1000/s per customer under a 120k/min org cap, both in Redis and rejecting", () => {
 		expect(RATE_LIMIT_CONFIGS[RateLimitType.SyncBalanceWrite]).toEqual({
-			limit: 500,
+			limit: 1000,
 			windowMs: 1000,
 			scope: RateLimitScope.Customer,
 			store: "redis",

@@ -1,6 +1,6 @@
 /**
- * On 2.5, synchronous tracks and writing checks from one customer drain one
- * shared counter; 2.4 sync tracks and 2.5 default (async) tracks never touch it.
+ * Tracks the handler applies synchronously and lock checks from one customer
+ * drain one shared counter; queued tracks never touch it.
  */
 
 import { afterEach, expect, test } from "bun:test";
@@ -91,8 +91,8 @@ test(`${chalk.yellowBright(`${testCase}1: 2.5 sync tracks and lock checks drain 
 	expect(countRateLimited(results)).toBeGreaterThan(0);
 });
 
-test(`${chalk.yellowBright(`${testCase}2: 2.4 sync tracks and 2.5 default tracks stay off the counter`)}`, async () => {
-	const customerId = `${testCase}-untouched`;
+test(`${chalk.yellowBright(`${testCase}2: 2.4 default tracks drain it too; queued tracks stay off it`)}`, async () => {
+	const customerId = `${testCase}-versions`;
 	const { secretKey } = await setupLimitedSubOrg({ customerId });
 	const tracks = ({
 		version,
@@ -114,7 +114,10 @@ test(`${chalk.yellowBright(`${testCase}2: 2.4 sync tracks and 2.5 default tracks
 	};
 
 	expect(
-		countRateLimited(await tracks({ version: ApiVersion.V2_4, async: false })),
+		countRateLimited(await tracks({ version: ApiVersion.V2_4, async: true })),
 	).toBe(0);
 	expect(countRateLimited(await tracks({ version: ApiVersion.V2_5 }))).toBe(0);
+	expect(
+		countRateLimited(await tracks({ version: ApiVersion.V2_4 })),
+	).toBeGreaterThan(0);
 });

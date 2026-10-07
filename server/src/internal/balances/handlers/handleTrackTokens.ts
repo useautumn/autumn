@@ -11,6 +11,7 @@ import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
+import { isQueuedTokenTrack } from "@/internal/balances/track/utils/isQueuedTrack.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const handleTrackTokens = createRoute({
@@ -29,7 +30,7 @@ export const handleTrackTokens = createRoute({
 			ctx,
 			input: body,
 		});
-		const isAsync = trackBody.async !== false;
+		const isAsync = isQueuedTokenTrack({ body: trackBody });
 
 		if (
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: trackBody.customer_id })

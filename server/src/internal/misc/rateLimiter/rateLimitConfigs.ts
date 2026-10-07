@@ -263,9 +263,9 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
-	// 2.5+ synchronous balance writes (track async: false, check with lock or send_event) share these.
+	// Tracks the handler applies synchronously, and checks with a lock or send_event, share these.
 	[RateLimitType.SyncBalanceWrite]: {
-		limit: 500,
+		limit: 1000,
 		windowMs: 1000,
 		scope: RateLimitScope.Customer,
 		store: "redis",
