@@ -42,9 +42,6 @@ KAFKA_CONTROLLER_PORT="${KAFKA_CONTROLLER_PORT:-19093}"
 
 PG_PORT="${PG_PORT:-5432}"
 DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
-# Explicit cap (Dragonfly otherwise sizes itself from host memory, past the sandbox's 4 GiB).
-# Eviction stays off: a full cache must fail writes loudly, not silently drop test state.
-DRAGONFLY_MAXMEMORY="${DRAGONFLY_MAXMEMORY:-1gb}"
 ELASTICMQ_PORT="${ELASTICMQ_PORT:-9324}"
 DYNAMODB_PORT="${DYNAMODB_PORT:-8000}"
 CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-8123}"
@@ -113,9 +110,7 @@ fi
 # 2. Dragonfly — Redis-protocol cache on :6379. --dir is the snapshot path so the
 #    clean-stop SAVE in stop-services.sh persists to disk for the fork.
 if redis-cli -p "$DRAGONFLY_PORT" PING >/dev/null 2>&1; then
-  log "Dragonfly already running; maxmemory $DRAGONFLY_MAXMEMORY"
-  [ "$(redis-cli -p "$DRAGONFLY_PORT" CONFIG SET maxmemory "$DRAGONFLY_MAXMEMORY")" = "OK" ] ||
-    die "could not set Dragonfly maxmemory to $DRAGONFLY_MAXMEMORY"
+  log "Dragonfly already running"
 else
   [ -x "$BIN_DIR/dragonfly" ] || die "dragonfly binary missing (run build-base.sh)"
   log "Starting Dragonfly on :$DRAGONFLY_PORT (--dir $DRAGONFLY_DIR)"
@@ -124,7 +119,6 @@ else
     --bind 127.0.0.1 \
     --dir "$DRAGONFLY_DIR" \
     --dbfilename dump \
-    --maxmemory "$DRAGONFLY_MAXMEMORY" \
     >"$LOG_DIR/dragonfly.log" 2>&1 &
   disown || true
 fi
