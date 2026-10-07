@@ -70,7 +70,7 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 ```
 </Expandable>
 
-From API version `2.5.0`, track is queued by default: it responds immediately with a `202` and `balance: null`, and the usage is applied a moment later. Pass `async: false` when you need the updated balance in the response:
+Track is queued by default: it responds immediately with a `202` and `balance: null`, and the usage is applied a moment later. Pass `async: false` when you need the updated balance in the response (it has [lower rate limits](/documentation/rate-limits)):
 
 <CodeGroup>
 
@@ -124,7 +124,7 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 ```
 </Expandable>
 
-On API version `2.4.0` and earlier, track stays synchronous unless you pass `async: true`.
+<Note>On API version `2.4.0` and earlier, track is synchronous by default, and `async: true` opts in to queuing.</Note>
 
 <Check>
   You can also send a negative `value` to increase the balance counter, which is
