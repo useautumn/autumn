@@ -1,0 +1,116 @@
+import { expect, test } from "bun:test";
+import type { TrackParams } from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+
+const postTrack = async ({
+	autumn,
+	body,
+}: {
+	autumn: AutumnInt;
+	body: TrackParams;
+}) => {
+	const response = await fetch(`${autumn.baseUrl}/balances.track`, {
+		method: "POST",
+		headers: autumn.headers,
+		body: JSON.stringify(body),
+	});
+	return { status: response.status, json: await response.json() };
+};
+
+const setupCustomer = async ({ customerId }: { customerId: string }) => {
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	return initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		actions: [s.attach({ productId: free.id })],
+	});
+};
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default1: 2.5 queues by default and applies the usage later")}`,
+	async () => {
+		const { autumnV2_5, customerId } = await setupCustomer({
+			customerId: "track-async-default1",
+		});
+
+		const { status, json } = await postTrack({
+			autumn: autumnV2_5,
+			body: {
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 3,
+			},
+		});
+
+		expect(status).toBe(202);
+		expect(json).toEqual({ customer_id: customerId, value: 3, balance: null });
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_5,
+			featureId: TestFeature.Messages,
+			remaining: 97,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default2: 2.5 with async: false applies before responding")}`,
+	async () => {
+		const { autumnV2_5, customerId } = await setupCustomer({
+			customerId: "track-async-default2",
+		});
+
+		const { status, json } = await postTrack({
+			autumn: autumnV2_5,
+			body: {
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 3,
+				async: false,
+			},
+		});
+
+		expect(status).toBe(200);
+		expect(json.balance.remaining).toBe(97);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default3: 2.4 stays sync by default and queues on async: true")}`,
+	async () => {
+		const { autumnV2_4, customerId } = await setupCustomer({
+			customerId: "track-async-default3",
+		});
+		const body = {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 3,
+		};
+
+		const sync = await postTrack({ autumn: autumnV2_4, body });
+		expect(sync.status).toBe(200);
+		expect(sync.json.balance.remaining).toBe(97);
+
+		const queued = await postTrack({
+			autumn: autumnV2_4,
+			body: { ...body, async: true },
+		});
+		expect(queued.status).toBe(202);
+		expect(queued.json.balance).toBeNull();
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_4,
+			featureId: TestFeature.Messages,
+			remaining: 94,
+		});
+	},
+);
