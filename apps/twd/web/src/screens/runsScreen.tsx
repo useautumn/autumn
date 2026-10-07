@@ -249,9 +249,15 @@ export const RunsScreen = () => {
 	const status = params.get("status");
 	const finishedFilter: FinishedFilter =
 		FINISHED_FILTERS.find((f) => f === status) ?? "all";
-	// `?status=baselines` came from the replaced layout; old links still land here.
-	const baselinesOnly =
-		params.get("baselines") === "1" || status === "baselines";
+	const baselinesOnly = params.get("baselines") === "1";
+	// `?status=baselines` came from the replaced layout; rewrite old links to the switch's own param.
+	useEffect(() => {
+		if (status !== "baselines") return;
+		const next = new URLSearchParams(params);
+		next.delete("status");
+		next.set("baselines", "1");
+		setParams(next, { replace: true });
+	}, [status, params, setParams]);
 	const baselinesToggleId = useId();
 	const body = useHeight();
 	const finishedBox = useHeight();
