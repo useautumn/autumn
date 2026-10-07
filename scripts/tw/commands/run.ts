@@ -640,6 +640,8 @@ export const buildWorkerEnv = ({
 		// Workers have no trigger.dev key: migrations run inline in-process
 		// (shouldRunMigrationInline) instead of via the durable layer.
 		TW_WORKER_MODE: "1",
+		// One queue worker, as on Capy dev: three forks cost ~1.1 GiB RSS of a 4 GiB worker.
+		WORKER_PROCESSES: "1",
 		// Reused Stripe accounts retain idempotency responses from earlier cloned databases.
 		TW_STRIPE_IDEMPOTENCY_NAMESPACE: crypto.randomUUID(),
 		// All processes share the same allocation through this worker's Redis.

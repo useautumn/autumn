@@ -79,6 +79,10 @@ describe("buildWorkerEnv app config", () => {
 		);
 	});
 
+	test("runs a single queue worker process", () => {
+		expect(buildFor("acct_1").WORKER_PROCESSES).toBe("1");
+	});
+
 	test("omits ANTHROPIC_API_KEY when the orchestrator lacks it", () => {
 		expect(buildFor("acct_1")).not.toHaveProperty("ANTHROPIC_API_KEY");
 	});
