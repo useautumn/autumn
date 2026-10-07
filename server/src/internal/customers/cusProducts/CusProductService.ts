@@ -17,6 +17,7 @@ import {
 	eq,
 	inArray,
 	isNotNull,
+	ne,
 	not,
 	or,
 } from "drizzle-orm";
@@ -525,6 +526,9 @@ export class CusProductService {
 				ended_at: Date.now(),
 				metadata_id: null,
 				updated_at: Date.now(),
+				// A pending plan never started, so its trial was never used.
+				free_trial_id: null,
+				trial_ends_at: null,
 			})
 			.where(
 				and(
@@ -705,6 +709,7 @@ export class CusProductService {
 				and(
 					eq(products.id, productId),
 					isNotNull(customerProducts.free_trial_id),
+					ne(customerProducts.status, CusProductStatus.Pending),
 					or(
 						// Cross-customer fingerprint dedup (unique_fingerprint abuse
 						// prevention) must match other customers regardless of entity,
