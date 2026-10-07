@@ -4,8 +4,9 @@ import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { Box, render, Static, Text, useApp } from "ink";
-import pLimit from "p-limit";
+import type pLimit from "p-limit";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { detectSoloFiles, runSoloItemsAlone } from "./soloTestFiles";
 import {
 	LocalExecutor,
 	runningProcesses,
@@ -592,6 +593,7 @@ interface SwarmRunMeta {
 
 interface TestRunnerAppProps {
 	testFiles: string[];
+	soloFiles: Set<string>;
 	maxParallel: number;
 	verbose: boolean;
 	executor: TestExecutor;
@@ -608,6 +610,7 @@ interface TestRunnerAppProps {
 
 function TestRunnerApp({
 	testFiles,
+	soloFiles,
 	maxParallel,
 	verbose,
 	executor,
@@ -711,8 +714,6 @@ function TestRunnerApp({
 	// Run tests
 	useEffect(() => {
 		const runAllTests = async () => {
-			const limit = pLimit(maxParallel);
-
 			// §8.4: a worker dying mid-file is NOT a test failure — the file got no
 			// verdict. Re-submit it through the SAME limit at the SAME attempt number
 			// (attempt-preserving, doesn't consume the auto-retry budget), capped so a
@@ -771,11 +772,13 @@ function TestRunnerApp({
 			};
 
 			// Phase 1: Initial run
-			const promises = testFiles.map((file) =>
-				runWithReschedule({ limit, file, attempt: 1 }),
-			);
-
-			await Promise.all(promises);
+			await runSoloItemsAlone({
+				items: testFiles,
+				isSolo: (file) => soloFiles.has(file),
+				maxParallel,
+				run: ({ item: file, limit }) =>
+					runWithReschedule({ limit, file, attempt: 1 }),
+			});
 
 			// Phase 2: Retry failed files with same concurrency as initial run
 			const allPendingResults: TestFileResult[] = Array.from(
@@ -801,42 +804,44 @@ function TestRunnerApp({
 				dirtyRef.current = true;
 
 				// Run retries concurrently with same limit as initial run
-				const retryLimit = pLimit(maxParallel);
-				const retryPromises = failedFiles.map(async (result) => {
-					const firstAttemptFailures = result.tests.filter(
-						(t) => t.status === "failed",
-					);
-					// Whole-file retry (no --test-name-pattern): files are stateful sequences,
-					// so a filtered retry of a later test lacks earlier tests' state and can't pass.
-					const failedTestNames: string[] = [];
+				await runSoloItemsAlone({
+					items: failedFiles,
+					isSolo: (result) => soloFiles.has(result.file),
+					maxParallel,
+					run: async ({ item: result, limit: retryLimit }) => {
+						const firstAttemptFailures = result.tests.filter(
+							(t) => t.status === "failed",
+						);
+						// Whole-file retry (no --test-name-pattern): files are stateful sequences,
+						// so a filtered retry of a later test lacks earlier tests' state and can't pass.
+						const failedTestNames: string[] = [];
 
-					// Mark this specific file as actively retrying
-					const retryingResult: TestFileResult = {
-						...result,
-						status: "retrying",
-						firstAttemptFailures,
-					};
-					pendingRef.current.set(result.file, retryingResult);
-					dirtyRef.current = true;
+						// Mark this specific file as actively retrying
+						const retryingResult: TestFileResult = {
+							...result,
+							status: "retrying",
+							firstAttemptFailures,
+						};
+						pendingRef.current.set(result.file, retryingResult);
+						dirtyRef.current = true;
 
-					// Worker-death during a retry is attempt-preserving too (re-runs at
-					// attempt 2 via the same retryLimit; §8.4).
-					const retryResult = await runWithReschedule({
-						limit: retryLimit,
-						file: result.file,
-						attempt: 2,
-						failedTestNames,
-					});
-					if (retryResult.status === "passed") {
-						retryResult.passedOnRetry = true;
-					}
-					retryResult.firstAttemptFailures = firstAttemptFailures;
-					pendingRef.current.set(result.file, retryResult);
-					dirtyRef.current = true;
-					return retryResult;
+						// Worker-death during a retry is attempt-preserving too (re-runs at
+						// attempt 2 via the same retryLimit; §8.4).
+						const retryResult = await runWithReschedule({
+							limit: retryLimit,
+							file: result.file,
+							attempt: 2,
+							failedTestNames,
+						});
+						if (retryResult.status === "passed") {
+							retryResult.passedOnRetry = true;
+						}
+						retryResult.firstAttemptFailures = firstAttemptFailures;
+						pendingRef.current.set(result.file, retryResult);
+						dirtyRef.current = true;
+						return retryResult;
+					},
 				});
-
-				await Promise.all(retryPromises);
 			}
 
 			// Mark retry phase as complete so failed files can be emitted to static
@@ -876,7 +881,7 @@ function TestRunnerApp({
 		if (testFiles.length > 0) {
 			runAllTests();
 		}
-	}, [testFiles, maxParallel, updateResult, verbose, executor]);
+	}, [testFiles, soloFiles, maxParallel, updateResult, verbose, executor]);
 
 	// Exit when complete
 	useEffect(() => {
@@ -1170,9 +1175,9 @@ const formatDuration = (ms: number) =>
 async function runHeadlessWithExecutor(
 	testFiles: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number; verbose?: boolean },
+	opts: { maxParallel: number; soloFiles: Set<string>; verbose?: boolean },
 ): Promise<number> {
-	const { maxParallel, verbose = false } = opts;
+	const { maxParallel, soloFiles, verbose = false } = opts;
 	const startTime = performance.now();
 	const results = new Map<string, TestFileResult>();
 
@@ -1231,10 +1236,13 @@ async function runHeadlessWithExecutor(
 		`Running ${testFiles.length} file(s) headless (max=${maxParallel})\n`,
 	);
 
-	const limit = pLimit(maxParallel);
-	await Promise.all(
-		testFiles.map((file) => runWithReschedule({ limit, file, attempt: 1 })),
-	);
+	await runSoloItemsAlone({
+		items: testFiles,
+		isSolo: (file) => soloFiles.has(file),
+		maxParallel,
+		run: ({ item: file, limit }) =>
+			runWithReschedule({ limit, file, attempt: 1 }),
+	});
 
 	const failedFirstPass = [...results.values()].filter(
 		(result) => result.status === "failed" && result.attempt === 1,
@@ -1242,9 +1250,11 @@ async function runHeadlessWithExecutor(
 
 	if (failedFirstPass.length > 0) {
 		console.log(`\nRetrying ${failedFirstPass.length} failed file(s)…\n`);
-		const retryLimit = pLimit(maxParallel);
-		await Promise.all(
-			failedFirstPass.map(async (result) => {
+		await runSoloItemsAlone({
+			items: failedFirstPass,
+			isSolo: (result) => soloFiles.has(result.file),
+			maxParallel,
+			run: async ({ item: result, limit: retryLimit }) => {
 				const firstAttemptFailures = result.tests.filter(
 					(test) => test.status === "failed",
 				);
@@ -1259,8 +1269,8 @@ async function runHeadlessWithExecutor(
 				}
 				retryResult.firstAttemptFailures = firstAttemptFailures;
 				results.set(result.file, retryResult);
-			}),
-		);
+			},
+		});
 	}
 
 	const finalResults = [...results.values()];
@@ -1321,13 +1331,17 @@ export function runWithExecutor(
 		verbose?: boolean;
 		headless?: boolean;
 		swarm?: SwarmRunMeta;
+		/** Files that run one at a time after the rest; omitted means none. */
+		soloFiles?: Set<string>;
 	},
 ): void {
 	const headless = opts.headless ?? false;
+	const soloFiles = opts.soloFiles ?? new Set<string>();
 
 	if (headless) {
 		void runHeadlessWithExecutor(testFiles, executor, {
 			maxParallel: opts.maxParallel,
+			soloFiles,
 			verbose: opts.verbose,
 		}).then((exitCode) => {
 			process.exit(exitCode);
@@ -1353,6 +1367,7 @@ export function runWithExecutor(
 			executor={executor}
 			maxParallel={opts.maxParallel}
 			onComplete={onComplete}
+			soloFiles={soloFiles}
 			swarm={opts.swarm}
 			testFiles={testFiles}
 			verbose={opts.verbose ?? false}
@@ -1446,6 +1461,13 @@ async function main() {
 		return;
 	}
 
+	const soloFiles = await detectSoloFiles({ files: testFiles });
+	if (soloFiles.size > 0 && maxParallel > 1) {
+		console.log(
+			`${soloFiles.size} file(s) change org-wide state; they run one at a time after the rest.\n`,
+		);
+	}
+
 	// `bun t` always runs locally — inject the LocalExecutor so behavior is
 	// byte-for-byte compatible with the pre-seam runner. Install the local-only
 	// SIGINT handler here (NOT at module import) so it never fires when the runner
@@ -1455,6 +1477,7 @@ async function main() {
 		maxParallel,
 		verbose,
 		headless,
+		soloFiles,
 	});
 }
 
