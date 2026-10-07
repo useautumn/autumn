@@ -1,8 +1,5 @@
-/**
- * set_plans re-lists Pro while its Stripe sub is trialing. Stripe rejects a reset-now during a trial, so
- * Autumn returns a clean 400. With the anchor unchanged, Stripe invoices nothing during the trial and
- * rates trial usage at $0, so the trial end bills only the plan, whether or not the usage price changed.
- */
+/** set_plans re-lists Pro on a trialing sub: a reset-now is a 400, as Stripe rejects it; otherwise Stripe rates
+ * trial usage at $0, so the trial end bills only the plan. */
 
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";

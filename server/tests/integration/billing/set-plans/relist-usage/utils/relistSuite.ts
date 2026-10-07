@@ -23,10 +23,7 @@ const SHORT: Record<RelistProration, string> = {
 	bill_difference: "bd",
 };
 
-/**
- * Registers one re-list cell: the plan re-listed unchanged (shared baseline) and once per change, each
- * pinned to Stripe's ground truth, and every change Stripe bills like the baseline compared to it field by field.
- */
+/** Each change is pinned to Stripe, and any Stripe bills like the unchanged baseline is compared to it field by field. */
 export const defineRelistSuite = ({
 	name,
 	stripeState,
@@ -51,9 +48,7 @@ export const defineRelistSuite = ({
 	trialDays?: number;
 	otherRenewals?: number;
 	cancelsAtRenewal?: boolean;
-	/** State-specific checks on every run, e.g. a re-list clears cancel_at_period_end. */
 	expectRun?: (run: RelistRun) => void;
-	/** Custom anchors stop at the anchor invoice; past_due subs are left to dunning. */
 	observeRenewal?: boolean;
 }) => {
 	const options: RelistExpectationOptions = {

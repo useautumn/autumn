@@ -84,7 +84,6 @@ const messagesItem = (unitPrice: number) => ({
 
 type PhasePlan = SetPlansParamsV0Input["phases"][number]["plans"][number];
 
-/** The plans a set_plans request lists after each change, starting from Pro alone. */
 export const relistPlans = ({
 	catalog,
 	change,
@@ -278,10 +277,7 @@ const advanceOntoInvoice = async ({
 	});
 };
 
-/**
- * One end-to-end set_plans re-list: set up the customer state, track 150 messages, change the plan on
- * day 10 of the period, then follow the Stripe clock through the custom anchor (if any) and the renewal.
- */
+/** Tracks 150 messages, changes the plan on day 10, then follows the Stripe clock through any anchor and the renewal. */
 export const runRelistCase = async ({
 	customerId,
 	setupState,

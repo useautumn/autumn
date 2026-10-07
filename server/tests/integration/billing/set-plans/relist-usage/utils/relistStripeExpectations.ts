@@ -11,11 +11,8 @@ import {
 	relistBilling,
 } from "./relistTypes";
 
-/**
- * Stripe's behaviour for each re-list, from plain-Stripe test clocks (handoffs/ATMN-746/stripe-relist-wide.md,
- * stripe-relist-no-sub.md). prorate_immediately maps to always_invoice. bill_difference has no Stripe
- * equivalent: per decision D8 it credits only the unused old period and charges the new item in full.
- */
+/** Stripe's behaviour per re-list, from plain-Stripe test clocks; prorate_immediately maps to always_invoice.
+ * bill_difference has no Stripe equivalent: it credits only the unused old period and charges the new item in full. */
 
 type LicensedItem = { key: string; amount: number };
 
@@ -188,10 +185,7 @@ const liveTimeline = ({
 	};
 };
 
-/**
- * No live sub (option 1): the old period closes, so its usage is billed now at the old price under
- * every proration (Stripe's reset semantics), and the listed plans start a new sub now.
- */
+/** No live sub: the old period closes, so its usage bills now at the old price under every proration. */
 const noSubTimeline = ({
 	change,
 	anchor,
@@ -242,11 +236,8 @@ const noSubTimeline = ({
 export type RelistStripeState = "live" | "no_sub";
 
 export type RelistExpectationOptions = {
-	/** The case stopped before the renewal (custom anchors stop at the anchor invoice). */
 	renewalObserved?: boolean;
-	/** Renewals of other subs the customer keeps (multi-sub state). */
 	otherRenewals?: number;
-	/** The plan is canceling: a re-list keeps the cancellation, so the period end bills only kept usage and next_cycle is $0. */
 	cancelsAtRenewal?: boolean;
 };
 

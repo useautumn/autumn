@@ -1,7 +1,4 @@
-/**
- * set_plans re-lists Pro while a schedule is pending: a future phase (Pro at $30 from renewal), or a
- * pending anchor reset. The request is the full declaration, so Stripe bills it like the same live sub.
- */
+/** set_plans re-lists Pro with a future phase or anchor reset pending: Stripe bills it like the same live sub. */
 
 import { futurePhaseState, pendingAnchorState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";

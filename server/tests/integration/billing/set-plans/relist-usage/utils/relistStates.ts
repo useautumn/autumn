@@ -42,7 +42,7 @@ const advanceDays = async ({
 	});
 };
 
-/** Pro active in Autumn with no Stripe subscription (the prod case behind option 1). */
+/** Pro active in Autumn with no Stripe subscription. */
 export const noSubState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario, noBillingChanges: true });
 	return { periodStartMs: scenario.clockStartMs };
@@ -165,7 +165,6 @@ export const pastDueState: RelistStateSetup = async ({ scenario }) => {
 	return { periodStartMs: renewedAtMs };
 };
 
-/** Pro on one Stripe sub and the add-on on a second sub. */
 export const multiSubState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario });
 	const stripeCustomerId = (

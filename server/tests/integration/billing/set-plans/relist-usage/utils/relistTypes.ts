@@ -1,4 +1,4 @@
-/** Shapes mirror handoffs/ATMN-746 (plain-Stripe ground truth): Pro $20 + 100 messages incl, $0.10 over. */
+/** Pro $20 + 100 messages included, $0.10 over. */
 export const RELIST = {
 	proPrice: 20,
 	changedProPrice: 30,

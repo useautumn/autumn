@@ -1,4 +1,4 @@
-/** set_plans re-lists Pro on no live Stripe sub (option 1), anchor custom, bill_difference: each change vs the unchanged re-list, pinned to Stripe. */
+/** set_plans re-lists Pro on no live Stripe sub, anchor custom, bill_difference: each change vs the unchanged re-list, pinned to Stripe. */
 
 import { noSubState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";
