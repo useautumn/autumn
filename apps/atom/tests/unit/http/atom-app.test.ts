@@ -19,6 +19,10 @@ const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
+const HEALTH = {
+	bootedAt: "2026-10-06T00:00:00.000Z",
+	restarts: new Int32Array(1),
+};
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -60,7 +64,7 @@ const createDeployedApp = () => {
 	const { logger, logged } = createLogger();
 	return {
 		app: createAtomApp({
-			ctx: { auth, logger, autumnApiUrl: AUTUMN_API_URL },
+			ctx: { auth, logger, autumnApiUrl: AUTUMN_API_URL, health: HEALTH },
 		}),
 		logged,
 	};
@@ -77,6 +81,7 @@ const createMultiTenantApp = () => {
 			logger,
 			multiTenant: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
 			autumnApiUrl: AUTUMN_API_URL,
+			health: HEALTH,
 		},
 	});
 };

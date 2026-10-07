@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
+import type { AtomHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { Slots } from "../../slots/types/slots.js";
 
@@ -8,6 +9,7 @@ export type AtomHttpContext = {
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	/** Where a request Atom does not answer itself is sent. */
 	autumnApiUrl: string;
+	health: AtomHealthSource;
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
 };
