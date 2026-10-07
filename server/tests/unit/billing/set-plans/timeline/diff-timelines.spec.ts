@@ -573,7 +573,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 					desiredSegment({ plan: credits, planIndex: 2 }),
 				],
 			}),
-			policies: policiesFor({ liveRows: "recreateRenewing" }),
+			policies: policiesFor({ liveRows: "recreateRecurring" }),
 		});
 
 		expect(describeOperations(diff)).toEqual([
@@ -593,7 +593,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 					desiredSegment({ plan: pro, planIndex: 1 }),
 				],
 			}),
-			policies: policiesFor({ liveRows: "recreateWhenPaidRecurringStarts" }),
+			policies: policiesFor({ liveRows: "carryUnlessPaidRecurringStarts" }),
 		});
 
 		expect(describeOperations(diff)).toEqual([

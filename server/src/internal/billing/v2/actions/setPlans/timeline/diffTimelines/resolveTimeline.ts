@@ -109,7 +109,7 @@ const keptCancellationEndsAt = ({
 	savedSegment: SavedSegment;
 	policies: SetPlansPolicies;
 }): number | null => {
-	const cycleResetsNow = policies.liveRows === "recreateRenewing";
+	const cycleResetsNow = policies.liveRows === "recreateRecurring";
 	const resetPeriodEndsAt = cycleResetsNow
 		? savedSegment.rows[0]?.periodEndsAtAfterReset
 		: undefined;
@@ -365,12 +365,12 @@ export const resolveTimeline = ({
 			now,
 			liveRowsCarry:
 				policies.liveRows !== "recreate" &&
-				policies.liveRows !== "recreateRenewing",
+				policies.liveRows !== "recreateRecurring",
 		},
 	});
 
 	const recreatesLiveRows =
-		policies.liveRows === "recreateWhenPaidRecurringStarts" &&
+		policies.liveRows === "carryUnlessPaidRecurringStarts" &&
 		insertsPaidRecurringNow({ resolved: carrying, now });
 	if (!recreatesLiveRows) return carrying;
 

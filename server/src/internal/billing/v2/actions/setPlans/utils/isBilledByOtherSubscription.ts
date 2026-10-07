@@ -1,7 +1,7 @@
 import type { FullCusProduct } from "@autumn/shared";
 
 /** A row not yet on any subscription is new to this one, not on another. */
-export const isCustomerProductOnOtherSubscription = ({
+export const isBilledByOtherSubscription = ({
 	customerProduct,
 	stripeSubscriptionId,
 }: {

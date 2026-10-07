@@ -129,7 +129,7 @@ const insertImmediateCustomerProduct = ({
 };
 
 /** Usage rows a replacement starting now keeps from the row it replaces; a later start carries nothing yet. */
-const keptCustomerEntitlementsFor = ({
+const computeReplacementKeptUsage = ({
 	billingContext,
 	segment,
 	fullProduct,
@@ -166,7 +166,7 @@ export const insertSegmentCustomerProduct = ({
 	keptUsageCustomerEntitlements: FullCustomerEntitlement[];
 } => {
 	const found = findProductContext({ billingContext, segment });
-	const keptCustomerEntitlements = keptCustomerEntitlementsFor({
+	const keptCustomerEntitlements = computeReplacementKeptUsage({
 		billingContext,
 		segment,
 		fullProduct: found.productContext.fullProduct,

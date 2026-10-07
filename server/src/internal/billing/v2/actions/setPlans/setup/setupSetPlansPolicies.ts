@@ -19,7 +19,7 @@ const liveRowsPolicy = ({
 	const { replacedStripeSubscription, requestedBillingCycleAnchor } =
 		billingContext;
 	// Resetting the cycle now restarts every renewing plan's period, so kept plans are re-billed like changed ones.
-	if (requestedBillingCycleAnchor === "now") return "recreateRenewing";
+	if (requestedBillingCycleAnchor === "now") return "recreateRecurring";
 	if (!replacedStripeSubscription) return "carry";
 	if (isBackdateRecreate({ billingContext })) {
 		return restartsCycleAtBackdatedStart({ billingContext })
@@ -30,7 +30,7 @@ const liveRowsPolicy = ({
 	const continuesPaidUpCycle =
 		replacedStripeSubscription.status === "canceled" &&
 		requestedBillingCycleAnchor === undefined;
-	return continuesPaidUpCycle ? "recreateWhenPaidRecurringStarts" : "recreate";
+	return continuesPaidUpCycle ? "carryUnlessPaidRecurringStarts" : "recreate";
 };
 
 export const setupSetPlansPolicies = ({

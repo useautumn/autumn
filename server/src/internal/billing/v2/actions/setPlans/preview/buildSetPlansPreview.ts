@@ -7,7 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
-import { isCustomerProductOnOtherSubscription } from "../utils/isCustomerProductOnOtherSubscription";
+import { isBilledByOtherSubscription } from "../utils/isBilledByOtherSubscription";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
@@ -46,7 +46,7 @@ export const buildSetPlansPreview = async ({
 			billingPlan,
 			nextCycleCustomerProductFilter: stripeSubscriptionId
 				? (customerProduct) =>
-						!isCustomerProductOnOtherSubscription({
+						!isBilledByOtherSubscription({
 							customerProduct,
 							stripeSubscriptionId,
 						})

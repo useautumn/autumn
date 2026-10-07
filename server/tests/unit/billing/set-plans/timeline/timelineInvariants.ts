@@ -364,7 +364,7 @@ export const expectProjection = ({
 	policies: SetPlansPolicies;
 	diff: TimelineDiff;
 }) => {
-	const cycleResetsNow = policies.liveRows === "recreateRenewing";
+	const cycleResetsNow = policies.liveRows === "recreateRecurring";
 	const cancelEnds = new Map(
 		saved.segments.flatMap(({ key, rows: [liveRow], endsAt }) =>
 			liveRow?.canceling

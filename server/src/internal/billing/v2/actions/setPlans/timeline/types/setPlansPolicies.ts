@@ -12,7 +12,7 @@ export type SetPlansPolicies = {
 	liveRows:
 		| "carry"
 		| "recreate"
-		| "recreateRenewing"
-		| "recreateWhenPaidRecurringStarts";
+		| "recreateRecurring"
+		| "carryUnlessPaidRecurringStarts";
 	unbilledRows: "carry" | "recreate";
 };

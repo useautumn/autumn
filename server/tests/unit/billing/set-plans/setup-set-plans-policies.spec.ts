@@ -118,7 +118,7 @@ test("a cycle reset now recreates renewing live rows, so kept plans are re-bille
 			}),
 			params: {},
 		}).liveRows,
-	).toBe("recreateRenewing");
+	).toBe("recreateRecurring");
 });
 
 test("a scheduled anchor keeps live rows carrying until the reset", () => {
