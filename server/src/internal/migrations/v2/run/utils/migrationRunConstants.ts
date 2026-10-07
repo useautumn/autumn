@@ -4,7 +4,7 @@ import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
  * and the per-customer lazy task). Flip to re-enable. */
 export const LAZY_MIGRATION_RUNS_DISABLED = true;
 
-export const MIGRATION_RUN_CUSTOMER_CONCURRENCY = 100;
+export const MIGRATION_RUN_CUSTOMER_CONCURRENCY = 15;
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS = 5;
