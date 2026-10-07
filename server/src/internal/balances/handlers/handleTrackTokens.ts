@@ -12,6 +12,7 @@ import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollo
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
 import { isQueuedTokenTrack } from "@/internal/balances/track/utils/isQueuedTrack.js";
+import { findTokenDeduction } from "@/internal/balances/track/utils/tokenFeatureDeduction.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const handleTrackTokens = createRoute({
@@ -44,7 +45,11 @@ export const handleTrackTokens = createRoute({
 		}
 
 		if (isAsync) {
-			await runAsyncTrack({ ctx, body: trackBody });
+			await runAsyncTrack({
+				ctx,
+				body: trackBody,
+				tokens: findTokenDeduction({ featureDeductions }),
+			});
 			return c.json(getQueuedTrackResponse({ ctx, body: trackBody }), 202);
 		}
 
