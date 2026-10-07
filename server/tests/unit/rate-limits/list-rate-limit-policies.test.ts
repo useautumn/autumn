@@ -75,7 +75,7 @@ describe("listRateLimitPolicies", () => {
 
 	test("customer reads are their own row on check's counters, rejecting at the cap", () => {
 		const check = findPolicy({ id: "check" });
-		const customerReads = findPolicy({ id: "check_2" });
+		const customerReads = findPolicy({ id: "customer_reads" });
 
 		expect(check.routes).toContain("POST /v1/check");
 		expect(check.perOrg).toMatchObject({

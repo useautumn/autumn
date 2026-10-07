@@ -13,6 +13,7 @@ import type {
 
 type PolicyRow = {
 	type: RateLimitType;
+	name?: string;
 	routes: string[] | "*";
 	overLimit?: "degrade";
 };
@@ -27,8 +28,9 @@ const isAnOrgCap = ({ type }: { type: RateLimitType }) =>
 
 /** One row per route group, then limits chosen outside the route table, then the general fallback. */
 const listRows = (): PolicyRow[] => [
-	...RATE_LIMIT_ROUTE_GROUPS.map(({ type, patterns, overLimit }) => ({
+	...RATE_LIMIT_ROUTE_GROUPS.map(({ type, name, patterns, overLimit }) => ({
 		type,
+		name,
 		routes: patterns.map(({ method, url }) => `${method} ${url}`),
 		overLimit,
 	})),
@@ -50,7 +52,8 @@ const toLayerTypes = ({ type }: { type: RateLimitType }) => {
 };
 
 const toRowIds = ({ rows }: { rows: PolicyRow[] }) =>
-	rows.map(({ type }, index) => {
+	rows.map(({ type, name }, index) => {
+		if (name) return name;
 		const earlierOfType = rows
 			.slice(0, index)
 			.filter((row) => row.type === type).length;

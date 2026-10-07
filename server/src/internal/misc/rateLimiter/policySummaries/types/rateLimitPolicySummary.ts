@@ -9,7 +9,7 @@ export type RateLimitPolicyOverride = {
 
 /** One limit as the admin page shows it: a customer limit with its org cap, or an org-wide limit. */
 export type RateLimitPolicySummary = {
-	/** The RateLimitType, suffixed with the group's position when a type has several route groups. */
+	/** The route group's name, else its RateLimitType (suffixed when the type repeats). */
 	id: string;
 	type: string;
 	routes: string[] | "*";
