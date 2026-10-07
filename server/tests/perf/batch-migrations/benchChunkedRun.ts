@@ -11,7 +11,16 @@
  *                   your local `trigger.dev dev` worker, via runMigrationTask.
  *                   Validates the end-to-end path; slower and noisier.
  *
+ * Two lanes (inline mode only):
+ *
+ *   --lane batch          (default) the set-based batch lane.
+ *   --lane per-customer   a DRY run, which takes the per-customer lane: fixed
+ *                         customer pages, claims and item rows, no plan writes.
+ *                         --chunk-concurrency K keeps K chunks in flight, each
+ *                         on its own migration-sized pool like a chunk task.
+ *
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts
+ *   bun tests/perf/batch-migrations/benchChunkedRun.ts --lane per-customer --chunk-concurrency 3
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts --migration bench-mig-bench-paid-words
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts --mode trigger --migration bench-mig-bench-paid-words
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts --pages-per-chunk 5
@@ -25,13 +34,20 @@
 
 import type { Migration } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { initDrizzle } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
 import type { BatchMigrationPagePhases } from "@/internal/migrations/v2/batchOperations/execute/utils/pagePhaseTimings.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { createInProcessChunkDispatcher } from "@/internal/migrations/v2/run/chunks/createInProcessChunkDispatcher.js";
+import { executeRunMigrationChunk } from "@/internal/migrations/v2/run/executeRunMigrationChunk.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
-import type { RunBatchMigrationChunkPayload } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import type {
+	RunBatchMigrationChunkPayload,
+	RunMigrationChunkPayload,
+} from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import { MIGRATION_DB_POOL_MAX } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	BENCH_INTERNAL_CUSTOMER_PREFIX,
@@ -52,6 +68,11 @@ const parseArgs = () => {
 	const mode = get("--mode") ?? "inline";
 	if (mode !== "inline" && mode !== "trigger")
 		throw new Error(`bench: --mode must be inline|trigger (got "${mode}")`);
+	const lane = get("--lane") ?? "batch";
+	if (lane !== "batch" && lane !== "per-customer")
+		throw new Error(`bench: --lane must be batch|per-customer (got "${lane}")`);
+	if (lane === "per-customer" && mode === "trigger")
+		throw new Error("bench: --lane per-customer is inline only");
 	const pagesPerChunk = get("--pages-per-chunk");
 	if (get("--limit") !== undefined)
 		throw new Error(
@@ -64,9 +85,11 @@ const parseArgs = () => {
 		);
 	return {
 		mode,
+		lane,
 		migrationId: get("--migration") ?? DEFAULT_MIGRATION_ID,
 		pagesPerChunk:
 			pagesPerChunk === undefined ? undefined : Number(pagesPerChunk),
+		chunkConcurrency: Number(get("--chunk-concurrency") ?? 1),
 		pollMs: Number(get("--poll-ms") ?? 2000),
 	};
 };
@@ -169,6 +192,69 @@ const runInlineMode = async ({
 		},
 	});
 
+	return { result, chunkTimings, phases };
+};
+
+/** Per-customer lane in-process, as a dry run. Each chunk slot gets its own
+ * migration-sized pool, the way a chunk task does, so K chunks contend on
+ * Postgres rather than on one local pool. */
+const runPerCustomerInlineMode = async ({
+	ctx,
+	migration,
+	migrationRunId,
+	chunkConcurrency,
+}: {
+	ctx: AutumnContext;
+	migration: Migration;
+	migrationRunId: string;
+	chunkConcurrency: number;
+}) => {
+	const chunkTimings: ChunkTiming[] = [];
+	const slotContexts = Array.from({ length: chunkConcurrency }, (_, slot) => {
+		const { db } = initDrizzle({
+			name: `bench-chunk-${slot}`,
+			maxConnections: MIGRATION_DB_POOL_MAX,
+		});
+		return { ...ctx, db };
+	});
+	const freeSlots = slotContexts.map((_, slot) => slot);
+
+	const runChunk = async (payload: RunMigrationChunkPayload) => {
+		const slot = freeSlots.pop();
+		if (slot === undefined) throw new Error("bench: more chunks than slots");
+		const startedAt = Date.now();
+		try {
+			const chunk = await executeRunMigrationChunk({
+				ctx: slotContexts[slot],
+				payload,
+			});
+			const ms = Date.now() - startedAt;
+			chunkTimings.push({
+				chunkIndex: payload.pageIndex,
+				ms,
+				processed: chunk.processed,
+				pages: 1,
+				completion: "exhausted",
+			});
+			console.log(
+				`bench: page ${payload.pageIndex} — ${chunk.processed.toLocaleString()} customers in ${ms}ms`,
+			);
+			return chunk;
+		} finally {
+			freeSlots.push(slot);
+		}
+	};
+
+	const result = await runMigrationInChunks({
+		ctx,
+		migration,
+		migrationRunId,
+		dryRun: true,
+		chunkConcurrency,
+		dispatcher: createInProcessChunkDispatcher({ runChunk }),
+	});
+
+	const phases: BatchMigrationPagePhases = {};
 	return { result, chunkTimings, phases };
 };
 
@@ -289,7 +375,8 @@ const runTriggerMode = async ({
 };
 
 const main = async () => {
-	const { mode, migrationId, pagesPerChunk, pollMs } = parseArgs();
+	const { mode, lane, migrationId, pagesPerChunk, chunkConcurrency, pollMs } =
+		parseArgs();
 	const { ctx } = await getBenchContext();
 
 	const migration = await migrationRepo.find({ ctx, id: migrationId });
@@ -299,9 +386,9 @@ const main = async () => {
 	await resetBenchRows({ ctx });
 
 	console.log(
-		`bench: mode=${mode} migration=${migrationId}${
+		`bench: mode=${mode} lane=${lane} migration=${migrationId}${
 			pagesPerChunk ? ` pagesPerChunk=${pagesPerChunk}` : ""
-		}`,
+		}${lane === "per-customer" ? ` chunkConcurrency=${chunkConcurrency}` : ""}`,
 	);
 
 	if (mode === "trigger") {
@@ -328,12 +415,15 @@ const main = async () => {
 	const migrationRunId = generateId("mrun");
 	console.log(`bench: run=${migrationRunId}`);
 	const startedAt = Date.now();
-	const { result, chunkTimings, phases } = await runInlineMode({
-		ctx,
-		migration,
-		migrationRunId,
-		pagesPerChunk,
-	});
+	const { result, chunkTimings, phases } =
+		lane === "per-customer"
+			? await runPerCustomerInlineMode({
+					ctx,
+					migration,
+					migrationRunId,
+					chunkConcurrency,
+				})
+			: await runInlineMode({ ctx, migration, migrationRunId, pagesPerChunk });
 	const totalMs = Date.now() - startedAt;
 
 	const totalPages = chunkTimings.reduce((sum, c) => sum + c.pages, 0);
