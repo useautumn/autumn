@@ -7,11 +7,11 @@ import { driveProductPastDue } from "@tests/integration/billing/utils/driveProdu
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { timeout } from "@/utils/genUtils";
 import {
 	buildProductSet,
 	expectInvoicesVoided,
 	expectNoCredit,
+	waitForPastDueCancelResolved,
 	withVoidFlag,
 } from "./pastDueVoidEdgeUtils";
 
@@ -36,13 +36,21 @@ test(`${chalk.yellowBright("edge: explicit cancel_immediately on past_due -> imm
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
 				cancel_action: "cancel_immediately",
 			});
-			await timeout(3000);
+			await waitForPastDueCancelResolved({
+				autumn: autumnV1,
+				ctx,
+				customerId,
+				productId: pro.id,
+				stripeCustomerId,
+				subscriptionId,
+			});
 
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			await expectCustomerProducts({

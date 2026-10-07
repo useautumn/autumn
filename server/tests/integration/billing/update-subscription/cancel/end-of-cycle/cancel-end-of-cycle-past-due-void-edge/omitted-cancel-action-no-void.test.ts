@@ -6,7 +6,6 @@ import type { ApiCustomerV3 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { timeout } from "@/utils/genUtils";
 import { buildProductSet, withVoidFlag } from "./pastDueVoidEdgeUtils";
 
 test(`${chalk.yellowBright("edge: omitted cancel_action on past_due does not resolve/void")}`, async () => {
@@ -30,6 +29,7 @@ test(`${chalk.yellowBright("edge: omitted cancel_action on past_due does not res
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 			// No cancel_action: nothing to cancel, no resolution, no void. recalculate_balances
 			// is a no-op billing-relevant field so the request has something to act on.
@@ -38,7 +38,6 @@ test(`${chalk.yellowBright("edge: omitted cancel_action on past_due does not res
 				product_id: pro.id,
 				recalculate_balances: { enabled: true },
 			});
-			await timeout(3000);
 
 			// pro still present (not removed), open invoice still open, nothing voided.
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

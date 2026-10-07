@@ -7,8 +7,11 @@ import { driveProductPastDue } from "@tests/integration/billing/utils/driveProdu
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { timeout } from "@/utils/genUtils";
-import { buildProductSet, withVoidFlag } from "./pastDueVoidEdgeUtils";
+import {
+	buildProductSet,
+	waitForPastDueCancelResolved,
+	withVoidFlag,
+} from "./pastDueVoidEdgeUtils";
 
 test(`${chalk.yellowBright("edge: uncollectible invoice is voided on the inline cancel path")}`, async () => {
 	const customerId = "qa-uncollectible";
@@ -31,6 +34,7 @@ test(`${chalk.yellowBright("edge: uncollectible invoice is voided on the inline 
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 			const before = await ctx.stripeCli.invoices.list({
 				customer: stripeCustomerId,
@@ -48,7 +52,14 @@ test(`${chalk.yellowBright("edge: uncollectible invoice is voided on the inline 
 				product_id: pro.id,
 				cancel_action: "cancel_end_of_cycle",
 			});
-			await timeout(3000);
+			await waitForPastDueCancelResolved({
+				autumn: autumnV1,
+				ctx,
+				customerId,
+				productId: pro.id,
+				stripeCustomerId,
+				subscriptionId,
+			});
 
 			const after = await ctx.stripeCli.invoices.retrieve(uncollectible.id);
 			expect(after.status).toBe("void");

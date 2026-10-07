@@ -8,11 +8,11 @@ import { expectCustomerProducts } from "@tests/integration/billing/utils/expectC
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { timeout } from "@/utils/genUtils";
 import {
 	buildProductSet,
 	expectInvoicesVoided,
 	expectNoCredit,
+	waitForPastDueCancelResolved,
 	withVoidFlag,
 } from "./pastDueVoidEdgeUtils";
 
@@ -37,6 +37,7 @@ test(`${chalk.yellowBright("edge: /billing/cancel past_due + prorate=true -> imm
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 			// Legacy /billing/cancel hardcodes proration_behavior="prorate_immediately".
 			await autumnV1.cancel({
@@ -45,7 +46,14 @@ test(`${chalk.yellowBright("edge: /billing/cancel past_due + prorate=true -> imm
 				cancel_immediately: false,
 				prorate: true,
 			});
-			await timeout(3000);
+			await waitForPastDueCancelResolved({
+				autumn: autumnV1,
+				ctx,
+				customerId,
+				productId: pro.id,
+				stripeCustomerId,
+				subscriptionId,
+			});
 
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			await expectCustomerProducts({

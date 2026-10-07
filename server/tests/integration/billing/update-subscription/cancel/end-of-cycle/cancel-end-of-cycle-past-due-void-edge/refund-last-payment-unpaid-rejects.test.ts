@@ -35,6 +35,7 @@ test(`${chalk.yellowBright("edge: refund_last_payment=full on unpaid past_due re
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 			const subscriptionBefore = await ctx.stripeCli.subscriptions.retrieve(
 				subscriptionId,
