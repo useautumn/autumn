@@ -116,6 +116,21 @@ describe("synchronous balance write limits", () => {
 		}
 	});
 
+	test("a request with no org resolved yet is judged by its body alone", () => {
+		const getRouteGroup = (requestBody: Record<string, unknown>) =>
+			getRateLimitRouteGroup({
+				req: { method: "POST", path: "/v1/balances.track" },
+				get: () => ({
+					apiVersion: new ApiVersionClass(ApiVersion.V2_4),
+					requestBody,
+					features: [],
+				}),
+			} as unknown as Context<HonoEnv>).type;
+
+		expect(getRouteGroup({})).toBe(RateLimitType.SyncBalanceWrite);
+		expect(getRouteGroup({ async: true })).toBe(RateLimitType.Track);
+	});
+
 	test("balance updates, finalize and usage never use SyncBalanceWrite", () => {
 		for (const spec of [
 			"POST /v1/balances.update",

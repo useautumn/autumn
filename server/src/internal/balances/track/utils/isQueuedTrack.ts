@@ -10,8 +10,9 @@ export const isQueuedTrack = ({
 	ctx,
 	body,
 }: {
-	ctx: Pick<AutumnContext, "org">;
+	ctx: { org?: Pick<AutumnContext["org"], "id" | "slug"> };
 	body: { async?: boolean };
 }) =>
 	isQueuedTokenTrack({ body }) ||
-	isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
+	(ctx.org !== undefined &&
+		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug }));
