@@ -121,4 +121,82 @@ describe("command topic", () => {
 		).toEqual([track, other]);
 		await expect(publisher.append({ records: [] })).rejects.toThrow(RangeError);
 	});
+
+	describe("appends that arrive while a send is in flight", () => {
+		/** A producer whose sends wait until the test releases them. */
+		const createGatedProducer = () => {
+			const sent: ProducerRecord[] = [];
+			const gates: { release: () => void; fail: (error: Error) => void }[] = [];
+			return {
+				sent,
+				releaseNext: () => gates.shift()?.release(),
+				failNext: (error: Error) => gates.shift()?.fail(error),
+				producer: {
+					send: (record: ProducerRecord) => {
+						sent.push(record);
+						return new Promise<[]>((resolve, reject) =>
+							gates.push({ release: () => resolve([]), fail: reject }),
+						);
+					},
+				},
+			};
+		};
+		const commandFor = (id: string) => ({ ...track, commandId: id });
+		const commandIdsOf = (record: ProducerRecord | undefined) =>
+			record?.messages.map(
+				(message) =>
+					(
+						parseCommandRecord({
+							key: message.key as Buffer,
+							value: message.value as Buffer,
+						}) as TrackCommand
+					).commandId,
+			);
+
+		test("share the next send, in arrival order, and each resolves with it", async () => {
+			const gated = createGatedProducer();
+			const publisher = createCommandPublisher({
+				ctx: { producer: gated.producer, topic: "local-commands" },
+			});
+			const first = publisher.append({
+				records: [{ partition: 1, command: commandFor("a") }],
+			});
+			const waiting = ["b", "c", "d"].map((id) =>
+				publisher.append({
+					records: [{ partition: 2, command: commandFor(id) }],
+				}),
+			);
+			await Bun.sleep(0);
+			expect(gated.sent).toHaveLength(1);
+
+			gated.releaseNext();
+			await first;
+			await Bun.sleep(0);
+			expect(gated.sent).toHaveLength(2);
+			expect(commandIdsOf(gated.sent[1])).toEqual(["b", "c", "d"]);
+
+			gated.releaseNext();
+			await Promise.all(waiting);
+		});
+
+		test("a failed send rejects only the appends it carried", async () => {
+			const gated = createGatedProducer();
+			const publisher = createCommandPublisher({
+				ctx: { producer: gated.producer, topic: "local-commands" },
+			});
+			const first = publisher.append({
+				records: [{ partition: 1, command: commandFor("a") }],
+			});
+			const second = publisher.append({
+				records: [{ partition: 1, command: commandFor("b") }],
+			});
+			await Bun.sleep(0);
+			gated.failNext(new Error("broker down"));
+			await expect(first).rejects.toThrow("broker down");
+			await Bun.sleep(0);
+			gated.releaseNext();
+			await second;
+			expect(commandIdsOf(gated.sent[1])).toEqual(["b"]);
+		});
+	});
 });
