@@ -50,16 +50,20 @@ export const createSubjectJoinCache = ({
 		return join;
 	}
 
+	function isRecheckDue(join: SubjectJoin): boolean {
+		return (
+			join.catalogJoinedAt === null ||
+			now() - join.catalogJoinedAt >= ctx.config.catalogRecheckMs
+		);
+	}
+
 	/** Joined, its rows unmoved, and not yet due a recheck. */
 	function isCatalogCurrent(
 		join: SubjectJoin | undefined,
 	): join is JoinedCatalog {
 		if (!join || join.catalog === null || join.catalogJoinedAt === null)
 			return false;
-		return (
-			isJoinCurrent(join) &&
-			now() - join.catalogJoinedAt < ctx.config.catalogRecheckMs
-		);
+		return isJoinCurrent(join) && !isRecheckDue(join);
 	}
 
 	function peekCatalog({ state }: { state: SubjectState }): Catalog | null {
@@ -75,7 +79,9 @@ export const createSubjectJoinCache = ({
 		join: () => Catalog;
 	}): Catalog {
 		const cached = joinOf({ state });
-		if (cached.catalog === null) {
+		// A catalog past its recheck is joined again from the rows `ensure` just refreshed; keeping it
+		// would leave this state, and every state it hands the catalog on to, due forever.
+		if (cached.catalog === null || isRecheckDue(cached)) {
 			cached.catalog = join();
 			cached.catalogJoinedAt = now();
 			cached.basis ??= cached.catalog;

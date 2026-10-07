@@ -277,6 +277,23 @@ describe("inheritCatalog", () => {
 		expect(joinCache.peekCatalog({ state: to })).toBeNull();
 	});
 
+	test("a state whose inherited catalog came due is current again once its catalog is read", () => {
+		const { joinCache, advanceClock, readCatalog } = createClockedFixture({
+			recheckMs: 60_000,
+		});
+		const first = createState();
+		const second = { ...first, revision: 1 };
+		joinCache.readCatalog({ state: first, join: () => readCatalog() });
+		joinCache.inheritCatalog({ from: first, to: second, changes: [increment] });
+		advanceClock(61_000);
+		expect(joinCache.peekCatalog({ state: second })).toBeNull();
+
+		const rechecked = readCatalog();
+		joinCache.readCatalog({ state: second, join: () => rechecked });
+
+		expect(joinCache.peekCatalog({ state: second })).toBe(rechecked);
+	});
+
 	test("an inherited catalog is re-read once its recheck is due, and after the catalog moves", () => {
 		const { joinCache, moveCatalog, advanceClock, readCatalog } =
 			createClockedFixture({ recheckMs: 60_000 });
