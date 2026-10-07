@@ -1,8 +1,7 @@
-import {
-	type BillingDetailsParams,
-	type CheckParams,
-	RecaseError,
-	type TrackParams,
+import type {
+	BillingDetailsParams,
+	CheckParams,
+	TrackParams,
 } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { assertBillingDetailsWritable } from "@/external/stripe/customers/billingDetails/utils/assertBillingDetailsWritable.js";
@@ -16,6 +15,7 @@ import {
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { orgRateLimitExceededError } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
@@ -59,11 +59,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	// and let the SDK retry the 429.
 	if (ctx.orgRateLimitDegraded) {
 		await queueRecovery?.();
-		throw new RecaseError({
-			message: "Rate limit exceeded.",
-			code: "rate_limit_exceeded",
-			statusCode: 429,
-		});
+		throw orgRateLimitExceededError();
 	}
 
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.

@@ -1,8 +1,9 @@
-import type { ApiVersion } from "@autumn/shared";
+import { type ApiVersion, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { shouldUseRedis } from "@/external/redis/initRedis";
+import { errorToResponse } from "@/honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import {
 	RATE_LIMIT_CONFIGS,
@@ -59,6 +60,13 @@ const warnOrgCapExceeded = ({
 	);
 };
 
+export const orgRateLimitExceededError = () =>
+	new RecaseError({
+		message: "Rate limit exceeded.",
+		code: "rate_limit_exceeded",
+		statusCode: 429,
+	});
+
 export const rateLimitFactory = ({
 	type,
 	config,
@@ -66,7 +74,7 @@ export const rateLimitFactory = ({
 }: {
 	type: RateLimitType;
 	config: RateLimitConfig;
-	overLimit?: "degrade";
+	overLimit?: "degrade" | "reject";
 }): ReturnType<typeof rateLimiter> => {
 	const { windowMs } = config;
 
@@ -91,12 +99,25 @@ export const rateLimitFactory = ({
 		await next();
 	};
 
+	// The SDK retries this 429 on its own backoff, so no Retry-After.
+	const rejectHandler = async (c: Context): Promise<Response> => {
+		const ctx = (c as Context<HonoEnv>).get("ctx");
+		warnOrgCapExceeded({ limitType: type, orgSlug: ctx.org?.slug });
+		c.header("Retry-After", undefined);
+		return errorToResponse({
+			c: c as Context<HonoEnv>,
+			error: orgRateLimitExceededError(),
+			env: ctx.env,
+		});
+	};
+
+	const handlers = { degrade: degradeHandler, reject: rejectHandler };
 	const options = {
 		windowMs,
 		limit: dynamicLimit,
 		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
-		...(overLimit === "degrade" && { handler: degradeHandler }),
+		...(overLimit && { handler: handlers[overLimit] }),
 	};
 
 	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;
@@ -147,12 +168,12 @@ export const getOrgLimiterFor = ({
 	overLimit,
 }: {
 	type: RateLimitType;
-	overLimit?: "degrade";
+	overLimit?: "degrade" | "reject";
 }) => {
 	const orgLimit = RATE_LIMIT_CONFIGS[type].orgLimit;
 	if (!orgLimit) return undefined;
 
-	const cacheKey = `${orgLimit}:${overLimit ?? "reject"}`;
+	const cacheKey = `${orgLimit}:${overLimit ?? "default"}`;
 	let limiter = orgLimiters.get(cacheKey);
 	if (!limiter) {
 		limiter = rateLimitFactory({

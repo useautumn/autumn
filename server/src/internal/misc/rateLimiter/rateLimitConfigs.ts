@@ -26,9 +26,10 @@ type RoutePattern = {
 
 type RateLimitRouteGroup = {
 	type: Exclude<RateLimitType, RateLimitType.General>;
-	/** "degrade" runs the handler with `ctx.orgRateLimitDegraded` set when the
-	 *  bucket's org cap is hit; the default is a 429 from the limiter. */
-	overLimit?: "degrade";
+	/** At the bucket's org cap: "degrade" runs the handler with
+	 *  `ctx.orgRateLimitDegraded` set, "reject" answers the API's JSON 429, and
+	 *  unset leaves hono's text 429 with Retry-After. */
+	overLimit?: "degrade" | "reject";
 	patterns: RoutePattern[];
 };
 
@@ -122,6 +123,7 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	// Reads have no DB-free answer, so they share check's counters but reject.
 	{
 		type: RateLimitType.CheckCustomerGet,
+		overLimit: "reject",
 		patterns: [
 			route({ method: "GET", url: "/v1/customers/:customer_id" }),
 			route({
@@ -146,7 +148,7 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 
 export const getRateLimitRouteGroup = (
 	c: Context<HonoEnv>,
-): { type: RateLimitType; overLimit?: "degrade" } => {
+): { type: RateLimitType; overLimit?: "degrade" | "reject" } => {
 	const method = c.req.method;
 	const path = c.req.path;
 
