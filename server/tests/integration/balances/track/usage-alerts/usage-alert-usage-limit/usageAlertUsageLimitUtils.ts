@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import {
 	type ApiCustomerV5,
 	ApiVersion,
@@ -11,12 +12,12 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntil, timeout } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setCustomerUsageLimit } from "../../../utils/usage-limit-utils/customerUsageLimitUtils.js";
-import { fetchUsageWindowRows } from "../../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
+import { expectUsageWindowSynced } from "../../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 export const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 export const numericFilterValue = (value: number) => value as unknown as string;
@@ -84,11 +85,12 @@ export const setUsageLimits = async ({
 		billing_controls: { usage_limits: usageLimits },
 	});
 	// Wait until the read path that track uses serves the new caps.
-	await pollUntil({
+	await pollUntilAsserted({
 		fetch: () => autumnV2_3.customers.get<ApiCustomerV5>(customerId),
-		until: (customer) =>
-			configuredLimits(customer.billing_controls?.usage_limits ?? []) ===
-			configuredLimits(usageLimits),
+		assert: (customer) =>
+			expect(
+				configuredLimits(customer.billing_controls?.usage_limits ?? []),
+			).toBe(configuredLimits(usageLimits)),
 		timeoutMs: 15_000,
 	});
 };
@@ -101,15 +103,12 @@ export const waitForUsageWindowSynced = ({
 	customerId: string;
 	usage: number;
 }) =>
-	pollUntil({
-		fetch: () =>
-			fetchUsageWindowRows({
-				ctx,
-				customerId,
-				featureId: TestFeature.Messages,
-			}),
-		until: (rows) => rows.some((row) => Number(row.usage) === usage),
-		timeoutMs: 15_000,
+	expectUsageWindowSynced({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+		usage,
+		rowCount: null,
 	});
 
 export const usageLimitAlert = ({
