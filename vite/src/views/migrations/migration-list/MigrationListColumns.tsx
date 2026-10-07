@@ -1,5 +1,6 @@
 import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
+import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { MigrationFilterCell } from "./cells/MigrationFilterCell";
 import { MigrationOperationsCell } from "./cells/MigrationOperationsCell";
 import { MigrationStatusCell } from "./cells/MigrationStatusCell";
@@ -43,6 +44,13 @@ export const createMigrationListColumns = (): ColumnDef<
 		cell: ({ row }: CellProps) => (
 			<MigrationOperationsCell view={row.original.view} />
 		),
+	},
+	{
+		...createDateTimeColumn<MigrationListRow>({
+			header: "Created At",
+			accessorKey: "created_at",
+		}),
+		size: 120,
 	},
 	{
 		header: "",

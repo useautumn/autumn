@@ -479,10 +479,10 @@ export function MigrationLiveView({
 				/>
 			))}
 			{latestFailedRun && latestFailedRun.internal_id !== dismissedError && (
-				<Alert variant="destructive">
+				<Alert variant="warning">
 					<WarningIcon weight="fill" />
 					<AlertDescription>
-						Run failed: {latestFailedRun.error_message}
+						Run incomplete: {latestFailedRun.error_message}
 					</AlertDescription>
 					<AlertAction>
 						<button

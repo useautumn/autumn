@@ -3,7 +3,8 @@
 	"resources": {
 		"pushes": {
 			"config": { "id": "pushes", "type": "queue" },
-			"lifecycle": "live",
+			"lifecycle": "frozen",
+			"remoteAccess": true,
 			"dependencies": []
 		},
 		"atom": {

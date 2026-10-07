@@ -4,7 +4,7 @@
  * Uses Decimal.js for precision - no floating point errors.
  */
 
-import { addMonths } from "date-fns";
+import { addMonths, addYears } from "date-fns";
 import { Decimal } from "decimal.js";
 import {
 	type BillingPeriod,
@@ -135,7 +135,8 @@ export const calculateBillingCycleAnchorResetNextCycle = async ({
 	const normalizedAnchorMs = floorToStripeSecond(billingCycleAnchorMs);
 
 	if (normalizedAnchorMs < billingPeriod.end) {
-		const newCycleEndMs = addMonths(normalizedAnchorMs, 1).getTime();
+		const addInterval = interval === "year" ? addYears : addMonths;
+		const newCycleEndMs = addInterval(normalizedAnchorMs, 1).getTime();
 		const originalPeriodEndMs = floorToStripeSecond(billingPeriod.end);
 
 		const extraDays = new Decimal(newCycleEndMs - originalPeriodEndMs);

@@ -240,6 +240,7 @@ export const createTrackCommand = ({
 	commandId = "cmd_1",
 	requestId,
 	featureId = "messages",
+	internalFeatureId = internalFeatureIdOf(featureId),
 	value = 5,
 	overageBehavior = "reject",
 	occurredAt = testOccurredAt,
@@ -248,6 +249,7 @@ export const createTrackCommand = ({
 	commandId?: string;
 	requestId?: string;
 	featureId?: string;
+	internalFeatureId?: string;
 	value?: number;
 	overageBehavior?: OverageBehavior;
 	occurredAt?: number;
@@ -261,7 +263,7 @@ export const createTrackCommand = ({
 			requestId: requestId ?? `req_${commandId}`,
 			identity,
 			featureId,
-			internalFeatureId: internalFeatureIdOf(featureId),
+			internalFeatureId,
 			value,
 			overageBehavior,
 			properties: null,

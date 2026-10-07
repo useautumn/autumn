@@ -1,5 +1,6 @@
 import type { RunDetail, RunFile } from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { summariseRunResources } from "../../profiles/repos/fileRunStats.ts";
 import { computeRunDrift } from "../../results/actions/computeRunDrift.ts";
 import { getLiveRun } from "../live/liveRuns.ts";
 import { summariseRepeats } from "../repeat/repetitions.ts";
@@ -52,5 +53,7 @@ export const getRun = async ({
 		milestones: progress.milestones ?? null,
 		etaMs: eta?.etaMs ?? null,
 		etaP90Ms: eta?.etaP90Ms ?? null,
+		resources: await summariseRunResources({ ctx, runId }),
+		sizing: run.sizing ?? null,
 	};
 };

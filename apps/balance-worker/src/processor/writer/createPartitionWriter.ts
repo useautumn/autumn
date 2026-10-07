@@ -23,6 +23,7 @@ import {
 	createPartitionWriterState,
 	rejectAllPending,
 } from "./pendingMutations.js";
+import type { OnSubjectEvicted } from "./subjectMap/types/subjectMap.js";
 import type {
 	DecidedMutation,
 	HeldDecision,
@@ -55,6 +56,7 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			onEvicted: evictDeleteOf({ ctx, config }),
 		}),
 	};
 
@@ -155,8 +157,8 @@ export function createPartitionWriter({
 		return evictCustomer({ scope, customerKey });
 	}
 
-	function adopt({ state }: Parameters<PartitionWriter["adopt"]>[0]) {
-		return adoptState({ scope, state });
+	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
+		return adoptState({ scope, ...params });
 	}
 
 	function waitForStore() {
@@ -200,4 +202,22 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}
 	}
+}
+
+/** The map's evict hook: a synchronous enqueue onto the partition's lane, never awaited by a request. */
+function evictDeleteOf({
+	ctx,
+	config,
+}: {
+	ctx: PartitionWriterContext;
+	config: PartitionWriterConfig;
+}): OnSubjectEvicted | undefined {
+	const writes = ctx.stateStore.snapshotQueues;
+	if (!writes) return undefined;
+	return ({ customerKey }) =>
+		writes.enqueueDelete({
+			topic: config.topic,
+			partition: config.partition,
+			customerKey,
+		});
 }

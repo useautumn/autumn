@@ -73,8 +73,11 @@ swarms + nukes → delete every webhook endpoint on each `TW_V3_KEYS` key →
 register one Connect webhook per usable key → `<TWD_PUBLIC_URL>/ingress/connect/sandbox`
 → re-probe → gate `open`. Idempotent; safe to rerun.
 
-**Baseline + drift** — nightly/merge runs on `dev` set per-file p50/p90 +
-pass-rate. A branch run flags: fails-on-branch-passes-on-dev, or
+**Baseline + drift** — a run is a baseline (`runs.is_baseline`, decided once at
+creation) when it is the scheduled daily `dev` run, or a full-suite `dev` run
+whose sha was dev's GitHub HEAD when it started. The last 10 finished baselines
+set per-file p50/p90 + pass-rate; each finished run records `new_failures`
+(failing files that were not failing in the previous baseline). A branch run flags: fails-on-branch-passes-on-dev, or
 duration > 1.5× dev p90. Scheduling is longest-first by dev p90; unseen files
 first.
 

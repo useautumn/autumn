@@ -4,6 +4,8 @@ import {
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import { deepFreeze } from "../../../state/deepFreeze.js";
+import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
@@ -28,9 +30,19 @@ const readStoredParts = ({
 	return { customer, entity };
 };
 
+/** The parts a subject was joined from: the view is current while the store still holds these very copies. */
+type SubjectJoinCacheEntry = {
+	customer: StoredSubject;
+	shared: SharedCatalog | null;
+	current: CurrentSubject;
+};
+
+/** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
+const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
+
 /**
  * The subject a request is decided on, as Autumn last sent it: for an entity, the customer's rows and its own as one.
- * A customer or entity Atom does not hold is left to the API.
+ * Joined once per change to its parts, not per check. A customer or entity Atom does not hold is left to the API.
  */
 export const readCurrentSubject = ({
 	ctx,
@@ -43,6 +55,29 @@ export const readCurrentSubject = ({
 }): CurrentSubject => {
 	const { customer, entity } = readStoredParts({ ctx, customerId, entityId });
 	const shared = ctx.catalogStore.read();
+	const target = entity ?? customer;
+	const joined = subjectJoinCache.get(target);
+	if (joined?.customer === customer && joined.shared === shared)
+		return joined.current;
+	// Frozen, because every check until the next push shares it.
+	const current = deepFreeze(
+		joinSubject({ customer, entity, shared, entityId }),
+	);
+	subjectJoinCache.set(target, { customer, shared, current });
+	return current;
+};
+
+const joinSubject = ({
+	customer,
+	entity,
+	shared,
+	entityId,
+}: {
+	customer: StoredSubject;
+	entity: StoredSubject | null;
+	shared: SharedCatalog | null;
+	entityId: string | null;
+}): CurrentSubject => {
 	// The part read later is merged last, so where both hold a row its copy is the one kept.
 	const parts = entity ? [customer, entity] : [customer];
 	const partsOldestFirst = [...parts].sort(

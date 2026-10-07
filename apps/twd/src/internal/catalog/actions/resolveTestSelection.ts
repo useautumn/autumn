@@ -4,7 +4,7 @@ import { createTestFileResolver } from "@tw/testDiscovery/createTestFileResolver
 import type { RunSelection } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { isArchivedTestId } from "../repoPaths.ts";
+import { groupSelectsTestId, isArchivedTestId } from "../repoPaths.ts";
 import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 
 const CATALOG_HINT =
@@ -59,7 +59,10 @@ export const resolveTestSelection = async ({
 			});
 		}
 		for (const path of groupPaths) {
-			for (const file of resolver.resolvePath({ path })) files.add(file);
+			for (const file of resolver.resolvePath({ path })) {
+				if (groupSelectsTestId({ group, testId: relative(testsDir, file) }))
+					files.add(file);
+			}
 		}
 	}
 

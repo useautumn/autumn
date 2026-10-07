@@ -5,7 +5,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 export const BASELINE_BRANCH = "dev";
 const BASELINE_WINDOW_RUNS = 10;
 
-/** Recompute file_baselines from the final attempt of each file in the last 10 finished dev baseline runs. */
+/** Recompute file_baselines from the final attempt of each file in the last 10 finished baseline runs. */
 export const refreshBaselines = async ({
 	ctx,
 }: {
@@ -14,9 +14,7 @@ export const refreshBaselines = async ({
 	const upserted = await ctx.db.execute<{ file: string }>(sql`
 		with recent as (
 			select id from runs
-			where purpose = 'baseline'
-				and branch = ${BASELINE_BRANCH}
-				and repeat = 1
+			where is_baseline
 				and status in ('passed', 'failed')
 				and finished_at is not null
 			order by finished_at desc
@@ -51,16 +49,59 @@ export const refreshBaselines = async ({
 	return { files: upserted.length };
 };
 
-/** Only plain dev baseline runs; a repeat run's samples of one file would skew its p90 and pass rate. */
-export const feedsBaseline = ({
-	purpose,
-	branch,
-	repeat,
+/** Files failing in a finished run that were not failing in the baseline that finished before it; null without one. */
+export const recordNewFailures = async ({
+	ctx,
+	runId,
 }: {
-	purpose: string;
-	branch: string;
-	repeat: number;
-}) => purpose === "baseline" && branch === BASELINE_BRANCH && repeat === 1;
+	ctx: TwdContext;
+	runId: string;
+}) => {
+	await ctx.db.execute(sql`
+		update runs r set new_failures = case when r.failed = 0 then 0 else (
+			select case when prev.id is null then null else (
+				select count(*)::int from (
+					select distinct on (t.file) t.file, t.status from test_results t
+					where t.run_id = r.id order by t.file, t.attempt desc, t.created_at desc
+				) cur
+				where cur.status in ('failed', 'crashed', 'timed_out')
+				and coalesce((
+					select p.status from test_results p
+					where p.run_id = prev.id and p.file = cur.file
+					order by p.attempt desc, p.created_at desc limit 1
+				), 'passed') not in ('failed', 'crashed', 'timed_out')
+			) end
+			from (
+				select (
+					select b.id from runs b
+					where b.is_baseline and b.status in ('passed', 'failed') and b.id <> r.id
+						and b.finished_at < r.finished_at
+					order by b.finished_at desc limit 1
+				) as id
+			) prev
+		) end
+		where r.id = ${runId} and r.repeat = 1 and r.status in ('passed', 'failed')
+			and r.finished_at is not null
+	`);
+};
+
+/** A baseline candidate keeps the flag only if it completed (passed or failed) with a result for every planned file. */
+export const settleBaselineFlag = async ({
+	ctx,
+	runId,
+}: {
+	ctx: TwdContext;
+	runId: string;
+}) => {
+	await ctx.db.execute(sql`
+		update runs r set is_baseline = false
+		where r.id = ${runId} and r.is_baseline and r.finished_at is not null and (
+			r.status not in ('passed', 'failed')
+			or coalesce(r.file_count, 0) = 0
+			or (select count(distinct t.file) from test_results t where t.run_id = r.id) < r.file_count
+		)
+	`);
+};
 
 /** Hook for the runs task: call once a run reaches a terminal status. */
 export const onRunFinished = async ({
@@ -70,10 +111,11 @@ export const onRunFinished = async ({
 	ctx: TwdContext;
 	runId: string;
 }): Promise<void> => {
+	await settleBaselineFlag({ ctx, runId });
+	await recordNewFailures({ ctx, runId });
 	const [run] = await ctx.db
-		.select({ purpose: runs.purpose, branch: runs.branch, repeat: runs.repeat })
+		.select({ isBaseline: runs.isBaseline })
 		.from(runs)
 		.where(eq(runs.id, runId));
-	if (!run || !feedsBaseline(run)) return;
-	await refreshBaselines({ ctx });
+	if (run?.isBaseline) await refreshBaselines({ ctx });
 };

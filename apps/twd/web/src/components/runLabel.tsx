@@ -21,7 +21,7 @@ export const RunLabel = ({
 				className={cn("flex min-w-0 items-baseline gap-1.5", className)}
 				title={`${run.sha} on ${run.branch}`}
 			>
-				<span className={cn("shrink-0 font-mono", primaryClassName)}>
+				<span className={cn(primaryClassName, "shrink-0 font-mono")}>
 					{sha7(run.sha)}
 				</span>
 				<span className="min-w-0 truncate text-xs font-normal text-subtle">

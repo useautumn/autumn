@@ -1,4 +1,9 @@
-import { inAtomRollout, type ShadowAtomConfig } from "@autumn/edge-config";
+import {
+	inAtomRollout,
+	SHADOW_ATOM_EXTERNAL_ID,
+	type ShadowAtomConfig,
+	shadowAtomIdOf,
+} from "@autumn/edge-config";
 import type { AppEnv, Organization } from "@autumn/shared";
 import { orgToAtomConnection } from "./orgToAtomConnection.js";
 import type { AtomConnection } from "./types/atomClient.js";
@@ -27,6 +32,13 @@ const shadowAtomConnection = ({
 		target: "shadow",
 		endpointUrl: config.endpointUrl,
 		encryptedToken: registered.encryptedTokens[env],
+		queue:
+			config.pushTransport === "queue"
+				? {
+						externalId: SHADOW_ATOM_EXTERNAL_ID,
+						atomId: shadowAtomIdOf({ orgId: org.id, env }),
+					}
+				: null,
 	};
 };
 

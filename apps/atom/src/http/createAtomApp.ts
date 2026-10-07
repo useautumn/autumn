@@ -15,7 +15,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
-	app.get("/health", receiveHealth);
+	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant) mountMultiTenantRoutes({ app, ctx: ctx.multiTenant });
 
 	// Everything else needs the Atom token: the customer's app asks, Autumn keeps the subjects current.

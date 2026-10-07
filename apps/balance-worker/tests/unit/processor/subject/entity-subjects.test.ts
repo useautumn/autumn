@@ -157,6 +157,8 @@ const createFixture = () => {
 			subjectRowsCalls.push(requested);
 			return requested.entityId === entity.id ? entityEnvelope : null;
 		},
+		readSubjectSnapshot: async () => null,
+		readEntitySubjectSnapshots: async () => new Map(),
 		getEntitySubjectRows: async ({ identity: requested, entityIds }) => {
 			for (const entityId of entityIds)
 				subjectRowsCalls.push({ ...requested, entityId });
@@ -184,11 +186,22 @@ const createFixture = () => {
 		windowMs: 600_000,
 		now: () => 0,
 	});
+	const catalogCache = createTestCatalogCache({ db });
+	// Wired as the processor wires it: each decided state hands its joined catalog on.
+	let subjectHydrator: ReturnType<typeof createSubjectHydrator> | undefined;
 	const writer = createPartitionWriter({
-		ctx: { stateStore: store, appender, receiptPolicy, recentCommands },
+		ctx: {
+			stateStore: store,
+			appender,
+			receiptPolicy,
+			recentCommands,
+			onStateAdvanced: (advanced) => subjectHydrator?.inheritCatalog(advanced),
+		},
 		config: { topic, partition, limits },
 	});
-	const catalogCache = createTestCatalogCache({ db });
+	subjectHydrator = createSubjectHydrator({
+		ctx: { catalogCache, db, writer, receiptPolicy },
+	});
 	const scope: PartitionProcessorScope = {
 		ctx: {
 			stateStore: store,
@@ -200,9 +213,7 @@ const createFixture = () => {
 			assertCanRead: () => undefined,
 			config: { topic, partition, writerLimits: limits },
 			writer,
-			subjectHydrator: createSubjectHydrator({
-				ctx: { catalogCache, db, writer, receiptPolicy },
-			}),
+			subjectHydrator,
 		},
 		accepted: createAcceptedCommands(),
 		customerPlans: createCustomerPlans(),
@@ -210,6 +221,8 @@ const createFixture = () => {
 	return {
 		store,
 		appender,
+		writer,
+		subjectHydrator: scope.ctx.subjectHydrator,
 		subjectRowsCalls,
 		track: (command: Parameters<typeof createTrackCommand>[0]) =>
 			track({ scope, command: createTrackCommand(command) }),
@@ -349,6 +362,32 @@ describe("entity subjects", () => {
 				["messages_monthly", 7],
 				["seats_ent_42", 6],
 			]);
+		} finally {
+			fixture.close();
+		}
+	});
+
+	test("an entity's view is one object while its rows stand, and a warm track hands it the catalog it joined", async () => {
+		const fixture = createFixture();
+		try {
+			const seats = { identity: entityIdentity, featureId: "seats", value: 1 };
+			await fixture.track({ ...seats, commandId: "cmd_cold" });
+			const cold = fixture.writer.readFreshestState({
+				identity: entityIdentity,
+			});
+			expect(
+				fixture.writer.readFreshestState({ identity: entityIdentity }),
+			).toBe(cold);
+
+			await fixture.track({ ...seats, commandId: "cmd_warm" });
+			const view = fixture.writer.readFreshestState({
+				identity: entityIdentity,
+			});
+			expect(view).not.toBe(cold);
+			if (!view) throw new Error("the entity is resident");
+			expect(
+				fixture.subjectHydrator.peekCatalog({ state: view }),
+			).not.toBeNull();
 		} finally {
 			fixture.close();
 		}

@@ -6,6 +6,7 @@ import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
 } from "../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import {
 	FlushRecordBlockedError,
 	FlushRecordFailedError,
@@ -47,10 +48,12 @@ const splitAtBookmark = ({
 export const applyDurableMutations = async ({
 	ctx,
 	records,
+	snapshotIntent,
 	claimToken,
 }: {
 	ctx: CommitterStateStoreContext;
 	records: readonly DurableMutationRecord[];
+	snapshotIntent?: SnapshotIntent;
 	claimToken?: string;
 }): Promise<DurableMutationApplyResult[]> => {
 	const first = records[0];
@@ -77,6 +80,7 @@ export const applyDurableMutations = async ({
 		expectedOffset,
 		claimToken,
 		records: pending,
+		snapshotIntent,
 	});
 	ctx.progress.setNextOffset({
 		topic,
