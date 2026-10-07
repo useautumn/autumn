@@ -322,6 +322,7 @@ const buildCommonWhere = ({
 	search,
 	customerFilters,
 	afterInternalId,
+	floorInternalId,
 	includeProcessed,
 	includeNotRun,
 }: {
@@ -331,13 +332,17 @@ const buildCommonWhere = ({
 	search?: string;
 	customerFilters?: CustomerListFilters;
 	afterInternalId?: string;
+	floorInternalId?: string;
 	includeProcessed?: IncludeProcessed;
 	includeNotRun?: boolean;
 }): SQL => {
 	const cursor = afterInternalId
 		? sql`AND c.internal_id < ${afterInternalId}`
 		: sql``;
-	return sql`${buildCheckpointWhere(checkpoint)} ${buildCustomerListWhere({ orgId, env, search, customerFilters })} ${buildExecutionStatusWhere(includeProcessed, { includeNotRun })} ${cursor}`;
+	const floor = floorInternalId
+		? sql`AND c.internal_id >= ${floorInternalId}`
+		: sql``;
+	return sql`${buildCheckpointWhere(checkpoint)} ${buildCustomerListWhere({ orgId, env, search, customerFilters })} ${buildExecutionStatusWhere(includeProcessed, { includeNotRun })} ${cursor} ${floor}`;
 };
 
 /**
@@ -358,9 +363,12 @@ export const buildCustomerSelect = ({
 	customerFilters,
 	limit,
 	afterInternalId,
+	floorInternalId,
 }: CustomerQueryArgs & {
 	limit?: number;
 	afterInternalId?: string;
+	/** Inclusive lower bound on internal_id; with `afterInternalId` it bounds one keyset segment. */
+	floorInternalId?: string;
 }): SQL => {
 	if (limit !== undefined) {
 		return rawWithParamsToDrizzle(
@@ -370,6 +378,7 @@ export const buildCustomerSelect = ({
 				ambient: { orgId, env },
 				limit,
 				cursor: afterInternalId || undefined,
+				floor: floorInternalId || undefined,
 				predicates: buildPagePredicates({
 					checkpoint,
 					orgId,
@@ -384,7 +393,7 @@ export const buildCustomerSelect = ({
 	return sql`
 		SELECT c.internal_id, c.id, c.name, c.email
 		FROM ${candidate.source}
-		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId })}
+		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId, floorInternalId })}
 		ORDER BY c.internal_id DESC
 	`;
 };

@@ -41,6 +41,8 @@ export const executeRunMigrationChunk = async ({
 		data: {
 			migrationRunId: payload.migrationRunId,
 			chunkIndex: payload.chunkIndex,
+			cursor: payload.cursor,
+			floor: payload.floor,
 			limit: payload.controls?.limit,
 		},
 	});
@@ -58,6 +60,7 @@ export const executeRunMigrationChunk = async ({
 		scheduler: createMigrationChunkScheduler(),
 		includeFilterCount: false,
 		afterInternalId: payload.cursor,
+		floorInternalId: payload.floor,
 	});
 
 	ctx.logger.info("run-migration-chunk: done", {

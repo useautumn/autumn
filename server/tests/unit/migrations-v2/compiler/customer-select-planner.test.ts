@@ -76,6 +76,24 @@ describe("migration customer select planner wiring", () => {
 		expect(normalized).not.toContain("WITH plan_products AS MATERIALIZED");
 	});
 
+	test("a floor bounds the walk below the cursor, inside the lateral", () => {
+		const query = buildCustomerSelect({
+			orgId: "org_test",
+			env: "live",
+			filter: { plan: { plan_id: "enterprise" } },
+			ctx,
+			limit: 100,
+			afterInternalId: "cus_b",
+			floorInternalId: "cus_a",
+		});
+		const { sql, params } = dialect.sqlToQuery(query);
+
+		expect(normalize(sql)).toContain(
+			'cp.internal_customer_id COLLATE "C" < $7 AND cp.internal_customer_id COLLATE "C" >= $8',
+		);
+		expect(params.slice(6, 8)).toEqual(["cus_b", "cus_a"]);
+	});
+
 	test("search and residual predicates move INSIDE the walk (pages stay exact)", () => {
 		const withSearch = buildCustomerSelect({
 			orgId: "org_test",

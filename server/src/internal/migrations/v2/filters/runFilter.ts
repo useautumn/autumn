@@ -30,6 +30,7 @@ export const runFilter = async ({
 	controls,
 	includeCount = true,
 	afterInternalId,
+	floorInternalId,
 	batchSize,
 }: {
 	ctx: AutumnContext;
@@ -40,6 +41,7 @@ export const runFilter = async ({
 	controls?: MigrationRunControls;
 	includeCount?: boolean;
 	afterInternalId?: string;
+	floorInternalId?: string;
 	batchSize?: number;
 }): Promise<{
 	kind: RunScopeKind;
@@ -103,6 +105,7 @@ export const runFilter = async ({
 			checkpoint,
 			limit,
 			afterInternalId,
+			floorInternalId,
 			batchSize,
 		})) {
 			yield batch.map(

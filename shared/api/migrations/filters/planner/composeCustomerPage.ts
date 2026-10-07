@@ -86,16 +86,26 @@ export const composeCandidateIdPage = ({
 	ambient,
 	limit,
 	cursor,
+	floor,
 	predicates = [],
 }: CustomerScopeArgs & {
 	limit: number;
 	cursor?: string;
+	/** Inclusive lower bound on the walk key; with `cursor` it bounds one segment. */
+	floor?: string;
 }): CompiledSql => {
 	const ir = filterToIr({ filter, ctx });
 	const accessPath = chooseCustomerAccessPath(ir);
 
 	if (!accessPath) {
-		return composeCustomersDriverIdPage({ ir, ambient, limit, cursor, predicates });
+		return composeCustomersDriverIdPage({
+			ir,
+			ambient,
+			limit,
+			cursor,
+			floor,
+			predicates,
+		});
 	}
 
 	const residualIr = accessPath.consumedNav
@@ -107,6 +117,7 @@ export const composeCandidateIdPage = ({
 		ambient,
 		limit,
 		cursor,
+		floor,
 		predicates,
 	});
 };
@@ -115,13 +126,15 @@ export const composeCandidateIdPage = ({
 export const composeCustomerPage = ({
 	limit,
 	cursor,
+	floor,
 	...scope
 }: CustomerScopeArgs & {
 	limit: number;
 	cursor?: string;
+	floor?: string;
 }): CompiledSql =>
 	wrapIdsWithCustomerColumns({
-		ids: composeCandidateIdPage({ ...scope, limit, cursor }),
+		ids: composeCandidateIdPage({ ...scope, limit, cursor, floor }),
 		ambient: scope.ambient,
 	});
 
@@ -194,6 +207,7 @@ const composePlanWalkIdPage = ({
 	ambient,
 	limit,
 	cursor,
+	floor,
 	predicates,
 }: {
 	constraint: PlanIdConstraint;
@@ -201,6 +215,7 @@ const composePlanWalkIdPage = ({
 	ambient: AmbientContext;
 	limit: number;
 	cursor?: string;
+	floor?: string;
 	predicates: CustomerPagePredicate[];
 }): CompiledSql => {
 	const planProducts = buildPlanProductsSql({ constraint, ambient });
@@ -231,6 +246,9 @@ const composePlanWalkIdPage = ({
 	if (cursor !== undefined) {
 		query.push('AND cp.internal_customer_id COLLATE "C" < ?', [cursor]);
 	}
+	if (floor !== undefined) {
+		query.push('AND cp.internal_customer_id COLLATE "C" >= ?', [floor]);
+	}
 	if (residual) {
 		query.push(`AND (${residual.sql})`, residual.params);
 	}
@@ -255,12 +273,14 @@ const composeCustomersDriverIdPage = ({
 	ambient,
 	limit,
 	cursor,
+	floor,
 	predicates,
 }: {
 	ir: IRNode;
 	ambient: AmbientContext;
 	limit: number;
 	cursor?: string;
+	floor?: string;
 	predicates: CustomerPagePredicate[];
 }): CompiledSql => {
 	const where = irToSql({ ir, root: customerRegistry, ambient });
@@ -270,6 +290,9 @@ const composeCustomersDriverIdPage = ({
 	query.push(`WHERE (${where.sql})`, where.params);
 	if (cursor !== undefined) {
 		query.push("AND c.internal_id < ?", [cursor]);
+	}
+	if (floor !== undefined) {
+		query.push("AND c.internal_id >= ?", [floor]);
 	}
 	for (const predicate of predicates) {
 		const compiled = predicate.build("c.internal_id");

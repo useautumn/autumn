@@ -25,10 +25,12 @@ const normalize = (sql: string) => sql.replace(/\s+/g, " ").trim();
 const compose = ({
 	filter,
 	cursor,
+	floor,
 	predicates,
 }: {
 	filter: CustomerFilter;
 	cursor?: string;
+	floor?: string;
 	predicates?: CustomerPagePredicate[];
 }) =>
 	composeCustomerPage({
@@ -37,6 +39,7 @@ const compose = ({
 		ambient,
 		limit: 5000,
 		cursor,
+		floor,
 		predicates,
 	});
 
@@ -85,6 +88,32 @@ describe("composeCustomerPage", () => {
 			"org_test",
 			"live",
 		]);
+	});
+
+	test("a segment floor bounds the plan walk next to the cursor", () => {
+		const page = compose({
+			filter: { plan: { plan_id: "enterprise" } },
+			cursor: "cus_b",
+			floor: "cus_a",
+		});
+
+		expect(walkSection(page.sql)).toContain(
+			'cp.internal_customer_id COLLATE "C" < ? AND cp.internal_customer_id COLLATE "C" >= ?',
+		);
+		expect(page.params).toContain("cus_a");
+	});
+
+	test("a segment floor bounds the customers-driver walk", () => {
+		const page = compose({
+			filter: { customer_id: { $in: ["customer_1"] } },
+			cursor: "cus_b",
+			floor: "cus_a",
+		});
+
+		expect(normalize(page.sql)).toContain(
+			"AND c.internal_id < ? AND c.internal_id >= ?",
+		);
+		expect(page.params).toContain("cus_a");
 	});
 
 	test("consumed extras (custom/version) filter inside the walk", () => {
