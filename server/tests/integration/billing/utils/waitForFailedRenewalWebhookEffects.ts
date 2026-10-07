@@ -15,8 +15,8 @@ const isFailedRenewal = (subscription: Stripe.Subscription) => {
 };
 
 /**
- * Waits until Stripe has failed the renewal and Autumn has processed its webhooks:
- * the renewal is stored as open and the product synced to past_due. Returns whether both landed.
+ * Waits until Stripe has failed the renewal (throws if it never does), then returns whether
+ * Autumn's webhooks stored the renewal as open and synced the product to past_due.
  */
 export const waitForFailedRenewalWebhookEffects = async ({
 	ctx,
@@ -37,7 +37,10 @@ export const waitForFailedRenewalWebhookEffects = async ({
 		until: isFailedRenewal,
 		timeoutMs: WEBHOOK_EFFECTS_TIMEOUT_MS,
 	});
-	if (!isFailedRenewal(subscription)) return false;
+	if (!isFailedRenewal(subscription))
+		throw new Error(
+			`Stripe never failed the renewal for ${subscriptionId} within ${WEBHOOK_EFFECTS_TIMEOUT_MS}ms`,
+		);
 	const renewalInvoiceId = (subscription.latest_invoice as Stripe.Invoice).id!;
 
 	const settled = await pollUntil({
