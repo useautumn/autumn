@@ -133,11 +133,20 @@ export const InvoiceLicenseQuantitySchema = z
 			description: "Billable seats, exclusive of any included seats.",
 		}),
 		customize: z
-			.object({ price: InvoiceBasePriceParamsSchema.nullable().optional() })
+			.object({
+				price: InvoiceBasePriceParamsSchema.nullable().optional().meta({
+					description: "Override the license's per-seat price on this invoice.",
+				}),
+				items: z.array(InvoiceCustomizeItemSchema).optional().meta({
+					description:
+						"Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features.",
+				}),
+			})
 			.strict()
 			.optional()
 			.meta({
-				description: "Override the license's per-seat price on this invoice.",
+				description:
+					"Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed.",
 			}),
 		feature_quantities: z.array(InvoiceFeatureQuantitySchema).optional().meta({
 			description: "Feature charges priced through the license plan.",

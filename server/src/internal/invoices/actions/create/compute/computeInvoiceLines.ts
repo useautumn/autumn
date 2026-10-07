@@ -385,6 +385,7 @@ const computePlanLines = ({
 				ctx,
 				invoiceContext,
 				planKey: plan.planKey,
+				customizeItems: license.customize?.items,
 				product: resolved.licenseProduct,
 				entry,
 				nowMs,
