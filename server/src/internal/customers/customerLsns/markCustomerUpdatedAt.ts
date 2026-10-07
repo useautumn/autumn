@@ -1,5 +1,4 @@
 import { sql } from "drizzle-orm";
-import { getScopedAutocommitDb } from "@/db/autocommit/withAutocommitDb.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateRecentlyUpdatedNegativeCache } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
@@ -10,8 +9,6 @@ const isTransactionHandle = (db?: DrizzleCli): boolean =>
 // Marks never trust the caller's handle: middleware may have swapped ctx.db to
 // a read-only replica, and a tx handle must not carry the ledger row lock.
 const resolveAutocommitDb = async (): Promise<DrizzleCli> => {
-	const scoped = getScopedAutocommitDb();
-	if (scoped) return scoped;
 	// Deliberately dbGeneral, not the dbCritical pool ledger reads use: marks
 	// are low-volume post-commit writes, not per-read traffic.
 	return (await import("@/db/initDrizzle.js")).dbGeneral;
