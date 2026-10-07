@@ -155,6 +155,7 @@ describe("push receiver", () => {
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			held: freshHeld(),
 		});
 		opened.push(auth);
 		const message = subjectMessage({ customerId: null });

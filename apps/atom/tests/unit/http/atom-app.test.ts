@@ -14,6 +14,10 @@ import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
+	createThreadStatsBuffer,
+	openThreadCounters,
+} from "../../../src/threads/stats/threadStats.js";
+import {
 	allSlotsOwnedHere,
 	freshHeld,
 	subjectBody,
@@ -23,10 +27,13 @@ const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
+const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
 const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
+	threadStats: THREAD_STATS,
 };
+const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -70,7 +77,13 @@ const createDeployedApp = () => {
 	const { logger, logged } = createLogger();
 	return {
 		app: createAtomApp({
-			ctx: { auth, logger, autumnApiUrl: AUTUMN_API_URL, health: HEALTH },
+			ctx: {
+				auth,
+				logger,
+				autumnApiUrl: AUTUMN_API_URL,
+				health: HEALTH,
+				counters,
+			},
 		}),
 		logged,
 	};
@@ -93,6 +106,7 @@ const createMultiTenantApp = () => {
 			multiTenant: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
+			counters,
 		},
 	});
 };
@@ -458,17 +472,11 @@ describe("a check Atom does not answer itself", () => {
 });
 
 describe("the request line", () => {
-	const notSampled = () => spyOn(Math, "random").mockReturnValue(0.5);
-	const sampled = () => spyOn(Math, "random").mockReturnValue(0);
-	afterEach(() => spyOn(Math, "random").mockRestore());
-
 	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
 		const { app, logged } = createDeployedApp();
-		notSampled();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		await app.request("/v1/balances.check", checkMessages());
 
-		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
+		expect(logged.map((line) => line.level)).toEqual(["info"]);
 		expect(logged[0]?.fields).toEqual({
 			statusCode: 200,
 			durationMs: expect.any(Number),
@@ -479,39 +487,48 @@ describe("the request line", () => {
 			},
 			res: null,
 		});
-		expect(logged[1]?.fields).toMatchObject({
-			statusCode: 200,
-			req: {
-				method: "POST",
-				path: "/v1/balances.check",
-				customer_id: "cus_1",
-				feature_id: "messages",
-			},
-			res: null,
-		});
-		expect(logged[1]?.message).toMatch(
-			/^\[200\] POST \/v1\/balances\.check \d+ms$/,
-		);
 	});
 
-	test("one in a hundred successful answers carries its body, without the balance's breakdown", async () => {
+	test("every answered check leaves a line with its verdict at res.allowed, where its body has it, and no body", async () => {
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		sampled();
 
 		await app.request("/v1/balances.check", checkMessages());
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
+		);
 
-		const line = logged.at(-1)?.fields as {
-			res: { allowed: boolean; balance: object };
-		};
-		expect(line.res.allowed).toBe(true);
-		expect(line.res.balance).not.toHaveProperty("breakdown");
+		expect(logged.map((line) => line.level)).toEqual(["info", "info", "info"]);
+		for (const [index, allowed] of [
+			[1, true],
+			[2, false],
+		] as const) {
+			expect(logged[index]?.fields).toEqual({
+				statusCode: 200,
+				durationMs: expect.any(Number),
+				req: {
+					method: "POST",
+					path: "/v1/balances.check",
+					customer_id: "cus_1",
+					entity_id: undefined,
+					feature_id: "messages",
+				},
+				res: { allowed },
+			});
+			expect(logged[index]?.message).toMatch(
+				/^\[200\] POST \/v1\/balances\.check \d+ms$/,
+			);
+		}
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {
 		const { app, logged } = createDeployedApp();
 
-		await app.request("/v1/balances.check", checkMessages({ token: null }));
+		const refused = await app.request(
+			"/v1/balances.check",
+			checkMessages({ token: null }),
+		);
 		await app.request(
 			"/v1/subjects.set",
 			post({
@@ -524,8 +541,9 @@ describe("the request line", () => {
 		expect(logged[0]?.fields).toMatchObject({
 			statusCode: 401,
 			req: { method: "POST", path: "/v1/balances.check" },
-			res: { code: "atom_token_required" },
+			res: await refused.json(),
 		});
+		expect(logged[0]?.fields).toHaveProperty("res.code", "atom_token_required");
 		expect(logged[1]?.fields).toMatchObject({
 			statusCode: 400,
 			errorCode: "invalid_request",
@@ -551,6 +569,24 @@ describe("the request line", () => {
 			res: null,
 		});
 		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
+	});
+
+	test("the health probe reports boot, restarts, the container and every thread's counters; a check counts", async () => {
+		const { app } = createDeployedApp();
+		const before = (await (await app.request("/health")).json()).threads[0]
+			.checks;
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await app.request("/v1/balances.check", checkMessages());
+
+		const health = await (await app.request("/health")).json();
+
+		expect(health).toMatchObject({
+			status: "alive",
+			bootedAt: HEALTH.bootedAt,
+			restarts: 0,
+			container: expect.any(Object),
+		});
+		expect(health.threads[0].checks).toBe(before + 1);
 	});
 
 	test("the health probe is not logged", async () => {

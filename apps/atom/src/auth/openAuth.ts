@@ -2,6 +2,7 @@ import type { AtomEnv } from "@autumn/env/atom";
 import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
 import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
 import { createHeldSubjects } from "../state/heldSubjects/createHeldSubjects.js";
+import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { createDeployedAuth } from "./createDeployedAuth.js";
 import type { Auth } from "./types/auth.js";
@@ -13,7 +14,7 @@ export const openAuth = ({
 }: {
 	env: AtomEnv;
 	owners: SlotOwners;
-}): { auth: Auth; multiTenant?: MultiTenantContext } => {
+}): { auth: Auth; multiTenant?: MultiTenantContext; held: HeldSubjects } => {
 	// One budget per thread: it owns its slots' subjects, in every folder a multi-tenant Atom holds.
 	const held = createHeldSubjects({
 		budgetBytes: env.ATOM_HELD_BYTES_PER_THREAD,
@@ -26,7 +27,7 @@ export const openAuth = ({
 			owners,
 			held,
 		});
-		return { auth };
+		return { auth, held };
 	}
 	const auth = createMultiTenantAuth({
 		dataDir: env.ATOM_DATA_DIR,
@@ -37,5 +38,6 @@ export const openAuth = ({
 	return {
 		auth,
 		multiTenant: { auth, adminTokenHash: env.ATOM_TOKEN_HASH },
+		held,
 	};
 };

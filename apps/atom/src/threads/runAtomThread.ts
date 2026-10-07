@@ -4,6 +4,7 @@ import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
+import { openThreadCounters } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
 	ThreadControl,
@@ -15,7 +16,7 @@ import type {
 const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
-	const { auth, multiTenant } = openAuth({ env, owners });
+	const { auth, multiTenant, held } = openAuth({ env, owners });
 	const answerPorts = new Map<number, MessagePort>();
 	const server = createAtomServer({
 		ctx: {
@@ -25,7 +26,10 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			health: {
 				bootedAt: init.bootedAt,
 				restarts: new Int32Array(init.restarts),
+				threadStats: init.stats,
 			},
+			counters: openThreadCounters({ buffer: init.stats, index }),
+			held,
 		},
 		config: {
 			env,

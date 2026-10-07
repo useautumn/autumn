@@ -39,7 +39,8 @@ export const checkResponseOf = async ({
 }: {
 	processor: SlotProcessor;
 	request: CheckRequest;
-}): Promise<CheckResponseV3> => JSON.parse(await processor.check({ request }));
+}): Promise<CheckResponseV3> =>
+	JSON.parse((await processor.check({ request })).json);
 
 /** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
 export const subjectBody = ({ balance }: { balance: number }) => {

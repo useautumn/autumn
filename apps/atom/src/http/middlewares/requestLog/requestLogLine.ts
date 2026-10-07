@@ -1,9 +1,6 @@
 import type { Context } from "hono";
 import type { AtomHttpEnv } from "../../types/atomHttp.js";
 
-/** One in a hundred successful answers carries its body; every failure does. */
-const SUCCESS_RESPONSE_SAMPLE_RATE = 0.01;
-
 const FORWARDED_HEADER = "x-atom-forwarded";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -35,33 +32,21 @@ export const requestFieldsOf = ({
 	};
 };
 
-/** A balance's breakdown is the bulk of a check answer and says nothing its totals do not. */
-const compactResponseBody = (body: unknown): unknown => {
-	if (!isRecord(body) || !isRecord(body.balance)) return body;
-	const { breakdown: _breakdown, ...balance } = body.balance;
-	return { ...body, balance };
-};
-
-/** Whether this line carries the response: decided before anything is read, so a skipped body costs nothing. */
-export const carriesResponse = ({
-	context,
-}: {
-	context: Context<AtomHttpEnv>;
-}): boolean =>
-	context.res.status >= 400 || Math.random() < SUCCESS_RESPONSE_SAMPLE_RATE;
-
-/** The JSON a response carried; a reply the API sent is never read, only its reason is logged. */
-export const responseBodyOf = async ({
+/** What came back, at `res`: a failure's body, or an answered check's verdict where its body has it; a reply the API sent is never read. */
+export const loggedResponseOf = async ({
 	context,
 }: {
 	context: Context<AtomHttpEnv>;
 }): Promise<unknown> => {
+	if (context.res.status < 400) {
+		const allowed = context.get("allowed");
+		return allowed === undefined ? null : { allowed };
+	}
 	if (forwardedReason({ context })) return null;
 	if (!context.res.headers.get("content-type")?.includes("application/json"))
 		return null;
 	try {
-		const body = await context.res.clone().json();
-		return context.res.status < 400 ? compactResponseBody(body) : body;
+		return await context.res.clone().json();
 	} catch {
 		return null;
 	}

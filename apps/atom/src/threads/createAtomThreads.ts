@@ -1,6 +1,8 @@
 import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
+import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
+import { createThreadStatsBuffer } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
 	ThreadControl,
@@ -60,8 +62,8 @@ const stoppedOf = ({ worker }: { worker: Worker }): Promise<void> =>
 	});
 
 /**
- * Runs the Atom as `ATOM_THREADS` threads of one process sharing the port. The main thread serves nothing:
- * it starts the threads, wires each pair, and replaces one that dies, telling the others while it is gone.
+ * Runs the Atom as `ATOM_THREADS` threads of one process sharing the port. The main thread serves nothing: it starts
+ * the threads, wires each pair, replaces one that dies, telling the others while it is gone, and logs their health.
  */
 export const createAtomThreads = ({
 	ctx,
@@ -74,7 +76,9 @@ export const createAtomThreads = ({
 	const threads: (Worker | null)[] = Array(env.ATOM_THREADS).fill(null);
 	const bootedAt = new Date().toISOString();
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
 	let stopping = false;
+	let healthLog: { stop(): void } | null = null;
 
 	/** Wired to every thread already running; those still to start wire themselves to it the same way. */
 	async function startThread({ index }: { index: number }): Promise<void> {
@@ -89,7 +93,7 @@ export const createAtomThreads = ({
 		const ready = readyOf({ worker });
 		send({
 			worker,
-			control: { type: "init", index, env, bootedAt, restarts },
+			control: { type: "init", index, env, bootedAt, restarts, stats },
 		});
 		threads.forEach((peer, peerIndex) => {
 			if (!peer || peerIndex === index) return;
@@ -160,11 +164,22 @@ export const createAtomThreads = ({
 		ctx.logger.info(
 			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT} on ${env.ATOM_THREADS} threads`,
 		);
+		healthLog ??= startHealthLog({
+			source: {
+				bootedAt,
+				restarts: new Int32Array(restarts),
+				threadStats: stats,
+			},
+			everyMs: env.ATOM_HEALTH_LOG_EVERY_MS,
+			logger: ctx.logger,
+		});
 	}
 
 	/** Each thread finishes its in-flight requests and closes its files before it ends; a call to one already gone fails at once. */
 	async function stop(): Promise<void> {
 		stopping = true;
+		healthLog?.stop();
+		healthLog = null;
 		await Promise.all(
 			threads.map(async (worker, index) => {
 				if (!worker) return;
