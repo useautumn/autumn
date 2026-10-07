@@ -4,6 +4,7 @@ import { withAutocommitDb } from "@/db/autocommit/withAutocommitDb.js";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withPlanTransaction } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/writePlanRows/withPlanTransaction.js";
+import { isCustomerRecentlyUpdated } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
 import {
 	markCustomersUpdatedAtByInternalIds,
 	markCustomerUpdatedAt,
@@ -98,6 +99,32 @@ describe.skipIf(!process.env.DATABASE_URL)(
 			});
 			expect(insideLedger).not.toContain("cus_after_commit");
 			expect(await ledgerCustomerIds()).toContain("cus_after_commit");
+		});
+
+		it("a deferred mark keeps internal_customer_id and clears a cached negative", async () => {
+			const customerId = "cus_internal_id";
+			expect(
+				await isCustomerRecentlyUpdated({ db, orgId, env, customerId }),
+			).toBe(false);
+			await inPlanTransaction((tx) =>
+				markCustomerUpdatedAt({
+					db: tx,
+					orgId,
+					env,
+					customerId,
+					internalCustomerId: "internal_cus_internal_id",
+				}),
+			);
+			const [row] = await db.execute<{
+				internal_customer_id: string | null;
+			}>(sql`
+				SELECT internal_customer_id FROM customer_lsns
+				WHERE org_id = ${orgId} AND env = ${env} AND customer_id = ${customerId}
+			`);
+			expect(row?.internal_customer_id).toBe("internal_cus_internal_id");
+			expect(
+				await isCustomerRecentlyUpdated({ db, orgId, env, customerId }),
+			).toBe(true);
 		});
 
 		it("marks are dropped when the transaction rolls back", async () => {
