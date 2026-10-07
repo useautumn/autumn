@@ -214,6 +214,7 @@ export const computeAttachPlan = ({
 		params,
 	});
 	plan = applyBillingCycleAnchorToSharedSubscription({
+		ctx,
 		plan,
 		billingContext: attachBillingContext,
 		stripeSubscriptionId:

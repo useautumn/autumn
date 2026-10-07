@@ -77,3 +77,40 @@ export const meteringTopic: TopicSchema<MeteringRecord> = {
 	parse: parseMeteringRecord,
 	serialize: serializeMeteringRecord,
 };
+
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** The fields a reader leans on, checked without the full schema: the writer validated the record before appending it. */
+function isMutationShaped(payload: unknown): payload is MeteringRecord {
+	if (!isObject(payload) || payload.type !== "mutation") return false;
+	const { identity, command, result, changes } = payload;
+	return (
+		isObject(identity) &&
+		typeof identity.orgId === "string" &&
+		typeof identity.env === "string" &&
+		typeof identity.customerId === "string" &&
+		isObject(command) &&
+		typeof command.type === "string" &&
+		typeof command.occurredAt === "number" &&
+		isObject(result) &&
+		Array.isArray(changes)
+	);
+}
+
+/** A log record read by a trusted follower: the envelope, key and shape are checked, the full schema is not. */
+export function parseTrustedMeteringRecord({
+	key,
+	value,
+}: {
+	key: Buffer | null;
+	value: Buffer | null;
+}): MeteringRecord {
+	const envelope = readTopicEnvelope({ value });
+	if (envelope.type !== "mutation" || !isMutationShaped(envelope.payload))
+		throw new InvalidRecordError();
+	const record = envelope.payload;
+	assertTopicRecordKey({ key, expectedKey: meteringRecordToKey({ record }) });
+	return record;
+}

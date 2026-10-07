@@ -36,7 +36,12 @@ export type {
 	JobPayload,
 	ParsedJob,
 } from "./lib/job/types/job.js";
+export {
+	type BatchAccumulator,
+	createBatchAccumulator,
+} from "./lib/queue/createBatchAccumulator.js";
 export type {
+	EntryFailure,
 	Queue,
 	QueueBatchConfig,
 	SendOptions,

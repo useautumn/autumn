@@ -16,7 +16,7 @@ export function ActiveRunDot({ className }: { className?: string }) {
 const LIVE_TONES: Record<MigrationItemEventStatus, StatusTone> = {
 	succeeded: "green",
 	skipped: "neutral",
-	failed: "red",
+	failed: "orange",
 };
 
 const DRY_TONES: Record<MigrationItemEventStatus, StatusTone> = {
@@ -28,13 +28,13 @@ const DRY_TONES: Record<MigrationItemEventStatus, StatusTone> = {
 const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
 	succeeded: "Passed",
 	skipped: "Skipped",
-	failed: "Failed",
+	failed: "Incomplete",
 };
 
 const STATUS_GLYPHS: Record<MigrationItemEventStatus, StatusGlyph> = {
 	succeeded: "check",
 	skipped: "minus",
-	failed: "x",
+	failed: "alert",
 };
 
 export function ItemEventStatusBadge({

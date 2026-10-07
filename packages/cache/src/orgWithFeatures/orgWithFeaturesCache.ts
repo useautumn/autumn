@@ -27,8 +27,13 @@ const getOrgWithFeaturesL1 = () => {
 	return orgWithFeaturesL1;
 };
 
-export const _resetOrgWithFeaturesL1ForTesting = () =>
+/** One lookup per key at a time: a burst on a cold L1 joins it instead of repeating it. */
+const inFlightLookups = new Map<string, Promise<unknown>>();
+
+export const _resetOrgWithFeaturesL1ForTesting = () => {
 	getOrgWithFeaturesL1().clear();
+	inFlightLookups.clear();
+};
 export const _orgWithFeaturesL1SizeForTesting = () =>
 	getOrgWithFeaturesL1().size;
 
@@ -98,6 +103,51 @@ export const setCachedOrgWithFeatures = async ({
 		redisInstance: redis,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.orgFeaturesSet,
 	});
+};
+
+/** L1, then Redis, then `load` (written back to both); concurrent callers for one org share a single lookup. */
+export const readThroughOrgWithFeatures = <T>({
+	ctx,
+	orgId,
+	env,
+	load,
+	requestId,
+}: {
+	ctx: ReadThroughCacheContext;
+	orgId: string;
+	env: AppEnv;
+	load: () => Promise<T | null>;
+	requestId?: string;
+}): Promise<T | null> => {
+	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
+	const local = getOrgWithFeaturesL1().get(cacheKey);
+	if (local) return Promise.resolve(local.value as T);
+
+	const inFlight = inFlightLookups.get(cacheKey);
+	if (inFlight) return inFlight as Promise<T | null>;
+
+	const lookup = (async () => {
+		const cached = await getCachedOrgWithFeatures<T>({
+			ctx,
+			orgId,
+			env,
+			requestId,
+		});
+		if (cached) return cached;
+
+		const fresh = await load();
+		if (fresh)
+			await setCachedOrgWithFeatures({
+				ctx,
+				orgId,
+				env,
+				data: fresh,
+				requestId,
+			});
+		return fresh;
+	})().finally(() => inFlightLookups.delete(cacheKey));
+	inFlightLookups.set(cacheKey, lookup);
+	return lookup;
 };
 
 /** Drop the cached org on every live instance — ramped readers must never see stale org config. */

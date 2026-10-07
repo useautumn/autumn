@@ -1,7 +1,7 @@
 /**
  * The org+features cache and its in-process L1: a hit fills L1, a write goes
- * through it, a clear empties it, a failing Redis never poisons it, and it is
- * bounded by TTL and size.
+ * through it, a clear empties it, a failing Redis never poisons it, it is
+ * bounded by TTL and size, and a read-through burst shares one lookup.
  */
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
@@ -14,6 +14,7 @@ import {
 	getCachedOrgWithFeatures,
 	ORG_WITH_FEATURES_L1_MAX_ENTRIES,
 	ORG_WITH_FEATURES_L1_TTL_MS,
+	readThroughOrgWithFeatures,
 	setCachedOrgWithFeatures,
 } from "../../../src/orgWithFeatures/orgWithFeaturesCache.js";
 import { createFakeReadThroughCache } from "../utils/fakeReadThroughCache.js";
@@ -185,5 +186,87 @@ describe("org-with-features cache", () => {
 		cache.main.calls.length = 0;
 		await getCachedOrgWithFeatures({ ctx, orgId: `org_${overfill - 1}`, env });
 		expect(redisGets()).toHaveLength(0);
+	});
+	test("a read-through burst on a cold cache reads Redis once and loads once", async () => {
+		const env = AppEnv.Live;
+		let loads = 0;
+		const load = async () => {
+			loads++;
+			await Bun.sleep(2);
+			return orgData("org_1");
+		};
+
+		const results = await Promise.all(
+			Array.from({ length: 64 }, () =>
+				readThroughOrgWithFeatures<CachedOrg>({
+					ctx,
+					orgId: "org_1",
+					env,
+					load,
+				}),
+			),
+		);
+
+		expect(results.every((result) => result?.org.id === "org_1")).toBe(true);
+		expect(redisGets()).toHaveLength(1);
+		expect(loads).toBe(1);
+		expect(
+			cache.main.store.has(
+				buildOrgWithFeaturesCacheKey({ orgId: "org_1", env }),
+			),
+		).toBe(true);
+	});
+
+	test("a read-through load is written back, so the next read is an L1 hit", async () => {
+		const env = AppEnv.Live;
+		const load = async () => orgData("org_1");
+		await readThroughOrgWithFeatures({ ctx, orgId: "org_1", env, load });
+
+		cache.main.calls.length = 0;
+		const again = await readThroughOrgWithFeatures<CachedOrg>({
+			ctx,
+			orgId: "org_1",
+			env,
+			load: async () => {
+				throw new Error("should not load");
+			},
+		});
+		expect(again?.org.id).toBe("org_1");
+		expect(cache.main.calls).toEqual([]);
+	});
+
+	test("a failed read-through lookup is not shared with the next caller", async () => {
+		const env = AppEnv.Live;
+		await expect(
+			readThroughOrgWithFeatures({
+				ctx,
+				orgId: "org_1",
+				env,
+				load: async () => {
+					throw new Error("postgres down");
+				},
+			}),
+		).rejects.toThrow("postgres down");
+
+		const result = await readThroughOrgWithFeatures<CachedOrg>({
+			ctx,
+			orgId: "org_1",
+			env,
+			load: async () => orgData("org_1"),
+		});
+		expect(result?.org.id).toBe("org_1");
+	});
+
+	test("a missing org is not cached", async () => {
+		const env = AppEnv.Live;
+		let loads = 0;
+		const load = async () => {
+			loads++;
+			return null;
+		};
+		await readThroughOrgWithFeatures({ ctx, orgId: "org_1", env, load });
+		await readThroughOrgWithFeatures({ ctx, orgId: "org_1", env, load });
+		expect(loads).toBe(2);
+		expect(_orgWithFeaturesL1SizeForTesting()).toBe(0);
 	});
 });

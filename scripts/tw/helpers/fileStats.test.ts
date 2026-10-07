@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import {
 	type MachineSeconds,
+	maxRssBytes,
 	permitWaitP95,
 	summariseFileStats,
 } from "../worker/runTestFileWithStats.ts";
@@ -30,7 +31,7 @@ const baseInput = {
 	wallMs: 2000,
 	exitCode: 0,
 	testCpuUsec: null,
-	testMaxRssKib: null,
+	testMaxRssBytes: null,
 };
 
 describe("summariseFileStats", () => {
@@ -110,7 +111,7 @@ describe("summariseFileStats", () => {
 				{ atMs: 2000, cpuUsec: 2_000_000, memBytes: 1024 ** 3 },
 			],
 			testCpuUsec: 1_250_000,
-			testMaxRssKib: 512 * 1024,
+			testMaxRssBytes: 512 * 2 ** 20,
 		});
 		expect(stats.stripe).toBeNull();
 		expect(stats.cpu).toEqual({
@@ -197,4 +198,9 @@ test("the inline wrapper passes output and exit code through, then prints its st
 	expect(seen).toHaveLength(1);
 	expect(seen[0]).toMatchObject({ v: 1, exitCode: 3, stripe: null });
 	expect(seen[0]?.wallMs).toBeGreaterThan(0);
+});
+
+test("maxRSS is bytes on Bun 1.4 and KiB on Bun 1.3", () => {
+	expect(maxRssBytes(542_588_928)).toBe(542_588_928);
+	expect(maxRssBytes(529_872)).toBe(529_872 * 1024);
 });

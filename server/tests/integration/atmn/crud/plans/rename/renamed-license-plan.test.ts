@@ -18,8 +18,7 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-// Skipped until ATMN-483: the rename push 500s on unique_plan_license.
-test.skip(`${chalk.yellowBright("renamed license plan → the parent's link follows (by internal id), attach with license quantities still resolves")}`, async () => {
+test(`${chalk.yellowBright("renamed license plan → the parent's link follows (by internal id), attach with license quantities still resolves")}`, async () => {
 	const scenario = await initAtmnScenario({
 		setup: [
 			s.platform.create({

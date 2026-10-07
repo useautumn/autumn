@@ -8,7 +8,7 @@ import { shortWorker } from "./runFiles.ts";
 
 type WorkerStatus = RunDetail["workers"][number]["status"];
 
-export const WORKER_COLOR: Record<WorkerStatus, string> = {
+const WORKER_COLOR: Record<WorkerStatus, string> = {
 	busy: "bg-blue-500",
 	ready: "bg-green-500/35",
 	booting: "bg-orange-400/60",

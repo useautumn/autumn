@@ -12,6 +12,7 @@ import type {
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
+import { carryOverParam } from "@/components/forms/shared/utils/carryOverParam";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import {
 	type BillingCycleAnchorMode,
@@ -250,19 +251,17 @@ export function buildAttachRequestBody({
 		body.enable_product_immediately = true;
 	}
 
-	if (carryOverBalances) {
-		body.carry_over_balances =
-			carryOverBalanceFeatureIds.length > 0
-				? { enabled: true, feature_ids: carryOverBalanceFeatureIds }
-				: { enabled: true };
-	}
+	const carryOverBalancesParam = carryOverParam({
+		enabled: carryOverBalances,
+		featureIds: carryOverBalanceFeatureIds,
+	});
+	if (carryOverBalancesParam) body.carry_over_balances = carryOverBalancesParam;
 
-	if (carryOverUsages) {
-		body.carry_over_usages =
-			carryOverUsageFeatureIds.length > 0
-				? { enabled: true, feature_ids: carryOverUsageFeatureIds }
-				: { enabled: true };
-	}
+	const carryOverUsagesParam = carryOverParam({
+		enabled: carryOverUsages,
+		featureIds: carryOverUsageFeatureIds,
+	});
+	if (carryOverUsagesParam) body.carry_over_usages = carryOverUsagesParam;
 
 	const validLineItems = customLineItems.filter(
 		(item) => item.amount !== "" && item.description.trim() !== "",

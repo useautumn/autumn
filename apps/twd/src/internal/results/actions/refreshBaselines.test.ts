@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { recordNewFailures } from "./refreshBaselines.ts";
+import { recordNewFailures, settleBaselineFlag } from "./refreshBaselines.ts";
 
 const testDatabaseUrl = process.env.TWD_TEST_DATABASE_URL;
 const MIGRATION = join(
@@ -295,6 +295,67 @@ test.skipIf(!testDatabaseUrl)(
 
 			// `b` already failed in `baseline`; `a` and `e` are new. later_baseline finished after the run.
 			expect((await flags(client)).branch_run).toEqual([false, 2]);
+		});
+	},
+);
+
+test.skipIf(!testDatabaseUrl)(
+	"settleBaselineFlag keeps only completed candidates with a result for every file",
+	async () => {
+		await withSchema(async (client) => {
+			await applyMigration(client);
+			const candidate = (id: string, status: string, finished = true) =>
+				flaggedRun(
+					{
+						id,
+						status,
+						failed: status === "failed" ? 1 : 0,
+						file_count: 2,
+						created_at: at(0),
+						finished_at: finished ? at(5) : null,
+					},
+					true,
+				);
+			await client`insert into runs ${client([
+				candidate("complete_passed", "passed"),
+				candidate("complete_failed", "failed"),
+				candidate("missing_a_file", "failed"),
+				candidate("cancelled", "cancelled"),
+				candidate("errored_no_results", "errored"),
+				candidate("still_live", "running", false),
+			])}`;
+			await client`insert into test_results ${client([
+				result("complete_passed", "a.test.ts", "passed"),
+				result("complete_passed", "b.test.ts", "passed"),
+				result("complete_failed", "a.test.ts", "failed", 1, 1),
+				result("complete_failed", "a.test.ts", "failed", 2, 2),
+				result("complete_failed", "b.test.ts", "passed"),
+				result("missing_a_file", "a.test.ts", "failed"),
+				result("cancelled", "a.test.ts", "passed"),
+				result("cancelled", "b.test.ts", "passed"),
+			])}`;
+			const ctx = { db: drizzle(client) } as unknown as TwdContext;
+			for (const id of [
+				"complete_passed",
+				"complete_failed",
+				"missing_a_file",
+				"cancelled",
+				"errored_no_results",
+				"still_live",
+			])
+				await settleBaselineFlag({ ctx, runId: id });
+
+			const flagOf = Object.fromEntries(
+				Object.entries(await flags(client)).map(([id, [flag]]) => [id, flag]),
+			);
+			expect(flagOf).toEqual({
+				cancelled: false,
+				complete_failed: true,
+				complete_passed: true,
+				errored_no_results: false,
+				missing_a_file: false,
+				still_live: true,
+			});
 		});
 	},
 );

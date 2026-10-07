@@ -23,6 +23,7 @@ import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
+import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
@@ -105,6 +106,15 @@ const loadReissuableStripeInvoice = async ({
 		invoiceId: row.invoice.stripe_id,
 		expand: [],
 	});
+
+	// Vercel already holds and charges this invoice; a Stripe-side replacement would desync it.
+	if (
+		await resolveVercelInstallationId({ stripeCli, invoice: stripeInvoice })
+	) {
+		throw invalidRequest(
+			`Invoice ${row.invoice.id} is billed through Vercel and can't be reissued`,
+		);
+	}
 
 	const replacementId = stripeInvoice.metadata?.autumn_reissued_to;
 	if (replacementId) {

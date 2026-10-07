@@ -63,9 +63,11 @@ const segmentRow = (segment: ResolvedSegment): TimelineRow => ({
 	onLiveSubscription: true,
 	startsAt: segment.startsAt,
 	endsAt: segment.endsAt,
+	periodEndsAtAfterReset: null,
 	scheduled: segment.startsAt > NOW,
-	canceling: false,
+	canceling: segment.inheritsCancellation === true,
 	pastDue: false,
+	unbilledByStripe: false,
 	externalId: null,
 });
 
@@ -350,19 +352,30 @@ export const expectNewPhasesHaveNoEnds = ({
 	}
 };
 
-/** I4: the resolved timeline holds every declared segment; only an open-ended one keeps a cancel date. */
+/** I4: the resolved timeline holds every declared segment; an open-ended one carrying or replacing it now keeps its cancel date, moved by a reset-now. */
 export const expectProjection = ({
 	saved,
 	desired,
+	policies,
 	diff,
 }: {
 	saved: SavedTimeline;
 	desired: DesiredTimeline;
+	policies: SetPlansPolicies;
 	diff: TimelineDiff;
 }) => {
+	const cycleResetsNow = policies.liveRows === "recreateRenewing";
 	const cancelEnds = new Map(
-		saved.segments.flatMap((segment) =>
-			segment.rows[0]?.canceling ? [[segment.key, segment.endsAt]] : [],
+		saved.segments.flatMap(({ key, rows: [liveRow], endsAt }) =>
+			liveRow?.canceling
+				? [
+						[
+							key,
+							(cycleResetsNow ? liveRow.periodEndsAtAfterReset : null) ??
+								endsAt,
+						],
+					]
+				: [],
 		),
 	);
 	const declared = diff.timeline.filter(({ origin }) => origin === "declared");
@@ -376,8 +389,12 @@ export const expectProjection = ({
 		);
 		expect(resolved?.configHash).toBe(desiredSegment.configHash);
 		const cancelEndsAt = cancelEnds.get(desiredSegment.key);
+		const keepsCanceledRun =
+			resolved?.carriedBy !== undefined ||
+			(policies.canceling === "keepCancellation" &&
+				desiredSegment.startsAt <= NOW);
 		const clipped =
-			resolved?.carriedBy !== undefined &&
+			keepsCanceledRun &&
 			cancelEndsAt !== undefined &&
 			cancelEndsAt !== null &&
 			desiredSegment.endsAt === null;
@@ -428,7 +445,12 @@ export const expectAllInvariants = (timelineCase: TimelineCase) => {
 	const result = runTimelineCase(timelineCase);
 	const { saved, diff } = result;
 	expectRoundTrip({ rows: timelineCase.rows, diff });
-	expectProjection({ saved, desired: timelineCase.desired, diff });
+	expectProjection({
+		saved,
+		desired: timelineCase.desired,
+		policies: timelineCase.policies,
+		diff,
+	});
 	if (timelineCase.policies.undeclared === "retain") {
 		expectRetained({ saved, desired: timelineCase.desired, diff });
 	}

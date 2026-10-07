@@ -208,6 +208,8 @@ export const CustomerStateFormSchema = z
 		billingCycleAnchorDate: z.number().nullable(),
 		endDate: z.number().nullable(),
 		enablePlanImmediately: z.boolean(),
+		carryOverUsages: z.boolean(),
+		carryOverUsageFeatureIds: z.array(z.string()),
 		...FreeTrialFormFieldsSchema.shape,
 		/** Set once the user touches the trial row, so plan changes stop re-seeding it. */
 		trialEdited: z.boolean(),

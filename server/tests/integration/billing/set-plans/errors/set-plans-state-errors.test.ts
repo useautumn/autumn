@@ -159,3 +159,57 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans state errors: a trialing subscription cannot reset the billing cycle now")}`,
+	async () => {
+		const proTrial = products.proWithTrial({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+			trialDays: 7,
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV2_4 } = await initScenario({
+			customerId: "set-plans-trialing-reset-now",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial, premium] }),
+			],
+			actions: [
+				s.billing.attach({ productId: proTrial.id }),
+				s.advanceTestClock({ days: 2 }),
+			],
+		});
+
+		const params = {
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: "now" as const,
+					billing_cycle_anchor: "phase_start" as const,
+					plans: [{ plan_id: premium.id }],
+				},
+			],
+		};
+		const errMessage =
+			"The billing cycle can't reset now while the subscription's trial runs";
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage,
+			func: () => autumnV2_4.billing.previewSetPlans(params),
+		});
+		// The test client drops the HTTP status, so the 400 is read from the raw response.
+		const response = await fetch(`${autumnV2_4.baseUrl}/billing.set_plans`, {
+			method: "POST",
+			headers: autumnV2_4.headers,
+			body: JSON.stringify(params),
+		});
+		const body = await response.json();
+		expect(response.status).toBe(400);
+		expect(body.code).toBe(ErrCode.InvalidRequest);
+		expect(body.message).toInclude(errMessage);
+	},
+);

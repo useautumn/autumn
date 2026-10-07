@@ -23,7 +23,7 @@ const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
 	not_run: "Not Run",
 	succeeded: "Succeeded",
 	skipped: "Skipped",
-	failed: "Failed",
+	failed: "Incomplete",
 };
 
 export function hasActiveExecutionFilters(

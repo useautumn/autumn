@@ -14,6 +14,7 @@ import {
 } from "@/components/forms/customer-state/customerStateSchema";
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
+import { carryOverParam } from "@/components/forms/shared/utils/carryOverParam";
 import type { FreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
@@ -38,6 +39,8 @@ export function buildCreateScheduleRequestBody({
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
+	carryOverUsages = false,
+	carryOverUsageFeatureIds = [],
 	stripeSubscriptionId,
 	freeTrial,
 	currentTrial = null,
@@ -55,6 +58,9 @@ export function buildCreateScheduleRequestBody({
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
+	/** Pass true only while the carry-over row is visible. */
+	carryOverUsages?: boolean;
+	carryOverUsageFeatureIds?: string[];
 	stripeSubscriptionId?: string | null;
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
@@ -149,6 +155,11 @@ export function buildCreateScheduleRequestBody({
 
 	if (enablePlanImmediately && startsLater) body.enable_plan_immediately = true;
 	if (stripeSubscriptionId) body.stripe_subscription_id = stripeSubscriptionId;
+	const carryOverUsagesParam = carryOverParam({
+		enabled: carryOverUsages,
+		featureIds: carryOverUsageFeatureIds,
+	});
+	if (carryOverUsagesParam) body.carry_over_usages = carryOverUsagesParam;
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
 		body.ends_at = endDate;
 	}
@@ -191,6 +202,8 @@ export function useCreateScheduleRequestBody({
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
+	carryOverUsages,
+	carryOverUsageFeatureIds,
 	stripeSubscriptionId,
 	freeTrial,
 	currentTrial,
@@ -208,6 +221,8 @@ export function useCreateScheduleRequestBody({
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
+	carryOverUsages?: boolean;
+	carryOverUsageFeatureIds?: string[];
 	stripeSubscriptionId?: string | null;
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
@@ -228,6 +243,8 @@ export function useCreateScheduleRequestBody({
 				endDate,
 				allowFirstPhaseBackdate,
 				enablePlanImmediately,
+				carryOverUsages,
+				carryOverUsageFeatureIds,
 				stripeSubscriptionId,
 				freeTrial,
 				currentTrial,
@@ -246,6 +263,8 @@ export function useCreateScheduleRequestBody({
 			endDate,
 			allowFirstPhaseBackdate,
 			enablePlanImmediately,
+			carryOverUsages,
+			carryOverUsageFeatureIds,
 			stripeSubscriptionId,
 			freeTrial,
 			currentTrial,
@@ -266,6 +285,7 @@ export function useBuildCreateScheduleRequestBody({
 	getEndDate,
 	getEnablePlanImmediately,
 	getAllowFirstPhaseBackdate,
+	getCarryOverUsages,
 	getFreeTrial,
 	currentTrial,
 	catalogFreeTrial,
@@ -285,6 +305,10 @@ export function useBuildCreateScheduleRequestBody({
 	getEndDate?: () => CustomerStateForm["endDate"];
 	getEnablePlanImmediately?: () => boolean;
 	getAllowFirstPhaseBackdate?: () => boolean;
+	getCarryOverUsages?: () => Pick<
+		CustomerStateForm,
+		"carryOverUsages" | "carryOverUsageFeatureIds"
+	>;
 	getFreeTrial?: () => FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
@@ -306,6 +330,7 @@ export function useBuildCreateScheduleRequestBody({
 					endDate: getEndDate?.(),
 					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
 					enablePlanImmediately: getEnablePlanImmediately?.() ?? false,
+					...getCarryOverUsages?.(),
 					stripeSubscriptionId,
 					freeTrial: getFreeTrial?.(),
 					currentTrial,
@@ -323,6 +348,7 @@ export function useBuildCreateScheduleRequestBody({
 			getEndDate,
 			getEnablePlanImmediately,
 			getAllowFirstPhaseBackdate,
+			getCarryOverUsages,
 			getFreeTrial,
 			currentTrial,
 			catalogFreeTrial,

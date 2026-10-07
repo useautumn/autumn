@@ -226,6 +226,10 @@ export const countRuns = async ({
 			.where(runsFilterSql(filter))
 	)[0]?.n ?? 0;
 
+/** Only a passed or failed run can be a baseline; onRunFinished checks those ran every file. */
+const NEVER_BASELINE: RunStatus[] = ["cancelled", "errored"];
+
+/** Every run write goes through here, so a cancel or error on any path also drops the baseline flag. */
 export const updateRun = async ({
 	ctx,
 	runId,
@@ -235,7 +239,11 @@ export const updateRun = async ({
 	runId: string;
 	set: Partial<Omit<RunRow, "id">>;
 }) => {
-	await ctx.db.update(runs).set(set).where(eq(runs.id, runId));
+	const settled =
+		set.status && NEVER_BASELINE.includes(set.status)
+			? { ...set, isBaseline: false }
+			: set;
+	await ctx.db.update(runs).set(settled).where(eq(runs.id, runId));
 };
 
 export type BranchesCursor = { lastAt: string; branch: string };

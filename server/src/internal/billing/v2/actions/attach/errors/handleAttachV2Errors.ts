@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleAttachInvoiceModeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachInvoiceModeErrors";
 import { handleBillingCycleAnchorErrors } from "@/internal/billing/v2/actions/attach/errors/handleBillingCycleAnchorErrors";
 import { handleCarryOverBalancesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverBalancesErrors";
-import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverUsagesErrors";
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleEndDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleEndDateErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
@@ -16,6 +15,7 @@ import { handleStartDateErrors } from "@/internal/billing/v2/actions/attach/erro
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
+import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
@@ -94,7 +94,11 @@ export const handleAttachV2Errors = async ({
 	handleCarryOverBalancesErrors({ ctx, params, billingContext });
 
 	// 9. Carry over usages errors (non-consumable features, downgrade block)
-	handleCarryOverUsagesErrors({ ctx, params, billingContext });
+	handleCarryOverUsagesErrors({
+		ctx,
+		carryOverUsages: params.carry_over_usages,
+		replacesPlanNow: billingContext.planTiming === "immediate",
+	});
 
 	// 10. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({

@@ -6,8 +6,11 @@ import {
 	type LineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
+import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
+import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
 import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
@@ -27,12 +30,15 @@ export const finalizeLineItems = ({
 	billingContext,
 	autumnBillingPlan,
 	customLineItems,
+	resetsLikeStripeUnderNone = false,
 }: {
 	ctx: AutumnContext;
 	lineItems: LineItem[];
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	customLineItems?: CustomLineItem[];
+	/** set_plans only: like Stripe, a reset now under none never credits and charges only the items it changes. */
+	resetsLikeStripeUnderNone?: boolean;
 }): LineItem[] => {
 	if (billingContext.skipBillingChanges) {
 		return [];
@@ -44,13 +50,32 @@ export const finalizeLineItems = ({
 		billingContext.stripeSubscription !== undefined ||
 		billingContextToNewSubscriptionAnchorMs({ billingContext }) !== undefined ||
 		isNewSubscriptionBackdate({ billingContext });
-	if (
-		billingContext.requestedProrationBehavior === "none" &&
-		hasProratedPeriod &&
-		!billingContext.anchorResetRefund?.noPartialRefund
-	) {
-		return [];
+	const skipsProration =
+		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
+	const resetsCycleNow = resetsLikeStripeUnderNone
+		? billingContext.requestedBillingCycleAnchor === "now"
+		: billingContext.anchorResetRefund?.noPartialRefund;
+	if (skipsProration && !resetsCycleNow) {
+		// set_plans only: usage of a plan no subscription billed is still owed under none.
+		const unbilledUsage = isSetPlansBillingContext(billingContext)
+			? lineItems.filter(isUsageNoSubscriptionBilled)
+			: [];
+		if (unbilledUsage.length === 0) return [];
+		lineItems = unbilledUsage;
 	}
+
+	const billedLineItems =
+		skipsProration && resetsLikeStripeUnderNone
+			? dropUnchangedSubscriptionItemCharges({
+					ctx,
+					billingContext,
+					lineItems: lineItems.filter(
+						({ context }) =>
+							context.direction === "charge" ||
+							context.billingTiming === "in_arrear",
+					),
+				})
+			: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
@@ -61,7 +86,7 @@ export const finalizeLineItems = ({
 	// 1. Filter line items based on trial state transitions
 	let finalizedLineItems = filterLineItemsForTrialTransition({
 		ctx,
-		lineItems,
+		lineItems: billedLineItems,
 		billingContext,
 	});
 

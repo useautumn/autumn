@@ -1,6 +1,9 @@
 import { expect } from "bun:test";
 import { msToSeconds, stripeToAtmnAmount } from "@autumn/shared";
-import { calculateProration } from "@tests/integration/billing/utils/proration";
+import {
+	calculateProration,
+	calculateProrationFromPeriod,
+} from "@tests/integration/billing/utils/proration";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -99,4 +102,72 @@ export const calculateStripeProratedSwitch = async ({
 		),
 	);
 	return new Decimal(charge).minus(credit).toNumber();
+};
+
+/** The live subscription item billed on this interval, on a subscription that mixes intervals. */
+const findStripeItemByInterval = async ({
+	ctx,
+	customerId,
+	interval,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	interval: "month" | "year";
+}) => {
+	const subscription = await findStripeSubscriptionByStatus({
+		ctx,
+		customerId,
+		status: "active",
+	});
+	const item = subscription.items.data.find(
+		({ price }) => price.recurring?.interval === interval,
+	);
+	if (!item) throw new Error(`No ${interval}ly item on ${subscription.id}`);
+	return item;
+};
+
+/** One item's reset-now total: the full new amount less the old amount's unused time on that item's own period. */
+export const calculateItemResetNowTotal = async ({
+	ctx,
+	customerId,
+	advancedTo,
+	interval,
+	oldAmount,
+	newAmount,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	advancedTo: number;
+	interval: "month" | "year";
+	oldAmount: number;
+	newAmount: number;
+}) => {
+	const item = await findStripeItemByInterval({ ctx, customerId, interval });
+	const unusedCredit = calculateProrationFromPeriod({
+		billingPeriod: {
+			start: item.current_period_start * 1000,
+			end: item.current_period_end * 1000,
+		},
+		advancedTo,
+		amount: oldAmount,
+	});
+	return new Decimal(newAmount)
+		.minus(unusedCredit)
+		.toDecimalPlaces(2)
+		.toNumber();
+};
+
+export const expectStripeItemPeriodEnd = async ({
+	ctx,
+	customerId,
+	interval,
+	periodEndMs,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	interval: "month" | "year";
+	periodEndMs: number;
+}) => {
+	const item = await findStripeItemByInterval({ ctx, customerId, interval });
+	expect(item.current_period_end).toBe(msToSeconds(periodEndMs));
 };

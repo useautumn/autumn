@@ -19,7 +19,7 @@ export const RunCard = ({
 			className,
 		)}
 	>
-		<header className="flex min-h-6 shrink-0 items-center justify-between gap-3">
+		<header className="flex min-h-6 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
 			<h2 className="text-xs font-medium text-muted-foreground">{title}</h2>
 			{right}
 		</header>

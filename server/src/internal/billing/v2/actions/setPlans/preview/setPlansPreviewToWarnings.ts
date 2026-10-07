@@ -16,6 +16,7 @@ import {
 	type StripeSubscriptionScope,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { cycleResetRebillWarnings } from "./cycleResetRebillWarnings";
 import { liveSubscriptionChangeWarnings } from "./liveSubscriptionChangeWarnings";
 import { otherSubscriptionsWarnings } from "./otherSubscriptionsWarnings";
 import {
@@ -104,6 +105,8 @@ export const setPlansPreviewToWarnings = ({
 	unbilledUsageLineItems = [],
 	lineItems = [],
 	stripeSubscriptionScope,
+	resetsCycleNow = false,
+	liveCustomerProducts = [],
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
@@ -121,6 +124,9 @@ export const setPlansPreviewToWarnings = ({
 	/** The line items the immediate invoice bills. */
 	lineItems?: LineItem[];
 	stripeSubscriptionScope?: StripeSubscriptionScope;
+	resetsCycleNow?: boolean;
+	/** Plans live on the subscription before the request. */
+	liveCustomerProducts?: FullCusProduct[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
@@ -139,6 +145,11 @@ export const setPlansPreviewToWarnings = ({
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
 			requestedAnchorResetMs,
+		}),
+		...cycleResetRebillWarnings({
+			resetsCycleNow,
+			lineItems,
+			liveCustomerProducts,
 		}),
 		...unbilledUsageWarnings(unbilledUsageLineItems),
 		...removedUnmanagedItems({

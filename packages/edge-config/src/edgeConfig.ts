@@ -25,12 +25,14 @@ export {
 	toLegacyMiscRedisInstanceName,
 } from "./configs/miscRedis/miscRedisEdgeConfig.js";
 export {
+	SHADOW_ATOM_EXTERNAL_ID,
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
 	type ShadowAtomOrg,
 	type ShadowAtomSettings,
 	ShadowAtomSettingsSchema,
 	shadowAtomConfig,
+	shadowAtomIdOf,
 } from "./configs/shadowAtom/shadowAtomEdgeConfig.js";
 export {
 	applyShadowAtomSettings,

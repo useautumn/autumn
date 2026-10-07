@@ -172,6 +172,9 @@ export function createPartitionCommitLogging({
 			...(ctx.stateStore.claimPartition
 				? { claimPartition: ctx.stateStore.claimPartition.bind(ctx.stateStore) }
 				: {}),
+			...(ctx.stateStore.snapshotQueues
+				? { snapshotQueues: ctx.stateStore.snapshotQueues }
+				: {}),
 			applyDurableMutations,
 		},
 	};

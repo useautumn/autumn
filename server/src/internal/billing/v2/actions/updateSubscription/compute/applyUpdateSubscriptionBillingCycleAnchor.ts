@@ -3,6 +3,7 @@ import type {
 	FullCusProduct,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { customerProductToBillingCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
@@ -32,9 +33,11 @@ const getCustomerProductAnchorUpdates = ({
 };
 
 export const applyUpdateSubscriptionBillingCycleAnchor = ({
+	ctx,
 	plan,
 	billingContext,
 }: {
+	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }): AutumnBillingPlan => {
@@ -59,6 +62,7 @@ export const applyUpdateSubscriptionBillingCycleAnchor = ({
 		: plan;
 
 	return applyBillingCycleAnchorToSharedSubscription({
+		ctx,
 		plan: planWithInsertedAnchor,
 		billingContext,
 		stripeSubscriptionId:

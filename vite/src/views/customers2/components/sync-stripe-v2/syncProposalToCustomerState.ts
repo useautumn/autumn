@@ -109,15 +109,17 @@ export const syncProposalToCustomerState = ({
 	products: ProductV2[];
 	features: Feature[];
 }): CustomerStateForm => {
-	const options = {
+	const options: Omit<CustomerStateForm, "phases" | "unscheduledPlans"> = {
 		resetBillingCycle: false,
 		billingCycleAnchorMode: "now",
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
+		carryOverUsages: false,
+		carryOverUsageFeatureIds: [],
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
 		trialEdited: false,
-	} as const;
+	};
 	const scopedCustomerProducts = scopeCustomerProducts({
 		customerProducts,
 		stripeSubscriptionId: proposal.stripe_subscription_id,

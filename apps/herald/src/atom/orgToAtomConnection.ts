@@ -17,5 +17,6 @@ export const orgToAtomConnection = ({
 		target: "org",
 		endpointUrl: cacheDeployment.endpoint_url,
 		encryptedToken: cacheDeployment.encrypted_token,
+		queue: null,
 	};
 };

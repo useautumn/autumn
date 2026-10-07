@@ -1,23 +1,12 @@
+import { isFreeProductV2, isOneOffProductV2 } from "@autumn/shared";
 import {
-	type Feature,
-	isFreeProductV2,
-	isOneOffProductV2,
-} from "@autumn/shared";
-import {
-	Button,
 	DateInputUnix,
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
 	IconCheckbox,
 	Switch,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { CaretDownIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
 import { useState } from "react";
 import {
@@ -26,6 +15,7 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
+import { CarryOverConfigRow } from "@/components/forms/shared/CarryOverConfigRow";
 import {
 	addCustomLineItem,
 	CustomLineItemRows,
@@ -49,67 +39,6 @@ import {
 } from "../utils/discountUtils";
 
 const BACKDATE_START_YEAR_LOOKBACK = 25;
-
-function FeatureSelectDropdown({
-	features,
-	selectedFeatureIds,
-	onChange,
-}: {
-	features: Feature[];
-	selectedFeatureIds: string[];
-	onChange: ({ featureIds }: { featureIds: string[] }) => void;
-}) {
-	const isAllSelected = selectedFeatureIds.length === 0;
-	const [open, setOpen] = useState(false);
-
-	const label = isAllSelected
-		? "All Features"
-		: `${selectedFeatureIds.length} feature${selectedFeatureIds.length !== 1 ? "s" : ""} selected`;
-
-	return (
-		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="secondary"
-					size="mini"
-					className={cn(
-						"gap-1 w-full justify-between",
-						open && "btn-secondary-active",
-					)}
-				>
-					{label}
-					<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-(--anchor-width)">
-				<DropdownMenuCheckboxItem
-					checked={isAllSelected}
-					onCheckedChange={() => onChange({ featureIds: [] })}
-				>
-					All Features
-				</DropdownMenuCheckboxItem>
-				{features.length > 0 && <DropdownMenuSeparator />}
-				{features.map((feature) => {
-					const isChecked = selectedFeatureIds.includes(feature.id);
-					return (
-						<DropdownMenuCheckboxItem
-							key={feature.id}
-							checked={isChecked}
-							onCheckedChange={(checked) => {
-								const newIds = checked
-									? [...selectedFeatureIds, feature.id]
-									: selectedFeatureIds.filter((id) => id !== feature.id);
-								onChange({ featureIds: newIds });
-							}}
-						>
-							{feature.name}
-						</DropdownMenuCheckboxItem>
-					);
-				})}
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
 
 export function AttachAdvancedSection() {
 	const {
@@ -311,55 +240,35 @@ export function AttachAdvancedSection() {
 			)}
 
 			{rules.carryOverBalances.visible && (
-				<ConfigRow
+				<CarryOverConfigRow
 					title="Carry Over Balances"
 					description="Preserve existing feature balances when switching plans"
-					expanded={carryOverBalances}
-					action={
-						<Switch
-							checked={carryOverBalances}
-							onCheckedChange={(checked) => {
-								form.setFieldValue("carryOverBalances", !!checked);
-								if (!checked)
-									form.setFieldValue("carryOverBalanceFeatureIds", []);
-							}}
-						/>
-					}
-				>
-					<FeatureSelectDropdown
-						features={features}
-						selectedFeatureIds={carryOverBalanceFeatureIds}
-						onChange={({ featureIds }) =>
-							form.setFieldValue("carryOverBalanceFeatureIds", featureIds)
-						}
-					/>
-				</ConfigRow>
+					features={features}
+					value={{
+						enabled: carryOverBalances,
+						featureIds: carryOverBalanceFeatureIds,
+					}}
+					onChange={({ enabled, featureIds }) => {
+						form.setFieldValue("carryOverBalances", enabled);
+						form.setFieldValue("carryOverBalanceFeatureIds", featureIds);
+					}}
+				/>
 			)}
 
 			{rules.carryOverUsages.visible && (
-				<ConfigRow
+				<CarryOverConfigRow
 					title="Carry Over Usages"
 					description="Preserve existing usage counts when switching plans"
-					expanded={carryOverUsages}
-					action={
-						<Switch
-							checked={carryOverUsages}
-							onCheckedChange={(checked) => {
-								form.setFieldValue("carryOverUsages", !!checked);
-								if (!checked)
-									form.setFieldValue("carryOverUsageFeatureIds", []);
-							}}
-						/>
-					}
-				>
-					<FeatureSelectDropdown
-						features={features}
-						selectedFeatureIds={carryOverUsageFeatureIds}
-						onChange={({ featureIds }) =>
-							form.setFieldValue("carryOverUsageFeatureIds", featureIds)
-						}
-					/>
-				</ConfigRow>
+					features={features}
+					value={{
+						enabled: carryOverUsages,
+						featureIds: carryOverUsageFeatureIds,
+					}}
+					onChange={({ enabled, featureIds }) => {
+						form.setFieldValue("carryOverUsages", enabled);
+						form.setFieldValue("carryOverUsageFeatureIds", featureIds);
+					}}
+				/>
 			)}
 
 			<ConfigRow

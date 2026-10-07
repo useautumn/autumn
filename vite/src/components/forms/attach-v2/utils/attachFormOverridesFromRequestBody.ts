@@ -7,6 +7,7 @@ import type {
 } from "@autumn/shared";
 import {
 	anchorOverridesFrom,
+	carryOverFrom,
 	type FieldReaders,
 	freeTrialFromRequest,
 	overridesFromRequest,
@@ -66,20 +67,6 @@ const ATTACH_FIELD_READERS: FieldReaders<AttachForm> = {
 					},
 				)
 			: undefined,
-};
-
-const carryOverFrom = (
-	value: unknown,
-	fields: { enabled: keyof AttachForm; featureIds: keyof AttachForm },
-): Partial<AttachForm> => {
-	const carryOver = requestRecord(value);
-	if (!carryOver?.enabled) return {};
-	return {
-		[fields.enabled]: true,
-		...(Array.isArray(carryOver.feature_ids)
-			? { [fields.featureIds]: carryOver.feature_ids }
-			: {}),
-	};
 };
 
 const requestPlanFields = (plan: Record<string, unknown>) => {
@@ -168,11 +155,11 @@ const singleAttachOverridesFromRequestBody = (
 	...overridesFromRequest(request, ATTACH_FIELD_READERS),
 	...(Array.isArray(request.items) ? { isCustom: true } : {}),
 	...anchorOverridesFrom(request.billing_cycle_anchor),
-	...carryOverFrom(request.carry_over_balances, {
+	...carryOverFrom<AttachForm>(request.carry_over_balances, {
 		enabled: "carryOverBalances",
 		featureIds: "carryOverBalanceFeatureIds",
 	}),
-	...carryOverFrom(request.carry_over_usages, {
+	...carryOverFrom<AttachForm>(request.carry_over_usages, {
 		enabled: "carryOverUsages",
 		featureIds: "carryOverUsageFeatureIds",
 	}),

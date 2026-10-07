@@ -1,4 +1,4 @@
-import { scheduleOrgPercent } from "@autumn/edge-config";
+import { scheduleOrgPercent, shadowAtomIdOf } from "@autumn/edge-config";
 import { AppEnv } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -8,10 +8,7 @@ import {
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { encryptData } from "@/utils/encryptUtils.js";
-import {
-	shadowAtomDeployerFor,
-	shadowAtomIdOf,
-} from "./shadowAtomDeployerFor.js";
+import { shadowAtomDeployerFor } from "./shadowAtomDeployerFor.js";
 
 type EnvTokens = Record<AppEnv, string>;
 

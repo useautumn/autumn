@@ -2,9 +2,9 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import { LATEST_VERSION } from "@autumn/shared";
 import {
-	createCatalogFor,
 	createCatalogRowsFor,
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
@@ -13,12 +13,27 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
-import { atomOrg } from "../utils/atomFixtures.js";
+import {
+	createThreadStatsBuffer,
+	openThreadCounters,
+} from "../../../src/threads/stats/threadStats.js";
+import {
+	allSlotsOwnedHere,
+	freshHeld,
+	subjectBody,
+} from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
+const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
+const HEALTH = {
+	bootedAt: "2026-10-06T00:00:00.000Z",
+	restarts: new Int32Array(1),
+	threadStats: THREAD_STATS,
+};
+const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -55,12 +70,20 @@ const createDeployedApp = () => {
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
 		slotCount: 2,
+		owners: allSlotsOwnedHere,
+		held: freshHeld(),
 	});
 	opened.push(auth);
 	const { logger, logged } = createLogger();
 	return {
 		app: createAtomApp({
-			ctx: { auth, logger, autumnApiUrl: AUTUMN_API_URL },
+			ctx: {
+				auth,
+				logger,
+				autumnApiUrl: AUTUMN_API_URL,
+				health: HEALTH,
+				counters,
+			},
 		}),
 		logged,
 	};
@@ -68,7 +91,12 @@ const createDeployedApp = () => {
 
 /** Our multi-tenant Atom: no orgs until the admin token's holder registers one. */
 const createMultiTenantApp = () => {
-	const auth = createMultiTenantAuth({ dataDir: newDataDir(), slotCount: 2 });
+	const auth = createMultiTenantAuth({
+		dataDir: newDataDir(),
+		slotCount: 2,
+		owners: allSlotsOwnedHere,
+		heldSubjects: freshHeld(),
+	});
 	opened.push(auth);
 	const { logger } = createLogger();
 	return createAtomApp({
@@ -77,6 +105,8 @@ const createMultiTenantApp = () => {
 			logger,
 			multiTenant: { auth, adminTokenHash: hashToken({ token: ADMIN_TOKEN }) },
 			autumnApiUrl: AUTUMN_API_URL,
+			health: HEALTH,
+			counters,
 		},
 	});
 };
@@ -107,25 +137,30 @@ const post = ({
 const withToken = (token: string | null): Record<string, string> =>
 	token ? { "x-atom-token": token } : {};
 
-/** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
-const subjectBody = ({ balance }: { balance: number }) => {
-	const state = createState({ balance });
-	return {
-		state,
-		catalog: createCatalogFor({ state }),
-		org: atomOrg,
-		log_offset: "41",
-		read_at: 1700,
-	};
-};
+/** The headers herald sends a subject push with. */
+const pushedFor = ({
+	customerId,
+}: {
+	customerId: string;
+}): Record<string, string> => ({
+	...withToken(ATOM_TOKEN),
+	[ATOM_CUSTOMER_ID_HEADER]: customerId,
+});
 
+/** As herald sends it: routed by the customer id in a header, so Atom passes the body on unparsed. */
 const setSubject = ({
 	balance,
 	token = ATOM_TOKEN,
+	customerId = "cus_1",
 }: {
 	balance: number;
 	token?: string | null;
-}) => post({ headers: withToken(token), body: subjectBody({ balance }) });
+	customerId?: string;
+}) =>
+	post({
+		headers: { ...withToken(token), [ATOM_CUSTOMER_ID_HEADER]: customerId },
+		body: subjectBody({ balance }),
+	});
 
 /** A check on `cus_1`'s messages as an SDK on the latest API version sends it. */
 const checkMessages = ({
@@ -180,6 +215,37 @@ describe("an Atom in an org's cloud", () => {
 		});
 		expect(await refused.json()).toMatchObject({ allowed: false });
 		expect(allowed.headers.get("x-atom-forwarded")).toBeNull();
+	});
+
+	test("a push routed to one customer but holding another is refused and stores nothing", async () => {
+		const { app } = createDeployedApp();
+
+		const misrouted = await app.request(
+			"/v1/subjects.set",
+			setSubject({ balance: 10, customerId: "cus_2" }),
+		);
+		const check = await app.request("/v1/balances.check", checkMessages());
+
+		expect(misrouted.status).toBe(400);
+		expect(await misrouted.json()).toMatchObject({ code: "invalid_request" });
+		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
+	});
+
+	test("a push sent without its customer id is refused and stores nothing", async () => {
+		const { app } = createDeployedApp();
+
+		const refused = await app.request(
+			"/v1/subjects.set",
+			post({
+				headers: withToken(ATOM_TOKEN),
+				body: subjectBody({ balance: 10 }),
+			}),
+		);
+		const check = await app.request("/v1/balances.check", checkMessages());
+
+		expect(refused.status).toBe(400);
+		expect(await refused.json()).toMatchObject({ code: "invalid_request" });
+		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
 	});
 
 	test("fields the API keeps for itself are dropped from the answer, as the API drops them", async () => {
@@ -242,7 +308,7 @@ describe("an Atom in an org's cloud", () => {
 		const stored = await app.request(
 			"/v1/subjects.set",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: pushedFor({ customerId: "cus_1" }),
 				body: { ...body, state: { ...body.state, added_later: true } },
 			}),
 		);
@@ -262,7 +328,7 @@ describe("an Atom in an org's cloud", () => {
 		const subject = await app.request(
 			"/v1/subjects.set",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: pushedFor({ customerId: "cus_1" }),
 				body: { state: {}, log_offset: "41" },
 			}),
 		);
@@ -294,7 +360,10 @@ describe("a customer push that arrives late", () => {
 		const push = (body: unknown) =>
 			app.request(
 				"/v1/subjects.set",
-				post({ headers: withToken(ATOM_TOKEN), body }),
+				post({
+					headers: pushedFor({ customerId: "cus_1" }),
+					body,
+				}),
 			);
 
 		const first = await push(newer);
@@ -403,17 +472,11 @@ describe("a check Atom does not answer itself", () => {
 });
 
 describe("the request line", () => {
-	const notSampled = () => spyOn(Math, "random").mockReturnValue(0.5);
-	const sampled = () => spyOn(Math, "random").mockReturnValue(0);
-	afterEach(() => spyOn(Math, "random").mockRestore());
-
 	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
 		const { app, logged } = createDeployedApp();
-		notSampled();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		await app.request("/v1/balances.check", checkMessages());
 
-		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
+		expect(logged.map((line) => line.level)).toEqual(["info"]);
 		expect(logged[0]?.fields).toEqual({
 			statusCode: 200,
 			durationMs: expect.any(Number),
@@ -421,59 +484,70 @@ describe("the request line", () => {
 				method: "POST",
 				path: "/v1/subjects.set",
 				customer_id: "cus_1",
-				entity_id: null,
-				log_offset: "41",
 			},
 			res: null,
 		});
-		expect(logged[1]?.fields).toMatchObject({
-			statusCode: 200,
-			req: {
-				method: "POST",
-				path: "/v1/balances.check",
-				customer_id: "cus_1",
-				feature_id: "messages",
-			},
-			res: null,
-		});
-		expect(logged[1]?.message).toMatch(
-			/^\[200\] POST \/v1\/balances\.check \d+ms$/,
-		);
 	});
 
-	test("one in a hundred successful answers carries its body, without the balance's breakdown", async () => {
+	test("every answered check leaves a line with its verdict at res.allowed, where its body has it, and no body", async () => {
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		sampled();
 
 		await app.request("/v1/balances.check", checkMessages());
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
+		);
 
-		const line = logged.at(-1)?.fields as {
-			res: { allowed: boolean; balance: object };
-		};
-		expect(line.res.allowed).toBe(true);
-		expect(line.res.balance).not.toHaveProperty("breakdown");
+		expect(logged.map((line) => line.level)).toEqual(["info", "info", "info"]);
+		for (const [index, allowed] of [
+			[1, true],
+			[2, false],
+		] as const) {
+			expect(logged[index]?.fields).toEqual({
+				statusCode: 200,
+				durationMs: expect.any(Number),
+				req: {
+					method: "POST",
+					path: "/v1/balances.check",
+					customer_id: "cus_1",
+					entity_id: undefined,
+					feature_id: "messages",
+				},
+				res: { allowed },
+			});
+			expect(logged[index]?.message).toMatch(
+				/^\[200\] POST \/v1\/balances\.check \d+ms$/,
+			);
+		}
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {
 		const { app, logged } = createDeployedApp();
 
-		await app.request("/v1/balances.check", checkMessages({ token: null }));
+		const refused = await app.request(
+			"/v1/balances.check",
+			checkMessages({ token: null }),
+		);
 		await app.request(
 			"/v1/subjects.set",
-			post({ headers: withToken(ATOM_TOKEN), body: { state: {} } }),
+			post({
+				headers: pushedFor({ customerId: "cus_1" }),
+				body: { state: {} },
+			}),
 		);
 
 		expect(logged.map((line) => line.level)).toEqual(["warn", "warn"]);
 		expect(logged[0]?.fields).toMatchObject({
 			statusCode: 401,
 			req: { method: "POST", path: "/v1/balances.check" },
-			res: { code: "atom_token_required" },
+			res: await refused.json(),
 		});
+		expect(logged[0]?.fields).toHaveProperty("res.code", "atom_token_required");
 		expect(logged[1]?.fields).toMatchObject({
 			statusCode: 400,
 			errorCode: "invalid_request",
-			error: { name: "ZodError" },
+			error: { name: "InvalidPushError" },
 			res: { code: "invalid_request" },
 		});
 		expect(logged[1]?.fields).not.toHaveProperty("error.stack");
@@ -495,6 +569,24 @@ describe("the request line", () => {
 			res: null,
 		});
 		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
+	});
+
+	test("the health probe reports boot, restarts, the container and every thread's counters; a check counts", async () => {
+		const { app } = createDeployedApp();
+		const before = (await (await app.request("/health")).json()).threads[0]
+			.checks;
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await app.request("/v1/balances.check", checkMessages());
+
+		const health = await (await app.request("/health")).json();
+
+		expect(health).toMatchObject({
+			status: "alive",
+			bootedAt: HEALTH.bootedAt,
+			restarts: 0,
+			container: expect.any(Object),
+		});
+		expect(health.threads[0].checks).toBe(before + 1);
 	});
 
 	test("the health probe is not logged", async () => {

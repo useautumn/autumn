@@ -278,6 +278,24 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		expect(describeReview(review)).toEqual(["now:kept:pro:h1"]);
 	});
 
+	test("a canceling plan re-listed with changed items is recreated and keeps its cancellation", () => {
+		const { diff } = expectAllInvariants({
+			rows: [
+				savedRow({ id: "pro_row", plan: pro, endsAt: C, canceling: true }),
+			],
+			desired: desiredTimeline({
+				segments: [desiredSegment({ plan: pro, hash: "h2" })],
+			}),
+			policies: policiesFor(),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h2:now-C",
+		]);
+		expect(diff.timeline[0]?.inheritsCancellation).toBe(true);
+	});
+
 	test("a canceling plan given an explicit later end runs to that end instead", () => {
 		const { diff } = expectAllInvariants({
 			rows: [
@@ -490,6 +508,79 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 		expect(describeOperations(diff)).toEqual([
 			"insert:pro:h1:now-C",
 			"retime:sso_row:C",
+		]);
+	});
+
+	test("a paid plan no Stripe subscription bills is recreated when re-listed unchanged, like a changed one", () => {
+		const unbilledPro = () =>
+			savedRow({
+				id: "pro_row",
+				plan: pro,
+				onLiveSubscription: false,
+				unbilledByStripe: true,
+			});
+		const desired = desiredTimeline({
+			segments: [desiredSegment({ plan: pro })],
+		});
+		const changedDesired = desiredTimeline({
+			segments: [desiredSegment({ plan: pro, hash: "h2" })],
+		});
+
+		const { diff } = expectAllInvariants({
+			rows: [unbilledPro()],
+			desired,
+			policies: policiesFor(),
+		});
+		const { diff: changedDiff } = expectAllInvariants({
+			rows: [unbilledPro()],
+			desired: changedDesired,
+			policies: policiesFor(),
+		});
+		const { diff: noBillingDiff } = expectAllInvariants({
+			rows: [unbilledPro()],
+			desired,
+			policies: policiesFor({ unbilledRows: "carry" }),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h1:now-never",
+		]);
+		expect(describeOperations(changedDiff)).toEqual([
+			"expire:pro_row",
+			"insert:pro:h2:now-never",
+		]);
+		expect(describeOperations(noBillingDiff)).toEqual([]);
+	});
+
+	test("a cycle reset now recreates renewing and canceling plans, moving the cancellation to the new period end, but carries a one-off purchase", () => {
+		const { diff } = expectAllInvariants({
+			rows: [
+				savedRow({ id: "pro_row", plan: pro }),
+				savedRow({
+					id: "sso_row",
+					plan: sso,
+					endsAt: B,
+					periodEndsAtAfterReset: C,
+					canceling: true,
+				}),
+				savedRow({ id: "credits_row", plan: credits }),
+			],
+			desired: desiredTimeline({
+				segments: [
+					desiredSegment({ plan: pro }),
+					desiredSegment({ plan: sso, planIndex: 1 }),
+					desiredSegment({ plan: credits, planIndex: 2 }),
+				],
+			}),
+			policies: policiesFor({ liveRows: "recreateRenewing" }),
+		});
+
+		expect(describeOperations(diff)).toEqual([
+			"expire:pro_row",
+			"expire:sso_row",
+			"insert:pro:h1:now-never",
+			"insert:sso:h1:now-C",
 		]);
 	});
 
