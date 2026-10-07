@@ -22,7 +22,7 @@ export const trackLockSchema = z
 		expiresAt: timestampSchema,
 		expiryAction: z.enum(["release", "confirm"]),
 	})
-	.strict();
+	.loose();
 
 export type TrackLock = z.infer<typeof trackLockSchema>;
 
@@ -33,7 +33,7 @@ export const trackIdempotencySchema = z
 		key: nonEmptyStringSchema,
 		ttlMs: z.number().int().positive(),
 	})
-	.strict();
+	.loose();
 
 export type TrackIdempotency = z.infer<typeof trackIdempotencySchema>;
 
@@ -47,7 +47,7 @@ export const trackUsageEventSchema = z
 		/** A caller-named event id (`x-event-id`); null lets the event be named by its place in the log. */
 		id: nonEmptyStringSchema.nullable(),
 	})
-	.strict();
+	.loose();
 
 export type TrackUsageEvent = z.infer<typeof trackUsageEventSchema>;
 
@@ -67,7 +67,9 @@ export const trackCommandSchema = mutatingCommandSchema
 		idempotency: trackIdempotencySchema.optional(),
 		/** Null when this command records none: the caller skipped it, or a fan-out already records it on its first feature. */
 		usageEvent: trackUsageEventSchema.nullable(),
+		/** Loose for a newer server's fields, but the writer's receipt never rides in a command. */
+		receipt: z.never().optional(),
 	})
-	.strict();
+	.loose();
 
 export type TrackCommand = z.infer<typeof trackCommandSchema>;
