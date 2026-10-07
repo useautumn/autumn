@@ -113,7 +113,9 @@ export const RateLimitOverrideSheet = ({
 						Limit
 						<Select value={draft.policy.id} onValueChange={selectPolicy}>
 							<SelectTrigger className="h-9 w-full">
-								<SelectValue />
+								<SelectValue>
+									{(policyId: string) => formatPolicyLabel(policyId)}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
 								{policies.map((policy) => (

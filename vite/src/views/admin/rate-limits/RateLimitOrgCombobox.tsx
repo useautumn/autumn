@@ -45,9 +45,11 @@ export const RateLimitOrgCombobox = ({
 			renderOption={(org) => (
 				<span className="flex min-w-0 flex-1 items-center gap-2">
 					<span className="truncate">{org.name}</span>
-					<span className="truncate font-mono text-tiny text-tertiary-foreground">
-						{org.slug}
-					</span>
+					{org.slug !== org.name && (
+						<span className="truncate font-mono text-tiny text-tertiary-foreground">
+							{org.slug}
+						</span>
+					)}
 					{org.overrideCount > 0 && (
 						<span className="ml-auto tabular-nums text-tertiary-foreground">
 							{org.overrideCount}

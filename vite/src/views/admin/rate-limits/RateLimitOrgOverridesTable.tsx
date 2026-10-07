@@ -14,7 +14,7 @@ import type {
 } from "./rateLimitTypes";
 
 const COLUMNS =
-	"md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.8fr)_auto]";
+	"md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.8fr)_140px]";
 const HEADERS = ["Limit", "Per customer", "Per org", "", ""];
 
 /** "120k → 300k/min" when the org overrides the layer, else its default. */
@@ -93,7 +93,7 @@ export const RateLimitOrgOverridesTable = ({
 							value={override.perOrg}
 						/>
 						<span />
-						<div className="flex gap-1">
+						<div className="flex justify-end gap-1">
 							<Button
 								variant="skeleton"
 								size="sm"

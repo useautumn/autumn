@@ -21,15 +21,24 @@ import type {
 	RateLimitPolicySummary,
 } from "./rateLimitTypes";
 
+/** A row sharing a counter names the row that owns it instead of repeating its version limits. */
 const PolicyTags = ({ policy }: { policy: RateLimitPolicySummary }) => {
-	const versionTags = [policy.perOrg, policy.perCustomer].flatMap((layer) =>
-		layer ? formatVersionLimits({ layer }) : [],
-	);
+	const ownsItsLayers = policy.sharesCounterWith.length === 0;
+	const versionTags = ownsItsLayers
+		? [policy.perOrg, policy.perCustomer].flatMap((layer) =>
+				layer ? formatVersionLimits({ layer }) : [],
+			)
+		: [];
 	const shareTags = policy.sharesCounterWith.map(
 		(id) => `shares ${formatPolicyLabel(id)}`,
 	);
 	return [...versionTags, ...shareTags].map((tag) => (
-		<Badge key={tag} variant="muted" size="sm">
+		<Badge
+			key={tag}
+			variant="muted"
+			size="sm"
+			className="shrink-0 whitespace-nowrap"
+		>
 			{tag}
 		</Badge>
 	));
@@ -44,7 +53,7 @@ const PolicyName = ({
 }) => {
 	if (!isNested || !policy.when) {
 		return (
-			<span className="truncate text-sm font-medium text-foreground">
+			<span className="shrink-0 text-sm font-medium text-foreground">
 				{formatPolicyLabel(policy.id)}
 			</span>
 		);
