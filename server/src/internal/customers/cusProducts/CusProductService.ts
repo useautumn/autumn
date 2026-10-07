@@ -709,7 +709,11 @@ export class CusProductService {
 				and(
 					eq(products.id, productId),
 					isNotNull(customerProducts.free_trial_id),
-					ne(customerProducts.status, CusProductStatus.Pending),
+					// Another customer's open checkout still reserves the fingerprint's trial.
+					or(
+						ne(customerProducts.status, CusProductStatus.Pending),
+						ne(customers.internal_id, internalCustomerId),
+					),
 					or(
 						// Cross-customer fingerprint dedup (unique_fingerprint abuse
 						// prevention) must match other customers regardless of entity,

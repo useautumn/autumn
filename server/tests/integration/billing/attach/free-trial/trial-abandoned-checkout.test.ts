@@ -11,6 +11,7 @@
  * - A trial checkout replaced by another plan's checkout does not consume it
  * - A trial checkout that expires in Stripe does not consume it
  * - A completed trial checkout still consumes it
+ * - With unique_fingerprint, an open checkout reserves the trial for the fingerprint
  */
 
 import { expect, test } from "bun:test";
@@ -260,6 +261,57 @@ test.concurrent(
 			planIds: [proTrial.id],
 			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		});
+	},
+	WEBHOOK_TEST_TIMEOUT_MS,
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: Open checkout reserves a unique-fingerprint trial
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("trial-abandoned-checkout 5: open checkout reserves the trial for a shared fingerprint")}`,
+	async () => {
+		const customerId = `trial-abandoned-fingerprint-${Date.now()}`;
+		const otherCustomerId = `${customerId}-dup`;
+		const fingerprint = `fp-${Date.now()}`;
+		const proTrial = products.proWithTrial({
+			id: "pro-trial-fingerprint",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+			trialDays: 7,
+			cardRequired: true,
+			uniqueFingerprint: true,
+		});
+
+		const { autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, data: { fingerprint } }),
+				s.otherCustomers([{ id: otherCustomerId, data: { fingerprint } }]),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: proTrial.id,
+			redirect_mode: "always",
+		});
+
+		const ownPreview =
+			await autumnV2_4.billing.previewAttach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: proTrial.id,
+			});
+		expect(ownPreview.total).toBe(0);
+
+		const otherPreview =
+			await autumnV2_4.billing.previewAttach<AttachParamsV1Input>({
+				customer_id: otherCustomerId,
+				plan_id: proTrial.id,
+			});
+		expect(otherPreview.total).toBe(20);
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
