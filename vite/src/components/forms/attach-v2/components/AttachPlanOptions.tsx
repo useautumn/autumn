@@ -2,10 +2,12 @@ import type { TrialOnEnd } from "@autumn/shared";
 import { Switch } from "@autumn/ui";
 import { BillingOptionSections } from "@/components/forms/shared/billing-option-sections/BillingOptionSections";
 import {
-	catalogTrialChange,
-	toggledChange,
-	versionChange,
-} from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
+	catalogTrialSummary,
+	changedTo,
+	staysAs,
+	switchSummary,
+	versionSummary,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import {
@@ -50,7 +52,11 @@ export function AttachPlanOptions() {
 					{
 						id: "version",
 						visible: numVersions > 1 && !isMultiPlan,
-						change: versionChange({ version, defaultVersion: numVersions }),
+						summary: versionSummary({
+							version,
+							defaultVersion: numVersions,
+							defaultLabel: "latest",
+						}),
 						row: (
 							<PlanVersionConfigRow
 								description="Select which version of the plan to attach"
@@ -68,13 +74,15 @@ export function AttachPlanOptions() {
 					{
 						id: "currency",
 						visible: attachCurrency.showCurrencySelector,
-						change: currency ? currency.toUpperCase() : null,
+						summary: currency
+							? changedTo(currency.toUpperCase())
+							: staysAs(attachCurrency.orgDefaultCurrency.toUpperCase()),
 						row: <AttachCurrencyRow />,
 					},
 					{
 						id: "freeTrial",
 						visible: true,
-						change: catalogTrialChange({
+						summary: catalogTrialSummary({
 							enabled: !!trialEnabled,
 							length: trialLength,
 							duration: trialDuration,
@@ -115,9 +123,9 @@ export function AttachPlanOptions() {
 					{
 						id: "grantFree",
 						visible: true,
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: !!grantFree,
-							label: "granted free",
+							changedText: "Granted free",
 						}),
 						row: (
 							<ConfigRow

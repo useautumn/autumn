@@ -7,22 +7,31 @@ import { Switch } from "@autumn/ui";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionSections } from "@/components/forms/shared/billing-option-sections/BillingOptionSections";
 import {
-	billingCycleAnchorChange,
-	datedChange,
-	freeTrialChange,
-	prorationChange,
-	toggledChange,
-} from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
+	anchorSummary,
+	carryOverSummary,
+	dateSummary,
+	editedTrialSummary,
+	prorationSummary,
+	renewsSummary,
+	staysAs,
+	switchSummary,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import { CarryOverConfigRow } from "@/components/forms/shared/CarryOverConfigRow";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { firstPhaseStartText } from "../utils/firstPhaseStartText";
 import { hasPaidRecurringSchedulePlan } from "../utils/hasPaidRecurringSchedulePlan";
 import { scheduleBillingCycleAnchorBounds } from "../utils/scheduleBillingCycleAnchorBounds";
 import { firstPhaseStartsLater } from "../utils/schedulePhaseTiming";
 import { ScheduleFreeTrialRow } from "./ScheduleFreeTrialRow";
+
+const BACKDATE_PRORATION_LABELS: Partial<Record<BillingBehavior, string>> = {
+	none: "Backdated time not billed",
+	prorate_immediately: "Bills backdated time",
+};
 
 export function CreateScheduleAdvancedSection() {
 	const {
@@ -35,6 +44,8 @@ export function CreateScheduleAdvancedSection() {
 		hasActiveSubscription,
 		replacesPlanNow,
 		canScheduleTrial,
+		isExistingSchedule,
+		previewQuery,
 	} = useCreateScheduleFormContext();
 	const {
 		resetBillingCycle,
@@ -86,9 +97,12 @@ export function CreateScheduleAdvancedSection() {
 						id: "proration",
 						visible: rules.proration.visible,
 						locked: rules.proration.disabled,
-						change: prorationChange({
+						summary: prorationSummary({
 							value: proration,
 							defaultValue: defaultProration,
+							labels: backdatesLiveSubscription
+								? BACKDATE_PRORATION_LABELS
+								: undefined,
 						}),
 						row: (
 							<ProrationBehaviorConfigRow
@@ -110,11 +124,18 @@ export function CreateScheduleAdvancedSection() {
 				],
 				timing: [
 					{
+						id: "firstPhaseStart",
+						visible: true,
+						summary: staysAs(
+							firstPhaseStartText({ phases, nowMs, isExistingSchedule }),
+						),
+					},
+					{
 						id: "earlyAccess",
 						visible: firstPhaseStartsLater({ phases, nowMs }),
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: enablePlanImmediately,
-							label: "early access",
+							changedText: "Early access",
 						}),
 						row: (
 							<ConfigRow
@@ -136,7 +157,7 @@ export function CreateScheduleAdvancedSection() {
 						id: "resetBillingCycle",
 						visible: resetRule.visible,
 						locked: resetRule.disabled,
-						change: billingCycleAnchorChange({
+						summary: anchorSummary({
 							enabled: resetBillingCycle,
 							mode: anchorMode,
 							customAnchor: billingCycleAnchorDate,
@@ -165,7 +186,7 @@ export function CreateScheduleAdvancedSection() {
 					{
 						id: "endDate",
 						visible: rules.endDate.visible,
-						change: datedChange({ label: "end", date: endDate }),
+						summary: dateSummary({ label: "Ends", date: endDate }),
 						row: (
 							<EndDateConfigRow
 								endDate={endDate}
@@ -179,7 +200,7 @@ export function CreateScheduleAdvancedSection() {
 					{
 						id: "freeTrial",
 						visible: canScheduleTrial,
-						change: freeTrialChange({
+						summary: editedTrialSummary({
 							edited: formValues.trialEdited,
 							enabled: formValues.trialEnabled,
 							length: formValues.trialLength,
@@ -187,14 +208,27 @@ export function CreateScheduleAdvancedSection() {
 						}),
 						row: <ScheduleFreeTrialRow />,
 					},
+					{
+						id: "renews",
+						visible: !firstPhaseStartsLater({ phases, nowMs }),
+						summary: renewsSummary({
+							startsAt: previewQuery.data?.next_cycle?.starts_at,
+						}),
+					},
 				],
 				balances: [
 					{
+						id: "usageResets",
+						visible: !carryOverUsages,
+						summary: staysAs("Usage resets"),
+					},
+					{
 						id: "carryOverUsages",
 						visible: rules.carryOverUsages.visible,
-						change: toggledChange({
+						summary: carryOverSummary({
 							enabled: carryOverUsages,
-							label: "carry over usages",
+							featureIds: carryOverUsageFeatureIds,
+							noun: "usage",
 						}),
 						row: (
 							<CarryOverConfigRow

@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { FreeTrialDuration } from "@autumn/shared";
 import type { BillingOptionDescriptor } from "@/components/forms/shared/billing-option-sections/types/billingOptionSectionTypes";
 import {
-	billingCycleAnchorChange,
-	prorationChange,
-} from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
+	anchorSummary,
+	catalogTrialSummary,
+	changedTo,
+	prorationSummary,
+	staysAs,
+	versionSummary,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import {
 	summarizeBillingOptions,
 	toVisibleBillingOptionSections,
@@ -14,8 +19,8 @@ const option = (
 ): BillingOptionDescriptor => ({
 	id: "option",
 	visible: true,
-	change: null,
-	row: null,
+	summary: null,
+	row: "row",
 	...overrides,
 });
 
@@ -26,82 +31,143 @@ describe("toVisibleBillingOptionSections", () => {
 				stripe: [option({ id: "skipBilling" })],
 				balances: [option({ id: "resetUsage", visible: false })],
 				charges: [option({ id: "proration" })],
+				plan: [option({ id: "version" })],
 			},
 		});
 		expect(sections.map((section) => section.id)).toEqual([
+			"plan",
 			"charges",
 			"stripe",
 		]);
 	});
 
-	test("returns nothing when no option is visible", () => {
+	test("a section of summary-only facts is not rendered", () => {
 		expect(
 			toVisibleBillingOptionSections({
-				sections: { timing: [option({ visible: false })] },
+				sections: {
+					timing: [
+						option({ row: undefined, summary: staysAs("Renews Nov 6") }),
+					],
+				},
 			}),
 		).toEqual([]);
+	});
+
+	test("facts join the summary but render no row", () => {
+		const [timing] = toVisibleBillingOptionSections({
+			sections: {
+				timing: [
+					option({ id: "endDate", summary: null }),
+					option({
+						id: "renews",
+						row: undefined,
+						summary: staysAs("Renews Nov 6"),
+					}),
+				],
+			},
+		});
+		expect(timing.options.map((entry) => entry.id)).toEqual(["endDate"]);
+		expect(timing.summary).toEqual([{ text: "Renews Nov 6", changed: false }]);
 	});
 });
 
 describe("summarizeBillingOptions", () => {
-	test("shows Default when nothing changed", () => {
-		expect(summarizeBillingOptions({ options: [option({})] })).toBe("Default");
-	});
-
-	test("joins changes in row order and capitalises the first", () => {
+	test("lists changed parts first, then what stays the same, in row order", () => {
 		expect(
 			summarizeBillingOptions({
 				options: [
-					option({ id: "a", change: "end of cycle" }),
-					option({ id: "b", change: "anchor now" }),
+					option({ id: "a", summary: staysAs("Starts now") }),
+					option({ id: "b", summary: changedTo("Ends Dec 1") }),
+					option({ id: "c", summary: staysAs("Renews Nov 6") }),
 				],
 			}),
-		).toBe("End of cycle · anchor now");
+		).toEqual([
+			{ text: "Ends Dec 1", changed: true },
+			{ text: "Starts now", changed: false },
+			{ text: "Renews Nov 6", changed: false },
+		]);
 	});
 
-	test("ignores locked and hidden options", () => {
+	test("a locked option reads as unchanged and a hidden one is left out", () => {
 		expect(
 			summarizeBillingOptions({
 				options: [
-					option({ id: "a", change: "anchor now", locked: true }),
-					option({ id: "b", change: "end Nov 1", visible: false }),
+					option({
+						id: "a",
+						summary: changedTo("Cycle resets now"),
+						locked: true,
+					}),
+					option({ id: "b", summary: changedTo("Ends Nov 1"), visible: false }),
 				],
 			}),
-		).toBe("Default");
+		).toEqual([{ text: "Cycle resets now", changed: false }]);
 	});
 });
 
-describe("change phrases", () => {
-	test("proration only counts when it differs from the flow default", () => {
-		expect(prorationChange({ value: "none", defaultValue: "none" })).toBeNull();
+describe("summary phrases", () => {
+	test("proration reads its effective mode and flags a change from the flow default", () => {
+		expect(prorationSummary({ value: "none", defaultValue: "none" })).toEqual(
+			staysAs("No proration"),
+		);
 		expect(
-			prorationChange({
-				value: "prorate_immediately",
-				defaultValue: "none",
-			}),
-		).toBe("prorated");
+			prorationSummary({ value: "prorate_immediately", defaultValue: "none" }),
+		).toEqual(changedTo("Prorated"));
 		expect(
-			prorationChange({
+			prorationSummary({
 				value: "none",
-				defaultValue: "prorate_immediately",
+				defaultValue: "none",
+				labels: { none: "Backdated time not billed" },
 			}),
-		).toBe("no proration");
+		).toEqual(staysAs("Backdated time not billed"));
 	});
 
-	test("a custom anchor without a date is not a change", () => {
+	test("the anchor keeps its default text until it resets", () => {
 		expect(
-			billingCycleAnchorChange({
-				enabled: true,
-				mode: "custom",
-				customAnchor: null,
-			}),
-		).toBeNull();
-		expect(
-			billingCycleAnchorChange({
-				enabled: true,
+			anchorSummary({
+				enabled: false,
 				mode: "now",
 				customAnchor: null,
+				defaultText: "Keeps cycle",
 			}),
-		).toBe("anchor now");
+		).toEqual(staysAs("Keeps cycle"));
+		expect(
+			anchorSummary({ enabled: true, mode: "now", customAnchor: null }),
+		).toEqual(changedTo("Cycle resets now"));
+		expect(
+			anchorSummary({ enabled: true, mode: "custom", customAnchor: null }),
+		).toBeNull();
+	});
+
+	test("a trial matching the catalog trial is not a change", () => {
+		const catalogTrial = { length: 14, duration: FreeTrialDuration.Day };
+		expect(
+			catalogTrialSummary({
+				enabled: true,
+				length: 14,
+				duration: FreeTrialDuration.Day,
+				catalogTrial,
+			}),
+		).toEqual(staysAs("14-day trial"));
+		expect(
+			catalogTrialSummary({
+				enabled: false,
+				length: 14,
+				duration: FreeTrialDuration.Day,
+				catalogTrial,
+			}),
+		).toEqual(changedTo("No trial"));
+	});
+
+	test("the version names the default it compares against", () => {
+		expect(
+			versionSummary({
+				version: undefined,
+				defaultVersion: 3,
+				defaultLabel: "latest",
+			}),
+		).toEqual(staysAs("Version 3 (latest)"));
+		expect(
+			versionSummary({ version: 2, defaultVersion: 3, defaultLabel: "latest" }),
+		).toEqual(changedTo("Version 2"));
 	});
 });

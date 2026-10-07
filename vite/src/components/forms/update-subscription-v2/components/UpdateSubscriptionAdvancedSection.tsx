@@ -3,13 +3,16 @@ import { Switch } from "@autumn/ui";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionSections } from "@/components/forms/shared/billing-option-sections/BillingOptionSections";
 import {
-	billingCycleAnchorChange,
-	discountsChange,
-	freeTrialChange,
-	prorationChange,
-	toggledChange,
-	versionChange,
-} from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
+	anchorSummary,
+	changedTo,
+	discountsSummary,
+	prorationSummary,
+	renewsSummary,
+	staysAs,
+	switchSummary,
+	trialText,
+	versionSummary,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import {
 	DISCOUNTS_FIELDS,
@@ -26,7 +29,7 @@ import { UpdateSubscriptionFreeTrialRow } from "./UpdateSubscriptionFreeTrialRow
 const DEFAULT_PRORATION: BillingBehavior = "prorate_immediately";
 
 export function UpdateSubscriptionAdvancedSection() {
-	const { form, formValues, formContext, trialState } =
+	const { form, formValues, formContext, trialState, previewQuery } =
 		useUpdateSubscriptionFormContext();
 	const {
 		billingBehavior,
@@ -53,17 +56,21 @@ export function UpdateSubscriptionAdvancedSection() {
 		},
 	});
 	const proration = billingBehavior ?? DEFAULT_PRORATION;
-	const addsTrial = trialState.isCurrentlyTrialing
+	const changesTrial = trialState.isCurrentlyTrialing
 		? trialState.isTrialModified
 		: trialState.isTrialExpanded && trialState.hasTrialValue;
-	const trialChange = trialState.removeTrial
-		? "end trial"
-		: freeTrialChange({
-				edited: addsTrial,
-				enabled: true,
+	const currentTrialText = trialState.isCurrentlyTrialing
+		? `Trialing, ${trialState.remainingTrialFormatted} left`
+		: "No trial";
+	let trialSummary = staysAs(currentTrialText);
+	if (trialState.removeTrial) trialSummary = changedTo("Ends trial now");
+	else if (changesTrial)
+		trialSummary = changedTo(
+			trialText({
 				length: trialState.trialLength,
 				duration: trialState.trialDuration,
-			});
+			}),
+		);
 
 	return (
 		<BillingOptionSections
@@ -72,7 +79,11 @@ export function UpdateSubscriptionAdvancedSection() {
 					{
 						id: "version",
 						visible: numVersions > 1,
-						change: versionChange({ version, defaultVersion: currentVersion }),
+						summary: versionSummary({
+							version,
+							defaultVersion: currentVersion,
+							defaultLabel: "current",
+						}),
 						row: (
 							<PlanVersionConfigRow
 								description="Select which version of the plan to use"
@@ -87,7 +98,7 @@ export function UpdateSubscriptionAdvancedSection() {
 					{
 						id: "freeTrial",
 						visible: true,
-						change: trialChange,
+						summary: trialSummary,
 						row: <UpdateSubscriptionFreeTrialRow />,
 					},
 				],
@@ -95,7 +106,11 @@ export function UpdateSubscriptionAdvancedSection() {
 					{
 						id: "discounts",
 						visible: rules.discounts.visible,
-						change: discountsChange({ discounts, removedRewardIds }),
+						summary: discountsSummary({
+							discounts,
+							removedRewardIds,
+							appliedCount: appliedDiscounts.length,
+						}),
 						row: (
 							<DiscountsFieldGroup
 								form={form}
@@ -110,7 +125,7 @@ export function UpdateSubscriptionAdvancedSection() {
 						id: "proration",
 						visible: rules.proration.visible,
 						locked: rules.proration.disabled,
-						change: prorationChange({
+						summary: prorationSummary({
 							value: proration,
 							defaultValue: DEFAULT_PRORATION,
 						}),
@@ -133,10 +148,11 @@ export function UpdateSubscriptionAdvancedSection() {
 						id: "resetBillingCycle",
 						visible: rules.resetBillingCycle.visible,
 						locked: rules.resetBillingCycle.disabled,
-						change: billingCycleAnchorChange({
+						summary: anchorSummary({
 							enabled: resetBillingCycle,
 							mode: billingCycleAnchorMode,
 							customAnchor: billingCycleAnchorDate,
+							defaultText: "Keeps cycle",
 						}),
 						row: (
 							<BillingCycleAnchorConfigRow
@@ -155,14 +171,22 @@ export function UpdateSubscriptionAdvancedSection() {
 							/>
 						),
 					},
+					{
+						id: "renews",
+						visible: true,
+						summary: renewsSummary({
+							startsAt: previewQuery.data?.next_cycle?.starts_at,
+						}),
+					},
 				],
 				balances: [
 					{
 						id: "resetUsage",
 						visible: rules.resetUsage.visible,
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: resetUsage,
-							label: "reset usage",
+							changedText: "Usage resets",
+							defaultText: "Usage carries over",
 						}),
 						row: (
 							<ConfigRow
@@ -184,9 +208,10 @@ export function UpdateSubscriptionAdvancedSection() {
 					{
 						id: "skipBilling",
 						visible: rules.skipBilling.visible,
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: noBillingChanges,
-							label: "no billing changes",
+							changedText: "No billing changes",
+							defaultText: "Updates subscription",
 						}),
 						row: (
 							<ConfigRow

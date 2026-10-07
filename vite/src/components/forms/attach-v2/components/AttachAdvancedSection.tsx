@@ -2,13 +2,19 @@ import { isFreeProductV2, isOneOffProductV2 } from "@autumn/shared";
 import { Switch } from "@autumn/ui";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionSections } from "@/components/forms/shared/billing-option-sections/BillingOptionSections";
+import type { BillingOptionSummary } from "@/components/forms/shared/billing-option-sections/types/billingOptionSectionTypes";
 import {
-	billingCycleAnchorChange,
-	datedChange,
-	discountsChange,
-	prorationChange,
-	toggledChange,
-} from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
+	anchorSummary,
+	carryOverSummary,
+	changedTo,
+	dateSummary,
+	discountsSummary,
+	formatOptionDate,
+	prorationSummary,
+	renewsSummary,
+	staysAs,
+	switchSummary,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import { CarryOverConfigRow } from "@/components/forms/shared/CarryOverConfigRow";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import {
@@ -75,6 +81,7 @@ export function AttachAdvancedSection() {
 		isNoChargesAllowed,
 		canChooseBillingCycle,
 		createsNewStripeSubscription,
+		createsRecurringSubscription,
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
@@ -113,6 +120,20 @@ export function AttachAdvancedSection() {
 	const resetsBillingCycleNow =
 		resetBillingCycle && billingCycleAnchorMode === "now";
 	const proration = showProrationBehavior ? effectiveProrationBehavior : "none";
+	const scheduledStartsAt = getAttachScheduledStartDate({
+		previewData: previewQuery.data,
+	});
+	const chargesFullPriceNow =
+		!rules.proration.visible &&
+		!isMultiPlan &&
+		isPaidRecurringProduct &&
+		!noBillingChanges &&
+		!formValues.grantFree;
+	let stripeOutcome: BillingOptionSummary = null;
+	if (createsRecurringSubscription)
+		stripeOutcome = staysAs("Creates subscription");
+	else if (hasActiveSubscription)
+		stripeOutcome = staysAs("Updates current subscription");
 	const anchorMode = isMultiPlan ? "now" : billingCycleAnchorMode;
 
 	return (
@@ -120,9 +141,20 @@ export function AttachAdvancedSection() {
 			sections={{
 				charges: [
 					{
+						id: "initialCharge",
+						visible: chargesFullPriceNow,
+						summary: staysAs(
+							trialEnabled ? "Charged after trial" : "Full price now",
+						),
+					},
+					{
 						id: "discounts",
 						visible: rules.discounts.visible,
-						change: discountsChange({ discounts, removedRewardIds }),
+						summary: discountsSummary({
+							discounts,
+							removedRewardIds,
+							appliedCount: appliedDiscounts.length,
+						}),
 						row: (
 							<DiscountsFieldGroup
 								form={form}
@@ -137,7 +169,10 @@ export function AttachAdvancedSection() {
 						id: "proration",
 						visible: rules.proration.visible,
 						locked: rules.proration.disabled,
-						change: prorationChange({ value: proration, defaultValue: "none" }),
+						summary: prorationSummary({
+							value: proration,
+							defaultValue: "none",
+						}),
 						row: (
 							<ProrationBehaviorConfigRow
 								rule={rules.proration}
@@ -149,7 +184,7 @@ export function AttachAdvancedSection() {
 					{
 						id: "chargeTax",
 						visible: showChargeTax,
-						change: toggledChange({ enabled: !chargeTax, label: "no tax" }),
+						summary: chargeTax ? staysAs("Tax on") : changedTo("No tax"),
 						row: (
 							<ConfigRow
 								title="Charge Tax"
@@ -168,9 +203,9 @@ export function AttachAdvancedSection() {
 					{
 						id: "overrideLineItems",
 						visible: rules.overrideLineItems.visible,
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: customLineItems.length > 0,
-							label: "custom line items",
+							changedText: "Custom line items",
 						}),
 						row: (
 							<AttachOverrideLineItemsRow
@@ -184,13 +219,22 @@ export function AttachAdvancedSection() {
 				],
 				timing: [
 					{
+						id: "startsNow",
+						visible:
+							startDate === null && effectivePlanSchedule !== "end_of_cycle",
+						summary: staysAs("Starts now"),
+					},
+					{
 						id: "planSchedule",
 						visible: rules.planSchedule.visible,
 						locked: resetsBillingCycleNow,
-						change: toggledChange({
-							enabled: isEndOfCycleSelected,
-							label: "end of cycle",
-						}),
+						summary: isEndOfCycleSelected
+							? changedTo(
+									scheduledStartsAt
+										? `End of cycle (${formatOptionDate(scheduledStartsAt)})`
+										: "End of cycle",
+								)
+							: null,
 						row: (
 							<AttachPlanScheduleRow
 								isImmediateSelected={isImmediateSelected}
@@ -204,7 +248,12 @@ export function AttachAdvancedSection() {
 					{
 						id: "startDate",
 						visible: rules.startDate.visible,
-						change: datedChange({ label: "start", date: startDate }),
+						summary:
+							startDate === null
+								? null
+								: changedTo(
+										`${startDate < Date.now() ? "Backdated to" : "Starts"} ${formatOptionDate(startDate)}`,
+									),
 						row: (
 							<AttachStartDateRow
 								startDate={startDate}
@@ -219,7 +268,7 @@ export function AttachAdvancedSection() {
 					{
 						id: "endDate",
 						visible: rules.endDate.visible,
-						change: datedChange({ label: "end", date: endDate }),
+						summary: dateSummary({ label: "Ends", date: endDate }),
 						row: (
 							<EndDateConfigRow
 								endDate={endDate}
@@ -233,7 +282,7 @@ export function AttachAdvancedSection() {
 					{
 						id: "resetBillingCycle",
 						visible: rules.resetBillingCycle.visible,
-						change: billingCycleAnchorChange({
+						summary: anchorSummary({
 							enabled: resetBillingCycle,
 							mode: anchorMode,
 							customAnchor: billingCycleAnchorDate,
@@ -264,14 +313,27 @@ export function AttachAdvancedSection() {
 							/>
 						),
 					},
+					{
+						id: "renews",
+						visible: !isEndOfCycleSelected,
+						summary: renewsSummary({
+							startsAt: previewQuery.data?.next_cycle?.starts_at,
+						}),
+					},
 				],
 				balances: [
 					{
+						id: "balancesReset",
+						visible: !carryOverBalances && !carryOverUsages,
+						summary: staysAs("Balances and usage reset"),
+					},
+					{
 						id: "carryOverBalances",
 						visible: rules.carryOverBalances.visible,
-						change: toggledChange({
+						summary: carryOverSummary({
 							enabled: carryOverBalances,
-							label: "carry over balances",
+							featureIds: carryOverBalanceFeatureIds,
+							noun: "balances",
 						}),
 						row: (
 							<CarryOverConfigRow
@@ -292,9 +354,10 @@ export function AttachAdvancedSection() {
 					{
 						id: "carryOverUsages",
 						visible: rules.carryOverUsages.visible,
-						change: toggledChange({
+						summary: carryOverSummary({
 							enabled: carryOverUsages,
-							label: "carry over usages",
+							featureIds: carryOverUsageFeatureIds,
+							noun: "usage",
 						}),
 						row: (
 							<CarryOverConfigRow
@@ -315,11 +378,16 @@ export function AttachAdvancedSection() {
 				],
 				stripe: [
 					{
+						id: "subscriptionOutcome",
+						visible: !newBillingSubscription && !noBillingChanges,
+						summary: stripeOutcome,
+					},
+					{
 						id: "newBillingSubscription",
 						visible: rules.newBillingSubscription.visible,
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: newBillingSubscription,
-							label: "new billing subscription",
+							changedText: "New subscription",
 						}),
 						row: (
 							<ConfigRow
@@ -339,9 +407,9 @@ export function AttachAdvancedSection() {
 					{
 						id: "skipBilling",
 						visible: rules.skipBilling.visible,
-						change: toggledChange({
+						summary: switchSummary({
 							enabled: noBillingChanges,
-							label: "skip billing",
+							changedText: "Skips Stripe",
 						}),
 						row: (
 							<ConfigRow
