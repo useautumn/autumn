@@ -27,10 +27,6 @@ import {
 	flushCommandSchema,
 } from "./commands/flush/types/flushCommand.js";
 import {
-	type InitializeCommand,
-	initializeCommandSchema,
-} from "./commands/initialize/types/initializeCommand.js";
-import {
 	type InitializeRequest,
 	initializeRequestSchema,
 } from "./commands/initialize/types/initializeRequest.js";
@@ -83,7 +79,6 @@ import {
 	type SubjectState,
 	subjectStateSchema,
 } from "./models/subject/subjectState.js";
-import { parseInbound } from "./parseInbound.js";
 
 export const parseTrackCommand = ({
 	input,
@@ -151,12 +146,6 @@ export const parseFinalizeCommand = ({
 	input: unknown;
 }): FinalizeCommand => finalizeCommandSchema.parse(input);
 
-export const parseInitializeCommand = ({
-	input,
-}: {
-	input: unknown;
-}): InitializeCommand => initializeCommandSchema.parse(input);
-
 export const parseApplyBillingPlanRequest = ({
 	input,
 }: {
@@ -185,17 +174,11 @@ export const parseSubjectStateMutation = ({
 	input: unknown;
 }): SubjectStateMutation => subjectStateMutationSchema.parse(input);
 
-/** The logged command is read as a newer writer may have sent it; the rest of the record stays strict. */
 export const parseMutationRecord = ({
 	input,
 }: {
 	input: unknown;
-}): MutationRecord =>
-	parseInbound({
-		parse: (params) => mutationRecordSchema.parse(params.input),
-		input,
-		within: ["command"],
-	});
+}): MutationRecord => mutationRecordSchema.parse(input);
 
 export const parseMeteringIdentity = ({
 	input,

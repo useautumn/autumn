@@ -71,10 +71,11 @@ const fromNewerWriter = () => {
 };
 
 describe("a record from a newer writer", () => {
-	test("replays: unknown keys anywhere in its command are dropped", () => {
-		const parsed = parseMutationRecord({ input: fromNewerWriter() });
+	test("replays: its command is read as written, unknown keys included", () => {
+		const logged = fromNewerWriter();
+		const parsed = parseMutationRecord({ input: logged });
 
-		expect(parsed).toEqual(record);
+		expect(parsed.command).toEqual(logged.command);
 		expect(applyMutation({ state: createState(), mutation: parsed })).toEqual(
 			applyMutation({ state: createState(), mutation: record }),
 		);

@@ -1,4 +1,4 @@
-import { parseResetCommand, type ResetCommand } from "@autumn/balance-engine";
+import type { ResetCommand } from "@autumn/balance-engine";
 import type { ResetReply } from "@autumn/balance-worker-client/protocol";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { mutateReset } from "../actions/ensureSubjectCurrent/advanceResets.js";
@@ -15,14 +15,13 @@ export async function decideReset({
 	command: ResetCommand;
 }): Promise<DecidedMutation<ResetReply>> {
 	const { ctx } = scope;
-	const parsed = parseResetCommand({ input: command });
-	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
-	const inputs = await readResetInputs({ scope, command: parsed });
-	const anchored: ResetCommand = { ...parsed, ...inputs };
+	await ctx.subjectHydrator.ensure({ identity: command.identity });
+	const inputs = await readResetInputs({ scope, command });
+	const anchored: ResetCommand = { ...command, ...inputs };
 
 	return ctx.writer.decide<ResetReply>({
 		command: anchored,
-		durability: parsed.durability ?? "log",
+		durability: command.durability ?? "log",
 		mutate: ({ state }) =>
 			timeSync({ label: "reset.decide" }, () =>
 				mutateReset({ scope, state, command: anchored }),

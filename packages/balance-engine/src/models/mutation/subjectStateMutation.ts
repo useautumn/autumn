@@ -1,41 +1,23 @@
 import { z } from "zod/v4";
-import { applyBillingPlanCommandSchema } from "../../commands/applyBillingPlan/types/applyBillingPlanCommand.js";
 import { applyBillingPlanResultSchema } from "../../commands/applyBillingPlan/types/applyBillingPlanResult.js";
-import { confirmExpiredLockCommandSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockCommand.js";
 import { confirmExpiredLockResultSchema } from "../../commands/confirmExpiredLock/types/confirmExpiredLockResult.js";
-import { deleteBalanceCommandSchema } from "../../commands/deleteBalance/types/deleteBalanceCommand.js";
 import { deleteBalanceResultSchema } from "../../commands/deleteBalance/types/deleteBalanceResult.js";
-import { loggedEvictCommandSchema } from "../../commands/evict/types/evictCommand.js";
 import { evictResultSchema } from "../../commands/evict/types/evictResult.js";
-import { finalizeCommandSchema } from "../../commands/finalize/types/finalizeCommand.js";
 import { finalizeResultSchema } from "../../commands/finalize/types/finalizeResult.js";
-import { initializeCommandSchema } from "../../commands/initialize/types/initializeCommand.js";
 import { initializeResultSchema } from "../../commands/initialize/types/initializeResult.js";
-import { recalculateBalanceCommandSchema } from "../../commands/recalculateBalance/types/recalculateBalanceCommand.js";
 import { recalculateBalanceResultSchema } from "../../commands/recalculateBalance/types/recalculateBalanceResult.js";
-import { resetCommandSchema } from "../../commands/reset/types/resetCommand.js";
 import { resetResultSchema } from "../../commands/reset/types/resetResult.js";
-import { trackCommandSchema } from "../../commands/track/types/trackCommand.js";
 import { trackResultSchema } from "../../commands/track/types/trackResult.js";
-import { updateBalanceCommandSchema } from "../../commands/updateBalance/types/updateBalanceCommand.js";
 import { updateBalanceResultSchema } from "../../commands/updateBalance/types/updateBalanceResult.js";
+import type { MutatingCommand } from "../command/mutatingCommand.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
 import { changesInsertCustomer, rowChangeSchema } from "./rowChange.js";
 
-// The command as it was sent. Readers parse it tolerantly (`parseMutationRecord`): a newer command field must not break an older replay.
-export const mutationCommandSchema = z.discriminatedUnion("type", [
-	trackCommandSchema,
-	initializeCommandSchema,
-	finalizeCommandSchema,
-	confirmExpiredLockCommandSchema,
-	resetCommandSchema,
-	applyBillingPlanCommandSchema,
-	updateBalanceCommandSchema,
-	deleteBalanceCommandSchema,
-	recalculateBalanceCommandSchema,
-	loggedEvictCommandSchema,
-]);
+/** The command as it was sent, cast rather than parsed: never replayed, so a newer writer's fields must not break an older reader. */
+const mutationCommandSchema = z.custom<MutationCommand>(
+	(value) => typeof value === "object" && value !== null,
+);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [
 	trackResultSchema,
@@ -156,6 +138,6 @@ export const subjectStateMutationSchema = z
 	.strict()
 	.superRefine(refineSubjectStateMutation);
 
-export type MutationCommand = z.infer<typeof mutationCommandSchema>;
+export type MutationCommand = MutatingCommand;
 export type MutationResult = z.infer<typeof mutationResultSchema>;
 export type SubjectStateMutation = z.infer<typeof subjectStateMutationSchema>;

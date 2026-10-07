@@ -4,7 +4,6 @@ import {
 	computeFinalizeDecision,
 	type FinalizeCommand,
 	meteringIdentityToPartitionKey,
-	parseFinalizeCommand,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { FinalizeReply } from "@autumn/balance-worker-client/protocol";
@@ -35,25 +34,24 @@ export async function decideFinalize({
 	command: FinalizeCommand;
 }): Promise<DecidedFinalize> {
 	const { ctx } = scope;
-	const parsed = parseFinalizeCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
-		identity: parsed.identity,
+		identity: command.identity,
 	});
 	// Filled by the decision, which is the only place that knows which rows it was made against.
 	const decidedAgainst: DecidedAgainst = {};
 	const decided = await withResidentSubject({
 		customerKey,
-		ensure: () => ensureSubjectCurrent({ scope, command: parsed }),
+		ensure: () => ensureSubjectCurrent({ scope, command }),
 		attempt: () =>
 			ctx.writer.decide<never>({
-				command: parsed,
+				command,
 				mutate: ({ state }) =>
 					timeSync({ label: "finalize.decide" }, () =>
 						mutateFinalize({
 							scope,
 							state,
 							customerKey,
-							command: parsed,
+							command,
 							decidedAgainst,
 						}),
 					),

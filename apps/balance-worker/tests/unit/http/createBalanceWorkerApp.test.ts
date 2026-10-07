@@ -150,10 +150,7 @@ const fixture = ({
 			state,
 			catalog: catalogRowsToCatalog({ rows: [] }),
 		}),
-		evict: async (params) => {
-			submitted.push(params);
-			return { evicted: false };
-		},
+		evict: async () => ({ evicted: false }),
 		flush: async () => ({ stored: true as const }),
 		finalize: async () => {
 			throw new Error("Finalize is not configured in this fixture");
@@ -427,56 +424,6 @@ describe("Balance worker HTTP", () => {
 		expect(response.status).toBe(200);
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([{ command: sent }]);
-	});
-	test("an evict from a newer server is applied without its unknown fields, logged once per window", async () => {
-		const { app, submitted, logs } = fixture();
-		const evict = {
-			schemaVersion: 1,
-			type: "evict",
-			requestId: "req_evict",
-			identity: command.identity,
-			occurredAt: 1,
-		};
-		const fromNewerServer = {
-			...evict,
-			refreshEverything: true,
-			identity: { ...evict.identity, region: "eu" },
-		};
-		const postEvict = (sent: unknown) =>
-			app.request("/v1/evict", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ route, command: sent }),
-			});
-
-		const accepted = [
-			await postEvict(fromNewerServer),
-			await postEvict(fromNewerServer),
-		];
-		const { occurredAt: _, ...missingField } = fromNewerServer;
-		const rejected = await postEvict(missingField);
-
-		expect(accepted.map((response) => response.status)).toEqual([200, 200]);
-		expect(submitted).toEqual([{ command: evict }, { command: evict }]);
-		expect(rejected.status).toBe(400);
-		expect((await rejected.json()).error.code).toBe("INVALID_REQUEST");
-		expect(
-			logs.filter(
-				([entry]) =>
-					(entry as { event?: string }).event ===
-					"balance_worker.unknown_keys_stripped",
-			),
-		).toEqual([
-			[
-				{
-					event: "balance_worker.unknown_keys_stripped",
-					source: "/v1/evict",
-					keyPaths: ["identity.region", "refreshEverything"],
-					repeatsSinceLastLine: 0,
-				},
-				"Unknown command keys stripped",
-			],
-		]);
 	});
 	test("rejects malformed and empty JSON before routing", async () => {
 		const { app, submitted, lookups } = fixture();

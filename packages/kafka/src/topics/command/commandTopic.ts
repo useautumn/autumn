@@ -1,14 +1,4 @@
-import {
-	meteringIdentityToPartitionKey,
-	parseConfirmExpiredLockCommand,
-	parseEvictCommand,
-	parseFinalizeCommand,
-	parseInbound,
-	parseInitializeCommand,
-	parseResetCommand,
-	parseTrackCommand,
-	parseUpdateBalanceCommand,
-} from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
 import {
 	assertTopicRecordKey,
@@ -20,56 +10,36 @@ import type {
 	TopicSchema,
 } from "../../lib/types/topicSchema.js";
 import type { CommandRecord } from "./types/commandRecord.js";
-import type { OnUnknownCommandKeys } from "./types/onUnknownCommandKeys.js";
 
 /** Same key as the metering log, so a command lands on the partition its mutation will. */
 function commandRecordToKey({ record }: { record: CommandRecord }): string {
 	return meteringIdentityToPartitionKey({ identity: record.identity });
 }
 
-type CommandParser = (params: { input: unknown }) => CommandRecord;
+const QUEUED_COMMAND_TYPES: ReadonlySet<string> = new Set([
+	"track",
+	"initialize",
+	"finalize",
+	"confirmExpiredLock",
+	"reset",
+	"evict",
+	"updateBalance",
+] satisfies CommandRecord["type"][]);
 
-function commandParserOf({ type }: { type: string }): CommandParser {
-	switch (type) {
-		case "track":
-			return parseTrackCommand;
-		case "initialize":
-			return parseInitializeCommand;
-		case "finalize":
-			return parseFinalizeCommand;
-		case "confirmExpiredLock":
-			return parseConfirmExpiredLockCommand;
-		case "reset":
-			return parseResetCommand;
-		case "evict":
-			return parseEvictCommand;
-		case "updateBalance":
-			return parseUpdateBalanceCommand;
-		default:
-			throw new InvalidRecordError();
-	}
-}
-
+/** Cast, not parsed: our server built and validated it, and a newer server's field must not drop the record.
+ *  The type is still checked, because the consumer routes on it. */
 function parseCommandPayload({
 	type,
 	payload,
-	onUnknownKeys,
-}: Pick<TopicRecordEnvelope, "type" | "payload"> & {
-	onUnknownKeys?: OnUnknownCommandKeys;
-}): CommandRecord {
-	const parse = commandParserOf({ type });
-	function reportUnknownKeys({ keyPaths }: { keyPaths: string[] }): void {
-		onUnknownKeys?.({ commandType: type, keyPaths });
-	}
-	try {
-		return parseInbound({
-			parse,
-			input: payload,
-			onUnknownKeys: reportUnknownKeys,
-		});
-	} catch (cause) {
-		throw new InvalidRecordError({ cause });
-	}
+}: Pick<TopicRecordEnvelope, "type" | "payload">): CommandRecord {
+	const command = payload as Partial<CommandRecord> | null;
+	if (
+		!QUEUED_COMMAND_TYPES.has(type) ||
+		command?.type !== type ||
+		!command.identity
+	)
+		throw new InvalidRecordError();
+	return command as CommandRecord;
 }
 
 export function serializeCommandRecord({ record }: { record: CommandRecord }): {
@@ -85,14 +55,12 @@ export function serializeCommandRecord({ record }: { record: CommandRecord }): {
 export function parseCommandRecord({
 	key,
 	value,
-	onUnknownKeys,
 }: {
 	key: Buffer | null;
 	value: Buffer | null;
-	onUnknownKeys?: OnUnknownCommandKeys;
 }): CommandRecord {
-	const { type, payload } = readTopicEnvelope({ value });
-	const record = parseCommandPayload({ type, payload, onUnknownKeys });
+	const envelope = readTopicEnvelope({ value });
+	const record = parseCommandPayload(envelope);
 	assertTopicRecordKey({ key, expectedKey: commandRecordToKey({ record }) });
 	return record;
 }

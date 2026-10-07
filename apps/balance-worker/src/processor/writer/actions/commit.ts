@@ -1,5 +1,4 @@
 import { isDeepStrictEqual } from "node:util";
-import { parseMutationRecord } from "@autumn/balance-engine";
 import { writesSubjectSnapshots } from "@autumn/edge-config";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
@@ -575,11 +574,7 @@ function assertPersistedMutation({
 		identity: mutation.identity,
 		mutationId: mutation.id,
 	});
-	// The receipt was read back tolerantly, so the pending mutation is compared as the store would read it.
-	if (
-		!receipt ||
-		!isDeepStrictEqual(receipt, parseMutationRecord({ input: mutation }))
-	) {
+	if (!receipt || !isDeepStrictEqual(receipt, mutation)) {
 		throw new Error(`Applied position has no matching receipt: ${mutation.id}`);
 	}
 }

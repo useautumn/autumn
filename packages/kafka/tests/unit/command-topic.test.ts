@@ -8,9 +8,7 @@ import type {
 import {
 	meteringIdentityToPartitionKey,
 	parseEvictCommand,
-	parseResetCommand,
 	parseTrackCommand,
-	parseUpdateBalanceCommand,
 } from "@autumn/balance-engine";
 import { CompressionTypes, type ProducerRecord } from "kafkajs";
 import {
@@ -57,50 +55,32 @@ const evict: EvictCommand = parseEvictCommand({
 	},
 });
 
-const reset: ResetCommand = parseResetCommand({
-	input: {
-		schemaVersion: 1,
-		type: "reset",
-		org: track.org,
-		commandId: "cmd_reset",
-		requestId: "req_reset",
-		identity: testIdentity,
-		occurredAt: 1_700_000_000_000,
-	},
-});
+const reset: ResetCommand = {
+	schemaVersion: 1,
+	type: "reset",
+	org: track.org,
+	commandId: "cmd_reset",
+	requestId: "req_reset",
+	identity: testIdentity,
+	occurredAt: 1_700_000_000_000,
+};
 
-const updateBalance: UpdateBalanceCommand = parseUpdateBalanceCommand({
-	input: {
-		schemaVersion: 1,
-		type: "updateBalance",
-		org: track.org,
-		commandId: "cmd_update",
-		requestId: "req_update",
-		identity: testIdentity,
-		featureId: "messages",
-		internalFeatureId: "feat_messages",
-		remaining: 10,
-		occurredAt: 1_700_000_000_000,
-	},
-});
+const updateBalance: UpdateBalanceCommand = {
+	schemaVersion: 1,
+	type: "updateBalance",
+	org: track.org,
+	commandId: "cmd_update",
+	requestId: "req_update",
+	identity: testIdentity,
+	featureId: "messages",
+	internalFeatureId: "feat_messages",
+	addToBalance: 1,
+	occurredAt: 1_700_000_000_000,
+};
 
-/** The command as a newer server sends it: a field this build does not know, at the top and nested. */
-const fromNewerServer = (command: CommandRecord) => ({
-	...command,
-	futureField: true,
-	identity: { ...command.identity, futureIdentityField: "eu" },
-});
-
-const serializeRaw = ({ payload }: { payload: unknown }) => ({
-	key: serializeCommandRecord({ record: payload as CommandRecord }).key,
-	value: Buffer.from(
-		JSON.stringify({
-			schemaVersion: 1,
-			type: (payload as CommandRecord).type,
-			payload,
-		}),
-	),
-});
+/** The command as a newer server sends it: with a field this build does not know. */
+const fromNewerServer = <Command extends CommandRecord>(command: Command) =>
+	({ ...command, futureField: true }) as Command;
 
 describe("command topic", () => {
 	test("a command round-trips, keyed like the metering log", () => {
@@ -119,34 +99,28 @@ describe("command topic", () => {
 		expect(parseCommandRecord(serialized)).toEqual(evict);
 	});
 
-	test("a queued command from a newer server is read without its unknown fields, and they are reported", () => {
+	test("a queued command is read as sent: a newer server's fields are kept, absent optional ones stay absent", () => {
 		for (const command of [track, reset, updateBalance, evict]) {
-			const reported: { commandType: string; keyPaths: string[] }[] = [];
-			const parsed = parseCommandRecord({
-				...serializeRaw({ payload: fromNewerServer(command) }),
-				onUnknownKeys: (unknownKeys) => reported.push(unknownKeys),
-			});
-
-			expect(parsed).toEqual(command);
-			expect(reported).toEqual([
-				{
-					commandType: command.type,
-					keyPaths: ["futureField", "identity.futureIdentityField"],
-				},
-			]);
+			for (const sent of [command, fromNewerServer(command)]) {
+				expect(
+					parseCommandRecord(serializeCommandRecord({ record: sent })),
+				).toEqual(sent);
+			}
 		}
 	});
 
-	test("an unknown field does not excuse a missing or mistyped one", () => {
-		const { featureId: _, ...missingFeature } = {
-			...track,
-			futureField: true,
-		};
-		const mistyped = { ...fromNewerServer(track), value: "two" };
-		for (const payload of [missingFeature, mistyped]) {
-			expect(() => parseCommandRecord(serializeRaw({ payload }))).toThrow(
-				InvalidRecordError,
+	test("a payload without an identity, or of another type than its envelope, is invalid", () => {
+		const { identity: _, ...anonymous } = track;
+		for (const payload of [anonymous, { ...track, type: "reset" }, null]) {
+			const value = Buffer.from(
+				JSON.stringify({ schemaVersion: 1, type: "track", payload }),
 			);
+			expect(() =>
+				parseCommandRecord({
+					key: serializeCommandRecord({ record: track }).key,
+					value,
+				}),
+			).toThrow(InvalidRecordError);
 		}
 	});
 

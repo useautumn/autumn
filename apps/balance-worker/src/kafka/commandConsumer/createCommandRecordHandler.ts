@@ -18,7 +18,6 @@ import {
 	settleQueuedFailure,
 } from "../../consume/settleQueuedFailure.js";
 import type { QueuedCommand } from "../../consume/types/queuedCommand.js";
-import { createUnknownKeysLog } from "../../logging/createUnknownKeysLog.js";
 import { isPartitionRestartableCause } from "../../partitions/health/partitionRestartableCauses.js";
 import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
@@ -44,7 +43,6 @@ export function createCommandRecordHandler({
 }: {
 	ctx: CommandConsumerContext;
 }): TopicRecordHandler {
-	const unknownKeysLog = createUnknownKeysLog({ ctx: { logger: ctx.logger } });
 	const deferredLogsByPartition = new Map<
 		number,
 		{ runtime: PartitionRuntimePort; logs: DeferredLogs }
@@ -135,15 +133,7 @@ export function createCommandRecordHandler({
 	}): Promise<{ command: CommandRecord; queued: QueuedCommand } | null> {
 		let command: CommandRecord;
 		try {
-			command = parseCommandRecord({
-				key: message.key,
-				value: message.value,
-				onUnknownKeys: ({ commandType, keyPaths }) =>
-					unknownKeysLog.record({
-						source: `commandTopic.${commandType}`,
-						keyPaths,
-					}),
-			});
+			command = parseCommandRecord({ key: message.key, value: message.value });
 		} catch (cause) {
 			// A record nobody can read must not take the partition down with it.
 			ctx.logger?.warn("Queued command skipped: unreadable", {
