@@ -82,6 +82,20 @@ describe("shouldRetrySqsJobError", () => {
 		).toBe(true);
 	});
 
+	test("retries track jobs when the balance worker gave no verdict", () => {
+		for (const code of [
+			"balance_worker_unavailable",
+			"balance_worker_result_unknown",
+		]) {
+			expect(
+				shouldRetrySqsJobError({
+					jobName: JobName.Track,
+					error: new RecaseError({ code, statusCode: 503, message: code }),
+				}),
+			).toBe(true);
+		}
+	});
+
 	test("does not retry track jobs on non-transient application errors", () => {
 		expect(
 			shouldRetrySqsJobError({

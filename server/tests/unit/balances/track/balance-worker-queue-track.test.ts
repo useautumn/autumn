@@ -1,10 +1,10 @@
-import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import { describe, expect, spyOn, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { ErrCode, type TrackParams } from "@autumn/shared";
 import { runBalanceWorkerAsyncTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerAsyncTrack.js";
 import { runBalanceWorkerBatchTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerBatchTrack.js";
+import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import * as claimKey from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
 import * as releaseKey from "@/internal/misc/idempotency/actions/releaseIdempotencyKey.js";
 import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
@@ -59,6 +59,12 @@ const unavailable = new BalanceWorkerClientError({
 	message: "kafka away",
 });
 
+const resultUnknown = new BalanceWorkerClientError({
+	code: "DEADLINE",
+	outcome: "unknown",
+	message: "Worker request deadline exceeded",
+});
+
 describe("runBalanceWorkerAsyncTrack", () => {
 	test("the API claims the body key, queues the commands, and keeps the claim", async () => {
 		const spies = spyOnClaims();
@@ -81,7 +87,30 @@ describe("runBalanceWorkerAsyncTrack", () => {
 		}
 	});
 
-	test("a failed append is a 503 and releases the claim", async () => {
+	test("an unconfirmed append is queued on SQS under the same request and keeps the claim", async () => {
+		const spies = spyOnClaims();
+		try {
+			const { ctx, client, body } = fixture({ failure: resultUnknown });
+			const sqsQueued: { requestId: string; body: TrackParams }[] = [];
+			await runBalanceWorkerAsyncTrack({
+				ctx,
+				body: { ...body, idempotency_key: "k1" },
+				client,
+				queueOnSqs: async ({ ctx: queuedCtx, body: queuedBody }) => {
+					sqsQueued.push({ requestId: queuedCtx.id, body: queuedBody });
+					return { success: true };
+				},
+			});
+			expect(sqsQueued).toEqual([
+				{ requestId: ctx.id, body: { ...body, idempotency_key: "k1" } },
+			]);
+			expect(spies.releases).toEqual([]);
+		} finally {
+			spies.restore();
+		}
+	});
+
+	test("a failed append is a 503 and releases the claim when SQS is unavailable too", async () => {
 		const spies = spyOnClaims();
 		try {
 			const { ctx, client, body } = fixture({ failure: unavailable });
@@ -90,6 +119,7 @@ describe("runBalanceWorkerAsyncTrack", () => {
 					ctx,
 					body: { ...body, idempotency_key: "k1" },
 					client,
+					queueOnSqs: async () => null,
 				}),
 			).rejects.toMatchObject({ statusCode: 503 });
 			expect(spies.releases).toEqual(["track:k1"]);
@@ -106,7 +136,9 @@ describe("runBalanceWorkerBatchTrack", () => {
 			const { ctx, client, queued, body } = fixture();
 			await runBalanceWorkerBatchTrack({
 				ctx,
-				entries: toBatchTrackEntries({ body: [{ ...body, idempotency_key: "a" }, body] }),
+				entries: toBatchTrackEntries({
+					body: [{ ...body, idempotency_key: "a" }, body],
+				}),
 				client,
 			});
 			expect(spies.claims).toEqual([]);
@@ -129,7 +161,9 @@ describe("runBalanceWorkerBatchTrack", () => {
 		await expect(
 			runBalanceWorkerBatchTrack({
 				ctx,
-				entries: toBatchTrackEntries({ body: [body, { ...body, feature_id: "missing" }] }),
+				entries: toBatchTrackEntries({
+					body: [body, { ...body, feature_id: "missing" }],
+				}),
 				client,
 			}),
 		).rejects.toMatchObject({ code: ErrCode.FeatureNotFound });
@@ -139,7 +173,11 @@ describe("runBalanceWorkerBatchTrack", () => {
 	test("a failed append is a 503", async () => {
 		const { ctx, client, body } = fixture({ failure: unavailable });
 		await expect(
-			runBalanceWorkerBatchTrack({ ctx, entries: toBatchTrackEntries({ body: [body] }), client }),
+			runBalanceWorkerBatchTrack({
+				ctx,
+				entries: toBatchTrackEntries({ body: [body] }),
+				client,
+			}),
 		).rejects.toMatchObject({ statusCode: 503 });
 	});
 });

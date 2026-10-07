@@ -82,6 +82,7 @@ export const shouldRetrySqsJobError = ({
 		// A replay may hit the balance worker's own outage; that is the same transient the request did.
 		case JobName.CustomerCreationRecovery:
 		case JobName.EntityCreationRecovery:
+		case JobName.Track:
 			return (
 				isTransientDbError({ error }) ||
 				isTransientRedisError({ error }) ||
@@ -93,7 +94,6 @@ export const shouldRetrySqsJobError = ({
 		// Signal jobs are meaningless without Redis: an unreachable Redis must
 		// leave the message in SQS for redelivery, not swallow-and-ack.
 		case JobName.SyncCustomerDirty:
-		case JobName.Track:
 		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		// Finalize replays also redeliver while a dying attempt's claim marker
