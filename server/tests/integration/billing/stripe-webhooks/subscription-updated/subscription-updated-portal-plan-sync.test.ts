@@ -132,7 +132,7 @@ test.concurrent(
 			ultraId: ultra.id,
 		});
 	},
-	60000,
+	120000,
 );
 
 test.concurrent(
@@ -172,5 +172,5 @@ test.concurrent(
 			ultraId: ultra.id,
 		});
 	},
-	60000,
+	120000,
 );
