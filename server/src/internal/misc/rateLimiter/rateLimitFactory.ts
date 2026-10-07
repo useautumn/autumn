@@ -14,7 +14,6 @@ import {
 	resolveRateLimit,
 } from "./rateLimitConfigs";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
-import { isCustomerInRedisAllowlist } from "./rateLimitRedisAllowlistStore";
 import { createRateLimitRedisStore } from "./rateLimitRedisStore";
 
 // Helper to get rate limit key from context
@@ -140,19 +139,11 @@ export const rateLimitFactory = ({
 	};
 
 	return async (c, next) => {
-		if (notInRedis) {
-			const ctx = (c as Context<HonoEnv>).get("ctx");
-			const customerId = ctx?.customerId;
-			const isAllowlisted = isCustomerInRedisAllowlist({ customerId });
-
-			if (!isAllowlisted) {
-				return getInMemoryLimiter()(c, next);
-			}
-		}
+		if (notInRedis) return getInMemoryLimiter()(c, next);
 
 		if (!shouldUseRedis()) {
 			warnRateLimitBypass();
-			return notInRedis ? getInMemoryLimiter()(c, next) : next();
+			return next();
 		}
 
 		return getRedisLimiter()(c, next);
