@@ -41,7 +41,7 @@ export const resolveInvoiceEnvelope = ({
 	);
 	if (outside) {
 		throw new RecaseError({
-			message: `A line period (${new Date(outside.start).toISOString()} to ${new Date(outside.end).toISOString()}) falls outside the invoice's period_start / period_end.`,
+			message: `A line period (${outside.start} to ${outside.end}, unix ms) falls outside the invoice's period_start / period_end.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

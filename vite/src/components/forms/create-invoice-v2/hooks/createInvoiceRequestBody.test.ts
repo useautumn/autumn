@@ -46,6 +46,27 @@ describe("buildCreateInvoiceRequestBody", () => {
 		).toBeNull();
 	});
 
+	test("sends a picked due date instead of payment terms, never both", () => {
+		const dueDay = Date.UTC(2099, 0, 15);
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [planWith()],
+				netTermsDays: 14,
+				dueDay,
+			},
+		});
+		expect(body?.net_terms_days).toBeUndefined();
+		expect(body?.due_date).toBeDefined();
+
+		const termsOnly = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: { ...emptyForm(), plans: [planWith()], netTermsDays: 14 },
+		});
+		expect(termsOnly?.net_terms_days).toBe(14);
+	});
+
 	test("returns null when there is nothing to charge", () => {
 		expect(
 			buildCreateInvoiceRequestBody({

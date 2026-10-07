@@ -135,7 +135,10 @@ export function buildCreateInvoiceRequestBody({
 		...(form.invoiceTemplateId
 			? { invoice_template_id: form.invoiceTemplateId }
 			: {}),
-		...(form.netTermsDays ? { net_terms_days: form.netTermsDays } : {}),
+		// A picked due date replaces payment terms; the API refuses both.
+		...(form.netTermsDays && form.dueDay === null
+			? { net_terms_days: form.netTermsDays }
+			: {}),
 		...(form.taxRateId ? { tax_rate_id: form.taxRateId } : {}),
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
