@@ -1,6 +1,7 @@
 import {
 	type DbInvoiceLineItem,
 	ErrCode,
+	type LineItem,
 	RecaseError,
 	type ReissueInvoiceOverrides,
 	type ReissueLineEdits,
@@ -38,13 +39,16 @@ export const buildReissueLines = async ({
 	overrides?: ReissueInvoiceOverrides;
 	lineEdits?: ReissueLineEdits;
 	storedLines: DbInvoiceLineItem[];
-}): Promise<Stripe.InvoiceAddLinesParams.Line[]> => {
+}): Promise<{
+	lines: Stripe.InvoiceAddLinesParams.Line[];
+	addedLineItems: LineItem[];
+}> => {
 	const { lineTaxRates } = resolveReissueTax({ stripeInvoice, overrides });
 	const sourceLines = await getStripeInvoiceLineItems({
 		stripeClient: stripeCli,
 		invoiceId: stripeInvoice.id,
 	});
-	const lines = await applyReissueLineEdits({
+	const { lines, addedLineItems } = await applyReissueLineEdits({
 		ctx,
 		customerId,
 		storedLines,
@@ -85,5 +89,5 @@ export const buildReissueLines = async ({
 			statusCode: 400,
 		});
 	}
-	return lines;
+	return { lines, addedLineItems };
 };
