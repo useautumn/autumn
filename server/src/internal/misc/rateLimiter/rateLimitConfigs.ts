@@ -34,7 +34,7 @@ const route = ({ method, url }: RoutePattern): RoutePattern => ({
 	url,
 });
 
-const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
+export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	{
 		type: RateLimitType.Attach,
 		patterns: [
