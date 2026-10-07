@@ -4,7 +4,7 @@ import { readTestFileIndex } from "@tw/testDiscovery/readTestFileIndex.ts";
 import type { Catalog } from "../../../api/contract.ts";
 import { fileBaselines } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
-import { isArchivedTestId } from "../repoPaths.ts";
+import { groupSelectsTestId, isArchivedTestId } from "../repoPaths.ts";
 import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 import { resolveBranchSha } from "./gitRemote.ts";
 
@@ -31,23 +31,34 @@ export const listCatalog = async ({
 	const resolver = await createTestFileResolver({ rootDir: testsDir });
 	const { files: allFiles } = await readTestFileIndex({ rootDir: testsDir });
 
-	const filesOf = (paths: string[]) =>
+	const filesOf = ({ group, paths }: { group: string; paths: string[] }) =>
 		new Set(
 			paths.flatMap((path) =>
 				resolver
 					.resolvePath({ path })
 					.map((absolutePath) => toTestId({ absolutePath }))
-					.filter((testId) => !isArchivedTestId({ testId })),
+					.filter(
+						(testId) =>
+							!isArchivedTestId({ testId }) &&
+							groupSelectsTestId({ group, testId }),
+					),
 			),
 		);
 	const groupFiles = new Map(
-		getAllGroups().map((group) => [group.name, filesOf(group.paths)]),
+		getAllGroups().map((group) => [
+			group.name,
+			filesOf({ group: group.name, paths: group.paths }),
+		]),
 	);
 	const suiteFiles = new Map(
 		getAllSuites().map((suite) => [
 			suite.name,
 			new Set(
-				suite.groups.flatMap((name) => [...(groupFiles.get(name) ?? [])]),
+				suite.groups.flatMap((name) =>
+					[...(groupFiles.get(name) ?? [])].filter((testId) =>
+						groupSelectsTestId({ group: suite.name, testId }),
+					),
+				),
 			),
 		]),
 	);
