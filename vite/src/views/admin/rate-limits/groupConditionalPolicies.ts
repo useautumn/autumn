@@ -5,25 +5,36 @@ export type RateLimitPolicyGroup = {
 	conditional: RateLimitPolicySummary[];
 };
 
-const hasSameRoutes = (a: RateLimitPolicySummary, b: RateLimitPolicySummary) =>
-	JSON.stringify(a.routes) === JSON.stringify(b.routes);
+const coversRoutes = ({
+	parent,
+	child,
+}: {
+	parent: RateLimitPolicySummary;
+	child: RateLimitPolicySummary;
+}) =>
+	parent.routes !== "*" &&
+	child.routes !== "*" &&
+	child.routes.every((route) => parent.routes.includes(route));
 
-/** A `when` row nests under the plain row with the same routes; without one it stands alone. */
+/** First match wins, so a row whose routes a later row covers only applies to some requests: it nests there. */
 export const groupConditionalPolicies = ({
 	policies,
 }: {
 	policies: RateLimitPolicySummary[];
 }): RateLimitPolicyGroup[] => {
-	const plainPolicies = policies.filter((policy) => !policy.when);
-	const groups = plainPolicies.map((policy) => ({
-		policy,
-		conditional: [] as RateLimitPolicySummary[],
-	}));
+	const findParent = (index: number) =>
+		policies
+			.slice(index + 1)
+			.find((parent) => coversRoutes({ parent, child: policies[index] }));
 
-	for (const policy of policies.filter((candidate) => candidate.when)) {
-		const parent = groups.find((group) => hasSameRoutes(group.policy, policy));
-		if (parent) parent.conditional.push(policy);
-		else groups.push({ policy, conditional: [] });
-	}
-	return groups;
+	const groups = new Map<string, RateLimitPolicyGroup>();
+	policies.forEach((policy, index) => {
+		if (findParent(index)) return;
+		groups.set(policy.id, { policy, conditional: [] });
+	});
+	policies.forEach((policy, index) => {
+		const parent = findParent(index);
+		if (parent) groups.get(parent.id)?.conditional.push(policy);
+	});
+	return [...groups.values()];
 };

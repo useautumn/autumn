@@ -20,8 +20,6 @@ export type RateLimitPolicyOverride = {
 export type RateLimitPolicySummary = {
 	id: string;
 	routes: string[] | "*";
-	/** Version- or body-specific rows; they nest under the plain row with the same routes. */
-	when?: { minVersion?: string; body?: Record<string, unknown> } | null;
 	perOrg: RateLimitLayerSummary | null;
 	perCustomer: RateLimitLayerSummary | null;
 	sharesCounterWith: string[];

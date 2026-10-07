@@ -1,7 +1,4 @@
-import type {
-	RateLimitLayerSummary,
-	RateLimitPolicySummary,
-} from "./rateLimitTypes";
+import type { RateLimitLayerSummary } from "./rateLimitTypes";
 
 const WINDOW_LABELS: Record<number, string> = { 1000: "s", 60000: "min" };
 
@@ -39,15 +36,6 @@ export const formatVersionLimits = ({
 			({ upTo, limit }) =>
 				`${formatVersion(upTo)} · ${formatLimit({ limit, windowMs: layer.windowMs })}`,
 		);
-
-export const formatCondition = ({
-	when,
-}: {
-	when: NonNullable<RateLimitPolicySummary["when"]>;
-}) =>
-	Object.entries(when.body ?? {})
-		.map(([path, value]) => `${path}: ${String(value)}`)
-		.join(", ");
 
 export const COUNTED_LABELS: Record<RateLimitLayerSummary["counted"], string> =
 	{

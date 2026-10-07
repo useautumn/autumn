@@ -3,12 +3,7 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ROW_ACTIONS_REVEAL } from "../edge-config/rolloutRowStyles";
-import {
-	formatCondition,
-	formatPolicyLabel,
-	formatVersion,
-	formatVersionLimits,
-} from "./formatRateLimit";
+import { formatPolicyLabel, formatVersionLimits } from "./formatRateLimit";
 import { RateLimitLayerCell } from "./RateLimitLayerCell";
 import { RateLimitOverrideBadge } from "./RateLimitOverrideBadge";
 import { RateLimitPolicyDetails } from "./RateLimitPolicyDetails";
@@ -56,25 +51,16 @@ const PolicyName = ({
 }: {
 	policy: RateLimitPolicySummary;
 	isNested: boolean;
-}) => {
-	if (!isNested || !policy.when) {
-		return (
-			<span className="shrink-0 text-sm font-medium text-foreground">
-				{formatPolicyLabel(policy.id)}
-			</span>
-		);
-	}
-	return (
-		<span className="flex items-center gap-2 pl-5 text-sm text-foreground">
-			{formatCondition({ when: policy.when })}
-			{policy.when.minVersion && (
-				<Badge variant="muted" size="sm">
-					{formatVersion(policy.when.minVersion)}
-				</Badge>
-			)}
-		</span>
-	);
-};
+}) => (
+	<span
+		className={cn(
+			"shrink-0 text-sm text-foreground",
+			isNested ? "pl-5" : "font-medium",
+		)}
+	>
+		{formatPolicyLabel(policy.id)}
+	</span>
+);
 
 /** One limit: what it allows per customer and per org, who overrides it, and its details on expand. */
 export const RateLimitPolicyRow = ({

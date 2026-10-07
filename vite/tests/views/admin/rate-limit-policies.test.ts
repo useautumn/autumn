@@ -41,18 +41,23 @@ const policy = (
 });
 
 describe("rate-limit policies page", () => {
-	test("nests a when row under the plain row with the same routes", () => {
-		const trackSync = policy({
-			id: "track_sync",
-			when: { minVersion: "2.5.0", body: { async: false } },
+	test("nests a row under the later row whose routes cover it", () => {
+		const trackSync = policy({ id: "track_sync" });
+		const checkWrite = policy({
+			id: "check_write",
+			routes: ["POST /v1/check"],
 		});
-		const track = policy({});
+		const track = policy({ routes: ["POST /v1/track", "POST /v1/events"] });
+		const check = policy({ id: "check", routes: ["POST /v1/check"] });
 		const general = policy({ id: "general", routes: "*" });
 
 		expect(
-			groupConditionalPolicies({ policies: [trackSync, track, general] }),
+			groupConditionalPolicies({
+				policies: [trackSync, checkWrite, track, check, general],
+			}),
 		).toEqual([
 			{ policy: track, conditional: [trackSync] },
+			{ policy: check, conditional: [checkWrite] },
 			{ policy: general, conditional: [] },
 		]);
 	});
