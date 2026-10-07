@@ -11,6 +11,10 @@ export const MIGRATION_DB_POOL_MAX = (() => {
 	const parsed = Number(process.env.MIGRATION_DB_POOL_MAX);
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : 110;
 })();
+/** Postgres cancels slow migration statements first with a retryable 57014. */
+export const MIGRATION_DB_STATEMENT_TIMEOUT_MS = 60_000;
+/** Client deadline only for lost replies; must exceed the statement timeout. */
+export const MIGRATION_DB_QUERY_DEADLINE_MS = 75_000;
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS = 5;

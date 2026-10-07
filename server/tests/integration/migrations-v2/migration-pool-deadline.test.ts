@@ -18,6 +18,10 @@ import {
 
 const databaseUrl = migrationTestDatabaseUrl();
 
+const pgErrorCode = (error: unknown): unknown =>
+	(error as { code?: unknown; cause?: { code?: unknown } }).code ??
+	(error as { cause?: { code?: unknown } }).cause?.code;
+
 describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 	test("a rejected BEGIN keeps its error and returns its pool slot", async () => {
 		const pool = new pg.Pool({
@@ -136,6 +140,62 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 				}
 			},
 		});
+	}, 5000);
+
+	test("a COMMIT the server rejects keeps its known error and its healthy client", async () => {
+		await withScratchSchema({
+			databaseUrl: databaseUrl as string,
+			run: async ({ options }) => {
+				const pool = new pg.Pool({
+					connectionString: databaseUrl,
+					options,
+					max: 1,
+				});
+				applyMigrationQueryDeadline({ pool, queryTimeoutMs: 1000 });
+				await pool.query(
+					"create table deferred (value integer unique deferrable initially deferred)",
+				);
+				const before = await pool.query("select pg_backend_pid() as id");
+				try {
+					const error = await drizzle(pool)
+						.transaction(async (transaction) => {
+							await transaction.execute(
+								sql`insert into deferred values (1), (1)`,
+							);
+						})
+						.catch((error: unknown) => error);
+					expect(String(error)).not.toContain("outcome unknown");
+					expect(pgErrorCode(error)).toBe("23505");
+					const after = await pool.query("select pg_backend_pid() as id");
+					expect(after.rows[0].id).toBe(before.rows[0].id);
+				} finally {
+					await pool.end();
+				}
+			},
+		});
+	}, 5000);
+
+	test("a server statement_timeout below the deadline fails with a retryable 57014 and keeps the client", async () => {
+		const pool = new pg.Pool({
+			connectionString: databaseUrl,
+			options: "-c statement_timeout=100",
+			max: 1,
+		});
+		applyMigrationQueryDeadline({ pool, queryTimeoutMs: 1000 });
+		const client = await pool.connect();
+		try {
+			const error = await client
+				.query("select pg_sleep(1)")
+				.catch((error: unknown) => error);
+			expect(pgErrorCode(error)).toBe("57014");
+			expect(isTransientDbError({ error })).toBe(true);
+			expect((await client.query("select 1 as value")).rows).toEqual([
+				{ value: 1 },
+			]);
+		} finally {
+			client.release();
+			await pool.end();
+		}
 	}, 5000);
 
 	test("standalone claim uncertainty and a stalled terminal write both settle without replay", async () => {
