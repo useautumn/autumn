@@ -54,7 +54,7 @@ export const resolveInvoicePlanEntity = ({
 	planParams: InvoicePlanParams;
 }): Entity | undefined => {
 	const entityId = requestedEntityId({ params, planParams });
-	if (!entityId) return undefined;
+	if (entityId === undefined) return undefined;
 
 	const entity = entitiesById.get(entityId);
 	if (!entity) {

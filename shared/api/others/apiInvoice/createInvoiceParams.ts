@@ -210,7 +210,7 @@ export const InvoicePlanParamsSchema = z
 		version: z.number().optional().meta({
 			description: "Plan version. Defaults to the active version.",
 		}),
-		entity_id: z.string().nullable().optional().meta({
+		entity_id: z.string().min(1).nullable().optional().meta({
 			description:
 				"The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.",
 		}),
@@ -238,7 +238,7 @@ export const CreateInvoiceParamsSchema = z
 		customer_id: z.string().meta({
 			description: "The customer to invoice.",
 		}),
-		entity_id: z.string().optional().meta({
+		entity_id: z.string().min(1).optional().meta({
 			description:
 				"The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity.",
 		}),
