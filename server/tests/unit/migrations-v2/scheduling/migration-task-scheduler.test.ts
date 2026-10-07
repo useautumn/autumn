@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	createMigrationChunkScheduler,
 	MIGRATION_CHUNK_FETCH_SIZE,
+	MIGRATION_DB_POOL_MAX,
 	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 	MIGRATION_SLICE_DURATION_MS,
 } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
@@ -27,6 +28,12 @@ describe("migration task scheduler", () => {
 	test("keeps fleet and per-run concurrency independently tunable", () => {
 		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
 		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(100);
+	});
+
+	test("keeps in-flight customers within the chunk task's migration DB pool", () => {
+		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBeLessThanOrEqual(
+			MIGRATION_DB_POOL_MAX,
+		);
 	});
 
 	test("uses a bounded customer-work slice", () => {
