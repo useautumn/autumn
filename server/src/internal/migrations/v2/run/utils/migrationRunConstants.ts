@@ -15,6 +15,8 @@ export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS = 5;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;
+export const MIGRATION_ITEM_SETTLE_DB_ATTEMPTS = 5;
+export const MIGRATION_ITEM_SETTLE_DB_RETRY_DELAY_MS = 1_000;
 
 export const createMigrationChunkScheduler = ({
 	now = Date.now,

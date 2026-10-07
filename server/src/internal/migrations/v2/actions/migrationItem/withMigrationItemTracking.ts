@@ -6,11 +6,16 @@ import type {
 	MigrationItemPreview,
 } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { runWithTransientDbRetry } from "../../batchOperations/execute/utils/runWithTransientDbRetry.js";
 import {
 	migrationItemEventRepo,
 	migrationItemRunRepo,
 } from "../../repos/index.js";
 import type { RunScopeItem } from "../../run/types/runScope.js";
+import {
+	MIGRATION_ITEM_SETTLE_DB_ATTEMPTS,
+	MIGRATION_ITEM_SETTLE_DB_RETRY_DELAY_MS,
+} from "../../run/utils/migrationRunConstants.js";
 import {
 	normalizeRetryItemStatuses,
 	type RetryableMigrationItemRunStatus,
@@ -163,14 +168,20 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 				},
 			);
 
-			await markItemRunFinished({
-				ctx,
-				migrationInternalId,
-				migrationRunId,
-				dryRun,
-				item,
-				status: "skipped",
-				skipReason: MigrationItemRunSkipReason.Ineligible,
+			// The drop often starves the pool for this write too; a failed write would strand the `running` claim.
+			await runWithTransientDbRetry({
+				maxAttempts: MIGRATION_ITEM_SETTLE_DB_ATTEMPTS,
+				delayMs: MIGRATION_ITEM_SETTLE_DB_RETRY_DELAY_MS,
+				run: () =>
+					markItemRunFinished({
+						ctx,
+						migrationInternalId,
+						migrationRunId,
+						dryRun,
+						item,
+						status: "skipped",
+						skipReason: MigrationItemRunSkipReason.Ineligible,
+					}),
 			});
 
 			const response = {
