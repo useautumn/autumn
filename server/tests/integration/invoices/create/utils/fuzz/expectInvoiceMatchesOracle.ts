@@ -29,14 +29,10 @@ export const catalogPricingSnapshot = async ({
 	});
 	return {
 		version: product.version,
-		prices: product.prices
-			.map((price) => ({
-				id: price.id,
-				tier_behavior: price.tier_behavior,
-				config: price.config,
-			}))
+		prices: [...product.prices].sort((a, b) => a.id.localeCompare(b.id)),
+		entitlements: product.entitlements
+			.map(({ feature: _feature, ...entitlement }) => entitlement)
 			.sort((a, b) => a.id.localeCompare(b.id)),
-		entitlementIds: product.entitlements.map((ent) => ent.id).sort(),
 	};
 };
 
