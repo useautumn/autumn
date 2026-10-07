@@ -65,7 +65,7 @@ describe("org rate limits", () => {
 		});
 		expect(groupFor({ method: "GET", path: "/v1/customers/cus_1" })).toEqual({
 			type: RateLimitType.CheckCustomerGet,
-			overLimit: undefined,
+			overLimit: "reject",
 		});
 		expect(groupFor({ method: "POST", path: "/v1/entities.get" })).toEqual({
 			type: RateLimitType.CustomerEntitiesGet,
