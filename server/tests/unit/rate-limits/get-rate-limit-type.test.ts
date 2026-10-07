@@ -115,7 +115,7 @@ describe("getRateLimitRouteGroup", () => {
 		).toMatchObject({ type: RateLimitType.CheckCustomerGet });
 	});
 
-	test("classifies customer reads and creates into the check bucket", () => {
+	test("classifies customer reads into the check bucket, creates into their own", () => {
 		expect(
 			getRateLimitRouteGroup(
 				createContext({ method: "GET", path: "/v1/customers/cus_123" }),
@@ -138,12 +138,12 @@ describe("getRateLimitRouteGroup", () => {
 			getRateLimitRouteGroup(
 				createContext({ method: "POST", path: "/v1/customers" }),
 			),
-		).toMatchObject({ type: RateLimitType.CheckCustomerGet });
+		).toMatchObject({ type: RateLimitType.CustomerGetOrCreate });
 		expect(
 			getRateLimitRouteGroup(
 				createContext({ method: "POST", path: "/v1/customers.get_or_create" }),
 			),
-		).toMatchObject({ type: RateLimitType.CheckCustomerGet });
+		).toMatchObject({ type: RateLimitType.CustomerGetOrCreate });
 	});
 
 	test("classifies events and attach endpoints into their dedicated buckets", () => {

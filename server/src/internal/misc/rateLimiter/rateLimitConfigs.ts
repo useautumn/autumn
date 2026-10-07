@@ -10,6 +10,8 @@ export enum RateLimitType {
 	BatchTrack = "batch_track",
 	CheckCustomerGet = "check",
 	CheckCustomerGetOrg = "check_org",
+	CustomerGetOrCreate = "customer_get_or_create",
+	CustomerGetOrCreateOrg = "customer_get_or_create_org",
 	Events = "events",
 	Attach = "attach",
 	ListCustomers = "list_customers",
@@ -115,6 +117,12 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/check" }),
 			route({ method: "POST", url: "/v1/entitled" }),
 			route({ method: "POST", url: "/v1/balances.check" }),
+		],
+	},
+	{
+		type: RateLimitType.CustomerGetOrCreate,
+		overLimit: "degrade",
+		patterns: [
 			route({ method: "POST", url: "/v1/customers" }),
 			route({ method: "POST", url: "/v1/customers.get_or_create" }),
 		],
@@ -251,6 +259,20 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		orgLimit: RateLimitType.CheckCustomerGetOrg,
 	},
 	[RateLimitType.CheckCustomerGetOrg]: {
+		limit: 240_000,
+		windowMs: 60_000,
+		scope: RateLimitScope.Org,
+		store: "redis",
+	},
+	// A burst of checks must not spend a creation's budget.
+	[RateLimitType.CustomerGetOrCreate]: {
+		limit: 10_000,
+		windowMs: 1000,
+		scope: RateLimitScope.Customer,
+		store: "memory",
+		orgLimit: RateLimitType.CustomerGetOrCreateOrg,
+	},
+	[RateLimitType.CustomerGetOrCreateOrg]: {
 		limit: 240_000,
 		windowMs: 60_000,
 		scope: RateLimitScope.Org,
