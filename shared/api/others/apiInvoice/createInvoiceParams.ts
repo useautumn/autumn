@@ -305,9 +305,16 @@ export const InvoicePlanParamsSchema = z
 		}),
 	);
 
-export const InvoiceCustomLineItemSchema = CustomLineItemSchema.extend(
-	LinePeriodShape,
-).check((ctx) => pushLineIssues({ ctx }));
+export const InvoiceCustomLineItemSchema = CustomLineItemSchema.extend({
+	period_start: LinePeriodShape.period_start.meta({
+		description:
+			"Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.",
+	}),
+	period_end: LinePeriodShape.period_end.meta({
+		description:
+			"End of the period this charge covers, in milliseconds. Given together with period_start.",
+	}),
+}).check((ctx) => pushLineIssues({ ctx }));
 
 /** How far a new invoice advances: left editable, opened silently, or opened and sent. */
 export const InvoiceIssueMethodSchema = z.enum(["draft", "finalize", "send"]);
