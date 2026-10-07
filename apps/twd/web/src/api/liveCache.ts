@@ -49,6 +49,8 @@ const matches = (run: RunSummary, filter: RunsFilter) =>
 		filter.outcome === "all" ||
 		!!OUTCOMES[filter.outcome]?.includes(run.status)) &&
 	(!filter.purpose || run.purpose === filter.purpose) &&
+	(filter.baseline === undefined || run.baseline === filter.baseline) &&
+	(!filter.exactBranch || run.branch === filter.exactBranch) &&
 	(!filter.branch ||
 		run.branch.toLowerCase().includes(filter.branch.toLowerCase()));
 
@@ -130,7 +132,10 @@ const applySnapshot = (
 	topic: string,
 	data: Extract<LiveServerMessage, { type: "snapshot" }>["data"],
 ) => {
-	if (topic === "runs") return qc.invalidateQueries({ queryKey: ["runs"] });
+	if (topic === "runs") {
+		qc.invalidateQueries({ queryKey: ["runBranches"] });
+		return qc.invalidateQueries({ queryKey: ["runs"] });
+	}
 	if (topic.startsWith("run:") && data)
 		return qc.setQueryData(qk.run(topic.slice(4)), data as RunDetail);
 	if (topic === "jobs" && Array.isArray(data))
@@ -206,6 +211,8 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 		case "run.updated": {
 			const { run } = event;
 			patchRunPages(qc, run);
+			if (TERMINAL.has(run.status))
+				qc.invalidateQueries({ queryKey: ["runBranches"] });
 			qc.setQueryData<RunDetail>(qk.run(run.id), (detail) =>
 				detail ? { ...detail, ...run } : detail,
 			);

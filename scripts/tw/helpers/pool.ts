@@ -41,6 +41,8 @@ type Waiter = {
 	 * preferred and same-worker is fine if it's the only idle one.
 	 */
 	strict: boolean;
+	/** Needs a worker with no other file on it, and keeps it to itself until released. */
+	exclusive?: boolean;
 };
 
 export class WorkerPool {
@@ -57,12 +59,20 @@ export class WorkerPool {
 	 * while `inFlight < slotsPerWorker`. */
 	private readonly slotsPerWorker: number;
 
+	/** Workers currently held whole by an exclusive acquire. */
+	private readonly exclusiveHolders = new Set<string>();
+
 	constructor(workers: WorkerHandle[], slotsPerWorker = 1) {
 		this.workers = [...workers];
 		this.slotsPerWorker = Math.max(1, slotsPerWorker);
 		for (const worker of this.workers) {
 			worker.inFlight = 0;
 		}
+	}
+
+	/** Files each worker runs at once. */
+	get slots(): number {
+		return this.slotsPerWorker;
 	}
 
 	/** Current live worker count (busy + idle). */
@@ -124,13 +134,16 @@ export class WorkerPool {
 	acquireDifferentFrom(
 		lastWorkerName: string | undefined,
 		strict = false,
+		exclusive = false,
 	): Promise<WorkerHandle> {
-		return this.enqueue({ avoidName: lastWorkerName, strict });
+		return this.enqueue({ avoidName: lastWorkerName, strict, exclusive });
 	}
 
 	/** Free one slot on a worker (a file finished) and admit the next waiter. */
 	release(worker: WorkerHandle): void {
-		worker.inFlight = Math.max(0, worker.inFlight - 1);
+		worker.inFlight = this.exclusiveHolders.delete(worker.name)
+			? 0
+			: Math.max(0, worker.inFlight - 1);
 		this.pump();
 	}
 
@@ -142,6 +155,7 @@ export class WorkerPool {
 	 * an N===1 pool fail cleanly instead of deadlocking on the first death.
 	 */
 	markDead(worker: WorkerHandle): void {
+		this.exclusiveHolders.delete(worker.name);
 		const index = this.workers.findIndex((w) => w.name === worker.name);
 		if (index !== -1) {
 			this.workers.splice(index, 1);
@@ -213,7 +227,7 @@ export class WorkerPool {
 
 	/** Enqueue an acquire request, then try to satisfy it immediately. */
 	private enqueue(
-		opts: Pick<Waiter, "avoidName" | "strict">,
+		opts: Pick<Waiter, "avoidName" | "strict" | "exclusive">,
 	): Promise<WorkerHandle> {
 		if (this.closed) {
 			return Promise.reject(
@@ -267,7 +281,12 @@ export class WorkerPool {
 				stillWaiting.push(waiter);
 				continue;
 			}
-			worker.inFlight += 1;
+			if (waiter.exclusive) {
+				worker.inFlight = this.slotsPerWorker;
+				this.exclusiveHolders.add(worker.name);
+			} else {
+				worker.inFlight += 1;
+			}
 			if (worker.inFlight >= this.slotsPerWorker) {
 				available.splice(available.indexOf(worker), 1);
 			}
@@ -283,11 +302,16 @@ export class WorkerPool {
 	 * `undefined` if none is currently available.
 	 */
 	private pickFrom(
-		available: WorkerHandle[],
+		candidates: WorkerHandle[],
 		waiter: Waiter,
 	): WorkerHandle | undefined {
+		let available = candidates;
 		// Among workers with a free slot (`--per-worker`) pick the LEAST-loaded so
 		// files spread evenly instead of piling K onto worker 1 before worker 2.
+		if (waiter.exclusive) {
+			available = available.filter((w) => w.inFlight === 0);
+			if (available.length === 0) return undefined;
+		}
 
 		if (!waiter.avoidName) {
 			return leastLoaded(available);

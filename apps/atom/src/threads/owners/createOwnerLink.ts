@@ -46,8 +46,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	}
 
 	async function call(body: OwnerCallBody): Promise<CheckAnswer | boolean> {
-		if (!port || waiting.size >= MAX_CALLS_IN_FLIGHT)
-			throw new OwnerUnavailableError({ thread });
+		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
+		const shed =
+			body.type !== "installCatalog" && waiting.size >= MAX_CALLS_IN_FLIGHT;
+		if (!port || shed) throw new OwnerUnavailableError({ thread });
 		const id = nextId++;
 		const reply = {
 			...Promise.withResolvers<OwnerReply>(),

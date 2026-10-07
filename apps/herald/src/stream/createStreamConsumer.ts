@@ -224,6 +224,7 @@ export function createStreamConsumer({
 		} finally {
 			membership = "idle";
 			assignedPartitions = [];
+			await streamConsumer.stop?.();
 		}
 	}
 

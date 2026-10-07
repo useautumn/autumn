@@ -36,6 +36,11 @@ import {
 	stripeForKey,
 } from "../../../keys/stripeForKey.ts";
 import { splitRepetitionId } from "../../repeat/repetitions.ts";
+import {
+	MAIN_SHARD,
+	SOLO_SHARD,
+	shardKeyOf,
+} from "../../sizing/types/sizingShard.ts";
 import type {
 	SwarmAccount,
 	SwarmChildMessage,
@@ -45,7 +50,7 @@ import type {
 import { createBootTimeline } from "./bootTimeline.ts";
 import { coalesceChunks } from "./coalesceChunks.ts";
 import { createOutputGate, isWorkerEchoLine } from "./outputGate.ts";
-import { pickShard } from "./pickShard.ts";
+import { pickShard, shardShortfall } from "./pickShard.ts";
 import { createFailureBreaker, withTransientRetry } from "./provisionGuard.ts";
 import { setUpStripeConnectAccount } from "./setUpStripeConnectAccount.ts";
 import { classifyFailedFile, createTimeoutTracker } from "./timeoutTracker.ts";
@@ -160,6 +165,8 @@ const timeBoxed = (action: () => Promise<unknown>) =>
 	]);
 
 type Shard = {
+	/** "main", "solo", or the capabilities joined; matches twd's sizing keys. */
+	key: string;
 	/** Empty for the normal pool. */
 	capabilities: string[];
 	files: string[];
@@ -169,6 +176,8 @@ type Shard = {
 	dedicated: boolean;
 	started: number;
 	provisioning: number;
+	filesPerWorker: number;
+	maxWorkers?: number;
 	pool: WorkerPool;
 	ready: Promise<void>;
 	markReady: () => void;
@@ -216,7 +225,8 @@ const main = async (init: SwarmInit) => {
 		outputBuffer.clear();
 	};
 	const outputTimer = setInterval(flushOutput, OUTPUT_FLUSH_MS);
-	const workerFile = new Map<string, string>();
+	/** Files running on each worker; a packed worker holds several. */
+	const workerFiles = new Map<string, Set<string>>();
 	const startedFiles = new Set<string>();
 	const shardOf = new Map<string, Shard>();
 	const streamingFiles = new Set<string>();
@@ -240,7 +250,7 @@ const main = async (init: SwarmInit) => {
 				bufferOutput(null, event.worker, event.chunk);
 			}
 		} else if (event.type === "workerStatus") {
-			workerFile.delete(event.worker);
+			workerFiles.delete(event.worker);
 			if (event.status === "ready") boot.mark(event.worker, "ready");
 			send({
 				type: "worker",
@@ -248,7 +258,9 @@ const main = async (init: SwarmInit) => {
 			});
 		} else if (event.type === "fileWorker") {
 			const file = toTestId({ absolutePath: event.file });
-			workerFile.set(event.worker, event.file);
+			const running = workerFiles.get(event.worker) ?? new Set<string>();
+			running.add(event.file);
+			workerFiles.set(event.worker, running);
 			if (!startedFiles.has(event.file)) {
 				startedFiles.add(event.file);
 				const shard = shardOf.get(event.file);
@@ -272,6 +284,8 @@ const main = async (init: SwarmInit) => {
 	let stripeConnectSetup: Promise<unknown> | undefined;
 	let teardownPromise: Promise<void> | undefined;
 	const tearingDown = Promise.withResolvers<void>();
+	/** Culls in flight; teardown waits so exit never cuts a terminate short and leaks the sandbox. */
+	const retiring = new Set<Promise<void>>();
 
 	teardown = () => {
 		tearingDown.resolve();
@@ -287,6 +301,7 @@ const main = async (init: SwarmInit) => {
 				),
 				// An in-flight sub-account create must report its id before exit; twd deletes it.
 				timeBoxed(() => stripeConnectSetup ?? Promise.resolve()),
+				...retiring,
 			]);
 		})();
 		return teardownPromise;
@@ -314,7 +329,12 @@ const main = async (init: SwarmInit) => {
 			void timeBoxed(() => tw.provider.deleteSandbox(sandbox));
 	};
 	/** Culled, dead or failed worker: delete its sandbox, then hand its account back early. */
-	const retire = async ({
+	const retire = (worker: { name: string; accountId: string }) => {
+		const retired = retireNow(worker).finally(() => retiring.delete(retired));
+		retiring.add(retired);
+		return retired;
+	};
+	const retireNow = async ({
 		name,
 		accountId,
 	}: {
@@ -354,17 +374,21 @@ const main = async (init: SwarmInit) => {
 	}
 
 	const partition = await partitionAtSha({ tw, init });
-	const { normalFiles } = partition;
+	const { filesPerWorker, shardWorkers } = init.sizing;
+	const soloSet = new Set(filesPerWorker > 1 ? init.sizing.soloFiles : []);
+	const normalFiles = partition.normalFiles.filter((f) => !soloSet.has(f));
+	const soloFiles = partition.normalFiles.filter((f) => soloSet.has(f));
 	// Pool accounts serve these shards; the stripe-connect shard brings its own account.
 	const {
 		pooledShards: capabilityShards,
 		stripeConnectShard: stripeConnectPlan,
 	} = splitStripeConnectShard(partition.capabilityShards);
 	const pooledFileCount =
-		normalFiles.length +
+		partition.normalFiles.length +
 		capabilityShards.reduce((sum, { files }) => sum + files.length, 0);
+	// Without a per-shard plan, workers split by file count as before.
 	const { totalWorkers, capabilityWorkers } =
-		pooledFileCount > 0
+		pooledFileCount > 0 && !shardWorkers
 			? planShardWorkers({
 					workers: init.workersWanted,
 					normalFileCount: normalFiles.length,
@@ -376,6 +400,13 @@ const main = async (init: SwarmInit) => {
 					),
 				})
 			: { totalWorkers: 0, capabilityWorkers: [] };
+	const plannedTarget = ({
+		key,
+		fallback,
+	}: {
+		key: string;
+		fallback: number;
+	}) => (shardWorkers ? (shardWorkers[key] ?? 1) : fallback);
 	// Sized as if every key ran its full cap, so growing never pushes a key over budget.
 	const poolBudget =
 		init.usableKeys > 0
@@ -410,14 +441,18 @@ const main = async (init: SwarmInit) => {
 	}
 	const makeShard = ({
 		capabilities,
+		key = shardKeyOf(capabilities),
 		files,
 		target,
 		dedicated = false,
+		filesPerWorker: slots = 1,
 	}: {
+		key?: string;
 		capabilities: string[];
 		files: string[];
 		target: number;
 		dedicated?: boolean;
+		filesPerWorker?: number;
 	}): Shard => {
 		let markReady = () => {};
 		let fail: (error: Error) => void = () => {};
@@ -426,13 +461,17 @@ const main = async (init: SwarmInit) => {
 			fail = rejectReady;
 		});
 		const shard: Shard = {
+			key,
 			capabilities,
 			files,
 			target: Math.max(1, target),
 			dedicated,
 			started: 0,
 			provisioning: 0,
-			pool: new ElasticPool([], 1),
+			filesPerWorker: slots,
+			// A sized run caps each shard at its plan; dead workers still get replaced.
+			maxWorkers: shardWorkers ? Math.max(1, target) : undefined,
+			pool: new ElasticPool([], slots),
 			ready,
 			markReady,
 			fail,
@@ -444,22 +483,39 @@ const main = async (init: SwarmInit) => {
 		makeShard({
 			capabilities: [],
 			files: normalFiles,
-			target: totalWorkers - capabilityWorkers.reduce((sum, n) => sum + n, 0),
+			filesPerWorker,
+			target: plannedTarget({
+				key: MAIN_SHARD,
+				fallback:
+					totalWorkers - capabilityWorkers.reduce((sum, n) => sum + n, 0),
+			}),
 		}),
+		...(soloFiles.length > 0
+			? [
+					makeShard({
+						key: SOLO_SHARD,
+						capabilities: [],
+						files: soloFiles,
+						target: plannedTarget({ key: SOLO_SHARD, fallback: 1 }),
+					}),
+				]
+			: []),
 		...capabilityShards.map(({ capabilities, files }, index) =>
-			makeShard({ capabilities, files, target: capabilityWorkers[index] ?? 0 }),
+			makeShard({
+				capabilities,
+				files,
+				target: plannedTarget({
+					key: shardKeyOf(capabilities),
+					fallback: capabilityWorkers[index] ?? 0,
+				}),
+			}),
 		),
 	];
-	const [normalShard] = shards;
 	const stripeConnectShard = stripeConnectPlan
 		? makeShard({ ...stripeConnectPlan, target: 1, dedicated: true })
 		: undefined;
 	if (stripeConnectShard) shards.push(stripeConnectShard);
 	const workersOf = (shard: Shard) => shard.pool.size + shard.provisioning;
-	const shortfall = (shard: Shard) =>
-		shard.dedicated
-			? 0
-			: Math.max(0, shard.files.length - shard.started - workersOf(shard));
 
 	let provisionFailures = 0;
 	const breaker = createFailureBreaker({ limit: MAX_PROVISION_FAILURES });
@@ -467,16 +523,19 @@ const main = async (init: SwarmInit) => {
 	let firstFailure: string | undefined;
 	let nextWorkerIdx = 0;
 	let lastDemand: number | undefined;
-	let stopCulling: (() => void) | undefined;
+	const stopCulling = new Map<Shard, () => void>();
 	const currentDemand = () =>
 		teardownPromise || breaker.tripped()
 			? 0
-			: shards.reduce((sum, shard) => sum + shortfall(shard), 0);
-	/** Tell twd how many more accounts help; once none do, the tail starts culling idle workers. */
+			: shards.reduce((sum, shard) => sum + shardShortfall(shard), 0);
+	/** Tell twd how many more accounts help; once none do, every shard culls its idle workers. */
 	const reportDemand = () => {
 		const demand = currentDemand();
-		if (demand === 0 && !stopCulling && normalShard.pool.size > 0) {
-			stopCulling = tw.run.startCulling(normalShard.pool, resolveSandbox);
+		if (demand === 0) {
+			for (const shard of shards) {
+				if (shard.pool.size === 0 || stopCulling.has(shard)) continue;
+				stopCulling.set(shard, tw.run.startCulling(shard.pool, resolveSandbox));
+			}
 		}
 		if (demand === lastDemand) return;
 		lastDemand = demand;
@@ -652,11 +711,22 @@ const main = async (init: SwarmInit) => {
 								resolveSandbox,
 								toWorkerPath: (file) =>
 									tw.run.toSandboxPath(splitRepetitionId({ id: file }).file),
+								onFileStats: ({ file, worker, stats }) =>
+									send({
+										type: "file_stats",
+										file: toTestId({ absolutePath: file }),
+										attempt: getTuiState().files.get(file)?.attempt ?? 1,
+										worker,
+										stats,
+									}),
 							}),
 						),
 					),
 			{ maxParallel: shard.files.length, totalFiles },
 		);
+		// Nothing left to retry here, so even the idle floor is waste while other shards finish.
+		for (const worker of shard.pool.cullIdle(shard.pool.size, 0))
+			setWorkerStatus(worker.name, "dead");
 	};
 
 	/** One worker on the shard's own platform account: lazy webhook, a run-scoped sub-account, its client_id. */
@@ -721,12 +791,14 @@ const main = async (init: SwarmInit) => {
 			if (final) finishedFiles++;
 			send({ type: "file", file, final });
 			if (file.status !== "running") {
-				for (const [worker, current] of workerFile) {
-					if (current !== tuiFile.file) continue;
-					workerFile.delete(worker);
+				for (const [worker, running] of workerFiles) {
+					if (!running.delete(tuiFile.file)) continue;
+					const [next] = running;
 					send({
 						type: "worker",
-						worker: workerState(worker, "ready", null),
+						worker: next
+							? workerState(worker, "busy", toTestId({ absolutePath: next }))
+							: workerState(worker, "ready", null),
 					});
 				}
 			}
@@ -745,7 +817,7 @@ const main = async (init: SwarmInit) => {
 	const progress = setInterval(() => {
 		const pools = shards.map(
 			(shard) =>
-				`${shard.capabilities.join("+") || "main"} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
+				`${shard.key}${shard.filesPerWorker > 1 ? `×${shard.filesPerWorker}` : ""} ${shard.pool.size} up/${shard.pool.idleCount} idle/${shard.provisioning} booting`,
 		);
 		const line = `[twd-progress] dispatched ${startedFiles.size} · streaming ${streamingFiles.size} · finished ${finishedFiles}/${totalFiles} · ${pools.join(" · ")} · max loop lag ${Math.round(maxLagMs)}ms\n`;
 		// stdout too: twd forwards child output to its own logs, so this survives any log budget.
@@ -789,7 +861,7 @@ const main = async (init: SwarmInit) => {
 		clearInterval(outputTimer);
 		flushOutput();
 		flushFiles();
-		stopCulling?.();
+		for (const stop of stopCulling.values()) stop();
 		for (const shard of shards) shard.pool.close();
 	}
 };

@@ -12,6 +12,6 @@ export type CommandAppend = {
 };
 
 export type CommandPublisher = {
-	/** One request for the whole batch, however many partitions it spans. */
+	/** One request for the whole batch, however many partitions it spans; appends made during a send share the next. */
 	append(params: CommandAppend): Promise<void>;
 };

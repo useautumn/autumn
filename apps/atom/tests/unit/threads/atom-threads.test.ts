@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import { createAtomEnv } from "@autumn/env/atom";
 import {
 	createCatalogRowsFor,
@@ -75,14 +76,17 @@ const post = ({
 	url,
 	path,
 	body,
+	headers,
 }: {
 	url: string;
 	path: string;
 	body: unknown;
+	headers?: Record<string, string>;
 }) =>
 	fetch(`${url}${path}`, {
 		method: "POST",
 		headers: {
+			...headers,
 			"content-type": "application/json",
 			"x-atom-token": ATOM_TOKEN,
 			"x-api-version": "2.1",
@@ -107,6 +111,7 @@ const pushCustomer = ({
 	return post({
 		url,
 		path: "/v1/subjects.set",
+		headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },
 		body: {
 			...body,
 			state: {

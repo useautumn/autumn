@@ -122,6 +122,7 @@ export function decide<Reply>({
 		}),
 		effects: result.effects,
 	});
+	advanceStoredView({ scope, identity, decided: result.nextState });
 	scheduleCommit({ scope });
 	return decidedWith<Reply>({
 		kind: "write",
@@ -180,6 +181,44 @@ export async function waitForPendingCommits({
 }
 
 /** Per subject, the map first (projected or committed), then the store: same-customer commands see uncommitted deductions, whichever subject made them. */
+/** An entity's view merged from its customer's and its own state: one object per pair, so joins keyed by state hold across reads. */
+const entityViews = new WeakMap<
+	SubjectState,
+	WeakMap<SubjectState, SubjectState>
+>();
+
+function entityViewOf({
+	customer,
+	entity,
+}: {
+	customer: SubjectState;
+	entity: SubjectState;
+}): SubjectState {
+	const views = entityViews.get(customer) ?? new WeakMap();
+	entityViews.set(customer, views);
+	const known = views.get(entity);
+	if (known) return known;
+	const view = mergeSubjectStates({ customer, entity });
+	views.set(entity, view);
+	return view;
+}
+
+/** The decision joined its next state; readers see the stored parts merged, so hand that view the same joins. */
+export function advanceStoredView({
+	scope,
+	identity,
+	decided,
+}: {
+	scope: PartitionWriterScope;
+	identity: MeteringIdentity;
+	decided: SubjectState;
+}): void {
+	if (!identity.entityId) return;
+	const view = readFreshestState({ scope, identity });
+	if (!view || view === decided) return;
+	scope.ctx.onStateAdvanced?.({ from: decided, to: view, changes: [] });
+}
+
 export function readFreshestState({
 	scope,
 	identity,
@@ -201,7 +240,7 @@ export function readFreshestState({
 	const entity = identity.entityId
 		? readOwnState({ ownIdentity: identity })
 		: null;
-	return mergeSubjectStates({ customer, entity });
+	return entity ? entityViewOf({ customer, entity }) : customer;
 }
 
 /** A known record for this commandId must have been produced by the same request. */

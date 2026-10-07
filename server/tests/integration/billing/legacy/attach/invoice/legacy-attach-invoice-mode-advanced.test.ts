@@ -25,6 +25,7 @@ import { completeInvoiceCheckoutV2 } from "@tests/utils/browserPool/completeInvo
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -107,8 +108,8 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 1: /checkout endpoint
 //
 // Expected:
 // - No checkout URL (auto-charged or draft)
-// - Premium product active immediately
-// - Invoice is draft with proration amount ($30)
+// - Premium stays pending while the invoice is a draft
+// - Finalizing the $30 proration invoice activates premium before payment
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enable_product_immediately draft invoice")}`, async () => {
@@ -146,6 +147,36 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 	// No checkout URL when finalize_invoice: false
 	expect(res.checkout_url).toBeFalsy();
 
+	// Draft invoice: premium stays pending until the invoice is finalized
+	const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(
+		customerId,
+		{ skip_cache: "true" },
+	);
+	await expectCustomerProducts({
+		customer: customerBefore,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
+	await expectCustomerInvoiceCorrect({
+		customer: customerBefore,
+		count: 2,
+		invoiceIndex: 0,
+		latestTotal: 30, // Premium $50 - Pro $20 proration
+		latestStatus: "draft",
+	});
+
+	await ctx.stripeCli.invoices.finalizeInvoice(
+		customerBefore.invoices![0].stripe_id,
+	);
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		active: [premium.id],
+		notPresent: [pro.id],
+	});
+
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -160,13 +191,15 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 		usage: 0,
 	});
 
-	// 2 invoices: pro $20 (paid) + premium upgrade proration $30 (draft)
+	// 2 invoices: pro $20 (paid) + premium upgrade proration $30 (finalized, unpaid)
 	await expectCustomerInvoiceCorrect({
-		customer,
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		count: 2,
 		invoiceIndex: 0,
-		latestTotal: 30, // Premium $50 - Pro $20 proration
-		latestStatus: "draft",
+		latestTotal: 30,
+		latestStatus: "open",
 	});
 });
 

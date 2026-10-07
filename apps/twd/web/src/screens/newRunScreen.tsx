@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import {
 	type Branch,
 	type Capacity,
+	MAX_FILES_PER_WORKER,
 	MAX_REPEAT,
 } from "../../../src/api/contract.ts";
 import { MAX_REPEAT_WORK_ITEMS } from "../../../src/internal/runs/repeat/repetitions.ts";
@@ -93,6 +94,8 @@ export const NewRunScreen = () => {
 	);
 	const [maxWorkers, setMaxWorkers] = useState("");
 	const workerCap = Number.parseInt(maxWorkers, 10);
+	const [maxFilesPerWorker, setMaxFilesPerWorker] = useState("");
+	const filesPerWorker = Number.parseInt(maxFilesPerWorker, 10);
 	const [repeatInput, setRepeatInput] = useState("");
 	const repeatValue = repeatInput.trim() === "" ? 1 : Number(repeatInput);
 	const repeatValid =
@@ -105,7 +108,11 @@ export const NewRunScreen = () => {
 		? Math.min(fileCount, capacity.data.poolCap)
 		: fileCount;
 	const workers =
-		workerCap > 0 ? Math.min(workerCap, autoWorkers) : autoWorkers;
+		workerCap > 0
+			? Math.min(workerCap, autoWorkers)
+			: filesPerWorker > 1
+				? Math.ceil(autoWorkers / filesPerWorker)
+				: autoWorkers;
 	const p90s = sel.effective.flatMap((f) =>
 		Array<number | null>(repeat).fill(p90ByPath.get(f) ?? null),
 	);
@@ -135,6 +142,9 @@ export const NewRunScreen = () => {
 				branch: branch.name,
 				sha: branch.sha,
 				...(workerCap > 0 && { maxWorkers: workerCap }),
+				...(workerCap > 0 || !(filesPerWorker > 0)
+					? {}
+					: { maxFilesPerWorker: filesPerWorker }),
 				...(repeat > 1 && { repeat }),
 				selection: {
 					groups: groups.length ? groups : undefined,
@@ -253,16 +263,34 @@ export const NewRunScreen = () => {
 								` ${unseen} file${unseen === 1 ? " has" : "s have"} no baseline yet (counted as 1 min).`}
 						</p>
 
-						<Field
-							label="Workers"
-							hint={`(auto: ${num(autoWorkers)})`}
-							type="number"
-							min={1}
-							value={maxWorkers}
-							onChange={(e) => setMaxWorkers(e.target.value)}
-							placeholder={`auto · one per file, up to ${num(capacity.data?.poolCap ?? 0)}`}
-							inputClassName="text-xs tabular-nums"
-						/>
+						<div className="grid grid-cols-2 gap-2">
+							<Field
+								label="Max workers"
+								type="number"
+								min={1}
+								value={maxWorkers}
+								disabled={maxFilesPerWorker.trim() !== ""}
+								onChange={(e) => setMaxWorkers(e.target.value)}
+								placeholder={`Auto · ≤ ${num(capacity.data?.poolCap ?? 0)}`}
+								inputClassName="text-xs tabular-nums"
+							/>
+							<Field
+								label="Max files per worker"
+								type="number"
+								min={1}
+								max={MAX_FILES_PER_WORKER}
+								value={maxFilesPerWorker}
+								disabled={maxWorkers.trim() !== "" || repeat > 1}
+								onChange={(e) => setMaxFilesPerWorker(e.target.value)}
+								placeholder="Auto"
+								inputClassName="text-xs tabular-nums"
+							/>
+						</div>
+						<p className="text-xs text-pretty text-subtle">
+							Set one or neither. Auto packs files by their measured Stripe, CPU
+							and memory use and sizes workers so the run ends with its longest
+							file.
+						</p>
 
 						<Field
 							label="Repeat"

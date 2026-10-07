@@ -38,7 +38,7 @@ const subjectMessage = ({
 	payload,
 }: {
 	atomId?: string | null;
-	customerId?: string;
+	customerId?: string | null;
 	payload?: string;
 }): PulledPush => ({
 	payload:
@@ -139,6 +139,26 @@ describe("push receiver", () => {
 		});
 		opened.push(auth);
 		const message = subjectMessage({ customerId: "cus_2" });
+
+		const { acked, warnings } = await drain({ auth, batches: [[message]] });
+
+		expect(acked).toEqual([message.receiptHandle]);
+		expect(warnings).toEqual(["atom_push_invalid"]);
+		expect(await forwardReasonOf(() => checkCustomer(auth.slots))).toBe(
+			"customer_not_stored",
+		);
+	});
+
+	test("a queued subject push without its customer id is dropped, never redelivered", async () => {
+		const auth = createDeployedAuth({
+			dataDir: newDataDir(),
+			tokenHash: TOKEN_HASH,
+			slotCount: 2,
+			owners: allSlotsOwnedHere,
+			held: freshHeld(),
+		});
+		opened.push(auth);
+		const message = subjectMessage({ customerId: null });
 
 		const { acked, warnings } = await drain({ auth, batches: [[message]] });
 

@@ -6,7 +6,10 @@ import {
 	catalogRowsToCatalog,
 	parseCatalogRow,
 } from "@autumn/balance-engine";
-import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
+import type {
+	CatalogCacheScope,
+	CatalogRead,
+} from "../types/catalogCacheContext.js";
 import { isCatalogRowCurrent } from "./catalogVersions.js";
 
 /** Every check and track reads the catalog, so a stored row is validated once and
@@ -42,13 +45,21 @@ export const readCatalog = ({
 	allowStale?: boolean;
 }): Catalog => {
 	const rows: CatalogRow[] = [];
+	const read: CatalogRead = {
+		changeCount: scope.state.changeCount,
+		rows: [],
+	};
 	for (const key of keys) {
-		const row = scope.state.entries.get(catalogKeyToString({ key }), {
-			allowStale,
-		});
-		if (!row) continue;
-		if (!allowStale && !isCatalogRowCurrent({ scope, row })) continue;
-		rows.push(parsedRowOf({ row }));
+		const cacheKey = catalogKeyToString({ key });
+		const row = scope.state.entries.get(cacheKey, { allowStale });
+		const answered =
+			row && (allowStale || isCatalogRowCurrent({ scope, row }))
+				? row
+				: undefined;
+		read.rows.push([cacheKey, answered]);
+		if (answered) rows.push(parsedRowOf({ row: answered }));
 	}
-	return catalogRowsToCatalog({ rows });
+	const catalog = catalogRowsToCatalog({ rows });
+	scope.state.reads.set(catalog, read);
+	return catalog;
 };

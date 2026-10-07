@@ -26,7 +26,11 @@ import {
 	PartitionWriterStateNotFoundError,
 } from "../writerErrors.js";
 import { scheduleCommit } from "./commit.js";
-import { assertSameRequest, readFreshestState } from "./decide.js";
+import {
+	advanceStoredView,
+	assertSameRequest,
+	readFreshestState,
+} from "./decide.js";
 
 /** Synchronous, like `decide`. Null when a settled write of the customer is in flight: its callers own the order. */
 export function decideHeld<Reply>({
@@ -111,6 +115,7 @@ export function decideHeld<Reply>({
 		state: result.nextState,
 	});
 	pending.replyBody = body;
+	advanceStoredView({ scope, identity, decided: result.nextState });
 	scheduleCommit({ scope });
 	return { kind: "write", seq: pending.seq, body };
 }

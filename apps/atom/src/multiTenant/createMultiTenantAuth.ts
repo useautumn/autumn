@@ -1,6 +1,8 @@
+import { statSync } from "node:fs";
+import { join } from "node:path";
 import { hashToken } from "../auth/hashToken.js";
 import type { Auth } from "../auth/types/auth.js";
-import { openSlots } from "../slots/openSlots.js";
+import { CATALOG_FILE, openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
@@ -28,7 +30,10 @@ export type MultiTenantAuth = Auth & {
 };
 
 /** Slots stay null until the token is first used, so an Atom nobody asks holds no files, statements or timers. */
-type HeldAtom = TenantAtom & { slots: Slots | null };
+type HeldAtom = TenantAtom & {
+	slots: Slots | null;
+	catalogInode: number | null;
+};
 
 export const createMultiTenantAuth = ({
 	dataDir,
@@ -64,6 +69,15 @@ export const createMultiTenantAuth = ({
 		heldByTokenHash.set(tokenHash, held);
 	}
 
+	/** A folder deleted and put again under the same id has a new catalog file: never the inode of one still open. */
+	function catalogInodeOf({ id }: { id: string }): number | null {
+		try {
+			return statSync(join(atomFolderPath({ dataDir, id }), CATALOG_FILE)).ino;
+		} catch {
+			return null;
+		}
+	}
+
 	function forget(held: HeldAtom): void {
 		heldById.delete(held.id);
 		heldByTokenHash.delete(held.tokenHash);
@@ -80,11 +94,15 @@ export const createMultiTenantAuth = ({
 		);
 		for (const held of [...heldById.values()]) {
 			const tokenHash = onDisk.get(held.id)?.tokenHash;
-			if (tokenHash === undefined) forget(held);
+			const replaced =
+				held.slots !== null &&
+				catalogInodeOf({ id: held.id }) !== held.catalogInode;
+			if (tokenHash === undefined || replaced) forget(held);
 			else if (tokenHash !== held.tokenHash) retoken({ held, tokenHash });
 		}
 		for (const tenantAtom of onDisk.values())
-			if (!heldById.has(tenantAtom.id)) hold({ ...tenantAtom, slots: null });
+			if (!heldById.has(tenantAtom.id))
+				hold({ ...tenantAtom, slots: null, catalogInode: null });
 		scannedAt = clock();
 	}
 
@@ -109,6 +127,7 @@ export const createMultiTenantAuth = ({
 			owners,
 			held: heldSubjects,
 		});
+		held.catalogInode = catalogInodeOf({ id: held.id });
 		return held.slots;
 	}
 
@@ -134,7 +153,7 @@ export const createMultiTenantAuth = ({
 		writeTenantAtom({ dataDir, tenantAtom });
 		const held = heldById.get(tenantAtom.id);
 		if (!held) {
-			hold({ ...tenantAtom, slots: null });
+			hold({ ...tenantAtom, slots: null, catalogInode: null });
 			return;
 		}
 		if (held.tokenHash !== tenantAtom.tokenHash)

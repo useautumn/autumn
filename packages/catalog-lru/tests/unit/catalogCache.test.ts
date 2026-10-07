@@ -441,37 +441,78 @@ test("an invalid cached row still fails the read that uses it", () => {
 	expect(() => cache.read({ keys: [keyOf(ent)] })).toThrow();
 });
 
-describe("catalog cache change count", () => {
-	test("moves when rows are set, expired or evicted; a read leaves it", () => {
+describe("a read catalog stays current until one of its own rows moves", () => {
+	test("other rows being set or evicted leave it current", () => {
 		const ent = entitlementRow({ id: "ent_1" });
-		const cache = createCache({ db: createFakeDb({ rows: [] }) });
-		const initial = cache.changeCount();
-
-		cache.put({ rows: [ent] });
-		const afterPut = cache.changeCount();
-		expect(afterPut).toBeGreaterThan(initial);
-
-		cache.read({ keys: [keyOf(ent)] });
-		expect(cache.changeCount()).toBe(afterPut);
-
-		cache.invalidate({ orgId: "org_1", env: "sandbox" });
-		expect(cache.changeCount()).toBeGreaterThan(afterPut);
-	});
-
-	test("an eviction moves it", () => {
-		const first = entitlementRow({ id: "ent_1" });
-		const second = entitlementRow({ id: "ent_2" });
+		const other = entitlementRow({ id: "ent_2" });
+		const third = entitlementRow({ id: "ent_3" });
 		const cache = createCache({
 			db: createFakeDb({ rows: [] }),
-			maxSizeBytes: JSON.stringify(first).length + 1,
+			maxSizeBytes: JSON.stringify(ent).length * 2 + 1,
 		});
-		cache.put({ rows: [first] });
-		const beforeEviction = cache.changeCount();
+		cache.put({ rows: [ent] });
+		const catalog = cache.read({ keys: [keyOf(ent)] });
 
-		cache.put({ rows: [second] });
+		cache.put({ rows: [other] });
+		cache.read({ keys: [keyOf(ent)] });
+		cache.put({ rows: [third] });
 
-		expect(cache.size()).toBe(1);
-		expect(cache.changeCount()).toBeGreaterThan(beforeEviction + 1);
+		expect(cache.size()).toBe(2);
+		expect(cache.isCurrent({ catalog })).toBe(true);
+	});
+
+	test("a replaced row makes it stale", () => {
+		const feature = featureRow({ internalId: "feat_internal_1" });
+		const cache = createCache({ db: createFakeDb({ rows: [] }) });
+		cache.put({ rows: [feature] });
+		const catalog = cache.read({ keys: [keyOf(feature)] });
+
+		cache.put({ rows: [featureRow({ internalId: "feat_internal_1" })] });
+
+		expect(cache.isCurrent({ catalog })).toBe(false);
+	});
+
+	test("an evicted row makes it stale", () => {
+		const ent = entitlementRow({ id: "ent_1" });
+		const cache = createCache({
+			db: createFakeDb({ rows: [] }),
+			maxSizeBytes: JSON.stringify(ent).length + 1,
+		});
+		cache.put({ rows: [ent] });
+		const catalog = cache.read({ keys: [keyOf(ent)] });
+
+		cache.put({ rows: [entitlementRow({ id: "ent_2" })] });
+
+		expect(cache.isCurrent({ catalog })).toBe(false);
+	});
+
+	test("its org's invalidation makes it stale; another org's leaves it", () => {
+		const feature = featureRow({ internalId: "feat_internal_1" });
+		const cache = createCache({ db: createFakeDb({ rows: [] }) });
+		cache.put({ rows: [feature] });
+		const catalog = cache.read({ keys: [keyOf(feature)] });
+
+		cache.invalidate({ orgId: "org_2", env: "sandbox" });
+		expect(cache.isCurrent({ catalog })).toBe(true);
+
+		cache.invalidate({ orgId: "org_1", env: "sandbox" });
+		expect(cache.isCurrent({ catalog })).toBe(false);
+	});
+
+	test("a key that was missing when it was read arriving makes it stale", () => {
+		const ent = entitlementRow({ id: "ent_1" });
+		const cache = createCache({ db: createFakeDb({ rows: [] }) });
+		const catalog = cache.read({ keys: [keyOf(ent)] });
+
+		cache.put({ rows: [ent] });
+
+		expect(cache.isCurrent({ catalog })).toBe(false);
+	});
+
+	test("a catalog this cache didn't read is never current", () => {
+		const cache = createCache({ db: createFakeDb({ rows: [] }) });
+		const other = createCache({ db: createFakeDb({ rows: [] }) });
+		expect(cache.isCurrent({ catalog: other.read({ keys: [] }) })).toBe(false);
 	});
 });
 

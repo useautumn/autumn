@@ -5,7 +5,10 @@ import {
 } from "@autumn/byoc";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../auth/types/auth.js";
-import { isUnreadableRequest } from "../lib/contracts/invalidPushError.js";
+import {
+	InvalidPushError,
+	isUnreadableRequest,
+} from "../lib/contracts/invalidPushError.js";
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
@@ -46,13 +49,17 @@ const applyPush = async ({
 		);
 		return;
 	}
-	if (push.type === AtomPushType.SetSubject)
-		await applySubjectPush({
-			slots,
-			customerId: push.customerId,
-			body: push.body,
-		});
-	else await applyCatalogPush({ slots, body: JSON.parse(push.body) });
+	if (push.type === AtomPushType.SetCatalog) {
+		await applyCatalogPush({ slots, body: JSON.parse(push.body) });
+		return;
+	}
+	if (push.customerId === null)
+		throw new InvalidPushError("A queued subjects.set push names no customer");
+	await applySubjectPush({
+		slots,
+		customerId: push.customerId,
+		body: push.body,
+	});
 };
 
 /** Whether the message is done with: applied on the thread that owns its customer, or one that can never apply. */

@@ -29,10 +29,12 @@ export const createRunEtaTracker = ({
 		live,
 		moreWorkersWanted,
 		now,
+		slotsPerWorker,
 	}: {
 		live: LiveRun;
 		moreWorkersWanted: number;
 		now: number;
+		slotsPerWorker: number;
 	}): RunEta | null =>
 		estimateRunEta({
 			now,
@@ -52,6 +54,7 @@ export const createRunEtaTracker = ({
 			workers: [...live.workers.values()],
 			moreWorkersWanted,
 			priors,
+			slotsPerWorker,
 		});
 
 	return { noteFile, estimate };
