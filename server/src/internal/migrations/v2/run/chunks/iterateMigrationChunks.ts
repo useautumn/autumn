@@ -1,5 +1,7 @@
 import type { BatchMigrationRejection } from "../../batchOperations/types/index.js";
 import type { IterateScopeCompletion } from "../orchestrators/iterateScope.js";
+import type { MigrationSegment } from "./carveMigrationSegments.js";
+import { resolveChunkContinuation } from "./resolveChunkContinuation.js";
 
 export type MigrationChunkResult = {
 	processed: number;
@@ -19,22 +21,31 @@ export type MigrationChunkRunResult = {
 	rejections?: BatchMigrationRejection[];
 };
 
+export type MigrationChunkRunner = (args: {
+	limit: number | undefined;
+	chunkIndex: number;
+	cursor: string | undefined;
+	floor: string | undefined;
+}) => Promise<MigrationChunkResult>;
+
+/** Walks one keyset segment chunk by chunk, each continuing from the last
+ * cursor. The default segment is the whole keyset: today's serial run. */
 export const iterateMigrationChunks = async ({
 	limit,
+	segment = {},
+	firstChunkIndex = 0,
 	isCancelRequested,
 	runChunk,
 }: {
 	limit?: number;
+	segment?: MigrationSegment;
+	firstChunkIndex?: number;
 	isCancelRequested: () => Promise<boolean>;
-	runChunk: (args: {
-		limit: number | undefined;
-		chunkIndex: number;
-		cursor: string | undefined;
-	}) => Promise<MigrationChunkResult>;
+	runChunk: MigrationChunkRunner;
 }): Promise<MigrationChunkRunResult> => {
 	let processed = 0;
 	let chunks = 0;
-	let cursor: string | undefined;
+	let cursor = segment.cursor;
 
 	while (limit === undefined || processed < limit) {
 		if (await isCancelRequested()) {
@@ -46,26 +57,18 @@ export const iterateMigrationChunks = async ({
 
 		const chunk = await runChunk({
 			limit: remainingLimit,
-			chunkIndex: chunks,
+			chunkIndex: firstChunkIndex + chunks,
 			cursor,
+			floor: segment.floor,
 		});
 
 		chunks++;
 		processed += chunk.processed;
 
-		if (chunk.completion === "stopped") {
-			return { processed, chunks, canceled: true };
-		}
-		if (chunk.completion === "exhausted") break;
-		if (chunk.processed === 0) {
-			throw new Error("Migration chunk made no progress before continuation");
-		}
-		if (!chunk.cursor) {
-			throw new Error(
-				"Migration chunk did not return a cursor for continuation",
-			);
-		}
-		cursor = chunk.cursor;
+		const next = resolveChunkContinuation(chunk);
+		if (next.kind === "stopped") return { processed, chunks, canceled: true };
+		if (next.kind === "exhausted") break;
+		cursor = next.cursor;
 	}
 
 	return { processed, chunks, canceled: false };
