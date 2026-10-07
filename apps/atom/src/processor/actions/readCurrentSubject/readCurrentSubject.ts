@@ -31,14 +31,14 @@ const readStoredParts = ({
 };
 
 /** The parts a subject was joined from: the view is current while the store still holds these very copies. */
-type JoinedSubject = {
+type SubjectJoinCacheEntry = {
 	customer: StoredSubject;
 	shared: SharedCatalog | null;
 	current: CurrentSubject;
 };
 
 /** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
-const joinedSubjects = new WeakMap<StoredSubject, JoinedSubject>();
+const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
 
 /**
  * The subject a request is decided on, as Autumn last sent it: for an entity, the customer's rows and its own as one.
@@ -56,14 +56,14 @@ export const readCurrentSubject = ({
 	const { customer, entity } = readStoredParts({ ctx, customerId, entityId });
 	const shared = ctx.catalogStore.read();
 	const target = entity ?? customer;
-	const joined = joinedSubjects.get(target);
+	const joined = subjectJoinCache.get(target);
 	if (joined?.customer === customer && joined.shared === shared)
 		return joined.current;
 	// Frozen, because every check until the next push shares it.
 	const current = deepFreeze(
 		joinSubject({ customer, entity, shared, entityId }),
 	);
-	joinedSubjects.set(target, { customer, shared, current });
+	subjectJoinCache.set(target, { customer, shared, current });
 	return current;
 };
 
