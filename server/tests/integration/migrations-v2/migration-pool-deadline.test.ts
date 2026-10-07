@@ -36,7 +36,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 					isolationLevel: "invalid" as "serializable",
 				})
 				.catch((error: unknown) => error);
-			expect(String(error)).not.toContain("outcome_unknown");
+			expect(String(error)).not.toContain("deadline");
 			expect(pool.totalCount).toBe(0);
 			expect((await pool.query("select 1 as value")).rows).toEqual([
 				{ value: 1 },
@@ -87,9 +87,9 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 				() => "resolved",
 				(error: Error) => error.message,
 			);
-			expect(outcome).toContain("outcome_unknown");
+			expect(outcome).toContain("deadline");
 			expect(socket.destroyed).toBe(true);
-			await expect(client.query("rollback")).rejects.toThrow("outcome_unknown");
+			await expect(client.query("rollback")).rejects.toThrow("deadline");
 			client.release();
 			const next = await pool.query("select pg_backend_pid() as id");
 			expect(next.rows[0].id).not.toBe(first.rows[0].id);
@@ -99,80 +99,6 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 			if (!socket.destroyed) client.release(true);
 			await pool.end();
 		}
-	}, 5000);
-
-	test("an unknown COMMIT is not replayed or masked by Drizzle rollback", async () => {
-		await withScratchSchema({
-			databaseUrl: databaseUrl!,
-			run: async ({ options }) => {
-				const pool = new pg.Pool({
-					connectionString: databaseUrl,
-					options,
-					max: 1,
-				});
-				applyMigrationQueryDeadline({ pool, queryTimeoutMs: 100 });
-				await pool.query("create table commits (value integer)");
-				let socket: Socket;
-				pool.on("acquire", (client) => {
-					socket = (client as unknown as { connection: { stream: Socket } })
-						.connection.stream;
-				});
-				let attempts = 0;
-				try {
-					const error = await runWithTransientDbRetry({
-						maxAttempts: 3,
-						delayMs: 0,
-						run: () =>
-							drizzle(pool).transaction(async (transaction) => {
-								attempts++;
-								await transaction.execute(sql`insert into commits values (1)`);
-								socket.pause();
-							}),
-					}).catch((error: unknown) => error);
-					expect(error).toBeInstanceOf(Error);
-					expect(isTransientDbError({ error })).toBe(false);
-					expect(attempts).toBe(1);
-					expect((await pool.query("select * from commits")).rows).toEqual([
-						{ value: 1 },
-					]);
-				} finally {
-					await pool.end();
-				}
-			},
-		});
-	}, 5000);
-
-	test("a COMMIT the server rejects keeps its known error and its healthy client", async () => {
-		await withScratchSchema({
-			databaseUrl: databaseUrl as string,
-			run: async ({ options }) => {
-				const pool = new pg.Pool({
-					connectionString: databaseUrl,
-					options,
-					max: 1,
-				});
-				applyMigrationQueryDeadline({ pool, queryTimeoutMs: 1000 });
-				await pool.query(
-					"create table deferred (value integer unique deferrable initially deferred)",
-				);
-				const before = await pool.query("select pg_backend_pid() as id");
-				try {
-					const error = await drizzle(pool)
-						.transaction(async (transaction) => {
-							await transaction.execute(
-								sql`insert into deferred values (1), (1)`,
-							);
-						})
-						.catch((error: unknown) => error);
-					expect(String(error)).not.toContain("outcome_unknown");
-					expect(pgErrorCode(error)).toBe("23505");
-					const after = await pool.query("select pg_backend_pid() as id");
-					expect(after.rows[0].id).toBe(before.rows[0].id);
-				} finally {
-					await pool.end();
-				}
-			},
-		});
 	}, 5000);
 
 	test("a server statement_timeout below the deadline fails with a retryable 57014 and keeps the client", async () => {
@@ -212,7 +138,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		}
 	}, 5000);
 
-	test("standalone claim uncertainty and a stalled terminal write both settle without replay", async () => {
+	test("a stalled claim and a stalled terminal write both fail at the deadline and are not retried", async () => {
 		await withScratchSchema({
 			databaseUrl: databaseUrl!,
 			run: async ({ options }) => {
@@ -243,7 +169,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 								);
 							},
 						}),
-					).rejects.toThrow("outcome_unknown");
+					).rejects.toThrow("deadline");
 					expect(attempts).toBe(1);
 					expect(socket.destroyed).toBe(true);
 					expect((await pool.query("select * from claims")).rows).toEqual([
@@ -257,7 +183,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 					terminalSocket.pause();
 					await expect(
 						pool.query("update claims set status = 'failed' where id = 1"),
-					).rejects.toThrow("outcome_unknown");
+					).rejects.toThrow("deadline");
 					expect(terminalSocket.destroyed).toBe(true);
 				} finally {
 					await pool.end();

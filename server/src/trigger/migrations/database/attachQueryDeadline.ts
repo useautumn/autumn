@@ -1,10 +1,5 @@
 import { trace } from "@opentelemetry/api";
-import {
-	DatabaseError,
-	type PoolClient,
-	type QueryConfig,
-	type QueryResult,
-} from "pg";
+import type { PoolClient, QueryConfig, QueryResult } from "pg";
 import { sqlCommand } from "./sqlCommand.js";
 import type { ReportMigrationDbFailure } from "./types/reportMigrationDbFailure.js";
 
@@ -16,11 +11,7 @@ type DispatchQuery = (
 	callback: (error: Error | null, result: QueryResult) => void,
 ) => void;
 
-/** A server ERROR on COMMIT means Postgres rolled back; anything else may have committed. */
-const isKnownCommitRejection = (error: Error) =>
-	error instanceof DatabaseError && error.severity === "ERROR";
-
-/** Bounds each statement on `client`; a lost reply retires the client with an outcome-unknown error. */
+/** Bounds each statement on `client`; a statement past its deadline throws the connection away. */
 export const attachQueryDeadline = ({
 	client,
 	timeoutMs,
@@ -31,8 +22,8 @@ export const attachQueryDeadline = ({
 	report: ReportMigrationDbFailure;
 }): void => {
 	const dispatch = client.query.bind(client) as DispatchQuery;
-	let retirement: Error | undefined;
-	// Serializes statements so each deadline starts at dispatch and work queued behind a retirement fails fast.
+	let deadlineError: Error | undefined;
+	// Serializes statements so each deadline starts at dispatch and work queued behind a timeout fails fast.
 	let statementQueue: Promise<unknown> = Promise.resolve();
 
 	// Drizzle awaits BEGIN outside its release finally, so this owner must return the slot.
@@ -50,55 +41,47 @@ export const attachQueryDeadline = ({
 		values: QueryValues;
 	}) =>
 		new Promise<QueryResult>((resolve, reject) => {
-			if (retirement) return reject(retirement);
+			if (deadlineError) return reject(deadlineError);
 			const command = sqlCommand(
 				typeof config === "string" ? config : config.text,
 			);
 			const startedAt = Date.now();
 			trace.getActiveSpan()?.setAttribute("db.pool.name", "migration");
 
-			const retire = (reason: "deadline" | "commit_unknown") => {
-				// Stored on the item event; grep `outcome_unknown` before retrying failed items.
-				retirement ??= new Error(
-					`migration database outcome_unknown (${reason}): not retried`,
-				);
-				releaseOnce();
-				reject(retirement);
+			const fail = ({ error, reason }: { error: unknown; reason: string }) => {
+				reject(error);
 				report({
 					phase: "query",
 					command,
 					reason,
+					code: (error as { code?: unknown }).code,
+					message: error instanceof Error ? error.message : String(error),
 					elapsedMs: Date.now() - startedAt,
 					client_process_id: (client as PoolClient & { processID?: number })
 						.processID,
 				});
 			};
-			const rejectKnown = (error: unknown) => {
+
+			const timer = setTimeout(() => {
+				deadlineError = new Error(
+					`migration database query exceeded its ${timeoutMs}ms deadline`,
+				);
+				releaseOnce();
+				fail({ error: deadlineError, reason: "deadline" });
+			}, timeoutMs);
+
+			const settle = (error: unknown, result?: QueryResult) => {
+				clearTimeout(timer);
+				if (deadlineError) return reject(deadlineError);
+				if (!error) return resolve(result as QueryResult);
 				if (command === "BEGIN") releaseOnce();
-				reject(error);
-				report({
-					phase: "query",
-					command,
-					reason: "error",
-					code: (error as { code?: unknown }).code,
-					message: error instanceof Error ? error.message : String(error),
-					elapsedMs: Date.now() - startedAt,
-				});
+				fail({ error, reason: "error" });
 			};
 
-			const timer = setTimeout(() => retire("deadline"), timeoutMs);
 			try {
-				dispatch(config, values, (error, result) => {
-					clearTimeout(timer);
-					if (retirement) return reject(retirement);
-					if (!error) return resolve(result);
-					if (command === "COMMIT" && !isKnownCommitRejection(error))
-						return retire("commit_unknown");
-					rejectKnown(error);
-				});
+				dispatch(config, values, settle);
 			} catch (error) {
-				clearTimeout(timer);
-				rejectKnown(error);
+				settle(error);
 			}
 		});
 
