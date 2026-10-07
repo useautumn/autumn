@@ -4,11 +4,18 @@ import {
 	RATE_LIMIT_CONFIGS,
 	RATE_LIMIT_ROUTE_GROUPS,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
-import { describeLegacyRateLimit } from "./golden/describeLegacyRateLimit.js";
-import { describeRateLimitPolicy } from "./golden/describeRateLimitPolicy.js";
+import {
+	describeLegacyRateLimit,
+	listLegacyPerPodLimiters,
+} from "./golden/describeLegacyRateLimit.js";
+import {
+	describeRateLimitPolicy,
+	listPolicyPerPodLimiters,
+} from "./golden/describeRateLimitPolicy.js";
 import {
 	describeAllGoldenRoutes,
 	GOLDEN_ROUTES,
+	groupRoutesByPerPodLimiter,
 	toEnvironmentStableLimit,
 } from "./golden/goldenRateLimitRequests.js";
 
@@ -63,5 +70,17 @@ describe("rate-limit golden resolution", () => {
 		expect(
 			toEnvironmentStableDefaults(listRateLimitDefaults()),
 		).toMatchSnapshot();
+	});
+
+	test("routes share per-pod limiters exactly where they did", () => {
+		const grouped = groupRoutesByPerPodLimiter({
+			listPerPodLimiters: listPolicyPerPodLimiters,
+		});
+		expect(grouped).toEqual(
+			groupRoutesByPerPodLimiter({
+				listPerPodLimiters: listLegacyPerPodLimiters,
+			}),
+		);
+		expect(grouped).toMatchSnapshot();
 	});
 });

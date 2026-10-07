@@ -169,3 +169,24 @@ export const describeAllGoldenRoutes = ({
 			groupVersionsByResolution({ goldenRoute, describeRateLimit }),
 		]),
 	);
+
+export type ListPerPodLimiters = (params: { route: GoldenRoute }) => unknown[];
+
+/** Per-pod counters live in the limiter instance, so routes must share instances exactly as before. */
+export const groupRoutesByPerPodLimiter = ({
+	listPerPodLimiters,
+}: {
+	listPerPodLimiters: ListPerPodLimiters;
+}) => {
+	const limiterIds = new Map<unknown, number>();
+	const toLimiterId = (limiter: unknown) => {
+		if (!limiterIds.has(limiter)) limiterIds.set(limiter, limiterIds.size);
+		return limiterIds.get(limiter);
+	};
+	return Object.fromEntries(
+		GOLDEN_ROUTES.map((route) => [
+			`${route.method} ${route.path}`,
+			listPerPodLimiters({ route }).map(toLimiterId),
+		]),
+	);
+};

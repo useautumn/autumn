@@ -1,5 +1,6 @@
 import type { ApiVersion } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getLayerLimiter } from "@/internal/misc/rateLimiter/layerLimiter/getLayerLimiter.js";
 import { getRateLimitKey } from "@/internal/misc/rateLimiter/policies/getRateLimitKey.js";
 import { resolveLayerLimit } from "@/internal/misc/rateLimiter/policies/resolveLayerLimit.js";
 import { resolveRateLimitPolicy } from "@/internal/misc/rateLimiter/policies/resolveRateLimitPolicy.js";
@@ -10,6 +11,7 @@ import {
 	type DescribeRateLimit,
 	GOLDEN_CUSTOMER_ID,
 	type GoldenLayer,
+	type ListPerPodLimiters,
 } from "./goldenRateLimitRequests.js";
 
 const createPolicyCtx = ({
@@ -78,4 +80,18 @@ export const describeRateLimitPolicy: DescribeRateLimit = ({
 		);
 	}
 	return { skipsTestsOrg: policy.skipForTestsOrg === true, layers };
+};
+
+export const listPolicyPerPodLimiters: ListPerPodLimiters = ({ route }) => {
+	const { perOrg, perCustomer } = resolveRateLimitPolicy({
+		method: route.method,
+		path: route.path,
+	});
+	const scopedLayers = [
+		{ layer: perOrg, scope: "perOrg" as const },
+		{ layer: perCustomer, scope: "perCustomer" as const },
+	];
+	return scopedLayers.flatMap(({ layer, scope }) =>
+		layer?.counted === "perPod" ? [getLayerLimiter({ layer, scope })] : [],
+	);
 };

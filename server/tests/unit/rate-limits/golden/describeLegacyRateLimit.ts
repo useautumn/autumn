@@ -10,13 +10,17 @@ import {
 	RateLimitType,
 	resolveRateLimit,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
-import { getRateLimitKey } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
+import {
+	getLimiterForType,
+	getRateLimitKey,
+} from "@/internal/misc/rateLimiter/rateLimitFactory.js";
 import {
 	createGoldenCtx,
 	type DescribeRateLimit,
 	GOLDEN_CUSTOMER_ID,
 	type GoldenLayer,
 	type GoldenRoute,
+	type ListPerPodLimiters,
 } from "./goldenRateLimitRequests.js";
 
 const createLegacyContext = ({
@@ -122,4 +126,13 @@ export const describeLegacyRateLimit: DescribeRateLimit = ({
 			}),
 		],
 	};
+};
+
+export const listLegacyPerPodLimiters: ListPerPodLimiters = ({ route }) => {
+	const type = getRateLimitType(createLegacyContext({ route }));
+	const aggregateType = getOrgAggregateType(type);
+	return [aggregateType, type]
+		.filter((candidate) => candidate !== undefined)
+		.filter((candidate) => RATE_LIMIT_CONFIGS[candidate].notInRedis)
+		.map((candidate) => getLimiterForType(candidate));
 };
