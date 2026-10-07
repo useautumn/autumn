@@ -37,6 +37,7 @@ const createProcessor = () => {
 		setCatalog: catalogStore.set,
 		check: ({ request }: { request: CheckRequest }) =>
 			checkResponseOf({ processor, request }),
+		answer: processor.check,
 	};
 };
 afterEach(() => {
@@ -76,6 +77,21 @@ describe("slot processor check", () => {
 		});
 
 		expect(reply.allowed).toBe(false);
+	});
+
+	test("beside its JSON, a check hands back the verdict its body carries, for the request line", async () => {
+		const processor = createProcessor();
+		await processor.setSubject(
+			subjectPushOf({ subject: storedSubjectWith({ balance: 10 }) }),
+		);
+
+		for (const requiredBalance of [10, 11]) {
+			const { json, allowed } = await processor.answer({
+				request: checkBalance({ requiredBalance }),
+			});
+			expect(allowed).toBe(requiredBalance <= 10);
+			expect(JSON.parse(json).allowed).toBe(allowed);
+		}
 	});
 
 	test("the answer follows the subject Autumn sent last", async () => {

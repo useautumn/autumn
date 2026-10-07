@@ -13,6 +13,9 @@ const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
 const MEMORY_SHARE_FOR_THREADS = 0.75;
 /** A held subject's parsed, frozen objects take about this many times the bytes of its row text; conservative until measured on a live Atom. */
 const HELD_EXPANSION = 3;
+const HEALTH_LOG_EVERY_MS = 10_000;
+/** A timer past a signed 32-bit delay fires every millisecond instead; a second is the shortest worth a line. */
+const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
 /** Checks far outnumber pushes, so a share of the threads also receive Autumn's pushes. */
 const RECEIVER_SHARE_OF_THREADS = 0.3;
 
@@ -167,6 +170,10 @@ export function createAtomEnv(
 			threads,
 			memoryLimitBytes: machine.memoryLimitBytes,
 		}),
+		/** How often the main thread logs what /health reports. */
+		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
+			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
+		),
 		/** The pushes queue's URL where the AWS SDK is opted in to read it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,

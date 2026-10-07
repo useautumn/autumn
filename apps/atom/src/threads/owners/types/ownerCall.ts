@@ -2,6 +2,7 @@ import type { CatalogRow } from "@autumn/balance-engine";
 import type { ApiVersion } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
+import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 
 /** A check as it crosses threads: plain data, with the API version by name. */
 export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
@@ -25,9 +26,9 @@ export type OwnerCallBody = { atomId: string | null } & (
  */
 export type OwnerCall = OwnerCallBody & { id: number };
 
-/** The owner's answer (a check's is its response JSON); one it cannot answer carries the reason, so the caller's thread forwards it. */
+/** The owner's answer (a check's is its JSON and verdict); one it cannot answer carries the reason, so the caller's thread forwards it. */
 export type OwnerReply =
-	| { id: number; ok: true; value: string | boolean }
+	| { id: number; ok: true; value: CheckAnswer | boolean }
 	| {
 			id: number;
 			ok: false;

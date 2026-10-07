@@ -2,13 +2,11 @@ import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import {
-	carriesResponse,
 	forwardedReason,
 	isAtomsOwnFault,
-	isSampled,
 	loggedErrorOf,
+	loggedResponseOf,
 	requestFieldsOf,
-	responseBodyOf,
 } from "./requestLogLine.js";
 
 /** Answered for a load balancer's probe every second; nothing to learn from it. */
@@ -20,26 +18,13 @@ const COUNTED_PATHS = {
 	"/v1/catalog.set": "pushes",
 } as const;
 
-/** The hot path: a check Atom answered itself, so a line for every one costs ~15% of check capacity. */
-const isAnsweredCheck = ({
-	context,
-	forwarded,
-}: {
-	context: Context<AtomHttpEnv>;
-	forwarded: string | undefined;
-}): boolean =>
-	context.req.path === "/v1/balances.check" &&
-	context.res.status < 400 &&
-	!forwarded;
-
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
 
 /**
- * The outermost layer: every request but an unsampled answered check leaves one line, `[status] METHOD path Nms`,
- * with who it was about, what came back and, when it failed, how. An error thrown below becomes its response here
- * first, so it is logged too. The line is built from the body already read and, for the few lines
- * that carry it, the response.
+ * The outermost layer: every request leaves one line, `[status] METHOD path Nms`, with who it was about, what came
+ * back and, when it failed, how. An error thrown below becomes its response here first, so it is logged too. Only a
+ * failure's line reads the response; an answered check's carries just the verdict its handler set.
  */
 export function requestLogMiddleware({
 	ctx,
@@ -63,8 +48,6 @@ export function requestLogMiddleware({
 		const statusCode = context.res.status;
 		const durationMs = Date.now() - startedAt;
 		const forwarded = forwardedReason({ context });
-		const sampled = isSampled();
-		if (!sampled && isAnsweredCheck({ context, forwarded })) return;
 		const failure = context.get("failure");
 		const line = {
 			statusCode,
@@ -77,9 +60,9 @@ export function requestLogMiddleware({
 					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
 				}),
 			},
-			res: carriesResponse({ context, sampled })
-				? await responseBodyOf({ context })
-				: null,
+			// Every answered check is logged, slim, for the rollout: it costs ~12 µs/check (~13% of check capacity).
+			// Remove it, or sample answered checks again, when that capacity is needed.
+			res: await loggedResponseOf({ context }),
 			...(forwarded && { forwarded }),
 			...(failure && {
 				errorCode: failure.code,

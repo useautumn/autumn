@@ -1,9 +1,6 @@
 import type { Context } from "hono";
 import type { AtomHttpEnv } from "../../types/atomHttp.js";
 
-/** One in a hundred: an answered check leaves a line, and a successful line carries its body, this often. */
-const SAMPLE_RATE = 0.01;
-
 const FORWARDED_HEADER = "x-atom-forwarded";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -35,37 +32,21 @@ export const requestFieldsOf = ({
 	};
 };
 
-/** A balance's breakdown is the bulk of a check answer and says nothing its totals do not. */
-const compactResponseBody = (body: unknown): unknown => {
-	if (!isRecord(body) || !isRecord(body.balance)) return body;
-	const { breakdown: _breakdown, ...balance } = body.balance;
-	return { ...body, balance };
-};
-
-/** Rolled once per request, before anything is read, so a skipped line or body costs nothing. */
-export const isSampled = (): boolean => Math.random() < SAMPLE_RATE;
-
-/** Whether this line carries the response: every failure's, and a sampled success's. */
-export const carriesResponse = ({
-	context,
-	sampled,
-}: {
-	context: Context<AtomHttpEnv>;
-	sampled: boolean;
-}): boolean => context.res.status >= 400 || sampled;
-
-/** The JSON a response carried; a reply the API sent is never read, only its reason is logged. */
-export const responseBodyOf = async ({
+/** What came back, at `res`: a failure's body, or an answered check's verdict where its body has it; a reply the API sent is never read. */
+export const loggedResponseOf = async ({
 	context,
 }: {
 	context: Context<AtomHttpEnv>;
 }): Promise<unknown> => {
+	if (context.res.status < 400) {
+		const allowed = context.get("allowed");
+		return allowed === undefined ? null : { allowed };
+	}
 	if (forwardedReason({ context })) return null;
 	if (!context.res.headers.get("content-type")?.includes("application/json"))
 		return null;
 	try {
-		const body = await context.res.clone().json();
-		return context.res.status < 400 ? compactResponseBody(body) : body;
+		return await context.res.clone().json();
 	} catch {
 		return null;
 	}
