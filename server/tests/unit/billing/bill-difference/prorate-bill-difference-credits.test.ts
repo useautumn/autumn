@@ -19,6 +19,13 @@ const billingContext = {
 	currentEpochMs: HALFWAY_MS,
 } as unknown as BillingContext;
 
+/** Only set_plans re-lists move a quantity onto a new customer product. */
+const setPlansBillingContext = {
+	...billingContext,
+	immediatePhase: {},
+	scheduledPhaseContexts: [],
+} as unknown as BillingContext;
+
 const line = ({
 	direction,
 	amount,
@@ -75,9 +82,9 @@ describe(chalk.yellowBright("prorateBillDifferenceCredits"), () => {
 		expect(amounts(result)).toEqual([-30, 50]);
 	});
 
-	test("a quantity moved to a new customer product credits the old quantity's unused time", () => {
+	test("a set_plans quantity moved to a new customer product credits the old quantity's unused time", () => {
 		const result = prorateBillDifferenceCredits({
-			billingContext,
+			billingContext: setPlansBillingContext,
 			lineItems: [
 				line({ direction: "refund", amount: 10, quantity: 100 }),
 				line({

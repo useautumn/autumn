@@ -9,6 +9,7 @@ import type {
 } from "@autumn/shared";
 import { billingContextToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { buildCustomerProductsForStripe } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildCustomerProductsForStripe";
 import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeRefundAction.js";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
@@ -131,7 +132,10 @@ export const evaluateStripeBillingPlan = async ({
 				billingContext,
 			});
 		}
-	} else if (!stripeCheckoutSessionAction) {
+	} else if (
+		!stripeCheckoutSessionAction &&
+		isSetPlansBillingContext(billingContext)
+	) {
 		// Subscription invoices only bill their own items; usage of a plan no subscription billed needs its own.
 		stripeInvoiceAction = buildStripeInvoiceAction({
 			lineItems: filterUnbilledUsageLineItems({ autumnBillingPlan }),

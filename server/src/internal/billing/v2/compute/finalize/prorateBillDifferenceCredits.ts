@@ -1,5 +1,6 @@
 import type { BillingContext, LineItem } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { billingContextBillsDifference } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 
 const sumBy = ({
@@ -60,8 +61,15 @@ const priceQuantityIsReplaced = (lineItems: LineItem[]) => {
 	return movedProduct && quantityChanged;
 };
 
-const creditedLineItems = (lineItems: LineItem[]) => {
-	if (priceQuantityIsReplaced(lineItems)) return byDirection(lineItems).refunds;
+const creditedLineItems = ({
+	lineItems,
+	replacesQuantityOnRelist,
+}: {
+	lineItems: LineItem[];
+	replacesQuantityOnRelist: boolean;
+}) => {
+	if (replacesQuantityOnRelist && priceQuantityIsReplaced(lineItems))
+		return byDirection(lineItems).refunds;
 	return priceIsRemoval(lineItems) ? lineItems : [];
 };
 
@@ -112,9 +120,13 @@ export const prorateBillDifferenceCredits = ({
 	];
 	const proratedLineItems = new Set(
 		priceIds.flatMap((priceId) =>
-			creditedLineItems(
-				lineItems.filter((lineItem) => lineItem.context.price.id === priceId),
-			),
+			creditedLineItems({
+				lineItems: lineItems.filter(
+					(lineItem) => lineItem.context.price.id === priceId,
+				),
+				// Only a set_plans re-list moves a quantity onto a new customer product.
+				replacesQuantityOnRelist: isSetPlansBillingContext(billingContext),
+			}),
 		),
 	);
 
