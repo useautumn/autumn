@@ -120,6 +120,32 @@ describe("chooseFilesPerWorker", () => {
 	});
 });
 
+test("real worker stats: vCPU-seconds become Modal cores and the idle stack is overhead, not load", () => {
+	// Shapes from run_fd3c4b2b8bcb4ac1: ~2.4 vCPU busy, 3.4-3.9 GiB worker peak, ~540 MiB test RSS.
+	const files = ids("real", 40);
+	const choice = chooseFilesPerWorker({
+		files,
+		estimates: estimatesFor(files, (_, i) =>
+			estimate({
+				durationMs: 20_000,
+				metrics: metrics({
+					stripeMeanRps: 1.2,
+					stripeMeanInFlight: 0.4,
+					cpuCoreSeconds: 20 * (1.95 + (i % 10) * 0.12),
+					memPeakMib: 3_450 + (i % 10) * 45,
+					testPeakMib: 520 + (i % 10) * 9,
+				}),
+			}),
+		),
+		soloCandidates: new Set(),
+		limits: { headroom: 0.65, ...LIMITS },
+	});
+	expect(choice.reasons[0]).toBe("40 files profiled; packing skipped");
+	expect(choice.reasons[1]).toBe("overhead per worker: 1.03 cores, 2966 MiB");
+	expect(choice.filesPerWorker).toBe(1);
+	expect(choice.binding).toBe("memoryMib");
+});
+
 describe("sizeShardWorkers", () => {
 	test("fewest workers whose longest-first makespan fits the target, ×1.3 for safety", () => {
 		// 1×100 s + 10×10 s: two slots finish in 100 s, one slot needs 200 s; ceil(2 × 1.3) = 3.
@@ -276,4 +302,28 @@ test("static scan flags org-wide mutations and the solo marker only", () => {
 	]);
 	expect(soloReasons('autumn.post("/platform/organizations", {})')).toEqual([]);
 	expect(soloReasons("await advanceTestClock({ stripeCli })")).toEqual([]);
+});
+
+test("the same real files pack once the worker has room for the idle stack", () => {
+	const files = ids("real", 40);
+	const choice = chooseFilesPerWorker({
+		files,
+		estimates: estimatesFor(files, (_, i) =>
+			estimate({
+				durationMs: 20_000,
+				metrics: metrics({
+					stripeMeanRps: 0.5,
+					stripeMeanInFlight: 0.15,
+					cpuCoreSeconds: 20 * (1.95 + (i % 10) * 0.12),
+					memPeakMib: 3_450 + (i % 10) * 45,
+					testPeakMib: 520 + (i % 10) * 9,
+				}),
+			}),
+		),
+		soloCandidates: new Set(),
+		limits: { headroom: 0.65, ...LIMITS, cores: 4, memoryMib: 8192 },
+	});
+	expect(choice.filesPerWorker).toBe(2);
+	expect(choice.binding).toBe("memoryMib");
+	expect(choice.packable.size).toBe(40);
 });

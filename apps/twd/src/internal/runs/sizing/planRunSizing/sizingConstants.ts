@@ -1,6 +1,8 @@
 /** Share of each per-worker ceiling packing may plan to use. */
 export const HEADROOM = 0.65;
 export const MAX_AUTO_FILES_PER_WORKER = 4;
+/** Stats count CPU-seconds on logical CPUs; Modal requests and bills physical cores, 2 vCPUs each. */
+export const VCPUS_PER_MODAL_CORE = 2;
 /** Sigma multiplier: k files' summed load stays under the ceiling ~97% of the time. */
 export const LOAD_SIGMA = 2;
 /** Worker count is sized so the LPT makespan stays within this factor of the longest file. */

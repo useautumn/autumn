@@ -127,6 +127,10 @@ const readMemBytes = (): number | null => {
 	}
 };
 
+/** Bun 1.4 reports maxRSS in bytes, 1.3 in KiB; a test process is always over 64 MiB and under 64 GiB. */
+export const maxRssBytes = (maxRss: number) =>
+	maxRss > 2 ** 26 ? maxRss : maxRss * 1024;
+
 export const sampleResources = (): ResourceSample => ({
 	atMs: Date.now(),
 	cpuUsec: readCpuUsec(),
@@ -160,7 +164,7 @@ export const summariseFileStats = ({
 	wallMs,
 	exitCode,
 	testCpuUsec,
-	testMaxRssKib,
+	testMaxRssBytes,
 }: {
 	fileHash: Record<string, string> | null;
 	machine: MachineSeconds | null;
@@ -169,7 +173,7 @@ export const summariseFileStats = ({
 	wallMs: number;
 	exitCode: number;
 	testCpuUsec: number | null;
-	testMaxRssKib: number | null;
+	testMaxRssBytes: number | null;
 }): FileStats => {
 	const alive = (index: number) => Math.max(1, machine?.alive[index] ?? 1);
 	const aliveAt = (atMs: number) =>
@@ -199,7 +203,7 @@ export const summariseFileStats = ({
 		peakMib:
 			memValues.length > 0 ? round(Math.max(...memValues) / 2 ** 20, 0) : null,
 		testProcessPeakMib:
-			testMaxRssKib === null ? null : round(testMaxRssKib / 1024, 0),
+			testMaxRssBytes === null ? null : round(testMaxRssBytes / 2 ** 20, 0),
 	};
 	const seconds = machine?.alive.length ?? 0;
 	const concurrentMax = Math.max(1, ...(machine?.alive ?? [1]));
@@ -380,7 +384,7 @@ const main = async () => {
 		wallMs: endedAt - startedAt,
 		exitCode,
 		testCpuUsec: usage ? Number(usage.cpuTime.total) : null,
-		testMaxRssKib: usage ? Number(usage.maxRSS) : null,
+		testMaxRssBytes: usage ? maxRssBytes(Number(usage.maxRSS)) : null,
 	});
 	process.stdout.write(`\n${FILE_STATS_MARKER} ${JSON.stringify(stats)}\n`);
 	process.exit(exitCode);
