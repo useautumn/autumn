@@ -215,7 +215,7 @@ export const computeSetPlansPlan = ({
 		lineItems: autumnBillingPlan.lineItems ?? [],
 		billingContext,
 		autumnBillingPlan,
-		dropsUnchangedItemChargesAtReset: true,
+		resetsLikeStripeUnderNone: true,
 	});
 
 	return {

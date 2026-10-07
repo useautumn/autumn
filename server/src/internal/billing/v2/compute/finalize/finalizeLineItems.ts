@@ -30,15 +30,15 @@ export const finalizeLineItems = ({
 	billingContext,
 	autumnBillingPlan,
 	customLineItems,
-	dropsUnchangedItemChargesAtReset = false,
+	resetsLikeStripeUnderNone = false,
 }: {
 	ctx: AutumnContext;
 	lineItems: LineItem[];
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	customLineItems?: CustomLineItem[];
-	/** set_plans only: a cycle reset under none charges a new period only for the items it changes, like Stripe. */
-	dropsUnchangedItemChargesAtReset?: boolean;
+	/** set_plans only: like Stripe, a reset now under none never credits and charges only the items it changes. */
+	resetsLikeStripeUnderNone?: boolean;
 }): LineItem[] => {
 	if (billingContext.skipBillingChanges) {
 		return [];
@@ -52,7 +52,9 @@ export const finalizeLineItems = ({
 		isNewSubscriptionBackdate({ billingContext });
 	const skipsProration =
 		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
-	const resetsCycleNow = billingContext.anchorResetRefund?.noPartialRefund;
+	const resetsCycleNow = resetsLikeStripeUnderNone
+		? billingContext.requestedBillingCycleAnchor === "now"
+		: billingContext.anchorResetRefund?.noPartialRefund;
 	if (skipsProration && !resetsCycleNow) {
 		// set_plans only: usage of a plan no subscription billed is still owed under none.
 		const unbilledUsage = isSetPlansBillingContext(billingContext)
@@ -63,8 +65,16 @@ export const finalizeLineItems = ({
 	}
 
 	const billedLineItems =
-		skipsProration && dropsUnchangedItemChargesAtReset
-			? dropUnchangedSubscriptionItemCharges({ ctx, billingContext, lineItems })
+		skipsProration && resetsLikeStripeUnderNone
+			? dropUnchangedSubscriptionItemCharges({
+					ctx,
+					billingContext,
+					lineItems: lineItems.filter(
+						({ context }) =>
+							context.direction === "charge" ||
+							context.billingTiming === "in_arrear",
+					),
+				})
 			: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
