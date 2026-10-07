@@ -5,7 +5,7 @@ import {
 	type MeteringIdentity,
 	type TrackCommand,
 } from "@autumn/balance-engine";
-import type { SubjectSnapshotMode } from "../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+import type { SubjectSnapshotMode } from "@autumn/edge-config";
 import { createPartitionWriter } from "../../../../src/processor/writer/createPartitionWriter.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createSubjectMapBudget } from "../../../../src/processor/writer/subjectMap/createSubjectMapBudget.js";

@@ -1,9 +1,11 @@
 import type { Catalog, SubjectState } from "@autumn/balance-engine";
 import type { CatalogCache } from "@autumn/catalog-lru";
-import type { EdgeConfigStore } from "@autumn/edge-config";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
 import type { PartitionPosition } from "../../../committer/types/committer.js";
-import type { SubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type {
 	StateStore,
 	SubjectBaseline,

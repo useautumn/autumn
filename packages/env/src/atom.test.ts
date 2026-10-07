@@ -168,19 +168,61 @@ describe("atom env", () => {
 		expect(receivers({ told: "9" })).toBe(7);
 	});
 
-	test("the Alien binding reads the linked queue unless ATOM_PUSH_QUEUE_CLIENT=sdk opts into the AWS SDK", () => {
-		const queueUrl = (client?: string) =>
+	describe("ATOM_PUSH_QUEUE_CLIENT picks the push reader: the AWS SDK on an SQS queue, else the Alien binding", () => {
+		const SQS_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/1/pushes";
+		const PUBSUB_BINDING = JSON.stringify({
+			service: "pubsub",
+			topic: "projects/p/topics/pushes",
+			subscription: "projects/p/subscriptions/pushes",
+		});
+		const sdkQueueUrl = ({
+			client,
+			binding,
+		}: {
+			client?: string;
+			binding?: string;
+		}) =>
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
-				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
+				ALIEN_PUSHES_BINDING: binding,
 				ATOM_PUSH_QUEUE_CLIENT: client,
 			}).ATOM_SDK_PUSH_QUEUE_URL;
 
-		expect(queueUrl()).toBeNull();
-		expect(queueUrl("sdk")).toBe(
-			"https://sqs.us-east-1.amazonaws.com/1/pushes",
-		);
-		expect(() => queueUrl("http")).toThrow("ATOM_PUSH_QUEUE_CLIENT");
+		test("auto, the default, reads an SQS queue with the SDK", () => {
+			expect(sdkQueueUrl({ binding: PUSHES_BINDING })).toBe(SQS_QUEUE_URL);
+			expect(sdkQueueUrl({ client: "auto", binding: PUSHES_BINDING })).toBe(
+				SQS_QUEUE_URL,
+			);
+		});
+
+		test("auto reads any other queue with the binding", () => {
+			expect(sdkQueueUrl({ binding: PUBSUB_BINDING })).toBeNull();
+		});
+
+		test("auto with no queue linked has no reader and no receivers", () => {
+			const env = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
+
+			expect(env.ATOM_SDK_PUSH_QUEUE_URL).toBeNull();
+			expect(env.ATOM_PUSH_RECEIVERS).toBe(0);
+		});
+
+		test("binding and sdk force their reader; sdk needs an SQS queue", () => {
+			expect(
+				sdkQueueUrl({ client: "binding", binding: PUSHES_BINDING }),
+			).toBeNull();
+			expect(sdkQueueUrl({ client: "sdk", binding: PUSHES_BINDING })).toBe(
+				SQS_QUEUE_URL,
+			);
+			expect(() =>
+				sdkQueueUrl({ client: "sdk", binding: PUBSUB_BINDING }),
+			).toThrow("ALIEN_PUSHES_BINDING");
+		});
+
+		test("any other value throws", () => {
+			expect(() =>
+				sdkQueueUrl({ client: "http", binding: PUSHES_BINDING }),
+			).toThrow("ATOM_PUSH_QUEUE_CLIENT");
+		});
 	});
 
 	test("each thread holds a share of the container's memory in parsed subjects, less the threads' own footprint and the parse expansion", () => {

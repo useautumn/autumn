@@ -29,6 +29,10 @@ import {
 	BalanceWorkerClientError,
 	createBalanceWorkerClient,
 } from "@autumn/balance-worker-client";
+import {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
+	defaultSubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
@@ -47,10 +51,6 @@ import {
 	SlotHeartbeatSchema,
 } from "../../../src/blueGreen/types/slotHeartbeat.js";
 import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
-import {
-	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
-	defaultSubjectSnapshotsEdgeConfig,
-} from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	openFixturePostgres,
 	type SeededCustomer,
