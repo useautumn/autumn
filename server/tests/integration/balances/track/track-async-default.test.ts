@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+import { ErrCode } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -127,22 +129,26 @@ test.concurrent(
 		});
 
 		for (const async of [undefined, false]) {
-			const unknownFeature = await postTrack({
-				autumn: autumnV2_5,
-				body: { customer_id: customerId, feature_id: "missing-feature", async },
+			await expectAutumnError({
+				errCode: ErrCode.FeatureNotFound,
+				func: () =>
+					autumnV2_5.track({
+						customer_id: customerId,
+						feature_id: "missing-feature",
+						async,
+					}),
 			});
-			expect(unknownFeature.status).toBe(404);
 
-			const rejectWithEventName = await postTrack({
-				autumn: autumnV2_5,
-				body: {
-					customer_id: customerId,
-					event_name: "missing-event",
-					overage_behavior: "reject",
-					async,
-				},
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				func: () =>
+					autumnV2_5.track({
+						customer_id: customerId,
+						event_name: "missing-event",
+						overage_behavior: "reject",
+						async,
+					}),
 			});
-			expect(rejectWithEventName.status).toBe(400);
 		}
 	},
 );
