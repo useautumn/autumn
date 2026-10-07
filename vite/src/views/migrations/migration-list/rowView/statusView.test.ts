@@ -160,7 +160,7 @@ test("no changes is a full neutral ring with every customer up to date", () => {
 test("failed and canceled report where they stopped and what was not reached", () => {
 	const failed = statusOf("migration-starter-v2");
 	expect(pill("migration-starter-v2")).toEqual({
-		ring: { tone: "red", fraction: 812 / 1020 },
+		ring: { tone: "orange", fraction: 812 / 1020 },
 		label: "Incomplete",
 		detail: "at 80%",
 	});
@@ -187,7 +187,7 @@ test("failed and canceled report where they stopped and what was not reached", (
 test("a failed run explains its error code in plain words", () => {
 	const view = statusOf("migration-credits-reset");
 	expect(pill("migration-credits-reset")).toEqual({
-		ring: { tone: "red", fraction: 881 / 904 },
+		ring: { tone: "orange", fraction: 881 / 904 },
 		label: "Incomplete",
 		detail: "at 97%",
 	});
