@@ -1,4 +1,4 @@
-// Contract: finite customer tasks share one queue; coordinators do not sleep while holding its only slot.
+// Contract: chunk tasks share one queue copied per run; the parent polls them from its own queue.
 import { describe, expect, test } from "bun:test";
 import {
 	MIGRATION_CHUNK_CONCURRENCY,
@@ -9,24 +9,38 @@ import {
 import {
 	getMigrationTriggerOptions,
 	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
+	MIGRATION_CHUNK_POLL_SECONDS,
 	MIGRATION_LAZY_TASK_PRIORITY_SECONDS,
 	MIGRATION_TASK_QUEUE_CONCURRENCY,
 	MIGRATION_TASK_RETRY,
+	migrationChunkIdempotencyKey,
 	migrationTaskQueue,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 
 describe("migration task scheduler", () => {
-	test("defines one fleet-wide queue with a conservative initial limit", () => {
+	test("the chunk queue admits a whole run's chunks per concurrency key", () => {
 		expect(migrationTaskQueue.name).toBe("migration-customer-work");
 		expect(migrationTaskQueue.concurrencyLimit).toBe(
 			MIGRATION_TASK_QUEUE_CONCURRENCY,
 		);
-		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
+		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBeGreaterThanOrEqual(
+			MIGRATION_CHUNK_CONCURRENCY,
+		);
+		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(50);
 	});
 
-	test("keeps fleet and per-run concurrency independently tunable", () => {
-		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(50);
+	test("the parent polls chunks every few seconds", () => {
+		expect(MIGRATION_CHUNK_POLL_SECONDS).toBe(5);
+	});
+
+	test("a page's retry gets its own idempotency key", () => {
+		const page = { migrationRunId: "mrun_1", pageIndex: 4 };
+		expect(migrationChunkIdempotencyKey({ ...page, attempt: 1 })).toBe(
+			"migration-chunk:mrun_1:4",
+		);
+		expect(migrationChunkIdempotencyKey({ ...page, attempt: 2 })).toBe(
+			"migration-chunk:mrun_1:4:retry",
+		);
 	});
 
 	test("sizes the migration DB pool for two connections per in-flight customer", () => {
