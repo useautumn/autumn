@@ -44,6 +44,8 @@ interface InlinePlanEditorProps {
 	/** The flow's current license patch; re-seeds cards on reopen so earlier
 	 * edits aren't lost. */
 	initialAddLicenses?: CustomizePlanLicense[] | null;
+	/** Who the edits apply to, shown in the editor's banner. */
+	scope?: "customer" | "invoice";
 }
 
 export function InlinePlanEditor({
@@ -53,6 +55,7 @@ export function InlinePlanEditor({
 	isOpen,
 	enableLicenseEditing = false,
 	initialAddLicenses,
+	scope = "customer",
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -82,6 +85,7 @@ export function InlinePlanEditor({
 								onSave={onSave}
 								onCancel={onCancel}
 								enableLicenseEditing={enableLicenseEditing}
+								scope={scope}
 							/>
 						</PendingLicenseLinksProvider>
 					</LicenseCustomizeCollectorProvider>
@@ -96,6 +100,7 @@ function InlinePlanEditorContent({
 	onSave,
 	onCancel,
 	enableLicenseEditing,
+	scope,
 }: {
 	onSave: (
 		product: FrontendProduct,
@@ -103,6 +108,7 @@ function InlinePlanEditorContent({
 	) => void;
 	onCancel: () => void;
 	enableLicenseEditing: boolean;
+	scope: "customer" | "invoice";
 }) {
 	const { product } = useProduct();
 	const { sheetType } = useSheet();
@@ -149,7 +155,7 @@ function InlinePlanEditorContent({
 							<EditPlanHeader />
 						</div>
 						<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4">
-							<CustomerPlanInfoBox />
+							<CustomerPlanInfoBox scope={scope} />
 							<PlanCard />
 							{enableLicenseEditing && <LicensePlanCards />}
 						</div>

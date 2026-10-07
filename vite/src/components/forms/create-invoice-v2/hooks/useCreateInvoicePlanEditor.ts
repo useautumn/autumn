@@ -6,6 +6,7 @@ import {
 	getSupportedPlanFormPatchFromDraftProduct,
 } from "@/components/forms/shared/utils/planCustomizationUtils";
 import type { CreateInvoiceForm } from "../createInvoiceFormSchema";
+import { applyInvoicePlanEditorItems } from "../utils/applyInvoicePlanEditorItems";
 import type { CreateInvoiceFormApi } from "./useCreateInvoiceForm";
 
 /** A standalone invoice never grants a trial, so the plan's own trial is left alone. */
@@ -82,12 +83,12 @@ export function useCreateInvoicePlanEditor({
 			);
 			const plan = form.store.state.values.plans[index];
 			if (plan) {
+				const edited =
+					patch.items === undefined
+						? plan
+						: applyInvoicePlanEditorItems({ plan, items: patch.items });
 				form.setFieldValue(`plans[${index}]`, {
-					...plan,
-					...(patch.items !== undefined && {
-						items: patch.items,
-						isCustom: true,
-					}),
+					...edited,
 					...("version" in patch && { version: patch.version }),
 				});
 			}
