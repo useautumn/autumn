@@ -70,5 +70,13 @@ declare module "ioredis" {
 			...permitTokens: string[]
 		): Promise<number>;
 		releaseQueuePermit(redisKey: string, token: string): Promise<number>;
+		incrementOrgThenCustomer(
+			orgKey: string,
+			customerKey: string,
+			orgWindowMs: number,
+			orgLimit: number,
+			countCustomerOverOrgLimit: string,
+			customerWindowMs: number,
+		): Promise<number[]>;
 	}
 }

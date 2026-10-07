@@ -41,18 +41,29 @@ const createFakeRedis = () => {
 				scripts.set(sha, text);
 				return sha;
 			},
-			evalsha: async (sha: string, keyCount: number, ...rest: unknown[]) => {
+			evalsha: async (
+				sha: string,
+				_keyCount: number,
+				key: string,
+				...args: unknown[]
+			) => {
 				roundTrips++;
-				const text = scripts.get(sha);
-				if (!text) throw new Error("NOSCRIPT No matching script");
-				const keys = rest.slice(0, keyCount) as string[];
-				const args = rest.slice(keyCount).map(String);
-				if (!text.includes("local function hit")) {
-					return hit(keys[0], Number(args[1]));
-				}
-				const org = hit(keys[0], Number(args[0]));
-				if (org[0] > Number(args[1]) && args[2] !== "1") return org;
-				return [...org, ...hit(keys[1], Number(args[3]))];
+				if (!scripts.has(sha)) throw new Error("NOSCRIPT No matching script");
+				return hit(key, Number(args[1]));
+			},
+			// Mirrors _luaScriptsMisc/rateLimit/incrementOrgThenCustomer.lua; the real script runs in the integration test.
+			incrementOrgThenCustomer: async (
+				orgKey: string,
+				customerKey: string,
+				orgWindowMs: number,
+				orgLimit: number,
+				countCustomerOverOrgLimit: string,
+				customerWindowMs: number,
+			) => {
+				roundTrips++;
+				const org = hit(orgKey, orgWindowMs);
+				if (org[0] > orgLimit && countCustomerOverOrgLimit !== "1") return org;
+				return [...org, ...hit(customerKey, customerWindowMs)];
 			},
 			decr: async (key: string) => {
 				roundTrips++;
