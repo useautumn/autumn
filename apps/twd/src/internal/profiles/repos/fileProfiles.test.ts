@@ -12,9 +12,8 @@ import { listFileProfiles } from "./fileProfiles.ts";
 import { insertFileRunStats, summariseRunResources } from "./fileRunStats.ts";
 
 const testDatabaseUrl = process.env.TWD_TEST_DATABASE_URL;
-const MIGRATION = join(
-	import.meta.dir,
-	"../../../db/migrations/0010_file_profiles.sql",
+const MIGRATIONS = ["0010_file_profiles.sql", "0012_run_sizing.sql"].map(
+	(name) => join(import.meta.dir, "../../../db/migrations", name),
 );
 
 const stats = ({
@@ -68,7 +67,7 @@ test.skipIf(!testDatabaseUrl)(
 			await client.unsafe(`
 				create table runs (id text primary key, status text not null, selection jsonb not null);
 				create table test_results (run_id text not null, file text not null, repetition integer, status text not null, attempt integer not null, duration_ms integer not null);
-				${readFileSync(MIGRATION, "utf8").replaceAll("--> statement-breakpoint", "")}
+				${MIGRATIONS.map((path) => readFileSync(path, "utf8").replaceAll("--> statement-breakpoint", "")).join("\n")}
 			`);
 			const ctx = {
 				db: drizzle(client, { schema }),

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { TESTS_DIR } from "../../catalog/repoPaths.ts";
-import { countPooledFiles } from "./countPooledFiles.ts";
+import { partitionPooledShards } from "./partitionPooledShards.ts";
 import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
 
 test("stripe-connect files never count toward the pool accounts a run asks for", async () => {
@@ -10,16 +10,27 @@ test("stripe-connect files never count toward the pool accounts a run asks for",
 		"integration/stripe/oauth-callback.test.ts",
 		"integration/stripe/oauth-deauthorization.test.ts",
 	];
-	expect(await countPooledFiles({ testIds, testsDirAtSha: TESTS_DIR })).toBe(0);
 	expect(
-		await countPooledFiles({
+		await partitionPooledShards({ testIds, testsDirAtSha: TESTS_DIR }),
+	).toEqual([]);
+	expect(
+		await partitionPooledShards({
 			testIds: [
 				...testIds,
-				"integration/billing/attach/attach-metadata.test.ts",
+				"integration/billing/attach/attach-metadata.test.ts#1",
+				"integration/billing/attach/attach-metadata.test.ts#2",
 			],
 			testsDirAtSha: resolve(TESTS_DIR),
 		}),
-	).toBe(1);
+	).toEqual([
+		{
+			key: "main",
+			files: [
+				"integration/billing/attach/attach-metadata.test.ts#1",
+				"integration/billing/attach/attach-metadata.test.ts#2",
+			],
+		},
+	]);
 });
 
 test("only one run holds the stripe-connect shard at a time", async () => {

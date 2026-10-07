@@ -54,5 +54,6 @@ export const getRun = async ({
 		etaMs: eta?.etaMs ?? null,
 		etaP90Ms: eta?.etaP90Ms ?? null,
 		resources: await summariseRunResources({ ctx, runId }),
+		sizing: run.sizing ?? null,
 	};
 };

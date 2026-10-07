@@ -41,6 +41,7 @@ const ownEstimate = (profile: FileProfile): FileProfileEstimate => ({
 	durationMs: profile.durationMeanMs,
 	durationP90Ms: durationP90(profile),
 	failRate: profile.failRate ?? 0,
+	packedFailRate: profile.packedFailRate ?? null,
 	metrics: Object.fromEntries(
 		METRIC_NAMES.map((name) => [name, profile[name] ?? null]),
 	) as ProfileMetrics,
@@ -78,6 +79,7 @@ const groupEstimate = ({
 				profiles.map((p) => p.failRate),
 				0.75,
 			) ?? 0,
+		packedFailRate: null,
 		metrics: Object.fromEntries(
 			METRIC_NAMES.map((name) => [
 				name,

@@ -42,6 +42,9 @@ export const fileProfiles = pgTable(
 		durationMeanMs: real("duration_mean_ms").notNull(),
 		durationVariance: real("duration_variance").notNull().default(0),
 		failRate: real("fail_rate").notNull().default(0),
+		/** First-attempt failures while sharing a worker; well above failRate means the file must run alone. */
+		packedSamples: integer("packed_samples").notNull().default(0),
+		packedFailRate: real("packed_fail_rate"),
 		stripeRequests: real("stripe_requests"),
 		stripeTestRequests: real("stripe_test_requests"),
 		stripeServerRequests: real("stripe_server_requests"),

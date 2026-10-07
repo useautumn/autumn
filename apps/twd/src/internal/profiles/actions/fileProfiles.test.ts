@@ -50,6 +50,7 @@ const sample = (
 	durationMs: overrides.durationMs ?? 10_000,
 	failure: overrides.failure ?? 0,
 	hung: overrides.hung ?? false,
+	packed: overrides.packed ?? false,
 	metrics:
 		overrides.metrics === undefined
 			? statsToProfileMetrics(overrides.stats ?? stats({}))
@@ -117,6 +118,18 @@ describe("foldFileProfile", () => {
 		expect(failedNoStats.statsSamples).toBe(1);
 		expect(failedNoStats.samples).toBe(2);
 	});
+});
+
+test("packed failures feed their own fast-moving rate; solo runs leave it alone", () => {
+	const first = fold(undefined, sample({}));
+	expect(first.packedFailRate).toBeNull();
+	const packedFail = fold(first, sample({ failure: 1, packed: true }));
+	expect(packedFail).toMatchObject({ packedSamples: 1, packedFailRate: 1 });
+	const packedPass = fold(packedFail, sample({ packed: true }));
+	expect(packedPass.packedFailRate).toBeCloseTo(0.5);
+	expect(fold(packedPass, sample({ failure: 1 })).packedFailRate).toBeCloseTo(
+		0.5,
+	);
 });
 
 test("a repeat run counts once: means averaged, peaks keep the worst", () => {

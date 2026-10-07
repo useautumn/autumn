@@ -84,6 +84,7 @@ export const createRun = async ({
 			purpose: body.purpose,
 			isBaseline,
 			maxWorkers: body.maxWorkers ?? null,
+			maxFilesPerWorker: body.maxFilesPerWorker ?? null,
 			repeat: body.repeat,
 			fileCount: files.length,
 			progress,

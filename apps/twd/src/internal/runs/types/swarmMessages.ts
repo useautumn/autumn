@@ -1,5 +1,6 @@
 import type { FileStats } from "@tw/worker/runTestFileWithStats.ts";
 import type { RunFile, WorkerState } from "../../../api/contract.ts";
+import type { SwarmSizing } from "../sizing/types/swarmSizing.ts";
 
 export type SwarmAccount = { accountId: string; secretKey: string };
 
@@ -18,6 +19,8 @@ export type SwarmInit = {
 	workersWanted: number;
 	/** Sizes the Stripe budget as if every usable key ran its full per-key cap. */
 	usableKeys: number;
+	/** Files per worker and planned workers per shard (twd's sizing decision). */
+	sizing: SwarmSizing;
 	ingressUrl: string;
 	ingressToken: string;
 	/** The stripe-connect shard's dedicated platform; absent when SHARD_STRIPE_* is unset. */

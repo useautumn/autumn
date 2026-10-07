@@ -21,10 +21,6 @@ import {
 	type RunDemand,
 	registerRunDemand,
 } from "../../accounts/allocator/accountAllocator.ts";
-import {
-	ACCOUNTS_PER_KEY_CAP,
-	MAX_RUN_WORKERS,
-} from "../../accounts/allocator/poolLimits.ts";
 import { usableKey } from "../../accounts/repos/cleanAccountsRepo.ts";
 import { getTestTreeAtSha } from "../../catalog/actions/getTestTreeAtSha.ts";
 import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";
@@ -62,6 +58,7 @@ import {
 } from "../repos/runsRepo.ts";
 import { endRunWorkers, insertRunWorker } from "../repos/runWorkersRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
+import { resolveRunSizing } from "../sizing/resolveRunSizing.ts";
 import { spawnTwChild } from "../spawnTwChild.ts";
 import { type RunProgress, readRunProgress } from "../types/runProgress.ts";
 import type {
@@ -69,7 +66,6 @@ import type {
 	SwarmInit,
 	SwarmParentMessage,
 } from "../types/swarmMessages.ts";
-import { countPooledFiles } from "./countPooledFiles.ts";
 import { deleteStripeConnectAccounts } from "./deleteStripeConnectAccounts.ts";
 import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
 
@@ -372,6 +368,7 @@ export const handleSwarmJob: JobHandler = async ({
 	const logWriter = createRunLogWriter({ ctx, runId });
 	const accrueTimer = setInterval(() => void accrue(), ACCRUE_MS);
 	let etaTimer: ReturnType<typeof setInterval> | undefined;
+	let filesPerWorker = 1;
 	try {
 		const files = await orderFilesLongestFirst({
 			ctx,
@@ -394,6 +391,7 @@ export const handleSwarmJob: JobHandler = async ({
 				const next = eta.estimate({
 					live,
 					moreWorkersWanted: demand.wants,
+					slotsPerWorker: filesPerWorker,
 					now: Date.now(),
 				});
 				const key = JSON.stringify(next);
@@ -419,20 +417,23 @@ export const handleSwarmJob: JobHandler = async ({
 			ctx,
 			sha: run.sha,
 		});
-		const pooledFiles = await countPooledFiles({
+		const {
+			sizing,
+			swarm: swarmSizing,
+			pooledFiles,
+		} = await resolveRunSizing({
+			ctx,
+			run,
 			testIds: files,
 			testsDirAtSha,
+			usableKeys,
 		});
-		const workersWanted = Math.min(
-			pooledFiles,
-			run.maxWorkers ?? Number.POSITIVE_INFINITY,
-			usableKeys * ACCOUNTS_PER_KEY_CAP,
-			MAX_RUN_WORKERS,
-		);
+		const workersWanted = sizing.workers;
+		filesPerWorker = sizing.filesPerWorker;
 		setStatus({
 			status: "warming",
 			phase: "waiting for warm image",
-			set: { startedAt: new Date(), workersWanted },
+			set: { startedAt: new Date(), workersWanted, sizing },
 		});
 		if (files.length === 0) throw new Error("run has no planned files");
 		if (pooledFiles > 0 && workersWanted === 0) {
@@ -467,6 +468,12 @@ export const handleSwarmJob: JobHandler = async ({
 			accounts: parked.splice(0).map(toSwarmAccount),
 			workersWanted,
 			usableKeys,
+			sizing: {
+				...swarmSizing,
+				soloFiles: swarmSizing.soloFiles.map((testId) =>
+					toAbsoluteTestPath({ testId }),
+				),
+			},
 			ingressUrl: ctx.env.TWD_PUBLIC_URL,
 			ingressToken: ctx.env.TWD_INGRESS_TOKEN,
 			stripeConnectShard: resolveStripeConnectShard(ctx.env) ?? undefined,

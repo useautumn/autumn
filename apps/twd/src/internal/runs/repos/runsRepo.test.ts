@@ -22,6 +22,8 @@ const runRow = ({
 	newFailures: null,
 	workersWanted: 588,
 	maxWorkers: null,
+	maxFilesPerWorker: null,
+	sizing: null,
 	repeat: 1,
 	costUsd: 0,
 	workerSeconds: 0,

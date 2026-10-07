@@ -11,6 +11,8 @@ const MEAN_ALPHA = 0.3;
 const PEAK_UP_ALPHA = 0.5;
 const PEAK_DOWN_ALPHA = 0.15;
 const FAIL_ALPHA = 0.1;
+/** One packed failure is enough to stop packing a file. */
+const PACKED_FAIL_ALPHA = 0.5;
 
 export const statsToProfileMetrics = (stats: FileStats): ProfileMetrics => ({
 	stripeRequests: stats.stripe?.requests ?? null,
@@ -62,6 +64,7 @@ export const combineRunSamples = (
 		durationMs: mean(samples.map(({ durationMs }) => durationMs)),
 		failure: mean(samples.map(({ failure }) => failure)),
 		hung: samples.some(({ hung }) => hung),
+		packed: samples.some(({ packed }) => packed),
 		metrics,
 	};
 };
@@ -164,6 +167,14 @@ export const foldFileProfile = ({
 				value: sample.failure,
 				alpha: FAIL_ALPHA,
 			}) ?? 0,
+		packedSamples: (previous?.packedSamples ?? 0) + (sample.packed ? 1 : 0),
+		packedFailRate: sample.packed
+			? smooth({
+					previous: previous?.packedFailRate,
+					value: sample.failure,
+					alpha: PACKED_FAIL_ALPHA,
+				})
+			: (previous?.packedFailRate ?? null),
 		...smoothedMetrics,
 		lastRunId: runId,
 		updatedAt: new Date(),
