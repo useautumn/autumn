@@ -38,12 +38,17 @@ describe("listRateLimitPolicies", () => {
 		});
 	});
 
-	test("lists version limits beside the otherwise limit", () => {
+	test("lists version limits, each with its own counter key, beside the fallback", () => {
 		expect(findPolicy({ id: "customer_list" }).perOrg).toMatchObject({
 			limit: 5,
+			key: "list_customers:{orgId}:{env}",
 			versionLimits: [
-				{ upTo: "2.2.0", limit: 5 },
-				{ upTo: "2.3.0", limit: 50 },
+				{ upTo: "2.2.0", limit: 5, key: "list_customers:{orgId}:{env}:v2.2.0" },
+				{
+					upTo: "2.3.0",
+					limit: 50,
+					key: "list_customers:{orgId}:{env}:v2.3.0",
+				},
 			],
 		});
 	});

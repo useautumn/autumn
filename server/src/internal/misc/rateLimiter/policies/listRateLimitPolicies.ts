@@ -34,6 +34,14 @@ const toLayerSummary = ({
 			: Object.entries(limit.upTo).map(([upTo, versionLimit]) => ({
 					upTo: upTo as ApiVersion,
 					limit: versionLimit,
+					key: getRateLimitKey({
+						ctx: {
+							...KEY_PLACEHOLDERS,
+							apiVersion: { value: upTo as ApiVersion },
+						},
+						layer,
+						scope,
+					}),
 				})),
 		windowMs: layer.windowMs,
 		counted: layer.counted ?? "allPods",
