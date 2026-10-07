@@ -18,6 +18,9 @@ const COUNTED_PATHS = {
 	"/v1/catalog.set": "pushes",
 } as const;
 
+/** A line per allowed check costs a saturated Atom about an eighth of its capacity, so 1 in 100 is kept; denies all are. */
+const ALLOWED_CHECK_SAMPLE_RATE = 0.01;
+
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
 
@@ -42,7 +45,7 @@ export function requestLogMiddleware({
 			COUNTED_PATHS[context.req.path as keyof typeof COUNTED_PATHS];
 		if (counted) ctx.counters.add(counted);
 		const allowed = context.get("allowed") === true;
-		if (allowed && Math.random() >= ctx.allowLogSampleRate) return;
+		if (allowed && Math.random() >= ALLOWED_CHECK_SAMPLE_RATE) return;
 
 		const statusCode = context.res.status;
 		const durationMs = Date.now() - startedAt;
@@ -60,7 +63,7 @@ export function requestLogMiddleware({
 				}),
 			},
 			res: await loggedResponseOf({ context }),
-			...(allowed && { sample_rate: ctx.allowLogSampleRate }),
+			...(allowed && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),
 			...(forwarded && { forwarded }),
 			...(failure && {
 				errorCode: failure.code,

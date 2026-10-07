@@ -64,12 +64,8 @@ const createLogger = () => {
 	};
 };
 
-/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder. Every allowed check is logged unless told otherwise. */
-const createDeployedApp = ({
-	allowLogSampleRate = 1,
-}: {
-	allowLogSampleRate?: number;
-} = {}) => {
+/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder. */
+const createDeployedApp = () => {
 	const auth = createDeployedAuth({
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
@@ -87,7 +83,6 @@ const createDeployedApp = ({
 				autumnApiUrl: AUTUMN_API_URL,
 				health: HEALTH,
 				counters,
-				allowLogSampleRate,
 			},
 		}),
 		logged,
@@ -112,7 +107,6 @@ const createMultiTenantApp = () => {
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
 			counters,
-			allowLogSampleRate: 1,
 		},
 	});
 };
@@ -121,8 +115,13 @@ const createMultiTenantApp = () => {
 const autumnAnswering = ({ status, body }: { status: number; body: unknown }) =>
 	spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
 
+/** Every allowed check falls inside the 1-in-100 sample, or none does. */
+const sampleEveryAllow = ({ sampled }: { sampled: boolean }) =>
+	spyOn(Math, "random").mockReturnValue(sampled ? 0 : 0.99);
+
 afterEach(() => {
 	spyOn(globalThis, "fetch").mockRestore();
+	spyOn(Math, "random").mockRestore();
 	for (const auth of opened.splice(0)) auth.close();
 	for (const directory of directories.splice(0))
 		rmSync(directory, { recursive: true, force: true });
@@ -496,6 +495,7 @@ describe("the request line", () => {
 	});
 
 	test("an answered check's line has its verdict at res.allowed, where its body has it, and no body; an allow says its sample rate", async () => {
+		sampleEveryAllow({ sampled: true });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 
@@ -511,7 +511,7 @@ describe("the request line", () => {
 			[2, false],
 		] as const) {
 			expect(logged[index]?.fields).toEqual({
-				...(allowed && { sample_rate: 1 }),
+				...(allowed && { sample_rate: 0.01 }),
 				statusCode: 200,
 				durationMs: expect.any(Number),
 				req: {
@@ -529,8 +529,9 @@ describe("the request line", () => {
 		}
 	});
 
-	test("allowed checks are logged at the sample rate; every deny is logged, and every check is counted", async () => {
-		const { app, logged } = createDeployedApp({ allowLogSampleRate: 0 });
+	test("an allowed check outside the sample leaves no line; every deny is logged, and every check is counted", async () => {
+		sampleEveryAllow({ sampled: false });
+		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 		const checksBefore = (await (await app.request("/health")).json())
 			.threads[0].checks;

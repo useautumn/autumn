@@ -12,8 +12,6 @@ export type AtomHttpContext = {
 	autumnApiUrl: string;
 	health: AtomHealthSource;
 	counters: ThreadCounters;
-	/** The share of allowed checks that get a request line. */
-	allowLogSampleRate: number;
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
 };
