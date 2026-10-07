@@ -32,5 +32,5 @@ test("succeeded and failed badges keep their labels", () => {
 	).toContain("Passed");
 	expect(
 		renderToStaticMarkup(<ItemEventStatusBadge status="failed" />),
-	).toContain("Failed");
+	).toContain("Incomplete");
 });

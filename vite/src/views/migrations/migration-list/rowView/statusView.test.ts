@@ -119,7 +119,7 @@ test("a failed latest dry run reads as failed, not done", () => {
 		now: FIXTURE_NOW,
 	});
 	expect(view.chip).toEqual({ label: "Draft", details: undefined });
-	expect(view.card.chip.details).toEqual(["· dry run failed"]);
+	expect(view.card.chip.details).toEqual(["· dry run incomplete"]);
 });
 
 test("completed is green when clean and amber with the failed count", () => {
@@ -131,7 +131,7 @@ test("completed is green when clean and amber with the failed count", () => {
 	expect(pill("migration-seat-licenses")).toEqual({
 		ring: { tone: "amber", fraction: 1 },
 		label: "Completed",
-		detail: "· 2 failed",
+		detail: "· 2 incomplete",
 	});
 });
 
@@ -192,7 +192,7 @@ test("a failed run explains its error code in plain words", () => {
 		detail: "at 97%",
 	});
 	expect(view.card.error).toBe(
-		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
+		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked incomplete so you can retry them.",
 	);
 	expect(view.card.legend).toEqual([
 		{ kind: "failed", value: 881 },

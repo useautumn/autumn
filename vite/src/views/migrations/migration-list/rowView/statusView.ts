@@ -32,7 +32,7 @@ export const SEGMENTS: Record<
 		label: "Already up to date",
 	},
 	skipped: { className: "bg-[#E5A21F]", label: "Skipped" },
-	failed: { className: "bg-[#E5484D]", label: "Failed" },
+	failed: { className: "bg-[#E8742C]", label: "Incomplete" },
 	in_flight: { className: "bg-[#30A46C]/45", label: "In progress" },
 	not_reached: {
 		className: "bg-black/[0.07] dark:bg-[#262626]",
@@ -128,7 +128,7 @@ const PREVIEW_OUTCOMES: Record<MigrationRunStatus, string> = {
 	running: " running",
 	succeeded: "",
 	no_changes: "",
-	failed: " failed",
+	failed: " incomplete",
 	canceled: " canceled",
 };
 
@@ -175,7 +175,9 @@ const PILLS: Record<
 		return {
 			label: "Completed",
 			detail:
-				failed > 0 ? `· ${failed.toLocaleString("en-US")} failed` : undefined,
+				failed > 0
+					? `· ${failed.toLocaleString("en-US")} incomplete`
+					: undefined,
 			fraction: 1,
 			tone: failed > 0 ? "amber" : "green",
 		};
@@ -195,7 +197,7 @@ const PILLS: Record<
 
 const RUN_ERROR_MESSAGES: Record<MigrationRunErrorCode, string> = {
 	cache_invalidation_incomplete:
-		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
+		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked incomplete so you can retry them.",
 	stripe_error:
 		"Stripe returned an error, so the run stopped. Customers already migrated keep their changes.",
 	timed_out:
