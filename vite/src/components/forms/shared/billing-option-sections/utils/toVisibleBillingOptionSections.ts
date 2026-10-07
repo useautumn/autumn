@@ -7,6 +7,7 @@ import {
 } from "../types/billingOptionSectionTypes";
 
 const SECTION_LABELS: Record<BillingOptionSectionId, string> = {
+	plan: "Plan",
 	charges: "Charges",
 	timing: "Timing",
 	balances: "Balances",

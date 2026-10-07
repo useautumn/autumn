@@ -1,23 +1,20 @@
 import type { TrialOnEnd } from "@autumn/shared";
+import { Switch } from "@autumn/ui";
+import { BillingOptionSections } from "@/components/forms/shared/billing-option-sections/BillingOptionSections";
 import {
-	Button,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-	Switch,
-} from "@autumn/ui";
-import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+	catalogTrialChange,
+	toggledChange,
+	versionChange,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import {
 	FREE_TRIAL_LENGTH_FIELDS,
 	FreeTrialLengthFields,
 } from "@/components/forms/shared/FreeTrialLengthFields";
+import { PlanVersionConfigRow } from "@/components/forms/shared/PlanVersionConfigRow";
 import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
 import { toggledFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
-import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { AttachCurrencyRow } from "./AttachCurrencyRow";
 
@@ -31,127 +28,118 @@ export function AttachPlanOptions() {
 		attachCurrency,
 		additionalPlans: { isMultiPlan },
 	} = useAttachFormContext();
-	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
-	const [versionOpen, setVersionOpen] = useState(false);
+	const {
+		trialEnabled,
+		trialLength,
+		trialDuration,
+		trialCardRequired,
+		trialOnEnd,
+		grantFree,
+		version,
+		currency,
+	} = formValues;
 
-	const showVersionSelector = numVersions > 1 && !isMultiPlan;
 	const handleTrialOnEndChange = supportsTrialRevert
 		? (value: TrialOnEnd) => form.setFieldValue("trialOnEnd", value)
 		: undefined;
 
 	return (
-		<div className="flex flex-col gap-4">
-			{showVersionSelector && (
-				<ConfigRow
-					title="Plan Version"
-					description="Select which version of the plan to attach"
-					action={
-						<form.AppField name="version">
-							{(field) => {
-								const selectedVersion =
-									field.state.value ?? product?.version ?? numVersions;
-								return (
-									<DropdownMenu
-										open={versionOpen}
-										onOpenChange={setVersionOpen}
-									>
-										<DropdownMenuTrigger asChild>
-											<Button
-												variant="secondary"
-												size="mini"
-												className={cn(
-													"gap-1",
-													versionOpen && "btn-secondary-active",
-												)}
-											>
-												Version {selectedVersion}
-												<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											{Array.from(
-												{ length: numVersions },
-												(_, index) => numVersions - index,
-											).map((version) => (
-												<DropdownMenuItem
-													key={version}
-													onClick={() => {
-														if (selectedVersion === version) return;
-														field.handleChange(version);
-														form.setFieldValue("items", null);
-														form.setFieldValue("addLicenses", null);
-														form.setFieldValue("licenseQuantities", {});
-													}}
-													className="flex gap-3"
-												>
-													<CheckIcon
-														size={12}
-														className={
-															selectedVersion === version
-																? "opacity-100"
-																: "opacity-0"
-														}
-													/>
-													Version {version}
-												</DropdownMenuItem>
-											))}
-										</DropdownMenuContent>
-									</DropdownMenu>
-								);
-							}}
-						</form.AppField>
-					}
-				/>
-			)}
-
-			{attachCurrency.showCurrencySelector && <AttachCurrencyRow />}
-
-			<FreeTrialConfigRow
-				form={form}
-				lengthFields={
-					<FreeTrialLengthFields
-						form={form}
-						fields={FREE_TRIAL_LENGTH_FIELDS}
-					/>
-				}
-				description={
-					isMultiPlan
-						? "Let the customer try every selected plan before being charged"
-						: undefined
-				}
-				expanded={!!trialEnabled}
-				checked={!!trialEnabled}
-				trialCardRequired={!!trialCardRequired}
-				trialOnEnd={trialOnEnd}
-				onTrialOnEndChange={handleTrialOnEndChange}
-				onToggle={(enabled) =>
-					applyFreeTrialFormValues({
-						form,
-						values: toggledFreeTrialFormValues({
-							enabled,
-							trialLength: formValues.trialLength,
-							catalogFreeTrial: product?.free_trial,
+		<BillingOptionSections
+			sections={{
+				plan: [
+					{
+						id: "version",
+						visible: numVersions > 1 && !isMultiPlan,
+						change: versionChange({ version, defaultVersion: numVersions }),
+						row: (
+							<PlanVersionConfigRow
+								description="Select which version of the plan to attach"
+								numVersions={numVersions}
+								version={version ?? product?.version ?? numVersions}
+								onVersionChange={(nextVersion) => {
+									form.setFieldValue("version", nextVersion);
+									form.setFieldValue("items", null);
+									form.setFieldValue("addLicenses", null);
+									form.setFieldValue("licenseQuantities", {});
+								}}
+							/>
+						),
+					},
+					{
+						id: "currency",
+						visible: attachCurrency.showCurrencySelector,
+						change: currency ? currency.toUpperCase() : null,
+						row: <AttachCurrencyRow />,
+					},
+					{
+						id: "freeTrial",
+						visible: true,
+						change: catalogTrialChange({
+							enabled: !!trialEnabled,
+							length: trialLength,
+							duration: trialDuration,
+							catalogTrial: product?.free_trial,
 						}),
-					})
-				}
-			/>
-
-			<ConfigRow
-				title="Grant for Free"
-				description={
-					isMultiPlan
-						? "Remove all prices on every selected plan for this customer"
-						: "Remove all prices on this plan for this customer"
-				}
-				action={
-					<Switch
-						checked={!!grantFree}
-						onCheckedChange={(enabled) =>
-							form.setFieldValue("grantFree", enabled)
-						}
-					/>
-				}
-			/>
-		</div>
+						row: (
+							<FreeTrialConfigRow
+								form={form}
+								lengthFields={
+									<FreeTrialLengthFields
+										form={form}
+										fields={FREE_TRIAL_LENGTH_FIELDS}
+									/>
+								}
+								description={
+									isMultiPlan
+										? "Let the customer try every selected plan before being charged"
+										: undefined
+								}
+								expanded={!!trialEnabled}
+								checked={!!trialEnabled}
+								trialCardRequired={!!trialCardRequired}
+								trialOnEnd={trialOnEnd}
+								onTrialOnEndChange={handleTrialOnEndChange}
+								onToggle={(enabled) =>
+									applyFreeTrialFormValues({
+										form,
+										values: toggledFreeTrialFormValues({
+											enabled,
+											trialLength,
+											catalogFreeTrial: product?.free_trial,
+										}),
+									})
+								}
+							/>
+						),
+					},
+					{
+						id: "grantFree",
+						visible: true,
+						change: toggledChange({
+							enabled: !!grantFree,
+							label: "granted free",
+						}),
+						row: (
+							<ConfigRow
+								title="Grant for Free"
+								description={
+									isMultiPlan
+										? "Remove all prices on every selected plan for this customer"
+										: "Remove all prices on this plan for this customer"
+								}
+								action={
+									<Switch
+										checked={!!grantFree}
+										onCheckedChange={(enabled) =>
+											form.setFieldValue("grantFree", enabled)
+										}
+									/>
+								}
+							/>
+						),
+					},
+				],
+			}}
+		/>
 	);
 }

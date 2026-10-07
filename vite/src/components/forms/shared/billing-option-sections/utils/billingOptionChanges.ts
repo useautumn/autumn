@@ -86,3 +86,42 @@ export function freeTrialChange({
 	if (!enabled || !length) return "no trial";
 	return `${length}-${duration} trial`;
 }
+
+/** A trial that differs from the plan's catalog trial; turning a catalog trial off reads "no trial". */
+export function catalogTrialChange({
+	enabled,
+	length,
+	duration,
+	catalogTrial,
+}: {
+	enabled: boolean;
+	length: number | null;
+	duration: FreeTrialDuration;
+	catalogTrial:
+		| { length: number | string; duration: FreeTrialDuration }
+		| null
+		| undefined;
+}) {
+	const matchesCatalog = catalogTrial
+		? enabled &&
+			Number(catalogTrial.length) === length &&
+			catalogTrial.duration === duration
+		: !enabled;
+	return freeTrialChange({
+		edited: !matchesCatalog,
+		enabled,
+		length,
+		duration,
+	});
+}
+
+export const versionChange = ({
+	version,
+	defaultVersion,
+}: {
+	version: number | undefined;
+	defaultVersion: number;
+}) =>
+	version === undefined || version === defaultVersion
+		? null
+		: `version ${version}`;

@@ -8,7 +8,10 @@ import type {
 } from "./types/billingOptionSectionTypes";
 import { toVisibleBillingOptionSections } from "./utils/toVisibleBillingOptionSections";
 
-const DEFAULT_OPEN_SECTION: BillingOptionSectionId = "charges";
+const DEFAULT_OPEN_SECTIONS = new Set<BillingOptionSectionId>([
+	"plan",
+	"charges",
+]);
 
 /** Collapsible billing option sections; a section with no visible option is not rendered. */
 export function BillingOptionSections({
@@ -31,7 +34,8 @@ export function BillingOptionSections({
 						<BillingOptionSection
 							section={section}
 							open={
-								openSections[section.id] ?? section.id === DEFAULT_OPEN_SECTION
+								openSections[section.id] ??
+								DEFAULT_OPEN_SECTIONS.has(section.id)
 							}
 							onOpenChange={(open) =>
 								setOpenSections((current) => ({

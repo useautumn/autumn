@@ -249,9 +249,7 @@ function SelectContent() {
 						</motion.div>
 					)}
 					<motion.div variants={STAGGER_ITEM}>
-						<SheetSection withSeparator>
-							<AttachPlanOptions />
-						</SheetSection>
+						<AttachPlanOptions />
 					</motion.div>
 					<motion.div variants={STAGGER_ITEM}>
 						<SheetFooter>

@@ -16,7 +16,6 @@ import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
 	UpdateSubscriptionGenerationBar,
-	UpdateSubscriptionPlanOptions,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
@@ -140,7 +139,6 @@ function EditContent() {
 					)}
 
 				<EditPlanSection />
-				<UpdateSubscriptionPlanOptions />
 				<UpdateSubscriptionAdvancedSection />
 				<UpdateSubscriptionPreviewSection />
 				<UpdateSubscriptionFooter />

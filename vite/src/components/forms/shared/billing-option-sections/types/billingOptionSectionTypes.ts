@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 export const BILLING_OPTION_SECTION_IDS = [
+	"plan",
 	"charges",
 	"timing",
 	"balances",

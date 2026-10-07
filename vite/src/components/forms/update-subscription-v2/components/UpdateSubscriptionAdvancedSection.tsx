@@ -5,24 +5,29 @@ import { BillingOptionSections } from "@/components/forms/shared/billing-option-
 import {
 	billingCycleAnchorChange,
 	discountsChange,
+	freeTrialChange,
 	prorationChange,
 	toggledChange,
+	versionChange,
 } from "@/components/forms/shared/billing-option-sections/utils/billingOptionChanges";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import {
 	DISCOUNTS_FIELDS,
 	DiscountsFieldGroup,
 } from "@/components/forms/shared/discount-row/DiscountsFieldGroup";
+import { PlanVersionConfigRow } from "@/components/forms/shared/PlanVersionConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
+import { UpdateSubscriptionFreeTrialRow } from "./UpdateSubscriptionFreeTrialRow";
 
 // The form stores the default as null, so any non-null billingBehavior is a change.
 const DEFAULT_PRORATION: BillingBehavior = "prorate_immediately";
 
 export function UpdateSubscriptionAdvancedSection() {
-	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
+	const { form, formValues, formContext, trialState } =
+		useUpdateSubscriptionFormContext();
 	const {
 		billingBehavior,
 		resetBillingCycle,
@@ -32,8 +37,9 @@ export function UpdateSubscriptionAdvancedSection() {
 		noBillingChanges,
 		discounts,
 		removedRewardIds,
+		version,
 	} = formValues;
-	const { customerProduct, product } = formContext;
+	const { customerProduct, product, numVersions, currentVersion } = formContext;
 	const { getDiscountsForSubscription } = useCusRewardsQuery();
 	const appliedDiscounts = getDiscountsForSubscription({
 		subscriptionIds: customerProduct.subscription_ids ?? [],
@@ -47,10 +53,44 @@ export function UpdateSubscriptionAdvancedSection() {
 		},
 	});
 	const proration = billingBehavior ?? DEFAULT_PRORATION;
+	const addsTrial = trialState.isCurrentlyTrialing
+		? trialState.isTrialModified
+		: trialState.isTrialExpanded && trialState.hasTrialValue;
+	const trialChange = trialState.removeTrial
+		? "end trial"
+		: freeTrialChange({
+				edited: addsTrial,
+				enabled: true,
+				length: trialState.trialLength,
+				duration: trialState.trialDuration,
+			});
 
 	return (
 		<BillingOptionSections
 			sections={{
+				plan: [
+					{
+						id: "version",
+						visible: numVersions > 1,
+						change: versionChange({ version, defaultVersion: currentVersion }),
+						row: (
+							<PlanVersionConfigRow
+								description="Select which version of the plan to use"
+								numVersions={numVersions}
+								version={version ?? currentVersion ?? numVersions}
+								onVersionChange={(nextVersion) =>
+									form.setFieldValue("version", nextVersion)
+								}
+							/>
+						),
+					},
+					{
+						id: "freeTrial",
+						visible: true,
+						change: trialChange,
+						row: <UpdateSubscriptionFreeTrialRow />,
+					},
+				],
 				charges: [
 					{
 						id: "discounts",
