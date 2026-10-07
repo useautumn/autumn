@@ -84,20 +84,10 @@ export const InvoiceCustomizeItemSchema = z
 		}
 	});
 
-export const InvoiceCustomizeSchema = z
-	.object({
-		price: InvoiceBasePriceParamsSchema.nullable().optional().meta({
-			description:
-				"Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line.",
-		}),
-		items: z.array(InvoiceCustomizeItemSchema).optional().meta({
-			description:
-				"Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice.",
-		}),
-	})
-	.strict()
+const InvoiceCustomizeItemsSchema = z
+	.array(InvoiceCustomizeItemSchema)
 	.check((ctx) => {
-		const featureIds = (ctx.value.items ?? []).map((item) => item.feature_id);
+		const featureIds = ctx.value.map((item) => item.feature_id);
 		const duplicate = featureIds.find(
 			(featureId, index) => featureIds.indexOf(featureId) !== index,
 		);
@@ -105,11 +95,23 @@ export const InvoiceCustomizeSchema = z
 			ctx.issues.push({
 				code: "custom",
 				message: `customize.items lists feature ${duplicate} more than once.`,
-				input: ctx.value.items,
-				path: ["items"],
+				input: ctx.value,
 			});
 		}
+	});
+
+export const InvoiceCustomizeSchema = z
+	.object({
+		price: InvoiceBasePriceParamsSchema.nullable().optional().meta({
+			description:
+				"Override the plan's base price for this invoice. Pass null or an amount of 0 to omit the base price line.",
+		}),
+		items: InvoiceCustomizeItemsSchema.optional().meta({
+			description:
+				"Override feature pricing for this invoice. Only pricing fields are accepted; grants, resets and rollovers are not part of an invoice.",
+		}),
 	})
+	.strict()
 	.meta({
 		title: "InvoiceCustomize",
 		description:
@@ -173,7 +175,7 @@ export const InvoiceLicenseQuantitySchema = z
 				price: InvoiceBasePriceParamsSchema.nullable().optional().meta({
 					description: "Override the license's per-seat price on this invoice.",
 				}),
-				items: z.array(InvoiceCustomizeItemSchema).optional().meta({
+				items: InvoiceCustomizeItemsSchema.optional().meta({
 					description:
 						"Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features.",
 				}),

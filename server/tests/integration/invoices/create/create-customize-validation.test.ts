@@ -5,6 +5,7 @@
  *   - Prices that the catalog would refuse (amount+tiers, neither, flat_amount on
  *     graduated, volume on usage_based, tiers not ascending or not ending in inf,
  *     billing_units <= 0) are a 400, as are negative amounts and duplicate items.
+ *   - The same rules apply to license_quantities[].customize.items.
  *   - An override only prices lines of its own billing_method.
  *   - Omitted tier_behavior is graduated, with or without a catalog price.
  *   - Preview lines and totals are the whole cents Stripe bills.
@@ -422,3 +423,126 @@ test.concurrent(
 		expect(outcome.response.preview.total).toBe(10);
 	},
 );
+
+const licenseCustomerId = "inv-create-customize-validation-license";
+const licenseParent = products.pro({
+	id: "customize-validation-license-parent",
+	items: [],
+});
+const licenseSeat = products.base({
+	id: "customize-validation-license-seat",
+	items: [
+		items.monthlyPrice({ price: 15 }),
+		items.prepaidUsers({ billingUnits: 1 }),
+	],
+});
+
+const runLicenseSetup = () =>
+	initScenario({
+		customerId: licenseCustomerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: [licenseParent, licenseSeat] }),
+		],
+		actions: [
+			s.licenses.link({
+				parentProductId: licenseParent.id,
+				licenseProductId: licenseSeat.id,
+				included: 0,
+			}),
+		],
+	});
+let licenseSetupPromise: ReturnType<typeof runLicenseSetup> | undefined;
+
+const invoiceLicense = async ({
+	customizeItems,
+	featureId,
+}: {
+	customizeItems: { feature_id: string; price: ItemPrice }[];
+	featureId: string;
+}) => {
+	licenseSetupPromise ??= runLicenseSetup();
+	const { autumnV2_3 } = await licenseSetupPromise;
+	return postInvoiceCreate({
+		autumnV2_3,
+		params: {
+			customer_id: licenseCustomerId,
+			preview: true,
+			plans: [
+				{
+					plan_id: licenseParent.id,
+					customize: { price: null },
+					license_quantities: [
+						{
+							license_plan_id: licenseSeat.id,
+							quantity: 0,
+							customize: { items: customizeItems },
+							feature_quantities: [billed(featureId, 5)],
+						},
+					],
+				},
+			],
+		},
+	});
+};
+
+const invalidLicenseRequests: [string, Parameters<typeof invoiceLicense>[0]][] =
+	[
+		[
+			"a negative license item amount",
+			{
+				featureId: TestFeature.Users,
+				customizeItems: [
+					{ feature_id: TestFeature.Users, price: prepaid({ amount: -2 }) },
+				],
+			},
+		],
+		[
+			"license item tiers without a final inf",
+			{
+				featureId: TestFeature.Storage,
+				customizeItems: [
+					{
+						feature_id: TestFeature.Storage,
+						price: graduatedTiers([{ to: 100, amount: 1 }]),
+					},
+				],
+			},
+		],
+		[
+			"two license customize.items for one feature",
+			{
+				featureId: TestFeature.Users,
+				customizeItems: [
+					{ feature_id: TestFeature.Users, price: prepaid({ amount: 1 }) },
+					{ feature_id: TestFeature.Users, price: prepaid({ amount: 100 }) },
+				],
+			},
+		],
+		[
+			"a license item whose billing_method differs from the line's",
+			{
+				featureId: TestFeature.Users,
+				customizeItems: [
+					{
+						feature_id: TestFeature.Users,
+						price: prepaid({ billing_method: BillingMethod.UsageBased }),
+					},
+				],
+			},
+		],
+	];
+
+for (const [name, request] of invalidLicenseRequests) {
+	test.concurrent(
+		`${chalk.yellowBright("invoices.create license customize validation: 400 for")} ${name}`,
+		async () => {
+			const outcome = await invoiceLicense(request);
+			expect(
+				outcome.ok,
+				outcome.ok ? JSON.stringify(outcome.response.preview.lines) : "",
+			).toBe(false);
+			if (!outcome.ok) expect(outcome.status, outcome.message).toBe(400);
+		},
+	);
+}
