@@ -11,10 +11,19 @@
  *                   your local `trigger.dev dev` worker, via runMigrationTask.
  *                   Validates the end-to-end path; slower and noisier.
  *
+ * Two lanes (inline mode only):
+ *
+ *   --lane batch          (default) the set-based batch lane.
+ *   --lane per-customer   a DRY run, which takes the per-customer lane: chunk
+ *                         pages, claims and item rows without plan writes.
+ *                         --lanes K runs K pipelined lanes, each on its own
+ *                         migration-sized pool like a chunk task.
+ *
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts --migration bench-mig-bench-paid-words
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts --mode trigger --migration bench-mig-bench-paid-words
  *   bun tests/perf/batch-migrations/benchChunkedRun.ts --pages-per-chunk 5
+ *   bun tests/perf/batch-migrations/benchChunkedRun.ts --lane per-customer --lanes 4
  *
  * --pages-per-chunk overrides BATCH_MIGRATION_PAGES_PER_CHUNK for the run so
  * the chunk boundary can be swept without editing source (inline mode only —
@@ -25,16 +34,20 @@
 
 import type { Migration } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { initDrizzle } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
 import type { BatchMigrationPagePhases } from "@/internal/migrations/v2/batchOperations/execute/utils/pagePhaseTimings.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { executeRunMigrationChunk } from "@/internal/migrations/v2/run/executeRunMigrationChunk.js";
+import { executeRunMigrationLane } from "@/internal/migrations/v2/run/executeRunMigrationLane.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 import type {
 	RunBatchMigrationChunkPayload,
 	RunMigrationChunkPayload,
 } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import { MIGRATION_DB_POOL_MAX } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	BENCH_INTERNAL_CUSTOMER_PREFIX,
@@ -55,6 +68,11 @@ const parseArgs = () => {
 	const mode = get("--mode") ?? "inline";
 	if (mode !== "inline" && mode !== "trigger")
 		throw new Error(`bench: --mode must be inline|trigger (got "${mode}")`);
+	const lane = get("--lane") ?? "batch";
+	if (lane !== "batch" && lane !== "per-customer")
+		throw new Error(`bench: --lane must be batch|per-customer (got "${lane}")`);
+	if (lane === "per-customer" && mode === "trigger")
+		throw new Error("bench: --lane per-customer is inline only");
 	const pagesPerChunk = get("--pages-per-chunk");
 	if (get("--limit") !== undefined)
 		throw new Error(
@@ -67,9 +85,11 @@ const parseArgs = () => {
 		);
 	return {
 		mode,
+		lane,
 		migrationId: get("--migration") ?? DEFAULT_MIGRATION_ID,
 		pagesPerChunk:
 			pagesPerChunk === undefined ? undefined : Number(pagesPerChunk),
+		laneCount: Number(get("--lanes") ?? 1),
 		pollMs: Number(get("--poll-ms") ?? 2000),
 	};
 };
@@ -170,6 +190,71 @@ const runInlineMode = async ({
 	});
 
 	return { result, chunkTimings, phases };
+};
+
+/** Per-customer lane in-process, as a dry run. Each lane gets its own
+ * migration-sized pool, the way a chunk task does, so K lanes contend on
+ * Postgres rather than on one local pool. */
+const runPerCustomerInlineMode = async ({
+	ctx,
+	migration,
+	migrationRunId,
+	laneCount,
+}: {
+	ctx: AutumnContext;
+	migration: Migration;
+	migrationRunId: string;
+	laneCount: number;
+}) => {
+	const chunkTimings: ChunkTiming[] = [];
+	const laneSizes: number[] = [];
+	const laneContexts = Array.from({ length: laneCount }, (_, lane) => {
+		const { db } = initDrizzle({
+			name: `bench-lane-${lane}`,
+			maxConnections: MIGRATION_DB_POOL_MAX,
+		});
+		return { ...ctx, db };
+	});
+
+	const runChunk = async (payload: RunMigrationChunkPayload) => {
+		const startedAt = Date.now();
+		const chunk = await executeRunMigrationChunk({
+			ctx: laneContexts[payload.laneIndex ?? 0],
+			payload,
+		});
+		const ms = Date.now() - startedAt;
+		chunkTimings.push({
+			chunkIndex: payload.chunkIndex,
+			ms,
+			processed: chunk.processed,
+			pages: 0,
+			completion: chunk.completion,
+		});
+		console.log(
+			`bench: lane ${payload.laneIndex ?? 0} chunk ${payload.chunkIndex} — ${chunk.processed.toLocaleString()} customers in ${ms}ms (${chunk.completion})`,
+		);
+		return chunk;
+	};
+
+	const result = await runMigrationInChunks({
+		ctx,
+		migration,
+		migrationRunId,
+		dryRun: true,
+		laneCount,
+		runChunk,
+		runLanes: (payloads) => {
+			laneSizes.push(...payloads.map((payload) => payload.segments.length));
+			return Promise.all(
+				payloads.map((payload) =>
+					executeRunMigrationLane({ ctx, payload, runChunk }),
+				),
+			);
+		},
+	});
+
+	const phases: BatchMigrationPagePhases = {};
+	return { result, chunkTimings, phases, laneSizes };
 };
 
 /** Real trigger path: claims the run row then triggers runMigrationTask
@@ -289,7 +374,8 @@ const runTriggerMode = async ({
 };
 
 const main = async () => {
-	const { mode, migrationId, pagesPerChunk, pollMs } = parseArgs();
+	const { mode, lane, migrationId, pagesPerChunk, laneCount, pollMs } =
+		parseArgs();
 	const { ctx } = await getBenchContext();
 
 	const migration = await migrationRepo.find({ ctx, id: migrationId });
@@ -299,9 +385,9 @@ const main = async () => {
 	await resetBenchRows({ ctx });
 
 	console.log(
-		`bench: mode=${mode} migration=${migrationId}${
+		`bench: mode=${mode} lane=${lane} migration=${migrationId}${
 			pagesPerChunk ? ` pagesPerChunk=${pagesPerChunk}` : ""
-		}`,
+		}${lane === "per-customer" ? ` lanes=${laneCount}` : ""}`,
 	);
 
 	if (mode === "trigger") {
@@ -328,12 +414,23 @@ const main = async () => {
 	const migrationRunId = generateId("mrun");
 	console.log(`bench: run=${migrationRunId}`);
 	const startedAt = Date.now();
-	const { result, chunkTimings, phases } = await runInlineMode({
-		ctx,
-		migration,
-		migrationRunId,
-		pagesPerChunk,
-	});
+	const { result, chunkTimings, phases, laneSizes } =
+		lane === "per-customer"
+			? await runPerCustomerInlineMode({
+					ctx,
+					migration,
+					migrationRunId,
+					laneCount,
+				})
+			: {
+					...(await runInlineMode({
+						ctx,
+						migration,
+						migrationRunId,
+						pagesPerChunk,
+					})),
+					laneSizes: [],
+				};
 	const totalMs = Date.now() - startedAt;
 
 	const totalPages = chunkTimings.reduce((sum, c) => sum + c.pages, 0);
@@ -347,6 +444,10 @@ const main = async () => {
 	console.log(
 		`bench: TOTAL ${result.processed.toLocaleString()} customers across ${chunkTimings.length} chunks / ${totalPages} pages${result.canceled ? " (CANCELED)" : ""}`,
 	);
+	if (laneSizes.length > 0)
+		console.log(
+			`bench: ${laneSizes.length} lanes over ${laneSizes.reduce((sum, n) => sum + n, 0)} segments (${laneSizes.join("/")} per lane)`,
+		);
 	console.log(
 		`bench: ${totalMs}ms wall — ${
 			totalMs > 0
