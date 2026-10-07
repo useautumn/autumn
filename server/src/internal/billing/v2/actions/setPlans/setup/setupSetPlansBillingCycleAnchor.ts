@@ -46,8 +46,7 @@ export const setupSetPlansBillingCycleAnchor = ({
 	billingContext: CreateScheduleBillingContext;
 	timeline: SetPlansTimeline;
 }): SetPlansAnchorFields => {
-	const { requestedBillingCycleAnchor, requestedProrationBehavior } =
-		billingContext;
+	const { requestedBillingCycleAnchor } = billingContext;
 	const outgoingCustomerProduct = currentRecurringCustomerProduct({
 		billingContext,
 		timeline,

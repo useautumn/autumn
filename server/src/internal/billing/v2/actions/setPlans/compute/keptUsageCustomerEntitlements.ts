@@ -5,28 +5,10 @@ import {
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	isConsumablePrice,
-	isCustomerProductOnStripeSubscription,
 	type Price,
 } from "@autumn/shared";
+import { isOnReplacedSubscription } from "../utils/isOnReplacedSubscription";
 import { isUnbilledByStripe } from "../utils/isUnbilledByStripe";
-
-/** A replaced row on a cancelled subscription ends with it; its usage never moves to the new one. */
-const isOnReplacedSubscription = ({
-	billingContext,
-	customerProduct,
-}: {
-	billingContext: CreateScheduleBillingContext;
-	customerProduct: FullCusProduct;
-}) => {
-	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
-	return (
-		replacedSubscriptionId !== undefined &&
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedSubscriptionId,
-		}) === true
-	);
-};
 
 /**
  * Usage rows the replacement keeps on the same usage price and allowance. Stripe leaves such a metered item in
@@ -54,6 +36,7 @@ export const keptUsageCustomerEntitlements = ({
 	) {
 		return [];
 	}
+	// A replaced row on a cancelled subscription ends with it; its usage never moves to the new one.
 	if (
 		isOnReplacedSubscription({
 			billingContext,

@@ -3,7 +3,6 @@ import {
 	type CreateScheduleBillingContext,
 	CusProductStatus,
 	type FullCusProduct,
-	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -16,6 +15,7 @@ import type {
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
+import { isOnReplacedSubscription } from "../../utils/isOnReplacedSubscription";
 import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
@@ -35,16 +35,11 @@ export type SetPlansCustomerProductChanges = {
 	trialStartedCustomerProducts: TrialStartedCustomerProduct[];
 	deleteCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
-	/** Rows ending now paired with the row that replaces them now. */
-	immediateReplacements: ImmediateReplacement[];
+	/** Usage rows a replacement starting now keeps on the same price, so it carries to renewal instead of billing now. */
+	keptUsageCustomerEntitlementIds: Set<string>;
 	keptCustomerProducts: FullCusProduct[];
 	/** The row each resolved segment runs on once the plan executes. */
 	customerProductIdBySegmentId: Map<string, string>;
-};
-
-export type ImmediateReplacement = {
-	outgoingCustomerProduct: FullCusProduct;
-	incomingCustomerProduct: FullCusProduct;
 };
 
 export type TrialStartedCustomerProduct = {
@@ -119,23 +114,6 @@ const emptyPatch = (customerProduct: FullCusProduct): CustomerProductPatch => ({
 	deleteCustomerEntitlements: [],
 	deleteCustomerPrices: [],
 });
-
-const isOnReplacedSubscription = ({
-	billingContext,
-	customerProduct,
-}: {
-	billingContext: CreateScheduleBillingContext;
-	customerProduct: FullCusProduct;
-}) => {
-	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
-	return (
-		replacedSubscriptionId !== undefined &&
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedSubscriptionId,
-		}) === true
-	);
-};
 
 const isOnReplacedSchedule = ({
 	billingContext,
@@ -349,7 +327,7 @@ export const diffToCustomerProducts = ({
 
 	const immediateInsertCustomerProducts: FullCusProduct[] = [];
 	const scheduledInsertCustomerProducts: FullCusProduct[] = [];
-	const immediateReplacements: ImmediateReplacement[] = [];
+	const keptUsageCustomerEntitlementIds = new Set<string>();
 	for (const insert of operations.insert) {
 		const segment = segmentsById.get(insert.segmentId);
 		if (!segment) throw new Error(`set_plans diff names ${insert.segmentId}`);
@@ -358,23 +336,21 @@ export const diffToCustomerProducts = ({
 		const replacedCustomerProduct = replacedOperation
 			? customerProductFor(replacedOperation.customerProductId)
 			: undefined;
-		const customerProduct = insertSegmentCustomerProduct({
-			ctx,
-			billingContext,
-			segment,
-			replacedCustomerProduct,
-		});
+		const { customerProduct, keptUsageCustomerEntitlements } =
+			insertSegmentCustomerProduct({
+				ctx,
+				billingContext,
+				segment,
+				replacedCustomerProduct,
+			});
 		customerProductIdBySegmentId.set(segment.id, customerProduct.id);
 		if (!insert.startsNow) {
 			scheduledInsertCustomerProducts.push(customerProduct);
 			continue;
 		}
 		immediateInsertCustomerProducts.push(customerProduct);
-		if (replacedCustomerProduct) {
-			immediateReplacements.push({
-				outgoingCustomerProduct: replacedCustomerProduct,
-				incomingCustomerProduct: customerProduct,
-			});
+		for (const { id } of keptUsageCustomerEntitlements) {
+			keptUsageCustomerEntitlementIds.add(id);
 		}
 	}
 
@@ -388,7 +364,7 @@ export const diffToCustomerProducts = ({
 			customerProductFor(customerProductId),
 		),
 		outgoingCustomerProducts,
-		immediateReplacements,
+		keptUsageCustomerEntitlementIds,
 		keptCustomerProducts,
 		customerProductIdBySegmentId,
 	};

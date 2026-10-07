@@ -2,6 +2,7 @@ import type {
 	AttachBillingContext,
 	CreateScheduleBillingContext,
 	FullCusProduct,
+	FullCustomerEntitlement,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/attach/compute/computeAttachNewCustomerProduct";
@@ -69,12 +70,14 @@ const insertImmediateCustomerProduct = ({
 	productContext,
 	segment,
 	replacedCustomerProduct,
+	keptCustomerEntitlements,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	productContext: CreateScheduleBillingContext["productContexts"][number];
 	segment: ResolvedSegment;
 	replacedCustomerProduct?: FullCusProduct;
+	keptCustomerEntitlements: FullCustomerEntitlement[];
 }): FullCusProduct => {
 	const startsLater = startsInFuture({
 		segment,
@@ -92,13 +95,7 @@ const insertImmediateCustomerProduct = ({
 		replacedCustomerProduct && !startsLater
 			? keptUsageCarryOverUsages({
 					replacedCustomerProduct,
-					keptCustomerEntitlements: keptUsageCustomerEntitlements({
-						billingContext,
-						outgoingCustomerProduct: replacedCustomerProduct,
-						incomingPrices: attachBillingContext.attachProduct.prices,
-						incomingEntitlements:
-							attachBillingContext.attachProduct.entitlements,
-					}),
+					keptCustomerEntitlements,
 				})
 			: undefined;
 	const customerProduct = computeAttachNewCustomerProduct({
@@ -131,7 +128,30 @@ const insertImmediateCustomerProduct = ({
 	return customerProduct;
 };
 
-/** The row the request inserts for a segment it doesn't find running. */
+/** Usage rows a replacement starting now keeps from the row it replaces; a later start carries nothing yet. */
+const keptCustomerEntitlementsFor = ({
+	billingContext,
+	segment,
+	fullProduct,
+	replacedCustomerProduct,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	segment: ResolvedSegment;
+	fullProduct: CreateScheduleBillingContext["productContexts"][number]["fullProduct"];
+	replacedCustomerProduct?: FullCusProduct;
+}): FullCustomerEntitlement[] => {
+	if (!replacedCustomerProduct) return [];
+	if (startsInFuture({ segment, now: billingContext.currentEpochMs }))
+		return [];
+	return keptUsageCustomerEntitlements({
+		billingContext,
+		outgoingCustomerProduct: replacedCustomerProduct,
+		incomingPrices: fullProduct.prices,
+		incomingEntitlements: fullProduct.entitlements,
+	});
+};
+
+/** The row the request inserts for a segment it doesn't find running, and the usage it keeps from the row it replaces. */
 export const insertSegmentCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -142,38 +162,54 @@ export const insertSegmentCustomerProduct = ({
 	billingContext: CreateScheduleBillingContext;
 	segment: ResolvedSegment;
 	replacedCustomerProduct?: FullCusProduct;
-}): FullCusProduct => {
+}): {
+	customerProduct: FullCusProduct;
+	keptUsageCustomerEntitlements: FullCustomerEntitlement[];
+} => {
 	const found = findProductContext({ billingContext, segment });
+	const keptCustomerEntitlements = keptCustomerEntitlementsFor({
+		billingContext,
+		segment,
+		fullProduct: found.productContext.fullProduct,
+		replacedCustomerProduct,
+	});
 	if (found.type === "immediate") {
-		return insertImmediateCustomerProduct({
-			ctx,
-			billingContext,
-			productContext: found.productContext,
-			segment,
-			replacedCustomerProduct,
-		});
+		return {
+			customerProduct: insertImmediateCustomerProduct({
+				ctx,
+				billingContext,
+				productContext: found.productContext,
+				segment,
+				replacedCustomerProduct,
+				keptCustomerEntitlements,
+			}),
+			keptUsageCustomerEntitlements: keptCustomerEntitlements,
+		};
 	}
 
 	const { phaseContext, productContext } = found;
 	// Scope comes from the inherited entity, never the request entity, so a
 	// customer-level plan stays customer-level in later phases.
-	return initScheduledCustomerProduct({
-		ctx,
-		fullCustomer: {
-			...billingContext.fullCustomer,
+	return {
+		customerProduct: initScheduledCustomerProduct({
+			ctx,
+			fullCustomer: {
+				...billingContext.fullCustomer,
+				entity: productContext.entity,
+			},
 			entity: productContext.entity,
-		},
-		entity: productContext.entity,
-		fullProduct: productContext.fullProduct,
-		featureQuantities: productContext.featureQuantities,
-		customerLicenseQuantities: productContext.customerLicenseQuantities,
-		startsAt: segment.startsAt,
-		endsAt: segment.endsAt,
-		currentEpochMs: billingContext.currentEpochMs,
-		externalId: productContext.externalId,
-		billingCycleAnchorResetsAt:
-			phaseContext.billingCycleAnchor === "phase_start"
-				? phaseContext.startsAt
-				: null,
-	});
+			fullProduct: productContext.fullProduct,
+			featureQuantities: productContext.featureQuantities,
+			customerLicenseQuantities: productContext.customerLicenseQuantities,
+			startsAt: segment.startsAt,
+			endsAt: segment.endsAt,
+			currentEpochMs: billingContext.currentEpochMs,
+			externalId: productContext.externalId,
+			billingCycleAnchorResetsAt:
+				phaseContext.billingCycleAnchor === "phase_start"
+					? phaseContext.startsAt
+					: null,
+		}),
+		keptUsageCustomerEntitlements: keptCustomerEntitlements,
+	};
 };

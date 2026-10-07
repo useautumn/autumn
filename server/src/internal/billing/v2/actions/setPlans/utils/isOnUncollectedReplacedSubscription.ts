@@ -1,9 +1,6 @@
-import {
-	type BillingContext,
-	type FullCusProduct,
-	isCustomerProductOnStripeSubscription,
-} from "@autumn/shared";
+import type { BillingContext, FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isOnReplacedSubscription } from "./isOnReplacedSubscription";
 
 const UNCOLLECTED_STATUSES: Stripe.Subscription.Status[] = [
 	"incomplete",
@@ -25,9 +22,6 @@ export const isOnUncollectedReplacedSubscription = ({
 
 	return (
 		UNCOLLECTED_STATUSES.includes(replacedStripeSubscription.status) &&
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedStripeSubscription.id,
-		}) === true
+		isOnReplacedSubscription({ billingContext, customerProduct })
 	);
 };
