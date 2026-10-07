@@ -12,6 +12,7 @@
  * - A trial checkout that expires in Stripe does not consume it
  * - A completed trial checkout still consumes it
  * - With unique_fingerprint, an open checkout reserves the trial for the fingerprint
+ * - That reservation never crosses organizations
  */
 
 import { expect, test } from "bun:test";
@@ -312,6 +313,64 @@ test.concurrent(
 				plan_id: proTrial.id,
 			});
 		expect(otherPreview.total).toBe(20);
+	},
+	WEBHOOK_TEST_TIMEOUT_MS,
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Fingerprint reservation stays inside the organization
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("trial-abandoned-checkout 6: another org's open checkout does not reserve the trial")}`,
+	async () => {
+		const runId = Date.now();
+		const fingerprint = `fp-cross-org-${runId}`;
+		const productPrefix = `trial-cross-org-${runId}`;
+		const fingerprintTrial = () =>
+			products.proWithTrial({
+				id: "pro-trial-cross-org",
+				items: [items.monthlyMessages({ includedUsage: 500 })],
+				trialDays: 7,
+				cardRequired: true,
+				uniqueFingerprint: true,
+			});
+
+		const firstOrgTrial = fingerprintTrial();
+		const firstOrg = await initScenario({
+			customerId: `trial-cross-org-a-${runId}`,
+			setup: [
+				s.customer({ testClock: false, data: { fingerprint } }),
+				s.products({ list: [firstOrgTrial], prefix: productPrefix }),
+			],
+			actions: [],
+		});
+
+		await firstOrg.autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: firstOrg.customerId,
+			plan_id: firstOrgTrial.id,
+			redirect_mode: "always",
+		});
+
+		const secondOrgTrial = fingerprintTrial();
+		const secondOrg = await initScenario({
+			customerId: `trial-cross-org-b-${runId}`,
+			setup: [
+				s.platform.create({ setupDefaultFeatures: true }),
+				s.customer({ testClock: false, data: { fingerprint } }),
+				s.products({ list: [secondOrgTrial], prefix: productPrefix }),
+			],
+			actions: [],
+		});
+		expect(secondOrg.ctx.org.id).not.toBe(firstOrg.ctx.org.id);
+		expect(secondOrgTrial.id).toBe(firstOrgTrial.id);
+
+		const preview =
+			await secondOrg.autumnV2_4.billing.previewAttach<AttachParamsV1Input>({
+				customer_id: secondOrg.customerId,
+				plan_id: secondOrgTrial.id,
+			});
+		expect(preview.total).toBe(0);
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );

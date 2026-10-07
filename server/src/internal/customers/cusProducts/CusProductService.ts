@@ -20,6 +20,7 @@ import {
 	ne,
 	not,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
@@ -708,6 +709,7 @@ export class CusProductService {
 			.where(
 				and(
 					eq(products.id, productId),
+					sql`(${customers.org_id}, ${customers.env}) = (SELECT org_id, env FROM customers WHERE internal_id = ${internalCustomerId})`,
 					isNotNull(customerProducts.free_trial_id),
 					// Another customer's open checkout still reserves the fingerprint's trial.
 					or(
