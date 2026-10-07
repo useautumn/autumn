@@ -1920,8 +1920,7 @@ components:
         - balances
         - flags
       examples:
-        - &a2
-          id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+        - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
           name: Patrick
           email: patrick@useautumn.com
           createdAt: 1771409161016
@@ -6053,11 +6052,13 @@ paths:
                 - customer_id
               title: GetOrCreateCustomerParams
               examples:
-                - &a1
-                  customer_id: cus_123
+                - customer_id: cus_123
                   name: John Doe
                   email: john@example.com
-            example: *a1
+            example:
+              customer_id: cus_123
+              name: John Doe
+              email: john@example.com
       responses:
         "200":
           description: OK
@@ -6065,11 +6066,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Customer"
-              example: *a2
+              example:
+                id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+                name: Patrick
+                email: patrick@useautumn.com
+                createdAt: 1771409161016
+                fingerprint: null
+                stripeId: cus_U0BKxpq1mFhuJO
+                processors:
+                  stripe:
+                    id: cus_U0BKxpq1mFhuJO
+                env: sandbox
+                metadata: {}
+                sendEmailReceipts: false
+                billingControls:
+                  autoTopups: []
+                subscriptions:
+                  - planId: pro_plan
+                    autoEnable: true
+                    addOn: false
+                    status: active
+                    pastDue: false
+                    canceledAt: null
+                    expiresAt: null
+                    trialEndsAt: null
+                    startedAt: 1771431921437
+                    currentPeriodStart: 1771431921437
+                    currentPeriodEnd: 1771999921437
+                    quantity: 1
+                purchases: []
+                licenses: []
+                balances:
+                  messages:
+                    featureId: messages
+                    granted: 100
+                    remaining: 0
+                    usage: 100
+                    unlimited: false
+                    overageAllowed: false
+                    maxPurchase: null
+                    nextResetAt: 1773851121437
+                    breakdown:
+                      - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                        planId: pro_plan
+                        includedGrant: 100
+                        prepaidGrant: 0
+                        remaining: 0
+                        usage: 100
+                        unlimited: false
+                        reset:
+                          interval: month
+                          resetsAt: 1773851121437
+                        price: null
+                        expiresAt: null
+                flags:
+                  advanced_workflows:
+                    id: cus_ent_abc123
+                    plan_id: pro_plan
+                    expires_at: null
+                    feature_id: advanced_workflows
+                config:
+                  disable_pooled_balance: false
+                  disable_overage_billing: false
       x-speakeasy-name-override: getOrCreate
       parameters:
-        - &a5
-          name: x-api-version
+        - name: x-api-version
           in: header
           required: true
           schema:
@@ -6110,13 +6171,13 @@ paths:
                 - customer_id
               title: GetCustomerParams
               examples:
-                - &a3
-                  customer_id: cus_123
+                - customer_id: cus_123
                 - customer_id: cus_123
                   expand:
                     - invoices
                     - entities
-            example: *a3
+            example:
+              customer_id: cus_123
       responses:
         "200":
           description: OK
@@ -7736,8 +7797,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a4
-                    id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+                  - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                     name: Patrick
                     email: patrick@useautumn.com
                     createdAt: 1771409161016
@@ -7798,10 +7858,77 @@ paths:
                     config:
                       disable_pooled_balance: false
                       disable_overage_billing: false
-              example: *a4
+              example:
+                id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+                name: Patrick
+                email: patrick@useautumn.com
+                createdAt: 1771409161016
+                fingerprint: null
+                stripeId: cus_U0BKxpq1mFhuJO
+                processors:
+                  stripe:
+                    id: cus_U0BKxpq1mFhuJO
+                env: sandbox
+                metadata: {}
+                sendEmailReceipts: false
+                billingControls:
+                  autoTopups: []
+                subscriptions:
+                  - planId: pro_plan
+                    autoEnable: true
+                    addOn: false
+                    status: active
+                    pastDue: false
+                    canceledAt: null
+                    expiresAt: null
+                    trialEndsAt: null
+                    startedAt: 1771431921437
+                    currentPeriodStart: 1771431921437
+                    currentPeriodEnd: 1771999921437
+                    quantity: 1
+                purchases: []
+                licenses: []
+                balances:
+                  messages:
+                    featureId: messages
+                    granted: 100
+                    remaining: 0
+                    usage: 100
+                    unlimited: false
+                    overageAllowed: false
+                    maxPurchase: null
+                    nextResetAt: 1773851121437
+                    breakdown:
+                      - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                        planId: pro_plan
+                        includedGrant: 100
+                        prepaidGrant: 0
+                        remaining: 0
+                        usage: 100
+                        unlimited: false
+                        reset:
+                          interval: month
+                          resetsAt: 1773851121437
+                        price: null
+                        expiresAt: null
+                flags:
+                  advanced_workflows:
+                    id: cus_ent_abc123
+                    plan_id: pro_plan
+                    expires_at: null
+                    feature_id: advanced_workflows
+                config:
+                  disable_pooled_balance: false
+                  disable_overage_billing: false
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.list:
     post:
       operationId: listCustomers
@@ -7884,10 +8011,11 @@ paths:
                     bounds).
               title: ListCustomersParams
               examples:
-                - &a6
-                  start_cursor: ""
+                - start_cursor: ""
                   limit: 10
-            example: *a6
+            example:
+              start_cursor: ""
+              limit: 10
       responses:
         "200":
           description: OK
@@ -9187,8 +9315,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a7
-                    list:
+                  - list:
                       - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                         name: Patrick
                         email: patrick@useautumn.com
@@ -9251,10 +9378,79 @@ paths:
                           disable_pooled_balance: false
                           disable_overage_billing: false
                     next_cursor: null
-              example: *a7
+              example:
+                list:
+                  - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+                    name: Patrick
+                    email: patrick@useautumn.com
+                    createdAt: 1771409161016
+                    fingerprint: null
+                    stripeId: cus_U0BKxpq1mFhuJO
+                    processors:
+                      stripe:
+                        id: cus_U0BKxpq1mFhuJO
+                    env: sandbox
+                    metadata: {}
+                    sendEmailReceipts: false
+                    billingControls:
+                      autoTopups: []
+                    subscriptions:
+                      - planId: pro_plan
+                        autoEnable: true
+                        addOn: false
+                        status: active
+                        pastDue: false
+                        canceledAt: null
+                        expiresAt: null
+                        trialEndsAt: null
+                        startedAt: 1771431921437
+                        currentPeriodStart: 1771431921437
+                        currentPeriodEnd: 1771999921437
+                        quantity: 1
+                    purchases: []
+                    licenses: []
+                    balances:
+                      messages:
+                        featureId: messages
+                        granted: 100
+                        remaining: 0
+                        usage: 100
+                        unlimited: false
+                        overageAllowed: false
+                        maxPurchase: null
+                        nextResetAt: 1773851121437
+                        breakdown:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            planId: pro_plan
+                            includedGrant: 100
+                            prepaidGrant: 0
+                            remaining: 0
+                            usage: 100
+                            unlimited: false
+                            reset:
+                              interval: month
+                              resetsAt: 1773851121437
+                            price: null
+                            expiresAt: null
+                    flags:
+                      advanced_workflows:
+                        id: cus_ent_abc123
+                        plan_id: pro_plan
+                        expires_at: null
+                        feature_id: advanced_workflows
+                    config:
+                      disable_pooled_balance: false
+                      disable_overage_billing: false
+                next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.update:
     post:
       operationId: updateCustomer
@@ -9784,8 +9980,7 @@ paths:
                 - customer_id
               title: UpdateCustomerParams
               examples:
-                - &a8
-                  customer_id: cus_123
+                - customer_id: cus_123
                   name: Jane Doe
                   email: jane@example.com
                 - customer_id: customer_123
@@ -9798,7 +9993,10 @@ paths:
                             amount: 300
                           - entity_id: workspace_b
                             amount: 200
-            example: *a8
+            example:
+              customer_id: cus_123
+              name: Jane Doe
+              email: jane@example.com
       responses:
         "200":
           description: OK
@@ -11010,8 +11208,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a9
-                    id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+                  - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                     name: Patrick
                     email: patrick@useautumn.com
                     createdAt: 1771409161016
@@ -11072,10 +11269,77 @@ paths:
                     config:
                       disable_pooled_balance: false
                       disable_overage_billing: false
-              example: *a9
+              example:
+                id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
+                name: Patrick
+                email: patrick@useautumn.com
+                createdAt: 1771409161016
+                fingerprint: null
+                stripeId: cus_U0BKxpq1mFhuJO
+                processors:
+                  stripe:
+                    id: cus_U0BKxpq1mFhuJO
+                env: sandbox
+                metadata: {}
+                sendEmailReceipts: false
+                billingControls:
+                  autoTopups: []
+                subscriptions:
+                  - planId: pro_plan
+                    autoEnable: true
+                    addOn: false
+                    status: active
+                    pastDue: false
+                    canceledAt: null
+                    expiresAt: null
+                    trialEndsAt: null
+                    startedAt: 1771431921437
+                    currentPeriodStart: 1771431921437
+                    currentPeriodEnd: 1771999921437
+                    quantity: 1
+                purchases: []
+                licenses: []
+                balances:
+                  messages:
+                    featureId: messages
+                    granted: 100
+                    remaining: 0
+                    usage: 100
+                    unlimited: false
+                    overageAllowed: false
+                    maxPurchase: null
+                    nextResetAt: 1773851121437
+                    breakdown:
+                      - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                        planId: pro_plan
+                        includedGrant: 100
+                        prepaidGrant: 0
+                        remaining: 0
+                        usage: 100
+                        unlimited: false
+                        reset:
+                          interval: month
+                          resetsAt: 1773851121437
+                        price: null
+                        expiresAt: null
+                flags:
+                  advanced_workflows:
+                    id: cus_ent_abc123
+                    plan_id: pro_plan
+                    expires_at: null
+                    feature_id: advanced_workflows
+                config:
+                  disable_pooled_balance: false
+                  disable_overage_billing: false
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.delete:
     post:
       operationId: deleteCustomer
@@ -11101,10 +11365,11 @@ paths:
                 - customer_id
               title: DeleteCustomerParams
               examples:
-                - &a10
-                  customer_id: cus_123
+                - customer_id: cus_123
                   delete_in_stripe: false
-            example: *a10
+            example:
+              customer_id: cus_123
+              delete_in_stripe: false
       responses:
         "200":
           description: OK
@@ -11119,7 +11384,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/customers.advance_test_clock:
     post:
       operationId: advanceTestClock
@@ -11178,7 +11449,13 @@ paths:
                 title: AdvanceTestClockResponse
       x-speakeasy-name-override: advanceTestClock
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/subscriptions.list:
     post:
       operationId: listSubscriptions
@@ -11231,14 +11508,16 @@ paths:
                   description: Only return rows for this plan.
               title: ListSubscriptionsParams
               examples:
-                - &a11
-                  customer_id: cus_123
+                - customer_id: cus_123
                   statuses:
                     - expired
                 - plan_id: pro
                   statuses:
                     - past_due
-            example: *a11
+            example:
+              customer_id: cus_123
+              statuses:
+                - expired
       responses:
         "200":
           description: OK
@@ -11361,8 +11640,7 @@ paths:
                   - has_more
                   - next_cursor
                 examples:
-                  - &a12
-                    list:
+                  - list:
                       - id: sub_123
                         plan_id: pro
                         auto_enable: false
@@ -11382,10 +11660,36 @@ paths:
                         created_at: 1768817161016
                     has_more: false
                     next_cursor: null
-              example: *a12
+              example:
+                list:
+                  - id: sub_123
+                    plan_id: pro
+                    auto_enable: false
+                    add_on: false
+                    status: expired
+                    past_due: false
+                    canceled_at: 1771409161016
+                    expires_at: 1771409161016
+                    trial_ends_at: null
+                    started_at: 1768817161016
+                    current_period_start: null
+                    current_period_end: null
+                    quantity: 1
+                    scope: customer
+                    customer_id: cus_123
+                    entity_id: null
+                    created_at: 1768817161016
+                has_more: false
+                next_cursor: null
       x-speakeasy-name-override: listSubscriptions
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/purchases.list:
     post:
       operationId: listPurchases
@@ -11438,12 +11742,15 @@ paths:
                   description: Only return rows for this plan.
               title: ListPurchasesParams
               examples:
-                - &a13
-                  customer_id: cus_123
+                - customer_id: cus_123
                   statuses:
                     - active
                     - expired
-            example: *a13
+            example:
+              customer_id: cus_123
+              statuses:
+                - active
+                - expired
       responses:
         "200":
           description: OK
@@ -11527,8 +11834,7 @@ paths:
                   - has_more
                   - next_cursor
                 examples:
-                  - &a14
-                    list:
+                  - list:
                       - id: cus_prod_123
                         plan_id: credit_pack
                         status: expired
@@ -11541,10 +11847,29 @@ paths:
                         created_at: 1768817161016
                     has_more: false
                     next_cursor: null
-              example: *a14
+              example:
+                list:
+                  - id: cus_prod_123
+                    plan_id: credit_pack
+                    status: expired
+                    expires_at: null
+                    started_at: 1768817161016
+                    quantity: 1
+                    scope: customer
+                    customer_id: cus_123
+                    entity_id: null
+                    created_at: 1768817161016
+                has_more: false
+                next_cursor: null
       x-speakeasy-name-override: listPurchases
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.create:
     post:
       operationId: createPlan
@@ -13270,8 +13595,7 @@ paths:
                 - name
               title: CreatePlanParams
               examples:
-                - &a15
-                  plan_id: free_plan
+                - plan_id: free_plan
                   name: Free
                   auto_enable: true
                   items:
@@ -13307,7 +13631,15 @@ paths:
                         interval: month
                         billing_units: 1
                         billing_method: prepaid
-            example: *a15
+            example:
+              plan_id: free_plan
+              name: Free
+              auto_enable: true
+              items:
+                - feature_id: messages
+                  included: 100
+                  reset:
+                    interval: month
       responses:
         "200":
           description: OK
@@ -16933,8 +17265,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a16
-                    id: pro
+                  - id: pro
                     name: Pro Plan
                     description: null
                     group: null
@@ -16984,10 +17315,66 @@ paths:
                       ignore_past_due: false
                     billing_controls: {}
                     metadata: {}
-              example: *a16
+              example:
+                id: pro
+                name: Pro Plan
+                description: null
+                group: null
+                version: 1
+                version_slug: v1
+                active: true
+                addOn: false
+                autoEnable: false
+                price:
+                  amount: 10
+                  interval: month
+                  display:
+                    primaryText: $10
+                    secondaryText: per month
+                items:
+                  - featureId: messages
+                    included: 100
+                    unlimited: false
+                    reset:
+                      interval: month
+                    price:
+                      amount: 0.5
+                      interval: month
+                      billingUnits: 100
+                      billingMethod: usage_based
+                      maxPurchase: null
+                    display:
+                      primaryText: 100 messages
+                      secondaryText: then $0.5 per 100 messages
+                  - featureId: users
+                    included: 0
+                    unlimited: false
+                    reset: null
+                    price:
+                      amount: 10
+                      interval: month
+                      billingUnits: 1
+                      billingMethod: prepaid
+                      maxPurchase: null
+                    display:
+                      primaryText: $10 per Users
+                createdAt: 1771513979217
+                env: sandbox
+                archived: false
+                baseVariantId: null
+                config:
+                  ignore_past_due: false
+                billing_controls: {}
+                metadata: {}
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.get:
     post:
       operationId: getPlan
@@ -17018,11 +17405,11 @@ paths:
                 - plan_id
               title: GetPlanParams
               examples:
-                - &a17
-                  plan_id: pro_plan
+                - plan_id: pro_plan
                 - plan_id: pro_plan
                   version: 2
-            example: *a17
+            example:
+              plan_id: pro_plan
       responses:
         "200":
           description: OK
@@ -20648,8 +21035,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a18
-                    id: pro
+                  - id: pro
                     name: Pro Plan
                     description: null
                     group: null
@@ -20699,10 +21085,66 @@ paths:
                       ignore_past_due: false
                     billing_controls: {}
                     metadata: {}
-              example: *a18
+              example:
+                id: pro
+                name: Pro Plan
+                description: null
+                group: null
+                version: 1
+                version_slug: v1
+                active: true
+                addOn: false
+                autoEnable: false
+                price:
+                  amount: 10
+                  interval: month
+                  display:
+                    primaryText: $10
+                    secondaryText: per month
+                items:
+                  - featureId: messages
+                    included: 100
+                    unlimited: false
+                    reset:
+                      interval: month
+                    price:
+                      amount: 0.5
+                      interval: month
+                      billingUnits: 100
+                      billingMethod: usage_based
+                      maxPurchase: null
+                    display:
+                      primaryText: 100 messages
+                      secondaryText: then $0.5 per 100 messages
+                  - featureId: users
+                    included: 0
+                    unlimited: false
+                    reset: null
+                    price:
+                      amount: 10
+                      interval: month
+                      billingUnits: 1
+                      billingMethod: prepaid
+                      maxPurchase: null
+                    display:
+                      primaryText: $10 per Users
+                createdAt: 1771513979217
+                env: sandbox
+                archived: false
+                baseVariantId: null
+                config:
+                  ignore_past_due: false
+                billing_controls: {}
+                metadata: {}
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.list:
     post:
       operationId: listPlans
@@ -20737,10 +21179,10 @@ paths:
                   description: If true, includes all plan versions.
               title: ListPlansParams
               examples:
-                - &a19 {}
+                - {}
                 - customer_id: cus_123
                 - include_archived: true
-            example: *a19
+            example: {}
       responses:
         "200":
           description: OK
@@ -27354,8 +27796,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a20
-                    list:
+                  - list:
                       - id: pro
                         name: Pro Plan
                         description: null
@@ -27411,10 +27852,72 @@ paths:
                             version: 1
                             version_slug: v1
                             included: 3
-              example: *a20
+              example:
+                list:
+                  - id: pro
+                    name: Pro Plan
+                    description: null
+                    group: null
+                    version: 1
+                    version_slug: v1
+                    active: true
+                    addOn: false
+                    autoEnable: false
+                    price:
+                      amount: 10
+                      interval: month
+                      display:
+                        primaryText: $10
+                        secondaryText: per month
+                    items:
+                      - featureId: messages
+                        included: 100
+                        unlimited: false
+                        reset:
+                          interval: month
+                        price:
+                          amount: 0.5
+                          interval: month
+                          billingUnits: 100
+                          billingMethod: usage_based
+                          maxPurchase: null
+                        display:
+                          primaryText: 100 messages
+                          secondaryText: then $0.5 per 100 messages
+                      - featureId: users
+                        included: 0
+                        unlimited: false
+                        reset: null
+                        price:
+                          amount: 10
+                          interval: month
+                          billingUnits: 1
+                          billingMethod: prepaid
+                          maxPurchase: null
+                        display:
+                          primaryText: $10 per Users
+                    createdAt: 1771513979217
+                    env: sandbox
+                    archived: false
+                    baseVariantId: null
+                    config:
+                      ignore_past_due: false
+                    billing_controls: {}
+                    metadata: {}
+                    licenses:
+                      - license_plan_id: seat
+                        version: 1
+                        version_slug: v1
+                        included: 3
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.update:
     post:
       operationId: updatePlan
@@ -31004,8 +31507,7 @@ paths:
                 - plan_id
               title: UpdatePlanParams
               examples:
-                - &a21
-                  plan_id: pro_plan
+                - plan_id: pro_plan
                   name: Pro Plan (Updated)
                   price:
                     amount: 15
@@ -31014,7 +31516,12 @@ paths:
                   price: null
                 - plan_id: old_plan
                   archived: true
-            example: *a21
+            example:
+              plan_id: pro_plan
+              name: Pro Plan (Updated)
+              price:
+                amount: 15
+                interval: month
       responses:
         "200":
           description: OK
@@ -34640,8 +35147,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a22
-                    id: pro
+                  - id: pro
                     name: Pro Plan
                     description: null
                     group: null
@@ -34691,10 +35197,66 @@ paths:
                       ignore_past_due: false
                     billing_controls: {}
                     metadata: {}
-              example: *a22
+              example:
+                id: pro
+                name: Pro Plan
+                description: null
+                group: null
+                version: 1
+                version_slug: v1
+                active: true
+                addOn: false
+                autoEnable: false
+                price:
+                  amount: 10
+                  interval: month
+                  display:
+                    primaryText: $10
+                    secondaryText: per month
+                items:
+                  - featureId: messages
+                    included: 100
+                    unlimited: false
+                    reset:
+                      interval: month
+                    price:
+                      amount: 0.5
+                      interval: month
+                      billingUnits: 100
+                      billingMethod: usage_based
+                      maxPurchase: null
+                    display:
+                      primaryText: 100 messages
+                      secondaryText: then $0.5 per 100 messages
+                  - featureId: users
+                    included: 0
+                    unlimited: false
+                    reset: null
+                    price:
+                      amount: 10
+                      interval: month
+                      billingUnits: 1
+                      billingMethod: prepaid
+                      maxPurchase: null
+                    display:
+                      primaryText: $10 per Users
+                createdAt: 1771513979217
+                env: sandbox
+                archived: false
+                baseVariantId: null
+                config:
+                  ignore_past_due: false
+                billing_controls: {}
+                metadata: {}
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/plans.delete:
     post:
       operationId: deletePlan
@@ -34727,11 +35289,11 @@ paths:
                 - plan_id
               title: DeletePlanParams
               examples:
-                - &a23
-                  plan_id: unused_plan
+                - plan_id: unused_plan
                 - plan_id: legacy_plan
                   all_versions: true
-            example: *a23
+            example:
+              plan_id: unused_plan
       responses:
         "200":
           description: OK
@@ -34746,7 +35308,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.create:
     post:
       operationId: createFeature
@@ -35160,8 +35728,7 @@ paths:
                 - feature_id
               title: CreateFeatureParams
               examples:
-                - &a24
-                  feature_id: api-calls
+                - feature_id: api-calls
                   name: API Calls
                   type: metered
                   consumable: true
@@ -35174,7 +35741,11 @@ paths:
                       credit_cost: 1
                     - metered_feature_id: image-generations
                       credit_cost: 10
-            example: *a24
+            example:
+              feature_id: api-calls
+              name: API Calls
+              type: metered
+              consumable: true
       responses:
         "200":
           description: OK
@@ -35706,8 +36277,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a25
-                    id: api-calls
+                  - id: api-calls
                     name: API Calls
                     type: metered
                     consumable: true
@@ -35715,10 +36285,24 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a25
+              example:
+                id: api-calls
+                name: API Calls
+                type: metered
+                consumable: true
+                archived: false
+                display:
+                  singular: API call
+                  plural: API calls
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.get:
     post:
       operationId: getFeature
@@ -35742,9 +36326,9 @@ paths:
                 - feature_id
               title: GetFeatureParams
               examples:
-                - &a26
-                  feature_id: api-calls
-            example: *a26
+                - feature_id: api-calls
+            example:
+              feature_id: api-calls
       responses:
         "200":
           description: OK
@@ -36276,8 +36860,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a27
-                    id: api-calls
+                  - id: api-calls
                     name: API Calls
                     type: metered
                     consumable: true
@@ -36285,10 +36868,24 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a27
+              example:
+                id: api-calls
+                name: API Calls
+                type: metered
+                consumable: true
+                archived: false
+                display:
+                  singular: API call
+                  plural: API calls
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.list:
     post:
       operationId: listFeatures
@@ -36848,8 +37445,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a28
-                    list:
+                  - list:
                       - id: api-calls
                         name: API Calls
                         type: metered
@@ -36871,10 +37467,38 @@ paths:
                         display:
                           singular: credit
                           plural: credits
-              example: *a28
+              example:
+                list:
+                  - id: api-calls
+                    name: API Calls
+                    type: metered
+                    consumable: true
+                    archived: false
+                    display:
+                      singular: API call
+                      plural: API calls
+                  - id: credits
+                    name: Credits
+                    type: credit_system
+                    consumable: true
+                    archived: false
+                    credit_schema:
+                      - metered_feature_id: api-calls
+                        credit_cost: 1
+                      - metered_feature_id: image-generations
+                        credit_cost: 10
+                    display:
+                      singular: credit
+                      plural: credits
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.update:
     post:
       operationId: updateFeature
@@ -37295,15 +37919,19 @@ paths:
                 - feature_id
               title: UpdateFeatureParams
               examples:
-                - &a29
-                  feature_id: api-calls
+                - feature_id: api-calls
                   name: API Requests
                   display:
                     singular: API request
                     plural: API requests
                 - feature_id: old-feature
                   archived: true
-            example: *a29
+            example:
+              feature_id: api-calls
+              name: API Requests
+              display:
+                singular: API request
+                plural: API requests
       responses:
         "200":
           description: OK
@@ -37835,8 +38463,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a30
-                    id: api-calls
+                  - id: api-calls
                     name: API Calls
                     type: metered
                     consumable: true
@@ -37844,10 +38471,24 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a30
+              example:
+                id: api-calls
+                name: API Calls
+                type: metered
+                consumable: true
+                archived: false
+                display:
+                  singular: API call
+                  plural: API calls
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/features.delete:
     post:
       operationId: deleteFeature
@@ -37873,9 +38514,9 @@ paths:
                 - feature_id
               title: DeleteFeatureParams
               examples:
-                - &a31
-                  feature_id: old-feature
-            example: *a31
+                - feature_id: old-feature
+            example:
+              feature_id: old-feature
       responses:
         "200":
           description: OK
@@ -37889,12 +38530,18 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a32
-                    success: true
-              example: *a32
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.attach:
     post:
       operationId: attach
@@ -40665,10 +41312,11 @@ paths:
                 - plan_id
               title: AttachParams
               examples:
-                - &a33
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plan_id: pro_plan
-            example: *a33
+            example:
+              customer_id: cus_123
+              plan_id: pro_plan
       responses:
         "200":
           description: OK
@@ -40743,13 +41391,20 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a34
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     payment_url: https://checkout.stripe.com/...
-              example: *a34
+              example:
+                customer_id: cus_123
+                payment_url: https://checkout.stripe.com/...
       x-speakeasy-name-override: attach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.create_schedule:
     post:
       operationId: createSchedule
@@ -48230,8 +48885,7 @@ paths:
                 - phases
               title: CreateScheduleParams
               examples:
-                - &a35
-                  customer_id: cus_123
+                - customer_id: cus_123
                   phases:
                     - starts_at: 1735689600000
                       plans:
@@ -48239,7 +48893,15 @@ paths:
                     - starts_at: 1736899200000
                       plans:
                         - plan_id: pro_plan
-            example: *a35
+            example:
+              customer_id: cus_123
+              phases:
+                - starts_at: 1735689600000
+                  plans:
+                    - plan_id: trial_plan
+                - starts_at: 1736899200000
+                  plans:
+                    - plan_id: pro_plan
       responses:
         "200":
           description: OK
@@ -48354,8 +49016,7 @@ paths:
                   - payment_url
                 title: CreateScheduleResponse
                 examples:
-                  - &a36
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     entity_id: null
                     status: created
                     schedule_id: sch_1234
@@ -48370,10 +49031,31 @@ paths:
                           - cus_prod_2222
                     invoice: null
                     payment_url: null
-              example: *a36
+              example:
+                customer_id: cus_123
+                entity_id: null
+                status: created
+                schedule_id: sch_1234
+                phases:
+                  - phase_id: sphs_1111
+                    starts_at: 1735689600000
+                    customer_product_ids:
+                      - cus_prod_1111
+                  - phase_id: sphs_2222
+                    starts_at: 1736899200000
+                    customer_product_ids:
+                      - cus_prod_2222
+                invoice: null
+                payment_url: null
       x-speakeasy-name-override: createSchedule
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.multi_attach:
     post:
       operationId: multiAttach
@@ -49435,15 +50117,21 @@ paths:
                 - plans
               title: MultiAttachParams
               examples:
-                - &a37
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plans:
                     - plan_id: pro_plan
                     - plan_id: addon_seats
                       feature_quantities:
                         - feature_id: seats
                           quantity: 5
-            example: *a37
+            example:
+              customer_id: cus_123
+              plans:
+                - plan_id: pro_plan
+                - plan_id: addon_seats
+                  feature_quantities:
+                    - feature_id: seats
+                      quantity: 5
       responses:
         "200":
           description: OK
@@ -49518,8 +50206,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a38
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     invoice:
                       status: paid
                       stripe_id: in_1234
@@ -49527,10 +50214,24 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a38
+              example:
+                customer_id: cus_123
+                invoice:
+                  status: paid
+                  stripe_id: in_1234
+                  total: 4900
+                  currency: usd
+                  hosted_invoice_url: https://invoice.stripe.com/...
+                payment_url: null
       x-speakeasy-name-override: multiAttach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_attach:
     post:
       operationId: previewAttach
@@ -52301,10 +53002,11 @@ paths:
                 - plan_id
               title: PreviewAttachParams
               examples:
-                - &a39
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plan_id: pro_plan
-            example: *a39
+            example:
+              customer_id: cus_123
+              plan_id: pro_plan
       responses:
         "200":
           description: OK
@@ -52708,21 +53410,36 @@ paths:
                   - redirect_to_checkout
                   - checkout_type
                 examples:
-                  - &a40
-                    customerId: charles
+                  - customerId: charles
                     lineItems:
                       - display_name: Pro seed
-                        description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                        description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
                         subtotal: 20
                         total: 20
                         discounts: []
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a40
+              example:
+                customerId: charles
+                lineItems:
+                  - display_name: Pro seed
+                    description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
+                    subtotal: 20
+                    total: 20
+                    discounts: []
+                subtotal: 20
+                total: 20
+                currency: usd
       x-speakeasy-name-override: previewAttach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_multi_attach:
     post:
       operationId: previewMultiAttach
@@ -53783,15 +54500,21 @@ paths:
                 - plans
               title: PreviewMultiAttachParams
               examples:
-                - &a41
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plans:
                     - plan_id: pro_plan
                     - plan_id: addon_seats
                       feature_quantities:
                         - feature_id: seats
                           quantity: 5
-            example: *a41
+            example:
+              customer_id: cus_123
+              plans:
+                - plan_id: pro_plan
+                - plan_id: addon_seats
+                  feature_quantities:
+                    - feature_id: seats
+                      quantity: 5
       responses:
         "200":
           description: OK
@@ -54195,21 +54918,36 @@ paths:
                   - redirect_to_checkout
                   - checkout_type
                 examples:
-                  - &a42
-                    customerId: charles
+                  - customerId: charles
                     lineItems:
                       - display_name: Pro seed
-                        description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                        description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
                         subtotal: 20
                         total: 20
                         discounts: []
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a42
+              example:
+                customerId: charles
+                lineItems:
+                  - display_name: Pro seed
+                    description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
+                    subtotal: 20
+                    total: 20
+                    discounts: []
+                subtotal: 20
+                total: 20
+                currency: usd
       x-speakeasy-name-override: previewMultiAttach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.update:
     post:
       operationId: billingUpdate
@@ -56834,13 +57572,17 @@ paths:
                 - customer_id
               title: UpdateSubscriptionParams
               examples:
-                - &a43
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 10
-            example: *a43
+            example:
+              customer_id: cus_123
+              plan_id: pro_plan
+              feature_quantities:
+                - feature_id: seats
+                  quantity: 10
       responses:
         "200":
           description: OK
@@ -56915,8 +57657,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a44
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     invoice:
                       status: paid
                       stripe_id: in_1234
@@ -56924,10 +57665,24 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a44
+              example:
+                customer_id: cus_123
+                invoice:
+                  status: paid
+                  stripe_id: in_1234
+                  total: 1500
+                  currency: usd
+                  hosted_invoice_url: https://invoice.stripe.com/...
+                payment_url: null
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_update:
     post:
       operationId: previewUpdate
@@ -59552,13 +60307,17 @@ paths:
                 - customer_id
               title: PreviewUpdateParams
               examples:
-                - &a45
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 15
-            example: *a45
+            example:
+              customer_id: cus_123
+              plan_id: pro_plan
+              feature_quantities:
+                - feature_id: seats
+                  quantity: 15
       responses:
         "200":
           description: OK
@@ -59958,21 +60717,36 @@ paths:
                   - outgoing
                   - intent
                 examples:
-                  - &a46
-                    customerId: charles
+                  - customerId: charles
                     lineItems:
                       - display_name: Pro seed
-                        description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                        description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
                         subtotal: 20
                         total: 20
                         discounts: []
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a46
+              example:
+                customerId: charles
+                lineItems:
+                  - display_name: Pro seed
+                    description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
+                    subtotal: 20
+                    total: 20
+                    discounts: []
+                subtotal: 20
+                total: 20
+                currency: usd
       x-speakeasy-name-override: previewUpdate
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.multi_update:
     post:
       operationId: multiUpdate
@@ -60066,14 +60840,19 @@ paths:
                 - updates
               title: MultiUpdateParams
               examples:
-                - &a47
-                  customer_id: cus_123
+                - customer_id: cus_123
                   updates:
                     - plan_id: pro_plan
                       cancel_action: cancel_end_of_cycle
                     - plan_id: addon_seats
                       cancel_action: cancel_end_of_cycle
-            example: *a47
+            example:
+              customer_id: cus_123
+              updates:
+                - plan_id: pro_plan
+                  cancel_action: cancel_end_of_cycle
+                - plan_id: addon_seats
+                  cancel_action: cancel_end_of_cycle
       responses:
         "200":
           description: OK
@@ -60148,8 +60927,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a48
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     invoice:
                       status: paid
                       stripe_id: in_1234
@@ -60157,10 +60935,24 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a48
+              example:
+                customer_id: cus_123
+                invoice:
+                  status: paid
+                  stripe_id: in_1234
+                  total: -20
+                  currency: usd
+                  hosted_invoice_url: https://invoice.stripe.com/...
+                payment_url: null
       x-speakeasy-name-override: multiUpdate
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.preview_multi_update:
     post:
       operationId: previewMultiUpdate
@@ -60252,14 +61044,19 @@ paths:
                 - updates
               title: PreviewMultiUpdateParams
               examples:
-                - &a49
-                  customer_id: cus_123
+                - customer_id: cus_123
                   updates:
                     - plan_id: pro_plan
                       cancel_action: cancel_immediately
                     - plan_id: addon_seats
                       cancel_action: cancel_immediately
-            example: *a49
+            example:
+              customer_id: cus_123
+              updates:
+                - plan_id: pro_plan
+                  cancel_action: cancel_immediately
+                - plan_id: addon_seats
+                  cancel_action: cancel_immediately
       responses:
         "200":
           description: OK
@@ -60627,15 +61424,14 @@ paths:
                   - subscriptions
                 title: MultiUpdatePreviewResponse
                 examples:
-                  - &a50
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     currency: usd
                     total: -40
                     subscriptions:
                       - customerId: charles
                         lineItems:
                           - display_name: Pro seed
-                            description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                            description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
                             subtotal: 20
                             total: 20
                             discounts: []
@@ -60647,7 +61443,7 @@ paths:
                       - customerId: charles
                         lineItems:
                           - display_name: Pro seed
-                            description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                            description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
                             subtotal: 20
                             total: 20
                             discounts: []
@@ -60656,10 +61452,44 @@ paths:
                         currency: usd
                         plan_ids:
                           - addon_seats
-              example: *a50
+              example:
+                customer_id: cus_123
+                currency: usd
+                total: -40
+                subscriptions:
+                  - customerId: charles
+                    lineItems:
+                      - display_name: Pro seed
+                        description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
+                        subtotal: 20
+                        total: 20
+                        discounts: []
+                    subtotal: -20
+                    total: -20
+                    currency: usd
+                    plan_ids:
+                      - pro_plan
+                  - customerId: charles
+                    lineItems:
+                      - display_name: Pro seed
+                        description: Pro seed (from 18 Feb 2026 to 18 Mar 2026)
+                        subtotal: 20
+                        total: 20
+                        discounts: []
+                    subtotal: -20
+                    total: -20
+                    currency: usd
+                    plan_ids:
+                      - addon_seats
       x-speakeasy-name-override: previewMultiUpdate
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.open_customer_portal:
     post:
       operationId: openCustomerPortal
@@ -60689,10 +61519,11 @@ paths:
                 - customer_id
               title: OpenCustomerPortalParams
               examples:
-                - &a51
-                  customer_id: cus_123
+                - customer_id: cus_123
                   return_url: https://useautumn.com
-            example: *a51
+            example:
+              customer_id: cus_123
+              return_url: https://useautumn.com
       responses:
         "200":
           description: OK
@@ -60711,13 +61542,20 @@ paths:
                   - customer_id
                   - url
                 examples:
-                  - &a52
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     url: https://billing.stripe.com/session/...
-              example: *a52
+              example:
+                customer_id: cus_123
+                url: https://billing.stripe.com/session/...
       x-speakeasy-name-override: openCustomerPortal
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.setup_payment:
     post:
       operationId: setupPayment
@@ -63421,10 +64259,11 @@ paths:
                 - customer_id
               title: SetupPaymentParams
               examples:
-                - &a53
-                  customer_id: cus_123
+                - customer_id: cus_123
                   success_url: https://example.com/account/billing
-            example: *a53
+            example:
+              customer_id: cus_123
+              success_url: https://example.com/account/billing
       responses:
         "200":
           description: OK
@@ -63448,13 +64287,20 @@ paths:
                   - url
                 title: SetupPaymentResponse
                 examples:
-                  - &a54
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     url: https://checkout.stripe.com/...
-              example: *a54
+              example:
+                customer_id: cus_123
+                url: https://checkout.stripe.com/...
       x-speakeasy-name-override: setupPayment
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.verify:
     post:
       operationId: verify
@@ -63497,9 +64343,9 @@ paths:
                 - customer_id
               title: VerifyParams
               examples:
-                - &a55
-                  customer_id: cus_123
-            example: *a55
+                - customer_id: cus_123
+            example:
+              customer_id: cus_123
       responses:
         "200":
           description: OK
@@ -64262,8 +65108,7 @@ paths:
                   - subscriptions
                 title: VerifyResponse
                 examples:
-                  - &a56
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     customer_mismatches: []
                     subscriptions:
                       - stripe_subscription_id: sub_1234
@@ -64280,10 +65125,33 @@ paths:
                       - stripe_subscription_id: sub_5678
                         status: correct
                         mismatches: []
-              example: *a56
+              example:
+                customer_id: cus_123
+                customer_mismatches: []
+                subscriptions:
+                  - stripe_subscription_id: sub_1234
+                    status: mismatched
+                    mismatches:
+                      - type: prepaid_quantity_mismatch
+                        message: Prepaid seats quantity differs — expected 10, Stripe has 5
+                        severity: error
+                        actual_price_id: price_1234
+                        feature_id: seats
+                        plan_id: pro_plan
+                        expected_quantity: 10
+                        actual_quantity: 5
+                  - stripe_subscription_id: sub_5678
+                    status: correct
+                    mismatches: []
       x-speakeasy-name-override: verify
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/billing.import:
     post:
       operationId: import
@@ -64483,8 +65351,7 @@ paths:
                 - billables
               title: DfuFlashParams
               examples:
-                - &a57
-                  customer_id: cus_123
+                - customer_id: cus_123
                   processors:
                     - type: stripe
                       id: cus_stripe_123
@@ -64498,7 +65365,21 @@ paths:
                         balances:
                           - feature_id: messages
                             usage: 10
-            example: *a57
+            example:
+              customer_id: cus_123
+              processors:
+                - type: stripe
+                  id: cus_stripe_123
+              billables:
+                - processor: stripe
+                  link:
+                    subscription_id: sub_123
+                  plan:
+                    plan_id: pro
+                    status: active
+                    balances:
+                      - feature_id: messages
+                        usage: 10
       responses:
         "200":
           description: OK
@@ -64567,8 +65448,7 @@ paths:
                   - customer
                 title: DfuFlashResult
                 examples:
-                  - &a58
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     flashed:
                       - plan_id: pro
                         processor: stripe
@@ -64631,10 +65511,79 @@ paths:
                       config:
                         disable_pooled_balance: false
                         disable_overage_billing: false
-              example: *a58
+              example:
+                customer_id: cus_123
+                flashed:
+                  - plan_id: pro
+                    processor: stripe
+                    customer_product_id: cus_prod_123
+                    status: active
+                    skipped: false
+                customer:
+                  id: cus_123
+                  name: Jane Doe
+                  email: jane@example.com
+                  createdAt: 1771409161016
+                  fingerprint: null
+                  stripeId: cus_stripe_123
+                  processors:
+                    stripe:
+                      id: cus_stripe_123
+                  env: sandbox
+                  metadata: {}
+                  sendEmailReceipts: false
+                  billingControls:
+                    autoTopups: []
+                  subscriptions:
+                    - planId: pro
+                      autoEnable: false
+                      addOn: false
+                      status: active
+                      pastDue: false
+                      canceledAt: null
+                      expiresAt: null
+                      trialEndsAt: null
+                      startedAt: 1771431921437
+                      currentPeriodStart: 1771431921437
+                      currentPeriodEnd: 1771999921437
+                      quantity: 1
+                  purchases: []
+                  balances:
+                    messages:
+                      featureId: messages
+                      granted: 100
+                      remaining: 90
+                      usage: 10
+                      unlimited: false
+                      overageAllowed: false
+                      maxPurchase: null
+                      nextResetAt: 1773851121437
+                      breakdown:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          planId: pro
+                          includedGrant: 100
+                          prepaidGrant: 0
+                          remaining: 90
+                          usage: 10
+                          unlimited: false
+                          reset:
+                            interval: month
+                            resetsAt: 1773851121437
+                          price: null
+                          expiresAt: null
+                  flags: {}
+                  config:
+                    disable_pooled_balance: false
+                    disable_overage_billing: false
       x-speakeasy-name-override: import
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.create:
     post:
       operationId: createBalance
@@ -64734,13 +65683,17 @@ paths:
                 - feature_id
               title: CreateBalanceParams
               examples:
-                - &a59
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: api_calls
                   included: 1000
                   reset:
                     interval: month
-            example: *a59
+            example:
+              customer_id: cus_123
+              feature_id: api_calls
+              included: 1000
+              reset:
+                interval: month
       responses:
         "200":
           description: OK
@@ -64755,7 +65708,13 @@ paths:
                   - success
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.list:
     post:
       operationId: listBalances
@@ -64813,14 +65772,16 @@ paths:
                   description: Only return balances for this feature.
               title: ListBalancesParams
               examples:
-                - &a60
-                  customer_id: cus_123
+                - customer_id: cus_123
                   statuses:
                     - expired
                 - customer_id: cus_123
                   feature_id: messages
                   plan_id: null
-            example: *a60
+            example:
+              customer_id: cus_123
+              statuses:
+                - expired
       responses:
         "200":
           description: OK
@@ -65042,8 +66003,7 @@ paths:
                   - has_more
                   - next_cursor
                 examples:
-                  - &a61
-                    list:
+                  - list:
                       - id: bonus_credits
                         plan_id: null
                         included_grant: 50
@@ -65064,10 +66024,37 @@ paths:
                         created_at: 1769904000000
                     has_more: false
                     next_cursor: null
-              example: *a61
+              example:
+                list:
+                  - id: bonus_credits
+                    plan_id: null
+                    included_grant: 50
+                    prepaid_grant: 0
+                    remaining: 0
+                    usage: 50
+                    unlimited: false
+                    reset:
+                      interval: one_off
+                      resets_at: null
+                    price: null
+                    expires_at: 1771999921437
+                    feature_id: messages
+                    status: expired
+                    rollovers: []
+                    customer_id: cus_123
+                    entity_id: null
+                    created_at: 1769904000000
+                has_more: false
+                next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.update:
     post:
       operationId: updateBalance
@@ -65140,11 +66127,13 @@ paths:
                 - feature_id
               title: UpdateBalanceParams
               examples:
-                - &a62
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: api_calls
                   remaining: 5
-            example: *a62
+            example:
+              customer_id: cus_123
+              feature_id: api_calls
+              remaining: 5
       responses:
         "200":
           description: OK
@@ -65159,7 +66148,13 @@ paths:
                   - success
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.delete:
     post:
       operationId: deleteBalance
@@ -65211,10 +66206,11 @@ paths:
                 - customer_id
               title: DeleteBalanceParams
               examples:
-                - &a63
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: api_calls
-            example: *a63
+            example:
+              customer_id: cus_123
+              feature_id: api_calls
       responses:
         "200":
           description: OK
@@ -65229,7 +66225,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.finalize:
     post:
       operationId: finalizeLock
@@ -65268,15 +66270,16 @@ paths:
                 - action
               title: FinalizeBalanceParams
               examples:
-                - &a64
-                  lock_id: lock_abc123
+                - lock_id: lock_abc123
                   action: confirm
                 - lock_id: lock_abc123
                   action: confirm
                   override_value: 3
                 - lock_id: lock_abc123
                   action: release
-            example: *a64
+            example:
+              lock_id: lock_abc123
+              action: confirm
       responses:
         "200":
           description: OK
@@ -65303,7 +66306,13 @@ paths:
                   - success
       x-speakeasy-name-override: finalize
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.check:
     post:
       operationId: check
@@ -65386,14 +66395,15 @@ paths:
                 - feature_id
               title: CheckParams
               examples:
-                - &a65
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: messages
                 - customer_id: cus_123
                   feature_id: messages
                   required_balance: 3
                   send_event: true
-            example: *a65
+            example:
+              customer_id: cus_123
+              feature_id: messages
       responses:
         "200":
           description: OK
@@ -66606,8 +67616,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a66
-                    allowed: true
+                  - allowed: true
                     customer_id: cus_123
                     entity_id: null
                     required_balance: 1
@@ -66633,7 +67642,33 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a66
+              example:
+                allowed: true
+                customer_id: cus_123
+                entity_id: null
+                required_balance: 1
+                balance:
+                  feature_id: messages
+                  granted: 100
+                  remaining: 72
+                  usage: 28
+                  unlimited: false
+                  overage_allowed: false
+                  max_purchase: null
+                  next_reset_at: 1773851121437
+                  breakdown:
+                    - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                      plan_id: pro_plan
+                      included_grant: 100
+                      prepaid_grant: 0
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      reset:
+                        interval: month
+                        resets_at: 1773851121437
+                      price: null
+                      expires_at: null
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so access was allowed fail-open.
@@ -67846,8 +68881,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a67
-                    allowed: true
+                  - allowed: true
                     customer_id: cus_123
                     entity_id: null
                     required_balance: 1
@@ -67873,10 +68907,42 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a67
+              example:
+                allowed: true
+                customer_id: cus_123
+                entity_id: null
+                required_balance: 1
+                balance:
+                  feature_id: messages
+                  granted: 100
+                  remaining: 72
+                  usage: 28
+                  unlimited: false
+                  overage_allowed: false
+                  max_purchase: null
+                  next_reset_at: 1773851121437
+                  breakdown:
+                    - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                      plan_id: pro_plan
+                      included_grant: 100
+                      prepaid_grant: 0
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      reset:
+                        interval: month
+                        resets_at: 1773851121437
+                      price: null
+                      expires_at: null
       x-speakeasy-name-override: check
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.track:
     post:
       operationId: track
@@ -67945,11 +69011,13 @@ paths:
                 - customer_id
               title: TrackParams
               examples:
-                - &a68
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a68
+            example:
+              customer_id: cus_123
+              feature_id: messages
+              value: 1
       responses:
         "200":
           description: OK
@@ -68061,8 +69129,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a69
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     value: 1
                     balance:
                       feature_id: messages
@@ -68094,7 +69161,39 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 1
-              example: *a69
+              example:
+                customer_id: cus_123
+                value: 1
+                balance:
+                  feature_id: messages
+                  granted: 100
+                  remaining: 72
+                  usage: 28
+                  unlimited: false
+                  overage_allowed: false
+                  max_purchase: null
+                  next_reset_at: 1773851121437
+                  breakdown:
+                    - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                      plan_id: pro_plan
+                      included_grant: 100
+                      prepaid_grant: 0
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      reset:
+                        interval: month
+                        resets_at: 1773851121437
+                      price: null
+                      expires_at: null
+                deductions:
+                  - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                    feature_id: messages
+                    plan_id: pro
+                    reset:
+                      interval: month
+                      resets_at: 1781288736881
+                    value: 1
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the event was accepted for replay and will be tracked
@@ -68207,8 +69306,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a70
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     value: 1
                     balance:
                       feature_id: messages
@@ -68240,10 +69338,48 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 1
-              example: *a70
+              example:
+                customer_id: cus_123
+                value: 1
+                balance:
+                  feature_id: messages
+                  granted: 100
+                  remaining: 72
+                  usage: 28
+                  unlimited: false
+                  overage_allowed: false
+                  max_purchase: null
+                  next_reset_at: 1773851121437
+                  breakdown:
+                    - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                      plan_id: pro_plan
+                      included_grant: 100
+                      prepaid_grant: 0
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      reset:
+                        interval: month
+                        resets_at: 1773851121437
+                      price: null
+                      expires_at: null
+                deductions:
+                  - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                    feature_id: messages
+                    plan_id: pro
+                    reset:
+                      interval: month
+                      resets_at: 1781288736881
+                    value: 1
       x-speakeasy-name-override: track
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.track_tokens:
     post:
       operationId: trackTokens
@@ -68352,13 +69488,17 @@ paths:
                 - output_tokens
               title: TrackTokensParams
               examples:
-                - &a71
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: ai_credits
                   model_id: anthropic/claude-sonnet-4-20250514
                   input_tokens: 1000
                   output_tokens: 500
-            example: *a71
+            example:
+              customer_id: cus_123
+              feature_id: ai_credits
+              model_id: anthropic/claude-sonnet-4-20250514
+              input_tokens: 1000
+              output_tokens: 500
       responses:
         "200":
           description: OK
@@ -68470,8 +69610,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a72
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     value: 0.006
                     balance:
                       feature_id: ai_credits
@@ -68503,7 +69642,39 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 0.006
-              example: *a72
+              example:
+                customer_id: cus_123
+                value: 0.006
+                balance:
+                  feature_id: ai_credits
+                  granted: 10
+                  remaining: 9.994
+                  usage: 0.006
+                  unlimited: false
+                  overage_allowed: false
+                  max_purchase: null
+                  next_reset_at: 1773851121437
+                  breakdown:
+                    - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                      plan_id: pro_plan
+                      included_grant: 100
+                      prepaid_grant: 0
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      reset:
+                        interval: month
+                        resets_at: 1773851121437
+                      price: null
+                      expires_at: null
+                deductions:
+                  - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                    feature_id: ai_credits
+                    plan_id: pro
+                    reset:
+                      interval: month
+                      resets_at: 1781288736881
+                    value: 0.006
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the token usage event was accepted for replay and will
@@ -68616,8 +69787,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a73
-                    customer_id: cus_123
+                  - customer_id: cus_123
                     value: 0.006
                     balance:
                       feature_id: ai_credits
@@ -68649,10 +69819,48 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 0.006
-              example: *a73
+              example:
+                customer_id: cus_123
+                value: 0.006
+                balance:
+                  feature_id: ai_credits
+                  granted: 10
+                  remaining: 9.994
+                  usage: 0.006
+                  unlimited: false
+                  overage_allowed: false
+                  max_purchase: null
+                  next_reset_at: 1773851121437
+                  breakdown:
+                    - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                      plan_id: pro_plan
+                      included_grant: 100
+                      prepaid_grant: 0
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      reset:
+                        interval: month
+                        resets_at: 1773851121437
+                      price: null
+                      expires_at: null
+                deductions:
+                  - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                    feature_id: ai_credits
+                    plan_id: pro
+                    reset:
+                      interval: month
+                      resets_at: 1781288736881
+                    value: 0.006
       x-speakeasy-name-override: trackTokens
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/balances.batch_track:
     post:
       operationId: batchTrack
@@ -68733,14 +69941,19 @@ paths:
                   - customer_id
               title: BatchTrackParams
               examples:
-                - &a74
-                  - customer_id: cus_123
+                - - customer_id: cus_123
                     feature_id: messages
                     value: 1
                   - customer_id: cus_123
                     event_name: message.sent
                     value: 1
-            example: *a74
+            example:
+              - customer_id: cus_123
+                feature_id: messages
+                value: 1
+              - customer_id: cus_123
+                event_name: message.sent
+                value: 1
       responses:
         "200":
           description: OK
@@ -68754,9 +69967,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a75
-                    success: true
-              example: *a75
+                  - success: true
+              example:
+                success: true
         "202":
           description: "Batch accepted. All items passed synchronous validation. Enqueue
             is best-effort: partial failures (some items enqueued, some not) are
@@ -68773,12 +69986,18 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a76
-                    success: true
-              example: *a76
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: batchTrack
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/events.list:
     post:
       operationId: listEvents
@@ -68845,8 +70064,7 @@ paths:
                     events.aggregate. Cannot be combined with custom_range
               title: EventsListParams
               examples:
-                - &a77
-                  start_cursor: ""
+                - start_cursor: ""
                   customer_id: cus_123
                   limit: 50
                 - start_cursor: ""
@@ -68854,7 +70072,10 @@ paths:
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a77
+            example:
+              start_cursor: ""
+              customer_id: cus_123
+              limit: 50
       responses:
         "200":
           description: OK
@@ -68979,8 +70200,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a78
-                    list:
+                  - list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
                         feature_id: credits
@@ -69003,10 +70223,39 @@ paths:
                         properties: {}
                         deductions: null
                     next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
-              example: *a78
+              example:
+                list:
+                  - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
+                    timestamp: 1765958215459
+                    feature_id: credits
+                    customer_id: 0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx
+                    value: 30
+                    properties: {}
+                    deductions:
+                      - balance_id: cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12
+                        feature_id: credits
+                        plan_id: pro
+                        reset:
+                          interval: month
+                          resets_at: 1765958215459
+                        value: 30
+                  - id: evt_36xmHxxjAkqxufDf9yHAPNfRrLM
+                    timestamp: 1765956512057
+                    feature_id: credits
+                    customer_id: 0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx
+                    value: 49
+                    properties: {}
+                    deductions: null
+                next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/events.aggregate:
     post:
       operationId: aggregateEvents
@@ -69112,8 +70361,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a79
-                  customer_id: cus_123
+                - customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
                   bin_size: day
@@ -69123,7 +70371,11 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a79
+            example:
+              customer_id: cus_123
+              feature_id: api_calls
+              range: 30d
+              bin_size: day
       responses:
         "200":
           description: OK
@@ -69301,8 +70553,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a80
-                    list:
+                  - list:
                       - period: 1762905600000
                         values:
                           messages: 10
@@ -69348,10 +70599,32 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a80
+              example:
+                list:
+                  - period: 1762905600000
+                    values:
+                      messages: 10
+                      sessions: 3
+                  - period: 1762992000000
+                    values:
+                      messages: 3
+                      sessions: 12
+                total:
+                  messages:
+                    count: 2
+                    sum: 13
+                  sessions:
+                    count: 2
+                    sum: 15
       x-speakeasy-name-override: aggregate
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/logs.search:
     post:
       operationId: searchRequestLogs
@@ -69393,10 +70666,11 @@ paths:
               additionalProperties: false
               title: SearchRequestLogsParams
               examples:
-                - &a81
-                  query: where status_code >= 400 | order by timestamp desc
+                - query: where status_code >= 400 | order by timestamp desc
                   limit: 50
-            example: *a81
+            example:
+              query: where status_code >= 400 | order by timestamp desc
+              limit: 50
       responses:
         "200":
           description: OK
@@ -69530,8 +70804,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a82
-                    list:
+                  - list:
                       - timestamp: 2026-09-21T12:00:00.000Z
                         source: api_request
                         status_code: 200
@@ -69554,10 +70827,39 @@ paths:
                           customer_id: cus_123
                         response_body:
                           allowed: true
-              example: *a82
+              example:
+                list:
+                  - timestamp: 2026-09-21T12:00:00.000Z
+                    source: api_request
+                    status_code: 200
+                    request:
+                      method: POST
+                      url: https://api.useautumn.com/v1/balances.check
+                      path: /v1/balances.check
+                    context:
+                      org_id: org_123
+                      customer_id: cus_123
+                      entity_id: null
+                      auth_type: secret_key
+                      user_id: user_123
+                      user_email: user@example.com
+                    stripe:
+                      event_id: null
+                      event_type: null
+                      object_id: null
+                    request_body:
+                      customer_id: cus_123
+                    response_body:
+                      allowed: true
       x-speakeasy-name-override: search
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.create:
     post:
       operationId: createInvoice
@@ -70365,8 +71667,7 @@ paths:
               additionalProperties: false
               title: CreateInvoiceParams
               examples:
-                - &a83
-                  customer_id: cus_123
+                - customer_id: cus_123
                   net_terms_days: 30
                   plans:
                     - plan_id: pro
@@ -70380,7 +71681,21 @@ paths:
                   custom_line_items:
                     - description: Implementation services
                       amount: 500
-            example: *a83
+            example:
+              customer_id: cus_123
+              net_terms_days: 30
+              plans:
+                - plan_id: pro
+                  feature_quantities:
+                    - feature_id: seats
+                      billing_behavior: prepaid
+                      quantity: 5
+                    - feature_id: credits
+                      billing_behavior: usage_based
+                      quantity: 2500
+              custom_line_items:
+                - description: Implementation services
+                  amount: 500
       responses:
         "200":
           description: OK
@@ -70664,8 +71979,7 @@ paths:
                   - invoice
                   - preview
                 examples:
-                  - &a84
-                    invoice:
+                  - invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
                       entity_id: null
@@ -70717,10 +72031,68 @@ paths:
                         currency: usd
                       amount_due: 19.99
                       due_date: 1761839877000
-              example: *a84
+              example:
+                invoice:
+                  id: inv_2b3c4d5e6f7g8h
+                  customer_id: cus_123
+                  entity_id: null
+                  plan_ids:
+                    - pro_plan
+                  stripe_id: in_1A2B3C4D5E6F7G8H
+                  processor_type: stripe
+                  status: open
+                  total: 29.99
+                  amount_paid: 29.99
+                  refunded_amount: 0
+                  currency: usd
+                  created_at: 1759247877000
+                  hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                  items:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      description: Pro plan
+                      plan_id: pro_plan
+                      feature_id: null
+                      feature_name: null
+                      quantity: null
+                      amount: 20
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities: []
+                    - id: invoice_li_3c4d5e6f7g8h9i
+                      description: AI credits
+                      plan_id: pro_plan
+                      feature_id: ai_credits
+                      feature_name: AI Credits
+                      quantity: 4995
+                      amount: 9.99
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities:
+                        - entity_id: acme-docs-prod
+                          quantity: 4995
+                          amount: 9.99
+                preview:
+                  currency: usd
+                  lines: []
+                  subtotal: 29.99
+                  discount_total: 0
+                  tax: null
+                  total: 29.99
+                  invoice_credits:
+                    balance: 10
+                    applied: 10
+                    currency: usd
+                  amount_due: 19.99
+                  due_date: 1761839877000
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.finalize:
     post:
       operationId: finalizeInvoice
@@ -70745,9 +72117,9 @@ paths:
                 - invoice_id
               title: FinalizeInvoiceParams
               examples:
-                - &a85
-                  invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a85
+                - invoice_id: inv_2b3c4d5e6f7g8h
+            example:
+              invoice_id: inv_2b3c4d5e6f7g8h
       responses:
         "200":
           description: OK
@@ -70913,8 +72285,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a86
-                    invoice:
+                  - invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
                       entity_id: null
@@ -70953,10 +72324,55 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a86
+              example:
+                invoice:
+                  id: inv_2b3c4d5e6f7g8h
+                  customer_id: cus_123
+                  entity_id: null
+                  plan_ids:
+                    - pro_plan
+                  stripe_id: in_1A2B3C4D5E6F7G8H
+                  processor_type: stripe
+                  status: open
+                  total: 29.99
+                  amount_paid: 29.99
+                  refunded_amount: 0
+                  currency: usd
+                  created_at: 1759247877000
+                  hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                  items:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      description: Pro plan
+                      plan_id: pro_plan
+                      feature_id: null
+                      feature_name: null
+                      quantity: null
+                      amount: 20
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities: []
+                    - id: invoice_li_3c4d5e6f7g8h9i
+                      description: AI credits
+                      plan_id: pro_plan
+                      feature_id: ai_credits
+                      feature_name: AI Credits
+                      quantity: 4995
+                      amount: 9.99
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities:
+                        - entity_id: acme-docs-prod
+                          quantity: 4995
+                          amount: 9.99
       x-speakeasy-name-override: finalize
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.insert:
     post:
       operationId: insertInvoices
@@ -71041,8 +72457,7 @@ paths:
                 - invoices
               title: InsertInvoicesParams
               examples:
-                - &a87
-                  invoices:
+                - invoices:
                     - customer_id: cus_123
                       plan_ids:
                         - pro
@@ -71055,7 +72470,20 @@ paths:
                       currency: usd
                       created_at: 1451606400000
                       hosted_invoice_url: https://billing.example.com/invoices/legacy-123
-            example: *a87
+            example:
+              invoices:
+                - customer_id: cus_123
+                  plan_ids:
+                    - pro
+                  stripe_id: in_legacy_123
+                  processor_type: stripe
+                  status: paid
+                  total: 29.99
+                  amount_paid: 29.99
+                  refunded_amount: 0
+                  currency: usd
+                  created_at: 1451606400000
+                  hosted_invoice_url: https://billing.example.com/invoices/legacy-123
       responses:
         "200":
           description: OK
@@ -71130,8 +72558,7 @@ paths:
                 required:
                   - invoices
                 examples:
-                  - &a88
-                    invoices:
+                  - invoices:
                       - id: inv_2b3c4d5e6f7g8h
                         customer_id: cus_123
                         plan_ids:
@@ -71145,10 +72572,30 @@ paths:
                         currency: usd
                         created_at: 1451606400000
                         hosted_invoice_url: https://billing.example.com/invoices/legacy-123
-              example: *a88
+              example:
+                invoices:
+                  - id: inv_2b3c4d5e6f7g8h
+                    customer_id: cus_123
+                    plan_ids:
+                      - pro
+                    stripe_id: in_legacy_123
+                    processor_type: stripe
+                    status: paid
+                    total: 29.99
+                    amount_paid: 29.99
+                    refunded_amount: 0
+                    currency: usd
+                    created_at: 1451606400000
+                    hosted_invoice_url: https://billing.example.com/invoices/legacy-123
       x-speakeasy-name-override: insert
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.list:
     post:
       operationId: listInvoices
@@ -71215,14 +72662,19 @@ paths:
                     before processor tracking count as stripe.
               title: ListInvoicesParams
               examples:
-                - &a89
-                  start_cursor: ""
+                - start_cursor: ""
                   limit: 10
                   customer_id: cus_123
                   status:
                     - open
                     - paid
-            example: *a89
+            example:
+              start_cursor: ""
+              limit: 10
+              customer_id: cus_123
+              status:
+                - open
+                - paid
       responses:
         "200":
           description: OK
@@ -71398,8 +72850,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a90
-                    list:
+                  - list:
                       - id: inv_2b3c4d5e6f7g8h
                         customer_id: cus_123
                         entity_id: null
@@ -71439,10 +72890,56 @@ paths:
                                 quantity: 4995
                                 amount: 9.99
                     next_cursor: null
-              example: *a90
+              example:
+                list:
+                  - id: inv_2b3c4d5e6f7g8h
+                    customer_id: cus_123
+                    entity_id: null
+                    plan_ids:
+                      - pro_plan
+                    stripe_id: in_1A2B3C4D5E6F7G8H
+                    processor_type: stripe
+                    status: paid
+                    total: 29.99
+                    amount_paid: 29.99
+                    refunded_amount: 0
+                    currency: usd
+                    created_at: 1759247877000
+                    hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                    items:
+                      - id: invoice_li_2b3c4d5e6f7g8h
+                        description: Pro plan
+                        plan_id: pro_plan
+                        feature_id: null
+                        feature_name: null
+                        quantity: null
+                        amount: 20
+                        period_start: 1759247877000
+                        period_end: 1761839877000
+                        entities: []
+                      - id: invoice_li_3c4d5e6f7g8h9i
+                        description: AI credits
+                        plan_id: pro_plan
+                        feature_id: ai_credits
+                        feature_name: AI Credits
+                        quantity: 4995
+                        amount: 9.99
+                        period_start: 1759247877000
+                        period_end: 1761839877000
+                        entities:
+                          - entity_id: acme-docs-prod
+                            quantity: 4995
+                            amount: 9.99
+                next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.listTemplates:
     post:
       operationId: listInvoiceTemplates
@@ -71474,10 +72971,11 @@ paths:
               title: ListInvoiceTemplatesParams
               description: Parameters for listing an organization's invoice templates.
               examples:
-                - &a91
-                  limit: 10
+                - limit: 10
                   offset: 0
-            example: *a91
+            example:
+              limit: 10
+              offset: 0
       responses:
         "200":
           description: OK
@@ -71538,8 +73036,7 @@ paths:
                   - offset
                   - has_more
                 examples:
-                  - &a92
-                    list:
+                  - list:
                       - id: inv_tmpl_2b3c4d5e6f7g8h
                         name: Bank transfer
                         footer: Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00
@@ -71550,10 +73047,27 @@ paths:
                     limit: 10
                     offset: 0
                     has_more: false
-              example: *a92
+              example:
+                list:
+                  - id: inv_tmpl_2b3c4d5e6f7g8h
+                    name: Bank transfer
+                    footer: Pay by wire to IBAN GB00 EXAM 0000 0000 0000 00
+                    memo: Questions? billing@example.com
+                    net_terms_days: 30
+                    created_at: 1759247877000
+                total: 1
+                limit: 10
+                offset: 0
+                has_more: false
       x-speakeasy-name-override: listTemplates
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.pay:
     post:
       operationId: payInvoice
@@ -71576,9 +73090,9 @@ paths:
                 - invoice_id
               title: PayInvoiceParams
               examples:
-                - &a93
-                  invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a93
+                - invoice_id: inv_2b3c4d5e6f7g8h
+            example:
+              invoice_id: inv_2b3c4d5e6f7g8h
       responses:
         "200":
           description: OK
@@ -71744,8 +73258,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a94
-                    invoice:
+                  - invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
                       entity_id: null
@@ -71784,10 +73297,55 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a94
+              example:
+                invoice:
+                  id: inv_2b3c4d5e6f7g8h
+                  customer_id: cus_123
+                  entity_id: null
+                  plan_ids:
+                    - pro_plan
+                  stripe_id: in_1A2B3C4D5E6F7G8H
+                  processor_type: stripe
+                  status: paid
+                  total: 29.99
+                  amount_paid: 29.99
+                  refunded_amount: 0
+                  currency: usd
+                  created_at: 1759247877000
+                  hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                  items:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      description: Pro plan
+                      plan_id: pro_plan
+                      feature_id: null
+                      feature_name: null
+                      quantity: null
+                      amount: 20
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities: []
+                    - id: invoice_li_3c4d5e6f7g8h9i
+                      description: AI credits
+                      plan_id: pro_plan
+                      feature_id: ai_credits
+                      feature_name: AI Credits
+                      quantity: 4995
+                      amount: 9.99
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities:
+                        - entity_id: acme-docs-prod
+                          quantity: 4995
+                          amount: 9.99
       x-speakeasy-name-override: pay
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.issue_credit_note:
     post:
       operationId: issueCreditNote
@@ -71874,8 +73432,7 @@ paths:
               additionalProperties: false
               title: IssueCreditNoteParams
               examples:
-                - &a95
-                  invoice_id: inv_2b3c4d5e6f7g8h
+                - invoice_id: inv_2b3c4d5e6f7g8h
                   lines:
                     - id: invoice_li_2b3c4d5e6f7g8h
                       amount: 20
@@ -71883,7 +73440,15 @@ paths:
                   send_email: true
                   reason: product_unsatisfactory
                   memo: Partial refund for degraded service
-            example: *a95
+            example:
+              invoice_id: inv_2b3c4d5e6f7g8h
+              lines:
+                - id: invoice_li_2b3c4d5e6f7g8h
+                  amount: 20
+              destination: refund
+              send_email: true
+              reason: product_unsatisfactory
+              memo: Partial refund for degraded service
       responses:
         "200":
           description: OK
@@ -72005,8 +73570,7 @@ paths:
                 required:
                   - credit_note
                 examples:
-                  - &a96
-                    credit_note:
+                  - credit_note:
                       id: cn_1MxvRqLkdIwHu7ixY0xbUcxk
                       invoice_id: inv_2b3c4d5e6f7g8h
                       number: ABC-0001-CN-01
@@ -72030,10 +73594,40 @@ paths:
                           quantity: null
                           amount: 20
                           discount_amount: 0
-              example: *a96
+              example:
+                credit_note:
+                  id: cn_1MxvRqLkdIwHu7ixY0xbUcxk
+                  invoice_id: inv_2b3c4d5e6f7g8h
+                  number: ABC-0001-CN-01
+                  status: issued
+                  currency: usd
+                  subtotal: 20
+                  discount_amount: 0
+                  tax_amount: 0
+                  total: 20
+                  pre_payment_amount: 0
+                  post_payment_amount: 20
+                  refund_amount: 20
+                  credit_amount: 0
+                  out_of_band_amount: 0
+                  reason: product_unsatisfactory
+                  memo: Partial refund for degraded service
+                  pdf: https://pay.stripe.com/credit_notes/acct_123/test_456/pdf
+                  lines:
+                    - invoice_line_item_id: invoice_li_2b3c4d5e6f7g8h
+                      description: Pro plan
+                      quantity: null
+                      amount: 20
+                      discount_amount: 0
       x-speakeasy-name-override: issueCreditNote
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.reissue:
     post:
       operationId: reissueInvoice
@@ -72978,10 +74572,11 @@ paths:
                 - invoice_id
               title: ReissueInvoiceParams
               examples:
-                - &a97
-                  invoice_id: inv_2b3c4d5e6f7g8h
+                - invoice_id: inv_2b3c4d5e6f7g8h
                   invoice_template_id: inv_tmpl_bank_transfer
-            example: *a97
+            example:
+              invoice_id: inv_2b3c4d5e6f7g8h
+              invoice_template_id: inv_tmpl_bank_transfer
       responses:
         "200":
           description: OK
@@ -73283,8 +74878,7 @@ paths:
                   - credit_note_id
                   - preview
                 examples:
-                  - &a98
-                    invoice:
+                  - invoice:
                       id: inv_3c4d5e6f7g8h9i
                       customer_id: cus_123
                       entity_id: null
@@ -73333,10 +74927,65 @@ paths:
                       total: 29.99
                       amount_due: 29.99
                       due_date: 1761839877000
-              example: *a98
+              example:
+                invoice:
+                  id: inv_3c4d5e6f7g8h9i
+                  customer_id: cus_123
+                  entity_id: null
+                  plan_ids:
+                    - pro_plan
+                  stripe_id: in_1A2B3C4D5E6F7G8H
+                  processor_type: stripe
+                  status: open
+                  total: 29.99
+                  amount_paid: 29.99
+                  refunded_amount: 0
+                  currency: usd
+                  created_at: 1759247877000
+                  hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                  items:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      description: Pro plan
+                      plan_id: pro_plan
+                      feature_id: null
+                      feature_name: null
+                      quantity: null
+                      amount: 20
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities: []
+                    - id: invoice_li_3c4d5e6f7g8h9i
+                      description: AI credits
+                      plan_id: pro_plan
+                      feature_id: ai_credits
+                      feature_name: AI Credits
+                      quantity: 4995
+                      amount: 9.99
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities:
+                        - entity_id: acme-docs-prod
+                          quantity: 4995
+                          amount: 9.99
+                voided_invoice_id: inv_2b3c4d5e6f7g8h
+                preview:
+                  currency: usd
+                  lines: []
+                  subtotal: 29.99
+                  discount_total: 0
+                  tax: null
+                  total: 29.99
+                  amount_due: 29.99
+                  due_date: 1761839877000
       x-speakeasy-name-override: reissue
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/invoices.void:
     post:
       operationId: voidInvoice
@@ -73361,9 +75010,9 @@ paths:
                 - invoice_id
               title: VoidInvoiceParams
               examples:
-                - &a99
-                  invoice_id: inv_2b3c4d5e6f7g8h
-            example: *a99
+                - invoice_id: inv_2b3c4d5e6f7g8h
+            example:
+              invoice_id: inv_2b3c4d5e6f7g8h
       responses:
         "200":
           description: OK
@@ -73529,8 +75178,7 @@ paths:
                 required:
                   - invoice
                 examples:
-                  - &a100
-                    invoice:
+                  - invoice:
                       id: inv_2b3c4d5e6f7g8h
                       customer_id: cus_123
                       entity_id: null
@@ -73569,10 +75217,55 @@ paths:
                             - entity_id: acme-docs-prod
                               quantity: 4995
                               amount: 9.99
-              example: *a100
+              example:
+                invoice:
+                  id: inv_2b3c4d5e6f7g8h
+                  customer_id: cus_123
+                  entity_id: null
+                  plan_ids:
+                    - pro_plan
+                  stripe_id: in_1A2B3C4D5E6F7G8H
+                  processor_type: stripe
+                  status: void
+                  total: 29.99
+                  amount_paid: 29.99
+                  refunded_amount: 0
+                  currency: usd
+                  created_at: 1759247877000
+                  hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+                  items:
+                    - id: invoice_li_2b3c4d5e6f7g8h
+                      description: Pro plan
+                      plan_id: pro_plan
+                      feature_id: null
+                      feature_name: null
+                      quantity: null
+                      amount: 20
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities: []
+                    - id: invoice_li_3c4d5e6f7g8h9i
+                      description: AI credits
+                      plan_id: pro_plan
+                      feature_id: ai_credits
+                      feature_name: AI Credits
+                      quantity: 4995
+                      amount: 9.99
+                      period_start: 1759247877000
+                      period_end: 1761839877000
+                      entities:
+                        - entity_id: acme-docs-prod
+                          quantity: 4995
+                          amount: 9.99
       x-speakeasy-name-override: void
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.attach:
     post:
       operationId: attachLicense
@@ -73616,13 +75309,17 @@ paths:
                 - entities
               title: AttachLicenseParams
               examples:
-                - &a101
-                  customer_id: cus_123
+                - customer_id: cus_123
                   plan_id: seat_plan
                   entities:
                     - entity_id: user_123
                       name: Ada Lovelace
-            example: *a101
+            example:
+              customer_id: cus_123
+              plan_id: seat_plan
+              entities:
+                - entity_id: user_123
+                  name: Ada Lovelace
       responses:
         "200":
           description: OK
@@ -73637,7 +75334,13 @@ paths:
                   - success
       x-speakeasy-name-override: attach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.release:
     post:
       operationId: releaseLicense
@@ -73666,12 +75369,15 @@ paths:
                 - entity_ids
               title: ReleaseLicenseParams
               examples:
-                - &a102
-                  customer_id: cus_123
+                - customer_id: cus_123
                   license_plan_id: seat_plan
                   entity_ids:
                     - user_123
-            example: *a102
+            example:
+              customer_id: cus_123
+              license_plan_id: seat_plan
+              entity_ids:
+                - user_123
       responses:
         "200":
           description: OK
@@ -73686,7 +75392,13 @@ paths:
                   - success
       x-speakeasy-name-override: release
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.list_assignments:
     post:
       operationId: listLicenseAssignments
@@ -73713,10 +75425,11 @@ paths:
                 - customer_id
               title: ListLicenseAssignmentsParams
               examples:
-                - &a103
-                  customer_id: cus_123
+                - customer_id: cus_123
                   active: true
-            example: *a103
+            example:
+              customer_id: cus_123
+              active: true
       responses:
         "200":
           description: OK
@@ -73751,18 +75464,29 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a104
-                    list:
+                  - list:
                       - id: lic_asn_123
                         entity_id: user_123
                         license_plan_id: seat_plan
                         started_at: 1759247877000
                         ended_at: null
-              example: *a104
+              example:
+                list:
+                  - id: lic_asn_123
+                    entity_id: user_123
+                    license_plan_id: seat_plan
+                    started_at: 1759247877000
+                    ended_at: null
       x-speakeasy-name-override: listAssignments
       x-speakeasy-ignore: true
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/licenses.list:
     post:
       operationId: listLicenses
@@ -73784,9 +75508,9 @@ paths:
                 - customer_id
               title: ListLicensesParams
               examples:
-                - &a105
-                  customer_id: cus_123
-            example: *a105
+                - customer_id: cus_123
+            example:
+              customer_id: cus_123
       responses:
         "200":
           description: OK
@@ -73832,8 +75556,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a106
-                    list:
+                  - list:
                       - license_plan_id: seat_plan
                         parent_plan_id: pro_plan
                         license_plan_name: Seat
@@ -73841,11 +75564,25 @@ paths:
                         usage: 3
                         remaining: 7
                         paid_quantity: 5
-              example: *a106
+              example:
+                list:
+                  - license_plan_id: seat_plan
+                    parent_plan_id: pro_plan
+                    license_plan_name: Seat
+                    granted: 10
+                    usage: 3
+                    remaining: 7
+                    paid_quantity: 5
       x-speakeasy-name-override: list
       x-speakeasy-ignore: true
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.create:
     post:
       operationId: createEntity
@@ -74067,12 +75804,15 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a107
-                  customer_id: cus_123
+                - customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a107
+            example:
+              customer_id: cus_123
+              entity_id: seat_42
+              feature_id: seats
+              name: Seat 42
       responses:
         "200":
           description: OK
@@ -75066,8 +76806,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a108
-                    id: seat_42
+                  - id: seat_42
                     name: Seat 42
                     customer_id: cus_123
                     feature_id: seats
@@ -75111,10 +76850,60 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a108
+              example:
+                id: seat_42
+                name: Seat 42
+                customer_id: cus_123
+                feature_id: seats
+                created_at: 1771409161016
+                env: sandbox
+                subscriptions:
+                  - plan_id: pro_plan
+                    auto_enable: true
+                    add_on: false
+                    status: active
+                    past_due: false
+                    canceled_at: null
+                    expires_at: null
+                    trial_ends_at: null
+                    started_at: 1771431921437
+                    current_period_start: 1771431921437
+                    current_period_end: 1771999921437
+                    quantity: 1
+                purchases: []
+                balances:
+                  messages:
+                    feature_id: messages
+                    granted: 100
+                    remaining: 72
+                    usage: 28
+                    unlimited: false
+                    overage_allowed: false
+                    max_purchase: null
+                    next_reset_at: 1773851121437
+                    breakdown:
+                      - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                        plan_id: pro_plan
+                        included_grant: 100
+                        prepaid_grant: 0
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        reset:
+                          interval: month
+                          resets_at: 1773851121437
+                        price: null
+                        expires_at: null
+                invoices: []
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.get:
     post:
       operationId: getEntity
@@ -75143,11 +76932,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a109
-                  entity_id: seat_42
+                - entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a109
+            example:
+              entity_id: seat_42
       responses:
         "200":
           description: OK
@@ -76141,8 +77930,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a110
-                    id: seat_42
+                  - id: seat_42
                     name: Seat 42
                     customer_id: cus_123
                     feature_id: seats
@@ -76186,10 +77974,60 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a110
+              example:
+                id: seat_42
+                name: Seat 42
+                customer_id: cus_123
+                feature_id: seats
+                created_at: 1771409161016
+                env: sandbox
+                subscriptions:
+                  - plan_id: pro_plan
+                    auto_enable: true
+                    add_on: false
+                    status: active
+                    past_due: false
+                    canceled_at: null
+                    expires_at: null
+                    trial_ends_at: null
+                    started_at: 1771431921437
+                    current_period_start: 1771431921437
+                    current_period_end: 1771999921437
+                    quantity: 1
+                purchases: []
+                balances:
+                  messages:
+                    feature_id: messages
+                    granted: 100
+                    remaining: 72
+                    usage: 28
+                    unlimited: false
+                    overage_allowed: false
+                    max_purchase: null
+                    next_reset_at: 1773851121437
+                    breakdown:
+                      - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                        plan_id: pro_plan
+                        included_grant: 100
+                        prepaid_grant: 0
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        reset:
+                          interval: month
+                          resets_at: 1773851121437
+                        price: null
+                        expires_at: null
+                invoices: []
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.list:
     post:
       operationId: listEntities
@@ -76265,12 +78103,13 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a111
-                  start_cursor: ""
+                - start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a111
+            example:
+              start_cursor: ""
+              limit: 10
       responses:
         "200":
           description: OK
@@ -77285,8 +79124,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a112
-                    list:
+                  - list:
                       - id: seat_42
                         name: Seat 42
                         customer_id: cus_123
@@ -77332,10 +79170,62 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a112
+              example:
+                list:
+                  - id: seat_42
+                    name: Seat 42
+                    customer_id: cus_123
+                    feature_id: seats
+                    created_at: 1771409161016
+                    env: sandbox
+                    subscriptions:
+                      - plan_id: pro_plan
+                        auto_enable: true
+                        add_on: false
+                        status: active
+                        past_due: false
+                        canceled_at: null
+                        expires_at: null
+                        trial_ends_at: null
+                        started_at: 1771431921437
+                        current_period_start: 1771431921437
+                        current_period_end: 1771999921437
+                        quantity: 1
+                    purchases: []
+                    balances:
+                      messages:
+                        feature_id: messages
+                        granted: 100
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        overage_allowed: false
+                        max_purchase: null
+                        next_reset_at: 1773851121437
+                        breakdown:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            included_grant: 100
+                            prepaid_grant: 0
+                            remaining: 72
+                            usage: 28
+                            unlimited: false
+                            reset:
+                              interval: month
+                              resets_at: 1773851121437
+                            price: null
+                            expires_at: null
+                    invoices: []
+                next_cursor: null
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.update:
     post:
       operationId: updateEntity
@@ -77598,8 +79488,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a113
-                  customer_id: cus_123
+                - customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
                     spend_limits:
@@ -77607,7 +79496,15 @@ paths:
                         enabled: true
                         limit_type: usage_percentage
                         overage_limit: 120
-            example: *a113
+            example:
+              customer_id: cus_123
+              entity_id: seat_42
+              billing_controls:
+                spend_limits:
+                  - feature_id: messages
+                    enabled: true
+                    limit_type: usage_percentage
+                    overage_limit: 120
       responses:
         "200":
           description: OK
@@ -78601,8 +80498,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a114
-                    id: seat_42
+                  - id: seat_42
                     name: Seat 42
                     customer_id: cus_123
                     feature_id: seats
@@ -78646,10 +80542,60 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a114
+              example:
+                id: seat_42
+                name: Seat 42
+                customer_id: cus_123
+                feature_id: seats
+                created_at: 1771409161016
+                env: sandbox
+                subscriptions:
+                  - plan_id: pro_plan
+                    auto_enable: true
+                    add_on: false
+                    status: active
+                    past_due: false
+                    canceled_at: null
+                    expires_at: null
+                    trial_ends_at: null
+                    started_at: 1771431921437
+                    current_period_start: 1771431921437
+                    current_period_end: 1771999921437
+                    quantity: 1
+                purchases: []
+                balances:
+                  messages:
+                    feature_id: messages
+                    granted: 100
+                    remaining: 72
+                    usage: 28
+                    unlimited: false
+                    overage_allowed: false
+                    max_purchase: null
+                    next_reset_at: 1773851121437
+                    breakdown:
+                      - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                        plan_id: pro_plan
+                        included_grant: 100
+                        prepaid_grant: 0
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        reset:
+                          interval: month
+                          resets_at: 1773851121437
+                        price: null
+                        expires_at: null
+                invoices: []
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/entities.delete:
     post:
       operationId: deleteEntity
@@ -78678,10 +80624,11 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a115
-                  customer_id: cus_123
+                - customer_id: cus_123
                   entity_id: seat_42
-            example: *a115
+            example:
+              customer_id: cus_123
+              entity_id: seat_42
       responses:
         "200":
           description: OK
@@ -78695,12 +80642,18 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a116
-                    success: true
-              example: *a116
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referrals.create_code:
     post:
       operationId: createReferralCode
@@ -78725,10 +80678,11 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a117
-                  customer_id: cus_123
+                - customer_id: cus_123
                   program_id: prog_123
-            example: *a117
+            example:
+              customer_id: cus_123
+              program_id: prog_123
       responses:
         "200":
           description: OK
@@ -78751,14 +80705,22 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a118
-                    code: <string>
+                  - code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a118
+              example:
+                code: <string>
+                customer_id: <string>
+                created_at: 123
       x-speakeasy-name-override: createCode
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referrals.redeem_code:
     post:
       operationId: redeemReferralCode
@@ -78783,10 +80745,11 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a119
-                  code: REF123
+                - code: REF123
                   customer_id: cus_456
-            example: *a119
+            example:
+              code: REF123
+              customer_id: cus_456
       responses:
         "200":
           description: OK
@@ -78809,14 +80772,22 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a120
-                    id: <string>
+                  - id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a120
+              example:
+                id: <string>
+                customer_id: <string>
+                reward_id: <string>
       x-speakeasy-name-override: redeemCode
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.create:
     post:
       operationId: createReferralProgram
@@ -78884,8 +80855,7 @@ paths:
               additionalProperties: false
               title: CreateReferralProgramParams
               examples:
-                - &a121
-                  id: refer_a_friend
+                - id: refer_a_friend
                   reward_id: beta_credits_grant
                   redeem_on: customer_creation
                   received_by: referrer
@@ -78893,7 +80863,15 @@ paths:
                   plan_ids: null
                   exclude_trial: false
                   created_at: 1718000000000
-            example: *a121
+            example:
+              id: refer_a_friend
+              reward_id: beta_credits_grant
+              redeem_on: customer_creation
+              received_by: referrer
+              max_redemptions: 10
+              plan_ids: null
+              exclude_trial: false
+              created_at: 1718000000000
       responses:
         "200":
           description: OK
@@ -78952,8 +80930,7 @@ paths:
                   - created_at
                 title: CreateReferralProgramResponse
                 examples:
-                  - &a122
-                    id: refer_a_friend
+                  - id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
                     received_by: referrer
@@ -78961,10 +80938,24 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a122
+              example:
+                id: refer_a_friend
+                reward_id: beta_credits_grant
+                redeem_on: customer_creation
+                received_by: referrer
+                max_redemptions: 10
+                plan_ids: null
+                exclude_trial: false
+                created_at: 1718000000000
       x-speakeasy-name-override: createProgram
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.list:
     post:
       operationId: listReferralPrograms
@@ -78979,8 +80970,8 @@ paths:
               type: object
               title: ListReferralProgramsParams
               examples:
-                - &a123 {}
-            example: *a123
+                - {}
+            example: {}
       responses:
         "200":
           description: OK
@@ -79055,8 +81046,7 @@ paths:
                   - list
                 title: ListReferralProgramsResponse
                 examples:
-                  - &a124
-                    list:
+                  - list:
                       - id: refer_a_friend
                         reward_id: beta_credits_grant
                         redeem_on: customer_creation
@@ -79065,10 +81055,25 @@ paths:
                         plan_ids: null
                         exclude_trial: false
                         created_at: 1718000000000
-              example: *a124
+              example:
+                list:
+                  - id: refer_a_friend
+                    reward_id: beta_credits_grant
+                    redeem_on: customer_creation
+                    received_by: referrer
+                    max_redemptions: 10
+                    plan_ids: null
+                    exclude_trial: false
+                    created_at: 1718000000000
       x-speakeasy-name-override: listPrograms
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.get:
     post:
       operationId: getReferralProgram
@@ -79148,8 +81153,7 @@ paths:
                   - created_at
                 title: GetReferralProgramResponse
                 examples:
-                  - &a125
-                    id: refer_a_friend
+                  - id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
                     received_by: referrer
@@ -79157,10 +81161,24 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a125
+              example:
+                id: refer_a_friend
+                reward_id: beta_credits_grant
+                redeem_on: customer_creation
+                received_by: referrer
+                max_redemptions: 10
+                plan_ids: null
+                exclude_trial: false
+                created_at: 1718000000000
       x-speakeasy-name-override: getProgram
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.update:
     post:
       operationId: updateReferralProgram
@@ -79280,8 +81298,7 @@ paths:
                   - created_at
                 title: UpdateReferralProgramResponse
                 examples:
-                  - &a126
-                    id: refer_a_friend
+                  - id: refer_a_friend
                     reward_id: beta_credits_grant
                     redeem_on: customer_creation
                     received_by: referrer
@@ -79289,10 +81306,24 @@ paths:
                     plan_ids: null
                     exclude_trial: false
                     created_at: 1718000000000
-              example: *a126
+              example:
+                id: refer_a_friend
+                reward_id: beta_credits_grant
+                redeem_on: customer_creation
+                received_by: referrer
+                max_redemptions: 10
+                plan_ids: null
+                exclude_trial: false
+                created_at: 1718000000000
       x-speakeasy-name-override: updateProgram
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/referral_programs.delete:
     post:
       operationId: deleteReferralProgram
@@ -79328,12 +81359,18 @@ paths:
                   - success
                 title: DeleteReferralProgramResponse
                 examples:
-                  - &a127
-                    success: true
-              example: *a127
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: deleteProgram
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.create:
     post:
       operationId: createReward
@@ -79528,8 +81565,7 @@ paths:
               additionalProperties: false
               title: CreateRewardParams
               examples:
-                - &a128
-                  coupon:
+                - coupon:
                     id: summer_sale
                     name: Summer Sale
                     type: percentage_discount
@@ -79540,7 +81576,18 @@ paths:
                     plan_ids: null
                     promo_codes:
                       - code: SUMMER20
-            example: *a128
+            example:
+              coupon:
+                id: summer_sale
+                name: Summer Sale
+                type: percentage_discount
+                value: 20
+                duration:
+                  type: months
+                  length: 3
+                plan_ids: null
+                promo_codes:
+                  - code: SUMMER20
       responses:
         "200":
           description: OK
@@ -79750,7 +81797,13 @@ paths:
                 additionalProperties: false
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.list:
     post:
       operationId: listRewards
@@ -79765,8 +81818,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a129 {}
-            example: *a129
+                - {}
+            example: {}
       responses:
         "200":
           description: OK
@@ -79979,13 +82032,20 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a130
-                    coupons: []
+                  - coupons: []
                     feature_grants: []
-              example: *a130
+              example:
+                coupons: []
+                feature_grants: []
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.get:
     post:
       operationId: getReward
@@ -80212,8 +82272,7 @@ paths:
                 additionalProperties: false
                 title: GetRewardResponse
                 examples:
-                  - &a131
-                    coupon:
+                  - coupon:
                       id: summer_sale
                       name: Summer Sale
                       type: percentage_discount
@@ -80229,10 +82288,32 @@ paths:
                           global_max_redemption: 100
                           first_time_transaction: false
                       created_at: 1718000000000
-              example: *a131
+              example:
+                coupon:
+                  id: summer_sale
+                  name: Summer Sale
+                  type: percentage_discount
+                  value: 20
+                  duration:
+                    type: months
+                    length: 3
+                  plan_ids:
+                    - pro
+                    - starter
+                  promo_codes:
+                    - code: SUMMER20
+                      global_max_redemption: 100
+                      first_time_transaction: false
+                  created_at: 1718000000000
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.update:
     post:
       operationId: updateReward
@@ -80542,8 +82623,7 @@ paths:
                 additionalProperties: false
                 title: UpdateRewardResponse
                 examples:
-                  - &a132
-                    feature_grant:
+                  - feature_grant:
                       id: beta_credits_grant
                       name: Beta Tester Credits
                       promo_codes:
@@ -80556,10 +82636,29 @@ paths:
                             type: month
                             length: 1
                       created_at: 1718000000000
-              example: *a132
+              example:
+                feature_grant:
+                  id: beta_credits_grant
+                  name: Beta Tester Credits
+                  promo_codes:
+                    - code: BETA2024
+                      max_uses: 500
+                  grants:
+                    - feature_id: credits
+                      included: 1000
+                      expiry:
+                        type: month
+                        length: 1
+                  created_at: 1718000000000
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.delete:
     post:
       operationId: deleteReward
@@ -80595,12 +82694,18 @@ paths:
                   - success
                 title: DeleteRewardResponse
                 examples:
-                  - &a133
-                    success: true
-              example: *a133
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/rewards.redeem:
     post:
       operationId: redeemRewardCode
@@ -80625,10 +82730,11 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a134
-                  code: REWARD10
+                - code: REWARD10
                   customer_id: cus_456
-            example: *a134
+            example:
+              code: REWARD10
+              customer_id: cus_456
       responses:
         "200":
           description: OK
@@ -80659,15 +82765,24 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a135
-                    reward_id: reward_789
+                  - reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a135
+              example:
+                reward_id: reward_789
+                entitlements_granted:
+                  - feature_id: messages
+                    balance: 100
       x-speakeasy-name-override: redeemCode
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.get_stripe_connection:
     post:
       operationId: getStripeConnection
@@ -80698,10 +82813,11 @@ paths:
                 - env
               title: GetStripeConnectionParams
               examples:
-                - &a136
-                  organization_slug: my-app
+                - organization_slug: my-app
                   env: test
-            example: *a136
+            example:
+              organization_slug: my-app
+              env: test
       responses:
         "200":
           description: OK
@@ -80732,17 +82848,25 @@ paths:
                   - connected_at
                 title: GetStripeConnectionResponse
                 examples:
-                  - &a137
-                    connected: true
+                  - connected: true
                     account_id: acct_example
                     connected_at: 1781113864000
                   - connected: false
                     account_id: null
                     connected_at: null
-              example: *a137
+              example:
+                connected: true
+                account_id: acct_example
+                connected_at: 1781113864000
       x-speakeasy-name-override: getStripeConnection
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.disconnect_stripe:
     post:
       operationId: disconnectStripe
@@ -80774,10 +82898,11 @@ paths:
                 - env
               title: DisconnectStripeParams
               examples:
-                - &a138
-                  organization_slug: my-app
+                - organization_slug: my-app
                   env: test
-            example: *a138
+            example:
+              organization_slug: my-app
+              env: test
       responses:
         "200":
           description: OK
@@ -80792,12 +82917,18 @@ paths:
                   - success
                 title: DisconnectStripeResponse
                 examples:
-                  - &a139
-                    success: true
-              example: *a139
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: disconnectStripe
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.link_revenuecat:
     post:
       operationId: linkRevenueCat
@@ -80833,12 +82964,15 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a140
-                  organization_slug: acme
+                - organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a140
+            example:
+              organization_slug: acme
+              env: test
+              project_name: acme-mobile
+              redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
       responses:
         "200":
           description: OK
@@ -80853,12 +82987,18 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a141
-                    oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a141
+                  - oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
+              example:
+                oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
       x-speakeasy-name-override: linkRevenueCat
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.sync_revenuecat:
     post:
       operationId: syncRevenueCat
@@ -80895,13 +83035,17 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a142
-                  organization_slug: acme
+                - organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a142
+            example:
+              organization_slug: acme
+              env: test
+              product_ids:
+                - pro
+                - premium
       responses:
         "200":
           description: OK
@@ -80967,8 +83111,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a143
-                    results:
+                  - results:
                       - plan_id: pro
                         status: synced
                         store_identifier: autumn.sandbox.org_123.pro
@@ -80978,10 +83121,26 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a143
+              example:
+                results:
+                  - plan_id: pro
+                    status: synced
+                    store_identifier: autumn.sandbox.org_123.pro
+                    apps:
+                      - app_id: app_test
+                        app_type: test_store
+                        product: created
+                        store_push: skipped
+                        price: set
       x-speakeasy-name-override: syncRevenueCat
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/platform.get_revenuecat_keys:
     post:
       operationId: getRevenueCatKeys
@@ -81012,10 +83171,11 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a144
-                  organization_slug: acme
+                - organization_slug: acme
                   env: test
-            example: *a144
+            example:
+              organization_slug: acme
+              env: test
       responses:
         "200":
           description: OK
@@ -81078,8 +83238,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a145
-                    apps:
+                  - apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
                         name: Acme (Test Store)
@@ -81089,10 +83248,26 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a145
+              example:
+                apps:
+                  - app_id: app1a2b3c4d
+                    app_type: test_store
+                    name: Acme (Test Store)
+                    api_keys:
+                      - id: apikey12345
+                        key: test_aBcDeFgHiJkLmNoPqRsTuVwXyZ
+                        environment: production
+                        app_id: app1a2b3c4
+                oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/keys.mint:
     post:
       operationId: mintKey
@@ -81121,9 +83296,9 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a146
-                  customer_id: cus_123
-            example: *a146
+                - customer_id: cus_123
+            example:
+              customer_id: cus_123
       responses:
         "200":
           description: OK
@@ -81152,15 +83327,24 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a147
-                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                  - access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a147
+              example:
+                access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                expires_at: 1781113864000
+                refresh_expires_at: 1781196664000
       x-speakeasy-name-override: mint
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/keys.refresh:
     post:
       operationId: refreshKey
@@ -81181,8 +83365,8 @@ paths:
               description: No body. The refresh token is supplied as the Bearer credential;
                 the response is a freshly rotated access + refresh pair.
               examples:
-                - &a148 {}
-            example: *a148
+                - {}
+            example: {}
       responses:
         "200":
           description: OK
@@ -81211,15 +83395,24 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a149
-                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                  - access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a149
+              example:
+                access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                expires_at: 1781113864000
+                refresh_expires_at: 1781196664000
       x-speakeasy-name-override: refresh
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/keys.revoke:
     post:
       operationId: revokeKey
@@ -81243,9 +83436,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a150
-                  customer_id: cus_123
-            example: *a150
+                - customer_id: cus_123
+            example:
+              customer_id: cus_123
       responses:
         "200":
           description: OK
@@ -81259,12 +83452,18 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a151
-                    revoked: true
-              example: *a151
+                  - revoked: true
+              example:
+                revoked: true
       x-speakeasy-name-override: revoke
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.create:
     post:
       operationId: createSandbox
@@ -81308,11 +83507,13 @@ paths:
                 - name
               title: CreateSandboxParams
               examples:
-                - &a152
-                  name: staging
+                - name: staging
                   color: blue
                   icon: Flask
-            example: *a152
+            example:
+              name: staging
+              color: blue
+              icon: Flask
       responses:
         "200":
           description: OK
@@ -81363,18 +83564,30 @@ paths:
                   - secret_key
                 title: CreateSandboxResponse
                 examples:
-                  - &a153
-                    id: org_123
+                  - id: org_123
                     name: staging
                     slug: staging-abc123|org_456
                     created_at: 1781113864000
                     color: blue
                     icon: Flask
                     secret_key: am_sk_test_abc123
-              example: *a153
+              example:
+                id: org_123
+                name: staging
+                slug: staging-abc123|org_456
+                created_at: 1781113864000
+                color: blue
+                icon: Flask
+                secret_key: am_sk_test_abc123
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.list:
     post:
       operationId: listSandboxes
@@ -81391,8 +83604,8 @@ paths:
               title: ListSandboxesParams
               description: No body. Lists every sandbox belonging to your organization.
               examples:
-                - &a154 {}
-            example: *a154
+                - {}
+            example: {}
       responses:
         "200":
           description: OK
@@ -81445,18 +83658,30 @@ paths:
                   - list
                 title: ListSandboxesResponse
                 examples:
-                  - &a155
-                    list:
+                  - list:
                       - id: org_123
                         name: staging
                         slug: staging-abc123|org_456
                         created_at: 1781113864000
                         color: blue
                         icon: Flask
-              example: *a155
+              example:
+                list:
+                  - id: org_123
+                    name: staging
+                    slug: staging-abc123|org_456
+                    created_at: 1781113864000
+                    color: blue
+                    icon: Flask
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.delete:
     post:
       operationId: deleteSandbox
@@ -81479,9 +83704,9 @@ paths:
                 - id
               title: DeleteSandboxParams
               examples:
-                - &a156
-                  id: org_123
-            example: *a156
+                - id: org_123
+            example:
+              id: org_123
       responses:
         "200":
           description: OK
@@ -81497,12 +83722,18 @@ paths:
                   - success
                 title: DeleteSandboxResponse
                 examples:
-                  - &a157
-                    success: true
-              example: *a157
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/sandboxes.reset:
     post:
       operationId: resetSandbox
@@ -81524,8 +83755,8 @@ paths:
               description: No body. Resets the sandbox the calling key belongs to — there is
                 no id to pass.
               examples:
-                - &a158 {}
-            example: *a158
+                - {}
+            example: {}
       responses:
         "200":
           description: OK
@@ -81541,12 +83772,18 @@ paths:
                   - success
                 title: ResetSandboxResponse
                 examples:
-                  - &a159
-                    success: true
-              example: *a159
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: reset
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.create:
     post:
       operationId: createWebhook
@@ -81607,14 +83844,19 @@ paths:
                 - url
               title: CreateWebhookParams
               examples:
-                - &a160
-                  id: billing
+                - id: billing
                   url: https://example.com/webhooks/autumn
                   events:
                     - billing.updated
                     - invoice.finalized
                   description: Plan changes and invoices
-            example: *a160
+            example:
+              id: billing
+              url: https://example.com/webhooks/autumn
+              events:
+                - billing.updated
+                - invoice.finalized
+              description: Plan changes and invoices
       responses:
         "200":
           description: OK
@@ -81667,8 +83909,7 @@ paths:
                   - secret
                 title: CreateWebhookResponse
                 examples:
-                  - &a161
-                    id: billing
+                  - id: billing
                     url: https://example.com/webhooks/autumn
                     events:
                       - billing.updated
@@ -81678,10 +83919,26 @@ paths:
                     created_at: 1781113864000
                     updated_at: 1781113864000
                     secret: whsec_abc123
-              example: *a161
+              example:
+                id: billing
+                url: https://example.com/webhooks/autumn
+                events:
+                  - billing.updated
+                  - invoice.finalized
+                description: Plan changes and invoices
+                disabled: false
+                created_at: 1781113864000
+                updated_at: 1781113864000
+                secret: whsec_abc123
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.get:
     post:
       operationId: getWebhook
@@ -81708,9 +83965,9 @@ paths:
                 - id
               title: GetWebhookParams
               examples:
-                - &a162
-                  id: billing
-            example: *a162
+                - id: billing
+            example:
+              id: billing
       responses:
         "200":
           description: OK
@@ -81757,8 +84014,7 @@ paths:
                   - updated_at
                 title: Webhook
                 examples:
-                  - &a163
-                    id: billing
+                  - id: billing
                     url: https://example.com/webhooks/autumn
                     events:
                       - billing.updated
@@ -81767,10 +84023,25 @@ paths:
                     disabled: false
                     created_at: 1781113864000
                     updated_at: 1781113864000
-              example: *a163
+              example:
+                id: billing
+                url: https://example.com/webhooks/autumn
+                events:
+                  - billing.updated
+                  - invoice.finalized
+                description: Plan changes and invoices
+                disabled: false
+                created_at: 1781113864000
+                updated_at: 1781113864000
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.list:
     post:
       operationId: listWebhooks
@@ -81787,8 +84058,8 @@ paths:
               title: ListWebhooksParams
               description: No body. Lists every webhook in the environment of the calling key.
               examples:
-                - &a164 {}
-            example: *a164
+                - {}
+            example: {}
       responses:
         "200":
           description: OK
@@ -81843,8 +84114,7 @@ paths:
                   - list
                 title: ListWebhooksResponse
                 examples:
-                  - &a165
-                    list:
+                  - list:
                       - id: billing
                         url: https://example.com/webhooks/autumn
                         events:
@@ -81854,10 +84124,26 @@ paths:
                         disabled: false
                         created_at: 1781113864000
                         updated_at: 1781113864000
-              example: *a165
+              example:
+                list:
+                  - id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: false
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.update:
     post:
       operationId: updateWebhook
@@ -81916,10 +84202,11 @@ paths:
                 - id
               title: UpdateWebhookParams
               examples:
-                - &a166
-                  id: billing
+                - id: billing
                   disabled: true
-            example: *a166
+            example:
+              id: billing
+              disabled: true
       responses:
         "200":
           description: OK
@@ -81966,8 +84253,7 @@ paths:
                   - updated_at
                 title: Webhook
                 examples:
-                  - &a167
-                    id: billing
+                  - id: billing
                     url: https://example.com/webhooks/autumn
                     events:
                       - billing.updated
@@ -81976,10 +84262,25 @@ paths:
                     disabled: true
                     created_at: 1781113864000
                     updated_at: 1781113864000
-              example: *a167
+              example:
+                id: billing
+                url: https://example.com/webhooks/autumn
+                events:
+                  - billing.updated
+                  - invoice.finalized
+                description: Plan changes and invoices
+                disabled: true
+                created_at: 1781113864000
+                updated_at: 1781113864000
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.delete:
     post:
       operationId: deleteWebhook
@@ -82005,9 +84306,9 @@ paths:
                 - id
               title: DeleteWebhookParams
               examples:
-                - &a168
-                  id: billing
-            example: *a168
+                - id: billing
+            example:
+              id: billing
       responses:
         "200":
           description: OK
@@ -82023,12 +84324,18 @@ paths:
                   - success
                 title: DeleteWebhookResponse
                 examples:
-                  - &a169
-                    success: true
-              example: *a169
+                  - success: true
+              example:
+                success: true
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.preview_sync:
     post:
       operationId: previewSyncWebhooks
@@ -82105,15 +84412,21 @@ paths:
                 - webhooks
               title: SyncWebhooksParams
               examples:
-                - &a170
-                  webhooks:
+                - webhooks:
                     - id: billing
                       url: https://example.com/webhooks/autumn
                       events:
                         - billing.updated
                         - invoice.finalized
                       description: Plan changes and invoices
-            example: *a170
+            example:
+              webhooks:
+                - id: billing
+                  url: https://example.com/webhooks/autumn
+                  events:
+                    - billing.updated
+                    - invoice.finalized
+                  description: Plan changes and invoices
       responses:
         "200":
           description: OK
@@ -82482,8 +84795,7 @@ paths:
                   - errors
                 title: PreviewSyncWebhooksResponse
                 examples:
-                  - &a171
-                    changes:
+                  - changes:
                       - action: create
                         id: billing
                         webhook:
@@ -82497,10 +84809,30 @@ paths:
                           created_at: 1781113864000
                           updated_at: 1781113864000
                     errors: []
-              example: *a171
+              example:
+                changes:
+                  - action: create
+                    id: billing
+                    webhook:
+                      id: billing
+                      url: https://example.com/webhooks/autumn
+                      events:
+                        - billing.updated
+                        - invoice.finalized
+                      description: Plan changes and invoices
+                      disabled: false
+                      created_at: 1781113864000
+                      updated_at: 1781113864000
+                errors: []
       x-speakeasy-name-override: previewSync
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
   /v1/webhooks.sync:
     post:
       operationId: syncWebhooks
@@ -82580,15 +84912,21 @@ paths:
                 - webhooks
               title: SyncWebhooksParams
               examples:
-                - &a172
-                  webhooks:
+                - webhooks:
                     - id: billing
                       url: https://example.com/webhooks/autumn
                       events:
                         - billing.updated
                         - invoice.finalized
                       description: Plan changes and invoices
-            example: *a172
+            example:
+              webhooks:
+                - id: billing
+                  url: https://example.com/webhooks/autumn
+                  events:
+                    - billing.updated
+                    - invoice.finalized
+                  description: Plan changes and invoices
       responses:
         "200":
           description: OK
@@ -82678,8 +85016,7 @@ paths:
                   - errors
                 title: SyncWebhooksResponse
                 examples:
-                  - &a173
-                    webhooks:
+                  - webhooks:
                       - id: billing
                         url: https://example.com/webhooks/autumn
                         events:
@@ -82693,10 +85030,30 @@ paths:
                       - id: billing
                         secret: whsec_abc123
                     errors: []
-              example: *a173
+              example:
+                webhooks:
+                  - id: billing
+                    url: https://example.com/webhooks/autumn
+                    events:
+                      - billing.updated
+                      - invoice.finalized
+                    description: Plan changes and invoices
+                    disabled: false
+                    created_at: 1781113864000
+                    updated_at: 1781113864000
+                secrets:
+                  - id: billing
+                    secret: whsec_abc123
+                errors: []
       x-speakeasy-name-override: sync
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.4.0
+          x-speakeasy-globals-hidden: true
 security:
   - secretKey: []
 x-speakeasy-globals:
