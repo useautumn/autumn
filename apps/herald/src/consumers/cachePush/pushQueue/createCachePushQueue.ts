@@ -5,6 +5,8 @@ export type CachePushQueue = {
 	enqueue(params: { subjects: CacheSubjectRef[] }): void;
 	/** Resolves once the queue has room, so the log is never read far ahead of the pushes. */
 	waitForRoom(): Promise<void>;
+	/** Resolves once nothing is waiting or in flight. */
+	drain(): Promise<void>;
 	pendingCount(): number;
 	activeCount(): number;
 };
@@ -26,6 +28,7 @@ export function createCachePushQueue({
 	const pending = new Map<string, CacheSubjectRef>();
 	let active = 0;
 	let roomWaiters: (() => void)[] = [];
+	let drainWaiters: (() => void)[] = [];
 
 	function takeOldest(): CacheSubjectRef | undefined {
 		for (const [key, cacheSubject] of pending) {
@@ -46,6 +49,11 @@ export function createCachePushQueue({
 	function onPushed(): void {
 		active--;
 		pump();
+		if (active === 0) {
+			const drained = drainWaiters;
+			drainWaiters = [];
+			for (const resolve of drained) resolve();
+		}
 		if (pending.size >= maxPending) return;
 		const waiters = roomWaiters;
 		roomWaiters = [];
@@ -73,9 +81,16 @@ export function createCachePushQueue({
 		return new Promise((resolve) => roomWaiters.push(resolve));
 	}
 
+	// With nothing in flight nothing is pending either: pump starts a waiting subject whenever a push slot is free.
+	function drain(): Promise<void> {
+		if (active === 0) return Promise.resolve();
+		return new Promise((resolve) => drainWaiters.push(resolve));
+	}
+
 	return {
 		enqueue,
 		waitForRoom,
+		drain,
 		pendingCount: () => pending.size,
 		activeCount: () => active,
 	};
