@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { listRateLimitDefaults } from "@/internal/misc/rateLimiter/policies/listRateLimitDefaults.js";
 import {
 	RATE_LIMIT_CONFIGS,
 	RATE_LIMIT_ROUTE_GROUPS,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import { describeLegacyRateLimit } from "./golden/describeLegacyRateLimit.js";
+import { describeRateLimitPolicy } from "./golden/describeRateLimitPolicy.js";
 import {
 	describeAllGoldenRoutes,
 	GOLDEN_ROUTES,
@@ -33,12 +35,17 @@ describe("rate-limit golden resolution", () => {
 	});
 
 	test("every route × API version resolves to the recorded layers", () => {
-		expect(
+		const resolved = describeAllGoldenRoutes({
+			describeRateLimit: describeRateLimitPolicy,
+		});
+		expect(resolved).toEqual(
 			describeAllGoldenRoutes({ describeRateLimit: describeLegacyRateLimit }),
-		).toMatchSnapshot();
+		);
+		expect(resolved).toMatchSnapshot();
 	});
 
 	test("admin defaults match the recorded layer defaults", () => {
-		expect(listLegacyAdminDefaults()).toMatchSnapshot();
+		expect(listRateLimitDefaults()).toEqual(listLegacyAdminDefaults());
+		expect(listRateLimitDefaults()).toMatchSnapshot();
 	});
 });
