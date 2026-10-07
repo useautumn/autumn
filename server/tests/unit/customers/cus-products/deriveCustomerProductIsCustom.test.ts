@@ -1,6 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { FullCusProduct, FullProduct } from "@autumn/shared";
-import { AllowanceType, EntInterval, FeatureType } from "@autumn/shared";
+import {
+	AllowanceType,
+	EntInterval,
+	FeatureType,
+	ProcessorType,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deriveCustomerProductIsCustom } from "@/internal/billing/v2/execute/deriveCustomerProductIsCustom";
 
@@ -155,15 +160,18 @@ const customerProduct = ({
 	name = "Pro",
 	prices = [],
 	licenses = [],
+	processorType,
 }: {
 	entitlements: unknown[];
 	freeTrial?: unknown;
 	name?: string;
 	prices?: unknown[];
 	licenses?: unknown[];
+	processorType?: ProcessorType;
 }) =>
 	({
 		id: "cus_prod_1",
+		...(processorType ? { processor: { type: processorType } } : {}),
 		internal_product_id: "prod_internal_pro",
 		product: productShape({ name }),
 		customer_prices: prices.map((price) => ({ price })),
@@ -466,5 +474,51 @@ describe("deriveCustomerProductIsCustom", () => {
 			}),
 		).toBe(true);
 		expect(logger.error).toHaveBeenCalledTimes(1);
+	});
+
+	// RevenueCat purchases arrive with no params and can't be customised.
+
+	test("RevenueCat product diverging from the catalog → not custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement({ allowance: 50 })],
+					prices: [basePrice({ amount: 20 })],
+					processorType: ProcessorType.RevenueCat,
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement({ allowance: 5 })],
+					prices: [basePrice()],
+				}),
+			}),
+		).toBe(false);
+	});
+
+	test("RevenueCat product with an unresolvable base product → not custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					processorType: ProcessorType.RevenueCat,
+				}),
+				base: null,
+			}),
+		).toBe(false);
+	});
+
+	test("Stripe product diverging from the catalog → custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice({ amount: 20 })],
+					processorType: ProcessorType.Stripe,
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice()],
+				}),
+			}),
+		).toBe(true);
 	});
 });
