@@ -179,6 +179,34 @@ describe("command topic", () => {
 			await Promise.all(waiting);
 		});
 
+		test("split by their bytes, so large commands never share a send past the broker's limit", async () => {
+			const gated = createGatedProducer();
+			const publisher = createCommandPublisher({
+				ctx: { producer: gated.producer, topic: "local-commands" },
+			});
+			const large = (id: string) => ({
+				...commandFor(id),
+				properties: { blob: "x".repeat(300_000) },
+			});
+			const first = publisher.append({
+				records: [{ partition: 1, command: commandFor("a") }],
+			});
+			const waiting = ["b", "c", "d"].map((id) =>
+				publisher.append({ records: [{ partition: 2, command: large(id) }] }),
+			);
+			await Bun.sleep(0);
+
+			gated.releaseNext();
+			await first;
+			await Bun.sleep(0);
+			expect(commandIdsOf(gated.sent[1])).toEqual(["b", "c"]);
+			gated.releaseNext();
+			await Bun.sleep(0);
+			expect(commandIdsOf(gated.sent[2])).toEqual(["d"]);
+			gated.releaseNext();
+			await Promise.all(waiting);
+		});
+
 		test("a failed send rejects only the appends it carried", async () => {
 			const gated = createGatedProducer();
 			const publisher = createCommandPublisher({
