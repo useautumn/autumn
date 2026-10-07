@@ -1,21 +1,22 @@
 import { and, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { fileProfiles } from "../../../db/schema/profiles.ts";
-import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import type { TwdDb } from "../../../lib/getDb.ts";
+import type { TwdTx } from "../../accounts/repos/cleanAccountsRepo.ts";
 import type { FileProfile } from "../types/fileProfile.ts";
 
 const UPSERT_BATCH = 500;
 
 /** Every profile of a worker class, or only the named files'. */
 export const listFileProfiles = ({
-	ctx,
+	db,
 	workerClass,
 	files,
 }: {
-	ctx: TwdContext;
+	db: TwdDb | TwdTx;
 	workerClass: string;
 	files?: string[];
 }): Promise<FileProfile[]> =>
-	ctx.db
+	db
 		.select()
 		.from(fileProfiles)
 		.where(
@@ -38,14 +39,14 @@ const takeIncoming = Object.fromEntries(
 );
 
 export const upsertFileProfiles = async ({
-	ctx,
+	db,
 	profiles,
 }: {
-	ctx: TwdContext;
+	db: TwdDb | TwdTx;
 	profiles: FileProfile[];
 }) => {
 	for (let start = 0; start < profiles.length; start += UPSERT_BATCH) {
-		await ctx.db
+		await db
 			.insert(fileProfiles)
 			.values(profiles.slice(start, start + UPSERT_BATCH))
 			.onConflictDoUpdate({
