@@ -5,6 +5,7 @@ import {
 	type SetPlansParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import {
 	getInitialSetPlansPhase,
@@ -167,6 +168,10 @@ export const setupSetPlansBillingContext = async ({
 		scheduledPhaseContexts,
 		endsAt: params.ends_at,
 		stripeSubscriptionScope,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: params.carry_over_usages,
+		}),
 		...setupFutureStartTiming({ billingContext: firstPhaseContext, params }),
 	};
 

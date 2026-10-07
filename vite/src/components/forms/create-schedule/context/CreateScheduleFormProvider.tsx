@@ -53,6 +53,7 @@ import {
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
+import { firstPhaseReplacesPlanNow } from "../utils/firstPhaseReplacesPlanNow";
 import {
 	type CurrentScheduleTrial,
 	canScheduleFreeTrial,
@@ -82,6 +83,8 @@ interface CreateScheduleFormContextValue {
 	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
 	backdatesLiveSubscription: boolean;
 	hasActiveSubscription: boolean;
+	/** The first phase replaces a live plan now, so its usage can carry over. */
+	replacesPlanNow: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -288,6 +291,33 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const replacesPlanNow = useMemo(
+		() =>
+			firstPhaseReplacesPlanNow({
+				phases: formValues.phases,
+				customerProducts: scopedCustomerProducts,
+				entities: fullCustomer?.entities ?? [],
+				products,
+				nowMs,
+			}),
+		[
+			formValues.phases,
+			scopedCustomerProducts,
+			fullCustomer?.entities,
+			products,
+			nowMs,
+		],
+	);
+
+	const getCarryOverUsages = useCallback(() => {
+		const { carryOverUsages, carryOverUsageFeatureIds } =
+			form.store.state.values;
+		return {
+			carryOverUsages: replacesPlanNow && carryOverUsages,
+			carryOverUsageFeatureIds,
+		};
+	}, [form.store, replacesPlanNow]);
+
 	const getEnablePlanImmediately = useCallback(
 		() => form.store.state.values.enablePlanImmediately ?? false,
 		[form.store],
@@ -322,6 +352,7 @@ export function CreateScheduleFormProvider({
 		getEndDate,
 		getEnablePlanImmediately,
 		getAllowFirstPhaseBackdate,
+		getCarryOverUsages,
 		getFreeTrial,
 		currentTrial,
 		catalogFreeTrial,
@@ -342,6 +373,8 @@ export function CreateScheduleFormProvider({
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,
+		carryOverUsages: replacesPlanNow && formValues.carryOverUsages,
+		carryOverUsageFeatureIds: formValues.carryOverUsageFeatureIds,
 		stripeSubscriptionId,
 		freeTrial: trialFormValues,
 		currentTrial,
@@ -421,6 +454,7 @@ export function CreateScheduleFormProvider({
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			hasActiveSubscription,
+			replacesPlanNow,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -447,6 +481,7 @@ export function CreateScheduleFormProvider({
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			hasActiveSubscription,
+			replacesPlanNow,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,

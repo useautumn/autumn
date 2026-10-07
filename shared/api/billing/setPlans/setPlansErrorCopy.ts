@@ -305,6 +305,19 @@ export const setPlansErrorCopy = (
 			};
 		case "backdate_conflict":
 			return backdateConflictCopy(details);
+		case "trialing_cycle_reset":
+			return {
+				line: [
+					plain(
+						"The billing cycle can't reset now while the subscription's trial runs until",
+					),
+					bold(formatMsToDate(details.trial_ends_at)),
+					punctuation("."),
+				],
+				hint: {
+					text: "Remove the billing cycle anchor, or reset the cycle after the trial ends.",
+				},
+			};
 	}
 };
 

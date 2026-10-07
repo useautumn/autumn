@@ -10,15 +10,13 @@ import {
 	type EdgeConfigLogger,
 	type EdgeConfigS3Client,
 	type EdgeConfigStore,
+	type SubjectSnapshotsEdgeConfig,
+	subjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
 import {
 	type ActiveSlotEdgeConfig,
 	activeSlotEdgeConfig,
 } from "./activeSlotEdgeConfig.js";
-import {
-	type SubjectSnapshotsEdgeConfig,
-	subjectSnapshotsEdgeConfig,
-} from "./subjectSnapshotsEdgeConfig.js";
 
 const ACTIVE_SLOT_POLL_INTERVAL_MS = 2_000;
 

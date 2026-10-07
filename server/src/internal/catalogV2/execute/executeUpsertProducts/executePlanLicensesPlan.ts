@@ -65,9 +65,15 @@ export const executePlanLicensesPlan = async ({
 	const planLicenses = upsert.planLicenses;
 	if (!planLicenses || planLicenses.length === 0) return;
 
+	// Removes free their (parent, license) slot in unique_plan_license before any insert claims it.
+	const removesFirst = [
+		...planLicenses.filter((planLicense) => planLicense.op === "remove"),
+		...planLicenses.filter((planLicense) => planLicense.op !== "remove"),
+	];
+
 	await ctx.db.transaction(async (tx) => {
 		const db = tx as unknown as DrizzleCli;
-		for (const planLicense of planLicenses) {
+		for (const planLicense of removesFirst) {
 			await executePlanLicenseRowPlan({ db, planLicense });
 		}
 	});

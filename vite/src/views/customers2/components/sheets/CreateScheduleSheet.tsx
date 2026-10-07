@@ -194,6 +194,8 @@ export function buildInitialValues({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
+		carryOverUsages: false,
+		carryOverUsageFeatureIds: [],
 		...defaultScheduleTrialFormValues({
 			currentTrial: findCurrentScheduleTrial({ customerProducts, nowMs }),
 			catalogFreeTrial: findCatalogScheduleTrial({

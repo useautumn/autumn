@@ -53,6 +53,7 @@ describe("set_plans preview open-invoice fetches read every page", () => {
 					replacedStripeSubscription: { id: "sub_old", status: "unpaid" },
 				} as BillingContext,
 				outgoingCustomerProducts: [],
+				billedLineItems: [],
 			});
 
 		expect(replacedOpenInvoices.map((invoice) => invoice.id)).toEqual([

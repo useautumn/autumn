@@ -101,6 +101,10 @@ const EVERY_ERROR: [SetPlansErrorDetails, string][] = [
 		},
 		"A free trial can't start on 01 Nov 2026. Start the first phase now, or remove the trial.",
 	],
+	[
+		{ type: "trialing_cycle_reset", trial_ends_at: OCT_15_2026 },
+		"The billing cycle can't reset now while the subscription's trial runs until 15 Oct 2026. Remove the billing cycle anchor, or reset the cycle after the trial ends.",
+	],
 ];
 
 test("every Set Plans error reads as one sentence from the shared copy", () => {

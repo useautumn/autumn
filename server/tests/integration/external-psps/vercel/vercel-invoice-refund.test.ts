@@ -22,6 +22,8 @@
  */
 
 import { expect, test } from "bun:test";
+import { ApiVersion, ErrCode } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -57,6 +59,10 @@ const TEST_CASE = "vrefund";
 const MOCK_HEADERS = { "x-mock-vercel-api": "true" };
 
 const autumn = new AutumnInt();
+const autumnV2_3 = new AutumnInt({
+	version: ApiVersion.V2_3,
+	secretKey: ctx.orgSecretKey,
+});
 const HMAC_SECRET = "test_vercel_client_secret_refund";
 
 const webhookClient = () =>
@@ -534,4 +540,69 @@ test(`${chalk.yellowBright(
 	);
 	expect(response.status).toBe(500);
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
+}, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 8: credit notes are blocked on Vercel invoices; refunds go through Vercel
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: invoices.issue_credit_note rejects a Vercel invoice",
+)}`, async () => {
+	const { stripeInvoiceId } = await setupPaidVercelInvoice({
+		suffix: "credit-note",
+	});
+	const invoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: stripeInvoiceId,
+	});
+	if (!invoice) throw new Error("Expected Autumn invoice");
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "billed through Vercel",
+		func: () =>
+			autumnV2_3.post(
+				"/invoices.issue_credit_note",
+				{ invoice_id: invoice.id, amount: 1, send_email: false },
+				MOCK_HEADERS,
+			),
+	});
+
+	const creditNotes = await ctx.stripeCli.creditNotes.list({
+		invoice: stripeInvoiceId,
+	});
+	expect(creditNotes.data).toHaveLength(0);
+}, 60000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST 9: reissue is blocked on Vercel invoices
+// ─────────────────────────────────────────────────────────────────────────────
+
+test(`${chalk.yellowBright(
+	"vercel-invoice-refund: invoices.reissue rejects a Vercel invoice",
+)}`, async () => {
+	const { stripeInvoiceId } = await setupPaidVercelInvoice({
+		suffix: "reissue",
+	});
+	const invoice = await InvoiceService.getByStripeId({
+		db: ctx.db,
+		stripeId: stripeInvoiceId,
+	});
+	if (!invoice) throw new Error("Expected Autumn invoice");
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "billed through Vercel",
+		func: () =>
+			autumnV2_3.post(
+				"/invoices.reissue",
+				{ invoice_id: invoice.id },
+				MOCK_HEADERS,
+			),
+	});
+
+	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
+	expect(stripeInvoice.status).toBe("paid");
+	expect(stripeInvoice.metadata?.autumn_reissued_to).toBeUndefined();
 }, 60000);

@@ -1,7 +1,9 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
-import type { EdgeConfigStore } from "@autumn/edge-config";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
-import type { SubjectSnapshotsEdgeConfig } from "../../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SubjectRead } from "../../types/subjectRead.js";
 
 /** A refresh's read, with the partition's bookmark as it began, less one: the last log offset the rows include. */

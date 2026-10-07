@@ -1,8 +1,13 @@
-import type { SetPlansPreviewResponse } from "@autumn/shared";
+import {
+	customerProductHasActiveStatus,
+	filterCustomerProductsByStripeSubscriptionId,
+	type SetPlansPreviewResponse,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
+import { isCustomerProductOnOtherSubscription } from "../utils/isCustomerProductOnOtherSubscription";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
@@ -26,6 +31,8 @@ export const buildSetPlansPreview = async ({
 		timeline,
 		schedulePlan: { phases, immediatePhaseTransition, customerProductChanges },
 	} = result;
+	// Stripe invoices each subscription on its own, so next_cycle covers only the one this request bills.
+	const stripeSubscriptionId = billingContext.stripeSubscription?.id;
 
 	const [
 		attachPreview,
@@ -33,7 +40,18 @@ export const buildSetPlansPreview = async ({
 		replacedSubscriptionInputs,
 		liveOpenInvoices,
 	] = await Promise.all([
-		billingPlanToAttachPreview({ ctx, billingContext, billingPlan }),
+		billingPlanToAttachPreview({
+			ctx,
+			billingContext,
+			billingPlan,
+			nextCycleCustomerProductFilter: stripeSubscriptionId
+				? (customerProduct) =>
+						!isCustomerProductOnOtherSubscription({
+							customerProduct,
+							stripeSubscriptionId,
+						})
+				: undefined,
+		}),
 		buildStripePriceLookup({
 			ctx,
 			stripeBillingPlan: billingPlan.stripe,
@@ -44,6 +62,7 @@ export const buildSetPlansPreview = async ({
 			billingContext,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
+			billedLineItems: billingPlan.autumn.lineItems ?? [],
 		}),
 		fetchPastDueOpenInvoices({ ctx, billingContext }),
 	]);
@@ -103,6 +122,13 @@ export const buildSetPlansPreview = async ({
 			liveOpenInvoices,
 			lineItems: billingPlan.autumn.lineItems,
 			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
+			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			liveCustomerProducts: billingContext.stripeSubscription
+				? filterCustomerProductsByStripeSubscriptionId({
+						customerProducts: billingContext.fullCustomer.customer_products,
+						stripeSubscriptionId: billingContext.stripeSubscription.id,
+					}).filter(customerProductHasActiveStatus)
+				: [],
 		}),
 	};
 };
