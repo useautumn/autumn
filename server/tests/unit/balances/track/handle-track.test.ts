@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { ApiVersionClass, AppEnv, LATEST_VERSION } from "@autumn/shared";
+import {
+	ApiVersion,
+	ApiVersionClass,
+	AppEnv,
+	LATEST_VERSION,
+} from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -20,12 +25,17 @@ import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 const createCtx = ({
 	orgId = "org_123",
 	orgSlug = "test-org",
+	apiVersion = LATEST_VERSION,
+}: {
+	orgId?: string;
+	orgSlug?: string;
+	apiVersion?: ApiVersion;
 } = {}): AutumnContext =>
 	({
 		id: "req_track_1",
 		org: { id: orgId, slug: orgSlug },
 		env: AppEnv.Sandbox,
-		apiVersion: new ApiVersionClass(LATEST_VERSION),
+		apiVersion: new ApiVersionClass(apiVersion),
 		features: [{ id: "messages" }],
 		extraLogs: {},
 		scopes: [],
@@ -131,7 +141,10 @@ describe("handleTrack", () => {
 		});
 
 		const response = await createApp({
-			ctx: createCtx({ orgSlug: "configured-slug" }),
+			ctx: createCtx({
+				orgSlug: "configured-slug",
+				apiVersion: ApiVersion.V2_4,
+			}),
 		}).request("/track", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -157,6 +170,46 @@ describe("handleTrack", () => {
 		});
 
 		const response = await createApp({
+			ctx: createCtx({ orgId: "org_async", apiVersion: ApiVersion.V2_4 }),
+		}).request("/track", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+			}),
+		});
+
+		expect(response.status).toBe(202);
+		expect(mockState.queueCommands).toHaveLength(1);
+	});
+	test("queues by default on the latest version", async () => {
+		const response = await createApp({ ctx: createCtx() }).request("/track", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+			}),
+		});
+
+		expect(response.status).toBe(202);
+		expect(await response.json()).toEqual({
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		});
+		expect(mockState.queueCommands).toHaveLength(1);
+	});
+
+	test("configured org still queues when async is false", async () => {
+		_setAsyncTrackConfigForTesting({
+			config: { enabledOrgIds: ["org_async"] },
+		});
+
+		const response = await createApp({
 			ctx: createCtx({ orgId: "org_async" }),
 		}).request("/track", {
 			method: "POST",
@@ -165,6 +218,7 @@ describe("handleTrack", () => {
 				customer_id: "cus_123",
 				feature_id: "messages",
 				value: 1,
+				async: false,
 			}),
 		});
 

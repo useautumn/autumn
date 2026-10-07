@@ -37,7 +37,7 @@ async function track(
 	const ctx = c.get("ctx");
 
 	const isAsync =
-		body.async === true ||
+		body.async !== false ||
 		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
 
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
