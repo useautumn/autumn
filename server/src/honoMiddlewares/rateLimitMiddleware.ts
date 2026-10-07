@@ -2,12 +2,12 @@ import type { Context, Env, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	getLimiterForType,
+	getOrgLimiterFor,
 	getRateLimitKey,
 	setRateLimitKeyInContext,
 } from "@/internal/misc/rateLimiter/rateLimitFactory";
 import {
-	getRateLimitType,
-	RATE_LIMIT_CONFIGS,
+	getRateLimitRouteGroup,
 	RateLimitType,
 } from "../internal/misc/rateLimiter/rateLimitConfigs";
 
@@ -20,7 +20,7 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	try {
 		// 1. Determine rate limit type based on endpoint
-		const rateLimitType = getRateLimitType(c);
+		const { type: rateLimitType, overLimit } = getRateLimitRouteGroup(c);
 
 		if (
 			rateLimitType === RateLimitType.Attach &&
@@ -40,8 +40,8 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		// 4. Get the appropriate limiter for this type
 		const limiter = getLimiterForType(rateLimitType);
 
-		const orgLimitType = RATE_LIMIT_CONFIGS[rateLimitType].orgLimit;
-		if (!orgLimitType) {
+		const orgLimit = getOrgLimiterFor({ type: rateLimitType, overLimit });
+		if (!orgLimit) {
 			// 5. Apply rate limiting
 			return await limiter(c as Context<Env>, next);
 		}
@@ -50,14 +50,13 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		// swapped between them since keyGenerator reads it at execution time.
 		setRateLimitKeyInContext(
 			c as Context,
-			getRateLimitKey({ c, rateLimitType: orgLimitType }),
+			getRateLimitKey({ c, rateLimitType: orgLimit.type }),
 		);
-		const aggregateLimiter = getLimiterForType(orgLimitType);
 		const skipPrimaryLimiter =
 			rateLimitType === RateLimitType.EntitiesList && !ctx.customerId;
 
 		let innerResponse: Response | undefined;
-		const aggregateResponse = await aggregateLimiter(
+		const aggregateResponse = await orgLimit.limiter(
 			c as Context<Env>,
 			async () => {
 				if (skipPrimaryLimiter) {
