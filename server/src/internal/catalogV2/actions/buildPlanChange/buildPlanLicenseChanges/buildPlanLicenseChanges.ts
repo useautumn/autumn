@@ -11,6 +11,30 @@ import { planLicenseChanged } from "./planLicenseChanged.js";
 import { toApiPlanLicenseSnapshot } from "./toApiPlanLicenseSnapshot.js";
 import { toCustomizePlanLicense } from "./toCustomizePlanLicense.js";
 
+/** Re-key a from-link whose license row was renamed, so it pairs with its to-link by internal id. */
+const pairRenamedLicenses = ({
+	fromByPlanId,
+	toByPlanId,
+}: {
+	fromByPlanId: Map<string, FullPlanLicense>;
+	toByPlanId: Map<string, FullPlanLicense>;
+}): Map<string, FullPlanLicense> => {
+	const renamedToPlanIdByInternalId = new Map(
+		[...toByPlanId]
+			.filter(([planId]) => !fromByPlanId.has(planId))
+			.map(([planId, to]) => [to.license_internal_product_id, planId]),
+	);
+	return new Map(
+		[...fromByPlanId].map(([planId, from]) => {
+			if (toByPlanId.has(planId)) return [planId, from];
+			const renamedPlanId = renamedToPlanIdByInternalId.get(
+				from.license_internal_product_id,
+			);
+			return [renamedPlanId ?? planId, from];
+		}),
+	);
+};
+
 /** Diff two FullProduct.licenses arrays — create / update / remove. */
 export const buildPlanLicenseChanges = ({
 	fromLicenses,
@@ -31,13 +55,17 @@ export const buildPlanLicenseChanges = ({
 	const toByPlanId = new Map(
 		(toLicenses ?? []).map((license) => [license.product.id, license]),
 	);
+	const fromByPlanIdAfterRenames = pairRenamedLicenses({
+		fromByPlanId,
+		toByPlanId,
+	});
 
 	const licenseChanges: PlanLicenseChangeV0[] = [];
 	const upsertLicenses: CustomizePlanLicense[] = [];
 	const removeLicenses: RemovePlanLicense[] = [];
 
 	for (const [licensePlanId, to] of toByPlanId) {
-		const from = fromByPlanId.get(licensePlanId);
+		const from = fromByPlanIdAfterRenames.get(licensePlanId);
 		if (!from) {
 			const snapshot = toApiPlanLicenseSnapshot({ license: to, features });
 			licenseChanges.push({
@@ -65,7 +93,7 @@ export const buildPlanLicenseChanges = ({
 		);
 	}
 
-	for (const [licensePlanId, from] of fromByPlanId) {
+	for (const [licensePlanId, from] of fromByPlanIdAfterRenames) {
 		if (toByPlanId.has(licensePlanId)) continue;
 		const snapshot = toApiPlanLicenseSnapshot({ license: from, features });
 		licenseChanges.push({

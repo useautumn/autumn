@@ -13,6 +13,7 @@ import {
 	type UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { createProductStatesFold } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/createProductStatesFold";
+import { projectPlanWideRenames } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/projectPlanWideRenames";
 
 /**
  * Derive direct intents → merge stated processors across each lineage → fold
@@ -87,7 +88,10 @@ export const computeUpsertProductsPlan = ({
 	const upsertProductsWithPlanLicenses = computePlanLicensesPlan({
 		ctx,
 		upsertProducts,
-		productStatesContext: fold.projected,
+		productStatesContext: projectPlanWideRenames({
+			productStatesContext: fold.projected,
+			upsertProducts,
+		}),
 		licenseStatesContext: catalogContext.licenseStatesContext,
 	});
 
