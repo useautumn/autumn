@@ -34,7 +34,6 @@ export type EdgeConfigCardId =
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
-	| "rate-limit-overrides"
 	| "rate-limit-redis-allowlist"
 	| "agent-provision-rate-limit"
 	| "stripe-sync"
@@ -156,19 +155,6 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 					"Per-org overrides for max customer products and entities.",
 				icon: SlidersHorizontal,
 				endpoint: "/admin/org-limits-config",
-				deriveStatus: (data) =>
-					overrideStatus({
-						count: countKeys(asRecord(data).orgs),
-						noun: "org override",
-					}),
-			},
-			{
-				id: "rate-limit-overrides",
-				title: "Rate Limit Overrides",
-				description:
-					"Per-org overrides for any rate-limit bucket (track, check, attach).",
-				icon: Gauge,
-				endpoint: "/admin/rate-limit-overrides-config",
 				deriveStatus: (data) =>
 					overrideStatus({
 						count: countKeys(asRecord(data).orgs),
