@@ -59,4 +59,3 @@ W   = Σ_s W_s, capped by keys × 4
 Packed files share one Postgres, one Dragonfly, one server, one connected Stripe account and the single test org. That is why:
 - org-wide mutations always run solo (above);
 - a rerun on a packed shard takes a whole worker to itself (`WorkerPool` exclusive acquire), so co-tenants can't fail it twice;
-- Dragonfly runs with an explicit `--maxmemory` (`DRAGONFLY_MAXMEMORY`, default 1gb) and no eviction, so a full cache fails loudly instead of silently dropping test state.
