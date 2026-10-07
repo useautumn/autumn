@@ -25,34 +25,26 @@ const ownLinePeriods = ({ params }: { params: CreateInvoiceParams }) =>
 	].flatMap((line: PeriodFields) => toInvoicePeriod(line) ?? []);
 
 /**
- * The invoice's period: the one given, else the earliest line start to the latest
- * line end, else none. Every line period must sit inside a given envelope.
+ * The period lines without their own inherit: only one the request gives, which
+ * must contain every line period. Without it, such lines carry no period, as before.
  */
 export const resolveInvoiceEnvelope = ({
 	params,
 }: {
 	params: CreateInvoiceParams;
 }): InvoicePeriod | undefined => {
-	const linePeriods = ownLinePeriods({ params });
 	const given = toInvoicePeriod(params);
+	if (!given) return undefined;
 
-	if (given) {
-		const outside = linePeriods.find(
-			(period) => period.start < given.start || period.end > given.end,
-		);
-		if (outside) {
-			throw new RecaseError({
-				message: `A line period (${new Date(outside.start).toISOString()} to ${new Date(outside.end).toISOString()}) falls outside the invoice's period_start / period_end.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		return given;
+	const outside = ownLinePeriods({ params }).find(
+		(period) => period.start < given.start || period.end > given.end,
+	);
+	if (outside) {
+		throw new RecaseError({
+			message: `A line period (${new Date(outside.start).toISOString()} to ${new Date(outside.end).toISOString()}) falls outside the invoice's period_start / period_end.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	}
-
-	if (linePeriods.length === 0) return undefined;
-	return {
-		start: Math.min(...linePeriods.map((period) => period.start)),
-		end: Math.max(...linePeriods.map((period) => period.end)),
-	};
+	return given;
 };

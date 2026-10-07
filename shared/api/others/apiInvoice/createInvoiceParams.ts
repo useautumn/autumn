@@ -16,7 +16,7 @@ import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
 const LinePeriodShape = {
 	period_start: UnixMsTimestampSchema.optional().meta({
 		description:
-			"Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's.",
+			"Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.",
 	}),
 	period_end: UnixMsTimestampSchema.optional().meta({
 		description:
@@ -359,7 +359,7 @@ export const CreateInvoiceParamsSchema = z
 		}),
 		period_start: UnixMsTimestampSchema.optional().meta({
 			description:
-				"Start of the period being invoiced, in milliseconds. Lines without their own period use this one. If omitted, it spans the earliest line period_start to the latest line period_end, and every line period must fall inside it when given.",
+				"Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.",
 		}),
 		period_end: UnixMsTimestampSchema.optional().meta({
 			description:

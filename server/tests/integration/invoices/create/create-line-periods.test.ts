@@ -250,3 +250,41 @@ test.concurrent(
 		]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create periods: without a top-level period, lines without their own never inherit one")}`,
+	async () => {
+		const customerId = "inv-create-line-periods-derived";
+		const { autumnV2_3, plan } = await setupPlan({ customerId });
+
+		const { preview } = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				preview: true,
+				plans: [{ plan_id: plan.id }],
+				custom_line_items: [
+					{
+						description: "Annual support",
+						amount: 0,
+						period_start: JAN_1,
+						period_end: Date.UTC(2027, 0, 1),
+					},
+					{ description: "Setup", amount: 5 },
+				],
+			},
+		});
+
+		// The plan bills one month, unprorated and with no period, exactly as without the custom line.
+		expect(
+			preview.lines.map((line) => ({
+				amount: line.amount,
+				prorated: line.prorated,
+				period: [line.period_start, line.period_end],
+			})),
+		).toEqual([
+			{ amount: 100, prorated: false, period: [null, null] },
+			{ amount: 5, prorated: false, period: [null, null] },
+		]);
+	},
+);
