@@ -10,7 +10,6 @@ import { setServerRateLimitOverride } from "@tests/utils/serverEdgeConfigTestUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
 const testCase = "rate-limit-overrides";
 
@@ -89,7 +88,7 @@ test(`${chalk.yellowBright(`${testCase}: override lowers effective limit for the
 		ctx,
 		orgKey: ctx.org.id,
 		limits: {
-			[RateLimitType.CustomerEntitiesGet]: ENTITIES_GET_OVERRIDE_LIMIT,
+			customer_entities_get: ENTITIES_GET_OVERRIDE_LIMIT,
 		},
 	}));
 
@@ -114,7 +113,7 @@ test(`${chalk.yellowBright(`${testCase}: orgSlug fallback resolves the override`
 		ctx,
 		orgKey: slug,
 		limits: {
-			[RateLimitType.CustomerEntitiesGet]: ENTITIES_GET_OVERRIDE_LIMIT,
+			customer_entities_get: ENTITIES_GET_OVERRIDE_LIMIT,
 		},
 	}));
 

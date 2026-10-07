@@ -4,13 +4,10 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	RATE_LIMIT_CONFIGS,
-	RateLimitType,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import { listRateLimitDefaults } from "@/internal/misc/rateLimiter/policies/listRateLimitDefaults.js";
 
 const testCase = "rate-limit-entities-get";
-const ENTITIES_GET_LIMIT = RATE_LIMIT_CONFIGS[RateLimitType.CustomerEntitiesGet].limit;
+const ENTITIES_GET_LIMIT = listRateLimitDefaults().customer_entities_get.limit;
 
 const countRateLimited = (results: PromiseSettledResult<unknown>[]): number =>
 	results.filter(

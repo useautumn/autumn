@@ -9,7 +9,6 @@ import {
 	dashboardFetch,
 } from "@tests/utils/testInitUtils/dashboardSession.js";
 import chalk from "chalk";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import type { RateLimitOverridesConfig } from "@/internal/misc/rateLimiter/rateLimitOverridesSchemas.js";
 
 const testCase = "rate-limit-overrides-concurrent-writes";
@@ -43,7 +42,7 @@ test(`${chalk.yellowBright(`${testCase}: parallel writers keep every org key`)}`
 				setServerRateLimitOverride({
 					ctx,
 					orgKey,
-					limits: { [RateLimitType.General]: 1 },
+					limits: { general: 1 },
 				}),
 			),
 		);

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { matchRoute } from "@/honoMiddlewares/middlewareUtils.js";
 
-// Real patterns from refreshCacheConfigs.ts / rateLimitConfigs.ts.
+// Real patterns from refreshCacheConfigs.ts / rateLimitPolicies.ts.
 const exactPattern = { method: "POST", url: "/v1/attach" };
 const rpcPattern = { method: "POST", url: "/v1/billing.attach" };
 const paramPattern = { method: "POST", url: "/customers/:customer_id" };

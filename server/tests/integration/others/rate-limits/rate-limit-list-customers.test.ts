@@ -3,22 +3,24 @@ import { ApiVersion } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	RATE_LIMIT_CONFIGS,
-	resolveRateLimit,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs";
+import { resolveLayerLimit } from "@/internal/misc/rateLimiter/policies/resolveLayerLimit";
+import { resolveRateLimitPolicy } from "@/internal/misc/rateLimiter/policies/resolveRateLimitPolicy";
 
 const testCase = "rate-limit-list-customers";
 
-const LEGACY_LIMIT = RATE_LIMIT_CONFIGS.list_customers.limit;
-const V2_3_LIMIT = resolveRateLimit({
-	config: RATE_LIMIT_CONFIGS.list_customers,
+const { perOrg: customerListLayer } = resolveRateLimitPolicy({
+	method: "GET",
+	path: "/v1/customers",
+});
+if (!customerListLayer) throw new Error("customers.list has no per-org layer");
+
+const LEGACY_LIMIT = resolveLayerLimit({ layer: customerListLayer }).limit;
+const V2_3_LIMIT = resolveLayerLimit({
+	layer: customerListLayer,
 	apiVersion: ApiVersion.V2_3,
 }).limit;
 
-const countRateLimited = (
-	results: PromiseSettledResult<unknown>[],
-): number => {
+const countRateLimited = (results: PromiseSettledResult<unknown>[]): number => {
 	return results.filter(
 		(result) =>
 			result.status === "rejected" &&

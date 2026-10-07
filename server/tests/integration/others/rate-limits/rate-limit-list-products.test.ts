@@ -4,7 +4,6 @@ import { setServerRateLimitOverride } from "@tests/utils/serverEdgeConfigTestUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
 const testCase = "rate-limit-list-products";
 
@@ -27,7 +26,7 @@ test(`${chalk.yellowBright(testCase)}`, async () => {
 	({ restore: restoreOverride } = await setServerRateLimitOverride({
 		ctx,
 		orgKey: ctx.org.id,
-		limits: { [RateLimitType.General]: GENERAL_OVERRIDE_LIMIT },
+		limits: { general: GENERAL_OVERRIDE_LIMIT },
 	}));
 
 	const autumnV1 = new AutumnInt({

@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import {
 	_setRateLimitOverridesConfigForTesting,
 	getOrgRateLimitOverride,
@@ -17,7 +16,7 @@ describe("getOrgRateLimitOverride", () => {
 		expect(
 			getOrgRateLimitOverride({
 				orgId: "org_a",
-				type: RateLimitType.CustomerEntitiesGet,
+				type: "customer_entities_get",
 			}),
 		).toBeUndefined();
 	});
@@ -26,14 +25,14 @@ describe("getOrgRateLimitOverride", () => {
 		_setRateLimitOverridesConfigForTesting({
 			config: {
 				orgs: {
-					org_a: { limits: { [RateLimitType.CustomerEntitiesGet]: 500 } },
+					org_a: { limits: { customer_entities_get: 500 } },
 				},
 			},
 		});
 		expect(
 			getOrgRateLimitOverride({
 				orgId: "org_a",
-				type: RateLimitType.CustomerEntitiesGet,
+				type: "customer_entities_get",
 			}),
 		).toBe(500);
 	});
@@ -42,7 +41,7 @@ describe("getOrgRateLimitOverride", () => {
 		_setRateLimitOverridesConfigForTesting({
 			config: {
 				orgs: {
-					mintlify: { limits: { [RateLimitType.CustomerEntitiesGet]: 200 } },
+					mintlify: { limits: { customer_entities_get: 200 } },
 				},
 			},
 		});
@@ -50,7 +49,7 @@ describe("getOrgRateLimitOverride", () => {
 			getOrgRateLimitOverride({
 				orgId: "org_unknown",
 				orgSlug: "mintlify",
-				type: RateLimitType.CustomerEntitiesGet,
+				type: "customer_entities_get",
 			}),
 		).toBe(200);
 	});
@@ -59,8 +58,8 @@ describe("getOrgRateLimitOverride", () => {
 		_setRateLimitOverridesConfigForTesting({
 			config: {
 				orgs: {
-					org_a: { limits: { [RateLimitType.CustomerEntitiesGet]: 999 } },
-					mintlify: { limits: { [RateLimitType.CustomerEntitiesGet]: 1 } },
+					org_a: { limits: { customer_entities_get: 999 } },
+					mintlify: { limits: { customer_entities_get: 1 } },
 				},
 			},
 		});
@@ -68,29 +67,29 @@ describe("getOrgRateLimitOverride", () => {
 			getOrgRateLimitOverride({
 				orgId: "org_a",
 				orgSlug: "mintlify",
-				type: RateLimitType.CustomerEntitiesGet,
+				type: "customer_entities_get",
 			}),
 		).toBe(999);
 	});
 
-	test("overrides are scoped per RateLimitType — other types fall through", () => {
+	test("overrides are scoped per layer name — other layers fall through", () => {
 		_setRateLimitOverridesConfigForTesting({
 			config: {
 				orgs: {
-					org_a: { limits: { [RateLimitType.CustomerEntitiesGet]: 500 } },
+					org_a: { limits: { customer_entities_get: 500 } },
 				},
 			},
 		});
 		expect(
 			getOrgRateLimitOverride({
 				orgId: "org_a",
-				type: RateLimitType.Check,
+				type: "check",
 			}),
 		).toBeUndefined();
 		expect(
 			getOrgRateLimitOverride({
 				orgId: "org_a",
-				type: RateLimitType.Track,
+				type: "track",
 			}),
 		).toBeUndefined();
 	});
@@ -99,12 +98,12 @@ describe("getOrgRateLimitOverride", () => {
 		_setRateLimitOverridesConfigForTesting({
 			config: {
 				orgs: {
-					org_a: { limits: { [RateLimitType.CustomerEntitiesGet]: 500 } },
+					org_a: { limits: { customer_entities_get: 500 } },
 				},
 			},
 		});
 		expect(
-			getOrgRateLimitOverride({ type: RateLimitType.CustomerEntitiesGet }),
+			getOrgRateLimitOverride({ type: "customer_entities_get" }),
 		).toBeUndefined();
 	});
 
@@ -112,14 +111,14 @@ describe("getOrgRateLimitOverride", () => {
 		_setRateLimitOverridesConfigForTesting({
 			config: {
 				orgs: {
-					org_a: { limits: { [RateLimitType.CustomerEntitiesGet]: 0 } },
+					org_a: { limits: { customer_entities_get: 0 } },
 				},
 			},
 		});
 		expect(
 			getOrgRateLimitOverride({
 				orgId: "org_a",
-				type: RateLimitType.CustomerEntitiesGet,
+				type: "customer_entities_get",
 			}),
 		).toBe(0);
 	});

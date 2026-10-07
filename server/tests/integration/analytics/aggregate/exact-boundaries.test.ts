@@ -20,7 +20,7 @@ const events = [
 	{ at: Date.UTC(2026, 7, 10, 0, 45), value: 41, region: "us" },
 ];
 
-// /events/aggregate allows 5 requests/s per customer (RateLimitType.Events); the matrix stays under it.
+// /events/aggregate allows 5 requests/s per customer (the "events" rate-limit layer); the matrix stays under it.
 const EVENTS_REQUEST_SPACING_MS = 250;
 
 type AggregateResponse = {

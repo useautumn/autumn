@@ -98,7 +98,7 @@
  *   src/internal/balances/balancesRouter.ts              -- route registration
  *   src/internal/balances/track/utils/queueTrack.ts      -- per-item enqueue
  *   shared/api/balances/track/trackParams.ts             -- BatchTrackParamsSchema
- *   src/internal/misc/rateLimiter/rateLimitConfigs.ts    -- BatchTrack limiter config
+ *   src/internal/misc/rateLimiter/policies/rateLimitPolicies.ts -- batch_track policy row
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";
@@ -374,7 +374,7 @@ describe(chalk.yellowBright(testCase), () => {
 	});
 
 	// ── Assertion 10: independent bucket — Track is unaffected by BatchTrack burst ─
-	// Track has its own limiter type (RateLimitType.Track) with limit 10000/sec
+	// Track has its own layer ("track") with limit 10000/sec
 	// scoped per-customer. If BatchTrack and Track shared a bucket, this Track
 	// call would 429 (or otherwise reject) after the previous burst.
 	test("Track still succeeds while BatchTrack is rate-limited (independent buckets)", async () => {
@@ -387,7 +387,7 @@ describe(chalk.yellowBright(testCase), () => {
 			0,
 		);
 
-		// Track's bucket is keyed differently (RateLimitType.Track, scope=Customer,
+		// Track's bucket is keyed differently ("track" layer, perCustomer,
 		// 10000/sec). It must remain serviceable even while BatchTrack is throttled.
 		const trackResult = await autumn.track({
 			customer_id: customerId,

@@ -1,13 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { listRateLimitDefaults } from "@/internal/misc/rateLimiter/policies/listRateLimitDefaults.js";
-import {
-	RATE_LIMIT_CONFIGS,
-	RATE_LIMIT_ROUTE_GROUPS,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
-import {
-	describeLegacyRateLimit,
-	listLegacyPerPodLimiters,
-} from "./golden/describeLegacyRateLimit.js";
+import { RATE_LIMIT_POLICIES } from "@/internal/misc/rateLimiter/policies/rateLimitPolicies.js";
 import {
 	describeRateLimitPolicy,
 	listPolicyPerPodLimiters,
@@ -35,52 +28,36 @@ const toEnvironmentStableDefaults = (
 const toGoldenPath = (url: string) =>
 	url.replace(":customer_id", "cus_golden").replace(":entity_id", "ent_golden");
 
-const listLegacyAdminDefaults = () =>
-	Object.fromEntries(
-		Object.entries(RATE_LIMIT_CONFIGS).map(([type, config]) => [
-			type,
-			{ limit: config.limit, windowMs: config.windowMs, scope: config.scope },
-		]),
-	);
-
 describe("rate-limit golden resolution", () => {
-	test("golden routes cover every route in the legacy table", () => {
+	test("golden routes cover every route in the policy table", () => {
 		const goldenRouteKeys = GOLDEN_ROUTES.map(
 			({ method, path }) => `${method} ${path}`,
 		);
-		for (const { patterns } of RATE_LIMIT_ROUTE_GROUPS) {
-			for (const { method, url } of patterns) {
+		for (const { routes } of RATE_LIMIT_POLICIES) {
+			if (routes === "*") continue;
+			for (const { method, url } of routes) {
 				expect(goldenRouteKeys).toContain(`${method} ${toGoldenPath(url)}`);
 			}
 		}
 	});
 
 	test("every route × API version resolves to the recorded layers", () => {
-		const resolved = describeAllGoldenRoutes({
-			describeRateLimit: describeRateLimitPolicy,
-		});
-		expect(resolved).toEqual(
-			describeAllGoldenRoutes({ describeRateLimit: describeLegacyRateLimit }),
-		);
-		expect(resolved).toMatchSnapshot();
+		expect(
+			describeAllGoldenRoutes({ describeRateLimit: describeRateLimitPolicy }),
+		).toMatchSnapshot();
 	});
 
 	test("admin defaults match the recorded layer defaults", () => {
-		expect(listRateLimitDefaults()).toEqual(listLegacyAdminDefaults());
 		expect(
 			toEnvironmentStableDefaults(listRateLimitDefaults()),
 		).toMatchSnapshot();
 	});
 
 	test("routes share per-pod limiters exactly where they did", () => {
-		const grouped = groupRoutesByPerPodLimiter({
-			listPerPodLimiters: listPolicyPerPodLimiters,
-		});
-		expect(grouped).toEqual(
+		expect(
 			groupRoutesByPerPodLimiter({
-				listPerPodLimiters: listLegacyPerPodLimiters,
+				listPerPodLimiters: listPolicyPerPodLimiters,
 			}),
-		);
-		expect(grouped).toMatchSnapshot();
+		).toMatchSnapshot();
 	});
 });
