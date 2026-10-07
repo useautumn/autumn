@@ -1,5 +1,12 @@
 import { expect, test } from "bun:test";
-import { runSoloItemsAlone, soloReasons } from "./soloTestFiles";
+import { resolve } from "node:path";
+import {
+	detectSoloFiles,
+	runSoloItemsAlone,
+	soloReasons,
+} from "./soloTestFiles";
+
+const testsRoot = resolve(import.meta.dir, "../../server/tests");
 
 test("soloReasons flags the marker and org-wide mutations only", () => {
 	expect(soloReasons({ source: "// tw:solo: shares org config" })).toEqual([
@@ -55,4 +62,13 @@ test("with no solo items, every item shares one window", async () => {
 	});
 
 	expect(peak).toBe(3);
+});
+
+test("a test that mutates the org through a test-local helper is solo", async () => {
+	const viaHelper = `${testsRoot}/integration/external-psps/vercel/vercel-marketplace-paid.test.ts`;
+	const plain = `${testsRoot}/integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle.test.ts`;
+
+	const solo = await detectSoloFiles({ files: [viaHelper, plain] });
+
+	expect([...solo]).toEqual([viaHelper]);
 });

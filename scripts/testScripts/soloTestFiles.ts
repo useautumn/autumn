@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import pLimit from "p-limit";
 
 /** A test can opt out of sharing the run with `// tw:solo` anywhere in the file. */
@@ -32,18 +34,93 @@ export const soloReasons = ({ source }: { source: string }) =>
 		({ reason }) => reason,
 	);
 
+const TESTS_ROOT = resolve(import.meta.dir, "../../server/tests");
+// Shared test infra is skipped: its org-mutating exports are matched by name at call sites.
+const SHARED_UTILS_DIR = `${TESTS_ROOT}/utils/`;
+const IMPORT_SPECIFIER = /from\s+["']([^"']+)["']/g;
+
+const isTestLocalHelper = ({ file }: { file: string }) =>
+	file.startsWith(TESTS_ROOT) &&
+	!file.startsWith(SHARED_UTILS_DIR) &&
+	!file.endsWith(".test.ts");
+
+const resolveTestImport = ({
+	fromFile,
+	specifier,
+}: {
+	fromFile: string;
+	specifier: string;
+}): string | null => {
+	const base = specifier.startsWith(".")
+		? resolve(dirname(fromFile), specifier)
+		: specifier.startsWith("@tests/")
+			? resolve(TESTS_ROOT, specifier.slice("@tests/".length))
+			: null;
+	if (!base) return null;
+
+	const stem = base.replace(/\.js$/, "");
+	const candidates = [stem, `${stem}.ts`, `${stem}.tsx`, `${stem}/index.ts`];
+	return (
+		candidates.find(
+			(candidate) => /\.tsx?$/.test(candidate) && existsSync(candidate),
+		) ?? null
+	);
+};
+
+/** Whether a file, or a test-local helper it imports, mutates org-wide state. */
+const createOrgMutationScanner = () => {
+	const sources = new Map<string, Promise<string>>();
+	// Only positives are cached: a negative found while cutting an import cycle may be partial.
+	const mutating = new Set<string>();
+
+	const readSource = ({ file }: { file: string }) => {
+		const cached = sources.get(file);
+		if (cached) return cached;
+		const source = Bun.file(file)
+			.text()
+			.catch(() => "");
+		sources.set(file, source);
+		return source;
+	};
+
+	const scan = async ({
+		file,
+		visiting = new Set<string>(),
+	}: {
+		file: string;
+		visiting?: Set<string>;
+	}): Promise<boolean> => {
+		if (mutating.has(file)) return true;
+		if (visiting.has(file)) return false;
+		visiting.add(file);
+
+		const source = await readSource({ file });
+		let mutates = soloReasons({ source }).length > 0;
+
+		for (const [, specifier] of source.matchAll(IMPORT_SPECIFIER)) {
+			if (mutates) break;
+			const helper = resolveTestImport({ fromFile: file, specifier });
+			if (!helper || !isTestLocalHelper({ file: helper })) continue;
+			mutates = await scan({ file: helper, visiting });
+		}
+
+		if (mutates) mutating.add(file);
+		return mutates;
+	};
+
+	return { scan };
+};
+
 export const detectSoloFiles = async ({
 	files,
 }: {
 	files: string[];
 }): Promise<Set<string>> => {
+	const scanner = createOrgMutationScanner();
 	const solo = await Promise.all(
-		files.map(async (file) => {
-			const source = await Bun.file(file)
-				.text()
-				.catch(() => "");
-			return soloReasons({ source }).length > 0 ? file : null;
-		}),
+		files.map(async (file) =>
+			(await scanner.scan({ file: resolve(file) })) ? file : null,
+		),
 	);
 	return new Set(solo.filter((file): file is string => file !== null));
 };
