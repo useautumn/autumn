@@ -1,5 +1,4 @@
 import { task } from "@trigger.dev/sdk/v3";
-import { withAutocommitDb } from "@/db/autocommit/withAutocommitDb.js";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { executeRunMigrationChunk } from "@/internal/migrations/v2/run/executeRunMigrationChunk.js";
 import { RunMigrationChunkPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
@@ -35,9 +34,6 @@ export const runMigrationChunkTask = task({
 			});
 		});
 
-		return withAutocommitDb({
-			db: ctx.db,
-			run: () => executeRunMigrationChunk({ ctx, payload }),
-		});
+		return executeRunMigrationChunk({ ctx, payload });
 	},
 });

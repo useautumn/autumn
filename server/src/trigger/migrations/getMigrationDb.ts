@@ -1,27 +1,13 @@
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
-import { logger } from "@/external/logtail/logtailUtils.js";
-import {
-	MIGRATION_DB_POOL_MAX,
-	MIGRATION_DB_QUERY_DEADLINE_MS,
-	MIGRATION_DB_STATEMENT_TIMEOUT_MS,
-} from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
-import { applyMigrationQueryDeadline } from "./database/applyMigrationQueryDeadline.js";
+import { MIGRATION_DB_POOL_MAX } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 
 let migrationDb: DrizzleCli | undefined;
 
 /** Lazily created so only processes that run migration chunks open this pool. */
 export const getMigrationDb = (): DrizzleCli => {
-	if (migrationDb) return migrationDb;
-	const { db, client } = initDrizzle({
+	migrationDb ??= initDrizzle({
 		name: "migration",
 		maxConnections: MIGRATION_DB_POOL_MAX,
-		poolConfig: { statement_timeout: MIGRATION_DB_STATEMENT_TIMEOUT_MS },
-	});
-	applyMigrationQueryDeadline({
-		pool: client,
-		queryTimeoutMs: MIGRATION_DB_QUERY_DEADLINE_MS,
-		onFailure: (fields) => logger.error("migration_db_failure", fields),
-	});
-	migrationDb = db;
+	}).db;
 	return migrationDb;
 };
