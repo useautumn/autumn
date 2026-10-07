@@ -49,24 +49,25 @@ export const finalizeLineItems = ({
 	const skipsProration =
 		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
 	const resetsCycleNow = billingContext.requestedBillingCycleAnchor === "now";
-	if (skipsProration && !resetsCycleNow) {
-		const unbilledUsage = lineItems.filter(isUsageNoSubscriptionBilled);
-		if (unbilledUsage.length === 0) return [];
-		lineItems = unbilledUsage;
-	}
+	// Mid-cycle under none bills only usage no Stripe period holds.
+	const skipsMidCycleProration = skipsProration && !resetsCycleNow;
+	const billableLineItems = skipsMidCycleProration
+		? lineItems.filter(isUsageNoSubscriptionBilled)
+		: lineItems;
+	if (skipsMidCycleProration && billableLineItems.length === 0) return [];
 
 	// Like Stripe, a cycle reset under none never credits and charges a new period only for the items it changes.
 	const billedLineItems = skipsProration
 		? dropUnchangedSubscriptionItemCharges({
 				ctx,
 				billingContext,
-				lineItems: lineItems.filter(
+				lineItems: billableLineItems.filter(
 					({ context }) =>
 						context.direction === "charge" ||
 						context.billingTiming === "in_arrear",
 				),
 			})
-		: lineItems;
+		: billableLineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
