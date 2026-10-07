@@ -93,8 +93,17 @@ describe("customer reads share check's counters", () => {
 		const { check, read, degraded } = buildApp({ orgId: "org_shared_org" });
 
 		expect((await check()).status).toBe(200);
-		expect((await read()).status).toBe(429);
+		const rejected = await read();
 		expect((await check()).status).toBe(200);
+
+		expect(rejected.status).toBe(429);
+		expect(rejected.headers.get("Retry-After")).toBeNull();
+		expect(rejected.headers.get("RateLimit-Remaining")).toBe("0");
+		expect(await rejected.json()).toEqual({
+			message: "Rate limit exceeded.",
+			code: "rate_limit_exceeded",
+			env: "live",
+		});
 		expect(degraded).toEqual([undefined, true]);
 		expect(redisHits.get("check_org:org_shared_org:live")).toBe(3);
 		expect(redisHits.size).toBe(1);
