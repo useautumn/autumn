@@ -1,5 +1,4 @@
 import { catalogBodyToSharedRows } from "../lib/contracts/catalogContract.js";
-import { customerIdOfSubjectPush } from "../lib/contracts/subjectContract.js";
 import type { Slots } from "../slots/types/slots.js";
 
 /**
@@ -12,15 +11,10 @@ export const applySubjectPush = ({
 	body,
 }: {
 	slots: Slots;
-	/** Null when an older Autumn sent none: then it is read from the body. */
-	customerId: string | null;
+	customerId: string;
 	body: string;
-}): boolean => {
-	const routedTo = customerId ?? customerIdOfSubjectPush({ body });
-	return slots
-		.processorFor({ customerId: routedTo })
-		.setSubject({ customerId: routedTo, body });
-};
+}): boolean =>
+	slots.processorFor({ customerId }).setSubject({ customerId, body });
 
 /** The shared catalog as Autumn pushes it; false when an older read was ignored. */
 export const applyCatalogPush = ({
