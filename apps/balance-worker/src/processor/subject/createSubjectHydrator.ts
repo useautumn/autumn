@@ -41,6 +41,7 @@ export const createSubjectHydrator = ({
 			scope.state.joinCache.readFullSubject({
 				state,
 				entityId: identity.entityId,
+				catalog,
 				join: () =>
 					markFullSubjectImmutable({
 						fullSubject: subjectStateToFullSubject({
