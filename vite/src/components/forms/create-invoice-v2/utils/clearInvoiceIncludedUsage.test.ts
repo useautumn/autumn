@@ -7,7 +7,10 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "@autumn/shared";
-import { clearInvoiceIncludedUsage } from "./clearInvoiceIncludedUsage";
+import {
+	clearInvoiceIncludedUsage,
+	invoicePlanItems,
+} from "./clearInvoiceIncludedUsage";
 
 const items = (list: unknown[]) => list as ProductItem[];
 
@@ -47,5 +50,30 @@ describe("clearInvoiceIncludedUsage", () => {
 		expect(clearInvoiceIncludedUsage({ items: items([base, grant]) })).toEqual(
 			items([base, grant]),
 		);
+	});
+});
+
+describe("invoicePlanItems", () => {
+	test("an uncustomized plan's catalog grant is not shown on the invoice sheet", () => {
+		const [shown] =
+			invoicePlanItems({
+				planItems: null,
+				catalogItems: items([{ ...pricedUsers, price: 10 }]),
+			}) ?? [];
+
+		expect(getProductItemDisplay({ item: shown, features: [users] })).toEqual({
+			primary_text: "$10 per Users",
+		});
+	});
+
+	test("an edited plan's items win over the catalog's", () => {
+		const edited = items([{ ...pricedUsers, included_usage: 0 }]);
+
+		expect(
+			invoicePlanItems({
+				planItems: edited,
+				catalogItems: items([pricedUsers]),
+			}),
+		).toEqual(edited);
 	});
 });

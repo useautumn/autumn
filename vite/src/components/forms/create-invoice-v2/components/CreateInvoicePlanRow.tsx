@@ -3,6 +3,7 @@ import { XIcon } from "@phosphor-icons/react";
 import { SelectedPlanRow } from "@/components/forms/shared";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import type { FormInvoicePlan } from "../createInvoiceFormSchema";
+import { invoicePlanItems } from "../utils/clearInvoiceIncludedUsage";
 import { CreateInvoiceLicenseRows } from "./CreateInvoiceLicenseRows";
 import { CreateInvoiceQuantityFields } from "./CreateInvoiceQuantityFields";
 
@@ -65,7 +66,10 @@ export function CreateInvoicePlanRow({ plan }: { plan: FormInvoicePlan }) {
 				onRemove={handleRemove}
 			/>
 			<CreateInvoiceQuantityFields
-				items={plan.items ?? selectedProduct?.items}
+				items={invoicePlanItems({
+					planItems: plan.items,
+					catalogItems: selectedProduct?.items,
+				})}
 				planIndex={planIndex}
 				quantities={plan.featureQuantities}
 			/>
