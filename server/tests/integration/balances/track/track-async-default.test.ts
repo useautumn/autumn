@@ -153,3 +153,31 @@ test.concurrent(
 		expect(sync.json.balance.remaining).toBeLessThan(1000);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default5: 2.5 default rejects what sync rejects before queueing")}`,
+	async () => {
+		const { autumnV2_5, customerId } = await setupCustomer({
+			customerId: "track-async-default5",
+		});
+
+		for (const async of [undefined, false]) {
+			const unknownFeature = await postTrack({
+				autumn: autumnV2_5,
+				body: { customer_id: customerId, feature_id: "missing-feature", async },
+			});
+			expect(unknownFeature.status).toBe(404);
+
+			const rejectWithEventName = await postTrack({
+				autumn: autumnV2_5,
+				body: {
+					customer_id: customerId,
+					event_name: "missing-event",
+					overage_behavior: "reject",
+					async,
+				},
+			});
+			expect(rejectWithEventName.status).toBe(400);
+		}
+	},
+);
