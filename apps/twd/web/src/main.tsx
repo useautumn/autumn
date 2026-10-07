@@ -44,7 +44,11 @@ const router = createBrowserRouter([
 				children: [
 					{ path: "/", element: <RunsScreen />, handle: FILL_PAGE },
 					{ path: "/runs/new", element: <NewRunScreen /> },
-					{ path: "/runs/:id", element: <RunDetailScreen /> },
+					{
+						path: "/runs/:id",
+						element: <RunDetailScreen />,
+						handle: FILL_PAGE,
+					},
 					{ path: "/costs", element: <CostsScreen /> },
 					{ path: "/keys", element: <KeysScreen />, handle: FILL_PAGE },
 					{ path: "/accounts", element: <AccountsScreen />, handle: FILL_PAGE },

@@ -106,6 +106,26 @@ export const RunStatusBadge = ({
 	);
 };
 
+export const FileStatusIcon = ({
+	status,
+}: {
+	status: z.infer<typeof FileResultStatus>;
+}) => {
+	const { tone, icon: Icon } = FILE_STATUS[status];
+	return (
+		<Icon
+			role="img"
+			aria-label={label(status)}
+			className={cn(
+				"size-3 shrink-0",
+				TONE_TEXT[tone],
+				Icon === LoaderCircle && "animate-spin",
+			)}
+			strokeWidth={2.25}
+		/>
+	);
+};
+
 export const FileStatusBadge = ({
 	status,
 }: {

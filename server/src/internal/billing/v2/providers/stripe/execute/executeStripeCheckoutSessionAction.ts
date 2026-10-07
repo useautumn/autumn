@@ -17,6 +17,66 @@ import {
 	updateMetadataWithCheckoutSession,
 } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 
+export const LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY =
+	"autumn_long_lived_checkout";
+
+export const createStripeCheckoutSessionFromAction = async ({
+	ctx,
+	billingContext,
+	checkoutSessionAction,
+	metadataId,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	checkoutSessionAction: StripeCheckoutSessionAction;
+	metadataId: string;
+}) => {
+	const { org } = ctx;
+	const { params } = checkoutSessionAction;
+	const { longLivedCheckout } = billingContext;
+
+	// Tax-related fields (automatic_tax, billing_address_collection, customer_update,
+	// tax_id_collection) are already baked into action.params by buildStripeCheckoutSessionAction.
+	const fullParams = buildCheckoutSessionParams({
+		params: longLivedCheckout
+			? {
+					...params,
+					metadata: {
+						...params.metadata,
+						[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY]: longLivedCheckout.id,
+					},
+				}
+			: params,
+		checkoutSessionParams: checkoutSessionAction.checkoutSessionParams,
+		currency: billingContextToCurrency({ org, billingContext }),
+		defaultAllowPromotionCodes: true,
+		defaultSavedPaymentMethodOptions: { payment_method_save: "enabled" },
+		defaultInvoiceCreation:
+			params.mode === "payment" ? { enabled: true } : undefined,
+		autumnMetadataId: metadataId,
+		userMetadata: billingContext.userMetadata,
+	});
+
+	return createStripeSessionWithCardFallback({
+		stripeCli: createStripeCli({ org, env: billingContext.fullCustomer.env }),
+		params: fullParams,
+	});
+};
+
+const getCheckoutMetadataType = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}) => {
+	if (billingContext.longLivedCheckout) {
+		return MetadataType.LongLivedCheckoutEnabledImmediately;
+	}
+	if (billingContext.enablePlanImmediately === true) {
+		return MetadataType.CheckoutSessionEnabledImmediately;
+	}
+	return MetadataType.CheckoutSessionV2;
+};
+
 export const executeStripeCheckoutSessionAction = async ({
 	ctx,
 	billingPlan,
@@ -28,15 +88,11 @@ export const executeStripeCheckoutSessionAction = async ({
 	billingContext: BillingContext;
 	checkoutSessionAction: StripeCheckoutSessionAction;
 }): Promise<StripeBillingPlanResult> => {
-	const { org, logger } = ctx;
+	const { logger } = ctx;
 	const { fullCustomer } = billingContext;
 
-	const stripeCli = createStripeCli({ org, env: fullCustomer.env });
-
 	const enablePlanImmediately = billingContext.enablePlanImmediately === true;
-	const metadataType = enablePlanImmediately
-		? MetadataType.CheckoutSessionEnabledImmediately
-		: MetadataType.CheckoutSessionV2;
+	const metadataType = getCheckoutMetadataType({ billingContext });
 
 	// 1. Insert metadata FIRST (without checkout session ID)
 	const metadata = await insertMetadataFromBillingPlan({
@@ -44,38 +100,25 @@ export const executeStripeCheckoutSessionAction = async ({
 		billingPlan,
 		billingContext,
 		resumeAfter: undefined,
-		expiresAt: addDays(Date.now(), 10).getTime(),
+		expiresAt:
+			billingContext.longLivedCheckout?.expiresAt ??
+			addDays(Date.now(), 10).getTime(),
 		typeOverride: metadataType,
 	});
 
-	// 2. Build full checkout params. Tax-related fields (automatic_tax,
-	// billing_address_collection, customer_update, tax_id_collection) are
-	// already baked into action.params by buildStripeCheckoutSessionAction.
-	const fullParams = buildCheckoutSessionParams({
-		params: checkoutSessionAction.params,
-		checkoutSessionParams: checkoutSessionAction.checkoutSessionParams,
-		currency: billingContextToCurrency({ org, billingContext }),
-		defaultAllowPromotionCodes: true,
-		defaultSavedPaymentMethodOptions: { payment_method_save: "enabled" },
-		defaultInvoiceCreation:
-			checkoutSessionAction.params.mode === "payment"
-				? { enabled: true }
-				: undefined,
-		autumnMetadataId: metadata.id,
-		userMetadata: billingContext.userMetadata,
-	});
-
-	// 3. Create checkout session with card-type fallback
-	const stripeCheckoutSession = await createStripeSessionWithCardFallback({
-		stripeCli,
-		params: fullParams,
+	// 2. Create checkout session with card-type fallback
+	const stripeCheckoutSession = await createStripeCheckoutSessionFromAction({
+		ctx,
+		billingContext,
+		checkoutSessionAction,
+		metadataId: metadata.id,
 	});
 
 	logger.info(
 		`Created checkout session for customer ${fullCustomer.id ?? fullCustomer.internal_id}`,
 	);
 
-	// 4. Update metadata with checkout session ID
+	// 3. Update metadata with checkout session ID
 	await updateMetadataWithCheckoutSession({
 		ctx,
 		metadataId: metadata.id,
@@ -83,7 +126,7 @@ export const executeStripeCheckoutSessionAction = async ({
 		type: metadataType,
 	});
 
-	// 5. When enable_plan_immediately is set, link each cusProduct row that's
+	// 4. When enable_plan_immediately is set, link each cusProduct row that's
 	// about to be inserted to this checkout session, and let the Autumn billing
 	// plan continue executing (deferred=false). The webhook will patch in
 	// subscription_ids on completion.
@@ -99,7 +142,7 @@ export const executeStripeCheckoutSessionAction = async ({
 		};
 	}
 
-	// 6. Default: defer Autumn billing plan execution to the webhook handler.
+	// 5. Default: defer Autumn billing plan execution to the webhook handler.
 	return {
 		deferred: true,
 		deferredMetadataId: metadata.id,

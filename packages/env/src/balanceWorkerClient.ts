@@ -52,7 +52,7 @@ export function createBalanceWorkerClientEnv(
 	}
 	const deployment = getBalanceWorkerDeployment({ runtimeEnv });
 	return {
-		...createKafkaAuthEnv({ runtimeEnv }),
+		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "SERVER" }),
 		KAFKA_BROKERS: brokerList.parse(
 			runtimeEnv.KAFKA_BROKERS ?? LOCAL_KAFKA_BROKERS,
 		),

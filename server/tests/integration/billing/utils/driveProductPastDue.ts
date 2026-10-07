@@ -7,6 +7,7 @@ import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { timeout } from "@/utils/genUtils";
+import { waitForFailedRenewalWebhookEffects } from "./waitForFailedRenewalWebhookEffects";
 
 type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
@@ -17,11 +18,14 @@ export const driveProductPastDue = async ({
 	testClockId,
 	customerId,
 	productId,
+	pollWebhookEffects = false,
 }: {
 	ctx: ScenarioCtx;
 	testClockId: string;
 	customerId: string;
 	productId: string;
+	/** Poll for the failed renewal's webhook effects instead of the fixed ~34s of waits. */
+	pollWebhookEffects?: boolean;
 }): Promise<{
 	subscriptionId: string;
 	stripeCustomerId: string | undefined;
@@ -51,8 +55,25 @@ export const driveProductPastDue = async ({
 		default_payment_method: paymentMethods.data[0].id,
 	});
 
-	await advanceToNextInvoice({ stripeCli: ctx.stripeCli, testClockId });
-	await timeout(4000);
+	if (pollWebhookEffects) {
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId,
+		});
+		const settled = await waitForFailedRenewalWebhookEffects({
+			ctx,
+			customerId,
+			productId,
+			subscriptionId,
+		});
+		if (!settled)
+			console.warn(
+				`[driveProductPastDue] renewal webhooks not settled for ${customerId}; forcing past_due`,
+			);
+	} else {
+		await advanceToNextInvoice({ stripeCli: ctx.stripeCli, testClockId });
+		await timeout(4000);
+	}
 
 	const fullCustomer = await CusService.getFull({
 		ctx,

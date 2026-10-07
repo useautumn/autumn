@@ -7,7 +7,7 @@ export const BILLING_PREVIEW_RESPONSE_EXAMPLE = {
 	lineItems: [
 		{
 			display_name: "Pro seed",
-			description: "Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)",
+			description: "Pro seed (from 18 Feb 2026 to 18 Mar 2026)",
 			subtotal: 20,
 			total: 20,
 			discounts: [],

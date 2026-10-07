@@ -14,6 +14,7 @@ import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import { inFlightTrackingMiddleware } from "./honoMiddlewares/inFlightTrackingMiddleware.js";
 import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
+import { twTestFileMiddleware } from "./honoMiddlewares/twTestFileMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
@@ -72,6 +73,7 @@ const FACADE_ONLY_SSO_PATHS = new Set([
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
+	app.use("*", twTestFileMiddleware);
 	app.route("", createChatProxyRouter());
 
 	// CORS configuration (must be before routes)

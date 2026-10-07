@@ -10,7 +10,7 @@
  *   New behaviors (classifier policy):
  *     - checkout.session.completed / expired -> sync (always, even when Autumn-originated)
  *     - invoice.paid with metadata.autumn_metadata_id -> sync; otherwise early
- *     - invoice.finalized with metadata.vercel_installation_id -> sync; otherwise early
+ *     - invoice.finalized with metadata.vercel_installation_id or autumn_metadata_id -> sync; otherwise early
  *     - invoice.created with billing_reason subscription_cycle -> sync; otherwise early
  *     - customer.updated -> sync (pure external mirror, cheap handler)
  *     - customer.subscription.created/updated/deleted with autumn idempotency key on
@@ -119,6 +119,14 @@ describe("classifyStripeWebhookAckMode", () => {
 			event: buildEvent({
 				type: "invoice.finalized",
 				object: { metadata: { vercel_installation_id: "icfg_1" } },
+			}),
+			expected: "sync",
+		},
+		{
+			name: "invoice.finalized with autumn_metadata_id -> sync",
+			event: buildEvent({
+				type: "invoice.finalized",
+				object: { metadata: { autumn_metadata_id: "meta_1" } },
 			}),
 			expected: "sync",
 		},

@@ -1,6 +1,7 @@
 import type { RunEvent, RunFile, WorkerState } from "../../../api/contract.ts";
 import type { RunStatus } from "../../../db/schema/runs.ts";
 import { publishLive } from "../../live/liveHub/liveHub.ts";
+import type { RunEta } from "../eta/estimateRunEta.ts";
 
 /** Per-file output kept in memory while a run is live in this process. */
 const FILE_LOG_MAX_CHARS = 64_000;
@@ -13,6 +14,7 @@ export type LiveRun = {
 	workers: Map<string, WorkerState>;
 	files: Map<string, RunFile>;
 	fileLogs: Map<string, string>;
+	eta: RunEta | null;
 	listeners: Set<(event: RunEvent) => void>;
 	/** Set by the swarm job; aborts the child from POST /runs/:id/cancel. */
 	cancel?: () => void;
@@ -35,6 +37,7 @@ export const openLiveRun = ({
 		workers: new Map(),
 		files: new Map(),
 		fileLogs: new Map(),
+		eta: null,
 		listeners: new Set(),
 	};
 	run.cancel = cancel;
@@ -61,6 +64,11 @@ export const publishRunEvent = ({
 		run.workers.set(event.worker.name, event.worker);
 	} else if (event.type === "file") {
 		run.files.set(event.file.file, event.file);
+	} else if (event.type === "eta") {
+		run.eta =
+			event.etaMs === null || event.etaP90Ms === null
+				? null
+				: { etaMs: event.etaMs, etaP90Ms: event.etaP90Ms };
 	} else if (event.file) {
 		const next = (run.fileLogs.get(event.file) ?? "") + event.text;
 		run.fileLogs.set(event.file, next.slice(-FILE_LOG_MAX_CHARS));

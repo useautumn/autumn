@@ -5,6 +5,8 @@
  * swarm front-end carries its own copy. No JSX / framework deps.
  */
 
+import { stripAnsi } from "../helpers/logSink.ts";
+
 export type ParsedTest = {
 	name: string;
 	status: "passed" | "failed";
@@ -21,6 +23,29 @@ const RECEIVED_LINE = /Received:\s*(.+)/;
 const FAILURE_TEXT =
 	/error|expect|timed out|not found|mismatch|failed|throw|invalid|unable/i;
 const STACK_LINE = /at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/;
+const TIMEOUT_AFTER = /this test timed out after (\d+(?:\.\d+)?m?s)/;
+/** The in-sandbox server's own log records (pretty or JSON), interleaved with bun's output. */
+const SERVER_LOG_LINE =
+	/^\s*(?:\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\s+(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b|\{"level":)/;
+
+/** Drops server log records, including a pretty record's multi-line `{ ... }` payload. */
+const withoutServerLogs = (lines: string[]): string[] => {
+	const kept: string[] = [];
+	let inPayload = false;
+	for (const raw of lines) {
+		const line = stripAnsi(raw);
+		if (inPayload) {
+			inPayload = !/^[}\]]/.test(line);
+			continue;
+		}
+		if (SERVER_LOG_LINE.test(line)) {
+			inPayload = /[{[]\s*$/.test(line);
+			continue;
+		}
+		kept.push(line);
+	}
+	return kept;
+};
 
 export const parseDuration = (duration: string): number => {
 	if (duration.endsWith("ms")) {
@@ -34,9 +59,10 @@ export const parseDuration = (duration: string): number => {
 
 const parseErrorFromLines = (
 	test: ParsedTest,
-	errorLines: string[],
+	rawErrorLines: string[],
 	filePath: string,
 ): void => {
+	const errorLines = withoutServerLogs(rawErrorLines);
 	const errorText = errorLines.join("\n");
 
 	let errorMessage = "";
@@ -77,7 +103,8 @@ const parseErrorFromLines = (
 	}
 
 	if (errorText.includes("this test timed out")) {
-		errorMessage = "Test timed out";
+		const after = errorText.match(TIMEOUT_AFTER)?.[1];
+		errorMessage = after ? `Test timed out after ${after}` : "Test timed out";
 	}
 
 	let location: string | undefined;
