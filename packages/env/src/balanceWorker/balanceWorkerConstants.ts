@@ -91,7 +91,7 @@ export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 1;
 
 /** A subject's row is rewritten whole at most this often; a flush in between only marks it stale, so a hot customer
  *  costs Postgres one full state per interval instead of one per flush. */
-export const BALANCE_WORKER_SUBJECT_SNAPSHOT_REWRITE_MS = 2_000;
+export const BALANCE_WORKER_SUBJECT_SNAPSHOT_REWRITE_MS = 86_400_000;
 
 /** Share of successful requests the worker logs a line for. Every failure is
  *  logged whatever this says; the API keeps a line per request either way.
