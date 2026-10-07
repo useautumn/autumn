@@ -1,4 +1,4 @@
-import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
+import { filterCustomerProductsByStripeSubscriptionId } from "@autumn/shared";
 import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency";
 import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
@@ -37,17 +37,17 @@ export const clearReleasedScheduleAnchorResets = async ({
 		stripeSubscription,
 		stripeCli: ctx.stripeCli,
 	});
-	const orphanedCustomerProducts = fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			isCustomerProductOnStripeSubscription({
-				customerProduct,
-				stripeSubscriptionId,
-			}) === true &&
-			isOrphanedBillingCycleAnchorReset({
-				customerProduct,
-				stripeSubscription,
-				nowMs,
-			}),
+	const orphanedCustomerProducts = filterCustomerProductsByStripeSubscriptionId(
+		{
+			customerProducts: fullCustomer.customer_products,
+			stripeSubscriptionId,
+		},
+	).filter((customerProduct) =>
+		isOrphanedBillingCycleAnchorReset({
+			customerProduct,
+			stripeSubscription,
+			nowMs,
+		}),
 	);
 	if (orphanedCustomerProducts.length === 0) return;
 

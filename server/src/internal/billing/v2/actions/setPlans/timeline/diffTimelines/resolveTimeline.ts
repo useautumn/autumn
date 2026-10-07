@@ -24,6 +24,15 @@ export const resolvedSegmentId = ({
 	startsAt: number;
 }) => `${key}@${startsAt}`;
 
+/** The policy keeps a canceling live plan's cancellation through a re-list. */
+const keepsLiveCancellation = ({
+	liveRow,
+	policies,
+}: {
+	liveRow?: SavedRow;
+	policies: SetPlansPolicies;
+}) => liveRow?.canceling === true && policies.canceling === "keepCancellation";
+
 const liveRowCarries = ({
 	liveRow,
 	planned,
@@ -36,8 +45,10 @@ const liveRowCarries = ({
 	if (planned.origin === "retained") return true;
 	// A one-off purchase has no cycle to restart, so recreating it would only charge it again.
 	if (planned.lifetime) return true;
-	const keepsCancellation =
-		liveRow.canceling && rules.policies.canceling === "keepCancellation";
+	const keepsCancellation = keepsLiveCancellation({
+		liveRow,
+		policies: rules.policies,
+	});
 	// No Stripe period is open for the plan, so even an unchanged listing starts one, like a new price would.
 	const startsStripeBilling =
 		liveRow.unbilledByStripe &&
@@ -88,8 +99,7 @@ const isCancellationKept = ({
 	savedSegment: SavedSegment;
 	policies: SetPlansPolicies;
 }) =>
-	savedSegment.rows[0]?.canceling === true &&
-	policies.canceling === "keepCancellation" &&
+	keepsLiveCancellation({ liveRow: savedSegment.rows[0], policies }) &&
 	planned.endsAt === null;
 
 /** Like Stripe's cancel_at_period_end, a kept cancellation lands at the period end, which a reset-now moves. */

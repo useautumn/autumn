@@ -1,4 +1,4 @@
-import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
+import { filterCustomerProductsByStripeSubscriptionId } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 import { createAutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
@@ -28,13 +28,10 @@ export const planUninvoicedBillingCycleAnchorReset = async ({
 	}
 
 	const { stripeSubscription, fullCustomer } = eventContext;
-	const customerProducts = eventContext.customerProducts.filter(
-		(customerProduct) =>
-			isCustomerProductOnStripeSubscription({
-				customerProduct,
-				stripeSubscriptionId: stripeSubscription.id,
-			}) === true,
-	);
+	const customerProducts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: eventContext.customerProducts,
+		stripeSubscriptionId: stripeSubscription.id,
+	});
 	const billingCycleAnchorResetCustomerProductIds =
 		findBillingCycleAnchorResetCustomerProductIds({
 			stripeSubscription,
