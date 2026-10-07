@@ -60,6 +60,8 @@ export function requestLogMiddleware({
 					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
 				}),
 			},
+			// Every answered check is logged, slim, for the rollout: it costs ~12 µs/check (~13% of check capacity).
+			// Remove it, or sample answered checks again, when that capacity is needed.
 			res: await loggedResponseOf({ context }),
 			...(forwarded && { forwarded }),
 			...(failure && {
