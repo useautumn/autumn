@@ -1,4 +1,5 @@
 import type { Auth } from "../../auth/types/auth.js";
+import { diagAdd } from "../../diagnostics/measureDiag.js";
 import { errorToReply, wireToCheckRequest } from "./ownerCallContract.js";
 import type { OwnerCall } from "./types/ownerCall.js";
 
@@ -39,6 +40,10 @@ export const answerOwnerCalls = ({
 	): Promise<void> {
 		const call: OwnerCall =
 			typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+		if (call.sentAt !== undefined) {
+			diagAdd("ownerCalls");
+			diagAdd("ownerWaitMs", Date.now() - call.sentAt);
+		}
 		try {
 			const value = await runOwnerCall({ ctx, call });
 			port.postMessage({ id: call.id, ok: true, value });

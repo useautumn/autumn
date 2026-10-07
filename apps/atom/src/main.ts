@@ -1,5 +1,7 @@
 import { isMainThread } from "node:worker_threads";
 import { getAtomEnv } from "@autumn/env/atom";
+import { startSelfProfile } from "./diagnostics/startSelfProfile.js";
+import { startTaskSampler } from "./diagnostics/startTaskSampler.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
 import { startWalCheckpointer } from "./state/startWalCheckpointer.js";
@@ -19,9 +21,17 @@ function createAtom(): AtomServer {
 		dataDir: env.ATOM_DATA_DIR,
 		logger,
 	});
+	const everySeconds = env.ATOM_PROFILE_EVERY_S;
+	const diagnostics = everySeconds
+		? [
+				startSelfProfile({ everySeconds, label: "main", logger }),
+				startTaskSampler({ everySeconds, logger }),
+			]
+		: [];
 	return {
 		start: threads.start,
 		stop: async () => {
+			for (const diagnostic of diagnostics) diagnostic.stop();
 			await threads.stop();
 			walCheckpointer.stop();
 		},

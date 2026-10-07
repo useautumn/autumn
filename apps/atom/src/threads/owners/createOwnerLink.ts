@@ -1,3 +1,4 @@
+import { diagAdd } from "../../diagnostics/measureDiag.js";
 import type {
 	CheckAnswer,
 	SlotProcessor,
@@ -57,11 +58,21 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 			sentAt: Date.now(),
 		};
 		waiting.set(id, reply);
-		const message = { id, ...body };
+		const message = { id, sentAt: reply.sentAt, ...body };
 		port.postMessage(
 			message.type === "setSubject" ? message : JSON.stringify(message),
 		);
-		const answered = await reply.promise;
+		const hopStartedAt = performance.now();
+		const answered = await reply.promise.finally(() => {
+			const ms = performance.now() - hopStartedAt;
+			if (body.type === "check") {
+				diagAdd("checkHops");
+				diagAdd("checkHopMs", ms);
+			} else if (body.type === "setSubject") {
+				diagAdd("pushHops");
+				diagAdd("pushHopMs", ms);
+			}
+		});
 		if (!answered.ok) throw replyToError(answered);
 		return answered.value;
 	}

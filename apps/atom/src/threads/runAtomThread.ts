@@ -1,5 +1,7 @@
 import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
+import { measureDiag } from "../diagnostics/measureDiag.js";
+import { startSelfProfile } from "../diagnostics/startSelfProfile.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
@@ -19,6 +21,15 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
 	const { auth, multiTenant, held } = openAuth({ env, owners });
 	const answerPorts = new Map<number, MessagePort>();
+	const counters = openThreadCounters({ buffer: init.stats, index });
+	measureDiag.counters = counters;
+	const selfProfile = env.ATOM_PROFILE_EVERY_S
+		? startSelfProfile({
+				everySeconds: env.ATOM_PROFILE_EVERY_S,
+				label: String(index),
+				logger: getAtomLogger(),
+			})
+		: null;
 	const server = createAtomServer({
 		ctx: {
 			auth,
@@ -30,7 +41,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 				threadStats: init.stats,
 				checkCounts: init.checkCounts,
 			},
-			counters: openThreadCounters({ buffer: init.stats, index }),
+			counters,
 			checkCounts: openCheckCounts({ buffer: init.checkCounts, index }),
 			held,
 			owners,
@@ -54,7 +65,12 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	return { start: server.start, stop: server.stop, join, leave };
+	async function stop(): Promise<void> {
+		selfProfile?.stop();
+		await server.stop();
+	}
+
+	return { start: server.start, stop, join, leave };
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */

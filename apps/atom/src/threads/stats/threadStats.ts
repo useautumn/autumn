@@ -11,6 +11,13 @@ export const THREAD_STAT_FIELDS = [
 	"loopStalls",
 	/** Calls this thread sent to the other threads' owners still unanswered at the last tick: how far behind they are. */
 	"ownerCallsWaiting",
+	/** Measure-only: owner-side wait from a call's send to its pickup, and caller-side round trips by kind. */
+	"ownerCalls",
+	"ownerWaitMs",
+	"checkHops",
+	"checkHopMs",
+	"pushHops",
+	"pushHopMs",
 ] as const;
 
 export type ThreadStatField = (typeof THREAD_STAT_FIELDS)[number];

@@ -175,6 +175,10 @@ export function createAtomEnv(
 			memoryLimitBytes: machine.memoryLimitBytes,
 		}),
 		/** How often the main thread logs what /health reports. */
+		/** Measure-only: seconds between each thread's self-profile; null (unset) never profiles. */
+		ATOM_PROFILE_EVERY_S: runtimeEnv.ATOM_PROFILE_EVERY_S?.trim()
+			? positiveInteger.parse(runtimeEnv.ATOM_PROFILE_EVERY_S)
+			: null,
 		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
 			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
 		),
