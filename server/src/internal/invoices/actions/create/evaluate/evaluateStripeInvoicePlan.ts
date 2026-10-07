@@ -136,6 +136,7 @@ export const evaluateStripeInvoicePlan = ({
 		previewLines.push({
 			plan_id: line.planId,
 			feature_id: line.featureId,
+			entity_id: lineItem.context.entity?.id ?? null,
 			description: lineItem.description,
 			amount: billedAmount,
 			amount_after_discounts: amountAfterLineDiscounts.toDP(2).toNumber(),

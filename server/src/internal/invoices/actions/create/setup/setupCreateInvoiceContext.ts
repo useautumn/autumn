@@ -1,5 +1,6 @@
 import type {
 	CreateInvoiceParams,
+	Entity,
 	FullCustomer,
 	FullProduct,
 	InvoiceTemplate,
@@ -23,6 +24,10 @@ import {
 	fetchNamedStripePrices,
 	type NamedStripePrices,
 } from "./fetchNamedStripePrices";
+import {
+	invoiceNamesEntities,
+	resolveInvoicePlanEntity,
+} from "./resolveInvoicePlanEntity";
 import { validateInvoiceCustomizeItems } from "./validateInvoiceCustomizeItems";
 
 export type InvoicePlanContext = {
@@ -31,6 +36,8 @@ export type InvoicePlanContext = {
 	params: NonNullable<CreateInvoiceParams["plans"]>[number];
 	fullProduct: FullProduct;
 	discounts: StripeDiscountWithCoupon[];
+	/** Undefined for customer-level plans. */
+	entity?: Entity;
 };
 
 export type CreateInvoiceContext = {
@@ -119,6 +126,7 @@ export const setupCreateInvoiceContext = async ({
 		customerId: params.customer_id,
 		skipCreate: preview,
 		skipUpdate: preview,
+		withEntities: invoiceNamesEntities({ params }),
 	});
 
 	// A preview reads the existing Stripe customer (for its credit balance) but
@@ -168,6 +176,11 @@ export const setupCreateInvoiceContext = async ({
 				planKey: `${planParams.plan_id}#${index}`,
 				params: planParams,
 				fullProduct,
+				entity: resolveInvoicePlanEntity({
+					fullCustomer,
+					params,
+					planParams,
+				}),
 				discounts: await resolveParamDiscounts({
 					stripeCli,
 					discounts: planParams.discounts ?? [],

@@ -94,6 +94,8 @@ export const previewReissuedInvoice = ({
 		return {
 			plan_id: stored?.product_id ?? line.metadata?.autumn_product_id ?? null,
 			feature_id: stored?.feature_id ?? null,
+			entity_id:
+				stored?.entities?.length === 1 ? stored.entities[0].entity_id : null,
 			description: line.description ?? "",
 			amount,
 			amount_after_discounts: amount,

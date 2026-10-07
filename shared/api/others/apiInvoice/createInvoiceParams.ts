@@ -210,6 +210,10 @@ export const InvoicePlanParamsSchema = z
 		version: z.number().optional().meta({
 			description: "Plan version. Defaults to the active version.",
 		}),
+		entity_id: z.string().nullable().optional().meta({
+			description:
+				"The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.",
+		}),
 		customize: InvoiceCustomizeSchema.optional(),
 		feature_quantities: z.array(InvoiceFeatureQuantitySchema).optional(),
 		license_quantities: z.array(InvoiceLicenseQuantitySchema).optional(),
@@ -233,6 +237,10 @@ export const CreateInvoiceParamsSchema = z
 	.object({
 		customer_id: z.string().meta({
 			description: "The customer to invoice.",
+		}),
+		entity_id: z.string().optional().meta({
+			description:
+				"The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity.",
 		}),
 		plans: z.array(InvoicePlanParamsSchema).optional(),
 		custom_line_items: z.array(CustomLineItemSchema).optional().meta({
@@ -299,6 +307,10 @@ export const CreateInvoiceParamsSchema = z
 export const CreateInvoicePreviewLineSchema = z.object({
 	plan_id: z.string().nullable(),
 	feature_id: z.string().nullable(),
+	entity_id: z.string().nullable().meta({
+		description:
+			"The entity this line is billed to. Null for customer-level lines.",
+	}),
 	description: z.string(),
 	amount: z.number(),
 	amount_after_discounts: z.number(),

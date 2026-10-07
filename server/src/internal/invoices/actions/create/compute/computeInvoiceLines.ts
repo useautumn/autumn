@@ -1,6 +1,7 @@
 import {
 	BillingMethod,
 	buildLineItem,
+	type Entity,
 	ErrCode,
 	type Feature,
 	type FullProduct,
@@ -47,17 +48,20 @@ const lineContext = ({
 	price,
 	product,
 	feature,
+	entity,
 	nowMs,
 }: {
 	invoiceContext: CreateInvoiceContext;
 	price: Price;
 	product: FullProduct;
 	feature?: Feature;
+	entity?: Entity;
 	nowMs: number;
 }): LineItemContext => ({
 	price,
 	product,
 	feature,
+	entity,
 	currency: invoiceContext.currency,
 	effectivePeriod: invoiceContext.period,
 	direction: "charge",
@@ -90,6 +94,7 @@ const toLine = ({
 	stripePriceId?: string;
 	stripeQuantity?: number;
 }): InvoiceLine => {
+	const entityLabel = context.entity?.name || context.entity?.id;
 	const lineItem = buildLineItem({
 		context,
 		amount,
@@ -107,6 +112,10 @@ const toLine = ({
 		// One-off prices are never prorated, whatever the request asked for.
 		lineItem: {
 			...lineItem,
+			// buildLineItem appends "(entity)"; invoices read "Pro — Workspace A".
+			description: entityLabel
+				? `${description} — ${entityLabel}`
+				: description,
 			prorated: prorated && !isOneOffPrice(context.price),
 		},
 		planKey,
@@ -162,6 +171,7 @@ const computeFeatureLine = ({
 	planKey,
 	customizeItems,
 	product,
+	entity,
 	entry,
 	nowMs,
 }: {
@@ -170,6 +180,7 @@ const computeFeatureLine = ({
 	planKey: string;
 	customizeItems?: InvoiceCustomizeItem[];
 	product: FullProduct;
+	entity?: Entity;
 	entry: InvoiceFeatureQuantity;
 	nowMs: number;
 }): InvoiceLine | undefined => {
@@ -239,6 +250,7 @@ const computeFeatureLine = ({
 		price,
 		product,
 		feature,
+		entity,
 		nowMs,
 	});
 	return toLine({
@@ -293,6 +305,7 @@ const computePlanLines = ({
 			invoiceContext,
 			price: base.price,
 			product: fullProduct,
+			entity: plan.entity,
 			nowMs,
 		});
 		lines.push(
@@ -326,6 +339,7 @@ const computePlanLines = ({
 			planKey: plan.planKey,
 			customizeItems: params.customize?.items,
 			product: fullProduct,
+			entity: plan.entity,
 			entry,
 			nowMs,
 		});
@@ -357,6 +371,7 @@ const computePlanLines = ({
 				invoiceContext,
 				price: resolved.price,
 				product: resolved.licenseProduct,
+				entity: plan.entity,
 				nowMs,
 			});
 			lines.push(
@@ -392,6 +407,7 @@ const computePlanLines = ({
 				planKey: plan.planKey,
 				customizeItems: license.customize?.items,
 				product: resolved.licenseProduct,
+				entity: plan.entity,
 				entry,
 				nowMs,
 			});
