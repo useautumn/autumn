@@ -201,6 +201,7 @@ export const computeSetPlansPlan = ({
 		ctx,
 		plan: baseAutumnBillingPlan,
 		billingContext,
+		rebillsUnchangedPlansAtReset: true,
 	});
 
 	autumnBillingPlan.lineItems = finalizeLineItems({

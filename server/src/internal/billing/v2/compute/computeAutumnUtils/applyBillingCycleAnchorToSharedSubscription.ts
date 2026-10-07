@@ -22,12 +22,15 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 	billingContext,
 	stripeSubscriptionId = billingContext.stripeSubscription?.id,
 	targetCustomerProduct,
+	rebillsUnchangedPlansAtReset = false,
 }: {
 	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	stripeSubscriptionId?: string;
 	targetCustomerProduct?: FullCusProduct;
+	/** set_plans only: a reset now also bills the subscription's plans the request leaves unchanged. */
+	rebillsUnchangedPlansAtReset?: boolean;
 }): AutumnBillingPlan => {
 	if (billingContext.requestedBillingCycleAnchor === undefined) return plan;
 	if (!stripeSubscriptionId && !targetCustomerProduct) return plan;
@@ -78,6 +81,7 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 
 	// Stripe re-bills every item when the cycle resets now; under none it only moves the period.
 	const rebillsUnchangedPlans =
+		rebillsUnchangedPlansAtReset &&
 		billingContext.requestedBillingCycleAnchor === "now" &&
 		billingContext.requestedProrationBehavior !== "none";
 	const isRebilledByReset = (customerProduct: FullCusProduct) =>

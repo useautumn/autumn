@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/attach/compute/computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/attach/compute/computeAttachTransitionUpdates";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
@@ -69,7 +70,7 @@ export const computeImmediateMultiProductPlan = ({
 		currentCustomerProducts: outgoingCustomerProducts,
 		fullCustomer: billingContext.fullCustomer,
 	});
-	return {
+	const billingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
 		insertCustomerProducts,
@@ -86,4 +87,13 @@ export const computeImmediateMultiProductPlan = ({
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 		pooledBalancePlan,
 	};
+
+	billingPlan.lineItems = finalizeLineItems({
+		ctx,
+		lineItems: billingPlan.lineItems ?? [],
+		billingContext,
+		autumnBillingPlan: billingPlan,
+	});
+
+	return billingPlan;
 };
