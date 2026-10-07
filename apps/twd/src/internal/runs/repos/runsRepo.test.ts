@@ -2,7 +2,13 @@ import { expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { type RunStatus, runs } from "../../../db/schema/runs.ts";
-import { peakWorkersSql, type RunRow, toRunSummary } from "./runsRepo.ts";
+import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import {
+	peakWorkersSql,
+	type RunRow,
+	toRunSummary,
+	updateRun,
+} from "./runsRepo.ts";
 
 const runRow = ({
 	status,
@@ -18,8 +24,12 @@ const runRow = ({
 	selection: { groups: ["core"] },
 	status,
 	purpose: "baseline",
+	isBaseline: true,
+	newFailures: null,
 	workersWanted: 588,
 	maxWorkers: null,
+	maxFilesPerWorker: null,
+	sizing: null,
 	repeat: 1,
 	costUsd: 0,
 	workerSeconds: 0,
@@ -110,3 +120,38 @@ test.skipIf(!testDatabaseUrl)(
 		}
 	},
 );
+
+const capturedSet = async (set: Partial<RunRow>) => {
+	let written: Partial<RunRow> | undefined;
+	const ctx = {
+		db: {
+			update: () => ({
+				set: (value: Partial<RunRow>) => {
+					written = value;
+					return { where: async () => undefined };
+				},
+			}),
+		},
+	} as unknown as TwdContext;
+	await updateRun({ ctx, runId: "run_1", set });
+	return written;
+};
+
+test("cancelling or erroring a run on any path drops its baseline flag", async () => {
+	expect(await capturedSet({ status: "cancelled" })).toEqual({
+		status: "cancelled",
+		isBaseline: false,
+	});
+	expect(await capturedSet({ status: "errored" })).toEqual({
+		status: "errored",
+		isBaseline: false,
+	});
+});
+
+test("other writes leave the baseline flag alone", async () => {
+	expect(await capturedSet({ status: "failed" })).toEqual({ status: "failed" });
+	expect(await capturedSet({ status: "running" })).toEqual({
+		status: "running",
+	});
+	expect(await capturedSet({ passed: 3 })).toEqual({ passed: 3 });
+});

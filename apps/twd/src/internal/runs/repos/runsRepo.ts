@@ -3,21 +3,28 @@ import {
 	and,
 	desc,
 	eq,
+	gte,
 	ilike,
 	inArray,
 	lt,
+	lte,
 	notInArray,
 	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import type { RunSummary } from "../../../api/contract.ts";
+import {
+	BRANCH_HISTORY_RUNS,
+	type RunLive,
+	type RunSummary,
+} from "../../../api/contract.ts";
 import { stripeAccounts } from "../../../db/schema/accounts.ts";
 import { users } from "../../../db/schema/auth.ts";
 import { type RunStatus, runs } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import { SYSTEM_ACTOR } from "../../../lib/createContext.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { getLiveRun } from "../live/liveRuns.ts";
 
 export type RunRow = typeof runs.$inferSelect;
 
@@ -60,6 +67,15 @@ const selectRuns = ({ ctx }: { ctx: TwdContext }) =>
 		.from(runs)
 		.leftJoin(users, eq(users.id, runs.createdBy));
 
+const toRunLive = ({ run }: { run: RunRow }): RunLive | null => {
+	const live = getLiveRun({ runId: run.id });
+	if (!live || isTerminalRunStatus({ status: run.status })) return null;
+	const workers: RunLive["workers"] = {};
+	for (const { status } of live.workers.values())
+		workers[status] = (workers[status] ?? 0) + 1;
+	return { workers, etaMs: live.eta?.etaMs ?? null };
+};
+
 export const toRunSummary = ({
 	run,
 	email,
@@ -76,6 +92,7 @@ export const toRunSummary = ({
 	sha: run.sha,
 	status: run.status,
 	purpose: run.purpose,
+	baseline: run.isBaseline,
 	selection: run.selection,
 	repeat: run.repeat,
 	fileCount: run.fileCount,
@@ -92,6 +109,8 @@ export const toRunSummary = ({
 	},
 	passed: run.passed,
 	failed: run.failed,
+	newFailures: run.newFailures,
+	live: toRunLive({ run }),
 	createdBy: {
 		userId: run.createdBy,
 		email:
@@ -128,7 +147,9 @@ export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
 	purpose?: "adhoc" | "baseline";
+	baseline?: boolean;
 	branch?: string;
+	exactBranch?: string;
 };
 export type RunsCursor = { createdAt: string; id: string };
 
@@ -143,7 +164,9 @@ const runsFilterSql = ({
 	status,
 	outcome = "all",
 	purpose,
+	baseline,
 	branch,
+	exactBranch,
 }: RunsFilter) =>
 	and(
 		status === "live"
@@ -155,9 +178,11 @@ const runsFilterSql = ({
 			? undefined
 			: inArray(runs.status, OUTCOME_STATUSES[outcome]),
 		purpose ? eq(runs.purpose, purpose) : undefined,
+		baseline === undefined ? undefined : eq(runs.isBaseline, baseline),
 		branch
 			? ilike(runs.branch, `%${branch.replace(/[\\%_]/g, "\\$&")}%`)
 			: undefined,
+		exactBranch ? eq(runs.branch, exactBranch) : undefined,
 	);
 
 /** Keyset page ordered newest first; ties on created_at break by id. */
@@ -201,6 +226,10 @@ export const countRuns = async ({
 			.where(runsFilterSql(filter))
 	)[0]?.n ?? 0;
 
+/** Only a passed or failed run can be a baseline; onRunFinished checks those ran every file. */
+const NEVER_BASELINE: RunStatus[] = ["cancelled", "errored"];
+
+/** Every run write goes through here, so a cancel or error on any path also drops the baseline flag. */
 export const updateRun = async ({
 	ctx,
 	runId,
@@ -210,5 +239,94 @@ export const updateRun = async ({
 	runId: string;
 	set: Partial<Omit<RunRow, "id">>;
 }) => {
-	await ctx.db.update(runs).set(set).where(eq(runs.id, runId));
+	const settled =
+		set.status && NEVER_BASELINE.includes(set.status)
+			? { ...set, isBaseline: false }
+			: set;
+	await ctx.db.update(runs).set(settled).where(eq(runs.id, runId));
+};
+
+export type BranchesCursor = { lastAt: string; branch: string };
+
+/** One page of branches by latest finished run, each with its last BRANCH_HISTORY_RUNS finished runs. */
+export const listBranchHistories = async ({
+	ctx,
+	branch,
+	cursor,
+	limit,
+}: {
+	ctx: TwdContext;
+	branch?: string;
+	cursor?: BranchesCursor;
+	limit: number;
+}) => {
+	const finished = runsFilterSql({ status: "finished", branch });
+	const lastAt = sql<string>`max(${runs.createdAt})`;
+	const page = await ctx.db
+		.select({ branch: runs.branch, lastAt: sql<string>`${lastAt}::text` })
+		.from(runs)
+		.where(finished)
+		.groupBy(runs.branch)
+		.having(
+			cursor
+				? sql`(${lastAt}, ${runs.branch}) < (${cursor.lastAt}::timestamptz, ${cursor.branch})`
+				: undefined,
+		)
+		.orderBy(desc(lastAt), desc(runs.branch))
+		.limit(limit);
+	if (page.length === 0) return { page, runsByBranch: new Map() };
+
+	const ranked = ctx.db
+		.select({
+			id: runs.id,
+			rank: sql<number>`row_number() over (partition by ${runs.branch} order by ${runs.createdAt} desc, ${runs.id} desc)`.as(
+				"rank",
+			),
+		})
+		.from(runs)
+		.where(
+			and(
+				finished,
+				inArray(
+					runs.branch,
+					page.map((p) => p.branch),
+				),
+			),
+		)
+		.as("ranked");
+	const rows = await selectRuns({ ctx })
+		.where(
+			inArray(
+				runs.id,
+				ctx.db
+					.select({ id: ranked.id })
+					.from(ranked)
+					.where(lte(ranked.rank, BRANCH_HISTORY_RUNS)),
+			),
+		)
+		.orderBy(desc(runs.createdAt), desc(runs.id));
+	const runsByBranch = new Map<string, RunSummary[]>();
+	for (const row of rows)
+		runsByBranch.set(row.run.branch, [
+			...(runsByBranch.get(row.run.branch) ?? []),
+			toRunSummary(row),
+		]);
+	return { page, runsByBranch };
+};
+
+export const getRunStatsSince = async ({
+	ctx,
+	since,
+}: {
+	ctx: TwdContext;
+	since: Date;
+}) => {
+	const [row] = await ctx.db
+		.select({
+			runs: sql<number>`count(*)::int`,
+			usd: sql<number>`coalesce(sum(${runs.costUsd}), 0)::float8`,
+		})
+		.from(runs)
+		.where(gte(runs.createdAt, since));
+	return { runs: row?.runs ?? 0, usd: row?.usd ?? 0 };
 };

@@ -10,6 +10,8 @@ export type StreamConsumer = {
 	name: string;
 	/** One partition's records, in order. A job must make a slice it has seen before harmless. */
 	handle(params: { records: StreamRecord[] }): Promise<void>;
+	/** After the job leaves its group: work it holds past `handle` finishes here, before herald closes its clients. */
+	stop?(): Promise<void>;
 };
 
 export type RunningStreamConsumer = {

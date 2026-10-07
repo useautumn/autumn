@@ -28,6 +28,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -46,7 +47,7 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 		],
 	});
 
-	const { autumnV2_2 } = await initScenario({
+	const { autumnV2_2, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -55,7 +56,7 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 		actions: [],
 	});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: scale.id,
 		customize: {
@@ -67,11 +68,17 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 		enable_plan_immediately: true,
 	});
 
-	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	// Draft invoice keeps the plan pending; finalizing it activates the plan before payment.
+	await ctx.stripeCli.invoices.finalizeInvoice(result.invoice!.stripe_id);
+	await expectCustomerProducts({
+		autumn: autumnV2_2,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		active: [scale.id],
+	});
 
-	// Plan active immediately (enable_plan_immediately overrides invoice-mode deferral).
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	await expectProductActive({ customer, productId: scale.id });
-	await expectCustomerProducts({ customer, active: [scale.id] });
 
 	// Base feature item retained (the bug dropped this entirely).
 	expectBalanceCorrect({

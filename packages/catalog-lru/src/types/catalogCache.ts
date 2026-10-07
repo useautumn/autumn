@@ -21,6 +21,6 @@ export type CatalogCache = {
 	/** Expires the org's mutable rows in this env; custom rows belong to one customer and stay. */
 	invalidate(params: { orgId: string; env: string }): { expiredCount: number };
 	size(): number;
-	/** Changes whenever a stale-allowing read could answer differently: a row set, replaced or dropped. */
-	changeCount(): number;
+	/** Whether a catalog `read` returned would still answer the same: none of its keys' rows set, dropped or invalidated since. */
+	isCurrent(params: { catalog: Catalog }): boolean;
 };

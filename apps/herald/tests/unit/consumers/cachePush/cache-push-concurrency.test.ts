@@ -184,3 +184,23 @@ test("a subject pushed once for several changes reports the age of its oldest ch
 	for (let i = 0; i < 50 && ages.length < 2; i++) await Bun.sleep(5);
 	expect(ages).toEqual([100, 200]);
 });
+
+test("stop waits for every queued push, since the slices that named them are already committed", async () => {
+	pushed.length = 0;
+	closeGate();
+	const consumer = createCachePushConsumer({ ctx: { logger } as never });
+	await consumer.handle({
+		records: Array.from({ length: CACHE_PUSH_CONCURRENCY + 2 }, (_, index) =>
+			recordFor({ customerId: `cus_stop_${index}`, offset: index }),
+		),
+	});
+	let stopped = false;
+	const stopping = consumer.stop?.().then(() => {
+		stopped = true;
+	});
+	await Bun.sleep(5);
+	expect(stopped).toBe(false);
+	openGate();
+	await stopping;
+	expect(pushed).toHaveLength(CACHE_PUSH_CONCURRENCY + 2);
+});

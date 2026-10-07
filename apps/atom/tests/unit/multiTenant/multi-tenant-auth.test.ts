@@ -244,6 +244,29 @@ describe("multi-tenant auth across processes", () => {
 		expect(existsSync(join(dataDir, "atom_a"))).toBe(false);
 	});
 
+	test("an Atom deleted and put again under its id reopens on the other process, with none of the old folder's customers", async () => {
+		const { first, second, advance } = openTwoProcesses();
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_MISS_RESCAN_MS);
+		await storeCustomer({ auth: second, token: "token_a" });
+
+		first.removeAtom({ id: "atom_a" });
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_REVALIDATE_MS);
+
+		expect(
+			await forwardReasonOf(() =>
+				checkCustomer({ auth: second, token: "token_a" }),
+			),
+		).toBe("customer_not_stored");
+		await storeCustomer({ auth: second, token: "token_a" });
+		expect(
+			await checkCustomer({ auth: first, token: "token_a" }),
+		).toMatchObject({
+			allowed: true,
+		});
+	});
+
 	test("an Atom deleted before the other process ever opened it is not recreated there", async () => {
 		const { dataDir, first, second, advance } = openTwoProcesses();
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });

@@ -79,5 +79,6 @@ export function createCachePushConsumer({
 		await queue.waitForRoom();
 	}
 
-	return { name: "cache-push", handle };
+	// Each slice's offsets are committed once it is queued, so a push still queued at stop would never be read again.
+	return { name: "cache-push", handle, stop: () => queue.drain() };
 }

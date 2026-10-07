@@ -5,7 +5,12 @@ import type {
 	FullCusProduct,
 	FullProduct,
 } from "@autumn/shared";
-import { cusProductToProduct, diffPlanV1 } from "@autumn/shared";
+import {
+	cusProductToProcessorType,
+	cusProductToProduct,
+	diffPlanV1,
+	ProcessorType,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
 
@@ -87,6 +92,11 @@ export const deriveCustomerProductIsCustom = ({
 	baseProduct?: FullProduct | null;
 	features: Feature[];
 }): boolean => {
+	// RevenueCat purchases carry no params and can't be customised, so any diff is catalog drift.
+	if (cusProductToProcessorType(customerProduct) === ProcessorType.RevenueCat) {
+		return false;
+	}
+
 	// Cannot prove it matches the catalog, so assume it does not.
 	if (!baseProduct) return true;
 

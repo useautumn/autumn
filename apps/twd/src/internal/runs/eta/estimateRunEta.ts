@@ -185,6 +185,7 @@ export const estimateRunEta = ({
 	workers,
 	moreWorkersWanted,
 	priors,
+	slotsPerWorker = 1,
 }: {
 	now: number;
 	files: EtaFile[];
@@ -192,6 +193,8 @@ export const estimateRunEta = ({
 	/** Accounts the run still asks for beyond its live and booting workers. */
 	moreWorkersWanted: number;
 	priors: EtaPriors;
+	/** Files each worker runs at once. */
+	slotsPerWorker?: number;
 }): RunEta | null => {
 	const finished = files.filter((f) => isFinished(f.status));
 	if (finished.length < MIN_FINISHED_FOR_ETA) return null;
@@ -225,11 +228,14 @@ export const estimateRunEta = ({
 	const arriving = workers.filter((w) => ARRIVING_WORKER.has(w.status)).length;
 	const stillWanted = Math.min(
 		moreWorkersWanted,
-		Math.max(0, unfinished.length - live.length - arriving),
+		Math.max(
+			0,
+			Math.ceil(unfinished.length / slotsPerWorker) - live.length - arriving,
+		),
 	);
 
 	const schedule = (quantile: "p50Ms" | "p90Ms") => {
-		const busyUntil = new Map<string, number>();
+		const busyUntil = new Map<string, number[]>();
 		const queued: number[] = [];
 		for (const f of unfinished) {
 			const e = expect(f.file);
@@ -252,12 +258,28 @@ export const estimateRunEta = ({
 					? e.p90Ms * factor
 					: duration;
 			const remaining = Math.max(tail - elapsed, RUNNING_FLOOR_MS);
-			busyUntil.set(f.worker as string, now + remaining + retry);
+			const worker = f.worker as string;
+			busyUntil.set(worker, [
+				...(busyUntil.get(worker) ?? []),
+				now + remaining + retry,
+			]);
 		}
+		const slotsOf = (freeAt: number) =>
+			Array.from({ length: slotsPerWorker }, () => freeAt);
 		const workerFreeAt = [
-			...live.map((w) => busyUntil.get(w.name) ?? now),
-			...Array.from({ length: arriving }, () => now + bootMs / 2),
-			...Array.from({ length: stillWanted }, () => now + bootMs),
+			...live.flatMap((w) => {
+				const busy = busyUntil.get(w.name) ?? [];
+				return [
+					...busy,
+					...slotsOf(now).slice(0, Math.max(0, slotsPerWorker - busy.length)),
+				];
+			}),
+			...Array.from({ length: arriving }, () =>
+				slotsOf(now + bootMs / 2),
+			).flat(),
+			...Array.from({ length: stillWanted }, () =>
+				slotsOf(now + bootMs),
+			).flat(),
 		];
 		const makespan = simulateLptMakespan({ workerFreeAt, jobs: queued, now });
 		return makespan === null ? null : makespan + teardownMs;

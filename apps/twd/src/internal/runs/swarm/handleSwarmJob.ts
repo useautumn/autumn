@@ -21,10 +21,6 @@ import {
 	type RunDemand,
 	registerRunDemand,
 } from "../../accounts/allocator/accountAllocator.ts";
-import {
-	ACCOUNTS_PER_KEY_CAP,
-	MAX_RUN_WORKERS,
-} from "../../accounts/allocator/poolLimits.ts";
 import { usableKey } from "../../accounts/repos/cleanAccountsRepo.ts";
 import { getTestTreeAtSha } from "../../catalog/actions/getTestTreeAtSha.ts";
 import { toAbsoluteTestPath } from "../../catalog/repoPaths.ts";
@@ -37,6 +33,9 @@ import {
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import type { JobHandler } from "../../jobs/types/jobHandler.ts";
 import { stripeForKey } from "../../keys/stripeForKey.ts";
+import { getWorkerClass } from "../../profiles/actions/getWorkerClass.ts";
+import { updateFileProfiles } from "../../profiles/actions/updateFileProfiles.ts";
+import { insertFileRunStats } from "../../profiles/repos/fileRunStats.ts";
 import { onRunFinished } from "../../results/actions/refreshBaselines.ts";
 import {
 	orderFilesLongestFirst,
@@ -59,6 +58,7 @@ import {
 } from "../repos/runsRepo.ts";
 import { endRunWorkers, insertRunWorker } from "../repos/runWorkersRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
+import { resolveRunSizing } from "../sizing/resolveRunSizing.ts";
 import { spawnTwChild } from "../spawnTwChild.ts";
 import { type RunProgress, readRunProgress } from "../types/runProgress.ts";
 import type {
@@ -66,7 +66,6 @@ import type {
 	SwarmInit,
 	SwarmParentMessage,
 } from "../types/swarmMessages.ts";
-import { countPooledFiles } from "./countPooledFiles.ts";
 import { deleteStripeConnectAccounts } from "./deleteStripeConnectAccounts.ts";
 import { acquireStripeConnectLease } from "./stripeConnectLease.ts";
 
@@ -283,6 +282,7 @@ export const handleSwarmJob: JobHandler = async ({
 
 	const sandboxIds: string[] = [];
 	const workers = new Set<string>();
+	const workerClass = getWorkerClass();
 	const shardAccountIds: string[] = [];
 	let shardLeaseHeld = false;
 	let checkpointed = 0;
@@ -368,6 +368,7 @@ export const handleSwarmJob: JobHandler = async ({
 	const logWriter = createRunLogWriter({ ctx, runId });
 	const accrueTimer = setInterval(() => void accrue(), ACCRUE_MS);
 	let etaTimer: ReturnType<typeof setInterval> | undefined;
+	let filesPerWorker = 1;
 	try {
 		const files = await orderFilesLongestFirst({
 			ctx,
@@ -390,6 +391,7 @@ export const handleSwarmJob: JobHandler = async ({
 				const next = eta.estimate({
 					live,
 					moreWorkersWanted: demand.wants,
+					slotsPerWorker: filesPerWorker,
 					now: Date.now(),
 				});
 				const key = JSON.stringify(next);
@@ -415,20 +417,23 @@ export const handleSwarmJob: JobHandler = async ({
 			ctx,
 			sha: run.sha,
 		});
-		const pooledFiles = await countPooledFiles({
+		const {
+			sizing,
+			swarm: swarmSizing,
+			pooledFiles,
+		} = await resolveRunSizing({
+			ctx,
+			run,
 			testIds: files,
 			testsDirAtSha,
+			usableKeys,
 		});
-		const workersWanted = Math.min(
-			pooledFiles,
-			run.maxWorkers ?? Number.POSITIVE_INFINITY,
-			usableKeys * ACCOUNTS_PER_KEY_CAP,
-			MAX_RUN_WORKERS,
-		);
+		const workersWanted = sizing.workers;
+		filesPerWorker = sizing.filesPerWorker;
 		setStatus({
 			status: "warming",
 			phase: "waiting for warm image",
-			set: { startedAt: new Date(), workersWanted },
+			set: { startedAt: new Date(), workersWanted, sizing },
 		});
 		if (files.length === 0) throw new Error("run has no planned files");
 		if (pooledFiles > 0 && workersWanted === 0) {
@@ -463,6 +468,12 @@ export const handleSwarmJob: JobHandler = async ({
 			accounts: parked.splice(0).map(toSwarmAccount),
 			workersWanted,
 			usableKeys,
+			sizing: {
+				...swarmSizing,
+				soloFiles: swarmSizing.soloFiles.map((testId) =>
+					toAbsoluteTestPath({ testId }),
+				),
+			},
 			ingressUrl: ctx.env.TWD_PUBLIC_URL,
 			ingressToken: ctx.env.TWD_INGRESS_TOKEN,
 			stripeConnectShard: resolveStripeConnectShard(ctx.env) ?? undefined,
@@ -563,6 +574,18 @@ export const handleSwarmJob: JobHandler = async ({
 					const grew = message.workers > demand.wants;
 					demand.wants = abort.signal.aborted ? 0 : message.workers;
 					if (grew) kickAllocator();
+				} else if (message.type === "file_stats") {
+					enqueueWrite(() =>
+						insertFileRunStats({
+							ctx,
+							runId,
+							file: message.file,
+							attempt: message.attempt,
+							worker: message.worker,
+							workerClass,
+							stats: message.stats,
+						}),
+					);
 				} else if (message.type === "file") {
 					eta?.noteFile({ file: message.file, now: Date.now() });
 					if (message.final)
@@ -678,6 +701,12 @@ export const handleSwarmJob: JobHandler = async ({
 		retireLiveRun({ runId });
 		await onRunFinished({ ctx, runId }).catch((error: unknown) =>
 			ctx.logger.warn("baseline refresh failed", {
+				runId,
+				error: String(error),
+			}),
+		);
+		await updateFileProfiles({ ctx, runId }).catch((error: unknown) =>
+			ctx.logger.warn("file profile update failed", {
 				runId,
 				error: String(error),
 			}),
