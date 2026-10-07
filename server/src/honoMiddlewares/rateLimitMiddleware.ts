@@ -52,6 +52,7 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		const policy = resolveRateLimitPolicy({
 			method: c.req.method,
 			path: c.req.path,
+			ctx,
 		});
 		if (policy.skipForTestsOrg && isTestsOrgRequest({ ctx })) {
 			return await next();

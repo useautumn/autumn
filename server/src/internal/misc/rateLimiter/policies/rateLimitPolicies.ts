@@ -1,4 +1,8 @@
 import { ApiVersion } from "@autumn/shared";
+import {
+	isSyncTrackRequest,
+	isWritingCheckRequest,
+} from "./isSyncBalanceWrite";
 import { perMinute, perSecond, route } from "./rateLimitPolicyBuilders";
 import type { RateLimitLayer } from "./types/rateLimitLayer";
 import type { RateLimitPolicy } from "./types/rateLimitPolicy";
@@ -65,6 +69,16 @@ const checkPerOrg: RateLimitLayer = {
 	...perMinute(240_000),
 };
 
+// 2.5+ synchronous balance writes (track async: false, check with lock or send_event) share one counter per layer.
+const syncBalanceWritePerCustomer: RateLimitLayer = {
+	name: "sync_balance_write",
+	...perSecond(500),
+};
+const syncBalanceWritePerOrg: RateLimitLayer = {
+	name: "sync_balance_write_org",
+	...perMinute(120_000),
+};
+
 // 2.4 matches no upTo key, so it gets `otherwise` (5/s): open question for John.
 const customerListPerOrg: RateLimitLayer = {
 	name: "list_customers",
@@ -76,6 +90,26 @@ const customerListPerOrg: RateLimitLayer = {
 
 // First match wins; "general" catches every other route.
 export const RATE_LIMIT_POLICIES: RateLimitPolicy[] = [
+	{
+		id: "track_sync",
+		routes: [
+			route("POST /v1/balances.track"),
+			route("POST /v1/balances.track_tokens"),
+			route("POST /v1/track"),
+			route("POST /v1/track_tokens"),
+			route("POST /v1/events"),
+		],
+		appliesTo: isSyncTrackRequest,
+		perCustomer: syncBalanceWritePerCustomer,
+		perOrg: syncBalanceWritePerOrg,
+	},
+	{
+		id: "check_write",
+		routes: CHECK_ROUTES,
+		appliesTo: isWritingCheckRequest,
+		perCustomer: syncBalanceWritePerCustomer,
+		perOrg: syncBalanceWritePerOrg,
+	},
 	{
 		id: "track",
 		routes: TRACK_ROUTES,
