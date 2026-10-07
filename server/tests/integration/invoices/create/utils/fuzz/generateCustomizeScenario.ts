@@ -89,6 +89,7 @@ type Rng = {
 	int: (min: number, max: number) => number;
 	pick: <T>(values: readonly T[]) => T;
 	chance: (probability: number) => boolean;
+	shuffle: <T>(values: readonly T[]) => T[];
 };
 
 /** mulberry32: tiny, deterministic, good enough for scenario selection. */
@@ -106,6 +107,15 @@ const createRng = (seed: number): Rng => {
 		int: (min, max) => min + Math.floor(next() * (max - min + 1)),
 		pick: (values) => values[Math.floor(next() * values.length)],
 		chance: (probability) => next() < probability,
+		// Fisher–Yates: a fixed number of draws per shuffle, so a seed survives runtime sort changes.
+		shuffle: (values) => {
+			const shuffled = [...values];
+			for (let index = shuffled.length - 1; index > 0; index--) {
+				const swap = Math.floor(next() * (index + 1));
+				[shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+			}
+			return shuffled;
+		},
 	};
 };
 
@@ -208,9 +218,7 @@ const genCatalog = (rng: Rng): FuzzCatalog => {
 				interval: rng.pick(["month", "month", "year"] as const),
 			}
 		: null;
-	const featureIds = [...ALL_FEATURES]
-		.sort(() => rng.next() - 0.5)
-		.slice(0, rng.int(1, 3));
+	const featureIds = rng.shuffle(ALL_FEATURES).slice(0, rng.int(1, 3));
 	const catalogItems = featureIds.map((featureId) => {
 		const behavior = CONTINUOUS_FEATURES.includes(featureId)
 			? BillingMethod.Prepaid
