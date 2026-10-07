@@ -67,7 +67,7 @@ describe("toVisibleBillingOptionSections", () => {
 			},
 		});
 		expect(timing.options.map((entry) => entry.id)).toEqual(["endDate"]);
-		expect(timing.summary).toEqual([{ text: "Renews Nov 6", changed: false }]);
+		expect(timing.summary).toBe("Renews Nov 6");
 	});
 });
 
@@ -81,14 +81,10 @@ describe("summarizeBillingOptions", () => {
 					option({ id: "c", summary: staysAs("Renews Nov 6") }),
 				],
 			}),
-		).toEqual([
-			{ text: "Ends Dec 1", changed: true },
-			{ text: "Starts now", changed: false },
-			{ text: "Renews Nov 6", changed: false },
-		]);
+		).toBe("Ends Dec 1 · Starts now · Renews Nov 6");
 	});
 
-	test("a locked option reads as unchanged and a hidden one is left out", () => {
+	test("a locked option sorts as unchanged and a hidden one is left out", () => {
 		expect(
 			summarizeBillingOptions({
 				options: [
@@ -100,7 +96,7 @@ describe("summarizeBillingOptions", () => {
 					option({ id: "b", summary: changedTo("Ends Nov 1"), visible: false }),
 				],
 			}),
-		).toEqual([{ text: "Cycle resets now", changed: false }]);
+		).toBe("Cycle resets now");
 	});
 });
 

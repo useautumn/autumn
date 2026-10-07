@@ -39,14 +39,7 @@ export function BillingOptionSection({
 					{section.label}
 				</span>
 				<span className="ml-auto min-w-0 truncate text-xs text-subtle">
-					{section.summary.map((part, index) => (
-						<Fragment key={part.text}>
-							{index > 0 && " · "}
-							<span className={cn(part.changed && "text-foreground")}>
-								{part.text}
-							</span>
-						</Fragment>
-					))}
+					{section.summary}
 				</span>
 			</CollapsibleTrigger>
 			<m.div

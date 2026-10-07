@@ -3,7 +3,6 @@ import {
 	type BillingOptionDescriptor,
 	type BillingOptionSectionId,
 	type BillingOptionSectionsConfig,
-	type BillingOptionSummaryPart,
 	type VisibleBillingOptionSection,
 } from "../types/billingOptionSectionTypes";
 
@@ -15,12 +14,12 @@ const SECTION_LABELS: Record<BillingOptionSectionId, string> = {
 	stripe: "Stripe",
 };
 
-/** Changed options first, then what stays as it is, each in row order. */
+/** Changed options first, then what stays as it is, each in row order, joined with " · ". */
 export function summarizeBillingOptions({
 	options,
 }: {
 	options: BillingOptionDescriptor[];
-}): BillingOptionSummaryPart[] {
+}): string {
 	const parts = options.flatMap((option) =>
 		option.visible && option.summary
 			? [
@@ -34,7 +33,9 @@ export function summarizeBillingOptions({
 	return [
 		...parts.filter((part) => part.changed),
 		...parts.filter((part) => !part.changed),
-	];
+	]
+		.map((part) => part.text)
+		.join(" · ");
 }
 
 /** Sections in display order, keeping only those with at least one visible row. */

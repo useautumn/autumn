@@ -29,11 +29,9 @@ export type BillingOptionSectionsConfig = Partial<
 	Record<BillingOptionSectionId, BillingOptionDescriptor[]>
 >;
 
-export type BillingOptionSummaryPart = { text: string; changed: boolean };
-
 export type VisibleBillingOptionSection = {
 	id: BillingOptionSectionId;
 	label: string;
 	options: BillingOptionDescriptor[];
-	summary: BillingOptionSummaryPart[];
+	summary: string;
 };
