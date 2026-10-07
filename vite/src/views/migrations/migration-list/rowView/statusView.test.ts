@@ -119,7 +119,7 @@ test("a failed latest dry run reads as failed, not done", () => {
 		now: FIXTURE_NOW,
 	});
 	expect(view.chip).toEqual({ label: "Draft", details: undefined });
-	expect(view.card.chip.details).toEqual(["· dry run failed"]);
+	expect(view.card.chip.details).toEqual(["· dry run incomplete"]);
 });
 
 test("completed is green when clean and amber with the failed count", () => {
@@ -131,7 +131,7 @@ test("completed is green when clean and amber with the failed count", () => {
 	expect(pill("migration-seat-licenses")).toEqual({
 		ring: { tone: "amber", fraction: 1 },
 		label: "Completed",
-		detail: "· 2 failed",
+		detail: "· 2 incomplete",
 	});
 });
 
@@ -160,12 +160,12 @@ test("no changes is a full neutral ring with every customer up to date", () => {
 test("failed and canceled report where they stopped and what was not reached", () => {
 	const failed = statusOf("migration-starter-v2");
 	expect(pill("migration-starter-v2")).toEqual({
-		ring: { tone: "red", fraction: 812 / 1020 },
-		label: "Failed",
+		ring: { tone: "orange", fraction: 812 / 1020 },
+		label: "Incomplete",
 		detail: "at 80%",
 	});
 	expect(failed.card).toEqual({
-		chip: { label: "Failed", details: ["at 80%"] },
+		chip: { label: "Incomplete", details: ["at 80%"] },
 		when: "Sep 15, 14:32 · after 18 minutes",
 		note: null,
 		error:
@@ -187,12 +187,12 @@ test("failed and canceled report where they stopped and what was not reached", (
 test("a failed run explains its error code in plain words", () => {
 	const view = statusOf("migration-credits-reset");
 	expect(pill("migration-credits-reset")).toEqual({
-		ring: { tone: "red", fraction: 881 / 904 },
-		label: "Failed",
+		ring: { tone: "orange", fraction: 881 / 904 },
+		label: "Incomplete",
 		detail: "at 97%",
 	});
 	expect(view.card.error).toBe(
-		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked failed so you can retry them.",
+		"The run stopped before it could confirm every update. Changes already applied are kept, and unconfirmed customers are marked incomplete so you can retry them.",
 	);
 	expect(view.card.legend).toEqual([
 		{ kind: "failed", value: 881 },
