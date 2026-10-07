@@ -26,6 +26,9 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	execute: () => Promise<void>;
 }): Promise<void> => {
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
+	// Long-lived and plain deferred checkouts both claim from their own type and revert to it.
+	const unclaimedType = metadata.type;
+	if (!unclaimedType) return;
 
 	// Only the initiating org sends the webhook — handles when multiple Stripe
 	// orgs are linked to the same account and both receive this event.
@@ -48,7 +51,7 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	const claimed = await MetadataService.claim({
 		db: ctx.db,
 		id: metadata.id,
-		fromType: MetadataType.CheckoutSessionV2,
+		fromType: unclaimedType,
 		toType: MetadataType.CheckoutSessionV2Processing,
 	});
 
@@ -82,7 +85,11 @@ export const withClaimedCheckoutSessionMetadata = async ({
 
 		await execute();
 	} catch (error) {
-		await revertMetadataClaim({ ctx, metadataId: metadata.id });
+		await revertMetadataClaim({
+			ctx,
+			metadataId: metadata.id,
+			unclaimedType,
+		});
 		throw error;
 	} finally {
 		await clearCheckoutReservation();
@@ -92,15 +99,17 @@ export const withClaimedCheckoutSessionMetadata = async ({
 const revertMetadataClaim = async ({
 	ctx,
 	metadataId,
+	unclaimedType,
 }: {
 	ctx: StripeWebhookContext;
 	metadataId: string;
+	unclaimedType: MetadataType;
 }): Promise<void> => {
 	await MetadataService.claim({
 		db: ctx.db,
 		id: metadataId,
 		fromType: MetadataType.CheckoutSessionV2Processing,
-		toType: MetadataType.CheckoutSessionV2,
+		toType: unclaimedType,
 	}).catch((revertError) => {
 		ctx.logger.error(
 			`[checkout.completed] Failed to revert metadata claim for ${metadataId}`,

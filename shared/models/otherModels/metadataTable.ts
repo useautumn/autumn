@@ -11,7 +11,8 @@ export enum MetadataType {
 	CheckoutSessionV2 = "checkout_session_v2",
 	CheckoutSessionV2Processing = "checkout_session_v2_processing",
 	CheckoutSessionEnabledImmediately = "checkout_session_enabled_immediately",
-	LongLivedCheckoutEnabledImmediately = "long_lived_checkout_enabled_immediately",
+	// Value kept from when only enable_plan_immediately links used it; rows already exist.
+	LongLivedCheckout = "long_lived_checkout_enabled_immediately",
 	SetupPaymentV2 = "setup_payment_v2",
 }
 
