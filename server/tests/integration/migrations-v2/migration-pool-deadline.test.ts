@@ -36,7 +36,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 					isolationLevel: "invalid" as "serializable",
 				})
 				.catch((error: unknown) => error);
-			expect(String(error)).not.toContain("outcome unknown");
+			expect(String(error)).not.toContain("outcome_unknown");
 			expect(pool.totalCount).toBe(0);
 			expect((await pool.query("select 1 as value")).rows).toEqual([
 				{ value: 1 },
@@ -87,9 +87,9 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 				() => "resolved",
 				(error: Error) => error.message,
 			);
-			expect(outcome).toContain("outcome unknown");
+			expect(outcome).toContain("outcome_unknown");
 			expect(socket.destroyed).toBe(true);
-			await expect(client.query("rollback")).rejects.toThrow("outcome unknown");
+			await expect(client.query("rollback")).rejects.toThrow("outcome_unknown");
 			client.release();
 			const next = await pool.query("select pg_backend_pid() as id");
 			expect(next.rows[0].id).not.toBe(first.rows[0].id);
@@ -164,7 +164,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 							);
 						})
 						.catch((error: unknown) => error);
-					expect(String(error)).not.toContain("outcome unknown");
+					expect(String(error)).not.toContain("outcome_unknown");
 					expect(pgErrorCode(error)).toBe("23505");
 					const after = await pool.query("select pg_backend_pid() as id");
 					expect(after.rows[0].id).toBe(before.rows[0].id);
@@ -181,7 +181,12 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 			options: "-c statement_timeout=100",
 			max: 1,
 		});
-		applyMigrationQueryDeadline({ pool, queryTimeoutMs: 1000 });
+		const failures: Record<string, unknown>[] = [];
+		applyMigrationQueryDeadline({
+			pool,
+			queryTimeoutMs: 1000,
+			onFailure: (fields) => failures.push(fields),
+		});
 		const client = await pool.connect();
 		try {
 			const error = await client
@@ -189,6 +194,15 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 				.catch((error: unknown) => error);
 			expect(pgErrorCode(error)).toBe("57014");
 			expect(isTransientDbError({ error })).toBe(true);
+			expect(failures).toMatchObject([
+				{
+					pool: "migration",
+					phase: "query",
+					command: "SELECT",
+					reason: "error",
+					code: "57014",
+				},
+			]);
 			expect((await client.query("select 1 as value")).rows).toEqual([
 				{ value: 1 },
 			]);
@@ -229,7 +243,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 								);
 							},
 						}),
-					).rejects.toThrow("outcome unknown");
+					).rejects.toThrow("outcome_unknown");
 					expect(attempts).toBe(1);
 					expect(socket.destroyed).toBe(true);
 					expect((await pool.query("select * from claims")).rows).toEqual([
@@ -243,7 +257,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 					terminalSocket.pause();
 					await expect(
 						pool.query("update claims set status = 'failed' where id = 1"),
-					).rejects.toThrow("outcome unknown");
+					).rejects.toThrow("outcome_unknown");
 					expect(terminalSocket.destroyed).toBe(true);
 				} finally {
 					await pool.end();

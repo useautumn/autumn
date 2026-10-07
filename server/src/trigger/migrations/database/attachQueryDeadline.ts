@@ -58,8 +58,9 @@ export const attachQueryDeadline = ({
 			trace.getActiveSpan()?.setAttribute("db.pool.name", "migration");
 
 			const retire = (reason: "deadline" | "commit_unknown") => {
+				// Stored on the item event; grep `outcome_unknown` before retrying failed items.
 				retirement ??= new Error(
-					`migration database ${reason}: outcome unknown; not retried`,
+					`migration database outcome_unknown (${reason}): not retried`,
 				);
 				releaseOnce();
 				reject(retirement);
@@ -75,6 +76,14 @@ export const attachQueryDeadline = ({
 			const rejectKnown = (error: unknown) => {
 				if (command === "BEGIN") releaseOnce();
 				reject(error);
+				report({
+					phase: "query",
+					command,
+					reason: "error",
+					code: (error as { code?: unknown }).code,
+					message: error instanceof Error ? error.message : String(error),
+					elapsedMs: Date.now() - startedAt,
+				});
 			};
 
 			const timer = setTimeout(() => retire("deadline"), timeoutMs);
