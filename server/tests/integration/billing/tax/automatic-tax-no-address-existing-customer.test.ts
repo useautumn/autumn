@@ -1,19 +1,19 @@
 /**
  * Existing-customer-no-address scenarios after `automatic_tax` is flipped on.
  *
- * Background: ~700 Mintlify customers were created BEFORE auto_tax was
- * enabled. Free→Pro via Checkout works (Checkout collects address);
- * Pro→Premium via invoice-mode failed with "customer's location isn't
- * recognized" because send_invoice has no address-collection UI. Fix:
- * invoice-mode mutations skip auto_tax.
+ * send_invoice has no address-collection UI, so an invoice-mode upgrade for a
+ * customer with no location is rejected rather than invoiced untaxed.
  *
  * A — Checkout, no address: session has auto_tax + address-collection + tax_id.
  * B — Pre-flip Checkout, then charge_automatically upgrade succeeds WITH tax.
- * C — Existing customer, INVOICE-MODE upgrade succeeds WITHOUT tax (the fix).
+ * C — INVOICE-MODE upgrade, no address: 400; tax.automatic_tax off goes through untaxed.
+ * D — INVOICE-MODE upgrade with billing_details.address: address saved, invoice taxed.
  */
 
 import { expect, test } from "bun:test";
+import { type AttachParamsV1Input, CusErrorCode } from "@autumn/shared";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -147,11 +147,15 @@ test.concurrent(`${chalk.yellowBright(
 		"address" in stripeCusBefore ? stripeCusBefore.address : null;
 	expect(addressBefore).toBeNull();
 
-	// Step 1: Pro via Checkout BEFORE auto_tax flip. Seeds the Stripe
-	// customer's `address` and Stripe's location waterfall.
+	// Step 1: Pro via Checkout BEFORE auto_tax flip. Checkout collects the full address and
+	// saves it on the customer; without it Stripe falls back to the runner's IP, which may not geolocate.
 	const proResult = (await autumnV1.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
+		checkout_session_params: {
+			billing_address_collection: "required",
+			customer_update: { address: "auto" },
+		},
 	})) as { checkout_url?: string };
 	expect(proResult.checkout_url).toBeDefined();
 
@@ -174,6 +178,19 @@ test.concurrent(`${chalk.yellowBright(
 		limit: 1,
 	});
 	expect(proSubs.data.length).toBeGreaterThan(0);
+
+	const stripeCusAfterCheckout = await ctx.stripeCli.customers.retrieve(
+		stripeCusId,
+		{ expand: ["tax"] },
+	);
+	expect(
+		"address" in stripeCusAfterCheckout &&
+			stripeCusAfterCheckout.address?.country,
+	).toBe("AU");
+	expect(
+		"tax" in stripeCusAfterCheckout &&
+			stripeCusAfterCheckout.tax?.location?.source,
+	).toBe("billing_address");
 
 	// Step 2: flip auto_tax on. OrgService.update invalidates the
 	// secret-key cache so the next request reads fresh config.
@@ -222,16 +239,15 @@ test.concurrent(`${chalk.yellowBright(
 	);
 });
 
-test.concurrent(`${chalk.yellowBright(
-	"automatic-tax-no-address (Scenario C — INVOICE-MODE upgrade, no address): post-fix MUST succeed without tax",
-)}`, async () => {
-	const customerId = "tax-no-addr-invoice-mode";
+/** Pro attached with auto_tax off (customer has a PM but no address), then auto_tax flipped on. */
+const setupInvoiceModeUpgrade = async ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
 	const proProd = products.pro({ id: "pro", items: [] });
 	const premiumProd = products.premium({ id: "premium", items: [] });
 
-	// auto_tax OFF so initial Pro attach succeeds (auto_tax + no
-	// address would fail at create even for a fresh customer).
-	// Customer has PM but no address.
 	const { ctx, customer, autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
@@ -259,11 +275,7 @@ test.concurrent(`${chalk.yellowBright(
 		limit: 1,
 	});
 	expect(initialSubs.data[0].automatic_tax.enabled).toBe(false);
-	console.log(
-		"[scenario-C] pre-flip: customer address=null, initial sub auto_tax=false",
-	);
 
-	// Flip auto_tax on.
 	await OrgService.update({
 		db: ctx.db,
 		orgId: ctx.org.id,
@@ -272,53 +284,114 @@ test.concurrent(`${chalk.yellowBright(
 		},
 	});
 
-	// INVOICE-MODE upgrade (the Mintlify prod-failure case).
-	// Pre-fix: Stripe rejected with "customer's location isn't recognized"
-	// since send_invoice has no address-collection UI. Post-fix: we skip
-	// auto_tax for invoice-mode mutations so the upgrade succeeds without
-	// tax computed.
-	//
-	// Use V2_2's `invoice_mode: { enabled: true }`; the legacy `invoice`
-	// alias isn't on V2_2, so passing it would silently no-op the
-	// discriminator and leak auto_tax into a charge_automatically call.
-	await autumnV2_2.billing.attach({
-		customer_id: customerId,
-		plan_id: `premium_${customerId}`,
-		invoice_mode: { enabled: true },
-	});
+	return {
+		ctx,
+		autumnV2_2,
+		stripeCusId,
+		premiumPlanId: `premium_${customerId}`,
+	};
+};
 
-	// Upgrade succeeded; resulting sub has auto_tax disabled.
-	// The sub stays charge_automatically (invoice-mode only flips for
-	// the proration invoice); we assert the invoice-level discriminator below.
-	const updatedSubs = await ctx.stripeCli.subscriptions.list({
-		customer: stripeCusId,
-		limit: 1,
-	});
-	const upgradedSub = updatedSubs.data[0];
-	expect(upgradedSub).toBeDefined();
-	expect(upgradedSub.automatic_tax.enabled).toBe(false);
-	console.log(
-		`[scenario-C] upgrade succeeded: sub_id=${upgradedSub.id} ` +
-			`collection_method=${upgradedSub.collection_method} ` +
-			`sub_auto_tax=${upgradedSub.automatic_tax.enabled}`,
-	);
-
-	// At least one resulting invoice is send_invoice (the upgrade's
-	// proration invoice), and every send_invoice invoice has auto_tax
-	// disabled — the prod-failure-fix discriminator.
+const listSendInvoiceInvoices = async ({
+	ctx,
+	stripeCusId,
+}: {
+	ctx: Awaited<ReturnType<typeof setupInvoiceModeUpgrade>>["ctx"];
+	stripeCusId: string;
+}) => {
 	const invoices = await ctx.stripeCli.invoices.list({
 		customer: stripeCusId,
 		limit: 10,
 	});
-	const sendInvoiceInvoices = invoices.data.filter(
+	return invoices.data.filter(
 		(inv) => inv.collection_method === "send_invoice",
 	);
-	expect(sendInvoiceInvoices.length).toBeGreaterThan(0);
-	for (const inv of sendInvoiceInvoices) {
-		expect(inv.automatic_tax.enabled).toBe(false);
-	}
-	console.log(
-		`[scenario-C] send_invoice invoices: ${sendInvoiceInvoices.length} ` +
-			`found (out of ${invoices.data.length} total), all with auto_tax=false`,
-	);
-});
+};
+
+test.concurrent(
+	`${chalk.yellowBright(
+		"automatic-tax-no-address (Scenario C — INVOICE-MODE upgrade, no address): 400, then tax opt-out goes through untaxed",
+	)}`,
+	async () => {
+		const customerId = "tax-no-addr-invoice-mode";
+		const { ctx, autumnV2_2, stripeCusId, premiumPlanId } =
+			await setupInvoiceModeUpgrade({ customerId });
+
+		// Use V2_2's `invoice_mode: { enabled: true }`; the legacy `invoice`
+		// alias isn't on V2_2 and would silently fall back to charge_automatically.
+		await expectAutumnError({
+			errCode: CusErrorCode.CustomerTaxLocationMissing,
+			func: () =>
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: premiumPlanId,
+					invoice_mode: { enabled: true },
+				}),
+		});
+		expect(await listSendInvoiceInvoices({ ctx, stripeCusId })).toHaveLength(0);
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premiumPlanId,
+			invoice_mode: { enabled: true },
+			tax: { automatic_tax: { enabled: false } },
+		});
+
+		const updatedSubs = await ctx.stripeCli.subscriptions.list({
+			customer: stripeCusId,
+			limit: 1,
+		});
+		expect(updatedSubs.data[0]).toBeDefined();
+		expect(updatedSubs.data[0].automatic_tax.enabled).toBe(false);
+
+		const sendInvoiceInvoices = await listSendInvoiceInvoices({
+			ctx,
+			stripeCusId,
+		});
+		expect(sendInvoiceInvoices.length).toBeGreaterThan(0);
+		for (const inv of sendInvoiceInvoices) {
+			expect(inv.automatic_tax.enabled).toBe(false);
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright(
+		"automatic-tax-no-address (Scenario D — INVOICE-MODE upgrade, billing_details address): saves the address and taxes the invoice",
+	)}`,
+	async () => {
+		const customerId = "tax-no-addr-invoice-mode-address";
+		const { ctx, autumnV2_2, stripeCusId, premiumPlanId } =
+			await setupInvoiceModeUpgrade({ customerId });
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premiumPlanId,
+			invoice_mode: { enabled: true },
+			billing_details: {
+				address: {
+					country: "AU",
+					line1: "1 Test St",
+					city: "Sydney",
+					state: "NSW",
+					postal_code: "2000",
+				},
+			},
+		});
+
+		const stripeCusAfter = await ctx.stripeCli.customers.retrieve(stripeCusId);
+		expect("address" in stripeCusAfter && stripeCusAfter.address?.country).toBe(
+			"AU",
+		);
+
+		const sendInvoiceInvoices = await listSendInvoiceInvoices({
+			ctx,
+			stripeCusId,
+		});
+		expect(sendInvoiceInvoices.length).toBeGreaterThan(0);
+		for (const inv of sendInvoiceInvoices) {
+			expect(inv.automatic_tax.enabled).toBe(true);
+			expect(inv.total).toBeGreaterThan(inv.subtotal);
+		}
+	},
+);
