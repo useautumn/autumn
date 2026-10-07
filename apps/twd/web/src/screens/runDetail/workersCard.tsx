@@ -90,9 +90,13 @@ const pendingSlots = ({
 	const owed =
 		run.live?.accountsPending ?? (run.queuePosition !== null ? unspawned : 0);
 	const forAccounts = Math.min(unspawned, owed);
+	// Past provisioning, a slot nobody owes accounts for won't start: the swarm lowered its demand.
 	return [
 		{ label: "waiting for accounts", count: forAccounts },
-		{ label: "booting", count: unspawned - forAccounts },
+		{
+			label: run.status === "provisioning" ? "booting" : "not needed",
+			count: unspawned - forAccounts,
+		},
 	];
 };
 
