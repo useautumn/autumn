@@ -296,3 +296,76 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a zero inline amount naming a Stripe price still bills that price")}`,
+	async () => {
+		const customerId = "inv-create-customize-zero-named";
+		const pro = products.pro({
+			id: "pro-create-customize-zero-named",
+			items: [items.prepaidUsers()],
+		});
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const stripeProduct = await ctx.stripeCli.products.create({
+			name: "Messages pack",
+		});
+		const stripePrice = await ctx.stripeCli.prices.create({
+			product: stripeProduct.id,
+			currency: "usd",
+			unit_amount: 900,
+		});
+
+		const response = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				plans: [
+					{
+						plan_id: pro.id,
+						customize: {
+							price: null,
+							items: [
+								{
+									feature_id: TestFeature.Messages,
+									price: {
+										amount: 0,
+										interval: BillingInterval.Month,
+										billing_method: BillingMethod.Prepaid,
+										billing_units: 1,
+										processors: { stripe: { price_id: stripePrice.id } },
+									},
+								},
+							],
+						},
+						feature_quantities: [
+							{
+								feature_id: TestFeature.Messages,
+								billing_behavior: BillingMethod.Prepaid,
+								quantity: 3,
+							},
+						],
+					},
+				],
+			},
+		});
+
+		// The named Stripe price bills 3 × $9; the inline $0 is ignored, as with any named price.
+		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
+			ctx,
+			response,
+			lines: [{ amount: 27, quantity: 3 }],
+			total: 27,
+		});
+		expect(stripeInvoice.lines.data[0].pricing?.price_details?.price).toBe(
+			stripePrice.id,
+		);
+	},
+);

@@ -57,7 +57,7 @@ const overlayCustomizedPrice = ({
 	} as Price["config"],
 });
 
-/** In-memory price for a feature the catalog plan does not price this way; null when the override is free. */
+/** In-memory price for a feature the catalog plan does not price this way; null when the override is free and names no Stripe price. */
 const mintCustomizedPrice = ({
 	ctx,
 	product,
@@ -69,10 +69,19 @@ const mintCustomizedPrice = ({
 	featureId: string;
 	override: InvoiceItemPrice;
 }): Price | null => {
-	const { processors: _processors, ...price } = override;
+	const { processors, ...price } = override;
+	// A named Stripe price bills its own amount, so a zero inline amount must not mint a free feature.
+	const pricing =
+		processors?.stripe?.price_id && !price.tiers
+			? {
+					...price,
+					amount: undefined,
+					tiers: [{ to: "inf" as const, amount: price.amount ?? 0 }],
+				}
+			: price;
 	return planItemV1ToPriceAndEnt({
 		ctx,
-		item: { feature_id: featureId, included: 0, price },
+		item: { feature_id: featureId, included: 0, price: pricing },
 		orgId: product.org_id,
 		internalProductId: product.internal_id,
 		isCustom: true,
