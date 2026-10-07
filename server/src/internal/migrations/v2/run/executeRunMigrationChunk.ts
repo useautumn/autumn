@@ -1,32 +1,23 @@
 import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	type RunMigrationResult,
-	runPreparedMigration,
-} from "./runMigration.js";
+import { runScopeItems } from "./orchestrators/runScopeItems.js";
+import type { MigrationChunkResult } from "./types/migrationChunkResult.js";
 import type { RunMigrationChunkPayload } from "./types/migrationRunPayloads.js";
-import {
-	createMigrationChunkScheduler,
-	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
-} from "./utils/migrationRunConstants.js";
+import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "./utils/migrationRunConstants.js";
 
 /** One chunk's workload (the child side of the process boundary): cancel
- * check, snapshot identity check, then a time-sliced run from the cursor. */
+ * check, snapshot identity check, then exactly the payload's customers. */
 export const executeRunMigrationChunk = async ({
 	ctx,
 	payload,
 }: {
 	ctx: AutumnContext;
 	payload: RunMigrationChunkPayload;
-}): Promise<RunMigrationResult> => {
+}): Promise<MigrationChunkResult> => {
 	if (
 		await isMigrationCancelRequested({ migrationRunId: payload.migrationRunId })
 	) {
-		return {
-			processed: 0,
-			completion: "stopped",
-			cursor: payload.cursor ?? null,
-		};
+		return { processed: 0 };
 	}
 
 	if (
@@ -40,34 +31,40 @@ export const executeRunMigrationChunk = async ({
 	ctx.logger.info("run-migration-chunk: starting", {
 		data: {
 			migrationRunId: payload.migrationRunId,
-			chunkIndex: payload.chunkIndex,
-			limit: payload.controls?.limit,
+			pageIndex: payload.pageIndex,
+			attempt: payload.attempt,
+			customers: payload.customers.length,
 		},
 	});
 
-	const result = await runPreparedMigration({
+	const summary = await runScopeItems({
 		ctx,
 		migration: payload.migration,
 		migrationRunId: payload.migrationRunId,
 		dryRun: payload.dryRun,
+		kind: "customer",
+		iterate: async function* () {
+			yield payload.customers.map((customer) => ({
+				kind: "customer" as const,
+				...customer,
+			}));
+		},
 		controls: {
 			...(payload.controls ?? {}),
 			concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 			checkpointDryRun: true,
 		},
-		scheduler: createMigrationChunkScheduler(),
-		includeFilterCount: false,
-		afterInternalId: payload.cursor,
 	});
 
+	const processed = summary?.processed ?? 0;
 	ctx.logger.info("run-migration-chunk: done", {
 		data: {
 			migrationRunId: payload.migrationRunId,
-			chunkIndex: payload.chunkIndex,
-			processed: result.processed,
-			completion: result.completion,
+			pageIndex: payload.pageIndex,
+			processed,
+			failed: summary?.failed ?? 0,
 		},
 	});
 
-	return result;
+	return { processed };
 };

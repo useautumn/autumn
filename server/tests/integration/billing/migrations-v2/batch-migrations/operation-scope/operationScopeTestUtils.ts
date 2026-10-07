@@ -2,7 +2,7 @@ import { expect } from "bun:test";
 import type { ApiCustomerV5, Migration } from "@autumn/shared";
 import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import { TestFeature } from "@tests/setup/v2Features";
-import type { MigrationChunkRunResult } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";
+import type { MigrationChunkRunResult } from "@/internal/migrations/v2/run/types/migrationChunkResult.js";
 import { runChunkedMigration } from "../../utils/runChunkedMigration";
 
 /** Words is absent from every fixture plan, so a Words balance row is exact

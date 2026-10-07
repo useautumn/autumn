@@ -1,11 +1,10 @@
 // Contract: finite customer tasks share one queue; coordinators do not sleep while holding its only slot.
 import { describe, expect, test } from "bun:test";
 import {
-	createMigrationChunkScheduler,
-	MIGRATION_CHUNK_FETCH_SIZE,
+	MIGRATION_CHUNK_CONCURRENCY,
+	MIGRATION_CHUNK_SIZE,
 	MIGRATION_DB_POOL_MAX,
 	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
-	MIGRATION_SLICE_DURATION_MS,
 } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import {
 	getMigrationTriggerOptions,
@@ -27,7 +26,7 @@ describe("migration task scheduler", () => {
 
 	test("keeps fleet and per-run concurrency independently tunable", () => {
 		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(100);
+		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(50);
 	});
 
 	test("sizes the migration DB pool for two connections per in-flight customer", () => {
@@ -36,9 +35,9 @@ describe("migration task scheduler", () => {
 		);
 	});
 
-	test("uses a bounded customer-work slice", () => {
-		expect(MIGRATION_SLICE_DURATION_MS).toBe(10_000);
-		expect(MIGRATION_CHUNK_FETCH_SIZE).toBe(100);
+	test("a chunk is one customer page, and a run keeps a few in flight", () => {
+		expect(MIGRATION_CHUNK_SIZE).toBe(500);
+		expect(MIGRATION_CHUNK_CONCURRENCY).toBe(3);
 	});
 
 	test("does not automatically retry checkpointed migration tasks", () => {
@@ -47,9 +46,7 @@ describe("migration task scheduler", () => {
 
 	test("bounds a stuck chunk and prioritizes request-path customer work", () => {
 		expect(MIGRATION_CHUNK_MAX_DURATION_SECONDS).toBe(30 * 60);
-		expect(MIGRATION_LAZY_TASK_PRIORITY_SECONDS).toBeGreaterThan(
-			MIGRATION_SLICE_DURATION_MS / 1000,
-		);
+		expect(MIGRATION_LAZY_TASK_PRIORITY_SECONDS).toBe(5 * 60);
 	});
 
 	test("does not partition migration runs into per-org queues", () => {
@@ -57,13 +54,5 @@ describe("migration task scheduler", () => {
 		expect(getMigrationTriggerOptions({ isDev: true })).toEqual({
 			region: "eu-central-1",
 		});
-	});
-
-	test("creates a pure clock-based scheduler with no in-task wait", () => {
-		const scheduler = createMigrationChunkScheduler({ now: () => 123 });
-
-		expect(scheduler.sliceDurationMs).toBe(MIGRATION_SLICE_DURATION_MS);
-		expect(scheduler.batchSize).toBe(MIGRATION_CHUNK_FETCH_SIZE);
-		expect(scheduler.now()).toBe(123);
 	});
 });

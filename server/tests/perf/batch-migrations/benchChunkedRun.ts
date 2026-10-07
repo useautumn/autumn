@@ -31,10 +31,7 @@ import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations
 import type { BatchMigrationPagePhases } from "@/internal/migrations/v2/batchOperations/execute/utils/pagePhaseTimings.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
-import type {
-	RunBatchMigrationChunkPayload,
-	RunMigrationChunkPayload,
-} from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import type { RunBatchMigrationChunkPayload } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	BENCH_INTERNAL_CUSTOMER_PREFIX,
@@ -159,13 +156,16 @@ const runInlineMode = async ({
 		},
 		// Per-customer lane should never engage for a batch-eligible migration;
 		// fail loudly rather than silently benchmarking the wrong lane.
-		runChunk: async (payload: RunMigrationChunkPayload) => {
-			throw new Error(
-				`bench: per-customer lane engaged at chunk ${payload.chunkIndex} — this ` +
-					"bench measures the BATCH lane. `--limit` makes a run batch-ineligible " +
-					"(isBatchEligibleRun requires limit == null); scope with `--migration` " +
-					"against a smaller plan instead.",
-			);
+		dispatcher: {
+			start: async (payload) => {
+				throw new Error(
+					`bench: per-customer lane engaged at page ${payload.pageIndex} — this ` +
+						"bench measures the BATCH lane. `--limit` makes a run batch-ineligible " +
+						"(isBatchEligibleRun requires limit == null); scope with `--migration` " +
+						"against a smaller plan instead.",
+				);
+			},
+			idle: async () => {},
 		},
 	});
 

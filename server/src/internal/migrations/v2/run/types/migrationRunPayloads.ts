@@ -58,9 +58,17 @@ export const PreparedMigrationSnapshotSchema = z.object({
 	event_internal_id: z.string(),
 });
 
+const ChunkCustomerSchema = z.object({
+	internal_id: z.string(),
+	id: z.string().nullable(),
+});
+
 export const RunMigrationChunkPayloadSchema = RunMigrationPayloadSchema.extend({
-	chunkIndex: z.number().int().min(0),
-	cursor: z.string().optional(),
+	pageIndex: z.number().int().min(0),
+	/** 1 on first dispatch, 2 on the one retry after a crash or failure. */
+	attempt: z.number().int().min(1).max(2),
+	/** Exactly the customers this chunk migrates: one filtered keyset page. */
+	customers: z.array(ChunkCustomerSchema),
 	migration: PreparedMigrationSnapshotSchema,
 });
 
@@ -123,8 +131,6 @@ export const buildRunBatchMigrationChunkPayload = ({
 	controls,
 });
 
-/** Assembles one chunk payload; the iterator's remaining `limit` overrides
- * controls.limit so later chunks only process what's left of the budget. */
 export const buildRunMigrationChunkPayload = ({
 	ctx,
 	migrationId,
@@ -133,9 +139,9 @@ export const buildRunMigrationChunkPayload = ({
 	lazyRun,
 	migration,
 	controls,
-	limit,
-	chunkIndex,
-	cursor,
+	pageIndex,
+	attempt,
+	customers,
 }: {
 	ctx: AutumnContext;
 	migrationId: string;
@@ -144,9 +150,9 @@ export const buildRunMigrationChunkPayload = ({
 	lazyRun: boolean;
 	migration: RunMigrationChunkPayload["migration"];
 	controls: RunMigrationPayload["controls"];
-	limit: number | undefined;
-	chunkIndex: number;
-	cursor: string | undefined;
+	pageIndex: number;
+	attempt: number;
+	customers: RunMigrationChunkPayload["customers"];
 }): RunMigrationChunkPayload => ({
 	orgId: ctx.org.id,
 	env: ctx.env,
@@ -154,11 +160,9 @@ export const buildRunMigrationChunkPayload = ({
 	migrationRunId,
 	dryRun,
 	lazyRun,
-	chunkIndex,
-	cursor,
+	pageIndex,
+	attempt,
+	customers,
 	migration,
-	controls: {
-		...(controls ?? {}),
-		...(limit === undefined ? {} : { limit }),
-	},
+	controls,
 });

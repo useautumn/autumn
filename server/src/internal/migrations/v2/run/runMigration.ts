@@ -19,7 +19,6 @@ import type { IterateScopeCompletion } from "./orchestrators/iterateScope.js";
 import { runScopeIteration } from "./orchestrators/runScopeIteration.js";
 import { preProcessMigration } from "./preProcess/index.js";
 import { getRunScopes } from "./types/getRunScopes.js";
-import type { MigrationRunScheduler } from "./types/migrationRunScheduler.js";
 
 export type RunMigrationResult = {
 	processed: number;
@@ -62,7 +61,6 @@ export const runPreparedMigration = async ({
 	batch,
 	controls,
 	hooks,
-	scheduler,
 	includeFilterCount = true,
 	afterInternalId,
 }: {
@@ -73,7 +71,6 @@ export const runPreparedMigration = async ({
 	batch?: MigrationBatchFn;
 	controls?: MigrationRunControls;
 	hooks?: RunMigrationHooks;
-	scheduler?: MigrationRunScheduler;
 	includeFilterCount?: boolean;
 	afterInternalId?: string;
 }): Promise<RunMigrationResult> => {
@@ -90,7 +87,6 @@ export const runPreparedMigration = async ({
 			batch,
 			controls,
 			hooks,
-			scheduler,
 			includeFilterCount,
 			afterInternalId,
 		});
@@ -116,7 +112,6 @@ export const runMigration = async ({
 	controls,
 	hooks,
 	plugins,
-	scheduler,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntime;
@@ -126,7 +121,6 @@ export const runMigration = async ({
 	controls?: MigrationRunControls;
 	hooks?: RunMigrationHooks;
 	plugins?: RunMigrationPlugin[];
-	scheduler?: MigrationRunScheduler;
 }): Promise<RunMigrationResult> => {
 	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
 	const migrationHooks = composeMigrationHooks({ hooks, plugins });
@@ -144,7 +138,6 @@ export const runMigration = async ({
 		batch,
 		controls,
 		hooks: migrationHooks,
-		scheduler,
 	});
 };
 

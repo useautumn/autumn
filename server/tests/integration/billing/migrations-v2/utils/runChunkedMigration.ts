@@ -3,8 +3,8 @@ import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migr
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { MigrationChunkRunResult } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
+import type { MigrationChunkRunResult } from "@/internal/migrations/v2/run/types/migrationChunkResult.js";
 import { generateId } from "@/utils/genUtils.js";
 import { waitForMigrationResult } from "./runUpdatePlanMigration";
 
