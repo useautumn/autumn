@@ -39,6 +39,7 @@ export const iterateScope = async <T>({
 	const maxParallel = Math.max(1, Math.floor(concurrency));
 	const sliceStartedAtMs = scheduler?.now();
 	let hasProcessedScheduledItem = false;
+	let lastScheduledItem: RunScopeItem | undefined;
 	const summarize = (
 		completion: IterateScopeCompletion,
 	): IterateScopeSummary<T> => ({
@@ -47,10 +48,12 @@ export const iterateScope = async <T>({
 		failed,
 		results,
 		completion,
-		cursor: results[results.length - 1]?.item.internal_id ?? null,
+		// Last scheduled, not last finished: a finish-order cursor can re-expose handled items.
+		cursor: lastScheduledItem?.internal_id ?? null,
 	});
 
 	const runItem = async (item: RunScopeItem) => {
+		lastScheduledItem = item;
 		try {
 			const value = await perItem(item);
 			results.push({ status: "ok", item, value });
