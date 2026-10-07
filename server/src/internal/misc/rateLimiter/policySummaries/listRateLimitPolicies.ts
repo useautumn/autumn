@@ -15,7 +15,7 @@ type PolicyRow = {
 	type: RateLimitType;
 	name?: string;
 	routes: string[] | "*";
-	overLimit?: "degrade";
+	overLimit?: "degrade" | "reject";
 };
 
 const ALL_TYPES = Object.keys(RATE_LIMIT_CONFIGS) as RateLimitType[];
