@@ -1,5 +1,6 @@
 import { subjectPushToStoredSubject } from "../lib/contracts/subjectContract.js";
 import { check } from "./actions/check/check.js";
+import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
 import type {
 	SlotProcessor,
@@ -11,7 +12,8 @@ export const createSlotProcessor = ({
 }: {
 	ctx: SlotProcessorContext;
 }): SlotProcessor => ({
-	check: (params) => check({ ctx, ...params }),
-	setSubject: (params) =>
+	check: async (params) =>
+		checkResponseToJson({ response: check({ ctx, ...params }) }),
+	setSubject: async (params) =>
 		setSubject({ ctx, subject: subjectPushToStoredSubject(params) }),
 });

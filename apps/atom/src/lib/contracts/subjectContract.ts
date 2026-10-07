@@ -39,7 +39,7 @@ const parsePush = <T>(read: () => T): T => {
 	}
 };
 
-/** The body as JSON text, parsed by the slot it was routed to; one holding another customer than it was routed by is refused. */
+/** The body as JSON text, parsed once on the customer's owner thread; one holding another customer than it was routed by is refused. */
 export const subjectPushToStoredSubject = ({
 	customerId,
 	body,

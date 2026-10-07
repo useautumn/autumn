@@ -90,11 +90,11 @@ describe("the subject a check runs on", () => {
 		expect(allowanceOf({ ctx })).toBe(ownAllowance);
 	});
 
-	test("is left to the API when Atom does not hold the customer", () => {
+	test("is left to the API when Atom does not hold the customer", async () => {
 		const ctx = createContext({ shared: sharedRows });
 
 		expect(
-			forwardReasonOf(() =>
+			await forwardReasonOf(() =>
 				readCurrentSubject({ ctx, customerId: "cus_unknown", entityId: null }),
 			),
 		).toBe("customer_not_stored");

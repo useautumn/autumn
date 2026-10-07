@@ -9,7 +9,9 @@ import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenan
 import { createPushReceiver } from "../../../src/pushes/createPushReceiver.js";
 import type { PulledPush } from "../../../src/pushQueue/types/pushQueue.js";
 import {
+	allSlotsOwnedHere,
 	checkRequestFor,
+	checkResponseOf,
 	forwardReasonOf,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -99,10 +101,14 @@ const drain = async ({
 	return { acked: fake.acked, warnings };
 };
 
-const checkCustomer = (slots: ReturnType<Auth["authorize"]>) =>
-	slots
-		?.processorFor({ customerId: "cus_1" })
-		.check({ request: checkRequestFor({ params: { required_balance: 5 } }) });
+const checkCustomer = async (slots: ReturnType<Auth["authorize"]>) => {
+	const processor = slots?.processorFor({ customerId: "cus_1" });
+	if (!processor) return undefined;
+	return checkResponseOf({
+		processor,
+		request: checkRequestFor({ params: { required_balance: 5 } }),
+	});
+};
 
 describe("push receiver", () => {
 	test("an org's Atom applies a queued subject through the HTTP route's apply, then acks it", async () => {
@@ -110,6 +116,7 @@ describe("push receiver", () => {
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
+			owners: allSlotsOwnedHere,
 		});
 		opened.push(auth);
 		const message = subjectMessage({});
@@ -117,7 +124,7 @@ describe("push receiver", () => {
 		const { acked } = await drain({ auth, batches: [[message]] });
 
 		expect(acked).toEqual([message.receiptHandle]);
-		expect(checkCustomer(auth.slots)).toMatchObject({ allowed: true });
+		expect(await checkCustomer(auth.slots)).toMatchObject({ allowed: true });
 	});
 
 	test("a queued push routed to another customer than it holds is dropped, never redelivered", async () => {
@@ -125,6 +132,7 @@ describe("push receiver", () => {
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
+			owners: allSlotsOwnedHere,
 		});
 		opened.push(auth);
 		const message = subjectMessage({ customerId: "cus_2" });
@@ -133,7 +141,7 @@ describe("push receiver", () => {
 
 		expect(acked).toEqual([message.receiptHandle]);
 		expect(warnings).toEqual(["atom_push_invalid"]);
-		expect(forwardReasonOf(() => checkCustomer(auth.slots))).toBe(
+		expect(await forwardReasonOf(() => checkCustomer(auth.slots))).toBe(
 			"customer_not_stored",
 		);
 	});
@@ -143,6 +151,7 @@ describe("push receiver", () => {
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
+			owners: allSlotsOwnedHere,
 		});
 		opened.push(auth);
 		const message = subjectMessage({ customerId: null });
@@ -151,13 +160,17 @@ describe("push receiver", () => {
 
 		expect(acked).toEqual([message.receiptHandle]);
 		expect(warnings).toEqual(["atom_push_invalid"]);
-		expect(forwardReasonOf(() => checkCustomer(auth.slots))).toBe(
+		expect(await forwardReasonOf(() => checkCustomer(auth.slots))).toBe(
 			"customer_not_stored",
 		);
 	});
 
 	test("a multi-tenant Atom applies a push to the folder it names", async () => {
-		const auth = createMultiTenantAuth({ dataDir: newDataDir(), slotCount: 2 });
+		const auth = createMultiTenantAuth({
+			dataDir: newDataDir(),
+			slotCount: 2,
+			owners: allSlotsOwnedHere,
+		});
 		opened.push(auth);
 		auth.putAtom({ id: "org_a.sandbox", tokenHash: TOKEN_HASH });
 		auth.putAtom({ id: "org_b.sandbox", tokenHash: "b".repeat(64) });
@@ -168,17 +181,21 @@ describe("push receiver", () => {
 		});
 
 		expect(
-			checkCustomer(auth.slotsFor({ atomId: "org_a.sandbox" })),
+			await checkCustomer(auth.slotsFor({ atomId: "org_a.sandbox" })),
 		).toMatchObject({ allowed: true });
 		expect(
-			forwardReasonOf(() =>
+			await forwardReasonOf(() =>
 				checkCustomer(auth.slotsFor({ atomId: "org_b.sandbox" })),
 			),
 		).toBe("customer_not_stored");
 	});
 
 	test("a push that can never apply is acked and logged, not redelivered forever", async () => {
-		const auth = createMultiTenantAuth({ dataDir: newDataDir(), slotCount: 2 });
+		const auth = createMultiTenantAuth({
+			dataDir: newDataDir(),
+			slotCount: 2,
+			owners: allSlotsOwnedHere,
+		});
 		opened.push(auth);
 		const unreadable = subjectMessage({ payload: "not json" });
 		const unrouted = subjectMessage({ atomId: "org_gone.sandbox" });
@@ -202,6 +219,7 @@ describe("push receiver", () => {
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
+			owners: allSlotsOwnedHere,
 		});
 		opened.push(auth);
 		const message = subjectMessage({});
@@ -231,7 +249,7 @@ describe("push receiver", () => {
 		await receiver.run();
 
 		expect(warnings).toContain("atom_push_receive_failed");
-		expect(checkCustomer(auth.slots)).toMatchObject({ allowed: true });
+		expect(await checkCustomer(auth.slots)).toMatchObject({ allowed: true });
 	});
 });
 
@@ -242,6 +260,7 @@ describe("push receiver under a hung or stopped queue", () => {
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
+			owners: allSlotsOwnedHere,
 		});
 		opened.push(auth);
 		return auth;

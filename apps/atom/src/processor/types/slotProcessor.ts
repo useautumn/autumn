@@ -1,5 +1,4 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { CheckResponseV3 } from "@autumn/shared";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
 import type { CheckRequest } from "./check.js";
@@ -10,13 +9,13 @@ export type SlotProcessorContext = {
 	logger: AutumnLogger;
 };
 
-/** Everything one slot does: decide checks, and take in the subjects Autumn sends. */
+/** Everything one slot does: decide checks, and take in the subjects Autumn sends. Answered here, or on the thread that owns the slot. */
 export type SlotProcessor = {
-	/** The API's check response at the caller's version; throws CannotAnswerError for a check the API must answer. */
-	check(params: { request: CheckRequest }): CheckResponseV3;
+	/** The API's check response at the caller's version, as the JSON body it is sent as; rejects with CannotAnswerError for a check the API must answer. */
+	check(params: { request: CheckRequest }): Promise<string>;
 	/**
-	 * A `subjects.set` body as JSON text, routed by its customer: parsed here, and refused with InvalidPushError when it
-	 * holds another customer. False when the subject was read before the one held, and so ignored.
+	 * A `subjects.set` body as JSON text, routed by its customer: parsed once, on the owner thread, which refuses a body
+	 * for another customer with InvalidPushError. False when the subject was read before the one held, and so ignored.
 	 */
-	setSubject(params: { customerId: string; body: string }): boolean;
+	setSubject(params: { customerId: string; body: string }): Promise<boolean>;
 };
