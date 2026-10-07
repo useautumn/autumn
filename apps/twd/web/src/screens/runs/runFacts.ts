@@ -1,11 +1,14 @@
 import type { RunSummary } from "../../../../src/api/contract.ts";
 import { elapsed, num } from "../../lib/format.ts";
 
-/** Full suite, else group names, a file count and the grep, as selected. */
+export const isFullSuite = ({ selection }: Pick<RunSummary, "selection">) =>
+	!!selection.groups?.includes("all") &&
+	!selection.files?.length &&
+	!selection.grep;
+
+/** Group names, a file count and the grep, as selected. */
 export const scopeLabel = ({ selection }: Pick<RunSummary, "selection">) => {
 	const { groups = [], files = [], grep } = selection;
-	if (groups.includes("all") && files.length === 0 && !grep)
-		return "full suite";
 	return (
 		[
 			...groups,

@@ -428,6 +428,7 @@ type Sim = {
 	readyAt: number;
 	workerSeconds: number;
 	peakWorkers: number;
+	warmForMs: number;
 	/** When each running file landed on its worker. */
 	fileStartedAt: Map<string, number>;
 };
@@ -809,6 +810,7 @@ const startLiveRun = ({
 	purpose = "adhoc",
 	pinnedSha = false,
 	repeat = 1,
+	warmForMs = 6_000,
 }: {
 	branch: string;
 	sha: string;
@@ -823,6 +825,8 @@ const startLiveRun = ({
 	queuedForMs?: number;
 	purpose?: RunSummary["purpose"];
 	repeat?: number;
+	/** How long the run sits in "warming" before workers boot. */
+	warmForMs?: number;
 }) => {
 	const list = planWorkItems({ files: filesForSelection(selection), repeat });
 	const wanted = Math.min(list.length, workerCap);
@@ -938,6 +942,7 @@ const startLiveRun = ({
 		readyAt: createdAt + queuedForMs,
 		workerSeconds: run.cost.workerSeconds,
 		peakWorkers: run.workerCount ?? 0,
+		warmForMs,
 		fileStartedAt: new Map(
 			running.map((file, w) => [file, Math.min(now - 1_000, at(cursor[w]))]),
 		),
@@ -1077,7 +1082,7 @@ const tickRun = (run: RunDetail) => {
 
 	if (run.status === "queued" && ageMs > 3_000)
 		return setStatus(run, "warming", "building tw-warm image");
-	if (run.status === "warming" && ageMs > 9_000) {
+	if (run.status === "warming" && ageMs > 3_000 + sim.warmForMs) {
 		run.milestones = {
 			warmReadyAt: iso(Date.now()),
 			accountsAt: iso(Date.now()),
@@ -1185,6 +1190,16 @@ startLiveRun({
 	workerCap: 24,
 	pinnedSha: true,
 });
+// A long branch stuck building its image, sized only once the swarm starts (as twd does).
+startLiveRun({
+	branch: "capy/revenuecat-customer-products-are-not-synced-after-transfer",
+	sha: hex(40),
+	selection: { files: filesForSelection({ groups: ["track"] }).slice(0, 3) },
+	createdBy: ACTORS[3],
+	workerCap: 3,
+	startWorkers: 0,
+	warmForMs: Number.POSITIVE_INFINITY,
+}).workersWanted = null;
 startLiveRun({
 	branch: "fix/cross-group-license-carry",
 	sha: branches[3].sha,

@@ -29,7 +29,7 @@ export const Sparkline = ({
 			width={width}
 			height={height}
 			viewBox={`0 0 ${width} ${height}`}
-			className={cn("shrink-0 text-green-500", className)}
+			className={cn("shrink-0 text-emerald-500", className)}
 		>
 			<path
 				d={line}

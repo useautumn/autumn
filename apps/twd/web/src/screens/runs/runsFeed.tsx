@@ -1,10 +1,7 @@
 import { Link } from "react-router-dom";
 import type { RunSummary } from "../../../../src/api/contract.ts";
-import { CostValue } from "../../components/cost.tsx";
-import { RunLabel } from "../../components/runLabel.tsx";
-import { Pill } from "../../components/status.tsx";
 import { Skeleton, Tooltip } from "../../components/ui.tsx";
-import { cn, handle, isAgentVia, num, sha7 } from "../../lib/format.ts";
+import { cn, handle, isAgentVia, num, sha7, usd } from "../../lib/format.ts";
 import { LoadMoreSentinel } from "./branchesView.tsx";
 import {
 	age,
@@ -14,6 +11,7 @@ import {
 	runResult,
 	scopeLabel,
 } from "./runFacts.ts";
+import { TintPill } from "./tintPill.tsx";
 
 const Avatar = ({ actor }: { actor: RunSummary["createdBy"] }) => (
 	<Tooltip content={`${actor.email} · ${actor.via}`}>
@@ -33,52 +31,61 @@ const Avatar = ({ actor }: { actor: RunSummary["createdBy"] }) => (
 const FeedRow = ({ run, now }: { run: RunSummary; now: number }) => (
 	<Link
 		to={`/runs/${run.id}`}
-		className="flex h-8 min-w-0 items-center gap-2.5 border-b @max-[700px]:gap-2 border-border/60 text-xs outline-none hover:bg-muted/40 focus-visible:bg-muted/40"
+		className="flex h-8 min-w-0 items-center gap-2 border-b border-border/60 text-xs outline-none hover:bg-muted/40 focus-visible:bg-muted/40"
 	>
 		<span
 			role="img"
 			aria-label={runResult(run)}
 			className={cn("size-2 shrink-0 rounded-full", RESULT_BG[runResult(run)])}
 		/>
-		<span className="w-[170px] min-w-0 shrink-0 @max-[700px]:w-[130px]">
-			<RunLabel
-				run={run}
-				showSha={false}
-				className="text-[12.5px]"
-				primaryClassName="font-medium text-foreground max-w-full"
-			/>
+		<span
+			title={run.branch}
+			className="w-[200px] min-w-[72px] shrink truncate text-[12.5px] font-medium text-foreground @max-[760px]:w-[140px] @max-[560px]:w-auto @max-[560px]:flex-1"
+		>
+			{run.branch}
 		</span>
-		<span className="w-[52px] shrink-0 font-mono text-[11px] text-subtle">
+		<span className="w-[60px] shrink-0 font-mono text-[11px] text-subtle @max-[560px]:hidden">
 			{sha7(run.sha)}
 		</span>
 		{run.baseline && (
-			<Pill tone="info" className="shrink-0">
+			<TintPill tone="info" className="@max-[560px]:hidden">
 				baseline
-			</Pill>
+			</TintPill>
 		)}
-		<span className="min-w-0 truncate font-mono text-[11px] text-tertiary-foreground">
+		<span className="min-w-0 flex-1 truncate font-mono text-[11px] text-tertiary-foreground @max-[560px]:hidden">
 			{scopeLabel(run)}
 		</span>
-		<span className="flex-1" />
+		<span className="hidden flex-1 @max-[560px]:block" />
 		{!!run.newFailures && (
-			<Pill tone="bad" className="shrink-0 tabular-nums">
-				{num(run.newFailures)} new failure{run.newFailures === 1 ? "" : "s"}
-			</Pill>
+			<TintPill tone="bad">
+				{num(run.newFailures)} new
+				<span className="@max-[560px]:hidden">
+					failure{run.newFailures === 1 ? "" : "s"}
+				</span>
+			</TintPill>
 		)}
-		<span className="w-[76px] shrink-0 text-right font-medium whitespace-nowrap text-muted-foreground tabular-nums">
+		<span className="min-w-[84px] shrink-0 text-right font-medium whitespace-nowrap text-muted-foreground tabular-nums @max-[700px]:w-auto">
 			{num(run.passed)}
+			{run.failed > 0 && (
+				<span className="text-red-600 dark:text-red-400">
+					{" "}
+					· {num(run.failed)}
+				</span>
+			)}
 			<span className="font-normal text-subtle">
 				/{num(run.fileCount ?? 0)}
 			</span>
 		</span>
-		<span className="w-[52px] shrink-0 whitespace-nowrap text-tertiary-foreground tabular-nums @max-[700px]:hidden">
+		<span className="w-[56px] shrink-0 whitespace-nowrap text-tertiary-foreground tabular-nums @max-[760px]:hidden">
 			{runDuration(run, now)}
 		</span>
-		<CostValue cost={run.cost} className="w-[52px] shrink-0 font-medium" />
+		<span className="w-[52px] shrink-0 font-medium text-foreground tabular-nums @max-[480px]:hidden">
+			{usd(run.cost.usd)}
+		</span>
 		<span className="shrink-0 @max-[700px]:hidden">
 			<Avatar actor={run.createdBy} />
 		</span>
-		<span className="w-[32px] shrink-0 text-right text-[11.5px] text-subtle tabular-nums">
+		<span className="w-[30px] shrink-0 text-right text-[11.5px] text-subtle tabular-nums">
 			{age(run.createdAt, now)}
 		</span>
 	</Link>

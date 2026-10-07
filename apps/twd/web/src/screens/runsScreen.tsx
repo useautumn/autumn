@@ -1,11 +1,10 @@
 import { buttonVariants } from "@autumn/ui/components/ui/button";
-import { PlayIcon } from "@phosphor-icons/react";
 import { Plus, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useBranchPages, useRunPages, useRuns } from "../api/hooks.ts";
 import { useLiveTopics } from "../api/live.ts";
 import { ErrorCallout } from "../components/status.tsx";
-import { PageHeader, SearchInput, Segmented } from "../components/ui.tsx";
+import { SearchInput, Segmented } from "../components/ui.tsx";
 import { useNow } from "../lib/useNow.ts";
 import { RunCard, ScrollFade } from "./runDetail/runCard.tsx";
 import { BaselineStrip } from "./runs/baselineStrip.tsx";
@@ -71,15 +70,10 @@ export const RunsScreen = () => {
 
 	return (
 		<>
-			<PageHeader
-				icon={<PlayIcon size={16} weight="fill" />}
-				title={
-					<span className="flex min-w-0 items-center gap-4">
-						Runs
-						<BaselineStrip now={now} />
-					</span>
-				}
-			>
+			<header className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-[18px]">
+				<h1 className="text-[17px] font-semibold text-foreground">Runs</h1>
+				<BaselineStrip now={now} />
+				<span className="flex-1" />
 				<SearchInput
 					value={branch}
 					onChange={(v) => update({ branch: v })}
@@ -91,7 +85,7 @@ export const RunsScreen = () => {
 						<Plus className="size-3.5" /> New run
 					</span>
 				</Link>
-			</PageHeader>
+			</header>
 			<ErrorCallout
 				error={live.error ?? branches.error ?? feed.error}
 				className="mb-3"
@@ -121,29 +115,29 @@ export const RunsScreen = () => {
 						</span>
 					}
 					right={
-						<div className="flex items-center gap-2">
+						<div className="flex flex-wrap items-center justify-end gap-2">
+							<Segmented
+								value={view}
+								onChange={setView}
+								options={VIEWS.map((v) => ({
+									value: v,
+									label: <span className="text-xs capitalize">{v}</span>,
+								}))}
+							/>
 							{view === "runs" && (
 								<Segmented
 									value={filter}
 									onChange={(f) => update({ status: f === "all" ? null : f })}
 									options={FILTERS.map((f) => ({
 										value: f,
-										label: <span className="capitalize">{f}</span>,
+										label: <span className="text-xs capitalize">{f}</span>,
 									}))}
 								/>
 							)}
-							<Segmented
-								value={view}
-								onChange={setView}
-								options={[
-									{ value: "branches", label: "Branches" },
-									{ value: "runs", label: "Runs" },
-								]}
-							/>
 						</div>
 					}
 				>
-					<ScrollFade key={view} className="@container">
+					<ScrollFade key={view} className="@container overflow-x-hidden">
 						{view === "branches" ? (
 							<BranchesView
 								branches={branches.pages.flatMap((p) => p.branches)}

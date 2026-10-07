@@ -85,6 +85,24 @@ export const recordNewFailures = async ({
 	`);
 };
 
+/** A baseline candidate keeps the flag only if it completed (passed or failed) with a result for every planned file. */
+export const settleBaselineFlag = async ({
+	ctx,
+	runId,
+}: {
+	ctx: TwdContext;
+	runId: string;
+}) => {
+	await ctx.db.execute(sql`
+		update runs r set is_baseline = false
+		where r.id = ${runId} and r.is_baseline and r.finished_at is not null and (
+			r.status not in ('passed', 'failed')
+			or coalesce(r.file_count, 0) = 0
+			or (select count(distinct t.file) from test_results t where t.run_id = r.id) < r.file_count
+		)
+	`);
+};
+
 /** Hook for the runs task: call once a run reaches a terminal status. */
 export const onRunFinished = async ({
 	ctx,
@@ -93,6 +111,7 @@ export const onRunFinished = async ({
 	ctx: TwdContext;
 	runId: string;
 }): Promise<void> => {
+	await settleBaselineFlag({ ctx, runId });
 	await recordNewFailures({ ctx, runId });
 	const [run] = await ctx.db
 		.select({ isBaseline: runs.isBaseline })
