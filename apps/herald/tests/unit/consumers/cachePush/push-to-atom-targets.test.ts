@@ -9,7 +9,6 @@ import type { AtomConnection } from "../../../../src/atom/types/atomClient.js";
 import { pushCatalogToCache } from "../../../../src/consumers/cachePush/pushCatalogToCache/pushCatalogToCache.js";
 import { pushSubjectToCache } from "../../../../src/consumers/cachePush/pushSubjectToCache/pushSubjectToCache.js";
 import type { CachePushContext } from "../../../../src/consumers/cachePush/types/cachePushContext.js";
-import { _resetOrgLookupsForTesting } from "../../../../src/orgs/getOrgWithFeaturesCached.js";
 
 const ORG_ATOM = "https://org-atom.example.com";
 const SHADOW_ATOM = "https://shadow-atom.example.com";
@@ -151,12 +150,7 @@ const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
 		},
 	});
 
-const resetOrgCaches = () => {
-	_resetOrgWithFeaturesL1ForTesting();
-	_resetOrgLookupsForTesting();
-};
-
-beforeEach(() => resetOrgCaches());
+beforeEach(() => _resetOrgWithFeaturesL1ForTesting());
 
 test("an org with its own Atom and no shadow configured: only the org's Atom", async () => {
 	const { ctx, reached } = createPushContext({
@@ -190,7 +184,7 @@ test("the shadow Atom is reached with the org's own token, and only once the org
 	expect(registered.reached).toEqual([SHADOW_ATOM, SHADOW_ATOM]);
 	expect(registered.tokens[SHADOW_ATOM]).toBe("encrypted_org_1");
 
-	resetOrgCaches();
+	_resetOrgWithFeaturesL1ForTesting();
 	const unregistered = createPushContext({
 		org: orgWith({ hasAtom: true }),
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM, registered: false }),
@@ -212,7 +206,7 @@ test("a customer in the rollout reaches both; one outside it only the org's Atom
 	await pushSubject({ ctx: both.ctx });
 	expect([...both.reached].sort()).toEqual([ORG_ATOM, SHADOW_ATOM]);
 
-	resetOrgCaches();
+	_resetOrgWithFeaturesL1ForTesting();
 	const outside = createPushContext({
 		org: orgWith({ hasAtom: true }),
 		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM, percent: 0 }),
@@ -246,7 +240,7 @@ test("a failed push to an org's own Atom is an error; to our shadow Atom only a 
 		[ORG_ATOM, "error", "org"],
 		[SHADOW_ATOM, "warn", "shadow"],
 	] as const) {
-		resetOrgCaches();
+		_resetOrgWithFeaturesL1ForTesting();
 		const { ctx, logged } = createPushContext({
 			org: orgWith({ hasAtom: true }),
 			shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
