@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
 	type FullCusProduct,
+	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
 import { firstPhaseReplacesPlanNow } from "@/components/forms/create-schedule/utils/firstPhaseReplacesPlanNow";
 import {
 	type CustomerStatePhase,
+	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
@@ -29,6 +31,11 @@ describe("schedule billing cycle reset rule", () => {
 });
 
 const NOW_MS = Date.UTC(2027, 0, 1);
+const CUSTOM_PRICE_ITEM = {
+	feature_id: null,
+	price: 30,
+	interval: "month",
+} as unknown as ProductItem;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const product = ({
@@ -39,7 +46,14 @@ const product = ({
 	id: string;
 	group?: string;
 	isAddOn?: boolean;
-}) => ({ id, group, is_add_on: isAddOn, items: [] }) as unknown as ProductV2;
+}) =>
+	({
+		id,
+		group,
+		is_add_on: isAddOn,
+		items: [],
+		version: 1,
+	}) as unknown as ProductV2;
 
 const PRODUCTS = [
 	product({ id: "free" }),
@@ -48,14 +62,27 @@ const PRODUCTS = [
 	product({ id: "support", isAddOn: true }),
 ];
 
+const MONTHLY_PRICE = {
+	price: {
+		is_custom: false,
+		config: { type: "fixed", amount: 20, interval: "month" },
+	},
+};
+
 const liveCustomerProduct = ({
 	productId,
 	entityId = null,
 	status = CusProductStatus.Active,
+	paid = false,
+	subscriptionIds = [],
+	trialEndsAt = null,
 }: {
 	productId: string;
 	entityId?: string | null;
 	status?: CusProductStatus;
+	paid?: boolean;
+	subscriptionIds?: string[];
+	trialEndsAt?: number | null;
 }) => {
 	const { id, group, is_add_on } =
 		PRODUCTS.find((candidate) => candidate.id === productId) ??
@@ -65,8 +92,15 @@ const liveCustomerProduct = ({
 		status,
 		entity_id: entityId,
 		internal_entity_id: entityId,
-		customer_prices: [],
-		product: { id, group, is_add_on },
+		product_id: id,
+		is_custom: false,
+		options: [],
+		customer_entitlements: [],
+		customer_licenses: [],
+		customer_prices: paid ? [MONTHLY_PRICE] : [],
+		subscription_ids: subscriptionIds,
+		trial_ends_at: trialEndsAt,
+		product: { id, group, is_add_on, version: 1 },
 	} as unknown as FullCusProduct;
 };
 
@@ -74,14 +108,16 @@ const firstPhase = ({
 	productId,
 	startsAt = null,
 	entityId = null,
+	plan = {},
 }: {
 	productId: string;
 	startsAt?: number | null;
 	entityId?: string | null;
+	plan?: Partial<CustomerStatePlan>;
 }): CustomerStatePhase[] => [
 	{
 		startsAt,
-		plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId, entityId }],
+		plans: [{ ...EMPTY_CUSTOMER_STATE_PLAN, productId, entityId, ...plan }],
 	},
 ];
 
@@ -141,6 +177,83 @@ describe("schedule carry over usages rule", () => {
 					liveCustomerProduct({
 						productId: "free",
 						status: CusProductStatus.Scheduled,
+					}),
+				],
+			}).visible,
+		).toBe(false);
+	});
+
+	test("shows when the current plan is re-listed with custom items", () => {
+		expect(
+			scheduleCarryOverUsagesRule({
+				phases: firstPhase({
+					productId: "pro",
+					plan: { isCustom: true, items: [CUSTOM_PRICE_ITEM] },
+				}),
+				customerProducts: [
+					liveCustomerProduct({
+						productId: "pro",
+						paid: true,
+						subscriptionIds: ["sub_1"],
+					}),
+				],
+			}).visible,
+		).toBe(true);
+	});
+
+	test("shows when the current plan is re-listed with a new prepaid quantity", () => {
+		expect(
+			scheduleCarryOverUsagesRule({
+				phases: firstPhase({
+					productId: "pro",
+					plan: { prepaidOptions: { messages: 500 } },
+				}),
+				customerProducts: [
+					liveCustomerProduct({
+						productId: "pro",
+						paid: true,
+						subscriptionIds: ["sub_1"],
+					}),
+				],
+			}).visible,
+		).toBe(true);
+	});
+
+	test("shows when an unchanged paid plan no Stripe subscription bills is re-listed", () => {
+		expect(
+			scheduleCarryOverUsagesRule({
+				phases: firstPhase({ productId: "pro" }),
+				customerProducts: [
+					liveCustomerProduct({ productId: "pro", paid: true }),
+				],
+			}).visible,
+		).toBe(true);
+	});
+
+	test("hides when an unchanged plan a Stripe subscription bills is re-listed", () => {
+		expect(
+			scheduleCarryOverUsagesRule({
+				phases: firstPhase({ productId: "pro" }),
+				customerProducts: [
+					liveCustomerProduct({
+						productId: "pro",
+						paid: true,
+						subscriptionIds: ["sub_1"],
+					}),
+				],
+			}).visible,
+		).toBe(false);
+	});
+
+	test("hides when an unchanged trialing plan with no subscription is re-listed", () => {
+		expect(
+			scheduleCarryOverUsagesRule({
+				phases: firstPhase({ productId: "pro" }),
+				customerProducts: [
+					liveCustomerProduct({
+						productId: "pro",
+						paid: true,
+						trialEndsAt: NOW_MS + 7 * DAY_MS,
 					}),
 				],
 			}).visible,

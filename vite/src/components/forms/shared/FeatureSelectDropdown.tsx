@@ -22,6 +22,7 @@ export function FeatureSelectDropdown({
 	onChange: ({ featureIds }: { featureIds: string[] }) => void;
 }) {
 	const isAllSelected = selectedFeatureIds.length === 0;
+	const selectedIds = new Set(selectedFeatureIds);
 	const [open, setOpen] = useState(false);
 
 	const label = isAllSelected
@@ -54,7 +55,7 @@ export function FeatureSelectDropdown({
 				</DropdownMenuCheckboxItem>
 				{features.length > 0 && <DropdownMenuSeparator />}
 				{features.map((feature) => {
-					const isChecked = selectedFeatureIds.includes(feature.id);
+					const isChecked = selectedIds.has(feature.id);
 					return (
 						<DropdownMenuCheckboxItem
 							key={feature.id}
