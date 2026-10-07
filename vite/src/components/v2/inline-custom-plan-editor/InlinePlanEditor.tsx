@@ -76,7 +76,10 @@ export function InlinePlanEditor({
 	return createPortal(
 		<AnimatePresence>
 			{isOpen && (
-				<InlineEditorProvider initialProduct={product}>
+				<InlineEditorProvider
+					initialProduct={product}
+					isInvoiceEditor={scope === "invoice"}
+				>
 					<LicenseCustomizeCollectorProvider
 						initialPatches={initialAddLicenses}
 					>

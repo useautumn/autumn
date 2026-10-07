@@ -12,8 +12,7 @@ export const CustomerPlanInfoBox = ({
 	if (scope === "invoice") {
 		return (
 			<InfoBox classNames={{ infoBox: "w-full max-w-xl" }}>
-				You're customizing this plan for this invoice only. The catalog and the
-				customer's plan won't change.
+				You're customizing this plan for this invoice only.
 			</InfoBox>
 		);
 	}

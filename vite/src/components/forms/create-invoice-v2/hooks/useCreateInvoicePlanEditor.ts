@@ -7,6 +7,7 @@ import {
 } from "@/components/forms/shared/utils/planCustomizationUtils";
 import type { CreateInvoiceForm } from "../createInvoiceFormSchema";
 import { applyInvoicePlanEditorItems } from "../utils/applyInvoicePlanEditorItems";
+import { clearInvoiceIncludedUsage } from "../utils/clearInvoiceIncludedUsage";
 import type { CreateInvoiceFormApi } from "./useCreateInvoiceForm";
 
 /** A standalone invoice never grants a trial, so the plan's own trial is left alone. */
@@ -42,7 +43,7 @@ export function useCreateInvoicePlanEditor({
 		const product = editingPlan && productsById.get(editingPlan.planId);
 		if (!editingPlan || !product) return undefined;
 
-		return getProductWithSupportedPlanFormValues({
+		const editable = getProductWithSupportedPlanFormValues({
 			baseProduct: productV2ToFrontendProduct({ product }),
 			formValues: {
 				items: editingPlan.items,
@@ -50,6 +51,10 @@ export function useCreateInvoicePlanEditor({
 				...NO_TRIAL_EDITS,
 			},
 		});
+		return {
+			...editable,
+			items: clearInvoiceIncludedUsage({ items: editable.items }),
+		};
 	}, [editingPlan, productsById]);
 
 	const handleCancel = useCallback(() => {
