@@ -18,10 +18,25 @@ import type {
 	RateLimitOrg,
 	RateLimitOverrideLimits,
 	RateLimitPolicySummary,
+	RateLimitScope,
 } from "./rateLimitTypes";
 import { useRateLimitOverrides } from "./useRateLimitOverrides";
 
 const SAVED_SUFFIX = "live in ~10 s";
+
+/** Edit opens on the scope the org already overrides; otherwise per org when the row has one. */
+const pickInitialScope = ({
+	policy,
+	orgKey,
+}: {
+	policy: RateLimitPolicySummary;
+	orgKey?: string;
+}): RateLimitScope => {
+	const override = policy.overrides.find((entry) => entry.orgKey === orgKey);
+	if (override?.perOrg !== undefined) return "perOrg";
+	if (override?.perCustomer !== undefined) return "perCustomer";
+	return policy.perOrg ? "perOrg" : "perCustomer";
+};
 
 const listLayerNames = ({ policy }: { policy: RateLimitPolicySummary }) =>
 	[policy.perOrg?.name, policy.perCustomer?.name].filter(
@@ -30,13 +45,26 @@ const listLayerNames = ({ policy }: { policy: RateLimitPolicySummary }) =>
 
 /** Every rate limit from the server's policy table, with per-org overrides read and written in place. */
 export const RateLimitsSection = () => {
-	const { view, isLoading, saveOrgs, isSaving } = useRateLimitOverrides();
+	const { view, isLoading, isError, retry, saveOrgs, isSaving } =
+		useRateLimitOverrides();
 	const [filterOrg, setFilterOrg] = useState<RateLimitOrg | null>(null);
 	const [draft, setDraft] = useState<RateLimitOverrideDraft | null>(null);
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
 	const [isRawJsonOpen, setIsRawJsonOpen] = useState(false);
 
-	if (isLoading || !view) return <Skeleton className="h-96" />;
+	if (isLoading) return <Skeleton className="h-96" />;
+	if (isError || !view) {
+		return (
+			<div className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm">
+				<span className="text-tertiary-foreground">
+					Rate limits failed to load.
+				</span>
+				<Button variant="secondary" size="sm" onClick={() => retry()}>
+					Retry
+				</Button>
+			</div>
+		);
+	}
 
 	const overrideOrgs = listOverrideOrgs({ view });
 
@@ -44,7 +72,7 @@ export const RateLimitsSection = () => {
 		setDraft({
 			org: filterOrg,
 			policy,
-			scope: policy.perOrg ? "perOrg" : "perCustomer",
+			scope: pickInitialScope({ policy, orgKey: filterOrg?.key }),
 		});
 		setIsSheetOpen(true);
 	};
@@ -56,6 +84,7 @@ export const RateLimitsSection = () => {
 		orgs: RateLimitOverrideLimits;
 		message: string;
 	}) => {
+		if (isSaving) return false;
 		try {
 			await saveOrgs({ orgs });
 			toast.success(`${message} · ${SAVED_SUFFIX}`);
@@ -151,6 +180,7 @@ export const RateLimitsSection = () => {
 					policies={view.policies}
 					onEdit={(policy) => openSheet({ policy })}
 					onRemove={(policy) => removeOverride({ org: filterOrg, policy })}
+					isSaving={isSaving}
 					onShowAll={() => setFilterOrg(null)}
 				/>
 			) : (

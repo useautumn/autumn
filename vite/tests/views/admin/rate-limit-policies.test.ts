@@ -67,8 +67,8 @@ describe("rate-limit policies page", () => {
 				layer: layer({
 					limit: 5,
 					versionLimits: [
-						{ upTo: "2.2.0", limit: 5 },
-						{ upTo: "2.3.0", limit: 50 },
+						{ upTo: "2.2.0", limit: 5, key: "k:v2.2.0" },
+						{ upTo: "2.3.0", limit: 50, key: "k:v2.3.0" },
 					],
 				}),
 			}),

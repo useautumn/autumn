@@ -1,4 +1,8 @@
-import { COUNTED_LABELS, OVER_LIMIT_LABELS } from "./formatRateLimit";
+import {
+	COUNTED_LABELS,
+	formatVersion,
+	OVER_LIMIT_LABELS,
+} from "./formatRateLimit";
 import type {
 	RateLimitLayerSummary,
 	RateLimitPolicySummary,
@@ -21,8 +25,23 @@ const LayerDetails = ({
 			<dt className="text-tertiary-foreground">Over the limit</dt>
 			<dd>{OVER_LIMIT_LABELS[layer.overLimit]}</dd>
 			<dt className="text-tertiary-foreground">Key</dt>
-			<dd className="truncate font-mono" title={layer.key}>
-				{layer.key}
+			<dd className="flex min-w-0 flex-col font-mono">
+				{layer.versionLimits.map(({ upTo, key }) => (
+					<span key={upTo} className="truncate" title={key}>
+						{key}
+						<span className="ml-1.5 font-sans text-tertiary-foreground">
+							≤ {formatVersion(upTo)}
+						</span>
+					</span>
+				))}
+				<span className="truncate" title={layer.key}>
+					{layer.key}
+					{layer.versionLimits.length > 0 && (
+						<span className="ml-1.5 font-sans text-tertiary-foreground">
+							other versions
+						</span>
+					)}
+				</span>
 			</dd>
 			{layer.skipWithoutCustomerId && (
 				<>

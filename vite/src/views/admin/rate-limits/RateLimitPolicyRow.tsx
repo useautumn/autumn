@@ -22,8 +22,14 @@ import type {
 } from "./rateLimitTypes";
 
 /** A row sharing a counter names the row that owns it instead of repeating its version limits. */
-const PolicyTags = ({ policy }: { policy: RateLimitPolicySummary }) => {
-	const ownsItsLayers = policy.sharesCounterWith.length === 0;
+const PolicyTags = ({
+	policy,
+	isNested,
+}: {
+	policy: RateLimitPolicySummary;
+	isNested: boolean;
+}) => {
+	const ownsItsLayers = !isNested && policy.sharesCounterWith.length === 0;
 	const versionTags = ownsItsLayers
 		? [policy.perOrg, policy.perCustomer].flatMap((layer) =>
 				layer ? formatVersionLimits({ layer }) : [],
@@ -106,7 +112,7 @@ export const RateLimitPolicyRow = ({
 						)}
 					/>
 					<PolicyName policy={policy} isNested={isNested} />
-					{!isNested && <PolicyTags policy={policy} />}
+					<PolicyTags policy={policy} isNested={isNested} />
 				</button>
 				<RateLimitLayerCell layer={policy.perCustomer} unit="per customer" />
 				<RateLimitLayerCell layer={policy.perOrg} unit="per org" />

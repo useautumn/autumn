@@ -3,7 +3,7 @@ export type RateLimitScope = "perOrg" | "perCustomer";
 export type RateLimitLayerSummary = {
 	name: string;
 	limit: number;
-	versionLimits: { upTo: string; limit: number }[];
+	versionLimits: { upTo: string; limit: number; key: string }[];
 	windowMs: number;
 	counted: "allPods" | "perPod";
 	overLimit: "reject" | "degrade" | "rejectAndQueueCreate";

@@ -68,6 +68,12 @@ export const RateLimitOverrideSheet = ({
 	const [draft, setDraft] = useState(initialDraft);
 	const [valueText, setValueText] = useState("");
 
+	// The value always shows what is stored for the selected org, limit and scope.
+	const selectDraft = (next: RateLimitOverrideDraft) => {
+		setDraft(next);
+		setValueText(String(findOverrideValue({ draft: next }) ?? ""));
+	};
+
 	useEffect(() => {
 		if (!open) return;
 		setDraft(initialDraft);
@@ -82,7 +88,7 @@ export const RateLimitOverrideSheet = ({
 		const policy = policies.find(({ id }) => id === policyId);
 		if (!policy) return;
 		const scope = policy[draft.scope] ? draft.scope : listScopes({ policy })[0];
-		setDraft({ ...draft, policy, scope });
+		selectDraft({ ...draft, policy, scope });
 	};
 
 	return (
@@ -104,7 +110,7 @@ export const RateLimitOverrideSheet = ({
 						<RateLimitOrgCombobox
 							value={draft.org}
 							overrideOrgs={overrideOrgs}
-							onChange={(org) => setDraft({ ...draft, org })}
+							onChange={(org) => selectDraft({ ...draft, org })}
 							placeholder="Search orgs"
 						/>
 					</div>
@@ -132,7 +138,7 @@ export const RateLimitOverrideSheet = ({
 						<GroupedTabButton
 							value={draft.scope}
 							onValueChange={(scope) =>
-								setDraft({ ...draft, scope: scope as RateLimitScope })
+								selectDraft({ ...draft, scope: scope as RateLimitScope })
 							}
 							options={listScopes({ policy: draft.policy }).map((scope) => ({
 								value: scope,

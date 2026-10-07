@@ -50,12 +50,15 @@ export const RateLimitOrgOverridesTable = ({
 	onEdit,
 	onRemove,
 	onShowAll,
+	isSaving,
 }: {
 	org: RateLimitOrg;
 	policies: RateLimitPolicySummary[];
 	onEdit: (policy: RateLimitPolicySummary) => void;
 	onRemove: (policy: RateLimitPolicySummary) => void;
 	onShowAll: () => void;
+	/** Each write replaces the whole config, so a second one waits for the first to land. */
+	isSaving: boolean;
 }) => {
 	const overridden = policies.flatMap((policy) => {
 		const override = policy.overrides.find(({ orgKey }) => orgKey === org.key);
@@ -104,6 +107,7 @@ export const RateLimitOrgOverridesTable = ({
 							<Button
 								variant="skeleton"
 								size="sm"
+								disabled={isSaving}
 								onClick={() => onRemove(policy)}
 							>
 								Remove
