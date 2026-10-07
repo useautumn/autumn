@@ -11,6 +11,8 @@ export const MIGRATION_DB_POOL_MAX = (() => {
 	const parsed = Number(process.env.MIGRATION_DB_POOL_MAX);
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : 110;
 })();
+/** Client-side per-statement deadline. Never a pool statement_timeout: PgBouncer rejects that startup parameter (08P01). */
+export const MIGRATION_DB_QUERY_DEADLINE_MS = 75_000;
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS = 5;
