@@ -3,7 +3,6 @@ import {
 	type ConfirmExpiredLockCommand,
 	computeConfirmExpiredLock,
 	meteringIdentityToPartitionKey,
-	parseConfirmExpiredLockCommand,
 	type SubjectState,
 } from "@autumn/balance-engine";
 import type { ConfirmExpiredLockReply } from "@autumn/balance-worker-client/protocol";
@@ -21,21 +20,20 @@ export async function confirmExpiredLock({
 	command: ConfirmExpiredLockCommand;
 }): Promise<ConfirmExpiredLockReply> {
 	const { ctx } = scope;
-	const parsed = parseConfirmExpiredLockCommand({ input: command });
 	const customerKey = meteringIdentityToPartitionKey({
-		identity: parsed.identity,
+		identity: command.identity,
 	});
-	await ctx.subjectHydrator.ensure({ identity: parsed.identity });
+	await ctx.subjectHydrator.ensure({ identity: command.identity });
 
 	const decided = ctx.writer.decide<never>({
-		command: parsed,
+		command,
 		mutate: ({ state }) =>
 			timeSync({ label: "confirmExpiredLock.decide" }, () =>
 				mutateConfirmExpiredLock({
 					scope,
 					state,
 					customerKey,
-					command: parsed,
+					command,
 				}),
 			),
 	});

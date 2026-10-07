@@ -105,35 +105,6 @@ export function parseWorkerRequest({
 	};
 }
 
-export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
-	switch (code) {
-		case "INVALID_REQUEST":
-		case "UNSUPPORTED_COMMAND":
-			return 400;
-		case "NOT_OWNER":
-		case "NOT_INITIALIZED":
-		case "STALE_SUBJECT":
-		case "COMMAND_CONFLICT":
-		case "DUPLICATE_COMMAND":
-		case "LOCK_ALREADY_EXISTS":
-			return 409;
-		case "CUSTOMER_NOT_FOUND":
-		case "ENTITY_NOT_FOUND":
-		case "LOCK_NOT_FOUND":
-			return 404;
-		case "CATALOG_NOT_FOUND":
-		case "RECORD_TOO_LARGE":
-			return 422;
-		case "NOT_READY":
-			return 503;
-		case "OVERLOADED":
-			return 429;
-		case "RECORD_REFUSED":
-		case "INTERNAL":
-			return 500;
-	}
-}
-
 /** How many milliseconds the caller will still wait for this request. A worker still
  *  activating the partition holds the request for that long instead of a fixed wait,
  *  so a handoff to an idle successor costs the caller latency, not a fail-open. */
