@@ -1,5 +1,6 @@
 import {
 	Activity,
+	Camera,
 	Clock,
 	CreditCard,
 	Database,
@@ -42,6 +43,7 @@ export type EdgeConfigCardId =
 	| "cache-v2-ramp"
 	| "full-subject-gate"
 	| "db-control"
+	| "subject-snapshots"
 	| "miscellaneous";
 
 export type QueueCronCardId =
@@ -58,6 +60,8 @@ export type EdgeConfigCardDef<Id extends string = EdgeConfigCardId> = {
 	endpoint: string;
 	/** Collapses a config payload into the one-line state shown on the card. */
 	deriveStatus: (data: unknown) => EdgeConfigStatus;
+	/** Adds a health chip for configs whose GET reports whether the stored object parses. */
+	deriveHealthy?: (data: unknown) => boolean;
 };
 
 export type EdgeConfigSectionDef = {
@@ -456,6 +460,21 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 						? { label: `${committer.concurrency} lanes`, tone: "active" }
 						: { label: "Pool size", tone: "neutral" };
 				},
+			},
+			{
+				id: "subject-snapshots",
+				title: "Subject Snapshots",
+				description:
+					"Whether the balance worker writes, verifies or serves the subject_snapshots table.",
+				icon: Camera,
+				endpoint: "/admin/subject-snapshots-config",
+				deriveStatus: (data) => {
+					const mode = asRecord(data).mode;
+					return typeof mode === "string" && mode !== "off"
+						? { label: `Mode: ${mode}`, tone: "active" }
+						: { label: "Mode: off", tone: "neutral" };
+				},
+				deriveHealthy: (data) => asRecord(data).configHealthy === true,
 			},
 		],
 	},

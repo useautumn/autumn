@@ -3,8 +3,8 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import type { DeletedSubjectSnapshot } from "@autumn/postgres";
-import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type {
 	Committer,

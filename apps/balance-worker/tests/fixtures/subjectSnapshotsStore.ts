@@ -1,13 +1,11 @@
 import {
 	createEdgeConfigStore,
+	defaultSubjectSnapshotsEdgeConfig,
 	type EdgeConfigS3Client,
 	type EdgeConfigStore,
-} from "@autumn/edge-config";
-import {
-	defaultSubjectSnapshotsEdgeConfig,
 	type SubjectSnapshotsEdgeConfig,
 	subjectSnapshotsEdgeConfig,
-} from "../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+} from "@autumn/edge-config";
 
 /** An S3 with one object per key, so a write lands where the next read looks. */
 export const createMemoryS3Client = (): EdgeConfigS3Client => {

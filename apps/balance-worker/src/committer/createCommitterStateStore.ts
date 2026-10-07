@@ -1,5 +1,7 @@
-import type { EdgeConfigStore } from "@autumn/edge-config";
-import type { SubjectSnapshotsEdgeConfig } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {

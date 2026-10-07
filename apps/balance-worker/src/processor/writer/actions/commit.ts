@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
-import { writesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
 	DurableMutationApplyResult,
