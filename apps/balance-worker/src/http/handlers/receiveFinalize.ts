@@ -3,12 +3,11 @@ import type { FinalizeReply } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
+import { readInboundCommand } from "./readInboundCommand.js";
 
 export async function receiveFinalize(context: Context<BalanceWorkerHttpEnv>) {
 	const { runtime } = context.get("ctx");
-	const command = parseFinalizeCommand({
-		input: context.get("request").command,
-	});
+	const command = readInboundCommand({ context, parse: parseFinalizeCommand });
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;
 	function runFinalize(processor: PartitionProcessor) {

@@ -83,6 +83,7 @@ import {
 	type SubjectState,
 	subjectStateSchema,
 } from "./models/subject/subjectState.js";
+import { parseInbound } from "./parseInbound.js";
 
 export const parseTrackCommand = ({
 	input,
@@ -184,11 +185,17 @@ export const parseSubjectStateMutation = ({
 	input: unknown;
 }): SubjectStateMutation => subjectStateMutationSchema.parse(input);
 
+/** The logged command is read as a newer writer may have sent it; the rest of the record stays strict. */
 export const parseMutationRecord = ({
 	input,
 }: {
 	input: unknown;
-}): MutationRecord => mutationRecordSchema.parse(input);
+}): MutationRecord =>
+	parseInbound({
+		parse: (params) => mutationRecordSchema.parse(params.input),
+		input,
+		within: ["command"],
+	});
 
 export const parseMeteringIdentity = ({
 	input,

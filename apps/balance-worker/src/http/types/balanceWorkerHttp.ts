@@ -57,6 +57,8 @@ export type BalanceWorkerRequestLog = {
 		| RecalculateBalanceReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
+	/** Keys a newer server sent that this worker dropped from the command. */
+	unknownKeys?: string[];
 	/** A track batch logs once: its size and failures counted by code, never one line per command. */
 	batch?: BalanceWorkerBatchLog;
 };

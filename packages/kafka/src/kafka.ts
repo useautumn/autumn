@@ -158,6 +158,7 @@ export type {
 	CommandPublisherContext,
 } from "./topics/command/publisher/types/commandPublisher.js";
 export type { CommandRecord } from "./topics/command/types/commandRecord.js";
+export type { OnUnknownCommandKeys } from "./topics/command/types/onUnknownCommandKeys.js";
 export { createMeteringConsumer } from "./topics/metering/consumer/createMeteringConsumer.js";
 export { createMeteringReader } from "./topics/metering/consumer/createMeteringReader.js";
 export type {

@@ -3,10 +3,11 @@ import type { FlushReply } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
+import { readInboundCommand } from "./readInboundCommand.js";
 
 export async function receiveFlush(context: Context<BalanceWorkerHttpEnv>) {
 	const { runtime } = context.get("ctx");
-	const command = parseFlushCommand({ input: context.get("request").command });
+	const command = readInboundCommand({ context, parse: parseFlushCommand });
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;
 	function runFlush(processor: PartitionProcessor) {

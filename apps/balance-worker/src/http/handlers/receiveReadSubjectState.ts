@@ -3,13 +3,15 @@ import type { ReadSubjectStateReply } from "@autumn/balance-worker-client/protoc
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
+import { readInboundCommand } from "./readInboundCommand.js";
 
 export async function receiveReadSubjectState(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
-	const command = parseReadSubjectStateCommand({
-		input: context.get("request").command,
+	const command = readInboundCommand({
+		context,
+		parse: parseReadSubjectStateCommand,
 	});
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;

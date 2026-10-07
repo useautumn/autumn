@@ -1,4 +1,5 @@
 import {
+	isWorkerErrorCode,
 	type WorkerErrorResponse,
 	workerErrorStatus,
 } from "../contracts/worker.js";
@@ -186,6 +187,8 @@ export function readNotOwnerResponse({
 }): NotOwnerAnswer | null {
 	if (response.status === 200) return null;
 	const error = (response.body as WorkerErrorResponse | null)?.error;
+	if (error && isNewerWorkerError({ error, status: response.status }))
+		throw newerWorkerError({ error, status: response.status });
 	if (!error || workerErrorStatus({ code: error.code }) !== response.status)
 		throw new Error("Worker error does not match HTTP status");
 	if (error.code === "NOT_OWNER") {
@@ -202,6 +205,39 @@ export function readNotOwnerResponse({
 		message: error.message,
 		workerCode: error.code,
 		workerReason: error.reason,
+	});
+}
+
+type WorkerErrorBody = WorkerErrorResponse["error"];
+
+/** A code this client predates, on an error status: a newer worker's, not a malformed reply. */
+function isNewerWorkerError({
+	error,
+	status,
+}: {
+	error: WorkerErrorBody;
+	status: number;
+}): boolean {
+	return (
+		typeof error.code === "string" &&
+		!isWorkerErrorCode(error.code) &&
+		status >= 400 &&
+		status <= 599
+	);
+}
+
+/** The status class still says whether the command could have run, so deploying workers first stays safe. */
+function newerWorkerError({
+	error,
+	status,
+}: {
+	error: WorkerErrorBody;
+	status: number;
+}): BalanceWorkerClientError {
+	return new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: status >= 500 ? "unknown" : "not_submitted",
+		message: `Worker error ${error.code}: ${error.message}`,
 	});
 }
 

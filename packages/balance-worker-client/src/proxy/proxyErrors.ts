@@ -1,7 +1,4 @@
-import {
-	WORKER_ERROR_CODES,
-	type WorkerErrorCode,
-} from "../contracts/worker.js";
+import { isWorkerErrorCode } from "../contracts/worker.js";
 import {
 	BALANCE_WORKER_CLIENT_ERROR_CODES,
 	BalanceWorkerClientError,
@@ -15,7 +12,6 @@ const clientErrorCodes: ReadonlySet<unknown> = new Set(
 	BALANCE_WORKER_CLIENT_ERROR_CODES,
 );
 const requestOutcomes: ReadonlySet<unknown> = new Set(WORKER_REQUEST_OUTCOMES);
-const workerErrorCodes: ReadonlySet<unknown> = new Set(WORKER_ERROR_CODES);
 
 function isClientErrorCode(
 	value: unknown,
@@ -25,10 +21,6 @@ function isClientErrorCode(
 
 function isRequestOutcome(value: unknown): value is WorkerRequestOutcome {
 	return requestOutcomes.has(value);
-}
-
-function isWorkerErrorCode(value: unknown): value is WorkerErrorCode {
-	return workerErrorCodes.has(value);
 }
 
 /** Anything else the API's client throws is a failure after the call may have reached the worker. */

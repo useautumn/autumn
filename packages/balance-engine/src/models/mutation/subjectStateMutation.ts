@@ -23,18 +23,18 @@ import { nonEmptyStringSchema } from "../common/primitives.js";
 import { meteringIdentitySchema } from "../identity/meteringIdentity.js";
 import { changesInsertCustomer, rowChangeSchema } from "./rowChange.js";
 
-// The command as it was sent, parsed loose on the log: a newer command field must not break an older replay.
+// The command as it was sent. Readers parse it tolerantly (`parseMutationRecord`): a newer command field must not break an older replay.
 export const mutationCommandSchema = z.discriminatedUnion("type", [
-	trackCommandSchema.loose(),
-	initializeCommandSchema.loose(),
-	finalizeCommandSchema.loose(),
-	confirmExpiredLockCommandSchema.loose(),
-	resetCommandSchema.loose(),
-	applyBillingPlanCommandSchema.loose(),
-	updateBalanceCommandSchema.loose(),
-	deleteBalanceCommandSchema.loose(),
-	recalculateBalanceCommandSchema.loose(),
-	loggedEvictCommandSchema.loose(),
+	trackCommandSchema,
+	initializeCommandSchema,
+	finalizeCommandSchema,
+	confirmExpiredLockCommandSchema,
+	resetCommandSchema,
+	applyBillingPlanCommandSchema,
+	updateBalanceCommandSchema,
+	deleteBalanceCommandSchema,
+	recalculateBalanceCommandSchema,
+	loggedEvictCommandSchema,
 ]);
 
 export const mutationResultSchema = z.discriminatedUnion("type", [

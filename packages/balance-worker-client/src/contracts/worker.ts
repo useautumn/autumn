@@ -25,6 +25,10 @@ export const WORKER_ERROR_CODES = [
 	"INTERNAL",
 ] as const;
 export type WorkerErrorCode = (typeof WORKER_ERROR_CODES)[number];
+const workerErrorCodes: ReadonlySet<unknown> = new Set(WORKER_ERROR_CODES);
+export function isWorkerErrorCode(value: unknown): value is WorkerErrorCode {
+	return workerErrorCodes.has(value);
+}
 export const PARTITION_RECOVERY_REASON = "PARTITION_RECOVERY";
 /** Where a partition went: the route its old owner claimed for the successor, so a caller can try it without a refresh. */
 export type WorkerRouteSuccessor = PartitionRoute & { endpoint: string };

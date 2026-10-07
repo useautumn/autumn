@@ -3,13 +3,15 @@ import type { ConfirmExpiredLockReply } from "@autumn/balance-worker-client/prot
 import type { Context } from "hono";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
+import { readInboundCommand } from "./readInboundCommand.js";
 
 export async function receiveConfirmExpiredLock(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
-	const command = parseConfirmExpiredLockCommand({
-		input: context.get("request").command,
+	const command = readInboundCommand({
+		context,
+		parse: parseConfirmExpiredLockCommand,
 	});
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;

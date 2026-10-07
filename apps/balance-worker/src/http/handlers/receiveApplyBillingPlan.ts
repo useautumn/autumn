@@ -1,21 +1,17 @@
 import { parseApplyBillingPlanRequest } from "@autumn/balance-engine";
 import type { ApplyBillingPlanReply } from "@autumn/balance-worker-client/protocol";
 import type { Context } from "hono";
-import { z } from "zod/v4";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
-
-const applyBillingPlanPayloadSchema = z
-	.object({ catalogRows: z.unknown() })
-	.strict();
+import { readInboundRequest } from "./readInboundCommand.js";
 
 export async function receiveApplyBillingPlan(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
-	const { command, payload } = context.get("request");
-	const request = parseApplyBillingPlanRequest({
-		input: { command, ...applyBillingPlanPayloadSchema.parse(payload) },
+	const request = readInboundRequest({
+		context,
+		parse: parseApplyBillingPlanRequest,
 	});
 	const requestLog = context.get("requestLog");
 	requestLog.command = {

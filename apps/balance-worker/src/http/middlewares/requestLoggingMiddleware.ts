@@ -1,6 +1,7 @@
 import { UnsupportedCommandError } from "@autumn/balance-engine";
 import type { PartitionRoute } from "@autumn/balance-worker-client/protocol";
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { createUnknownKeysLog } from "../../logging/createUnknownKeysLog.js";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { OwnedPartitionNotReadyError } from "../../runtime/runtimeErrors.js";
 import type {
@@ -17,6 +18,7 @@ export function requestLoggingMiddleware({
 }: {
 	ctx: BalanceWorkerHttpContext;
 }): MiddlewareHandler<BalanceWorkerHttpEnv> {
+	const unknownKeysLog = createUnknownKeysLog({ ctx: { logger: ctx.logger } });
 	async function logRequest(
 		context: Context<BalanceWorkerHttpEnv>,
 		next: Next,
@@ -25,10 +27,16 @@ export function requestLoggingMiddleware({
 		const startedAt = performance.now();
 		await next();
 		try {
+			const requestLog = context.get("requestLog");
+			if (requestLog.unknownKeys)
+				unknownKeysLog.record({
+					source: context.req.path,
+					keyPaths: requestLog.unknownKeys,
+				});
 			timeSync({ label: "request.log" }, () =>
 				logWorkerRequest({
 					ctx,
-					requestLog: context.get("requestLog"),
+					requestLog,
 					statusCode: context.res.status,
 					method: context.req.method,
 					path: context.req.path,
