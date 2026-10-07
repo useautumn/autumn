@@ -1,7 +1,7 @@
 /** What one `/v1/balances.check` to the shadow Atom came back with. */
 export type AtomCheckReply =
 	| { kind: "answered"; body: unknown }
-	| { kind: "timeout" }
+	| { kind: "timeout"; shed?: true }
 	| { kind: "atom_error"; reason: string };
 
 /** How the Atom's answer compared with the API's; only a mismatch carries both bodies. */

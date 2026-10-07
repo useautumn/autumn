@@ -57,6 +57,7 @@ export {
 	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
 	ORG_WITH_FEATURES_L1_MAX_ENTRIES,
 	ORG_WITH_FEATURES_L1_TTL_MS,
+	readThroughOrgWithFeatures,
 	setCachedOrgWithFeatures,
 } from "./orgWithFeatures/orgWithFeaturesCache.js";
 export {

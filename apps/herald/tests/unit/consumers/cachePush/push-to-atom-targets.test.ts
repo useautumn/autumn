@@ -146,6 +146,7 @@ const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
 				entityId: null,
 			},
 			logOffset: 1n,
+			oldestOccurredAt: 1,
 		},
 	});
 
