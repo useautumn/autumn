@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
@@ -79,7 +80,7 @@ export function CustomerConfigSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Edit Config"
 					description="Override billing behaviour for this customer."
@@ -127,7 +128,7 @@ export function CustomerConfigSheet() {
 						Save
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

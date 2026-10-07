@@ -22,6 +22,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -205,7 +206,7 @@ function CreditNoteForm({
 		: null;
 
 	return (
-		<div className="flex h-full flex-col overflow-y-auto">
+		<SheetBody>
 			<SheetHeader
 				title="Issue Credit Note"
 				description={
@@ -423,7 +424,7 @@ function CreditNoteForm({
 						: "Issue credit note"}
 				</Button>
 			</SheetFooter>
-		</div>
+		</SheetBody>
 	);
 }
 

@@ -2,17 +2,12 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
-import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
+import { COLLAPSE_VARIANTS } from "@/views/customers2/customer/customerAnimations";
 import {
 	type ConfigRowLayout,
 	ConfigRowLayoutProvider,
 	useConfigRowLayout,
 } from "./advanced-section/ConfigRowLayoutContext";
-
-const EXPAND_TRANSITION = {
-	duration: 0.2,
-	ease: SHEET_EASE,
-};
 
 const CONFIG_ROW_LAYOUT_CLASSES: Record<
 	ConfigRowLayout,
@@ -76,20 +71,10 @@ export function ConfigRow({
 				<AnimatePresence initial={false}>
 					{expanded && children && (
 						<motion.div
-							initial={{ height: 0, opacity: 0 }}
-							animate={{
-								height: "auto",
-								opacity: 1,
-								transition: {
-									height: EXPAND_TRANSITION,
-									opacity: { duration: 0.15, delay: 0.05 },
-								},
-							}}
-							exit={{
-								height: 0,
-								opacity: 0,
-								transition: EXPAND_TRANSITION,
-							}}
+							variants={COLLAPSE_VARIANTS}
+							initial="closed"
+							animate="open"
+							exit="closed"
 							className="overflow-hidden"
 						>
 							{body}

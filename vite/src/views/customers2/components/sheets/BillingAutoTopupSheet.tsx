@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -266,7 +267,7 @@ export function BillingAutoTopupSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={isEdit ? "Edit Auto Top-up" : "Add Auto Top-up"}
 					description="Configure automatic credit top-ups when a feature balance drops below a threshold."
@@ -469,7 +470,7 @@ export function BillingAutoTopupSheet() {
 						{isEdit ? "Save" : "Add"}
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

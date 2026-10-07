@@ -53,7 +53,7 @@ const ackPush = async ({
 	);
 };
 
-/** The opt-in reader (ATOM_PUSH_QUEUE_CLIENT=sdk): the AWS SDK at the URL the Alien binding names; a receive can be aborted. */
+/** The reader for an SQS queue (ATOM_PUSH_QUEUE_CLIENT auto or sdk): the AWS SDK at the URL the Alien binding names; a receive can be aborted. */
 export const createSdkPushQueue = ({
 	ctx,
 }: {

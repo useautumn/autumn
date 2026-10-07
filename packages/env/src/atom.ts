@@ -81,23 +81,29 @@ const modeEnvOf = ({
 	};
 };
 
-/** The Alien binding reads the linked queue unless ATOM_PUSH_QUEUE_CLIENT=sdk opts into the AWS SDK at the queue's URL. */
+/** Alien tags each queue binding with its service; only an SQS queue has a URL the AWS SDK can read. */
+const sqsQueueUrlOf = ({ binding }: { binding: string }): string | null => {
+	const { service, queueUrl } = JSON.parse(binding);
+	if (service !== "sqs" || typeof queueUrl !== "string") return null;
+	return queueUrl;
+};
+
+/** ATOM_PUSH_QUEUE_CLIENT=auto (the default) reads an SQS queue with the AWS SDK and any other with the Alien binding; binding or sdk forces one. */
 const sdkPushQueueUrlOf = ({
 	runtimeEnv,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
 }): string | null => {
-	const client = runtimeEnv.ATOM_PUSH_QUEUE_CLIENT?.trim() || "binding";
-	if (client !== "binding" && client !== "sdk")
-		throw new Error("ATOM_PUSH_QUEUE_CLIENT is either binding or sdk");
+	const client = runtimeEnv.ATOM_PUSH_QUEUE_CLIENT?.trim() || "auto";
+	if (client !== "auto" && client !== "binding" && client !== "sdk")
+		throw new Error("ATOM_PUSH_QUEUE_CLIENT is auto, binding or sdk");
 	const binding = runtimeEnv.ALIEN_PUSHES_BINDING?.trim();
 	if (client === "binding" || !binding) return null;
-	const queueUrl = JSON.parse(binding).queueUrl;
-	if (typeof queueUrl !== "string")
-		throw new Error(
-			"ALIEN_PUSHES_BINDING names no queueUrl for the SDK to read",
-		);
-	return queueUrl;
+	const queueUrl = sqsQueueUrlOf({ binding });
+	if (queueUrl || client === "auto") return queueUrl;
+	throw new Error(
+		"ALIEN_PUSHES_BINDING names no SQS queueUrl for the SDK to read",
+	);
 };
 
 /** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
@@ -174,7 +180,7 @@ export function createAtomEnv(
 		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
 			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
 		),
-		/** The pushes queue's URL where the AWS SDK is opted in to read it; null where the binding reads it or no queue is linked. */
+		/** The pushes queue's URL where the AWS SDK reads it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,
 	};

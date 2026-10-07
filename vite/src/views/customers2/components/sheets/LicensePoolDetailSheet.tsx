@@ -3,6 +3,7 @@ import { CopyButton, InfoRow } from "@autumn/ui";
 import { ChartBarIcon, HashIcon } from "@phosphor-icons/react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCustomerContext } from "../../customer/CustomerContext";
@@ -52,7 +53,7 @@ export function LicensePoolDetailSheet() {
 	}
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
+		<SheetBody>
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
@@ -93,6 +94,6 @@ export function LicensePoolDetailSheet() {
 			</SheetSection>
 
 			<LicenseAssignedEntities licensePlanId={pool.license_plan_id} />
-		</div>
+		</SheetBody>
 	);
 }

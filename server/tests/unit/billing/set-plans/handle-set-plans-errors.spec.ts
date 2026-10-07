@@ -309,11 +309,13 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 					immediateStartsAt: Date.now(),
 					currentEpochMs: Date.now(),
 				}),
+				params: {},
 				autumnBillingPlan,
 				immediatePhaseTransition: {
 					outgoingCustomerProducts: [],
 					incomingCustomerProducts: [],
 					keptCustomerProducts: [],
+					replacedCustomerProducts: [],
 				},
 			}),
 		).resolves.toBeUndefined();
@@ -332,11 +334,13 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 					immediateStartsAt: Date.now(),
 					currentEpochMs: Date.now(),
 				}),
+				params: {},
 				autumnBillingPlan,
 				immediatePhaseTransition: {
 					outgoingCustomerProducts: [],
 					incomingCustomerProducts: [],
 					keptCustomerProducts: [],
+					replacedCustomerProducts: [],
 				},
 			}),
 		).rejects.toThrow("2 assigned, but the incoming plan grants 1");

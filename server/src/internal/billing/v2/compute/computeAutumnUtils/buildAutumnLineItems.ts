@@ -1,5 +1,6 @@
 import {
 	type BillingContext,
+	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	isAllocatedV2CustomerEntitlement,
 	type LineItem,
@@ -18,6 +19,8 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts,
 	billingContext,
 	includeArrearLineItems = false,
+	carriesUsage,
+	creditsUnusedTime = () => true,
 }: {
 	ctx: AutumnContext;
 	newCustomerProducts: FullCusProduct[];
@@ -25,6 +28,9 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts?: FullCusProduct[];
 	billingContext: BillingContext;
 	includeArrearLineItems?: boolean;
+	carriesUsage?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
+	/** A plan nothing was charged for has no unused time to credit. */
+	creditsUnusedTime?: (customerProduct: FullCusProduct) => boolean;
 }) => {
 	const { logger } = ctx;
 	const customerProductsToDelete = [
@@ -46,7 +52,9 @@ export const buildAutumnLineItems = ({
 					// carried-over balance is billed at the next cycle end on the new
 					// plan instead (billing it here would charge a full cycle of rent
 					// mid-cycle and double-bill the carried balance).
-					cusEntFilter: (cusEnt) => !isAllocatedV2CustomerEntitlement(cusEnt),
+					cusEntFilter: (cusEnt) =>
+						!isAllocatedV2CustomerEntitlement(cusEnt) &&
+						!carriesUsage?.(cusEnt),
 				},
 				options: {
 					includePeriodDescription: true,
@@ -67,14 +75,16 @@ export const buildAutumnLineItems = ({
 	arrearLineItems = arrearLineItems.filter((lineItem) => lineItem.amount !== 0);
 
 	// Get line items for ongoing cus product
-	const deletedLineItems = customerProductsToDelete.flatMap((customerProduct) =>
-		getRefundLineItems({
-			ctx,
-			customerProduct,
-			billingContext,
-			priceFilters: { excludeOneOffPrices: true },
-		}),
-	);
+	const deletedLineItems = customerProductsToDelete
+		.filter(creditsUnusedTime)
+		.flatMap((customerProduct) =>
+			getRefundLineItems({
+				ctx,
+				customerProduct,
+				billingContext,
+				priceFilters: { excludeOneOffPrices: true },
+			}),
+		);
 
 	const newLineItems = newCustomerProducts.flatMap((newCustomerProduct) =>
 		customerProductToLineItems({

@@ -45,9 +45,11 @@ export const savedRow = ({
 	entity = null,
 	startsAt = PAST,
 	endsAt = null,
+	periodEndsAtAfterReset = null,
 	scheduled,
 	canceling = false,
 	pastDue = false,
+	unbilledByStripe = false,
 	onLiveSubscription,
 	externalId = null,
 }: {
@@ -57,9 +59,11 @@ export const savedRow = ({
 	entity?: string | null;
 	startsAt?: number;
 	endsAt?: number | null;
+	periodEndsAtAfterReset?: number | null;
 	scheduled?: boolean;
 	canceling?: boolean;
 	pastDue?: boolean;
+	unbilledByStripe?: boolean;
 	onLiveSubscription?: boolean;
 	externalId?: string | null;
 }): TimelineRow => ({
@@ -74,9 +78,11 @@ export const savedRow = ({
 		(testPlan.kind !== "free" && testPlan.kind !== "oneOff"),
 	startsAt,
 	endsAt,
+	periodEndsAtAfterReset,
 	scheduled: scheduled ?? startsAt > NOW,
 	canceling,
 	pastDue,
+	unbilledByStripe,
 	externalId,
 });
 
@@ -135,5 +141,6 @@ export const policiesFor = ({
 	canceling: "keepCancellation",
 	pastDue: "continue",
 	liveRows: "carry",
+	unbilledRows: "recreate",
 	...overrides,
 });

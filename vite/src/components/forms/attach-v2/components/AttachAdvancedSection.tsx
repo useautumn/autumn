@@ -1,115 +1,35 @@
-import {
-	type Feature,
-	isFreeProductV2,
-	isOneOffProductV2,
-} from "@autumn/shared";
-import {
-	Button,
-	DateInputUnix,
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-	IconCheckbox,
-	Switch,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { addDays } from "date-fns";
-import { useState } from "react";
-import {
-	AdvancedSection,
-	AdvancedToggleRow,
-	ConfigRow,
-} from "@/components/forms/shared/advanced-section";
+import { isFreeProductV2, isOneOffProductV2 } from "@autumn/shared";
+import { Switch } from "@autumn/ui";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
+import { BillingOptionSections } from "@/components/forms/shared/billing-option-sections/BillingOptionSections";
+import type { BillingOptionSummary } from "@/components/forms/shared/billing-option-sections/types/billingOptionSectionTypes";
 import {
-	addCustomLineItem,
-	CustomLineItemRows,
-	removeCustomLineItem,
-	updateCustomLineItem,
-} from "@/components/forms/shared/CustomLineItemRows";
-import { AppliedDiscountRow } from "@/components/forms/shared/discount-row/AppliedDiscountRow";
-import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
+	anchorSummary,
+	carryOverSummary,
+	changedTo,
+	dateSummary,
+	discountsSummary,
+	formatOptionDate,
+	prorationSummary,
+	renewsSummary,
+	staysAs,
+	switchSummary,
+} from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
+import { CarryOverConfigRow } from "@/components/forms/shared/CarryOverConfigRow";
+import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import {
+	DISCOUNTS_FIELDS,
+	DiscountsFieldGroup,
+} from "@/components/forms/shared/discount-row/DiscountsFieldGroup";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useOrg } from "@/hooks/common/useOrg";
-import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
-import {
-	addDiscount,
-	removeDiscount,
-	toggleRemovedRewardId,
-	updateDiscount,
-} from "../utils/discountUtils";
-
-const BACKDATE_START_YEAR_LOOKBACK = 25;
-
-function FeatureSelectDropdown({
-	features,
-	selectedFeatureIds,
-	onChange,
-}: {
-	features: Feature[];
-	selectedFeatureIds: string[];
-	onChange: ({ featureIds }: { featureIds: string[] }) => void;
-}) {
-	const isAllSelected = selectedFeatureIds.length === 0;
-	const [open, setOpen] = useState(false);
-
-	const label = isAllSelected
-		? "All Features"
-		: `${selectedFeatureIds.length} feature${selectedFeatureIds.length !== 1 ? "s" : ""} selected`;
-
-	return (
-		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="secondary"
-					size="mini"
-					className={cn(
-						"gap-1 w-full justify-between",
-						open && "btn-secondary-active",
-					)}
-				>
-					{label}
-					<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-(--anchor-width)">
-				<DropdownMenuCheckboxItem
-					checked={isAllSelected}
-					onCheckedChange={() => onChange({ featureIds: [] })}
-				>
-					All Features
-				</DropdownMenuCheckboxItem>
-				{features.length > 0 && <DropdownMenuSeparator />}
-				{features.map((feature) => {
-					const isChecked = selectedFeatureIds.includes(feature.id);
-					return (
-						<DropdownMenuCheckboxItem
-							key={feature.id}
-							checked={isChecked}
-							onCheckedChange={(checked) => {
-								const newIds = checked
-									? [...selectedFeatureIds, feature.id]
-									: selectedFeatureIds.filter((id) => id !== feature.id);
-								onChange({ featureIds: newIds });
-							}}
-						>
-							{feature.name}
-						</DropdownMenuCheckboxItem>
-					);
-				})}
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
+import { AttachOverrideLineItemsRow } from "./AttachOverrideLineItemsRow";
+import { AttachPlanScheduleRow } from "./AttachPlanScheduleRow";
+import { AttachStartDateRow } from "./AttachStartDateRow";
 
 export function AttachAdvancedSection() {
 	const {
@@ -149,10 +69,6 @@ export function AttachAdvancedSection() {
 		customer?.customer_products?.some(
 			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
 		) || (customer?.extra_customer_entitlements?.length ?? 0) > 0;
-
-	const [overrideLineItemsEnabled, setOverrideLineItemsEnabled] = useState(
-		customLineItems.length > 0,
-	);
 	const {
 		hasActiveSubscription,
 		hasOutgoing,
@@ -165,6 +81,7 @@ export function AttachAdvancedSection() {
 		isNoChargesAllowed,
 		canChooseBillingCycle,
 		createsNewStripeSubscription,
+		createsRecurringSubscription,
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
@@ -174,16 +91,6 @@ export function AttachAdvancedSection() {
 		!!product &&
 		!isFreeProductV2({ items: product.items }) &&
 		!isOneOffProductV2({ items: product.items });
-
-	const allowBackdatedStartDate = createsNewStripeSubscription;
-	let startDateDescription = "Schedule the plan to start on a future date";
-	if (allowBackdatedStartDate) {
-		startDateDescription =
-			"Start the new subscription on a past or future date";
-	}
-	if (isMultiPlan) {
-		startDateDescription = "Backdate every plan to the same start date";
-	}
 
 	const rules = getBillingOptionRules({
 		flow: "attach",
@@ -212,322 +119,315 @@ export function AttachAdvancedSection() {
 	const endDateMin = Math.max(Date.now(), attachStartsAt ?? 0);
 	const resetsBillingCycleNow =
 		resetBillingCycle && billingCycleAnchorMode === "now";
-
-	const handleAddDiscount = () => {
-		form.setFieldValue("discounts", addDiscount(discounts));
-	};
-
-	const toggleRemovedReward = (rewardId: string) =>
-		form.setFieldValue(
-			"removedRewardIds",
-			toggleRemovedRewardId({ removedRewardIds, rewardId }),
-		);
-
-	const handleAddCustomLineItem = () => {
-		form.setFieldValue("customLineItems", addCustomLineItem(customLineItems));
-	};
-
-	const handleRemoveCustomLineItem = ({ index }: { index: number }) => {
-		form.setFieldValue(
-			"customLineItems",
-			removeCustomLineItem(customLineItems, index),
-		);
-	};
-
-	const handleUpdateCustomLineItem = ({
-		index,
-		field,
-		value,
-	}: {
-		index: number;
-		field: "amount" | "description";
-		value: string;
-	}) => {
-		form.setFieldValue(
-			"customLineItems",
-			updateCustomLineItem({ lineItems: customLineItems, index, field, value }),
-		);
-	};
-
-	const moreOptions = (
-		<>
-			{showChargeTax && (
-				<ConfigRow
-					title="Charge Tax"
-					description="Calculate tax automatically via Stripe"
-					action={
-						<Switch
-							checked={chargeTax}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("chargeTax", !!checked)
-							}
-						/>
-					}
-				/>
-			)}
-
-			{rules.startDate.visible && (
-				<ConfigRow
-					title="Start Date"
-					description={startDateDescription}
-					expanded={startDate !== null}
-					action={
-						<Switch
-							checked={startDate !== null}
-							onCheckedChange={(checked) =>
-								form.setFieldValue(
-									"startDate",
-									checked
-										? addDays(Date.now(), isMultiPlan ? -1 : 1).getTime()
-										: null,
-								)
-							}
-						/>
-					}
-				>
-					<DateInputUnix
-						unixDate={startDate}
-						setUnixDate={(value) => form.setFieldValue("startDate", value)}
-						disablePastDates={!allowBackdatedStartDate}
-						disableFutureDates={isMultiPlan}
-						minUnixDate={allowBackdatedStartDate ? undefined : Date.now()}
-						maxUnixDate={isMultiPlan ? Date.now() : undefined}
-						fromYear={
-							allowBackdatedStartDate
-								? new Date().getFullYear() - BACKDATE_START_YEAR_LOOKBACK
-								: undefined
-						}
-						withTime
-					/>
-				</ConfigRow>
-			)}
-
-			{rules.endDate.visible && (
-				<EndDateConfigRow
-					endDate={endDate}
-					minUnixDate={endDateMin}
-					onEndDateChange={(value) => form.setFieldValue("endDate", value)}
-				/>
-			)}
-
-			{rules.carryOverBalances.visible && (
-				<ConfigRow
-					title="Carry Over Balances"
-					description="Preserve existing feature balances when switching plans"
-					expanded={carryOverBalances}
-					action={
-						<Switch
-							checked={carryOverBalances}
-							onCheckedChange={(checked) => {
-								form.setFieldValue("carryOverBalances", !!checked);
-								if (!checked)
-									form.setFieldValue("carryOverBalanceFeatureIds", []);
-							}}
-						/>
-					}
-				>
-					<FeatureSelectDropdown
-						features={features}
-						selectedFeatureIds={carryOverBalanceFeatureIds}
-						onChange={({ featureIds }) =>
-							form.setFieldValue("carryOverBalanceFeatureIds", featureIds)
-						}
-					/>
-				</ConfigRow>
-			)}
-
-			{rules.carryOverUsages.visible && (
-				<ConfigRow
-					title="Carry Over Usages"
-					description="Preserve existing usage counts when switching plans"
-					expanded={carryOverUsages}
-					action={
-						<Switch
-							checked={carryOverUsages}
-							onCheckedChange={(checked) => {
-								form.setFieldValue("carryOverUsages", !!checked);
-								if (!checked)
-									form.setFieldValue("carryOverUsageFeatureIds", []);
-							}}
-						/>
-					}
-				>
-					<FeatureSelectDropdown
-						features={features}
-						selectedFeatureIds={carryOverUsageFeatureIds}
-						onChange={({ featureIds }) =>
-							form.setFieldValue("carryOverUsageFeatureIds", featureIds)
-						}
-					/>
-				</ConfigRow>
-			)}
-
-			<ConfigRow
-				title="Override Line Items"
-				description="Replace default invoice line items with custom amounts"
-				expanded={overrideLineItemsEnabled}
-				action={
-					<Switch
-						checked={overrideLineItemsEnabled}
-						onCheckedChange={(checked) => {
-							setOverrideLineItemsEnabled(!!checked);
-							if (!checked) form.setFieldValue("customLineItems", []);
-						}}
-					/>
-				}
-			>
-				<CustomLineItemRows
-					lineItems={customLineItems}
-					onAdd={handleAddCustomLineItem}
-					onUpdate={handleUpdateCustomLineItem}
-					onRemove={handleRemoveCustomLineItem}
-				/>
-			</ConfigRow>
-
-			{rules.newBillingSubscription.visible && (
-				<ConfigRow
-					title="New Billing Subscription"
-					description="Create a separate billing cycle instead of merging with existing"
-					action={
-						<Switch
-							checked={newBillingSubscription}
-							onCheckedChange={(checked) =>
-								handleBillingCycleChange({
-									createNewCycle: !!checked,
-								})
-							}
-						/>
-					}
-				/>
-			)}
-
-			{rules.resetBillingCycle.visible && (
-				<BillingCycleAnchorConfigRow
-					enabled={resetBillingCycle}
-					mode={billingCycleAnchorMode}
-					customAnchor={billingCycleAnchorDate}
-					minUnixDate={endDateMin}
-					maxUnixDate={endDate ? endDate - 1_000 : undefined}
-					allowCustomAnchor={!isMultiPlan}
-					onEnabledChange={(enabled) => {
-						form.setFieldValue("resetBillingCycle", enabled);
-						if (enabled && billingCycleAnchorMode === "now") {
-							handleScheduleChange("immediate");
-						}
-					}}
-					onModeChange={(mode) => {
-						form.setFieldValue("billingCycleAnchorMode", mode);
-						if (mode === "now" && resetBillingCycle) {
-							handleScheduleChange("immediate");
-						}
-					}}
-					onCustomAnchorChange={(anchor) =>
-						form.setFieldValue("billingCycleAnchorDate", anchor)
-					}
-				/>
-			)}
-
-			{rules.skipBilling.visible && (
-				<ConfigRow
-					title="Skip Billing"
-					description="Attach the plan without making changes in Stripe"
-					action={
-						<Switch
-							checked={noBillingChanges}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("noBillingChanges", !!checked)
-							}
-						/>
-					}
-				/>
-			)}
-		</>
-	);
-
-	// A multi-plan attach drops "More Options" entirely unless something in it
-	// is still visible.
-	const hasMoreOptions =
-		!isMultiPlan || rules.startDate.visible || rules.resetBillingCycle.visible;
+	const proration = showProrationBehavior ? effectiveProrationBehavior : "none";
+	const scheduledStartsAt = getAttachScheduledStartDate({
+		previewData: previewQuery.data,
+	});
+	const chargesFullPriceNow =
+		!rules.proration.visible &&
+		!isMultiPlan &&
+		isPaidRecurringProduct &&
+		!noBillingChanges &&
+		!formValues.grantFree;
+	let stripeOutcome: BillingOptionSummary = null;
+	if (createsRecurringSubscription)
+		stripeOutcome = staysAs("Creates subscription");
+	else if (hasActiveSubscription)
+		stripeOutcome = staysAs("Updates current subscription");
+	const anchorMode = isMultiPlan ? "now" : billingCycleAnchorMode;
 
 	return (
-		<AdvancedSection moreOptions={hasMoreOptions ? moreOptions : undefined}>
-			<DiscountsConfigRow
-				discounts={discounts}
-				description="Apply percentage or fixed-amount discounts to this plan"
-				productId={product?.id}
-				onAdd={handleAddDiscount}
-				onUpdate={({ index, rewardId }) =>
-					form.setFieldValue(
-						"discounts",
-						updateDiscount(discounts, index, { reward_id: rewardId }),
-					)
-				}
-				onRemove={({ index }) =>
-					form.setFieldValue("discounts", removeDiscount(discounts, index))
-				}
-				excludedRewardIds={appliedDiscounts.map((discount) => discount.id)}
-				appliedDiscounts={appliedDiscounts.map((discount) => (
-					<AppliedDiscountRow
-						key={discount.id}
-						discount={discount}
-						removed={removedRewardIds.includes(discount.id)}
-						onToggleRemoved={() => toggleRemovedReward(discount.id)}
-					/>
-				))}
-			/>
-
-			{rules.proration.visible && (
-				<ProrationBehaviorConfigRow
-					rule={rules.proration}
-					value={showProrationBehavior ? effectiveProrationBehavior : "none"}
-					onChange={handleProrationBehaviorChange}
-				/>
-			)}
-
-			{rules.planSchedule.visible && (
-				<AdvancedToggleRow
-					label="Plan Schedule"
-					description="When the new plan should take effect"
-				>
-					<IconCheckbox
-						variant="secondary"
-						size="sm"
-						checked={isImmediateSelected || resetsBillingCycleNow}
-						disabled={resetsBillingCycleNow}
-						onCheckedChange={() => handleScheduleChange("immediate")}
-						className={cn(
-							"min-w-[76px] px-2 text-xs rounded-r-none",
-							!isImmediateSelected && !resetsBillingCycleNow && "border-r-0",
-						)}
-					>
-						Immediately
-					</IconCheckbox>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span className="inline-flex">
-								<IconCheckbox
-									variant="secondary"
-									size="sm"
-									checked={isEndOfCycleSelected && !resetsBillingCycleNow}
-									disabled={!hasOutgoing || resetsBillingCycleNow}
-									onCheckedChange={() => handleScheduleChange("end_of_cycle")}
-									className={cn(
-										"min-w-[76px] px-2 text-xs rounded-l-none",
-										!isEndOfCycleSelected && "border-l-0",
-									)}
-								>
-									End of cycle
-								</IconCheckbox>
-							</span>
-						</TooltipTrigger>
-						{!hasOutgoing && (
-							<TooltipContent>
-								Only available when transitioning from an existing plan
-							</TooltipContent>
-						)}
-					</Tooltip>
-				</AdvancedToggleRow>
-			)}
-		</AdvancedSection>
+		<BillingOptionSections
+			sections={{
+				charges: [
+					{
+						id: "initialCharge",
+						visible: chargesFullPriceNow,
+						summary: staysAs(
+							trialEnabled ? "Charged after trial" : "Full price now",
+						),
+					},
+					{
+						id: "discounts",
+						visible: rules.discounts.visible,
+						summary: discountsSummary({
+							discounts,
+							removedRewardIds,
+							appliedCount: appliedDiscounts.length,
+						}),
+						row: (
+							<DiscountsFieldGroup
+								form={form}
+								fields={DISCOUNTS_FIELDS}
+								description="Apply percentage or fixed-amount discounts to this plan"
+								productId={product?.id}
+								appliedDiscounts={appliedDiscounts}
+							/>
+						),
+					},
+					{
+						id: "proration",
+						visible: rules.proration.visible,
+						locked: rules.proration.disabled,
+						summary: prorationSummary({
+							value: proration,
+							defaultValue: "none",
+						}),
+						row: (
+							<ProrationBehaviorConfigRow
+								rule={rules.proration}
+								value={proration}
+								onChange={handleProrationBehaviorChange}
+							/>
+						),
+					},
+					{
+						id: "chargeTax",
+						visible: showChargeTax,
+						summary: chargeTax ? staysAs("Tax on") : changedTo("No tax"),
+						row: (
+							<ConfigRow
+								title="Charge Tax"
+								description="Calculate tax automatically via Stripe"
+								action={
+									<Switch
+										checked={chargeTax}
+										onCheckedChange={(checked) =>
+											form.setFieldValue("chargeTax", !!checked)
+										}
+									/>
+								}
+							/>
+						),
+					},
+					{
+						id: "overrideLineItems",
+						visible: rules.overrideLineItems.visible,
+						summary: switchSummary({
+							enabled: customLineItems.length > 0,
+							changedText: "Custom line items",
+						}),
+						row: (
+							<AttachOverrideLineItemsRow
+								lineItems={customLineItems}
+								onLineItemsChange={(lineItems) =>
+									form.setFieldValue("customLineItems", lineItems)
+								}
+							/>
+						),
+					},
+				],
+				timing: [
+					{
+						id: "startsNow",
+						visible:
+							startDate === null && effectivePlanSchedule !== "end_of_cycle",
+						summary: staysAs("Starts now"),
+					},
+					{
+						id: "planSchedule",
+						visible: rules.planSchedule.visible,
+						locked: resetsBillingCycleNow,
+						summary: isEndOfCycleSelected
+							? changedTo(
+									scheduledStartsAt
+										? `End of cycle (${formatOptionDate(scheduledStartsAt)})`
+										: "End of cycle",
+								)
+							: null,
+						row: (
+							<AttachPlanScheduleRow
+								isImmediateSelected={isImmediateSelected}
+								isEndOfCycleSelected={isEndOfCycleSelected}
+								hasOutgoing={hasOutgoing}
+								locked={resetsBillingCycleNow}
+								onChange={handleScheduleChange}
+							/>
+						),
+					},
+					{
+						id: "startDate",
+						visible: rules.startDate.visible,
+						summary:
+							startDate === null
+								? null
+								: changedTo(
+										`${startDate < Date.now() ? "Backdated to" : "Starts"} ${formatOptionDate(startDate)}`,
+									),
+						row: (
+							<AttachStartDateRow
+								startDate={startDate}
+								isMultiPlan={isMultiPlan}
+								allowBackdate={createsNewStripeSubscription}
+								onStartDateChange={(value) =>
+									form.setFieldValue("startDate", value)
+								}
+							/>
+						),
+					},
+					{
+						id: "endDate",
+						visible: rules.endDate.visible,
+						summary: dateSummary({ label: "Ends", date: endDate }),
+						row: (
+							<EndDateConfigRow
+								endDate={endDate}
+								minUnixDate={endDateMin}
+								onEndDateChange={(value) =>
+									form.setFieldValue("endDate", value)
+								}
+							/>
+						),
+					},
+					{
+						id: "resetBillingCycle",
+						visible: rules.resetBillingCycle.visible,
+						summary: anchorSummary({
+							enabled: resetBillingCycle,
+							mode: anchorMode,
+							customAnchor: billingCycleAnchorDate,
+						}),
+						row: (
+							<BillingCycleAnchorConfigRow
+								enabled={resetBillingCycle}
+								mode={billingCycleAnchorMode}
+								customAnchor={billingCycleAnchorDate}
+								minUnixDate={endDateMin}
+								maxUnixDate={endDate ? endDate - 1_000 : undefined}
+								allowCustomAnchor={!isMultiPlan}
+								onEnabledChange={(enabled) => {
+									form.setFieldValue("resetBillingCycle", enabled);
+									if (enabled && billingCycleAnchorMode === "now") {
+										handleScheduleChange("immediate");
+									}
+								}}
+								onModeChange={(mode) => {
+									form.setFieldValue("billingCycleAnchorMode", mode);
+									if (mode === "now" && resetBillingCycle) {
+										handleScheduleChange("immediate");
+									}
+								}}
+								onCustomAnchorChange={(anchor) =>
+									form.setFieldValue("billingCycleAnchorDate", anchor)
+								}
+							/>
+						),
+					},
+					{
+						id: "renews",
+						visible: !isEndOfCycleSelected,
+						summary: renewsSummary({
+							startsAt: previewQuery.data?.next_cycle?.starts_at,
+						}),
+					},
+				],
+				balances: [
+					{
+						id: "balancesReset",
+						visible: !carryOverBalances && !carryOverUsages,
+						summary: staysAs("Balances and usage reset"),
+					},
+					{
+						id: "carryOverBalances",
+						visible: rules.carryOverBalances.visible,
+						summary: carryOverSummary({
+							enabled: carryOverBalances,
+							featureIds: carryOverBalanceFeatureIds,
+							noun: "balances",
+						}),
+						row: (
+							<CarryOverConfigRow
+								title="Carry Over Balances"
+								description="Preserve existing feature balances when switching plans"
+								features={features}
+								value={{
+									enabled: carryOverBalances,
+									featureIds: carryOverBalanceFeatureIds,
+								}}
+								onChange={({ enabled, featureIds }) => {
+									form.setFieldValue("carryOverBalances", enabled);
+									form.setFieldValue("carryOverBalanceFeatureIds", featureIds);
+								}}
+							/>
+						),
+					},
+					{
+						id: "carryOverUsages",
+						visible: rules.carryOverUsages.visible,
+						summary: carryOverSummary({
+							enabled: carryOverUsages,
+							featureIds: carryOverUsageFeatureIds,
+							noun: "usage",
+						}),
+						row: (
+							<CarryOverConfigRow
+								title="Carry Over Usages"
+								description="Preserve existing usage counts when switching plans"
+								features={features}
+								value={{
+									enabled: carryOverUsages,
+									featureIds: carryOverUsageFeatureIds,
+								}}
+								onChange={({ enabled, featureIds }) => {
+									form.setFieldValue("carryOverUsages", enabled);
+									form.setFieldValue("carryOverUsageFeatureIds", featureIds);
+								}}
+							/>
+						),
+					},
+				],
+				stripe: [
+					{
+						id: "subscriptionOutcome",
+						visible: !newBillingSubscription && !noBillingChanges,
+						summary: stripeOutcome,
+					},
+					{
+						id: "newBillingSubscription",
+						visible: rules.newBillingSubscription.visible,
+						summary: switchSummary({
+							enabled: newBillingSubscription,
+							changedText: "New subscription",
+						}),
+						row: (
+							<ConfigRow
+								title="New Billing Subscription"
+								description="Create a separate billing cycle instead of merging with existing"
+								action={
+									<Switch
+										checked={newBillingSubscription}
+										onCheckedChange={(checked) =>
+											handleBillingCycleChange({ createNewCycle: !!checked })
+										}
+									/>
+								}
+							/>
+						),
+					},
+					{
+						id: "skipBilling",
+						visible: rules.skipBilling.visible,
+						summary: switchSummary({
+							enabled: noBillingChanges,
+							changedText: "Skips Stripe",
+						}),
+						row: (
+							<ConfigRow
+								title="Skip Billing"
+								description="Attach the plan without making changes in Stripe"
+								action={
+									<Switch
+										checked={noBillingChanges}
+										onCheckedChange={(checked) =>
+											form.setFieldValue("noBillingChanges", !!checked)
+										}
+									/>
+								}
+							/>
+						),
+					},
+				],
+			}}
+		/>
 	);
 }

@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEnv } from "@/utils/envUtils";
@@ -45,7 +46,7 @@ export function UpcomingInvoiceSheet({
 	});
 
 	return (
-		<div className="flex h-full flex-col overflow-y-auto">
+		<SheetBody>
 			<SheetHeader
 				title={
 					<div className="flex items-center gap-2">
@@ -152,6 +153,6 @@ export function UpcomingInvoiceSheet({
 					View subscription
 				</Button>
 			</div>
-		</div>
+		</SheetBody>
 	);
 }

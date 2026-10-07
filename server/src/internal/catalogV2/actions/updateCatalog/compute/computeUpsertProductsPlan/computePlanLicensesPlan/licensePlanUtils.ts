@@ -21,6 +21,19 @@ export const upsertProductPlanToLicenses = ({
 	upsert.row.baseFullProduct?.licenses ??
 	[];
 
+/** A link's license plan id after this batch's renames — the same internal row keeps one link. */
+export const projectedLicensePlanId = ({
+	link,
+	productStatesContext,
+}: {
+	link: FullPlanLicense;
+	productStatesContext: ProductStatesContext;
+}): string =>
+	findFullProductByInternalId({
+		internalId: link.license_internal_product_id,
+		productStatesContext,
+	})?.id ?? link.product.id;
+
 /** Child rows this parent may still be linked to — current, mint source, or demoted. */
 const childSourceInternalIds = ({
 	child,

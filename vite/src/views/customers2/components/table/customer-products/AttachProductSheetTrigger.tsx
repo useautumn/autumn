@@ -16,7 +16,7 @@ import {
 } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useOpenSetPlans } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/useOpenSetPlans";
-import { usePrefetchSubscriptionPicker } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/usePrefetchSubscriptionPicker";
+import { usePrefetchSetPlans } from "@/views/customers2/components/sheets/set-plans-subscription/hooks/usePrefetchSetPlans";
 
 export function AttachProductSheetTrigger() {
 	const { setSheet } = useSheetStore();
@@ -27,7 +27,7 @@ export function AttachProductSheetTrigger() {
 	};
 
 	const openSetPlans = useOpenSetPlans();
-	usePrefetchSubscriptionPicker();
+	usePrefetchSetPlans();
 
 	return (
 		<div

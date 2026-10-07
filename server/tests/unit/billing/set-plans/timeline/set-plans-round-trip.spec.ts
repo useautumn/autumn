@@ -59,10 +59,20 @@ const executeAndReread = ({
 		billingContext,
 		undeclaredPlans,
 	});
-	const executed = applyAutumnBillingPlanToFullCustomer({
+	const applied = applyAutumnBillingPlanToFullCustomer({
 		fullCustomer: billingContext.fullCustomer,
 		autumnBillingPlan,
 	});
+	// Stripe execution links each started row to the subscription that bills it.
+	const executed = {
+		...applied,
+		customer_products: applied.customer_products.map((customerProduct) =>
+			customerProduct.status === CusProductStatus.Scheduled ||
+			customerProduct.subscription_ids?.length
+				? customerProduct
+				: { ...customerProduct, subscription_ids: ["sub_live"] },
+		),
+	};
 	const rerun = setupSetPlansTimeline({
 		ctx,
 		billingContext: withCustomer({ billingContext, fullCustomer: executed }),

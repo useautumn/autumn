@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -175,6 +176,7 @@ export function InvoiceDetailSheet({
 		enabled:
 			invoiceIsStripe &&
 			(invoice?.status === InvoiceStatus.Paid ||
+				invoice?.status === InvoiceStatus.Open ||
 				invoice?.status === InvoiceStatus.Draft),
 	});
 
@@ -275,16 +277,15 @@ export function InvoiceDetailSheet({
 	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
 	const isFullyRefunded =
 		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
-	// Vercel invoices before the mapping existed can't be refunded from Autumn.
-	const vercelRefundBlocked =
-		invoiceProcessor === "vercel" && !invoiceMetadata.vercel_invoice_id;
-	const canRefund =
-		invoiceIsStripe &&
+	const isVercelInvoice = invoiceProcessor === "vercel";
+	// Stripe invoices refund via credit notes; Vercel ones only through Vercel.
+	const showVercelRefund =
+		isVercelInvoice &&
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded &&
-		!metadataLoading &&
-		!metadataError &&
-		!vercelRefundBlocked;
+		!metadataError;
+	// Vercel invoices before the mapping existed can't be refunded from Autumn.
+	const canRefund = showVercelRefund && !!invoiceMetadata.vercel_invoice_id;
 	const canVoid =
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
@@ -296,12 +297,16 @@ export function InvoiceDetailSheet({
 	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
 		invoiceIsStripe &&
+		!metadataLoading &&
+		!isVercelInvoice &&
 		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Draft ||
 			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const canIssueCreditNote =
 		invoiceIsStripe &&
+		!metadataLoading &&
+		!isVercelInvoice &&
 		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Paid);
@@ -417,7 +422,7 @@ export function InvoiceDetailSheet({
 			onSelect: () => openUrl(hostedInvoiceUrl),
 		});
 	}
-	if (canRefund || (vercelRefundBlocked && !isFullyRefunded)) {
+	if (showVercelRefund) {
 		menuActions.push({
 			label: canRefund ? "Refund invoice" : "Refund via Vercel support",
 			icon: <ArrowCounterClockwiseIcon size={16} />,
@@ -437,7 +442,7 @@ export function InvoiceDetailSheet({
 	}
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
+		<SheetBody>
 			<div className="p-4">
 				<div className="flex items-center gap-2 text-sm font-medium text-tertiary-foreground">
 					<span>Invoice</span>
@@ -584,7 +589,7 @@ export function InvoiceDetailSheet({
 					invoice={invoice}
 				/>
 			)}
-		</div>
+		</SheetBody>
 	);
 }
 

@@ -86,10 +86,17 @@ const insertImmediateCustomerProduct = ({
 		}),
 		...firstPhaseTiming({ billingContext, startsLater }),
 	};
+	const carryOverUsages =
+		attachBillingContext.currentCustomerProduct && !startsLater
+			? billingContext.carryOverUsages
+			: undefined;
 	const customerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
-		params: { no_billing_changes: billingContext.skipBillingChanges },
+		params: {
+			no_billing_changes: billingContext.skipBillingChanges,
+			carry_over_usages: carryOverUsages,
+		},
 	});
 
 	if (replacedCustomerProduct && !startsLater) {
@@ -101,6 +108,11 @@ const insertImmediateCustomerProduct = ({
 		result: { insertCustomerProduct: customerProduct },
 		endedAt: segment.endsAt,
 	});
+	// Stripe keeps a pending cancellation through an item update, so the recreated row stays canceling.
+	if (segment.inheritsCancellation && replacedCustomerProduct) {
+		customerProduct.canceled = true;
+		customerProduct.canceled_at = replacedCustomerProduct.canceled_at;
+	}
 	if (billingContext.skipBillingChanges) {
 		customerProduct.scheduled_ids =
 			attachBillingContext.currentCustomerProduct?.scheduled_ids;
