@@ -9,10 +9,13 @@ export type SlotProcessorContext = {
 	logger: AutumnLogger;
 };
 
+/** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */
+export type CheckAnswer = { json: string; allowed: boolean };
+
 /** Everything one slot does: decide checks, and take in the subjects Autumn sends. Answered here, or on the thread that owns the slot. */
 export type SlotProcessor = {
-	/** The API's check response at the caller's version, as the JSON body it is sent as; rejects with CannotAnswerError for a check the API must answer. */
-	check(params: { request: CheckRequest }): Promise<string>;
+	/** The API's check response at the caller's version; rejects with CannotAnswerError for a check the API must answer. */
+	check(params: { request: CheckRequest }): Promise<CheckAnswer>;
 	/**
 	 * A `subjects.set` body as JSON text, routed by its customer: parsed once, on the owner thread, which refuses a body
 	 * for another customer with InvalidPushError. False when the subject was read before the one held, and so ignored.

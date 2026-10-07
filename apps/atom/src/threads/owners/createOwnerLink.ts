@@ -1,4 +1,7 @@
-import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
+import type {
+	CheckAnswer,
+	SlotProcessor,
+} from "../../processor/types/slotProcessor.js";
 import { checkRequestToWire, replyToError } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type { OwnerCallBody, OwnerReply } from "./types/ownerCall.js";
@@ -42,7 +45,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 			}
 	}
 
-	async function call(body: OwnerCallBody): Promise<string | boolean> {
+	async function call(body: OwnerCallBody): Promise<CheckAnswer | boolean> {
 		if (!port || waiting.size >= MAX_CALLS_IN_FLIGHT)
 			throw new OwnerUnavailableError({ thread });
 		const id = nextId++;
@@ -67,7 +70,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					type: "check",
 					atomId,
 					request: checkRequestToWire({ request }),
-				})) as string,
+				})) as CheckAnswer,
 			setSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "setSubject",

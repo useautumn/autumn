@@ -458,15 +458,9 @@ describe("a check Atom does not answer itself", () => {
 });
 
 describe("the request line", () => {
-	const notSampled = () => spyOn(Math, "random").mockReturnValue(0.5);
-	const sampled = () => spyOn(Math, "random").mockReturnValue(0);
-	afterEach(() => spyOn(Math, "random").mockRestore());
-
-	test("every request leaves one line (status, method, path, duration and who it was about) except an answered check, which leaves one in a hundred", async () => {
+	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
 		const { app, logged } = createDeployedApp();
-		notSampled();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		await app.request("/v1/balances.check", checkMessages());
 
 		expect(logged.map((line) => line.level)).toEqual(["info"]);
 		expect(logged[0]?.fields).toEqual({
@@ -481,45 +475,46 @@ describe("the request line", () => {
 		});
 	});
 
-	test("a sampled answered check leaves its line: status, method, path, duration and who it was about", async () => {
+	test("every answered check leaves a line with its verdict at res.allowed, where its body has it, and no body", async () => {
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		sampled();
-		await app.request("/v1/balances.check", checkMessages());
 
-		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
-		expect(logged[1]?.fields).toMatchObject({
-			statusCode: 200,
-			req: {
-				method: "POST",
-				path: "/v1/balances.check",
-				customer_id: "cus_1",
-				feature_id: "messages",
-			},
-		});
-		expect(logged[1]?.message).toMatch(
-			/^\[200\] POST \/v1\/balances\.check \d+ms$/,
+		await app.request("/v1/balances.check", checkMessages());
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
 		);
-	});
 
-	test("one in a hundred successful answers carries its body, without the balance's breakdown", async () => {
-		const { app, logged } = createDeployedApp();
-		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		sampled();
-
-		await app.request("/v1/balances.check", checkMessages());
-
-		const line = logged.at(-1)?.fields as {
-			res: { allowed: boolean; balance: object };
-		};
-		expect(line.res.allowed).toBe(true);
-		expect(line.res.balance).not.toHaveProperty("breakdown");
+		expect(logged.map((line) => line.level)).toEqual(["info", "info", "info"]);
+		for (const [index, allowed] of [
+			[1, true],
+			[2, false],
+		] as const) {
+			expect(logged[index]?.fields).toEqual({
+				statusCode: 200,
+				durationMs: expect.any(Number),
+				req: {
+					method: "POST",
+					path: "/v1/balances.check",
+					customer_id: "cus_1",
+					entity_id: undefined,
+					feature_id: "messages",
+				},
+				res: { allowed },
+			});
+			expect(logged[index]?.message).toMatch(
+				/^\[200\] POST \/v1\/balances\.check \d+ms$/,
+			);
+		}
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {
 		const { app, logged } = createDeployedApp();
 
-		await app.request("/v1/balances.check", checkMessages({ token: null }));
+		const refused = await app.request(
+			"/v1/balances.check",
+			checkMessages({ token: null }),
+		);
 		await app.request(
 			"/v1/subjects.set",
 			post({ headers: withToken(ATOM_TOKEN), body: { state: {} } }),
@@ -529,8 +524,9 @@ describe("the request line", () => {
 		expect(logged[0]?.fields).toMatchObject({
 			statusCode: 401,
 			req: { method: "POST", path: "/v1/balances.check" },
-			res: { code: "atom_token_required" },
+			res: await refused.json(),
 		});
+		expect(logged[0]?.fields).toHaveProperty("res.code", "atom_token_required");
 		expect(logged[1]?.fields).toMatchObject({
 			statusCode: 400,
 			errorCode: "invalid_request",

@@ -24,12 +24,14 @@ export type AtomFailure = {
 	target?: string;
 };
 
-/** Set along the way: the body read once for every layer, the data the request's token opens, and how it failed. */
+/** Set along the way: the body read once for every layer, the data the request's token opens, an answered check's verdict, and how it failed. */
 export type AtomHttpEnv = {
 	Variables: {
 		/** The request's JSON, or undefined when it carried none that parses. */
 		body: unknown;
 		slots: Slots;
+		/** Set only when Atom answered a check itself, so its line need not read the body. */
+		allowed?: boolean;
 		failure?: AtomFailure;
 	};
 };

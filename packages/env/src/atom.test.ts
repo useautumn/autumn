@@ -199,4 +199,17 @@ describe("atom env", () => {
 		// Too small for more than the threads themselves: nothing is held, and every check reads its row.
 		expect(heldBytes({ cpus: 2, memory: 0.5 * GiB })).toBe(0);
 	});
+
+	test("the main thread logs its health every 10s unless told otherwise; an interval that would spin or overflow a timer is refused", () => {
+		const everyMs = (value?: string) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_HEALTH_LOG_EVERY_MS: value,
+			}).ATOM_HEALTH_LOG_EVERY_MS;
+
+		expect(everyMs()).toBe(10_000);
+		expect(everyMs("60000")).toBe(60_000);
+		for (const bad of ["0", "-5", "NaN", "abc", "1.5", "999", "3000000000"])
+			expect(() => everyMs(bad)).toThrow();
+	});
 });

@@ -12,8 +12,13 @@ export const createSlotProcessor = ({
 }: {
 	ctx: SlotProcessorContext;
 }): SlotProcessor => ({
-	check: async (params) =>
-		checkResponseToJson({ response: check({ ctx, ...params }) }),
+	check: async (params) => {
+		const response = check({ ctx, ...params });
+		return {
+			json: checkResponseToJson({ response }),
+			allowed: response.allowed,
+		};
+	},
 	setSubject: async (params) =>
 		setSubject({ ctx, subject: subjectPushToStoredSubject(params) }),
 });
