@@ -9,7 +9,8 @@ export type RateLimitLayerSummary = {
 	versionLimits: { upTo: ApiVersion; limit: number; key: string }[];
 	windowMs: number;
 	store: RateLimitConfig["store"];
-	overLimit: NonNullable<RateLimitConfig["overLimit"]>;
+	/** "degrade" runs the handler degraded; set per route group, on org caps only. */
+	overLimit: "reject" | "degrade";
 	/** The counter key for versions no `versionLimits` entry covers. */
 	key: string;
 };

@@ -11,8 +11,10 @@ const KEY_PLACEHOLDERS = {
 
 export const toRateLimitLayerSummary = ({
 	type,
+	overLimit = "reject",
 }: {
 	type: RateLimitType;
+	overLimit?: RateLimitLayerSummary["overLimit"];
 }): RateLimitLayerSummary => {
 	const config = RATE_LIMIT_CONFIGS[type];
 	const versionLimits = Object.entries(config.versionedLimit ?? {}).map(
@@ -32,7 +34,7 @@ export const toRateLimitLayerSummary = ({
 		versionLimits,
 		windowMs: config.windowMs,
 		store: config.store,
-		overLimit: config.overLimit ?? "reject",
+		overLimit,
 		key: toRateLimitKey({ ctx: KEY_PLACEHOLDERS, rateLimitType: type }),
 	};
 };

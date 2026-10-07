@@ -40,7 +40,7 @@ const setupOrgOverCap = async ({ customerId }: { customerId: string }) => {
 		orgKey: ctx.org.id,
 		limits: {
 			[RateLimitType.TrackOrg]: 0,
-			[RateLimitType.CheckOrg]: 0,
+			[RateLimitType.CheckCustomerGetOrg]: 0,
 		},
 	}));
 
