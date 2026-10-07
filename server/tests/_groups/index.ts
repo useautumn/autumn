@@ -30,6 +30,7 @@ import { customers } from "./domains/crud/customers";
 import { entities } from "./domains/crud/entities";
 import { licenses } from "./domains/licenses";
 import { misc } from "./domains/misc";
+import { unit } from "./domains/unit";
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
 import { all } from "./all";
@@ -72,6 +73,7 @@ const allGroups: TestGroup[] = [
 	webhooks,
 	advanced,
 	misc,
+	unit,
 ];
 
 export const getAllGroups = (): TestGroup[] => allGroups;
