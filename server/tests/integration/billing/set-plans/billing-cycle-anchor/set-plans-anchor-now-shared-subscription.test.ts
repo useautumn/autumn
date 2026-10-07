@@ -271,3 +271,73 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now shared sub: with proration none, a customer-level add-on's usage is still billed and reset, as Stripe does")}`,
+	async () => {
+		const { pro, premium } = entityPlans();
+		const addOn = products.base({
+			id: "words-addon",
+			isAddOn: true,
+			items: [
+				items.monthlyPrice({ price: 10 }),
+				items.consumableWords({ includedUsage: 0 }),
+			],
+		});
+		const { customerId, autumnV1, autumnV2_4, ctx, advancedTo, entities } =
+			await initScenario({
+				customerId: "set-plans-anchor-now-shared-addon-none",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium, addOn] }),
+					s.entities({ count: 1, featureId: TestFeature.Users }),
+				],
+				actions: [
+					s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+					s.billing.attach({ productId: addOn.id }),
+					s.advanceTestClock({ days: 10 }),
+					s.track({ featureId: TestFeature.Words, value: 100, timeout: 2000 }),
+				],
+			});
+
+		const renewalAt = addMonths(advancedTo, 1).getTime();
+		const stripeFlatTotal = await previewStripeTwinResetNowTotal({
+			ctx,
+			customerId,
+			advancedTo,
+			prorationBehavior: "none",
+			changes: [{ removeUnitAmount: 20, addUnitAmount: 50 }],
+		});
+		// Stripe closes the metered period under none too; the usage itself is Autumn's: 100 words × $0.05.
+		const expectedTotal = new Decimal(stripeFlatTotal).plus(5).toNumber();
+		expect(expectedTotal).toBe(55);
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			phases: [
+				resetNowPhase({ planIds: [premium.id], prorationBehavior: "none" }),
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(expectedTotal);
+
+		await autumnV2_4.billing.setPlans(params);
+
+		const { invoices } =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(invoices?.map(({ total }) => total)).toContain(expectedTotal);
+		await expectStripeCycleCorrect({
+			ctx,
+			customerId,
+			anchorMs: advancedTo,
+			periodEndMs: renewalAt,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Words,
+			usage: 0,
+			nextResetAt: renewalAt,
+		});
+	},
+);

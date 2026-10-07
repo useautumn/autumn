@@ -76,10 +76,9 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 		});
 	};
 
-	// Stripe re-bills every item when the cycle resets now; under none it only moves the period.
+	// Stripe closes every item's period when the cycle resets now; finalizeLineItems waives the flat lines under none.
 	const rebillsUnchangedPlans =
-		billingContext.requestedBillingCycleAnchor === "now" &&
-		billingContext.requestedProrationBehavior !== "none";
+		billingContext.requestedBillingCycleAnchor === "now";
 	const isRebilledByReset = (customerProduct: FullCusProduct) =>
 		rebillsUnchangedPlans &&
 		!customerProductUpdateById.has(customerProduct.id) &&
