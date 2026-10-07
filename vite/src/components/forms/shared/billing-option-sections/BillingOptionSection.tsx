@@ -23,11 +23,11 @@ export function BillingOptionSection({
 		<Collapsible
 			open={open}
 			onOpenChange={onOpenChange}
-			className="flex flex-col py-3.5"
+			className="flex flex-col"
 		>
 			<CollapsibleTrigger
 				aria-controls={panelId}
-				className="group/billing-section flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+				className="group/billing-section flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-sm py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
 			>
 				<ChevronRightIcon
 					className={cn(
@@ -51,7 +51,7 @@ export function BillingOptionSection({
 				inert={!open}
 				className="overflow-hidden"
 			>
-				<div className="flex flex-col gap-4 pt-4 pb-0.5">
+				<div className="flex flex-col gap-4 pt-0.5 pb-4">
 					{section.options.map((option) => (
 						<Fragment key={option.id}>{option.row}</Fragment>
 					))}
