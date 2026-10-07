@@ -10,6 +10,15 @@ const IMMEDIATE_PHASE_INDEX = 0;
 export const isImmediatePhase = ({ phaseIndex }: { phaseIndex: number }) =>
 	phaseIndex === IMMEDIATE_PHASE_INDEX;
 
+/** A new single phase starting now is a plain plan set, with no schedule timing to show. */
+export const isUnscheduledPlanSet = ({
+	phases,
+	isExistingSchedule,
+}: {
+	phases: { startsAt: number | null }[];
+	isExistingSchedule: boolean;
+}) => !isExistingSchedule && phases.length === 1 && phases[0]?.startsAt == null;
+
 /** The first phase starts further ahead than set_plans treats as now, so billing waits until then. */
 export const firstPhaseStartsLater = ({
 	phases,
