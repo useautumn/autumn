@@ -15,12 +15,14 @@ import type {
 	RunDetail,
 	RunEvent,
 	RunFile,
+	RunLive,
 	RunSummary,
 	StripeAccount,
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
 import {
+	BRANCH_HISTORY_RUNS,
 	CreateRunBody,
 	isFailedFileStatus,
 } from "../../../src/api/contract.ts";
@@ -543,7 +545,10 @@ const summary = (run: RunDetail): RunSummary => {
 		etaP90Ms: _etaP90,
 		...rest
 	} = run;
-	return rest;
+	if (!isLive(run)) return { ...rest, live: null };
+	const workers: RunLive["workers"] = {};
+	for (const w of run.workers) workers[w.status] = (workers[w.status] ?? 0) + 1;
+	return { ...rest, live: { workers, etaMs: run.etaMs } };
 };
 
 // ---- costs ----------------------------------------------------------------
@@ -668,6 +673,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		passed: 0,
 		failed: 0,
 		newFailures: null,
+		live: null,
 		createdBy: baseline ? SYSTEM : pickUser(r),
 		createdAt: iso(createdAt),
 		startedAt: iso(startedAt),
@@ -866,6 +872,7 @@ const startLiveRun = ({
 		passed: 0,
 		failed: 0,
 		newFailures: null,
+		live: null,
 		createdBy,
 		createdAt: iso(createdAt),
 		startedAt: progress > 0 ? iso(startedAt) : null,
@@ -1428,16 +1435,48 @@ export const handle = ({
 		});
 	}
 
+	if (route === "GET /runs/branches") {
+		const branch = url.searchParams.get("branch");
+		const byBranch = new Map<string, RunSummary[]>();
+		for (const r of allSummaries())
+			if (!isLive(r) && (!branch || r.branch.includes(branch)))
+				byBranch.set(r.branch, [...(byBranch.get(r.branch) ?? []), r]);
+		const list = [...byBranch].map(([name, list]) => ({
+			branch: name,
+			runs: list.slice(0, BRANCH_HISTORY_RUNS),
+		}));
+		const limit = Number(url.searchParams.get("limit") ?? 30);
+		const start = Number(url.searchParams.get("cursor") ?? 0);
+		const end = start + limit;
+		return ok({
+			branches: list.slice(start, end),
+			nextCursor: end < list.length ? String(end) : null,
+		});
+	}
+
+	if (route === "GET /runs/stats") {
+		const since = Date.parse(url.searchParams.get("since") ?? "");
+		const today = allSummaries().filter(
+			(r) => Date.parse(r.createdAt) >= since,
+		);
+		return ok({
+			runs: today.length,
+			usd: today.reduce((sum, r) => sum + r.cost.usd, 0),
+		});
+	}
+
 	if (route === "GET /runs") {
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
 		const purpose = url.searchParams.get("purpose");
 		const baseline = url.searchParams.get("baseline");
+		const exactBranch = url.searchParams.get("exactBranch");
 		const list = allSummaries()
 			.filter((r) =>
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
+			.filter((r) => !exactBranch || r.branch === exactBranch)
 			.filter((r) => !purpose || r.purpose === purpose)
 			.filter((r) => !baseline || r.baseline === (baseline === "true"))
 			.filter((r) => {

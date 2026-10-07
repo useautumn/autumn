@@ -1,14 +1,17 @@
 import {
 	keepPreviousData,
 	useMutation,
+	useQueries,
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { useState } from "react";
 import { z } from "zod";
 import type { ReinitScope } from "../../../src/api/contract.ts";
 import {
 	ApiKey,
 	Branch,
+	BranchesPage,
 	Capacity,
 	Catalog,
 	Costs,
@@ -21,6 +24,7 @@ import {
 	Me,
 	RetryBrokenAccountsResponse,
 	RunDetail,
+	RunStats,
 	RunSummary,
 	RunsPage,
 	StripeAccount,
@@ -33,6 +37,8 @@ import type { LogLine } from "./liveCache.ts";
 export const qk = {
 	me: ["me"] as const,
 	runs: (filter: RunsFilter) => ["runs", filter] as const,
+	runBranches: (filter: BranchesFilter) => ["runBranches", filter] as const,
+	runStats: (since: string) => ["runStats", since] as const,
 	run: (id: string) => ["run", id] as const,
 	fileLog: (id: string, file: string) => ["run", id, "log", file] as const,
 	liveLog: (id: string) => ["run", id, "live-log"] as const,
@@ -54,6 +60,13 @@ export type RunsFilter = {
 	purpose?: RunSummary["purpose"];
 	/** Only runs that feed (true) or don't feed (false) the dev baseline. */
 	baseline?: boolean;
+	branch?: string;
+	exactBranch?: string;
+	cursor?: string;
+	limit: number;
+};
+
+export type BranchesFilter = {
 	branch?: string;
 	cursor?: string;
 	limit: number;
@@ -77,15 +90,85 @@ export const useMe = () =>
 		staleTime: 60_000,
 	});
 
-export const useRuns = (filter: RunsFilter) =>
+const runsQuery = (filter: RunsFilter) => ({
+	queryKey: qk.runs(filter),
+	queryFn: () => api({ path: `/runs${qs({ ...filter })}`, schema: RunsPage }),
+});
+
+/** `pollMs` refetches on a timer even while live: worker counts and ETA aren't pushed per change. */
+export const useRuns = (
+	filter: RunsFilter,
+	{ pollMs }: { pollMs?: number } = {},
+) =>
 	useQuery({
-		queryKey: qk.runs(filter),
+		...runsQuery(filter),
+		refetchInterval: pollMs ?? whileDisconnected,
+		placeholderData: keepPreviousData,
+	});
+
+/** Pages fetched so far, one query per cursor (so live patches still reach each page); resets with the filter. */
+const useCursorPages = <F, P extends { nextCursor: string | null }>({
+	filter,
+	query,
+}: {
+	filter: F;
+	query: (cursor: string | undefined) => {
+		queryKey: readonly unknown[];
+		queryFn: () => Promise<P>;
+	};
+}) => {
+	const resetKey = JSON.stringify(filter);
+	const [state, setState] = useState({ resetKey, cursors: [] as string[] });
+	const cursors = state.resetKey === resetKey ? state.cursors : [];
+	const results = useQueries({
+		queries: [undefined, ...cursors].map((cursor) => ({
+			...query(cursor),
+			refetchInterval: whileDisconnected,
+			placeholderData: cursor === undefined ? keepPreviousData : undefined,
+		})),
+	});
+	const pages = results.flatMap((r) => (r.data ? [r.data] : []));
+	const last = results.at(-1);
+	const nextCursor = last?.data?.nextCursor ?? null;
+	return {
+		pages,
+		isLoading: results[0]?.isLoading ?? true,
+		error: results.find((r) => r.error)?.error ?? null,
+		hasMore: nextCursor !== null,
+		isFetchingMore: cursors.length > 0 && !!last?.isLoading,
+		loadMore: () => {
+			if (!nextCursor || last?.isFetching) return;
+			setState({ resetKey, cursors: [...cursors, nextCursor] });
+		},
+	};
+};
+
+export const useRunPages = (filter: Omit<RunsFilter, "cursor">) =>
+	useCursorPages({
+		filter,
+		query: (cursor) => runsQuery({ ...filter, cursor }),
+	});
+
+export const useBranchPages = (filter: Omit<BranchesFilter, "cursor">) =>
+	useCursorPages({
+		filter,
+		query: (cursor) => {
+			const full = { ...filter, cursor };
+			return {
+				queryKey: qk.runBranches(full),
+				queryFn: () =>
+					api({ path: `/runs/branches${qs(full)}`, schema: BranchesPage }),
+			};
+		},
+	});
+
+/** Runs created since `since` and their cost; polled since every run tick would change it. */
+export const useRunStats = (since: string) =>
+	useQuery({
+		queryKey: qk.runStats(since),
 		queryFn: () =>
-			api({
-				path: `/runs${qs({ ...filter })}`,
-				schema: RunsPage,
-			}),
-		refetchInterval: whileDisconnected,
+			api({ path: `/runs/stats${qs({ since })}`, schema: RunStats }),
+		refetchInterval: 30_000,
 		placeholderData: keepPreviousData,
 	});
 
