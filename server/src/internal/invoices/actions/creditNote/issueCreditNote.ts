@@ -11,6 +11,7 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
+import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "../../InvoiceService";
 import { assertInvoiceNotReissued } from "../../invoiceUtils/assertInvoiceNotReissued";
@@ -100,6 +101,14 @@ export const issueCreditNote = async ({
 	});
 	assertInvoiceNotReissued({ invoiceId, stripeInvoice });
 	assertCreditable({ invoiceId, stripeInvoice });
+	// Vercel moves the money and was already sent this invoice, so a Stripe-only credit would desync it.
+	if (
+		await resolveVercelInstallationId({ stripeCli, invoice: stripeInvoice })
+	) {
+		throw invalidRequest(
+			`Invoice ${invoiceId} is billed through Vercel and can't be credited; refund it through Vercel instead`,
+		);
+	}
 
 	const lineItems = params.lines
 		? await invoiceLineItemRepo.getByInvoiceId({ db: ctx.db, invoiceId })
