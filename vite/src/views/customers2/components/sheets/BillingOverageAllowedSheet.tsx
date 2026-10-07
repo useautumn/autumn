@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -140,7 +141,7 @@ export function BillingOverageAllowedSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={isEdit ? "Edit Overage Allowed" : "Add Overage Allowed"}
 					description="Control whether usage can exceed the granted balance for a feature."
@@ -203,7 +204,7 @@ export function BillingOverageAllowedSheet() {
 						{isEdit ? "Save" : "Add"}
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

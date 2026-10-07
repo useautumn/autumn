@@ -20,6 +20,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -283,7 +284,7 @@ export function RecordUsageSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Record Usage"
 					description={
@@ -448,7 +449,7 @@ export function RecordUsageSheet() {
 							: "Record"}
 					</ShortcutButton>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

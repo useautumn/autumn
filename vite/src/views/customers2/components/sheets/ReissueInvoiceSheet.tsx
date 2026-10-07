@@ -35,6 +35,7 @@ import type Stripe from "stripe";
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -255,7 +256,7 @@ function ReissueInvoiceForm({
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Reissue Invoice"
 					description={
@@ -563,7 +564,7 @@ function ReissueInvoiceForm({
 						</DropdownMenu>
 					</div>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

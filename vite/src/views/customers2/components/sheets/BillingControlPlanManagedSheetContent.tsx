@@ -12,6 +12,7 @@ import {
 } from "@/components/billing-controls/billingControlSheets";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -73,7 +74,7 @@ export function BillingControlPlanManagedSheetContent() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={BILLING_CONTROL_LABELS[controlKey]}
 					description={`Inherited from ${planName}`}
@@ -135,7 +136,7 @@ export function BillingControlPlanManagedSheetContent() {
 						</Button>
 					)}
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }
