@@ -5,11 +5,13 @@ import {
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "@autumn/postgres";
+import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,
 } from "../../processor/subject/subjectErrors.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import {
 	BillingPlanRowCollisionError,
 	CommitterStoppedError,
@@ -24,7 +26,11 @@ import type {
 	FlushOutcome,
 	FlushRejection,
 } from "../types/committer.js";
-import { flushLandedEarlier, runFlush } from "./runFlush.js";
+import {
+	flushLandedEarlier,
+	runFlush,
+	writesSnapshotRows,
+} from "./runFlush.js";
 
 /** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */
 const isOwnershipLost = (cause: unknown): boolean =>
@@ -153,11 +159,12 @@ const runWithRetries = async ({
 	const { signal } = scope.state.stop;
 	const sleep = ctx.sleep ?? defaultSleep;
 	let delayMs = config.retry.initialBackoffMs;
+	let attempted = flush;
 	for (let attempt = 1; ; attempt++) {
 		try {
-			const outcomes = await runFlush({ ctx, flush });
+			const outcomes = await runFlush({ ctx, config, flush: attempted });
 			reportStoreRecovered({ scope, attempt });
-			return outcomes;
+			return keyedByOriginalCalls({ flush, attempted, outcomes });
 		} catch (cause) {
 			if (attempt > 1 && isOwnershipLost(cause)) {
 				const landed = await flushLandedEarlier({ ctx, flush });
@@ -170,6 +177,16 @@ const runWithRetries = async ({
 				}
 			}
 			if (!isTransientPostgresError({ error: cause })) throw cause;
+			// Two transient refusals of a snapshot-carrying flush: the snapshots may be the weight, so they go before the records wait longer.
+			if (
+				attempt === 2 &&
+				attempted.calls.some((call) => writesSnapshotRows({ call }))
+			) {
+				attempted = withoutSnapshotWrites({ flush: attempted });
+				ctx.logger?.warn(
+					"[committer] a flush failed twice with its snapshots attached; retrying it with the customers' snapshots deleted instead",
+				);
+			}
 			reportStoreWaiting({ scope, attempt, cause });
 			await sleep({ delayMs, signal });
 			if (signal.aborted) throw new CommitterStoppedError({ cause });
@@ -191,7 +208,48 @@ const recordCall = ({
 	expectedOffset,
 	records: [record],
 	rows: record.mutation.changes.length,
+	// A record landing alone no longer lands with the rest of its customer's: its snapshot is deleted, not written.
+	snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
 });
+
+/** The same calls with every snapshot deleted instead of written; a call that wrote none is the same object. */
+const withoutSnapshotWrites = ({ flush }: { flush: Flush }): Flush => ({
+	calls: flush.calls.map((call) =>
+		writesSnapshotRows({ call })
+			? {
+					...call,
+					snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
+				}
+			: call,
+	),
+});
+
+/** Outcomes under the calls the caller handed in, when a retry ran stand-in calls for them. */
+const keyedByOriginalCalls = ({
+	flush,
+	attempted,
+	outcomes,
+}: {
+	flush: Flush;
+	attempted: Flush;
+	outcomes: Map<FlushCall, FlushOutcome>;
+}): Map<FlushCall, FlushOutcome> => {
+	if (attempted === flush) return outcomes;
+	const keyed = new Map<FlushCall, FlushOutcome>();
+	flush.calls.forEach((call, index) => {
+		const outcome = outcomes.get(attempted.calls[index] ?? call);
+		if (outcome) keyed.set(call, outcome);
+	});
+	return keyed;
+};
+
+/** The same intent with every customer's rows deleted instead of written. */
+const withSnapshotsDeleted = ({
+	intent,
+}: {
+	intent: SnapshotIntent | undefined;
+}): SnapshotIntent | undefined =>
+	intent && new Map([...intent.keys()].map((key) => [key, "delete" as const]));
 
 type RefusedRecord =
 	| {
@@ -324,10 +382,28 @@ export const landFlush = async ({
 			outcomes.set(call, await landRecordsOneByOne({ scope, call }));
 			return outcomes;
 		}
-		// A lone record already failed alone: it is not re-run, only classified.
+		// A lone record already failed alone: it is not re-run, only classified,
+		// unless its snapshot could be the reason, which must never cost a record.
 		const record = call.records[0];
+		// A delete-only call has no record to classify: it alone is refused, never the calls that landed beside it.
 		if (!record) {
-			throw cause;
+			call.settle.reject(cause);
+			return outcomes;
+		}
+		if (
+			writesSubjectSnapshots(
+				scope.ctx.subjectSnapshotsConfig?.get() ?? { mode: "off" },
+			) &&
+			writesSnapshotRows({ call })
+		) {
+			const deleted = {
+				...call,
+				snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
+			};
+			const landed = await landFlush({ scope, flush: { calls: [deleted] } });
+			const outcome = landed.get(deleted);
+			if (outcome) outcomes.set(call, outcome);
+			return outcomes;
 		}
 		const refused = await settleRefusedRecord({
 			scope,

@@ -6,7 +6,11 @@ import {
 
 /** Drops the customer's resident rows after another writer changed them in Postgres. */
 export const evictCommandSchema = baseCommandSchema
-	.extend({ type: z.literal("evict") })
+	.extend({
+		type: z.literal("evict"),
+		/** The owner rebuilds the customer's snapshot rows after the drop: only for a customer the worker keeps writing, never on a rollback; absent is no. */
+		refreshSnapshots: z.boolean().optional(),
+	})
 	.strict();
 
 export type EvictCommand = z.infer<typeof evictCommandSchema>;

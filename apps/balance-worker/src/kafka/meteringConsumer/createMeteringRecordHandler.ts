@@ -1,3 +1,4 @@
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import {
 	type MeteringFenceApplication,
 	type MeteringRecordApplication,
@@ -225,8 +226,15 @@ export function createMeteringRecordHandler({
 				?.remember({ mutation: record });
 			return undefined;
 		}
+		// A replayed record carries no state, so the row it makes stale is deleted rather than left behind.
 		const applied = ctx.stateStore.applyDurableMutations({
 			records: [{ position, mutation: record }],
+			snapshotIntent: new Map([
+				[
+					meteringIdentityToPartitionKey({ identity: record.identity }),
+					"delete",
+				],
+			]),
 		});
 		const settle = (results: DurableMutationApplyResult[]) => {
 			if (landedOnStore(results))

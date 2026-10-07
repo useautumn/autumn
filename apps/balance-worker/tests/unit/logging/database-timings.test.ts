@@ -96,4 +96,43 @@ describe("database timings", () => {
 		expect(logged[0]?.[1]).toBe("Balance worker database");
 		reporter.stop();
 	});
+
+	test("subject snapshot writes are counted on the database line, and absent from it while nothing was written", () => {
+		const timings = createDatabaseTimings();
+		const logged: unknown[][] = [];
+		let tick = () => {};
+		const reporter = createDatabaseReporter({
+			ctx: {
+				logger: { info: (...args: unknown[]) => logged.push(args) },
+				timings,
+				gate: { snapshot: () => ({ running: 0, queued: 0 }) },
+				schedule: ({ run }) => {
+					tick = run;
+					return () => {};
+				},
+			},
+			config: {
+				deployment: "prod",
+				endpoint: "http://10.0.0.1:8082",
+				poolSize: 32,
+				subjectLoadConcurrency: 16,
+			},
+		});
+		reporter.start();
+		timings.recordSubjectSnapshots({ upserted: 3, deleted: 1 });
+		timings.recordSubjectSnapshots({ upserted: 2, deleted: 0 });
+		timings.recordSubjectSnapshots({ hits: 1 });
+		timings.recordSubjectSnapshots({ misses: 2 });
+		tick();
+		expect(logged[0]?.[0]).toMatchObject({
+			data: {
+				subjectSnapshots: { upserted: 5, deleted: 1, hits: 1, misses: 2 },
+			},
+		});
+		tick();
+		expect((logged[1]?.[0] as { data: object }).data).not.toHaveProperty(
+			"subjectSnapshots",
+		);
+		reporter.stop();
+	});
 });

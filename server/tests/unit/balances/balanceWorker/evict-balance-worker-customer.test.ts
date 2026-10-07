@@ -56,29 +56,36 @@ const notReady = () =>
 	});
 
 describe("evictBalanceWorkerCustomer", () => {
-	test("a server evict names the customer under the request's id, whatever the rollout says", async () => {
-		const h = createHarness();
-		const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-		try {
-			await evictBalanceWorkerCustomer({
-				ctx: h.ctx,
-				customerId: "cus_1",
-				client: h.client,
+	test.each([
+		["false", false],
+		["true", true],
+	])(
+		"a server evict names the customer under the request's id, whatever the rollout says; its snapshot rows are rebuilt only for a customer the worker keeps writing (rollout %s)",
+		async (rollout, refreshSnapshots) => {
+			const h = createHarness();
+			const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = rollout;
+			try {
+				await evictBalanceWorkerCustomer({
+					ctx: h.ctx,
+					customerId: "cus_1",
+					client: h.client,
+				});
+			} finally {
+				if (previousRollout === undefined)
+					delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
+				else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
+			}
+			expect(h.sent).toHaveLength(1);
+			expect(h.sent[0]).toMatchObject({
+				type: "evict",
+				requestId: "req_evict",
+				identity: { customerId: "cus_1", entityId: null },
+				refreshSnapshots,
 			});
-		} finally {
-			if (previousRollout === undefined)
-				delete process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
-			else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
-		}
-		expect(h.sent).toHaveLength(1);
-		expect(h.sent[0]).toMatchObject({
-			type: "evict",
-			requestId: "req_evict",
-			identity: { customerId: "cus_1", entityId: null },
-		});
-		expect(h.queued).toHaveLength(0);
-	});
+			expect(h.queued).toHaveLength(0);
+		},
+	);
 
 	test("an evict a handing-off partition never took is queued for its owner, not dropped", async () => {
 		for (const directFailure of [

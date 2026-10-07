@@ -6,6 +6,7 @@ import {
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { activeSlotEdgeConfig } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
 import { createWorkerEdgeConfigs } from "../../../src/edgeConfig/createWorkerEdgeConfigs.js";
+import { createMemoryS3Client } from "../../fixtures/subjectSnapshotsStore.js";
 
 const ours = "arn:aws:ecs:us-east-2:1:service/autumn/balance-workers-green";
 const theirs = "arn:aws:ecs:us-east-2:1:service/autumn/balance-workers-blue";
@@ -19,26 +20,6 @@ const record = ({
 	flightcontrolBlueArn,
 	updatedAt: new Date().toISOString(),
 });
-/** An S3 with one object per key, so a write lands where the next read looks. */
-const createMemoryS3Client = (): EdgeConfigS3Client => {
-	const objects = new Map<string, string>();
-	return {
-		send: async (command) => {
-			const { Key, Body } = command.input as { Key?: string; Body?: string };
-			if (Body !== undefined) {
-				objects.set(Key ?? "", Body);
-				return {};
-			}
-			const stored = objects.get(Key ?? "");
-			if (stored === undefined) {
-				const missing = new Error("NoSuchKey");
-				missing.name = "NoSuchKey";
-				throw missing;
-			}
-			return { Body: { transformToString: async () => stored } };
-		},
-	};
-};
 const createActiveSlotStore = () =>
 	createEdgeConfigStore({
 		ctx: {
