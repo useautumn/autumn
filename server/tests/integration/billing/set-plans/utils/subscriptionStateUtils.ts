@@ -5,6 +5,7 @@ import {
 	ms,
 	type SetPlansPreviewResponse,
 	type SetPlansPreviewWarning,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -179,4 +180,27 @@ export const setupPausedPro = async ({
 	expect(paused.status).toBe("paused");
 
 	return { ...scenario, pro, paused };
+};
+
+/** The invoices a Stripe subscription raised, oldest first, as totals in major units. */
+export const expectSubscriptionInvoiceTotals = async ({
+	ctx,
+	subscriptionId,
+	totals,
+}: {
+	ctx: TestContext;
+	subscriptionId: string;
+	totals: number[];
+}) => {
+	const { data: invoices } = await ctx.stripeCli.invoices.list({
+		subscription: subscriptionId,
+	});
+	expect(
+		[...invoices].reverse().map((invoice) =>
+			stripeToAtmnAmount({
+				amount: invoice.total,
+				currency: invoice.currency,
+			}),
+		),
+	).toEqual(totals);
 };

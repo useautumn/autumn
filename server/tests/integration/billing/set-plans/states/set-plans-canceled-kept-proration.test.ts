@@ -2,7 +2,7 @@
  * Re-listing a plan whose Stripe subscription was canceled (webhook missed) recreates the subscription on the
  * old period end. Like Stripe's subscriptions.create with a future billing_cycle_anchor, proration_behavior
  * decides the stub until that anchor: none bills nothing, prorate_immediately (and bill_difference, which
- * Stripe has no equivalent for) bills the prorated stub now. phase_start resets the cycle and bills a full period.
+ * Stripe has no equivalent for, by the new-subscription rule) bills the prorated stub now. phase_start resets the cycle and bills a full period.
  *
  * Red (before):  prorate_immediately and bill_difference previewed $0 while Stripe invoiced the stub; phase_start
  *                previewed a credit for the canceled period that Stripe never issues ($6.45, invoiced $20).
@@ -13,6 +13,7 @@ import { expect, test } from "bun:test";
 import type { BillingBehavior, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { calculateNewSubscriptionAnchorStub } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -22,13 +23,17 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { CusService } from "@/internal/customers/CusService";
-import { expectStripeCycleCorrect } from "../billing-cycle-anchor/utils/anchorCycleUtils";
+import {
+	advancePastCycleStart,
+	expectStripeCycleCorrect,
+} from "../billing-cycle-anchor/utils/anchorCycleUtils";
 import {
 	cancelSubscriptionMissingWebhook,
 	expectPlanKept,
 } from "../utils/resyncUtils";
 import {
 	expectLiveSubscriptionCharged,
+	expectSubscriptionInvoiceTotals,
 	findStripeSubscriptionByStatus,
 } from "../utils/subscriptionStateUtils";
 
@@ -41,7 +46,7 @@ const setupCanceledPro = async ({ customerId }: { customerId: string }) => {
 	const pro = products.pro({
 		items: [items.monthlyMessages({ includedUsage: INCLUDED_MESSAGES })],
 	});
-	const { autumnV2_4, ctx, advancedTo } = await initScenario({
+	const { autumnV2_4, ctx, advancedTo, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -70,6 +75,7 @@ const setupCanceledPro = async ({ customerId }: { customerId: string }) => {
 		autumnV2_4,
 		ctx,
 		advancedTo,
+		testClockId: testClockId!,
 		oldPeriodEndMs,
 		customerProductId: customerProducts[0]!.id,
 	};
@@ -109,6 +115,7 @@ const relistAndExpectKeptCycle = async ({
 		autumnV2_4,
 		ctx,
 		advancedTo,
+		testClockId,
 		oldPeriodEndMs,
 		customerProductId,
 	} = await setupCanceledPro({ customerId });
@@ -121,6 +128,12 @@ const relistAndExpectKeptCycle = async ({
 
 	const preview = await autumnV2_4.billing.previewSetPlans(params);
 	expect(preview.total).toBe(stubTotal);
+	expectPreviewNextCycleCorrect({
+		preview,
+		startsAt: oldPeriodEndMs,
+		total: PRO_PRICE,
+		toleranceMs: 1000,
+	});
 
 	await autumnV2_4.billing.setPlans(params);
 
@@ -155,6 +168,18 @@ const relistAndExpectKeptCycle = async ({
 		usage: TRACKED_MESSAGES,
 		nextResetAt: oldPeriodEndMs,
 	});
+
+	// The anchor bills one full renewal, with no separate cycle reset on top.
+	await advancePastCycleStart({
+		ctx,
+		testClockId,
+		cycleStartsAt: oldPeriodEndMs,
+	});
+	await expectSubscriptionInvoiceTotals({
+		ctx,
+		subscriptionId: newSubscription.id,
+		totals: [...(stubTotal > 0 ? [stubTotal] : []), PRO_PRICE],
+	});
 };
 
 const proratedStub = ({
@@ -171,10 +196,21 @@ const proratedStub = ({
 	});
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans canceled kept: none (default) recreates on the old period end and charges nothing until it")}`,
+	`${chalk.yellowBright("set-plans canceled kept: unset proration defaults to none and charges nothing until the old period end")}`,
+	async () => {
+		await relistAndExpectKeptCycle({
+			customerId: "set-plans-canceled-kept-unset",
+			expectedStub: () => 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans canceled kept: none recreates on the old period end and charges nothing until it")}`,
 	async () => {
 		await relistAndExpectKeptCycle({
 			customerId: "set-plans-canceled-kept-none",
+			prorationBehavior: "none",
 			expectedStub: () => 0,
 		});
 	},

@@ -78,10 +78,9 @@ test.concurrent(
 				{ starts_at: "now" as const, plans: [{ plan_id: proTrial.id }] },
 			],
 		};
-		expectPreviewWarning({
-			preview: await autumnV2_4.billing.previewSetPlans(setPlansParams),
-			type: "trial_ended",
-		});
+		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);
+		expectPreviewWarning({ preview, type: "trial_ended" });
+		expect(preview.total).toBe(20);
 		await autumnV2_4.billing.setPlans(setPlansParams);
 
 		const ended = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
