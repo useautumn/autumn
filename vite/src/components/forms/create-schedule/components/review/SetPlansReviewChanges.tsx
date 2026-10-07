@@ -32,8 +32,6 @@ const REVIEW_GROUPS: {
 	},
 ];
 
-const DEFAULT_OPEN_GROUPS = ["plans"];
-
 /** Every group always renders, as a skeleton whenever a preview is loading, so the
  * sheet never jumps and never shows a stale preview. */
 export function SetPlansReviewChanges() {
@@ -49,11 +47,7 @@ export function SetPlansReviewChanges() {
 	return (
 		<div className="flex flex-col">
 			{sections && <ReviewWarnings warnings={sections.warnings} />}
-			<Accordion
-				type="multiple"
-				defaultValue={DEFAULT_OPEN_GROUPS}
-				className="px-4 pt-1"
-			>
+			<Accordion type="multiple" className="px-4 pt-1">
 				{REVIEW_GROUPS.map(({ sectionKey, ...group }) => (
 					<ReviewChangeGroup
 						key={group.value}
