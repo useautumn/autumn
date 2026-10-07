@@ -60,14 +60,16 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 const buildApp = ({
 	type,
 	config,
+	overLimit,
 	key,
 }: {
 	type: RateLimitType;
 	config: RateLimitConfig;
+	overLimit?: "degrade";
 	key: string;
 }) => {
 	const app = new Hono<HonoEnv>();
-	const middleware = rateLimitFactory({ type, config });
+	const middleware = rateLimitFactory({ type, config, overLimit });
 	const seenContexts: { orgRateLimitDegraded?: boolean }[] = [];
 
 	app.use("*", async (c, next) => {
@@ -154,8 +156,8 @@ describe("rateLimitFactory", () => {
 				windowMs: 60_000,
 				scope: RateLimitScope.Org,
 				store: "memory",
-				overLimit: "degrade",
 			},
+			overLimit: "degrade",
 			key: "track_org:org_123:live",
 		});
 

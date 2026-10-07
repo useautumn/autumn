@@ -62,9 +62,11 @@ const warnOrgCapExceeded = ({
 export const rateLimitFactory = ({
 	type,
 	config,
+	overLimit,
 }: {
 	type: RateLimitType;
 	config: RateLimitConfig;
+	overLimit?: "degrade";
 }): ReturnType<typeof rateLimiter> => {
 	const { windowMs } = config;
 
@@ -94,7 +96,7 @@ export const rateLimitFactory = ({
 		limit: dynamicLimit,
 		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
-		...(config.overLimit === "degrade" && { handler: degradeHandler }),
+		...(overLimit === "degrade" && { handler: degradeHandler }),
 	};
 
 	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;
@@ -161,6 +163,33 @@ export const toRateLimitKey = ({
 
 	if (config.scope === RateLimitScope.Org) return baseKey;
 	return `${baseKey}:${ctx.customerId}`;
+};
+
+// Route groups sharing an org counter can answer its cap differently, so each
+// answer gets its own wrapper over the same Redis key.
+const orgLimiters = new Map<string, ReturnType<typeof rateLimiter>>();
+
+export const getOrgLimiterFor = ({
+	type,
+	overLimit,
+}: {
+	type: RateLimitType;
+	overLimit?: "degrade";
+}) => {
+	const orgLimit = RATE_LIMIT_CONFIGS[type].orgLimit;
+	if (!orgLimit) return undefined;
+
+	const cacheKey = `${orgLimit}:${overLimit ?? "reject"}`;
+	let limiter = orgLimiters.get(cacheKey);
+	if (!limiter) {
+		limiter = rateLimitFactory({
+			type: orgLimit,
+			config: RATE_LIMIT_CONFIGS[orgLimit],
+			overLimit,
+		});
+		orgLimiters.set(cacheKey, limiter);
+	}
+	return { type: orgLimit, limiter };
 };
 
 export const getRateLimitKey = ({

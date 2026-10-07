@@ -73,6 +73,24 @@ describe("listRateLimitPolicies", () => {
 		});
 	});
 
+	test("customer reads are their own row on check's counters, rejecting at the cap", () => {
+		const check = findPolicy({ id: "check" });
+		const customerReads = findPolicy({ id: "check_2" });
+
+		expect(check.routes).toContain("POST /v1/check");
+		expect(check.perOrg).toMatchObject({
+			name: "check_org",
+			overLimit: "degrade",
+		});
+		expect(customerReads.routes).toContain("GET /v1/customers/:customer_id");
+		expect(customerReads).toMatchObject({
+			type: "check",
+			sharesCounterWith: ["check"],
+			perCustomer: { name: "check", store: "memory" },
+			perOrg: { name: "check_org", overLimit: "reject" },
+		});
+	});
+
 	test("a row that reuses another row's counter names it", () => {
 		expect(findPolicy({ id: "entities_list" }).sharesCounterWith).toEqual([
 			"list_customers",

@@ -11,29 +11,35 @@ import type {
 	RateLimitPolicySummary,
 } from "./types/rateLimitPolicySummary";
 
+type PolicyRow = {
+	type: RateLimitType;
+	routes: string[] | "*";
+	overLimit?: "degrade";
+};
+
 const ALL_TYPES = Object.keys(RATE_LIMIT_CONFIGS) as RateLimitType[];
 
-const listRoutes = ({ type }: { type: RateLimitType }) => {
-	if (type === RateLimitType.General) return "*" as const;
-	const group = RATE_LIMIT_ROUTE_GROUPS.find((entry) => entry.type === type);
-	return (group?.patterns ?? []).map(({ method, url }) => `${method} ${url}`);
-};
+const isRouted = ({ type }: { type: RateLimitType }) =>
+	RATE_LIMIT_ROUTE_GROUPS.some((group) => group.type === type);
 
-/** A type is its own row unless it is only ever some other limit's org cap. */
-const isOnlyAnOrgCap = ({ type }: { type: RateLimitType }) => {
-	const isRouted = RATE_LIMIT_ROUTE_GROUPS.some((entry) => entry.type === type);
-	const capsAnother = ALL_TYPES.some(
-		(other) => RATE_LIMIT_CONFIGS[other].orgLimit === type,
-	);
-	return capsAnother && !isRouted;
-};
+const isAnOrgCap = ({ type }: { type: RateLimitType }) =>
+	ALL_TYPES.some((other) => RATE_LIMIT_CONFIGS[other].orgLimit === type);
 
-/** Rows in config order, with the general fallback last. */
-const listRowTypes = () =>
-	ALL_TYPES.filter((type) => !isOnlyAnOrgCap({ type })).sort(
-		(a, b) =>
-			Number(a === RateLimitType.General) - Number(b === RateLimitType.General),
-	);
+/** One row per route group, then limits chosen outside the route table, then the general fallback. */
+const listRows = (): PolicyRow[] => [
+	...RATE_LIMIT_ROUTE_GROUPS.map(({ type, patterns, overLimit }) => ({
+		type,
+		routes: patterns.map(({ method, url }) => `${method} ${url}`),
+		overLimit,
+	})),
+	...ALL_TYPES.filter(
+		(type) =>
+			type !== RateLimitType.General &&
+			!isRouted({ type }) &&
+			!isAnOrgCap({ type }),
+	).map((type) => ({ type, routes: [] })),
+	{ type: RateLimitType.General, routes: "*" },
+];
 
 const toLayerTypes = ({ type }: { type: RateLimitType }) => {
 	const config = RATE_LIMIT_CONFIGS[type];
@@ -42,6 +48,14 @@ const toLayerTypes = ({ type }: { type: RateLimitType }) => {
 	}
 	return { perOrg: config.orgLimit, perCustomer: type };
 };
+
+const toRowIds = ({ rows }: { rows: PolicyRow[] }) =>
+	rows.map(({ type }, index) => {
+		const earlierOfType = rows
+			.slice(0, index)
+			.filter((row) => row.type === type).length;
+		return earlierOfType === 0 ? type : `${type}_${earlierOfType + 1}`;
+	});
 
 const listPolicyOverrides = ({
 	perOrg,
@@ -69,13 +83,14 @@ export const listRateLimitPolicies = ({
 }: {
 	overrides: RateLimitOverridesConfig;
 }): RateLimitPolicySummary[] => {
-	const rowTypes = listRowTypes();
-	const layerTypesByRow = rowTypes.map((type) => toLayerTypes({ type }));
+	const rows = listRows();
+	const ids = toRowIds({ rows });
+	const layerTypesByRow = rows.map(({ type }) => toLayerTypes({ type }));
 
-	return rowTypes.map((type, index) => {
+	return rows.map(({ type, routes, overLimit }, index) => {
 		const { perOrg, perCustomer } = layerTypesByRow[index];
 		const ownLayers = [perOrg, perCustomer].filter(Boolean);
-		const sharesCounterWith = rowTypes.filter((_, earlierIndex) => {
+		const sharesCounterWith = ids.filter((_, earlierIndex) => {
 			if (earlierIndex >= index) return false;
 			const earlier = layerTypesByRow[earlierIndex];
 			return [earlier.perOrg, earlier.perCustomer].some(
@@ -84,9 +99,16 @@ export const listRateLimitPolicies = ({
 		});
 
 		return {
-			id: type,
-			routes: listRoutes({ type }),
-			perOrg: perOrg ? toRateLimitLayerSummary({ type: perOrg }) : null,
+			id: ids[index],
+			type,
+			routes,
+			// The group's over-limit answer applies to the orgLimit cap only.
+			perOrg: perOrg
+				? toRateLimitLayerSummary({
+						type: perOrg,
+						overLimit: perCustomer ? overLimit : undefined,
+					})
+				: null,
 			perCustomer: perCustomer
 				? toRateLimitLayerSummary({ type: perCustomer })
 				: null,

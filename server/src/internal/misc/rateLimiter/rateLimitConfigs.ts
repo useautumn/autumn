@@ -8,14 +8,14 @@ export enum RateLimitType {
 	Track = "track",
 	TrackOrg = "track_org",
 	BatchTrack = "batch_track",
-	Check = "check",
-	CheckOrg = "check_org",
+	CheckCustomerGet = "check",
+	CheckCustomerGetOrg = "check_org",
 	Events = "events",
 	Attach = "attach",
 	ListCustomers = "list_customers",
 	EntitiesList = "entities_list",
 	CustomerEntitiesGet = "customer_entities_get",
-	EntitiesGetOrg = "entities_get_org",
+	CustomerEntitiesGetOrg = "entities_get_org",
 	Logs = "logs",
 }
 
@@ -26,6 +26,9 @@ type RoutePattern = {
 
 type RateLimitRouteGroup = {
 	type: Exclude<RateLimitType, RateLimitType.General>;
+	/** "degrade" runs the handler with `ctx.orgRateLimitDegraded` set when the
+	 *  bucket's org cap is hit; the default is a 429 from the limiter. */
+	overLimit?: "degrade";
 	patterns: RoutePattern[];
 };
 
@@ -85,6 +88,7 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	},
 	{
 		type: RateLimitType.Track,
+		overLimit: "degrade",
 		patterns: [
 			route({ method: "POST", url: "/v1/events" }),
 			route({ method: "POST", url: "/v1/track" }),
@@ -105,19 +109,26 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 		],
 	},
 	{
-		type: RateLimitType.Check,
+		type: RateLimitType.CheckCustomerGet,
+		overLimit: "degrade",
 		patterns: [
 			route({ method: "POST", url: "/v1/check" }),
 			route({ method: "POST", url: "/v1/entitled" }),
 			route({ method: "POST", url: "/v1/balances.check" }),
+			route({ method: "POST", url: "/v1/customers" }),
+			route({ method: "POST", url: "/v1/customers.get_or_create" }),
+		],
+	},
+	// Reads have no DB-free answer, so they share check's counters but reject.
+	{
+		type: RateLimitType.CheckCustomerGet,
+		patterns: [
 			route({ method: "GET", url: "/v1/customers/:customer_id" }),
 			route({
 				method: "GET",
 				url: "/v1/customers/:customer_id/entities/:entity_id",
 			}),
-			route({ method: "POST", url: "/v1/customers" }),
 			route({ method: "POST", url: "/v1/customers.get" }),
-			route({ method: "POST", url: "/v1/customers.get_or_create" }),
 		],
 	},
 	{
@@ -133,19 +144,21 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	},
 ];
 
-export const getRateLimitType = (c: Context<HonoEnv>) => {
+export const getRateLimitRouteGroup = (
+	c: Context<HonoEnv>,
+): { type: RateLimitType; overLimit?: "degrade" } => {
 	const method = c.req.method;
 	const path = c.req.path;
 
-	for (const { patterns, type } of RATE_LIMIT_ROUTE_GROUPS) {
+	for (const { patterns, type, overLimit } of RATE_LIMIT_ROUTE_GROUPS) {
 		if (
 			patterns.some((pattern) => matchRoute({ url: path, method, pattern }))
 		) {
-			return type;
+			return { type, overLimit };
 		}
 	}
 
-	return RateLimitType.General;
+	return { type: RateLimitType.General };
 };
 
 export enum RateLimitScope {
@@ -169,8 +182,6 @@ export type RateLimitConfig = {
 	/** Org-wide cap checked before this one; per-customer limits never bind
 	 *  for many-customer storms (2026-06-08 incident). */
 	orgLimit?: RateLimitType;
-	/** "degrade" runs the handler with `ctx.orgRateLimitDegraded` set instead of a 429. */
-	overLimit?: "reject" | "degrade";
 };
 
 export const resolveRateLimit = ({
@@ -225,7 +236,6 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 60_000,
 		scope: RateLimitScope.Org,
 		store: "redis",
-		overLimit: "degrade",
 	},
 	[RateLimitType.BatchTrack]: {
 		limit: 10,
@@ -233,19 +243,18 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
-	[RateLimitType.Check]: {
+	[RateLimitType.CheckCustomerGet]: {
 		limit: 10_000,
 		windowMs: 1000,
 		scope: RateLimitScope.Customer,
 		store: "memory",
-		orgLimit: RateLimitType.CheckOrg,
+		orgLimit: RateLimitType.CheckCustomerGetOrg,
 	},
-	[RateLimitType.CheckOrg]: {
+	[RateLimitType.CheckCustomerGetOrg]: {
 		limit: 240_000,
 		windowMs: 60_000,
 		scope: RateLimitScope.Org,
 		store: "redis",
-		overLimit: "degrade",
 	},
 	[RateLimitType.Events]: {
 		limit: 5,
@@ -281,9 +290,9 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 1000,
 		scope: RateLimitScope.Customer,
 		store: "redis",
-		orgLimit: RateLimitType.EntitiesGetOrg,
+		orgLimit: RateLimitType.CustomerEntitiesGetOrg,
 	},
-	[RateLimitType.EntitiesGetOrg]: {
+	[RateLimitType.CustomerEntitiesGetOrg]: {
 		limit: 90_000,
 		windowMs: 60_000,
 		scope: RateLimitScope.Org,

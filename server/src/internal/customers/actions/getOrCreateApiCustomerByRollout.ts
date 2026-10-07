@@ -1,7 +1,8 @@
-import type {
-	BillingDetailsParams,
-	CheckParams,
-	TrackParams,
+import {
+	type BillingDetailsParams,
+	type CheckParams,
+	RecaseError,
+	type TrackParams,
 } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { assertBillingDetailsWritable } from "@/external/stripe/customers/billingDetails/utils/assertBillingDetailsWritable.js";
@@ -15,7 +16,6 @@ import {
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { throwIfOrgRateLimited } from "@/internal/misc/rateLimiter/throwIfOrgRateLimited.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
@@ -55,9 +55,16 @@ export const getOrCreateApiCustomerByRollout = async ({
 			}
 		: undefined;
 
-	// Valid creations survive the incident: queued for serialized replay.
-	if (ctx.orgRateLimitDegraded) await queueRecovery?.();
-	throwIfOrgRateLimited({ ctx });
+	// Over the org cap a creation cannot run: queue it for serialized replay
+	// and let the SDK retry the 429.
+	if (ctx.orgRateLimitDegraded) {
+		await queueRecovery?.();
+		throw new RecaseError({
+			message: "Rate limit exceeded.",
+			code: "rate_limit_exceeded",
+			statusCode: 429,
+		});
+	}
 
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.
 	if (
