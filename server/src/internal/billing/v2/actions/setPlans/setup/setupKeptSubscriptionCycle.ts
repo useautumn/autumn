@@ -5,10 +5,10 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 	getSmallestInterval,
-	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 
@@ -27,9 +27,6 @@ const keptCustomerProductsOnReplacedSubscription = ({
 	billingContext: CreateScheduleBillingContext;
 	operations: SetPlansTimeline["diff"]["operations"];
 }): FullCusProduct[] => {
-	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
-	if (!replacedSubscriptionId) return [];
-
 	const keptCustomerProductIds = new Set(
 		operations.flatMap((operation) =>
 			operation.type === "keep" ? [operation.customerProductId] : [],
@@ -38,10 +35,7 @@ const keptCustomerProductsOnReplacedSubscription = ({
 	return billingContext.fullCustomer.customer_products.filter(
 		(customerProduct) =>
 			keptCustomerProductIds.has(customerProduct.id) &&
-			isCustomerProductOnStripeSubscription({
-				customerProduct,
-				stripeSubscriptionId: replacedSubscriptionId,
-			}),
+			isOnReplacedStripeSubscription({ billingContext, customerProduct }),
 	);
 };
 
@@ -81,7 +75,7 @@ const backdatedCycleRenewalMs = ({
 };
 
 /**
- * A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it.
+ * A replacement subscription for kept plans continues their paid cycle on the old period end; like Stripe, the stub before it is free under none (the default) and prorated otherwise.
  * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
  */
 export const setupKeptSubscriptionCycle = ({

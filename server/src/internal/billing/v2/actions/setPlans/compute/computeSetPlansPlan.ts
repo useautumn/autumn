@@ -15,6 +15,7 @@ import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooled
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { isOnCanceledReplacedSubscription } from "../utils/isOnCanceledReplacedSubscription";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
 import { nowReplacedCustomerProducts } from "../utils/nowReplacedCustomerProducts";
 import { backdateGapLineItems } from "./backdateGapLineItems";
@@ -23,6 +24,7 @@ import {
 	type SetPlansCustomerProductChanges,
 } from "./diffToCustomerProducts/diffToCustomerProducts";
 import { diffToSchedule } from "./diffToSchedule";
+import { keptCustomerProductsBilledByReplacement } from "./keptCustomerProductsBilledByReplacement";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -105,9 +107,17 @@ export const computeSetPlansPlan = ({
 	const carryOverSourceCustomerProductIds = new Set(
 		replacedCustomerProducts.map(({ id }) => id),
 	);
+	// Finalize drops these stub charges under none, as Stripe's create bills nothing before its anchor.
+	const keptBilledByReplacement = keptCustomerProductsBilledByReplacement({
+		billingContext,
+		keptCustomerProducts,
+	});
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
-		newCustomerProducts: immediateCustomerProducts,
+		newCustomerProducts: [
+			...immediateCustomerProducts,
+			...keptBilledByReplacement,
+		],
 		deletedCustomerProducts: creditedCustomerProducts,
 		billingContext,
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
@@ -121,7 +131,8 @@ export const computeSetPlansPlan = ({
 			!isUnbilledByStripe({
 				customerProduct,
 				now: billingContext.currentEpochMs,
-			}),
+			}) &&
+			!isOnCanceledReplacedSubscription({ billingContext, customerProduct }),
 	});
 
 	const { trialStartedCustomerProducts } = customerProductChanges;
