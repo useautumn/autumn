@@ -1,8 +1,38 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { sql } from "drizzle-orm";
 import { getScopedAutocommitDb } from "@/db/autocommit/withAutocommitDb.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateRecentlyUpdatedNegativeCache } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
+
+type DeferredMarks = {
+	customers: { orgId: string; env: string; customerId: string }[];
+	internalCustomerIds: Set<string>;
+};
+
+const deferredMarks = new AsyncLocalStorage<DeferredMarks>();
+
+/** Holds marks issued during `run` and writes them once it resolves; a rejection drops them. */
+export const withDeferredMarks = async <T>({
+	db,
+	run,
+}: {
+	db: DrizzleCli;
+	run: () => Promise<T>;
+}): Promise<T> => {
+	if (deferredMarks.getStore()) return run();
+	const marks: DeferredMarks = {
+		customers: [],
+		internalCustomerIds: new Set(),
+	};
+	const result = await deferredMarks.run(marks, run);
+	await markCustomersUpdatedAt({ customers: marks.customers });
+	await markCustomersUpdatedAtByInternalIds({
+		db,
+		internalCustomerIds: [...marks.internalCustomerIds],
+	});
+	return result;
+};
 
 const isTransactionHandle = (db?: DrizzleCli): boolean =>
 	!(db && (db as { $client?: unknown }).$client);
@@ -54,6 +84,11 @@ export const markCustomerUpdatedAt = async ({
 	customerId: string;
 	internalCustomerId?: string | null;
 }): Promise<void> => {
+	const deferred = deferredMarks.getStore();
+	if (deferred) {
+		deferred.customers.push({ orgId, env, customerId });
+		return;
+	}
 	await runMark({
 		execute: (markDb) =>
 			markDb.execute(sql`
@@ -78,6 +113,11 @@ export const markCustomersUpdatedAt = async ({
 	db?: DrizzleCli;
 	customers: { orgId: string; env: string; customerId: string }[];
 }): Promise<void> => {
+	const deferred = deferredMarks.getStore();
+	if (deferred) {
+		deferred.customers.push(...customers);
+		return;
+	}
 	// Dedupe: duplicate conflict targets in one multi-row upsert are an error.
 	const byKey = new Map(
 		customers
@@ -131,6 +171,11 @@ export const markCustomersUpdatedAtByInternalIds = async ({
 		...new Set(internalCustomerIds.filter((id): id is string => Boolean(id))),
 	];
 	if (ids.length === 0) return;
+	const deferred = deferredMarks.getStore();
+	if (deferred) {
+		for (const id of ids) deferred.internalCustomerIds.add(id);
+		return;
+	}
 
 	const idList = sql.join(
 		ids.map((id) => sql`${id}`),
