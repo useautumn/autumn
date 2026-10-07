@@ -70,17 +70,19 @@ export type TrackParams = z.infer<typeof TrackParamsSchema>;
 export type TrackQuery = z.infer<typeof TrackQuerySchema>;
 
 // Only batch track exposes the key: each item dedups on its own.
-export const BatchTrackItemSchema = TrackParamsBaseSchema.extend({
-	async: z.boolean().optional().meta({
-		description: "Ignored: batch track always queues its items.",
-	}),
-	idempotency_key: z.string().optional().meta({
-		description:
-			"Deduplicates this item: a second track with the same key within 24 hours is ignored.",
-	}),
-}).refine(hasExactlyOneOfFeatureIdOrEventName.check, {
-	message: hasExactlyOneOfFeatureIdOrEventName.message,
-});
+// Batch always queues, so 2.5 items have no async (V2_4_BatchTrackParamsChange drops it).
+export const BatchTrackItemSchema = TrackParamsBaseSchema.omit({
+	async: true,
+})
+	.extend({
+		idempotency_key: z.string().optional().meta({
+			description:
+				"Deduplicates this item: a second track with the same key within 24 hours is ignored.",
+		}),
+	})
+	.refine(hasExactlyOneOfFeatureIdOrEventName.check, {
+		message: hasExactlyOneOfFeatureIdOrEventName.message,
+	});
 
 export const BatchTrackParamsSchema = z
 	.array(BatchTrackItemSchema)
