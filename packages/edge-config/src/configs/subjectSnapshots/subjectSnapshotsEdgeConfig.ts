@@ -1,8 +1,5 @@
 import { z } from "zod/v4";
-
-/** What the worker does with `subject_snapshots`; written by hand in S3, read at every decision that touches the table. */
-export const BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY =
-	"admin/balance-worker-subject-snapshots.json";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY } from "../../keys.js";
 
 /** An object naming an unknown mode or key is refused whole, and the last good record stays. */
 export const SubjectSnapshotsEdgeConfigSchema = z
@@ -66,3 +63,19 @@ export const servesSubjectSnapshots = ({
 }: {
 	mode: SubjectSnapshotMode;
 }): boolean => mode === "serve";
+
+/** Leaving off stamps writtenAfter, so rows left from an earlier run never reach verify or serve. */
+export const stampSubjectSnapshotsWrittenAfter = ({
+	previous,
+	next,
+	now,
+}: {
+	previous: SubjectSnapshotsEdgeConfig | null;
+	next: SubjectSnapshotsEdgeConfig;
+	now: number;
+}): SubjectSnapshotsEdgeConfig => {
+	const leavesOff =
+		(previous?.mode ?? "off") === "off" &&
+		writesSubjectSnapshots({ mode: next.mode });
+	return leavesOff ? { ...next, writtenAfter: now } : next;
+};
