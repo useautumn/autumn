@@ -7,7 +7,6 @@ import {
 	parseInitializeRequest,
 } from "@autumn/balance-engine";
 import {
-	BalanceWorkerClientError,
 	createBalanceWorkerClient,
 	type PartitionOwner,
 	type TrackReply,
@@ -290,56 +289,29 @@ async function doesNotRetryWorkerErrors(): Promise<void> {
 	}
 }
 
-async function rejectsUnknownHttpErrors(): Promise<void> {
-	for (const response of [
-		{
-			status: 409,
-			body: { error: { code: "NOT_READY", message: "Wrong status" } },
-		},
-		{
-			status: 302,
-			body: { error: { code: "FROM_A_NEWER_WORKER", message: "No status" } },
-		},
-		{ status: 502, body: { error: "upstream" } },
-		{ status: 409, body: null },
-		{ status: 409, body: {} },
-		{
-			status: 500,
-			body: { error: { code: "NOT_OWNER", message: "Wrong status" } },
-		},
-	]) {
+async function acceptsAnyOtherWorkerError(): Promise<void> {
+	const newer = { code: "FROM_A_NEWER_WORKER", message: "New" };
+	for (const [response, expected] of [
+		[
+			{ status: 409, body: { error: newer } },
+			{ outcome: "not_submitted", workerCode: newer.code, message: "New" },
+		],
+		[
+			{ status: 503, body: { error: newer } },
+			{ outcome: "unknown", workerCode: newer.code },
+		],
+		[
+			{ status: 500, body: { error: { code: "OVERLOADED", message: "Busy" } } },
+			{ outcome: "unknown", workerCode: "OVERLOADED" },
+		],
+		[{ status: 502, body: { error: "upstream" } }, { outcome: "unknown" }],
+		[{ status: 409, body: null }, { outcome: "not_submitted" }],
+		[{ status: 400, body: "<html>" }, { outcome: "not_submitted" }],
+	] as const) {
 		const fixture = createFixture({ responses: [response] });
 		await expect(fixture.client.track({ command })).rejects.toMatchObject({
-			code: "INVALID_RESPONSE",
-			outcome: "unknown",
-		});
-		expect(fixture.stats().refreshes).toBe(0);
-		expect(fixture.stats().requests).toHaveLength(1);
-	}
-}
-
-async function toleratesNewerWorkerCodes(): Promise<void> {
-	for (const [status, outcome] of [
-		[409, "not_submitted"],
-		[503, "unknown"],
-	] as const) {
-		const fixture = createFixture({
-			responses: [
-				{
-					status,
-					body: { error: { code: "FROM_A_NEWER_WORKER", message: "New" } },
-				},
-			],
-		});
-		const failure = await fixture.client
-			.track({ command })
-			.catch((error: unknown) => error);
-		expect(failure).toBeInstanceOf(BalanceWorkerClientError);
-		expect(failure).toMatchObject({
 			code: "WORKER_ERROR",
-			outcome,
-			workerCode: undefined,
-			message: "Worker error FROM_A_NEWER_WORKER: New",
+			...expected,
 		});
 		expect(fixture.stats().refreshes).toBe(0);
 		expect(fixture.stats().requests).toHaveLength(1);
@@ -445,12 +417,8 @@ test(
 	doesNotRetryWorkerErrors,
 );
 test(
-	"does not interpret proxy or status-mismatched errors as stale ownership",
-	rejectsUnknownHttpErrors,
-);
-test(
-	"a code from a newer worker is a worker error its status classifies, not an invalid response",
-	toleratesNewerWorkerCodes,
+	"any other answer is one worker error, whatever its code, status or body",
+	acceptsAnyOtherWorkerError,
 );
 test(
 	"never retries ambiguous transport failures",

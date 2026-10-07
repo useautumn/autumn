@@ -25,10 +25,6 @@ export const WORKER_ERROR_CODES = [
 	"INTERNAL",
 ] as const;
 export type WorkerErrorCode = (typeof WORKER_ERROR_CODES)[number];
-const workerErrorCodes: ReadonlySet<unknown> = new Set(WORKER_ERROR_CODES);
-export function isWorkerErrorCode(value: unknown): value is WorkerErrorCode {
-	return workerErrorCodes.has(value);
-}
 export const PARTITION_RECOVERY_REASON = "PARTITION_RECOVERY";
 /** Where a partition went: the route its old owner claimed for the successor, so a caller can try it without a refresh. */
 export type WorkerRouteSuccessor = PartitionRoute & { endpoint: string };
@@ -107,35 +103,6 @@ export function parseWorkerRequest({
 		command: request.command,
 		...(hasPayload ? { payload: request.payload } : {}),
 	};
-}
-
-export function workerErrorStatus({ code }: { code: WorkerErrorCode }): number {
-	switch (code) {
-		case "INVALID_REQUEST":
-		case "UNSUPPORTED_COMMAND":
-			return 400;
-		case "NOT_OWNER":
-		case "NOT_INITIALIZED":
-		case "STALE_SUBJECT":
-		case "COMMAND_CONFLICT":
-		case "DUPLICATE_COMMAND":
-		case "LOCK_ALREADY_EXISTS":
-			return 409;
-		case "CUSTOMER_NOT_FOUND":
-		case "ENTITY_NOT_FOUND":
-		case "LOCK_NOT_FOUND":
-			return 404;
-		case "CATALOG_NOT_FOUND":
-		case "RECORD_TOO_LARGE":
-			return 422;
-		case "NOT_READY":
-			return 503;
-		case "OVERLOADED":
-			return 429;
-		case "RECORD_REFUSED":
-		case "INTERNAL":
-			return 500;
-	}
 }
 
 /** How many milliseconds the caller will still wait for this request. A worker still
