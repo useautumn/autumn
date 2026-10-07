@@ -43,6 +43,27 @@ describe("CreatePlanItemParamsV1 billing_units and tier shape", () => {
 		).toBe(true);
 	});
 
+	test("rejects the legacy -1 in any tier but the last", () => {
+		expect(
+			accepts({
+				tiers: [
+					{ to: -1, amount: 1 },
+					{ to: 100, amount: 2 },
+					{ to: "inf", amount: 3 },
+				],
+			}),
+		).toBe(false);
+		expect(
+			accepts({
+				tiers: [
+					{ to: 100, amount: 1 },
+					{ to: -1, amount: 2 },
+					{ to: "inf", amount: 3 },
+				],
+			}),
+		).toBe(false);
+	});
+
 	test("requires strictly increasing tier bounds", () => {
 		expect(
 			accepts({

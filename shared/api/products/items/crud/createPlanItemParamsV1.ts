@@ -194,7 +194,7 @@ export const PlanItemParamsObjectSchema = z.object({
 
 type PlanItemParamsCheckValue = z.infer<typeof PlanItemParamsObjectSchema>;
 
-/** Stripe needs ascending tier bounds and a catch-all last tier; -1 is the legacy "inf". */
+/** Stripe needs ascending tier bounds and a catch-all last tier; -1 is the legacy "inf", so only the last tier may use it. */
 const tiersAreAscendingToInfinity = ({
 	tiers,
 }: {
@@ -206,6 +206,7 @@ const tiersAreAscendingToInfinity = ({
 	return bounds.every(
 		(to, index) =>
 			typeof to === "number" &&
+			to !== -1 &&
 			(index === 0 || to > (bounds[index - 1] as number)),
 	);
 };
