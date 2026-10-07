@@ -3,7 +3,7 @@ import { ApiVersion, ApiVersionClass } from "@autumn/shared";
 import type { Context } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
-	getRateLimitType,
+	getRateLimitRouteGroup,
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
 	RateLimitType,
@@ -23,10 +23,10 @@ const typeFor = ({
 		apiVersion: new ApiVersionClass(apiVersion),
 		requestBody: body,
 	};
-	return getRateLimitType({
+	return getRateLimitRouteGroup({
 		req: { method, path },
 		get: () => ctx,
-	} as unknown as Context<HonoEnv>);
+	} as unknown as Context<HonoEnv>).type;
 };
 
 const TRACK_SPECS = [
@@ -76,7 +76,7 @@ describe("2.5 synchronous balance write limits", () => {
 		for (const spec of CHECK_SPECS) {
 			for (const body of [{}, { send_event: false }]) {
 				expect(typeFor({ spec, apiVersion: ApiVersion.V2_5, body })).toBe(
-					RateLimitType.Check,
+					RateLimitType.CheckCustomerGet,
 				);
 			}
 		}
@@ -91,7 +91,9 @@ describe("2.5 synchronous balance write limits", () => {
 			}
 			for (const spec of CHECK_SPECS) {
 				for (const body of [lockBody, { send_event: true }]) {
-					expect(typeFor({ spec, apiVersion, body })).toBe(RateLimitType.Check);
+					expect(typeFor({ spec, apiVersion, body })).toBe(
+						RateLimitType.CheckCustomerGet,
+					);
 				}
 			}
 		}
