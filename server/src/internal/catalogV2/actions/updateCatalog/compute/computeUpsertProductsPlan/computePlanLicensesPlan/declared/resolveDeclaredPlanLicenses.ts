@@ -11,6 +11,7 @@ import type { PlanLicensePlan } from "@/internal/catalogV2/actions/updateCatalog
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForSlug";
+import { projectedLicensePlanId } from "../licensePlanUtils";
 
 /** The link's actual current overlay vs. its base version — undefined when stock. */
 const currentLinkCustomize = (currentPlanLicense: FullPlanLicense) =>
@@ -104,7 +105,10 @@ export const resolveDeclaredPlanLicenses = ({
 	const currentPlanLicenseByPlanId = new Map<string, FullPlanLicense>();
 	for (const currentPlanLicense of currentLicenses) {
 		currentPlanLicenseByPlanId.set(
-			currentPlanLicense.product.id,
+			projectedLicensePlanId({
+				link: currentPlanLicense,
+				productStatesContext,
+			}),
 			currentPlanLicense,
 		);
 	}
@@ -145,11 +149,14 @@ export const resolveDeclaredPlanLicenses = ({
 		};
 	});
 
-	for (const currentPlanLicense of currentLicenses) {
-		if (declaredIds.has(currentPlanLicense.product.id)) continue;
+	for (const [
+		licensePlanId,
+		currentPlanLicense,
+	] of currentPlanLicenseByPlanId) {
+		if (declaredIds.has(licensePlanId)) continue;
 		planned.push({
 			op: "remove",
-			licensePlanId: currentPlanLicense.product.id,
+			licensePlanId,
 			licenseProduct: null,
 			effectiveLicenseProduct: null,
 			currentPlanLicense,

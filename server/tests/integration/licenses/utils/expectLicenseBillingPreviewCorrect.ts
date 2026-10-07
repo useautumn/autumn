@@ -23,12 +23,10 @@ export const expectLicenseAttachPreviewCorrect = ({
 	expectPreviewNextCycleCorrect({ preview });
 };
 
-const quantityLabel = (quantity: number) => `${quantity}x Base Price`;
-
 /** Quantity updates bill previous vs new picture as a refund/charge pair;
  * a pair that nets to zero is dropped entirely, and a zero-quantity side
  * emits no line at all. Charges are synthesized from the catalog and read
- * "<name> - <qty>x Base Price (from ... to ...)"; refunds mirror the stored
+ * "<qty>x <name> (from ... to ...)"; refunds mirror the stored
  * invoice line they credit, so only their quantity is pinned. */
 export const expectQuantityLineItemPairCorrect = ({
 	preview,
@@ -80,8 +78,8 @@ export const expectQuantityLineItemPairCorrect = ({
 		expect(charge?.description).not.toMatch(/^Unused /);
 		if (newQuantity !== undefined) {
 			expect(charge?.quantity).toEqual(newQuantity);
-			expect(charge?.description).toContain(
-				`- ${quantityLabel(newQuantity)} (from`,
+			expect(charge?.description).toMatch(
+				new RegExp(`^${newQuantity}x .+ \\(from `),
 			);
 		}
 	}

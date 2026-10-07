@@ -1,4 +1,8 @@
-import type { CatalogRow, MeteringIdentity } from "@autumn/balance-engine";
+import type {
+	Catalog,
+	CatalogRow,
+	MeteringIdentity,
+} from "@autumn/balance-engine";
 import type { CatalogRowIds, CatalogRowsEnvelope } from "@autumn/postgres";
 import type { LRUCache } from "lru-cache";
 
@@ -20,13 +24,21 @@ export type CatalogCacheConfig = {
 /** Invalidation scope (an org, or an org in one env) to the cached keys it expires. */
 export type KeysByInvalidationScope = Map<string, Set<string>>;
 
+/** What one `read` saw: each requested key and the row it answered with (undefined if none), at a change count. */
+export type CatalogRead = {
+	changeCount: number;
+	rows: [key: string, row: CatalogRow | undefined][];
+};
+
 /** Entries keyed by catalogKeyToString; one fetch per key in flight at a time. */
 export type CatalogCacheState = {
 	entries: LRUCache<string, CatalogRow>;
 	keysByScope: KeysByInvalidationScope;
 	inFlight: Map<string, Promise<CatalogRow[]>>;
-	/** Moves on every insert and removal, so a view joined from these rows knows when to rejoin. */
+	/** Moves on every insert, removal and invalidation: while it stands still, every read catalog is current. */
 	changeCount: number;
+	/** The read behind each catalog `read` returned, so it can tell whether its own rows have moved since. */
+	reads: WeakMap<Catalog, CatalogRead>;
 	/** Invalidations received per scope (an org, or an org in one env). */
 	catalogVersions: Map<string, number>;
 	/** The version of its scope each cached row was read under; older than the scope's current version means stale. */

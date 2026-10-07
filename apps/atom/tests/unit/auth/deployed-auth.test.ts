@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
+import { allSlotsOwnedHere, freshHeld } from "../utils/atomFixtures.js";
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -15,6 +16,8 @@ const createAuth = () => {
 		dataDir,
 		tokenHash: hashToken({ token: "token_deployed" }),
 		slotCount: 2,
+		owners: allSlotsOwnedHere,
+		held: freshHeld(),
 	});
 	opened.push(auth);
 	return { auth, dataDir };

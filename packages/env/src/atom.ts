@@ -5,16 +5,21 @@ const LOCAL_ATOM_PORT = 8790;
 const AUTUMN_API_URL = "https://api.useautumn.com";
 /** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** A container given no limits sees its whole host; past this many, more processes only cost memory. */
-const MAX_AUTOMATIC_PROCESSES = 8;
-/** Measured on Linux with 128 slots: a serving process, and the supervisor, each hold a little under this. */
-const MEMORY_PER_PROCESS_BYTES = 250 * 1024 * 1024;
+/** A container given no limits sees its whole host; past this many, more threads only cost memory. */
+const MAX_AUTOMATIC_THREADS = 8;
+/** Measured on Linux with 128 slots: a serving thread, and the main thread, each hold a little under this. */
+const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
 /** The rest is left for the OS, the files' page cache and a busy moment. */
-const MEMORY_SHARE_FOR_PROCESSES = 0.75;
-/** Checks far outnumber pushes, so most processes serve and the rest apply Autumn's pushes. */
-const WRITER_SHARE_OF_PROCESSES = 0.3;
+const MEMORY_SHARE_FOR_THREADS = 0.75;
+/** A held subject's parsed, frozen objects take about this many times the bytes of its row text; conservative until measured on a live Atom. */
+const HELD_EXPANSION = 3;
+const HEALTH_LOG_EVERY_MS = 10_000;
+/** A timer past a signed 32-bit delay fires every millisecond instead; a second is the shortest worth a line. */
+const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
+/** Checks far outnumber pushes, so a share of the threads also receive Autumn's pushes. */
+const RECEIVER_SHARE_OF_THREADS = 0.3;
 
-/** What the machine allows this process: the container's limits where it has them, not the host's totals. */
+/** What the machine allows the Atom: the container's limits where it has them, not the host's totals. */
 type AtomMachine = { availableCpus: number; memoryLimitBytes: number };
 
 const readMachine = (): AtomMachine => ({
@@ -23,14 +28,27 @@ const readMachine = (): AtomMachine => ({
 	memoryLimitBytes: process.constrainedMemory?.() || totalmem(),
 });
 
-/** How many serving processes fit in memory, with one more counted for the supervisor that starts them. */
-const processesMemoryAllows = ({
+/** How many serving threads fit in memory, with one more counted for the main thread that starts them. */
+const threadsMemoryAllows = ({
 	memoryLimitBytes,
 }: {
 	memoryLimitBytes: number;
 }): number => {
-	const budget = memoryLimitBytes * MEMORY_SHARE_FOR_PROCESSES;
-	return Math.floor(budget / MEMORY_PER_PROCESS_BYTES) - 1;
+	const budget = memoryLimitBytes * MEMORY_SHARE_FOR_THREADS;
+	return Math.floor(budget / MEMORY_PER_THREAD_BYTES) - 1;
+};
+/** Row text each thread may hold parsed: the threads' memory share, less each thread's own, split between them and shrunk by the expansion. */
+const heldBytesPerThreadOf = ({
+	threads,
+	memoryLimitBytes,
+}: {
+	threads: number;
+	memoryLimitBytes: number;
+}): number => {
+	const forHeld =
+		memoryLimitBytes * MEMORY_SHARE_FOR_THREADS -
+		(threads + 1) * MEMORY_PER_THREAD_BYTES;
+	return Math.max(0, Math.floor(forHeld / threads / HELD_EXPANSION));
 };
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
@@ -63,46 +81,66 @@ const modeEnvOf = ({
 	};
 };
 
-/** As many processes as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step. */
-const processesOf = ({
+/** Alien tags each queue binding with its service; only an SQS queue has a URL the AWS SDK can read. */
+const sqsQueueUrlOf = ({ binding }: { binding: string }): string | null => {
+	const { service, queueUrl } = JSON.parse(binding);
+	if (service !== "sqs" || typeof queueUrl !== "string") return null;
+	return queueUrl;
+};
+
+/** ATOM_PUSH_QUEUE_CLIENT=auto (the default) reads an SQS queue with the AWS SDK and any other with the Alien binding; binding or sdk forces one. */
+const sdkPushQueueUrlOf = ({
 	runtimeEnv,
-	isMultiTenant,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}): string | null => {
+	const client = runtimeEnv.ATOM_PUSH_QUEUE_CLIENT?.trim() || "auto";
+	if (client !== "auto" && client !== "binding" && client !== "sdk")
+		throw new Error("ATOM_PUSH_QUEUE_CLIENT is auto, binding or sdk");
+	const binding = runtimeEnv.ALIEN_PUSHES_BINDING?.trim();
+	if (client === "binding" || !binding) return null;
+	const queueUrl = sqsQueueUrlOf({ binding });
+	if (queueUrl || client === "auto") return queueUrl;
+	throw new Error(
+		"ALIEN_PUSHES_BINDING names no SQS queueUrl for the SDK to read",
+	);
+};
+
+/** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
+ * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
+const threadsOf = ({
+	runtimeEnv,
 	machine,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
-	isMultiTenant: boolean;
 	machine: AtomMachine;
 }): number => {
-	const told = runtimeEnv.ATOM_PROCESSES;
-	// A multi-tenant Atom keeps its list of orgs in memory, which a second process would not see.
-	if (isMultiTenant) {
-		if (told && positiveInteger.parse(told) > 1)
-			throw new Error(
-				"ATOM_MODE=multi_tenant runs as one process; unset ATOM_PROCESSES",
-			);
-		return 1;
-	}
+	const told = runtimeEnv.ATOM_THREADS;
 	if (told) return positiveInteger.parse(told);
 	const allowed = Math.min(
 		machine.availableCpus,
-		processesMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
-		MAX_AUTOMATIC_PROCESSES,
+		threadsMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
+		MAX_AUTOMATIC_THREADS,
 	);
 	return Math.max(1, allowed);
 };
 
-/** One process both serves and receives; past that, at least one of each, about a third writing. */
-const writersOf = ({
-	processes,
+/** ATOM_PUSH_RECEIVERS when set; otherwise one thread both serves and receives, and past that about a third also receive. */
+const pushReceiversOf = ({
+	runtimeEnv,
+	threads,
 	receivesPushes,
 }: {
-	processes: number;
+	runtimeEnv: Record<string, string | undefined>;
+	threads: number;
 	receivesPushes: boolean;
 }): number => {
 	if (!receivesPushes) return 0;
-	if (processes === 1) return 1;
-	const share = Math.round(processes * WRITER_SHARE_OF_PROCESSES);
-	return Math.min(Math.max(share, 1), processes - 1);
+	const told = runtimeEnv.ATOM_PUSH_RECEIVERS;
+	if (told) return Math.min(positiveInteger.parse(told), threads);
+	if (threads === 1) return 1;
+	const share = Math.round(threads * RECEIVER_SHARE_OF_THREADS);
+	return Math.min(Math.max(share, 1), threads - 1);
 };
 
 /** What Atom reads: where it listens, its data directory, the Autumn API it forwards to, and which tokens it answers to. */
@@ -112,12 +150,8 @@ export function createAtomEnv(
 ) {
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
 	const modeEnv = modeEnvOf({ runtimeEnv });
-	const processes = processesOf({
-		runtimeEnv,
-		isMultiTenant: modeEnv.ATOM_MODE === "multi_tenant",
-		machine,
-	});
-	// alien sets this where the `pushes` queue is linked to the container.
+	const threads = threadsOf({ runtimeEnv, machine });
+	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom's pushes name the org's folder.
 	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
 	return {
 		ATOM_HOSTNAME: hostname,
@@ -129,10 +163,25 @@ export function createAtomEnv(
 		ATOM_SLOT_COUNT: positiveInteger.parse(
 			runtimeEnv.ATOM_SLOT_COUNT ?? SLOT_COUNT,
 		),
-		/** How many processes run: those that serve checks share the port. */
-		ATOM_PROCESSES: processes,
-		/** How many of them read Autumn's pushes from the org's queue; 0 where no queue is linked. */
-		ATOM_WRITERS: writersOf({ processes, receivesPushes }),
+		/** How many threads serve checks on the shared port. */
+		ATOM_THREADS: threads,
+		/** How many of them also read Autumn's pushes from the org's queue; 0 where no queue is linked. */
+		ATOM_PUSH_RECEIVERS: pushReceiversOf({
+			runtimeEnv,
+			threads,
+			receivesPushes,
+		}),
+		/** Bytes of row text each thread keeps parsed before it drops its least recently read subjects. */
+		ATOM_HELD_BYTES_PER_THREAD: heldBytesPerThreadOf({
+			threads,
+			memoryLimitBytes: machine.memoryLimitBytes,
+		}),
+		/** How often the main thread logs what /health reports. */
+		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
+			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
+		),
+		/** The pushes queue's URL where the AWS SDK reads it; null where the binding reads it or no queue is linked. */
+		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,
 	};
 }

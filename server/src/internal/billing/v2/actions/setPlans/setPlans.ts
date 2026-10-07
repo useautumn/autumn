@@ -84,6 +84,7 @@ export const setPlans = async ({
 	await handleSetPlansComputeErrors({
 		ctx,
 		billingContext: plannedBillingContext,
+		params: resolvedParams,
 		autumnBillingPlan,
 		immediatePhaseTransition,
 	});

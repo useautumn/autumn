@@ -15,16 +15,23 @@ import type {
 	RunDetail,
 	RunEvent,
 	RunFile,
+	RunLive,
 	RunSummary,
 	StripeAccount,
 	StripeKey,
 	WorkerState,
 } from "../../../src/api/contract.ts";
 import {
+	BRANCH_HISTORY_RUNS,
 	CreateRunBody,
 	isFailedFileStatus,
 } from "../../../src/api/contract.ts";
 import { TwdError } from "../../../src/http/apiError.ts";
+import {
+	createDurationModel,
+	type EtaPriors,
+	estimateRunEta,
+} from "../../../src/internal/runs/eta/estimateRunEta.ts";
 import {
 	planWorkItems,
 	splitRepetitionId,
@@ -130,6 +137,28 @@ const catalog: Catalog = (() => {
 })();
 const p90 = new Map(catalog.files.map((f) => [f.path, f.baselineP90Ms]));
 const groupFiles = new Map<string, string[]>();
+const MOCK_ETA_PRIORS: EtaPriors = {
+	model: createDurationModel({
+		baselines: new Map(
+			catalog.files.flatMap((f) =>
+				f.baselineP90Ms === null
+					? []
+					: [
+							[
+								f.path,
+								{
+									p50Ms: Math.round(f.baselineP90Ms * 0.7),
+									p90Ms: f.baselineP90Ms,
+									passRate: 0.985,
+								},
+							] as const,
+						],
+			),
+		),
+	}),
+	bootP50Ms: 25_000,
+	teardownP50Ms: 60_000,
+};
 for (const g of fixture.groups) groupFiles.set(g.name, g.files);
 for (const s of fixture.suites)
 	groupFiles.set(s.name, [
@@ -398,6 +427,10 @@ type Sim = {
 	/** When the run left the account queue; phases time from here. */
 	readyAt: number;
 	workerSeconds: number;
+	peakWorkers: number;
+	warmForMs: number;
+	/** When each running file landed on its worker. */
+	fileStartedAt: Map<string, number>;
 };
 const runs: RunDetail[] = [];
 const sims = new Map<string, Sim>();
@@ -509,9 +542,14 @@ const summary = (run: RunDetail): RunSummary => {
 		files: _f,
 		drift: _d,
 		repeats: _r,
+		etaMs: _eta,
+		etaP90Ms: _etaP90,
 		...rest
 	} = run;
-	return rest;
+	if (!isLive(run)) return { ...rest, live: null };
+	const workers: RunLive["workers"] = {};
+	for (const w of run.workers) workers[w.status] = (workers[w.status] ?? 0) + 1;
+	return { ...rest, live: { workers, etaMs: run.etaMs } };
 };
 
 // ---- costs ----------------------------------------------------------------
@@ -520,7 +558,7 @@ const summary = (run: RunDetail): RunSummary => {
 const RATES: Costs["rates"] = {
 	usdPerCoreSecond: 0.00003942,
 	usdPerGibSecond: 0.00000667,
-	regionMultiplier: 1.75,
+	regionMultiplier: 1,
 	workerCores: 2,
 	workerMemoryGib: 4,
 };
@@ -587,9 +625,11 @@ const makeFinishedRun = (i: number): RunDetail => {
 		: i % 4 === 0
 			? branches[0]
 			: pick(branches.slice(2), r);
-	const selection = baseline
-		? { groups: ["core", ...fixture.suites[1].groups] }
-		: pick(SELECTIONS, r);
+	const manualBaseline = !baseline && branch.name === "dev" && i % 9 === 4;
+	const selection =
+		baseline || manualBaseline
+			? { groups: ["core", ...fixture.suites[1].groups] }
+			: pick(SELECTIONS, r);
 	const list = filesForSelection(selection);
 	const workerCount = Math.min(list.length, 40 + Math.floor(r() * 160));
 	const failRate = r() < 0.45 ? 0 : 0.004 + r() * 0.02;
@@ -623,6 +663,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		pinnedSha: !baseline && i % 5 === 3,
 		status: cancelled ? "cancelled" : "passed",
 		purpose: baseline ? "baseline" : "adhoc",
+		baseline: baseline || manualBaseline,
 		selection,
 		repeat: 1,
 		fileCount: list.length,
@@ -632,6 +673,8 @@ const makeFinishedRun = (i: number): RunDetail => {
 		cost: costOf(workerSeconds, true),
 		passed: 0,
 		failed: 0,
+		newFailures: null,
+		live: null,
 		createdBy: baseline ? SYSTEM : pickUser(r),
 		createdAt: iso(createdAt),
 		startedAt: iso(startedAt),
@@ -650,9 +693,13 @@ const makeFinishedRun = (i: number): RunDetail => {
 			warmReadyAt: iso(createdAt + (startedAt - createdAt) * 0.6),
 			accountsAt: iso(startedAt),
 		},
+		etaMs: null,
+		etaP90Ms: null,
 	};
 	summarize(run);
 	if (!cancelled && run.failed > 0) run.status = "failed";
+	if (!cancelled)
+		run.newFailures = run.drift.filter((d) => d.kind === "new_failure").length;
 	return run;
 };
 
@@ -763,6 +810,7 @@ const startLiveRun = ({
 	purpose = "adhoc",
 	pinnedSha = false,
 	repeat = 1,
+	warmForMs = 6_000,
 }: {
 	branch: string;
 	sha: string;
@@ -777,16 +825,35 @@ const startLiveRun = ({
 	queuedForMs?: number;
 	purpose?: RunSummary["purpose"];
 	repeat?: number;
+	/** How long the run sits in "warming" before workers boot. */
+	warmForMs?: number;
 }) => {
 	const list = planWorkItems({ files: filesForSelection(selection), repeat });
 	const wanted = Math.min(list.length, workerCap);
 	const attached = queuedForMs ? 0 : Math.min(wanted, startWorkers);
 	const runId = `run_${hex(10)}`;
-	const createdAt = Date.now() - progress * 11 * MIN;
+	const now = Date.now();
+	const createdAt = now - progress * 11 * MIN;
+	const startedAt = createdAt + 70_000;
 	const done = Math.floor(list.length * progress);
-	const files: RunFile[] = list
+	const boots = Array.from({ length: attached }, () => mockBoot());
+	const readyAt = boots.map((b) => startedAt + (b.totalMs ?? 0));
+	const finished = list
 		.slice(0, done)
 		.map((f, j) => finishedFile(f, rand, workerName(j % attached), 0.012));
+	// Lay finished files end to end per worker, squeezed to end before now.
+	const cursor = [...readyAt];
+	const ends = finished.map((f, j) => {
+		cursor[j % attached] += f.durationMs ?? 0;
+		return cursor[j % attached];
+	});
+	const last = Math.max(startedAt + 1, ...ends);
+	const squeeze = Math.min(1, (now - 10_000 - startedAt) / (last - startedAt));
+	const at = (ms: number) => startedAt + (ms - startedAt) * squeeze;
+	const files: RunFile[] = finished.map((f, j) => ({
+		...f,
+		finishedAt: iso(at(ends[j])),
+	}));
 	const running = progress > 0 ? list.slice(done, done + attached) : [];
 	const queuePosition = queuedForMs
 		? runs.filter((r) => r.queuePosition !== null).length + 1
@@ -798,6 +865,7 @@ const startLiveRun = ({
 		pinnedSha,
 		status: progress > 0 ? "running" : "queued",
 		purpose,
+		baseline: purpose === "baseline" && branch === "dev",
 		selection,
 		repeat,
 		fileCount: list.length,
@@ -807,9 +875,11 @@ const startLiveRun = ({
 		cost: costOf(progress > 0 ? attached * (progress * 11 * 60) : 0, false),
 		passed: 0,
 		failed: 0,
+		newFailures: null,
+		live: null,
 		createdBy,
 		createdAt: iso(createdAt),
-		startedAt: progress > 0 ? iso(createdAt + 70_000) : null,
+		startedAt: progress > 0 ? iso(startedAt) : null,
 		finishedAt: null,
 		phase:
 			progress > 0
@@ -825,6 +895,10 @@ const startLiveRun = ({
 					? ("ready" as const)
 					: ("provisioning" as const),
 			file: running[w] ?? null,
+			...(progress > 0 && {
+				boot: boots[w],
+				readyAt: iso(at(readyAt[w])),
+			}),
 		})),
 		files: [
 			...files,
@@ -851,6 +925,12 @@ const startLiveRun = ({
 		],
 		repeats: [],
 		drift: [],
+		milestones:
+			progress > 0
+				? { warmReadyAt: iso(createdAt + 45_000), accountsAt: iso(startedAt) }
+				: null,
+		etaMs: null,
+		etaP90Ms: null,
 	};
 	summarize(run);
 	claim({ count: attached, runId, heldBy: createdBy.email });
@@ -861,6 +941,11 @@ const startLiveRun = ({
 		ticks: 0,
 		readyAt: createdAt + queuedForMs,
 		workerSeconds: run.cost.workerSeconds,
+		peakWorkers: run.workerCount ?? 0,
+		warmForMs,
+		fileStartedAt: new Map(
+			running.map((file, w) => [file, Math.min(now - 1_000, at(cursor[w]))]),
+		),
 	});
 	return run;
 };
@@ -885,6 +970,8 @@ const setStatus = (
 	run.status = status;
 	run.phase = phase;
 	if (TERMINAL.has(status)) {
+		run.etaMs = null;
+		run.etaP90Ms = null;
 		run.finishedAt = iso(Date.now());
 		run.cost = { ...run.cost, final: true };
 	}
@@ -941,6 +1028,31 @@ const bootWorkers = (run: RunDetail) => {
 		setWorker(run, { ...w, status: "booting" });
 };
 
+/** The same estimator twd runs server-side, fed the mock catalog's baselines. */
+const updateEta = (run: RunDetail, sim: Sim) => {
+	const eta = estimateRunEta({
+		now: Date.now(),
+		files: run.files.map((f) => ({
+			file: f.file,
+			status: f.status,
+			durationMs: f.durationMs,
+			finishedAt: f.finishedAt ? Date.parse(f.finishedAt) : null,
+			startedAt: sim.fileStartedAt.get(f.file) ?? null,
+			worker: f.worker,
+			attempt: f.attempt,
+		})),
+		workers: run.workers,
+		moreWorkersWanted: Math.max(
+			0,
+			(run.workersWanted ?? 0) - run.workers.length,
+		),
+		priors: MOCK_ETA_PRIORS,
+	});
+	run.etaMs = eta?.etaMs ?? null;
+	run.etaP90Ms = eta?.etaP90Ms ?? null;
+	emit(run.id, { type: "eta", etaMs: run.etaMs, etaP90Ms: run.etaP90Ms });
+};
+
 const tickRun = (run: RunDetail) => {
 	const sim = sims.get(run.id);
 	if (!sim) return;
@@ -963,14 +1075,27 @@ const tickRun = (run: RunDetail) => {
 	}
 	const alive = run.workers.filter((w) => w.status !== "dead").length;
 	run.workerCount = alive;
+	sim.peakWorkers = Math.max(sim.peakWorkers, alive);
 	sim.workerSeconds += alive;
 	run.cost = costOf(sim.workerSeconds, false);
 	const ageMs = Date.now() - sim.readyAt;
 
 	if (run.status === "queued" && ageMs > 3_000)
 		return setStatus(run, "warming", "building tw-warm image");
-	if (run.status === "warming" && ageMs > 9_000)
-		return setStatus(run, "provisioning", `booting 0/${run.workers.length}`);
+	if (run.status === "warming" && ageMs > 3_000 + sim.warmForMs) {
+		run.milestones = {
+			warmReadyAt: iso(Date.now()),
+			accountsAt: iso(Date.now()),
+		};
+		run.status = "provisioning";
+		run.phase = `booting 0/${run.workers.length}`;
+		return emit(run.id, {
+			type: "status",
+			status: run.status,
+			phase: run.phase,
+			milestones: run.milestones,
+		});
+	}
 	if (run.status === "provisioning") {
 		bootWorkers(run);
 		const up = run.workers.filter((w) => w.status === "ready").length;
@@ -1017,6 +1142,7 @@ const tickRun = (run: RunDetail) => {
 		}
 		const next = w.status === "ready" ? sim.queue.shift() : undefined;
 		if (next) {
+			sim.fileStartedAt.set(next, Date.now());
 			setFile(run, {
 				file: next,
 				status: "running",
@@ -1031,6 +1157,7 @@ const tickRun = (run: RunDetail) => {
 		}
 	}
 	summarize(run);
+	if (sim.ticks % 3 === 0) updateEta(run, sim);
 	const finished = run.files.filter(
 		(f) => f.status !== "running" && f.status !== "queued",
 	).length;
@@ -1040,7 +1167,7 @@ const tickRun = (run: RunDetail) => {
 		for (const w of run.workers)
 			setWorker(run, { ...w, status: "dead", file: null });
 		releaseAccounts((a) => a.runId === run.id);
-		run.workerCount = 0;
+		run.workerCount = sim.peakWorkers;
 		setStatus(run, run.failed ? "failed" : "passed", null);
 		sims.delete(run.id);
 	}
@@ -1063,6 +1190,16 @@ startLiveRun({
 	workerCap: 24,
 	pinnedSha: true,
 });
+// A long branch stuck building its image, sized only once the swarm starts (as twd does).
+startLiveRun({
+	branch: "capy/revenuecat-customer-products-are-not-synced-after-transfer",
+	sha: hex(40),
+	selection: { files: filesForSelection({ groups: ["track"] }).slice(0, 3) },
+	createdBy: ACTORS[3],
+	workerCap: 3,
+	startWorkers: 0,
+	warmForMs: Number.POSITIVE_INFINITY,
+}).workersWanted = null;
 startLiveRun({
 	branch: "fix/cross-group-license-carry",
 	sha: branches[3].sha,
@@ -1313,16 +1450,50 @@ export const handle = ({
 		});
 	}
 
+	if (route === "GET /runs/branches") {
+		const branch = url.searchParams.get("branch");
+		const byBranch = new Map<string, RunSummary[]>();
+		for (const r of allSummaries())
+			if (!isLive(r) && (!branch || r.branch.includes(branch)))
+				byBranch.set(r.branch, [...(byBranch.get(r.branch) ?? []), r]);
+		const list = [...byBranch].map(([name, list]) => ({
+			branch: name,
+			runs: list.slice(0, BRANCH_HISTORY_RUNS),
+		}));
+		const limit = Number(url.searchParams.get("limit") ?? 30);
+		const start = Number(url.searchParams.get("cursor") ?? 0);
+		const end = start + limit;
+		return ok({
+			branches: list.slice(start, end),
+			nextCursor: end < list.length ? String(end) : null,
+		});
+	}
+
+	if (route === "GET /runs/stats") {
+		const since = Date.parse(url.searchParams.get("since") ?? "");
+		const today = allSummaries().filter(
+			(r) => Date.parse(r.createdAt) >= since,
+		);
+		return ok({
+			runs: today.length,
+			usd: today.reduce((sum, r) => sum + r.cost.usd, 0),
+		});
+	}
+
 	if (route === "GET /runs") {
 		const status = url.searchParams.get("status") ?? "live";
 		const branch = url.searchParams.get("branch");
 		const purpose = url.searchParams.get("purpose");
+		const baseline = url.searchParams.get("baseline");
+		const exactBranch = url.searchParams.get("exactBranch");
 		const list = allSummaries()
 			.filter((r) =>
 				status === "all" ? true : status === "live" ? isLive(r) : !isLive(r),
 			)
 			.filter((r) => !branch || r.branch.includes(branch))
+			.filter((r) => !exactBranch || r.branch === exactBranch)
 			.filter((r) => !purpose || r.purpose === purpose)
+			.filter((r) => !baseline || r.baseline === (baseline === "true"))
 			.filter((r) => {
 				const outcome = url.searchParams.get("outcome") ?? "all";
 				if (outcome === "all") return true;

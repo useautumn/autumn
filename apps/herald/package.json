@@ -13,6 +13,7 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@alienplatform/bindings": "3.3.28",
 		"@autumn/balance-engine": "workspace:*",
 		"@autumn/auto-topup": "workspace:*",
 		"@autumn/balance-webhooks": "workspace:*",

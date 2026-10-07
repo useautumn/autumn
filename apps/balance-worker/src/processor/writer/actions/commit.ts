@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import { BALANCE_WORKER_DEFERRED_COMMIT_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
@@ -6,12 +7,14 @@ import type {
 	DurableMutationApplyResult,
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
+import type { SnapshotIntent } from "../../../state/types/snapshotIntent.js";
 import {
 	advanceStored,
 	awaitStored,
 	maxBatchBytesOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
+	releasePins,
 	removePendingMutation,
 	settlementOf,
 	writerNowOf,
@@ -26,6 +29,7 @@ import {
 	MutationBatchNotCommittedError,
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
+import { decideSnapshotIntent } from "./decideSnapshotIntent.js";
 
 /** Bounds one store flush; the committer writes a flush as a single statement. */
 const MAX_BATCHES_PER_FLUSH = 16;
@@ -229,7 +233,10 @@ async function applyQueued({
 					}),
 				),
 			);
-			const ok = await applyBatch({ scope, batch, records });
+			const snapshotIntent = timeSync({ label: "writer.apply.intent" }, () =>
+				decideSnapshotIntent({ scope, batch }),
+			);
+			const ok = await applyBatch({ scope, batch, records, snapshotIntent });
 			state.unapplied.splice(0, taken.length);
 			if (!ok) return;
 		}
@@ -359,22 +366,37 @@ function settlePending({
 	const { mutation } = pending;
 	scope.ctx.recentCommands.remember({ mutation });
 	removePendingMutation({ state: scope.state, pending });
+	if (!keepsPinsUntilStored({ scope }))
+		releasePins({ state: scope.state, pending });
 	pending.settlement?.settle({ mutation, state: pending.nextState });
 }
+
+/** Snapshot intents read each subject as its batch leaves it, so while writing, pins hold until the store has the batch. */
+const keepsPinsUntilStored = ({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): boolean => {
+	const settings = scope.ctx.subjectSnapshotsConfig?.get();
+	return settings !== undefined && writesSubjectSnapshots(settings);
+};
 
 /** A committed batch that cannot be applied leaves the writer in recovery. */
 async function applyBatch({
 	scope,
 	batch,
 	records,
+	snapshotIntent,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 	records: DurableMutationRecord[];
+	snapshotIntent: SnapshotIntent;
 }): Promise<boolean> {
 	try {
 		const results = await scope.ctx.stateStore.applyDurableMutations({
 			records,
+			snapshotIntent,
 		});
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
@@ -414,6 +436,7 @@ async function applyBatch({
 			enterRecovery({ scope, batch, cause: firstFailure });
 			return false;
 		}
+		for (const pending of batch) releasePins({ state: scope.state, pending });
 		for (const pending of batch) pending.settlement?.settleStore();
 		const last = batch.at(-1);
 		if (last) advanceStored({ state: scope.state, seq: last.seq });

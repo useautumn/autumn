@@ -32,7 +32,9 @@ export {
 	FlushBookmarkConflictError,
 	type FlushRoundTrips,
 } from "./flush/repos/commitFlush.js";
+export { flushSql } from "./flush/repos/flushSql.js";
 export type {
+	DeletedSubjectSnapshot,
 	FlushBookmark,
 	FlushRequest,
 	FlushResult,
@@ -54,6 +56,8 @@ export {
 export { getEntitySubjectRows } from "./subjects/repos/getSubjectRows/getEntitySubjectRows.js";
 export { getSubjectRows } from "./subjects/repos/getSubjectRows/getSubjectRows.js";
 export { SUBJECT_ROW_LIMITS } from "./subjects/repos/getSubjectRows/subjectRowLimits.js";
+export { readEntitySubjectSnapshots } from "./subjects/repos/subjectSnapshots/readEntitySubjectSnapshots.js";
+export { readSubjectSnapshot } from "./subjects/repos/subjectSnapshots/readSubjectSnapshot.js";
 export { SubjectRowsInvalidError } from "./subjects/subjectErrors.js";
 export {
 	type SubjectRowChange,
@@ -64,6 +68,10 @@ export type {
 	SubjectRowTable,
 	SubjectRowUpdate,
 } from "./subjects/types/subjectRowUpdate.js";
+export type {
+	SubjectSnapshotUpsert,
+	SubjectSnapshotWrites,
+} from "./subjects/types/subjectSnapshot.js";
 export { getSubscriptionsByStripeIds } from "./subscriptions/repos/getSubscriptionsByStripeIds.js";
 export type {
 	PostgresClient,

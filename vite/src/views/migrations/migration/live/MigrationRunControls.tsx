@@ -60,8 +60,8 @@ export function MigrationRunControls({
 			<Separator />
 			{hasFailedItems && (
 				<ControlRow
-					title="Retry failed"
-					description="Re-run customers that previously errored."
+					title="Retry incomplete"
+					description="Re-run customers that didn't complete."
 				>
 					<Switch
 						checked={value.retryErrored}

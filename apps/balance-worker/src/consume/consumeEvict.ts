@@ -9,5 +9,6 @@ export async function consumeEvict({
 	ctx: Pick<ConsumeContext, "processor">;
 	command: EvictCommand;
 }): Promise<void> {
-	await ctx.processor.evict({ command });
+	// No caller waits for an answer, and the stream is serial: its DELETE lands on the lane behind it, batched with its neighbours'.
+	await ctx.processor.evict({ command, waitsForSnapshotDelete: false });
 }

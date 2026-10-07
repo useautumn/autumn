@@ -8,6 +8,7 @@ import type {
 	PartitionCheckpointV1,
 	PreparedPartitionCheckpoint,
 } from "../../checkpoint/partitionCheckpoint.js";
+import type { SnapshotQueues } from "../../committer/subjectSnapshots/types/snapshotQueues.js";
 import type { PartitionCheckpointCaptureLimits } from "../actions/checkpoint/capturePartitionCheckpoint.js";
 import type {
 	PartitionCheckpointRestoreLimits,
@@ -18,6 +19,7 @@ import type {
 	DurableMutationRecord,
 	SqliteDurableMutationApplyResult,
 } from "./durableMutation.js";
+import type { SnapshotIntent } from "./snapshotIntent.js";
 
 /** Where a fetched baseline goes: onto the log as an initialize mutation, or straight into the writer's map. */
 export type SubjectBaseline = "log" | "map";
@@ -67,9 +69,13 @@ export type StateStore = {
 		partition: number;
 		fence: OwnerFence;
 	}): void | Promise<void>;
-	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either. */
+	/** Present on a store that holds subject snapshots: an evict's DELETE and an evict's refresh land through it. */
+	snapshotQueues?: SnapshotQueues;
+	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either.
+	 *  `snapshotIntent` is the writer's word on the customers these records touch; a store that keeps no snapshots ignores it. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
+		snapshotIntent?: SnapshotIntent;
 	}): DurableMutationApplyResult[] | Promise<DurableMutationApplyResult[]>;
 	close(): void;
 };
@@ -107,7 +113,9 @@ export type SqliteStateStore = Omit<
 		partition: number;
 		nextOffset: bigint;
 	}): void;
+	/** Resident: the intent is accepted and ignored, there is no snapshot table behind it. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
+		snapshotIntent?: SnapshotIntent;
 	}): SqliteDurableMutationApplyResult[];
 };

@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { ms } from "../../../utils/common/unixUtils";
+import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import {
 	CreateScheduleParamsV0BaseSchema,
@@ -36,6 +37,10 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 		ends_at: UnixMsTimestampSchema.optional().meta({
 			description:
 				"Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.",
+		}),
+		carry_over_usages: CarryOverUsagesSchema.meta({
+			description:
+				"Carry the consumable usage of a plan the first phase replaces onto the plan replacing it, instead of billing it now. Only valid when a plan is replaced immediately; usage of features left out of feature_ids is billed now.",
 		}),
 	})
 	.check((ctx) => {

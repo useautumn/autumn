@@ -8,8 +8,8 @@ import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdated
 import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
 
 /**
- * Live rows carry, with a requested trial patched onto them. A replacement for a paid-up subscription
- * keeps plans' cycle unless a new paid plan or anchor restarts billing; a backdate keeps it unless it restarts the cycle.
+ * Live rows carry, with a requested trial patched onto them, unless the cycle resets now. A replacement for a paid-up
+ * subscription keeps plans' cycle unless a new paid plan or anchor restarts billing; a backdate keeps it unless it restarts the cycle.
  */
 const liveRowsPolicy = ({
 	billingContext,
@@ -18,6 +18,8 @@ const liveRowsPolicy = ({
 }): SetPlansPolicies["liveRows"] => {
 	const { replacedStripeSubscription, requestedBillingCycleAnchor } =
 		billingContext;
+	// Resetting the cycle now restarts every renewing plan's period, so kept plans are re-billed like changed ones.
+	if (requestedBillingCycleAnchor === "now") return "recreateRenewing";
 	if (!replacedStripeSubscription) return "carry";
 	if (isBackdateRecreate({ billingContext })) {
 		return restartsCycleAtBackdatedStart({ billingContext })
@@ -45,4 +47,5 @@ export const setupSetPlansPolicies = ({
 	canceling: "keepCancellation",
 	pastDue: "continue",
 	liveRows: liveRowsPolicy({ billingContext }),
+	unbilledRows: billingContext.skipBillingChanges ? "carry" : "recreate",
 });

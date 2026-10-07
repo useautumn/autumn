@@ -111,14 +111,23 @@ export const Branch = z.object({
 /** Flake checks only: 50 clean first attempts bound a flake rate near 6% (95% confidence). */
 export const MAX_REPEAT = 50;
 
+export const MAX_FILES_PER_WORKER = 8;
+
 export const CreateRunBody = z
 	.object({
 		branch: z.string().min(1),
 		/** Defaults to the branch head. */
 		sha: z.string().optional(),
 		selection: RunSelection,
-		/** Cap on workers for this run (default: one per file, bounded by the key budget). */
+		/** Cap on workers, one file each. Exclusive with maxFilesPerWorker; neither = Auto sizing. */
 		maxWorkers: z.number().int().min(1).max(5_000).optional(),
+		/** Files each worker runs at once (one worker per that many files). Exclusive with maxWorkers. */
+		maxFilesPerWorker: z
+			.number()
+			.int()
+			.min(1)
+			.max(MAX_FILES_PER_WORKER)
+			.optional(),
 		purpose: z.enum(["adhoc", "baseline"]).default("adhoc"),
 		/** Runs each selected file N times, each as its own work item; only for checking a flaky test. */
 		repeat: z.number().int().min(1).max(MAX_REPEAT).default(1),
@@ -126,6 +135,18 @@ export const CreateRunBody = z
 	.refine((body) => body.purpose !== "baseline" || body.repeat === 1, {
 		message: "baseline runs cannot repeat",
 		path: ["repeat"],
+	})
+	.refine(
+		(body) =>
+			body.maxWorkers === undefined || body.maxFilesPerWorker === undefined,
+		{
+			message: "set maxWorkers or maxFilesPerWorker, not both (neither = Auto)",
+			path: ["maxFilesPerWorker"],
+		},
+	)
+	.refine((body) => body.repeat === 1 || (body.maxFilesPerWorker ?? 1) === 1, {
+		message: "repeat runs keep one file per worker (repetitions share ids)",
+		path: ["maxFilesPerWorker"],
 	});
 
 export const WorkerBoot = z.object({
@@ -133,16 +154,17 @@ export const WorkerBoot = z.object({
 	steps: z.array(z.object({ step: z.string(), ms: z.number() })),
 	totalMs: z.number().nullable(),
 });
+export const WorkerStatus = z.enum([
+	"provisioning",
+	"booting",
+	"ready",
+	"busy",
+	"dead",
+	"failed",
+]);
 export const WorkerState = z.object({
 	name: z.string(),
-	status: z.enum([
-		"provisioning",
-		"booting",
-		"ready",
-		"busy",
-		"dead",
-		"failed",
-	]),
+	status: WorkerStatus,
 	file: z.string().nullable(),
 	boot: WorkerBoot.nullable().optional(),
 	/** When the worker was mapped and serving. */
@@ -168,6 +190,12 @@ export const RunFile = z.object({
 	finishedAt: z.string().nullable().optional(),
 });
 
+/** A live run as this process sees it: workers by status and the server ETA. */
+export const RunLive = z.object({
+	workers: z.record(WorkerStatus, z.number()),
+	etaMs: z.number().nullable(),
+});
+
 /** Modal compute cost of a run: Σ worker lifetime × (cores × core rate + GiB × memory rate). */
 export const RunCost = z.object({
 	usd: z.number(),
@@ -184,12 +212,14 @@ export const RunSummary = z.object({
 	pinnedSha: z.boolean(),
 	status: RunStatus,
 	purpose: z.enum(["adhoc", "baseline"]),
+	/** Feeds the dev baseline: a scheduled or full-suite dev-HEAD run that completed (passed/failed) every file; while live, a candidate. */
+	baseline: z.boolean(),
 	selection: RunSelection,
 	/** Times each selected file runs; > 1 only for flake checks. */
 	repeat: z.number(),
 	/** Work items: files × repeat. */
 	fileCount: z.number().nullable(),
-	/** Workers currently attached; grows as accounts free up (elastic, FIFO). */
+	/** Workers currently attached (elastic, FIFO); once finished, the most that were attached at once. */
 	workerCount: z.number().nullable(),
 	/** Workers this run wants: min(files, key budget). */
 	workersWanted: z.number().nullable(),
@@ -198,6 +228,10 @@ export const RunSummary = z.object({
 	cost: RunCost,
 	passed: z.number(),
 	failed: z.number(),
+	/** Failing files that were not failing in the previous baseline; null while live or with no baseline to compare. */
+	newFailures: z.number().nullable(),
+	/** Null once finished (or when the run is not live in this process). */
+	live: RunLive.nullable(),
 	createdBy: ActorRef,
 	createdAt: z.string(),
 	startedAt: z.string().nullable(),
@@ -214,6 +248,56 @@ export const RepeatStat = z.object({
 	failed: z.number(),
 });
 
+/** Per-file Stripe and resource totals from the run's `[tw-file-stats]` lines (every attempt). */
+export const RunResources = z.object({
+	/** File attempts that reported stats. */
+	attempts: z.number(),
+	stripeRequests: z.number(),
+	/** 429s Stripe returned (each was retried by the limiter). */
+	rateLimited: z.number(),
+	permitWaitP95Ms: z.number().nullable(),
+	permitWaitMaxMs: z.number().nullable(),
+	workerPeakRps: z.number().nullable(),
+	workerPeakInFlight: z.number().nullable(),
+	cpuCoreSeconds: z.number().nullable(),
+	cpuPeakCoresP95: z.number().nullable(),
+	memPeakMibP95: z.number().nullable(),
+	memPeakMibMax: z.number().nullable(),
+});
+
+/** How a run chose its worker count and files per worker; see sizing/README.md for the formula. */
+export const RunSizing = z.object({
+	mode: z.enum(["auto", "max_workers", "max_files_per_worker"]),
+	/** Files per worker on the packed shard; every other shard runs one per worker. */
+	filesPerWorker: z.number(),
+	workers: z.number(),
+	packedFiles: z.number(),
+	soloFiles: z.number(),
+	/** Wall time the worker count was sized for (LPT over profile p90s), and its prediction. */
+	targetWallMs: z.number().nullable(),
+	predictedWallMs: z.number().nullable(),
+	/** Per-worker ceilings and the share of them packing may use. */
+	limits: z.object({
+		headroom: z.number(),
+		stripeRps: z.number(),
+		stripeInFlight: z.number(),
+		cores: z.number(),
+		memoryMib: z.number(),
+	}),
+	/** Expected per-worker load at the chosen files per worker (mean + 2σ·√k, overhead included). */
+	load: z
+		.object({
+			stripeRps: z.number(),
+			stripeInFlight: z.number(),
+			cores: z.number(),
+			memoryMib: z.number(),
+		})
+		.nullable(),
+	/** The resource that stopped files per worker growing; null when it hit the cap or never packed. */
+	binding: z.string().nullable(),
+	reasons: z.array(z.string()),
+});
+
 export const RunDetail = RunSummary.extend({
 	phase: z.string().nullable(),
 	workers: z.array(WorkerState),
@@ -222,6 +306,13 @@ export const RunDetail = RunSummary.extend({
 	repeats: z.array(RepeatStat),
 	drift: z.array(Drift),
 	milestones: RunMilestones.nullable().optional(),
+	/** Live runs only: server estimate of the remaining wall time (median and p90); null while estimating. */
+	etaMs: z.number().nullable(),
+	etaP90Ms: z.number().nullable(),
+	/** Null until a file attempt reports stats. */
+	resources: RunResources.nullable().optional(),
+	/** Set once the run has sized itself (after it leaves the queue). */
+	sizing: RunSizing.nullable().optional(),
 });
 
 export const RunOutcome = z.enum(["all", "passed", "failed", "cancelled"]);
@@ -230,8 +321,15 @@ export const ListRunsQuery = z.object({
 	/** Narrows finished runs; "failed" includes errored. */
 	outcome: RunOutcome.default("all"),
 	purpose: z.enum(["adhoc", "baseline"]).optional(),
+	/** "true" = only runs that feed the dev baseline (see RunSummary.baseline). */
+	baseline: z
+		.enum(["true", "false"])
+		.transform((value) => value === "true")
+		.optional(),
 	/** Substring match on branch name. */
 	branch: z.string().optional(),
+	/** Exact branch name (a branch's history). */
+	exactBranch: z.string().optional(),
 	/** Opaque `nextCursor` from the previous page. */
 	cursor: z.string().optional(),
 	limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -241,6 +339,27 @@ export const RunsPage = z.object({
 	nextCursor: z.string().nullable(),
 	total: z.number(),
 });
+
+/** Most recent finished runs kept per branch on GET /runs/branches. */
+export const BRANCH_HISTORY_RUNS = 12;
+export const ListBranchesQuery = z.object({
+	/** Substring match on branch name. */
+	branch: z.string().optional(),
+	/** Opaque `nextCursor` from the previous page. */
+	cursor: z.string().optional(),
+	limit: z.coerce.number().int().min(1).max(100).default(30),
+});
+/** Branches by their latest finished run, newest first, each with its last finished runs (newest first). */
+export const BranchesPage = z.object({
+	branches: z.array(
+		z.object({ branch: z.string(), runs: z.array(RunSummary) }),
+	),
+	nextCursor: z.string().nullable(),
+});
+
+export const RunStatsQuery = z.object({ since: z.string().datetime() });
+/** Runs created since `since` and their cost so far (live runs still accruing). */
+export const RunStats = z.object({ runs: z.number(), usd: z.number() });
 
 /** SSE event on GET /runs/:id/events. */
 export const RunEvent = z.discriminatedUnion("type", [
@@ -252,6 +371,11 @@ export const RunEvent = z.discriminatedUnion("type", [
 	}),
 	z.object({ type: z.literal("worker"), worker: WorkerState }),
 	z.object({ type: z.literal("file"), file: RunFile }),
+	z.object({
+		type: z.literal("eta"),
+		etaMs: z.number().nullable(),
+		etaP90Ms: z.number().nullable(),
+	}),
 	z.object({
 		type: z.literal("log"),
 		file: z.string().nullable(),
@@ -526,6 +650,8 @@ export const ROUTES = {
 
 	// runs (http/routes/runs.ts)
 	listRuns: "GET /runs",
+	runBranches: "GET /runs/branches",
+	runStats: "GET /runs/stats?since=",
 	createRun: "POST /runs",
 	getRun: "GET /runs/:id",
 	runEvents: "GET /runs/:id/events",
@@ -584,7 +710,11 @@ export type Branch = z.infer<typeof Branch>;
 export type CreateRunBody = z.infer<typeof CreateRunBody>;
 export type RunSummary = z.infer<typeof RunSummary>;
 export type RunsPage = z.infer<typeof RunsPage>;
+export type BranchesPage = z.infer<typeof BranchesPage>;
+export type RunStats = z.infer<typeof RunStats>;
+export type RunLive = z.infer<typeof RunLive>;
 export type RunDetail = z.infer<typeof RunDetail>;
+export type RunSizing = z.infer<typeof RunSizing>;
 export type RunFile = z.infer<typeof RunFile>;
 export type RepeatStat = z.infer<typeof RepeatStat>;
 export type RunEvent = z.infer<typeof RunEvent>;

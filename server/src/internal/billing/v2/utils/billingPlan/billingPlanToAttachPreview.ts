@@ -2,6 +2,7 @@ import type {
 	AttachBillingContext,
 	AttachPreviewResponse,
 	BillingPlan,
+	FullCusProduct,
 	MultiAttachBillingContext,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
@@ -12,6 +13,7 @@ export const billingPlanToAttachPreview = async ({
 	ctx,
 	billingContext,
 	billingPlan,
+	nextCycleCustomerProductFilter,
 }: {
 	ctx: AutumnContext;
 	billingContext:
@@ -19,12 +21,17 @@ export const billingPlanToAttachPreview = async ({
 		| MultiAttachBillingContext
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
+	/** Scope next_cycle to a subset of products (e.g. one subscription's). */
+	nextCycleCustomerProductFilter?: (customerProduct: FullCusProduct) => boolean;
 }): Promise<AttachPreviewResponse> => {
-	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse({
-		ctx,
-		billingContext,
-		billingPlan,
-	});
+	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(
+		{
+			ctx,
+			billingContext,
+			billingPlan,
+			nextCycleCustomerProductFilter,
+		},
+	);
 
 	const willRedirectToCheckout =
 		billingContext.checkoutMode === "stripe_checkout" ||

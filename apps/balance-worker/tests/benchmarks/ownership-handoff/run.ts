@@ -7,7 +7,7 @@
  * (same machine, so Date.now() is comparable everywhere).
  *
  *   cd apps/balance-worker
- *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite]
+ *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite] [--snapshots write]
  *
  * --slots runs the blue-green scenario instead: two fleets told apart only by a fake
  * ECS service ARN (BENCH_SERVICE_ARN, which names their consumer groups), a slot
@@ -29,6 +29,10 @@ import {
 	BalanceWorkerClientError,
 	createBalanceWorkerClient,
 } from "@autumn/balance-worker-client";
+import {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
+	defaultSubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import {
 	BALANCE_WORKER_REQUEST_TIMEOUT_MS,
@@ -61,8 +65,11 @@ const { values: args } = parseArgs({
 		// the metering log volume, and replay re-reads the last ten minutes of it, so it inflates the very window being measured.
 		probe: { type: "boolean", default: false },
 		slots: { type: "boolean", default: false },
+		snapshots: { type: "string", default: "off" },
 	},
 });
+if (args.snapshots !== "off" && args.snapshots !== "write")
+	throw new Error("--snapshots must be off or write");
 const RUNS = Number(args.runs);
 const SLOTS = args.slots;
 const BACKEND = args.backend as "sqlite" | "postgres";
@@ -376,9 +383,24 @@ const fleets: Record<Fleet["name"], Fleet> = {
 	blue: fleetOfArn("blue"),
 	green: fleetOfArn("green"),
 };
+/** The snapshot settings every spawned worker serves from memory; a fleet member reads the same object from the directory. */
+const subjectSnapshotsConfig = {
+	...defaultSubjectSnapshotsEdgeConfig(),
+	mode: args.snapshots,
+};
+const edgeConfigOverride = Buffer.from(
+	JSON.stringify({
+		[BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY]: subjectSnapshotsConfig,
+	}),
+).toString("base64");
 const edgeConfigDir = SLOTS
 	? mkdtempSync(join(tmpdir(), `bench-edge-${deployment}-`))
 	: undefined;
+if (edgeConfigDir) {
+	const path = join(edgeConfigDir, BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY);
+	mkdirSync(join(path, ".."), { recursive: true });
+	await Bun.write(path, JSON.stringify(subjectSnapshotsConfig));
+}
 async function writeSlotRecord({
 	fleet,
 	reason,
@@ -484,7 +506,9 @@ async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 			env: {
 				...inherited,
 				NODE_ENV: "test",
-				...(fleet ? {} : { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: "e30=" }),
+				...(fleet
+					? {}
+					: { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverride }),
 				BENCH_WORKER_ENV: JSON.stringify(env),
 			},
 			stdout: "pipe",

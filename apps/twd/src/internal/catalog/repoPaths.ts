@@ -11,5 +11,15 @@ export const toTestId = ({ absolutePath }: { absolutePath: string }) =>
 export const isArchivedTestId = ({ testId }: { testId: string }) =>
 	testId === "archives" || testId.startsWith("archives/");
 
+export const UNIT_GROUP = "unit";
+/** CI runs unit tests on every PR and each would boot its own twd sandbox, so only the unit group or an explicit path selects them. */
+export const groupSelectsTestId = ({
+	group,
+	testId,
+}: {
+	group: string;
+	testId: string;
+}) => group === UNIT_GROUP || !testId.startsWith("unit/");
+
 export const toAbsoluteTestPath = ({ testId }: { testId: string }) =>
 	resolve(TESTS_DIR, testId);

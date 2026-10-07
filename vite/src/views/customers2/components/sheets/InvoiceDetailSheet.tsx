@@ -78,10 +78,9 @@ const resolveFeatureName = ({
 	featureId,
 	features,
 }: {
-	featureId: string | null;
+	featureId: string;
 	features: Feature[];
 }): string => {
-	if (!featureId) return "Base Price";
 	const feature = features.find((f) => f.id === featureId);
 	return feature?.name ?? featureId;
 };
@@ -176,6 +175,7 @@ export function InvoiceDetailSheet({
 		enabled:
 			invoiceIsStripe &&
 			(invoice?.status === InvoiceStatus.Paid ||
+				invoice?.status === InvoiceStatus.Open ||
 				invoice?.status === InvoiceStatus.Draft),
 	});
 
@@ -194,39 +194,6 @@ export function InvoiceDetailSheet({
 
 		const result: ProductGroup[] = [];
 		for (const [productKey, items] of byProduct) {
-			const groups = new Map<string, LineItemGroup>();
-
-			for (const item of items) {
-				const groupKey = item.stripe_subscription_item_id ?? item.id;
-				const isBasePrice = !item.feature_id;
-				const chargedAmount = item.amount_after_discounts ?? item.amount;
-
-				const existing = groups.get(groupKey);
-				if (existing) {
-					existing.items.push(item);
-					existing.totalAmount += chargedAmount;
-				} else {
-					groups.set(groupKey, {
-						groupKey,
-						label: isBasePrice
-							? "Base Price"
-							: resolveFeatureName({
-									featureId: item.feature_id,
-									features,
-								}),
-						isBasePrice,
-						items: [item],
-						totalAmount: chargedAmount,
-					});
-				}
-			}
-
-			const sortedGroups = Array.from(groups.values()).sort((a, b) => {
-				if (a.isBasePrice && !b.isBasePrice) return -1;
-				if (!a.isBasePrice && b.isBasePrice) return 1;
-				return a.label.localeCompare(b.label);
-			});
-
 			const productId = productKey === "__unknown__" ? null : productKey;
 			const product = products?.find((p) => p.id === productId);
 			const invoiceProductId =
@@ -242,6 +209,39 @@ export function InvoiceDetailSheet({
 				productId ??
 				invoiceProductId ??
 				"Custom Item";
+
+			const groups = new Map<string, LineItemGroup>();
+
+			for (const item of items) {
+				const groupKey = item.stripe_subscription_item_id ?? item.id;
+				const isBasePrice = !item.feature_id;
+				const chargedAmount = item.amount_after_discounts ?? item.amount;
+
+				const existing = groups.get(groupKey);
+				if (existing) {
+					existing.items.push(item);
+					existing.totalAmount += chargedAmount;
+				} else {
+					groups.set(groupKey, {
+						groupKey,
+						label: item.feature_id
+							? resolveFeatureName({
+									featureId: item.feature_id,
+									features,
+								})
+							: productName,
+						isBasePrice,
+						items: [item],
+						totalAmount: chargedAmount,
+					});
+				}
+			}
+
+			const sortedGroups = Array.from(groups.values()).sort((a, b) => {
+				if (a.isBasePrice && !b.isBasePrice) return -1;
+				if (!a.isBasePrice && b.isBasePrice) return 1;
+				return a.label.localeCompare(b.label);
+			});
 
 			result.push({
 				productId,
@@ -276,16 +276,15 @@ export function InvoiceDetailSheet({
 	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
 	const isFullyRefunded =
 		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
-	// Vercel invoices before the mapping existed can't be refunded from Autumn.
-	const vercelRefundBlocked =
-		invoiceProcessor === "vercel" && !invoiceMetadata.vercel_invoice_id;
-	const canRefund =
-		invoiceIsStripe &&
+	const isVercelInvoice = invoiceProcessor === "vercel";
+	// Stripe invoices refund via credit notes; Vercel ones only through Vercel.
+	const showVercelRefund =
+		isVercelInvoice &&
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded &&
-		!metadataLoading &&
-		!metadataError &&
-		!vercelRefundBlocked;
+		!metadataError;
+	// Vercel invoices before the mapping existed can't be refunded from Autumn.
+	const canRefund = showVercelRefund && !!invoiceMetadata.vercel_invoice_id;
 	const canVoid =
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
@@ -297,12 +296,16 @@ export function InvoiceDetailSheet({
 	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
 		invoiceIsStripe &&
+		!metadataLoading &&
+		!isVercelInvoice &&
 		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Draft ||
 			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const canIssueCreditNote =
 		invoiceIsStripe &&
+		!metadataLoading &&
+		!isVercelInvoice &&
 		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Paid);
@@ -418,7 +421,7 @@ export function InvoiceDetailSheet({
 			onSelect: () => openUrl(hostedInvoiceUrl),
 		});
 	}
-	if (canRefund || (vercelRefundBlocked && !isFullyRefunded)) {
+	if (showVercelRefund) {
 		menuActions.push({
 			label: canRefund ? "Refund invoice" : "Refund via Vercel support",
 			icon: <ArrowCounterClockwiseIcon size={16} />,

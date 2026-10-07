@@ -1,5 +1,9 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
+import type {
 	KafkaCommitMode,
 	KafkaConsumerGroupTimings,
 	KafkaOffsetCommit,
@@ -70,6 +74,7 @@ export type PartitionRuntimeFactoryContext = {
 	bootstrapper: PartitionBootstrapper;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
 	partitionLoad?: PartitionLoad;
 	/** The task's commit positions; each partition's writer publishes to its own cell. */

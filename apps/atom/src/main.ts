@@ -1,34 +1,31 @@
+import { isMainThread } from "node:worker_threads";
 import { getAtomEnv } from "@autumn/env/atom";
-import { atomProcessRole } from "./init/atomProcessRole.js";
-import { createAtomServer } from "./init/createAtomServer.js";
-import { createAtomSupervisor } from "./init/createAtomSupervisor.js";
-import { ATOM_CHILD_INDEX, spawnAtomChild } from "./init/spawnAtomChild.js";
 import type { AtomServer } from "./init/types/atomServer.js";
 import { getAtomLogger } from "./lib/logging/getAtomLogger.js";
+import { startWalCheckpointer } from "./state/startWalCheckpointer.js";
+import { createAtomThreads } from "./threads/createAtomThreads.js";
+import { runAtomThread } from "./threads/runAtomThread.js";
 
-/** How long a process that died stays down before another takes its place. */
-const RESTART_DELAY_MS = 1000;
-
-/** One process serves. Told to run several, the first process only supervises the ones that do. */
+/** The main thread starts the serving threads, each this same program, and copies their SQLite logs back into the files. */
 function createAtom(): AtomServer {
 	const env = getAtomEnv();
 	const logger = getAtomLogger();
-	const childIndex = process.env[ATOM_CHILD_INDEX];
-	const isSupervisor = env.ATOM_PROCESSES > 1 && childIndex === undefined;
-	if (!isSupervisor) {
-		const role = atomProcessRole({
-			env,
-			childIndex: childIndex === undefined ? null : Number(childIndex),
-		});
-		return createAtomServer({ ctx: { logger }, config: { env, role } });
-	}
-	return createAtomSupervisor({
-		ctx: { spawnChild: spawnAtomChild, logger },
-		config: {
-			processes: env.ATOM_PROCESSES,
-			restartDelayMs: RESTART_DELAY_MS,
-		},
+	const threads = createAtomThreads({
+		// The program's entry, not this module: Alien's build wraps main.ts in a bootstrap, and a non-entry module's URL is its source path.
+		ctx: { spawnThread: () => new Worker(Bun.main), logger },
+		config: { env },
 	});
+	const walCheckpointer = startWalCheckpointer({
+		dataDir: env.ATOM_DATA_DIR,
+		logger,
+	});
+	return {
+		start: threads.start,
+		stop: async () => {
+			await threads.stop();
+			walCheckpointer.stop();
+		},
+	};
 }
 
 async function main(): Promise<void> {
@@ -68,4 +65,6 @@ function reportError({ cause }: { cause: unknown }): void {
 	getAtomLogger().error({ error: cause, type: "atom_failed" }, "Atom failed");
 }
 
-void main();
+// One program for every thread: a compiled Atom is a single file, so a serving thread is the program started again.
+if (isMainThread) void main();
+else runAtomThread();

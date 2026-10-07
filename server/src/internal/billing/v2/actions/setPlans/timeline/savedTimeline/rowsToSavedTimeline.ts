@@ -65,9 +65,11 @@ const toSavedRow = (row: TimelineRow): SavedRow => ({
 	customerProductId: row.customerProductId,
 	startsAt: row.startsAt,
 	endsAt: row.endsAt,
+	periodEndsAtAfterReset: row.periodEndsAtAfterReset,
 	scheduled: row.scheduled,
 	canceling: row.canceling,
 	pastDue: row.pastDue,
+	unbilledByStripe: row.unbilledByStripe,
 });
 
 const toSavedSegment = ({

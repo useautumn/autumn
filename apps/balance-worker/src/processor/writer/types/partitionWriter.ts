@@ -8,6 +8,10 @@ import type {
 	SubjectState,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../../state/types/stateStore.js";
@@ -73,8 +77,9 @@ export type PartitionWriter = {
 	}): SubjectState | null;
 	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
 	evict(params: { customerKey: string }): Promise<void>;
-	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there. */
-	adopt(params: { state: SubjectState }): SubjectState;
+	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
+	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
+	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
 	/** Releases the partition's share of the worker's budget and drops its resident rows. */
 	dispose(): void;
 };
@@ -119,8 +124,11 @@ export type PartitionWriterContext = {
 		| "readOwnState"
 		| "readReceipt"
 		| "applyDurableMutations"
+		| "snapshotQueues"
 	>;
 	appender: CommittedOutcomeAppender;
+	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */
@@ -179,8 +187,9 @@ export type PendingMutation = {
 	/** The partition's sequence number for this write, in decide order. */
 	seq: number;
 	customerKey: string;
-	/** The subjects this mutation projected; pinned in the map until it commits. */
+	/** The subjects this mutation projected; pinned in the map until it commits, or until it is stored while snapshots are written. */
 	projectedSubjectKeys: string[];
+	pinsReleased?: boolean;
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied; null for a log-only record. */
 	nextState: SubjectState | null;

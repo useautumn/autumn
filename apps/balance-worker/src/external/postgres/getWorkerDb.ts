@@ -1,4 +1,9 @@
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
 	claimCustomerByEmail,
 	claimPartitionProgress,
@@ -13,7 +18,9 @@ import {
 	type PostgresClient,
 	type PostgresClientConfig,
 	type PostgresLogger,
+	readEntitySubjectSnapshots,
 	readPartitionProgress,
+	readSubjectSnapshot,
 	sumPooledContributionGrants,
 } from "@autumn/postgres";
 import {
@@ -58,8 +65,22 @@ export const createWorkerPostgresClient = ({
 type WorkerDbContext = {
 	postgres: Pick<PostgresClient, "db">;
 	subjectLoads: Pick<SubjectLoadGate, "run">;
-	timings: Pick<DatabaseTimings, "queryStarted" | "queryFinished">;
+	timings: Pick<
+		DatabaseTimings,
+		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
+	>;
+	/** Read at each probe for `writtenAfter`; absent, every row of this build's version answers. */
+	subjectSnapshotsConfig?: Pick<
+		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,
+		"get"
+	>;
 };
+
+/** Which rows a snapshot probe may answer with, as the config stands when it runs. */
+const snapshotProbeOf = ({ ctx }: { ctx: WorkerDbContext }) => ({
+	stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
+	writtenAfter: ctx.subjectSnapshotsConfig?.get().writtenAfter ?? 0,
+});
 
 export const createWorkerDb = ({
 	ctx,
@@ -84,6 +105,51 @@ export const createWorkerDb = ({
 					}),
 			}),
 		),
+	readSubjectSnapshot: ({ identity }) =>
+		ctx.subjectLoads.run(async () => {
+			const snapshot = await timeQuery({
+				ctx,
+				kind: "subject_snapshot",
+				run: () =>
+					readSubjectSnapshot({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityId: identity.entityId,
+						probe: snapshotProbeOf({ ctx }),
+					}),
+			});
+			ctx.timings.recordSubjectSnapshots(
+				snapshot === null ? { misses: 1 } : { hits: 1 },
+			);
+			return snapshot;
+		}),
+	readEntitySubjectSnapshots: ({ identity, entityIds }) =>
+		ctx.subjectLoads.run(async () => {
+			const snapshots = await timeQuery({
+				ctx,
+				kind: "subject_snapshot",
+				run: () =>
+					readEntitySubjectSnapshots({
+						ctx: {
+							db: ctx.postgres.db,
+							orgId: identity.orgId,
+							env: identity.env,
+						},
+						customerId: identity.customerId,
+						entityIds,
+						probe: snapshotProbeOf({ ctx }),
+					}),
+			});
+			ctx.timings.recordSubjectSnapshots({
+				hits: snapshots.size,
+				misses: entityIds.length - snapshots.size,
+			});
+			return snapshots;
+		}),
 	getEntitySubjectRows: ({ identity, entityIds, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({
@@ -178,7 +244,12 @@ const FLUSH_STATEMENT_TIMEOUT_MS = 2_000;
 export const createCommitterDb = ({
 	ctx,
 }: {
-	ctx: Omit<WorkerDbContext, "subjectLoads">;
+	ctx: Omit<WorkerDbContext, "subjectLoads" | "timings"> & {
+		timings: Pick<
+			DatabaseTimings,
+			"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
+		>;
+	};
 }): CommitterDb => ({
 	readPartitionProgress: (params) =>
 		timeQuery({
@@ -201,8 +272,8 @@ export const createCommitterDb = ({
 			run: () =>
 				claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 		}),
-	flush: (request) =>
-		timeQuery({
+	flush: async (request) => {
+		const result = await timeQuery({
 			ctx,
 			kind: "flush",
 			run: () =>
@@ -212,7 +283,16 @@ export const createCommitterDb = ({
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
 					roundTrips: "single",
 				}),
-		}),
+		});
+		const { snapshots } = result;
+		// A rolled-back flush answers zero counts: nothing to put on the database line.
+		if (snapshots && snapshots.upserted + snapshots.deleted.length > 0)
+			ctx.timings.recordSubjectSnapshots({
+				upserted: snapshots.upserted,
+				deleted: snapshots.deleted.length,
+			});
+		return result;
+	},
 });
 
 /** The flush's synchronous work shows up in the stall sections beside the request path's. */

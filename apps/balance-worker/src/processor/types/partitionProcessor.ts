@@ -30,6 +30,10 @@ import type {
 	UpdateBalanceReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
@@ -79,7 +83,11 @@ export type PartitionProcessor = {
 	applyBillingPlan(params: {
 		request: ApplyBillingPlanRequest;
 	}): Promise<ApplyBillingPlanReply>;
-	evict(params: { command: EvictCommand }): Promise<EvictReply>;
+	/** Answers once the rows are gone from memory and, unless told otherwise, once the customer's snapshot DELETE has landed. */
+	evict(params: {
+		command: EvictCommand;
+		waitsForSnapshotDelete?: boolean;
+	}): Promise<EvictReply>;
 	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	decideFinalize(params: {
@@ -112,11 +120,15 @@ export type PartitionProcessorDependencies = {
 	stateStore: PartitionWriterContext["stateStore"] &
 		Pick<
 			StateStore,
-			"baseline" | "readCommandNextOffset" | "advanceCommandNextOffset"
+			| "baseline"
+			| "readNextOffset"
+			| "readCommandNextOffset"
+			| "advanceCommandNextOffset"
 		>;
 	catalogCache: CatalogCache;
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
+	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	/** Where the partition's writer publishes its commit position. */

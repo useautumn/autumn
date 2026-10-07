@@ -28,6 +28,7 @@ export type {
 	KafkaProducerClient,
 	KafkaProducerFactory,
 	KafkaRequestTiming,
+	KafkaSaslCredentials,
 	KafkaSender,
 	KafkaTransaction,
 	KafkaTransportConfig,
@@ -177,6 +178,7 @@ export type {
 export {
 	meteringTopic,
 	parseMeteringRecord,
+	parseTrustedMeteringRecord,
 	serializeMeteringRecord,
 } from "./topics/metering/meteringTopic.js";
 export type { OwnerHeaders } from "./topics/metering/ownerHeaders.js";

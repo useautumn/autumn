@@ -60,6 +60,7 @@ export const createFeatureListColumns = ({
 		? [
 				{
 					header: "Event Names",
+					enableSorting: false,
 					size: 200,
 					accessorKey: "event_names",
 					cell: ({ row }: { row: Row<Feature> }) => {

@@ -6,15 +6,36 @@ import type {
 
 /** Fail fast: an Atom slower than this is the finding, not something to wait out. */
 const ATOM_SHADOW_TIMEOUT_MS = 300;
+/** A late reply still finishes so its keep-alive socket returns to the pool; this only bounds a stuck one. */
+const ATOM_SHADOW_ABANDON_MS = 5_000;
+/** Past this many open requests a check is shed as a timeout rather than dialled: bounds the Atom's queue below the timeout. */
+const ATOM_SHADOW_MAX_IN_FLIGHT = 16;
 
 /** Set when Atom had the API answer instead, so the body is not Atom's own. */
 const FORWARDED_HEADER = "x-atom-forwarded";
 
+let requestsInFlight = 0;
+
+/** This process's Atom requests still open, late ones past their timeout included. */
+export const atomRequestsInFlight = () => requestsInFlight;
+
 const errorToReason = (error: unknown): string =>
 	error instanceof Error ? error.name : "unknown_failure";
 
+/** Resolves to a timeout after ATOM_SHADOW_TIMEOUT_MS, without aborting the request: an abort drops its socket. */
+const replyWithinTimeout = (reply: Promise<AtomCheckReply>) => {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<AtomCheckReply>((resolve) => {
+		timer = setTimeout(
+			() => resolve({ kind: "timeout" }),
+			ATOM_SHADOW_TIMEOUT_MS,
+		);
+	});
+	return Promise.race([reply, timeout]).finally(() => clearTimeout(timer));
+};
+
 /** The caller's check as the caller sent it, minus its secret key: Atom forwards nothing without one. */
-export const sendCheckToAtom = async ({
+export const sendCheckToAtom = ({
 	target,
 	params,
 	search,
@@ -24,7 +45,18 @@ export const sendCheckToAtom = async ({
 	params: CheckParams;
 	search: string;
 	apiVersion: ApiVersionClass;
-}): Promise<AtomCheckReply> => {
+}): Promise<AtomCheckReply> =>
+	requestsInFlight >= ATOM_SHADOW_MAX_IN_FLIGHT
+		? Promise.resolve({ kind: "timeout", shed: true })
+		: replyWithinTimeout(requestCheck({ target, params, search, apiVersion }));
+
+const requestCheck = async ({
+	target,
+	params,
+	search,
+	apiVersion,
+}: Parameters<typeof sendCheckToAtom>[0]): Promise<AtomCheckReply> => {
+	requestsInFlight++;
 	try {
 		const response = await fetch(
 			new URL(`/v1/balances.check${search}`, target.endpointUrl),
@@ -36,17 +68,21 @@ export const sendCheckToAtom = async ({
 					"x-api-version": apiVersion.semver,
 				},
 				body: JSON.stringify(params),
-				signal: AbortSignal.timeout(ATOM_SHADOW_TIMEOUT_MS),
+				signal: AbortSignal.timeout(ATOM_SHADOW_ABANDON_MS),
 			},
 		);
 		const forwardReason = response.headers.get(FORWARDED_HEADER);
-		if (forwardReason)
-			return { kind: "atom_error", reason: `forwarded_${forwardReason}` };
-		if (!response.ok)
-			return { kind: "atom_error", reason: `http_${response.status}` };
+		if (forwardReason || !response.ok) {
+			await response.arrayBuffer();
+			return forwardReason
+				? { kind: "atom_error", reason: `forwarded_${forwardReason}` }
+				: { kind: "atom_error", reason: `http_${response.status}` };
+		}
 		return { kind: "answered", body: await response.json() };
 	} catch (error) {
 		if (errorToReason(error) === "TimeoutError") return { kind: "timeout" };
 		return { kind: "atom_error", reason: errorToReason(error) };
+	} finally {
+		requestsInFlight--;
 	}
 };

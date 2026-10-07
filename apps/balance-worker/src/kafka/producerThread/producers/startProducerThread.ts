@@ -93,6 +93,7 @@ export async function startProducerThread({
 		brokers: config.brokers,
 		authMode: config.authMode,
 		region: config.region,
+		sasl: config.sasl,
 		limits: config.limits,
 		sendRing: rings.send,
 		ackRing: rings.ack,

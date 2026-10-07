@@ -1,3 +1,7 @@
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
@@ -7,8 +11,10 @@ import {
 	loadProgress,
 } from "./actions/partitionProgress.js";
 import { createProgressMirror } from "./repos/progressMirror.js";
+import { createSnapshotQueues } from "./subjectSnapshots/createSnapshotQueues.js";
 import type {
 	Committer,
+	CommitterContext,
 	CommitterStateStore,
 	PartitionPosition,
 } from "./types/committer.js";
@@ -26,6 +32,9 @@ export const createCommitterStateStore = ({
 			| "insertPartitionProgress"
 			| "claimPartitionProgress"
 		>;
+		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
+		/** Present when the worker has the snapshot settings: evict DELETEs and refreshes land through the store's lane. */
+		subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	};
 }): CommitterStateStore => {
 	const claimTokens = new Map<string, string>();
@@ -37,7 +46,7 @@ export const createCommitterStateStore = ({
 		progress: createProgressMirror(),
 		claimTokenOf,
 	};
-	// Replay, writer applies and command-only bookmarks share one lane per partition.
+	// Replay, writer applies, command-only bookmarks and evict DELETEs share one lane per partition: Postgres sees them in the order the partition asked.
 	const laneByPartition = new Map<string, Promise<unknown>>();
 	function runInLane<Result>({
 		position,
@@ -55,13 +64,15 @@ export const createCommitterStateStore = ({
 
 	const applyInLane: CommitterStateStore["applyDurableMutations"] = ({
 		records,
+		snapshotIntent,
 	}) => {
 		const first = records[0];
 		if (!first) return Promise.resolve([]);
 		const claimToken = claimTokenOf(first.position);
 		return runInLane({
 			position: first.position,
-			run: () => applyDurableMutations({ ctx, records, claimToken }),
+			run: () =>
+				applyDurableMutations({ ctx, records, snapshotIntent, claimToken }),
 		});
 	};
 
@@ -107,6 +118,18 @@ export const createCommitterStateStore = ({
 	function readCommandNextOffset(params: PartitionPosition) {
 		return ctx.progress.readCommandNextOffset(params);
 	}
+	const snapshotQueues = dependencies.subjectSnapshotsConfig
+		? createSnapshotQueues({
+				ctx: {
+					committer: ctx.committer,
+					logger: dependencies.logger,
+					subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
+					readNextOffset: (position) => ctx.progress.readNextOffset(position),
+					claimTokenOf,
+					runInLane,
+				},
+			})
+		: undefined;
 	function readAbsent(): null {
 		return null;
 	}
@@ -116,6 +139,7 @@ export const createCommitterStateStore = ({
 
 	return {
 		baseline: "map",
+		...(snapshotQueues && { snapshotQueues }),
 		claimPartition,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,

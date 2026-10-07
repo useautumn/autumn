@@ -49,6 +49,7 @@ const matches = (run: RunSummary, filter: RunsFilter) =>
 		filter.outcome === "all" ||
 		!!OUTCOMES[filter.outcome]?.includes(run.status)) &&
 	(!filter.purpose || run.purpose === filter.purpose) &&
+	(filter.baseline === undefined || run.baseline === filter.baseline) &&
 	(!filter.branch ||
 		run.branch.toLowerCase().includes(filter.branch.toLowerCase()));
 
@@ -61,6 +62,7 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 	const workers = new Map(run.workers.map((w) => [w.name, w]));
 	const files = new Map(run.files.map((f) => [f.file, f]));
 	let touchedFiles = false;
+	let { etaMs, etaP90Ms } = run;
 	for (const event of events) {
 		if (event.type === "status") {
 			status = event.status;
@@ -73,6 +75,8 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		} else if (event.type === "file") {
 			files.set(event.file.file, event.file);
 			touchedFiles = true;
+		} else if (event.type === "eta") {
+			({ etaMs, etaP90Ms } = event);
 		}
 	}
 	const fileList = touchedFiles ? [...files.values()] : run.files;
@@ -82,6 +86,8 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 		phase,
 		finishedAt,
 		milestones,
+		etaMs: TERMINAL.has(status) ? null : etaMs,
+		etaP90Ms: TERMINAL.has(status) ? null : etaP90Ms,
 		workers: [...workers.values()],
 		files: fileList,
 		...(touchedFiles && {

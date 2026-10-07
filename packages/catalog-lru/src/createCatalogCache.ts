@@ -5,6 +5,7 @@ import {
 	indexCatalogRow,
 	unindexCatalogRow,
 } from "./actions/invalidationIndex.js";
+import { isCatalogCurrent } from "./actions/isCatalogCurrent.js";
 import { loadCatalogRows } from "./actions/loadCatalogRows.js";
 import { putCatalogRows } from "./actions/putCatalogRows.js";
 import { readCatalog } from "./actions/readCatalog.js";
@@ -54,6 +55,7 @@ export const createCatalogCache = ({
 			keysByScope,
 			inFlight: new Map(),
 			changeCount: 0,
+			reads: new WeakMap(),
 			catalogVersions: new Map(),
 			rowVersions: new WeakMap(),
 		},
@@ -75,6 +77,6 @@ export const createCatalogCache = ({
 		put: ({ rows }) => putCatalogRows({ scope, rows }),
 		invalidate: ({ orgId, env }) => invalidateCatalog({ scope, orgId, env }),
 		size: () => scope.state.entries.size,
-		changeCount: () => scope.state.changeCount,
+		isCurrent: ({ catalog }) => isCatalogCurrent({ scope, catalog }),
 	};
 };

@@ -22,11 +22,14 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
+import { billingPlanToAutumnCheckout } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAutumnCheckout";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
+import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { applyBillingDetailsForBilling } from "@/internal/billing/v2/utils/tax/applyBillingDetailsForBilling";
 import { resolveTaxRateId } from "@/internal/billing/v2/utils/tax/resolveTaxRateId";
+import { updateCheckoutDbAndCache } from "@/internal/checkouts/actions/updateDbAndCache";
 import { preserveSubjectCache } from "@/internal/customers/cache/fullSubject/actions/preserveSubjectCache.js";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
@@ -186,7 +189,7 @@ export async function attach({
 		);
 	}
 
-	if (shouldCreateLongLivedCheckout) {
+	if (shouldCreateLongLivedCheckout && !billingContext.enablePlanImmediately) {
 		// Creating a checkout changes no Autumn balance state. Keep any accepted
 		// Redis-only tracks for the later confirmation request to consume.
 		preserveSubjectCache({ ctx });
@@ -212,6 +215,26 @@ export async function attach({
 			billingContext,
 			billingPlan,
 		});
+	}
+
+	// enable_plan_immediately grants the plan now, so the link wraps a real attach.
+	const longLivedCheckout = shouldCreateLongLivedCheckout
+		? (
+				await billingPlanToAutumnCheckout({
+					ctx,
+					action: CheckoutAction.Attach,
+					params,
+					billingContext,
+					billingPlan,
+					expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
+				})
+			).checkout
+		: undefined;
+	if (longLivedCheckout) {
+		billingContext.longLivedCheckout = {
+			id: longLivedCheckout.id,
+			expiresAt: longLivedCheckout.expires_at,
+		};
 	}
 
 	// 6. Save request billing details first so tax resolves against the new location
@@ -242,6 +265,25 @@ export async function attach({
 	});
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
+
+	if (longLivedCheckout) {
+		await updateCheckoutDbAndCache({
+			ctx,
+			oldCheckout: longLivedCheckout,
+			updates: {
+				response: billingResultToResponse({ billingContext, billingResult }),
+			},
+		});
+
+		return {
+			billingContext,
+			billingPlan,
+			billingResult: {
+				...billingResult,
+				autumn: { checkout: longLivedCheckout },
+			},
+		};
+	}
 
 	return {
 		billingContext,

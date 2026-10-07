@@ -7,6 +7,7 @@ import type {
 	Price,
 } from "@autumn/shared";
 import type { PhaseProrationBehavior } from "../../../api/billing/common/billingBehavior";
+import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages";
 import type { ResolvedCreateSchedulePhaseV0 } from "../../../api/billing/createSchedule/createScheduleParamsV0";
 import type { FullProduct } from "../../productModels/productModels";
 import type { MultiAttachBillingContext } from "./multiAttachBillingContext";
@@ -53,4 +54,6 @@ export interface CreateScheduleBillingContext
 	endsAt?: number;
 	/** Set when the request targets one subscription; nothing outside it may change. */
 	stripeSubscriptionScope?: StripeSubscriptionScope;
+	/** The request's carry_over_usages, else the org's transition rule. */
+	carryOverUsages?: CarryOverUsages;
 }

@@ -1,14 +1,14 @@
 import {
-	getCachedOrgWithFeatures,
 	type ReadThroughCacheContext,
+	readThroughOrgWithFeatures,
 } from "@autumn/cache";
 import { getOrgWithFeatures, type PostgresDb } from "@autumn/postgres";
 import type { AppEnv, Feature, Organization } from "@autumn/shared";
 
 type OrgWithFeatures = { org: Organization; features: Feature[] };
 
-/** The server's cached org, else Postgres. Never written back: the server owns this key and its payload. */
-export const getOrgWithFeaturesCached = async ({
+/** The server's cached org, else Postgres; a burst of pushes for one org shares one lookup. */
+export const getOrgWithFeaturesCached = ({
 	ctx,
 	orgId,
 	env,
@@ -17,5 +17,9 @@ export const getOrgWithFeaturesCached = async ({
 	orgId: string;
 	env: AppEnv;
 }): Promise<OrgWithFeatures | null> =>
-	(await getCachedOrgWithFeatures<OrgWithFeatures>({ ctx, orgId, env })) ??
-	(await getOrgWithFeatures({ ctx, orgId, env }));
+	readThroughOrgWithFeatures({
+		ctx,
+		orgId,
+		env,
+		load: () => getOrgWithFeatures({ ctx, orgId, env }),
+	});

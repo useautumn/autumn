@@ -116,7 +116,7 @@ export function createBalanceWorkerEnv(
 		env.BALANCE_WORKER_HOST === "::1" ? "[::1]" : env.BALANCE_WORKER_HOST;
 	return {
 		...env,
-		...createKafkaAuthEnv({ runtimeEnv }),
+		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "BALANCE_WORKER" }),
 		BALANCE_WORKER_DEPLOYMENT: deployment,
 		BALANCE_WORKER_METERING_TOPIC: kafkaNames.meteringTopic,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: kafkaNames.ownershipTopic,
