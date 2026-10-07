@@ -4,7 +4,13 @@ import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
  * and the per-customer lazy task). Flip to re-enable. */
 export const LAZY_MIGRATION_RUNS_DISABLED = true;
 
-export const MIGRATION_RUN_CUSTOMER_CONCURRENCY = 15;
+export const MIGRATION_RUN_CUSTOMER_CONCURRENCY = 100;
+/** Chunk-task DB pool: every in-flight customer holds a connection, so this
+ * must cover MIGRATION_RUN_CUSTOMER_CONCURRENCY plus headroom. */
+export const MIGRATION_DB_POOL_MAX = (() => {
+	const parsed = Number(process.env.MIGRATION_DB_POOL_MAX);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : 110;
+})();
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
 /** Customer ids per keyset segment when a run fans out over concurrent chunks. */

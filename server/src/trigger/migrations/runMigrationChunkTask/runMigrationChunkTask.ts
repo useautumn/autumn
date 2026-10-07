@@ -2,6 +2,7 @@ import { task } from "@trigger.dev/sdk/v3";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { executeRunMigrationChunk } from "@/internal/migrations/v2/run/executeRunMigrationChunk.js";
 import { RunMigrationChunkPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import { getMigrationDb } from "@/trigger/migrations/getMigrationDb.js";
 import {
 	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
 	MIGRATION_TASK_RETRY,
@@ -21,6 +22,7 @@ export const runMigrationChunkTask = task({
 			orgId: payload.orgId,
 			env: payload.env,
 			triggerCtx,
+			db: getMigrationDb(),
 		});
 
 		// Trigger tasks start with cold Redis clients; warm before chunk work.
