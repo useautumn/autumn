@@ -2,7 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 
 const UNKNOWN_KEYS_LOG_EVERY_MS = 60_000;
 
-/** Where commands carrying keys this worker does not know arrive from, logged once a minute per source and key set. */
+/** Commands that arrived with keys this worker does not know: one line per source and key set per window. */
 export type UnknownKeysLog = {
 	record(params: { source: string; keyPaths: string[] }): void;
 };
