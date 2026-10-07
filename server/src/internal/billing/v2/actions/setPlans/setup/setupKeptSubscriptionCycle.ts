@@ -75,7 +75,7 @@ const backdatedCycleRenewalMs = ({
 };
 
 /**
- * A replacement subscription for kept plans continues their paid cycle on the old period end; like Stripe, the stub before it is free under none (the default) and prorated otherwise.
+ * A replacement subscription for kept plans continues them to a date: the requested anchor (an ended trial's), else the old period end.
  * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
  */
 export const setupKeptSubscriptionCycle = ({
@@ -120,8 +120,13 @@ export const setupKeptSubscriptionCycle = ({
 		}).length > 0;
 	if (!keepsReplacedPlan) return {};
 
+	// Like Stripe's create on a future anchor, nothing is billed before it unless proration is requested.
+	const { requestedBillingCycleAnchor } = billingContext;
 	return {
-		billingCycleAnchorMs: periodEndMs,
+		billingCycleAnchorMs:
+			typeof requestedBillingCycleAnchor === "number"
+				? requestedBillingCycleAnchor
+				: periodEndMs,
 		requestedProrationBehavior: requestedProrationBehavior ?? "none",
 	};
 };

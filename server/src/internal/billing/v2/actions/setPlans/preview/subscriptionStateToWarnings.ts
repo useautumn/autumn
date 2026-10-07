@@ -52,6 +52,18 @@ const replacedSubscriptionWarning = ({
 	replacedStripeSubscription: Stripe.Subscription;
 	stripeBillingPlan: StripeBillingPlan;
 }): Warning | undefined => {
+	// A replaced trialing subscription ends without a charge: Stripe neither invoices nor credits its trial.
+	if (replacedStripeSubscription.status === "trialing") {
+		return {
+			type: "subscription_replaced",
+			...warningText([
+				plainText("The trialing subscription"),
+				boldText(replacedStripeSubscription.id),
+				plainText("will be cancelled without a charge and a new one created."),
+			]),
+		};
+	}
+
 	const { warning } = subscriptionStateAction({
 		state: replacedStripeSubscription.status,
 	});

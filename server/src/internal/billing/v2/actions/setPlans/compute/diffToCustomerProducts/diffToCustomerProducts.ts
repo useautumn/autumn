@@ -3,7 +3,6 @@ import {
 	type CreateScheduleBillingContext,
 	CusProductStatus,
 	type FullCusProduct,
-	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -16,6 +15,7 @@ import type {
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
+import { isOnReplacedStripeSubscription } from "../../utils/isOnReplacedStripeSubscription";
 import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
@@ -113,23 +113,6 @@ const emptyPatch = (customerProduct: FullCusProduct): CustomerProductPatch => ({
 	deleteCustomerPrices: [],
 });
 
-const isOnReplacedSubscription = ({
-	billingContext,
-	customerProduct,
-}: {
-	billingContext: CreateScheduleBillingContext;
-	customerProduct: FullCusProduct;
-}) => {
-	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
-	return (
-		replacedSubscriptionId !== undefined &&
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedSubscriptionId,
-		}) === true
-	);
-};
-
 const isOnReplacedSchedule = ({
 	billingContext,
 	customerProduct,
@@ -191,7 +174,7 @@ const replacedLinkResets = ({
 	billingContext: CreateScheduleBillingContext;
 	customerProduct: FullCusProduct;
 }): CustomerProductUpdate["updates"] | undefined => {
-	const onReplacedSubscription = isOnReplacedSubscription({
+	const onReplacedSubscription = isOnReplacedStripeSubscription({
 		billingContext,
 		customerProduct,
 	});
@@ -254,6 +237,16 @@ const keptRowUpdate = ({
 	const linkResets = replacedLinkResets({ billingContext, customerProduct });
 	// Unlinked and paired with an empty patch, execution stamps the new subscription and schedule ids on it.
 	if (linkResets) Object.assign(update.updates, linkResets);
+	// A row leaving a trialing subscription the request ends lands on a new one without a trial.
+	if (linkResets && billingContext.trialContext?.trialEndsAt === null) {
+		Object.assign(
+			update.updates,
+			applyTrialContextToPatchedCustomerProduct({
+				customerProduct: { ...customerProduct },
+				trialContext: billingContext.trialContext,
+			}),
+		);
+	}
 	if (
 		linkResets &&
 		isLiveRow(customerProduct) &&

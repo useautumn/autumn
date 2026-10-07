@@ -29,6 +29,7 @@ import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomiz
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 import { replaceLiveSubscriptionForBackdate } from "./replaceLiveSubscriptionForBackdate";
 import { replaceLiveSubscriptionForFutureStart } from "./replaceLiveSubscriptionForFutureStart";
+import { replaceLiveSubscriptionForTrialEnd } from "./replaceLiveSubscriptionForTrialEnd";
 import { setupFutureStartTiming } from "./setupFutureStartTiming";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
@@ -134,7 +135,7 @@ export const setupSetPlansBillingContext = async ({
 		endsAt: params.ends_at,
 	});
 
-	const scheduleBillingContext: CreateScheduleBillingContext = {
+	const requestedBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
 		...mergeScheduledPhaseCustomizations({
 			billingContext,
@@ -173,6 +174,12 @@ export const setupSetPlansBillingContext = async ({
 			carryOverUsages: params.carry_over_usages,
 		}),
 		...setupFutureStartTiming({ billingContext: firstPhaseContext, params }),
+	};
+	const scheduleBillingContext: CreateScheduleBillingContext = {
+		...requestedBillingContext,
+		...replaceLiveSubscriptionForTrialEnd({
+			billingContext: requestedBillingContext,
+		}),
 	};
 
 	const timeline = setupSetPlansTimeline({
