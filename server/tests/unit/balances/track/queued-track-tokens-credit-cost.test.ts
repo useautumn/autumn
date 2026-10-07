@@ -95,6 +95,9 @@ const { runQueuedTrack } = await import(
 const { getTokenTrackParams } = await import(
 	"@/internal/balances/track/utils/getTokenTrackParams.js"
 );
+const { runBatchTrackTokens } = await import(
+	"@/internal/balances/track/runBatchTrackTokens.js"
+);
 const { buildAiCreditCostProperty } = await import(
 	"@/internal/balances/track/utils/buildAiCreditCostProperty.js"
 );
@@ -132,7 +135,11 @@ const drawn = [
 	{ featureId: "orbs", amount: 20_000 },
 ];
 
-const queueDefaultTrackTokens = async () => {
+type QueuedTrackMessage = Omit<Parameters<typeof runQueuedTrack>[0], "ctx">;
+
+const captureQueuedMessages = async (
+	send: () => Promise<unknown>,
+): Promise<QueuedTrackMessage[]> => {
 	const { restore } = pinTrackProducerQueueToFifo({
 		fifoQueueUrl: trackAsyncQueueUrl,
 	});
@@ -147,6 +154,21 @@ const queueDefaultTrackTokens = async () => {
 	}) as typeof sqsClient.send;
 
 	try {
+		await send();
+	} finally {
+		sqsClient.send = originalSend;
+		restore();
+	}
+
+	return sent.flatMap((input) =>
+		(input.Entries as Array<{ MessageBody: string }>).map(
+			(entry) => JSON.parse(entry.MessageBody).data,
+		),
+	);
+};
+
+const queueDefaultTrackTokens = async () => {
+	const [message] = await captureQueuedMessages(async () => {
 		const app = new Hono<HonoEnv>();
 		app.use("*", async (c, next) => {
 			c.set("ctx", createCtx());
@@ -159,13 +181,8 @@ const queueDefaultTrackTokens = async () => {
 			body: JSON.stringify(requestBody),
 		});
 		expect(response.status).toBe(202);
-	} finally {
-		sqsClient.send = originalSend;
-		restore();
-	}
-
-	const entries = sent[0]?.Entries as Array<{ MessageBody: string }>;
-	return JSON.parse(entries[0].MessageBody).data;
+	});
+	return message;
 };
 
 describe("queued track_tokens credit_cost", () => {
@@ -186,8 +203,24 @@ describe("queued track_tokens credit_cost", () => {
 			entries: drawn,
 		});
 
+		expect(replayedDeductions[0]).toEqual(sync.featureDeductions);
 		expect(syncCreditCost).toEqual({ orbs: 20_000 });
 		expect(queuedCreditCost).toEqual(syncCreditCost);
+	});
+
+	test("a legacy batch track_tokens replays each item with the sync path's token deduction", async () => {
+		const sync = await getTokenTrackParams({
+			ctx: createCtx(),
+			input: requestBody,
+		});
+
+		const [queuedMessage] = await captureQueuedMessages(() =>
+			runBatchTrackTokens({ ctx: createCtx(), body: [requestBody] }),
+		);
+		replayedDeductions.length = 0;
+		await runQueuedTrack({ ctx: createCtx(), ...queuedMessage });
+
+		expect(replayedDeductions[0]).toEqual(sync.featureDeductions);
 	});
 });
 
