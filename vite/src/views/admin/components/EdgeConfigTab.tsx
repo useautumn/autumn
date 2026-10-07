@@ -21,6 +21,7 @@ import { RateLimitRedisAllowlistDialog } from "./RateLimitRedisAllowlistDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
+import { SubjectSnapshotsDialog } from "./SubjectSnapshotsDialog";
 
 type EdgeConfigSource = {
 	bucket: string;
@@ -127,6 +128,11 @@ export function EdgeConfigTab() {
 
 			<DbControlDialog
 				open={openConfig === "db-control"}
+				onOpenChange={closeDialog}
+			/>
+
+			<SubjectSnapshotsDialog
+				open={openConfig === "subject-snapshots"}
 				onOpenChange={closeDialog}
 			/>
 

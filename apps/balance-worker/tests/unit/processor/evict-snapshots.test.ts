@@ -6,11 +6,11 @@ import {
 	parseCheckCommand,
 	partitionKeyToMeteringIdentity,
 } from "@autumn/balance-engine";
+import type { SubjectSnapshotMode } from "@autumn/edge-config";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import type { Committer } from "../../../src/committer/types/committer.js";
-import type { SubjectSnapshotMode } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";

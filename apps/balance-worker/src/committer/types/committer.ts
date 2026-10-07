@@ -1,6 +1,8 @@
-import type { EdgeConfigStore } from "@autumn/edge-config";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { DeletedSubjectSnapshot } from "@autumn/postgres";
-import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { DurableMutationRecord } from "../../state/types/durableMutation.js";
 import type { SnapshotIntent } from "../../state/types/snapshotIntent.js";
 import type { OwnerFence, StateStore } from "../../state/types/stateStore.js";

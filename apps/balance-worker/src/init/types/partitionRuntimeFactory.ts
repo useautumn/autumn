@@ -1,5 +1,8 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
-import type { EdgeConfigStore } from "@autumn/edge-config";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type {
 	KafkaCommitMode,
 	KafkaConsumerGroupTimings,
@@ -10,7 +13,6 @@ import type {
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
-import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
