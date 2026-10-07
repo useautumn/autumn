@@ -152,3 +152,66 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default6: 2.4 batch items with async still succeed")}`,
+	async () => {
+		const { autumnV2_4, autumnV2_5, customerId } = await setupCustomer({
+			customerId: "track-async-default6",
+		});
+		const item = {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 2,
+		};
+
+		expect(
+			await autumnV2_4.post("/balances.batch_track", [
+				{ ...item, async: false },
+				{ ...item, async: true },
+			]),
+		).toEqual({ success: true });
+		expect(await autumnV2_5.post("/balances.batch_track", [item])).toEqual({
+			success: true,
+		});
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_5,
+			featureId: TestFeature.Messages,
+			remaining: 94,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default7: 2.4 batch track_tokens items with async still succeed")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [
+				items.free({ featureId: TestFeature.AiCredits, includedUsage: 1000 }),
+			],
+		});
+		const { autumnV2_4, autumnV2_5, customerId } = await initScenario({
+			customerId: "track-async-default7",
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [s.attach({ productId: free.id })],
+		});
+		const item = {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "openai/gpt-4o",
+			input_tokens: 1000,
+			output_tokens: 500,
+		};
+
+		expect(
+			await autumnV2_4.post("/balances.batch_track_tokens", [
+				{ ...item, async: false },
+			]),
+		).toEqual({ success: true });
+		expect(
+			await autumnV2_5.post("/balances.batch_track_tokens", [item]),
+		).toEqual({ success: true });
+	},
+);
