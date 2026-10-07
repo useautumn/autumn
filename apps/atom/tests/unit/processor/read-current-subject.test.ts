@@ -10,6 +10,7 @@ import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSu
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
+import type { CatalogStore } from "../../../src/state/types/catalogStore.js";
 import { atomOrg, forwardReasonOf, freshHeld } from "../utils/atomFixtures.js";
 
 const state = createState({ balance: 10 });
@@ -148,5 +149,20 @@ describe("the subject a check runs on", () => {
 		});
 
 		expect(read()).not.toBe(first);
+	});
+
+	test("lets a replaced shared catalog go, though a subject not checked since was joined to it", async () => {
+		const ctx = createContext({ shared: sharedRows });
+		readCurrentSubject({ ctx, customerId: "cus_1", entityId: null });
+		const replaced = (() => {
+			const shared = ctx.catalogStore.read();
+			return shared ? new WeakRef(shared) : null;
+		})();
+
+		(ctx.catalogStore as CatalogStore).set({ rows: sharedRows, readAt: 3000 });
+		await Bun.sleep(0);
+		Bun.gc(true);
+
+		expect(replaced?.deref()).toBeUndefined();
 	});
 });

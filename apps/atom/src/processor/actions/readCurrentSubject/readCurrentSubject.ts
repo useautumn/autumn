@@ -30,15 +30,23 @@ const readStoredParts = ({
 	return { customer, entity };
 };
 
-/** The parts a subject was joined from: the view is current while the store still holds these very copies. */
+/** The customer copy a subject was joined from: the view is current while the store still holds that very copy. */
 type SubjectJoinCacheEntry = {
 	customer: StoredSubject;
-	shared: SharedCatalog | null;
 	current: CurrentSubject;
 };
 
-/** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
-const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
+/** Stands in for an absent shared catalog, which cannot key a WeakMap. */
+const NO_SHARED_CATALOG = {};
+
+/**
+ * Per shared catalog, then by the copy the request is for (the entity's, or the customer's): a catalog or copy the
+ * store replaces takes its views with it, so no view holds an old catalog alive.
+ */
+const subjectJoinCaches = new WeakMap<
+	object,
+	WeakMap<StoredSubject, SubjectJoinCacheEntry>
+>();
 
 /**
  * The subject a request is decided on, as Autumn last sent it: for an entity, the customer's rows and its own as one.
@@ -56,14 +64,19 @@ export const readCurrentSubject = ({
 	const { customer, entity } = readStoredParts({ ctx, customerId, entityId });
 	const shared = ctx.catalogStore.read();
 	const target = entity ?? customer;
+	const catalogKey = shared ?? NO_SHARED_CATALOG;
+	let subjectJoinCache = subjectJoinCaches.get(catalogKey);
+	if (!subjectJoinCache) {
+		subjectJoinCache = new WeakMap();
+		subjectJoinCaches.set(catalogKey, subjectJoinCache);
+	}
 	const joined = subjectJoinCache.get(target);
-	if (joined?.customer === customer && joined.shared === shared)
-		return joined.current;
+	if (joined?.customer === customer) return joined.current;
 	// Frozen, because every check until the next push shares it.
 	const current = deepFreeze(
 		joinSubject({ customer, entity, shared, entityId }),
 	);
-	subjectJoinCache.set(target, { customer, shared, current });
+	subjectJoinCache.set(target, { customer, current });
 	return current;
 };
 
