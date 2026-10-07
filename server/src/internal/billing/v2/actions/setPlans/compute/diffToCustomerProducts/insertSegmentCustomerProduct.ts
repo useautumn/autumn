@@ -86,10 +86,17 @@ const insertImmediateCustomerProduct = ({
 		}),
 		...firstPhaseTiming({ billingContext, startsLater }),
 	};
+	const carryOverUsages =
+		attachBillingContext.currentCustomerProduct && !startsLater
+			? billingContext.carryOverUsages
+			: undefined;
 	const customerProduct = computeAttachNewCustomerProduct({
 		ctx,
 		attachBillingContext,
-		params: { no_billing_changes: billingContext.skipBillingChanges },
+		params: {
+			no_billing_changes: billingContext.skipBillingChanges,
+			carry_over_usages: carryOverUsages,
+		},
 	});
 
 	if (replacedCustomerProduct && !startsLater) {

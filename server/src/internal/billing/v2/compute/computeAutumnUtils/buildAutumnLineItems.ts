@@ -1,5 +1,6 @@
 import {
 	type BillingContext,
+	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	isAllocatedV2CustomerEntitlement,
 	type LineItem,
@@ -18,6 +19,7 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts,
 	billingContext,
 	includeArrearLineItems = false,
+	carriesUsage,
 }: {
 	ctx: AutumnContext;
 	newCustomerProducts: FullCusProduct[];
@@ -25,6 +27,7 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts?: FullCusProduct[];
 	billingContext: BillingContext;
 	includeArrearLineItems?: boolean;
+	carriesUsage?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 }) => {
 	const { logger } = ctx;
 	const customerProductsToDelete = [
@@ -46,7 +49,9 @@ export const buildAutumnLineItems = ({
 					// carried-over balance is billed at the next cycle end on the new
 					// plan instead (billing it here would charge a full cycle of rent
 					// mid-cycle and double-bill the carried balance).
-					cusEntFilter: (cusEnt) => !isAllocatedV2CustomerEntitlement(cusEnt),
+					cusEntFilter: (cusEnt) =>
+						!isAllocatedV2CustomerEntitlement(cusEnt) &&
+						!carriesUsage?.(cusEnt),
 				},
 				options: {
 					includePeriodDescription: true,

@@ -5,6 +5,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { carriesOverUsage } from "@/internal/billing/v2/compute/carryOverUsages/carriesOverUsage";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
@@ -14,6 +15,7 @@ import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/util
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
+import { nowReplacedCustomerProducts } from "../utils/nowReplacedCustomerProducts";
 import { backdateGapLineItems } from "./backdateGapLineItems";
 import {
 	diffToCustomerProducts,
@@ -27,6 +29,8 @@ export type ImmediatePhaseTransition = {
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
 	keptCustomerProducts: FullCusProduct[];
+	/** Outgoing rows a plan starting now replaces; usage carries only from these. */
+	replacedCustomerProducts: FullCusProduct[];
 };
 
 export type SetPlansPlanResult = {
@@ -92,12 +96,26 @@ export const computeSetPlansPlan = ({
 		(customerProduct) =>
 			!isOnUncollectedReplacedSubscription({ billingContext, customerProduct }),
 	);
+	const replacedCustomerProducts = nowReplacedCustomerProducts({
+		diff: timeline.diff,
+		outgoingCustomerProducts,
+		incomingCustomerProducts: immediateCustomerProducts,
+	});
+	const carryOverSourceCustomerProductIds = new Set(
+		replacedCustomerProducts.map(({ id }) => id),
+	);
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
 		deletedCustomerProducts: creditedCustomerProducts,
 		billingContext,
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
+		carriesUsage: (customerEntitlement) =>
+			carriesOverUsage({
+				carryOverUsages: billingContext.carryOverUsages,
+				sourceCustomerProductIds: carryOverSourceCustomerProductIds,
+				customerEntitlement,
+			}),
 	});
 
 	const { trialStartedCustomerProducts } = customerProductChanges;
@@ -201,6 +219,7 @@ export const computeSetPlansPlan = ({
 			outgoingCustomerProducts,
 			incomingCustomerProducts: immediateCustomerProducts,
 			keptCustomerProducts,
+			replacedCustomerProducts,
 		},
 		customerProductChanges,
 	};

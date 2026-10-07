@@ -1,5 +1,5 @@
-import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
+	type CarryOverUsages,
 	ErrCode,
 	featureUtils,
 	isBooleanFeature,
@@ -7,25 +7,19 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Validates carry_over_usages params.
- *
- * - Only valid for immediate switches — errors on scheduled/downgrade.
- * - Boolean and allocated (continuous_use) features cannot have usages carried over.
- */
+/** Usage only carries onto a plan replacing another now, and only consumable usage carries. */
 export const handleCarryOverUsagesErrors = ({
 	ctx,
-	params,
-	billingContext,
+	carryOverUsages,
+	replacesPlanNow,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV1;
-	billingContext: AttachBillingContext;
+	carryOverUsages: CarryOverUsages;
+	replacesPlanNow: boolean;
 }) => {
-	const carryOver = params.carry_over_usages;
-	if (!carryOver?.enabled) return;
+	if (!carryOverUsages?.enabled) return;
 
-	if (billingContext.planTiming !== "immediate") {
+	if (!replacesPlanNow) {
 		throw new RecaseError({
 			message:
 				"carry_over_usages is only supported for immediate plan switches (upgrades). It cannot be used with scheduled downgrades.",
@@ -34,7 +28,7 @@ export const handleCarryOverUsagesErrors = ({
 		});
 	}
 
-	const featureIds = carryOver.feature_ids;
+	const featureIds = carryOverUsages.feature_ids;
 	if (!featureIds?.length) return;
 
 	for (const featureId of featureIds) {

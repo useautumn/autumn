@@ -13,6 +13,7 @@ import { handleMultiAttachCurrencyErrors } from "@/internal/billing/v2/actions/m
 import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
 import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
+import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
@@ -114,14 +115,23 @@ export const handleSetPlansErrors = async ({
 export const handleSetPlansComputeErrors = async ({
 	ctx,
 	billingContext,
+	params,
 	autumnBillingPlan,
 	immediatePhaseTransition,
 }: {
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
+	params: Pick<SetPlansParamsV0, "carry_over_usages">;
 	autumnBillingPlan: AutumnBillingPlan;
 	immediatePhaseTransition: ImmediatePhaseTransition;
 }) => {
+	// Only an explicit request is rejected; an org transition rule simply has nothing to carry.
+	handleCarryOverUsagesErrors({
+		ctx,
+		carryOverUsages: params.carry_over_usages,
+		replacesPlanNow:
+			immediatePhaseTransition.replacedCustomerProducts.length > 0,
+	});
 	handleFutureStartActivationErrors({ billingContext, autumnBillingPlan });
 	handleFreePhaseStripeConnectionErrors({
 		ctx,
