@@ -221,3 +221,36 @@ test("an unclassified error gets a generic sentence, never the raw message", () 
 		"The run stopped unexpectedly. Customers already migrated keep their changes.",
 	);
 });
+
+test("an unfinished run holds its percent until the filter count loads, a finished run does not", () => {
+	const pendingStatusOf = (id: string) => {
+		const migration = fixtureMigrations.find(
+			(candidate) => candidate.id === id,
+		);
+		if (!migration) throw new Error(`fixture ${id} missing`);
+		return deriveStatusView({
+			status: migration.status,
+			summary: { ...migration.summary, customer_count: null },
+			now: FIXTURE_NOW,
+			customerCountPending: true,
+		});
+	};
+
+	const running = pendingStatusOf("migration-pro-v3-rollout");
+	expect(running.ring).toEqual({ tone: "green", fraction: 0 });
+	expect(running.chip).toEqual({ label: "Running", details: undefined });
+	expect(running.card.legend.map((segment) => segment.kind)).not.toContain(
+		"not_reached",
+	);
+	expect(pendingStatusOf("migration-starter-v2").chip).toEqual({
+		label: "Incomplete",
+		details: undefined,
+	});
+
+	const completed = pendingStatusOf("migration-seat-licenses");
+	expect(completed.chip).toEqual({
+		label: "Completed",
+		details: ["· 2 incomplete"],
+	});
+	expect(completed.ring.fraction).toBe(1);
+});

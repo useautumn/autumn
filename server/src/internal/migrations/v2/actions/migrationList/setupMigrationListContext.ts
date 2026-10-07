@@ -1,66 +1,10 @@
 import type { Migration } from "@autumn/shared";
-import pLimit from "p-limit";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationItemRunRepo } from "../../repos/index.js";
-import { countCustomersCached } from "../countCustomersCached.js";
 import { setupMigrationRunState } from "../migrationStatus/setupMigrationRunState.js";
+import { listMigrationCustomerCounts } from "./listMigrationCustomerCounts.js";
 import { listMigrationProducts } from "./listMigrationProducts.js";
 import type { MigrationListContext } from "./types/migrationListContext.js";
-
-const CUSTOMER_COUNT_CONCURRENCY = 4;
-
-const countMatchedCustomers = async ({
-	ctx,
-	migration,
-}: {
-	ctx: AutumnContext;
-	migration: Migration;
-}): Promise<number | null> => {
-	const filter = migration.filter?.customer;
-	const hasFilter =
-		filter !== undefined &&
-		Object.values(filter).some((value) => value !== undefined);
-	if (migration.archived || !hasFilter) return null;
-
-	try {
-		return await countCustomersCached({
-			ctx,
-			filter,
-			includeProcessed: { migrationInternalId: migration.internal_id },
-			cacheScope: {
-				migrationId: migration.id,
-				source: "filter",
-				executionStatuses: [],
-			},
-		});
-	} catch (error) {
-		ctx.logger.warn(`Migration ${migration.id} customer count failed`, {
-			error,
-		});
-		return null;
-	}
-};
-
-const listCustomerCounts = async ({
-	ctx,
-	migrations,
-}: {
-	ctx: AutumnContext;
-	migrations: Migration[];
-}): Promise<Map<string, number | null>> => {
-	const limit = pLimit(CUSTOMER_COUNT_CONCURRENCY);
-	const counts = await Promise.all(
-		migrations.map((migration) =>
-			limit(() => countMatchedCustomers({ ctx, migration })),
-		),
-	);
-	return new Map(
-		migrations.map((migration, index) => [
-			migration.internal_id,
-			counts[index],
-		]),
-	);
-};
 
 const setupRunsWithItemCounts = async ({
 	ctx,
@@ -80,13 +24,16 @@ const setupRunsWithItemCounts = async ({
 	return { ...runState, itemRunCounts };
 };
 
-/** Every read the list needs, batched per org rather than per migration. */
+/** Every read the list needs, batched per org rather than per migration.
+ * Customer counts dominate on large orgs, so callers may defer them. */
 export const setupMigrationListContext = async ({
 	ctx,
 	migrations,
+	includeCustomerCounts = true,
 }: {
 	ctx: AutumnContext;
 	migrations: Migration[];
+	includeCustomerCounts?: boolean;
 }): Promise<MigrationListContext> => {
 	const [runsWithItemCounts, customerCounts, products] = await Promise.all([
 		setupRunsWithItemCounts({
@@ -95,7 +42,9 @@ export const setupMigrationListContext = async ({
 				(migration) => migration.internal_id,
 			),
 		}),
-		listCustomerCounts({ ctx, migrations }),
+		includeCustomerCounts
+			? listMigrationCustomerCounts({ ctx, migrations })
+			: new Map<string, number | null>(),
 		listMigrationProducts({ ctx, migrations }),
 	]);
 

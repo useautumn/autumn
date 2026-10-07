@@ -60,10 +60,12 @@ const deriveMigrationRowView = ({
 	migration,
 	catalog,
 	now,
+	customerCountPending,
 }: {
 	migration: MigrationWithRunInfo;
 	catalog: MigrationCatalog;
 	now: number;
+	customerCountPending: boolean;
 }): MigrationRowView => {
 	const { summary } = migration;
 	return {
@@ -73,7 +75,12 @@ const deriveMigrationRowView = ({
 			noBillingChanges: migration.no_billing_changes,
 			catalog,
 		}),
-		status: deriveStatusView({ status: migration.status, summary, now }),
+		status: deriveStatusView({
+			status: migration.status,
+			summary,
+			now,
+			customerCountPending,
+		}),
 		customerCount: summary.customer_count,
 	};
 };
@@ -82,12 +89,19 @@ export const toMigrationListRows = ({
 	migrations,
 	catalog,
 	now,
+	customerCountPending = false,
 }: {
 	migrations: MigrationWithRunInfo[];
 	catalog: MigrationCatalog;
 	now: number;
+	customerCountPending?: boolean;
 }): MigrationListRow[] =>
 	migrations.map((migration) => ({
 		...migration,
-		view: deriveMigrationRowView({ migration, catalog, now }),
+		view: deriveMigrationRowView({
+			migration,
+			catalog,
+			now,
+			customerCountPending,
+		}),
 	}));

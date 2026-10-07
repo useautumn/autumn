@@ -28,9 +28,13 @@ import {
 
 const LIST_POLL_MS = 5000;
 
-function useMigrationListRows(
-	migrations: MigrationWithRunInfo[],
-): MigrationListRow[] {
+function useMigrationListRows({
+	migrations,
+	customerCountPending,
+}: {
+	migrations: MigrationWithRunInfo[];
+	customerCountPending: boolean;
+}): MigrationListRow[] {
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -42,16 +46,20 @@ function useMigrationListRows(
 				migrations,
 				catalog: createMigrationCatalog({ products, features, currency }),
 				now: Date.now(),
+				customerCountPending,
 			}),
-		[migrations, products, features, currency],
+		[migrations, products, features, currency, customerCountPending],
 	);
 }
 
 export function MigrationListTable() {
-	const { migrations, isLoading } = useMigrationsQuery({
+	const { migrations, isLoading, isCountsLoading } = useMigrationsQuery({
 		pollWhileActiveMs: LIST_POLL_MS,
 	});
-	const rows = useMigrationListRows(migrations);
+	const rows = useMigrationListRows({
+		migrations,
+		customerCountPending: isCountsLoading,
+	});
 	return <MigrationListTableView rows={rows} isLoading={isLoading} />;
 }
 
