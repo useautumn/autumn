@@ -9,8 +9,11 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { timeout } from "@/utils/genUtils";
-import { expectNoCredit, withVoidFlag } from "./pastDueVoidEdgeUtils";
+import {
+	expectNoCredit,
+	waitForProductRemoved,
+	withVoidFlag,
+} from "./pastDueVoidEdgeUtils";
 
 test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT void surviving add-on's invoice")}`, async () => {
 	const customerId = "qa-shared-sub-addon";
@@ -60,6 +63,7 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 
 			await autumnV1.subscriptions.update({
@@ -67,7 +71,11 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 				product_id: pro.id,
 				cancel_action: "cancel_end_of_cycle",
 			});
-			await timeout(3000);
+			await waitForProductRemoved({
+				autumn: autumnV1,
+				customerId,
+				productId: pro.id,
+			});
 
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			// Main gone; add-on survives -> the Stripe op was an "update", not a whole-sub cancel.

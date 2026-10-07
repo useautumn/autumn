@@ -5,8 +5,11 @@ import { expect, test } from "bun:test";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { timeout } from "@/utils/genUtils";
-import { buildProductSet, withVoidFlag } from "./pastDueVoidEdgeUtils";
+import {
+	buildProductSet,
+	waitForPastDueCancelResolved,
+	withVoidFlag,
+} from "./pastDueVoidEdgeUtils";
 
 test(`${chalk.yellowBright("edge: paid invoice untouched, only the open invoice voided")}`, async () => {
 	const customerId = "qa-paid-untouched";
@@ -30,13 +33,21 @@ test(`${chalk.yellowBright("edge: paid invoice untouched, only the open invoice 
 				testClockId: testClockId!,
 				customerId,
 				productId: pro.id,
+				pollWebhookEffects: true,
 			});
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
 				cancel_action: "cancel_end_of_cycle",
 			});
-			await timeout(3000);
+			await waitForPastDueCancelResolved({
+				autumn: autumnV1,
+				ctx,
+				customerId,
+				productId: pro.id,
+				stripeCustomerId,
+				subscriptionId,
+			});
 
 			const invoices = await ctx.stripeCli.invoices.list({
 				customer: stripeCustomerId,
