@@ -16,12 +16,12 @@ type JoinedCatalog = SubjectJoin & {
 	catalogJoinedAt: number;
 };
 
-/** A join is pure over (state, catalog) and states are replaced, never edited, so one join per state serves every read until the catalog moves. */
+/** A join is pure over (state, catalog) and states are replaced, never edited, so one join per state serves every read until its own catalog rows move. */
 export const createSubjectJoinCache = ({
 	ctx,
 }: {
 	ctx: {
-		catalogCache: Pick<CatalogCache, "changeCount">;
+		catalogCache: Pick<CatalogCache, "isCurrent">;
 		/** How long a joined catalog is trusted before `ensure` re-reads its rows; bounds staleness across inherited states. */
 		config: { catalogRecheckMs: number };
 		now?: () => number;
@@ -30,12 +30,18 @@ export const createSubjectJoinCache = ({
 	const joins = new WeakMap<SubjectState, SubjectJoin>();
 	const now = ctx.now ?? Date.now;
 
+	/** Built against no catalog yet, or one whose rows haven't moved: another customer's rows coming and going don't count. */
+	function isJoinCurrent(join: SubjectJoin): boolean {
+		return (
+			join.basis === null || ctx.catalogCache.isCurrent({ catalog: join.basis })
+		);
+	}
+
 	function joinOf({ state }: { state: SubjectState }): SubjectJoin {
-		const catalogChangeCount = ctx.catalogCache.changeCount();
 		const existing = joins.get(state);
-		if (existing?.catalogChangeCount === catalogChangeCount) return existing;
+		if (existing && isJoinCurrent(existing)) return existing;
 		const join: SubjectJoin = {
-			catalogChangeCount,
+			basis: null,
 			catalog: null,
 			catalogJoinedAt: null,
 			fullSubjectByEntityId: new Map(),
@@ -44,14 +50,14 @@ export const createSubjectJoinCache = ({
 		return join;
 	}
 
-	/** Joined, at the catalog's current change count, and not yet due a recheck. */
+	/** Joined, its rows unmoved, and not yet due a recheck. */
 	function isCatalogCurrent(
 		join: SubjectJoin | undefined,
 	): join is JoinedCatalog {
 		if (!join || join.catalog === null || join.catalogJoinedAt === null)
 			return false;
 		return (
-			join.catalogChangeCount === ctx.catalogCache.changeCount() &&
+			isJoinCurrent(join) &&
 			now() - join.catalogJoinedAt < ctx.config.catalogRecheckMs
 		);
 	}
@@ -72,6 +78,7 @@ export const createSubjectJoinCache = ({
 		if (cached.catalog === null) {
 			cached.catalog = join();
 			cached.catalogJoinedAt = now();
+			cached.basis ??= cached.catalog;
 		}
 		return cached.catalog;
 	}
@@ -79,16 +86,20 @@ export const createSubjectJoinCache = ({
 	function readFullSubject({
 		state,
 		entityId,
+		catalog,
 		join,
 	}: {
 		state: SubjectState;
 		entityId: string | null;
+		/** The catalog `join` reads, when the caller already holds it. */
+		catalog?: Catalog;
 		join: () => WorkerFullSubject;
 	}): WorkerFullSubject {
 		const cached = joinOf({ state });
 		const existing = cached.fullSubjectByEntityId.get(entityId);
 		if (existing) return existing;
 		const fullSubject = join();
+		cached.basis ??= catalog ?? cached.catalog;
 		cached.fullSubjectByEntityId.set(entityId, fullSubject);
 		return fullSubject;
 	}
@@ -105,9 +116,13 @@ export const createSubjectJoinCache = ({
 		if (!from || !changesKeepCatalogKeys({ changes })) return;
 		const join = joins.get(from);
 		if (!isCatalogCurrent(join)) return;
-		// The decision already joined the next state's view; it keeps that and gains the catalog.
+		// The decision already joined the next state's view against this catalog; it keeps that and gains the catalog.
 		const existing = joins.get(to);
-		if (existing && existing.catalogChangeCount === join.catalogChangeCount) {
+		if (
+			existing &&
+			(existing.basis === null || existing.basis === join.catalog)
+		) {
+			existing.basis = join.catalog;
 			if (existing.catalog === null) {
 				existing.catalog = join.catalog;
 				existing.catalogJoinedAt = join.catalogJoinedAt;
@@ -115,7 +130,7 @@ export const createSubjectJoinCache = ({
 			return;
 		}
 		joins.set(to, {
-			catalogChangeCount: join.catalogChangeCount,
+			basis: join.catalog,
 			catalog: join.catalog,
 			catalogJoinedAt: join.catalogJoinedAt,
 			fullSubjectByEntityId: new Map(),
