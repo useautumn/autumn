@@ -90,6 +90,36 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("track-async-default4: track_tokens queues by default on 2.5 and stays sync on 2.4")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [
+				items.free({ featureId: TestFeature.AiCredits, includedUsage: 1000 }),
+			],
+		});
+		const { autumnV2_4, autumnV2_5, customerId } = await initScenario({
+			customerId: "track-async-default4",
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [s.attach({ productId: free.id })],
+		});
+		const body = {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "openai/gpt-4o",
+			input_tokens: 1000,
+			output_tokens: 500,
+		};
+
+		const queued = await autumnV2_5.post("/track_tokens", body);
+		expect(queued.balance).toBeNull();
+
+		const applied = await autumnV2_4.post("/track_tokens", body);
+		expect(applied.balance.remaining).toBeLessThan(1000);
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("track-async-default6: 2.4 batch items with async still succeed")}`,
 	async () => {
 		const { autumnV2_4, autumnV2_5, customerId } = await setupCustomer({
@@ -116,5 +146,38 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			remaining: 94,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default7: 2.4 batch track_tokens items with async still succeed")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [
+				items.free({ featureId: TestFeature.AiCredits, includedUsage: 1000 }),
+			],
+		});
+		const { autumnV2_4, autumnV2_5, customerId } = await initScenario({
+			customerId: "track-async-default7",
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [s.attach({ productId: free.id })],
+		});
+		const item = {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "openai/gpt-4o",
+			input_tokens: 1000,
+			output_tokens: 500,
+		};
+
+		expect(
+			await autumnV2_4.post("/balances.batch_track_tokens", [
+				{ ...item, async: false },
+			]),
+		).toEqual({ success: true });
+		expect(
+			await autumnV2_5.post("/balances.batch_track_tokens", [item]),
+		).toEqual({ success: true });
 	},
 );

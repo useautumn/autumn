@@ -8,6 +8,7 @@ import {
 	test,
 } from "bun:test";
 import {
+	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
 	FeatureType,
@@ -184,12 +185,17 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 	return app;
 };
 
-const createCtx = (): AutumnContext =>
+// Defaults to 2.4, where an omitted async is sync.
+const createCtx = ({
+	apiVersion = ApiVersion.V2_4,
+}: {
+	apiVersion?: ApiVersion;
+} = {}): AutumnContext =>
 	({
 		id: "req_track_tokens_1",
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
-		apiVersion: new ApiVersionClass(LATEST_VERSION),
+		apiVersion: new ApiVersionClass(apiVersion),
 		features: [{ id: "ai_credits", type: FeatureType.AiCreditSystem }],
 		extraLogs: {},
 		scopes: [],
@@ -392,5 +398,32 @@ describe("handleTrackTokens", () => {
 		expect(response.status).toBe(202);
 		expect(ctx.extraLogs.trackQueuedForReplay).toBe(true);
 		expect(mockState.runTrackWithRolloutCalls).toHaveLength(1);
+	});
+	test("queues by default on the latest version", async () => {
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		mockState.originalSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			mockState.queueCommands.push(command.input);
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
+		}) as typeof sqsClient.send;
+
+		const response = await createApp({
+			ctx: createCtx({ apiVersion: LATEST_VERSION }),
+		}).request("/track_tokens", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(requestBody),
+		});
+
+		expect(response.status).toBe(202);
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.runTrackWithRolloutCalls).toHaveLength(0);
 	});
 });
