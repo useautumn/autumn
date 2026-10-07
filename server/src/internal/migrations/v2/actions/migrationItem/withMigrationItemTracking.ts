@@ -262,19 +262,25 @@ export const withMigrationItemTracking = async <
 		const retryStatuses = normalizeRetryItemStatuses({
 			retryItemStatuses,
 		});
-		const claim = await withMigrationPhase({
-			phase: "claim",
+		// A claim that never reached Postgres is safe to retry; dropping it would silently skip the customer.
+		const claim = await runWithTransientDbRetry({
+			maxAttempts: MIGRATION_ITEM_SETTLE_DB_ATTEMPTS,
+			delayMs: MIGRATION_ITEM_SETTLE_DB_RETRY_DELAY_MS,
 			run: () =>
-				migrationItemRunRepo.claim({
-					ctx,
-					migrationInternalId,
-					migrationRunId,
-					dryRun,
-					itemKind: item.kind,
-					itemId: item.internal_id,
-					claimBehavior:
-						retryStatuses.length > 0 ? "retry_statuses" : "claim_new",
-					retryStatuses,
+				withMigrationPhase({
+					phase: "claim",
+					run: () =>
+						migrationItemRunRepo.claim({
+							ctx,
+							migrationInternalId,
+							migrationRunId,
+							dryRun,
+							itemKind: item.kind,
+							itemId: item.internal_id,
+							claimBehavior:
+								retryStatuses.length > 0 ? "retry_statuses" : "claim_new",
+							retryStatuses,
+						}),
 				}),
 		});
 
