@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { SlotProcessor } from "../processor/types/slotProcessor.js";
+import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SqliteStore } from "../state/types/sqliteStore.js";
@@ -39,12 +40,15 @@ export const openSlots = ({
 	slotCount,
 	atomId = null,
 	owners,
+	held,
 }: {
 	folder: string;
 	slotCount: number;
 	/** The folder's name on a multi-tenant Atom, so a call to another thread names it too. */
 	atomId?: string | null;
 	owners: SlotOwners;
+	/** This thread's parsed subjects, shared by every store it opens. */
+	held: HeldSubjects;
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -64,6 +68,7 @@ export const openSlots = ({
 			};
 		const sqliteStore = openSqliteStore({
 			databasePath: slotFilePath({ folder, slot, slotCount }),
+			held,
 		});
 		return {
 			sqliteStore,

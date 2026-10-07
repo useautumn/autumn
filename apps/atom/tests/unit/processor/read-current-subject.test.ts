@@ -10,7 +10,7 @@ import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSu
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
-import { atomOrg, forwardReasonOf } from "../utils/atomFixtures.js";
+import { atomOrg, forwardReasonOf, freshHeld } from "../utils/atomFixtures.js";
 
 const state = createState({ balance: 10 });
 const customerCatalog = createCatalogFor({ state });
@@ -35,7 +35,10 @@ const createContext = ({
 	/** Null leaves the Atom without a shared catalog; rows are read after the customer. */
 	shared: CatalogRow[] | null;
 }): SlotProcessorContext => {
-	const sqliteStore = openSqliteStore({ databasePath: ":memory:" });
+	const sqliteStore = openSqliteStore({
+		databasePath: ":memory:",
+		held: freshHeld(),
+	});
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
 	closers.push(
 		() => sqliteStore.close(),
@@ -123,5 +126,27 @@ describe("the subject a check runs on", () => {
 			"messages",
 			"seats",
 		]);
+	});
+
+	test("is joined once per change to its parts: checks share one frozen view until the next push", () => {
+		const ctx = createContext({ shared: null });
+		const read = () =>
+			readCurrentSubject({ ctx, customerId: "cus_1", entityId: null });
+
+		const first = read();
+		expect(read()).toBe(first);
+		expect(Object.isFrozen(first.fullSubject)).toBe(true);
+
+		ctx.sqliteStore.setSubject({
+			subject: {
+				state,
+				catalog: customerCatalog,
+				org: atomOrg,
+				logOffset: 2n,
+				readAt: 1001,
+			},
+		});
+
+		expect(read()).not.toBe(first);
 	});
 });

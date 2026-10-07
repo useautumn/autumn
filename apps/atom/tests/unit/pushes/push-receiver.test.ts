@@ -13,6 +13,7 @@ import {
 	checkRequestFor,
 	checkResponseOf,
 	forwardReasonOf,
+	freshHeld,
 	subjectBody,
 } from "../utils/atomFixtures.js";
 
@@ -117,6 +118,7 @@ describe("push receiver", () => {
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			held: freshHeld(),
 		});
 		opened.push(auth);
 		const message = subjectMessage({});
@@ -133,6 +135,7 @@ describe("push receiver", () => {
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			held: freshHeld(),
 		});
 		opened.push(auth);
 		const message = subjectMessage({ customerId: "cus_2" });
@@ -170,6 +173,7 @@ describe("push receiver", () => {
 			dataDir: newDataDir(),
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			heldSubjects: freshHeld(),
 		});
 		opened.push(auth);
 		auth.putAtom({ id: "org_a.sandbox", tokenHash: TOKEN_HASH });
@@ -195,6 +199,7 @@ describe("push receiver", () => {
 			dataDir: newDataDir(),
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			heldSubjects: freshHeld(),
 		});
 		opened.push(auth);
 		const unreadable = subjectMessage({ payload: "not json" });
@@ -220,6 +225,7 @@ describe("push receiver", () => {
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			held: freshHeld(),
 		});
 		opened.push(auth);
 		const message = subjectMessage({});
@@ -261,6 +267,7 @@ describe("push receiver under a hung or stopped queue", () => {
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
+			held: freshHeld(),
 		});
 		opened.push(auth);
 		return auth;

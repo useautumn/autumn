@@ -182,4 +182,21 @@ describe("atom env", () => {
 		);
 		expect(() => queueUrl("http")).toThrow("ATOM_PUSH_QUEUE_CLIENT");
 	});
+
+	test("each thread holds a share of the container's memory in parsed subjects, less the threads' own footprint and the parse expansion", () => {
+		const GiB = 1024 ** 3;
+		const MiB = 1024 ** 2;
+		const heldBytes = ({ cpus, memory }: { cpus: number; memory: number }) =>
+			createAtomEnv(
+				{ ATOM_TOKEN_HASH: TOKEN_HASH },
+				{ availableCpus: cpus, memoryLimitBytes: memory },
+			).ATOM_HELD_BYTES_PER_THREAD;
+
+		// 12 GiB on 7 threads: (9 GiB − 8 × 250 MiB) / 7 / 3.
+		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBe(
+			Math.floor((9 * GiB - 8 * 250 * MiB) / 7 / 3),
+		);
+		// Too small for more than the threads themselves: nothing is held, and every check reads its row.
+		expect(heldBytes({ cpus: 2, memory: 0.5 * GiB })).toBe(0);
+	});
 });

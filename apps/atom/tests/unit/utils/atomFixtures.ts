@@ -22,6 +22,7 @@ import {
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
+import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import type { SlotOwners } from "../../../src/threads/owners/types/slotOwners.js";
 
@@ -169,3 +170,7 @@ export const allSlotsOwnedHere: SlotOwners = {
 	processorOn: noOtherThread,
 	catalogOn: noOtherThread,
 };
+
+/** A thread's held subjects, roomy enough that a test never evicts by accident. */
+export const freshHeld = () =>
+	createHeldSubjects({ budgetBytes: 64 * 1024 * 1024 });
