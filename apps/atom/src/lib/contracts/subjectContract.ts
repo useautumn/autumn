@@ -60,9 +60,3 @@ export const subjectPushToStoredSubject = ({
 		readAt: parsed.read_at,
 	};
 };
-
-/** For a push sent without its customer id (an older Autumn): read from the body, which the slot parses again. */
-export const customerIdOfSubjectPush = ({ body }: { body: string }): string =>
-	parsePush(
-		() => stateShape.parse(JSON.parse(body)?.state).identity.customerId,
-	);

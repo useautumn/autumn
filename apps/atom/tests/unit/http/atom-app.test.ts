@@ -107,6 +107,16 @@ const post = ({
 const withToken = (token: string | null): Record<string, string> =>
 	token ? { "x-atom-token": token } : {};
 
+/** The headers herald sends a subject push with. */
+const pushedFor = ({
+	customerId,
+}: {
+	customerId: string;
+}): Record<string, string> => ({
+	...withToken(ATOM_TOKEN),
+	[ATOM_CUSTOMER_ID_HEADER]: customerId,
+});
+
 /** As herald sends it: routed by the customer id in a header, so Atom passes the body on unparsed. */
 const setSubject = ({
 	balance,
@@ -191,10 +201,10 @@ describe("an Atom in an org's cloud", () => {
 		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
 	});
 
-	test("a push sent without its customer id, as an older Autumn sends it, is routed by its body", async () => {
+	test("a push sent without its customer id is refused and stores nothing", async () => {
 		const { app } = createDeployedApp();
 
-		const stored = await app.request(
+		const refused = await app.request(
 			"/v1/subjects.set",
 			post({
 				headers: withToken(ATOM_TOKEN),
@@ -203,8 +213,9 @@ describe("an Atom in an org's cloud", () => {
 		);
 		const check = await app.request("/v1/balances.check", checkMessages());
 
-		expect(stored.status).toBe(200);
-		expect(await check.json()).toMatchObject({ allowed: true });
+		expect(refused.status).toBe(400);
+		expect(await refused.json()).toMatchObject({ code: "invalid_request" });
+		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
 	});
 
 	test("fields the API keeps for itself are dropped from the answer, as the API drops them", async () => {
@@ -267,7 +278,7 @@ describe("an Atom in an org's cloud", () => {
 		const stored = await app.request(
 			"/v1/subjects.set",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: pushedFor({ customerId: "cus_1" }),
 				body: { ...body, state: { ...body.state, added_later: true } },
 			}),
 		);
@@ -287,7 +298,7 @@ describe("an Atom in an org's cloud", () => {
 		const subject = await app.request(
 			"/v1/subjects.set",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: pushedFor({ customerId: "cus_1" }),
 				body: { state: {}, log_offset: "41" },
 			}),
 		);
@@ -319,7 +330,10 @@ describe("a customer push that arrives late", () => {
 		const push = (body: unknown) =>
 			app.request(
 				"/v1/subjects.set",
-				post({ headers: withToken(ATOM_TOKEN), body }),
+				post({
+					headers: pushedFor({ customerId: "cus_1" }),
+					body,
+				}),
 			);
 
 		const first = await push(newer);
@@ -484,7 +498,10 @@ describe("the request line", () => {
 		await app.request("/v1/balances.check", checkMessages({ token: null }));
 		await app.request(
 			"/v1/subjects.set",
-			post({ headers: withToken(ATOM_TOKEN), body: { state: {} } }),
+			post({
+				headers: pushedFor({ customerId: "cus_1" }),
+				body: { state: {} },
+			}),
 		);
 
 		expect(logged.map((line) => line.level)).toEqual(["warn", "warn"]);

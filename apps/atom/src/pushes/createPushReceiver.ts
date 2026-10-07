@@ -5,7 +5,10 @@ import {
 } from "@autumn/byoc";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../auth/types/auth.js";
-import { isUnreadableRequest } from "../lib/contracts/invalidPushError.js";
+import {
+	InvalidPushError,
+	isUnreadableRequest,
+} from "../lib/contracts/invalidPushError.js";
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
@@ -44,9 +47,13 @@ const applyPush = ({
 		);
 		return;
 	}
-	if (push.type === AtomPushType.SetSubject)
-		applySubjectPush({ slots, customerId: push.customerId, body: push.body });
-	else applyCatalogPush({ slots, body: JSON.parse(push.body) });
+	if (push.type === AtomPushType.SetCatalog) {
+		applyCatalogPush({ slots, body: JSON.parse(push.body) });
+		return;
+	}
+	if (push.customerId === null)
+		throw new InvalidPushError("A queued subjects.set push names no customer");
+	applySubjectPush({ slots, customerId: push.customerId, body: push.body });
 };
 
 /** Whether the message is done with: applied, or one that can never apply, however often SQS delivers it. */
