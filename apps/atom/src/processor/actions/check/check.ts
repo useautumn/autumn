@@ -5,14 +5,14 @@ import { readCurrentSubject } from "../readCurrentSubject/readCurrentSubject.js"
 import { answerCheck } from "./answerCheck.js";
 import { checkRequestToAnswerableCheck } from "./checkForwardRules.js";
 
-/** A check answered from the subject Autumn last sent, in the API's own shape, with whose it was. One Atom cannot decide is left to the API. */
+/** A check answered from the subject Autumn last sent, in the API's own shape. One Atom cannot decide is left to the API. */
 export const check = ({
 	ctx,
 	request,
 }: {
 	ctx: SlotProcessorContext;
 	request: CheckRequest;
-}): { response: CheckResponseV3; orgId: string; featureId: string } => {
+}): CheckResponseV3 => {
 	const answerableCheck = checkRequestToAnswerableCheck({ request });
 
 	const subject = readCurrentSubject({
@@ -20,9 +20,5 @@ export const check = ({
 		customerId: answerableCheck.customerId,
 		entityId: answerableCheck.entityId,
 	});
-	return {
-		response: answerCheck({ ctx, check: answerableCheck, subject }),
-		orgId: subject.fullSubject.identity.orgId,
-		featureId: answerableCheck.featureId,
-	};
+	return answerCheck({ ctx, check: answerableCheck, subject });
 };

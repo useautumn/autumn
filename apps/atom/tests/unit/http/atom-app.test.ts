@@ -14,10 +14,6 @@ import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
-	createCheckCountsBuffer,
-	openCheckCounts,
-} from "../../../src/threads/stats/checkCounts.js";
-import {
 	createThreadStatsBuffer,
 	openThreadCounters,
 } from "../../../src/threads/stats/threadStats.js";
@@ -32,15 +28,12 @@ const ADMIN_TOKEN = "atom_admin_token_1";
 const AUTUMN_API_URL = "https://api.autumn.example";
 const SECRET_KEY = "Bearer am_sk_test_1";
 const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
-const CHECK_COUNTS = createCheckCountsBuffer({ threads: 1 });
 const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
 	threadStats: THREAD_STATS,
-	checkCounts: CHECK_COUNTS,
 };
 const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
-const checkCounts = openCheckCounts({ buffer: CHECK_COUNTS, index: 0 });
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -94,7 +87,6 @@ const createDeployedApp = ({
 				autumnApiUrl: AUTUMN_API_URL,
 				health: HEALTH,
 				counters,
-				checkCounts,
 				allowLogSampleRate,
 			},
 		}),
@@ -120,7 +112,6 @@ const createMultiTenantApp = () => {
 			autumnApiUrl: AUTUMN_API_URL,
 			health: HEALTH,
 			counters,
-			checkCounts,
 			allowLogSampleRate: 1,
 		},
 	});
@@ -538,11 +529,11 @@ describe("the request line", () => {
 		}
 	});
 
-	test("allowed checks are logged at the sample rate; every deny is logged, and every check is counted by org and feature", async () => {
+	test("allowed checks are logged at the sample rate; every deny is logged, and every check is counted", async () => {
 		const { app, logged } = createDeployedApp({ allowLogSampleRate: 0 });
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
-		const countsBefore = (await (await app.request("/health")).json())
-			.checkCounts;
+		const checksBefore = (await (await app.request("/health")).json())
+			.threads[0].checks;
 
 		for (let i = 0; i < 3; i++)
 			await app.request("/v1/balances.check", checkMessages());
@@ -550,7 +541,7 @@ describe("the request line", () => {
 			"/v1/balances.check",
 			checkMessages({ required_balance: 11 }),
 		);
-		const { checkCounts: counts } = await (await app.request("/health")).json();
+		const health = await (await app.request("/health")).json();
 
 		expect(logged.map((line) => line.fields)).toEqual([
 			expect.objectContaining({
@@ -559,15 +550,7 @@ describe("the request line", () => {
 			expect.objectContaining({ res: { allowed: false } }),
 		]);
 		expect(logged[1]?.fields).not.toHaveProperty("sample_rate");
-		const messagesBefore = countsBefore.top.find(
-			(count: { featureId: string }) => count.featureId === "messages",
-		) ?? { allowed: 0, denied: 0 };
-		expect(counts.top).toContainEqual({
-			orgId: "org_1",
-			featureId: "messages",
-			allowed: messagesBefore.allowed + 3,
-			denied: messagesBefore.denied + 1,
-		});
+		expect(health.threads[0].checks).toBe(checksBefore + 4);
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {

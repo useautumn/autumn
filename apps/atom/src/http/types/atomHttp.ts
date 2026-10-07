@@ -2,9 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
 import type { AtomHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
-import type { CheckAnswer } from "../../processor/types/slotProcessor.js";
 import type { Slots } from "../../slots/types/slots.js";
-import type { CheckCounts } from "../../threads/stats/checkCounts.js";
 import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 
 export type AtomHttpContext = {
@@ -14,7 +12,6 @@ export type AtomHttpContext = {
 	autumnApiUrl: string;
 	health: AtomHealthSource;
 	counters: ThreadCounters;
-	checkCounts: CheckCounts;
 	/** The share of allowed checks that get a request line. */
 	allowLogSampleRate: number;
 	/** Present only on a multi-tenant Atom. */
@@ -36,7 +33,7 @@ export type AtomHttpEnv = {
 		body: unknown;
 		slots: Slots;
 		/** Set only when Atom answered a check itself, so its line need not read the body. */
-		verdict?: Omit<CheckAnswer, "json">;
+		allowed?: boolean;
 		failure?: AtomFailure;
 	};
 };

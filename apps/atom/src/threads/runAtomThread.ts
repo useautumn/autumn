@@ -4,7 +4,6 @@ import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
-import { openCheckCounts } from "./stats/checkCounts.js";
 import { openThreadCounters } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
@@ -28,10 +27,8 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 				bootedAt: init.bootedAt,
 				restarts: new Int32Array(init.restarts),
 				threadStats: init.stats,
-				checkCounts: init.checkCounts,
 			},
 			counters: openThreadCounters({ buffer: init.stats, index }),
-			checkCounts: openCheckCounts({ buffer: init.checkCounts, index }),
 			held,
 			owners,
 		},

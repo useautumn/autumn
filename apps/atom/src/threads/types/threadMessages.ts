@@ -13,8 +13,6 @@ export type ThreadInit = {
 	restarts: SharedArrayBuffer;
 	/** Every thread's counters (see threadStats), shared the same way. */
 	stats: SharedArrayBuffer;
-	/** Every thread's check counts (see checkCounts), shared the same way. */
-	checkCounts: SharedArrayBuffer;
 };
 
 /** What the main thread tells a running thread. */

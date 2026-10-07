@@ -2,7 +2,6 @@ import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
-import { createCheckCountsBuffer } from "./stats/checkCounts.js";
 import { createThreadStatsBuffer } from "./stats/threadStats.js";
 import type {
 	PeerPorts,
@@ -78,7 +77,6 @@ export const createAtomThreads = ({
 	const bootedAt = new Date().toISOString();
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
 	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
-	const checkCounts = createCheckCountsBuffer({ threads: env.ATOM_THREADS });
 	let stopping = false;
 	let healthLog: { stop(): void } | null = null;
 
@@ -95,15 +93,7 @@ export const createAtomThreads = ({
 		const ready = readyOf({ worker });
 		send({
 			worker,
-			control: {
-				type: "init",
-				index,
-				env,
-				bootedAt,
-				restarts,
-				stats,
-				checkCounts,
-			},
+			control: { type: "init", index, env, bootedAt, restarts, stats },
 		});
 		threads.forEach((peer, peerIndex) => {
 			if (!peer || peerIndex === index) return;
@@ -179,7 +169,6 @@ export const createAtomThreads = ({
 				bootedAt,
 				restarts: new Int32Array(restarts),
 				threadStats: stats,
-				checkCounts,
 			},
 			everyMs: env.ATOM_HEALTH_LOG_EVERY_MS,
 			logger: ctx.logger,

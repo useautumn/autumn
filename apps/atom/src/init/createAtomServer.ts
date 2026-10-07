@@ -35,7 +35,6 @@ export const createAtomServer = ({
 			logger: ctx.logger,
 			health: ctx.health,
 			counters: ctx.counters,
-			checkCounts: ctx.checkCounts,
 			allowLogSampleRate: env.ATOM_ALLOW_LOG_SAMPLE_RATE,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		},

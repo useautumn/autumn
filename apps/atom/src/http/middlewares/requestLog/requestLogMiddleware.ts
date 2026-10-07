@@ -41,9 +41,8 @@ export function requestLogMiddleware({
 		const counted =
 			COUNTED_PATHS[context.req.path as keyof typeof COUNTED_PATHS];
 		if (counted) ctx.counters.add(counted);
-		const verdict = context.get("verdict");
-		if (verdict) ctx.checkCounts.add(verdict);
-		if (verdict?.allowed && Math.random() >= ctx.allowLogSampleRate) return;
+		const allowed = context.get("allowed") === true;
+		if (allowed && Math.random() >= ctx.allowLogSampleRate) return;
 
 		const statusCode = context.res.status;
 		const durationMs = Date.now() - startedAt;
@@ -61,7 +60,7 @@ export function requestLogMiddleware({
 				}),
 			},
 			res: await loggedResponseOf({ context }),
-			...(verdict?.allowed && { sample_rate: ctx.allowLogSampleRate }),
+			...(allowed && { sample_rate: ctx.allowLogSampleRate }),
 			...(forwarded && { forwarded }),
 			...(failure && {
 				errorCode: failure.code,

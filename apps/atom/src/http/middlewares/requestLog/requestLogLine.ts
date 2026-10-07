@@ -39,8 +39,8 @@ export const loggedResponseOf = async ({
 	context: Context<AtomHttpEnv>;
 }): Promise<unknown> => {
 	if (context.res.status < 400) {
-		const verdict = context.get("verdict");
-		return verdict === undefined ? null : { allowed: verdict.allowed };
+		const allowed = context.get("allowed");
+		return allowed === undefined ? null : { allowed };
 	}
 	if (forwardedReason({ context })) return null;
 	if (!context.res.headers.get("content-type")?.includes("application/json"))
