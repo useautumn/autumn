@@ -740,6 +740,7 @@ const copyLineItemRows = async ({
 	replacement,
 	autumnInvoiceId,
 	addedLineItems,
+	editedAmountLineIds,
 }: {
 	ctx: AutumnContext;
 	original: InvoiceListRow;
@@ -747,6 +748,8 @@ const copyLineItemRows = async ({
 	autumnInvoiceId: string;
 	/** Autumn lines behind catalog plans the reissue added. */
 	addedLineItems: LineItem[];
+	/** Autumn line item ids whose amount the request edited. */
+	editedAmountLineIds: Set<string>;
 }) => {
 	const originalRows = await invoiceLineItemRepo.getByInvoiceIds({
 		db: ctx.db,
@@ -782,7 +785,7 @@ const copyLineItemRows = async ({
 				amount_after_discounts: amount,
 				// One entity owns the whole line, so its share follows an amount edit.
 				entities:
-					row.entities?.length === 1
+					editedAmountLineIds.has(row.id) && row.entities?.length === 1
 						? [{ ...row.entities[0], amount }]
 						: row.entities,
 				invoice_id: autumnInvoiceId,
@@ -819,12 +822,14 @@ const storeReplacementInAutumn = async ({
 	replacement,
 	original,
 	addedLineItems,
+	editedAmountLineIds,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	replacement: Stripe.Invoice;
 	original: InvoiceListRow;
 	addedLineItems: LineItem[];
+	editedAmountLineIds: Set<string>;
 }) => {
 	const fullProducts = fullCustomer.customer_products
 		.filter((customerProduct) =>
@@ -851,6 +856,7 @@ const storeReplacementInAutumn = async ({
 		replacement,
 		autumnInvoiceId: autumnInvoice.id,
 		addedLineItems,
+		editedAmountLineIds,
 	});
 	return autumnInvoice;
 };
@@ -1035,6 +1041,11 @@ export const reissueInvoice = async ({
 		replacement: issued,
 		original: row,
 		addedLineItems,
+		editedAmountLineIds: new Set(
+			(lineEdits?.update ?? [])
+				.filter((update) => update.amount !== undefined)
+				.map((update) => update.id),
+		),
 	});
 	await deleteCachedFullCustomer({
 		ctx,

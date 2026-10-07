@@ -179,3 +179,40 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.reissue: an unedited discounted entity line keeps its entity share")}`,
+	async () => {
+		const customerId = "inv-reissue-entities-discount";
+		const { autumnV2_3, ctx, pro } = await setupEntityCustomer({ customerId });
+		const coupon = await ctx.stripeCli.coupons.create({
+			percent_off: 50,
+			duration: "once",
+		});
+
+		const created = (await autumnV2_3.post("/invoices.create", {
+			customer_id: customerId,
+			plans: [
+				{
+					plan_id: pro.id,
+					entity_id: "ent-1",
+					customize: { price: null },
+					discounts: [{ reward_id: coupon.id }],
+					feature_quantities: [messages(100)],
+				},
+			],
+		})) as CreateInvoiceResponse;
+		const original = await invoiceByStripeId({
+			autumnV2_3,
+			customerId,
+			stripeId: created.invoice?.stripe_id as string,
+		});
+		const originalShare = original.items?.[0]?.entities;
+
+		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: original.id,
+		})) as { invoice: ApiListInvoiceV1 };
+
+		expect(invoice.items?.[0]?.entities).toEqual(originalShare);
+	},
+);
