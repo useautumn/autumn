@@ -61,7 +61,7 @@ export const resolveRunSizing = async ({
 	const shards = await partitionPooledShards({ testIds, testsDirAtSha });
 	const mainFiles = shards.find((s) => s.key === MAIN_SHARD)?.files ?? [];
 	const [profiles, staticSolo] = await Promise.all([
-		listFileProfiles({ db: ctx.db, workerClass: getWorkerClass() }).catch(
+		listFileProfiles({ ctx, workerClass: getWorkerClass() }).catch(
 			(error: unknown) => {
 				ctx.logger.warn("loading file profiles failed; sizing without them", {
 					error: String(error),
