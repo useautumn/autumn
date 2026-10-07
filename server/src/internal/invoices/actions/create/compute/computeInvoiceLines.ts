@@ -177,6 +177,7 @@ const computeFeatureLine = ({
 	}
 
 	const price = resolveInvoiceFeaturePrice({ ctx, plan, product, entry });
+	if (!price) return undefined;
 
 	const { units, alreadyMoney } = billableUnitsFor({ plan, entry, feature });
 	if (units <= 0) return undefined;

@@ -231,3 +231,68 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create: a feature customized to a zero price bills nothing for it")}`,
+	async () => {
+		const customerId = "inv-create-customize-zero";
+		const pro = products.pro({
+			id: "pro-create-customize-zero",
+			items: [items.prepaidUsers()],
+		});
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const response = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				plans: [
+					{
+						plan_id: pro.id,
+						customize: {
+							price: null,
+							items: [
+								{
+									feature_id: TestFeature.Messages,
+									price: {
+										amount: 0,
+										interval: BillingInterval.Month,
+										billing_method: BillingMethod.UsageBased,
+										billing_units: 1,
+									},
+								},
+							],
+						},
+						feature_quantities: [
+							{
+								feature_id: TestFeature.Users,
+								billing_behavior: BillingMethod.Prepaid,
+								quantity: 2,
+							},
+							{
+								feature_id: TestFeature.Messages,
+								billing_behavior: BillingMethod.UsageBased,
+								quantity: 10,
+							},
+						],
+					},
+				],
+			},
+		});
+
+		// 2 users × $10; the zero-priced messages add no line.
+		await expectCreatedInvoiceCorrect({
+			ctx,
+			response,
+			lines: [{ amount: 20, quantity: 2 }],
+			total: 20,
+		});
+	},
+);

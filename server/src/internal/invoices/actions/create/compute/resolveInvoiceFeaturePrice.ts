@@ -57,7 +57,7 @@ const overlayCustomizedPrice = ({
 	} as Price["config"],
 });
 
-/** In-memory price for a feature the catalog plan does not price this way; never written to the catalog. */
+/** In-memory price for a feature the catalog plan does not price this way; null when the override is free. */
 const mintCustomizedPrice = ({
 	ctx,
 	product,
@@ -68,23 +68,22 @@ const mintCustomizedPrice = ({
 	product: FullProduct;
 	featureId: string;
 	override: InvoiceItemPrice;
-}): Price | undefined => {
+}): Price | null => {
 	const { processors: _processors, ...price } = override;
-	return (
-		planItemV1ToPriceAndEnt({
-			ctx,
-			item: { feature_id: featureId, included: 0, price },
-			orgId: product.org_id,
-			internalProductId: product.internal_id,
-			isCustom: true,
-		}).newPrice ?? undefined
-	);
+	return planItemV1ToPriceAndEnt({
+		ctx,
+		item: { feature_id: featureId, included: 0, price },
+		orgId: product.org_id,
+		internalProductId: product.internal_id,
+		isCustom: true,
+	}).newPrice;
 };
 
 /**
  * The price that bills a feature on this invoice: the catalog price for the
  * requested behavior, customized when the invoice overrides it, or minted from
- * the override when the catalog has no price for that behavior.
+ * the override when the catalog has no price for that behavior. Null means the
+ * invoice customized the feature to free, so it bills nothing.
  */
 export const resolveInvoiceFeaturePrice = ({
 	ctx,
@@ -96,7 +95,7 @@ export const resolveInvoiceFeaturePrice = ({
 	plan: InvoicePlanContext;
 	product: FullProduct;
 	entry: InvoiceFeatureQuantity;
-}): Price => {
+}): Price | null => {
 	const featureId = entry.feature_id;
 	const billingBehavior: BillingMethod = entry.billing_behavior;
 	const override = findCustomizedPrice({ plan, featureId });
@@ -112,16 +111,12 @@ export const resolveInvoiceFeaturePrice = ({
 			: catalogPrice;
 	}
 
-	const overrideBillsBehavior = override?.billing_method === billingBehavior;
-	const minted = overrideBillsBehavior
-		? mintCustomizedPrice({ ctx, product, featureId, override })
-		: undefined;
-	return (
-		minted ??
-		findInvoiceFeaturePrice({
-			prices: product.prices,
-			featureId,
-			billingBehavior,
-		})
-	);
+	if (override?.billing_method === billingBehavior) {
+		return mintCustomizedPrice({ ctx, product, featureId, override });
+	}
+	return findInvoiceFeaturePrice({
+		prices: product.prices,
+		featureId,
+		billingBehavior,
+	});
 };
