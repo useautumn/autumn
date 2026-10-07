@@ -23,6 +23,8 @@ export type DatabaseTimingsSummary = {
 	>;
 	subjectLoadWait: Distribution;
 	errorCodes: Record<string, number>;
+	/** Flush latency by statement size (bytes sent): staging telemetry for the snapshot write cost. */
+	flushBySize?: Record<string, Distribution & { bytes: number }>;
 	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
@@ -89,6 +91,31 @@ export function createDatabaseTimings() {
 	let subjectLoadWait = emptySampled();
 	let errorCodes: Record<string, number> = {};
 	let subjectSnapshots: SubjectSnapshotCounts | null = null;
+	let flushBySize = new Map<string, { window: SampledWindow; bytes: number }>();
+
+	function recordFlushSize({
+		bytes,
+		durationMs,
+	}: {
+		bytes: number;
+		durationMs: number;
+	}): void {
+		const bucket =
+			bytes < 16_384
+				? "lt16k"
+				: bytes < 65_536
+					? "16to64k"
+					: bytes < 262_144
+						? "64to256k"
+						: "ge256k";
+		const entry = flushBySize.get(bucket) ?? {
+			window: emptySampled(),
+			bytes: 0,
+		};
+		flushBySize.set(bucket, entry);
+		entry.bytes += bytes;
+		addSample({ window: entry.window, value: durationMs });
+	}
 
 	function queryStarted(): void {
 		inFlight += 1;
@@ -162,8 +189,17 @@ export function createDatabaseTimings() {
 			subjectLoadWait: distributionOf({ window: subjectLoadWait }),
 			errorCodes,
 			...(subjectSnapshots ? { subjectSnapshots } : undefined),
+			...(flushBySize.size > 0 && {
+				flushBySize: Object.fromEntries(
+					[...flushBySize].map(([bucket, entry]) => [
+						bucket,
+						{ ...distributionOf({ window: entry.window }), bytes: entry.bytes },
+					]),
+				),
+			}),
 		};
 		subjectSnapshots = null;
+		flushBySize = new Map();
 		inFlightMax = inFlight;
 		queries = new Map();
 		subjectLoadWait = emptySampled();
@@ -177,6 +213,7 @@ export function createDatabaseTimings() {
 		recordSubjectLoadWait,
 		recordSubjectSnapshots,
 		recordSnapshotRefreshes,
+		recordFlushSize,
 		drain,
 	};
 }

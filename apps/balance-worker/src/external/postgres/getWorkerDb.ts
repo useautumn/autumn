@@ -66,7 +66,8 @@ type WorkerDbContext = {
 	timings: Pick<
 		DatabaseTimings,
 		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
-	>;
+	> &
+		Partial<Pick<DatabaseTimings, "recordFlushSize">>;
 	/** Read at each probe for `writtenAfter`; absent, every row of this build's version answers. */
 	subjectSnapshotsConfig?: Pick<
 		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,
@@ -246,7 +247,8 @@ export const createCommitterDb = ({
 		timings: Pick<
 			DatabaseTimings,
 			"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
-		>;
+		> &
+			Partial<Pick<DatabaseTimings, "recordFlushSize">>;
 	};
 }): CommitterDb => ({
 	readPartitionProgress: (params) =>
@@ -271,16 +273,30 @@ export const createCommitterDb = ({
 				claimPartitionProgress({ ctx: { db: ctx.postgres.db }, ...params }),
 		}),
 	flush: async (request) => {
+		let bytes = 0;
+		const startedAt = performance.now();
 		const result = await timeQuery({
 			ctx,
 			kind: "flush",
 			run: () =>
 				commitFlush({
-					ctx: { db: ctx.postgres.db, timing: timeFlushSection },
+					ctx: {
+						db: ctx.postgres.db,
+						timing: (label, run) => {
+							const value = timeFlushSection(label, run);
+							if (label === "flush.sql" && typeof value === "string")
+								bytes = Buffer.byteLength(value);
+							return value;
+						},
+					},
 					request,
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
 					roundTrips: "single",
 				}),
+		});
+		ctx.timings.recordFlushSize?.({
+			bytes,
+			durationMs: performance.now() - startedAt,
 		});
 		const { snapshots } = result;
 		// A rolled-back flush answers zero counts: nothing to put on the database line.
