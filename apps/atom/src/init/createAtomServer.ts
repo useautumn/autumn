@@ -43,6 +43,7 @@ export const createAtomServer = ({
 	const statsTick = startThreadStatsTick({
 		counters: ctx.counters,
 		held: ctx.held,
+		owners: ctx.owners,
 	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
 	let receiving: Promise<void> | undefined;

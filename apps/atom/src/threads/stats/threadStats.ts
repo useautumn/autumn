@@ -9,6 +9,8 @@ export const THREAD_STAT_FIELDS = [
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
+	/** Calls this thread sent to the other threads' owners still unanswered at the last tick: how far behind they are. */
+	"ownerCallsWaiting",
 ] as const;
 
 export type ThreadStatField = (typeof THREAD_STAT_FIELDS)[number];
