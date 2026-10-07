@@ -10,17 +10,17 @@ import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withMigrationRunTracking } from "../actions/migrationRun/index.js";
 import type { MigrationWebhookControls } from "../cloudAdapter/types.js";
+import { runFilter } from "../filters/runFilter.js";
 import type { MigrationRuntimeWithEventId } from "../types/migrationDefinition.js";
 import { shouldRunBatchLane } from "../utils/shouldRunBatchLane.js";
 import { resolveMigrationWebhookControls } from "../webhookDelivery/utils/resolveMigrationWebhookControls.js";
+import { createInProcessChunkDispatcher } from "./chunks/createInProcessChunkDispatcher.js";
 import { iterateBatchMigrationChunks } from "./chunks/iterateBatchMigrationChunks.js";
-import {
-	iterateMigrationChunks,
-	type MigrationChunkResult,
-	type MigrationChunkRunResult,
-} from "./chunks/iterateMigrationChunks.js";
+import { scheduleMigrationChunks } from "./chunks/scheduleMigrationChunks.js";
 import { executeRunMigrationChunk } from "./executeRunMigrationChunk.js";
 import { prepareMigration } from "./runMigration.js";
+import type { MigrationChunkDispatcher } from "./types/migrationChunkDispatcher.js";
+import type { MigrationChunkRunResult } from "./types/migrationChunkResult.js";
 import {
 	buildRunBatchMigrationChunkPayload,
 	buildRunMigrationChunkPayload,
@@ -29,11 +29,11 @@ import {
 	type RunMigrationChunkPayload,
 	type RunMigrationPayload,
 } from "./types/migrationRunPayloads.js";
-import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "./utils/migrationRunConstants.js";
-
-export type RunMigrationChunkRunner = (
-	payload: RunMigrationChunkPayload,
-) => Promise<MigrationChunkResult>;
+import {
+	MIGRATION_CHUNK_CONCURRENCY,
+	MIGRATION_CHUNK_SIZE,
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+} from "./utils/migrationRunConstants.js";
 
 export type RunBatchMigrationChunkRunner = (
 	payload: RunBatchMigrationChunkPayload,
@@ -97,6 +97,64 @@ const runBatchMigrationLane = async ({
 	};
 };
 
+/** The per-customer lane: walk the filtered customers one page at a time and
+ * keep `chunkConcurrency` chunk tasks migrating those pages. */
+const runPerCustomerMigrationLane = async ({
+	ctx,
+	migration,
+	migrationSnapshot,
+	migrationRunId,
+	dryRun,
+	lazyRun,
+	controls,
+	chunkSize,
+	chunkConcurrency,
+	dispatcher,
+}: {
+	ctx: AutumnContext;
+	migration: MigrationRuntimeWithEventId;
+	migrationSnapshot: RunMigrationChunkPayload["migration"];
+	migrationRunId: string;
+	dryRun: boolean;
+	lazyRun: boolean;
+	controls: RunMigrationPayload["controls"];
+	chunkSize: number;
+	chunkConcurrency: number;
+	dispatcher: MigrationChunkDispatcher;
+}): Promise<MigrationChunkRunResult> => {
+	const { iterate } = await runFilter({
+		ctx,
+		migration,
+		migrationRunId,
+		dryRun,
+		kind: "customer",
+		// Chunks checkpoint dry runs too, so the walk sees what they see.
+		controls: { ...controls, checkpointDryRun: true },
+		includeCount: false,
+		batchSize: chunkSize,
+	});
+
+	return scheduleMigrationChunks({
+		pages: iterate(),
+		concurrency: chunkConcurrency,
+		isCancelRequested: () => isMigrationCancelRequested({ migrationRunId }),
+		dispatcher,
+		buildPayload: ({ pageIndex, attempt, customers }) =>
+			buildRunMigrationChunkPayload({
+				ctx,
+				migrationId: migration.id,
+				migrationRunId,
+				dryRun,
+				lazyRun,
+				migration: migrationSnapshot,
+				controls,
+				pageIndex,
+				attempt,
+				customers,
+			}),
+	});
+};
+
 /** Top-level migration run (successor of runMigration): track the run,
  * prepare once, snapshot, then drive per-chunk workloads until done. */
 export const runMigrationInChunks = async ({
@@ -106,7 +164,11 @@ export const runMigrationInChunks = async ({
 	dryRun,
 	lazyRun = false,
 	controls,
-	runChunk,
+	chunkSize = MIGRATION_CHUNK_SIZE,
+	chunkConcurrency = MIGRATION_CHUNK_CONCURRENCY,
+	dispatcher = createInProcessChunkDispatcher({
+		runChunk: (payload) => executeRunMigrationChunk({ ctx, payload }),
+	}),
 	runBatchChunk,
 }: {
 	ctx: AutumnContext;
@@ -115,7 +177,9 @@ export const runMigrationInChunks = async ({
 	dryRun: boolean;
 	lazyRun?: boolean;
 	controls?: RunMigrationPayload["controls"];
-	runChunk?: RunMigrationChunkRunner;
+	chunkSize?: number;
+	chunkConcurrency?: number;
+	dispatcher?: MigrationChunkDispatcher;
 	runBatchChunk?: RunBatchMigrationChunkRunner;
 }): Promise<MigrationChunkRunResult> => {
 	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
@@ -131,6 +195,7 @@ export const runMigrationInChunks = async ({
 				dryRun,
 				noBillingChanges: migration.no_billing_changes === true,
 				concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+				chunkConcurrency,
 				only: controls?.only,
 				limit: controls?.limit,
 				retryItemStatuses: controls?.retryItemStatuses,
@@ -178,33 +243,17 @@ export const runMigrationInChunks = async ({
 					});
 				}
 
-				const executeChunk: RunMigrationChunkRunner =
-					runChunk ??
-					((chunkPayload) =>
-						executeRunMigrationChunk({ ctx, payload: chunkPayload }));
-
-				const chunkRun = await iterateMigrationChunks({
-					limit: controls?.limit,
-					isCancelRequested: () =>
-						isMigrationCancelRequested({
-							migrationRunId: eventMigrationRunId,
-						}),
-
-					runChunk: ({ limit, chunkIndex, cursor }) =>
-						executeChunk(
-							buildRunMigrationChunkPayload({
-								ctx,
-								migrationId: migration.id,
-								migrationRunId: eventMigrationRunId,
-								dryRun,
-								lazyRun,
-								migration: migrationSnapshot,
-								controls,
-								limit,
-								chunkIndex,
-								cursor,
-							}),
-						),
+				const chunkRun = await runPerCustomerMigrationLane({
+					ctx,
+					migration: preparedMigration,
+					migrationSnapshot,
+					migrationRunId: eventMigrationRunId,
+					dryRun,
+					lazyRun,
+					controls,
+					chunkSize,
+					chunkConcurrency,
+					dispatcher,
 				});
 
 				return {

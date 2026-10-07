@@ -1,6 +1,7 @@
 import { task } from "@trigger.dev/sdk/v3";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { createInProcessChunkDispatcher } from "@/internal/migrations/v2/run/chunks/createInProcessChunkDispatcher.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 import { RunMigrationPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import {
@@ -47,13 +48,17 @@ export const runMigrationTask = task({
 			dryRun: payload.dryRun,
 			lazyRun: payload.lazyRun,
 			controls: payload.controls,
-			runChunk: (chunkPayload) =>
-				runMigrationChunkTask
-					.triggerAndWait(chunkPayload, {
-						idempotencyKey: `migration-chunk:${chunkPayload.migrationRunId}:${chunkPayload.chunkIndex}`,
-						idempotencyKeyTTL: "7d",
-					})
-					.unwrap(),
+			// triggerAndWait cannot overlap, so this stays serial until the polling dispatcher lands.
+			chunkConcurrency: 1,
+			dispatcher: createInProcessChunkDispatcher({
+				runChunk: (chunkPayload) =>
+					runMigrationChunkTask
+						.triggerAndWait(chunkPayload, {
+							idempotencyKey: `migration-chunk:${chunkPayload.migrationRunId}:${chunkPayload.pageIndex}`,
+							idempotencyKeyTTL: "7d",
+						})
+						.unwrap(),
+			}),
 			runBatchChunk: (chunkPayload) =>
 				runBatchMigrationChunkTask
 					.triggerAndWait(chunkPayload, {
