@@ -2,9 +2,9 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import { LATEST_VERSION } from "@autumn/shared";
 import {
-	createCatalogFor,
 	createCatalogRowsFor,
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
@@ -13,7 +13,7 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
-import { atomOrg } from "../utils/atomFixtures.js";
+import { subjectBody } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
 const ADMIN_TOKEN = "atom_admin_token_1";
@@ -107,25 +107,30 @@ const post = ({
 const withToken = (token: string | null): Record<string, string> =>
 	token ? { "x-atom-token": token } : {};
 
-/** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
-const subjectBody = ({ balance }: { balance: number }) => {
-	const state = createState({ balance });
-	return {
-		state,
-		catalog: createCatalogFor({ state }),
-		org: atomOrg,
-		log_offset: "41",
-		read_at: 1700,
-	};
-};
+/** The headers herald sends a subject push with. */
+const pushedFor = ({
+	customerId,
+}: {
+	customerId: string;
+}): Record<string, string> => ({
+	...withToken(ATOM_TOKEN),
+	[ATOM_CUSTOMER_ID_HEADER]: customerId,
+});
 
+/** As herald sends it: routed by the customer id in a header, so Atom passes the body on unparsed. */
 const setSubject = ({
 	balance,
 	token = ATOM_TOKEN,
+	customerId = "cus_1",
 }: {
 	balance: number;
 	token?: string | null;
-}) => post({ headers: withToken(token), body: subjectBody({ balance }) });
+	customerId?: string;
+}) =>
+	post({
+		headers: { ...withToken(token), [ATOM_CUSTOMER_ID_HEADER]: customerId },
+		body: subjectBody({ balance }),
+	});
 
 /** A check on `cus_1`'s messages as an SDK on the latest API version sends it. */
 const checkMessages = ({
@@ -180,6 +185,37 @@ describe("an Atom in an org's cloud", () => {
 		});
 		expect(await refused.json()).toMatchObject({ allowed: false });
 		expect(allowed.headers.get("x-atom-forwarded")).toBeNull();
+	});
+
+	test("a push routed to one customer but holding another is refused and stores nothing", async () => {
+		const { app } = createDeployedApp();
+
+		const misrouted = await app.request(
+			"/v1/subjects.set",
+			setSubject({ balance: 10, customerId: "cus_2" }),
+		);
+		const check = await app.request("/v1/balances.check", checkMessages());
+
+		expect(misrouted.status).toBe(400);
+		expect(await misrouted.json()).toMatchObject({ code: "invalid_request" });
+		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
+	});
+
+	test("a push sent without its customer id is refused and stores nothing", async () => {
+		const { app } = createDeployedApp();
+
+		const refused = await app.request(
+			"/v1/subjects.set",
+			post({
+				headers: withToken(ATOM_TOKEN),
+				body: subjectBody({ balance: 10 }),
+			}),
+		);
+		const check = await app.request("/v1/balances.check", checkMessages());
+
+		expect(refused.status).toBe(400);
+		expect(await refused.json()).toMatchObject({ code: "invalid_request" });
+		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
 	});
 
 	test("fields the API keeps for itself are dropped from the answer, as the API drops them", async () => {
@@ -242,7 +278,7 @@ describe("an Atom in an org's cloud", () => {
 		const stored = await app.request(
 			"/v1/subjects.set",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: pushedFor({ customerId: "cus_1" }),
 				body: { ...body, state: { ...body.state, added_later: true } },
 			}),
 		);
@@ -262,7 +298,7 @@ describe("an Atom in an org's cloud", () => {
 		const subject = await app.request(
 			"/v1/subjects.set",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: pushedFor({ customerId: "cus_1" }),
 				body: { state: {}, log_offset: "41" },
 			}),
 		);
@@ -294,7 +330,10 @@ describe("a customer push that arrives late", () => {
 		const push = (body: unknown) =>
 			app.request(
 				"/v1/subjects.set",
-				post({ headers: withToken(ATOM_TOKEN), body }),
+				post({
+					headers: pushedFor({ customerId: "cus_1" }),
+					body,
+				}),
 			);
 
 		const first = await push(newer);
@@ -421,8 +460,6 @@ describe("the request line", () => {
 				method: "POST",
 				path: "/v1/subjects.set",
 				customer_id: "cus_1",
-				entity_id: null,
-				log_offset: "41",
 			},
 			res: null,
 		});
@@ -461,7 +498,10 @@ describe("the request line", () => {
 		await app.request("/v1/balances.check", checkMessages({ token: null }));
 		await app.request(
 			"/v1/subjects.set",
-			post({ headers: withToken(ATOM_TOKEN), body: { state: {} } }),
+			post({
+				headers: pushedFor({ customerId: "cus_1" }),
+				body: { state: {} },
+			}),
 		);
 
 		expect(logged.map((line) => line.level)).toEqual(["warn", "warn"]);
@@ -473,7 +513,7 @@ describe("the request line", () => {
 		expect(logged[1]?.fields).toMatchObject({
 			statusCode: 400,
 			errorCode: "invalid_request",
-			error: { name: "ZodError" },
+			error: { name: "InvalidPushError" },
 			res: { code: "invalid_request" },
 		});
 		expect(logged[1]?.fields).not.toHaveProperty("error.stack");

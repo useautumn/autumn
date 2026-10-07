@@ -5,40 +5,26 @@ import { createAtomApp } from "../http/createAtomApp.js";
 import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
 import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
-import type { PushReceiver } from "../pushes/types/pushReceiver.js";
-import type { AtomProcessRole } from "./types/atomProcessRole.js";
+import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import type {
 	AtomServer,
 	AtomServerConfig,
 	AtomServerDependencies,
 } from "./types/atomServer.js";
 
-/** An org's deployment is given its one token hash, and its writers lease Autumn's pushes; a multi-tenant Atom adds orgs as the admin registers them. */
+/** An org's deployment is given its one token hash; a multi-tenant Atom adds orgs as the admin registers them. */
 const openAuth = ({
-	ctx,
 	env,
-	role,
 }: {
-	ctx: AtomServerDependencies;
 	env: AtomEnv;
-	role: AtomProcessRole;
-}): {
-	auth: Auth;
-	multiTenant?: MultiTenantContext;
-	pushReceiver?: PushReceiver;
-} => {
+}): { auth: Auth; multiTenant?: MultiTenantContext } => {
 	if (env.ATOM_MODE === "deployed") {
 		const auth = createDeployedAuth({
 			dataDir: env.ATOM_DATA_DIR,
 			tokenHash: env.ATOM_TOKEN_HASH,
 			slotCount: env.ATOM_SLOT_COUNT,
 		});
-		const pushReceiver = role.receivesPushes
-			? createPushReceiver({
-					ctx: { slots: auth.slots, logger: ctx.logger },
-				})
-			: undefined;
-		return { auth, pushReceiver };
+		return { auth };
 	}
 	const auth = createMultiTenantAuth({
 		dataDir: env.ATOM_DATA_DIR,
@@ -58,7 +44,13 @@ export const createAtomServer = ({
 	config: AtomServerConfig;
 }): AtomServer => {
 	const { env, role } = config;
-	const { auth, multiTenant, pushReceiver } = openAuth({ ctx, env, role });
+	const { auth, multiTenant } = openAuth({ env });
+	// A queued push names the folder it lands in, so a multi-tenant Atom's writers read the queue like an org's own.
+	const pushReceiver = role.receivesPushes
+		? createPushReceiver({
+				ctx: { pushQueue: getPushQueue({ env }), auth, logger: ctx.logger },
+			})
+		: undefined;
 	const app = createAtomApp({
 		ctx: {
 			auth,

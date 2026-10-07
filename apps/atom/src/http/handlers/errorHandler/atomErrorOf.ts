@@ -1,4 +1,4 @@
-import { ZodError } from "zod/v4";
+import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
 
 export type AtomErrorStatus = 400 | 500;
 
@@ -9,7 +9,7 @@ export const atomErrorOf = ({
 	cause: Error;
 }): { status: AtomErrorStatus; code: string; message: string } => {
 	// A push Atom cannot read is the sender's to fix.
-	if (cause instanceof ZodError || cause instanceof SyntaxError)
+	if (isUnreadableRequest(cause))
 		return { status: 400, code: "invalid_request", message: cause.message };
 	return {
 		status: 500,

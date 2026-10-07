@@ -3,6 +3,10 @@ import { createAtomEnv } from "./atom.js";
 
 const TOKEN_HASH = "a".repeat(64);
 const ADMIN_TOKEN_HASH = "b".repeat(64);
+const PUSHES_BINDING = JSON.stringify({
+	service: "sqs",
+	queueUrl: "https://sqs.us-east-1.amazonaws.com/1/pushes",
+});
 const MULTI_TENANT = {
 	ATOM_MODE: "multi_tenant",
 	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
@@ -118,7 +122,7 @@ describe("atom env", () => {
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
 				ATOM_PROCESSES: processes,
-				ALIEN_PUSHES_BINDING: "{}",
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
 			}).ATOM_WRITERS;
 
 		// A lone process serves and receives.
@@ -135,5 +139,20 @@ describe("atom env", () => {
 		});
 
 		expect(env.ATOM_WRITERS).toBe(0);
+	});
+
+	test("the Alien binding reads the linked queue unless ATOM_PUSH_QUEUE_CLIENT=sdk opts into the AWS SDK", () => {
+		const queueUrl = (client?: string) =>
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
+				ATOM_PUSH_QUEUE_CLIENT: client,
+			}).ATOM_SDK_PUSH_QUEUE_URL;
+
+		expect(queueUrl()).toBeNull();
+		expect(queueUrl("sdk")).toBe(
+			"https://sqs.us-east-1.amazonaws.com/1/pushes",
+		);
+		expect(() => queueUrl("http")).toThrow("ATOM_PUSH_QUEUE_CLIENT");
 	});
 });
