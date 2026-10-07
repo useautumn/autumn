@@ -68,7 +68,7 @@ export const rateLimitFactory = ({
 	type: RateLimitType;
 	config: RateLimitConfig;
 }): ReturnType<typeof rateLimiter> => {
-	const { windowMs, notInRedis } = config;
+	const { windowMs } = config;
 
 	const dynamicLimit = (c: Context): number => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
@@ -139,7 +139,7 @@ export const rateLimitFactory = ({
 	};
 
 	return async (c, next) => {
-		if (notInRedis) return getInMemoryLimiter()(c, next);
+		if (config.store === "memory") return getInMemoryLimiter()(c, next);
 
 		if (!shouldUseRedis()) {
 			warnRateLimitBypass();
@@ -175,14 +175,8 @@ export const getRateLimitKey = ({
 	const config = RATE_LIMIT_CONFIGS[rateLimitType];
 	const { matchedKey } = resolveRateLimit({ config, apiVersion });
 	const versionSuffix = matchedKey ? `:v${matchedKey}` : "";
-	const baseKey = `${config.name}:${orgId}:${env}${versionSuffix}`;
+	const baseKey = `${rateLimitType}:${orgId}:${env}${versionSuffix}`;
 
-	switch (config.scope) {
-		case RateLimitScope.Org:
-			return baseKey;
-
-		case RateLimitScope.Customer:
-		case RateLimitScope.CustomerWithUrlFallback:
-			return `${baseKey}:${ctx.customerId}`;
-	}
+	if (config.scope === RateLimitScope.Org) return baseKey;
+	return `${baseKey}:${ctx.customerId}`;
 };

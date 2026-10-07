@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { Context } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
-	getOrgAggregateType,
 	getRateLimitType,
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
@@ -57,7 +56,7 @@ describe("getRateLimitType", () => {
 	});
 
 	test("retains the org list cap around entities.list", () => {
-		expect(getOrgAggregateType(RateLimitType.EntitiesList)).toBe(
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesList].orgLimit).toBe(
 			RateLimitType.ListCustomers,
 		);
 	});
@@ -174,7 +173,6 @@ describe("getRateLimitType", () => {
 		).toBe(RateLimitType.Logs);
 
 		expect(RATE_LIMIT_CONFIGS[RateLimitType.Logs]).toMatchObject({
-			name: "logs",
 			limit: 10,
 			windowMs: 1000,
 			scope: RateLimitScope.Org,

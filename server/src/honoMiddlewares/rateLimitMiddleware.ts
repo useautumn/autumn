@@ -6,8 +6,8 @@ import {
 	setRateLimitKeyInContext,
 } from "@/internal/misc/rateLimiter/rateLimitFactory";
 import {
-	getOrgAggregateType,
 	getRateLimitType,
+	RATE_LIMIT_CONFIGS,
 	RateLimitType,
 } from "../internal/misc/rateLimiter/rateLimitConfigs";
 
@@ -40,19 +40,19 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		// 4. Get the appropriate limiter for this type
 		const limiter = getLimiterForType(rateLimitType);
 
-		const aggregateType = getOrgAggregateType(rateLimitType);
-		if (!aggregateType) {
+		const orgLimitType = RATE_LIMIT_CONFIGS[rateLimitType].orgLimit;
+		if (!orgLimitType) {
 			// 5. Apply rate limiting
 			return await limiter(c as Context<Env>, next);
 		}
 
-		// 5. Org-aggregate limiter wraps the per-customer one; the key slot is
+		// 5. The org limiter wraps the per-customer one; the key slot is
 		// swapped between them since keyGenerator reads it at execution time.
 		setRateLimitKeyInContext(
 			c as Context,
-			getRateLimitKey({ c, rateLimitType: aggregateType }),
+			getRateLimitKey({ c, rateLimitType: orgLimitType }),
 		);
-		const aggregateLimiter = getLimiterForType(aggregateType);
+		const aggregateLimiter = getLimiterForType(orgLimitType);
 		const skipPrimaryLimiter =
 			rateLimitType === RateLimitType.EntitiesList && !ctx.customerId;
 

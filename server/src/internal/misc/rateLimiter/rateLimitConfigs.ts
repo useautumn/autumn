@@ -6,31 +6,18 @@ import type { HonoEnv } from "../../../honoUtils/HonoEnv";
 export enum RateLimitType {
 	General = "general",
 	Track = "track",
+	TrackOrg = "track_org",
 	BatchTrack = "batch_track",
 	Check = "check",
+	CheckOrg = "check_org",
 	Events = "events",
 	Attach = "attach",
 	ListCustomers = "list_customers",
 	EntitiesList = "entities_list",
 	CustomerEntitiesGet = "customer_entities_get",
-	Logs = "logs",
-	TrackOrg = "track_org",
-	CheckOrg = "check_org",
 	EntitiesGetOrg = "entities_get_org",
+	Logs = "logs",
 }
-
-// Org-wide aggregate caps summed across all of an org's customers — the
-// per-customer limits never bind for many-customer storms (2026-06-08 incident).
-const ORG_AGGREGATE_TYPES: Partial<Record<RateLimitType, RateLimitType>> = {
-	[RateLimitType.Track]: RateLimitType.TrackOrg,
-	[RateLimitType.Check]: RateLimitType.CheckOrg,
-	[RateLimitType.EntitiesList]: RateLimitType.ListCustomers,
-	[RateLimitType.CustomerEntitiesGet]: RateLimitType.EntitiesGetOrg,
-};
-
-export const getOrgAggregateType = (
-	type: RateLimitType,
-): RateLimitType | undefined => ORG_AGGREGATE_TYPES[type];
 
 type RoutePattern = {
 	method: string;
@@ -180,11 +167,9 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 export enum RateLimitScope {
 	Org = "org",
 	Customer = "customer",
-	CustomerWithUrlFallback = "customer_with_url_fallback", // Check endpoint: tries body first, then URL param
 }
 
 export type RateLimitConfig = {
-	name: string;
 	limit: number;
 	/**
 	 * Per-version overrides resolved by GTE bounds — each key is the floor
@@ -194,10 +179,13 @@ export type RateLimitConfig = {
 	 */
 	versionedLimit?: Partial<Record<ApiVersion, number>>;
 	windowMs: number;
-	notInRedis: boolean;
 	scope: RateLimitScope;
-	// "degrade" preserves check/track traffic through fallback paths.
-	// Establish routes still reject with 429.
+	/** "memory" counts per pod, so the real ceiling is limit × pods. */
+	store: "memory" | "redis";
+	/** Org-wide cap checked before this one; per-customer limits never bind
+	 *  for many-customer storms (2026-06-08 incident). */
+	orgLimit?: RateLimitType;
+	/** "degrade" runs the handler with `ctx.orgRateLimitDegraded` set instead of a 429. */
 	overLimit?: "reject" | "degrade";
 };
 
@@ -234,102 +222,93 @@ export const resolveRateLimit = ({
 
 export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	[RateLimitType.General]: {
-		name: "general",
 		limit: process.env.NODE_ENV === "development" ? 1000 : 25,
 		windowMs: 1000,
-		notInRedis: false,
 		scope: RateLimitScope.Org,
+		store: "redis",
 	},
 	[RateLimitType.Track]: {
-		name: "track",
-		limit: 10000,
+		limit: 10_000,
 		windowMs: 1000,
-		notInRedis: true,
 		scope: RateLimitScope.Customer,
+		store: "memory",
+		orgLimit: RateLimitType.TrackOrg,
+	},
+	// Org windows are 60s, sized ~1.5-2x the highest legit per-org peak over 7d
+	// of prod traffic (check 157k/min, track 60k/min, entities.get 53k/min).
+	[RateLimitType.TrackOrg]: {
+		limit: 120_000,
+		windowMs: 60_000,
+		scope: RateLimitScope.Org,
+		store: "redis",
+		overLimit: "degrade",
 	},
 	[RateLimitType.BatchTrack]: {
-		name: "batch_track",
 		limit: 10,
 		windowMs: 1000,
-		notInRedis: false,
 		scope: RateLimitScope.Org,
+		store: "redis",
 	},
 	[RateLimitType.Check]: {
-		name: "check",
-		limit: 10000,
+		limit: 10_000,
 		windowMs: 1000,
-		notInRedis: true,
-		scope: RateLimitScope.CustomerWithUrlFallback,
+		scope: RateLimitScope.Customer,
+		store: "memory",
+		orgLimit: RateLimitType.CheckOrg,
+	},
+	[RateLimitType.CheckOrg]: {
+		limit: 240_000,
+		windowMs: 60_000,
+		scope: RateLimitScope.Org,
+		store: "redis",
+		overLimit: "degrade",
 	},
 	[RateLimitType.Events]: {
-		name: "events",
 		limit: 5,
 		windowMs: 1000,
-		notInRedis: false,
 		scope: RateLimitScope.Customer,
+		store: "redis",
 	},
 	[RateLimitType.Attach]: {
-		name: "attach",
 		limit: 30,
 		windowMs: 60000,
-		notInRedis: false,
 		scope: RateLimitScope.Customer,
+		store: "redis",
 	},
 	[RateLimitType.ListCustomers]: {
-		name: "list_customers",
 		limit: 5,
 		versionedLimit: {
 			[ApiVersion.V2_3]: 50,
 			[ApiVersion.V2_2]: 5,
 		},
 		windowMs: 1000,
-		notInRedis: false,
 		scope: RateLimitScope.Org,
+		store: "redis",
 	},
 	[RateLimitType.EntitiesList]: {
-		name: "entities_list",
 		limit: 10,
 		windowMs: 1000,
-		notInRedis: false,
 		scope: RateLimitScope.Customer,
+		store: "redis",
+		orgLimit: RateLimitType.ListCustomers,
 	},
 	[RateLimitType.CustomerEntitiesGet]: {
-		name: "customer_entities_get",
 		limit: 50,
 		windowMs: 1000,
-		notInRedis: false,
 		scope: RateLimitScope.Customer,
-	},
-	[RateLimitType.Logs]: {
-		name: "logs",
-		limit: 10,
-		windowMs: 1000,
-		notInRedis: false,
-		scope: RateLimitScope.Org,
-	},
-	// 60s windows sized ~1.5-2x the highest legit per-org peak observed over 7d
-	// of prod traffic (check 157k/min, track 60k/min, entities.get 53k/min).
-	[RateLimitType.TrackOrg]: {
-		name: "track_org",
-		limit: 120_000,
-		windowMs: 60_000,
-		notInRedis: false,
-		scope: RateLimitScope.Org,
-		overLimit: "degrade",
-	},
-	[RateLimitType.CheckOrg]: {
-		name: "check_org",
-		limit: 240_000,
-		windowMs: 60_000,
-		notInRedis: false,
-		scope: RateLimitScope.Org,
-		overLimit: "degrade",
+		store: "redis",
+		orgLimit: RateLimitType.EntitiesGetOrg,
 	},
 	[RateLimitType.EntitiesGetOrg]: {
-		name: "entities_get_org",
 		limit: 90_000,
 		windowMs: 60_000,
-		notInRedis: false,
 		scope: RateLimitScope.Org,
+		store: "redis",
+	},
+	[RateLimitType.Logs]: {
+		limit: 10,
+		windowMs: 1000,
+		scope: RateLimitScope.Org,
+		store: "redis",
 	},
 };
