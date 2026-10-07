@@ -13,7 +13,7 @@ import { runWithTransientDbRetry } from "@/internal/migrations/v2/batchOperation
 import { applyMigrationQueryDeadline } from "@/trigger/migrations/database/applyMigrationQueryDeadline.js";
 import {
 	migrationTestDatabaseUrl,
-	withScratchSchema,
+	withScratchDatabase,
 } from "./utils/scratchDatabase.js";
 
 const databaseUrl = migrationTestDatabaseUrl();
@@ -79,7 +79,6 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		const client = await pool.connect();
 		const socket = (client as unknown as { connection: { stream: Socket } })
 			.connection.stream;
-		const first = await client.query("select pg_backend_pid() as id");
 		socket.pause();
 		const watchdog = setTimeout(() => socket.resume(), 800);
 		try {
@@ -91,8 +90,13 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 			expect(socket.destroyed).toBe(true);
 			await expect(client.query("rollback")).rejects.toThrow("deadline");
 			client.release();
-			const next = await pool.query("select pg_backend_pid() as id");
-			expect(next.rows[0].id).not.toBe(first.rows[0].id);
+			// Client identity, not backend pid: behind PgBouncer the server connection is legitimately reused.
+			const next = await pool.connect();
+			expect(next).not.toBe(client);
+			expect((await next.query("select 1 as value")).rows).toEqual([
+				{ value: 1 },
+			]);
+			next.release();
 		} finally {
 			clearTimeout(watchdog);
 			socket.resume();
@@ -101,12 +105,8 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		}
 	}, 5000);
 
-	test("a server statement_timeout below the deadline fails with a retryable 57014 and keeps the client", async () => {
-		const pool = new pg.Pool({
-			connectionString: databaseUrl,
-			options: "-c statement_timeout=100",
-			max: 1,
-		});
+	test("a server statement timeout below the deadline fails with a retryable 57014 and keeps the client", async () => {
+		const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
 		const failures: Record<string, unknown>[] = [];
 		applyMigrationQueryDeadline({
 			pool,
@@ -115,9 +115,13 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		});
 		const client = await pool.connect();
 		try {
+			// SET LOCAL, not a startup parameter: PgBouncer rejects the latter with 08P01.
+			await client.query("begin");
+			await client.query("set local statement_timeout = 100");
 			const error = await client
 				.query("select pg_sleep(1)")
 				.catch((error: unknown) => error);
+			await client.query("rollback");
 			expect(pgErrorCode(error)).toBe("57014");
 			expect(isTransientDbError({ error })).toBe(true);
 			expect(failures).toMatchObject([
@@ -139,12 +143,11 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 	}, 5000);
 
 	test("a stalled claim and a stalled terminal write both fail at the deadline and are not retried", async () => {
-		await withScratchSchema({
-			databaseUrl: databaseUrl!,
-			run: async ({ options }) => {
+		await withScratchDatabase({
+			databaseUrl: databaseUrl as string,
+			run: async ({ databaseUrl: scratchUrl }) => {
 				const pool = new pg.Pool({
-					connectionString: databaseUrl,
-					options,
+					connectionString: scratchUrl,
 					max: 1,
 				});
 				applyMigrationQueryDeadline({ pool, queryTimeoutMs: 100 });
@@ -229,12 +232,11 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		const { markCustomerUpdatedAt } = await import(
 			"@/internal/customers/customerLsns/markCustomerUpdatedAt.js"
 		);
-		await withScratchSchema({
-			databaseUrl: databaseUrl!,
-			run: async ({ options }) => {
+		await withScratchDatabase({
+			databaseUrl: databaseUrl as string,
+			run: async ({ databaseUrl: scratchUrl }) => {
 				const pool = new pg.Pool({
-					connectionString: databaseUrl,
-					options,
+					connectionString: scratchUrl,
 					max: 110,
 					connectionTimeoutMillis: 2000,
 				});
@@ -295,12 +297,11 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		const { markCustomerUpdatedAt } = await import(
 			"@/internal/customers/customerLsns/markCustomerUpdatedAt.js"
 		);
-		await withScratchSchema({
-			databaseUrl: databaseUrl!,
-			run: async ({ options }) => {
+		await withScratchDatabase({
+			databaseUrl: databaseUrl as string,
+			run: async ({ databaseUrl: scratchUrl }) => {
 				const pool = new pg.Pool({
-					connectionString: databaseUrl,
-					options,
+					connectionString: scratchUrl,
 					max: 2,
 				});
 				const failures: Record<string, unknown>[] = [];

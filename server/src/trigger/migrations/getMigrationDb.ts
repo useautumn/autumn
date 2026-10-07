@@ -3,7 +3,6 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import {
 	MIGRATION_DB_POOL_MAX,
 	MIGRATION_DB_QUERY_DEADLINE_MS,
-	MIGRATION_DB_STATEMENT_TIMEOUT_MS,
 } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { applyMigrationQueryDeadline } from "./database/applyMigrationQueryDeadline.js";
 
@@ -15,7 +14,6 @@ export const getMigrationDb = (): DrizzleCli => {
 	const { db, client } = initDrizzle({
 		name: "migration",
 		maxConnections: MIGRATION_DB_POOL_MAX,
-		poolConfig: { statement_timeout: MIGRATION_DB_STATEMENT_TIMEOUT_MS },
 	});
 	applyMigrationQueryDeadline({
 		pool: client,
