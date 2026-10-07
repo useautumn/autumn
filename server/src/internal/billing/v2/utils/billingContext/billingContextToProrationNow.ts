@@ -1,7 +1,8 @@
 import type { BillingContext, BillingPeriod } from "@autumn/shared";
+import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 
 /** `bill_difference` applies only to an existing subscription whose period runs on; a new
- * subscription's stub, or a cycle reset now, starts a new period, so it prorates. */
+ * subscription's stub, or a set_plans cycle reset now, starts a new period, so it prorates. */
 export const billingContextBillsDifference = ({
 	billingContext,
 }: {
@@ -9,7 +10,10 @@ export const billingContextBillsDifference = ({
 }): boolean =>
 	billingContext.requestedProrationBehavior === "bill_difference" &&
 	billingContext.stripeSubscription !== undefined &&
-	billingContext.requestedBillingCycleAnchor !== "now";
+	!(
+		isSetPlansBillingContext(billingContext) &&
+		billingContext.requestedBillingCycleAnchor === "now"
+	);
 
 /** The instant proration is measured from: the period start when billing the full difference. */
 export const billingContextToProrationNow = ({

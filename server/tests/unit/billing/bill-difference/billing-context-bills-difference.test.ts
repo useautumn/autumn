@@ -1,4 +1,4 @@
-/** `bill_difference` bills against the period that runs on, so a cycle reset now prorates like Stripe. */
+/** `bill_difference` bills against the period that runs on, so a set_plans cycle reset now prorates like Stripe. */
 
 import { describe, expect, test } from "bun:test";
 import type { BillingContext } from "@autumn/shared";
@@ -33,10 +33,12 @@ describe(chalk.yellowBright("billingContextBillsDifference"), () => {
 		).toBe(PERIOD.start);
 	});
 
-	test("a cycle reset now prorates from now", () => {
+	test("a set_plans cycle reset now prorates from now", () => {
 		const billingContext = billingContextFor({
 			requestedBillingCycleAnchor: "now",
-		});
+			immediatePhase: {},
+			scheduledPhaseContexts: [],
+		} as Partial<BillingContext>);
 		expect(billingContextBillsDifference({ billingContext })).toBe(false);
 		expect(
 			billingContextToProrationNow({
@@ -45,6 +47,16 @@ describe(chalk.yellowBright("billingContextBillsDifference"), () => {
 				now: NOW,
 			}),
 		).toBe(NOW);
+	});
+
+	test("another action's cycle reset now still bills the difference", () => {
+		expect(
+			billingContextBillsDifference({
+				billingContext: billingContextFor({
+					requestedBillingCycleAnchor: "now",
+				}),
+			}),
+		).toBe(true);
 	});
 
 	test("a scheduled anchor still bills the difference", () => {

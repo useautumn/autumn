@@ -86,15 +86,8 @@ for (const variant of [
 		const baseAmount = variant.planChange ? 30 : 20;
 		const newAmount =
 			baseAmount + (variant.nextPrepaid ?? 300) / 10 + variant.nextSeats * 20;
-		// Under none, like Stripe, only the items the reset changes are charged a new period.
-		const changedItemAmounts = variant.planChange
-			? [baseAmount]
-			: [variant.nextSeats * 20];
-		const chargedAmounts = variant.none
-			? changedItemAmounts
-			: [baseAmount, (variant.nextPrepaid ?? 300) / 10, variant.nextSeats * 20];
 		const expectedTotal = variant.none
-			? changedItemAmounts.reduce((total, amount) => total + amount, 0)
+			? newAmount
 			: await calculateResetBillingCycleNowTotal({
 					customerId,
 					advancedTo,
@@ -125,15 +118,19 @@ for (const variant of [
 				params,
 			);
 		expect(preview.total).toBeCloseTo(expectedTotal, 2);
-		expect(preview.line_items).toHaveLength(
-			variant.none ? changedItemAmounts.length : 6,
-		);
+		expect(preview.line_items).toHaveLength(variant.none ? 3 : 6);
 		expect(
 			preview.line_items
 				.filter((line) => line.total > 0)
 				.map((line) => line.total)
 				.sort((a, b) => a - b),
-		).toEqual(chargedAmounts.sort((a, b) => a - b));
+		).toEqual(
+			[
+				baseAmount,
+				(variant.nextPrepaid ?? 300) / 10,
+				variant.nextSeats * 20,
+			].sort((a, b) => a - b),
+		);
 		expect(await scenario.readProduct()).toEqual(before);
 		expect(await scenario.readCustomer()).toEqual(customerBefore);
 		await autumnV2_4.billing.update<UpdateSubscriptionV1ParamsInput>(params);

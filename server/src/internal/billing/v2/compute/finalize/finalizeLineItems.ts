@@ -28,12 +28,15 @@ export const finalizeLineItems = ({
 	billingContext,
 	autumnBillingPlan,
 	customLineItems,
+	dropsUnchangedItemChargesAtReset = false,
 }: {
 	ctx: AutumnContext;
 	lineItems: LineItem[];
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	customLineItems?: CustomLineItem[];
+	/** set_plans only: a cycle reset under none charges a new period only for the items it changes, like Stripe. */
+	dropsUnchangedItemChargesAtReset?: boolean;
 }): LineItem[] => {
 	if (billingContext.skipBillingChanges) {
 		return [];
@@ -50,10 +53,10 @@ export const finalizeLineItems = ({
 	const resetsCycleNow = billingContext.anchorResetRefund?.noPartialRefund;
 	if (skipsProration && !resetsCycleNow) return [];
 
-	// Like Stripe, a cycle reset under none charges a new period only for the items it changes.
-	const billedLineItems = skipsProration
-		? dropUnchangedSubscriptionItemCharges({ ctx, billingContext, lineItems })
-		: lineItems;
+	const billedLineItems =
+		skipsProration && dropsUnchangedItemChargesAtReset
+			? dropUnchangedSubscriptionItemCharges({ ctx, billingContext, lineItems })
+			: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
