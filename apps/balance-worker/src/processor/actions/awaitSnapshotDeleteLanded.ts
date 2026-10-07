@@ -2,8 +2,8 @@ import {
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
 } from "@autumn/balance-engine";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import type { DeletedSubjectSnapshot } from "@autumn/postgres";
-import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
 /**

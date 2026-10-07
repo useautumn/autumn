@@ -40,8 +40,20 @@ export {
 	SHADOW_ATOM_SETTLE_MS,
 	scheduleOrgPercent,
 } from "./configs/shadowAtom/shadowAtomRollout.js";
+export {
+	defaultSubjectSnapshotsEdgeConfig,
+	readsSubjectSnapshots,
+	type SubjectSnapshotMode,
+	type SubjectSnapshotsEdgeConfig,
+	SubjectSnapshotsEdgeConfigSchema,
+	servesSubjectSnapshots,
+	stampSubjectSnapshotsWrittenAfter,
+	subjectSnapshotsEdgeConfig,
+	writesSubjectSnapshots,
+} from "./configs/subjectSnapshots/subjectSnapshotsEdgeConfig.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
 export {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	BALANCE_WORKER_THREADS_CONFIG_KEY,
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,

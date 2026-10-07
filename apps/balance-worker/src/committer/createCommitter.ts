@@ -1,4 +1,4 @@
-import { writesSubjectSnapshots } from "../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import { landFlush } from "./actions/landFlush.js";
 import { takeFlush } from "./actions/takeFlush.js";
 import { CommitterStoppedError } from "./committerErrors.js";

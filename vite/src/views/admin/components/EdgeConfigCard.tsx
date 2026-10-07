@@ -6,6 +6,7 @@ import {
 } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { ConfigHealthChip } from "./ConfigHealthChip";
 import type { EdgeConfigCardDef, EdgeConfigCardTone } from "./edgeConfigCards";
 
 const STATUS_INDICATORS: Record<
@@ -42,6 +43,7 @@ export function EdgeConfigCard<Id extends string>({
 	});
 
 	const status = isError ? null : data ? def.deriveStatus(data) : null;
+	const healthy = status && def.deriveHealthy?.(data);
 
 	return (
 		<div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
@@ -69,9 +71,16 @@ export function EdgeConfigCard<Id extends string>({
 				)}
 
 				{!isPending && status && (
-					<StatusChip {...STATUS_INDICATORS[status.tone]}>
-						{status.label}
-					</StatusChip>
+					<div className="flex min-w-0 flex-wrap items-center gap-1.5">
+						<StatusChip {...STATUS_INDICATORS[status.tone]}>
+							{status.label}
+						</StatusChip>
+						{def.deriveHealthy && (
+							<ConfigHealthChip healthy={Boolean(healthy)}>
+								{healthy ? "Healthy" : "Unreadable"}
+							</ConfigHealthChip>
+						)}
+					</div>
 				)}
 
 				<div className="flex shrink-0 items-center gap-2">
