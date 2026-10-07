@@ -1,7 +1,7 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { listMigrationProducts } from "../actions/migrationList/listMigrationProducts.js";
 import { migrationRepo } from "../repos/index.js";
 import { isBatchEligibleMigrationDefinition } from "../utils/shouldRunBatchLane.js";
 
@@ -25,14 +25,10 @@ export const handleGetMigration = createRoute({
 				statusCode: 404,
 			});
 
-		const products = migration.operations
-			? await ProductService.listFull({
-					db: ctx.db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					returnAll: true,
-				})
-			: [];
+		const products = await listMigrationProducts({
+			ctx,
+			migrations: [migration],
+		});
 
 		return c.json({
 			...migration,
