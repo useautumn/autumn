@@ -3,8 +3,10 @@ import type {
 	ApiCustomerV3,
 	CreateScheduleParamsV0Input,
 } from "@autumn/shared";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { previewCreateSchedule } from "./utils/createSchedulePreviewUtils";
@@ -63,9 +65,23 @@ test.concurrent(
 		const preview = await previewCreateSchedule({ autumnV1, params });
 		const response = await autumnV1.billing.createSchedule(params);
 
-		expect(response.status).toBe("created");
+		// Draft invoice keeps the schedule pending; finalizing it activates premium before payment.
+		expect(response.status).toBe("pending_payment");
 		expect(preview.total).toBe(30);
 		expect(response.invoice?.total).toBe(153.45);
+
+		const draftInvoice = await ctx.stripeCli.invoices.retrieve(
+			response.invoice!.stripe_id!,
+		);
+		expect(draftInvoice.status).toBe("draft");
+
+		await ctx.stripeCli.invoices.finalizeInvoice(response.invoice!.stripe_id!);
+		await expectCustomerProducts({
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+			active: [premium.id],
+		});
 
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 			response.invoice!.stripe_id!,
