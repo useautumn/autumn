@@ -19,6 +19,7 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customLineItemsToLineItems } from "@/internal/billing/v2/utils/lineItems/customLineItemsToLineItems";
 import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils";
+import { toInvoicePeriod } from "../setup/resolveInvoiceEnvelope";
 import type {
 	CreateInvoiceContext,
 	InvoicePlanContext,
@@ -26,7 +27,10 @@ import type {
 import { featureQuantityToAmount } from "./featureQuantityToAmount";
 import { licenseQuantityToAmount } from "./licenseQuantityToAmount";
 import { namedStripePriceLineAmount } from "./namedStripePriceLineAmount";
-import { prorateInvoiceLineAmount } from "./prorateInvoiceLineAmount";
+import {
+	type InvoicePeriod,
+	prorateInvoiceLineAmount,
+} from "./prorateInvoiceLineAmount";
 import { resolveInvoiceBasePrice } from "./resolveInvoiceBasePrice";
 import { resolveInvoiceFeaturePrice } from "./resolveInvoiceFeaturePrice";
 import { usageEntriesToCredits } from "./usageEntriesToCredits";
@@ -49,6 +53,7 @@ const lineContext = ({
 	product,
 	feature,
 	entity,
+	period,
 	nowMs,
 }: {
 	invoiceContext: CreateInvoiceContext;
@@ -56,6 +61,7 @@ const lineContext = ({
 	product: FullProduct;
 	feature?: Feature;
 	entity?: Entity;
+	period?: InvoicePeriod;
 	nowMs: number;
 }): LineItemContext => ({
 	price,
@@ -63,7 +69,7 @@ const lineContext = ({
 	feature,
 	entity,
 	currency: invoiceContext.currency,
-	effectivePeriod: invoiceContext.period,
+	effectivePeriod: period,
 	direction: "charge",
 	now: nowMs,
 	billingTiming: "in_advance",
@@ -172,6 +178,7 @@ const computeFeatureLine = ({
 	customizeItems,
 	product,
 	entity,
+	parentPeriod,
 	entry,
 	nowMs,
 }: {
@@ -181,9 +188,11 @@ const computeFeatureLine = ({
 	customizeItems?: InvoiceCustomizeItem[];
 	product: FullProduct;
 	entity?: Entity;
+	parentPeriod?: InvoicePeriod;
 	entry: InvoiceFeatureQuantity;
 	nowMs: number;
 }): InvoiceLine | undefined => {
+	const period = toInvoicePeriod(entry) ?? parentPeriod;
 	const feature = ctx.features.find(
 		(candidate) => candidate.id === entry.feature_id,
 	);
@@ -238,11 +247,7 @@ const computeFeatureLine = ({
 	const amount =
 		named?.amount ??
 		(prorate
-			? prorateInvoiceLineAmount({
-					price,
-					amount: baseAmount,
-					period: invoiceContext.period,
-				})
+			? prorateInvoiceLineAmount({ price, amount: baseAmount, period })
 			: baseAmount);
 
 	const context = lineContext({
@@ -251,6 +256,7 @@ const computeFeatureLine = ({
 		product,
 		feature,
 		entity,
+		period,
 		nowMs,
 	});
 	return toLine({
@@ -262,7 +268,7 @@ const computeFeatureLine = ({
 			includePeriodDescription: false,
 		}),
 		quantity: units,
-		prorated: prorate && Boolean(invoiceContext.period),
+		prorated: prorate && Boolean(period),
 		planKey,
 		planId: product.id,
 		featureId: feature.id,
@@ -284,6 +290,7 @@ const computePlanLines = ({
 }): InvoiceLine[] => {
 	const { fullProduct, params } = plan;
 	const lines: InvoiceLine[] = [];
+	const planPeriod = toInvoicePeriod(params) ?? invoiceContext.period;
 
 	const base = resolveInvoiceBasePrice({
 		product: fullProduct,
@@ -306,6 +313,7 @@ const computePlanLines = ({
 			price: base.price,
 			product: fullProduct,
 			entity: plan.entity,
+			period: planPeriod,
 			nowMs,
 		});
 		lines.push(
@@ -317,12 +325,12 @@ const computePlanLines = ({
 						? prorateInvoiceLineAmount({
 								price: base.price,
 								amount: base.amount,
-								period: invoiceContext.period,
+								period: planPeriod,
 							})
 						: base.amount),
 				description: fixedPriceToDescription({ price: base.price, context }),
 				quantity: null,
-				prorated: prorate && Boolean(invoiceContext.period),
+				prorated: prorate && Boolean(planPeriod),
 				planKey: plan.planKey,
 				planId: fullProduct.id,
 				featureId: null,
@@ -340,6 +348,7 @@ const computePlanLines = ({
 			customizeItems: params.customize?.items,
 			product: fullProduct,
 			entity: plan.entity,
+			parentPeriod: planPeriod,
 			entry,
 			nowMs,
 		});
@@ -347,6 +356,7 @@ const computePlanLines = ({
 	}
 
 	for (const license of params.license_quantities ?? []) {
+		const licensePeriod = toInvoicePeriod(license) ?? planPeriod;
 		const resolved = licenseQuantityToAmount({
 			parent: fullProduct,
 			licensePlanId: license.license_plan_id,
@@ -372,6 +382,7 @@ const computePlanLines = ({
 				price: resolved.price,
 				product: resolved.licenseProduct,
 				entity: plan.entity,
+				period: licensePeriod,
 				nowMs,
 			});
 			lines.push(
@@ -383,7 +394,7 @@ const computePlanLines = ({
 							? prorateInvoiceLineAmount({
 									price: resolved.price,
 									amount: resolved.amount,
-									period: invoiceContext.period,
+									period: licensePeriod,
 								})
 							: resolved.amount),
 					description: fixedPriceToDescription({
@@ -392,7 +403,7 @@ const computePlanLines = ({
 						quantity: license.quantity,
 					}),
 					quantity: license.quantity,
-					prorated: prorate && Boolean(invoiceContext.period),
+					prorated: prorate && Boolean(licensePeriod),
 					planKey: plan.planKey,
 					planId: resolved.licenseProduct.id,
 					featureId: null,
@@ -408,6 +419,7 @@ const computePlanLines = ({
 				customizeItems: license.customize?.items,
 				product: resolved.licenseProduct,
 				entity: plan.entity,
+				parentPeriod: licensePeriod,
 				entry,
 				nowMs,
 			});
@@ -432,11 +444,19 @@ export const computeInvoiceLines = ({
 		computePlanLines({ ctx, invoiceContext, plan, nowMs }),
 	);
 
+	const customLineItems = invoiceContext.params.custom_line_items ?? [];
 	const customLines = customLineItemsToLineItems({
-		customLineItems: invoiceContext.params.custom_line_items ?? [],
+		customLineItems,
 		currency: invoiceContext.currency,
-	}).map((lineItem) => ({
-		lineItem,
+	}).map((lineItem, index) => ({
+		// A custom line prints a period only when it names its own.
+		lineItem: {
+			...lineItem,
+			context: {
+				...lineItem.context,
+				effectivePeriod: toInvoicePeriod(customLineItems[index]),
+			},
+		},
 		planKey: null,
 		planId: null,
 		featureId: null,

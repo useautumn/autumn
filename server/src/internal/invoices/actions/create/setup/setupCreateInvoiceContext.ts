@@ -24,6 +24,7 @@ import {
 	fetchNamedStripePrices,
 	type NamedStripePrices,
 } from "./fetchNamedStripePrices";
+import { resolveInvoiceEnvelope } from "./resolveInvoiceEnvelope";
 import {
 	loadInvoiceEntities,
 	resolveInvoicePlanEntity,
@@ -220,10 +221,7 @@ export const setupCreateInvoiceContext = async ({
 			template?.net_terms_days ??
 			ctx.org.config.default_invoice_net_terms_days ??
 			DEFAULT_NET_TERMS_DAYS,
-		period:
-			params.period_start !== undefined && params.period_end !== undefined
-				? { start: params.period_start, end: params.period_end }
-				: undefined,
+		period: resolveInvoiceEnvelope({ params }),
 		taxRate,
 		invoiceDiscounts,
 		namedStripePrices,
