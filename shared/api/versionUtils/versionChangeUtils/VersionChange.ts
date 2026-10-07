@@ -25,6 +25,7 @@ export enum AffectedResource {
 	Track = "track",
 	TrackTokens = "track_tokens",
 	BatchTrack = "batch_track",
+	BatchTrackTokens = "batch_track_tokens",
 	Checkout = "checkout",
 	Attach = "attach",
 	MultiAttach = "multi_attach",

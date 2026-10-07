@@ -38,6 +38,7 @@ import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange"
 import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange";
 import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange";
 import { V2_4_BatchTrackParamsChange } from "../../balances/track/requestChanges/V2.4_BatchTrackParamsChange";
+import { V2_4_BatchTrackTokensParamsChange } from "../../balances/track/requestChanges/V2.4_BatchTrackTokensParamsChange";
 import { V2_4_TrackParamsChange } from "../../balances/track/requestChanges/V2.4_TrackParamsChange";
 import { V2_4_TrackTokensParamsChange } from "../../balances/track/requestChanges/V2.4_TrackTokensParamsChange";
 // Import attach changes
@@ -54,6 +55,7 @@ export const V2_5_CHANGES: VersionChangeConstructor[] = [
 	V2_4_TrackParamsChange, // Track params TO V2.5: an omitted async means false (sync)
 	V2_4_TrackTokensParamsChange, // Track tokens params TO V2.5: same async default
 	V2_4_BatchTrackParamsChange, // Batch track params TO V2.5: drops the ignored item async
+	V2_4_BatchTrackTokensParamsChange, // Batch track tokens params TO V2.5: same
 ];
 
 export const V2_4_CHANGES: VersionChangeConstructor[] = [
