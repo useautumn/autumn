@@ -17,7 +17,7 @@ type QueueClient = Pick<BalanceWorkerClient, "queue">;
  */
 const batchEntryToCommands = ({
 	ctx,
-	entry: { item, index },
+	entry: { item, index, tokens },
 	ttlMs,
 }: {
 	ctx: AutumnContext;
@@ -26,12 +26,14 @@ const batchEntryToCommands = ({
 }): TrackCommand[] => {
 	const itemCtx = { ...ctx, id: `${ctx.id}-${index}` };
 	const key = getTrackBodyIdempotencyKey({ body: item });
-	return trackParamsToTrackCommands({ ctx: itemCtx, body: item }).map(
-		(command) => ({
-			...command,
-			...(key && { idempotency: { key, ttlMs } }),
-		}),
-	);
+	return trackParamsToTrackCommands({
+		ctx: itemCtx,
+		body: item,
+		recordsCreditCost: tokens !== undefined,
+	}).map((command) => ({
+		...command,
+		...(key && { idempotency: { key, ttlMs } }),
+	}));
 };
 
 /** Every item is checked before any is queued, so a malformed item fails the whole batch as it does today. */

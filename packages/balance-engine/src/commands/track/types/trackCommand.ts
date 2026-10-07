@@ -46,6 +46,8 @@ export const trackUsageEventSchema = z
 		idempotencyKey: nonEmptyStringSchema.nullable(),
 		/** A caller-named event id (`x-event-id`); null lets the event be named by its place in the log. */
 		id: nonEmptyStringSchema.nullable(),
+		/** Set on a track_tokens command: its event records what parent credit pools were charged as `credit_cost`. */
+		recordsCreditCost: z.boolean().optional(),
 	})
 	.loose();
 
