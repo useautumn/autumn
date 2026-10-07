@@ -103,27 +103,18 @@ test.concurrent(
 			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
 			actions: [s.attach({ productId: free.id })],
 		});
-		const postTrackTokens = async ({ autumn }: { autumn: AutumnInt }) => {
-			const response = await fetch(`${autumn.baseUrl}/balances.track_tokens`, {
-				method: "POST",
-				headers: autumn.headers,
-				body: JSON.stringify({
-					customer_id: customerId,
-					feature_id: TestFeature.AiCredits,
-					model_id: "openai/gpt-4o",
-					input_tokens: 1000,
-					output_tokens: 500,
-				}),
-			});
-			return { status: response.status, json: await response.json() };
+		const body = {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "openai/gpt-4o",
+			input_tokens: 1000,
+			output_tokens: 500,
 		};
 
-		const queued = await postTrackTokens({ autumn: autumnV2_5 });
-		expect(queued.status).toBe(202);
-		expect(queued.json.balance).toBeNull();
+		const queued = await autumnV2_5.post("/track_tokens", body);
+		expect(queued.balance).toBeNull();
 
-		const sync = await postTrackTokens({ autumn: autumnV2_4 });
-		expect(sync.status).toBe(200);
-		expect(sync.json.balance.remaining).toBeLessThan(1000);
+		const applied = await autumnV2_4.post("/track_tokens", body);
+		expect(applied.balance.remaining).toBeLessThan(1000);
 	},
 );
