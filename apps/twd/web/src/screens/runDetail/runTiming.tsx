@@ -64,6 +64,23 @@ export const SheetSection = ({
 	</section>
 );
 
+/** The phase a live run is in now, named like the finished phases so the legend stays one vocabulary. */
+const currentPhase = ({
+	status,
+	warmReady,
+}: {
+	status: RunDetail["status"];
+	warmReady: number | null;
+}) => {
+	if (status === "warming") return "warm image";
+	if (status === "queued")
+		return warmReady === null ? "warm image" : "waiting for accounts";
+	if (status === "provisioning") return "first worker boot";
+	if (status === "running") return "tests";
+	if (status === "tearing_down") return "teardown";
+	return null;
+};
+
 /** Sequential wall-time phases; a live run's current phase grows at the end. */
 export const PhaseBar = ({
 	timing,
@@ -73,10 +90,11 @@ export const PhaseBar = ({
 	status: RunDetail["status"];
 }) => {
 	const counted = timing.phases.reduce((sum, p) => sum + p.ms, 0);
+	const livePhase = currentPhase({ status, warmReady: timing.marks.warmReady });
 	const current =
-		status === "running" || status === "tearing_down"
+		livePhase && !timing.phases.some((p) => p.phase === livePhase)
 			? {
-					phase: status === "running" ? "tests" : "teardown",
+					phase: livePhase,
 					ms: Math.max(0, timing.wallMs - counted),
 					live: true,
 				}

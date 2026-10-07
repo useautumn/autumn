@@ -15,6 +15,7 @@ import {
 	LIVE_RUN_STATUSES,
 	queuePositionSql,
 } from "../../runs/repos/runsRepo.ts";
+import { summariseAccountDemand } from "./summariseAccountDemand.ts";
 
 export const getCapacity = async ({
 	ctx,
@@ -33,6 +34,7 @@ export const getCapacity = async ({
 			ctx.db
 				.select({
 					id: runs.id,
+					status: runs.status,
 					workersWanted: runs.workersWanted,
 					queuePosition: queuePositionSql,
 				})
@@ -49,14 +51,11 @@ export const getCapacity = async ({
 			accounts[field] += counts[field];
 		}
 	}
-	// A run already taking accounts wants only what its swarm can still use (the allocator's view).
-	const accountsWanted = liveRuns.reduce((sum, run) => {
-		const unmet = Math.max(
-			0,
-			(run.workersWanted ?? 0) - (heldByRun.get(run.id) ?? 0),
-		);
-		return sum + Math.min(unmet, getRunDemand({ runId: run.id }) ?? unmet);
-	}, 0);
+	const { accountsWanted, slotsAwaitingWarm } = summariseAccountDemand({
+		liveRuns,
+		heldByRun,
+		demandOf: (runId) => getRunDemand({ runId }),
+	});
 	const queuedRuns = liveRuns.filter((run) => run.queuePosition !== null);
 	const freeNow = keys.reduce((sum, key) => {
 		const counts = byKey.get(key.platformAccountId);
@@ -73,9 +72,14 @@ export const getCapacity = async ({
 		liveRuns: liveRuns.length,
 		queuedRuns: queuedRuns.length,
 		accountsWanted,
+		slotsAwaitingWarm,
+		freeAccounts: freeNow,
 		poolCap: keys.length * ACCOUNTS_PER_KEY_CAP,
 		maxFilesNow:
-			gate.state === "draining" || queuedRuns.length > 0 || accountsWanted > 0
+			gate.state === "draining" ||
+			queuedRuns.length > 0 ||
+			accountsWanted > 0 ||
+			slotsAwaitingWarm > 0
 				? 0
 				: freeNow,
 		warmBuilds: warmBuilds.n,

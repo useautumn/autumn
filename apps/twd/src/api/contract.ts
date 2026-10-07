@@ -484,8 +484,12 @@ export const Capacity = z.object({
 	liveRuns: z.number(),
 	/** Runs waiting in the FIFO queue for their first account. */
 	queuedRuns: z.number(),
-	/** Accounts live runs still want beyond what they hold. */
+	/** Accounts live runs are asking the allocator for beyond what they hold. */
 	accountsWanted: z.number(),
+	/** Worker slots of warming runs: they ask for accounts once their image is built. */
+	slotsAwaitingWarm: z.number(),
+	/** Clean accounts a run could take right now, within the per-key cap. */
+	freeAccounts: z.number(),
 	/** Pool ceiling: usable keys × per-key cap. */
 	poolCap: z.number(),
 	/** Largest run (in files) that can start right now without waiting. */

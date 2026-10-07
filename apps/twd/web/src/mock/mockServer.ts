@@ -1328,11 +1328,17 @@ const capacity = (): Capacity => {
 		accounts: counts,
 		liveRuns: live.length,
 		queuedRuns: live.filter((r) => r.queuePosition !== null).length,
-		accountsWanted: live.reduce(
-			(sum, r) =>
-				sum + Math.max(0, (r.workersWanted ?? 0) - (r.workerCount ?? 0)),
-			0,
-		),
+		accountsWanted: live
+			.filter((r) => r.status !== "warming")
+			.reduce(
+				(sum, r) =>
+					sum + Math.max(0, (r.workersWanted ?? 0) - (r.workerCount ?? 0)),
+				0,
+			),
+		slotsAwaitingWarm: live
+			.filter((r) => r.status === "warming")
+			.reduce((sum, r) => sum + (r.workersWanted ?? 0), 0),
+		freeAccounts: counts.clean,
 		poolCap: usableKeys * 3,
 		maxFilesNow: gate.state === "draining" ? 0 : counts.clean,
 		warmBuilds: branches.filter((b) => b.warm === "building").length,

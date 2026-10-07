@@ -1,6 +1,7 @@
 import { Hourglass } from "lucide-react";
 import type { RunDetail } from "../../../../src/api/contract.ts";
 import { summariseBoot } from "../../../../src/internal/runs/boot/summariseBoot.ts";
+import { useCapacity } from "../../api/hooks.ts";
 import { Tooltip } from "../../components/ui.tsx";
 import { cn, formatMs, num } from "../../lib/format.ts";
 import { EmptyNote, RunCard } from "./runCard.tsx";
@@ -77,6 +78,20 @@ const WorkerGrid = ({
 	);
 };
 
+/** What a sized-but-unspawned worker slot is waiting on; accounts only when the run is queued or the pool is dry. */
+const pendingSlotLabel = ({
+	run,
+	freeAccounts,
+}: {
+	run: RunDetail;
+	freeAccounts: number | undefined;
+}) => {
+	if (run.status === "warming") return "waiting for warm build";
+	if (run.queuePosition !== null || freeAccounts === 0)
+		return "waiting for accounts";
+	return "booting";
+};
+
 /** Worker squares (click one for its log), a status legend, and boot p50 · p90. */
 export const WorkersCard = ({
 	run,
@@ -93,6 +108,7 @@ export const WorkersCard = ({
 		counts.set(w.status, (counts.get(w.status) ?? 0) + 1);
 	const boot = summariseBoot(run.workers);
 	const waiting = Math.max(0, wanted - run.workers.length);
+	const freeAccounts = useCapacity().data?.freeAccounts;
 	return (
 		<RunCard
 			title="Workers"
@@ -136,7 +152,7 @@ export const WorkersCard = ({
 						{waiting > 0 && (
 							<span className="flex items-center gap-1.5">
 								<span className="size-2 rounded-[2px] border border-dashed border-subtle/60" />
-								{num(waiting)} waiting for accounts
+								{num(waiting)} {pendingSlotLabel({ run, freeAccounts })}
 							</span>
 						)}
 					</div>
