@@ -35,6 +35,32 @@ export class EntityService {
 			},
 		});
 	}
+	/** A customer's live entities with these ids, unbounded by the full-customer hydration cap. */
+	static async listByCustomerAndIds({
+		ctx,
+		internalCustomerId,
+		ids,
+	}: {
+		ctx: AutumnContext;
+		internalCustomerId: string;
+		ids: string[];
+	}): Promise<Entity[]> {
+		if (ids.length === 0) return [];
+		const rows = await ctx.db
+			.select()
+			.from(entities)
+			.where(
+				and(
+					eq(entities.org_id, ctx.org.id),
+					eq(entities.env, ctx.env),
+					eq(entities.internal_customer_id, internalCustomerId),
+					inArray(entities.id, ids),
+					eq(entities.deleted, false),
+				),
+			);
+		return rows as Entity[];
+	}
+
 	static async get({
 		db,
 		id,

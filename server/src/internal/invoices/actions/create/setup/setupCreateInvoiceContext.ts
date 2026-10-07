@@ -25,7 +25,7 @@ import {
 	type NamedStripePrices,
 } from "./fetchNamedStripePrices";
 import {
-	invoiceNamesEntities,
+	loadInvoiceEntities,
 	resolveInvoicePlanEntity,
 } from "./resolveInvoicePlanEntity";
 import { validateInvoiceCustomizeItems } from "./validateInvoiceCustomizeItems";
@@ -126,7 +126,11 @@ export const setupCreateInvoiceContext = async ({
 		customerId: params.customer_id,
 		skipCreate: preview,
 		skipUpdate: preview,
-		withEntities: invoiceNamesEntities({ params }),
+	});
+	const entitiesById = await loadInvoiceEntities({
+		ctx,
+		fullCustomer,
+		params,
 	});
 
 	// A preview reads the existing Stripe customer (for its credit balance) but
@@ -177,7 +181,7 @@ export const setupCreateInvoiceContext = async ({
 				params: planParams,
 				fullProduct,
 				entity: resolveInvoicePlanEntity({
-					fullCustomer,
+					entitiesById,
 					params,
 					planParams,
 				}),

@@ -13,7 +13,9 @@ import {
 	type ApiListInvoiceV1,
 	BillingMethod,
 	type CreateInvoiceParamsInput,
+	customers,
 	ErrCode,
+	entities,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -21,6 +23,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { and, asc, eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 import { createInvoice } from "./utils/expectCreatedInvoiceCorrect";
 
@@ -258,5 +261,59 @@ test.concurrent(
 			"ent-1",
 			"ent-2",
 		]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create entities: an older entity beyond the customer's hydrated page still resolves")}`,
+	async () => {
+		const customerId = "inv-create-entities-many";
+		const pro = products.pro({
+			id: `pro-${customerId}`,
+			items: [items.consumableMessages({ price: 0.1 })],
+		});
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+				s.entities({ count: 301, featureId: TestFeature.Users }),
+			],
+			actions: [],
+		});
+
+		// A full customer hydrates the 300 entities with the highest internal_id; take the one left out.
+		const [oldest] = await ctx.db
+			.select({ id: entities.id })
+			.from(entities)
+			.innerJoin(
+				customers,
+				eq(customers.internal_id, entities.internal_customer_id),
+			)
+			.where(
+				and(
+					eq(customers.id, customerId),
+					eq(customers.org_id, ctx.org.id),
+					eq(customers.env, ctx.env),
+				),
+			)
+			.orderBy(asc(entities.internal_id))
+			.limit(1);
+		const { preview } = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				preview: true,
+				plans: [
+					{
+						plan_id: pro.id,
+						entity_id: oldest.id as string,
+						customize: { price: null },
+						feature_quantities: [messages(10)],
+					},
+				],
+			},
+		});
+		expect(preview.lines.map((line) => line.entity_id)).toEqual([oldest.id]);
 	},
 );
