@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import type { Context as TriggerRunContext } from "@trigger.dev/sdk/v3";
-import { db } from "@/db/initDrizzle.js";
+import { type DrizzleCli, db as dbGeneral } from "@/db/initDrizzle.js";
 import {
 	createDualLogger,
 	type Logger,
@@ -24,11 +24,14 @@ export const createTriggerContext = async ({
 	env,
 	triggerCtx,
 	customerId,
+	db = dbGeneral,
 }: {
 	orgId: string;
 	env: AppEnv;
 	triggerCtx: TriggerRunContext;
 	customerId?: string;
+	/** Task-scoped pool; defaults to the shared general pool. */
+	db?: DrizzleCli;
 }): Promise<{ ctx: AutumnContext; logger: Logger }> => {
 	const logger = addTriggerToLogs({
 		logger: createDualLogger(),
