@@ -5,7 +5,7 @@ import { Switch } from "@autumn/ui/components/ui/switch";
 import { PlayIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { RunSummary } from "../../../src/api/contract.ts";
 import { type RunsFilter, useRuns } from "../api/hooks.ts";
@@ -218,7 +218,14 @@ const usePagedRuns = (
 		limit: pageSize,
 	});
 	const page = query.data;
-	const footer = page && page.total > pageSize && (
+	// A page past the end (rows finished while you were on it) steps back instead of stranding an empty table.
+	const { canPrev, popCursor } = pager;
+	const pastTheEnd =
+		!!page && page.runs.length === 0 && canPrev && !query.isPlaceholderData;
+	useEffect(() => {
+		if (pastTheEnd) popCursor();
+	}, [pastTheEnd, popCursor]);
+	const footer = page && (page.total > pageSize || pager.canPrev) && (
 		<TablePaginationFooter
 			currentPage={pager.currentPage}
 			totalPages={Math.max(1, Math.ceil(page.total / pageSize))}
@@ -239,8 +246,12 @@ const usePagedRuns = (
 export const RunsScreen = () => {
 	const [params, setParams] = useSearchParams();
 	const branch = params.get("branch") ?? "";
-	const finishedFilter = (params.get("status") ?? "all") as FinishedFilter;
-	const baselinesOnly = params.get("baselines") === "1";
+	const status = params.get("status");
+	const finishedFilter: FinishedFilter =
+		FINISHED_FILTERS.find((f) => f === status) ?? "all";
+	// `?status=baselines` came from the replaced layout; old links still land here.
+	const baselinesOnly =
+		params.get("baselines") === "1" || status === "baselines";
 	const baselinesToggleId = useId();
 	const body = useHeight();
 	const finishedBox = useHeight();
