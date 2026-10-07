@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import type { AtomHttpEnv } from "../../types/atomHttp.js";
 
-/** One in a hundred successful answers carries its body; every failure does. */
-const SUCCESS_RESPONSE_SAMPLE_RATE = 0.01;
+/** One in a hundred: an answered check leaves a line, and a successful line carries its body, this often. */
+const SAMPLE_RATE = 0.01;
 
 const FORWARDED_HEADER = "x-atom-forwarded";
 
@@ -42,13 +42,17 @@ const compactResponseBody = (body: unknown): unknown => {
 	return { ...body, balance };
 };
 
-/** Whether this line carries the response: decided before anything is read, so a skipped body costs nothing. */
+/** Rolled once per request, before anything is read, so a skipped line or body costs nothing. */
+export const isSampled = (): boolean => Math.random() < SAMPLE_RATE;
+
+/** Whether this line carries the response: every failure's, and a sampled success's. */
 export const carriesResponse = ({
 	context,
+	sampled,
 }: {
 	context: Context<AtomHttpEnv>;
-}): boolean =>
-	context.res.status >= 400 || Math.random() < SUCCESS_RESPONSE_SAMPLE_RATE;
+	sampled: boolean;
+}): boolean => context.res.status >= 400 || sampled;
 
 /** The JSON a response carried; a reply the API sent is never read, only its reason is logged. */
 export const responseBodyOf = async ({

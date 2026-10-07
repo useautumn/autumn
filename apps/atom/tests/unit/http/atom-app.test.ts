@@ -462,13 +462,13 @@ describe("the request line", () => {
 	const sampled = () => spyOn(Math, "random").mockReturnValue(0);
 	afterEach(() => spyOn(Math, "random").mockRestore());
 
-	test("every request leaves one line: status, method, path, duration and who it was about", async () => {
+	test("every request leaves one line (status, method, path, duration and who it was about) except an answered check, which leaves one in a hundred", async () => {
 		const { app, logged } = createDeployedApp();
 		notSampled();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 		await app.request("/v1/balances.check", checkMessages());
 
-		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
+		expect(logged.map((line) => line.level)).toEqual(["info"]);
 		expect(logged[0]?.fields).toEqual({
 			statusCode: 200,
 			durationMs: expect.any(Number),
@@ -479,6 +479,15 @@ describe("the request line", () => {
 			},
 			res: null,
 		});
+	});
+
+	test("a sampled answered check leaves its line: status, method, path, duration and who it was about", async () => {
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		sampled();
+		await app.request("/v1/balances.check", checkMessages());
+
+		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
 		expect(logged[1]?.fields).toMatchObject({
 			statusCode: 200,
 			req: {
@@ -487,7 +496,6 @@ describe("the request line", () => {
 				customer_id: "cus_1",
 				feature_id: "messages",
 			},
-			res: null,
 		});
 		expect(logged[1]?.message).toMatch(
 			/^\[200\] POST \/v1\/balances\.check \d+ms$/,
