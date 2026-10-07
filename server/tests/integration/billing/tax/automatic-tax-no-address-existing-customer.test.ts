@@ -147,11 +147,15 @@ test.concurrent(`${chalk.yellowBright(
 		"address" in stripeCusBefore ? stripeCusBefore.address : null;
 	expect(addressBefore).toBeNull();
 
-	// Step 1: Pro via Checkout BEFORE auto_tax flip. Seeds the Stripe
-	// customer's `address` and Stripe's location waterfall.
+	// Step 1: Pro via Checkout BEFORE auto_tax flip. Checkout collects the full address and
+	// saves it on the customer; without it Stripe falls back to the runner's IP, which may not geolocate.
 	const proResult = (await autumnV1.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
+		checkout_session_params: {
+			billing_address_collection: "required",
+			customer_update: { address: "auto" },
+		},
 	})) as { checkout_url?: string };
 	expect(proResult.checkout_url).toBeDefined();
 
@@ -174,6 +178,19 @@ test.concurrent(`${chalk.yellowBright(
 		limit: 1,
 	});
 	expect(proSubs.data.length).toBeGreaterThan(0);
+
+	const stripeCusAfterCheckout = await ctx.stripeCli.customers.retrieve(
+		stripeCusId,
+		{ expand: ["tax"] },
+	);
+	expect(
+		"address" in stripeCusAfterCheckout &&
+			stripeCusAfterCheckout.address?.country,
+	).toBe("AU");
+	expect(
+		"tax" in stripeCusAfterCheckout &&
+			stripeCusAfterCheckout.tax?.location?.source,
+	).toBe("billing_address");
 
 	// Step 2: flip auto_tax on. OrgService.update invalidates the
 	// secret-key cache so the next request reads fresh config.
