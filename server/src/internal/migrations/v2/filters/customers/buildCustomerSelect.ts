@@ -358,9 +358,11 @@ export const buildCustomerSelect = ({
 	customerFilters,
 	limit,
 	afterInternalId,
+	floorInternalId,
 }: CustomerQueryArgs & {
 	limit?: number;
 	afterInternalId?: string;
+	floorInternalId?: string;
 }): SQL => {
 	if (limit !== undefined) {
 		return rawWithParamsToDrizzle(
@@ -370,6 +372,7 @@ export const buildCustomerSelect = ({
 				ambient: { orgId, env },
 				limit,
 				cursor: afterInternalId || undefined,
+				floor: floorInternalId,
 				predicates: buildPagePredicates({
 					checkpoint,
 					orgId,
@@ -385,6 +388,7 @@ export const buildCustomerSelect = ({
 		SELECT c.internal_id, c.id, c.name, c.email
 		FROM ${candidate.source}
 		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId })}
+		${floorInternalId ? sql`AND c.internal_id >= ${floorInternalId}` : sql``}
 		ORDER BY c.internal_id DESC
 	`;
 };

@@ -47,11 +47,13 @@ const buildRowsSelect = ({
 	includeProcessed,
 	limit,
 	afterInternalId,
+	floorInternalId,
 }: {
 	args: CustomerSelectArgs;
 	includeProcessed?: IncludeProcessed;
 	limit?: number;
 	afterInternalId?: string;
+	floorInternalId?: string;
 }) =>
 	includeProcessed
 		? buildProcessedPreviewSelect({
@@ -60,7 +62,7 @@ const buildRowsSelect = ({
 				limit,
 				afterInternalId,
 			})
-		: buildCustomerSelect({ ...args, limit, afterInternalId });
+		: buildCustomerSelect({ ...args, limit, afterInternalId, floorInternalId });
 
 /**
  * Pure inner: takes a CustomerFilter directly. Used by `runFilter` shim
@@ -76,6 +78,7 @@ export const filterCustomers = ({
 	batchSize,
 	limit,
 	afterInternalId,
+	floorInternalId,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
@@ -86,12 +89,19 @@ export const filterCustomers = ({
 	batchSize?: number;
 	limit?: number;
 	afterInternalId?: string;
+	floorInternalId?: string;
 }): AsyncGenerator<CustomerRow[]> => {
 	const args = buildArgs({ ctx, filter, checkpoint, search, customerFilters });
 	const source = iterateOverFilterResults<CustomerRow>({
 		db: ctx.db,
 		buildSelect: ({ limit, afterInternalId }) =>
-			buildRowsSelect({ args, includeProcessed, limit, afterInternalId }),
+			buildRowsSelect({
+				args,
+				includeProcessed,
+				limit,
+				afterInternalId,
+				floorInternalId,
+			}),
 		batchSize:
 			limit === undefined ? batchSize : Math.min(batchSize ?? limit, limit),
 		afterInternalId,

@@ -61,6 +61,8 @@ export const PreparedMigrationSnapshotSchema = z.object({
 export const RunMigrationChunkPayloadSchema = RunMigrationPayloadSchema.extend({
 	chunkIndex: z.number().int().min(0),
 	cursor: z.string().optional(),
+	/** Inclusive lower bound of this chunk's segment; unset walks to the end. */
+	floor: z.string().optional(),
 	migration: PreparedMigrationSnapshotSchema,
 });
 
@@ -136,6 +138,7 @@ export const buildRunMigrationChunkPayload = ({
 	limit,
 	chunkIndex,
 	cursor,
+	floor,
 }: {
 	ctx: AutumnContext;
 	migrationId: string;
@@ -147,6 +150,7 @@ export const buildRunMigrationChunkPayload = ({
 	limit: number | undefined;
 	chunkIndex: number;
 	cursor: string | undefined;
+	floor?: string;
 }): RunMigrationChunkPayload => ({
 	orgId: ctx.org.id,
 	env: ctx.env,
@@ -156,6 +160,7 @@ export const buildRunMigrationChunkPayload = ({
 	lazyRun,
 	chunkIndex,
 	cursor,
+	floor,
 	migration,
 	controls: {
 		...(controls ?? {}),

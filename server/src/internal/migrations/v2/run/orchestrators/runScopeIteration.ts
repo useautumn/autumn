@@ -30,6 +30,7 @@ export const runScopeIteration = async ({
 	scheduler,
 	includeFilterCount,
 	afterInternalId,
+	floorInternalId,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -42,6 +43,7 @@ export const runScopeIteration = async ({
 	scheduler?: MigrationRunScheduler;
 	includeFilterCount?: boolean;
 	afterInternalId?: string;
+	floorInternalId?: string;
 }) => {
 	const { count, iterate } = await runFilter({
 		ctx,
@@ -52,6 +54,7 @@ export const runScopeIteration = async ({
 		controls,
 		includeCount: includeFilterCount,
 		afterInternalId,
+		floorInternalId,
 		batchSize: scheduler?.batchSize,
 	});
 	ctx.logger.info(`run-migration: iterating scope`, {

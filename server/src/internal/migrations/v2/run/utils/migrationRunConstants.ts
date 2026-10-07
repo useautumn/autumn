@@ -7,6 +7,8 @@ export const LAZY_MIGRATION_RUNS_DISABLED = true;
 export const MIGRATION_RUN_CUSTOMER_CONCURRENCY = 100;
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
+/** Customer ids per keyset segment when a run fans out over concurrent chunks. */
+export const MIGRATION_SEGMENT_SIZE = 500;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS = 5;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;
 

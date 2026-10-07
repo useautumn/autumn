@@ -3,7 +3,7 @@ import {
 	MigrationItemRunStatus,
 	migrationItemRuns,
 } from "@autumn/shared";
-import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, or, type SQL, sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
 export type MigrationItemRunCounts = {
@@ -81,7 +81,15 @@ export const getMigrationItemRunCounts = async ({
 		eq(migrationItemRuns.item_kind, itemKind),
 	];
 
-	if (dryRun !== undefined) where.push(eq(migrationItemRuns.dry_run, dryRun));
+	// Both lanes still need a dry_run arm each, or neither partial index can serve the count.
+	where.push(
+		dryRun === undefined
+			? or(
+					eq(migrationItemRuns.dry_run, false),
+					eq(migrationItemRuns.dry_run, true),
+				)!
+			: eq(migrationItemRuns.dry_run, dryRun),
+	);
 	if (migrationRunId !== undefined)
 		where.push(eq(migrationItemRuns.migration_run_id, migrationRunId));
 

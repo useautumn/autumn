@@ -10,6 +10,7 @@ import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withMigrationRunTracking } from "../actions/migrationRun/index.js";
 import type { MigrationWebhookControls } from "../cloudAdapter/types.js";
+import { loadCustomerIdPage } from "../filters/runFilter.js";
 import type { MigrationRuntimeWithEventId } from "../types/migrationDefinition.js";
 import { shouldRunBatchLane } from "../utils/shouldRunBatchLane.js";
 import { resolveMigrationWebhookControls } from "../webhookDelivery/utils/resolveMigrationWebhookControls.js";
@@ -19,6 +20,7 @@ import {
 	type MigrationChunkResult,
 	type MigrationChunkRunResult,
 } from "./chunks/iterateMigrationChunks.js";
+import { iterateMigrationSegments } from "./chunks/iterateMigrationSegments.js";
 import { executeRunMigrationChunk } from "./executeRunMigrationChunk.js";
 import { prepareMigration } from "./runMigration.js";
 import {
@@ -29,11 +31,30 @@ import {
 	type RunMigrationChunkPayload,
 	type RunMigrationPayload,
 } from "./types/migrationRunPayloads.js";
-import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "./utils/migrationRunConstants.js";
+import {
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+	MIGRATION_SEGMENT_SIZE,
+} from "./utils/migrationRunConstants.js";
 
 export type RunMigrationChunkRunner = (
 	payload: RunMigrationChunkPayload,
 ) => Promise<MigrationChunkResult>;
+
+/** Runs one round of chunks; resolves only after every chunk has settled. */
+export type RunMigrationChunkRoundRunner = (
+	payloads: RunMigrationChunkPayload[],
+) => Promise<MigrationChunkResult[]>;
+
+const settleChunkRound = async (
+	runs: Promise<MigrationChunkResult>[],
+): Promise<MigrationChunkResult[]> => {
+	const results: MigrationChunkResult[] = [];
+	for (const settled of await Promise.allSettled(runs)) {
+		if (settled.status === "rejected") throw settled.reason;
+		results.push(settled.value);
+	}
+	return results;
+};
 
 export type RunBatchMigrationChunkRunner = (
 	payload: RunBatchMigrationChunkPayload,
@@ -106,7 +127,10 @@ export const runMigrationInChunks = async ({
 	dryRun,
 	lazyRun = false,
 	controls,
+	partitions = 1,
+	segmentSize = MIGRATION_SEGMENT_SIZE,
 	runChunk,
+	runChunkRound,
 	runBatchChunk,
 }: {
 	ctx: AutumnContext;
@@ -115,7 +139,11 @@ export const runMigrationInChunks = async ({
 	dryRun: boolean;
 	lazyRun?: boolean;
 	controls?: RunMigrationPayload["controls"];
+	/** Concurrent chunks for the per-customer lane; budgeted runs stay serial. */
+	partitions?: number;
+	segmentSize?: number;
 	runChunk?: RunMigrationChunkRunner;
+	runChunkRound?: RunMigrationChunkRoundRunner;
 	runBatchChunk?: RunBatchMigrationChunkRunner;
 }): Promise<MigrationChunkRunResult> => {
 	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
@@ -131,6 +159,7 @@ export const runMigrationInChunks = async ({
 				dryRun,
 				noBillingChanges: migration.no_billing_changes === true,
 				concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+				partitions,
 				only: controls?.only,
 				limit: controls?.limit,
 				retryItemStatuses: controls?.retryItemStatuses,
@@ -183,28 +212,81 @@ export const runMigrationInChunks = async ({
 					((chunkPayload) =>
 						executeRunMigrationChunk({ ctx, payload: chunkPayload }));
 
-				const chunkRun = await iterateMigrationChunks({
-					limit: controls?.limit,
-					isCancelRequested: () =>
-						isMigrationCancelRequested({
-							migrationRunId: eventMigrationRunId,
-						}),
+				const isCancelRequested = () =>
+					isMigrationCancelRequested({ migrationRunId: eventMigrationRunId });
+				const buildChunkPayload = ({
+					limit,
+					chunkIndex,
+					cursor,
+					floor,
+				}: {
+					limit: number | undefined;
+					chunkIndex: number;
+					cursor: string | undefined;
+					floor?: string;
+				}) =>
+					buildRunMigrationChunkPayload({
+						ctx,
+						migrationId: migration.id,
+						migrationRunId: eventMigrationRunId,
+						dryRun,
+						lazyRun,
+						migration: migrationSnapshot,
+						controls,
+						limit,
+						chunkIndex,
+						cursor,
+						floor,
+					});
 
-					runChunk: ({ limit, chunkIndex, cursor }) =>
-						executeChunk(
-							buildRunMigrationChunkPayload({
+				const runsSegments =
+					partitions > 1 &&
+					!lazyRun &&
+					controls?.limit === undefined &&
+					controls?.only === undefined;
+
+				if (runsSegments) {
+					const executeRound: RunMigrationChunkRoundRunner =
+						runChunkRound ??
+						((payloads) => settleChunkRound(payloads.map(executeChunk)));
+
+					const segmentRun = await iterateMigrationSegments({
+						partitions,
+						isCancelRequested,
+						loadIdPage: ({ cursor }) =>
+							loadCustomerIdPage({
 								ctx,
-								migrationId: migration.id,
+								migration: preparedMigration,
 								migrationRunId: eventMigrationRunId,
 								dryRun,
-								lazyRun,
-								migration: migrationSnapshot,
-								controls,
-								limit,
-								chunkIndex,
+								controls: { ...controls, checkpointDryRun: true },
 								cursor,
+								pageSize: segmentSize,
 							}),
-						),
+						runRound: (segmentChunks) =>
+							executeRound(
+								segmentChunks.map(({ chunkIndex, cursor, floor }) =>
+									buildChunkPayload({
+										limit: undefined,
+										chunkIndex,
+										cursor,
+										floor,
+									}),
+								),
+							),
+					});
+
+					return {
+						...segmentRun,
+						lane: "per_customer" as const,
+						rejections: batchLane?.rejections,
+					};
+				}
+
+				const chunkRun = await iterateMigrationChunks({
+					limit: controls?.limit,
+					isCancelRequested,
+					runChunk: (args) => executeChunk(buildChunkPayload(args)),
 				});
 
 				return {

@@ -65,6 +65,7 @@ export const runPreparedMigration = async ({
 	scheduler,
 	includeFilterCount = true,
 	afterInternalId,
+	floorInternalId,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -76,6 +77,7 @@ export const runPreparedMigration = async ({
 	scheduler?: MigrationRunScheduler;
 	includeFilterCount?: boolean;
 	afterInternalId?: string;
+	floorInternalId?: string;
 }): Promise<RunMigrationResult> => {
 	let processed = 0;
 	let cursor: string | null = null;
@@ -93,6 +95,7 @@ export const runPreparedMigration = async ({
 			scheduler,
 			includeFilterCount,
 			afterInternalId,
+			floorInternalId,
 		});
 		if (!result) continue;
 		processed += result.processed;

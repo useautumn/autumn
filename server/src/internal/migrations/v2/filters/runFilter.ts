@@ -3,8 +3,13 @@ import {
 	type MigrationItemRunStatus as MigrationItemRunStatusType,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import { runWithTransientDbRetry } from "../batchOperations/execute/utils/runWithTransientDbRetry.js";
 import type { MigrationRunControls } from "../cloudAdapter/types.js";
 import type { RunScopeItem, RunScopeKind } from "../run/types/runScope.js";
+import {
+	MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS,
+	MIGRATION_FILTER_PAGE_TRANSIENT_DB_RETRY_DELAY_MS,
+} from "../run/utils/migrationRunConstants.js";
 import { normalizeRetryItemStatuses } from "../run/utils/retryItemStatuses.js";
 import type {
 	MigrationRuntime,
@@ -14,6 +19,7 @@ import type { CustomerCheckpointExclusion } from "./customers/buildCustomerSelec
 import {
 	countCustomers,
 	filterCustomers,
+	getCustomerPage,
 } from "./customers/filterCustomers.js";
 
 /**
@@ -30,6 +36,7 @@ export const runFilter = async ({
 	controls,
 	includeCount = true,
 	afterInternalId,
+	floorInternalId,
 	batchSize,
 }: {
 	ctx: AutumnContext;
@@ -40,6 +47,7 @@ export const runFilter = async ({
 	controls?: MigrationRunControls;
 	includeCount?: boolean;
 	afterInternalId?: string;
+	floorInternalId?: string;
 	batchSize?: number;
 }): Promise<{
 	kind: RunScopeKind;
@@ -103,6 +111,7 @@ export const runFilter = async ({
 			checkpoint,
 			limit,
 			afterInternalId,
+			floorInternalId,
 			batchSize,
 		})) {
 			yield batch.map(
@@ -116,6 +125,47 @@ export const runFilter = async ({
 	};
 
 	return { kind, count, iterate };
+};
+
+/** One keyset page of matching, unprocessed customer ids below `cursor`. */
+export const loadCustomerIdPage = async ({
+	ctx,
+	migration,
+	migrationRunId,
+	dryRun,
+	controls,
+	cursor,
+	pageSize,
+}: {
+	ctx: AutumnContext;
+	migration: MigrationRuntimeWithEventId;
+	migrationRunId: string;
+	dryRun: boolean;
+	controls?: MigrationRunControls;
+	cursor?: string;
+	pageSize: number;
+}): Promise<{ ids: string[]; isLastPage: boolean }> => {
+	const { rows, nextCursor } = await runWithTransientDbRetry({
+		maxAttempts: MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS,
+		delayMs: MIGRATION_FILTER_PAGE_TRANSIENT_DB_RETRY_DELAY_MS,
+		run: () =>
+			getCustomerPage({
+				ctx,
+				filter: narrowCustomerFilter({
+					filter: migration.filter?.customer ?? {},
+					controls,
+				}),
+				checkpoint: getCustomerCheckpointExclusion({
+					migration,
+					migrationRunId,
+					dryRun,
+					controls,
+				}),
+				pageSize,
+				cursor,
+			}),
+	});
+	return { ids: rows.map((row) => row.internal_id), isLastPage: !nextCursor };
 };
 
 const getCustomerCheckpointExclusion = ({

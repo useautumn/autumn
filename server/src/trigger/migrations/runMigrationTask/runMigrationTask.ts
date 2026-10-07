@@ -6,6 +6,7 @@ import { RunMigrationPayloadSchema } from "@/internal/migrations/v2/run/types/mi
 import {
 	MIGRATION_TASK_RETRY,
 	migrationRunQueue,
+	resolveMigrationChunkPartitions,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 import { runBatchMigrationChunkTask } from "@/trigger/migrations/runBatchMigrationChunkTask/runBatchMigrationChunkTask.js";
 import { runMigrationChunkTask } from "@/trigger/migrations/runMigrationChunkTask/runMigrationChunkTask.js";
@@ -40,6 +41,7 @@ export const runMigrationTask = task({
 			ctx,
 			id: payload.migrationId,
 		});
+		const partitions = await resolveMigrationChunkPartitions();
 		await runMigrationInChunks({
 			ctx,
 			migration,
@@ -47,6 +49,7 @@ export const runMigrationTask = task({
 			dryRun: payload.dryRun,
 			lazyRun: payload.lazyRun,
 			controls: payload.controls,
+			partitions,
 			runChunk: (chunkPayload) =>
 				runMigrationChunkTask
 					.triggerAndWait(chunkPayload, {
@@ -54,6 +57,22 @@ export const runMigrationTask = task({
 						idempotencyKeyTTL: "7d",
 					})
 					.unwrap(),
+			// batchTriggerAndWait settles every chunk before returning; never Promise.all waits.
+			runChunkRound: async (chunkPayloads) => {
+				const round = await runMigrationChunkTask.batchTriggerAndWait(
+					chunkPayloads.map((chunkPayload) => ({
+						payload: chunkPayload,
+						options: {
+							idempotencyKey: `migration-chunk:${chunkPayload.migrationRunId}:${chunkPayload.chunkIndex}`,
+							idempotencyKeyTTL: "7d",
+						},
+					})),
+				);
+				return round.runs.map((run) => {
+					if (!run.ok) throw run.error;
+					return run.output;
+				});
+			},
 			runBatchChunk: (chunkPayload) =>
 				runBatchMigrationChunkTask
 					.triggerAndWait(chunkPayload, {
