@@ -15,6 +15,7 @@ import {
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { throwIfOrgRateLimited } from "@/internal/misc/rateLimiter/throwIfOrgRateLimited.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
@@ -53,6 +54,10 @@ export const getOrCreateApiCustomerByRollout = async ({
 				});
 			}
 		: undefined;
+
+	// Valid creations survive the incident: queued for serialized replay.
+	if (ctx.orgRateLimitDegraded) await queueRecovery?.();
+	throwIfOrgRateLimited({ ctx });
 
 	// The worker is keyed by customer id; an id-less customer stays on Postgres.
 	if (

@@ -146,10 +146,9 @@ describe("rateLimitFactory", () => {
 		]);
 	});
 
-	test("returns 429 without Retry-After for an over-limit establish route", async () => {
-		const app = new Hono<HonoEnv>();
-		const middleware = rateLimitFactory({
-			type: RateLimitType.CheckOrg,
+	test("an over-limit degrade bucket runs the handler with the org flagged", async () => {
+		const { request, seenContexts } = buildApp({
+			type: RateLimitType.TrackOrg,
 			config: {
 				limit: 1,
 				windowMs: 60_000,
@@ -157,32 +156,23 @@ describe("rateLimitFactory", () => {
 				store: "memory",
 				overLimit: "degrade",
 			},
+			key: "track_org:org_123:live",
 		});
 
-		app.use("*", async (c, next) => {
-			c.set("ctx", {
-				env: "live",
-				org: { id: "org_123", slug: "test-org" },
-			} as never);
-			return middleware(c as never, next);
-		});
-		app.post("/v1/customers", (c) => c.json({ success: true }));
-
-		const firstResponse = await app.request("/v1/customers", {
-			method: "POST",
-		});
-		const limitedResponse = await app.request("/v1/customers", {
-			method: "POST",
-		});
+		const firstResponse = await request();
+		const degradedResponse = await request();
 
 		expect(firstResponse.status).toBe(200);
-		expect(limitedResponse.status).toBe(429);
-		expect(limitedResponse.headers.get("Retry-After")).toBeNull();
-		expect(await limitedResponse.json()).toEqual({
-			message: "Rate limit exceeded.",
-			code: "rate_limit_exceeded",
-			env: "live",
-		});
+		expect(degradedResponse.status).toBe(200);
+		expect(degradedResponse.headers.get("Retry-After")).toBeNull();
+		expect(degradedResponse.headers.get("RateLimit-Remaining")).toBe("0");
+		expect(seenContexts.map((ctx) => ctx.orgRateLimitDegraded)).toEqual([
+			undefined,
+			true,
+		]);
+		expect(mockState.warnings).toEqual([
+			"[rate-limit] org aggregate cap exceeded: test-org (track_org)",
+		]);
 	});
 });
 

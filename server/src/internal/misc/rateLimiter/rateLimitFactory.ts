@@ -4,13 +4,11 @@ import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { shouldUseRedis } from "@/external/redis/initRedis";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
-import { queueRateLimitedCustomerCreation } from "@/internal/customers/recovery/queueRateLimitedCustomerCreation.js";
 import {
-	isCheckFailOpenRoute,
 	RATE_LIMIT_CONFIGS,
 	type RateLimitConfig,
 	RateLimitScope,
-	RateLimitType,
+	type RateLimitType,
 	resolveRateLimit,
 } from "./rateLimitConfigs";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
@@ -82,35 +80,13 @@ export const rateLimitFactory = ({
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
-	// Check routes fail open; establish routes reject with a standard 429.
-	// Track routes use the degradation flag to preserve events through SQS.
-	const degradeHandler = async (
-		c: Context,
-		next: Next,
-	): Promise<Response | undefined> => {
-		const honoContext = c as Context<HonoEnv>;
-		const ctx = honoContext.get("ctx");
+	// The handler runs and decides what degraded means for its route.
+	const degradeHandler = async (c: Context, next: Next): Promise<void> => {
+		const ctx = (c as Context<HonoEnv>).get("ctx");
 		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
-
-		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
-			// Clients fail open on this 429. Preserve valid customer creation
-			// requests for controlled, serialized replay after the incident.
-			await queueRateLimitedCustomerCreation({ c: honoContext });
-			c.header("Retry-After", undefined);
-			return c.json(
-				{
-					message: "Rate limit exceeded.",
-					code: "rate_limit_exceeded",
-					env: ctx?.env,
-				},
-				429,
-			);
-		}
-
 		if (ctx) ctx.orgRateLimitDegraded = true;
 		c.header("Retry-After", undefined);
 		await next();
-		return;
 	};
 
 	const options = {

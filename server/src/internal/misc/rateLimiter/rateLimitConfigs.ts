@@ -133,22 +133,6 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	},
 ];
 
-// Check-group routes that can fail open (allowed: true) when an org is over
-// its aggregate cap; the establish routes in the group shed a 503 instead.
-const CHECK_FAIL_OPEN_PATTERNS: RoutePattern[] = [
-	route({ method: "POST", url: "/v1/check" }),
-	route({ method: "POST", url: "/v1/entitled" }),
-	route({ method: "POST", url: "/v1/balances.check" }),
-];
-
-export const isCheckFailOpenRoute = (c: Context<HonoEnv>): boolean => {
-	const method = c.req.method;
-	const path = c.req.path;
-	return CHECK_FAIL_OPEN_PATTERNS.some((pattern) =>
-		matchRoute({ url: path, method, pattern }),
-	);
-};
-
 export const getRateLimitType = (c: Context<HonoEnv>) => {
 	const method = c.req.method;
 	const path = c.req.path;

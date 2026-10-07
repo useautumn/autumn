@@ -7,6 +7,7 @@ import {
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { throwIfOrgRateLimited } from "@/internal/misc/rateLimiter/throwIfOrgRateLimited.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 
@@ -27,6 +28,8 @@ export const getApiCustomerByRollout = async ({
 	singleflight?: boolean;
 	disableReplicaRead?: boolean;
 }) => {
+	throwIfOrgRateLimited({ ctx });
+
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
 		const fullSubject = await readBalanceWorkerSubject({
 			ctx,
