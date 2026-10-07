@@ -21,11 +21,11 @@ import type {
 	InvoicePlanContext,
 } from "../setup/setupCreateInvoiceContext";
 import { featureQuantityToAmount } from "./featureQuantityToAmount";
-import { findInvoiceFeaturePrice } from "./findInvoiceFeaturePrice";
 import { licenseQuantityToAmount } from "./licenseQuantityToAmount";
 import { namedStripePriceLineAmount } from "./namedStripePriceLineAmount";
 import { prorateInvoiceLineAmount } from "./prorateInvoiceLineAmount";
 import { resolveInvoiceBasePrice } from "./resolveInvoiceBasePrice";
+import { resolveInvoiceFeaturePrice } from "./resolveInvoiceFeaturePrice";
 import { usageEntriesToCredits } from "./usageEntriesToCredits";
 
 /** A billing line plus which request entry produced it. */
@@ -112,43 +112,6 @@ const toLine = ({
 	};
 };
 
-const customizedFeaturePrice = ({
-	plan,
-	featureId,
-	catalogPrice,
-}: {
-	plan: InvoicePlanContext;
-	featureId: string;
-	catalogPrice: Price;
-}): Price => {
-	const override = plan.params.customize?.items?.find(
-		(item) => item.feature_id === featureId,
-	)?.price;
-	if (!override) return catalogPrice;
-
-	return {
-		...catalogPrice,
-		is_custom: true,
-		tier_behavior: override.tier_behavior ?? catalogPrice.tier_behavior,
-		config: {
-			...catalogPrice.config,
-			interval: override.interval,
-			interval_count: override.interval_count,
-			billing_units: override.billing_units ?? 1,
-			usage_tiers: override.tiers
-				? override.tiers.map((tier) => ({
-						to: tier.to,
-						amount: tier.amount ?? 0,
-						flat_amount: tier.flat_amount,
-					}))
-				: [{ to: "inf" as const, amount: override.amount ?? 0 }],
-			stripe_price_id:
-				override.processors?.stripe?.price_id ??
-				catalogPrice.config.stripe_price_id,
-		} as Price["config"],
-	};
-};
-
 const customizedCreditSystem = ({
 	plan,
 	feature,
@@ -213,15 +176,7 @@ const computeFeatureLine = ({
 		});
 	}
 
-	const price = customizedFeaturePrice({
-		plan,
-		featureId: entry.feature_id,
-		catalogPrice: findInvoiceFeaturePrice({
-			prices: product.prices,
-			featureId: entry.feature_id,
-			billingBehavior: entry.billing_behavior,
-		}),
-	});
+	const price = resolveInvoiceFeaturePrice({ ctx, plan, product, entry });
 
 	const { units, alreadyMoney } = billableUnitsFor({ plan, entry, feature });
 	if (units <= 0) return undefined;
