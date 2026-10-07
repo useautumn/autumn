@@ -4,7 +4,7 @@ import { resolveBranchSha } from "../../catalog/actions/gitRemote.ts";
 import { resolveTestSelection } from "../../catalog/actions/resolveTestSelection.ts";
 import { BASELINE_BRANCH } from "./refreshBaselines.ts";
 
-/** A dev run feeds the baseline when scheduled as one, or when it ran every file at dev's GitHub HEAD. */
+/** Candidate at creation: scheduled on dev, or every file at dev's GitHub HEAD; settleBaselineFlag drops it unless it completes. */
 export const countsAsBaseline = ({
 	purpose,
 	branch,

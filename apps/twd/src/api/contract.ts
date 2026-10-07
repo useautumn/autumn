@@ -212,7 +212,7 @@ export const RunSummary = z.object({
 	pinnedSha: z.boolean(),
 	status: RunStatus,
 	purpose: z.enum(["adhoc", "baseline"]),
-	/** Feeds the dev baseline: scheduled, or a full-suite dev run at dev's GitHub HEAD when it started. */
+	/** Feeds the dev baseline: a scheduled or full-suite dev-HEAD run that completed (passed/failed) every file; while live, a candidate. */
 	baseline: z.boolean(),
 	selection: RunSelection,
 	/** Times each selected file runs; > 1 only for flake checks. */

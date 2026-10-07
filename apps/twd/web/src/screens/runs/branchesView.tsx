@@ -2,12 +2,12 @@ import { ChevronRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import type { RunSummary } from "../../../../src/api/contract.ts";
-import { Pill } from "../../components/status.tsx";
 import { Skeleton, Tooltip } from "../../components/ui.tsx";
 import { cn, num, sha7, usd } from "../../lib/format.ts";
 import { useBaselineRates } from "./baselineStrip.tsx";
 import {
 	age,
+	isFullSuite,
 	RESULT_BG,
 	type RunResult,
 	runDuration,
@@ -15,14 +15,19 @@ import {
 	scopeLabel,
 } from "./runFacts.ts";
 import { Sparkline } from "./sparkline.tsx";
+import { TintPill } from "./tintPill.tsx";
 
 const BASELINE_BRANCH = "dev";
 
 const RESULT_LABEL: Record<RunResult, { text: string; className: string }> = {
-	passed: { text: "✓ Passed", className: "text-green-600 dark:text-green-400" },
-	failed: { text: "✕ Failed", className: "text-red-600 dark:text-red-400" },
-	cancelled: { text: "⊘ Cancelled", className: "text-tertiary-foreground" },
+	passed: { text: "✓ Passed", className: "text-green-300" },
+	failed: { text: "✕ Failed", className: "text-red-300" },
+	cancelled: { text: "⊘ Cancelled", className: "text-neutral-300" },
 };
+
+/** The Paper frame's tooltip: near-black in both themes, so it reads as a hint over the grid. */
+const DARK_TOOLTIP =
+	"border-transparent bg-[#121212] px-2.5 py-2 text-xs leading-[1.45] font-normal text-neutral-300 shadow-[0_6px_20px_rgba(0,0,0,0.18)] dark:bg-[#121212] before:data-[side=top]:border-t-[#121212] before:data-[side=bottom]:border-b-[#121212]";
 
 const baselineNote = (run: RunSummary) =>
 	!run.baseline
@@ -34,19 +39,20 @@ const baselineNote = (run: RunSummary) =>
 const SquareTooltip = ({ run, now }: { run: RunSummary; now: number }) => {
 	const result = RESULT_LABEL[runResult(run)];
 	return (
-		<span className="flex flex-col gap-0.5 tabular-nums">
+		<span className="flex flex-col gap-[3px] tabular-nums">
 			<span>
 				<span className={cn("font-semibold", result.className)}>
 					{result.text}
 				</span>{" "}
-				· {scopeLabel(run)} · {num(run.fileCount ?? 0)} files
+				· {isFullSuite(run) ? "full suite" : scopeLabel(run)} ·{" "}
+				{num(run.fileCount ?? 0)} files
 			</span>
-			<span className="text-tertiary-foreground">
-				<span className="font-mono">{sha7(run.sha)}</span> · {baselineNote(run)}{" "}
-				· {runDuration(run, now)} · {usd(run.cost.usd)}
+			<span>
+				<span className="font-mono text-neutral-400">{sha7(run.sha)}</span> ·{" "}
+				{baselineNote(run)} · {runDuration(run, now)} · {usd(run.cost.usd)}
 			</span>
 			{run.failed > 0 && (
-				<span className="text-red-600 dark:text-red-400">
+				<span className="text-red-300">
 					{num(run.failed)} failed
 					{run.newFailures !== null &&
 						` · ${num(run.newFailures)} new vs previous baseline`}
@@ -58,9 +64,13 @@ const SquareTooltip = ({ run, now }: { run: RunSummary; now: number }) => {
 
 /** Equal 10px squares, oldest → newest; colour is the only signal. */
 const RunSquares = ({ runs, now }: { runs: RunSummary[]; now: number }) => (
-	<div className="flex w-[176px] shrink-0 items-center gap-[3px]">
+	<div className="flex w-[300px] shrink-0 items-center gap-[3px] @max-[880px]:w-[153px]">
 		{[...runs].reverse().map((run) => (
-			<Tooltip key={run.id} content={<SquareTooltip run={run} now={now} />}>
+			<Tooltip
+				key={run.id}
+				className={cn(DARK_TOOLTIP, "max-w-[460px]")}
+				content={<SquareTooltip run={run} now={now} />}
+			>
 				<Link
 					to={`/runs/${run.id}`}
 					aria-label={`${runResult(run)} run ${sha7(run.sha)}`}
@@ -79,13 +89,8 @@ const BaselineTrend = () => {
 	const rate = rates.at(-1);
 	if (!latest || rate === undefined) return null;
 	return (
-		<span className="flex shrink-0 items-center gap-2">
-			<Sparkline
-				values={rates}
-				width={120}
-				height={20}
-				className="@max-[700px]:w-16"
-			/>
+		<span className="flex shrink-0 items-center gap-2 @max-[600px]:hidden">
+			<Sparkline values={rates.slice(-30)} width={120} height={20} />
 			<span className="text-xs font-semibold text-green-600 tabular-nums dark:text-green-400">
 				{rate.toFixed(1)}%
 			</span>
@@ -106,12 +111,12 @@ const BranchRow = ({
 }) => {
 	const latest = runs[0];
 	return (
-		<div className="flex h-10 min-w-0 items-center gap-3 border-b border-border/60 @max-[700px]:gap-2.5">
+		<div className="flex h-10 min-w-0 items-center gap-3 border-b border-border/60">
 			<button
 				type="button"
 				onClick={() => onOpenHistory(branch)}
 				title={branch}
-				className="w-[210px] shrink-0 cursor-pointer truncate text-left text-[12.5px] font-semibold text-foreground outline-none hover:underline focus-visible:underline @max-[700px]:w-[140px]"
+				className="w-[210px] min-w-0 shrink cursor-pointer truncate text-left text-[12.5px] font-semibold text-foreground outline-none hover:underline focus-visible:underline"
 			>
 				{branch}
 			</button>
@@ -119,14 +124,14 @@ const BranchRow = ({
 			{branch === BASELINE_BRANCH && <BaselineTrend />}
 			<span className="flex-1" />
 			{!!latest?.newFailures && (
-				<Pill tone="bad" className="shrink-0 tabular-nums">
+				<TintPill tone="bad">
 					{num(latest.newFailures)} new failure
 					{latest.newFailures === 1 ? "" : "s"}
-				</Pill>
+				</TintPill>
 			)}
 			{latest && (
 				<span className="shrink-0 text-[11.5px] text-subtle tabular-nums">
-					<span className="font-mono">{sha7(latest.sha)}</span> ·{" "}
+					<span className="@max-[520px]:hidden">{sha7(latest.sha)} · </span>
 					{age(latest.finishedAt ?? latest.createdAt, now)}
 				</span>
 			)}
