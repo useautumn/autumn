@@ -30,9 +30,9 @@ describe("migration task scheduler", () => {
 		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(100);
 	});
 
-	test("keeps in-flight customers within the chunk task's migration DB pool", () => {
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBeLessThanOrEqual(
-			MIGRATION_DB_POOL_MAX,
+	test("sizes the migration DB pool for two connections per in-flight customer", () => {
+		expect(MIGRATION_DB_POOL_MAX).toBeGreaterThanOrEqual(
+			MIGRATION_RUN_CUSTOMER_CONCURRENCY * 2,
 		);
 	});
 
