@@ -1,7 +1,7 @@
 import pLimit from "p-limit";
 
 /** A test can opt out of sharing the run with `// tw:solo` anywhere in the file. */
-export const SOLO_MARKER = "tw:solo";
+const SOLO_MARKER = "tw:solo";
 
 /** Calls that change state every concurrently running file shares: the one test org, its config, caches and catalog. */
 const ORG_WIDE_MUTATIONS: { reason: string; pattern: RegExp }[] = [
