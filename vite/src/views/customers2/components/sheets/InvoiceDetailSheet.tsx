@@ -296,6 +296,8 @@ export function InvoiceDetailSheet({
 	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
 		invoiceIsStripe &&
+		!metadataLoading &&
+		!isVercelInvoice &&
 		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Draft ||
