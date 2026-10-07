@@ -23,7 +23,8 @@
 					"ATOM_HOSTNAME": "0.0.0.0",
 					"ATOM_PORT": "8080",
 					"ATOM_DATA_DIR": "/data",
-					"ATOM_PUSH_RECEIVERS": "2"
+					"ATOM_PUSH_RECEIVERS": "2",
+					"ATOM_PUSH_QUEUE_CLIENT": "sdk"
 				},
 				"healthCheck": {
 					"path": "/health",
