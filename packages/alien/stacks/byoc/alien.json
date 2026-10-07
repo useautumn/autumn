@@ -17,12 +17,13 @@
 					"toolchain": { "type": "typescript", "binaryName": "atom" }
 				},
 				"commandsEnabled": false,
-				"cpu": { "min": "3", "desired": "3" },
-				"memory": { "min": "6Gi", "desired": "6Gi" },
+				"cpu": { "min": "7", "desired": "7" },
+				"memory": { "min": "12Gi", "desired": "12Gi" },
 				"environment": {
 					"ATOM_HOSTNAME": "0.0.0.0",
 					"ATOM_PORT": "8080",
-					"ATOM_DATA_DIR": "/data"
+					"ATOM_DATA_DIR": "/data",
+					"ATOM_PUSH_RECEIVERS": "2"
 				},
 				"healthCheck": {
 					"path": "/health",
