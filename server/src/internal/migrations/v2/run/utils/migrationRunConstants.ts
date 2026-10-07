@@ -13,6 +13,8 @@ export const MIGRATION_DB_POOL_MAX = (() => {
 })();
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;
+/** Customer ids per keyset segment when a run fans out over concurrent lanes. */
+export const MIGRATION_SEGMENT_SIZE = 500;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_ATTEMPTS = 5;
 export const MIGRATION_FILTER_PAGE_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;
 

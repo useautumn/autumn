@@ -9,10 +9,14 @@ import {
 } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import {
 	getMigrationTriggerOptions,
+	laneCountFromQueueLimit,
 	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
 	MIGRATION_LAZY_TASK_PRIORITY_SECONDS,
+	MIGRATION_MAX_LANES,
 	MIGRATION_TASK_QUEUE_CONCURRENCY,
 	MIGRATION_TASK_RETRY,
+	migrationChunkIdempotencyKey,
+	migrationLaneQueue,
 	migrationTaskQueue,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 
@@ -34,6 +38,37 @@ describe("migration task scheduler", () => {
 		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBeLessThanOrEqual(
 			MIGRATION_DB_POOL_MAX,
 		);
+	});
+
+	test("fans a run out to the chunk queue's limit, capped and never below serial", () => {
+		expect(MIGRATION_MAX_LANES).toBe(8);
+		expect(laneCountFromQueueLimit(MIGRATION_TASK_QUEUE_CONCURRENCY)).toBe(1);
+		expect(laneCountFromQueueLimit(4)).toBe(4);
+		expect(laneCountFromQueueLimit(3.7)).toBe(3);
+		expect(laneCountFromQueueLimit(50)).toBe(8);
+		expect(laneCountFromQueueLimit(0)).toBe(1);
+		expect(laneCountFromQueueLimit(null)).toBe(1);
+		expect(laneCountFromQueueLimit(undefined)).toBe(1);
+	});
+
+	test("lanes wait on chunks from their own queue, never from the chunk queue", () => {
+		expect(migrationLaneQueue.name).not.toBe(migrationTaskQueue.name);
+		expect(migrationLaneQueue.concurrencyLimit).toBeGreaterThanOrEqual(
+			MIGRATION_MAX_LANES,
+		);
+	});
+
+	test("serial chunks keep today's idempotency key; lane chunks are scoped by lane", () => {
+		expect(
+			migrationChunkIdempotencyKey({ migrationRunId: "mrun_1", chunkIndex: 2 }),
+		).toBe("migration-chunk:mrun_1:2");
+		expect(
+			migrationChunkIdempotencyKey({
+				migrationRunId: "mrun_1",
+				laneIndex: 1,
+				chunkIndex: 2,
+			}),
+		).toBe("migration-chunk:mrun_1:lane1:2");
 	});
 
 	test("uses a bounded customer-work slice", () => {

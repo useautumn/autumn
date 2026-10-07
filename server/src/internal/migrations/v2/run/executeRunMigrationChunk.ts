@@ -41,6 +41,7 @@ export const executeRunMigrationChunk = async ({
 		data: {
 			migrationRunId: payload.migrationRunId,
 			chunkIndex: payload.chunkIndex,
+			laneIndex: payload.laneIndex,
 			cursor: payload.cursor,
 			floor: payload.floor,
 			limit: payload.controls?.limit,

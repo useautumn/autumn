@@ -60,14 +60,31 @@ export const PreparedMigrationSnapshotSchema = z.object({
 
 export const RunMigrationChunkPayloadSchema = RunMigrationPayloadSchema.extend({
 	chunkIndex: z.number().int().min(0),
+	/** Set when a lane runs the chunk; chunkIndex then counts within the lane. */
+	laneIndex: z.number().int().min(0).optional(),
 	cursor: z.string().optional(),
 	/** Inclusive lower bound of this chunk's keyset segment; unset walks to the end. */
 	floor: z.string().optional(),
 	migration: PreparedMigrationSnapshotSchema,
 });
 
+const MigrationSegmentSchema = z.object({
+	cursor: z.string().optional(),
+	floor: z.string().optional(),
+});
+
+export const RunMigrationLanePayloadSchema = RunMigrationPayloadSchema.extend({
+	laneIndex: z.number().int().min(0),
+	/** Disjoint keyset segments this lane alone walks, in order. */
+	segments: z.array(MigrationSegmentSchema),
+	migration: PreparedMigrationSnapshotSchema,
+});
+
 export type RunMigrationChunkPayload = z.infer<
 	typeof RunMigrationChunkPayloadSchema
+>;
+export type RunMigrationLanePayload = z.infer<
+	typeof RunMigrationLanePayloadSchema
 >;
 
 /** Resolved once at run start, then carried per chunk so every task delivers
@@ -137,6 +154,7 @@ export const buildRunMigrationChunkPayload = ({
 	controls,
 	limit,
 	chunkIndex,
+	laneIndex,
 	cursor,
 	floor,
 }: {
@@ -149,6 +167,7 @@ export const buildRunMigrationChunkPayload = ({
 	controls: RunMigrationPayload["controls"];
 	limit: number | undefined;
 	chunkIndex: number;
+	laneIndex?: number;
 	cursor: string | undefined;
 	floor?: string;
 }): RunMigrationChunkPayload => ({
@@ -159,6 +178,7 @@ export const buildRunMigrationChunkPayload = ({
 	dryRun,
 	lazyRun,
 	chunkIndex,
+	laneIndex,
 	cursor,
 	floor,
 	migration,
@@ -166,4 +186,37 @@ export const buildRunMigrationChunkPayload = ({
 		...(controls ?? {}),
 		...(limit === undefined ? {} : { limit }),
 	},
+});
+
+export const buildRunMigrationLanePayload = ({
+	ctx,
+	migrationId,
+	migrationRunId,
+	dryRun,
+	lazyRun,
+	migration,
+	controls,
+	laneIndex,
+	segments,
+}: {
+	ctx: AutumnContext;
+	migrationId: string;
+	migrationRunId: string;
+	dryRun: boolean;
+	lazyRun: boolean;
+	migration: RunMigrationLanePayload["migration"];
+	controls: RunMigrationPayload["controls"];
+	laneIndex: number;
+	segments: RunMigrationLanePayload["segments"];
+}): RunMigrationLanePayload => ({
+	orgId: ctx.org.id,
+	env: ctx.env,
+	migrationId,
+	migrationRunId,
+	dryRun,
+	lazyRun,
+	laneIndex,
+	segments,
+	migration,
+	controls,
 });

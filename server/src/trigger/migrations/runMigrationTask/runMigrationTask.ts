@@ -5,10 +5,13 @@ import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationI
 import { RunMigrationPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import {
 	MIGRATION_TASK_RETRY,
+	migrationChunkIdempotencyKey,
 	migrationRunQueue,
+	resolveMigrationLaneCount,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 import { runBatchMigrationChunkTask } from "@/trigger/migrations/runBatchMigrationChunkTask/runBatchMigrationChunkTask.js";
 import { runMigrationChunkTask } from "@/trigger/migrations/runMigrationChunkTask/runMigrationChunkTask.js";
+import { runMigrationLaneTask } from "@/trigger/migrations/runMigrationLaneTask/runMigrationLaneTask.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
 export const runMigrationTask = task({
@@ -40,6 +43,7 @@ export const runMigrationTask = task({
 			ctx,
 			id: payload.migrationId,
 		});
+		const laneCount = await resolveMigrationLaneCount({ logger });
 		await runMigrationInChunks({
 			ctx,
 			migration,
@@ -47,13 +51,30 @@ export const runMigrationTask = task({
 			dryRun: payload.dryRun,
 			lazyRun: payload.lazyRun,
 			controls: payload.controls,
+			laneCount,
 			runChunk: (chunkPayload) =>
 				runMigrationChunkTask
 					.triggerAndWait(chunkPayload, {
-						idempotencyKey: `migration-chunk:${chunkPayload.migrationRunId}:${chunkPayload.chunkIndex}`,
+						idempotencyKey: migrationChunkIdempotencyKey(chunkPayload),
 						idempotencyKeyTTL: "7d",
 					})
 					.unwrap(),
+			// One batch per run: batchTriggerAndWait settles every lane before returning.
+			runLanes: async (lanePayloads) => {
+				const lanes = await runMigrationLaneTask.batchTriggerAndWait(
+					lanePayloads.map((lanePayload) => ({
+						payload: lanePayload,
+						options: {
+							idempotencyKey: `migration-lane:${lanePayload.migrationRunId}:${lanePayload.laneIndex}`,
+							idempotencyKeyTTL: "7d",
+						},
+					})),
+				);
+				return lanes.runs.map((run) => {
+					if (!run.ok) throw run.error;
+					return run.output;
+				});
+			},
 			runBatchChunk: (chunkPayload) =>
 				runBatchMigrationChunkTask
 					.triggerAndWait(chunkPayload, {
