@@ -71,7 +71,13 @@ export const InvoiceCustomizeItemSchema = z
 		// The catalog allows negative prices; an invoice credit is a negative custom line item.
 		const isNegative =
 			(price.amount ?? 0) < 0 ||
-			(price.tiers ?? []).some((tier) => tier.amount < 0);
+			(price.tiers ?? []).some(
+				(tier) =>
+					tier.amount < 0 ||
+					(tier.additional_currencies ?? []).some(
+						(entry) => (entry.amount ?? 0) < 0 || (entry.flat_amount ?? 0) < 0,
+					),
+			);
 		if (isNegative) {
 			issues.push({
 				message:

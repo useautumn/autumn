@@ -149,6 +149,40 @@ const invalidRequests: [string, Omit<PlanParams, "plan_id">][] = [
 		}),
 	],
 	[
+		"negative flat_amount on a volume tier",
+		customizedLine({
+			featureId: TestFeature.Storage,
+			price: prepaid({
+				amount: undefined,
+				tier_behavior: TierBehavior.VolumeBased,
+				tiers: [
+					{ to: 10, amount: 1, flat_amount: -50 },
+					{ to: "inf", amount: 1 },
+				],
+			}),
+			quantity: 5,
+		}),
+	],
+	[
+		"negative additional currency amount on a tier",
+		customizedLine({
+			featureId: TestFeature.Storage,
+			price: graduatedTiers([
+				{
+					to: 10,
+					amount: 1,
+					additional_currencies: [{ currency: "eur", amount: -1 }],
+				},
+				{
+					to: "inf",
+					amount: 1,
+					additional_currencies: [{ currency: "eur", amount: 1 }],
+				},
+			]),
+			quantity: 5,
+		}),
+	],
+	[
 		"billing_units 0 on a plan feature",
 		customizedLine({
 			featureId: TestFeature.Users,
