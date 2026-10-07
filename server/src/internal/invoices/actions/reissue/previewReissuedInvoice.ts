@@ -2,6 +2,7 @@ import type {
 	CreateInvoicePreview,
 	CreateInvoicePreviewLine,
 	DbInvoiceLineItem,
+	LineItem,
 	PreviewInvoiceCredits,
 } from "@autumn/shared";
 import { secondsToMs, stripeToAtmnAmount } from "@autumn/shared";
@@ -64,6 +65,7 @@ export const previewReissuedInvoice = ({
 	stripeInvoice,
 	lines,
 	storedLines,
+	addedLineItems = [],
 	credits,
 	dueDateMs,
 	settled = false,
@@ -72,6 +74,8 @@ export const previewReissuedInvoice = ({
 	lines: Stripe.InvoiceLineItem[];
 	/** Autumn's rows for the original, which carry the plan and feature. */
 	storedLines: DbInvoiceLineItem[];
+	/** Autumn lines behind catalog plans the reissue added, matched on autumn_line_item_id. */
+	addedLineItems?: LineItem[];
 	credits?: PreviewInvoiceCredits;
 	dueDateMs: number | null;
 	/** The invoice is finalized, so its own balance figures are the truth. */
@@ -82,6 +86,10 @@ export const previewReissuedInvoice = ({
 		storedLines
 			.filter((stored) => stored.stripe_id)
 			.map((stored) => [stored.stripe_id as string, stored]),
+	);
+
+	const addedById = new Map(
+		addedLineItems.map((lineItem) => [lineItem.id, lineItem]),
 	);
 
 	const previewLines: CreateInvoicePreviewLine[] = lines.map((line) => {
@@ -95,7 +103,10 @@ export const previewReissuedInvoice = ({
 			plan_id: stored?.product_id ?? line.metadata?.autumn_product_id ?? null,
 			feature_id: stored?.feature_id ?? null,
 			entity_id:
-				stored?.entities?.length === 1 ? stored.entities[0].entity_id : null,
+				stored?.entities?.length === 1
+					? stored.entities[0].entity_id
+					: (addedById.get(line.metadata?.autumn_line_item_id ?? "")?.context
+							.entity?.id ?? null),
 			description: line.description ?? "",
 			amount,
 			amount_after_discounts: amount,

@@ -152,21 +152,36 @@ test.concurrent(
 			stripeId: created.invoice?.stripe_id as string,
 		});
 
-		const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
+		const lines = {
+			add: [
+				{
+					plan_id: pro.id,
+					entity_id: "ent-2",
+					customize: { price: null },
+					period_start: JAN_1,
+					period_end: JAN_16,
+					feature_quantities: [messages(20)],
+				},
+			],
+		};
+		const addedEntityIds = (preview: CreateInvoiceResponse["preview"]) =>
+			preview.lines.map((line) => line.entity_id);
+
+		const dryRun = (await autumnV2_3.post("/invoices.reissue", {
 			invoice_id: original.id,
-			lines: {
-				add: [
-					{
-						plan_id: pro.id,
-						entity_id: "ent-2",
-						customize: { price: null },
-						period_start: JAN_1,
-						period_end: JAN_16,
-						feature_quantities: [messages(20)],
-					},
-				],
-			},
-		})) as { invoice: ApiListInvoiceV1 };
+			preview: true,
+			lines,
+		})) as { preview: CreateInvoiceResponse["preview"] };
+		expect(addedEntityIds(dryRun.preview).sort()).toEqual(["ent-1", "ent-2"]);
+
+		const { invoice, preview } = (await autumnV2_3.post("/invoices.reissue", {
+			invoice_id: original.id,
+			lines,
+		})) as {
+			invoice: ApiListInvoiceV1;
+			preview: CreateInvoiceResponse["preview"];
+		};
+		expect(addedEntityIds(preview).sort()).toEqual(["ent-1", "ent-2"]);
 
 		const added = invoice.items?.find((item) => item.amount === 2);
 		expect(added?.description).toMatch(/ — Entity 2$/);

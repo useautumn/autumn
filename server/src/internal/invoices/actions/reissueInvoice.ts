@@ -987,6 +987,7 @@ export const reissueInvoice = async ({
 				overrides: invoiceOverrides,
 				lines: replacementLines,
 				storedLines,
+				addedLineItems,
 				credits,
 				dueDateMs,
 			}),
@@ -1061,6 +1062,7 @@ export const reissueInvoice = async ({
 			invoiceId: issued.id,
 		}),
 		storedLines,
+		addedLineItems,
 		// A credit note issued during the reissue moved the balance a draft will draw on.
 		credits: creditNoteId
 			? stripeCustomerToInvoiceCredits({
