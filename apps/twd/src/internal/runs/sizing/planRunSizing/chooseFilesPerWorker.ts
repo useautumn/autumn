@@ -5,6 +5,7 @@ import {
 	LOAD_SIGMA,
 	MAX_AUTO_FILES_PER_WORKER,
 	OVERHEAD_QUANTILE,
+	VCPUS_PER_MODAL_CORE,
 } from "./sizingConstants.ts";
 
 type Limits = RunSizing["limits"];
@@ -17,7 +18,7 @@ const RESOURCES: Resource[] = [
 	"memoryMib",
 ];
 
-/** One file's measured load at one file per worker; cores and memory are worker-wide. */
+/** One file's measured load at one file per worker; cores (Modal physical) and memory are worker-wide. */
 type FileLoad = {
 	file: string;
 	stripeRps: number;
@@ -61,7 +62,10 @@ const toFileLoad = ({
 		file,
 		stripeRps: metrics.stripeMeanRps ?? 0,
 		stripeInFlight: metrics.stripeMeanInFlight ?? 0,
-		workerCores: (metrics.cpuCoreSeconds ?? 0) / (durationMs / 1000),
+		workerCores:
+			(metrics.cpuCoreSeconds ?? 0) /
+			(durationMs / 1000) /
+			VCPUS_PER_MODAL_CORE,
 		workerMemoryMib: metrics.memPeakMib ?? 0,
 		testMemoryMib: metrics.testPeakMib ?? 0,
 	};
@@ -179,6 +183,20 @@ export const chooseFilesPerWorker = ({
 
 	const overhead = measureOverhead(loads);
 	const ceiling = ceilingOf({ limits });
+	const overheadReason = `overhead per worker: ${overhead.cores.toFixed(2)} cores, ${Math.round(overhead.memoryMib)} MiB`;
+	const saturated = firstOverCeiling({ load: overhead, ceiling });
+	if (saturated)
+		return {
+			filesPerWorker: 1,
+			packable: new Set(),
+			load: null,
+			binding: saturated,
+			reasons: [
+				`${loads.length} files profiled; packing skipped`,
+				overheadReason,
+				`the idle stack alone is over ${HEADROOM * 100}% of the worker's ${saturated}, so no second file fits`,
+			],
+		};
 	const withIncrements = loads.map((load) => ({
 		load,
 		increment: fileIncrement({ load, overhead }),
@@ -189,7 +207,7 @@ export const chooseFilesPerWorker = ({
 	const increments = light.map(({ increment }) => increment);
 	const reasons = [
 		`${light.length} packable, ${withIncrements.length - light.length} heavy, ${soloCandidates.size} org-mutating, ${Math.max(0, unprofiled)} without profiles (heavy, org-mutating and unprofiled run alone)`,
-		`overhead per worker: ${overhead.cores.toFixed(2)} cores, ${Math.round(overhead.memoryMib)} MiB`,
+		overheadReason,
 	];
 	if (light.length < 2)
 		return {
