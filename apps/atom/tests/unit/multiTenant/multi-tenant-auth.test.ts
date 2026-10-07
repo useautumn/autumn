@@ -210,6 +210,25 @@ describe("multi-tenant auth across threads", () => {
 		expect(existsSync(join(dataDir, "atom_a"))).toBe(false);
 	});
 
+	test("an Atom deleted and put again under its id reopens on the other thread, with none of the old folder's customers", async () => {
+		const { first, second, advance } = openTwoThreads();
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_MISS_RESCAN_MS);
+		storeCustomer({ auth: second, token: "token_a" });
+
+		first.removeAtom({ id: "atom_a" });
+		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
+		advance(TENANTS_REVALIDATE_MS);
+
+		expect(
+			forwardReasonOf(() => checkCustomer({ auth: second, token: "token_a" })),
+		).toBe("customer_not_stored");
+		storeCustomer({ auth: second, token: "token_a" });
+		expect(checkCustomer({ auth: first, token: "token_a" })).toMatchObject({
+			allowed: true,
+		});
+	});
+
 	test("an Atom deleted before the other thread ever opened it is not recreated there", async () => {
 		const { dataDir, first, second, advance } = openTwoThreads();
 		first.putAtom({ id: "atom_a", tokenHash: tokenHash("token_a") });
