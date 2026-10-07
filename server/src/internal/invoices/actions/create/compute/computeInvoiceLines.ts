@@ -6,6 +6,7 @@ import {
 	type FullProduct,
 	type InvoiceCustomizeItem,
 	type InvoiceFeatureQuantity,
+	isOneOffPrice,
 	type LineItem,
 	type LineItemContext,
 	type Price,
@@ -103,7 +104,11 @@ const toLine = ({
 		overage: quantity ?? undefined,
 	});
 	return {
-		lineItem: { ...lineItem, prorated },
+		// One-off prices are never prorated, whatever the request asked for.
+		lineItem: {
+			...lineItem,
+			prorated: prorated && !isOneOffPrice(context.price),
+		},
 		planKey,
 		planId,
 		featureId,

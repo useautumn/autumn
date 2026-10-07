@@ -89,17 +89,19 @@ export const evaluateStripeInvoicePlan = ({
 		const lineCoupons = (assigned.lineCouponIds[lineItem.id] ?? [])
 			.map((id) => couponsById.get(id))
 			.filter((coupon): coupon is Stripe.Coupon => Boolean(coupon));
-		const amountAfterLineDiscounts = percentOffTotal({
+		const minorAmount = atmnToStripeAmount({
 			amount: lineItem.amount,
+			currency,
+		});
+		// Preview the amount Stripe bills, so subtotal and total add up the same lines.
+		const billedAmount = stripeToAtmnAmount({ amount: minorAmount, currency });
+		const amountAfterLineDiscounts = percentOffTotal({
+			amount: billedAmount,
 			coupons: lineCoupons,
 			currency,
 		});
 
 		const stripeProductId = lineItemToStripeProductId({ lineItem });
-		const minorAmount = atmnToStripeAmount({
-			amount: lineItem.amount,
-			currency,
-		});
 		stripeLines.push({
 			description: lineItem.description,
 			// A named Stripe price bills through Stripe's own tiers; otherwise the
@@ -135,7 +137,7 @@ export const evaluateStripeInvoicePlan = ({
 			plan_id: line.planId,
 			feature_id: line.featureId,
 			description: lineItem.description,
-			amount: lineItem.amount,
+			amount: billedAmount,
 			amount_after_discounts: amountAfterLineDiscounts.toDP(2).toNumber(),
 			quantity: line.quantity,
 			prorated: lineItem.prorated,

@@ -6,7 +6,10 @@ import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
-import { PlanItemPriceParamsSchema } from "@api/products/items/crud/createPlanItemParamsV1.js";
+import {
+	PlanItemPriceParamsSchema,
+	planItemParamsIssues,
+} from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { z } from "zod/v4";
 import { ApiListInvoiceV1Schema } from "./apiListInvoiceV1.js";
 
@@ -60,7 +63,26 @@ export const InvoiceCustomizeItemSchema = z
 					"For credit-system features: a credit rate card to use when converting `usage` on this invoice.",
 			}),
 	})
-	.strict();
+	.strict()
+	.check((ctx) => {
+		const { feature_id, price } = ctx.value;
+		if (!price) return;
+		const issues = planItemParamsIssues({ feature_id, price });
+		// The catalog allows negative prices; an invoice credit is a negative custom line item.
+		const isNegative =
+			(price.amount ?? 0) < 0 ||
+			(price.tiers ?? []).some((tier) => tier.amount < 0);
+		if (isNegative) {
+			issues.push({
+				message:
+					"customize.items prices cannot be negative. Use a negative custom_line_items entry for a credit.",
+				input: price,
+			});
+		}
+		for (const { message, input } of issues) {
+			ctx.issues.push({ code: "custom", message, input, path: ["price"] });
+		}
+	});
 
 export const InvoiceCustomizeSchema = z
 	.object({
@@ -74,6 +96,20 @@ export const InvoiceCustomizeSchema = z
 		}),
 	})
 	.strict()
+	.check((ctx) => {
+		const featureIds = (ctx.value.items ?? []).map((item) => item.feature_id);
+		const duplicate = featureIds.find(
+			(featureId, index) => featureIds.indexOf(featureId) !== index,
+		);
+		if (duplicate) {
+			ctx.issues.push({
+				code: "custom",
+				message: `customize.items lists feature ${duplicate} more than once.`,
+				input: ctx.value.items,
+				path: ["items"],
+			});
+		}
+	})
 	.meta({
 		title: "InvoiceCustomize",
 		description:

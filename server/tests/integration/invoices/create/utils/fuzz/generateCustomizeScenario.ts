@@ -41,7 +41,10 @@ export type InvalidMutation =
 	| "zero_billing_units"
 	| "amount_and_tiers"
 	| "flat_amount_on_graduated"
-	| "volume_usage_based";
+	| "volume_usage_based"
+	| "unsorted_tiers"
+	| "missing_inf_tier"
+	| "duplicate_item";
 
 type PriceShape = OraclePrice & {
 	behavior: BillingMethod;
@@ -417,6 +420,36 @@ const applyInvalidMutation = ({
 				},
 				billingBehavior: behavior,
 			});
+		case "unsorted_tiers":
+		case "missing_inf_tier":
+			return addOverridden({
+				price: {
+					billing_method: behavior,
+					interval: BillingInterval.Month,
+					billing_units: 1,
+					tier_behavior: TierBehavior.Graduated,
+					tiers:
+						mutation === "unsorted_tiers"
+							? [
+									{ to: 100, amount: 1 },
+									{ to: 50, amount: 2 },
+									{ to: "inf", amount: 3 },
+								]
+							: [{ to: 100, amount: 1 }],
+				},
+				billingBehavior: behavior,
+				quantity: 200,
+			});
+		case "duplicate_item":
+			if (
+				!addOverridden({
+					price: flatPrice(behavior),
+					billingBehavior: behavior,
+				})
+			)
+				return false;
+			customizeItems.push({ ...customizeItems[customizeItems.length - 1] });
+			return true;
 		case "volume_usage_based":
 			return addOverridden({
 				price: {
@@ -496,6 +529,21 @@ const computeExpectation = ({
 	}
 
 	for (const entry of plan.feature_quantities ?? []) {
+		const hasCatalogPrice = catalog.items.some(
+			(item) =>
+				item.featureId === entry.feature_id &&
+				item.price.behavior === entry.billing_behavior,
+		);
+		const override = draft.overrides.get(entry.feature_id);
+		if (
+			hasCatalogPrice &&
+			override &&
+			override.behavior !== entry.billing_behavior
+		)
+			return {
+				kind: "invalid",
+				reason: `override method for ${entry.feature_id}`,
+			};
 		const price = resolveExpectedPrice({
 			catalog,
 			overrides: draft.overrides,
@@ -519,7 +567,10 @@ const computeExpectation = ({
 		});
 	}
 
-	const billable = lines.filter((line) => Math.abs(line.amount) > 1e-12);
+	// Lines preview the whole cents Stripe bills; the total adds those cents.
+	const billable = lines
+		.filter((line) => Math.abs(line.amount) > 1e-12)
+		.map((line) => ({ ...line, amount: roundToCents(line.amount) }));
 	if (billable.length === 0)
 		return { kind: "invalid", reason: "nothing to invoice" };
 	return {
@@ -577,11 +628,9 @@ const summarize = ({
 export const generateCustomizeScenario = ({
 	seed,
 	allowInvalid,
-	excludedMutations = [],
 }: {
 	seed: number;
 	allowInvalid: boolean;
-	excludedMutations?: readonly InvalidMutation[];
 }): FuzzScenario => {
 	const rng = createRng(seed);
 	const catalog = genCatalog(rng);
@@ -663,21 +712,22 @@ export const generateCustomizeScenario = ({
 	if (planProrate !== undefined) plan.prorate = planProrate;
 	const period = rng.pick([undefined, undefined, ...PERIODS]);
 
-	const mutations = (
-		[
-			"behavior_mismatch_new_feature",
-			"unpriced_feature",
-			"quantity_and_usage",
-			"negative_quantity",
-			"negative_base_amount",
-			"negative_item_amount",
-			"negative_tier_amount",
-			"zero_billing_units",
-			"amount_and_tiers",
-			"flat_amount_on_graduated",
-			"volume_usage_based",
-		] as const
-	).filter((mutation) => !excludedMutations.includes(mutation));
+	const mutations: InvalidMutation[] = [
+		"behavior_mismatch_new_feature",
+		"unpriced_feature",
+		"quantity_and_usage",
+		"negative_quantity",
+		"negative_base_amount",
+		"negative_item_amount",
+		"negative_tier_amount",
+		"zero_billing_units",
+		"amount_and_tiers",
+		"flat_amount_on_graduated",
+		"volume_usage_based",
+		"unsorted_tiers",
+		"missing_inf_tier",
+		"duplicate_item",
+	];
 	const mutation =
 		allowInvalid && rng.chance(0.3) ? rng.pick(mutations) : undefined;
 	if (mutation && applyInvalidMutation({ rng, catalog, draft, mutation })) {

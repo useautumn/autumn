@@ -1,10 +1,12 @@
 import {
 	type BillingMethod,
+	ErrCode,
 	type FullProduct,
 	type InvoiceCustomizeItem,
 	type InvoiceFeatureQuantity,
 	type Price,
 	planItemV1ToPriceAndEnt,
+	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
@@ -32,7 +34,8 @@ const overlayCustomizedPrice = ({
 }): Price => ({
 	...catalogPrice,
 	is_custom: true,
-	tier_behavior: override.tier_behavior ?? catalogPrice.tier_behavior,
+	// The override replaces the whole price, so an omitted tier_behavior is graduated, as in the catalog.
+	tier_behavior: override.tier_behavior ?? null,
 	config: {
 		...catalogPrice.config,
 		interval: override.interval,
@@ -109,9 +112,15 @@ export const resolveInvoiceFeaturePrice = ({
 	});
 
 	if (catalogPrice) {
-		return override
-			? overlayCustomizedPrice({ catalogPrice, override })
-			: catalogPrice;
+		if (!override) return catalogPrice;
+		if (override.billing_method !== billingBehavior) {
+			throw new RecaseError({
+				message: `customize.items prices feature ${featureId} as ${override.billing_method}, but feature_quantities bills it as ${billingBehavior}`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		return overlayCustomizedPrice({ catalogPrice, override });
 	}
 
 	if (override?.billing_method === billingBehavior) {
