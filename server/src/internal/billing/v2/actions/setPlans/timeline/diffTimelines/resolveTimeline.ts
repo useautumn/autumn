@@ -79,7 +79,7 @@ const savedCarriesPlanned = ({
 };
 
 /** A canceling plan re-listed with no end of its own keeps its cancellation, carried or recreated; an explicit end replaces it. */
-const keepsCancellation = ({
+const isCancellationKept = ({
 	planned,
 	savedSegment,
 	policies,
@@ -116,9 +116,33 @@ const carriedEndsAt = ({
 	savedSegment: SavedSegment;
 	policies: SetPlansPolicies;
 }): number | null =>
-	keepsCancellation({ planned, savedSegment, policies })
+	isCancellationKept({ planned, savedSegment, policies })
 		? keptCancellationEndsAt({ savedSegment, policies })
 		: planned.endsAt;
+
+/** The live plan a recreated segment replaces now, when it keeps that plan's cancellation. */
+const findInheritedCancellation = ({
+	planned,
+	savedSegments,
+	rules,
+}: {
+	planned: PlannedSegment;
+	savedSegments: SavedSegment[];
+	rules: CarryRules;
+}): SavedSegment | undefined => {
+	if (startsInFuture({ segment: planned, now: rules.now })) return undefined;
+	const replaced = savedSegments.find((savedSegment) =>
+		isAliveAt({ segment: savedSegment, at: rules.now }),
+	);
+	if (!replaced) return undefined;
+	return isCancellationKept({
+		planned,
+		savedSegment: replaced,
+		policies: rules.policies,
+	})
+		? replaced
+		: undefined;
+};
 
 const toResolvedSegment = ({
 	planned,
@@ -162,30 +186,20 @@ const resolveKey = ({
 			savedCarriesPlanned({ savedSegment, planned: plannedSegment, rules }),
 		);
 		if (!carriedBy) {
-			const replaced = startsInFuture({
-				segment: plannedSegment,
-				now: rules.now,
-			})
-				? undefined
-				: uncarriedSaved.find((savedSegment) =>
-						isAliveAt({ segment: savedSegment, at: rules.now }),
-					);
-			const inheritsCancellation =
-				replaced !== undefined &&
-				keepsCancellation({
-					planned: plannedSegment,
-					savedSegment: replaced,
-					policies: rules.policies,
-				});
+			const cancellationSource = findInheritedCancellation({
+				planned: plannedSegment,
+				savedSegments: uncarriedSaved,
+				rules,
+			});
 			return toResolvedSegment({
 				planned: plannedSegment,
-				endsAt: inheritsCancellation
+				endsAt: cancellationSource
 					? keptCancellationEndsAt({
-							savedSegment: replaced,
+							savedSegment: cancellationSource,
 							policies: rules.policies,
 						})
 					: plannedSegment.endsAt,
-				inheritsCancellation,
+				inheritsCancellation: cancellationSource !== undefined,
 			});
 		}
 
