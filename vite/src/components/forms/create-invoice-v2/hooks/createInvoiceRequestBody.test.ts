@@ -247,8 +247,12 @@ describe("buildCreateInvoiceRequestBody", () => {
 		]);
 	});
 
-	test("derives a license feature's billing_behavior from the license plan, not the parent", () => {
-		const editorItems = [
+	test("derives a license feature's billing_behavior from the linked license version, not the parent or the latest version", () => {
+		const latestEditorItems = [
+			{ feature_id: "credits", usage_model: UsageModel.PayPerUse },
+			{ feature_id: "exports", usage_model: UsageModel.PayPerUse },
+		] as CreateInvoiceForm["plans"][number]["items"];
+		const pinnedEditorItems = [
 			{ feature_id: "credits", usage_model: UsageModel.Prepaid },
 			{ feature_id: "exports", usage_model: UsageModel.Prepaid },
 		] as CreateInvoiceForm["plans"][number]["items"];
@@ -257,7 +261,10 @@ describe("buildCreateInvoiceRequestBody", () => {
 			customerId: "cus_1",
 			catalogItemsByPlanId: new Map([
 				["pro", planItems ?? undefined],
-				["editor", editorItems ?? undefined],
+				["editor", latestEditorItems ?? undefined],
+			]),
+			licenseItemsByPlanId: new Map([
+				["pro", new Map([["editor", pinnedEditorItems ?? []]])],
 			]),
 			form: {
 				...emptyForm(),

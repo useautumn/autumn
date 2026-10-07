@@ -44,12 +44,17 @@ const toLicenseQuantity = ({
 	};
 };
 
+/** Parent plan id → license plan id → items of the license version the link pins. */
+export type LicenseItemsByPlanId = Map<string, Map<string, ProductItem[]>>;
+
 const toPlanParams = ({
 	plan,
 	catalogItemsByPlanId,
+	licenseItemsByPlanId,
 }: {
 	plan: FormInvoicePlan;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
+	licenseItemsByPlanId?: LicenseItemsByPlanId;
 }): InvoicePlanParams | null => {
 	if (!plan.planId) return null;
 
@@ -57,12 +62,13 @@ const toPlanParams = ({
 	const pricedItems =
 		plan.items ?? catalogItemsByPlanId?.get(plan.planId) ?? null;
 
-	// The server prices license features through the license plan, never the parent.
+	// The server prices license features through the linked license version, never the parent.
+	const linkedLicenseItems = licenseItemsByPlanId?.get(plan.planId);
 	const licenses = plan.licenses
 		.map((license) =>
 			toLicenseQuantity({
 				license,
-				items: catalogItemsByPlanId?.get(license.licensePlanId) ?? null,
+				items: linkedLicenseItems?.get(license.licensePlanId) ?? null,
 			}),
 		)
 		.filter((license): license is InvoiceLicenseQuantity => license !== null);
@@ -91,16 +97,20 @@ export function buildCreateInvoiceRequestBody({
 	form,
 	preview,
 	catalogItemsByPlanId,
+	licenseItemsByPlanId,
 }: {
 	customerId: string | undefined;
 	form: CreateInvoiceForm;
 	preview?: boolean;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
+	licenseItemsByPlanId?: LicenseItemsByPlanId;
 }): CreateInvoiceParams | null {
 	if (!customerId) return null;
 
 	const plans = form.plans
-		.map((plan) => toPlanParams({ plan, catalogItemsByPlanId }))
+		.map((plan) =>
+			toPlanParams({ plan, catalogItemsByPlanId, licenseItemsByPlanId }),
+		)
 		.filter((plan): plan is InvoicePlanParams => plan !== null);
 
 	const customLineItems = form.customLineItems
@@ -144,11 +154,13 @@ export function useCreateInvoiceRequestBody({
 	form,
 	preview,
 	catalogItemsByPlanId,
+	licenseItemsByPlanId,
 }: {
 	customerId: string | undefined;
 	form: CreateInvoiceForm;
 	preview?: boolean;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
+	licenseItemsByPlanId?: LicenseItemsByPlanId;
 }) {
 	return useMemo(
 		() =>
@@ -157,7 +169,8 @@ export function useCreateInvoiceRequestBody({
 				form,
 				preview,
 				catalogItemsByPlanId,
+				licenseItemsByPlanId,
 			}),
-		[customerId, form, preview, catalogItemsByPlanId],
+		[customerId, form, preview, catalogItemsByPlanId, licenseItemsByPlanId],
 	);
 }
