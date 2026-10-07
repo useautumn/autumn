@@ -8,10 +8,12 @@ import type {
 	SubjectState,
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
-import type { EdgeConfigStore } from "@autumn/edge-config";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { SubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";

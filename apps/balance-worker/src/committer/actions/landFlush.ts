@@ -1,11 +1,11 @@
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import {
 	FlushBookmarkConflictError,
 	isTransientPostgresError,
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "@autumn/postgres";
-import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import {
 	SubjectNotFoundError,
 	SubjectStaleError,

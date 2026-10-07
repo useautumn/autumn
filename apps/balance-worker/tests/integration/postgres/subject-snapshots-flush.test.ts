@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import { defaultSubjectSnapshotsEdgeConfig } from "@autumn/edge-config";
 import {
 	claimPartitionProgress,
 	commitFlush,
@@ -15,7 +16,6 @@ import { sql } from "drizzle-orm";
 import { readSubjectSnapshotSql } from "../../../../../packages/postgres/src/subjects/repos/subjectSnapshots/readSubjectSnapshot.js";
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
-import { defaultSubjectSnapshotsEdgeConfig } from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import { createState } from "../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../fixtures/subjectSnapshotsStore.js";

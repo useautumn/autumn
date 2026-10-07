@@ -1,9 +1,9 @@
 import { partitionKeyToMeteringIdentity } from "@autumn/balance-engine";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import type {
 	SubjectSnapshotUpsert,
 	SubjectSnapshotWrites,
 } from "@autumn/postgres";
-import { writesSubjectSnapshots } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type {
 	CommitterConfig,
 	CommitterContext,

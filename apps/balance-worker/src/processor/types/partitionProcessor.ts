@@ -30,9 +30,11 @@ import type {
 	UpdateBalanceReply,
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
-import type { EdgeConfigStore } from "@autumn/edge-config";
+import type {
+	EdgeConfigStore,
+	SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
-import type { SubjectSnapshotsEdgeConfig } from "../../edgeConfig/subjectSnapshotsEdgeConfig.js";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { InlineCheckDecision } from "../commands/checkInline.js";
