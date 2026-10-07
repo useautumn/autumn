@@ -138,7 +138,10 @@ describe("command topic", () => {
 	});
 
 	test("an unknown field does not excuse a missing or mistyped one", () => {
-		const { featureId: _, ...missingFeature } = fromNewerServer(track);
+		const { featureId: _, ...missingFeature } = {
+			...track,
+			futureField: true,
+		};
 		const mistyped = { ...fromNewerServer(track), value: "two" };
 		for (const payload of [missingFeature, mistyped]) {
 			expect(() => parseCommandRecord(serializeRaw({ payload }))).toThrow(

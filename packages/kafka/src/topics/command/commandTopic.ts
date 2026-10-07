@@ -58,12 +58,14 @@ function parseCommandPayload({
 	onUnknownKeys?: OnUnknownCommandKeys;
 }): CommandRecord {
 	const parse = commandParserOf({ type });
+	function reportUnknownKeys({ keyPaths }: { keyPaths: string[] }): void {
+		onUnknownKeys?.({ commandType: type, keyPaths });
+	}
 	try {
 		return parseInbound({
 			parse,
 			input: payload,
-			onUnknownKeys: ({ keyPaths }) =>
-				onUnknownKeys?.({ commandType: type, keyPaths }),
+			onUnknownKeys: reportUnknownKeys,
 		});
 	} catch (cause) {
 		throw new InvalidRecordError({ cause });
