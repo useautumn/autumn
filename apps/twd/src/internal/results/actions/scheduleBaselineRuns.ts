@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { RunSummary } from "../../../api/contract.ts";
 import { runs, warmImages } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
@@ -34,7 +34,7 @@ export const isBaselineSkipDay = ({
 	return skipped.includes(UTC_DAYS[new Date(now).getUTCDay()] ?? "");
 };
 
-/** Interval hook: start a full dev baseline run when the last one is more than 24h old, except on skip days. */
+/** Interval hook: start a full dev baseline run when the last baseline (scheduled or a full dev-HEAD run) is more than 24h old, except on skip days. */
 export const scheduleBaselineRuns = async ({
 	ctx,
 }: {
@@ -43,7 +43,7 @@ export const scheduleBaselineRuns = async ({
 	const [lastRun] = await ctx.db
 		.select({ sha: runs.sha, createdAt: runs.createdAt })
 		.from(runs)
-		.where(and(eq(runs.branch, BASELINE_BRANCH), eq(runs.purpose, "baseline")))
+		.where(eq(runs.isBaseline, true))
 		.orderBy(desc(runs.createdAt))
 		.limit(1);
 

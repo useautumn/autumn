@@ -76,6 +76,7 @@ export const toRunSummary = ({
 	sha: run.sha,
 	status: run.status,
 	purpose: run.purpose,
+	baseline: run.isBaseline,
 	selection: run.selection,
 	repeat: run.repeat,
 	fileCount: run.fileCount,
@@ -92,6 +93,7 @@ export const toRunSummary = ({
 	},
 	passed: run.passed,
 	failed: run.failed,
+	newFailures: run.newFailures,
 	createdBy: {
 		userId: run.createdBy,
 		email:
@@ -128,6 +130,7 @@ export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
 	purpose?: "adhoc" | "baseline";
+	baseline?: boolean;
 	branch?: string;
 };
 export type RunsCursor = { createdAt: string; id: string };
@@ -143,6 +146,7 @@ const runsFilterSql = ({
 	status,
 	outcome = "all",
 	purpose,
+	baseline,
 	branch,
 }: RunsFilter) =>
 	and(
@@ -155,6 +159,7 @@ const runsFilterSql = ({
 			? undefined
 			: inArray(runs.status, OUTCOME_STATUSES[outcome]),
 		purpose ? eq(runs.purpose, purpose) : undefined,
+		baseline === undefined ? undefined : eq(runs.isBaseline, baseline),
 		branch
 			? ilike(runs.branch, `%${branch.replace(/[\\%_]/g, "\\$&")}%`)
 			: undefined,

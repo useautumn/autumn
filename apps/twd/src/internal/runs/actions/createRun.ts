@@ -8,6 +8,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { resolveBranchSha } from "../../catalog/actions/gitRemote.ts";
 import { resolveTestSelection } from "../../catalog/actions/resolveTestSelection.ts";
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
+import { resolveRunIsBaseline } from "../../results/actions/countsAsBaseline.ts";
 import { planWorkItems } from "../repeat/repetitions.ts";
 import { getRunWithEmail, toRunSummary, updateRun } from "../repos/runsRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
@@ -54,9 +55,21 @@ export const createRun = async ({
 		});
 	}
 	const sha = body.sha ?? (await resolveBranchSha({ branch: body.branch }));
-	const files = planWorkItems({
-		files: await resolveTestSelection({ ctx, sha, selection: body.selection }),
+	const selected = await resolveTestSelection({
+		ctx,
+		sha,
+		selection: body.selection,
+	});
+	const files = planWorkItems({ files: selected, repeat: body.repeat });
+	const isBaseline = await resolveRunIsBaseline({
+		ctx,
+		branch: body.branch,
+		sha,
+		pinnedSha: body.sha !== undefined,
+		selection: body.selection,
+		purpose: body.purpose,
 		repeat: body.repeat,
+		files: selected,
 	});
 
 	const progress: RunProgress = { phase: "queued", plannedFiles: files };
@@ -69,6 +82,7 @@ export const createRun = async ({
 			pinnedSha: body.sha !== undefined,
 			selection: body.selection,
 			purpose: body.purpose,
+			isBaseline,
 			maxWorkers: body.maxWorkers ?? null,
 			repeat: body.repeat,
 			fileCount: files.length,

@@ -43,7 +43,7 @@ const toPoint = (run: RunSummary): Point => {
 export const BaselinePassRateChart = ({ branch }: { branch?: string }) => {
 	const baselines = useRuns({
 		status: "finished",
-		purpose: "baseline",
+		baseline: true,
 		branch,
 		limit: HISTORY_LIMIT,
 	});
