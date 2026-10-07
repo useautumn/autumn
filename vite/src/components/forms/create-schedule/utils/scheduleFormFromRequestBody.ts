@@ -13,6 +13,7 @@ import type {
 } from "@/components/forms/customer-state/customerStateSchema";
 import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import {
+	carryOverFrom,
 	type FieldReaders,
 	overridesFromRequest,
 	readArray,
@@ -175,6 +176,10 @@ export const scheduleFormFromRequestBody = (
 		billingCycleAnchorMode: customAnchor === null ? "now" : "custom",
 		billingCycleAnchorDate: customAnchor,
 		unscheduledPlans: plansFrom(request.unscheduled_plans),
+		...carryOverFrom<CustomerStateForm>(request.carry_over_usages, {
+			enabled: "carryOverUsages",
+			featureIds: "carryOverUsageFeatureIds",
+		}),
 		...freeTrialFrom(request.free_trial),
 	};
 };

@@ -16,6 +16,7 @@ export const computeMultiAttachPlan = ({
 	multiAttachBillingContext: MultiAttachBillingContext;
 }): AutumnBillingPlan => {
 	const plan = applyBillingCycleAnchorToSharedSubscription({
+		ctx,
 		plan: computeImmediateMultiProductPlan({
 			ctx,
 			billingContext: multiAttachBillingContext,

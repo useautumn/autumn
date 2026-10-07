@@ -25,7 +25,11 @@ export const finalizeUpdateSubscriptionPlan = async ({
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV1Params;
 }): Promise<AutumnBillingPlan> => {
-	plan = applyUpdateSubscriptionBillingCycleAnchor({ plan, billingContext });
+	plan = applyUpdateSubscriptionBillingCycleAnchor({
+		ctx,
+		plan,
+		billingContext,
+	});
 
 	// Finalize line items (shared logic)
 	plan.lineItems = finalizeLineItems({

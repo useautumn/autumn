@@ -1,5 +1,4 @@
 import {
-	earliestEnd,
 	groupByKey,
 	isAliveAt,
 	sortByStart,
@@ -35,6 +34,16 @@ const liveRowCarries = ({
 	rules: CarryRules;
 }) => {
 	if (planned.origin === "retained") return true;
+	// A one-off purchase has no cycle to restart, so recreating it would only charge it again.
+	if (planned.lifetime) return true;
+	const keepsCancellation =
+		liveRow.canceling && rules.policies.canceling === "keepCancellation";
+	// No Stripe period is open for the plan, so even an unchanged listing starts one, like a new price would.
+	const startsStripeBilling =
+		liveRow.unbilledByStripe &&
+		rules.policies.unbilledRows === "recreate" &&
+		!keepsCancellation;
+	if (startsStripeBilling) return false;
 	if (!rules.liveRowsCarry) return false;
 	if (liveRow.canceling && rules.policies.canceling === "recreate") {
 		return false;
@@ -69,7 +78,35 @@ const savedCarriesPlanned = ({
 	);
 };
 
-/** A plan re-listed with no end of its own keeps its cancel date; an explicit end replaces it. */
+/** A canceling plan re-listed with no end of its own keeps its cancellation, carried or recreated; an explicit end replaces it. */
+const isCancellationKept = ({
+	planned,
+	savedSegment,
+	policies,
+}: {
+	planned: PlannedSegment;
+	savedSegment: SavedSegment;
+	policies: SetPlansPolicies;
+}) =>
+	savedSegment.rows[0]?.canceling === true &&
+	policies.canceling === "keepCancellation" &&
+	planned.endsAt === null;
+
+/** Like Stripe's cancel_at_period_end, a kept cancellation lands at the period end, which a reset-now moves. */
+const keptCancellationEndsAt = ({
+	savedSegment,
+	policies,
+}: {
+	savedSegment: SavedSegment;
+	policies: SetPlansPolicies;
+}): number | null => {
+	const cycleResetsNow = policies.liveRows === "recreateRenewing";
+	const resetPeriodEndsAt = cycleResetsNow
+		? savedSegment.rows[0]?.periodEndsAtAfterReset
+		: undefined;
+	return resetPeriodEndsAt ?? savedSegment.endsAt;
+};
+
 const carriedEndsAt = ({
 	planned,
 	savedSegment,
@@ -78,24 +115,45 @@ const carriedEndsAt = ({
 	planned: PlannedSegment;
 	savedSegment: SavedSegment;
 	policies: SetPlansPolicies;
-}): number | null => {
-	const [liveRow] = savedSegment.rows;
-	const keepsCancellation =
-		liveRow?.canceling === true &&
-		policies.canceling === "keepCancellation" &&
-		planned.endsAt === null;
-	if (!keepsCancellation) return planned.endsAt;
-	return earliestEnd([planned.endsAt, savedSegment.endsAt]);
+}): number | null =>
+	isCancellationKept({ planned, savedSegment, policies })
+		? keptCancellationEndsAt({ savedSegment, policies })
+		: planned.endsAt;
+
+/** The live plan a recreated segment replaces now, when it keeps that plan's cancellation. */
+const findInheritedCancellation = ({
+	planned,
+	savedSegments,
+	rules,
+}: {
+	planned: PlannedSegment;
+	savedSegments: SavedSegment[];
+	rules: CarryRules;
+}): SavedSegment | undefined => {
+	if (startsInFuture({ segment: planned, now: rules.now })) return undefined;
+	const replaced = savedSegments.find((savedSegment) =>
+		isAliveAt({ segment: savedSegment, at: rules.now }),
+	);
+	if (!replaced) return undefined;
+	return isCancellationKept({
+		planned,
+		savedSegment: replaced,
+		policies: rules.policies,
+	})
+		? replaced
+		: undefined;
 };
 
 const toResolvedSegment = ({
 	planned,
 	carriedBy,
 	endsAt,
+	inheritsCancellation,
 }: {
 	planned: PlannedSegment;
 	carriedBy?: SavedSegment;
 	endsAt: number | null;
+	inheritsCancellation?: boolean;
 }): ResolvedSegment => ({
 	id: resolvedSegmentId(planned),
 	key: planned.key,
@@ -109,6 +167,7 @@ const toResolvedSegment = ({
 	origin: planned.origin,
 	desired: planned.desired,
 	carriedBy,
+	inheritsCancellation,
 });
 
 const resolveKey = ({
@@ -127,9 +186,20 @@ const resolveKey = ({
 			savedCarriesPlanned({ savedSegment, planned: plannedSegment, rules }),
 		);
 		if (!carriedBy) {
+			const cancellationSource = findInheritedCancellation({
+				planned: plannedSegment,
+				savedSegments: uncarriedSaved,
+				rules,
+			});
 			return toResolvedSegment({
 				planned: plannedSegment,
-				endsAt: plannedSegment.endsAt,
+				endsAt: cancellationSource
+					? keptCancellationEndsAt({
+							savedSegment: cancellationSource,
+							policies: rules.policies,
+						})
+					: plannedSegment.endsAt,
+				inheritsCancellation: cancellationSource !== undefined,
 			});
 		}
 
@@ -282,7 +352,13 @@ export const resolveTimeline = ({
 	const carrying = resolveWithRules({
 		saved,
 		planned,
-		rules: { policies, now, liveRowsCarry: policies.liveRows !== "recreate" },
+		rules: {
+			policies,
+			now,
+			liveRowsCarry:
+				policies.liveRows !== "recreate" &&
+				policies.liveRows !== "recreateRenewing",
+		},
 	});
 
 	const recreatesLiveRows =

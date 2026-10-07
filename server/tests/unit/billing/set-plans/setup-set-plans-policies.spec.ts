@@ -109,3 +109,40 @@ test("a backdate that restarts the cycle on its start recreates the live rows, s
 		}).liveRows,
 	).toBe("recreate");
 });
+
+test("a cycle reset now recreates renewing live rows, so kept plans are re-billed", () => {
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({
+				requestedBillingCycleAnchor: "now",
+			}),
+			params: {},
+		}).liveRows,
+	).toBe("recreateRenewing");
+});
+
+test("a scheduled anchor keeps live rows carrying until the reset", () => {
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({
+				requestedBillingCycleAnchor: 1_800_000_000_000,
+			}),
+			params: {},
+		}).liveRows,
+	).toBe("carry");
+});
+
+test("a plan no Stripe subscription bills is recreated, unless the request makes no billing changes", () => {
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({}),
+			params: {},
+		}).unbilledRows,
+	).toBe("recreate");
+	expect(
+		setupSetPlansPolicies({
+			billingContext: billingContextWith({ skipBillingChanges: true }),
+			params: {},
+		}).unbilledRows,
+	).toBe("carry");
+});

@@ -829,6 +829,37 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].starts_at).toBe(now);
 	});
 
+	test("sends carry_over_usages only when enabled, with its feature ids", () => {
+		const bodyWith = (carryOver: {
+			carryOverUsages?: boolean;
+			carryOverUsageFeatureIds?: string[];
+		}) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: [schedulePhase({ startsAt: null })],
+				products: defaultProducts,
+				features,
+				...carryOver,
+			});
+
+		expect(bodyWith({})!.carry_over_usages).toBeUndefined();
+		expect(
+			bodyWith({
+				carryOverUsages: false,
+				carryOverUsageFeatureIds: ["api_calls"],
+			})!.carry_over_usages,
+		).toBeUndefined();
+		expect(bodyWith({ carryOverUsages: true })!.carry_over_usages).toEqual({
+			enabled: true,
+		});
+		expect(
+			bodyWith({
+				carryOverUsages: true,
+				carryOverUsageFeatureIds: ["api_calls"],
+			})!.carry_over_usages,
+		).toEqual({ enabled: true, feature_ids: ["api_calls"] });
+	});
+
 	test("sends a future first-phase starts_at, with early access only then", () => {
 		const now = Date.now();
 		const later = addDays(now, 7).getTime();

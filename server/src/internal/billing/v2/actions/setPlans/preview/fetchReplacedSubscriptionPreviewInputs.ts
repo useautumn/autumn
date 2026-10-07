@@ -2,6 +2,7 @@ import {
 	type BillingContext,
 	type FullCusProduct,
 	filterCustomerProductsByStripeSubscriptionId,
+	type LineItem,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { listOpenStripeSubscriptionInvoices } from "@/external/stripe/invoices/operations/listOpenStripeSubscriptionInvoices";
@@ -9,18 +10,35 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 
+/** The plan already bills a usage price's arrears when one of its lines charges that customer price. */
+const isBilledByPlan = ({
+	lineItem,
+	billedLineItems,
+}: {
+	lineItem: LineItem;
+	billedLineItems: LineItem[];
+}) =>
+	billedLineItems.some(
+		(billed) =>
+			billed.context.billingTiming === "in_arrear" &&
+			billed.context.customerPrice?.id === lineItem.context.customerPrice?.id,
+	);
+
 /**
- * What the replaced subscription leaves behind: open invoices and arrear usage it never bills.
+ * What the replaced subscription leaves behind: open invoices and arrear usage the plan never bills.
  * A backdate recreate bills that usage itself: now for plans that end, at renewal for kept ones.
  */
 export const fetchReplacedSubscriptionPreviewInputs = async ({
 	ctx,
 	billingContext,
 	outgoingCustomerProducts,
+	billedLineItems,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	outgoingCustomerProducts: FullCusProduct[];
+	/** The immediate invoice's lines, so a warning never contradicts a charge. */
+	billedLineItems: LineItem[];
 }) => {
 	const replacedStripeSubscription = billingContext.replacedStripeSubscription;
 	if (!replacedStripeSubscription) {
@@ -39,22 +57,24 @@ export const fetchReplacedSubscriptionPreviewInputs = async ({
 	const unbilledUsageLineItems = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: outgoingCustomerProducts,
 		stripeSubscriptionId: replacedStripeSubscription.id,
-	}).flatMap(
-		(customerProduct) =>
-			customerProductToArrearLineItems({
-				ctx,
-				customerProduct,
-				billingContext: {
-					...billingContext,
-					stripeSubscription: replacedStripeSubscription,
-				},
-				options: {
-					includePeriodDescription: false,
-					updateNextResetAt: false,
-					discountable: false,
-				},
-			}).lineItems,
-	);
+	})
+		.flatMap(
+			(customerProduct) =>
+				customerProductToArrearLineItems({
+					ctx,
+					customerProduct,
+					billingContext: {
+						...billingContext,
+						stripeSubscription: replacedStripeSubscription,
+					},
+					options: {
+						includePeriodDescription: false,
+						updateNextResetAt: false,
+						discountable: false,
+					},
+				}).lineItems,
+		)
+		.filter((lineItem) => !isBilledByPlan({ lineItem, billedLineItems }));
 
 	return { replacedOpenInvoices, unbilledUsageLineItems };
 };

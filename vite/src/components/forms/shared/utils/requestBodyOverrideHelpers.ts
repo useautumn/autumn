@@ -180,3 +180,18 @@ export const trialOverridesFrom = (
 			: {}),
 	};
 };
+
+/** A `carry_over_*` param as its row's switch and feature list; a disabled one leaves the form defaults. */
+export const carryOverFrom = <Form>(
+	value: unknown,
+	fields: { enabled: keyof Form; featureIds: keyof Form },
+): Partial<Form> => {
+	const carryOver = requestRecord(value);
+	if (!carryOver?.enabled) return {};
+	return {
+		[fields.enabled]: true,
+		...(Array.isArray(carryOver.feature_ids)
+			? { [fields.featureIds]: carryOver.feature_ids }
+			: {}),
+	} as Partial<Form>;
+};
