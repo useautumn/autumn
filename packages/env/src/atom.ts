@@ -63,25 +63,16 @@ const modeEnvOf = ({
 	};
 };
 
-/** As many processes as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step. */
+/** As many processes as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
+ * A multi-tenant Atom sizes the same way: each process re-reads the org folders, so any of them answers any org. */
 const processesOf = ({
 	runtimeEnv,
-	isMultiTenant,
 	machine,
 }: {
 	runtimeEnv: Record<string, string | undefined>;
-	isMultiTenant: boolean;
 	machine: AtomMachine;
 }): number => {
 	const told = runtimeEnv.ATOM_PROCESSES;
-	// A multi-tenant Atom keeps its list of orgs in memory, which a second process would not see.
-	if (isMultiTenant) {
-		if (told && positiveInteger.parse(told) > 1)
-			throw new Error(
-				"ATOM_MODE=multi_tenant runs as one process; unset ATOM_PROCESSES",
-			);
-		return 1;
-	}
 	if (told) return positiveInteger.parse(told);
 	const allowed = Math.min(
 		machine.availableCpus,
@@ -112,13 +103,11 @@ export function createAtomEnv(
 ) {
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
 	const modeEnv = modeEnvOf({ runtimeEnv });
-	const processes = processesOf({
-		runtimeEnv,
-		isMultiTenant: modeEnv.ATOM_MODE === "multi_tenant",
-		machine,
-	});
-	// alien sets this where the `pushes` queue is linked to the container.
-	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
+	const processes = processesOf({ runtimeEnv, machine });
+	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom gets each org's pushes over HTTP instead.
+	const receivesPushes =
+		modeEnv.ATOM_MODE === "deployed" &&
+		Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),

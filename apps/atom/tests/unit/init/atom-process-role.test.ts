@@ -56,4 +56,23 @@ describe("an Atom process's role", () => {
 			receivesPushes: false,
 		});
 	});
+
+	test("a multi-tenant Atom runs a process per core and every one serves, its pushes arriving over HTTP", () => {
+		const env = createAtomEnv(
+			{
+				ATOM_MODE: "multi_tenant",
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ALIEN_PUSHES_BINDING: "{}",
+			},
+			{ availableCpus: 8, memoryLimitBytes: 16 * 1024 ** 3 },
+		);
+		const roles = [...Array(env.ATOM_PROCESSES).keys()].map((childIndex) =>
+			atomProcessRole({ env, childIndex }),
+		);
+
+		expect(env.ATOM_PROCESSES).toBe(8);
+		expect(
+			roles.every((role) => role.servesChecks && !role.receivesPushes),
+		).toBe(true);
+	});
 });

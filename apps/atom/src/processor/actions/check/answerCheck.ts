@@ -15,6 +15,7 @@ import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { AnswerableCheck } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import { checkPhaseMs } from "./checkPhaseMs.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
@@ -83,8 +84,11 @@ export const answerCheck = ({
 	check: AnswerableCheck;
 	subject: CurrentSubject;
 }): CheckResponseV3 => {
+	const decideStartedAt = performance.now();
 	const command = checkToCommand({ check, subject });
 	const result = computeCheck({ fullSubject: subject.fullSubject, command });
+	const renderStartedAt = performance.now();
+	checkPhaseMs.decide += renderStartedAt - decideStartedAt;
 	const { response } = checkResultToApiResponse({
 		ctx: toRenderContext({ ctx, check, subject }),
 		apiVersion: check.apiVersion,
@@ -92,5 +96,6 @@ export const answerCheck = ({
 		result,
 		fullSubject: subject.fullSubject,
 	});
+	checkPhaseMs.render += performance.now() - renderStartedAt;
 	return response;
 };

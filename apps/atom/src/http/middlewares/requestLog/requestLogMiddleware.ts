@@ -10,7 +10,14 @@ import {
 } from "./requestLogLine.js";
 
 /** Answered for a load balancer's probe every second; nothing to learn from it. */
-const UNLOGGED_PATHS = new Set(["/health"]);
+const UNLOGGED_PATHS = new Set([
+	"/health",
+	"/health/profile",
+	"/health/bench",
+	"/health/floor",
+]);
+/** A check Atom answered itself is logged one time in a hundred: at peak a line each was a sixth of a process's CPU. */
+const ANSWERED_CHECK_LOG_SAMPLE_RATE = 0.01;
 
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
@@ -29,7 +36,7 @@ export function requestLogMiddleware({
 	handleError: ErrorHandler<AtomHttpEnv>;
 }): MiddlewareHandler<AtomHttpEnv> {
 	async function logRequest(context: Context<AtomHttpEnv>, next: Next) {
-		const startedAt = Date.now();
+		const startedAt = performance.now();
 		try {
 			await next();
 		} catch (cause) {
@@ -38,8 +45,22 @@ export function requestLogMiddleware({
 		if (UNLOGGED_PATHS.has(context.req.path)) return;
 
 		const statusCode = context.res.status;
-		const durationMs = Date.now() - startedAt;
+		const elapsedMs = performance.now() - startedAt;
+		const durationMs = Math.round(elapsedMs);
 		const forwarded = forwardedReason({ context });
+		ctx.processStats?.recordRequest({
+			path: context.req.path,
+			durationMs: elapsedMs,
+			forwarded: forwarded !== undefined,
+			bytes: Number(context.req.header("content-length") ?? 0),
+		});
+		if (
+			statusCode < 400 &&
+			forwarded === undefined &&
+			context.req.path === "/v1/balances.check" &&
+			Math.random() >= ANSWERED_CHECK_LOG_SAMPLE_RATE
+		)
+			return;
 		const failure = context.get("failure");
 		const line = {
 			statusCode,

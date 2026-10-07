@@ -43,9 +43,11 @@ const createSupervisor = ({
 	const { spawned, spawnChild } = createFakeChildren({ failing });
 	const logged: unknown[] = [];
 	const errors: unknown[] = [];
+	const restarts: number[] = [];
 	const supervisor = createAtomSupervisor({
 		ctx: {
 			spawnChild,
+			recordRestarts: ({ restarts: total }) => void restarts.push(total),
 			logger: {
 				info: () => undefined,
 				warn: (...args: unknown[]) => void logged.push(args),
@@ -54,7 +56,7 @@ const createSupervisor = ({
 		},
 		config: { processes, restartDelayMs: 0 },
 	});
-	return { supervisor, spawned, logged, errors };
+	return { supervisor, spawned, logged, errors, restarts };
 };
 
 /** Lets a child's exit be noticed and its replacement started. */
@@ -78,6 +80,20 @@ describe("the Atom supervisor", () => {
 
 		expect(spawned.map((child) => child.index)).toEqual([0, 1, 1]);
 		expect(logged).toHaveLength(1);
+	});
+
+	test("counts each replacement since boot", async () => {
+		const { supervisor, spawned, restarts } = createSupervisor({
+			processes: 2,
+		});
+		await supervisor.start();
+
+		spawned[1]?.exit();
+		await settle();
+		spawned[0]?.exit();
+		await settle();
+
+		expect(restarts).toEqual([1, 2]);
 	});
 
 	test("stopping asks every child to stop and waits for them", async () => {

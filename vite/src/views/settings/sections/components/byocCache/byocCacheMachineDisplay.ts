@@ -4,20 +4,15 @@ import {
 	findByocCacheMachine,
 } from "@autumn/shared";
 
-/** Names only the dashboard uses; the API speaks in `cpu` and `memory`. */
-const MACHINE_LABELS: Record<ByocCacheMachine["instanceType"], string> = {
-	"t4g.micro": "Starter",
-	"t4g.medium": "Small",
-	"c7g.xlarge": "Medium",
-	"c7g.2xlarge": "Large",
-	"c7g.4xlarge": "XL",
-};
-
 export const byocCacheMachineLabel = (machine: ByocCacheMachine) =>
-	MACHINE_LABELS[machine.instanceType];
+	machine.tier;
 
 export const byocCacheMachineSpecs = (machine: ByocCacheMachine) =>
 	`${machine.cpu} vCPU · ${machine.memory} GiB`;
+
+/** One line naming the tier, its size and its price, e.g. "Large · 8 vCPU · 16 GiB · ~$220/mo". */
+export const byocCacheMachineSummary = (machine: ByocCacheMachine) =>
+	`${machine.tier} · ${byocCacheMachineSpecs(machine)} · ~$${machine.estimatedMonthlyUsd}/mo`;
 
 export const BYOC_CACHE_RESIZE_NOTE =
 	"Resizing takes up to a minute. During this time the SDK falls back to the Autumn API.";

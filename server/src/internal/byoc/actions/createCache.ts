@@ -43,7 +43,7 @@ const setupMachine = ({
 		return resourcesToMachine({ cpu, memory });
 	const asked =
 		existing && cacheDeploymentToMachine({ cacheDeployment: existing });
-	return asked ?? DEFAULT_BYOC_CACHE_MACHINE;
+	return asked?.available ? asked : DEFAULT_BYOC_CACHE_MACHINE;
 };
 
 /** Holds the env's slot for this deployment group, or returns whoever claimed it first. */

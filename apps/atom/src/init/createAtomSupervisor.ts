@@ -18,6 +18,7 @@ export const createAtomSupervisor = ({
 }): AtomServer => {
 	const children = new Map<number, AtomChild>();
 	let stopping = false;
+	let restarts = 0;
 
 	function startChild({ index }: { index: number }): void {
 		const child = ctx.spawnChild({ index });
@@ -43,6 +44,8 @@ export const createAtomSupervisor = ({
 			if (stopping || children.get(index) !== child) return;
 			try {
 				startChild({ index });
+				restarts++;
+				ctx.recordRestarts?.({ restarts });
 			} catch (error) {
 				ctx.logger.error(
 					{ type: "atom_process_spawn_failed", error, data: { index } },

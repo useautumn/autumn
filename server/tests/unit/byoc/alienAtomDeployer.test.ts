@@ -69,7 +69,7 @@ describe("starting an Atom on alien", () => {
 		});
 
 		expect(started[0]?.pools).toEqual({
-			stateful: { machine: "t4g.micro", machines: 1 },
+			stateful: { machine: "c7g.2xlarge", machines: 1 },
 		});
 	});
 
