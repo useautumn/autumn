@@ -17,8 +17,11 @@ import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanc
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
+import { DELAYED_PAYMENT_SUSPENDED_REASON } from "./helpers/delayedPaymentMethods.js";
 import { recordAutoTopupAttempt } from "./helpers/limits/index.js";
+import { paymentMethodToFingerprint } from "./helpers/limits/paymentMethodFingerprint.js";
 import { logAutoTopupContext } from "./logs/logAutoTopupContext.js";
+import { autoTopupLimitRepo } from "./repos/index.js";
 import { setupAutoTopupContext } from "./setup/setupAutoTopupContext.js";
 import {
 	classifyAutoTopupError,
@@ -144,16 +147,36 @@ export const autoTopup = async ({
 			autoTopupContext,
 			billingResult,
 		});
+
+		// Credits still land on invoice.paid; the suspension stops this method charging again.
+		if (billingResult.stripe?.requiredAction?.code === "payment_processing") {
+			const now = Date.now();
+			await autoTopupLimitRepo.updateById({
+				ctx,
+				id: autoTopupContext.limitState.id,
+				updates: {
+					suspended_at: now,
+					suspended_reason: DELAYED_PAYMENT_SUSPENDED_REASON,
+					suspended_payment_method_fingerprint:
+						paymentMethodToFingerprint({
+							paymentMethod: autoTopupContext.paymentMethod,
+						}) ?? null,
+					updated_at: now,
+				},
+			});
+			await sendFailureWebhook({
+				reason: "payment_method_delayed",
+				message: `Auto top-up charge is processing on a delayed payment method (${autoTopupContext.paymentMethod?.type}); credits are granted when it settles, and auto top-ups are paused until a new payment method is added`,
+				autoTopupContext,
+			});
+			return;
+		}
+
 		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
-		const isPaymentProcessing =
-			billingResult.stripe?.requiredAction?.code === "payment_processing";
 		const shouldVoidInvoice =
-			!isInvoiceMode &&
-			!isCustomPm &&
-			invoiceStatus !== "paid" &&
-			!isPaymentProcessing;
+			!isInvoiceMode && !isCustomPm && invoiceStatus !== "paid";
 
 		if (shouldVoidInvoice) {
 			try {
