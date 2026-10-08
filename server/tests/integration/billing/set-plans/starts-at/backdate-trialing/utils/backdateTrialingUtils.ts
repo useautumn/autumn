@@ -51,7 +51,7 @@ const TRIAL_KEPT_ANCHOR_DAYS_AFTER_TRIAL = 6;
 export type BackdateTrialAnchor = "unset" | "custom" | "phase_start";
 
 /** Pro trialing for 14 days on a live Stripe subscription, with usage tracked during the trial. */
-const initTrialingProScenario = async ({
+export const initTrialingProScenario = async ({
 	customerId,
 }: {
 	customerId: string;
@@ -100,8 +100,12 @@ const initTrialingProScenario = async ({
 	};
 };
 
+/** Two months and ten days back, so Stripe bills a stub plus full months. */
+export const backdatedStartMs = ({ nowMs }: { nowMs: number }) =>
+	addDays(subMonths(new UTCDate(nowMs), 2), -10).getTime();
+
 /** The custom anchor a request names, or undefined for no anchor and phase_start. */
-const customAnchorMs = ({
+export const customAnchorMs = ({
 	anchor,
 	keepsTrial,
 	nowMs,
@@ -226,7 +230,7 @@ export const backdateTrialingAndExpect = async ({
 		customerProductId,
 		nowMs,
 	} = await initTrialingProScenario({ customerId });
-	const startMs = addDays(subMonths(new UTCDate(nowMs), 2), -10).getTime();
+	const startMs = backdatedStartMs({ nowMs });
 	const requestedAnchorMs = customAnchorMs({
 		anchor,
 		keepsTrial,

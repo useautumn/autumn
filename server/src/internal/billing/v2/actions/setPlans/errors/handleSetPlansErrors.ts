@@ -12,7 +12,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validateCustomerEntitlementBatchTransitions } from "@/internal/billing/v2/actions/batchTransition/errors/validateCustomerEntitlementBatchTransitions";
 import { handleMultiAttachCurrencyErrors } from "@/internal/billing/v2/actions/multiAttach/errors/handleMultiAttachCurrencyErrors";
 import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
-import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
@@ -30,6 +29,7 @@ import {
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
 import { handleFutureStartActivationErrors } from "./handleFutureStartActivationErrors";
+import { handleKeptTrialAnchorErrors } from "./handleKeptTrialAnchorErrors";
 import { handleSetPlansBillingCycleAnchorErrors } from "./handleSetPlansBillingCycleAnchorErrors";
 import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
@@ -85,7 +85,7 @@ export const handleSetPlansErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
-	assertNoBillingCycleAnchorWithTrial({ billingContext });
+	handleKeptTrialAnchorErrors({ billingContext });
 	handleTrialingCycleResetErrors({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,

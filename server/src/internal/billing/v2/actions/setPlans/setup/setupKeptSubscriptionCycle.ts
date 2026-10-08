@@ -7,6 +7,7 @@ import {
 	getSmallestInterval,
 } from "@autumn/shared";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { anchorFollowsKeptTrial } from "../utils/anchorFollowsKeptTrial";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
@@ -146,9 +147,16 @@ export const setupKeptSubscriptionCycle = ({
 		}).length > 0;
 	if (!keepsReplacedPlan) return {};
 
-	// Like Stripe's create on a future anchor, nothing is billed before it unless proration is requested.
+	// Like Stripe's create on a future anchor, nothing is billed before it unless proration is requested;
+	// an anchor after a kept trial is always prorated, since Stripe rejects none there.
+	const defaultProrationBehavior: BillingBehavior = anchorFollowsKeptTrial({
+		billingContext,
+	})
+		? "prorate_immediately"
+		: "none";
 	return {
 		billingCycleAnchorMs: keptPlansAnchorMs({ billingContext, periodEndMs }),
-		requestedProrationBehavior: requestedProrationBehavior ?? "none",
+		requestedProrationBehavior:
+			requestedProrationBehavior ?? defaultProrationBehavior,
 	};
 };

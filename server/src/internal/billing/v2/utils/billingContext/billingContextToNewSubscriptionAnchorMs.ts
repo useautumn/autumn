@@ -2,8 +2,8 @@ import type { BillingContext } from "@autumn/shared";
 import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 
 /**
- * The future anchor a new subscription is created on. A trial ahead anchors on
- * its own end instead, and an existing subscription resets via a schedule.
+ * The future anchor a new subscription is created on. A trial ahead anchors on its own end
+ * instead unless the anchor is after it, and an existing subscription resets via a schedule.
  */
 export const billingContextToNewSubscriptionAnchorMs = ({
 	billingContext,
@@ -16,7 +16,8 @@ export const billingContextToNewSubscriptionAnchorMs = ({
 	if (stripeSubscription) return undefined;
 	if (typeof billingCycleAnchorMs !== "number") return undefined;
 	if (billingCycleAnchorMs <= currentEpochMs) return undefined;
-	if (billingContextToFutureTrialEnd({ billingContext }) !== undefined) {
+	const futureTrialEnd = billingContextToFutureTrialEnd({ billingContext });
+	if (futureTrialEnd !== undefined && billingCycleAnchorMs <= futureTrialEnd) {
 		return undefined;
 	}
 
