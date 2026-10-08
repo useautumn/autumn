@@ -14,6 +14,8 @@ export type SwarmInit = {
 	/** server/tests extracted at `sha`; read file contents here, not from twd's checkout. */
 	testsDirAtSha: string;
 	grep?: string;
+	/** Absolute paths of files that failed every recent dev baseline run: a failure there is final, no retry. */
+	noRetryFiles: string[];
 	/** First accounts (none when every file is on the stripe-connect shard); more arrive as `add_accounts`. */
 	accounts: SwarmAccount[];
 	workersWanted: number;

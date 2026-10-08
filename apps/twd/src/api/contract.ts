@@ -56,6 +56,29 @@ export const Drift = z.object({
 	baselineValue: z.number(),
 });
 
+/** A failure judged by its file's dev baseline pass rate: ≥ 0.9 new, ≤ 0.1 fails on dev, between flaky. */
+export const FailureKind = z.enum([
+	"new_failure",
+	"flaky_on_dev",
+	"fails_on_dev",
+	"no_dev_history",
+]);
+
+export const TriagedFailure = z.object({
+	file: z.string(),
+	kind: FailureKind,
+	devPassRate: z.number().nullable(),
+	devSamples: z.number(),
+	/** Failed its first attempt and is being retried; the verdict is not final yet. */
+	retrying: z.boolean(),
+});
+
+export const FailureTriage = z.object({
+	/** e.g. "12 failed: 1 new, 3 flaky on dev, 5 fail on dev, 3 no history". Empty for repeat runs. */
+	summary: z.string(),
+	failures: z.array(TriagedFailure),
+});
+
 // ---- me / auth ------------------------------------------------------------
 
 export const Me = z.object({
@@ -305,6 +328,8 @@ export const RunDetail = RunSummary.extend({
 	/** Empty unless repeat > 1; drift is skipped for repeat runs. */
 	repeats: z.array(RepeatStat),
 	drift: z.array(Drift),
+	/** Live: covers final failures and files retrying after a failed first attempt. */
+	failureTriage: FailureTriage,
 	milestones: RunMilestones.nullable().optional(),
 	/** Live runs only: server estimate of the remaining wall time (median and p90); null while estimating. */
 	etaMs: z.number().nullable(),
@@ -722,6 +747,9 @@ export type WorkerState = z.infer<typeof WorkerState>;
 export type WorkerBoot = z.infer<typeof WorkerBoot>;
 export type RunMilestones = z.infer<typeof RunMilestones>;
 export type Drift = z.infer<typeof Drift>;
+export type FailureKind = z.infer<typeof FailureKind>;
+export type TriagedFailure = z.infer<typeof TriagedFailure>;
+export type FailureTriage = z.infer<typeof FailureTriage>;
 export type StripeKey = z.infer<typeof StripeKey>;
 export type ReinitScope = z.infer<typeof ReinitScope>;
 export type ImportKeysResponse = z.infer<typeof ImportKeysResponse>;

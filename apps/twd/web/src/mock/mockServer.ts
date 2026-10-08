@@ -544,6 +544,7 @@ const summary = (run: RunDetail): RunSummary => {
 		repeats: _r,
 		etaMs: _eta,
 		etaP90Ms: _etaP90,
+		failureTriage: _t,
 		...rest
 	} = run;
 	if (!isLive(run)) return { ...rest, live: null };
@@ -689,6 +690,7 @@ const makeFinishedRun = (i: number): RunDetail => {
 		}),
 		repeats: [],
 		drift: [],
+		failureTriage: { summary: "", failures: [] },
 		milestones: {
 			warmReadyAt: iso(createdAt + (startedAt - createdAt) * 0.6),
 			accountsAt: iso(startedAt),
@@ -931,6 +933,7 @@ const startLiveRun = ({
 				: null,
 		etaMs: null,
 		etaP90Ms: null,
+		failureTriage: { summary: "", failures: [] },
 	};
 	summarize(run);
 	claim({ count: attached, runId, heldBy: createdBy.email });

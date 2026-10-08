@@ -3,8 +3,8 @@ import { type Drift, isFailedFileStatus } from "../../../api/contract.ts";
 import { runs } from "../../../db/schema/runs.ts";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { NEW_FAILURE_MIN_PASS_RATE } from "./classifyFailure.ts";
 
-const NEW_FAILURE_MIN_PASS_RATE = 0.9;
 const SLOW_FACTOR = 1.5;
 const SLOW_MIN_MS = 30_000;
 

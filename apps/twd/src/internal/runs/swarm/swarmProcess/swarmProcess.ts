@@ -687,6 +687,7 @@ const main = async (init: SwarmInit) => {
 		},
 	});
 	let running = false;
+	const noRetry = new Set(init.noRetryFiles);
 	const totalFiles = shards.reduce((sum, shard) => sum + shard.files.length, 0);
 	// pool.acquire gates on idle workers, so the window is every file and grows with the pool.
 	const runShard = async (shard: Shard) => {
@@ -722,7 +723,7 @@ const main = async (init: SwarmInit) => {
 							}),
 						),
 					),
-			{ maxParallel: shard.files.length, totalFiles },
+			{ maxParallel: shard.files.length, totalFiles, noRetry },
 		);
 		// Nothing left to retry here, so even the idle floor is waste while other shards finish.
 		for (const worker of shard.pool.cullIdle(shard.pool.size, 0))

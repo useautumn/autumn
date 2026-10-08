@@ -286,20 +286,26 @@ const runWithReschedule = async (params: {
 export const runSwarmTests = async (
 	files: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number; totalFiles?: number },
+	opts: {
+		maxParallel: number;
+		totalFiles?: number;
+		/** Files whose failure is final on the first attempt (known red on dev). */
+		noRetry?: ReadonlySet<string>;
+	},
 ): Promise<void> => {
 	setRunTotal(opts.totalFiles ?? files.length);
 	const limit = pLimit(opts.maxParallel);
 
 	const runFileWithRetry = async (file: string): Promise<void> => {
+		const willRetry = !opts.noRetry?.has(file);
 		const first = await runWithReschedule({
 			limit,
 			file,
 			attempt: 1,
 			executor,
-			willRetry: true,
+			willRetry,
 		});
-		if (first.status !== "failed") {
+		if (first.status !== "failed" || !willRetry) {
 			return;
 		}
 

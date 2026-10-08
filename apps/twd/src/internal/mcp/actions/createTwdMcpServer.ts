@@ -37,17 +37,27 @@ const describeRepeats = (run: RunDetail) => {
 	return ` Repeat ×${run.repeat}: ${shown.join("; ")}${more > 0 ? `; ${more} more file(s) in data.repeats` : ""}.`;
 };
 
-/** Agent-sized run view: counts, failures and drift only (never the full file list). */
+/** Agent-sized run view: counts, triaged failures and drift only (never the full file list). */
 const summariseRun = (run: RunDetail) => {
+	const triaged = run.failureTriage.failures;
+	const triageOf = new Map(
+		triaged.map(({ retrying: _, ...triage }) => [triage.file, triage]),
+	);
+	const rank = new Map(triaged.map((f, index) => [f.file, index]));
 	const failures = run.files
 		.filter((f) => isFailedFileStatus(f.status))
+		.sort((a, b) => (rank.get(a.file) ?? 0) - (rank.get(b.file) ?? 0))
 		.map((f) => ({
+			...triageOf.get(f.file),
 			file: f.file,
 			status: f.status,
 			attempt: f.attempt,
 			failedTests: f.failedTests,
 			failureSummary: f.failureSummary,
 		}));
+	const retrying = triaged
+		.filter((f) => f.retrying)
+		.map(({ retrying: _, ...triage }) => triage);
 	const done = run.files.filter(
 		(f) => f.status !== "queued" && f.status !== "running",
 	).length;
@@ -82,6 +92,7 @@ const summariseRun = (run: RunDetail) => {
 			timedOut,
 		},
 		failures,
+		retrying,
 		drift: run.drift,
 		eta: { etaMs: run.etaMs, etaP90Ms: run.etaP90Ms },
 		resources: run.resources ?? null,
@@ -89,7 +100,10 @@ const summariseRun = (run: RunDetail) => {
 		startedAt: run.startedAt,
 		finishedAt: run.finishedAt,
 	};
-	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed${timedOut ? ` (${timedOut} timed out)` : ""}, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).${run.etaMs === null ? "" : ` About ${Math.ceil(run.etaMs / 60_000)} min left (p90 ${Math.ceil((run.etaP90Ms ?? run.etaMs) / 60_000)} min).`}${describeRepeats(run)}`;
+	const triageLine = run.failureTriage.summary
+		? `${run.failureTriage.summary}\n`
+		: "";
+	const summary = `${triageLine}Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed${timedOut ? ` (${timedOut} timed out)` : ""}, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).${run.etaMs === null ? "" : ` About ${Math.ceil(run.etaMs / 60_000)} min left (p90 ${Math.ceil((run.etaP90Ms ?? run.etaMs) / 60_000)} min).`}${describeRepeats(run)}`;
 	return { summary, data };
 };
 
@@ -232,7 +246,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "get_run",
 			description:
-				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted (once finished: peak attached at once vs wanted), boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90), sizing (how Auto or the caller's cap chose files per worker and worker count: mode, filesPerWorker, workers, packed/solo files, target vs predicted wall, per-worker limits and expected load, the binding resource, and reasons), and resources (per-file stats totals: Stripe requests, 429s, permit-wait p95/max, worker peak rps/in-flight, CPU core-seconds and p95 peak cores, p95/max peak memory; null until files report). For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
+				"Non-blocking snapshot of a run: status, phase, workers attached vs wanted (once finished: peak attached at once vs wanted), boot (per-step p50/p90/max ms from account to serving, and the slowest workers), timing (wall-time phases: warm image, waiting for accounts, first worker boot, tests, teardown; ms marks from creation; duration histogram; slowest files), queue position while waiting for its first account, eta (etaMs/etaP90Ms: estimated remaining wall time, null until ~5 files finish), cost, pass/fail counts (failed includes timedOut), failing files with status failed|crashed|timed_out and failure summaries, drift (new_failure = fails here but passes on dev; slow = >1.5x dev p90), sizing (how Auto or the caller's cap chose files per worker and worker count: mode, filesPerWorker, workers, packed/solo files, target vs predicted wall, per-worker limits and expected load, the binding resource, and reasons), and resources (per-file stats totals: Stripe requests, 429s, permit-wait p95/max, worker peak rps/in-flight, CPU core-seconds and p95 peak cores, p95/max peak memory; null until files report). The first line triages failures against the file's recent dev baseline runs, live while the run is going: each failure (and each file in retrying, which failed its first attempt and is being retried) has kind new_failure (dev pass rate >= 90%, most likely your branch), flaky_on_dev (10-90%), fails_on_dev (<= 10%, pre-existing) or no_dev_history, plus devPassRate and devSamples. Act on new_failure entries as soon as they appear; files that failed every recent dev run are not retried. For a repeat run, repeats gives each file's first-attempt pass rate (firstAttemptPassed/total) and failures name repetitions as <file>#<k>; drift is not computed. Use wait_for_run to block until it finishes.",
 			input: z.object({ run_id: z.string().min(1) }),
 			run: async ({ run_id }) =>
 				toolOk(summariseRun(await getRun({ ctx, runId: run_id }))),
@@ -240,7 +254,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "wait_for_run",
 			description:
-				"Step 3 of 'test my branch'. Blocks until the run finishes (passed|failed|cancelled|errored) or timeout_s elapses (default and max 600), then returns the same shape as get_run (including workers X/Y and queue position). If terminal is false, call it again; a queued run is waiting for its first free account and starts on its own. On finish, read failures and drift: a new_failure is most likely caused by your branch; files failing without drift may be flaky on dev too.",
+				"Step 3 of 'test my branch'. Blocks until the run finishes (passed|failed|cancelled|errored) or timeout_s elapses (default and max 600), then returns the same shape as get_run (including workers X/Y and queue position). If terminal is false, call it again; a queued run is waiting for its first free account and starts on its own. Each failure carries kind (new_failure, flaky_on_dev, fails_on_dev, no_dev_history) from the file's dev pass rate: a new_failure is most likely caused by your branch. Prefer polling get_run so you can act on new_failure entries before the run finishes.",
 			input: z.object({
 				run_id: z.string().min(1),
 				timeout_s: z
