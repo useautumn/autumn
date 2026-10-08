@@ -7,6 +7,8 @@ import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillin
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { isAliveAt } from "../timeline/timelineGuards";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { anchorFollowsKeptTrial } from "../utils/anchorFollowsKeptTrial";
+import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
 
 type SetPlansAnchorFields = Pick<
 	CreateScheduleBillingContext,
@@ -61,7 +63,8 @@ export const setupSetPlansBillingCycleAnchor = ({
 		outgoingCustomerProduct,
 	});
 
-	if (requestedBillingCycleAnchor === undefined || !firstProduct) {
+	const anchor = billingCycleAnchorToApply({ billingContext });
+	if (anchor === undefined || !firstProduct) {
 		return {
 			billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
 			resetCycleAnchorMs: billingContext.resetCycleAnchorMs,
@@ -69,7 +72,10 @@ export const setupSetPlansBillingCycleAnchor = ({
 		};
 	}
 
-	const trialEndsAt = billingContext.trialContext?.trialEndsAt;
+	// A trial anchors the cycle on its end, unless a backdated recreate anchors it after the kept trial.
+	const trialEndsAt = anchorFollowsKeptTrial({ billingContext })
+		? undefined
+		: billingContext.trialContext?.trialEndsAt;
 	const billingCycleAnchorMs =
 		trialEndsAt ??
 		setupBillingCycleAnchor({
@@ -78,7 +84,7 @@ export const setupSetPlansBillingCycleAnchor = ({
 			newFullProduct: firstProduct,
 			trialContext: billingContext.trialContext,
 			currentEpochMs: billingContext.currentEpochMs,
-			requestedBillingCycleAnchor,
+			requestedBillingCycleAnchor: anchor,
 		});
 
 	return {

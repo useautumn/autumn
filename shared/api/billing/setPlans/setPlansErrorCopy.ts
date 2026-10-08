@@ -111,8 +111,8 @@ const BACKDATE_CONFLICT_COPY: Record<
 	StartDateConflictCopy
 > = {
 	free_trial: {
-		subject: "A trial can't be backdated to",
-		hint: "End the trial first, or start the first phase now.",
+		subject: "A paid subscription can't start a trial when backdated to",
+		hint: "Remove the trial, or start the first phase now.",
 	},
 	stripe_checkout: {
 		subject: "Stripe Checkout can't backdate the subscription to",

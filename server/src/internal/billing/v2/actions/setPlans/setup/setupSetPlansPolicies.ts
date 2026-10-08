@@ -4,12 +4,13 @@ import type {
 } from "@autumn/shared";
 import type { SetPlansPolicies } from "../timeline/types/setPlansPolicies";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { replacementCarriesKeptPlans } from "../utils/replacementCarriesKeptPlans";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
 
 /**
- * Live rows carry, with a requested trial patched onto them, unless the cycle resets now. A replacement for a paid-up
- * subscription keeps plans' cycle unless a new paid plan or anchor restarts billing; a backdate keeps it unless it restarts the cycle.
+ * Live rows carry, with a requested trial patched onto them, unless the cycle resets now. A replacement that carries kept
+ * plans to a date keeps them unless a new paid plan restarts billing; a backdate keeps them unless it restarts the cycle.
  */
 const liveRowsPolicy = ({
 	billingContext,
@@ -27,10 +28,9 @@ const liveRowsPolicy = ({
 			: "carry";
 	}
 
-	const continuesPaidUpCycle =
-		replacedStripeSubscription.status === "canceled" &&
-		requestedBillingCycleAnchor === undefined;
-	return continuesPaidUpCycle ? "recreateWhenPaidRecurringStarts" : "recreate";
+	return replacementCarriesKeptPlans({ billingContext })
+		? "recreateWhenPaidRecurringStarts"
+		: "recreate";
 };
 
 export const setupSetPlansPolicies = ({

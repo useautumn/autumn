@@ -16,7 +16,8 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { backdateGap, billsBackdateGap } from "../utils/backdateGap";
+import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import { backdateGap, billsProratedTime } from "../utils/backdateGap";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { replacedStripeScheduleId } from "../utils/replacedStripeScheduleId";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
@@ -52,6 +53,18 @@ const replacedSubscriptionWarning = ({
 	replacedStripeSubscription: Stripe.Subscription;
 	stripeBillingPlan: StripeBillingPlan;
 }): Warning | undefined => {
+	// A replaced trialing subscription ends without a charge: Stripe neither invoices nor credits its trial.
+	if (isStripeSubscriptionTrialing(replacedStripeSubscription)) {
+		return {
+			type: "subscription_replaced",
+			...warningText([
+				plainText("The trialing subscription"),
+				boldText(replacedStripeSubscription.id),
+				plainText("will be cancelled without a charge and a new one created."),
+			]),
+		};
+	}
+
 	const { warning } = subscriptionStateAction({
 		state: replacedStripeSubscription.status,
 	});
@@ -90,7 +103,7 @@ const backdateGapParts = ({
 	if (!gap) return [];
 
 	const gapEnd = formatMsToDate(gap.end);
-	if (!billsBackdateGap({ billingContext })) {
+	if (!billsProratedTime({ billingContext })) {
 		return [
 			plainText("The time before"),
 			boldText(gapEnd),

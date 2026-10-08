@@ -13,6 +13,7 @@ import {
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
+import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import {
 	billingPlanToNextCycleLineItems,
@@ -141,6 +142,22 @@ const scaleNextCycleAmounts = ({
 			.toDecimalPlaces(2)
 			.toNumber(),
 	};
+};
+
+/** A trial ending before a later anchor bills the stub up to it, as Stripe prorates the anchored invoice. */
+const trialEndStubAnchorMs = ({
+	billingContext,
+	nextCycleStart,
+	anchorMs,
+}: {
+	billingContext: BillingContext;
+	nextCycleStart: number;
+	anchorMs: number;
+}) => {
+	const trialEndsAt = billingContextToFutureTrialEnd({ billingContext });
+	if (trialEndsAt === undefined) return undefined;
+	if (!timestampsMatch(nextCycleStart, trialEndsAt)) return undefined;
+	return anchorMs > nextCycleStart ? anchorMs : undefined;
 };
 
 export const billingPlanToNextCyclePreview = ({
@@ -377,17 +394,21 @@ export const billingPlanToNextCyclePreview = ({
 		customerProducts,
 		startsAtMs: nextCycleStart - MS_PER_SECOND,
 	});
+	const proratedChargeAnchorMs =
+		event.kind === "anchor_reset"
+			? nextCycleStart
+			: trialEndStubAnchorMs({ billingContext, nextCycleStart, anchorMs });
 	let lineItemsResult = billingPlanToNextCycleLineItems({
 		ctx,
 		customerProducts: filteredCustomerProducts,
 		productsForUsageLineItems,
 		lineItemSpecs:
-			event.kind === "anchor_reset"
+			proratedChargeAnchorMs !== undefined
 				? [
 						{
 							customerProducts: filteredCustomerProducts,
 							direction: "charge",
-							billingCycleAnchorMs: nextCycleStart,
+							billingCycleAnchorMs: proratedChargeAnchorMs,
 							filterBillingPeriodStart: false,
 							priceFilters: { excludeOneOffPrices: true },
 						},

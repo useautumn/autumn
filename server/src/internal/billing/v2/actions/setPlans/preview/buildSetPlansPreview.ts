@@ -123,6 +123,7 @@ export const buildSetPlansPreview = async ({
 			lineItems: billingPlan.autumn.lineItems,
 			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
 			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			prorationOverride: billingContext.prorationOverride,
 			liveCustomerProducts: billingContext.stripeSubscription
 				? filterCustomerProductsByStripeSubscriptionId({
 						customerProducts: billingContext.fullCustomer.customer_products,

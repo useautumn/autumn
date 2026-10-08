@@ -7,6 +7,7 @@ import {
 	type LineItem,
 	notNullish,
 	type ProcessorItem,
+	type ProrationBehaviorOverride,
 	plainText,
 	punctuationText,
 	type SetPlansPreviewBalanceChange,
@@ -106,6 +107,7 @@ export const setPlansPreviewToWarnings = ({
 	lineItems = [],
 	stripeSubscriptionScope,
 	resetsCycleNow = false,
+	prorationOverride,
 	liveCustomerProducts = [],
 }: {
 	phases: SetPlansPreviewPhase[];
@@ -125,6 +127,7 @@ export const setPlansPreviewToWarnings = ({
 	lineItems?: LineItem[];
 	stripeSubscriptionScope?: StripeSubscriptionScope;
 	resetsCycleNow?: boolean;
+	prorationOverride?: ProrationBehaviorOverride;
 	/** Plans live on the subscription before the request. */
 	liveCustomerProducts?: FullCusProduct[];
 }): SetPlansPreviewWarning[] => {
@@ -148,6 +151,7 @@ export const setPlansPreviewToWarnings = ({
 		}),
 		...cycleResetRebillWarnings({
 			resetsCycleNow,
+			prorationOverride,
 			lineItems,
 			liveCustomerProducts,
 		}),

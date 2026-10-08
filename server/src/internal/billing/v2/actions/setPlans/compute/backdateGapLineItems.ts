@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
-import { backdateGap, billsBackdateGap } from "../utils/backdateGap";
+import { backdateGap, billsProratedTime } from "../utils/backdateGap";
 import type { SetPlansCustomerProductChanges } from "./diffToCustomerProducts/diffToCustomerProducts";
 
 type PlanRun = {
@@ -66,7 +66,7 @@ export const backdateGapLineItems = ({
 	customerProductChanges: SetPlansCustomerProductChanges;
 }): LineItem[] => {
 	const gap = backdateGap({ billingContext });
-	if (!gap || !billsBackdateGap({ billingContext })) return [];
+	if (!gap || !billsProratedTime({ billingContext })) return [];
 
 	return plansFromBackdatedStart({
 		customerProductChanges,

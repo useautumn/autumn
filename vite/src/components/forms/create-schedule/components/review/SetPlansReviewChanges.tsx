@@ -1,4 +1,5 @@
 import { Accordion } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormProvider";
 import { useSetPlansReviewSections } from "../../hooks/useSetPlansReviewSections";
 import { formPhasesToSkeletonPhases } from "../../utils/review/formPhasesToSkeletonPhases";
@@ -32,20 +33,26 @@ const REVIEW_GROUPS: {
 	},
 ];
 
-/** Every group always renders, as a skeleton whenever a preview is loading, so the
- * sheet never jumps and never shows a stale preview. */
+/** Skeletons hold the groups until the first preview; refetches dim the previous preview
+ * in place so the banner and groups never collapse and re-expand. */
 export function SetPlansReviewChanges() {
 	const { isPreviewLoading, formValues } = useCreateScheduleFormContext();
-	const latestSections = useSetPlansReviewSections();
-	const sections = isPreviewLoading ? undefined : latestSections;
+	const sections = useSetPlansReviewSections();
 	if (!sections && !isPreviewLoading) return null;
 
 	const placeholderPhases = formPhasesToSkeletonPhases({
 		phases: formValues.phases,
 	});
+	const isRefetching = Boolean(sections) && isPreviewLoading;
 
 	return (
-		<div className="flex flex-col">
+		<div
+			aria-busy={isPreviewLoading}
+			className={cn(
+				"flex flex-col transition-opacity",
+				isRefetching && "opacity-60",
+			)}
+		>
 			{sections && <ReviewWarnings warnings={sections.warnings} />}
 			<Accordion type="multiple" className="px-4 pt-1">
 				{REVIEW_GROUPS.map(({ sectionKey, ...group }) => (

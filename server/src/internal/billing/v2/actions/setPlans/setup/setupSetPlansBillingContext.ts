@@ -18,7 +18,9 @@ import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import {
 	immediatePhaseBillingCycleAnchor,
 	immediatePhaseProrationBehavior,
+	setupTrialEndAnchorMs,
 } from "../utils/immediatePhaseBilling";
+import { setPlansProrationOverride } from "../utils/setPlansProrationOverride";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import {
 	classifyFirstPhaseStart,
@@ -29,6 +31,7 @@ import { mergeScheduledPhaseCustomizations } from "./mergeScheduledPhaseCustomiz
 import { phaseToImmediateParams } from "./phaseToImmediateParams";
 import { replaceLiveSubscriptionForBackdate } from "./replaceLiveSubscriptionForBackdate";
 import { replaceLiveSubscriptionForFutureStart } from "./replaceLiveSubscriptionForFutureStart";
+import { replaceLiveSubscriptionForTrialEnd } from "./replaceLiveSubscriptionForTrialEnd";
 import { setupFutureStartTiming } from "./setupFutureStartTiming";
 import { setupKeptSubscriptionCycle } from "./setupKeptSubscriptionCycle";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
@@ -86,10 +89,15 @@ export const setupSetPlansBillingContext = async ({
 				? undefined
 				: setupSetPlansCycleBoundaryMs({
 						billingContext: initialBillingContext,
-						requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
-							params,
-							currentEpochMs: initialBillingContext.currentEpochMs,
-						}),
+						requestedBillingCycleAnchor:
+							immediatePhaseBillingCycleAnchor({
+								params,
+								currentEpochMs: initialBillingContext.currentEpochMs,
+							}) ??
+							setupTrialEndAnchorMs({
+								params,
+								billingContext: initialBillingContext,
+							}),
 					}),
 		}),
 		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
@@ -134,7 +142,7 @@ export const setupSetPlansBillingContext = async ({
 		endsAt: params.ends_at,
 	});
 
-	const scheduleBillingContext: CreateScheduleBillingContext = {
+	const requestedBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
 		...mergeScheduledPhaseCustomizations({
 			billingContext,
@@ -152,6 +160,7 @@ export const setupSetPlansBillingContext = async ({
 			params,
 			currentEpochMs: billingContext.currentEpochMs,
 		}),
+		trialEndAnchorMs: setupTrialEndAnchorMs({ params, billingContext }),
 		billingStartsAt: firstPhaseBillingStartsAt({
 			startsAt: immediatePhase.starts_at,
 			currentEpochMs: billingContext.currentEpochMs,
@@ -174,6 +183,12 @@ export const setupSetPlansBillingContext = async ({
 		}),
 		...setupFutureStartTiming({ billingContext: firstPhaseContext, params }),
 	};
+	const scheduleBillingContext: CreateScheduleBillingContext = {
+		...requestedBillingContext,
+		...replaceLiveSubscriptionForTrialEnd({
+			billingContext: requestedBillingContext,
+		}),
+	};
 
 	const timeline = setupSetPlansTimeline({
 		ctx,
@@ -181,11 +196,17 @@ export const setupSetPlansBillingContext = async ({
 		params,
 	});
 
-	const liveSubscriptionBillingContext: CreateScheduleBillingContext = {
+	const replacedForFutureStartContext: CreateScheduleBillingContext = {
 		...scheduleBillingContext,
 		...replaceLiveSubscriptionForFutureStart({
 			billingContext: scheduleBillingContext,
 			operations: timeline.diff.operations,
+		}),
+	};
+	const liveSubscriptionBillingContext: CreateScheduleBillingContext = {
+		...replacedForFutureStartContext,
+		prorationOverride: setPlansProrationOverride({
+			billingContext: replacedForFutureStartContext,
 		}),
 	};
 

@@ -3,8 +3,10 @@ import {
 	CusProductStatus,
 	findActiveCustomerProductById,
 	ms,
+	msToSeconds,
 	type SetPlansPreviewResponse,
 	type SetPlansPreviewWarning,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -179,4 +181,54 @@ export const setupPausedPro = async ({
 	expect(paused.status).toBe("paused");
 
 	return { ...scenario, pro, paused };
+};
+
+/** The invoices a Stripe subscription raised, oldest first, as totals in major units. */
+export const expectSubscriptionInvoiceTotals = async ({
+	ctx,
+	subscriptionId,
+	totals,
+}: {
+	ctx: TestContext;
+	subscriptionId: string;
+	totals: number[];
+}) => {
+	const { data: invoices } = await ctx.stripeCli.invoices.list({
+		subscription: subscriptionId,
+	});
+	expect(
+		[...invoices].reverse().map((invoice) =>
+			stripeToAtmnAmount({
+				amount: invoice.total,
+				currency: invoice.currency,
+			}),
+		),
+	).toEqual(totals);
+};
+
+/** Stripe's own upcoming invoice for the subscription renews on `startsAt` for `total` (major units). */
+export const expectStripeUpcomingInvoiceCorrect = async ({
+	ctx,
+	subscriptionId,
+	startsAt,
+	total,
+}: {
+	ctx: TestContext;
+	subscriptionId: string;
+	startsAt: number;
+	total: number;
+}) => {
+	const subscription =
+		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
+	const upcoming = await ctx.stripeCli.invoices.createPreview({
+		customer: subscription.customer as string,
+		subscription: subscriptionId,
+	});
+	expect({
+		startsAt: upcoming.lines.data[0]?.period.start,
+		total: stripeToAtmnAmount({
+			amount: upcoming.total,
+			currency: upcoming.currency,
+		}),
+	}).toEqual({ startsAt: msToSeconds(startsAt), total });
 };

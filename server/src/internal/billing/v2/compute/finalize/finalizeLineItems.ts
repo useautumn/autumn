@@ -50,8 +50,13 @@ export const finalizeLineItems = ({
 		billingContext.stripeSubscription !== undefined ||
 		billingContextToNewSubscriptionAnchorMs({ billingContext }) !== undefined ||
 		isNewSubscriptionBackdate({ billingContext });
+	// set_plans only: like Stripe's trial_end now, ending a trial in place bills the full period under none too.
+	const billsTrialEnd =
+		billingContext.prorationOverride === "bills_full_period";
 	const skipsProration =
-		billingContext.requestedProrationBehavior === "none" && hasProratedPeriod;
+		billingContext.requestedProrationBehavior === "none" &&
+		hasProratedPeriod &&
+		!billsTrialEnd;
 	const resetsCycleNow = resetsLikeStripeUnderNone
 		? billingContext.requestedBillingCycleAnchor === "now"
 		: billingContext.anchorResetRefund?.noPartialRefund;
