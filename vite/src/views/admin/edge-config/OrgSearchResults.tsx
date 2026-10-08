@@ -6,7 +6,7 @@ import type { RolloutOrg } from "./rolloutTypes";
 
 type OrgSearchResponse = { rows: RolloutOrg[]; hasNextPage: boolean };
 
-const useOrgSearch = ({ search }: { search: string }) => {
+export const useOrgSearch = ({ search }: { search: string }) => {
 	const axiosInstance = useAxiosInstance();
 	const debounced = useDebounce({ value: search.trim(), delayMs: 250 });
 	const query = useQuery<OrgSearchResponse>({

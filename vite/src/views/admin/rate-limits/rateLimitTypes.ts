@@ -1,0 +1,50 @@
+export type RateLimitScope = "perOrg" | "perCustomer";
+
+export type RateLimitLayerSummary = {
+	name: string;
+	limit: number;
+	versionLimits: { upTo: string; limit: number; key: string }[];
+	windowMs: number;
+	store: "memory" | "redis";
+	overLimit: "reject" | "degrade";
+	key: string;
+};
+
+export type RateLimitPolicyOverride = {
+	orgKey: string;
+	perOrg?: number;
+	perCustomer?: number;
+};
+
+export type RateLimitPolicySummary = {
+	id: string;
+	routes: string[] | "*";
+	perOrg: RateLimitLayerSummary | null;
+	perCustomer: RateLimitLayerSummary | null;
+	sharesCounterWith: string[];
+	overrides: RateLimitPolicyOverride[];
+};
+
+export type RateLimitOverrideLimits = Record<
+	string,
+	{ limits: Record<string, number> }
+>;
+
+export type RateLimitOverridesView = {
+	orgs: RateLimitOverrideLimits;
+	policies: RateLimitPolicySummary[];
+	orgsByKey: Record<string, { id: string; name: string; slug: string }>;
+	configHealthy: boolean;
+	configConfigured: boolean;
+	lastSuccessAt: string | null;
+	error: string | null;
+};
+
+/** An org as the page picks it; `key` is what its overrides are stored under. */
+export type RateLimitOrg = {
+	key: string;
+	id: string;
+	name: string;
+	slug: string;
+	overrideCount: number;
+};

@@ -27,7 +27,7 @@ describe("migration task scheduler", () => {
 
 	test("keeps fleet and per-run concurrency independently tunable", () => {
 		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(100);
+		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(50);
 	});
 
 	test("sizes the migration DB pool for two connections per in-flight customer", () => {
