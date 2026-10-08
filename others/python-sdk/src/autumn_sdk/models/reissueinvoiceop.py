@@ -1278,7 +1278,11 @@ class ReissueInvoiceFeatureQuantityTypedDict(TypedDict):
     usage: NotRequired[List[ReissueInvoiceUsageTypedDict]]
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class ReissueInvoiceFeatureQuantity(BaseModel):
@@ -1295,11 +1299,19 @@ class ReissueInvoiceFeatureQuantity(BaseModel):
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["quantity", "usage", "prorate"])
+        optional_fields = set(
+            ["quantity", "usage", "prorate", "period_start", "period_end"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1413,20 +1425,865 @@ class ReissueInvoiceLicenseQuantityPrice(BaseModel):
         return m
 
 
-class ReissueInvoiceCustomizeTypedDict(TypedDict):
-    r"""Override the license's per-seat price on this invoice."""
+ReissueInvoiceLicenseQuantityPriceToTypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityPriceToTypedDict", Union[float, str]
+)
 
-    price: NotRequired[Nullable[ReissueInvoiceLicenseQuantityPriceTypedDict]]
+
+ReissueInvoiceLicenseQuantityPriceTo = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityPriceTo", Union[float, str]
+)
 
 
-class ReissueInvoiceCustomize(BaseModel):
-    r"""Override the license's per-seat price on this invoice."""
+class ReissueInvoiceLicenseQuantityAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
-    price: OptionalNullable[ReissueInvoiceLicenseQuantityPrice] = UNSET
+
+class ReissueInvoiceLicenseQuantityAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price"])
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceLicenseQuantityPriceTierTypedDict(TypedDict):
+    to: ReissueInvoiceLicenseQuantityPriceToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[ReissueInvoiceLicenseQuantityAdditionalCurrencyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+
+class ReissueInvoiceLicenseQuantityPriceTier(BaseModel):
+    to: ReissueInvoiceLicenseQuantityPriceTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    additional_currencies: Optional[
+        List[ReissueInvoiceLicenseQuantityAdditionalCurrency]
+    ] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceLicenseQuantityTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+ReissueInvoiceLicenseQuantityItemInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+ReissueInvoiceLicenseQuantityBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class ReissueInvoiceLicenseQuantityItemStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceLicenseQuantityItemStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class ReissueInvoiceLicenseQuantityItemProcessorsTypedDict(TypedDict):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: NotRequired[Nullable[ReissueInvoiceLicenseQuantityItemStripeTypedDict]]
+
+
+class ReissueInvoiceLicenseQuantityItemProcessors(BaseModel):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: OptionalNullable[ReissueInvoiceLicenseQuantityItemStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceLicenseQuantityItemPriceTypedDict(TypedDict):
+    r"""Pricing to use for this feature on this invoice."""
+
+    interval: ReissueInvoiceLicenseQuantityItemInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: ReissueInvoiceLicenseQuantityBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[ReissueInvoiceLicenseQuantityPriceTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[ReissueInvoiceLicenseQuantityTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    processors: NotRequired[ReissueInvoiceLicenseQuantityItemProcessorsTypedDict]
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+
+class ReissueInvoiceLicenseQuantityItemPrice(BaseModel):
+    r"""Pricing to use for this feature on this invoice."""
+
+    interval: ReissueInvoiceLicenseQuantityItemInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: ReissueInvoiceLicenseQuantityBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[ReissueInvoiceLicenseQuantityPriceTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[ReissueInvoiceLicenseQuantityTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    processors: Optional[ReissueInvoiceLicenseQuantityItemProcessors] = None
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "processors",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch4TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch4TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch4 = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch4", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceDimensionsLicenseQuantity4TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch4TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantity4(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch4]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch3TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch3TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch3 = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch3", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsToLicenseQuantityEnum2 = Literal["inf",]
+
+
+ReissueInvoiceDimensionsLicenseQuantityToUnion2TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityToUnion2TypedDict",
+    Union[float, ReissueInvoiceDimensionsToLicenseQuantityEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+ReissueInvoiceDimensionsLicenseQuantityToUnion2 = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityToUnion2",
+    Union[float, ReissueInvoiceDimensionsToLicenseQuantityEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantityTier2TypedDict(TypedDict):
+    to: ReissueInvoiceDimensionsLicenseQuantityToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantityTier2(BaseModel):
+    to: ReissueInvoiceDimensionsLicenseQuantityToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantity3TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch3TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[ReissueInvoiceDimensionsLicenseQuantityTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class ReissueInvoiceDimensionsLicenseQuantity3(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch3]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[ReissueInvoiceDimensionsLicenseQuantityTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceLicenseQuantityDimensionsUnion2TypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityDimensionsUnion2TypedDict",
+    Union[
+        ReissueInvoiceDimensionsLicenseQuantity4TypedDict,
+        ReissueInvoiceDimensionsLicenseQuantity3TypedDict,
+    ],
+)
+
+
+ReissueInvoiceLicenseQuantityDimensionsUnion2 = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityDimensionsUnion2",
+    Union[
+        ReissueInvoiceDimensionsLicenseQuantity4,
+        ReissueInvoiceDimensionsLicenseQuantity3,
+    ],
+)
+
+
+ReissueInvoiceLicenseQuantityMultipliersMatch2TypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityMultipliersMatch2TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceLicenseQuantityMultipliersMatch2 = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityMultipliersMatch2", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceLicenseQuantityMultipliers2TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceLicenseQuantityMultipliersMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class ReissueInvoiceLicenseQuantityMultipliers2(BaseModel):
+    match: Dict[str, ReissueInvoiceLicenseQuantityMultipliersMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceCreditSchemaLicenseQuantity2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, ReissueInvoiceLicenseQuantityDimensionsUnion2TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[
+        Dict[str, ReissueInvoiceLicenseQuantityMultipliers2TypedDict]
+    ]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class ReissueInvoiceCreditSchemaLicenseQuantity2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, ReissueInvoiceLicenseQuantityDimensionsUnion2]] = (
+        None
+    )
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, ReissueInvoiceLicenseQuantityMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch2TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch2TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch2 = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch2", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceDimensionsLicenseQuantity2TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantity2(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch1TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch1TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsLicenseQuantityMatch1 = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityMatch1", Union[str, float, bool]
+)
+
+
+ReissueInvoiceDimensionsToLicenseQuantityEnum1 = Literal["inf",]
+
+
+ReissueInvoiceDimensionsLicenseQuantityToUnion1TypedDict = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityToUnion1TypedDict",
+    Union[float, ReissueInvoiceDimensionsToLicenseQuantityEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+ReissueInvoiceDimensionsLicenseQuantityToUnion1 = TypeAliasType(
+    "ReissueInvoiceDimensionsLicenseQuantityToUnion1",
+    Union[float, ReissueInvoiceDimensionsToLicenseQuantityEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantityTier1TypedDict(TypedDict):
+    to: ReissueInvoiceDimensionsLicenseQuantityToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantityTier1(BaseModel):
+    to: ReissueInvoiceDimensionsLicenseQuantityToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceDimensionsLicenseQuantity1TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[ReissueInvoiceDimensionsLicenseQuantityTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class ReissueInvoiceDimensionsLicenseQuantity1(BaseModel):
+    match: Dict[str, ReissueInvoiceDimensionsLicenseQuantityMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[ReissueInvoiceDimensionsLicenseQuantityTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceLicenseQuantityDimensionsUnion1TypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityDimensionsUnion1TypedDict",
+    Union[
+        ReissueInvoiceDimensionsLicenseQuantity2TypedDict,
+        ReissueInvoiceDimensionsLicenseQuantity1TypedDict,
+    ],
+)
+
+
+ReissueInvoiceLicenseQuantityDimensionsUnion1 = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityDimensionsUnion1",
+    Union[
+        ReissueInvoiceDimensionsLicenseQuantity2,
+        ReissueInvoiceDimensionsLicenseQuantity1,
+    ],
+)
+
+
+ReissueInvoiceLicenseQuantityMultipliersMatch1TypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityMultipliersMatch1TypedDict", Union[str, float, bool]
+)
+
+
+ReissueInvoiceLicenseQuantityMultipliersMatch1 = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityMultipliersMatch1", Union[str, float, bool]
+)
+
+
+class ReissueInvoiceLicenseQuantityMultipliers1TypedDict(TypedDict):
+    match: Dict[str, ReissueInvoiceLicenseQuantityMultipliersMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class ReissueInvoiceLicenseQuantityMultipliers1(BaseModel):
+    match: Dict[str, ReissueInvoiceLicenseQuantityMultipliersMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceToLicenseQuantityEnum = Literal["inf",]
+
+
+ReissueInvoiceLicenseQuantityFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityFeatureOverrideToUnionTypedDict",
+    Union[float, ReissueInvoiceToLicenseQuantityEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+ReissueInvoiceLicenseQuantityFeatureOverrideToUnion = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityFeatureOverrideToUnion",
+    Union[float, ReissueInvoiceToLicenseQuantityEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class ReissueInvoiceLicenseQuantityFeatureOverrideTierTypedDict(TypedDict):
+    to: ReissueInvoiceLicenseQuantityFeatureOverrideToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceLicenseQuantityFeatureOverrideTier(BaseModel):
+    to: ReissueInvoiceLicenseQuantityFeatureOverrideToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class ReissueInvoiceCreditSchemaLicenseQuantity1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[ReissueInvoiceLicenseQuantityFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, ReissueInvoiceLicenseQuantityDimensionsUnion1TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[
+        Dict[str, ReissueInvoiceLicenseQuantityMultipliers1TypedDict]
+    ]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+    tier_behavior: Literal["graduated"]
+
+
+class ReissueInvoiceCreditSchemaLicenseQuantity1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[ReissueInvoiceLicenseQuantityFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, ReissueInvoiceLicenseQuantityDimensionsUnion1]] = (
+        None
+    )
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, ReissueInvoiceLicenseQuantityMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ReissueInvoiceLicenseQuantityCreditSchemaUnionTypedDict = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityCreditSchemaUnionTypedDict",
+    Union[
+        ReissueInvoiceCreditSchemaLicenseQuantity2TypedDict,
+        ReissueInvoiceCreditSchemaLicenseQuantity1TypedDict,
+    ],
+)
+
+
+ReissueInvoiceLicenseQuantityCreditSchemaUnion = TypeAliasType(
+    "ReissueInvoiceLicenseQuantityCreditSchemaUnion",
+    Union[
+        ReissueInvoiceCreditSchemaLicenseQuantity2,
+        ReissueInvoiceCreditSchemaLicenseQuantity1,
+    ],
+)
+
+
+class ReissueInvoiceLicenseQuantityFeatureOverrideTypedDict(TypedDict):
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    credit_schema: NotRequired[
+        List[ReissueInvoiceLicenseQuantityCreditSchemaUnionTypedDict]
+    ]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class ReissueInvoiceLicenseQuantityFeatureOverride(BaseModel):
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    credit_schema: Optional[List[ReissueInvoiceLicenseQuantityCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class AddLicenseQuantityItemTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose pricing is overridden on this invoice."""
+    price: NotRequired[ReissueInvoiceLicenseQuantityItemPriceTypedDict]
+    r"""Pricing to use for this feature on this invoice."""
+    feature_override: NotRequired[ReissueInvoiceLicenseQuantityFeatureOverrideTypedDict]
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+
+class AddLicenseQuantityItem(BaseModel):
+    feature_id: str
+    r"""The feature whose pricing is overridden on this invoice."""
+
+    price: Optional[ReissueInvoiceLicenseQuantityItemPrice] = None
+    r"""Pricing to use for this feature on this invoice."""
+
+    feature_override: Optional[ReissueInvoiceLicenseQuantityFeatureOverride] = None
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "feature_override"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class ReissueInvoiceCustomizeTypedDict(TypedDict):
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
+
+    price: NotRequired[Nullable[ReissueInvoiceLicenseQuantityPriceTypedDict]]
+    r"""Override the license's per-seat price on this invoice."""
+    items: NotRequired[List[AddLicenseQuantityItemTypedDict]]
+    r"""Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features."""
+
+
+class ReissueInvoiceCustomize(BaseModel):
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
+
+    price: OptionalNullable[ReissueInvoiceLicenseQuantityPrice] = UNSET
+    r"""Override the license's per-seat price on this invoice."""
+
+    items: Optional[List[AddLicenseQuantityItem]] = None
+    r"""Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "items"])
         nullable_fields = set(["price"])
         serialized = handler(self)
         m = {}
@@ -1503,7 +2360,11 @@ class ReissueInvoiceLicenseQuantityFeatureQuantityTypedDict(TypedDict):
     usage: NotRequired[List[ReissueInvoiceLicenseQuantityUsageTypedDict]]
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class ReissueInvoiceLicenseQuantityFeatureQuantity(BaseModel):
@@ -1520,11 +2381,19 @@ class ReissueInvoiceLicenseQuantityFeatureQuantity(BaseModel):
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["quantity", "usage", "prorate"])
+        optional_fields = set(
+            ["quantity", "usage", "prorate", "period_start", "period_end"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1545,13 +2414,17 @@ class ReissueInvoiceLicenseQuantityTypedDict(TypedDict):
     quantity: int
     r"""Billable seats, exclusive of any included seats."""
     customize: NotRequired[ReissueInvoiceCustomizeTypedDict]
-    r"""Override the license's per-seat price on this invoice."""
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
     feature_quantities: NotRequired[
         List[ReissueInvoiceLicenseQuantityFeatureQuantityTypedDict]
     ]
     r"""Feature charges priced through the license plan."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate seat charges against the license's period. Defaults to true."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class ReissueInvoiceLicenseQuantity(BaseModel):
@@ -1562,7 +2435,7 @@ class ReissueInvoiceLicenseQuantity(BaseModel):
     r"""Billable seats, exclusive of any included seats."""
 
     customize: Optional[ReissueInvoiceCustomize] = None
-    r"""Override the license's per-seat price on this invoice."""
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
 
     feature_quantities: Optional[List[ReissueInvoiceLicenseQuantityFeatureQuantity]] = (
         None
@@ -1570,11 +2443,19 @@ class ReissueInvoiceLicenseQuantity(BaseModel):
     r"""Feature charges priced through the license plan."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate seat charges against the license's period. Defaults to true."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["customize", "feature_quantities", "prorate"])
+        optional_fields = set(
+            ["customize", "feature_quantities", "prorate", "period_start", "period_end"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1629,6 +2510,8 @@ class Add2TypedDict(TypedDict):
     r"""The catalog plan (or variant) whose pricing to use."""
     version: NotRequired[float]
     r"""Plan version. Defaults to the active version."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
     customize: NotRequired[ReissueInvoiceInvoiceCustomizeTypedDict]
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
     feature_quantities: NotRequired[List[ReissueInvoiceFeatureQuantityTypedDict]]
@@ -1636,7 +2519,11 @@ class Add2TypedDict(TypedDict):
     discounts: NotRequired[List[ReissueInvoiceAttachDiscountTypedDict]]
     r"""Discounts applied only to this plan's lines."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate the base price against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate the base price against the plan's period. Defaults to true."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class Add2(BaseModel):
@@ -1645,6 +2532,9 @@ class Add2(BaseModel):
 
     version: Optional[float] = None
     r"""Plan version. Defaults to the active version."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
 
     customize: Optional[ReissueInvoiceInvoiceCustomize] = None
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
@@ -1657,29 +2547,47 @@ class Add2(BaseModel):
     r"""Discounts applied only to this plan's lines."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate the base price against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate the base price against the plan's period. Defaults to true."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "version",
+                "entity_id",
                 "customize",
                 "feature_quantities",
                 "license_quantities",
                 "discounts",
                 "prorate",
+                "period_start",
+                "period_end",
             ]
         )
+        nullable_fields = set(["entity_id"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -2073,6 +2981,8 @@ class ReissueInvoiceInvoiceResponse(BaseModel):
 class ReissueInvoiceLineTypedDict(TypedDict):
     plan_id: Nullable[str]
     feature_id: Nullable[str]
+    entity_id: Nullable[str]
+    r"""The entity this line is billed to. Null for customer-level lines."""
     description: str
     amount: float
     amount_after_discounts: float
@@ -2086,6 +2996,9 @@ class ReissueInvoiceLine(BaseModel):
     plan_id: Nullable[str]
 
     feature_id: Nullable[str]
+
+    entity_id: Nullable[str]
+    r"""The entity this line is billed to. Null for customer-level lines."""
 
     description: str
 
@@ -2304,5 +3217,17 @@ except NameError:
     pass
 try:
     ReissueInvoiceCreditSchema1.model_rebuild()
+except NameError:
+    pass
+try:
+    ReissueInvoiceDimensionsLicenseQuantity3.model_rebuild()
+except NameError:
+    pass
+try:
+    ReissueInvoiceDimensionsLicenseQuantity1.model_rebuild()
+except NameError:
+    pass
+try:
+    ReissueInvoiceCreditSchemaLicenseQuantity1.model_rebuild()
 except NameError:
     pass

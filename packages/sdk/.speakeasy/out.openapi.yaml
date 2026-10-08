@@ -63497,6 +63497,10 @@ paths:
                 customer_id:
                   type: string
                   description: The customer to invoice.
+                entity_id:
+                  type: string
+                  minLength: 1
+                  description: The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity.
                 plans:
                   type: array
                   items:
@@ -63508,6 +63512,12 @@ paths:
                       version:
                         type: number
                         description: Plan version. Defaults to the active version.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                            minLength: 1
+                          - type: "null"
+                        description: The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
                       customize:
                         type: object
                         properties:
@@ -63983,7 +63993,17 @@ paths:
                               description: "For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."
                             prorate:
                               type: boolean
-                              description: Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+                              description: Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based.
+                            period_start:
+                              type: integer
+                              minimum: 0
+                              maximum: 9.007199254740991e+15
+                              description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                            period_end:
+                              type: integer
+                              minimum: 0
+                              maximum: 9.007199254740991e+15
+                              description: End of the period this line covers, in milliseconds. Given together with period_start.
                           required:
                             - feature_id
                             - billing_behavior
@@ -64045,8 +64065,393 @@ paths:
                                         - interval
                                       additionalProperties: false
                                     - type: "null"
+                                  description: Override the license's per-seat price on this invoice.
+                                items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      feature_id:
+                                        type: string
+                                        description: The feature whose pricing is overridden on this invoice.
+                                      price:
+                                        type: object
+                                        properties:
+                                          amount:
+                                            type: number
+                                            description: Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                                          tiers:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                to:
+                                                  anyOf:
+                                                    - type: number
+                                                    - const: inf
+                                                amount:
+                                                  type: number
+                                                flat_amount:
+                                                  type: number
+                                                additional_currencies:
+                                                  type: array
+                                                  items:
+                                                    type: object
+                                                    properties:
+                                                      currency:
+                                                        type: string
+                                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                      amount:
+                                                        type: number
+                                                        description: Per-unit amount for this tier in this currency.
+                                                      flat_amount:
+                                                        type: number
+                                                        description: Flat amount for this tier in this currency, if the tier uses one.
+                                                    required:
+                                                      - currency
+                                                  description: Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                                              required:
+                                                - to
+                                            description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                          tier_behavior:
+                                            enum:
+                                              - graduated
+                                              - volume
+                                            type: string
+                                          interval:
+                                            enum:
+                                              - one_off
+                                              - week
+                                              - month
+                                              - quarter
+                                              - semi_annual
+                                              - year
+                                            type: string
+                                            description: Billing interval. For consumable features, should match reset.interval.
+                                          interval_count:
+                                            type: number
+                                            default: 1
+                                            description: Number of intervals per billing cycle. Defaults to 1.
+                                          billing_units:
+                                            type: number
+                                            default: 1
+                                            description: Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                                          billing_method:
+                                            enum:
+                                              - prepaid
+                                              - usage_based
+                                            type: string
+                                            description: "'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."
+                                          processors:
+                                            type: object
+                                            properties:
+                                              stripe:
+                                                anyOf:
+                                                  - type: object
+                                                    properties:
+                                                      price_id:
+                                                        type: string
+                                                        description: Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                                    required:
+                                                      - price_id
+                                                  - type: "null"
+                                            x-atmn-mapping: true
+                                            description: Bill this line under an existing Stripe price instead of an inline one.
+                                        required:
+                                          - interval
+                                          - billing_method
+                                        additionalProperties: false
+                                        description: Pricing to use for this feature on this invoice.
+                                      feature_override:
+                                        type: object
+                                        properties:
+                                          credit_schema:
+                                            type: array
+                                            items:
+                                              anyOf:
+                                                - type: object
+                                                  properties:
+                                                    metered_feature_id:
+                                                      type: string
+                                                      minLength: 1
+                                                      description: ID of the metered feature that draws from this credit system.
+                                                    billing_units:
+                                                      type: number
+                                                      exclusiveMinimum: 0
+                                                      description: Number of metered-feature units priced together. Defaults to one when omitted.
+                                                    dimensions:
+                                                      type: object
+                                                      propertyNames:
+                                                        type: string
+                                                        minLength: 1
+                                                        maxLength: 64
+                                                      additionalProperties:
+                                                        anyOf:
+                                                          - type: object
+                                                            properties:
+                                                              match:
+                                                                type: object
+                                                                propertyNames:
+                                                                  type: string
+                                                                additionalProperties:
+                                                                  anyOf:
+                                                                    - type: string
+                                                                    - type: number
+                                                                    - type: boolean
+                                                                description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                              priority:
+                                                                type: integer
+                                                                minimum: -9.007199254740991e+15
+                                                                maximum: 9.007199254740991e+15
+                                                                description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                              tier_behavior:
+                                                                const: graduated
+                                                              tiers:
+                                                                type: array
+                                                                minItems: 1
+                                                                items:
+                                                                  type: object
+                                                                  properties:
+                                                                    to:
+                                                                      anyOf:
+                                                                        - type: number
+                                                                          exclusiveMinimum: 0
+                                                                        - enum:
+                                                                            - inf
+                                                                          type: string
+                                                                      description: Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                                    credit_cost:
+                                                                      type: number
+                                                                      minimum: 0
+                                                                      description: Credits consumed per billing-unit group within this tier.
+                                                                  required:
+                                                                    - to
+                                                                    - credit_cost
+                                                            required:
+                                                              - match
+                                                              - tier_behavior
+                                                              - tiers
+                                                            additionalProperties: false
+                                                          - type: object
+                                                            properties:
+                                                              match:
+                                                                type: object
+                                                                propertyNames:
+                                                                  type: string
+                                                                additionalProperties:
+                                                                  anyOf:
+                                                                    - type: string
+                                                                    - type: number
+                                                                    - type: boolean
+                                                                description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                              priority:
+                                                                type: integer
+                                                                minimum: -9.007199254740991e+15
+                                                                maximum: 9.007199254740991e+15
+                                                                description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                              credit_cost:
+                                                                type: number
+                                                                minimum: 0
+                                                                description: Credits consumed per billing-unit group when this dimension matches.
+                                                            required:
+                                                              - match
+                                                              - credit_cost
+                                                            additionalProperties: false
+                                                      description: Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                                    multipliers:
+                                                      type: object
+                                                      propertyNames:
+                                                        type: string
+                                                        minLength: 1
+                                                        maxLength: 64
+                                                      additionalProperties:
+                                                        type: object
+                                                        properties:
+                                                          match:
+                                                            type: object
+                                                            propertyNames:
+                                                              type: string
+                                                            additionalProperties:
+                                                              anyOf:
+                                                                - type: string
+                                                                - type: number
+                                                                - type: boolean
+                                                            description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                          factor:
+                                                            type: number
+                                                            exclusiveMinimum: 0
+                                                            description: Multiplies the matched rate. All matching multipliers stack.
+                                                          add:
+                                                            type: number
+                                                            description: Added to the rate after every factor is applied, in credits per billing-unit group.
+                                                        required:
+                                                          - match
+                                                        additionalProperties: false
+                                                      description: "Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."
+                                                    tier_behavior:
+                                                      const: graduated
+                                                    tiers:
+                                                      type: array
+                                                      minItems: 1
+                                                      items:
+                                                        type: object
+                                                        properties:
+                                                          to:
+                                                            anyOf:
+                                                              - type: number
+                                                                exclusiveMinimum: 0
+                                                              - enum:
+                                                                  - inf
+                                                                type: string
+                                                            description: Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                          credit_cost:
+                                                            type: number
+                                                            minimum: 0
+                                                            description: Credits consumed per billing-unit group within this tier.
+                                                        required:
+                                                          - to
+                                                          - credit_cost
+                                                  required:
+                                                    - metered_feature_id
+                                                    - tier_behavior
+                                                    - tiers
+                                                  additionalProperties: false
+                                                - type: object
+                                                  properties:
+                                                    metered_feature_id:
+                                                      type: string
+                                                      minLength: 1
+                                                      description: ID of the metered feature that draws from this credit system.
+                                                    billing_units:
+                                                      type: number
+                                                      exclusiveMinimum: 0
+                                                      description: Number of metered-feature units priced together. Defaults to one when omitted.
+                                                    dimensions:
+                                                      type: object
+                                                      propertyNames:
+                                                        type: string
+                                                        minLength: 1
+                                                        maxLength: 64
+                                                      additionalProperties:
+                                                        anyOf:
+                                                          - type: object
+                                                            properties:
+                                                              match:
+                                                                type: object
+                                                                propertyNames:
+                                                                  type: string
+                                                                additionalProperties:
+                                                                  anyOf:
+                                                                    - type: string
+                                                                    - type: number
+                                                                    - type: boolean
+                                                                description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                              priority:
+                                                                type: integer
+                                                                minimum: -9.007199254740991e+15
+                                                                maximum: 9.007199254740991e+15
+                                                                description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                              tier_behavior:
+                                                                const: graduated
+                                                              tiers:
+                                                                type: array
+                                                                minItems: 1
+                                                                items:
+                                                                  type: object
+                                                                  properties:
+                                                                    to:
+                                                                      anyOf:
+                                                                        - type: number
+                                                                          exclusiveMinimum: 0
+                                                                        - enum:
+                                                                            - inf
+                                                                          type: string
+                                                                      description: Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                                    credit_cost:
+                                                                      type: number
+                                                                      minimum: 0
+                                                                      description: Credits consumed per billing-unit group within this tier.
+                                                                  required:
+                                                                    - to
+                                                                    - credit_cost
+                                                            required:
+                                                              - match
+                                                              - tier_behavior
+                                                              - tiers
+                                                            additionalProperties: false
+                                                          - type: object
+                                                            properties:
+                                                              match:
+                                                                type: object
+                                                                propertyNames:
+                                                                  type: string
+                                                                additionalProperties:
+                                                                  anyOf:
+                                                                    - type: string
+                                                                    - type: number
+                                                                    - type: boolean
+                                                                description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                              priority:
+                                                                type: integer
+                                                                minimum: -9.007199254740991e+15
+                                                                maximum: 9.007199254740991e+15
+                                                                description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                              credit_cost:
+                                                                type: number
+                                                                minimum: 0
+                                                                description: Credits consumed per billing-unit group when this dimension matches.
+                                                            required:
+                                                              - match
+                                                              - credit_cost
+                                                            additionalProperties: false
+                                                      description: Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                                    multipliers:
+                                                      type: object
+                                                      propertyNames:
+                                                        type: string
+                                                        minLength: 1
+                                                        maxLength: 64
+                                                      additionalProperties:
+                                                        type: object
+                                                        properties:
+                                                          match:
+                                                            type: object
+                                                            propertyNames:
+                                                              type: string
+                                                            additionalProperties:
+                                                              anyOf:
+                                                                - type: string
+                                                                - type: number
+                                                                - type: boolean
+                                                            description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                          factor:
+                                                            type: number
+                                                            exclusiveMinimum: 0
+                                                            description: Multiplies the matched rate. All matching multipliers stack.
+                                                          add:
+                                                            type: number
+                                                            description: Added to the rate after every factor is applied, in credits per billing-unit group.
+                                                        required:
+                                                          - match
+                                                        additionalProperties: false
+                                                      description: "Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."
+                                                    credit_cost:
+                                                      type: number
+                                                      minimum: 0
+                                                      description: Credits consumed per billing-unit group.
+                                                  required:
+                                                    - metered_feature_id
+                                                    - credit_cost
+                                                  additionalProperties: false
+                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                        additionalProperties: false
+                                        description: "For credit-system features: a credit rate card to use when converting `usage` on this invoice."
+                                    required:
+                                      - feature_id
+                                    additionalProperties: false
+                                  description: Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features.
                               additionalProperties: false
-                              description: Override the license's per-seat price on this invoice.
+                              description: Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed.
                             feature_quantities:
                               type: array
                               items:
@@ -64090,7 +64495,17 @@ paths:
                                     description: "For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."
                                   prorate:
                                     type: boolean
-                                    description: Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+                                    description: Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based.
+                                  period_start:
+                                    type: integer
+                                    minimum: 0
+                                    maximum: 9.007199254740991e+15
+                                    description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                                  period_end:
+                                    type: integer
+                                    minimum: 0
+                                    maximum: 9.007199254740991e+15
+                                    description: End of the period this line covers, in milliseconds. Given together with period_start.
                                 required:
                                   - feature_id
                                   - billing_behavior
@@ -64098,7 +64513,17 @@ paths:
                               description: Feature charges priced through the license plan.
                             prorate:
                               type: boolean
-                              description: Whether to prorate seat charges against period_start / period_end. Defaults to true.
+                              description: Whether to prorate seat charges against the license's period. Defaults to true.
+                            period_start:
+                              type: integer
+                              minimum: 0
+                              maximum: 9.007199254740991e+15
+                              description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                            period_end:
+                              type: integer
+                              minimum: 0
+                              maximum: 9.007199254740991e+15
+                              description: End of the period this line covers, in milliseconds. Given together with period_start.
                           required:
                             - license_plan_id
                             - quantity
@@ -64119,7 +64544,17 @@ paths:
                         description: Discounts applied only to this plan's lines.
                       prorate:
                         type: boolean
-                        description: Whether to prorate the base price against period_start / period_end. Defaults to true.
+                        description: Whether to prorate the base price against the plan's period. Defaults to true.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this line covers, in milliseconds. Given together with period_start.
                     required:
                       - plan_id
                     additionalProperties: false
@@ -64134,6 +64569,16 @@ paths:
                       description:
                         type: string
                         description: Description for the line item.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this charge covers, in milliseconds. Given together with period_start.
                     required:
                       - amount
                       - description
@@ -64160,7 +64605,7 @@ paths:
                   minimum: -9.007199254740991e+15
                   maximum: 9.007199254740991e+15
                   exclusiveMinimum: 0
-                  description: Days until the invoice is due. Defaults to the template's terms, then the org default.
+                  description: Days until the invoice is due. Defaults to the template's terms, then the org default. Cannot be combined with due_date.
                 issue_date:
                   type: integer
                   minimum: 0
@@ -64170,7 +64615,7 @@ paths:
                   type: integer
                   minimum: 0
                   maximum: 9.007199254740991e+15
-                  description: When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
+                  description: When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days.
                 tax_rate_id:
                   type: string
                   description: Stripe tax rate ID (txr_...) applied to every line.
@@ -64178,12 +64623,12 @@ paths:
                   type: integer
                   minimum: 0
                   maximum: 9.007199254740991e+15
-                  description: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
+                  description: Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
                 period_end:
                   type: integer
                   minimum: 0
                   maximum: 9.007199254740991e+15
-                  description: End of the period being invoiced, in milliseconds.
+                  description: End of the period being invoiced, in milliseconds. Given together with period_start.
                 preview:
                   type: boolean
                   description: If true, returns the calculated lines and totals without creating an invoice.
@@ -64387,6 +64832,11 @@ paths:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                            entity_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The entity this line is billed to. Null for customer-level lines.
                             description:
                               type: string
                             amount:
@@ -64410,6 +64860,7 @@ paths:
                           required:
                             - plan_id
                             - feature_id
+                            - entity_id
                             - description
                             - amount
                             - amount_after_discounts
@@ -65992,6 +66443,12 @@ paths:
                               version:
                                 type: number
                                 description: Plan version. Defaults to the active version.
+                              entity_id:
+                                anyOf:
+                                  - type: string
+                                    minLength: 1
+                                  - type: "null"
+                                description: The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
                               customize:
                                 type: object
                                 properties:
@@ -66467,7 +66924,17 @@ paths:
                                       description: "For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."
                                     prorate:
                                       type: boolean
-                                      description: Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+                                      description: Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based.
+                                    period_start:
+                                      type: integer
+                                      minimum: 0
+                                      maximum: 9.007199254740991e+15
+                                      description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                                    period_end:
+                                      type: integer
+                                      minimum: 0
+                                      maximum: 9.007199254740991e+15
+                                      description: End of the period this line covers, in milliseconds. Given together with period_start.
                                   required:
                                     - feature_id
                                     - billing_behavior
@@ -66529,8 +66996,393 @@ paths:
                                                 - interval
                                               additionalProperties: false
                                             - type: "null"
+                                          description: Override the license's per-seat price on this invoice.
+                                        items:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              feature_id:
+                                                type: string
+                                                description: The feature whose pricing is overridden on this invoice.
+                                              price:
+                                                type: object
+                                                properties:
+                                                  amount:
+                                                    type: number
+                                                    description: Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                                                  tiers:
+                                                    type: array
+                                                    items:
+                                                      type: object
+                                                      properties:
+                                                        to:
+                                                          anyOf:
+                                                            - type: number
+                                                            - const: inf
+                                                        amount:
+                                                          type: number
+                                                        flat_amount:
+                                                          type: number
+                                                        additional_currencies:
+                                                          type: array
+                                                          items:
+                                                            type: object
+                                                            properties:
+                                                              currency:
+                                                                type: string
+                                                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                              amount:
+                                                                type: number
+                                                                description: Per-unit amount for this tier in this currency.
+                                                              flat_amount:
+                                                                type: number
+                                                                description: Flat amount for this tier in this currency, if the tier uses one.
+                                                            required:
+                                                              - currency
+                                                          description: Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                                                      required:
+                                                        - to
+                                                    description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                                  tier_behavior:
+                                                    enum:
+                                                      - graduated
+                                                      - volume
+                                                    type: string
+                                                  interval:
+                                                    enum:
+                                                      - one_off
+                                                      - week
+                                                      - month
+                                                      - quarter
+                                                      - semi_annual
+                                                      - year
+                                                    type: string
+                                                    description: Billing interval. For consumable features, should match reset.interval.
+                                                  interval_count:
+                                                    type: number
+                                                    default: 1
+                                                    description: Number of intervals per billing cycle. Defaults to 1.
+                                                  billing_units:
+                                                    type: number
+                                                    default: 1
+                                                    description: Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                                                  billing_method:
+                                                    enum:
+                                                      - prepaid
+                                                      - usage_based
+                                                    type: string
+                                                    description: "'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."
+                                                  processors:
+                                                    type: object
+                                                    properties:
+                                                      stripe:
+                                                        anyOf:
+                                                          - type: object
+                                                            properties:
+                                                              price_id:
+                                                                type: string
+                                                                description: Stripe price ID. For prepaid with included > 0 this is the V2 price.
+                                                            required:
+                                                              - price_id
+                                                          - type: "null"
+                                                    x-atmn-mapping: true
+                                                    description: Bill this line under an existing Stripe price instead of an inline one.
+                                                required:
+                                                  - interval
+                                                  - billing_method
+                                                additionalProperties: false
+                                                description: Pricing to use for this feature on this invoice.
+                                              feature_override:
+                                                type: object
+                                                properties:
+                                                  credit_schema:
+                                                    type: array
+                                                    items:
+                                                      anyOf:
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              type: string
+                                                              minLength: 1
+                                                              description: ID of the metered feature that draws from this credit system.
+                                                            billing_units:
+                                                              type: number
+                                                              exclusiveMinimum: 0
+                                                              description: Number of metered-feature units priced together. Defaults to one when omitted.
+                                                            dimensions:
+                                                              type: object
+                                                              propertyNames:
+                                                                type: string
+                                                                minLength: 1
+                                                                maxLength: 64
+                                                              additionalProperties:
+                                                                anyOf:
+                                                                  - type: object
+                                                                    properties:
+                                                                      match:
+                                                                        type: object
+                                                                        propertyNames:
+                                                                          type: string
+                                                                        additionalProperties:
+                                                                          anyOf:
+                                                                            - type: string
+                                                                            - type: number
+                                                                            - type: boolean
+                                                                        description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                                      priority:
+                                                                        type: integer
+                                                                        minimum: -9.007199254740991e+15
+                                                                        maximum: 9.007199254740991e+15
+                                                                        description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                                      tier_behavior:
+                                                                        const: graduated
+                                                                      tiers:
+                                                                        type: array
+                                                                        minItems: 1
+                                                                        items:
+                                                                          type: object
+                                                                          properties:
+                                                                            to:
+                                                                              anyOf:
+                                                                                - type: number
+                                                                                  exclusiveMinimum: 0
+                                                                                - enum:
+                                                                                    - inf
+                                                                                  type: string
+                                                                              description: Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                                            credit_cost:
+                                                                              type: number
+                                                                              minimum: 0
+                                                                              description: Credits consumed per billing-unit group within this tier.
+                                                                          required:
+                                                                            - to
+                                                                            - credit_cost
+                                                                    required:
+                                                                      - match
+                                                                      - tier_behavior
+                                                                      - tiers
+                                                                    additionalProperties: false
+                                                                  - type: object
+                                                                    properties:
+                                                                      match:
+                                                                        type: object
+                                                                        propertyNames:
+                                                                          type: string
+                                                                        additionalProperties:
+                                                                          anyOf:
+                                                                            - type: string
+                                                                            - type: number
+                                                                            - type: boolean
+                                                                        description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                                      priority:
+                                                                        type: integer
+                                                                        minimum: -9.007199254740991e+15
+                                                                        maximum: 9.007199254740991e+15
+                                                                        description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                                      credit_cost:
+                                                                        type: number
+                                                                        minimum: 0
+                                                                        description: Credits consumed per billing-unit group when this dimension matches.
+                                                                    required:
+                                                                      - match
+                                                                      - credit_cost
+                                                                    additionalProperties: false
+                                                              description: Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                                            multipliers:
+                                                              type: object
+                                                              propertyNames:
+                                                                type: string
+                                                                minLength: 1
+                                                                maxLength: 64
+                                                              additionalProperties:
+                                                                type: object
+                                                                properties:
+                                                                  match:
+                                                                    type: object
+                                                                    propertyNames:
+                                                                      type: string
+                                                                    additionalProperties:
+                                                                      anyOf:
+                                                                        - type: string
+                                                                        - type: number
+                                                                        - type: boolean
+                                                                    description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                                  factor:
+                                                                    type: number
+                                                                    exclusiveMinimum: 0
+                                                                    description: Multiplies the matched rate. All matching multipliers stack.
+                                                                  add:
+                                                                    type: number
+                                                                    description: Added to the rate after every factor is applied, in credits per billing-unit group.
+                                                                required:
+                                                                  - match
+                                                                additionalProperties: false
+                                                              description: "Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."
+                                                            tier_behavior:
+                                                              const: graduated
+                                                            tiers:
+                                                              type: array
+                                                              minItems: 1
+                                                              items:
+                                                                type: object
+                                                                properties:
+                                                                  to:
+                                                                    anyOf:
+                                                                      - type: number
+                                                                        exclusiveMinimum: 0
+                                                                      - enum:
+                                                                          - inf
+                                                                        type: string
+                                                                    description: Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                                  credit_cost:
+                                                                    type: number
+                                                                    minimum: 0
+                                                                    description: Credits consumed per billing-unit group within this tier.
+                                                                required:
+                                                                  - to
+                                                                  - credit_cost
+                                                          required:
+                                                            - metered_feature_id
+                                                            - tier_behavior
+                                                            - tiers
+                                                          additionalProperties: false
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              type: string
+                                                              minLength: 1
+                                                              description: ID of the metered feature that draws from this credit system.
+                                                            billing_units:
+                                                              type: number
+                                                              exclusiveMinimum: 0
+                                                              description: Number of metered-feature units priced together. Defaults to one when omitted.
+                                                            dimensions:
+                                                              type: object
+                                                              propertyNames:
+                                                                type: string
+                                                                minLength: 1
+                                                                maxLength: 64
+                                                              additionalProperties:
+                                                                anyOf:
+                                                                  - type: object
+                                                                    properties:
+                                                                      match:
+                                                                        type: object
+                                                                        propertyNames:
+                                                                          type: string
+                                                                        additionalProperties:
+                                                                          anyOf:
+                                                                            - type: string
+                                                                            - type: number
+                                                                            - type: boolean
+                                                                        description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                                      priority:
+                                                                        type: integer
+                                                                        minimum: -9.007199254740991e+15
+                                                                        maximum: 9.007199254740991e+15
+                                                                        description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                                      tier_behavior:
+                                                                        const: graduated
+                                                                      tiers:
+                                                                        type: array
+                                                                        minItems: 1
+                                                                        items:
+                                                                          type: object
+                                                                          properties:
+                                                                            to:
+                                                                              anyOf:
+                                                                                - type: number
+                                                                                  exclusiveMinimum: 0
+                                                                                - enum:
+                                                                                    - inf
+                                                                                  type: string
+                                                                              description: Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                                                                            credit_cost:
+                                                                              type: number
+                                                                              minimum: 0
+                                                                              description: Credits consumed per billing-unit group within this tier.
+                                                                          required:
+                                                                            - to
+                                                                            - credit_cost
+                                                                    required:
+                                                                      - match
+                                                                      - tier_behavior
+                                                                      - tiers
+                                                                    additionalProperties: false
+                                                                  - type: object
+                                                                    properties:
+                                                                      match:
+                                                                        type: object
+                                                                        propertyNames:
+                                                                          type: string
+                                                                        additionalProperties:
+                                                                          anyOf:
+                                                                            - type: string
+                                                                            - type: number
+                                                                            - type: boolean
+                                                                        description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                                      priority:
+                                                                        type: integer
+                                                                        minimum: -9.007199254740991e+15
+                                                                        maximum: 9.007199254740991e+15
+                                                                        description: Breaks ties between dimensions that match the same number of keys. Higher wins.
+                                                                      credit_cost:
+                                                                        type: number
+                                                                        minimum: 0
+                                                                        description: Credits consumed per billing-unit group when this dimension matches.
+                                                                    required:
+                                                                      - match
+                                                                      - credit_cost
+                                                                    additionalProperties: false
+                                                              description: Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+                                                            multipliers:
+                                                              type: object
+                                                              propertyNames:
+                                                                type: string
+                                                                minLength: 1
+                                                                maxLength: 64
+                                                              additionalProperties:
+                                                                type: object
+                                                                properties:
+                                                                  match:
+                                                                    type: object
+                                                                    propertyNames:
+                                                                      type: string
+                                                                    additionalProperties:
+                                                                      anyOf:
+                                                                        - type: string
+                                                                        - type: number
+                                                                        - type: boolean
+                                                                    description: Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+                                                                  factor:
+                                                                    type: number
+                                                                    exclusiveMinimum: 0
+                                                                    description: Multiplies the matched rate. All matching multipliers stack.
+                                                                  add:
+                                                                    type: number
+                                                                    description: Added to the rate after every factor is applied, in credits per billing-unit group.
+                                                                required:
+                                                                  - match
+                                                                additionalProperties: false
+                                                              description: "Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."
+                                                            credit_cost:
+                                                              type: number
+                                                              minimum: 0
+                                                              description: Credits consumed per billing-unit group.
+                                                          required:
+                                                            - metered_feature_id
+                                                            - credit_cost
+                                                          additionalProperties: false
+                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                additionalProperties: false
+                                                description: "For credit-system features: a credit rate card to use when converting `usage` on this invoice."
+                                            required:
+                                              - feature_id
+                                            additionalProperties: false
+                                          description: Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features.
                                       additionalProperties: false
-                                      description: Override the license's per-seat price on this invoice.
+                                      description: Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed.
                                     feature_quantities:
                                       type: array
                                       items:
@@ -66574,7 +67426,17 @@ paths:
                                             description: "For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."
                                           prorate:
                                             type: boolean
-                                            description: Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based.
+                                            description: Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based.
+                                          period_start:
+                                            type: integer
+                                            minimum: 0
+                                            maximum: 9.007199254740991e+15
+                                            description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                                          period_end:
+                                            type: integer
+                                            minimum: 0
+                                            maximum: 9.007199254740991e+15
+                                            description: End of the period this line covers, in milliseconds. Given together with period_start.
                                         required:
                                           - feature_id
                                           - billing_behavior
@@ -66582,7 +67444,17 @@ paths:
                                       description: Feature charges priced through the license plan.
                                     prorate:
                                       type: boolean
-                                      description: Whether to prorate seat charges against period_start / period_end. Defaults to true.
+                                      description: Whether to prorate seat charges against the license's period. Defaults to true.
+                                    period_start:
+                                      type: integer
+                                      minimum: 0
+                                      maximum: 9.007199254740991e+15
+                                      description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                                    period_end:
+                                      type: integer
+                                      minimum: 0
+                                      maximum: 9.007199254740991e+15
+                                      description: End of the period this line covers, in milliseconds. Given together with period_start.
                                   required:
                                     - license_plan_id
                                     - quantity
@@ -66603,7 +67475,17 @@ paths:
                                 description: Discounts applied only to this plan's lines.
                               prorate:
                                 type: boolean
-                                description: Whether to prorate the base price against period_start / period_end. Defaults to true.
+                                description: Whether to prorate the base price against the plan's period. Defaults to true.
+                              period_start:
+                                type: integer
+                                minimum: 0
+                                maximum: 9.007199254740991e+15
+                                description: Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent.
+                              period_end:
+                                type: integer
+                                minimum: 0
+                                maximum: 9.007199254740991e+15
+                                description: End of the period this line covers, in milliseconds. Given together with period_start.
                             required:
                               - plan_id
                             additionalProperties: false
@@ -66820,6 +67702,11 @@ paths:
                               anyOf:
                                 - type: string
                                 - type: "null"
+                            entity_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The entity this line is billed to. Null for customer-level lines.
                             description:
                               type: string
                             amount:
@@ -66843,6 +67730,7 @@ paths:
                           required:
                             - plan_id
                             - feature_id
+                            - entity_id
                             - description
                             - amount
                             - amount_after_discounts

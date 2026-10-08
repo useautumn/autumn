@@ -13,6 +13,7 @@ class Invoices(BaseSDK):
         self,
         *,
         customer_id: str,
+        entity_id: Optional[str] = None,
         plans: Optional[
             Union[
                 List[models.CreateInvoicePlan], List[models.CreateInvoicePlanTypedDict]
@@ -47,16 +48,17 @@ class Invoices(BaseSDK):
         r"""Creates a standalone send-invoice Stripe invoice from catalog pricing and custom charges. Quantities are billable units, exclusive of any included usage; Autumn applies billing units and tiers. Nothing about the customer's plans, balances or subscriptions changes. Pass preview: true to get the calculated lines and totals without creating an invoice.
 
         :param customer_id: The customer to invoice.
+        :param entity_id: The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity.
         :param plans:
         :param custom_line_items: Charges that are not tied to any plan or feature.
         :param discounts: Discounts applied to the whole invoice.
         :param invoice_template_id: ID of an invoice template whose footer, memo and default payment terms are applied.
-        :param net_terms_days: Days until the invoice is due. Defaults to the template's terms, then the org default.
+        :param net_terms_days: Days until the invoice is due. Defaults to the template's terms, then the org default. Cannot be combined with due_date.
         :param issue_date: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
-        :param due_date: When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
+        :param due_date: When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days.
         :param tax_rate_id: Stripe tax rate ID (txr_...) applied to every line.
-        :param period_start: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
-        :param period_end: End of the period being invoiced, in milliseconds.
+        :param period_start: Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
+        :param period_end: End of the period being invoiced, in milliseconds. Given together with period_start.
         :param preview: If true, returns the calculated lines and totals without creating an invoice.
         :param issue_method: draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
         :param retries: Override the default retry configuration for this method
@@ -76,6 +78,7 @@ class Invoices(BaseSDK):
 
         request = models.CreateInvoiceParams(
             customer_id=customer_id,
+            entity_id=entity_id,
             plans=utils.get_pydantic_model(
                 plans, Optional[List[models.CreateInvoicePlan]]
             ),
@@ -159,6 +162,7 @@ class Invoices(BaseSDK):
         self,
         *,
         customer_id: str,
+        entity_id: Optional[str] = None,
         plans: Optional[
             Union[
                 List[models.CreateInvoicePlan], List[models.CreateInvoicePlanTypedDict]
@@ -193,16 +197,17 @@ class Invoices(BaseSDK):
         r"""Creates a standalone send-invoice Stripe invoice from catalog pricing and custom charges. Quantities are billable units, exclusive of any included usage; Autumn applies billing units and tiers. Nothing about the customer's plans, balances or subscriptions changes. Pass preview: true to get the calculated lines and totals without creating an invoice.
 
         :param customer_id: The customer to invoice.
+        :param entity_id: The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity.
         :param plans:
         :param custom_line_items: Charges that are not tied to any plan or feature.
         :param discounts: Discounts applied to the whole invoice.
         :param invoice_template_id: ID of an invoice template whose footer, memo and default payment terms are applied.
-        :param net_terms_days: Days until the invoice is due. Defaults to the template's terms, then the org default.
+        :param net_terms_days: Days until the invoice is due. Defaults to the template's terms, then the org default. Cannot be combined with due_date.
         :param issue_date: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
-        :param due_date: When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.
+        :param due_date: When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days.
         :param tax_rate_id: Stripe tax rate ID (txr_...) applied to every line.
-        :param period_start: Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.
-        :param period_end: End of the period being invoiced, in milliseconds.
+        :param period_start: Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
+        :param period_end: End of the period being invoiced, in milliseconds. Given together with period_start.
         :param preview: If true, returns the calculated lines and totals without creating an invoice.
         :param issue_method: draft leaves the invoice editable. finalize opens it without Stripe emailing, reminding or charging (auto_advance off). send opens it with auto_advance on. Defaults to send.
         :param retries: Override the default retry configuration for this method
@@ -222,6 +227,7 @@ class Invoices(BaseSDK):
 
         request = models.CreateInvoiceParams(
             customer_id=customer_id,
+            entity_id=entity_id,
             plans=utils.get_pydantic_model(
                 plans, Optional[List[models.CreateInvoicePlan]]
             ),

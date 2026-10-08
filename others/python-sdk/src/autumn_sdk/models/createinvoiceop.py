@@ -1037,7 +1037,11 @@ class CreateInvoiceFeatureQuantityTypedDict(TypedDict):
     usage: NotRequired[List[CreateInvoiceUsageTypedDict]]
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class CreateInvoiceFeatureQuantity(BaseModel):
@@ -1054,11 +1058,19 @@ class CreateInvoiceFeatureQuantity(BaseModel):
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["quantity", "usage", "prorate"])
+        optional_fields = set(
+            ["quantity", "usage", "prorate", "period_start", "period_end"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1172,20 +1184,859 @@ class CreateInvoiceLicenseQuantityPrice(BaseModel):
         return m
 
 
-class CreateInvoiceCustomizeTypedDict(TypedDict):
-    r"""Override the license's per-seat price on this invoice."""
+CreateInvoiceLicenseQuantityPriceToTypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityPriceToTypedDict", Union[float, str]
+)
 
-    price: NotRequired[Nullable[CreateInvoiceLicenseQuantityPriceTypedDict]]
+
+CreateInvoiceLicenseQuantityPriceTo = TypeAliasType(
+    "CreateInvoiceLicenseQuantityPriceTo", Union[float, str]
+)
 
 
-class CreateInvoiceCustomize(BaseModel):
-    r"""Override the license's per-seat price on this invoice."""
+class CreateInvoiceLicenseQuantityAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
-    price: OptionalNullable[CreateInvoiceLicenseQuantityPrice] = UNSET
+
+class CreateInvoiceLicenseQuantityAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price"])
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateInvoiceLicenseQuantityPriceTierTypedDict(TypedDict):
+    to: CreateInvoiceLicenseQuantityPriceToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[CreateInvoiceLicenseQuantityAdditionalCurrencyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+
+class CreateInvoiceLicenseQuantityPriceTier(BaseModel):
+    to: CreateInvoiceLicenseQuantityPriceTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    additional_currencies: Optional[
+        List[CreateInvoiceLicenseQuantityAdditionalCurrency]
+    ] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceLicenseQuantityTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+CreateInvoiceLicenseQuantityItemInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+CreateInvoiceLicenseQuantityBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class CreateInvoiceLicenseQuantityItemStripeTypedDict(TypedDict):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class CreateInvoiceLicenseQuantityItemStripe(BaseModel):
+    price_id: str
+    r"""Stripe price ID. For prepaid with included > 0 this is the V2 price."""
+
+
+class CreateInvoiceLicenseQuantityItemProcessorsTypedDict(TypedDict):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: NotRequired[Nullable[CreateInvoiceLicenseQuantityItemStripeTypedDict]]
+
+
+class CreateInvoiceLicenseQuantityItemProcessors(BaseModel):
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    stripe: OptionalNullable[CreateInvoiceLicenseQuantityItemStripe] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        nullable_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CreateInvoiceLicenseQuantityItemPriceTypedDict(TypedDict):
+    r"""Pricing to use for this feature on this invoice."""
+
+    interval: CreateInvoiceLicenseQuantityItemInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: CreateInvoiceLicenseQuantityBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[CreateInvoiceLicenseQuantityPriceTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[CreateInvoiceLicenseQuantityTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    processors: NotRequired[CreateInvoiceLicenseQuantityItemProcessorsTypedDict]
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+
+class CreateInvoiceLicenseQuantityItemPrice(BaseModel):
+    r"""Pricing to use for this feature on this invoice."""
+
+    interval: CreateInvoiceLicenseQuantityItemInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: CreateInvoiceLicenseQuantityBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[CreateInvoiceLicenseQuantityPriceTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[CreateInvoiceLicenseQuantityTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    processors: Optional[CreateInvoiceLicenseQuantityItemProcessors] = None
+    r"""Bill this line under an existing Stripe price instead of an inline one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "processors",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch4TypedDict = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch4TypedDict", Union[str, float, bool]
+)
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch4 = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch4", Union[str, float, bool]
+)
+
+
+class CreateInvoiceDimensionsLicenseQuantity4TypedDict(TypedDict):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch4TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class CreateInvoiceDimensionsLicenseQuantity4(BaseModel):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch4]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch3TypedDict = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch3TypedDict", Union[str, float, bool]
+)
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch3 = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch3", Union[str, float, bool]
+)
+
+
+CreateInvoiceDimensionsToLicenseQuantityEnum2 = Literal["inf",]
+
+
+CreateInvoiceDimensionsLicenseQuantityToUnion2TypedDict = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityToUnion2TypedDict",
+    Union[float, CreateInvoiceDimensionsToLicenseQuantityEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateInvoiceDimensionsLicenseQuantityToUnion2 = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityToUnion2",
+    Union[float, CreateInvoiceDimensionsToLicenseQuantityEnum2],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateInvoiceDimensionsLicenseQuantityTier2TypedDict(TypedDict):
+    to: CreateInvoiceDimensionsLicenseQuantityToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateInvoiceDimensionsLicenseQuantityTier2(BaseModel):
+    to: CreateInvoiceDimensionsLicenseQuantityToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateInvoiceDimensionsLicenseQuantity3TypedDict(TypedDict):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch3TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[CreateInvoiceDimensionsLicenseQuantityTier2TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateInvoiceDimensionsLicenseQuantity3(BaseModel):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch3]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[CreateInvoiceDimensionsLicenseQuantityTier2]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceLicenseQuantityDimensionsUnion2TypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityDimensionsUnion2TypedDict",
+    Union[
+        CreateInvoiceDimensionsLicenseQuantity4TypedDict,
+        CreateInvoiceDimensionsLicenseQuantity3TypedDict,
+    ],
+)
+
+
+CreateInvoiceLicenseQuantityDimensionsUnion2 = TypeAliasType(
+    "CreateInvoiceLicenseQuantityDimensionsUnion2",
+    Union[
+        CreateInvoiceDimensionsLicenseQuantity4, CreateInvoiceDimensionsLicenseQuantity3
+    ],
+)
+
+
+CreateInvoiceLicenseQuantityMultipliersMatch2TypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityMultipliersMatch2TypedDict", Union[str, float, bool]
+)
+
+
+CreateInvoiceLicenseQuantityMultipliersMatch2 = TypeAliasType(
+    "CreateInvoiceLicenseQuantityMultipliersMatch2", Union[str, float, bool]
+)
+
+
+class CreateInvoiceLicenseQuantityMultipliers2TypedDict(TypedDict):
+    match: Dict[str, CreateInvoiceLicenseQuantityMultipliersMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CreateInvoiceLicenseQuantityMultipliers2(BaseModel):
+    match: Dict[str, CreateInvoiceLicenseQuantityMultipliersMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateInvoiceCreditSchemaLicenseQuantity2TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, CreateInvoiceLicenseQuantityDimensionsUnion2TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[
+        Dict[str, CreateInvoiceLicenseQuantityMultipliers2TypedDict]
+    ]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+
+class CreateInvoiceCreditSchemaLicenseQuantity2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, CreateInvoiceLicenseQuantityDimensionsUnion2]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, CreateInvoiceLicenseQuantityMultipliers2]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch2TypedDict = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch2TypedDict", Union[str, float, bool]
+)
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch2 = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch2", Union[str, float, bool]
+)
+
+
+class CreateInvoiceDimensionsLicenseQuantity2TypedDict(TypedDict):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch2TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class CreateInvoiceDimensionsLicenseQuantity2(BaseModel):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch2]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch1TypedDict = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch1TypedDict", Union[str, float, bool]
+)
+
+
+CreateInvoiceDimensionsLicenseQuantityMatch1 = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityMatch1", Union[str, float, bool]
+)
+
+
+CreateInvoiceDimensionsToLicenseQuantityEnum1 = Literal["inf",]
+
+
+CreateInvoiceToLicenseQuantityEnum = Literal["inf",]
+
+
+CreateInvoiceDimensionsLicenseQuantityToUnion1TypedDict = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityToUnion1TypedDict",
+    Union[float, CreateInvoiceDimensionsToLicenseQuantityEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateInvoiceDimensionsLicenseQuantityToUnion1 = TypeAliasType(
+    "CreateInvoiceDimensionsLicenseQuantityToUnion1",
+    Union[float, CreateInvoiceDimensionsToLicenseQuantityEnum1],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateInvoiceDimensionsLicenseQuantityTier1TypedDict(TypedDict):
+    to: CreateInvoiceDimensionsLicenseQuantityToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateInvoiceDimensionsLicenseQuantityTier1(BaseModel):
+    to: CreateInvoiceDimensionsLicenseQuantityToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateInvoiceDimensionsLicenseQuantity1TypedDict(TypedDict):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[CreateInvoiceDimensionsLicenseQuantityTier1TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateInvoiceDimensionsLicenseQuantity1(BaseModel):
+    match: Dict[str, CreateInvoiceDimensionsLicenseQuantityMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[CreateInvoiceDimensionsLicenseQuantityTier1]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceLicenseQuantityDimensionsUnion1TypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityDimensionsUnion1TypedDict",
+    Union[
+        CreateInvoiceDimensionsLicenseQuantity2TypedDict,
+        CreateInvoiceDimensionsLicenseQuantity1TypedDict,
+    ],
+)
+
+
+CreateInvoiceLicenseQuantityDimensionsUnion1 = TypeAliasType(
+    "CreateInvoiceLicenseQuantityDimensionsUnion1",
+    Union[
+        CreateInvoiceDimensionsLicenseQuantity2, CreateInvoiceDimensionsLicenseQuantity1
+    ],
+)
+
+
+CreateInvoiceLicenseQuantityMultipliersMatch1TypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityMultipliersMatch1TypedDict", Union[str, float, bool]
+)
+
+
+CreateInvoiceLicenseQuantityMultipliersMatch1 = TypeAliasType(
+    "CreateInvoiceLicenseQuantityMultipliersMatch1", Union[str, float, bool]
+)
+
+
+class CreateInvoiceLicenseQuantityMultipliers1TypedDict(TypedDict):
+    match: Dict[str, CreateInvoiceLicenseQuantityMultipliersMatch1TypedDict]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CreateInvoiceLicenseQuantityMultipliers1(BaseModel):
+    match: Dict[str, CreateInvoiceLicenseQuantityMultipliersMatch1]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceLicenseQuantityFeatureOverrideToUnionTypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityFeatureOverrideToUnionTypedDict",
+    Union[float, CreateInvoiceToLicenseQuantityEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateInvoiceLicenseQuantityFeatureOverrideToUnion = TypeAliasType(
+    "CreateInvoiceLicenseQuantityFeatureOverrideToUnion",
+    Union[float, CreateInvoiceToLicenseQuantityEnum],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateInvoiceLicenseQuantityFeatureOverrideTierTypedDict(TypedDict):
+    to: CreateInvoiceLicenseQuantityFeatureOverrideToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateInvoiceLicenseQuantityFeatureOverrideTier(BaseModel):
+    to: CreateInvoiceLicenseQuantityFeatureOverrideToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateInvoiceCreditSchemaLicenseQuantity1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[CreateInvoiceLicenseQuantityFeatureOverrideTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    dimensions: NotRequired[
+        Dict[str, CreateInvoiceLicenseQuantityDimensionsUnion1TypedDict]
+    ]
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+    multipliers: NotRequired[
+        Dict[str, CreateInvoiceLicenseQuantityMultipliers1TypedDict]
+    ]
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateInvoiceCreditSchemaLicenseQuantity1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[CreateInvoiceLicenseQuantityFeatureOverrideTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    dimensions: Optional[Dict[str, CreateInvoiceLicenseQuantityDimensionsUnion1]] = None
+    r"""Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies."""
+
+    multipliers: Optional[Dict[str, CreateInvoiceLicenseQuantityMultipliers1]] = None
+    r"""Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units", "dimensions", "multipliers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateInvoiceLicenseQuantityCreditSchemaUnionTypedDict = TypeAliasType(
+    "CreateInvoiceLicenseQuantityCreditSchemaUnionTypedDict",
+    Union[
+        CreateInvoiceCreditSchemaLicenseQuantity2TypedDict,
+        CreateInvoiceCreditSchemaLicenseQuantity1TypedDict,
+    ],
+)
+
+
+CreateInvoiceLicenseQuantityCreditSchemaUnion = TypeAliasType(
+    "CreateInvoiceLicenseQuantityCreditSchemaUnion",
+    Union[
+        CreateInvoiceCreditSchemaLicenseQuantity2,
+        CreateInvoiceCreditSchemaLicenseQuantity1,
+    ],
+)
+
+
+class CreateInvoiceLicenseQuantityFeatureOverrideTypedDict(TypedDict):
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    credit_schema: NotRequired[
+        List[CreateInvoiceLicenseQuantityCreditSchemaUnionTypedDict]
+    ]
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+
+class CreateInvoiceLicenseQuantityFeatureOverride(BaseModel):
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    credit_schema: Optional[List[CreateInvoiceLicenseQuantityCreditSchemaUnion]] = None
+    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["credit_schema"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateInvoiceLicenseQuantityItemTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature whose pricing is overridden on this invoice."""
+    price: NotRequired[CreateInvoiceLicenseQuantityItemPriceTypedDict]
+    r"""Pricing to use for this feature on this invoice."""
+    feature_override: NotRequired[CreateInvoiceLicenseQuantityFeatureOverrideTypedDict]
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+
+class CreateInvoiceLicenseQuantityItem(BaseModel):
+    feature_id: str
+    r"""The feature whose pricing is overridden on this invoice."""
+
+    price: Optional[CreateInvoiceLicenseQuantityItemPrice] = None
+    r"""Pricing to use for this feature on this invoice."""
+
+    feature_override: Optional[CreateInvoiceLicenseQuantityFeatureOverride] = None
+    r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "feature_override"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateInvoiceCustomizeTypedDict(TypedDict):
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
+
+    price: NotRequired[Nullable[CreateInvoiceLicenseQuantityPriceTypedDict]]
+    r"""Override the license's per-seat price on this invoice."""
+    items: NotRequired[List[CreateInvoiceLicenseQuantityItemTypedDict]]
+    r"""Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features."""
+
+
+class CreateInvoiceCustomize(BaseModel):
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
+
+    price: OptionalNullable[CreateInvoiceLicenseQuantityPrice] = UNSET
+    r"""Override the license's per-seat price on this invoice."""
+
+    items: Optional[List[CreateInvoiceLicenseQuantityItem]] = None
+    r"""Override the license plan's feature pricing for this license's feature_quantities on this invoice. The parent plan's customize.items never apply to license features."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "items"])
         nullable_fields = set(["price"])
         serialized = handler(self)
         m = {}
@@ -1262,7 +2113,11 @@ class CreateInvoiceLicenseQuantityFeatureQuantityTypedDict(TypedDict):
     usage: NotRequired[List[CreateInvoiceLicenseQuantityUsageTypedDict]]
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class CreateInvoiceLicenseQuantityFeatureQuantity(BaseModel):
@@ -1279,11 +2134,19 @@ class CreateInvoiceLicenseQuantityFeatureQuantity(BaseModel):
     r"""For credit-system features: billable units of the source features, converted through the credit rate card. Mutually exclusive with quantity."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate this line against period_start / period_end. Defaults to true for prepaid and false for usage-based."""
+    r"""Whether to prorate this line against its period. Defaults to true for prepaid and false for usage-based."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["quantity", "usage", "prorate"])
+        optional_fields = set(
+            ["quantity", "usage", "prorate", "period_start", "period_end"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1304,13 +2167,17 @@ class CreateInvoiceLicenseQuantityTypedDict(TypedDict):
     quantity: int
     r"""Billable seats, exclusive of any included seats."""
     customize: NotRequired[CreateInvoiceCustomizeTypedDict]
-    r"""Override the license's per-seat price on this invoice."""
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
     feature_quantities: NotRequired[
         List[CreateInvoiceLicenseQuantityFeatureQuantityTypedDict]
     ]
     r"""Feature charges priced through the license plan."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate seat charges against the license's period. Defaults to true."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class CreateInvoiceLicenseQuantity(BaseModel):
@@ -1321,7 +2188,7 @@ class CreateInvoiceLicenseQuantity(BaseModel):
     r"""Billable seats, exclusive of any included seats."""
 
     customize: Optional[CreateInvoiceCustomize] = None
-    r"""Override the license's per-seat price on this invoice."""
+    r"""Pricing overrides for this license on this invoice only. The catalog and the customer's plan are not changed."""
 
     feature_quantities: Optional[List[CreateInvoiceLicenseQuantityFeatureQuantity]] = (
         None
@@ -1329,11 +2196,19 @@ class CreateInvoiceLicenseQuantity(BaseModel):
     r"""Feature charges priced through the license plan."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate seat charges against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate seat charges against the license's period. Defaults to true."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["customize", "feature_quantities", "prorate"])
+        optional_fields = set(
+            ["customize", "feature_quantities", "prorate", "period_start", "period_end"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1388,6 +2263,8 @@ class CreateInvoicePlanTypedDict(TypedDict):
     r"""The catalog plan (or variant) whose pricing to use."""
     version: NotRequired[float]
     r"""Plan version. Defaults to the active version."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
     customize: NotRequired[CreateInvoiceInvoiceCustomizeTypedDict]
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
     feature_quantities: NotRequired[List[CreateInvoiceFeatureQuantityTypedDict]]
@@ -1395,7 +2272,11 @@ class CreateInvoicePlanTypedDict(TypedDict):
     discounts: NotRequired[List[PlanAttachDiscountTypedDict]]
     r"""Discounts applied only to this plan's lines."""
     prorate: NotRequired[bool]
-    r"""Whether to prorate the base price against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate the base price against the plan's period. Defaults to true."""
+    period_start: NotRequired[int]
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+    period_end: NotRequired[int]
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
 
 class CreateInvoicePlan(BaseModel):
@@ -1404,6 +2285,9 @@ class CreateInvoicePlan(BaseModel):
 
     version: Optional[float] = None
     r"""Plan version. Defaults to the active version."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity this plan's lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level."""
 
     customize: Optional[CreateInvoiceInvoiceCustomize] = None
     r"""Pricing overrides applied to this invoice only. The catalog and the customer's plan are not changed."""
@@ -1416,20 +2300,79 @@ class CreateInvoicePlan(BaseModel):
     r"""Discounts applied only to this plan's lines."""
 
     prorate: Optional[bool] = None
-    r"""Whether to prorate the base price against period_start / period_end. Defaults to true."""
+    r"""Whether to prorate the base price against the plan's period. Defaults to true."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this line covers, in milliseconds. Defaults to the parent's period, then the invoice's period_start / period_end when sent."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this line covers, in milliseconds. Given together with period_start."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "version",
+                "entity_id",
                 "customize",
                 "feature_quantities",
                 "license_quantities",
                 "discounts",
                 "prorate",
+                "period_start",
+                "period_end",
             ]
         )
+        nullable_fields = set(["entity_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CreateInvoiceCustomLineItemTypedDict(TypedDict):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+    description: str
+    r"""Description for the line item."""
+    period_start: NotRequired[int]
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+    period_end: NotRequired[int]
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+
+class CreateInvoiceCustomLineItem(BaseModel):
+    amount: float
+    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
+
+    description: str
+    r"""Description for the line item."""
+
+    period_start: Optional[int] = None
+    r"""Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period."""
+
+    period_end: Optional[int] = None
+    r"""End of the period this charge covers, in milliseconds. Given together with period_start."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["period_start", "period_end"])
         serialized = handler(self)
         m = {}
 
@@ -1442,21 +2385,6 @@ class CreateInvoicePlan(BaseModel):
                     m[k] = val
 
         return m
-
-
-class CreateInvoiceCustomLineItemTypedDict(TypedDict):
-    amount: float
-    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
-    description: str
-    r"""Description for the line item."""
-
-
-class CreateInvoiceCustomLineItem(BaseModel):
-    amount: float
-    r"""Amount in dollars for this line item (e.g. 10.50). Can be negative for credits."""
-
-    description: str
-    r"""Description for the line item."""
 
 
 class CreateInvoiceAttachDiscountTypedDict(TypedDict):
@@ -1505,6 +2433,8 @@ r"""draft leaves the invoice editable. finalize opens it without Stripe emailing
 class CreateInvoiceParamsTypedDict(TypedDict):
     customer_id: str
     r"""The customer to invoice."""
+    entity_id: NotRequired[str]
+    r"""The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity."""
     plans: NotRequired[List[CreateInvoicePlanTypedDict]]
     custom_line_items: NotRequired[List[CreateInvoiceCustomLineItemTypedDict]]
     r"""Charges that are not tied to any plan or feature."""
@@ -1513,17 +2443,17 @@ class CreateInvoiceParamsTypedDict(TypedDict):
     invoice_template_id: NotRequired[str]
     r"""ID of an invoice template whose footer, memo and default payment terms are applied."""
     net_terms_days: NotRequired[int]
-    r"""Days until the invoice is due. Defaults to the template's terms, then the org default."""
+    r"""Days until the invoice is due. Defaults to the template's terms, then the org default. Cannot be combined with due_date."""
     issue_date: NotRequired[int]
     r"""Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future."""
     due_date: NotRequired[int]
-    r"""When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days."""
+    r"""When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days."""
     tax_rate_id: NotRequired[str]
     r"""Stripe tax rate ID (txr_...) applied to every line."""
     period_start: NotRequired[int]
-    r"""Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start."""
+    r"""Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated."""
     period_end: NotRequired[int]
-    r"""End of the period being invoiced, in milliseconds."""
+    r"""End of the period being invoiced, in milliseconds. Given together with period_start."""
     preview: NotRequired[bool]
     r"""If true, returns the calculated lines and totals without creating an invoice."""
     issue_method: NotRequired[CreateInvoiceIssueMethod]
@@ -1533,6 +2463,9 @@ class CreateInvoiceParamsTypedDict(TypedDict):
 class CreateInvoiceParams(BaseModel):
     customer_id: str
     r"""The customer to invoice."""
+
+    entity_id: Optional[str] = None
+    r"""The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity."""
 
     plans: Optional[List[CreateInvoicePlan]] = None
 
@@ -1546,22 +2479,22 @@ class CreateInvoiceParams(BaseModel):
     r"""ID of an invoice template whose footer, memo and default payment terms are applied."""
 
     net_terms_days: Optional[int] = None
-    r"""Days until the invoice is due. Defaults to the template's terms, then the org default."""
+    r"""Days until the invoice is due. Defaults to the template's terms, then the org default. Cannot be combined with due_date."""
 
     issue_date: Optional[int] = None
     r"""Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future."""
 
     due_date: Optional[int] = None
-    r"""When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days."""
+    r"""When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days."""
 
     tax_rate_id: Optional[str] = None
     r"""Stripe tax rate ID (txr_...) applied to every line."""
 
     period_start: Optional[int] = None
-    r"""Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start."""
+    r"""Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated."""
 
     period_end: Optional[int] = None
-    r"""End of the period being invoiced, in milliseconds."""
+    r"""End of the period being invoiced, in milliseconds. Given together with period_start."""
 
     preview: Optional[bool] = None
     r"""If true, returns the calculated lines and totals without creating an invoice."""
@@ -1573,6 +2506,7 @@ class CreateInvoiceParams(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "entity_id",
                 "plans",
                 "custom_line_items",
                 "discounts",
@@ -1819,6 +2753,8 @@ class CreateInvoiceInvoice(BaseModel):
 class CreateInvoiceLineTypedDict(TypedDict):
     plan_id: Nullable[str]
     feature_id: Nullable[str]
+    entity_id: Nullable[str]
+    r"""The entity this line is billed to. Null for customer-level lines."""
     description: str
     amount: float
     amount_after_discounts: float
@@ -1832,6 +2768,9 @@ class CreateInvoiceLine(BaseModel):
     plan_id: Nullable[str]
 
     feature_id: Nullable[str]
+
+    entity_id: Nullable[str]
+    r"""The entity this line is billed to. Null for customer-level lines."""
 
     description: str
 
@@ -2034,5 +2973,17 @@ except NameError:
     pass
 try:
     CreateInvoiceCreditSchema1.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateInvoiceDimensionsLicenseQuantity3.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateInvoiceDimensionsLicenseQuantity1.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateInvoiceCreditSchemaLicenseQuantity1.model_rebuild()
 except NameError:
     pass

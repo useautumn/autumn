@@ -3286,6 +3286,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description: "The customer to invoice.",
 			},
 			{
+				name: "entity_id",
+				type: "string",
+				required: false,
+				description:
+					"The entity every plan is billed to unless the plan sets its own entity_id. The invoice is tagged with it when every plan line resolves to this entity.",
+			},
+			{
 				name: "plans",
 				type: "json",
 				required: false,
@@ -3314,7 +3321,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "number",
 				required: false,
 				description:
-					"Days until the invoice is due. Defaults to the template's terms, then the org default.",
+					"Days until the invoice is due. Defaults to the template's terms, then the org default. Cannot be combined with due_date.",
 			},
 			{
 				name: "issue_date",
@@ -3328,7 +3335,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "number",
 				required: false,
 				description:
-					"When payment is due, in milliseconds. Must be in the future; takes precedence over net_terms_days.",
+					"When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days.",
 			},
 			{
 				name: "tax_rate_id",
@@ -3341,13 +3348,14 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "number",
 				required: false,
 				description:
-					"Start of the period being invoiced, in milliseconds. Prorated lines are charged for period_start → period_end against one price interval starting at period_start.",
+					"Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.",
 			},
 			{
 				name: "period_end",
 				type: "number",
 				required: false,
-				description: "End of the period being invoiced, in milliseconds.",
+				description:
+					"End of the period being invoiced, in milliseconds. Given together with period_start.",
 			},
 			{
 				name: "preview",
