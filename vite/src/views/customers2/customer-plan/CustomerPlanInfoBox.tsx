@@ -1,9 +1,21 @@
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
-export const CustomerPlanInfoBox = () => {
+export const CustomerPlanInfoBox = ({
+	scope = "customer",
+}: {
+	scope?: "customer" | "invoice";
+}) => {
 	const { customer } = useCusQuery();
 	const customerLabel = customer?.name || customer?.email || customer?.id || "";
+
+	if (scope === "invoice") {
+		return (
+			<InfoBox classNames={{ infoBox: "w-full max-w-xl" }}>
+				You're customizing this plan for this invoice only.
+			</InfoBox>
+		);
+	}
 
 	return (
 		<InfoBox classNames={{ infoBox: "w-full max-w-xl" }}>

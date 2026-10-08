@@ -766,7 +766,6 @@ test.concurrent(
 			params: {
 				customer_id: customerId,
 				plans: [{ plan_id: pro.id }],
-				net_terms_days: 5,
 				issue_date: issueDate,
 				due_date: dueDate,
 			},
@@ -833,6 +832,19 @@ test.concurrent(
 						plans: [{ plan_id: pro.id }],
 						issue_date: subDays(new Date(), 1).getTime(),
 						due_date: subDays(new Date(), 2).getTime(),
+					},
+				}),
+		});
+		await expectAutumnError({
+			errMessage: "Provide due_date or net_terms_days, not both.",
+			func: () =>
+				createInvoice({
+					autumnV2_3,
+					params: {
+						customer_id: customerId,
+						plans: [{ plan_id: pro.id }],
+						net_terms_days: 5,
+						due_date: addDays(new Date(), 20).getTime(),
 					},
 				}),
 		});

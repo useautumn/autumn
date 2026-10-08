@@ -46,6 +46,27 @@ describe("buildCreateInvoiceRequestBody", () => {
 		).toBeNull();
 	});
 
+	test("sends a picked due date instead of payment terms, never both", () => {
+		const dueDay = Date.UTC(2099, 0, 15);
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [planWith()],
+				netTermsDays: 14,
+				dueDay,
+			},
+		});
+		expect(body?.net_terms_days).toBeUndefined();
+		expect(body?.due_date).toBeDefined();
+
+		const termsOnly = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: { ...emptyForm(), plans: [planWith()], netTermsDays: 14 },
+		});
+		expect(termsOnly?.net_terms_days).toBe(14);
+	});
+
 	test("returns null when there is nothing to charge", () => {
 		expect(
 			buildCreateInvoiceRequestBody({
@@ -245,6 +266,52 @@ describe("buildCreateInvoiceRequestBody", () => {
 				],
 			},
 		]);
+	});
+
+	test("derives a license feature's billing_behavior from the linked license version, not the parent or the latest version", () => {
+		const latestEditorItems = [
+			{ feature_id: "credits", usage_model: UsageModel.PayPerUse },
+			{ feature_id: "exports", usage_model: UsageModel.PayPerUse },
+		] as CreateInvoiceForm["plans"][number]["items"];
+		const pinnedEditorItems = [
+			{ feature_id: "credits", usage_model: UsageModel.Prepaid },
+			{ feature_id: "exports", usage_model: UsageModel.Prepaid },
+		] as CreateInvoiceForm["plans"][number]["items"];
+
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			catalogItemsByPlanId: new Map([
+				["pro", planItems ?? undefined],
+				["editor", latestEditorItems ?? undefined],
+			]),
+			licenseItemsByPlanId: new Map([
+				["pro", new Map([["editor", pinnedEditorItems ?? []]])],
+			]),
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						licenses: [
+							{
+								_id: "l1",
+								licensePlanId: "editor",
+								quantity: 1,
+								featureQuantities: { credits: 100, exports: 5 },
+								featureUsage: {},
+								prorate: undefined,
+							},
+						],
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0].license_quantities?.[0].feature_quantities).toEqual(
+			[
+				{ feature_id: "credits", billing_behavior: "prepaid", quantity: 100 },
+				{ feature_id: "exports", billing_behavior: "prepaid", quantity: 5 },
+			],
+		);
 	});
 
 	test("sends the period as a pair and flags preview", () => {

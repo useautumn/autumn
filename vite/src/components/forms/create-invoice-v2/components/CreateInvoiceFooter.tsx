@@ -14,6 +14,7 @@ export function CreateInvoiceFooter() {
 		previewQuery,
 		blockingReason,
 		catalogItemsByPlanId,
+		licenseItemsByPlanId,
 	} = useCreateInvoiceFormContext();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
@@ -24,6 +25,7 @@ export function CreateInvoiceFooter() {
 				customerId,
 				form: formValues,
 				catalogItemsByPlanId,
+				licenseItemsByPlanId,
 			}),
 		onCreated: closeSheet,
 	});

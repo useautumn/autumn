@@ -2,6 +2,7 @@ import type {
 	CustomLineItem,
 	DbInvoiceLineItem,
 	InvoicePlanParams,
+	LineItem,
 	ReissueLineEdits,
 } from "@autumn/shared";
 import { atmnToStripeAmount, ErrCode, RecaseError } from "@autumn/shared";
@@ -46,8 +47,8 @@ export const applyReissueLineEdits = async ({
 	storedLines: DbInvoiceLineItem[];
 	edits?: ReissueLineEdits;
 	currency: string;
-}): Promise<StripeLine[]> => {
-	if (!edits) return lines;
+}): Promise<{ lines: StripeLine[]; addedLineItems: LineItem[] }> => {
+	if (!edits) return { lines, addedLineItems: [] };
 
 	const stripeIds = stripeIdsByLineId({ storedLines });
 	const resolve = (lineItemId: string) => {
@@ -107,5 +108,8 @@ export const applyReissueLineEdits = async ({
 		plans: adds.filter(isCatalogPlan),
 	});
 
-	return [...kept, ...customAdds, ...planAdds];
+	return {
+		lines: [...kept, ...customAdds, ...planAdds.lines],
+		addedLineItems: planAdds.lineItems,
+	};
 };
