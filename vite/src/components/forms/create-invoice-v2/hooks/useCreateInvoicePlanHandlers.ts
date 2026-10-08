@@ -1,8 +1,7 @@
-import type { ProductV2 } from "@autumn/shared";
 import { useCallback, useMemo, useRef } from "react";
-import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
 import { EMPTY_INVOICE_PLAN, newInvoicePlan } from "../createInvoiceFormSchema";
 import { copyExistingPlansIntoInvoice } from "../utils/copyExistingPlansIntoInvoice";
+import type { InvoiceExistingPlan } from "../utils/customerStatePlanToInvoicePlan";
 import type { CreateInvoiceFormApi } from "./useCreateInvoiceForm";
 
 /** Row edits for the plans tray. New rows take the last scope picked, else the page's entity. */
@@ -10,12 +9,10 @@ export function useCreateInvoicePlanHandlers({
 	form,
 	defaultEntityId,
 	existingPlans,
-	productsById,
 }: {
 	form: CreateInvoiceFormApi;
 	defaultEntityId: string | null;
-	existingPlans: CustomerStatePlan[];
-	productsById: Map<string, ProductV2>;
+	existingPlans: InvoiceExistingPlan[];
 }) {
 	const lastSelectedEntityId = useRef(defaultEntityId);
 	// The picker present at mount waits for the sheet; user-added ones open at once.
@@ -82,11 +79,10 @@ export function useCreateInvoicePlanHandlers({
 				planIndex,
 				entityId,
 				existingPlans,
-				productsById,
 			});
 			if (plans) form.setFieldValue("plans", plans);
 		},
-		[form, plansNow, existingPlans, productsById],
+		[form, plansNow, existingPlans],
 	);
 
 	return useMemo(

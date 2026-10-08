@@ -1,8 +1,9 @@
-import type { ProductV2 } from "@autumn/shared";
-import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
 import { resolveCopySourceScope } from "@/components/forms/customer-state/customerStateUtils";
 import type { FormInvoicePlan } from "../createInvoiceFormSchema";
-import { customerStatePlanToInvoicePlan } from "./customerStatePlanToInvoicePlan";
+import {
+	customerStatePlanToInvoicePlan,
+	type InvoiceExistingPlan,
+} from "./customerStatePlanToInvoicePlan";
 
 /** Invoice rows in the shape the shared copy-scope rules read. */
 export const invoicePlansToScopedPlans = ({
@@ -18,13 +19,11 @@ export function copyExistingPlansIntoInvoice({
 	planIndex,
 	entityId,
 	existingPlans,
-	productsById,
 }: {
 	plans: FormInvoicePlan[];
 	planIndex: number;
 	entityId: string | null;
-	existingPlans: CustomerStatePlan[];
-	productsById: Map<string, ProductV2>;
+	existingPlans: InvoiceExistingPlan[];
 }): FormInvoicePlan[] | null {
 	const copySource = resolveCopySourceScope({
 		existingPlans,
@@ -35,12 +34,7 @@ export function copyExistingPlansIntoInvoice({
 
 	return [
 		...plans.slice(0, planIndex),
-		...copySource.plans.map((plan) =>
-			customerStatePlanToInvoicePlan({
-				plan,
-				product: productsById.get(plan.productId),
-			}),
-		),
+		...copySource.plans.map((plan) => customerStatePlanToInvoicePlan({ plan })),
 		...plans.slice(planIndex + 1),
 	];
 }

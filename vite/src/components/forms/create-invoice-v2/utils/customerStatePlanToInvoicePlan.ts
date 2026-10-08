@@ -1,57 +1,47 @@
-import type { ProductItem, ProductV2 } from "@autumn/shared";
+import type { FullCustomer, ProductV2 } from "@autumn/shared";
+import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
 import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
+import { getActiveCustomerProducts } from "@/components/forms/customer-state/getActiveCustomerPlans";
 import {
-	type FormInvoiceLicense,
 	type FormInvoicePlan,
 	newInvoiceLicense,
 	newInvoicePlan,
 } from "../createInvoiceFormSchema";
+import {
+	customerProductToPaidFeatureQuantities,
+	customerProductToPaidLicenseQuantities,
+} from "./customerProductPaidQuantities";
 
-const includedUsageOf = (item: ProductItem | undefined) =>
-	typeof item?.included_usage === "number" ? item.included_usage : 0;
+/** A saved plan plus what the customer actually paid for, since invoices bill exclusive of grants. */
+export type InvoiceExistingPlan = CustomerStatePlan & {
+	paidFeatureQuantities: Record<string, number>;
+	paidLicenseQuantities: Record<string, number>;
+};
 
-/** Saved prepaid totals count included usage; an invoice bills only the paid units. */
-const paidFeatureQuantities = ({
-	prepaidOptions,
-	items,
+/** The customer's active plans, offered by "Copy existing plans". */
+export function getInvoiceExistingPlans({
+	customer,
+	products,
 }: {
-	prepaidOptions: Record<string, number>;
-	items: ProductItem[];
-}): Record<string, number> =>
-	Object.fromEntries(
-		Object.entries(prepaidOptions).flatMap(([featureId, total]) => {
-			const item = items.find(
-				(candidate) => candidate.feature_id === featureId,
-			);
-			const paid = total - includedUsageOf(item);
-			return paid > 0 ? [[featureId, paid]] : [];
+	customer: FullCustomer | undefined;
+	products: ProductV2[];
+}): InvoiceExistingPlan[] {
+	return getActiveCustomerProducts({ customer }).map((cusProduct) => ({
+		...customerProductToCustomerStatePlan({ cusProduct, products }),
+		paidFeatureQuantities: customerProductToPaidFeatureQuantities({
+			cusProduct,
 		}),
-	);
-
-const paidLicenses = ({
-	licenseQuantities,
-	product,
-}: {
-	licenseQuantities: Record<string, number>;
-	product: ProductV2 | undefined;
-}): FormInvoiceLicense[] =>
-	Object.entries(licenseQuantities).flatMap(([licensePlanId, total]) => {
-		const link = product?.licenses?.find(
-			(candidate) => candidate.product.id === licensePlanId,
-		);
-		const paid = total - (link?.included ?? 0);
-		return paid > 0
-			? [{ ...newInvoiceLicense(licensePlanId), quantity: paid }]
-			: [];
-	});
+		paidLicenseQuantities: customerProductToPaidLicenseQuantities({
+			cusProduct,
+		}),
+	}));
+}
 
 /** A customer's saved plan as an invoice row, keeping its customisations and scope. */
 export function customerStatePlanToInvoicePlan({
 	plan,
-	product,
 }: {
-	plan: CustomerStatePlan;
-	product: ProductV2 | undefined;
+	plan: InvoiceExistingPlan;
 }): FormInvoicePlan {
 	return {
 		...newInvoicePlan({ entityId: plan.entityId ?? null }),
@@ -59,13 +49,12 @@ export function customerStatePlanToInvoicePlan({
 		version: plan.version,
 		items: plan.items,
 		isCustom: plan.isCustom,
-		featureQuantities: paidFeatureQuantities({
-			prepaidOptions: plan.prepaidOptions,
-			items: plan.items ?? product?.items ?? [],
-		}),
-		licenses: paidLicenses({
-			licenseQuantities: plan.licenseQuantities,
-			product,
-		}),
+		featureQuantities: { ...plan.paidFeatureQuantities },
+		licenses: Object.entries(plan.paidLicenseQuantities).map(
+			([licensePlanId, quantity]) => ({
+				...newInvoiceLicense(licensePlanId),
+				quantity,
+			}),
+		),
 	};
 }

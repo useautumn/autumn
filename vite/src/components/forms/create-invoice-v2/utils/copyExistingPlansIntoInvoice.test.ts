@@ -1,23 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import type { ProductV2 } from "@autumn/shared";
-import {
-	type CustomerStatePlan,
-	EMPTY_CUSTOMER_STATE_PLAN,
-} from "@/components/forms/customer-state/customerStateSchema";
+import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/customerStateSchema";
 import {
 	EMPTY_INVOICE_PLAN,
 	type FormInvoicePlan,
 } from "../createInvoiceFormSchema";
 import { copyExistingPlansIntoInvoice } from "./copyExistingPlansIntoInvoice";
-
-const productsById = new Map(
-	["pro", "addon"].map((id) => [id, { id, items: [] } as unknown as ProductV2]),
-);
+import type { InvoiceExistingPlan } from "./customerStatePlanToInvoicePlan";
 
 const existing = (
 	productId: string,
 	entityId: string | null,
-): CustomerStatePlan => ({ ...EMPTY_CUSTOMER_STATE_PLAN, productId, entityId });
+): InvoiceExistingPlan => ({
+	...EMPTY_CUSTOMER_STATE_PLAN,
+	productId,
+	entityId,
+	paidFeatureQuantities: {},
+	paidLicenseQuantities: {},
+});
 
 const invoicePlan = (
 	_id: string,
@@ -41,7 +40,6 @@ describe("copyExistingPlansIntoInvoice", () => {
 			planIndex: 1,
 			entityId: "workspace_a",
 			existingPlans,
-			productsById,
 		});
 
 		expect(rows(plans)).toEqual([
@@ -59,7 +57,6 @@ describe("copyExistingPlansIntoInvoice", () => {
 			planIndex: 1,
 			entityId: "workspace_a",
 			existingPlans: [...existingPlans, existing("addon", "workspace_a")],
-			productsById,
 		});
 
 		expect(rows(plans)).toEqual([
@@ -74,7 +71,6 @@ describe("copyExistingPlansIntoInvoice", () => {
 			planIndex: 0,
 			entityId: null,
 			existingPlans: [existing("pro", "workspace_b")],
-			productsById,
 		});
 
 		expect(rows(plans)).toEqual([["pro", "workspace_b"]]);
@@ -90,7 +86,6 @@ describe("copyExistingPlansIntoInvoice", () => {
 				planIndex: 1,
 				entityId: "workspace_b",
 				existingPlans,
-				productsById,
 			}),
 		).toBeNull();
 	});

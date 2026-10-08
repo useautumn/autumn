@@ -12,8 +12,6 @@ import {
 	useContext,
 	useMemo,
 } from "react";
-import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
-import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
 import type { LicenseCatalog } from "@/components/forms/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQuery";
@@ -33,6 +31,10 @@ import {
 	type LicenseItemsByPlanId,
 	useCreateInvoiceRequestBody,
 } from "../hooks/useCreateInvoiceRequestBody";
+import {
+	getInvoiceExistingPlans,
+	type InvoiceExistingPlan,
+} from "../utils/customerStatePlanToInvoicePlan";
 import { findBlockingDiscount } from "../utils/validateInvoiceDiscounts";
 
 interface CreateInvoiceFormContextValue {
@@ -50,7 +52,7 @@ interface CreateInvoiceFormContextValue {
 	planEditor: ReturnType<typeof useCreateInvoicePlanEditor>;
 	planHandlers: ReturnType<typeof useCreateInvoicePlanHandlers>;
 	/** The customer's active plans, offered by "Copy existing plans". */
-	existingPlans: CustomerStatePlan[];
+	existingPlans: InvoiceExistingPlan[];
 }
 
 const CreateInvoiceFormContext =
@@ -82,7 +84,7 @@ export function CreateInvoiceFormProvider({
 
 	const existingPlans = useMemo(
 		() =>
-			getActiveCustomerPlans({
+			getInvoiceExistingPlans({
 				customer: customer as FullCustomer | undefined,
 				products: products ?? [],
 			}),
@@ -92,7 +94,6 @@ export function CreateInvoiceFormProvider({
 		form,
 		defaultEntityId: pageEntityId,
 		existingPlans,
-		productsById,
 	});
 
 	const catalogItemsByPlanId = useMemo(
