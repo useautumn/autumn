@@ -31,6 +31,8 @@ const alienClient: AlienClient = {
 		return { deploymentGroupId: "dg_1", setupUrl: "https://setup" };
 	},
 	findDeployment: async () => null,
+	getDeployment: async () => null,
+	retryDeployment: async () => {},
 	updateDeploymentCompute: async () => {},
 	deleteDeployment: async () => {},
 	revokeSetupLinks: async () => {},

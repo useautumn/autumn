@@ -87,3 +87,19 @@ export const deleteCacheDeployment = ({
 		value: sql`${envByocConfig({ ctx })} - 'cache'`,
 		condition: sql`(${envCache({ ctx })}->>'created_at')::bigint = ${cacheDeployment.created_at}`,
 	});
+
+/** Stamps the token's one hand-over; false when it already happened or the record moved on. */
+export const markCacheTokenRevealed = ({
+	ctx,
+	cacheDeployment,
+	revealedAt,
+}: {
+	ctx: AutumnContext;
+	cacheDeployment: ByocCacheDeployment;
+	revealedAt: number;
+}) =>
+	writeByocConfig({
+		ctx,
+		value: sql`jsonb_set(${envByocConfig({ ctx })}, '{cache,token_revealed_at}', to_jsonb(${revealedAt}::bigint))`,
+		condition: sql`${envCache({ ctx })}->>'deployment_group_id' = ${cacheDeployment.deployment_group_id} AND ${envCache({ ctx })}->>'token_revealed_at' IS NULL`,
+	});

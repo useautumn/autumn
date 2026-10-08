@@ -22,7 +22,10 @@ export const useAtomActions = () => {
 	const queryKey = useAtomQueryKey();
 
 	const setCache = (cache: GetByocCacheResponse["cache"]) =>
-		queryClient.setQueryData<GetByocCacheResponse>(queryKey, { cache });
+		queryClient.setQueryData<GetByocCacheResponse>(
+			queryKey,
+			(current) => current && { ...current, cache },
+		);
 
 	const create = useMutation({
 		mutationFn: async ({ cpu, memory }: ByocCacheMachine) => {
@@ -50,7 +53,8 @@ export const useAtomActions = () => {
 		mutationFn: async () => {
 			await axiosInstance.post("/v1/byoc.delete_atom", {});
 		},
-		onSuccess: () => setCache(null),
+		// A delete keeps the record while the stack is torn down, so read where it landed.
+		onSuccess: () => queryClient.invalidateQueries({ queryKey }),
 	});
 
 	/** Deploys, then opens alien's setup in a new tab; a deploy with no link to open (local dev) closes it again. */

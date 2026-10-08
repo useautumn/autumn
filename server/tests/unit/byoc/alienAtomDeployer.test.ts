@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { AlienClient } from "@autumn/alien";
+import type { AlienClient, AlienDeployment } from "@autumn/alien";
 import { getAutumnEnv } from "@autumn/env";
 import {
 	AppEnv,
+	type ByocCacheNetwork,
+	ByocCacheStage,
+	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_MACHINE,
 	type Organization,
 } from "@autumn/shared";
@@ -23,6 +26,8 @@ const recordingAlienClient = () => {
 			return { deploymentGroupId: "dg_1", setupUrl: "https://setup" };
 		},
 		findDeployment: async () => null,
+		getDeployment: async () => null,
+		retryDeployment: async () => {},
 		updateDeploymentCompute: async () => {},
 		deleteDeployment: async () => {},
 		revokeSetupLinks: async () => {},
@@ -103,5 +108,154 @@ describe("starting an Atom on alien", () => {
 				targetResources: null,
 			},
 		]);
+	});
+});
+
+describe("an Atom's network on alien", () => {
+	const start = async (network: ByocCacheNetwork | null) => {
+		const { alienClient, started } = recordingAlienClient();
+		await createAlienAtomDeployer({ alienClient }).start({
+			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			auth: { mode: "deployed", tokenHash: "hash_1" },
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			network,
+		});
+		return started[0]?.network;
+	};
+
+	test("an existing VPC keeps Atom on its private subnets", async () => {
+		expect(
+			await start({
+				type: "existing_vpc",
+				vpc_id: "vpc_1",
+				subnet_ids: ["subnet_a", "subnet_b"],
+			}),
+		).toEqual({
+			type: "byo-vpc-aws",
+			vpc_id: "vpc_1",
+			private_subnet_ids: ["subnet_a", "subnet_b"],
+			public_subnet_ids: [],
+		});
+	});
+
+	test("a new VPC is one alien creates; none takes alien's default", async () => {
+		expect(await start({ type: "new_vpc" })).toEqual({ type: "create" });
+		expect(await start(null)).toBeNull();
+	});
+});
+
+/** An alien client whose deployments are looked up by id or by group. */
+const deploymentsAlienClient = ({
+	byId,
+	byGroup,
+}: {
+	byId: AlienDeployment | null;
+	byGroup: AlienDeployment | null;
+}): AlienClient => ({
+	...recordingAlienClient().alienClient,
+	getDeployment: async () => byId,
+	findDeployment: async () => byGroup,
+});
+
+const deploymentIn = (status: string): AlienDeployment => ({
+	id: "dep_1",
+	status,
+	region: "eu-west-2",
+	stackState: {
+		resources: {
+			"compute-cluster": {
+				config: { id: "compute-cluster", type: "compute-cluster" },
+				status: "running",
+			},
+			atom: {
+				config: { id: "atom", type: "container" },
+				status: status === "running" ? "running" : "provisioning",
+				outputs: {
+					volumes: [{ ordinal: 0, volumeId: "vol_1", zone: "eu-west-2a" }],
+					publicEndpoints:
+						status === "running"
+							? { default: { url: "https://atom.example" } }
+							: {},
+				},
+			},
+		},
+	},
+});
+
+describe("finding an Atom on alien", () => {
+	test("a provisioning deployment reports the steps alien has finished", async () => {
+		const deployer = createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: null,
+				byGroup: deploymentIn("provisioning"),
+			}),
+		});
+
+		const atom = await deployer.find({ deploymentGroupId: "dg_1" });
+
+		expect(atom?.status).toBe(ByocCacheStatus.Provisioning);
+		expect(atom?.region).toBe("eu-west-2");
+		expect(atom?.doneStages).toEqual([
+			ByocCacheStage.Stack,
+			ByocCacheStage.Disk,
+			ByocCacheStage.Machine,
+		]);
+	});
+
+	test("a running deployment has every step done but connected", async () => {
+		const deployer = createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: deploymentIn("running"),
+				byGroup: null,
+			}),
+		});
+
+		const atom = await deployer.find({
+			deploymentGroupId: "dg_1",
+			deploymentId: "dep_1",
+		});
+
+		expect(atom?.endpointUrl).toBe("https://atom.example");
+		expect(atom?.doneStages).toEqual([
+			ByocCacheStage.Stack,
+			ByocCacheStage.Disk,
+			ByocCacheStage.Machine,
+			ByocCacheStage.LoadBalancer,
+			ByocCacheStage.Atom,
+		]);
+	});
+
+	test("a known deployment is followed through its delete", async () => {
+		const removing = createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: deploymentIn("deleting"),
+				byGroup: null,
+			}),
+		});
+		const teardown = createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: deploymentIn("teardown-required"),
+				byGroup: null,
+			}),
+		});
+		const found = { deploymentGroupId: "dg_1", deploymentId: "dep_1" };
+
+		expect((await removing.find(found))?.status).toBe(ByocCacheStatus.Removing);
+		expect((await teardown.find(found))?.status).toBe(
+			ByocCacheStatus.TeardownRequired,
+		);
+	});
+
+	test("a deleted deployment gives way to whatever the group runs now", async () => {
+		const deployer = createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: deploymentIn("deleted"),
+				byGroup: null,
+			}),
+		});
+
+		expect(
+			await deployer.find({ deploymentGroupId: "dg_1", deploymentId: "dep_1" }),
+		).toBeNull();
 	});
 });

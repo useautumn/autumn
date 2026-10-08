@@ -1,3 +1,4 @@
+import { toDeploymentGroupName } from "@autumn/alien";
 import { SHADOW_ATOM_EXTERNAL_ID } from "@autumn/edge-config";
 import {
 	type ApiByocCache,
@@ -12,6 +13,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
+import { cacheDeploymentToStages } from "./cacheStageUtils.js";
 
 /** A dev stack's name goes in front, so two worktrees can hold the same org on alien at once; only `scripts/dev.ts` sets it. */
 const cacheNamePrefix = (): string | null =>
@@ -46,6 +48,15 @@ export const cacheGroupLabel = ({
 	env: AppEnv;
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
+
+/** The name alien gives the org's stack in its cloud: the deployment group's. */
+export const cacheStackName = ({
+	org,
+	env,
+}: {
+	org: Pick<Organization, "slug">;
+	env: AppEnv;
+}) => toDeploymentGroupName({ label: cacheGroupLabel({ org, env }) });
 
 /** An org's Atom names, as `createCache` starts it. */
 export const cacheNames = ({
@@ -103,6 +114,22 @@ export const cacheNotRunning = () =>
 		statusCode: 409,
 	});
 
+/** Only a deploy that stopped can be resumed. */
+export const cacheNotFailed = () =>
+	new RecaseError({
+		message: "Atom's deploy has not failed, so there is nothing to retry.",
+		code: ErrCode.InvalidRequest,
+		statusCode: 409,
+	});
+
+/** The token is handed over once; after that only a new Atom gets a new one. */
+export const cacheTokenUnavailable = () =>
+	new RecaseError({
+		message: "Atom's token was already shown, or there is no Atom.",
+		code: ErrCode.InvalidRequest,
+		statusCode: 409,
+	});
+
 /** One cache change per env at a time. */
 export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 	`lock:byoc-cache:${ctx.org.id}:${ctx.env}`;
@@ -121,6 +148,11 @@ export const cacheDeploymentToApiCache = ({
 	created_at: cacheDeployment.created_at,
 	cpu: cacheDeployment.cpu,
 	memory: cacheDeployment.memory,
+	region: cacheDeployment.region ?? null,
+	network: cacheDeployment.network ?? null,
+	stages: cacheDeploymentToStages({ cacheDeployment }),
+	error: cacheDeployment.error ?? null,
+	token_revealed: Boolean(cacheDeployment.token_revealed_at),
 });
 
 /** Only a create hands out the token, so reading a cache never reveals it. */

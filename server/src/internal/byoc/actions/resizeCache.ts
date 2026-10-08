@@ -48,9 +48,8 @@ const moveCacheMachine = async ({
 		machine: resourcesToMachine(params),
 	});
 
-	const resized = await refreshCacheDeployment({
-		ctx,
-		cacheDeployment: current,
-	});
+	const resized =
+		(await refreshCacheDeployment({ ctx, cacheDeployment: current })) ??
+		current;
 	return cacheDeploymentToApiCache({ cacheDeployment: resized, env: ctx.env });
 };

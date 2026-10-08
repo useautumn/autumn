@@ -7,6 +7,7 @@ import type { AlienApi } from "../types/alienApi.js";
 import type {
 	AlienEnvironmentVariable,
 	AlienFixedPools,
+	AlienNetwork,
 	AlienSetup,
 } from "../types/alienClient.js";
 import { toDeploymentGroupName } from "./deploymentGroupName.js";
@@ -52,6 +53,7 @@ const startHostedSetup = async ({
 	name,
 	environmentVariables,
 	pools,
+	network,
 }: {
 	api: AlienApi;
 	config: { project: string; workspace: string };
@@ -59,6 +61,7 @@ const startHostedSetup = async ({
 	name: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
+	network: AlienNetwork | null;
 }): Promise<AlienSetup> => {
 	const existingGroup = await findDeploymentGroupByExternalId({
 		api,
@@ -83,7 +86,10 @@ const startHostedSetup = async ({
 					allowedPlatforms: ["aws"],
 					allowedSetupMethods: ["cloudformation"],
 					stackSettings: {
-						defaults: { compute: fixedPoolsToCompute({ pools }) },
+						defaults: {
+							compute: fixedPoolsToCompute({ pools }),
+							...(network && { network }),
+						},
 					},
 				},
 				environmentVariables,
@@ -102,19 +108,21 @@ const startHostedSetup = async ({
 	};
 };
 
-/** The local manager runs no machines, so only a hosted setup takes `pools`. */
+/** The local manager runs no machines or networks, so only a hosted setup takes `pools` and `network`. */
 export const startSetup = ({
 	ctx,
 	externalId,
 	label,
 	environmentVariables,
 	pools,
+	network,
 }: {
 	ctx: { api: AlienApi };
 	externalId: string;
 	label: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
+	network: AlienNetwork | null;
 }): Promise<AlienSetup> => {
 	const { api } = ctx;
 	const name = toDeploymentGroupName({ label });
@@ -127,5 +135,6 @@ export const startSetup = ({
 		name,
 		environmentVariables,
 		pools,
+		network,
 	});
 };

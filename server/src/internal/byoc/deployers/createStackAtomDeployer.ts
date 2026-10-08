@@ -1,13 +1,12 @@
 import {
-	type AppEnv,
 	type ByocCacheMachine,
+	ByocCacheStage,
 	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_MACHINE,
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import { cacheExternalId } from "../utils/byocCacheUtils.js";
 import { postToMultiTenantAtom } from "./postToMultiTenantAtom.js";
 import type {
 	AtomAuth,
@@ -76,6 +75,12 @@ const findStackAtom = async ({
 		status: ByocCacheStatus.Ready,
 		endpointUrl: ctx.atom.atomUrl,
 		machine: ctx.machineById.get(atom.id) ?? DEFAULT_BYOC_CACHE_MACHINE,
+		region: null,
+		// The stack's Atom process is already running, so every step it would take is done.
+		doneStages: Object.values(ByocCacheStage).filter(
+			(stage) => stage !== ByocCacheStage.Connected,
+		),
+		error: null,
 	};
 };
 
@@ -118,6 +123,8 @@ export const createStackAtomDeployer = ({
 		start: (params) => startStackAtom({ ctx, ...params }),
 		find: (params) => findStackAtom({ ctx, ...params }),
 		resize: (params) => resizeStackAtom({ ctx, ...params }),
+		// Nothing deploys on a dev stack, so nothing can fail to.
+		retry: () => Promise.resolve(),
 		delete: (params) => deleteStackAtom({ ctx, ...params }),
 	};
 };

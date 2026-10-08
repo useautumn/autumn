@@ -1,7 +1,9 @@
+import { isDeepStrictEqual } from "node:util";
 import { orgToCacheDeployment } from "@autumn/byoc";
 import {
 	type ByocCacheDeployment,
 	type ByocCacheMachine,
+	type ByocCacheNetwork,
 	ByocCacheStatus,
 	type CreateByocCacheParams,
 	type CreateByocCacheResponse,
@@ -30,20 +32,34 @@ import {
 	resourcesToMachine,
 } from "../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
+import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
 
-/** A named machine wins; a fresh link for a waiting setup keeps the one it asked for; otherwise the default. */
-const setupMachine = ({
-	params: { cpu, memory },
+/** What a setup asks the org's cloud for. */
+type CacheSetupSettings = {
+	machine: ByocCacheMachine;
+	region: string | null;
+	network: ByocCacheNetwork | null;
+};
+
+/** A named setting wins; a fresh link for a waiting setup keeps what it asked for; otherwise the default. */
+const setupSettings = ({
+	params: { cpu, memory, region, network },
 	existing,
 }: {
 	params: CreateByocCacheParams;
 	existing: ByocCacheDeployment | null;
-}): ByocCacheMachine => {
-	if (cpu !== undefined && memory !== undefined)
-		return resourcesToMachine({ cpu, memory });
-	const asked =
+}): CacheSetupSettings => {
+	const askedMachine =
 		existing && cacheDeploymentToMachine({ cacheDeployment: existing });
-	return asked ?? DEFAULT_BYOC_CACHE_MACHINE;
+	const namedMachine =
+		cpu !== undefined && memory !== undefined
+			? resourcesToMachine({ cpu, memory })
+			: null;
+	return {
+		machine: namedMachine ?? askedMachine ?? DEFAULT_BYOC_CACHE_MACHINE,
+		region: region ?? existing?.region ?? null,
+		network: network ?? existing?.network ?? null,
+	};
 };
 
 /** Holds the env's slot for this deployment group, or returns whoever claimed it first. */
@@ -51,12 +67,12 @@ const claimCacheDeployment = async ({
 	ctx,
 	deploymentGroupId,
 	token,
-	machine,
+	settings: { machine, region, network },
 }: {
 	ctx: AutumnContext;
 	deploymentGroupId: string;
 	token: string;
-	machine: ByocCacheMachine;
+	settings: CacheSetupSettings;
 }): Promise<ByocCacheDeployment> => {
 	const cacheDeployment: ByocCacheDeployment = {
 		deployment_group_id: deploymentGroupId,
@@ -67,6 +83,8 @@ const claimCacheDeployment = async ({
 		memory: machine.memory,
 		encrypted_token: encryptData(token),
 		created_at: Date.now(),
+		region,
+		network,
 	};
 	if (await insertCacheDeployment({ ctx, cacheDeployment }))
 		return cacheDeployment;
@@ -77,22 +95,24 @@ const claimCacheDeployment = async ({
 	);
 };
 
-/** A fresh link moves the record to the group it landed in (the org's external id changed) and the machine it asks for; token kept. */
+/** A fresh link moves the record to the group it landed in (the org's external id changed) and the settings it asks for; token kept. */
 const followSetup = async ({
 	ctx,
 	existing,
 	deploymentGroupId,
-	machine,
+	settings: { machine, region, network },
 }: {
 	ctx: AutumnContext;
 	existing: ByocCacheDeployment;
 	deploymentGroupId: string;
-	machine: ByocCacheMachine;
+	settings: CacheSetupSettings;
 }): Promise<ByocCacheDeployment> => {
 	const sameGroup = existing.deployment_group_id === deploymentGroupId;
 	const sameMachine =
 		existing.cpu === machine.cpu && existing.memory === machine.memory;
-	if (sameGroup && sameMachine) return existing;
+	const sameRegion = (existing.region ?? null) === region;
+	const sameNetwork = isDeepStrictEqual(existing.network ?? null, network);
+	if (sameGroup && sameMachine && sameRegion && sameNetwork) return existing;
 	const moved: ByocCacheDeployment = {
 		...existing,
 		deployment_group_id: deploymentGroupId,
@@ -101,6 +121,8 @@ const followSetup = async ({
 		endpoint_url: null,
 		cpu: machine.cpu,
 		memory: machine.memory,
+		region,
+		network,
 	};
 	await updateCacheDeployment({
 		ctx,
@@ -148,28 +170,32 @@ const startCacheSetup = async ({
 	const token = existing
 		? cacheDeploymentToAtomToken({ cacheDeployment: existing })
 		: generateAtomToken();
-	const machine = setupMachine({ params, existing });
+	const settings = setupSettings({ params, existing });
 	const setup = await getAtomDeployer().start({
 		names: cacheNames({ org, env }),
 		auth: { mode: "deployed", tokenHash: atomTokenToHash({ token }) },
-		machine,
+		machine: settings.machine,
+		network: settings.network,
 	});
 	const claimed = existing
 		? await followSetup({
 				ctx,
 				existing,
 				deploymentGroupId: setup.deploymentGroupId,
-				machine,
+				settings,
 			})
 		: await claimCacheDeployment({
 				ctx,
 				deploymentGroupId: setup.deploymentGroupId,
 				token,
-				machine,
+				settings,
 			});
-	const cacheDeployment = await refreshCacheDeployment({
+	const cacheDeployment =
+		(await refreshCacheDeployment({ ctx, cacheDeployment: claimed })) ??
+		claimed;
+	await startCacheDeploymentWatch({
 		ctx,
-		cacheDeployment: claimed,
+		deploymentGroupId: cacheDeployment.deployment_group_id,
 	});
 	return cacheDeploymentToCreateResponse({
 		cacheDeployment,

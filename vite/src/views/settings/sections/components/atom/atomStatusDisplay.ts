@@ -66,4 +66,16 @@ export const ATOM_STATUS_DISPLAY: Record<ByocCacheStatus, AtomStatusDisplay> = {
 		dotClassName: "bg-red-500",
 		removal: { ...DELETE_ATOM, action: "Delete and start over" },
 	},
+	[CacheStatus.Removing]: {
+		label: "Removing",
+		description: "Removing Atom from your AWS account.",
+		dotClassName: "bg-violet-500 motion-safe:animate-pulse",
+		removal: DELETE_ATOM,
+	},
+	[CacheStatus.TeardownRequired]: {
+		label: "Finish in AWS",
+		description: "Delete the stack in AWS to finish.",
+		dotClassName: "bg-orange-500",
+		removal: DELETE_ATOM,
+	},
 };

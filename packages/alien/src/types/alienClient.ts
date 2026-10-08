@@ -2,6 +2,10 @@ export type AlienDeployment = {
 	id: string;
 	/** alien's lifecycle status, e.g. `provisioning`, `running`, `provisioning-failed`. */
 	status: string;
+	/** The cloud region the customer's setup ran in; absent until it has. */
+	region?: string | null;
+	/** Why the last operation stopped; read it with `deploymentToErrorMessage`. */
+	error?: unknown;
 	/** alien's resource outputs; read them with `deploymentToPublicEndpointUrl`. */
 	stackState?: unknown;
 	/** The settings the deployment runs with; read its machines with `deploymentToPoolMachine`. */
@@ -13,6 +17,27 @@ export type AlienFixedPools = Record<
 	string,
 	{ machine: string; machines: number }
 >;
+
+/** Where a setup puts the deployment's network: alien's `stackSettings.defaults.network`. */
+export type AlienNetwork =
+	| { type: "create" }
+	| {
+			type: "byo-vpc-aws";
+			vpc_id: string;
+			public_subnet_ids: string[];
+			private_subnet_ids: string[];
+	  };
+
+/** One resource of a deployment's stack, as alien last reported it. */
+export type AlienResourceState = {
+	id: string;
+	/** alien's resource type, e.g. `container` or `compute-cluster`. */
+	type: string | null;
+	/** alien's resource status, e.g. `provisioning`, `running`, `provision-failed`. */
+	status: string | null;
+	outputs: Record<string, unknown> | null;
+	error: string | null;
+};
 
 /** A value the deployment's containers start with. */
 export type AlienEnvironmentVariable = {
@@ -36,16 +61,23 @@ export type AlienConfig =
 
 /** Everything Autumn asks of alien. A deployment group is one customer, keyed by our external id. */
 export type AlienClient = {
-	/** `label` is shown in alien's dashboard; it is reduced to a valid group name. `pools` are the setup's default machines. */
+	/** `label` is shown in alien's dashboard; it is reduced to a valid group name. `pools` and `network` are the setup's defaults. */
 	startSetup(params: {
 		externalId: string;
 		label: string;
 		environmentVariables: AlienEnvironmentVariable[];
 		pools: AlienFixedPools;
+		network: AlienNetwork | null;
 	}): Promise<AlienSetup>;
 	findDeployment(params: {
 		deploymentGroupId: string;
 	}): Promise<AlienDeployment | null>;
+	/** The deployment itself, in whatever state it is in, deletes included; null once alien no longer has it. */
+	getDeployment(params: {
+		deploymentId: string;
+	}): Promise<AlienDeployment | null>;
+	/** Resumes a failed deployment from where it stopped. */
+	retryDeployment(params: { deployment: AlienDeployment }): Promise<void>;
 	/** alien replaces a pool's machines; a pool's volumes follow its containers. */
 	updateDeploymentCompute(params: {
 		deployment: AlienDeployment;
