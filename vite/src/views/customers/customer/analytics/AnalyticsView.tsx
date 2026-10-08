@@ -11,7 +11,6 @@ import type { EventRow, EventsData } from "./components/analytics-types";
 import { ChartSkeleton } from "./components/ChartSkeleton";
 import { FirstLoadNotice } from "./components/FirstLoadNotice";
 import { QueryStrip } from "./components/query/QueryStrip";
-import { UpdatingBar } from "./components/UpdatingBar";
 import {
 	type TablePlaceholder,
 	UsageBreakdownTable,
@@ -22,6 +21,7 @@ import {
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
+import { useFadeTransition } from "./hooks/useFadeTransition";
 import { type ShownChart, useLastShownChart } from "./hooks/useLastShownChart";
 import { useResetQuery } from "./hooks/useResetQuery";
 import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
@@ -55,10 +55,9 @@ import {
 	trimToTopSeries,
 } from "./utils/transformGroupedChartData";
 
-// Quick cross-fade: a staged reveal read as the chart vanishing and popping back.
-const CHART_FADE = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
 const MAX_CHART_SERIES = 30;
-const STALE_OPACITY = 0.35;
+// Dimmed enough to read as stale, not so much that the chart blinks out.
+const STALE_OPACITY = 0.6;
 // Matches the default of charting the top three events.
 const PLACEHOLDER_TABLE_ROWS = 3;
 
@@ -99,6 +98,7 @@ export const AnalyticsView = () => {
 
 	const env = useEnv();
 	const resetQuery = useResetQuery();
+	const fade = useFadeTransition();
 	const { queryStates } = useAnalyticsQueryState();
 	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
 	const [plotInsets, setPlotInsets] = useState<PlotInsets>(
@@ -430,13 +430,12 @@ export const AnalyticsView = () => {
 					<div className="flex flex-col flex-1 min-h-0 min-w-0">
 						<div className="pb-8 shrink-0">
 							<div className="relative flex flex-col h-[300px]">
-								{isStale && <UpdatingBar />}
 								<AnimatePresence initial={false}>
 									{isFirstLoad && (
 										<motion.div
 											key="skeleton"
 											className="absolute inset-0 flex flex-col"
-											exit={{ opacity: 0, transition: CHART_FADE }}
+											exit={{ opacity: 0, transition: fade }}
 										>
 											<ChartSkeleton geometry={plotInsets} />
 										</motion.div>
@@ -450,9 +449,9 @@ export const AnalyticsView = () => {
 											initial={{ opacity: 0 }}
 											animate={{
 												opacity: isStale ? STALE_OPACITY : 1,
-												transition: CHART_FADE,
+												transition: fade,
 											}}
-											exit={{ opacity: 0, transition: CHART_FADE }}
+											exit={{ opacity: 0, transition: fade }}
 											inert={isStale}
 										>
 											<div className="flex-1 min-h-0">
@@ -491,7 +490,7 @@ export const AnalyticsView = () => {
 								key={isFirstLoad ? "table-placeholder" : "table"}
 								initial={{ opacity: 0 }}
 								animate={{ opacity: isStale ? STALE_OPACITY : 1 }}
-								transition={CHART_FADE}
+								transition={fade}
 								inert={isStale}
 							>
 								<UsageBreakdownTable
