@@ -26,6 +26,8 @@ const credits = (fields: Partial<SetPlansPreviewBalance>): PhaseBalances => ({
 });
 
 const NO_CREDITS: PhaseBalances = {};
+const MAY_1 = Date.UTC(2026, 4, 1);
+const JUNE_1 = Date.UTC(2026, 5, 1);
 
 const behaviorOf = ({
 	before,
@@ -148,6 +150,57 @@ describe(chalk.yellowBright("diffPhaseBalances"), () => {
 			name: "remaining credits rebased onto a fresh grant are carried",
 			before: credits({ granted: 500, remaining: 300, usage: 200 }),
 			after: credits({ granted: 300, remaining: 300 }),
+			behaviors: ["carried"],
+		},
+		{
+			name: "a pay-as-you-go feature whose usage clears at a reset is reset, not carried",
+			before: credits({
+				overage_allowed: true,
+				usage: 40,
+				next_reset_at: MAY_1,
+			}),
+			after: credits({ overage_allowed: true, next_reset_at: JUNE_1 }),
+			behaviors: ["reset"],
+		},
+		{
+			name: "a pay-as-you-go feature whose usage carries over a reset is carried",
+			before: credits({
+				overage_allowed: true,
+				usage: 40,
+				next_reset_at: MAY_1,
+			}),
+			after: credits({
+				overage_allowed: true,
+				usage: 40,
+				next_reset_at: JUNE_1,
+			}),
+			behaviors: ["carried"],
+		},
+		{
+			name: "a prepaid feature whose usage clears at a reset is reset",
+			before: credits({
+				granted: 100,
+				remaining: 70,
+				usage: 30,
+				next_reset_at: MAY_1,
+			}),
+			after: credits({ granted: 100, remaining: 100, next_reset_at: JUNE_1 }),
+			behaviors: ["reset"],
+		},
+		{
+			name: "a prepaid feature whose usage carries over a reset is carried",
+			before: credits({
+				granted: 100,
+				remaining: 70,
+				usage: 30,
+				next_reset_at: MAY_1,
+			}),
+			after: credits({
+				granted: 100,
+				remaining: 70,
+				usage: 30,
+				next_reset_at: JUNE_1,
+			}),
 			behaviors: ["carried"],
 		},
 	];
