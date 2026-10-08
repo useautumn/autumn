@@ -5,6 +5,7 @@ import {
 	cmdCapyStatus,
 	cmdCapyStop,
 } from "./command.ts";
+import { cmdCapyTeardown } from "./teardown.ts";
 
 async function main(): Promise<void> {
 	const sub = process.argv[2];
@@ -21,6 +22,9 @@ async function main(): Promise<void> {
 			break;
 		case "stop":
 			cmdCapyStop();
+			break;
+		case "teardown":
+			cmdCapyTeardown();
 			break;
 		case "restart":
 			await cmdCapyRestart({ args: process.argv.slice(3) });

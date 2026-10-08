@@ -370,7 +370,24 @@ async function main() {
 	}
 }
 
+/** Capy machines boot without the app; integration tests need the server, unit tests don't. */
+async function warnIfCapyServerDown() {
+	if (!process.env.CAPY_MACHINE_CONFIG) return;
+	const port = process.env.SERVER_PORT ?? "8080";
+	const up = await fetch(`http://localhost:${port}/`, {
+		signal: AbortSignal.timeout(1000),
+	}).then(
+		() => true,
+		() => false,
+	);
+	if (up) return;
+	console.warn(
+		`[capy] Autumn server is not running on :${port}; integration tests will fail to connect. Start it with \`bun capy --server-only\`.\n`,
+	);
+}
+
 async function spawnRunner({ args }: { args: string[] }) {
+	await warnIfCapyServerDown();
 	const proc = spawn(["bun", RUNNER_SCRIPT, ...args], {
 		stdout: "inherit",
 		stderr: "inherit",

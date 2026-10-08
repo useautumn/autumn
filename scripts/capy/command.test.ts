@@ -11,6 +11,7 @@ import { join } from "node:path";
 import {
 	capyHandoffText,
 	capyUnsetCommand,
+	descendantPids,
 	ensureCapyBashrc,
 } from "./command.ts";
 
@@ -73,5 +74,20 @@ describe("capyUnsetCommand", () => {
 
 	test("adds nothing when every opt-in is on", () => {
 		expect(capyUnsetCommand([])).toBe("");
+	});
+});
+
+describe("descendantPids", () => {
+	test("follows the whole tree under the tmux panes, including nodemon's children", () => {
+		const psOutput = [
+			"  1     0",
+			" 10     1",
+			" 11    10",
+			" 12    11",
+			" 20     1",
+		].join("\n");
+		expect(descendantPids({ roots: [10], psOutput }).sort()).toEqual([
+			10, 11, 12,
+		]);
 	});
 });

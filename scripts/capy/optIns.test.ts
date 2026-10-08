@@ -63,4 +63,24 @@ describe("capy opt-ins", () => {
 		);
 		expect(capyDevServices({ dir })).not.toContain("checkout");
 	});
+
+	test("serverOnly keeps backend services and opt-ins but drops every frontend", () => {
+		const dir = createDir();
+		applyOptInFlags({ args: ["--trigger", "--eve", "--checkout"], dir });
+		const services = capyDevServices({ dir, serverOnly: true });
+		expect(services).toEqual(
+			expect.arrayContaining([
+				"server",
+				"workers",
+				"cron",
+				"balance-worker",
+				"stripe",
+				"trigger",
+				"eve",
+			]),
+		);
+		for (const frontend of ["vite", "checkout", "leaf"]) {
+			expect(services).not.toContain(frontend);
+		}
+	});
 });
