@@ -27,6 +27,7 @@ import { ServicePeriodPicker } from "./ServicePeriodPicker";
 
 const ALL = "all";
 const BASE = "base";
+const featureValue = (featureId: string) => `feature:${featureId}`;
 
 const BEHAVIOR_LABELS: Record<BillingMethod, string> = {
 	[BillingMethod.Prepaid]: "Prepaid",
@@ -57,7 +58,7 @@ export function PlanServicePeriodEditor({
 		itemOverrideCount > 0 ? BASE : ALL,
 	);
 	const featureOption = featureOptions.find(
-		({ featureId }) => featureId === targetValue,
+		({ featureId }) => featureValue(featureId) === targetValue,
 	);
 	const [behavior, setBehavior] = useState<BillingMethod>(
 		featureOption?.behaviors[0] ?? BillingMethod.Prepaid,
@@ -97,7 +98,7 @@ export function PlanServicePeriodEditor({
 		{ value: ALL, label: "All prices", period: periodLabel({ kind: "all" }) },
 		{ value: BASE, label: "Base price", period: periodLabel({ kind: "base" }) },
 		...featureOptions.map((option) => ({
-			value: option.featureId,
+			value: featureValue(option.featureId),
 			label: featureName(option.featureId),
 			period: featurePeriodLabel(option) || null,
 		})),
