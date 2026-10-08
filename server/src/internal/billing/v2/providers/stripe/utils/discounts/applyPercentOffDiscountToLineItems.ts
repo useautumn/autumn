@@ -3,10 +3,23 @@ import type {
 	LineItemDiscount,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
+import { atmnToStripeAmount, stripeToAtmnAmount } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 import { getBackdatedDiscountCycleCount } from "./getBackdatedDiscountCycleCount";
+
+const roundToMinorUnits = ({
+	amount,
+	currency,
+}: {
+	amount: number;
+	currency: string;
+}) =>
+	stripeToAtmnAmount({
+		amount: atmnToStripeAmount({ amount, currency }),
+		currency,
+	});
 
 /**
  * Applies a percent_off discount to line items.
@@ -36,9 +49,11 @@ export const applyPercentOffDiscountToLineItems = ({
 			return item;
 		}
 
-		// Use current amountAfterDiscounts as base for multiplicative stacking
-		// If no previous discounts, amountAfterDiscounts equals amount
-		const currentAmount = item.amountAfterDiscounts ?? item.amount;
+		// Stripe bills each line in whole minor units, then discounts it; stacked discounts compound on the result.
+		const currentAmount = roundToMinorUnits({
+			amount: item.amountAfterDiscounts ?? item.amount,
+			currency: item.context.currency,
+		});
 		const eligibleCycles = getBackdatedDiscountCycleCount({
 			lineItem: item,
 			coupon,
