@@ -215,6 +215,14 @@ export const computeSetPlansPlan = ({
 			...keptReplacementEntitlementUpdates({
 				billingContext,
 				keptCustomerProducts: keptBilledByReplacement,
+				carriesUsage: (customerEntitlement) =>
+					carriesOverUsage({
+						carryOverUsages: billingContext.carryOverUsages,
+						sourceCustomerProductIds: new Set(
+							keptBilledByReplacement.map(({ id }) => id),
+						),
+						customerEntitlement,
+					}),
 			}),
 		],
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,

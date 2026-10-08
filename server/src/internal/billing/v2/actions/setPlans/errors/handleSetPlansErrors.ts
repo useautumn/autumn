@@ -22,6 +22,7 @@ import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/s
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { endsLiveTrial } from "../utils/endsLiveTrial";
 import {
 	resolvePhaseProductContexts,
 	resolveUnscheduledProductContexts,
@@ -136,6 +137,7 @@ export const handleSetPlansComputeErrors = async ({
 			replacesPlanNow:
 				immediatePhaseTransition.replacedCustomerProducts.length > 0,
 			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			endsTrialNow: endsLiveTrial({ billingContext }),
 		}),
 	});
 	handleFutureStartActivationErrors({ billingContext, autumnBillingPlan });

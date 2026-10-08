@@ -18,6 +18,7 @@ export const replaceLiveSubscriptionForTrialEnd = ({
 		| "stripeSubscription"
 		| "stripeSubscriptionSchedule"
 		| "trialContext"
+		| "replacedStripeSubscription"
 		| "requestedBillingCycleAnchor"
 		| "currentEpochMs"
 		| "immediatePhase"

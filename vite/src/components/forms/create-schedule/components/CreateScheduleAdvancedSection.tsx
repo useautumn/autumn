@@ -43,6 +43,7 @@ export function CreateScheduleAdvancedSection() {
 		backdatesLiveSubscription,
 		hasActiveSubscription,
 		carriesUsageNow,
+		prorationDefaultsToNone,
 		canScheduleTrial,
 		isExistingSchedule,
 		previewQuery,
@@ -84,7 +85,7 @@ export function CreateScheduleAdvancedSection() {
 	const anchorMode = anchorBounds.allowCustomAnchor
 		? billingCycleAnchorMode
 		: "now";
-	const defaultProration: BillingBehavior = backdatesLiveSubscription
+	const defaultProration: BillingBehavior = prorationDefaultsToNone
 		? "none"
 		: "prorate_immediately";
 	const proration = phases[0]?.prorationBehavior ?? defaultProration;
@@ -112,8 +113,7 @@ export function CreateScheduleAdvancedSection() {
 								onChange={(value) =>
 									form.setFieldValue(
 										"phases[0].prorationBehavior",
-										value === "prorate_immediately" &&
-											!backdatesLiveSubscription
+										value === "prorate_immediately" && !prorationDefaultsToNone
 											? null
 											: value,
 									)

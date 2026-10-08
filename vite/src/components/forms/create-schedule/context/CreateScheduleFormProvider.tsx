@@ -59,6 +59,7 @@ import {
 	type CurrentScheduleTrial,
 	canScheduleFreeTrial,
 	defaultScheduleTrialFormValues,
+	endsCurrentTrialNow,
 	findCatalogScheduleTrial,
 	findCurrentScheduleTrial,
 	reseededScheduleTrialFormValues,
@@ -84,8 +85,10 @@ interface CreateScheduleFormContextValue {
 	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
 	backdatesLiveSubscription: boolean;
 	hasActiveSubscription: boolean;
-	/** The first phase replaces a live plan or resets the cycle now, so its usage can carry over. */
+	/** The first phase replaces a live plan, resets the cycle or ends a trial now, so its usage can carry over. */
 	carriesUsageNow: boolean;
+	/** set_plans bills nothing before the first phase's date unless proration is asked for. */
+	prorationDefaultsToNone: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -292,6 +295,21 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const resetsCycleNow =
+		!firstPhaseStartsLater({ phases: formValues.phases, nowMs }) &&
+		formValues.resetBillingCycle &&
+		!backdatesLiveSubscription &&
+		formValues.billingCycleAnchorMode === "now";
+	const endsTrialNow = endsCurrentTrialNow({
+		phases: formValues.phases,
+		nowMs,
+		formValues,
+		currentTrial,
+	});
+	// A backdate, or a trial ended on a date (recreated on it), defaults to no proration, like set_plans.
+	const prorationDefaultsToNone =
+		backdatesLiveSubscription || (endsTrialNow && !resetsCycleNow);
+
 	const carriesUsageNow = useMemo(
 		() =>
 			acceptsCarryOverUsages({
@@ -302,17 +320,13 @@ export function CreateScheduleFormProvider({
 					products,
 					nowMs,
 				}),
-				resetsCycleNow:
-					!firstPhaseStartsLater({ phases: formValues.phases, nowMs }) &&
-					formValues.resetBillingCycle &&
-					!backdatesLiveSubscription &&
-					formValues.billingCycleAnchorMode === "now",
+				resetsCycleNow,
+				endsTrialNow,
 			}),
 		[
 			formValues.phases,
-			formValues.resetBillingCycle,
-			formValues.billingCycleAnchorMode,
-			backdatesLiveSubscription,
+			resetsCycleNow,
+			endsTrialNow,
 			scopedCustomerProducts,
 			fullCustomer?.entities,
 			products,
@@ -466,6 +480,7 @@ export function CreateScheduleFormProvider({
 			backdatesLiveSubscription,
 			hasActiveSubscription,
 			carriesUsageNow,
+			prorationDefaultsToNone,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -493,6 +508,7 @@ export function CreateScheduleFormProvider({
 			backdatesLiveSubscription,
 			hasActiveSubscription,
 			carriesUsageNow,
+			prorationDefaultsToNone,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,

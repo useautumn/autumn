@@ -42,7 +42,10 @@ export const immediatePhaseBillingCycleAnchor = ({
 	params: FirstPhaseParams;
 	billingContext: Pick<
 		BillingContext,
-		"currentEpochMs" | "stripeSubscription" | "trialContext"
+		| "currentEpochMs"
+		| "stripeSubscription"
+		| "replacedStripeSubscription"
+		| "trialContext"
 	>;
 }): BillingContext["requestedBillingCycleAnchor"] => {
 	const anchor = requestedImmediatePhaseAnchor({

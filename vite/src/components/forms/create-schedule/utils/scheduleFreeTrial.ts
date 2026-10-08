@@ -123,6 +123,22 @@ export const canScheduleFreeTrial = ({
 	return firstPhase.startsAt === null;
 };
 
+/** Switching a running trial off on a first phase starting now ends it now (set_plans' `free_trial: null`). */
+export const endsCurrentTrialNow = ({
+	phases,
+	nowMs,
+	formValues,
+	currentTrial,
+}: {
+	phases: CustomerStatePhase[];
+	nowMs: number;
+	formValues: Pick<FreeTrialFormValues, "trialEnabled">;
+	currentTrial: CurrentScheduleTrial | null;
+}) =>
+	currentTrial !== null &&
+	!formValues.trialEnabled &&
+	canScheduleFreeTrial({ phases, nowMs });
+
 /**
  * Untouched, a running trial is omitted so set_plans carries it on. Switched off, null ends a running
  * trial or skips the catalog trial set_plans would start; with neither, `free_trial` is omitted.
