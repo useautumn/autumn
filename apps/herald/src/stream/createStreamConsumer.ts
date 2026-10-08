@@ -1,7 +1,10 @@
 import {
+	type ConsumerCrashEvent,
+	type ConsumerGroupJoinEvent,
 	createConsumerGroupConfig,
 	createMeteringConsumer,
 	createProgressTracker,
+	type Kafka,
 	type KafkaConsumerGroupTimings,
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
@@ -10,11 +13,6 @@ import {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import { type PostgresExecutor, readPartitionProgress } from "@autumn/postgres";
-import type {
-	ConsumerCrashEvent,
-	ConsumerGroupJoinEvent,
-	Kafka,
-} from "kafkajs";
 import type {
 	JobHealth,
 	JobMembership,
@@ -49,7 +47,7 @@ export function createStreamConsumer({
 		logger: AutumnLogger;
 		/** Where partition_progress lives; without it a fence is known only once read from the log. */
 		db?: PostgresExecutor;
-		/** The consumer died and kafkajs will not restart it: the process must end so the task is replaced. */
+		/** The consumer died and will not restart: the process must end so the task is replaced. */
 		onCrashed: (params: { job: string; cause: unknown }) => void;
 	};
 	config: {
@@ -66,6 +64,8 @@ export function createStreamConsumer({
 		createConsumerGroupConfig({
 			groupId,
 			timings: config.timings ?? CONSUMER_TIMINGS,
+			// No co-partitioning to keep: the broker's uniform dealing spreads a job's partitions evenly.
+			remoteAssignor: "uniform",
 		}),
 	);
 	const stopping = new AbortController();

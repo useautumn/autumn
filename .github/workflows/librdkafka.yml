@@ -1,0 +1,57 @@
+name: librdkafka
+
+on:
+  pull_request:
+    paths:
+      - "packages/librdkafka/**"
+      - "patches/@confluentinc%2Fkafka-javascript@*.patch"
+      - ".github/workflows/librdkafka.yml"
+  push:
+    branches: [dev]
+    paths:
+      - "packages/librdkafka/**"
+      - "patches/@confluentinc%2Fkafka-javascript@*.patch"
+      - ".github/workflows/librdkafka.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: librdkafka-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Build and load the addon
+    runs-on: peak-ubuntu-24.04-4
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore the compiled addon
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/autumn-librdkafka
+          key: librdkafka-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('patches/@confluentinc%2Fkafka-javascript@*.patch', 'packages/librdkafka/src/native/**') }}
+
+      - name: Build the addon
+        run: bun run --cwd packages/librdkafka build
+
+      - name: Unit tests
+        run: bun -F @autumn/librdkafka test:unit
+
+      - name: The addon loads under Bun
+        run: bun -F @autumn/librdkafka test:native
+
+      - name: Type check
+        run: bun -F @autumn/librdkafka ts

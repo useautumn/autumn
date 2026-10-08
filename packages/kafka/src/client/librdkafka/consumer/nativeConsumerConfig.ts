@@ -1,6 +1,9 @@
 import type { ConsumerConfig } from "../../types/kafkaWire.js";
 
-/** Long enough for our slowest batch: under KIP-848 it is also how long a revocation may take. */
+/**
+ * librdkafka heartbeats from its own thread, so a member stuck in a batch stays in the group until this long
+ * passes without a poll; it is the rebalance timeout too (KIP-848), the window kafkajs gave a stuck member.
+ */
 export const DEFAULT_MAX_POLL_INTERVAL_MS = 300_000;
 const DEFAULT_FETCH_MAX_WAIT_MS = 500;
 /**
@@ -16,10 +19,7 @@ export function nativeConsumerConfigOf({
 	config: ConsumerConfig;
 }): Record<string, unknown> {
 	const protocol = config.groupProtocol ?? "consumer";
-	const pollInterval = Math.max(
-		config.rebalanceTimeout ?? 0,
-		DEFAULT_MAX_POLL_INTERVAL_MS,
-	);
+	const pollInterval = config.rebalanceTimeout ?? DEFAULT_MAX_POLL_INTERVAL_MS;
 	const membership =
 		protocol === "consumer"
 			? {

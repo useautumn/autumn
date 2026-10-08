@@ -42,6 +42,24 @@ RUN mkdir -p scripts && touch scripts/preload-env.ts
 RUN --mount=type=cache,id=bun-install-${BUN_VERSION},target=/root/.bun/install/cache \
 	bun install --ignore-scripts --frozen-lockfile
 
+# librdkafka's addon, compiled from the patched @confluentinc/kafka-javascript sources only, so a
+# manifest change elsewhere never recompiles it (~15 min cold). The runtime image gets one .node file.
+FROM oven/bun:${BUN_VERSION} AS librdkafka
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends build-essential python3 perl curl ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+COPY patches/@confluentinc%2Fkafka-javascript@1.10.0.patch patches/
+COPY packages/librdkafka packages/librdkafka
+RUN bun -e 'const root = { name: "librdkafka-build", private: true, workspaces: ["packages/librdkafka"], \
+	patchedDependencies: { "@confluentinc/kafka-javascript@1.10.0": "patches/@confluentinc%2Fkafka-javascript@1.10.0.patch" } }; \
+	await Bun.write("package.json", JSON.stringify(root));'
+RUN --mount=type=cache,id=bun-install-librdkafka,target=/root/.bun/install/cache \
+	bun install --ignore-scripts
+RUN --mount=type=cache,id=autumn-librdkafka,target=/root/.cache/autumn-librdkafka \
+	bun run --cwd packages/librdkafka build \
+	&& cp "$(bun -e 'console.log(require.resolve("@confluentinc/kafka-javascript/build/Release/confluent-kafka-javascript.node", { paths: ["/build/packages/librdkafka"] }))')" /confluent-kafka-javascript.node
+
 FROM oven/bun:${BUN_VERSION}
 WORKDIR /app
 ENV NODE_ENV=production
@@ -56,6 +74,12 @@ RUN apt-get update \
 # node_modules is .dockerignore'd, so COPY . . never clobbers the install.
 COPY --from=deps /app ./
 COPY . .
+
+# Where `bindings` looks for the addon: the installed package's build/Release.
+COPY --from=librdkafka /confluent-kafka-javascript.node /tmp/confluent-kafka-javascript.node
+RUN release="$(bun -e 'console.log(require("node:path").dirname(require.resolve("@confluentinc/kafka-javascript/package.json", { paths: ["/app/packages/librdkafka"] })))')/build/Release" \
+	&& mkdir -p "$release" \
+	&& mv /tmp/confluent-kafka-javascript.node "$release/"
 
 EXPOSE 8080
 

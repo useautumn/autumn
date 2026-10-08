@@ -1,7 +1,7 @@
 import {
+	createKafka,
 	createKafkaClient,
 	createKafkaTransport,
-	KafkaWithSettledTopicOffsets,
 } from "@autumn/kafka";
 import type {
 	BalanceWorkerKafka,
@@ -16,7 +16,7 @@ export function createBalanceWorkerKafka({
 	region,
 	sasl,
 }: BalanceWorkerKafkaConfig): BalanceWorkerKafka {
-	return new KafkaWithSettledTopicOffsets(
+	return createKafka(
 		createKafkaClient({
 			clientId,
 			brokers,
