@@ -9,7 +9,8 @@ import { invoiceDiscountRows } from "../utils/invoiceDiscountRows";
 import { InvoicePreviewDocument } from "./InvoicePreviewDocument";
 
 export function CreateInvoicePreviewColumn() {
-	const { previewQuery, formValues } = useCreateInvoiceFormContext();
+	const { previewQuery, formValues, planIdsOutsidePeriod } =
+		useCreateInvoiceFormContext();
 	const { customer } = useCusQuery();
 	const { org } = useOrg();
 	const { templates } = useInvoiceTemplatesQuery();
@@ -62,7 +63,9 @@ export function CreateInvoicePreviewColumn() {
 						<LoadingShimmerText text="Generating Preview" />
 					) : (
 						<span className="text-sm text-tertiary-foreground">
-							Add a plan or charge to preview the invoice
+							{planIdsOutsidePeriod.size > 0
+								? "Fix the highlighted service period to preview the invoice"
+								: "Add a plan or charge to preview the invoice"}
 						</span>
 					)}
 				</div>
