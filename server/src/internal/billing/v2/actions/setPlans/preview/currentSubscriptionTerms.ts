@@ -1,15 +1,11 @@
-import {
-	type BillingContext,
-	type SetPlansPreviewResponse,
-	stripeDiscountToApiDiscount,
-} from "@autumn/shared";
+import type { BillingContext, SetPlansPreviewResponse } from "@autumn/shared";
 import type {
 	StripeCustomerWithDiscount,
 	StripeSubscriptionWithDiscounts,
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
-import { repeatingDiscountMonthsLeft } from "@/internal/billing/v2/setup/carryReplacedSubscription/repeatingDiscountMonthsLeft";
+import { previewSubscriptionDiscounts } from "./previewSubscriptionDiscounts";
 
 type CurrentSubscriptionTerms = Pick<
 	SetPlansPreviewResponse,
@@ -44,33 +40,15 @@ export const currentSubscriptionTerms = async ({
 			| undefined,
 		stripeCustomer,
 	});
-	const customerDiscountId = stripeCustomer?.discount?.id;
 	const sendsInvoice =
 		currentSubscription?.collection_method === "send_invoice";
 
 	return {
-		discounts: discounts.map((discount) => {
-			const isCustomerDiscount = discount.id === customerDiscountId;
-			const carriesMonths =
-				!isCustomerDiscount &&
-				currentSubscription &&
-				discount.source.coupon.duration === "repeating";
-			return {
-				...stripeDiscountToApiDiscount({
-					discount,
-					// A customer-level coupon isn't on the subscription, matching the customer rewards list.
-					subscriptionId: isCustomerDiscount
-						? undefined
-						: currentSubscription?.id,
-				}),
-				months_left: carriesMonths
-					? repeatingDiscountMonthsLeft({
-							discount,
-							subscription: currentSubscription,
-							currentEpochMs: billingContext.currentEpochMs,
-						})
-					: null,
-			};
+		discounts: previewSubscriptionDiscounts({
+			discounts,
+			customerDiscountId: stripeCustomer?.discount?.id,
+			subscription: currentSubscription,
+			currentEpochMs: billingContext.currentEpochMs,
 		}),
 		invoice_mode: {
 			enabled: sendsInvoice,
