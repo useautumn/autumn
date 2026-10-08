@@ -213,6 +213,8 @@ function ensureAppProcess({ serverOnly }: { serverOnly: boolean }): void {
 	if (runningStackSatisfies({ serverOnly })) return;
 	cmdCapyStop();
 	ensureStartup();
+	// Another `bun capy` may have launched the app while this one waited on the startup lock.
+	if (runningStackSatisfies({ serverOnly })) return;
 	const env: Record<string, string> = {
 		...process.env,
 		CAPY_DEV: "1",

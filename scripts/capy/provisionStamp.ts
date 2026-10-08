@@ -6,6 +6,7 @@ const BOOT_ID_PATH = "/proc/sys/kernel/random/boot_id";
 
 /** Inputs whose change since the last provision means migrations, SQL functions or env files are stale. */
 const PROVISION_INPUT_DIRS = [
+	{ dir: "scripts/capy", suffix: ".ts" },
 	{ dir: "shared/drizzle", suffix: ".sql" },
 	{ dir: "server/src/internal/balances/utils/sql", suffix: ".sql" },
 ];

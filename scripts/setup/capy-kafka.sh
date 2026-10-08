@@ -59,8 +59,10 @@ capy_kafka_answers() {
 	"$CAPY_KAFKA_HOME/bin/kafka-topics.sh" --bootstrap-server "127.0.0.1:$1" --list >/dev/null 2>&1
 }
 
+# A pid file survives reboots, so the pid must still be this broker, not a reused one.
 capy_kafka_alive() {
-	[ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null
+	[ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null &&
+		tr '\0' ' ' <"/proc/$(cat "$1")/cmdline" 2>/dev/null | grep -qE 'kafka-server-start|kafka\.Kafka'
 }
 
 start_capy_kafka() {
