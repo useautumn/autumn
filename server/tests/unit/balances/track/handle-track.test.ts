@@ -4,6 +4,7 @@ import {
 	ApiVersionClass,
 	AppEnv,
 	LATEST_VERSION,
+	RecaseError,
 } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
@@ -54,6 +55,12 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 		c.set("ctx", ctx);
 		await next();
 	});
+	app.onError((error, c) =>
+		c.json(
+			{ message: error.message },
+			error instanceof RecaseError ? (error.statusCode as 400) : 500,
+		),
+	);
 	app.post("/track", ...handleTrack);
 	return app;
 };
@@ -224,5 +231,30 @@ describe("handleTrack", () => {
 
 		expect(response.status).toBe(202);
 		expect(mockState.queueCommands).toHaveLength(1);
+	});
+	test("rejects an unknown feature before queueing", async () => {
+		const response = await createApp({ ctx: createCtx() }).request("/track", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ customer_id: "cus_123", feature_id: "missing" }),
+		});
+
+		expect(response.status).toBe(404);
+		expect(mockState.queueCommands).toHaveLength(0);
+	});
+
+	test("rejects event_name with overage_behavior reject before queueing", async () => {
+		const response = await createApp({ ctx: createCtx() }).request("/track", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				customer_id: "cus_123",
+				event_name: "message_sent",
+				overage_behavior: "reject",
+			}),
+		});
+
+		expect(response.status).toBe(400);
+		expect(mockState.queueCommands).toHaveLength(0);
 	});
 });

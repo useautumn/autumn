@@ -371,6 +371,7 @@ const buildTrialsUsedCTE = (
         AND p.org_id = ${orgId}
         AND p.env = ${env}
         AND cp.free_trial_id IS NOT NULL
+        AND cp.status != ${CusProductStatus.Pending}
     )
   `;
 };
@@ -1044,6 +1045,7 @@ export const getPaginatedFullCusQuery = ({
       JOIN customers c ON cp.internal_customer_id = c.internal_id
       WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records)
         AND cp.free_trial_id IS NOT NULL
+        AND cp.status != ${CusProductStatus.Pending}
       GROUP BY cp.internal_customer_id
     )`
 				: sql``

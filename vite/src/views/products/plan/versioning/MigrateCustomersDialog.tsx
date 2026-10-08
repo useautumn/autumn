@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -154,7 +154,7 @@ export function MigrateCustomersDialog({
 	versionCounts,
 }: MigrateCustomersDialogProps) {
 	const navigate = useNavigate();
-	const { createMigration, isCreating } = useMigrationsQuery();
+	const { createMigration, isCreating } = useMigrationMutations();
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
 

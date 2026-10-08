@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
 import type { MigrationHooks } from "../../hooks/index.js";
 import type { MigrationRuntime } from "../../types/migrationDefinition.js";
+import { withMigrationPhase } from "../utils/withMigrationPhase.js";
 import { evaluateMigrateCustomerStripe } from "./evaluateMigrateCustomerStripe.js";
 import { executeMigrateCustomerPlan } from "./executeMigrateCustomerPlan.js";
 import {
@@ -51,11 +52,15 @@ export const migrateCustomer = async ({
 	});
 
 	const migrate = async (): Promise<MigrateCustomerResult> => {
-		const context = await setupMigrateCustomerContext({
-			ctx: migrationCtx,
-			migration,
-			customerId,
-			preview,
+		const context = await withMigrationPhase({
+			phase: "hydrate",
+			run: () =>
+				setupMigrateCustomerContext({
+					ctx: migrationCtx,
+					migration,
+					customerId,
+					preview,
+				}),
 		});
 
 		const run = async (): Promise<MigrateCustomerResult> => {
@@ -82,11 +87,15 @@ export const migrateCustomer = async ({
 			});
 
 			if (!preview) {
-				await executeMigrateCustomerPlan({
-					ctx: migrationCtx,
-					context,
-					billingPlan,
-					billingContexts,
+				await withMigrationPhase({
+					phase: "billing",
+					run: () =>
+						executeMigrateCustomerPlan({
+							ctx: migrationCtx,
+							context,
+							billingPlan,
+							billingContexts,
+						}),
 				});
 			}
 
