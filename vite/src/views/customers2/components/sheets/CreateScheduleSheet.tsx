@@ -32,12 +32,12 @@ import {
 	MAX_PHASE_START_DRIFT_MS,
 	type PhaseStart,
 } from "@/components/forms/customer-state/customerProductsToCustomerState";
-import { customerProductToCustomerStatePlan } from "@/components/forms/customer-state/customerProductToCustomerStatePlan";
 import {
 	type CustomerStateForm,
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
+import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
 import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
@@ -111,23 +111,6 @@ const findCurrentPhaseStart = ({
 		? Math.min(...currentPhaseStarts)
 		: undefined;
 };
-
-/** Every active plan, whatever its scope — each row carries its own. */
-export function getActiveCustomerPlans({
-	customer,
-	products,
-}: {
-	customer: FullCustomer | undefined;
-	products: ProductV2[];
-}): CustomerStatePlan[] {
-	return (
-		customer?.customer_products
-			.filter((cp) => cp.status === CusProductStatus.Active && !cp.canceled_at)
-			.map((cp) =>
-				customerProductToCustomerStatePlan({ cusProduct: cp, products }),
-			) ?? []
-	);
-}
 
 /** Built from the customer's plans alone, scoped the same way Sync from Stripe
  * scopes them; scheduled plans mean the customer is already on a schedule. */

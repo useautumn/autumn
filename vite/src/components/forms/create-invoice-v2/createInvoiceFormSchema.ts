@@ -23,6 +23,11 @@ const FormInvoiceLicenseSchema = z.object({
 
 export type FormInvoiceLicense = z.infer<typeof FormInvoiceLicenseSchema>;
 
+const ServicePeriodSchema = z.object({ start: z.number(), end: z.number() });
+
+/** UTC midnights; end is the day the period runs up to. */
+export type ServicePeriod = z.infer<typeof ServicePeriodSchema>;
+
 const FormInvoicePlanSchema = z.object({
 	_id: z.string(),
 	planId: z.string(),
@@ -31,9 +36,17 @@ const FormInvoicePlanSchema = z.object({
 	items: z.custom<ProductItem[]>().nullable(),
 	isCustom: z.boolean(),
 	featureQuantities: FeatureQuantitiesSchema,
+	/** Usage-based units for a feature also priced prepaid; its prepaid units stay in featureQuantities. */
+	overageQuantities: FeatureQuantitiesSchema,
 	featureUsage: FeatureUsageSchema,
 	licenses: z.array(FormInvoiceLicenseSchema),
 	prorate: z.boolean().optional(),
+	/** Null bills the plan at customer level. */
+	entityId: z.string().nullable(),
+	/** Overrides the invoice's service period for this plan. */
+	period: ServicePeriodSchema.nullable(),
+	/** Per-line overrides, keyed `featureId:billing_behavior`. */
+	featurePeriods: z.record(z.string(), ServicePeriodSchema),
 });
 
 export type FormInvoicePlan = z.infer<typeof FormInvoicePlanSchema>;
@@ -44,9 +57,13 @@ export const EMPTY_INVOICE_PLAN: Omit<FormInvoicePlan, "_id"> = {
 	items: null,
 	isCustom: false,
 	featureQuantities: {},
+	overageQuantities: {},
 	featureUsage: {},
 	licenses: [],
 	prorate: undefined,
+	entityId: null,
+	period: null,
+	featurePeriods: {},
 };
 
 let licenseCounter = 0;
@@ -67,11 +84,16 @@ export const newInvoiceLicense = (
 
 let planCounter = 0;
 
-export const newInvoicePlan = (): FormInvoicePlan => {
+export const newInvoicePlan = ({
+	entityId = null,
+}: {
+	entityId?: string | null;
+} = {}): FormInvoicePlan => {
 	planCounter += 1;
 	return {
 		...EMPTY_INVOICE_PLAN,
 		_id: `plan_${Date.now()}_${planCounter}`,
+		entityId,
 	};
 };
 
@@ -84,8 +106,8 @@ export const CreateInvoiceFormSchema = z.object({
 	taxRateId: z.string().nullable(),
 	periodStart: z.number().nullable(),
 	periodEnd: z.number().nullable(),
+	/** Null issues today. */
 	issueDay: z.number().nullable(),
-	dueDay: z.number().nullable(),
 });
 
 export type CreateInvoiceForm = z.infer<typeof CreateInvoiceFormSchema>;

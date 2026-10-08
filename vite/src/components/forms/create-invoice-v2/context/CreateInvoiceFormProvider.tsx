@@ -1,4 +1,5 @@
 import {
+	type FullCustomer,
 	mapToProductItems,
 	type ProductItem,
 	type ProductV2,
@@ -16,6 +17,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import type { CreateInvoiceForm } from "../createInvoiceFormSchema";
@@ -24,11 +26,17 @@ import {
 	useCreateInvoiceForm,
 } from "../hooks/useCreateInvoiceForm";
 import { useCreateInvoicePlanEditor } from "../hooks/useCreateInvoicePlanEditor";
+import { useCreateInvoicePlanHandlers } from "../hooks/useCreateInvoicePlanHandlers";
 import { useCreateInvoicePreview } from "../hooks/useCreateInvoicePreview";
 import {
 	type LicenseItemsByPlanId,
 	useCreateInvoiceRequestBody,
 } from "../hooks/useCreateInvoiceRequestBody";
+import {
+	getInvoiceExistingPlans,
+	type InvoiceExistingPlan,
+} from "../utils/customerStatePlanToInvoicePlan";
+import { findPlansOutsideInvoicePeriod } from "../utils/servicePeriod";
 import { findBlockingDiscount } from "../utils/validateInvoiceDiscounts";
 
 interface CreateInvoiceFormContextValue {
@@ -44,6 +52,11 @@ interface CreateInvoiceFormContextValue {
 	licenseItemsByPlanId: LicenseItemsByPlanId;
 	blockingReason: string | null;
 	planEditor: ReturnType<typeof useCreateInvoicePlanEditor>;
+	planHandlers: ReturnType<typeof useCreateInvoicePlanHandlers>;
+	/** The customer's active plans, offered by "Copy existing plans". */
+	existingPlans: InvoiceExistingPlan[];
+	/** Rows whose service period the server rejected as outside the invoice's. */
+	planIdsOutsidePeriod: Set<string>;
 }
 
 const CreateInvoiceFormContext =
@@ -58,8 +71,9 @@ export function CreateInvoiceFormProvider({
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const { rewards } = useRewardsQuery();
-	const { setIsInlineEditorOpen } = useCustomerContext();
-	const form = useCreateInvoiceForm();
+	const { setIsInlineEditorOpen, entityId: pageEntityId } =
+		useCustomerContext();
+	const form = useCreateInvoiceForm({ defaultEntityId: pageEntityId });
 	const formValues = useStore(form.store, (state) => state.values);
 
 	const customerId = customer?.id ?? customer?.internal_id;
@@ -71,6 +85,20 @@ export function CreateInvoiceFormProvider({
 		() => new Map(rewards.map((reward) => [reward.id, reward])),
 		[rewards],
 	);
+
+	const existingPlans = useMemo(
+		() =>
+			getInvoiceExistingPlans({
+				customer: customer as FullCustomer | undefined,
+				products: products ?? [],
+			}),
+		[customer, products],
+	);
+	const planHandlers = useCreateInvoicePlanHandlers({
+		form,
+		defaultEntityId: pageEntityId,
+		existingPlans,
+	});
 
 	const catalogItemsByPlanId = useMemo(
 		() =>
@@ -148,6 +176,20 @@ export function CreateInvoiceFormProvider({
 		enabled: requestBody !== null && blockingReason === null,
 	});
 
+	const previewError = previewQuery.error
+		? getBackendErr(previewQuery.error, "")
+		: null;
+	const planIdsOutsidePeriod = useMemo(
+		() =>
+			new Set(
+				findPlansOutsideInvoicePeriod({
+					errorMessage: previewError,
+					plans: formValues.plans,
+				}),
+			),
+		[previewError, formValues.plans],
+	);
+
 	const value = useMemo(
 		() => ({
 			form,
@@ -162,6 +204,9 @@ export function CreateInvoiceFormProvider({
 			licenseItemsByPlanId,
 			blockingReason,
 			planEditor,
+			planHandlers,
+			existingPlans,
+			planIdsOutsidePeriod,
 		}),
 		[
 			form,
@@ -176,6 +221,9 @@ export function CreateInvoiceFormProvider({
 			licenseItemsByPlanId,
 			blockingReason,
 			planEditor,
+			planHandlers,
+			existingPlans,
+			planIdsOutsidePeriod,
 		],
 	);
 

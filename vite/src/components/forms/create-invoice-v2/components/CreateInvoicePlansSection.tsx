@@ -1,31 +1,34 @@
+import { PlanScopeGroups } from "@/components/forms/shared/plan-tray/PlanScopeGroups";
+import { PlanTrayAddRow } from "@/components/forms/shared/plan-tray/PlanTrayAddRow";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
-import { newInvoicePlan } from "../createInvoiceFormSchema";
-import { AddRowAction } from "./AddRowAction";
+import { invoicePlansToScopedPlans } from "../utils/copyExistingPlansIntoInvoice";
 import { CreateInvoicePlanRow } from "./CreateInvoicePlanRow";
 
 export function CreateInvoicePlansSection() {
-	const { form, formValues } = useCreateInvoiceFormContext();
+	const { formValues, planHandlers } = useCreateInvoiceFormContext();
+	const { hasEntities } = useScopeEntitySearch({ selectedEntityId: undefined });
 	const { plans } = formValues;
-	const isChoosing = plans.some((plan) => !plan.planId);
 
 	return (
 		<SheetSection title="Plans" withSeparator>
-			<div className="space-y-2">
-				{plans.map((plan) => (
-					<CreateInvoicePlanRow key={plan._id} plan={plan} />
-				))}
-
-				{!isChoosing && (
-					<AddRowAction
-						count={plans.length}
-						noun="plan"
-						onAdd={() =>
-							form.setFieldValue("plans", [...plans, newInvoicePlan()])
-						}
+			<PlanScopeGroups
+				plans={invoicePlansToScopedPlans({ plans })}
+				showHeaders={hasEntities}
+				renderPlan={(planIndex) => (
+					<CreateInvoicePlanRow
+						key={plans[planIndex]?._id}
+						planIndex={planIndex}
 					/>
 				)}
-			</div>
+				addRow={
+					<PlanTrayAddRow
+						label="Add plan"
+						onClick={planHandlers.handleAddPlan}
+					/>
+				}
+			/>
 		</SheetSection>
 	);
 }
