@@ -353,16 +353,6 @@ export const AnalyticsView = () => {
 		],
 	);
 
-	if (clickHouseDisabled) {
-		return (
-			<div className="flex flex-col items-center justify-center h-full">
-				<h3 className="text-sm text-muted-foreground font-bold">
-					Tinybird is disabled
-				</h3>
-			</div>
-		);
-	}
-
 	const showRevenueMetrics =
 		env === "live" &&
 		!isFeatureFlagsLoading &&
@@ -401,6 +391,16 @@ export const AnalyticsView = () => {
 		};
 	}, [isFirstLoad, queryStates]);
 	const isEmpty = !queryLoading && !freshChart;
+
+	if (clickHouseDisabled) {
+		return (
+			<div className="flex flex-col items-center justify-center h-full">
+				<h3 className="text-sm text-muted-foreground font-bold">
+					Tinybird is disabled
+				</h3>
+			</div>
+		);
+	}
 
 	const emptyMessage =
 		eventNames.length === 0
