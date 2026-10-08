@@ -15,6 +15,8 @@ import {
 
 /** At most this many records per partition reach one `eachBatch`, the most our handlers commit at once. */
 export const MAX_RECORDS_PER_CONSUME = 500;
+/** The wait after a poll that found nothing: the most a record or a rebalance waits to be served. */
+export const IDLE_POLL_MS = 5;
 const OFFSET_BEGINNING = -2;
 
 type PartitionItem =
@@ -431,6 +433,10 @@ export async function runConsumeLoop({
 				await Bun.sleep(100);
 			}
 		}
+		const idle =
+			partitions.length === 0 &&
+			(!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT);
+		if (idle) await Bun.sleep(IDLE_POLL_MS);
 		emitConsumerEvent({
 			scope,
 			type: "consumer.fetch",

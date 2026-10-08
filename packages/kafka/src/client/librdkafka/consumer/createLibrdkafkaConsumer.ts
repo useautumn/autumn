@@ -12,7 +12,12 @@ import { ConsumerEventNames } from "../../types/kafkaWire.js";
 import type { KafkaLog } from "../kafkaLog.js";
 import { type NativeDone, settleNative } from "../settleNative.js";
 import { commitTopicOffsets } from "./batchRun.js";
-import { failTerminally, runConsumeLoop, seekNative } from "./consumeLoop.js";
+import {
+	failTerminally,
+	IDLE_POLL_MS,
+	runConsumeLoop,
+	seekNative,
+} from "./consumeLoop.js";
 import { handleRebalance } from "./handleRebalance.js";
 import { nativeConsumerConfigOf } from "./nativeConsumerConfig.js";
 import { registerNativeConsumer } from "./nativeConsumerRegistry.js";
@@ -33,8 +38,8 @@ import {
 
 /** How long `stop()` serves the group's revocation after leaving before it gives up waiting. */
 const LEAVE_TIMEOUT_MS = 5_000;
-/** How long one poll waits for a first record; it also bounds how long `stop()` waits for the loop. */
-const CONSUME_POLL_MS = 100;
+/** A poll never waits natively: a blocking one holds a native pool thread, and idle consumers starve every commit. */
+const CONSUME_POLL_MS = 0;
 
 function emptyListeners(): ConsumerListeners {
 	return {
@@ -180,7 +185,7 @@ export function createLibrdkafkaConsumer({
 				native.connect({}, done);
 			}
 			await settleNative(connectNative);
-			// Wait for the first record only, then take what is already fetched: a poll never sits on a partial batch.
+			// Take what is already fetched; the runner waits between empty polls.
 			native.setDefaultConsumeTimeout(CONSUME_POLL_MS);
 			native.setDefaultIsTimeoutOnlyForFirstMessage(true);
 			state.native = native;
@@ -280,6 +285,7 @@ export function createLibrdkafkaConsumer({
 			}
 			native.consume(1, onServed);
 			await served.promise;
+			await Bun.sleep(IDLE_POLL_MS);
 		}
 	}
 

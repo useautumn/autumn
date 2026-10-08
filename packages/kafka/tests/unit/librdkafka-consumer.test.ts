@@ -93,7 +93,9 @@ function createFakeNative() {
 				{ kind: "rebalance", code: REVOKE, partitions: [...current.values()] },
 			]);
 		},
-		setDefaultConsumeTimeout() {},
+		setDefaultConsumeTimeout(timeoutMs) {
+			calls.push(`consumeTimeout:${timeoutMs}`);
+		},
 		setDefaultIsTimeoutOnlyForFirstMessage() {},
 		consume(_count, done) {
 			if (chunks.length > 0) {
@@ -237,6 +239,15 @@ async function until(
 }
 
 describe("librdkafka consumer runner", () => {
+	// A blocking poll holds one of the runtime's few native pool threads; enough idle consumers starve every producer commit.
+	test("an idle poll never blocks a native pool thread: consume returns at once and the runner waits in JS", async () => {
+		const { fake, consumer } = createRunner();
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic] });
+		expect(fake.calls).toContain("consumeTimeout:0");
+		await consumer.disconnect();
+	});
+
 	test("each group change reads as kafkajs's: everything revoked, then the whole assignment", async () => {
 		const { fake, consumer, events } = createRunner();
 		fake.chunks.push(
