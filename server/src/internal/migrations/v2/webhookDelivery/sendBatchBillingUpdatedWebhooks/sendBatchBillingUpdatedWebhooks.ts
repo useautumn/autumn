@@ -4,15 +4,12 @@ import pLimit from "p-limit";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js";
-import { migrationWebhookIdempotencyKey } from "../utils/migrationWebhookIdempotencyKey.js";
 
 const sendBillingUpdated = async ({
 	ctx,
-	migrationInternalId,
 	record,
 }: {
 	ctx: AutumnContext;
-	migrationInternalId: string | undefined;
 	record: MigrationWebhookRecord;
 }) => {
 	if (record.planChanges.length === 0) return;
@@ -35,11 +32,6 @@ const sendBillingUpdated = async ({
 			customerId: record.customerId,
 			entityId: record.entityId,
 		}),
-		idempotencyKey: migrationWebhookIdempotencyKey({
-			migrationInternalId,
-			eventType: WebhookEventType.BillingUpdated,
-			record,
-		}),
 	});
 };
 
@@ -51,13 +43,11 @@ const sendBillingUpdated = async ({
  */
 export const sendBatchBillingUpdatedWebhooks = async ({
 	ctx,
-	migrationInternalId,
 	migrationRunId,
 	records,
 	concurrency,
 }: {
 	ctx: AutumnContext;
-	migrationInternalId: string | undefined;
 	migrationRunId: string;
 	records: MigrationWebhookRecord[];
 	concurrency: number;
@@ -69,7 +59,7 @@ export const sendBatchBillingUpdatedWebhooks = async ({
 		records.map((record) =>
 			limit(async () => {
 				try {
-					await sendBillingUpdated({ ctx, migrationInternalId, record });
+					await sendBillingUpdated({ ctx, record });
 					delivered++;
 				} catch (error) {
 					failed++;

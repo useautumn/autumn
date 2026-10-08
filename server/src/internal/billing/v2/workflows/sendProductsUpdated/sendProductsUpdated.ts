@@ -37,7 +37,6 @@ export const sendProductsUpdated = async ({
 	ctx,
 	payload,
 	preloaded,
-	idempotencyKey,
 }: {
 	ctx: AutumnContext;
 	payload: SendProductsUpdatedPayload;
@@ -47,8 +46,6 @@ export const sendProductsUpdated = async ({
 		fullCustomer?: FullCustomer;
 		customerProduct?: FullCusProduct;
 	};
-	/** Lets a caller that may resend the same event have Svix deduplicate it. */
-	idempotencyKey?: string;
 }) => {
 	const { features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
@@ -167,6 +164,5 @@ export const sendProductsUpdated = async ({
 			updated_product: versionedPlan,
 		},
 		tags,
-		idempotencyKey,
 	});
 };

@@ -71,7 +71,6 @@ export const publishBatchMigrationChanges = async ({
 	if (webhooks?.sendWebhooks)
 		await queueMigrationWebhooks({
 			ctx,
-			migrationInternalId,
 			migrationRunId,
 			controls: webhooks,
 			records: buildBatchMigrationWebhookRecords({

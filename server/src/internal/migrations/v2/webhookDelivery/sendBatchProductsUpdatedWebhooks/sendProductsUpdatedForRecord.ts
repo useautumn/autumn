@@ -1,12 +1,7 @@
-import {
-	AttachScenario,
-	type FullCustomer,
-	WebhookEventType,
-} from "@autumn/shared";
+import { AttachScenario, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js";
-import { migrationWebhookIdempotencyKey } from "../utils/migrationWebhookIdempotencyKey.js";
 
 /** Migration patches keep the customer's plan; the customize path emits
  * `new` for the same shape, so consumers see a consistent scenario. */
@@ -15,12 +10,10 @@ const PRODUCTS_UPDATED_SCENARIO = AttachScenario.New;
 /** One `customer.products.updated` per customer product the record touched. */
 export const sendProductsUpdatedForRecord = async ({
 	ctx,
-	migrationInternalId,
 	record,
 	fullCustomer,
 }: {
 	ctx: AutumnContext;
-	migrationInternalId: string | undefined;
 	record: MigrationWebhookRecord;
 	fullCustomer: FullCustomer | undefined;
 }) => {
@@ -45,12 +38,6 @@ export const sendProductsUpdatedForRecord = async ({
 			preloaded: fullCustomer
 				? { fullCustomer: { ...fullCustomer }, customerProduct }
 				: undefined,
-			idempotencyKey: migrationWebhookIdempotencyKey({
-				migrationInternalId,
-				eventType: WebhookEventType.CustomerProductsUpdated,
-				record,
-				customerProductId,
-			}),
 		});
 	}
 };

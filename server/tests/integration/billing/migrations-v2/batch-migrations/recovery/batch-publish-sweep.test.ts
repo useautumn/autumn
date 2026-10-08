@@ -1,6 +1,7 @@
 /**
- * Changes whose publish failed stay on their settled item run, and the run's
- * sweep republishes them under the same Svix idempotency key: one delivery.
+ * Changes whose publish failed stay on their settled item run until a run's
+ * sweep publishes them. Delivery is at-least-once: a publish that failed after
+ * sending is sent again.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -47,7 +48,7 @@ afterAll(async () => {
 });
 
 test.concurrent(
-	`${chalk.yellowBright("batch publish sweep: a publish that failed after sending is republished once, under the same key")}`,
+	`${chalk.yellowBright("batch publish sweep: a publish that failed after sending is sent again by the next run's sweep")}`,
 	async () => {
 		const customerId = "batch-sweep-republish";
 		const plan = products.base({ id: "batch-sweep-republish", items: [] });
@@ -108,7 +109,7 @@ test.concurrent(
 				playToken: webhook.playToken,
 				customerId,
 			}),
-		).toHaveLength(1);
+		).toHaveLength(2);
 	},
 );
 

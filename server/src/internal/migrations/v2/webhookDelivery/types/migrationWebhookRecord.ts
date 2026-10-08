@@ -25,8 +25,6 @@ export const SendMigrationWebhooksPayloadSchema = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
 	migrationRunId: z.string(),
-	/** Keys Svix sends; absent on batches queued before keys existed. */
-	migrationInternalId: z.string().optional(),
 	concurrency: z.number().int().min(1),
 	eventTypes: z.array(z.string()),
 	records: z.array(MigrationWebhookRecordSchema),
