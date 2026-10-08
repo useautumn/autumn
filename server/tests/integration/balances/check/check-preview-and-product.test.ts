@@ -13,6 +13,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import type { CheckResponseWithPreview } from "@/internal/api/check/getCheckPreview.js";
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
@@ -148,7 +149,7 @@ test.concurrent(
 			],
 		});
 
-		const response = await subOrgAutumn.check({
+		const response = await subOrgAutumn.check<CheckResponseWithPreview>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			with_preview: true,
