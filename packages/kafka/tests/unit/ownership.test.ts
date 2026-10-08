@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createRequire } from "node:module";
-import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type {
 	KafkaProducer,
 	KafkaTransaction,
@@ -1314,30 +1312,51 @@ describe("compactedOwnershipLog", function compactedOwnershipLogTests() {
 });
 
 describe("partitionRouting", function partitionRoutingTests() {
-	const require = createRequire(import.meta.url);
+	/** Partitions Kafka's own murmur2 partitioner (Java's, and kafkajs's) gives these keys. */
+	const kafkaPartitions = [
+		{
+			identity: {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				entityId: null,
+			},
+			of32: 4,
+			of128: 36,
+		},
+		{
+			identity: {
+				orgId: "org_2",
+				env: "live",
+				customerId: "cus_42",
+				entityId: "ent_7",
+			},
+			of32: 13,
+			of128: 13,
+		},
+		{
+			identity: {
+				orgId: "org_3",
+				env: "live",
+				customerId: "c",
+				entityId: null,
+			},
+			of32: 9,
+			of128: 9,
+		},
+	] as const;
 
-	const murmur2 =
-		require("kafkajs/src/producer/partitioners/default/murmur2.js") as (
-			key: Buffer,
-		) => number;
-
-	const identity = {
-		orgId: "org_1",
-		env: "sandbox",
-		customerId: "cus_1",
-		entityId: null,
-	} as const;
+	const identity = kafkaPartitions[0].identity;
 
 	function matchesKafkaDefaultPartitioner(): void {
-		const key = Buffer.from(
-			meteringIdentityToPartitionKey({ identity }),
-			"utf8",
-		);
-		const kafkaPartition = (murmur2(key) & 0x7fffffff) % 32;
-
-		expect(meteringIdentityToPartition({ identity, partitionCount: 32 })).toBe(
-			kafkaPartition,
-		);
+		for (const { identity, of32, of128 } of kafkaPartitions) {
+			expect(
+				meteringIdentityToPartition({ identity, partitionCount: 32 }),
+			).toBe(of32);
+			expect(
+				meteringIdentityToPartition({ identity, partitionCount: 128 }),
+			).toBe(of128);
+		}
 	}
 
 	function keepsStablePartition(): void {

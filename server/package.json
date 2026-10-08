@@ -162,7 +162,6 @@
 		"ink-spinner": "^5.0.0",
 		"ioredis": "^5.5.0",
 		"jose": "^6.1.0",
-		"kafkajs": "^2.2.4",
 		"ksuid": "^3.0.0",
 		"loops": "^5.0.1",
 		"lru-cache": "^11.2.7",
