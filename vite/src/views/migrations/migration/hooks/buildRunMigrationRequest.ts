@@ -1,4 +1,4 @@
-import type { RetryableMigrationItemRunStatus } from "@/hooks/queries/useMigrationsQuery";
+import type { RetryableMigrationItemRunStatus } from "@/hooks/queries/useMigrationMutations";
 
 type BuildRunMigrationRequestParams = {
 	migrationId: string;

@@ -16,7 +16,7 @@ export const evictCommandSchema = baseCommandSchema
 export type EvictCommand = z.infer<typeof evictCommandSchema>;
 
 /** The evict as the worker logs it, under an id it mints: nothing moves, but readers learn the rows changed. */
-export const loggedEvictCommandSchema = mutatingCommandSchema
+const loggedEvictCommandSchema = mutatingCommandSchema
 	.extend({ type: z.literal("evict") })
 	.strict();
 

@@ -1,4 +1,4 @@
-import { type EvictCommand, parseEvictCommand } from "@autumn/balance-engine";
+import type { EvictCommand } from "@autumn/balance-engine";
 import type { EvictReply } from "@autumn/balance-worker-client/protocol";
 import { BALANCE_WORKER_EVICTS_LOGGED } from "@autumn/env/balanceWorkerConstants";
 import { awaitSnapshotDeleteLanded } from "../actions/awaitSnapshotDeleteLanded.js";
@@ -18,9 +18,7 @@ export async function evict({
 	waitsForSnapshotDelete: boolean;
 }): Promise<EvictReply> {
 	// The flag is the owner's instruction, not part of the record the log keeps.
-	const { refreshSnapshots = false, ...evicting } = parseEvictCommand({
-		input: command,
-	});
+	const { refreshSnapshots = false, ...evicting } = command;
 	const { identity } = evicting;
 	const customerIdentity = { ...identity, entityId: null };
 	const droppedState = scope.ctx.writer.readFreshestState({

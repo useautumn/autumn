@@ -287,7 +287,7 @@ test("per-item results settle each caller with today's error mapping", async () 
 	}
 });
 
-test("a per-item error whose status does not match its code is an invalid response", async () => {
+test("a per-item error is a worker error whatever its status says", async () => {
 	const fixture = createFixture();
 	const pending = fixture.client.track({ command: commandFor("a") });
 	fixture.requests[0].respond({
@@ -303,7 +303,8 @@ test("a per-item error whose status does not match its code is an invalid respon
 		},
 	});
 	await expect(pending).rejects.toMatchObject({
-		code: "INVALID_RESPONSE",
+		code: "WORKER_ERROR",
+		workerCode: "OVERLOADED",
 		outcome: "unknown",
 	});
 });

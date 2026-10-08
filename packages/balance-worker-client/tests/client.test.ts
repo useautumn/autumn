@@ -289,28 +289,29 @@ async function doesNotRetryWorkerErrors(): Promise<void> {
 	}
 }
 
-async function rejectsUnknownHttpErrors(): Promise<void> {
-	for (const response of [
-		{
-			status: 409,
-			body: { error: { code: "NOT_READY", message: "Wrong status" } },
-		},
-		{
-			status: 409,
-			body: { error: { code: "invented", message: "Invalid code" } },
-		},
-		{ status: 502, body: { error: "upstream" } },
-		{ status: 409, body: null },
-		{ status: 409, body: {} },
-		{
-			status: 500,
-			body: { error: { code: "NOT_OWNER", message: "Wrong status" } },
-		},
-	]) {
+async function acceptsAnyOtherWorkerError(): Promise<void> {
+	const newer = { code: "FROM_A_NEWER_WORKER", message: "New" };
+	for (const [response, expected] of [
+		[
+			{ status: 409, body: { error: newer } },
+			{ outcome: "not_submitted", workerCode: newer.code, message: "New" },
+		],
+		[
+			{ status: 503, body: { error: newer } },
+			{ outcome: "unknown", workerCode: newer.code },
+		],
+		[
+			{ status: 500, body: { error: { code: "OVERLOADED", message: "Busy" } } },
+			{ outcome: "unknown", workerCode: "OVERLOADED" },
+		],
+		[{ status: 502, body: { error: "upstream" } }, { outcome: "unknown" }],
+		[{ status: 409, body: null }, { outcome: "not_submitted" }],
+		[{ status: 400, body: "<html>" }, { outcome: "not_submitted" }],
+	] as const) {
 		const fixture = createFixture({ responses: [response] });
 		await expect(fixture.client.track({ command })).rejects.toMatchObject({
-			code: "INVALID_RESPONSE",
-			outcome: "unknown",
+			code: "WORKER_ERROR",
+			...expected,
 		});
 		expect(fixture.stats().refreshes).toBe(0);
 		expect(fixture.stats().requests).toHaveLength(1);
@@ -416,8 +417,8 @@ test(
 	doesNotRetryWorkerErrors,
 );
 test(
-	"does not interpret proxy or status-mismatched errors as stale ownership",
-	rejectsUnknownHttpErrors,
+	"any other answer is one worker error, whatever its code, status or body",
+	acceptsAnyOtherWorkerError,
 );
 test(
 	"never retries ambiguous transport failures",

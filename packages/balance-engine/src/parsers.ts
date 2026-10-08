@@ -27,10 +27,6 @@ import {
 	flushCommandSchema,
 } from "./commands/flush/types/flushCommand.js";
 import {
-	type InitializeCommand,
-	initializeCommandSchema,
-} from "./commands/initialize/types/initializeCommand.js";
-import {
 	type InitializeRequest,
 	initializeRequestSchema,
 } from "./commands/initialize/types/initializeRequest.js";
@@ -149,12 +145,6 @@ export const parseFinalizeCommand = ({
 }: {
 	input: unknown;
 }): FinalizeCommand => finalizeCommandSchema.parse(input);
-
-export const parseInitializeCommand = ({
-	input,
-}: {
-	input: unknown;
-}): InitializeCommand => initializeCommandSchema.parse(input);
 
 export const parseApplyBillingPlanRequest = ({
 	input,

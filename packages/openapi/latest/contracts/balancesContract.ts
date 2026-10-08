@@ -102,7 +102,7 @@ export const balancesTrackContract = oc
 			withAcceptedResponse(
 				spec,
 				"track",
-				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.",
+				"Accepted. The event was queued and will be applied shortly, so balance is null. Returned by default unless async is false, and when Autumn is experiencing degraded service.",
 			),
 	})
 	.input(
@@ -151,7 +151,7 @@ export const balancesTrackTokensContract = oc
 			withAcceptedResponse(
 				spec,
 				"trackTokens",
-				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the token usage event was accepted for replay and will be tracked as soon as the service is restored.",
+				"Accepted. The token usage event was queued and will be applied shortly, so balance is null. Returned by default unless async is false, and when Autumn is experiencing degraded service.",
 			),
 	})
 	.input(

@@ -115,8 +115,13 @@ const createMultiTenantApp = () => {
 const autumnAnswering = ({ status, body }: { status: number; body: unknown }) =>
 	spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
 
+/** Every allowed check falls inside the 1-in-100 sample, or none does. */
+const sampleEveryAllow = ({ sampled }: { sampled: boolean }) =>
+	spyOn(Math, "random").mockReturnValue(sampled ? 0 : 0.99);
+
 afterEach(() => {
 	spyOn(globalThis, "fetch").mockRestore();
+	spyOn(Math, "random").mockRestore();
 	for (const auth of opened.splice(0)) auth.close();
 	for (const directory of directories.splice(0))
 		rmSync(directory, { recursive: true, force: true });
@@ -489,7 +494,8 @@ describe("the request line", () => {
 		});
 	});
 
-	test("every answered check leaves a line with its verdict at res.allowed, where its body has it, and no body", async () => {
+	test("an answered check's line has its verdict at res.allowed, where its body has it, and no body; an allow says its sample rate", async () => {
+		sampleEveryAllow({ sampled: true });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 
@@ -505,6 +511,7 @@ describe("the request line", () => {
 			[2, false],
 		] as const) {
 			expect(logged[index]?.fields).toEqual({
+				...(allowed && { sample_rate: 0.01 }),
 				statusCode: 200,
 				durationMs: expect.any(Number),
 				req: {
@@ -520,6 +527,31 @@ describe("the request line", () => {
 				/^\[200\] POST \/v1\/balances\.check \d+ms$/,
 			);
 		}
+	});
+
+	test("an allowed check outside the sample leaves no line; every deny is logged, and every check is counted", async () => {
+		sampleEveryAllow({ sampled: false });
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		const checksBefore = (await (await app.request("/health")).json())
+			.threads[0].checks;
+
+		for (let i = 0; i < 3; i++)
+			await app.request("/v1/balances.check", checkMessages());
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ required_balance: 11 }),
+		);
+		const health = await (await app.request("/health")).json();
+
+		expect(logged.map((line) => line.fields)).toEqual([
+			expect.objectContaining({
+				req: expect.objectContaining({ path: "/v1/subjects.set" }),
+			}),
+			expect.objectContaining({ res: { allowed: false } }),
+		]);
+		expect(logged[1]?.fields).not.toHaveProperty("sample_rate");
+		expect(health.threads[0].checks).toBe(checksBefore + 4);
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {

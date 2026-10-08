@@ -13,10 +13,8 @@ import {
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	type MigrationWithRunInfo,
-	useMigrationsQuery,
-} from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
+import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
 import { DeleteMigrationDialog } from "./DeleteMigrationDialog";
 
 export function MigrationListRowToolbar({
@@ -26,7 +24,7 @@ export function MigrationListRowToolbar({
 }) {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const { updateMigration } = useMigrationsQuery();
+	const { updateMigration } = useMigrationMutations();
 
 	const handleArchiveToggle = async () => {
 		setDropdownOpen(false);

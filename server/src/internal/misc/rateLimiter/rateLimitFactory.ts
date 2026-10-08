@@ -1,20 +1,18 @@
-import type { ApiVersion } from "@autumn/shared";
+import { type ApiVersion, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { shouldUseRedis } from "@/external/redis/initRedis";
+import { errorToResponse } from "@/honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
-import { queueRateLimitedCustomerCreation } from "@/internal/customers/recovery/queueRateLimitedCustomerCreation.js";
 import {
-	isCheckFailOpenRoute,
 	RATE_LIMIT_CONFIGS,
 	type RateLimitConfig,
 	RateLimitScope,
-	RateLimitType,
+	type RateLimitType,
 	resolveRateLimit,
 } from "./rateLimitConfigs";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
-import { isCustomerInRedisAllowlist } from "./rateLimitRedisAllowlistStore";
 import { createRateLimitRedisStore } from "./rateLimitRedisStore";
 
 // Helper to get rate limit key from context
@@ -62,15 +60,23 @@ const warnOrgCapExceeded = ({
 	);
 };
 
-export const rateLimitFactory = ({
+export const orgRateLimitExceededError = () =>
+	new RecaseError({
+		message: "Rate limit exceeded.",
+		code: "rate_limit_exceeded",
+		statusCode: 429,
+	});
+
+/** The limiter options for one bucket; every limiter for it, single or paired, is built from these. */
+export const createRateLimitOptions = ({
 	type,
 	config,
+	overLimit,
 }: {
 	type: RateLimitType;
 	config: RateLimitConfig;
-}): ReturnType<typeof rateLimiter> => {
-	const { windowMs, notInRedis } = config;
-
+	overLimit?: "degrade" | "reject";
+}) => {
 	const dynamicLimit = (c: Context): number => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
 		const apiVersion = ctx?.apiVersion?.value as ApiVersion | undefined;
@@ -83,44 +89,47 @@ export const rateLimitFactory = ({
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
-	// Check routes fail open; establish routes reject with a standard 429.
-	// Track routes use the degradation flag to preserve events through SQS.
-	const degradeHandler = async (
-		c: Context,
-		next: Next,
-	): Promise<Response | undefined> => {
-		const honoContext = c as Context<HonoEnv>;
-		const ctx = honoContext.get("ctx");
+	// The handler runs and decides what degraded means for its route.
+	const degradeHandler = async (c: Context, next: Next): Promise<void> => {
+		const ctx = (c as Context<HonoEnv>).get("ctx");
 		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
-
-		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
-			// Clients fail open on this 429. Preserve valid customer creation
-			// requests for controlled, serialized replay after the incident.
-			await queueRateLimitedCustomerCreation({ c: honoContext });
-			c.header("Retry-After", undefined);
-			return c.json(
-				{
-					message: "Rate limit exceeded.",
-					code: "rate_limit_exceeded",
-					env: ctx?.env,
-				},
-				429,
-			);
-		}
-
 		if (ctx) ctx.orgRateLimitDegraded = true;
 		c.header("Retry-After", undefined);
 		await next();
-		return;
 	};
 
-	const options = {
-		windowMs,
+	// The SDK retries this 429 on its own backoff, so no Retry-After.
+	const rejectHandler = async (c: Context): Promise<Response> => {
+		const ctx = (c as Context<HonoEnv>).get("ctx");
+		warnOrgCapExceeded({ limitType: type, orgSlug: ctx.org?.slug });
+		c.header("Retry-After", undefined);
+		return errorToResponse({
+			c: c as Context<HonoEnv>,
+			error: orgRateLimitExceededError(),
+			env: ctx.env,
+		});
+	};
+
+	const handlers = { degrade: degradeHandler, reject: rejectHandler };
+	return {
+		windowMs: config.windowMs,
 		limit: dynamicLimit,
 		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
-		...(config.overLimit === "degrade" && { handler: degradeHandler }),
+		...(overLimit && { handler: handlers[overLimit] }),
 	};
+};
+
+export const rateLimitFactory = ({
+	type,
+	config,
+	overLimit,
+}: {
+	type: RateLimitType;
+	config: RateLimitConfig;
+	overLimit?: "degrade" | "reject";
+}): ReturnType<typeof rateLimiter> => {
+	const options = createRateLimitOptions({ type, config, overLimit });
 
 	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;
 	let redisLimiter: ReturnType<typeof rateLimiter> | null = null;
@@ -140,19 +149,11 @@ export const rateLimitFactory = ({
 	};
 
 	return async (c, next) => {
-		if (notInRedis) {
-			const ctx = (c as Context<HonoEnv>).get("ctx");
-			const customerId = ctx?.customerId;
-			const isAllowlisted = isCustomerInRedisAllowlist({ customerId });
-
-			if (!isAllowlisted) {
-				return getInMemoryLimiter()(c, next);
-			}
-		}
+		if (config.store === "memory") return getInMemoryLimiter()(c, next);
 
 		if (!shouldUseRedis()) {
 			warnRateLimitBypass();
-			return notInRedis ? getInMemoryLimiter()(c, next) : next();
+			return next();
 		}
 
 		return getRedisLimiter()(c, next);
@@ -169,29 +170,64 @@ const limiters = Object.fromEntries(
 
 export const getLimiterForType = (type: RateLimitType) => limiters[type];
 
+type RateLimitKeyContext = {
+	org?: { id: string };
+	env: string;
+	apiVersion?: { value: ApiVersion };
+	customerId?: string;
+};
+
+/** `${type}:${orgId}:${env}[:v${version}][:${customerId}]`; live Redis counters depend on this shape. */
+export const toRateLimitKey = ({
+	ctx,
+	rateLimitType,
+}: {
+	ctx: RateLimitKeyContext;
+	rateLimitType: RateLimitType;
+}): string => {
+	const config = RATE_LIMIT_CONFIGS[rateLimitType];
+	const { matchedKey } = resolveRateLimit({
+		config,
+		apiVersion: ctx.apiVersion?.value,
+	});
+	const versionSuffix = matchedKey ? `:v${matchedKey}` : "";
+	const baseKey = `${rateLimitType}:${ctx.org?.id}:${ctx.env}${versionSuffix}`;
+
+	if (config.scope === RateLimitScope.Org) return baseKey;
+	return `${baseKey}:${ctx.customerId}`;
+};
+
+// Route groups sharing an org counter can answer its cap differently, so each
+// answer gets its own wrapper over the same Redis key.
+const orgLimiters = new Map<string, ReturnType<typeof rateLimiter>>();
+
+export const getOrgLimiterFor = ({
+	type,
+	overLimit,
+}: {
+	type: RateLimitType;
+	overLimit?: "degrade" | "reject";
+}) => {
+	const orgLimit = RATE_LIMIT_CONFIGS[type].orgLimit;
+	if (!orgLimit) return undefined;
+
+	const cacheKey = `${orgLimit}:${overLimit ?? "default"}`;
+	let limiter = orgLimiters.get(cacheKey);
+	if (!limiter) {
+		limiter = rateLimitFactory({
+			type: orgLimit,
+			config: RATE_LIMIT_CONFIGS[orgLimit],
+			overLimit,
+		});
+		orgLimiters.set(cacheKey, limiter);
+	}
+	return { type: orgLimit, limiter };
+};
+
 export const getRateLimitKey = ({
 	c,
 	rateLimitType,
 }: {
 	c: Context<HonoEnv>;
 	rateLimitType: RateLimitType;
-}): string => {
-	const ctx = c.get("ctx");
-	const orgId = ctx.org?.id;
-	const env = ctx.env;
-	const apiVersion = ctx.apiVersion?.value as ApiVersion | undefined;
-
-	const config = RATE_LIMIT_CONFIGS[rateLimitType];
-	const { matchedKey } = resolveRateLimit({ config, apiVersion });
-	const versionSuffix = matchedKey ? `:v${matchedKey}` : "";
-	const baseKey = `${config.name}:${orgId}:${env}${versionSuffix}`;
-
-	switch (config.scope) {
-		case RateLimitScope.Org:
-			return baseKey;
-
-		case RateLimitScope.Customer:
-		case RateLimitScope.CustomerWithUrlFallback:
-			return `${baseKey}:${ctx.customerId}`;
-	}
-};
+}): string => toRateLimitKey({ ctx: c.get("ctx"), rateLimitType });

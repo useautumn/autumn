@@ -1,7 +1,4 @@
-import {
-	parseReadSubjectStateCommand,
-	type ReadSubjectStateCommand,
-} from "@autumn/balance-engine";
+import type { ReadSubjectStateCommand } from "@autumn/balance-engine";
 import type { ReadSubjectStateReply } from "@autumn/balance-worker-client/protocol";
 import { readCurrentSubject } from "../actions/readCurrentSubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -14,6 +11,5 @@ export async function readSubjectState({
 	scope: PartitionProcessorScope;
 	command: ReadSubjectStateCommand;
 }): Promise<ReadSubjectStateReply> {
-	const parsed = parseReadSubjectStateCommand({ input: command });
-	return readCurrentSubject({ scope, command: parsed });
+	return readCurrentSubject({ scope, command });
 }

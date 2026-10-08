@@ -46,7 +46,6 @@ import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellan
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimitOverridesConfig";
-import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRateLimitRedisAllowlistConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
@@ -88,7 +87,6 @@ import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMis
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRateLimitOverridesConfig";
-import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAdminRateLimitRedisAllowlistConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
@@ -266,14 +264,6 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/rate-limit-overrides-config",
 	...handleUpsertAdminRateLimitOverridesConfig,
-);
-honoAdminRouter.get(
-	"/rate-limit-redis-allowlist-config",
-	...handleGetAdminRateLimitRedisAllowlistConfig,
-);
-honoAdminRouter.put(
-	"/rate-limit-redis-allowlist-config",
-	...handleUpsertAdminRateLimitRedisAllowlistConfig,
 );
 honoAdminRouter.get(
 	"/agent-provision-rate-limit-config",

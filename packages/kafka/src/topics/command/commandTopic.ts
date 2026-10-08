@@ -1,13 +1,4 @@
-import {
-	meteringIdentityToPartitionKey,
-	parseConfirmExpiredLockCommand,
-	parseEvictCommand,
-	parseFinalizeCommand,
-	parseInitializeCommand,
-	parseResetCommand,
-	parseTrackCommand,
-	parseUpdateBalanceCommand,
-} from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
 import {
 	assertTopicRecordKey,
@@ -25,34 +16,30 @@ function commandRecordToKey({ record }: { record: CommandRecord }): string {
 	return meteringIdentityToPartitionKey({ identity: record.identity });
 }
 
+const QUEUED_COMMAND_TYPES: ReadonlySet<string> = new Set([
+	"track",
+	"initialize",
+	"finalize",
+	"confirmExpiredLock",
+	"reset",
+	"evict",
+	"updateBalance",
+] satisfies CommandRecord["type"][]);
+
+/** Cast, not parsed: our server built and validated it, and a newer server's field must not drop the record.
+ *  The type is still checked, because the consumer routes on it. */
 function parseCommandPayload({
 	type,
 	payload,
 }: Pick<TopicRecordEnvelope, "type" | "payload">): CommandRecord {
-	try {
-		switch (type) {
-			case "track":
-				return parseTrackCommand({ input: payload });
-			case "initialize":
-				return parseInitializeCommand({ input: payload });
-			case "finalize":
-				return parseFinalizeCommand({ input: payload });
-			case "confirmExpiredLock":
-				return parseConfirmExpiredLockCommand({ input: payload });
-			case "reset":
-				return parseResetCommand({ input: payload });
-			case "evict":
-				return parseEvictCommand({ input: payload });
-			case "updateBalance":
-				return parseUpdateBalanceCommand({ input: payload });
-			default:
-				throw new InvalidRecordError();
-		}
-	} catch (cause) {
-		throw cause instanceof InvalidRecordError
-			? cause
-			: new InvalidRecordError({ cause });
-	}
+	const command = payload as Partial<CommandRecord> | null;
+	if (
+		!QUEUED_COMMAND_TYPES.has(type) ||
+		command?.type !== type ||
+		!command.identity
+	)
+		throw new InvalidRecordError();
+	return command as CommandRecord;
 }
 
 export function serializeCommandRecord({ record }: { record: CommandRecord }): {
