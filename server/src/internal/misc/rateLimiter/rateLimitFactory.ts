@@ -170,6 +170,33 @@ const limiters = Object.fromEntries(
 
 export const getLimiterForType = (type: RateLimitType) => limiters[type];
 
+type RateLimitKeyContext = {
+	org?: { id: string };
+	env: string;
+	apiVersion?: { value: ApiVersion };
+	customerId?: string;
+};
+
+/** `${type}:${orgId}:${env}[:v${version}][:${customerId}]`; live Redis counters depend on this shape. */
+export const toRateLimitKey = ({
+	ctx,
+	rateLimitType,
+}: {
+	ctx: RateLimitKeyContext;
+	rateLimitType: RateLimitType;
+}): string => {
+	const config = RATE_LIMIT_CONFIGS[rateLimitType];
+	const { matchedKey } = resolveRateLimit({
+		config,
+		apiVersion: ctx.apiVersion?.value,
+	});
+	const versionSuffix = matchedKey ? `:v${matchedKey}` : "";
+	const baseKey = `${rateLimitType}:${ctx.org?.id}:${ctx.env}${versionSuffix}`;
+
+	if (config.scope === RateLimitScope.Org) return baseKey;
+	return `${baseKey}:${ctx.customerId}`;
+};
+
 // Route groups sharing an org counter can answer its cap differently, so each
 // answer gets its own wrapper over the same Redis key.
 const orgLimiters = new Map<string, ReturnType<typeof rateLimiter>>();
@@ -203,17 +230,4 @@ export const getRateLimitKey = ({
 }: {
 	c: Context<HonoEnv>;
 	rateLimitType: RateLimitType;
-}): string => {
-	const ctx = c.get("ctx");
-	const orgId = ctx.org?.id;
-	const env = ctx.env;
-	const apiVersion = ctx.apiVersion?.value as ApiVersion | undefined;
-
-	const config = RATE_LIMIT_CONFIGS[rateLimitType];
-	const { matchedKey } = resolveRateLimit({ config, apiVersion });
-	const versionSuffix = matchedKey ? `:v${matchedKey}` : "";
-	const baseKey = `${rateLimitType}:${orgId}:${env}${versionSuffix}`;
-
-	if (config.scope === RateLimitScope.Org) return baseKey;
-	return `${baseKey}:${ctx.customerId}`;
-};
+}): string => toRateLimitKey({ ctx: c.get("ctx"), rateLimitType });

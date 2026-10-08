@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { RateLimitsSection } from "../rate-limits/RateLimitsSection";
 import { AgentProvisionRateLimitDialog } from "./AgentProvisionRateLimitDialog";
 import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
 import { AsyncTrackDialog } from "./AsyncTrackDialog";
@@ -16,7 +17,6 @@ import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { MiscRedisDialog } from "./MiscRedisDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
-import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
@@ -73,6 +73,8 @@ export function EdgeConfigTab() {
 					</div>
 				</div>
 			)}
+
+			<RateLimitsSection />
 
 			{EDGE_CONFIG_SECTIONS.map((section) => (
 				<section key={section.id} className="flex flex-col gap-3">
@@ -153,11 +155,6 @@ export function EdgeConfigTab() {
 
 			<OrgLimitsDialog
 				open={openConfig === "org-limits"}
-				onOpenChange={closeDialog}
-			/>
-
-			<RateLimitOverridesDialog
-				open={openConfig === "rate-limit-overrides"}
 				onOpenChange={closeDialog}
 			/>
 

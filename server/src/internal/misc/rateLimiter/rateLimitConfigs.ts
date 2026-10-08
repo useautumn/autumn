@@ -29,6 +29,8 @@ type RoutePattern = {
 
 type RateLimitRouteGroup = {
 	type: Exclude<RateLimitType, RateLimitType.General>;
+	/** Admin page row name when this group's type also has another route group. */
+	name?: string;
 	/** At the bucket's org cap: "degrade" runs the handler with
 	 *  `ctx.orgRateLimitDegraded` set, "reject" answers the API's JSON 429, and
 	 *  unset leaves hono's text 429 with Retry-After. */
@@ -41,7 +43,7 @@ const route = ({ method, url }: RoutePattern): RoutePattern => ({
 	url,
 });
 
-const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
+export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	{
 		type: RateLimitType.Attach,
 		patterns: [
@@ -126,6 +128,7 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	// Reads have no DB-free answer, so they share check's counters but reject.
 	{
 		type: RateLimitType.CheckCustomerGet,
+		name: "customer_reads",
 		overLimit: "reject",
 		patterns: [
 			route({ method: "GET", url: "/v1/customers/:customer_id" }),
