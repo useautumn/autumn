@@ -4,20 +4,36 @@ import {
 	findByocCacheMachine,
 } from "@autumn/shared";
 
-/** Names only the dashboard uses; the API speaks in `cpu` and `memory`. */
-const MACHINE_LABELS: Record<ByocCacheMachine["instanceType"], string> = {
-	"t4g.micro": "Starter",
-	"t4g.medium": "Small",
-	"c7g.xlarge": "Medium",
-	"c7g.2xlarge": "Large",
-	"c7g.4xlarge": "XL",
+type AtomMachineDisplay = {
+	label: string;
+	/** Only measured capacity is shown; the rest is unmeasured. */
+	checksPerSecond: string | null;
 };
 
+/** Names only the dashboard uses; the API speaks in `cpu` and `memory`. */
+const MACHINE_DISPLAY: Record<
+	ByocCacheMachine["instanceType"],
+	AtomMachineDisplay
+> = {
+	"t4g.micro": { label: "Starter", checksPerSecond: null },
+	"t4g.medium": { label: "Small", checksPerSecond: null },
+	"c7g.xlarge": { label: "Medium", checksPerSecond: null },
+	"c7g.2xlarge": { label: "Large", checksPerSecond: "13.5k" },
+	"c7g.4xlarge": { label: "XL", checksPerSecond: null },
+};
+
+/** The size most apps fit, picked when setup starts. */
+export const RECOMMENDED_ATOM_INSTANCE_TYPE: ByocCacheMachine["instanceType"] =
+	"c7g.xlarge";
+
 export const atomMachineLabel = (machine: ByocCacheMachine) =>
-	MACHINE_LABELS[machine.instanceType];
+	MACHINE_DISPLAY[machine.instanceType].label;
+
+export const atomMachineChecksPerSecond = (machine: ByocCacheMachine) =>
+	MACHINE_DISPLAY[machine.instanceType].checksPerSecond;
 
 export const atomMachineSpecs = (machine: ByocCacheMachine) =>
-	`${machine.cpu} vCPU · ${machine.memory} GiB`;
+	`${machine.cpu} vCPU · ${machine.memory} GB`;
 
 export const ATOM_RESIZE_NOTE =
 	"Resizing takes up to a minute. During this time the SDK falls back to the Autumn API.";

@@ -4,23 +4,21 @@ import {
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
 import { RadioGroup, RadioGroupItem } from "@autumn/ui";
+import { useId } from "react";
+import { LabelTag } from "@/components/general/LabelTag";
+import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import {
-	SETTINGS_ROW_CLASS,
-	SettingsTable,
-	TableCell,
-	TableRow,
-} from "../../../SettingsTable";
-import { atomMachineLabel } from "./atomMachineDisplay";
+	atomMachineChecksPerSecond,
+	atomMachineLabel,
+	atomMachineSpecs,
+	RECOMMENDED_ATOM_INSTANCE_TYPE,
+} from "./atomMachineDisplay";
 
-const COLUMNS = [
-	{ label: "Size", width: "32%" },
-	{ label: "vCPU", width: "14%" },
-	{ label: "Memory", width: "14%" },
-	{ label: "Instance", width: "20%" },
-	{ label: "Est. / month", width: "15%" },
-] as const;
+const GRID_CLASS =
+	"grid grid-cols-[minmax(0,1fr)_120px_88px_80px] items-center gap-4 px-4";
 
+/** Atom's sizes as rows on a section's surface; the one it runs on now is marked Current. */
 export const AtomMachineTable = ({
 	selected,
 	current,
@@ -28,11 +26,11 @@ export const AtomMachineTable = ({
 	disabled = false,
 }: {
 	selected: ByocCacheMachine;
-	/** The machine Atom runs on now, marked in its row; none before setup. */
 	current?: ByocCacheMachine | null;
 	onSelect: (machine: ByocCacheMachine) => void;
 	disabled?: boolean;
 }) => {
+	const radioIdPrefix = useId();
 	const selectInstanceType = (instanceType: unknown) => {
 		const machine = findByocCacheMachineByInstanceType({
 			instanceType: String(instanceType),
@@ -41,62 +39,58 @@ export const AtomMachineTable = ({
 	};
 
 	return (
-		<div className="flex flex-col gap-2">
-			<RadioGroup
-				className="block"
-				value={selected.instanceType}
-				onValueChange={selectInstanceType}
-				disabled={disabled}
-				aria-label="Machine size"
+		<RadioGroup
+			className="block gap-0"
+			value={selected.instanceType}
+			onValueChange={selectInstanceType}
+			disabled={disabled}
+			aria-label="Size"
+		>
+			<div
+				className={cn(
+					GRID_CLASS,
+					TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+					"h-8 text-xs text-subtle",
+				)}
 			>
-				<SettingsTable columns={COLUMNS}>
-					{BYOC_CACHE_MACHINES.map((machine) => {
-						const isSelected = machine.instanceType === selected.instanceType;
-						const isCurrent = machine.instanceType === current?.instanceType;
-						return (
-							<TableRow
-								key={machine.instanceType}
-								className={cn(
-									SETTINGS_ROW_CLASS,
-									"cursor-pointer",
-									isSelected && "bg-hover-primary",
-								)}
-								onClick={() => !disabled && onSelect(machine)}
-							>
-								<TableCell className="pl-4">
-									<div className="flex items-center gap-3">
-										<RadioGroupItem value={machine.instanceType} />
-										<span className="font-medium text-foreground">
-											{atomMachineLabel(machine)}
-										</span>
-										{isCurrent && (
-											<span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-tertiary-foreground">
-												Current
-											</span>
-										)}
-									</div>
-								</TableCell>
-								<TableCell>{machine.cpu} vCPU</TableCell>
-								<TableCell>{machine.memory} GiB</TableCell>
-								<TableCell className="font-mono text-xs">
-									{machine.instanceType}
-								</TableCell>
-								<TableCell>
-									<span className="text-foreground">
-										${machine.estimatedMonthlyUsd}
-									</span>
-									<span className="text-subtle"> /mo</span>
-								</TableCell>
-								<TableCell />
-							</TableRow>
-						);
-					})}
-				</SettingsTable>
-			</RadioGroup>
-			<p className="text-xs text-subtle">
-				Estimated AWS on-demand price for the instance, billed by AWS to your
-				account.
-			</p>
-		</div>
+				<span>Size</span>
+				<span>vCPU · Memory</span>
+				<span>Checks / s</span>
+				<span>Per month</span>
+			</div>
+			{BYOC_CACHE_MACHINES.map((machine) => {
+				const isSelected = machine.instanceType === selected.instanceType;
+				const isCurrent = machine.instanceType === current?.instanceType;
+				const isRecommended =
+					!current && machine.instanceType === RECOMMENDED_ATOM_INSTANCE_TYPE;
+				const radioId = `${radioIdPrefix}-${machine.instanceType}`;
+				return (
+					<label
+						key={machine.instanceType}
+						htmlFor={radioId}
+						className={cn(
+							GRID_CLASS,
+							TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+							"h-10 cursor-pointer text-sm text-tertiary-foreground hover:bg-table-row-hover",
+							isSelected && "bg-primary/[0.06]",
+						)}
+					>
+						<span className="flex items-center gap-3">
+							<RadioGroupItem id={radioId} value={machine.instanceType} />
+							<span className="font-medium text-foreground">
+								{atomMachineLabel(machine)}
+							</span>
+							{isRecommended && <LabelTag label="RECOMMENDED" />}
+							{isCurrent && <LabelTag label="CURRENT" />}
+						</span>
+						<span>{atomMachineSpecs(machine)}</span>
+						<span>{atomMachineChecksPerSecond(machine) ?? "—"}</span>
+						<span className="text-foreground">
+							${machine.estimatedMonthlyUsd}
+						</span>
+					</label>
+				);
+			})}
+		</RadioGroup>
 	);
 };

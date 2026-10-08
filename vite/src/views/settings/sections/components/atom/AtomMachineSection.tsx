@@ -1,6 +1,10 @@
 import type { ApiByocCache } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { CpuIcon } from "@phosphor-icons/react";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+} from "@/components/general/table";
 import { AtomMachineTable } from "./AtomMachineTable";
 import { ATOM_RESIZE_NOTE } from "./atomMachineDisplay";
 import { ResizeAtomDialog } from "./ResizeAtomDialog";
@@ -38,12 +42,16 @@ export const AtomMachineSection = ({
 					<CpuIcon className="size-4 text-subtle" />
 					Machine size
 				</div>
-				<AtomMachineTable
-					selected={selected}
-					current={current}
-					onSelect={selectMachine}
-					disabled={resize.isPending}
-				/>
+				<div className={TABLE_TRAY_CLASS}>
+					<div className={TABLE_TRAY_SURFACE_CLASS}>
+						<AtomMachineTable
+							selected={selected}
+							current={current}
+							onSelect={selectMachine}
+							disabled={resize.isPending}
+						/>
+					</div>
+				</div>
 				<div className="flex items-center justify-between gap-4">
 					<p className="max-w-[420px] text-xs text-tertiary-foreground">
 						{ATOM_RESIZE_NOTE}

@@ -1,8 +1,10 @@
 import type {
 	ApiByocCache,
 	ByocCacheMachine,
+	CreateByocCacheParams,
 	CreateByocCacheResponse,
 	GetByocCacheResponse,
+	RevealByocCacheTokenResponse,
 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtomQueryKey } from "@/hooks/queries/useAtomQuery";
@@ -15,53 +17,65 @@ const openSetupTab = (): Window | null => {
 	return setupTab;
 };
 
-/** Create, resize and delete write straight into the query cache, so the card advances without a refetch. */
+/** Every Atom write: each lands its result in the query cache, so the page advances without waiting on a poll. */
 export const useAtomActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const queryKey = useAtomQueryKey();
 
-	const setCache = (cache: GetByocCacheResponse["cache"]) =>
+	const setCache = (cache: ApiByocCache | null) =>
 		queryClient.setQueryData<GetByocCacheResponse>(
 			queryKey,
 			(current) => current && { ...current, cache },
 		);
+	const refetchCache = () => queryClient.invalidateQueries({ queryKey });
+
+	const postAtom = async <Response>(
+		route: string,
+		body: object = {},
+	): Promise<Response> => {
+		const { data } = await axiosInstance.post<Response>(
+			`/v1/byoc.${route}`,
+			body,
+		);
+		return data;
+	};
 
 	const create = useMutation({
-		mutationFn: async ({ cpu, memory }: ByocCacheMachine) => {
-			const { data } = await axiosInstance.post<CreateByocCacheResponse>(
-				"/v1/byoc.create_atom",
-				{ cpu, memory },
-			);
-			return data;
-		},
-		onSuccess: ({ setup_url: _setupUrl, ...cache }) => setCache(cache),
+		mutationFn: (params: CreateByocCacheParams) =>
+			postAtom<CreateByocCacheResponse>("create_atom", params),
+		onSuccess: ({ setup_url: _setupUrl, token: _token, ...cache }) =>
+			setCache(cache),
 	});
 
 	const resize = useMutation({
-		mutationFn: async ({ cpu, memory }: ByocCacheMachine) => {
-			const { data } = await axiosInstance.post<ApiByocCache>(
-				"/v1/byoc.resize_atom",
-				{ cpu, memory },
-			);
-			return data;
-		},
+		mutationFn: ({ cpu, memory }: ByocCacheMachine) =>
+			postAtom<ApiByocCache>("resize_atom", { cpu, memory }),
 		onSuccess: setCache,
 	});
 
-	const remove = useMutation({
-		mutationFn: async () => {
-			await axiosInstance.post("/v1/byoc.delete_atom", {});
-		},
-		// A delete keeps the record while the stack is torn down, so read where it landed.
-		onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+	const retry = useMutation({
+		mutationFn: () => postAtom<ApiByocCache>("retry_atom"),
+		onSuccess: setCache,
 	});
 
-	/** Deploys, then opens alien's setup in a new tab; a deploy with no link to open (local dev) closes it again. */
-	const startSetup = async (machine: ByocCacheMachine): Promise<void> => {
+	// A delete keeps the record while the stack is torn down, so read where it landed.
+	const remove = useMutation({
+		mutationFn: () => postAtom("delete_atom"),
+		onSuccess: refetchCache,
+	});
+
+	const revealToken = useMutation({
+		mutationFn: () =>
+			postAtom<RevealByocCacheTokenResponse>("reveal_atom_token"),
+		onSuccess: refetchCache,
+	});
+
+	/** Creates the setup, then opens its AWS link in a new tab; with no link to open (local dev) the tab closes again. */
+	const startSetup = async (params: CreateByocCacheParams): Promise<void> => {
 		const setupTab = openSetupTab();
 		try {
-			const { setup_url: setupUrl } = await create.mutateAsync(machine);
+			const { setup_url: setupUrl } = await create.mutateAsync(params);
 			if (setupUrl && setupTab) setupTab.location.href = setupUrl;
 			else setupTab?.close();
 		} catch (error) {
@@ -70,11 +84,7 @@ export const useAtomActions = () => {
 		}
 	};
 
-	return {
-		create,
-		resize,
-		remove,
-		startSetup,
-		setupUrl: create.data?.setup_url ?? null,
-	};
+	return { create, resize, retry, remove, revealToken, startSetup };
 };
+
+export type AtomActions = ReturnType<typeof useAtomActions>;

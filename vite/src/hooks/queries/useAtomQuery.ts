@@ -1,6 +1,7 @@
 import {
-	type ByocCacheStatus,
-	ByocCacheStatus as CacheStatus,
+	type ApiByocCache,
+	ByocCacheStageStatus,
+	ByocCacheStatus,
 	type GetByocCacheResponse,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
@@ -8,16 +9,32 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const POLL_INTERVAL_MS = 2000;
+/** The org deletes its stack in AWS on its own time, so that wait is polled gently. */
+const TEARDOWN_POLL_INTERVAL_MS = 10_000;
 
-const isSettling = (status: ByocCacheStatus | undefined) =>
-	status === CacheStatus.AwaitingSetup || status === CacheStatus.Provisioning;
+const SETTLING_STATUSES: ByocCacheStatus[] = [
+	ByocCacheStatus.AwaitingSetup,
+	ByocCacheStatus.Provisioning,
+	ByocCacheStatus.Removing,
+];
+
+const pollIntervalFor = (cache: ApiByocCache | null | undefined) => {
+	if (!cache) return false;
+	if (cache.status === ByocCacheStatus.TeardownRequired)
+		return TEARDOWN_POLL_INTERVAL_MS;
+	const isConnecting =
+		cache.status === ByocCacheStatus.Ready &&
+		cache.stages.connected !== ByocCacheStageStatus.Done;
+	const isSettling = SETTLING_STATUSES.includes(cache.status) || isConnecting;
+	return isSettling ? POLL_INTERVAL_MS : false;
+};
 
 export const useAtomQueryKey = () => {
 	const buildKey = useQueryKeyFactory();
 	return buildKey(["atom"]);
 };
 
-/** The env's BYOC cache, polled while it waits on setup or provisions. */
+/** The env's Atom, polled until it is connected, failed, or gone. */
 export const useAtomQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryKey = useAtomQueryKey();
@@ -33,9 +50,14 @@ export const useAtomQuery = ({ enabled = true } = {}) => {
 		},
 		enabled,
 		retry: false,
-		refetchInterval: (query) =>
-			isSettling(query.state.data?.cache?.status) ? POLL_INTERVAL_MS : false,
+		refetchInterval: (query) => pollIntervalFor(query.state.data?.cache),
 	});
 
-	return { cache: data?.cache ?? null, isLoading, error, refetch };
+	return {
+		cache: data?.cache ?? null,
+		stackName: data?.stack_name ?? "",
+		isLoading,
+		error,
+		refetch,
+	};
 };
