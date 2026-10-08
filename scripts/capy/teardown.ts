@@ -101,8 +101,15 @@ export function cmdCapyTeardown(): void {
 	ensureBunGlobalBin();
 	cmdCapyStop();
 	const branchName = ownNeonBranchName();
-	if (branchName && findBranchByName(branchName)) deleteBranch(branchName);
-	else log("no Neon branch to delete for this machine");
+	if (branchName && findBranchByName(branchName)) {
+		deleteBranch(branchName);
+		// Provision adopts a surviving branch by name, which would silently keep the old data.
+		if (findBranchByName(branchName)) {
+			fatal(
+				`Neon branch ${branchName} still exists; teardown stopped before clearing state`,
+			);
+		}
+	} else log("no Neon branch to delete for this machine");
 	removeComposeProjects();
 	stopKafka();
 	rmSync(join(REPO_ROOT, ".data", "atom"), { recursive: true, force: true });
