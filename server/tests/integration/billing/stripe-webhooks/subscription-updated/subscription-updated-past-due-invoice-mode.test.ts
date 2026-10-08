@@ -7,6 +7,7 @@ import {
 	type AttachParamsV1Input,
 	CusProductStatus,
 	customerProducts,
+	stripeRefToId,
 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { expectProductPastDue } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -117,10 +118,7 @@ test.concurrent(
 		expect(sub.status).toBe("past_due");
 		expect(sub.collection_method).toBe("charge_automatically");
 
-		const latestInvoiceId =
-			typeof sub.latest_invoice === "string"
-				? sub.latest_invoice
-				: sub.latest_invoice?.id;
+		const latestInvoiceId = stripeRefToId(sub.latest_invoice);
 		expect(latestInvoiceId).toBeTruthy();
 
 		const invoice = await ctx.stripeCli.invoices.retrieve(latestInvoiceId!);

@@ -9,6 +9,7 @@ import {
 	type Product,
 	productToStripeIds,
 	type StripeInlinePrice,
+	stripeRefToId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
@@ -34,7 +35,7 @@ export type ShapeFallbackCandidate = {
 const candidateProductIdOf = (price: Stripe.Price): string | undefined => {
 	const { product } = price;
 	if (!product) return undefined;
-	return typeof product === "string" ? product : product.id;
+	return stripeRefToId(product);
 };
 
 /** Items id-matching or tagged to a live cus price belong to id/metadata

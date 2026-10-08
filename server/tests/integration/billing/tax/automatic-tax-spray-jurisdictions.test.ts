@@ -11,6 +11,7 @@
  * "Failed to register Stripe Tax" warnings (factory swallows them).
  */
 
+import { stripeRefToId } from "@autumn/shared";
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";
@@ -165,9 +166,7 @@ test(
 			expect(sub.automatic_tax.enabled).toBe(true);
 
 			const latestInvoiceId =
-				typeof sub.latest_invoice === "string"
-					? sub.latest_invoice
-					: sub.latest_invoice?.id;
+				stripeRefToId(sub.latest_invoice);
 			if (latestInvoiceId) {
 				const invoice = await ctx.stripeCli.invoices.retrieve(latestInvoiceId);
 				const taxAmount = invoice.total - invoice.subtotal;

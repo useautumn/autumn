@@ -2,6 +2,7 @@ import {
 	BillingVersion,
 	hasCustomItems,
 	orgDisableStripeWrites,
+	stripeRefToId,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
@@ -150,10 +151,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];
-	const inheritedTaxRateId =
-		typeof subscriptionTaxRate === "string"
-			? subscriptionTaxRate
-			: subscriptionTaxRate?.id;
+	const inheritedTaxRateId = stripeRefToId(subscriptionTaxRate);
 	const inheritedStripeTaxRate =
 		typeof subscriptionTaxRate === "string"
 			? await fetchStripeTaxRateForBilling({

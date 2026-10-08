@@ -4,6 +4,7 @@ import {
 	customerProducts,
 	prices,
 	products,
+	stripeRefToId,
 } from "@autumn/shared";
 import type { initScenario } from "@tests/utils/testInitUtils/initScenario";
 import { and, eq, inArray } from "drizzle-orm";
@@ -153,8 +154,7 @@ type StripePhasePrice = {
 };
 
 const toStripePhasePrice = (price: Stripe.Price): StripePhasePrice => ({
-	productId:
-		typeof price.product === "string" ? price.product : price.product.id,
+	productId: stripeRefToId(price.product),
 	unitAmount: price.unit_amount,
 	active: price.active,
 });

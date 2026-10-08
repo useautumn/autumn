@@ -13,7 +13,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { CusProductStatus, customerProducts } from "@autumn/shared";
+import { CusProductStatus, customerProducts, stripeRefToId } from "@autumn/shared";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { items } from "@tests/utils/fixtures/items";
@@ -94,9 +94,7 @@ const provisionForTest = async ({
 	if (!subscription) throw new Error("Expected Stripe subscription");
 
 	const latestInvoiceId =
-		typeof subscription.latest_invoice === "string"
-			? subscription.latest_invoice
-			: subscription.latest_invoice?.id;
+		stripeRefToId(subscription.latest_invoice);
 	if (!latestInvoiceId) throw new Error("Expected latest invoice id");
 
 	return {

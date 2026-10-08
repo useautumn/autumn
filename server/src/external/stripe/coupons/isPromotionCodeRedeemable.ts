@@ -1,6 +1,5 @@
-import { secondsToMs } from "@autumn/shared";
+import { secondsToMs, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
-import { stripeRefToId } from "../common/utils/stripeRefToId";
 
 /** Whether Stripe would accept the promotion code again for this customer; restricted codes count as not, since a reuse could be rejected. */
 export const isPromotionCodeRedeemable = ({

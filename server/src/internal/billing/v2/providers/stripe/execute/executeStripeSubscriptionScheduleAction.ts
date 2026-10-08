@@ -2,6 +2,7 @@ import type {
 	BillingContext,
 	StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@server/external/stripe/common/autumnStripeIdempotency";
 import { stripeSchedulePhaseItemToPriceId } from "@server/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
@@ -290,10 +291,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 
 			const newSchedule = await createScheduleFromSubscription({
 				stripeCli,
-				subscriptionId:
-					typeof subscriptionId === "string"
-						? subscriptionId
-						: subscriptionId.id,
+				subscriptionId: stripeRefToId(subscriptionId),
 				params,
 				stripeSubscription,
 				previousSchedule: billingContext.stripeSubscriptionSchedule,

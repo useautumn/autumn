@@ -1,4 +1,5 @@
 import type { RewardMismatch } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 /** Evaluates that the subscription has exactly the expected reward coupon IDs. */
@@ -13,11 +14,7 @@ export const evaluateRewards = ({
 		sub.discounts?.map((discount) => {
 			if (typeof discount === "string") return discount;
 			const d = discount as Stripe.Discount;
-			return d.source?.coupon
-				? typeof d.source.coupon === "string"
-					? d.source.coupon
-					: d.source.coupon.id
-				: undefined;
+			return d.source?.coupon ? stripeRefToId(d.source.coupon) : undefined;
 		}) ?? [];
 
 	const missingRewardIds = rewards.filter(

@@ -1,8 +1,11 @@
-import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
+import {
+	type StripeDiscountWithCoupon,
+	secondsToMs,
+	stripeRefToId,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeResourceAlreadyExists } from "@/external/stripe/common/utils/isStripeResourceAlreadyExists";
-import { stripeRefToId } from "@/external/stripe/common/utils/stripeRefToId";
 import { isPromotionCodeRedeemable } from "@/external/stripe/coupons/isPromotionCodeRedeemable";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { subToDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/subToDiscounts";

@@ -3,6 +3,7 @@ import {
 	findActiveCustomerProductById,
 	msToSeconds,
 	secondsToMs,
+	stripeRefToId,
 } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
@@ -167,10 +168,7 @@ export const expectCycleResetPhase = async ({
 		customerId,
 		status: "active",
 	});
-	const scheduleId =
-		typeof subscription.schedule === "string"
-			? subscription.schedule
-			: subscription.schedule?.id;
+	const scheduleId = stripeRefToId(subscription.schedule);
 	if (!scheduleId) throw new Error("Live subscription has no schedule");
 
 	const schedule =
@@ -223,10 +221,7 @@ export const expectLiveSubscriptionEndsAt = async ({
 		customerId,
 		status: "active",
 	});
-	const scheduleId =
-		typeof subscription.schedule === "string"
-			? subscription.schedule
-			: subscription.schedule?.id;
+	const scheduleId = stripeRefToId(subscription.schedule);
 	const schedule = scheduleId
 		? await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId)
 		: undefined;

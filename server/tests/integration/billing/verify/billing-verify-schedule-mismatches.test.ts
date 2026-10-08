@@ -16,6 +16,7 @@ import {
 	CusProductStatus,
 	customerProducts,
 	ms,
+	stripeRefToId,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -164,8 +165,7 @@ testSequentially(
 			stripeCustomerId,
 		});
 		expect(sub.schedule).toBeTruthy();
-		const scheduleId =
-			typeof sub.schedule === "string" ? sub.schedule : sub.schedule?.id;
+		const scheduleId = stripeRefToId(sub.schedule);
 		if (!scheduleId) throw new Error("Expected schedule id on sub");
 
 		const schedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
@@ -193,7 +193,7 @@ testSequentially(
 				end_date: phase.end_date,
 				proration_behavior: "none" as const,
 				items: phase.items.map((item, itemIndex) => ({
-					price: typeof item.price === "string" ? item.price : item.price.id,
+					price: stripeRefToId(item.price),
 					quantity:
 						index === 1 && itemIndex === 0
 							? (item.quantity ?? 1) + 1
@@ -336,8 +336,7 @@ testSequentially(
 			ctx,
 			stripeCustomerId,
 		});
-		const scheduleId =
-			typeof sub.schedule === "string" ? sub.schedule : sub.schedule?.id;
+		const scheduleId = stripeRefToId(sub.schedule);
 		if (!scheduleId) throw new Error("Expected schedule id on sub");
 
 		const schedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
@@ -351,7 +350,7 @@ testSequentially(
 		const splitAt = secondPhase.start_date + 12 * 3600;
 		const phaseItems = (phase: (typeof schedule.phases)[number]) =>
 			phase.items.map((item) => ({
-				price: typeof item.price === "string" ? item.price : item.price.id,
+				price: stripeRefToId(item.price),
 				quantity: item.quantity ?? undefined,
 			}));
 

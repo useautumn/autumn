@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import type { BillingPreviewResponse } from "@autumn/shared";
 import {
 	OnDecrease,
+	stripeRefToId,
 	stripeToAtmnAmount,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
@@ -133,8 +134,7 @@ export const expectScheduledAnchorQuantities = async (
 		const { latest_invoice } = await ctx.stripeCli.subscriptions.retrieve(
 			scenario.subscription.id,
 		);
-		const invoiceId =
-			typeof latest_invoice === "string" ? latest_invoice : latest_invoice?.id;
+		const invoiceId = stripeRefToId(latest_invoice);
 		expect(invoiceId).toBeDefined();
 		const invoice = await ctx.stripeCli.invoices.retrieve(invoiceId!);
 		expect(preview.total).toBe(

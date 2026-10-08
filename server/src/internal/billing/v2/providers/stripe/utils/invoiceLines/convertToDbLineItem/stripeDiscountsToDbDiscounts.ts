@@ -1,5 +1,6 @@
 import {
 	type InvoiceLineItemDiscount,
+	stripeRefToId,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -33,11 +34,7 @@ export const stripeDiscountsToDbDiscounts = ({
 		const coupon = discount.source?.coupon;
 
 		// Get coupon ID from source.coupon (can be string or expanded Coupon object)
-		const couponId = coupon
-			? typeof coupon === "string"
-				? coupon
-				: coupon.id
-			: null;
+		const couponId = coupon ? stripeRefToId(coupon) : null;
 		const percentOff =
 			coupon && typeof coupon !== "string"
 				? (coupon.percent_off ?? undefined)

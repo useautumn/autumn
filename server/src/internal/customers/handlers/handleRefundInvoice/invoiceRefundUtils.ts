@@ -2,6 +2,7 @@ import {
 	atmnToStripeAmount,
 	ErrCode,
 	RecaseError,
+	stripeRefToId,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -41,10 +42,7 @@ export const resolveChargeFromInvoice = async ({
 	}
 
 	if (payment.type === "payment_intent" && payment.payment_intent) {
-		const paymentIntentId =
-			typeof payment.payment_intent === "string"
-				? payment.payment_intent
-				: payment.payment_intent.id;
+		const paymentIntentId = stripeRefToId(payment.payment_intent);
 
 		const paymentIntent = await stripeCli.paymentIntents.retrieve(
 			paymentIntentId,

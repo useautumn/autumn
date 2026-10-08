@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { createTwStripeRequestDeadline } from "../twStripeLimiter/createTwStripeRequestDeadline";
 import { withTwStripeRequestDeadline } from "../twStripeLimiter/twStripeRequestContext";
@@ -47,10 +48,7 @@ export const waitForTwStripeScheduleClock = async ({
 		),
 	);
 	if (!schedule.test_clock) return;
-	const clockId =
-		typeof schedule.test_clock === "string"
-			? schedule.test_clock
-			: schedule.test_clock.id;
+	const clockId = stripeRefToId(schedule.test_clock);
 	const retrieveClock = () =>
 		read(() =>
 			client.testHelpers.testClocks.retrieve(clockId, requestOptions()),

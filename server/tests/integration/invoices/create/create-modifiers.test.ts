@@ -8,6 +8,7 @@ import {
 	type ApiCustomerV5,
 	BillingInterval,
 	BillingMethod,
+	stripeRefToId,
 } from "@autumn/shared";
 import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -88,8 +89,7 @@ test.concurrent(
 		});
 		expect(response.preview.discount_total).toBe(40);
 		// Everything a line was discounted beyond the invoice-wide coupon.
-		const idOf = (discount: string | { id: string }) =>
-			typeof discount === "string" ? discount : discount.id;
+		const idOf = (discount: string | { id: string }) => stripeRefToId(discount);
 		const invoiceDiscountIds = stripeInvoice.discounts.map(idOf);
 		const planCouponAmounts = stripeInvoice.lines.data.map((line) =>
 			(line.discount_amounts ?? [])

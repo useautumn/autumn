@@ -1,4 +1,4 @@
-import { hasCustomerProductStarted } from "@autumn/shared";
+import { hasCustomerProductStarted, stripeRefToId } from "@autumn/shared";
 import { fromUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
@@ -7,7 +7,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 
 const getScheduleId = (subscription: Stripe.Subscription) => {
 	const { schedule } = subscription;
-	return typeof schedule === "string" ? schedule : schedule?.id;
+	return stripeRefToId(schedule);
 };
 
 const executeLinkScheduledCustomerProductsToSubscription = async ({

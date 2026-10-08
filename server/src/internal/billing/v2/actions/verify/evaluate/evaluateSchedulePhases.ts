@@ -3,6 +3,7 @@ import type {
 	ScheduleMismatch,
 	SubscriptionMismatch,
 } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { fromUnixTime, isAfter } from "date-fns";
 import type Stripe from "stripe";
 import { similarUnix } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils";
@@ -40,8 +41,7 @@ export const evaluateSchedulePhases = async ({
 		];
 	}
 
-	const scheduleId =
-		typeof sub.schedule === "string" ? sub.schedule : sub.schedule.id;
+	const scheduleId = stripeRefToId(sub.schedule);
 	const schedule = await stripeCli.subscriptionSchedules.retrieve(scheduleId, {
 		expand: ["phases.items.price"],
 	});

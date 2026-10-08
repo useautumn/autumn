@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
 import { createRatePacer, type RatePacer } from "@/utils/createRatePacer.js";
@@ -101,10 +102,7 @@ export const sweepStripeSubscriptions = async ({
 				onRetry,
 			});
 			for (const subscription of page.data) {
-				const stripeCustomerId =
-					typeof subscription.customer === "string"
-						? subscription.customer
-						: subscription.customer.id;
+				const stripeCustomerId = stripeRefToId(subscription.customer);
 				const existing = subscriptionsByStripeCustomerId.get(stripeCustomerId);
 				if (existing) existing.push(subscription);
 				else

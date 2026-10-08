@@ -1,6 +1,6 @@
 import type { BillingContext } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
-import { stripeRefToId } from "@/external/stripe/common/utils/stripeRefToId";
 
 const AUTUMN_METADATA_PREFIX = "autumn_";
 
