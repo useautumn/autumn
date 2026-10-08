@@ -68,6 +68,11 @@ const backdateConflict = ({
 	});
 	if (requestsTrial && !acceptsFreeTrial) return { conflict: "free_trial" };
 	if (paidPeriodEnded({ billingContext })) return { conflict: "period_ended" };
+	// Resetting a paid backdate's cycle now would bill its paid period again; held until that rule is decided.
+	const resetsPaidCycleNow =
+		isBackdateRecreate({ billingContext }) &&
+		billingContext.requestedBillingCycleAnchor === "now";
+	if (resetsPaidCycleNow) return { conflict: "billing_cycle_anchor" };
 	if (
 		exceedsStripeBackdateInvoiceLineItemLimit({
 			products: billingContext.fullProducts,

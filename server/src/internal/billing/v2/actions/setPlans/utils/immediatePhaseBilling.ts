@@ -4,7 +4,7 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
-import { endsLiveTrial } from "./endsLiveTrial";
+import { endsLiveTrial, trialingStripeSubscription } from "./endsLiveTrial";
 
 type FirstPhaseParams = Pick<SetPlansParamsV0, "phases">;
 
@@ -14,7 +14,8 @@ export const immediatePhaseProrationBehavior = ({
 	params: FirstPhaseParams;
 }) => params.phases[0].proration_behavior;
 
-const requestedImmediatePhaseAnchor = ({
+/** The anchor the request names: 'phase_start' on a first phase starting now resets the cycle now; a backdated or later start anchors on itself. */
+export const immediatePhaseBillingCycleAnchor = ({
 	params,
 	currentEpochMs,
 }: {
@@ -32,10 +33,10 @@ const requestedImmediatePhaseAnchor = ({
 };
 
 /**
- * 'phase_start' on a first phase starting now resets the cycle now; a backdated or later start already anchors on itself.
- * Ending a live trial otherwise anchors the cycle: with no anchor requested, it starts on the old trial end.
+ * Ending a live trial anchors the cycle on a date: with no anchor in the request, the old trial end.
+ * Kept out of the requested anchor, so request guards only judge what the caller sent.
  */
-export const immediatePhaseBillingCycleAnchor = ({
+export const setupTrialEndAnchorMs = ({
 	params,
 	billingContext,
 }: {
@@ -47,18 +48,24 @@ export const immediatePhaseBillingCycleAnchor = ({
 		| "replacedStripeSubscription"
 		| "trialContext"
 	>;
-}): BillingContext["requestedBillingCycleAnchor"] => {
-	const anchor = requestedImmediatePhaseAnchor({
-		params,
-		currentEpochMs: billingContext.currentEpochMs,
-	});
-	const anchorsOnPhaseStart =
-		params.phases[0].billing_cycle_anchor === "phase_start";
-	if (!endsLiveTrial({ billingContext }) || anchorsOnPhaseStart) return anchor;
+}): number | undefined => {
+	const { billing_cycle_anchor: anchor, starts_at: startsAt } =
+		params.phases[0];
+	if (anchor !== undefined) return undefined;
 
-	// A backdate has already moved the trialing subscription aside to be replaced.
-	const trialingSubscription =
-		billingContext.stripeSubscription ??
-		billingContext.replacedStripeSubscription;
-	return anchor ?? secondsToMs(trialingSubscription?.trial_end ?? undefined);
+	const endsTrial = endsLiveTrial({
+		billingContext: {
+			...billingContext,
+			immediatePhase: {
+				starts_at:
+					typeof startsAt === "number"
+						? startsAt
+						: billingContext.currentEpochMs,
+			},
+		},
+	});
+	if (!endsTrial) return undefined;
+
+	const trialEnd = trialingStripeSubscription({ billingContext })?.trial_end;
+	return trialEnd ? secondsToMs(trialEnd) : undefined;
 };

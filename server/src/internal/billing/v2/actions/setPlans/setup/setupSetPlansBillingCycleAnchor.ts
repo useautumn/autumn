@@ -8,8 +8,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { isAliveAt } from "../timeline/timelineGuards";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { anchorFollowsKeptTrial } from "../utils/anchorFollowsKeptTrial";
-import { endsLiveTrial } from "../utils/endsLiveTrial";
-import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
+import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
 
 type SetPlansAnchorFields = Pick<
 	CreateScheduleBillingContext,
@@ -64,15 +63,10 @@ export const setupSetPlansBillingCycleAnchor = ({
 		outgoingCustomerProduct,
 	});
 
-	// A trial ended in place (a reset now) restarts the cycle now, like Stripe's trial_end now; a backdate keeps its anchor.
-	const trialEndResetsCycleNow =
-		endsLiveTrial({ billingContext }) &&
-		!isTrialBackdateRecreate({ billingContext });
-	if (requestedBillingCycleAnchor === undefined || !firstProduct) {
+	const anchor = billingCycleAnchorToApply({ billingContext });
+	if (anchor === undefined || !firstProduct) {
 		return {
-			billingCycleAnchorMs: trialEndResetsCycleNow
-				? "now"
-				: billingContext.billingCycleAnchorMs,
+			billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
 			resetCycleAnchorMs: billingContext.resetCycleAnchorMs,
 			anchorResetRefund,
 		};
@@ -90,7 +84,7 @@ export const setupSetPlansBillingCycleAnchor = ({
 			newFullProduct: firstProduct,
 			trialContext: billingContext.trialContext,
 			currentEpochMs: billingContext.currentEpochMs,
-			requestedBillingCycleAnchor,
+			requestedBillingCycleAnchor: anchor,
 		});
 
 	return {

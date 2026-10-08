@@ -56,4 +56,6 @@ export interface CreateScheduleBillingContext
 	stripeSubscriptionScope?: StripeSubscriptionScope;
 	/** The request's carry_over_usages, else the org's transition rule. */
 	carryOverUsages?: CarryOverUsages;
+	/** The old trial end a trial ended now or backdated anchors on, when the request names no anchor. */
+	trialEndAnchorMs?: number;
 }

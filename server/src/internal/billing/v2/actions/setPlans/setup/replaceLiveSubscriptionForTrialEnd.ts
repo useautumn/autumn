@@ -1,4 +1,5 @@
 import type { CreateScheduleBillingContext } from "@autumn/shared";
+import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { classifyFirstPhaseStart } from "./classifyFirstPhaseStart";
 import {
@@ -20,17 +21,17 @@ export const replaceLiveSubscriptionForTrialEnd = ({
 		| "trialContext"
 		| "replacedStripeSubscription"
 		| "requestedBillingCycleAnchor"
+		| "trialEndAnchorMs"
 		| "currentEpochMs"
 		| "immediatePhase"
 	>;
 }): LiveSubscriptionFields => {
-	const { stripeSubscription, requestedBillingCycleAnchor, currentEpochMs } =
-		billingContext;
+	const { stripeSubscription, currentEpochMs } = billingContext;
 	if (!stripeSubscription) return {};
 
+	const anchorMs = billingCycleAnchorToApply({ billingContext });
 	const anchorsInFuture =
-		typeof requestedBillingCycleAnchor === "number" &&
-		requestedBillingCycleAnchor > currentEpochMs;
+		typeof anchorMs === "number" && anchorMs > currentEpochMs;
 	const startsNow =
 		classifyFirstPhaseStart({
 			startsAt: billingContext.immediatePhase.starts_at,

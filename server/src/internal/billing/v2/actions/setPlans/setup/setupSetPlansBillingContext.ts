@@ -19,6 +19,7 @@ import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import {
 	immediatePhaseBillingCycleAnchor,
 	immediatePhaseProrationBehavior,
+	setupTrialEndAnchorMs,
 } from "../utils/immediatePhaseBilling";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import {
@@ -88,10 +89,15 @@ export const setupSetPlansBillingContext = async ({
 				? undefined
 				: setupSetPlansCycleBoundaryMs({
 						billingContext: initialBillingContext,
-						requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
-							params,
-							billingContext: initialBillingContext,
-						}),
+						requestedBillingCycleAnchor:
+							immediatePhaseBillingCycleAnchor({
+								params,
+								currentEpochMs: initialBillingContext.currentEpochMs,
+							}) ??
+							setupTrialEndAnchorMs({
+								params,
+								billingContext: initialBillingContext,
+							}),
 					}),
 		}),
 		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
@@ -154,8 +160,9 @@ export const setupSetPlansBillingContext = async ({
 		}),
 		requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
 			params,
-			billingContext,
+			currentEpochMs: billingContext.currentEpochMs,
 		}),
+		trialEndAnchorMs: setupTrialEndAnchorMs({ params, billingContext }),
 		billingStartsAt: firstPhaseBillingStartsAt({
 			startsAt: immediatePhase.starts_at,
 			currentEpochMs: billingContext.currentEpochMs,

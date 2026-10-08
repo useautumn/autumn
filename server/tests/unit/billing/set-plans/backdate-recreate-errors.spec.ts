@@ -202,6 +202,16 @@ describe(
 			).toBeUndefined();
 		});
 
+		test("resetting a paid subscription's cycle now is held back with a clean 400", () => {
+			expect(
+				rejectionOf({
+					billingContext: backdateContext({
+						requestedBillingCycleAnchor: "now",
+					}),
+				}),
+			).toEqual(conflict("billing_cycle_anchor"));
+		});
+
 		test("a start more than 250 invoice lines back is rejected", () => {
 			const startsAt = addInterval({
 				from: NOW,

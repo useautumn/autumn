@@ -1,4 +1,5 @@
 import type { CreateScheduleBillingContext } from "@autumn/shared";
+import { billingCycleAnchorToApply } from "./billingCycleAnchorToApply";
 import { isTrialBackdateRecreate } from "./isTrialBackdateRecreate";
 
 /**
@@ -12,6 +13,7 @@ export const replacementCarriesKeptPlans = ({
 		CreateScheduleBillingContext,
 		| "replacedStripeSubscription"
 		| "requestedBillingCycleAnchor"
+		| "trialEndAnchorMs"
 		| "subscriptionBackdateStartMs"
 	>;
 }) => {
@@ -23,6 +25,6 @@ export const replacementCarriesKeptPlans = ({
 	if (isTrialBackdateRecreate({ billingContext })) return true;
 	return (
 		replacedStripeSubscription?.status === "trialing" &&
-		typeof requestedBillingCycleAnchor === "number"
+		typeof billingCycleAnchorToApply({ billingContext }) === "number"
 	);
 };

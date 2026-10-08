@@ -13,7 +13,8 @@ export const setPlansProrationOverride = ({
 		| "subscriptionBackdateStartMs"
 		| "requestedBillingCycleAnchor"
 		| "trialContext"
-	>;
+		| "currentEpochMs"
+	> & { immediatePhase?: { starts_at: number } };
 }) =>
 	prorationBehaviorOverride({
 		endsTrialNow: endsLiveTrial({ billingContext }),

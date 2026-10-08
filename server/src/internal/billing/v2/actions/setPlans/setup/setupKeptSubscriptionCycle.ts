@@ -7,6 +7,7 @@ import {
 	getSmallestInterval,
 } from "@autumn/shared";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
@@ -87,11 +88,9 @@ const keptPlansAnchorMs = ({
 	billingContext: CreateScheduleBillingContext;
 	periodEndMs: number;
 }) => {
-	const { requestedBillingCycleAnchor, subscriptionBackdateStartMs } =
-		billingContext;
-	if (typeof requestedBillingCycleAnchor === "number") {
-		return requestedBillingCycleAnchor;
-	}
+	const { subscriptionBackdateStartMs } = billingContext;
+	const anchorMs = billingCycleAnchorToApply({ billingContext });
+	if (typeof anchorMs === "number") return anchorMs;
 	const anchorsOnBackdatedStart =
 		isTrialBackdateRecreate({ billingContext }) &&
 		endsLiveTrial({ billingContext });
