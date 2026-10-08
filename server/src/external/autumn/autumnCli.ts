@@ -1227,9 +1227,17 @@ export class AutumnInt {
 			const data = await this.post(`/migrations.create`, params);
 			return data as Migration;
 		},
-		list: async (): Promise<{ list: MigrationListItem[] }> => {
-			const data = await this.post(`/migrations.list`, {});
+		list: async (
+			params: { customer_counts?: boolean } = {},
+		): Promise<{ list: MigrationListItem[] }> => {
+			const data = await this.post(`/migrations.list`, params);
 			return data as { list: MigrationListItem[] };
+		},
+		customerCounts: async (): Promise<{
+			list: { id: string; customer_count: number | null }[];
+		}> => {
+			const data = await this.post(`/migrations.customer_counts`, {});
+			return data as { list: { id: string; customer_count: number | null }[] };
 		},
 		update: async (params: {
 			id: string;
