@@ -52,6 +52,8 @@ const INCLUDED_MESSAGES = 1000;
 const TRACKED_MESSAGES = 200;
 const TRIAL_DAYS = 14;
 const ANCHOR_DAYS = 8;
+// The trial's own $0 invoices: Pro starting it, then the add-on joining it.
+const TRIAL_INVOICE_TOTALS = [0, 0];
 
 /** Pro and an add-on trialing on one subscription, with usage, ended now and anchored 8 days out. */
 const setupTrialingPlans = async ({ customerId }: { customerId: string }) => {
@@ -412,7 +414,7 @@ const endTrialResettingNowAndExpect = async ({
 	await expectSubscriptionInvoiceTotals({
 		ctx,
 		subscriptionId: trialing.id,
-		totals: [0, MONTHLY_TOTAL],
+		totals: [...TRIAL_INVOICE_TOTALS, MONTHLY_TOTAL],
 	});
 
 	// Nothing more at the old trial end; the next full period on the renewal.
@@ -424,13 +426,13 @@ const endTrialResettingNowAndExpect = async ({
 	await expectSubscriptionInvoiceTotals({
 		ctx,
 		subscriptionId: trialing.id,
-		totals: [0, MONTHLY_TOTAL],
+		totals: [...TRIAL_INVOICE_TOTALS, MONTHLY_TOTAL],
 	});
 	await advancePastCycleStart({ ctx, testClockId, cycleStartsAt: renewalAt });
 	await expectSubscriptionInvoiceTotals({
 		ctx,
 		subscriptionId: trialing.id,
-		totals: [0, MONTHLY_TOTAL, MONTHLY_TOTAL],
+		totals: [...TRIAL_INVOICE_TOTALS, MONTHLY_TOTAL, MONTHLY_TOTAL],
 	});
 };
 
