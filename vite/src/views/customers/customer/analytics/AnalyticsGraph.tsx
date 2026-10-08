@@ -24,6 +24,8 @@ const BUSY_SEGMENT_GAP = 1;
 const BUSY_SERIES_COUNT = 20;
 // Past this many bins a bar is only a few pixels wide, so the gap stroke would hide it.
 const DENSE_BIN_COUNT = 90;
+// Each segment fades on its own, so past this many the dim stalls whole frames; it snaps instead.
+const MAX_FADED_SEGMENTS = 500;
 const TOP_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
 const CHART_STYLE = { cursor: "default" } as const;
 const BAR_STYLE = { cursor: "pointer" } as const;
@@ -99,6 +101,9 @@ export const EventsBarChart = memo(function EventsBarChart({
 				? BUSY_SEGMENT_GAP
 				: SEGMENT_GAP;
 
+	const fadesSegments =
+		data.data.length * chartConfig.length <= MAX_FADED_SEGMENTS;
+
 	const chart = useMemo(
 		() => (
 			<ChartContainer
@@ -106,8 +111,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 				className={cn(
 					"h-full w-full",
 					"[&_*:focus]:outline-none",
-					"[&_.recharts-bar-rectangle]:transition-opacity [&_.recharts-bar-rectangle]:duration-150",
-					"[&:has(.recharts-bar-rectangle:hover)_.recharts-bar-rectangle:not(:hover)]:opacity-35",
+					fadesSegments &&
+						"[&_.recharts-bar-rectangle]:transition-opacity [&_.recharts-bar-rectangle]:duration-150",
 				)}
 			>
 				<BarChart
@@ -167,6 +172,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 		[
 			seriesSetKey,
 			segmentGap,
+			fadesSegments,
 			data,
 			rechartsConfig,
 			chartConfig,
@@ -180,7 +186,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 	return (
 		<div
 			ref={containerRef}
-			className="h-full w-full relative"
+			className="h-full w-full relative [&[data-segment-hover]_.recharts-bar-rectangle:not(:hover)]:opacity-35"
 			onMouseMove={handleMouseMove}
 			onMouseLeave={handleChartMouseLeave}
 			onClick={handleChartClick}

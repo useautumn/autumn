@@ -11,6 +11,7 @@ import type { Row } from "../components/analytics-types";
 import type { TooltipEntry } from "../components/tooltipItemLink";
 import type { PlotInsets } from "../utils/chartGeometry";
 import type { ChartSeriesConfig } from "../utils/transformGroupedChartData";
+import { useSegmentHoverDim } from "./useSegmentHoverDim";
 
 /**
  * Hover + pin state machine for the events bar chart: which column is active,
@@ -38,6 +39,9 @@ export const usePinnedChartTooltip = ({
 		setPinnedState(next);
 	}, []);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const { trackSegmentHover, clearSegmentHover } = useSegmentHoverDim({
+		containerRef,
+	});
 
 	// Cursor tracking is imperative: a per-pixel setState here re-renders the
 	// whole recharts tree per mousemove, which is what made the tooltip choppy.
@@ -148,6 +152,7 @@ export const usePinnedChartTooltip = ({
 
 	const handleMouseMove = useCallback(
 		(e: React.MouseEvent) => {
+			trackSegmentHover(e.target);
 			if (pinnedRef.current) return;
 			const rect = containerRef.current?.getBoundingClientRect();
 			if (!rect) return;
@@ -159,7 +164,7 @@ export const usePinnedChartTooltip = ({
 			if (row === undefined) return;
 			startTransition(() => setActivePeriod(row ? String(row.period) : null));
 		},
-		[positionTooltip, resolveRowAt],
+		[trackSegmentHover, positionTooltip, resolveRowAt],
 	);
 
 	const handleChartClick = useCallback(
@@ -194,12 +199,13 @@ export const usePinnedChartTooltip = ({
 	}, [setPinned]);
 
 	const handleChartMouseLeave = useCallback(() => {
+		clearSegmentHover();
 		if (pinnedRef.current) return;
 		setHoveredKey(null);
 		setActivePeriod(null);
 		lastMousePos.current = null;
 		liveHoveredKeyRef.current = null;
-	}, []);
+	}, [clearSegmentHover]);
 
 	// The tooltip is fixed in viewport coords, so scrolling moves the chart out
 	// from under it: dismiss rather than track. A pin is deliberate, so it stays.

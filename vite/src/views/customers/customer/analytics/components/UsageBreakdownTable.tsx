@@ -170,7 +170,12 @@ const useHiddenColumnEdges = ({ resetKey }: { resetKey: string }) => {
 		const el = scrollRef.current;
 		if (!el) return;
 		const maxScroll = el.scrollWidth - el.clientWidth;
-		setEdges({ left: el.scrollLeft > 0, right: el.scrollLeft < maxScroll - 1 });
+		const left = el.scrollLeft > 0;
+		const right = el.scrollLeft < maxScroll - 1;
+		// Fires per scroll frame; a fresh object would re-render every cell each time.
+		setEdges((prev) =>
+			prev.left === left && prev.right === right ? prev : { left, right },
+		);
 	}, []);
 
 	// Open on the latest bins, the ones people check first; resetKey marks a new column set.
