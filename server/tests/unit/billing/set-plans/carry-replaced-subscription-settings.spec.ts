@@ -254,6 +254,39 @@ describe("carryReplacedSubscriptionSettings", () => {
 		});
 	});
 
+	test("a carried copy records its original reward, so remove_discounts by that reward drops it", async () => {
+		const repeating = subscriptionDiscount({
+			id: "di_repeating",
+			couponOverrides: {
+				id: "co_repeating_sub_old_3m",
+				duration: "repeating",
+				duration_in_months: 6,
+				metadata: { autumn_original_coupon_id: "co_repeating" },
+			},
+			endMs: addMonths(PERIOD_END, 2).getTime(),
+		});
+		const replacedStripeSubscription = liveSubscription({
+			discounts: [repeating] as Stripe.Discount[],
+		});
+
+		const carried = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({ replacedStripeSubscription }),
+			preview: true,
+		});
+		const removed = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({ replacedStripeSubscription }),
+			removedRewardIds: ["co_repeating"],
+			preview: true,
+		});
+
+		expect(carried.stripeDiscounts?.[0]?.source.coupon.metadata).toMatchObject({
+			autumn_original_coupon_id: "co_repeating",
+		});
+		expect(removed.stripeDiscounts).toEqual([]);
+	});
+
 	test("a customer's own discount isn't the subscription's to move", async () => {
 		const customerDiscount = subscriptionDiscount({
 			id: "di_customer",
@@ -331,6 +364,18 @@ describe("remainingDiscountMonths", () => {
 				discountEndMs: addMonths(PERIOD_END, 2).getTime() + ms.days(3),
 			}),
 		).toBe(3);
+	});
+
+	test("a long-cancelled subscription's discount that ran out before now carries nothing", () => {
+		expect(
+			remainingDiscountMonths({
+				currentEpochMs: addMonths(PERIOD_END, 4).getTime(),
+				billingCycleAnchorMs: PERIOD_END,
+				periodEndMs: PERIOD_END,
+				renewal: monthly,
+				discountEndMs: addMonths(PERIOD_END, 2).getTime(),
+			}),
+		).toBe(0);
 	});
 
 	test("a discount ending by the period end has nothing left to carry", () => {

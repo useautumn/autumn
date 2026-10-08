@@ -1,5 +1,5 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
-import { getOriginalCouponId } from "@/internal/rewards/rewardUtils";
+import { stripeCouponToRewardId } from "./stripeCouponToRewardId";
 
 /** Rewards that are no longer applied are ignored, so removal is idempotent. */
 export const removeDiscountsByRewardIds = ({
@@ -13,8 +13,10 @@ export const removeDiscountsByRewardIds = ({
 
 	const removedRewardIds = new Set(rewardIds);
 	return discounts.filter((discount) => {
-		const couponId = discount.source.coupon.id;
-		const rewardId = getOriginalCouponId(couponId) ?? couponId;
-		return !removedRewardIds.has(couponId) && !removedRewardIds.has(rewardId);
+		const { coupon } = discount.source;
+		return (
+			!removedRewardIds.has(coupon.id) &&
+			!removedRewardIds.has(stripeCouponToRewardId(coupon))
+		);
 	});
 };

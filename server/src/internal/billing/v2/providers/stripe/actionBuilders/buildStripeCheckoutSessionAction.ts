@@ -76,7 +76,12 @@ export const buildStripeCheckoutSessionAction = ({
 							end_behavior: { missing_payment_method: "cancel" },
 						},
 					}),
-					...(taxRateId && { default_tax_rates: [taxRateId] }),
+					...(taxRateId
+						? { default_tax_rates: [taxRateId] }
+						: billingContext.carriedSubscriptionParams?.default_tax_rates && {
+								default_tax_rates:
+									billingContext.carriedSubscriptionParams.default_tax_rates,
+							}),
 					metadata: buildAutumnSubscriptionMetadata({
 						actionSource: billingContext.actionSource,
 					}),

@@ -69,7 +69,8 @@ export const remainingDiscountMonths = ({
 		renewal,
 		discountEndMs,
 	});
-	if (lastRenewal === undefined) return 0;
+	// A long-cancelled subscription's discount may have run out already; its past renewals were never billed.
+	if (lastRenewal === undefined || lastRenewal <= currentEpochMs) return 0;
 
 	let months = 1;
 	while (addMonths(currentEpochMs, months).getTime() <= lastRenewal) months++;

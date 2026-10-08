@@ -9,6 +9,10 @@ import { isStripeResourceAlreadyExists } from "@/external/stripe/common/utils/is
 import { isPromotionCodeRedeemable } from "@/external/stripe/coupons/isPromotionCodeRedeemable";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { removeDiscountsByRewardIds } from "@/internal/billing/v2/providers/stripe/utils/discounts/removeDiscountsByRewardIds";
+import {
+	ORIGINAL_COUPON_ID_METADATA_KEY,
+	stripeCouponToRewardId,
+} from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeCouponToRewardId";
 import { subToDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/subToDiscounts";
 import {
 	remainingDiscountMonths,
@@ -66,7 +70,20 @@ const copyCoupon = async ({
 			? `${coupon.duration_in_months}m`
 			: coupon.duration;
 	const id = `${coupon.id}_${replacedStripeSubscription.id}_${durationSuffix}`;
-	if (preview) return { source: { coupon: { ...coupon, id } } };
+	if (preview) {
+		return {
+			source: {
+				coupon: {
+					...coupon,
+					id,
+					metadata: {
+						...coupon.metadata,
+						[ORIGINAL_COUPON_ID_METADATA_KEY]: stripeCouponToRewardId(coupon),
+					},
+				},
+			},
+		};
+	}
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	try {
@@ -79,7 +96,10 @@ const copyCoupon = async ({
 			duration: coupon.duration,
 			duration_in_months: coupon.duration_in_months ?? undefined,
 			applies_to: coupon.applies_to ?? undefined,
-			metadata: coupon.metadata ?? undefined,
+			metadata: {
+				...coupon.metadata,
+				[ORIGINAL_COUPON_ID_METADATA_KEY]: stripeCouponToRewardId(coupon),
+			},
 		});
 		return { source: { coupon: copy } };
 	} catch (error) {
@@ -179,8 +199,8 @@ const carryDiscount = async ({
 	return copyCoupon({ ...input, coupon: remainingCoupon({ coupon, months }) });
 };
 
-const couponIdOf = (discount: StripeDiscountWithCoupon) =>
-	discount.source.coupon.id;
+const rewardIdOf = (discount: StripeDiscountWithCoupon) =>
+	stripeCouponToRewardId(discount.source.coupon);
 
 /**
  * On a recreate the replaced subscription's discounts carry as Stripe would have kept applying them (Stripe drops
@@ -219,9 +239,9 @@ export const carryReplacedSubscriptionDiscounts = async ({
 	).filter(
 		(discount): discount is StripeDiscountWithCoupon => discount !== undefined,
 	);
-	const carriedCouponIds = new Set(replacedDiscounts.map(couponIdOf));
+	const carriedRewardIds = new Set(replacedDiscounts.map(rewardIdOf));
 	const requested = otherDiscounts.filter(
-		(discount) => !discount.id && !carriedCouponIds.has(couponIdOf(discount)),
+		(discount) => !discount.id && !carriedRewardIds.has(rewardIdOf(discount)),
 	);
 	return [...carried, ...requested];
 };
