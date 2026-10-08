@@ -24,11 +24,8 @@ export const TOP_INSET = CHART_MARGIN.top + CHART_PAD.top;
 export const BOTTOM_INSET = X_AXIS_HEIGHT + CHART_MARGIN.bottom;
 export const RIGHT_INSET = CHART_MARGIN.right + CHART_PAD.right;
 
-/** Share of each band a bar fills, matching the mockup. */
-export const BAR_WIDTH_FRACTION = 0.62;
-
-/** recharts applies `barCategoryGap` to both sides of a bar, so halve the slack. */
-export const BAR_CATEGORY_GAP = `${((1 - BAR_WIDTH_FRACTION) / 2) * 100}%`;
+/** Px on each side of a bar; recharts applies it twice, so bars sit 4px apart like the Logs strip. */
+export const BAR_CATEGORY_GAP = 2;
 
 /** Pixel insets of the plot area from each edge of the chart body. */
 export interface PlotInsets {
