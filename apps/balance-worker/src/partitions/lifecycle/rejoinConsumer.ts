@@ -8,7 +8,7 @@ import type {
 import type { PartitionConsumerStatus } from "../types/partitions.js";
 
 /**
- * A broker refused this worker's identity and kafkajs gave the group up for good. The verdict is the
+ * A broker refused this worker's identity and the consumer gave the group up for good. The verdict is the
  * broker's to change, and prod has changed it back within minutes twice, so the worker keeps its
  * task and rejoins with a growing pause instead of exiting: every worker shares one task role, and
  * exiting turned one shared refusal into a fleet with no owner for anything. Between attempts the

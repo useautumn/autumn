@@ -131,7 +131,7 @@ function revokePartitionAllocation({
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 }
 
-/** A crash kafkajs will restart from rejoins and is reassigned. One it will not is the worker's to
+/** A crash the consumer will restart from rejoins and is reassigned. One it will not is the worker's to
  *  judge: a broker refusing its identity is rejoined with backoff, since the verdict has cleared on
  *  its own before; anything else leaves nothing to wait for, and the service stops. */
 function crashPartitionAllocation({

@@ -8,7 +8,6 @@ import {
 	type MeteringRecord,
 	serializeCommandRecord,
 } from "@autumn/kafka";
-import { KafkaJSNumberOfRetriesExceeded, KafkaJSProtocolError } from "kafkajs";
 import { createCommandRecordHandler } from "../../src/kafka/commandConsumer/createCommandRecordHandler.js";
 import type { PartitionRuntimePort } from "../../src/partitions/types/partitions.js";
 import { createPartitionProcessor } from "../../src/processor/createPartitionProcessor.js";
@@ -248,20 +247,13 @@ export const createCommandPipeline = ({
 	};
 };
 
-/** What kafkajs throws when a leader election outlasts the producer's retries; the append may have landed. */
+/** What librdkafka throws when a leader election outlasts message.timeout.ms; the append may have landed. */
 function retriesRanOut(): KafkaTransactionStateUnknownError {
-	const election = new KafkaJSProtocolError(
-		Object.assign(new Error("There is no leader for this topic-partition"), {
-			type: "LEADER_NOT_AVAILABLE",
-			code: 5,
-			retriable: true,
-		}),
-	);
 	return new KafkaTransactionStateUnknownError({
 		failureStage: "commit",
-		cause: new KafkaJSNumberOfRetriesExceeded(election, {
-			retryCount: 10,
-			retryTime: 2_500,
+		cause: Object.assign(new Error("Local: Message timed out"), {
+			code: -192,
+			retriable: true,
 		}),
 	});
 }

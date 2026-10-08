@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { coPartitionedAssigner, createKafkaClient } from "@autumn/kafka";
+import { createKafkaClient } from "@autumn/kafka";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
 import {
 	createWorkerConsumerConfig,
@@ -34,10 +34,8 @@ describe("Kafka balance worker config", () => {
 			clientId: "balance-worker-staging",
 			brokers: ["broker-1:9098", "broker-2:9098"],
 			ssl: true,
-			logCreator: expect.any(Function),
 			connectionTimeout: 3_000,
 			requestTimeout: 10_000,
-			enforceRequestTimeout: true,
 			retry: {
 				retries: 4,
 				initialRetryTime: 100,
@@ -46,7 +44,7 @@ describe("Kafka balance worker config", () => {
 		});
 	});
 
-	test("makes committed records the consumer visibility boundary", () => {
+	test("speaks KIP-848 with the broker's range assignor, so partition n of every topic lands on one worker", () => {
 		expect(
 			createWorkerConsumerConfig({
 				groupId: "balance-worker-staging",
@@ -54,7 +52,8 @@ describe("Kafka balance worker config", () => {
 			}),
 		).toEqual({
 			groupId: "balance-worker-staging",
-			partitionAssigners: [coPartitionedAssigner],
+			groupProtocol: "consumer",
+			remoteAssignor: "range",
 			readUncommitted: false,
 			allowAutoTopicCreation: false,
 			maxWaitTimeInMs: 250,
@@ -85,7 +84,7 @@ describe("Kafka balance worker config", () => {
 		).toThrow("healthRefreshIntervalMs");
 	});
 
-	test("rejects a fetch wait longer than the heartbeat interval", () => {
+	test("a fetch wait longer than the heartbeat interval is fine: librdkafka heartbeats on its own thread", () => {
 		expect(() =>
 			createWorkerConsumerConfig({
 				groupId: "balance-worker-staging",
@@ -94,7 +93,7 @@ describe("Kafka balance worker config", () => {
 					fetchMaxWaitTimeMs: timings.heartbeatIntervalMs + 1,
 				},
 			}),
-		).toThrow("fetchMaxWaitTimeMs");
+		).not.toThrow();
 	});
 
 	test("rejects a heartbeat that cannot fit inside the session", () => {
@@ -137,26 +136,6 @@ describe("Kafka balance worker config", () => {
 			}),
 		).toThrow("retryCount");
 	});
-});
-
-test("a worker that reports partition load gets the load-aware assigner", () => {
-	const config = createWorkerConsumerConfig({
-		groupId: "balance-worker-staging",
-		timings,
-		partitionLoad: { snapshot: () => new Map() },
-	});
-	const [assigner, fallback] = config.partitionAssigners ?? [];
-	expect(assigner).toBeDefined();
-	expect(assigner).not.toBe(coPartitionedAssigner);
-	// Still advertised, so old and new workers can share a group mid-rollout.
-	expect(fallback).toBe(coPartitionedAssigner);
-	expect(
-		assigner?.({
-			cluster: {} as never,
-			groupId: "balance-worker-staging",
-			logger: {} as never,
-		}).name,
-	).toBe("LoadAwareCoPartitionedAssigner");
 });
 
 describe("the worker's consumer group", () => {

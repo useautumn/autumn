@@ -94,7 +94,7 @@ export type SubscribePartitionChanges = (
 export type PartitionConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
-	/** Joins the group again after kafkajs gave it up; absent, such a crash stops the service. */
+	/** Joins the group again after the consumer gave it up; absent, such a crash stops the service. */
 	restart?(): Promise<void>;
 	pause(position: { topic: string; partitions: number[] }): void;
 	resume(position: {
@@ -166,12 +166,7 @@ export type PartitionsDependencies = {
 /** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
 export type PartitionServiceStopReason = {
 	cause: unknown;
-	scope:
-		| "consumer"
-		| "partition"
-		| "retirement"
-		| "http-workers"
-		| "producer-thread";
+	scope: "consumer" | "partition" | "retirement" | "http-workers";
 };
 
 export type PartitionConsumerStatus = {

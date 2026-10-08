@@ -1,5 +1,5 @@
 /**
- * Plumbing (threads, rings, frames, producers, commit positions) moves bytes and positions and never reaches
+ * Plumbing (threads, rings, frames, commit positions) moves bytes and positions and never reaches
  * into business code; business code reaches it through one narrow interface. This scan keeps it that way.
  */
 import { describe, expect, test } from "bun:test";
@@ -11,12 +11,7 @@ import ts from "typescript";
 const SRC = new URL("../../../src/", import.meta.url).pathname;
 
 /** Every plumbing folder, as each slice of the ring stack adds one. */
-const PLUMBING = [
-	"threads",
-	"http/workerThreads",
-	"kafka/producerThread",
-	"runtime/commitPositions",
-];
+const PLUMBING = ["threads", "http/workerThreads", "runtime/commitPositions"];
 
 const BUSINESS_PACKAGES = [
 	"@autumn/balance-engine",

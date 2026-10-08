@@ -3,9 +3,10 @@ import {
 	type KafkaProducer,
 	type KafkaTransaction,
 	KafkaTransactionStateUnknownError,
+	type ProducerRecord,
 	parseMeteringRecord,
+	type RecordMetadata,
 } from "@autumn/kafka";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import {
 	type CommandOffsetSettleTiming,
 	createMutationPublisher,
@@ -114,7 +115,7 @@ describe("Kafka committed track outcome appender", () => {
 				},
 				settle: promptSettleTiming(),
 			},
-			config: { commandTopic: "commands", groupId: "workers" },
+			config: { commandTopic: "commands" },
 		});
 		const mutation = {
 			...createMutation({ state: createState(), commandId: "queued" }),
@@ -141,7 +142,7 @@ describe("Kafka committed track outcome appender", () => {
 				commandOffsets: { commit: async () => {} },
 				settle: promptSettleTiming(),
 			},
-			config: { commandTopic: "commands", groupId: "workers" },
+			config: { commandTopic: "commands" },
 		});
 		const mutation = {
 			...createMutation({ state: createState(), commandId: "queued" }),
@@ -424,7 +425,7 @@ describe("idempotent commits", () => {
 				},
 				settle: promptSettleTiming(),
 			},
-			config: { commandTopic: "commands", groupId: "workers" },
+			config: { commandTopic: "commands" },
 		});
 		epoch = "2516";
 		const appended = await appender.appendCommitted({
@@ -453,7 +454,6 @@ describe("idempotent commits", () => {
 		await settleGap();
 		expect(committed).toEqual([
 			{
-				consumerGroupId: "workers",
 				topics: [
 					{ topic: "commands", partitions: [{ partition, offset: "12" }] },
 				],
@@ -464,7 +464,6 @@ describe("idempotent commits", () => {
 		await appender.commitCommandOffset({ topic, partition, nextOffset: 13n });
 		expect(committed).toEqual([
 			{
-				consumerGroupId: "workers",
 				topics: [
 					{ topic: "commands", partitions: [{ partition, offset: "13" }] },
 				],

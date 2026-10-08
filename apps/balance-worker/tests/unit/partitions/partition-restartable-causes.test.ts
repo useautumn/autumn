@@ -4,7 +4,6 @@ import {
 	KafkaTransactionStateUnknownError,
 } from "@autumn/kafka";
 import { FlushBookmarkConflictError } from "@autumn/postgres";
-import { KafkaJSNumberOfRetriesExceeded, KafkaJSProtocolError } from "kafkajs";
 import { FlushRecordFailedError } from "../../../src/committer/committerErrors.js";
 import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { isPartitionRestartableCause } from "../../../src/partitions/health/partitionRestartableCauses.js";
@@ -21,14 +20,25 @@ import {
 const topic = "events";
 const partition = 44;
 
+/** What librdkafka (through the producer) throws for a broker refusal: its code and its own retry verdict. */
+function librdkafkaError({
+	message,
+	code,
+	retriable,
+}: {
+	message: string;
+	code: number;
+	retriable: boolean;
+}): Error {
+	return Object.assign(new Error(message), { code, retriable });
+}
+
 function refusedByCoordinator(): Error {
-	return new KafkaJSProtocolError(
-		Object.assign(new Error("concurrent operation ongoing"), {
-			type: "CONCURRENT_TRANSACTIONS",
-			code: 51,
-			retriable: true,
-		}),
-	);
+	return librdkafkaError({
+		message: "concurrent operation ongoing",
+		code: 51,
+		retriable: true,
+	});
 }
 
 test("a batch the broker refused, reported through recovery, restarts the partition alone", () => {
@@ -67,14 +77,12 @@ test("a bookmark the store would not advance restarts the partition alone", () =
 });
 
 test("a producer the broker fenced restarts the partition alone: the log and the store decide what landed", () => {
-	const expired = new KafkaJSProtocolError(
-		Object.assign(
-			new Error(
-				"Producer attempted an operation with an old epoch. Either there is a newer producer with the same transactionalId, or the producer's transaction has been expired by the broker",
-			),
-			{ type: "INVALID_PRODUCER_EPOCH", code: 47, retriable: false },
-		),
-	);
+	const expired = librdkafkaError({
+		message:
+			"Producer attempted an operation with an old epoch. Either there is a newer producer with the same transactionalId, or the producer's transaction has been expired by the broker",
+		code: 47,
+		retriable: false,
+	});
 	const cause = new OwnedPartitionProducerFencedError({
 		topic,
 		partition,
@@ -89,23 +97,19 @@ test("a producer the broker fenced restarts the partition alone: the log and the
 });
 
 test("an append whose retries ran out in a leader election restarts the partition alone: the bootstrap replays whatever landed", () => {
-	const election = new KafkaJSProtocolError(
-		Object.assign(new Error("There is no leader for this topic-partition"), {
-			type: "LEADER_NOT_AVAILABLE",
-			code: 5,
-			retriable: true,
-		}),
-	);
+	// librdkafka gives up once message.timeout.ms passes and reports the send as timed out.
+	const election = librdkafkaError({
+		message: "Local: Message timed out",
+		code: -192,
+		retriable: true,
+	});
 	const cause = new OwnedPartitionRecoveryRequiredError({
 		topic,
 		partition,
 		cause: new PartitionWriterRecoveryRequiredError({
 			cause: new KafkaTransactionStateUnknownError({
 				failureStage: "commit",
-				cause: new KafkaJSNumberOfRetriesExceeded(election, {
-					retryCount: 10,
-					retryTime: 2_500,
-				}),
+				cause: election,
 			}),
 		}),
 	});
@@ -137,16 +141,14 @@ function coordinatorNotReady({
 	type: string;
 	code: number;
 }): Error {
-	return new KafkaJSNumberOfRetriesExceeded(
-		new KafkaJSProtocolError(
-			Object.assign(new Error(`coordinator not ready: ${type}`), {
-				type,
-				code,
-				retriable: true,
-			}),
-		),
-		{ retryCount: 8, retryTime: 1000 },
-	);
+	// The shim wraps librdkafka's error; the refusal is on the cause.
+	return new Error(`init_transactions failed: ${type}`, {
+		cause: librdkafkaError({
+			message: `coordinator not ready: ${type}`,
+			code,
+			retriable: true,
+		}),
+	});
 }
 
 test("a producer the coordinator could not yet initialise restarts the partition alone: it wrote nothing", () => {
@@ -165,12 +167,17 @@ test("a producer the coordinator could not yet initialise restarts the partition
 });
 
 test("any other refusal the broker gave up retrying still stops the service", () => {
-	const cause = new OwnedPartitionRecoveryRequiredError({
-		topic,
-		partition,
-		cause: coordinatorNotReady({ type: "UNKNOWN_SERVER_ERROR", code: -1 }),
-	});
-	expect(isPartitionRestartableCause({ cause })).toBe(false);
+	for (const refusal of [
+		{ type: "UNKNOWN_SERVER_ERROR", code: -1 },
+		{ type: "ALL_BROKERS_DOWN", code: -187 },
+	]) {
+		const cause = new OwnedPartitionRecoveryRequiredError({
+			topic,
+			partition,
+			cause: coordinatorNotReady(refusal),
+		});
+		expect(isPartitionRestartableCause({ cause })).toBe(false);
+	}
 });
 test("anything else keeps stopping the service", () => {
 	const store = new OwnedPartitionRecoveryRequiredError({

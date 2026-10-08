@@ -1,5 +1,6 @@
 import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import {
+	type Admin,
 	type MeteringFenceApplication,
 	type MeteringRecordApplication,
 	type MeteringRecordFailure,
@@ -9,7 +10,6 @@ import {
 	type TopicResumePosition,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { Admin } from "kafkajs";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import {

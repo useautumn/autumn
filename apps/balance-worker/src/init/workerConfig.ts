@@ -1,16 +1,15 @@
 import { BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION } from "@autumn/env/balanceWorkerConstants";
 import {
+	type Admin,
 	assertConsumerGroupTimings,
-	coPartitionedAssigner,
+	type ConsumerConfig,
 	createConsumerGroupConfig,
-	createLoadAwareAssigner,
+	type ITopicMetadata,
 	type KafkaCommitMode,
 	type KafkaProducerLimits,
 	type KafkaProducerSessionConfig,
-	type PartitionLoadSource,
 	partitionProducerTransactionalIdOf,
 } from "@autumn/kafka";
-import type { Admin, ConsumerConfig, ITopicMetadata } from "kafkajs";
 import {
 	createSubjectMapBudget,
 	subjectMapBudgetBytesOf,
@@ -25,7 +24,7 @@ import { workerCheckpointLimits } from "./workerCheckpointConfig.js";
 /** A leader election or a replica rejoining the ISR lasts seconds; an append waits it out rather than end unknown. */
 export const PRODUCER_RETRY_BUDGET_MS = 5_000;
 
-/** kafkajs stretches each backoff by up to this fraction. */
+/** librdkafka jitters each backoff by up to this fraction (KIP-580). */
 const PRODUCER_RETRY_JITTER = 0.2;
 
 /** A drain that ends while an append still retries disposes the writer under it, and the append can land after a successor's fence. */
@@ -67,11 +66,6 @@ export function assertKafkaBalanceWorkerTimings({
 			throw new RangeError(`${name} must be a positive safe integer`);
 		}
 	}
-	if (timings.fetchMaxWaitTimeMs > timings.heartbeatIntervalMs) {
-		throw new RangeError(
-			"fetchMaxWaitTimeMs cannot exceed heartbeatIntervalMs: kafkajs heartbeats only between fetches",
-		);
-	}
 	if (
 		timings.rebalanceTimeoutMs - timings.recoveryDrainTimeoutMs <
 		timings.heartbeatIntervalMs
@@ -101,27 +95,17 @@ export function workerConsumerGroupIdOf({
 export function createWorkerConsumerConfig({
 	groupId,
 	timings,
-	partitionLoad,
 }: {
 	groupId: string;
 	timings: KafkaBalanceWorkerTimings;
-	/** When given, partitions are dealt by the load the workers report rather than by number. */
-	partitionLoad?: PartitionLoadSource;
 }): ConsumerConfig {
 	assertKafkaBalanceWorkerTimings({ timings });
-	// Both topics share the membership; either assigner keeps partition n of each on one worker.
-	// The plain assigner stays advertised so a rollout can mix old and new workers in one group:
-	// Kafka only admits a member whose protocols overlap the group's, picks the one every member
-	// supports, and moves to the load-aware one on the first rebalance after the old workers leave.
-	return {
-		...createConsumerGroupConfig({ groupId, timings }),
-		partitionAssigners: partitionLoad
-			? [
-					createLoadAwareAssigner({ loads: partitionLoad }),
-					coPartitionedAssigner,
-				]
-			: [coPartitionedAssigner],
-	};
+	// Range deals partition n of every subscribed topic to one member, as the co-partitioned assigner did.
+	return createConsumerGroupConfig({
+		groupId,
+		timings,
+		remoteAssignor: "range",
+	});
 }
 
 export function createWorkerProducerConfig({
@@ -152,20 +136,14 @@ export function createWorkerProducerConfig({
 export function balanceWorkerEnvToRuntimeConfig({
 	env,
 	endpoint,
-	groupId,
 }: {
 	env: BalanceWorkerEnv;
 	endpoint: string;
-	/** The group the worker consumes in; command offsets are committed under it. */
-	groupId: string;
 }): PartitionRuntimeFactoryConfig {
 	return {
 		deploymentEnvironment: env.BALANCE_WORKER_DEPLOYMENT,
 		commit: { mode: env.BALANCE_WORKER_COMMIT_MODE },
-		commands: {
-			commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
-			groupId,
-		},
+		commands: { commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC },
 		ownership: {
 			topic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 			endpoint,
@@ -222,7 +200,7 @@ export async function validateBalanceWorkerTopics({
 	admin,
 	env,
 }: {
-	admin: Pick<Admin, "fetchTopicMetadata" | "describeConfigs">;
+	admin: Pick<Admin, "fetchTopicMetadata">;
 	env: BalanceWorkerEnv;
 }): Promise<void> {
 	const topics = [
@@ -257,25 +235,6 @@ export async function validateBalanceWorkerTopics({
 			);
 		}
 	}
-	const configs = await admin.describeConfigs({
-		resources: [
-			{
-				type: 2,
-				name: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
-				configNames: ["cleanup.policy"],
-			},
-		],
-		includeSynonyms: false,
-	});
-	let policy: string | null | undefined;
-	for (const entry of configs.resources[0]?.configEntries ?? []) {
-		if (entry.configName === "cleanup.policy") {
-			policy = entry.configValue;
-			break;
-		}
-	}
-	if (policy !== "compact")
-		throw new Error("Ownership topic must use compact-only cleanup.policy");
 }
 
 function hasMatchingTopicPartitions({

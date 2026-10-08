@@ -1,7 +1,6 @@
 import type { IdempotencyKeyStore } from "@autumn/dynamodb";
-import type { KafkaConsumerClient } from "@autumn/kafka";
+import type { Admin, KafkaConsumerClient } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { Admin } from "kafkajs";
 import type { PartitionReplay } from "../../kafka/meteringConsumer/types/partitionReplay.js";
 import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import type {
@@ -34,7 +33,7 @@ export type WorkerPartitionsContext = {
 	consumer: KafkaOwnedPartitionGroupConsumerPort;
 	partitionOffsets: KafkaOwnedPartitionGroupAdminPort &
 		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;
-	/** Required with a command topic: kafkajs admins sharing topics can overwrite each other's metadata mid-read. */
+	/** Required with a command topic; a separate admin is a holdover from the old client's shared-metadata bug. */
 	commandTopicOffsets?: KafkaOwnedPartitionGroupAdminPort;
 	logger?: Pick<AutumnLogger, "info" | "warn">;
 	stateStore: StateStore;

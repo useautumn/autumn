@@ -2,10 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { startWorkerThreads } from "../../../src/init/construction/startWorkerThreads.js";
 
 const logger = { warn() {}, error() {} };
-const threadUrl = new URL(
-	"../kafka/producerThread/fakeProducerThread.ts",
-	import.meta.url,
-).href;
 
 async function freePort(): Promise<number> {
 	const reservation = Bun.serve({
@@ -19,7 +15,7 @@ async function freePort(): Promise<number> {
 	return port;
 }
 
-function configFor({ port, clientId }: { port: number; clientId: string }) {
+function configFor({ port }: { port: number }) {
 	return {
 		http: {
 			hostname: "127.0.0.1",
@@ -29,21 +25,6 @@ function configFor({ port, clientId }: { port: number; clientId: string }) {
 			requestRingBytes: 1 << 16,
 			replyRingBytes: 1 << 16,
 		},
-		producers: {
-			clientId,
-			brokers: ["fake:9092"],
-			authMode: "none" as const,
-			limits: {
-				connectionTimeoutMs: 1000,
-				requestTimeoutMs: 1000,
-				retryCount: 1,
-				initialRetryTimeMs: 1,
-				maxRetryTimeMs: 1,
-			},
-			sendRingBytes: 1 << 16,
-			ackRingBytes: 1 << 16,
-			threadUrl,
-		},
 	};
 }
 
@@ -52,42 +33,24 @@ function ctxFor({ fatal }: { fatal: string[] }) {
 		fetch: async () => new Response("ok"),
 		logger,
 		onFatal: ({ scope }: { scope: string }) => fatal.push(scope),
-		onToken() {},
 	};
 }
 
 describe("starting worker threads", () => {
-	test("requests are served on the HTTP threads and partition producers live on the producer thread", async () => {
+	test("requests are served on the HTTP threads and stopping frees the port", async () => {
 		const port = await freePort();
 		const fatal: string[] = [];
-		const { listener, producers } = await startWorkerThreads({
+		const { listener } = await startWorkerThreads({
 			ctx: ctxFor({ fatal }),
-			config: configFor({ port, clientId: "test-client" }),
+			config: configFor({ port }),
 		});
 		try {
 			const response = await fetch(`http://127.0.0.1:${port}/health`);
 			expect(await response.text()).toBe("ok");
-			const producer = producers.producer({ idempotent: true });
-			await producer.connect();
-			const metadata = await producer.send?.({
-				topic: "outcomes",
-				messages: [{ key: "k", value: "v", partition: 3 }],
-			});
-			expect(metadata?.[0]).toMatchObject({ partition: 3, baseOffset: "0" });
-			await producer.disconnect();
 		} finally {
 			await listener.stop();
 		}
 		expect(fatal).toEqual([]);
-	});
-
-	test("a producer thread that cannot start takes the HTTP threads down, so the port is free again", async () => {
-		const port = await freePort();
-		const caught = await startWorkerThreads({
-			ctx: ctxFor({ fatal: [] }),
-			config: configFor({ port, clientId: "bad-client" }),
-		}).catch((cause: Error) => cause);
-		expect((caught as Error).message).toContain("bad client id");
 		const rebound = Bun.serve({
 			port,
 			hostname: "127.0.0.1",
