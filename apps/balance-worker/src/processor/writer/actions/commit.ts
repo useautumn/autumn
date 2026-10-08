@@ -234,6 +234,28 @@ function applyIsDue({
 	);
 }
 
+/** A flush costs about the same for one batch as for sixteen, and repeated changes to a row fold into one,
+ *  so batches gather until the apply is due or the linger ends; null applies now, without yielding. */
+function lingerForApply({
+	scope,
+}: {
+	scope: PartitionWriterScope;
+}): Promise<void> | null {
+	const { state, config } = scope;
+	const lingerMs = config.limits.applyLingerMs ?? 0;
+	if (lingerMs <= 0 || applyIsDue({ state })) return null;
+	return new Promise<void>((resolve) => {
+		function wake(): void {
+			clearTimeout(timer);
+			state.applyWake = null;
+			resolve();
+		}
+		const timer = setTimeout(wake, lingerMs);
+		timer.unref?.();
+		state.applyWake = wake;
+	});
+}
+
 async function applyQueued({
 	scope,
 }: {
@@ -242,6 +264,9 @@ async function applyQueued({
 	const { state } = scope;
 	try {
 		while (state.unapplied.length > 0 && !state.recoveryError) {
+			const linger = lingerForApply({ scope });
+			if (linger) await linger;
+			if (state.recoveryError) return;
 			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
 			const takenAt = writerNowOf({ scope });
 			const batch = taken.flatMap((entry) => entry.batch);

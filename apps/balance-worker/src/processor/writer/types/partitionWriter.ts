@@ -160,6 +160,8 @@ export type PartitionWriterLimits = {
 	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
+	/** How long committed batches gather before a store flush; unset applies each batch at once. */
+	applyLingerMs?: number;
 	deferredCommitMs?: number;
 };
 

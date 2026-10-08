@@ -190,6 +190,8 @@ export function balanceWorkerEnvToRuntimeConfig({
 			}),
 			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
 			commitLingerMs: 5,
+			// Up to 16 commits land as one Postgres flush; a reader of the store (flush, evict, store-durable write, drain) cuts it short.
+			applyLingerMs: 500,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {
