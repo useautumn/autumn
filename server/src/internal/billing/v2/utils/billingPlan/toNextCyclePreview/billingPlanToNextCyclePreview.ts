@@ -13,6 +13,7 @@ import {
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
+import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { phaseStartCreditsUnusedTime } from "@/internal/billing/v2/utils/schedulePhaseProration/resolvePhaseStartProrationBehavior";
 import {
 	billingPlanToNextCycleLineItems,
@@ -377,17 +378,31 @@ export const billingPlanToNextCyclePreview = ({
 		customerProducts,
 		startsAtMs: nextCycleStart - MS_PER_SECOND,
 	});
+	// A trial ending before a later anchor bills the stub up to it, as Stripe prorates the anchored invoice.
+	const trialEndBillsStubToAnchor =
+		event.kind !== "anchor_reset" &&
+		timestampsMatch(
+			nextCycleStart,
+			billingContextToFutureTrialEnd({ billingContext }) ?? 0,
+		) &&
+		anchorMs > nextCycleStart;
+	const proratedChargeAnchorMs =
+		event.kind === "anchor_reset"
+			? nextCycleStart
+			: trialEndBillsStubToAnchor
+				? anchorMs
+				: undefined;
 	let lineItemsResult = billingPlanToNextCycleLineItems({
 		ctx,
 		customerProducts: filteredCustomerProducts,
 		productsForUsageLineItems,
 		lineItemSpecs:
-			event.kind === "anchor_reset"
+			proratedChargeAnchorMs !== undefined
 				? [
 						{
 							customerProducts: filteredCustomerProducts,
 							direction: "charge",
-							billingCycleAnchorMs: nextCycleStart,
+							billingCycleAnchorMs: proratedChargeAnchorMs,
 							filterBillingPeriodStart: false,
 							priceFilters: { excludeOneOffPrices: true },
 						},
