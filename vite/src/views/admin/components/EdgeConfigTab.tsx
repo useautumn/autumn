@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { RateLimitsSection } from "../rate-limits/RateLimitsSection";
 import { AgentProvisionRateLimitDialog } from "./AgentProvisionRateLimitDialog";
 import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
 import { AsyncTrackDialog } from "./AsyncTrackDialog";
@@ -73,8 +72,6 @@ export function EdgeConfigTab() {
 					</div>
 				</div>
 			)}
-
-			<RateLimitsSection />
 
 			{EDGE_CONFIG_SECTIONS.map((section) => (
 				<section key={section.id} className="flex flex-col gap-3">
