@@ -1,5 +1,4 @@
 import {
-	backdateAcceptsFreeTrial,
 	type CreateScheduleBillingContext,
 	customerProductHasRelevantStatus,
 	isCustomerProductOnStripeSubscription,
@@ -61,11 +60,10 @@ const backdateConflict = ({
 		return { conflict: "stripe_checkout" };
 	}
 	const requestsTrial = !!billingContext.trialContext?.trialEndsAt;
-	const acceptsFreeTrial = backdateAcceptsFreeTrial({
-		liveSubscriptionTrialing: isStripeSubscriptionTrialing(
-			billingContext.replacedStripeSubscription,
-		),
-	});
+	// A backdate keeps or ends a running trial; a paid one continues the period it paid, with no trial.
+	const acceptsFreeTrial = isStripeSubscriptionTrialing(
+		billingContext.replacedStripeSubscription,
+	);
 	if (requestsTrial && !acceptsFreeTrial) return { conflict: "free_trial" };
 	if (paidPeriodEnded({ billingContext })) return { conflict: "period_ended" };
 	// Resetting a paid backdate's cycle now would bill its paid period again; held until that rule is decided.

@@ -1,6 +1,5 @@
 export * from "./convertBillingContext/billingContextToCurrency.js";
 export * from "./cycleUtils/anchorFollowsKeptTrial";
-export * from "./cycleUtils/backdateAcceptsFreeTrial";
 export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
 export * from "./cycleUtils/getNextMonthStart";

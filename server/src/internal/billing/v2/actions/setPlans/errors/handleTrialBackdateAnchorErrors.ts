@@ -3,24 +3,14 @@ import {
 	formatMsToDate,
 	PRORATION_BEHAVIOR_OVERRIDE_REASONS,
 } from "@autumn/shared";
-import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
-import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
 
-/**
- * A trial controls the cycle start, except on a backdated trialing recreate, where Stripe's create takes an anchor
- * after the kept trial ends. It rejects an earlier anchor, and requires the stub between them to be prorated.
- */
-export const handleKeptTrialAnchorErrors = ({
+/** Stripe's create takes an anchor after a kept trial ends; it rejects an earlier one and requires the stub to be prorated. */
+export const handleTrialBackdateAnchorErrors = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
 }) => {
-	if (!isTrialBackdateRecreate({ billingContext })) {
-		assertNoBillingCycleAnchorWithTrial({ billingContext });
-		return;
-	}
-
 	const { requestedBillingCycleAnchor, trialContext } = billingContext;
 	const trialEndsAt = trialContext?.trialEndsAt;
 	if (typeof requestedBillingCycleAnchor !== "number" || !trialEndsAt) return;

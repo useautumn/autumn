@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validateCustomerEntitlementBatchTransitions } from "@/internal/billing/v2/actions/batchTransition/errors/validateCustomerEntitlementBatchTransitions";
 import { handleMultiAttachCurrencyErrors } from "@/internal/billing/v2/actions/multiAttach/errors/handleMultiAttachCurrencyErrors";
 import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/errors/assertNoAmbiguousDroppedLicenses";
+import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
@@ -22,6 +23,7 @@ import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/i
 import type { ImmediatePhaseTransition } from "../compute/computeSetPlansPlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
+import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import {
 	resolvePhaseProductContexts,
 	resolveUnscheduledProductContexts,
@@ -29,12 +31,12 @@ import {
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 import { handleFreePhaseStripeConnectionErrors } from "./handleFreePhaseStripeConnectionErrors";
 import { handleFutureStartActivationErrors } from "./handleFutureStartActivationErrors";
-import { handleKeptTrialAnchorErrors } from "./handleKeptTrialAnchorErrors";
 import { handleSetPlansBillingCycleAnchorErrors } from "./handleSetPlansBillingCycleAnchorErrors";
 import { handleSetPlansEndDateErrors } from "./handleSetPlansEndDateErrors";
 import { handleSetPlansLicenseQuantityErrors } from "./handleSetPlansLicenseQuantityErrors";
 import { handleSetPlansSubscriptionIdErrors } from "./handleSetPlansSubscriptionIdErrors";
 import { handleStripeSchedulePhaseLimitErrors } from "./handleStripeSchedulePhaseLimitErrors";
+import { handleTrialBackdateAnchorErrors } from "./handleTrialBackdateAnchorErrors";
 import { handleTrialingCycleResetErrors } from "./handleTrialingCycleResetErrors";
 import { assertNoBillingIntervalMix } from "./subscriptionScope/assertNoBillingIntervalMix";
 import { handleStripeSubscriptionScopeErrors } from "./subscriptionScope/handleStripeSubscriptionScopeErrors";
@@ -85,7 +87,12 @@ export const handleSetPlansErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
-	handleKeptTrialAnchorErrors({ billingContext });
+	// A trial controls the cycle start, except on a backdated trialing recreate, which anchors after the kept trial.
+	if (isTrialBackdateRecreate({ billingContext })) {
+		handleTrialBackdateAnchorErrors({ billingContext });
+	} else {
+		assertNoBillingCycleAnchorWithTrial({ billingContext });
+	}
 	handleTrialingCycleResetErrors({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,

@@ -16,6 +16,7 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { backdateGap, billsProratedTime } from "../utils/backdateGap";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { replacedStripeScheduleId } from "../utils/replacedStripeScheduleId";
@@ -53,7 +54,7 @@ const replacedSubscriptionWarning = ({
 	stripeBillingPlan: StripeBillingPlan;
 }): Warning | undefined => {
 	// A replaced trialing subscription ends without a charge: Stripe neither invoices nor credits its trial.
-	if (replacedStripeSubscription.status === "trialing") {
+	if (isStripeSubscriptionTrialing(replacedStripeSubscription)) {
 		return {
 			type: "subscription_replaced",
 			...warningText([

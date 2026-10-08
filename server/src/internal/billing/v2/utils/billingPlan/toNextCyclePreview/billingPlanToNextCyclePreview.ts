@@ -144,6 +144,22 @@ const scaleNextCycleAmounts = ({
 	};
 };
 
+/** A trial ending before a later anchor bills the stub up to it, as Stripe prorates the anchored invoice. */
+const trialEndStubAnchorMs = ({
+	billingContext,
+	nextCycleStart,
+	anchorMs,
+}: {
+	billingContext: BillingContext;
+	nextCycleStart: number;
+	anchorMs: number;
+}) => {
+	const trialEndsAt = billingContextToFutureTrialEnd({ billingContext });
+	if (trialEndsAt === undefined) return undefined;
+	if (!timestampsMatch(nextCycleStart, trialEndsAt)) return undefined;
+	return anchorMs > nextCycleStart ? anchorMs : undefined;
+};
+
 export const billingPlanToNextCyclePreview = ({
 	ctx,
 	billingContext,
@@ -378,20 +394,10 @@ export const billingPlanToNextCyclePreview = ({
 		customerProducts,
 		startsAtMs: nextCycleStart - MS_PER_SECOND,
 	});
-	// A trial ending before a later anchor bills the stub up to it, as Stripe prorates the anchored invoice.
-	const trialEndBillsStubToAnchor =
-		event.kind !== "anchor_reset" &&
-		timestampsMatch(
-			nextCycleStart,
-			billingContextToFutureTrialEnd({ billingContext }) ?? 0,
-		) &&
-		anchorMs > nextCycleStart;
 	const proratedChargeAnchorMs =
 		event.kind === "anchor_reset"
 			? nextCycleStart
-			: trialEndBillsStubToAnchor
-				? anchorMs
-				: undefined;
+			: trialEndStubAnchorMs({ billingContext, nextCycleStart, anchorMs });
 	let lineItemsResult = billingPlanToNextCycleLineItems({
 		ctx,
 		customerProducts: filteredCustomerProducts,
