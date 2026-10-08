@@ -41,6 +41,7 @@ export function CreateScheduleAdvancedSection() {
 		features,
 		nowMs,
 		backdatesLiveSubscription,
+		backdateKeepsRenewalDate,
 		hasActiveSubscription,
 		carriesUsageNow,
 		prorationDefaultsToNone,
@@ -66,7 +67,7 @@ export function CreateScheduleAdvancedSection() {
 			carriesUsageNow,
 		},
 	});
-	const resetRule = backdatesLiveSubscription
+	const resetRule = backdateKeepsRenewalDate
 		? {
 				...rules.resetBillingCycle,
 				disabled: true,

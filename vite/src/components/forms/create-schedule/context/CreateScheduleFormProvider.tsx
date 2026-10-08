@@ -7,6 +7,7 @@ import type {
 import {
 	ACTIVE_STATUSES,
 	acceptsCarryOverUsages,
+	backdateAcceptsBillingCycleAnchor,
 	CusProductStatus,
 	isFreeProductV2,
 	isOneOffProductV2,
@@ -82,8 +83,10 @@ interface CreateScheduleFormContextValue {
 	allowFirstPhaseBackdate: boolean;
 	/** An existing schedule's started first phase may move earlier, recreating its live subscription. */
 	allowStartedPhaseBackdate: boolean;
-	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
+	/** The first phase is backdated over a live subscription, which set_plans recreates from that date. */
 	backdatesLiveSubscription: boolean;
+	/** The backdate keeps the live subscription's renewal date: a paid one can't take a new anchor, a trialing one can. */
+	backdateKeepsRenewalDate: boolean;
 	hasActiveSubscription: boolean;
 	/** The first phase replaces a live plan, resets the cycle or ends a trial now, so its usage can carry over. */
 	carriesUsageNow: boolean;
@@ -277,11 +280,17 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const backdateKeepsRenewalDate =
+		backdatesLiveSubscription &&
+		!backdateAcceptsBillingCycleAnchor({
+			liveSubscriptionTrialing: currentTrial !== null,
+		});
+
 	const getResetBillingCycle = useCallback(
 		() =>
-			!backdatesLiveSubscription &&
+			!backdateKeepsRenewalDate &&
 			(form.store.state.values.resetBillingCycle ?? false),
-		[form.store, backdatesLiveSubscription],
+		[form.store, backdateKeepsRenewalDate],
 	);
 
 	const getBillingCycleAnchor = useCallback(() => {
@@ -392,7 +401,7 @@ export function CreateScheduleFormProvider({
 		features,
 		nowMs,
 		resetBillingCycle:
-			formValues.resetBillingCycle && !backdatesLiveSubscription,
+			formValues.resetBillingCycle && !backdateKeepsRenewalDate,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
@@ -478,6 +487,7 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
+			backdateKeepsRenewalDate,
 			hasActiveSubscription,
 			carriesUsageNow,
 			prorationDefaultsToNone,
@@ -506,6 +516,7 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
+			backdateKeepsRenewalDate,
 			hasActiveSubscription,
 			carriesUsageNow,
 			prorationDefaultsToNone,

@@ -1,10 +1,12 @@
 import {
+	backdateAcceptsBillingCycleAnchor,
 	type CreateScheduleBillingContext,
 	customerProductHasRelevantStatus,
 	isCustomerProductOnStripeSubscription,
 	type SetPlansBackdateConflict,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
+import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
@@ -15,23 +17,22 @@ import { setPlansError } from "./setPlansError";
 /** Only the live period end, or a restart on the backdated start alone, keeps every period billed once. */
 const movesBillingCycleAnchor = ({
 	billingContext,
-	periodEndMs,
 }: {
 	billingContext: CreateScheduleBillingContext;
-	periodEndMs: number;
 }) => {
 	const { requestedBillingCycleAnchor } = billingContext;
 	if (requestedBillingCycleAnchor === undefined) return false;
 	if (restartsCycleAtBackdatedStart({ billingContext })) return true;
 	if (requestedBillingCycleAnchor === "now") return true;
 	return (
-		truncateMsToSecondPrecision(requestedBillingCycleAnchor) !== periodEndMs
+		truncateMsToSecondPrecision(requestedBillingCycleAnchor) !==
+		replacedSubscriptionPeriodEndMs(billingContext)
 	);
 };
 
 /**
- * A paid subscription's recreate continues the period it paid, so it can't add a trial, outlive that period or move its
- * anchor. A trialing one paid nothing and bills like a new subscription's backdate, so none of these apply.
+ * A paid subscription's recreate continues the period it paid, so it can't add a trial or outlive that period.
+ * A trialing one paid nothing and bills like a new subscription's backdate, so neither applies.
  */
 const paidPeriodConflict = ({
 	billingContext,
@@ -42,15 +43,9 @@ const paidPeriodConflict = ({
 	if (billingContext.trialContext?.trialEndsAt) return "free_trial";
 
 	const periodEndMs = replacedSubscriptionPeriodEndMs(billingContext);
-	if (
-		periodEndMs === undefined ||
-		periodEndMs <= billingContext.currentEpochMs
-	) {
-		return "period_ended";
-	}
-	return movesBillingCycleAnchor({ billingContext, periodEndMs })
-		? "billing_cycle_anchor"
-		: undefined;
+	const periodEnded =
+		periodEndMs === undefined || periodEndMs <= billingContext.currentEpochMs;
+	return periodEnded ? "period_ended" : undefined;
 };
 
 /** A plan the recreated subscription would leave behind on the cancelled one. */
@@ -90,6 +85,14 @@ const backdateConflict = ({
 	}
 	const paidConflict = paidPeriodConflict({ billingContext });
 	if (paidConflict) return { conflict: paidConflict };
+	const acceptsAnchor = backdateAcceptsBillingCycleAnchor({
+		liveSubscriptionTrialing: isStripeSubscriptionTrialing(
+			billingContext.replacedStripeSubscription,
+		),
+	});
+	if (!acceptsAnchor && movesBillingCycleAnchor({ billingContext })) {
+		return { conflict: "billing_cycle_anchor" };
+	}
 	if (
 		exceedsStripeBackdateInvoiceLineItemLimit({
 			products: billingContext.fullProducts,
