@@ -27,8 +27,8 @@ export const backdateGap = ({
 	return { start: subscriptionBackdateStartMs, end: replacedStartMs };
 };
 
-/** "none" leaves the gap unbilled; any other behavior, including an unset one, bills it. */
-export const billsBackdateGap = ({
+/** "none" leaves backdated or moved-anchor time unbilled; any other behavior, including an unset one, bills it. */
+export const billsProratedTime = ({
 	billingContext,
 }: {
 	billingContext: Pick<BillingContext, "requestedProrationBehavior">;

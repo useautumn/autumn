@@ -1,7 +1,10 @@
-import type { BillingContext } from "@autumn/shared";
+import {
+	anchorFollowsKeptTrial as anchorFollowsKeptTrialRule,
+	type BillingContext,
+} from "@autumn/shared";
 import { isTrialBackdateRecreate } from "./isTrialBackdateRecreate";
 
-/** A backdated trialing recreate keeps its trial and anchors the cycle after it ends, so Stripe bills a stub between. */
+/** The shared kept-trial anchor rule, read from the request; Set Plans' sheet applies the same rule. */
 export const anchorFollowsKeptTrial = ({
 	billingContext,
 }: {
@@ -14,11 +17,13 @@ export const anchorFollowsKeptTrial = ({
 	>;
 }) => {
 	const { requestedBillingCycleAnchor, trialContext } = billingContext;
-	const trialEndsAt = trialContext?.trialEndsAt;
-	return (
-		isTrialBackdateRecreate({ billingContext }) &&
-		typeof trialEndsAt === "number" &&
-		typeof requestedBillingCycleAnchor === "number" &&
-		requestedBillingCycleAnchor > trialEndsAt
-	);
+	return anchorFollowsKeptTrialRule({
+		backdatesTrialingSubscription: isTrialBackdateRecreate({ billingContext }),
+		keepsTrial: typeof trialContext?.trialEndsAt === "number",
+		anchorMs:
+			typeof requestedBillingCycleAnchor === "number"
+				? requestedBillingCycleAnchor
+				: undefined,
+		trialEndsAt: trialContext?.trialEndsAt,
+	});
 };

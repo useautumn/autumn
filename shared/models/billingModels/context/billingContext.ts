@@ -15,6 +15,7 @@ import type { TransitionConfig } from "@models/billingModels/context/transitionC
 import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
 import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
+import type { ProrationBehaviorOverride } from "@utils/billingUtils/invoicingUtils/prorationUtils/prorationBehaviorOverride";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
@@ -77,6 +78,8 @@ export interface BillingContext {
 	subscriptionBackdateStartMs?: number;
 	requestedBillingCycleAnchor?: number | "now";
 	requestedProrationBehavior?: BillingBehavior;
+	/** Where proration can't change what's billed, set by set_plans' setup. */
+	prorationOverride?: ProrationBehaviorOverride;
 
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;

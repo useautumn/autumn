@@ -16,7 +16,7 @@ import {
 	sumValues,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { backdateGap, billsBackdateGap } from "../utils/backdateGap";
+import { backdateGap, billsProratedTime } from "../utils/backdateGap";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { replacedStripeScheduleId } from "../utils/replacedStripeScheduleId";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
@@ -102,7 +102,7 @@ const backdateGapParts = ({
 	if (!gap) return [];
 
 	const gapEnd = formatMsToDate(gap.end);
-	if (!billsBackdateGap({ billingContext })) {
+	if (!billsProratedTime({ billingContext })) {
 		return [
 			plainText("The time before"),
 			boldText(gapEnd),

@@ -7,6 +7,7 @@ import type {
 import {
 	ACTIVE_STATUSES,
 	acceptsCarryOverUsages,
+	anchorFollowsKeptTrial,
 	type BillingBehavior,
 	CusProductStatus,
 	isFreeProductV2,
@@ -44,6 +45,7 @@ import {
 } from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
+import { defaultProrationBehavior } from "@/components/forms/shared/utils/defaultProrationBehavior";
 import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
 import { pickFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -90,8 +92,8 @@ interface CreateScheduleFormContextValue {
 	hasActiveSubscription: boolean;
 	/** The first phase replaces a live plan, resets the cycle or ends a trial now, so its usage can carry over. */
 	carriesUsageNow: boolean;
-	/** set_plans bills nothing before the first phase's date unless proration is asked for. */
-	prorationDefaultsToNone: boolean;
+	/** What the Proration row shows until the user changes it. */
+	defaultFirstPhaseProration: BillingBehavior;
 	/** Proration can't change what's billed here, so the row stays as shown and explains why. */
 	prorationOverride: ProrationBehaviorOverride | undefined;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
@@ -311,25 +313,24 @@ export function CreateScheduleFormProvider({
 		formValues,
 		currentTrial,
 	});
-	// Worked out once when the sheet opens, so changing another control never flips proration's shown default.
-	const [prorationDefaultsToNone] = useState(
-		() => backdatesLiveSubscription || (endsTrialNow && !resetsCycleNow),
+	// Attach's rule, worked out once when the sheet opens: No charges on a live subscription, prorated on a new one.
+	const [defaultFirstPhaseProration] = useState(() =>
+		defaultProrationBehavior({ noChargesAllowed: hasActiveSubscription }),
 	);
-	const anchorFollowsKeptTrial =
-		backdatesLiveSubscription &&
-		currentTrial !== null &&
-		formValues.trialEnabled &&
+	const usesCustomAnchor =
 		formValues.resetBillingCycle &&
-		formValues.billingCycleAnchorMode === "custom" &&
-		(formValues.billingCycleAnchorDate ?? 0) > currentTrial.trialEndsAt;
+		formValues.billingCycleAnchorMode === "custom";
 	const prorationOverride = prorationBehaviorOverride({
 		endsTrialNow,
 		resetsCycleNow,
-		anchorFollowsKeptTrial,
+		anchorFollowsKeptTrial: anchorFollowsKeptTrial({
+			backdatesTrialingSubscription:
+				backdatesLiveSubscription && currentTrial !== null,
+			keepsTrial: formValues.trialEnabled,
+			anchorMs: usesCustomAnchor ? formValues.billingCycleAnchorDate : null,
+			trialEndsAt: currentTrial?.trialEndsAt,
+		}),
 	});
-	const defaultFirstPhaseProration: BillingBehavior = prorationDefaultsToNone
-		? "none"
-		: "prorate_immediately";
 	const getOmitFirstPhaseProration = useCallback(
 		() => prorationOverride !== undefined,
 		[prorationOverride],
@@ -508,7 +509,7 @@ export function CreateScheduleFormProvider({
 			backdatesLiveSubscription,
 			hasActiveSubscription,
 			carriesUsageNow,
-			prorationDefaultsToNone,
+			defaultFirstPhaseProration,
 			prorationOverride,
 			createsRecurringSubscription,
 			subscriptionTarget,
@@ -537,7 +538,7 @@ export function CreateScheduleFormProvider({
 			backdatesLiveSubscription,
 			hasActiveSubscription,
 			carriesUsageNow,
-			prorationDefaultsToNone,
+			defaultFirstPhaseProration,
 			prorationOverride,
 			createsRecurringSubscription,
 			subscriptionTarget,

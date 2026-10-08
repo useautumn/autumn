@@ -15,12 +15,9 @@ import {
 export const handleProrationBehaviorErrors = ({
 	billingContext,
 	billingPlan,
-	billsTrialEndUnderNone = false,
 }: {
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-	/** Like Stripe's trial_end now, ending a trial bills the full period whatever the proration_behavior. */
-	billsTrialEndUnderNone?: boolean;
 }) => {
 	if (billingContext.requestedProrationBehavior !== "none") return;
 
@@ -32,7 +29,9 @@ export const handleProrationBehaviorErrors = ({
 		billingContext,
 	});
 	const endsTrial = isTrialing && !willBeTrialing;
-	if (endsTrial && billsTrialEndUnderNone) return;
+	if (endsTrial && billingContext.prorationOverride === "bills_full_period") {
+		return;
+	}
 
 	if (endsTrial) {
 		throw new RecaseError({

@@ -21,6 +21,7 @@ import {
 	immediatePhaseProrationBehavior,
 	setupTrialEndAnchorMs,
 } from "../utils/immediatePhaseBilling";
+import { setPlansProrationOverride } from "../utils/setPlansProrationOverride";
 import { alignPhasesToSavedBoundaries } from "./alignPhasesToSavedBoundaries";
 import {
 	classifyFirstPhaseStart,
@@ -222,6 +223,9 @@ export const setupSetPlansBillingContext = async ({
 			...setupSetPlansBillingCycleAnchor({
 				billingContext: keptCycleBillingContext,
 				timeline,
+			}),
+			prorationOverride: setPlansProrationOverride({
+				billingContext: keptCycleBillingContext,
 			}),
 		},
 		timeline,

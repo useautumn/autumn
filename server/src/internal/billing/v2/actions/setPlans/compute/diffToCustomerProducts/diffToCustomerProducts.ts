@@ -14,6 +14,7 @@ import type {
 	TimelineDiff,
 	TimelineOperation,
 } from "../../timeline/types/timelineDiff";
+import { endsLiveTrial } from "../../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../../utils/isOnReplacedStripeSubscription";
 import { isTrialBackdateRecreate } from "../../utils/isTrialBackdateRecreate";
@@ -239,7 +240,7 @@ const keptRowUpdate = ({
 	// Unlinked and paired with an empty patch, execution stamps the new subscription and schedule ids on it.
 	if (linkResets) Object.assign(update.updates, linkResets);
 	// A row leaving a trialing subscription the request ends lands on a new one without a trial.
-	if (linkResets && billingContext.trialContext?.trialEndsAt === null) {
+	if (linkResets && endsLiveTrial({ billingContext })) {
 		Object.assign(
 			update.updates,
 			applyTrialContextToPatchedCustomerProduct({

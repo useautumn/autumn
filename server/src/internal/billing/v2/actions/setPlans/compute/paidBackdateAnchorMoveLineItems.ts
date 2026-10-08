@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
-import { billsBackdateGap } from "../utils/backdateGap";
+import { billsProratedTime } from "../utils/backdateGap";
 import { paidBackdateAnchorMove } from "../utils/paidBackdateAnchorMove";
 
 /**
@@ -22,7 +22,7 @@ export const paidBackdateAnchorMoveLineItems = ({
 	keptCustomerProducts: FullCusProduct[];
 }): LineItem[] => {
 	const anchorMove = paidBackdateAnchorMove({ billingContext });
-	if (!anchorMove || !billsBackdateGap({ billingContext })) return [];
+	if (!anchorMove || !billsProratedTime({ billingContext })) return [];
 
 	const { anchorMs, paidThroughMs } = anchorMove;
 	const movesLater = anchorMs > paidThroughMs;

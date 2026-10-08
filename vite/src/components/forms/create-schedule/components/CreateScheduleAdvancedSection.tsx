@@ -44,7 +44,7 @@ export function CreateScheduleAdvancedSection() {
 		backdatesLiveSubscription,
 		hasActiveSubscription,
 		carriesUsageNow,
-		prorationDefaultsToNone,
+		defaultFirstPhaseProration,
 		prorationOverride,
 		canScheduleTrial,
 		isExistingSchedule,
@@ -80,9 +80,7 @@ export function CreateScheduleAdvancedSection() {
 	const anchorMode = anchorBounds.allowCustomAnchor
 		? billingCycleAnchorMode
 		: "now";
-	const defaultProration: BillingBehavior = prorationDefaultsToNone
-		? "none"
-		: "prorate_immediately";
+	const defaultProration = defaultFirstPhaseProration;
 	const proration = phases[0]?.prorationBehavior ?? defaultProration;
 	const prorationRule = prorationOverride
 		? {

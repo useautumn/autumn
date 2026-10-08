@@ -183,11 +183,7 @@ export const handleSetPlansBillingPlanErrors = ({
 	billingContext: CreateScheduleBillingContext;
 	billingPlan: BillingPlan;
 }) => {
-	handleProrationBehaviorErrors({
-		billingContext,
-		billingPlan,
-		billsTrialEndUnderNone: true,
-	});
+	handleProrationBehaviorErrors({ billingContext, billingPlan });
 	handleStripeSchedulePhaseLimitErrors({ billingPlan });
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };
