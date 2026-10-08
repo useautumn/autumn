@@ -23,6 +23,7 @@ import {
 	secondsToMs,
 } from "@autumn/shared";
 import { expectSubscriptionNotTrialing } from "@tests/integration/billing/utils/expect-customer-products/expectSubscriptionTrialing";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { calculateNewSubscriptionAnchorStub } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -227,8 +228,14 @@ const endTrialOnAnchorAndExpect = async ({
 		usage: TRACKED_MESSAGES,
 	});
 
-	// The anchor bills one full renewal, with no separate cycle reset on top.
+	// The anchor bills one full renewal, with no separate cycle reset on top, and resets usage.
 	await advancePastCycleStart({ ctx, testClockId, cycleStartsAt: anchorMs });
+	await expectBalanceCorrect({
+		customerId,
+		featureId: TestFeature.Messages,
+		remaining: INCLUDED_MESSAGES,
+		usage: 0,
+	});
 	await expectSubscriptionInvoiceTotals({
 		ctx,
 		subscriptionId: newSubscription.id,
@@ -330,27 +337,27 @@ test.concurrent(
 	},
 );
 
-/** Ending the trial with a reset now keeps the subscription and bills one full period now, then one on the renewal. */
+/** Ending the trial with a reset now keeps the subscription, restarts the plans' cycle and bills one full period now. */
 const endTrialResettingNowAndExpect = async ({
 	customerId,
 	prorationBehavior,
+	carriesUsage = false,
 }: {
 	customerId: string;
 	prorationBehavior?: BillingBehavior;
+	carriesUsage?: boolean;
 }) => {
-	const {
-		pro,
-		addOn,
-		autumnV2_4,
-		ctx,
-		testClockId,
-		trialing,
-		advancedTo,
-		keptIds,
-	} = await setupTrialingPlans({ customerId });
+	const { pro, addOn, autumnV2_4, ctx, testClockId, trialing, advancedTo } =
+		await setupTrialingPlans({ customerId });
 	const params: SetPlansParamsV0Input = {
 		customer_id: customerId,
 		free_trial: null,
+		...(carriesUsage && {
+			carry_over_usages: {
+				enabled: true,
+				feature_ids: [TestFeature.Messages],
+			},
+		}),
 		phases: [
 			{
 				starts_at: "now",
@@ -388,18 +395,16 @@ const endTrialResettingNowAndExpect = async ({
 		startsAt: renewalAt,
 		total: MONTHLY_TOTAL,
 	});
-	for (const [productId, customerProductId] of [
-		[pro.id, keptIds.pro],
-		[addOn.id, keptIds.addOn],
-	] as const) {
-		await expectPlanKept({
-			ctx,
-			customerId,
-			productId,
-			customerProductId,
-			subscriptionId: trialing.id,
-		});
-	}
+	// Like any reset now, the plans restart their cycle: usage resets unless carry_over_usages carries it.
+	await expectCustomerProducts({ customerId, active: [pro.id, addOn.id] });
+	const carriedUsage = carriesUsage ? TRACKED_MESSAGES : 0;
+	await expectBalanceCorrect({
+		customerId,
+		featureId: TestFeature.Messages,
+		remaining: INCLUDED_MESSAGES - carriedUsage,
+		usage: carriedUsage,
+		nextResetAt: renewalAt,
+	});
 	const customer = await autumnV2_4.customers.get<ApiCustomerV5>(customerId);
 	for (const productId of [pro.id, addOn.id]) {
 		await expectSubscriptionNotTrialing({ customer, productId });
@@ -430,7 +435,7 @@ const endTrialResettingNowAndExpect = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans trial end reset now: phase_start with none ends the trial in place and bills the full period now")}`,
+	`${chalk.yellowBright("set-plans trial end reset now: phase_start with none ends the trial and bills the full period now")}`,
 	async () => {
 		await endTrialResettingNowAndExpect({
 			customerId: "set-plans-trial-reset-now-none",
@@ -440,10 +445,20 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans trial end reset now: phase_start with default proration ends the trial in place and bills the full period now")}`,
+	`${chalk.yellowBright("set-plans trial end reset now: phase_start with default proration ends the trial and bills the full period now")}`,
 	async () => {
 		await endTrialResettingNowAndExpect({
 			customerId: "set-plans-trial-reset-phase-start",
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans trial end reset now: carry_over_usages carries the trial's usage into the new cycle")}`,
+	async () => {
+		await endTrialResettingNowAndExpect({
+			customerId: "set-plans-trial-reset-carry",
+			carriesUsage: true,
 		});
 	},
 );
