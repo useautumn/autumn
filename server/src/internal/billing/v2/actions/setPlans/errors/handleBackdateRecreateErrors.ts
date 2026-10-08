@@ -1,5 +1,5 @@
 import {
-	backdateAcceptsBillingCycleAnchor,
+	backdateSetsNewBillingTerms,
 	type CreateScheduleBillingContext,
 	customerProductHasRelevantStatus,
 	isCustomerProductOnStripeSubscription,
@@ -9,7 +9,6 @@ import {
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
-import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { setPlansError } from "./setPlansError";
@@ -30,22 +29,24 @@ const movesBillingCycleAnchor = ({
 	);
 };
 
-/**
- * A paid subscription's recreate continues the period it paid, so it can't add a trial or outlive that period.
- * A trialing one paid nothing and bills like a new subscription's backdate, so neither applies.
- */
+/** A paid subscription's recreate continues the period it paid, so it can't add a trial, outlive that period or move its anchor. */
 const paidPeriodConflict = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
 }): SetPlansBackdateConflict | undefined => {
-	if (!isBackdateRecreate({ billingContext })) return undefined;
 	if (billingContext.trialContext?.trialEndsAt) return "free_trial";
 
 	const periodEndMs = replacedSubscriptionPeriodEndMs(billingContext);
-	const periodEnded =
-		periodEndMs === undefined || periodEndMs <= billingContext.currentEpochMs;
-	return periodEnded ? "period_ended" : undefined;
+	if (
+		periodEndMs === undefined ||
+		periodEndMs <= billingContext.currentEpochMs
+	) {
+		return "period_ended";
+	}
+	return movesBillingCycleAnchor({ billingContext })
+		? "billing_cycle_anchor"
+		: undefined;
 };
 
 /** A plan the recreated subscription would leave behind on the cancelled one. */
@@ -83,16 +84,15 @@ const backdateConflict = ({
 	if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 		return { conflict: "stripe_checkout" };
 	}
-	const paidConflict = paidPeriodConflict({ billingContext });
-	if (paidConflict) return { conflict: paidConflict };
-	const acceptsAnchor = backdateAcceptsBillingCycleAnchor({
+	const setsNewBillingTerms = backdateSetsNewBillingTerms({
 		liveSubscriptionTrialing: isStripeSubscriptionTrialing(
 			billingContext.replacedStripeSubscription,
 		),
 	});
-	if (!acceptsAnchor && movesBillingCycleAnchor({ billingContext })) {
-		return { conflict: "billing_cycle_anchor" };
-	}
+	const paidConflict = setsNewBillingTerms
+		? undefined
+		: paidPeriodConflict({ billingContext });
+	if (paidConflict) return { conflict: paidConflict };
 	if (
 		exceedsStripeBackdateInvoiceLineItemLimit({
 			products: billingContext.fullProducts,

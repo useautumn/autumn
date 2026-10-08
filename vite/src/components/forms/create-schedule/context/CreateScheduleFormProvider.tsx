@@ -7,10 +7,12 @@ import type {
 import {
 	ACTIVE_STATUSES,
 	acceptsCarryOverUsages,
-	backdateAcceptsBillingCycleAnchor,
+	backdateSetsNewBillingTerms,
 	CusProductStatus,
 	isFreeProductV2,
 	isOneOffProductV2,
+	type ProrationBehaviorOverride,
+	prorationBehaviorOverride,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
@@ -92,6 +94,8 @@ interface CreateScheduleFormContextValue {
 	carriesUsageNow: boolean;
 	/** set_plans bills nothing before the first phase's date unless proration is asked for. */
 	prorationDefaultsToNone: boolean;
+	/** Proration can't change what's billed here, so the row stays as shown and explains why. */
+	prorationOverride: ProrationBehaviorOverride | undefined;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -252,9 +256,11 @@ export function CreateScheduleFormProvider({
 		() => defaultScheduleTrialFormValues({ currentTrial, catalogFreeTrial }),
 		[currentTrial, catalogFreeTrial],
 	);
+	const liveSubscriptionTrialing = currentTrial !== null;
 	const canScheduleTrial = canScheduleFreeTrial({
 		phases: formValues.phases,
 		nowMs,
+		liveSubscriptionTrialing,
 	});
 
 	const previousDefaultTrialFormValuesRef = useRef(defaultTrialFormValues);
@@ -282,9 +288,7 @@ export function CreateScheduleFormProvider({
 
 	const backdateKeepsRenewalDate =
 		backdatesLiveSubscription &&
-		!backdateAcceptsBillingCycleAnchor({
-			liveSubscriptionTrialing: currentTrial !== null,
-		});
+		!backdateSetsNewBillingTerms({ liveSubscriptionTrialing });
 
 	const getResetBillingCycle = useCallback(
 		() =>
@@ -315,9 +319,26 @@ export function CreateScheduleFormProvider({
 		formValues,
 		currentTrial,
 	});
-	// A backdate, or a trial ended on a date (recreated on it), defaults to no proration, like set_plans.
-	const prorationDefaultsToNone =
-		backdatesLiveSubscription || (endsTrialNow && !resetsCycleNow);
+	// Worked out once when the sheet opens, so changing another control never flips proration's shown default.
+	const [prorationDefaultsToNone] = useState(
+		() => backdatesLiveSubscription || (endsTrialNow && !resetsCycleNow),
+	);
+	const anchorFollowsKeptTrial =
+		backdatesLiveSubscription &&
+		currentTrial !== null &&
+		formValues.trialEnabled &&
+		formValues.resetBillingCycle &&
+		formValues.billingCycleAnchorMode === "custom" &&
+		(formValues.billingCycleAnchorDate ?? 0) > currentTrial.trialEndsAt;
+	const prorationOverride = prorationBehaviorOverride({
+		endsTrialNow,
+		resetsCycleNow,
+		anchorFollowsKeptTrial,
+	});
+	const getOmitFirstPhaseProration = useCallback(
+		() => prorationOverride !== undefined,
+		[prorationOverride],
+	);
 
 	const carriesUsageNow = useMemo(
 		() =>
@@ -388,6 +409,7 @@ export function CreateScheduleFormProvider({
 		getAllowFirstPhaseBackdate,
 		getCarryOverUsages,
 		getFreeTrial,
+		getOmitFirstPhaseProration,
 		currentTrial,
 		catalogFreeTrial,
 		stripeSubscriptionId,
@@ -413,6 +435,7 @@ export function CreateScheduleFormProvider({
 		freeTrial: trialFormValues,
 		currentTrial,
 		catalogFreeTrial,
+		omitFirstPhaseProration: prorationOverride !== undefined,
 	});
 
 	// Clear stale backdates when the selected scope can no longer use them.
@@ -491,6 +514,7 @@ export function CreateScheduleFormProvider({
 			hasActiveSubscription,
 			carriesUsageNow,
 			prorationDefaultsToNone,
+			prorationOverride,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -520,6 +544,7 @@ export function CreateScheduleFormProvider({
 			hasActiveSubscription,
 			carriesUsageNow,
 			prorationDefaultsToNone,
+			prorationOverride,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,

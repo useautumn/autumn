@@ -45,6 +45,7 @@ export function buildCreateScheduleRequestBody({
 	freeTrial,
 	currentTrial = null,
 	catalogFreeTrial = null,
+	omitFirstPhaseProration = false,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -65,6 +66,7 @@ export function buildCreateScheduleRequestBody({
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
+	omitFirstPhaseProration?: boolean;
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
@@ -124,8 +126,12 @@ export function buildCreateScheduleRequestBody({
 			index,
 		) => {
 			const isFirstPhase = index === 0;
+			// Where proration can't change what's billed, the server applies its own rule.
+			const firstPhaseProration = omitFirstPhaseProration
+				? undefined
+				: phases[0]?.prorationBehavior;
 			const prorationBehavior = isFirstPhase
-				? phases[0]?.prorationBehavior
+				? firstPhaseProration
 				: ownProration;
 			const billingCycleAnchor = phaseToBillingCycleAnchor({
 				phase: { keepsCycleAnchor },
@@ -165,7 +171,12 @@ export function buildCreateScheduleRequestBody({
 	}
 
 	const freeTrialParam =
-		freeTrial && canScheduleFreeTrial({ phases, nowMs: now })
+		freeTrial &&
+		canScheduleFreeTrial({
+			phases,
+			nowMs: now,
+			liveSubscriptionTrialing: !!currentTrial,
+		})
 			? scheduleFreeTrialParam({
 					formValues: freeTrial,
 					currentTrial,
@@ -208,6 +219,7 @@ export function useCreateScheduleRequestBody({
 	freeTrial,
 	currentTrial,
 	catalogFreeTrial,
+	omitFirstPhaseProration = false,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -227,6 +239,7 @@ export function useCreateScheduleRequestBody({
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
+	omitFirstPhaseProration?: boolean;
 }) {
 	return useMemo(
 		() =>
@@ -249,6 +262,7 @@ export function useCreateScheduleRequestBody({
 				freeTrial,
 				currentTrial,
 				catalogFreeTrial,
+				omitFirstPhaseProration,
 			}),
 		[
 			customerId,
@@ -269,6 +283,7 @@ export function useCreateScheduleRequestBody({
 			freeTrial,
 			currentTrial,
 			catalogFreeTrial,
+			omitFirstPhaseProration,
 		],
 	);
 }
@@ -287,6 +302,7 @@ export function useBuildCreateScheduleRequestBody({
 	getAllowFirstPhaseBackdate,
 	getCarryOverUsages,
 	getFreeTrial,
+	getOmitFirstPhaseProration,
 	currentTrial,
 	catalogFreeTrial,
 	stripeSubscriptionId,
@@ -310,6 +326,7 @@ export function useBuildCreateScheduleRequestBody({
 		"carryOverUsages" | "carryOverUsageFeatureIds"
 	>;
 	getFreeTrial?: () => FreeTrialFormValues;
+	getOmitFirstPhaseProration?: () => boolean;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
 	stripeSubscriptionId?: string | null;
@@ -335,6 +352,7 @@ export function useBuildCreateScheduleRequestBody({
 					freeTrial: getFreeTrial?.(),
 					currentTrial,
 					catalogFreeTrial,
+					omitFirstPhaseProration: getOmitFirstPhaseProration?.() ?? false,
 				}),
 		[
 			customerId,
@@ -350,6 +368,7 @@ export function useBuildCreateScheduleRequestBody({
 			getAllowFirstPhaseBackdate,
 			getCarryOverUsages,
 			getFreeTrial,
+			getOmitFirstPhaseProration,
 			currentTrial,
 			catalogFreeTrial,
 			stripeSubscriptionId,

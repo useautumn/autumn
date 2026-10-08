@@ -153,46 +153,67 @@ describe("schedule free_trial request mapping", () => {
 		).toMatchObject({ duration_length: 30 });
 	});
 
-	test("a backdated or future first phase never sends a trial", () => {
-		for (const phases of [
-			phasesStarting(NOW - DAY_MS),
-			phasesStarting(NOW + DAY_MS, NOW + DAY_MS),
-		]) {
-			expect(
-				buildFreeTrialParam({
-					freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES,
-					currentTrial: CURRENT_TRIAL,
-					phases,
-				}),
-			).not.toHaveProperty("free_trial");
-		}
+	test("a future first phase never sends a trial", () => {
+		expect(
+			buildFreeTrialParam({
+				freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES,
+				currentTrial: CURRENT_TRIAL,
+				phases: phasesStarting(NOW + DAY_MS, NOW + DAY_MS),
+			}),
+		).not.toHaveProperty("free_trial");
+	});
+
+	test("a backdate over a trialing subscription can turn its trial off", () => {
+		expect(
+			buildFreeTrialParam({
+				freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES,
+				currentTrial: CURRENT_TRIAL,
+				phases: phasesStarting(NOW - DAY_MS),
+			})?.free_trial,
+		).toBeNull();
+		expect(
+			buildFreeTrialParam({
+				freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES,
+				phases: phasesStarting(NOW - DAY_MS),
+			}),
+		).not.toHaveProperty("free_trial");
 	});
 });
 
 describe("canScheduleFreeTrial", () => {
 	test("allows a first phase starting now or an already started schedule", () => {
-		expect(
-			canScheduleFreeTrial({ phases: phasesStarting(null), nowMs: NOW }),
-		).toBe(true);
-		expect(
-			canScheduleFreeTrial({
-				phases: phasesStarting(NOW - DAY_MS, NOW - DAY_MS),
-				nowMs: NOW,
-			}),
-		).toBe(true);
+		for (const phases of [
+			phasesStarting(null),
+			phasesStarting(NOW - DAY_MS, NOW - DAY_MS),
+		]) {
+			expect(
+				canScheduleFreeTrial({
+					phases,
+					nowMs: NOW,
+					liveSubscriptionTrialing: false,
+				}),
+			).toBe(true);
+		}
 	});
 
-	test("hides the trial for a backdated or future first phase", () => {
-		expect(
-			canScheduleFreeTrial({
-				phases: phasesStarting(NOW - DAY_MS),
-				nowMs: NOW,
-			}),
-		).toBe(false);
+	test("shows the trial for a backdate only over a trialing subscription", () => {
+		for (const liveSubscriptionTrialing of [true, false]) {
+			expect(
+				canScheduleFreeTrial({
+					phases: phasesStarting(NOW - DAY_MS),
+					nowMs: NOW,
+					liveSubscriptionTrialing,
+				}),
+			).toBe(liveSubscriptionTrialing);
+		}
+	});
+
+	test("hides the trial for a future first phase", () => {
 		expect(
 			canScheduleFreeTrial({
 				phases: phasesStarting(NOW + DAY_MS, NOW + DAY_MS),
 				nowMs: NOW,
+				liveSubscriptionTrialing: true,
 			}),
 		).toBe(false);
 	});

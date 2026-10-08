@@ -1,10 +1,11 @@
 import {
 	type CreateScheduleBillingContext,
 	formatMsToDate,
+	PRORATION_BEHAVIOR_OVERRIDE_REASONS,
 } from "@autumn/shared";
 import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
-import { anchorFollowsKeptTrial } from "../utils/anchorFollowsKeptTrial";
 import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
+import { keptPlansProrationOverride } from "../utils/keptPlansProrationOverride";
 import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
 
 /**
@@ -30,12 +31,11 @@ export const handleKeptTrialAnchorErrors = ({
 			`billing_cycle_anchor is before the kept trial ends on ${formatMsToDate(trialEndsAt)}. Move the anchor on or after the trial end, or turn the trial off.`,
 		);
 	}
-	if (
-		anchorFollowsKeptTrial({ billingContext }) &&
-		billingContext.requestedProrationBehavior === "none"
-	) {
+	const alwaysProrates =
+		keptPlansProrationOverride({ billingContext }) === "always_prorates";
+	if (alwaysProrates && billingContext.requestedProrationBehavior === "none") {
 		throw invalidSetPlansRequest(
-			"Stripe bills the time between the trial end and billing_cycle_anchor, so proration_behavior can't be none here. Use prorate_immediately, or turn the trial off.",
+			`${PRORATION_BEHAVIOR_OVERRIDE_REASONS.always_prorates} proration_behavior can't be none here: use prorate_immediately, or turn the trial off.`,
 		);
 	}
 };

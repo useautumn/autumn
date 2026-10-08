@@ -1,5 +1,5 @@
 export * from "./convertBillingContext/billingContextToCurrency.js";
-export * from "./cycleUtils/backdateAcceptsBillingCycleAnchor";
+export * from "./cycleUtils/backdateSetsNewBillingTerms";
 export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
 export * from "./cycleUtils/getNextMonthStart";
@@ -26,6 +26,7 @@ export * from "./invoicingUtils/lineItemUtils/priceToLineAmount.js";
 export * from "./invoicingUtils/lineItemUtils/tiersToLineAmount.js";
 export * from "./invoicingUtils/prorationUtils/applyProration.js";
 export * from "./invoicingUtils/prorationUtils/getEffectivePeriod.js";
+export * from "./invoicingUtils/prorationUtils/prorationBehaviorOverride.js";
 export * from "./invoicingUtils/prorationUtils/prorationConfigUtils.js";
 export * from "./usageUtils/acceptsCarryOverUsages.js";
 export * from "./usageUtils/roundUsageToNearestBillingUnit.js";
