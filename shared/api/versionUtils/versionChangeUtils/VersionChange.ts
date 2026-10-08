@@ -23,6 +23,7 @@ export enum AffectedResource {
 	Feature = "feature",
 	Check = "check",
 	Track = "track",
+	BatchTrack = "batch_track",
 	Checkout = "checkout",
 	Attach = "attach",
 	MultiAttach = "multi_attach",

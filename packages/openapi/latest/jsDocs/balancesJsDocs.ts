@@ -36,7 +36,7 @@ export const balancesCheckJsDoc = createJSDocDescription({
 
 export const balancesTrackJsDoc = createJSDocDescription({
 	description:
-		"Records usage for a customer feature and returns updated balances.",
+		"Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.",
 	whenToUse:
 		"Use this after an action happens to decrement usage, or send a negative value to credit balance back.",
 	body: TrackParamsSchema,
@@ -60,7 +60,7 @@ export const balancesTrackJsDoc = createJSDocDescription({
 	],
 	methodName: "track",
 	returns:
-		"The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.",
+		"The usage value recorded. By default the event is queued and the API returns 202 with balance: null. With async: false it returns 200 with either a single updated balance or a map of updated balances, or 202 if Autumn is experiencing degraded service and accepted the event for replay.",
 });
 
 export const balancesTrackTokensJsDoc = createJSDocDescription({
