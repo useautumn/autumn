@@ -1,7 +1,8 @@
 /**
  * A backdate over a healthy live subscription recreates it, so anything the recreate would
- * lose or rebill is rejected with structured details: a trial, Stripe Checkout, a paid period
- * already over, a changed anchor, a start too far back, or a plan it doesn't cover.
+ * lose or rebill is rejected with structured details: a trial added to a paid one, Stripe
+ * Checkout, a paid period already over, a changed anchor on a paid one, a start too far back,
+ * or a plan it doesn't cover. A trialing subscription paid nothing, so it is recreated freely.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -136,14 +137,23 @@ describe(
 			).toBeUndefined();
 		});
 
-		test("a trial on the subscription, or a requested one, is rejected", () => {
-			expect(
-				rejectionOf({
-					billingContext: backdateContext({
-						replacedStripeSubscription: liveSubscription("trialing"),
+		test("a trialing subscription is recreated, with or without a new anchor", () => {
+			for (const requestedBillingCycleAnchor of [
+				undefined,
+				NOW + ms.days(20),
+			]) {
+				expect(
+					rejectionOf({
+						billingContext: backdateContext({
+							replacedStripeSubscription: liveSubscription("trialing"),
+							requestedBillingCycleAnchor,
+						}),
 					}),
-				}),
-			).toEqual(conflict("free_trial"));
+				).toBeUndefined();
+			}
+		});
+
+		test("a trial requested on a paid subscription is rejected", () => {
 			expect(
 				rejectionOf({
 					billingContext: backdateContext({
