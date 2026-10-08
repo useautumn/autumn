@@ -16,6 +16,17 @@ import { cn } from "@/lib/utils";
 import { ValueChip } from "./ValueChip";
 
 const MAX_VISIBLE_CHIPS = 3;
+const MIN_LIST_HEIGHT = 240;
+
+type PickerSide = "top" | "bottom";
+
+/** Chosen once on open so the list never flips while chips change or the page scrolls. */
+const sideForTrigger = (trigger: Element | undefined): PickerSide => {
+	if (!trigger) return "bottom";
+	const { top, bottom } = trigger.getBoundingClientRect();
+	const spaceBelow = window.innerHeight - bottom;
+	return spaceBelow < MIN_LIST_HEIGHT && top > spaceBelow ? "top" : "bottom";
+};
 
 export type ValuePickerOption = {
 	value: string;
@@ -41,13 +52,21 @@ export function ValuePicker({
 	className?: string;
 	defaultOpen?: boolean;
 }) {
-	const [open, setOpen] = useState(defaultOpen);
+	const [popup, setPopup] = useState<{ open: boolean; side: PickerSide }>({
+		open: defaultOpen,
+		side: "bottom",
+	});
 
 	const getOption = (val: string) => suggestions.find((s) => s.value === val);
 
 	return (
 		<div className={cn("min-w-0", triggerClassName)}>
-			<Popover open={open} onOpenChange={setOpen}>
+			<Popover
+				open={popup.open}
+				onOpenChange={(open, { trigger }) =>
+					setPopup({ open, side: open ? sideForTrigger(trigger) : popup.side })
+				}
+			>
 				<PopoverTrigger
 					render={
 						<button
@@ -81,7 +100,7 @@ export function ValuePicker({
 					)}
 				</PopoverTrigger>
 				<PopoverContent
-					side="bottom"
+					side={popup.side}
 					align="start"
 					collisionAvoidance={{ side: "none", fallbackAxisSide: "none" }}
 					className="flex flex-col w-(--anchor-width) max-h-(--available-height) p-0 overflow-hidden"
