@@ -79,16 +79,23 @@ export function withheldEnvKeys({
 	);
 }
 
-/** scripts/dev.ts services to launch: the defaults plus every opted-in piece. */
+/** Browser apps that integration tests never reach. */
+const FRONTEND_DEV_SERVICES = ["vite", "checkout", "leaf"];
+
+/** scripts/dev.ts services to launch: the defaults plus every opted-in piece, minus frontends when serverOnly. */
 export function capyDevServices({
 	dir = CAPY_OPT_IN_DIR,
+	serverOnly = false,
 }: {
 	dir?: string;
+	serverOnly?: boolean;
 } = {}): string[] {
-	return [
+	const services = [
 		...DEFAULT_DEV_SERVICES,
 		...CAPY_OPT_INS.filter((name) => isOptedIn({ name, dir })).flatMap(
 			(name) => [...OPT_INS[name].devServices],
 		),
 	];
+	if (!serverOnly) return services;
+	return services.filter((name) => !FRONTEND_DEV_SERVICES.includes(name));
 }

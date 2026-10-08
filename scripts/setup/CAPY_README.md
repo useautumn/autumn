@@ -12,12 +12,61 @@ Configure this repository under **Settings → Project → Dev environment**:
 | --- | --- | --- |
 | Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl`, the pinned Stripe CLI and native Kafka, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
-| Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
-| App | `bun capy` | runs Startup if needed and starts the app in a detached tmux session |
+| Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files. Starts no app processes |
+| App (on demand) | `bun capy` | runs Startup (a near no-op when it already ran this boot) and starts the app in a detached tmux session |
 
 Initialize does not start services or create per-VM state, so it is safe to run
 during a snapshot build. Startup is blocking but bounded: its containers detach,
 its readiness checks finish, and the script exits as required by Capy v2.
+
+## The app is lazy
+
+Every Capy sleep is a reboot, so Startup only prepares the machine. Nothing
+listens on :3000 or :8080 until an agent asks for it. Editing code,
+typechecking and unit tests need nothing more. Start the app only when the task
+needs it:
+
+| Need | Command | Runs |
+| --- | --- | --- |
+| Integration tests (`bun t`) | `bun capy --server-only` | server, workers, cron, balance worker, `stripe listen` and backend opt-ins; no Vite or other frontends |
+| Dashboard, browser, webhooks by hand | `bun capy` | the full slim stack; expose port 3000 afterwards |
+| Stop the app, keep infra and DB | `bun capy stop` | kills the tmux session and every process under it |
+| Fresh start | `bun capy teardown` | see below |
+
+Integration tests talk to the server over HTTP on :8080 (Stripe webhook tests
+also need `stripe listen`), so they fail with "Unable to connect" against
+Startup alone. `bun t` prints a warning when the server is down on Capy. Unit
+tests need only Startup. A full `bun capy` replaces a running server-only stack;
+`bun capy --server-only` keeps a running full stack, since it is a superset.
+
+Startup and `bun capy` share a lock (`~/.autumn-capy/startup.lock`), so an
+agent that runs `bun capy` while the boot's Startup is still going waits for
+it. Provisioning then records a fingerprint in `~/.autumn-capy/provisioned`:
+the boot id, machine id, Trigger opt-in, migrations, SQL functions and
+`.env.local` contents. A later run with the same fingerprint skips Neon,
+migrations and setup-test after re-checking the infra, so `bun capy` only adds
+the app. A reboot, a pulled migration or an edited env file re-provisions;
+`bash scripts/setup/capy-startup.sh --force` always does.
+
+Measured on a Capy VM with the branch already provisioned:
+
+| | Before | After |
+| --- | --- | --- |
+| Startup (provision only) | 27 s | 25 s first run, 1.8 s repeat in the same boot |
+| `bun capy` after Startup | 47 s (re-provisioned) | 22 s full, 16 s `--server-only` |
+| Memory used, infra only | | 1.3 GB |
+| Memory used, server-only / full app | 4.1 GB full | 3.5 GB / 4.1 GB |
+
+## Teardown
+
+`bun capy teardown` returns the machine to its pre-Startup state: it stops the
+app, deletes this machine's Neon branch, removes the `autumn-capy` and
+`autumn-capy-trigger` Compose projects with their volumes, stops Kafka and
+deletes its data, deletes `.data/atom`, the generated `.env.local` files and
+everything under `~/.autumn-capy` except the opt-in markers. The next
+`bun capy` (or Startup) rebuilds from scratch on a fresh branch (same name) off
+`dw-template`; that takes about two minutes. Teardown refuses to run while
+Startup holds the lock.
 
 The old `.capy/settings.json` terminals and previews are intentionally gone.
 Project Setup is authoritative in v2, and Capy discovers listening HTTP services
@@ -91,8 +140,7 @@ serves `@autumn/shared` as one incrementally rebuilt bundle
 (`vite/viteSharedBundle.ts`), and watches files with inotify instead of
 polling.
 
-The application remains opt-in. Run the Setup command `dev` or `bun dev` when a
-task needs the full stack:
+Ports the app uses once started:
 
 | Port | Application |
 | --- | --- |
@@ -124,13 +172,14 @@ bun capy --no-alien   # back to the local Atom
 
 ## Provisioning model
 
-`scripts/capy/provision.ts` mints a random machine id on first run, persists it
-to `~/.autumn-capy/machine-id`, and hashes it into a `capy-<hash>` Neon branch
-name. Non-secret branch metadata plus generated local auth secrets live in the
-mode-`0600` file `~/.autumn-capy/state.json`. A resumed VM keeps its minted id
-and reuses that branch; a fresh filesystem mints a new id and derives a new
-branch. Hostnames are not used: VMs cloned from one image share a hostname,
-which previously collapsed every machine onto one shared branch.
+`scripts/capy/provision.ts` derives the machine id from Capy's per-machine
+`bindingId` (off Capy it mints one into `~/.autumn-capy/machine-id`) and hashes
+it into a `capy-<hash>` Neon branch name. Non-secret branch metadata plus
+generated local auth secrets live in the mode-`0600` file
+`~/.autumn-capy/state.json`; state baked into a snapshot by another machine is
+ignored. A resumed VM reuses its branch. Hostnames are not used: VMs cloned
+from one image share a hostname, which previously collapsed every machine onto
+one shared branch.
 
 The script writes managed values into:
 

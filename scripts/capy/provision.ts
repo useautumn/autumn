@@ -17,7 +17,9 @@
 //      with the per-machine DATABASE_URL + localhost service URLs.
 //
 // Run via `bun scripts/capy/provision.ts`. Idempotent: a second run is a
-// no-op for the Neon branch and refreshes env files in place.
+// no-op for the Neon branch and refreshes env files in place. A run in the
+// same boot with unchanged migrations, SQL functions and env files exits
+// right after the infra checks (see provisionStamp.ts); `--force` redoes it.
 //
 import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import {
@@ -47,6 +49,12 @@ import { sh } from "../dw/helpers/shell.ts";
 import { getMachineId, stateForMachine } from "./machineIdentity.ts";
 import { isOptedIn } from "./optIns.ts";
 import {
+	isProvisionCurrent,
+	provisionFingerprint,
+	readBootId,
+	writeProvisionStamp,
+} from "./provisionStamp.ts";
+import {
 	capyEnvFiles,
 	DRAGONFLY_PORT,
 	FAKECLOUD_PORT,
@@ -67,6 +75,7 @@ const SCRIPT_DIR = new URL(".", import.meta.url).pathname;
 const PROJECT_ROOT = join(SCRIPT_DIR, "..", "..");
 const CAPY_PREFIX = process.env.CAPY_PREFIX ?? join(homedir(), ".autumn-capy");
 const CAPY_STATE = join(CAPY_PREFIX, "state.json");
+const PROVISION_STAMP = join(CAPY_PREFIX, "provisioned");
 
 const NEON_TEMPLATE_BRANCH = "dw-template";
 
@@ -670,6 +679,32 @@ async function main(): Promise<void> {
 	]);
 	// fakecloud has no startup config for seeding queues; create them like bun dw does.
 	await ensureFakecloudQueues({ port: FAKECLOUD_PORT });
+
+	// Startup already provisioned this boot; `bun capy` then only adds the app.
+	const bootId = readBootId();
+	const fingerprint = () =>
+		bootId &&
+		provisionFingerprint({
+			repoRoot: PROJECT_ROOT,
+			bootId,
+			machineId,
+			optIns: triggerOptedIn ? ["trigger"] : [],
+		});
+	const currentFingerprint = fingerprint();
+	if (
+		currentFingerprint &&
+		!process.argv.includes("--force") &&
+		isProvisionCurrent({
+			stampPath: PROVISION_STAMP,
+			fingerprint: currentFingerprint,
+		})
+	) {
+		log(
+			"already provisioned this boot with the same migrations and env files; skipping (pass --force to redo)",
+		);
+		return;
+	}
+
 	const trigger = triggerOptedIn ? ensureTriggerProject() : undefined;
 
 	// 2. Neon auth + branch + migrations.
@@ -711,6 +746,14 @@ async function main(): Promise<void> {
 
 	runSetupTest(["--ensure"], directUrl);
 	runSetupTest(["--ensure-key"], directUrl);
+
+	const provisionedFingerprint = fingerprint();
+	if (provisionedFingerprint) {
+		writeProvisionStamp({
+			stampPath: PROVISION_STAMP,
+			fingerprint: provisionedFingerprint,
+		});
+	}
 
 	log(
 		`capy provision complete — run \`bun capy\` to start the stack (fresh=${created})`,

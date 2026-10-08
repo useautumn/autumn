@@ -125,3 +125,16 @@ EOF
 	tail -20 "$dir/kafka.log" >&2 || true
 	return 1
 }
+
+stop_capy_kafka() {
+	local pid_file="${CAPY_PREFIX:?CAPY_PREFIX is required}/kafka/kafka.pid"
+	capy_kafka_alive "$pid_file" || return 0
+	local pid _
+	pid="$(cat "$pid_file")"
+	kill "$pid"
+	for _ in $(seq 1 30); do
+		kill -0 "$pid" 2>/dev/null || return 0
+		sleep 1
+	done
+	kill -9 "$pid" 2>/dev/null || true
+}
