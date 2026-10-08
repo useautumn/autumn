@@ -1,6 +1,5 @@
 import type { BillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 import { carryReplacedSubscriptionDiscounts } from "./carryReplacedSubscriptionDiscounts";
 import {
 	replacedSubscriptionCreateParams,
@@ -14,7 +13,7 @@ type CarriedSettings = Partial<
 	>
 >;
 
-/** A subscription recreated for a backdate keeps the old one's discounts, payment, collection, tax and metadata. */
+/** Whatever the reason for a recreate, the new subscription keeps the old one's discounts, payment, collection, tax and metadata. */
 export const carryReplacedSubscriptionSettings = async ({
 	ctx,
 	billingContext,
@@ -26,7 +25,6 @@ export const carryReplacedSubscriptionSettings = async ({
 }): Promise<CarriedSettings> => {
 	const { replacedStripeSubscription } = billingContext;
 	if (!replacedStripeSubscription) return {};
-	if (!isBackdateRecreate({ billingContext })) return {};
 	if (billingContext.skipBillingChanges && !preview) return {};
 
 	return {

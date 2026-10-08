@@ -2,24 +2,27 @@ import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeResourceAlreadyExists } from "@/external/stripe/common/utils/isStripeResourceAlreadyExists";
+import { stripeRefToId } from "@/external/stripe/common/utils/stripeRefToId";
+import { isPromotionCodeRedeemable } from "@/external/stripe/coupons/isPromotionCodeRedeemable";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { subToDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/subToDiscounts";
 import { replacedSubscriptionPeriodEndMs } from "../../utils/replacedSubscriptionPeriodEndMs";
 import {
 	remainingDiscountMonths,
 	type SubscriptionRenewal,
 } from "./remainingDiscountMonths";
 
+type CarryInput = {
+	ctx: AutumnContext;
+	replacedStripeSubscription: Stripe.Subscription;
+	currentEpochMs: number;
+	preview: boolean;
+};
+
 const DEFAULT_RENEWAL: SubscriptionRenewal = {
 	interval: "month",
 	intervalCount: 1,
 };
-
-const subscriptionDiscountIds = (subscription: Stripe.Subscription) =>
-	new Set(
-		(subscription.discounts ?? []).map((discount) =>
-			typeof discount === "string" ? discount : discount.id,
-		),
-	);
 
 const subscriptionRenewal = (
 	subscription: Stripe.Subscription,
@@ -45,20 +48,25 @@ const remainingCoupon = ({
 	duration_in_months: months,
 });
 
-/** One copy per replaced subscription and remaining months, so a retried recreate reuses it. */
-const createCouponCopy = async ({
+/** One copy per replaced subscription and duration, so a retried recreate reuses it. */
+const copyCoupon = async ({
 	ctx,
 	coupon,
 	replacedStripeSubscription,
-}: {
-	ctx: AutumnContext;
+	preview,
+}: CarryInput & {
 	coupon: Stripe.Coupon;
-	replacedStripeSubscription: Stripe.Subscription;
-}) => {
+}): Promise<StripeDiscountWithCoupon> => {
+	const durationSuffix =
+		coupon.duration === "repeating"
+			? `${coupon.duration_in_months}m`
+			: coupon.duration;
+	const id = `${coupon.id}_${replacedStripeSubscription.id}_${durationSuffix}`;
+	if (preview) return { source: { coupon: { ...coupon, id } } };
+
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const id = `${coupon.id}_${replacedStripeSubscription.id}_${coupon.duration_in_months}m`;
 	try {
-		return await stripeCli.coupons.create({
+		const copy = await stripeCli.coupons.create({
 			id,
 			name: coupon.name ?? undefined,
 			percent_off: coupon.percent_off ?? undefined,
@@ -69,35 +77,74 @@ const createCouponCopy = async ({
 			applies_to: coupon.applies_to ?? undefined,
 			metadata: coupon.metadata ?? undefined,
 		});
+		return { source: { coupon: copy } };
 	} catch (error) {
 		if (!isStripeResourceAlreadyExists(error)) throw error;
-		return await stripeCli.coupons.retrieve(id);
+		return { source: { coupon: await stripeCli.coupons.retrieve(id) } };
 	}
 };
 
-const carryDiscount = async ({
+/** The promotion code the discount was redeemed with, when Stripe still accepts it for this customer. */
+const redeemablePromotionCodeId = async ({
 	ctx,
 	discount,
 	replacedStripeSubscription,
 	currentEpochMs,
-	preview,
-}: {
-	ctx: AutumnContext;
-	discount: StripeDiscountWithCoupon;
-	replacedStripeSubscription: Stripe.Subscription;
-	currentEpochMs: number;
-	preview: boolean;
-}): Promise<StripeDiscountWithCoupon | undefined> => {
-	const { coupon } = discount.source;
-	if (coupon.duration === "forever") return { source: { coupon } };
-	if (coupon.duration !== "repeating" || !discount.end) return undefined;
+}: CarryInput & { discount: StripeDiscountWithCoupon }) => {
+	const stripeDiscount = replacedStripeSubscription.discounts.find(
+		(replacedDiscount) => stripeRefToId(replacedDiscount) === discount.id,
+	);
+	const promotionCodeId =
+		typeof stripeDiscount === "object"
+			? stripeRefToId(stripeDiscount.promotion_code)
+			: undefined;
+	const stripeCustomerId = stripeRefToId(replacedStripeSubscription.customer);
+	if (!promotionCodeId || !stripeCustomerId) return undefined;
 
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const promotionCode =
+		await stripeCli.promotionCodes.retrieve(promotionCodeId);
+	return isPromotionCodeRedeemable({
+		promotionCode,
+		stripeCustomerId,
+		currentEpochMs,
+	})
+		? promotionCodeId
+		: undefined;
+};
+
+/**
+ * A discount id can't move to another subscription, so the discount is redeemed again from the same
+ * promotion code or coupon; one Stripe no longer accepts is applied as a copy with the same terms.
+ */
+const redeemAgain = async ({
+	discount,
+	coupon,
+	...input
+}: CarryInput & {
+	discount: StripeDiscountWithCoupon;
+	coupon: Stripe.Coupon;
+}): Promise<StripeDiscountWithCoupon> => {
+	const promotionCodeId = await redeemablePromotionCodeId({
+		...input,
+		discount,
+	});
+	if (promotionCodeId) return { source: { coupon }, promotionCodeId };
+	if (coupon.valid) return { source: { coupon } };
+	return copyCoupon({ ...input, coupon });
+};
+
+const repeatingMonthsLeft = ({
+	discount,
+	replacedStripeSubscription,
+	currentEpochMs,
+}: CarryInput & { discount: StripeDiscountWithCoupon }) => {
 	const periodEndMs = replacedSubscriptionPeriodEndMs({
 		replacedStripeSubscription,
 	});
-	if (periodEndMs === undefined) return undefined;
+	if (!discount.end || periodEndMs === undefined) return 0;
 
-	const months = remainingDiscountMonths({
+	return remainingDiscountMonths({
 		currentEpochMs,
 		billingCycleAnchorMs: secondsToMs(
 			replacedStripeSubscription.billing_cycle_anchor,
@@ -106,52 +153,47 @@ const carryDiscount = async ({
 		renewal: subscriptionRenewal(replacedStripeSubscription),
 		discountEndMs: secondsToMs(discount.end),
 	});
+};
+
+/** A repeating coupon restarts its full duration when redeemed again, so a part-used one moves as a copy for the months left. */
+const carryDiscount = async ({
+	discount,
+	...input
+}: CarryInput & {
+	discount: StripeDiscountWithCoupon;
+}): Promise<StripeDiscountWithCoupon | undefined> => {
+	const { coupon } = discount.source;
+	if (coupon.duration !== "repeating") {
+		return redeemAgain({ ...input, discount, coupon });
+	}
+
+	const months = repeatingMonthsLeft({ ...input, discount });
 	if (months === 0) return undefined;
-
-	const carriedCoupon = remainingCoupon({ coupon, months });
-	if (preview) return { source: { coupon: carriedCoupon } };
-
-	return {
-		source: {
-			coupon: await createCouponCopy({
-				ctx,
-				coupon: carriedCoupon,
-				replacedStripeSubscription,
-			}),
-		},
-	};
+	if (months === coupon.duration_in_months) {
+		return redeemAgain({ ...input, discount, coupon });
+	}
+	return copyCoupon({ ...input, coupon: remainingCoupon({ coupon, months }) });
 };
 
 /**
- * A subscription's own discounts can't be reused on another one, so each moves as its coupon:
- * forever as is, repeating for its remaining months; a once discount was already spent.
+ * The replaced subscription's discounts carry as Stripe would have kept applying them: Stripe drops a once
+ * discount when spent and a repeating one when it ends, so any still attached is unspent. Like billing setup,
+ * the subscription's own discounts take priority over the customer's.
  */
 export const carryReplacedSubscriptionDiscounts = async ({
-	ctx,
 	stripeDiscounts = [],
-	replacedStripeSubscription,
-	currentEpochMs,
-	preview,
-}: {
-	ctx: AutumnContext;
+	...input
+}: CarryInput & {
 	stripeDiscounts?: StripeDiscountWithCoupon[];
-	replacedStripeSubscription: Stripe.Subscription;
-	currentEpochMs: number;
-	preview: boolean;
 }): Promise<StripeDiscountWithCoupon[]> => {
-	const ownDiscountIds = subscriptionDiscountIds(replacedStripeSubscription);
+	const replacedDiscounts = await subToDiscounts({
+		ctx: input.ctx,
+		sub: input.replacedStripeSubscription,
+	});
+	if (replacedDiscounts.length === 0) return stripeDiscounts;
+
 	const carried = await Promise.all(
-		stripeDiscounts.map((discount) =>
-			discount.id && ownDiscountIds.has(discount.id)
-				? carryDiscount({
-						ctx,
-						discount,
-						replacedStripeSubscription,
-						currentEpochMs,
-						preview,
-					})
-				: discount,
-		),
+		replacedDiscounts.map((discount) => carryDiscount({ ...input, discount })),
 	);
 	return carried.filter(
 		(discount): discount is StripeDiscountWithCoupon => discount !== undefined,

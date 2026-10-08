@@ -1,6 +1,6 @@
 /**
- * A subscription recreated for a backdate takes over the old one's payment method, collection,
- * tax settings, metadata and discounts, with a repeating discount keeping only its remaining cycles.
+ * A recreated subscription, whatever the reason, takes over the old one's payment method, collection,
+ * tax settings, metadata and discounts, with a part-used repeating discount keeping only its remaining cycles.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -25,6 +25,7 @@ const coupon = (overrides: Partial<Stripe.Coupon>) =>
 		name: "Launch",
 		percent_off: 20,
 		duration: "forever",
+		valid: true,
 		...overrides,
 	}) as Stripe.Coupon;
 
@@ -52,7 +53,7 @@ const liveSubscription = (overrides: Partial<Stripe.Subscription> = {}) =>
 		days_until_due: 14,
 		default_tax_rates: [{ id: "txr_vat" }],
 		automatic_tax: { enabled: true },
-		discounts: ["di_forever", "di_once", "di_repeating"],
+		discounts: [],
 		billing_cycle_anchor: msToSeconds(PERIOD_END),
 		items: {
 			data: [
@@ -96,7 +97,7 @@ describe("carryReplacedSubscriptionSettings", () => {
 		expect(carried.userMetadata).toEqual({ team: "growth" });
 	});
 
-	test("a forever discount moves as its coupon, a used once discount drops, a repeating one keeps going", async () => {
+	test("forever and unspent once discounts are redeemed again from their coupon, a part-used repeating one moves as a copy", async () => {
 		const forever = subscriptionDiscount({
 			id: "di_forever",
 			couponOverrides: { id: "co_forever" },
@@ -118,7 +119,9 @@ describe("carryReplacedSubscriptionSettings", () => {
 		const carried = await carryReplacedSubscriptionSettings({
 			ctx,
 			billingContext: backdateContext({
-				stripeDiscounts: [forever, once, repeating],
+				replacedStripeSubscription: liveSubscription({
+					discounts: [forever, once, repeating] as Stripe.Discount[],
+				}),
 			}),
 			preview: true,
 		});
@@ -130,7 +133,8 @@ describe("carryReplacedSubscriptionSettings", () => {
 			})),
 		).toEqual([
 			{ id: undefined, couponId: "co_forever" },
-			{ id: undefined, couponId: "co_repeating" },
+			{ id: undefined, couponId: "co_once" },
+			{ id: undefined, couponId: "co_repeating_sub_live_2m" },
 		]);
 	});
 
@@ -167,12 +171,16 @@ describe("carryReplacedSubscriptionSettings", () => {
 
 		const carried = await carryReplacedSubscriptionSettings({
 			ctx,
-			billingContext: backdateContext({ stripeDiscounts: [repeating] }),
+			billingContext: backdateContext({
+				replacedStripeSubscription: liveSubscription({
+					discounts: [repeating] as Stripe.Discount[],
+				}),
+			}),
 			preview: true,
 		});
 
 		expect(carried.stripeDiscounts?.[0]?.source.coupon).toMatchObject({
-			id: "co_repeating",
+			id: "co_repeating_sub_live_2m",
 			duration: "repeating",
 			duration_in_months: 2,
 		});
@@ -199,6 +207,53 @@ describe("carryReplacedSubscriptionSettings", () => {
 		).toBeDefined();
 	});
 
+	test("a repeating discount with its full duration left is redeemed again from the same coupon", async () => {
+		const repeating = subscriptionDiscount({
+			id: "di_repeating",
+			couponOverrides: {
+				id: "co_repeating",
+				duration: "repeating",
+				duration_in_months: 2,
+			},
+			endMs: addMonths(PERIOD_END, 2).getTime(),
+		});
+
+		const carried = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({
+				replacedStripeSubscription: liveSubscription({
+					discounts: [repeating] as Stripe.Discount[],
+				}),
+			}),
+			preview: true,
+		});
+
+		expect(carried.stripeDiscounts?.[0]?.source.coupon.id).toBe("co_repeating");
+	});
+
+	test("a coupon Stripe no longer accepts moves as a copy with the same terms", async () => {
+		const usedUp = subscriptionDiscount({
+			id: "di_forever",
+			couponOverrides: { id: "co_forever", valid: false, max_redemptions: 1 },
+		});
+
+		const carried = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({
+				replacedStripeSubscription: liveSubscription({
+					discounts: [usedUp] as Stripe.Discount[],
+				}),
+			}),
+			preview: true,
+		});
+
+		expect(carried.stripeDiscounts?.[0]?.source.coupon).toMatchObject({
+			id: "co_forever_sub_live_forever",
+			duration: "forever",
+			percent_off: 20,
+		});
+	});
+
 	test("a customer's own discount isn't the subscription's to move", async () => {
 		const customerDiscount = subscriptionDiscount({
 			id: "di_customer",
@@ -214,12 +269,27 @@ describe("carryReplacedSubscriptionSettings", () => {
 		expect(carried.stripeDiscounts).toEqual([customerDiscount]);
 	});
 
-	test("nothing is carried when no live subscription is recreated", async () => {
+	test("a recreate for any reason carries, not only a backdate", async () => {
+		const carried = await carryReplacedSubscriptionSettings({
+			ctx,
+			billingContext: backdateContext({
+				subscriptionBackdateStartMs: undefined,
+				replacedStripeSubscription: liveSubscription({ status: "unpaid" }),
+			}),
+			preview: true,
+		});
+
+		expect(carried.carriedSubscriptionParams?.collection_method).toBe(
+			"send_invoice",
+		);
+	});
+
+	test("nothing is carried when no subscription is recreated", async () => {
 		expect(
 			await carryReplacedSubscriptionSettings({
 				ctx,
 				billingContext: backdateContext({
-					replacedStripeSubscription: liveSubscription({ status: "unpaid" }),
+					replacedStripeSubscription: undefined,
 				}),
 				preview: true,
 			}),

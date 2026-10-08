@@ -32,7 +32,6 @@ export type SubscriptionWarningContext = Pick<
 	| "subscriptionBackdateStartMs"
 	| "stripeSubscription"
 	| "replacedStripeSubscription"
-	| "stripeDiscounts"
 	| "trialContext"
 	| "billingStartsAt"
 	| "accessStartsAt"
@@ -251,35 +250,6 @@ const pastDueInvoiceWarnings = ({
 			}))
 		: [];
 
-const discountCoupon = (discount: string | Stripe.Discount) => {
-	if (typeof discount === "string") return undefined;
-	const coupon = discount.source?.coupon;
-	return typeof coupon === "object" && coupon ? coupon : undefined;
-};
-
-const droppedDiscountWarnings = ({
-	replacedStripeSubscription,
-	stripeDiscounts = [],
-}: {
-	replacedStripeSubscription: Stripe.Subscription;
-	stripeDiscounts?: BillingContext["stripeDiscounts"];
-}): Warning[] => {
-	const carriedCouponIds = new Set(
-		stripeDiscounts.map((discount) => discount.source.coupon.id),
-	);
-	return (replacedStripeSubscription.discounts ?? [])
-		.map(discountCoupon)
-		.filter((coupon) => coupon && !carriedCouponIds.has(coupon.id))
-		.map((coupon) => ({
-			type: "discount_not_carried",
-			...warningText([
-				plainText("Discount"),
-				boldText(coupon?.name ?? coupon?.id ?? ""),
-				plainText("from the cancelled subscription is not carried over."),
-			]),
-		}));
-};
-
 const trialEndedWarning = ({
 	stripeSubscription,
 	trialContext,
@@ -326,10 +296,6 @@ export const subscriptionStateToWarnings = ({
 				...(stripeVoidsOpenInvoices(replacedStripeSubscription)
 					? []
 					: openInvoiceWarnings(replacedOpenInvoices)),
-				...droppedDiscountWarnings({
-					replacedStripeSubscription,
-					stripeDiscounts: billingContext.stripeDiscounts,
-				}),
 			]
 		: [];
 

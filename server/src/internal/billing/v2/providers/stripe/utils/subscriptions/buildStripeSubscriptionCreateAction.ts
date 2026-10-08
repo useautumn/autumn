@@ -28,9 +28,13 @@ export const buildStripeSubscriptionCreateAction = ({
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
+	const sendsInvoice =
+		!!billingContext.invoiceMode ||
+		billingContext.carriedSubscriptionParams?.collection_method ===
+			"send_invoice";
 	// Stripe rejects trial_settings.missing_payment_method together with send_invoice.
 	const freeTrialNoCardRequired =
-		trialContext?.cardRequired === false && !billingContext.invoiceMode;
+		trialContext?.cardRequired === false && !sendsInvoice;
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const skipsBackdatedCycles =

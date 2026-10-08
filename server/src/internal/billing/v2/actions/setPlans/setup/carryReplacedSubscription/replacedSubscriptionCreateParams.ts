@@ -1,14 +1,12 @@
 import type { BillingContext } from "@autumn/shared";
 import type Stripe from "stripe";
+import { stripeRefToId } from "@/external/stripe/common/utils/stripeRefToId";
 
 const AUTUMN_METADATA_PREFIX = "autumn_";
 
 type CarriedSubscriptionParams = NonNullable<
 	BillingContext["carriedSubscriptionParams"]
 >;
-
-const expandableId = (value: string | { id: string } | null) =>
-	typeof value === "string" ? value : value?.id;
 
 /** The payment, collection and tax settings the replaced subscription was created with. */
 export const replacedSubscriptionCreateParams = ({
@@ -25,13 +23,13 @@ export const replacedSubscriptionCreateParams = ({
 		automatic_tax: automaticTax,
 	} = replacedStripeSubscription;
 
-	const paymentMethodId = expandableId(defaultPaymentMethod);
-	const sourceId = expandableId(defaultSource);
+	const paymentMethodId = stripeRefToId(defaultPaymentMethod);
+	const sourceId = stripeRefToId(defaultSource);
 	return {
 		...(paymentMethodId && { default_payment_method: paymentMethodId }),
 		...(sourceId && { default_source: sourceId }),
+		collection_method: collectionMethod,
 		...(collectionMethod === "send_invoice" && {
-			collection_method: collectionMethod,
 			days_until_due: daysUntilDue ?? undefined,
 		}),
 		...(defaultTaxRates?.length && {

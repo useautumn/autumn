@@ -126,7 +126,6 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"subscription_replaced",
 	"new_stripe_subscription",
 	"open_invoice_not_collected",
-	"discount_not_carried",
 	"trial_ended",
 	"scheduled_cancel_changed",
 	"interval_change_invoices_now",
