@@ -30,6 +30,8 @@ const TOTAL_VALUE = "font-semibold text-foreground tabular-nums";
 const PINNED_LEFT_SHADOW = "shadow-[6px_0_8px_-4px_rgba(0,0,0,0.18)]";
 const PINNED_RIGHT_SHADOW = "shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.18)]";
 // Varied widths so the placeholder reads like real numbers, not a uniform grid.
+// The tray is near-white in light mode, so the bars need more than the default skeleton fill.
+const SKELETON_FILL = "bg-tertiary-foreground/15";
 const SKELETON_VALUE_WIDTHS = ["w-9", "w-7", "w-10", "w-8", "w-6"];
 const SKELETON_NAME_WIDTHS = ["w-28", "w-20", "w-24", "w-16"];
 
@@ -100,6 +102,7 @@ const skeletonCell = ({ seed }: { seed: number }): TableCell => ({
 		<Skeleton
 			className={cn(
 				"inline-block h-3 rounded-sm align-middle",
+				SKELETON_FILL,
 				SKELETON_VALUE_WIDTHS[seed % SKELETON_VALUE_WIDTHS.length],
 			)}
 		/>
@@ -129,10 +132,13 @@ const placeholderToModel = ({
 			key: String(index),
 			name: (
 				<>
-					<Skeleton className="size-2.5 shrink-0 rounded-[3px]" />
+					<Skeleton
+						className={cn("size-2.5 shrink-0 rounded-[3px]", SKELETON_FILL)}
+					/>
 					<Skeleton
 						className={cn(
 							"h-3 rounded-sm",
+							SKELETON_FILL,
 							SKELETON_NAME_WIDTHS[index % SKELETON_NAME_WIDTHS.length],
 						)}
 					/>

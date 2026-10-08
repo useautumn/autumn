@@ -8,8 +8,7 @@ import { useEnv } from "@/utils/envUtils";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsBarChart } from "./AnalyticsGraph";
 import type { EventRow, EventsData } from "./components/analytics-types";
-import { ChartSkeleton } from "./components/ChartSkeleton";
-import { FirstLoadNotice } from "./components/FirstLoadNotice";
+import { ChartLoadingStubs } from "./components/ChartLoadingStubs";
 import { QueryStrip } from "./components/query/QueryStrip";
 import {
 	type TablePlaceholder,
@@ -34,6 +33,7 @@ import {
 	predictBinStarts,
 	setCachedPlotInsets,
 } from "./utils/chartGeometry";
+import { chartGeometryOf, chartLoadingState } from "./utils/chartLoadingState";
 import { deductionsToEventsData } from "./utils/deductionsToEventsData";
 import { SOURCE_FEATURE_GROUP } from "./utils/displayLabels";
 import { dropZeroRowsKeepingPeriods } from "./utils/dropZeroRowsKeepingPeriods";
@@ -56,8 +56,9 @@ import {
 } from "./utils/transformGroupedChartData";
 
 const MAX_CHART_SERIES = 30;
-// Dimmed enough to read as stale, not so much that the chart blinks out.
-const STALE_OPACITY = 0.6;
+// The last result stays readable behind a load that only changes the data.
+const STALE_CHART_OPACITY = 0.35;
+const STALE_TABLE_OPACITY = 0.5;
 // Matches the default of charting the top three events.
 const PLACEHOLDER_TABLE_ROWS = 3;
 
@@ -358,6 +359,9 @@ export const AnalyticsView = () => {
 		!isFeatureFlagsLoading &&
 		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
+	const { interval, bin_size, start, end } = queryStates;
+	const geometry = chartGeometryOf({ interval, binSize: bin_size, start, end });
+
 	const freshChart = useMemo<ShownChart | null>(
 		() =>
 			!queryLoading && chartData && chartConfig && chartData.data.length > 0
@@ -365,31 +369,57 @@ export const AnalyticsView = () => {
 						chartData,
 						chartConfig,
 						chartTicks,
-						interval: queryStates.interval,
+						geometry: chartGeometryOf({
+							interval,
+							binSize: bin_size,
+							start,
+							end,
+						}),
 					}
 				: null,
-		[queryLoading, chartData, chartConfig, chartTicks, queryStates.interval],
+		[
+			queryLoading,
+			chartData,
+			chartConfig,
+			chartTicks,
+			interval,
+			bin_size,
+			start,
+			end,
+		],
 	);
-	const { displayedChart, isStale } = useLastShownChart({
+	const lastChart = useLastShownChart({
 		chart: freshChart,
 		isLoading: queryLoading,
 	});
-	const isFirstLoad = queryLoading && !displayedChart;
+	const loadingState = queryLoading
+		? chartLoadingState({
+				current: geometry,
+				previous: lastChart?.geometry ?? null,
+			})
+		: null;
+	const isStale = loadingState === "dim";
+	const isShowingStubs = loadingState === "stubs";
+	const displayedChart = freshChart ?? (isStale ? lastChart : null);
 
-	// Fixed shape so the table changes once, when names and numbers land together.
-	const tablePlaceholder = useMemo<TablePlaceholder | null>(() => {
-		if (!isFirstLoad) return null;
-		const { interval, bin_size, start, end } = queryStates;
-		return {
-			rowCount: PLACEHOLDER_TABLE_ROWS,
-			periodLabels: predictBinStarts({
-				interval,
-				binSize: bin_size,
-				start,
-				end,
-			}).map((binStart) => formatBinStartLabel({ binStart, interval })),
-		};
-	}, [isFirstLoad, queryStates]);
+	// The new range's bins, known before any data: stubs on the chart, columns in the table.
+	const loadingBinStarts = useMemo(
+		() =>
+			isShowingStubs
+				? predictBinStarts({ interval, binSize: bin_size, start, end })
+				: null,
+		[isShowingStubs, interval, bin_size, start, end],
+	);
+	const tablePlaceholder = useMemo<TablePlaceholder | null>(
+		() =>
+			loadingBinStarts && {
+				rowCount: PLACEHOLDER_TABLE_ROWS,
+				periodLabels: loadingBinStarts.map((binStart) =>
+					formatBinStartLabel({ binStart, interval }),
+				),
+			},
+		[loadingBinStarts, interval],
+	);
 	const isEmpty = !queryLoading && !freshChart;
 
 	if (clickHouseDisabled) {
@@ -431,15 +461,16 @@ export const AnalyticsView = () => {
 						<div className="pb-8 shrink-0">
 							<div className="relative flex flex-col h-[300px]">
 								<AnimatePresence initial={false}>
-									{isFirstLoad && (
+									{loadingBinStarts && (
 										<motion.div
-											key="skeleton"
+											key="stubs"
 											className="absolute inset-0 flex flex-col"
 											exit={{ opacity: 0, transition: fade }}
 										>
-											<ChartSkeleton
+											<ChartLoadingStubs
+												binStarts={loadingBinStarts}
+												interval={interval}
 												geometry={plotInsets}
-												barCount={tablePlaceholder?.periodLabels.length ?? 0}
 											/>
 										</motion.div>
 									)}
@@ -451,7 +482,7 @@ export const AnalyticsView = () => {
 											className="absolute inset-0 flex flex-col"
 											initial={{ opacity: 0 }}
 											animate={{
-												opacity: isStale ? STALE_OPACITY : 1,
+												opacity: isStale ? STALE_CHART_OPACITY : 1,
 												transition: fade,
 											}}
 											exit={{ opacity: 0, transition: fade }}
@@ -472,7 +503,6 @@ export const AnalyticsView = () => {
 										</motion.div>
 									)}
 								</AnimatePresence>
-								<FirstLoadNotice active={isFirstLoad} />
 								{isEmpty && (
 									<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
 										<ChartBarIcon
@@ -490,18 +520,18 @@ export const AnalyticsView = () => {
 
 						<div className="flex-1 min-h-0 overflow-y-auto pb-2">
 							<motion.div
-								key={isFirstLoad ? "table-placeholder" : "table"}
+								key={isShowingStubs ? "table-placeholder" : "table"}
 								initial={{ opacity: 0 }}
-								animate={{ opacity: isStale ? STALE_OPACITY : 1 }}
+								animate={{ opacity: isStale ? STALE_TABLE_OPACITY : 1 }}
 								transition={fade}
 								inert={isStale}
 							>
 								<UsageBreakdownTable
 									chartData={displayedChart?.chartData ?? chartData}
 									chartConfig={displayedChart?.chartConfig ?? chartConfig}
-									interval={displayedChart?.interval ?? queryStates.interval}
+									interval={displayedChart?.geometry.interval ?? interval}
 									nameHeader={chartGroupBy ? "Series" : "Event"}
-									isLoading={isFirstLoad}
+									isLoading={isShowingStubs}
 									placeholder={tablePlaceholder}
 								/>
 							</motion.div>

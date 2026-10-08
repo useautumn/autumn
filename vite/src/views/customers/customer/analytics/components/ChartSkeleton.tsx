@@ -1,29 +1,36 @@
-import { Skeleton } from "@autumn/ui";
+import { motion, useReducedMotion } from "motion/react";
+import { cn } from "@/lib/utils";
 import {
 	barSpacing,
 	DEFAULT_PLOT_INSETS,
 	type PlotInsets,
 } from "../utils/chartGeometry";
+import { formatBinStartLabel } from "../utils/parseTimestamp";
 
-const Y_POSITIONS = [0, 25, 50, 75, 100] as const;
-const MIN_BAR_HEIGHT = 0.25;
-const BAR_HEIGHT_RANGE = 0.6;
+const Y_POSITIONS = [0, 25, 50, 75] as const;
+/** Roughly what recharts fits on the x-axis at dashboard widths. */
+const MAX_X_LABELS = 16;
+const SWEEP = {
+	duration: 1.6,
+	ease: "easeInOut",
+	repeat: Number.POSITIVE_INFINITY,
+} as const;
 
-/** A stable 25–85% height per bar, so the skeleton never reshuffles between renders. */
-const barHeight = (index: number) => {
-	const noise = Math.sin(index * 12.9898) * 43758.5453;
-	return MIN_BAR_HEIGHT + (noise - Math.floor(noise)) * BAR_HEIGHT_RANGE;
-};
-
-/** Static bars on the real plot geometry; the shared Skeleton pulse is its only motion. */
+/** The new range's bins as 6px stubs on the real axis; the bars grow out of them when data lands. */
 export const ChartSkeleton = ({
-	barCount,
+	binStarts,
+	interval,
+	isSweeping,
 	geometry = DEFAULT_PLOT_INSETS,
 }: {
-	barCount: number;
+	binStarts: number[];
+	interval: string;
+	isSweeping: boolean;
 	geometry?: PlotInsets;
 }) => {
-	const { barWidth } = barSpacing({ barCount });
+	const prefersReducedMotion = useReducedMotion();
+	const { barWidth } = barSpacing({ barCount: binStarts.length });
+	const labelEvery = Math.ceil(binStarts.length / MAX_X_LABELS);
 
 	return (
 		<div
@@ -42,17 +49,36 @@ export const ChartSkeleton = ({
 					style={{ top: `${top}%`, borderColor: "var(--chart-grid-stroke)" }}
 				/>
 			))}
-			<div className="absolute inset-0 flex items-end">
-				{Array.from({ length: barCount }, (_, index) => (
-					<div
-						key={index}
-						className="flex h-full min-w-0 flex-1 items-end justify-center"
-					>
-						<Skeleton
-							className="rounded-t-[3px] rounded-b-none"
-							style={{ width: barWidth, height: `${barHeight(index) * 100}%` }}
+			<div className="absolute inset-x-0 bottom-0 flex h-1.5 overflow-hidden">
+				{binStarts.map((binStart) => (
+					<div key={binStart} className="flex min-w-0 flex-1 justify-center">
+						<div
+							className="h-full rounded-t-[2px] bg-tertiary-foreground/20"
+							style={{ width: barWidth }}
 						/>
 					</div>
+				))}
+				{isSweeping && !prefersReducedMotion && (
+					// x is a share of the band's own width: -100% starts it off the left edge, 400% clears the right.
+					<motion.div
+						className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-foreground/15 to-transparent"
+						initial={{ x: "-100%" }}
+						animate={{ x: "400%" }}
+						transition={SWEEP}
+					/>
+				)}
+			</div>
+			<div className="absolute inset-x-0 top-full flex pt-1">
+				{binStarts.map((binStart, index) => (
+					<span
+						key={binStart}
+						className={cn(
+							"flex min-w-0 flex-1 justify-center whitespace-nowrap text-[11px] leading-4 text-tertiary-foreground",
+							index % labelEvery !== 0 && "invisible",
+						)}
+					>
+						{formatBinStartLabel({ binStart, interval })}
+					</span>
 				))}
 			</div>
 		</div>
