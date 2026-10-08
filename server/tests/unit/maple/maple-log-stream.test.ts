@@ -9,7 +9,9 @@ import {
 	createMapleLogStreams,
 	toMapleLogRecord,
 } from "@/external/maple/createMapleLogStreams.js";
-import { isMapleLog } from "@/external/maple/isMapleLog.js";
+import { parseMapleLog } from "@/external/maple/parseMapleLog.js";
+
+const isMapleLog = (line: string) => parseMapleLog(line) !== null;
 
 const requestLine = ({
 	name,
@@ -51,7 +53,7 @@ const stripeWebhookLine = `${JSON.stringify({
 	msg: "STRIPE invoice.paid org_x | evt_123",
 })}\n`;
 
-describe("isMapleLog", () => {
+describe("parseMapleLog", () => {
 	test("accepts billing requests and Stripe webhooks", () => {
 		expect(isMapleLog(billingLine)).toBe(true);
 		expect(
@@ -100,6 +102,26 @@ describe("isMapleLog", () => {
 		).toBe(false);
 	});
 
+	test("rejects billing-looking user data on non-billing requests", () => {
+		const forgedBodyLine = `${JSON.stringify({
+			level: "INFO",
+			req: {
+				query: { name: "POST /v1/check" },
+				body: { name: "POST /v1/billing.attach", stripe_event: {} },
+				name: "POST /v1/customers",
+			},
+			msg: "[200] /v1/customers (org_x) 5ms",
+		})}\n`;
+		const laterDataLine = `${JSON.stringify({
+			level: "INFO",
+			req: { name: "POST /v1/check" },
+			data: { name: "POST /v1/billing.attach" },
+			msg: "updated customer data",
+		})}\n`;
+		expect(isMapleLog(forgedBodyLine)).toBe(false);
+		expect(isMapleLog(laterDataLine)).toBe(false);
+	});
+
 	test("rejects other requests and non-request lines", () => {
 		expect(
 			isMapleLog(
@@ -123,7 +145,7 @@ describe("isMapleLog", () => {
 
 describe("toMapleLogRecord", () => {
 	test("maps a pino line to an OTLP record with shallow attributes", () => {
-		expect(toMapleLogRecord(stripeWebhookLine)).toEqual({
+		expect(toMapleLogRecord(JSON.parse(stripeWebhookLine))).toEqual({
 			body: "STRIPE invoice.paid org_x | evt_123",
 			severityText: "WARN",
 			severityNumber: 13,
