@@ -15,7 +15,7 @@ import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getValidatedTrackFeatureDeductions } from "@/internal/balances/track/utils/getValidatedTrackFeatureDeductions.js";
-import { isAsyncTrackEnabled } from "@/internal/misc/asyncTrack/asyncTrackStore.js";
+import { isQueuedTrack } from "@/internal/balances/track/utils/isQueuedTrack.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const handleTrack = createRoute({
@@ -36,9 +36,7 @@ async function track(
 	const body = c.req.valid("json");
 	const ctx = c.get("ctx");
 
-	const isAsync =
-		body.async !== false ||
-		isAsyncTrackEnabled({ orgId: ctx.org.id, orgSlug: ctx.org.slug });
+	const isAsync = isQueuedTrack({ ctx, body });
 
 	const featureDeductions = getValidatedTrackFeatureDeductions({ ctx, body });
 
