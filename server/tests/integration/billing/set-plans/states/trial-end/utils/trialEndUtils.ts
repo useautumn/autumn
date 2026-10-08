@@ -40,11 +40,7 @@ const ANCHOR_DAYS = 8;
 const TRIAL_INVOICE_TOTALS = [0, 0];
 
 /** Pro and an add-on trialing on one subscription, with usage, ended now and anchored 8 days out. */
-const setupTrialingPlans = async ({
-	customerId,
-}: {
-	customerId: string;
-}) => {
+const setupTrialingPlans = async ({ customerId }: { customerId: string }) => {
 	const pro = products.base({
 		id: "pro540",
 		items: [

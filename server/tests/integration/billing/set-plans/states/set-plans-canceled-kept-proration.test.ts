@@ -196,11 +196,11 @@ const proratedStub = ({
 	});
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans canceled kept: unset proration defaults to none and charges nothing until the old period end")}`,
+	`${chalk.yellowBright("set-plans canceled kept: unset proration prorates like attach, charging the stub to the old period end")}`,
 	async () => {
 		await relistAndExpectKeptCycle({
 			customerId: "set-plans-canceled-kept-unset",
-			expectedStub: () => 0,
+			expectedStub: proratedStub,
 		});
 	},
 );

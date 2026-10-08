@@ -1,6 +1,6 @@
 /**
  * set_plans on a trialing subscription keeps the trial in Stripe and Autumn. `free_trial: null` ends it in both by recreating
- * the subscription on the old trial end, billing nothing until then (the trial-end-anchor tests cover each proration).
+ * the subscription on the old trial end, billing nothing until then under none (the trial-end tests cover each proration).
  */
 
 import { expect, test } from "bun:test";
@@ -78,7 +78,11 @@ test.concurrent(
 			customer_id: customerId,
 			free_trial: null,
 			phases: [
-				{ starts_at: "now" as const, plans: [{ plan_id: proTrial.id }] },
+				{
+					starts_at: "now" as const,
+					proration_behavior: "none" as const,
+					plans: [{ plan_id: proTrial.id }],
+				},
 			],
 		};
 		const preview = await autumnV2_4.billing.previewSetPlans(setPlansParams);

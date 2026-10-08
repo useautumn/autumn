@@ -1,6 +1,7 @@
 import {
 	type CreateScheduleBillingContext,
 	isPastStartDate,
+	resolveProrationBehavior,
 	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	type SetPlansParamsV0,
 } from "@autumn/shared";
@@ -148,7 +149,9 @@ export const setupSetPlansBillingContext = async ({
 				billingContext: firstPhaseContext,
 			}),
 		}),
-		requestedProrationBehavior: immediatePhaseProrationBehavior({ params }),
+		requestedProrationBehavior: resolveProrationBehavior({
+			prorationBehavior: immediatePhaseProrationBehavior({ params }),
+		}),
 		requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
 			params,
 			billingContext,

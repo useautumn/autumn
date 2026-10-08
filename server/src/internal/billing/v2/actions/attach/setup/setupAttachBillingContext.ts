@@ -15,6 +15,7 @@ import {
 	orgDisableStripeWrites,
 	orgToReturnUrl,
 	resolveCustomerCurrency,
+	resolveProrationBehavior,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
@@ -370,7 +371,9 @@ export const setupAttachBillingContext = async ({
 			isOneOffAttach: isOneOffProduct({ product: attachProduct }),
 		})
 			? undefined
-			: params.proration_behavior,
+			: resolveProrationBehavior({
+					prorationBehavior: params.proration_behavior,
+				}),
 
 		invoiceMode,
 		paymentBehaviorIntent,

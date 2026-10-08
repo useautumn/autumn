@@ -19,6 +19,7 @@ import {
 	orgToReturnUrl,
 	RecaseError,
 	resolveCustomerCurrency,
+	resolveProrationBehavior,
 } from "@autumn/shared";
 import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
 import type Stripe from "stripe";
@@ -509,7 +510,9 @@ export const setupImmediateMultiProductBillingContext = async ({
 		resetCycleAnchorMs,
 		billingStartsAt,
 		subscriptionBackdateStartMs,
-		requestedProrationBehavior: params.billing_behavior,
+		requestedProrationBehavior: resolveProrationBehavior({
+			prorationBehavior: params.billing_behavior,
+		}),
 		requestedBillingCycleAnchor,
 		// Multi-attach has no carry_over_balances param, so there is no reset
 		// cycle to round the refund to — only the no-partial-refund flag applies.

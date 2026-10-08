@@ -1,7 +1,7 @@
 /**
  * Ending a live trial with a future billing_cycle_anchor recreates the subscription on the anchor: Stripe's update can't
- * anchor on a date and always invoices when a trial ends. none (the default) bills nothing until the anchor;
- * prorate_immediately and bill_difference bill the stub now.
+ * anchor on a date and always invoices when a trial ends. none bills nothing until the anchor; prorate_immediately,
+ * bill_difference and unset (attach's default) bill the stub now.
  *
  * Red (before):  the trial ended in place, billing a full $940 now plus the anchor reset's prorated period.
  * Green (after): a new subscription anchored on the date bills as previewed; balances refill at the trial end
@@ -13,12 +13,12 @@ import chalk from "chalk";
 import { endTrialOnAnchorAndExpect, proratedStub } from "./utils/trialEndUtils";
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans trial end anchor: unset proration defaults to none, billing nothing until the anchor")}`,
+	`${chalk.yellowBright("set-plans trial end anchor: unset proration prorates like attach, billing the stub to the anchor now")}`,
 	async () => {
 		await endTrialOnAnchorAndExpect({
 			customerId: "set-plans-trial-anchor-unset",
 			anchorSource: "requested",
-			expectedStub: () => 0,
+			expectedStub: proratedStub,
 		});
 	},
 );
@@ -66,7 +66,7 @@ test.concurrent(
 			customerId: "set-plans-trial-anchor-carry",
 			anchorSource: "requested",
 			carriesUsage: true,
-			expectedStub: () => 0,
+			expectedStub: proratedStub,
 		});
 	},
 );

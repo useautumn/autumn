@@ -88,7 +88,7 @@ const keptCycle = (billingContext: CreateScheduleBillingContext) =>
 	});
 
 describe(chalk.yellowBright("setupKeptSubscriptionCycle"), () => {
-	test("anchors the new subscription on the cancelled one's period end with no proration", () => {
+	test("anchors the new subscription on the cancelled one's period end, leaving proration as requested", () => {
 		expect(
 			keptCycle(
 				proRequestedAgain({
@@ -99,7 +99,7 @@ describe(chalk.yellowBright("setupKeptSubscriptionCycle"), () => {
 			),
 		).toEqual({
 			billingCycleAnchorMs: PERIOD_END,
-			requestedProrationBehavior: "none",
+			requestedProrationBehavior: undefined,
 		});
 	});
 
