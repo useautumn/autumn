@@ -96,6 +96,10 @@ install_capy_kafka "[capy-init]"
 log "bun install --frozen-lockfile (workspace deps)"
 ( cd "$REPO_ROOT" && bun install --frozen-lockfile )
 
+# Every Kafka client is librdkafka's addon; it compiles once (~15 min) and the snapshot keeps the cache.
+log "building the librdkafka addon"
+( cd "$REPO_ROOT" && bun run --cwd packages/librdkafka build )
+
 # Pull local infrastructure into the snapshot. The ngrok profile is
 # intentionally excluded; Capy v2 discovers listening services directly.
 log "pulling local service images"

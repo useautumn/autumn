@@ -1,7 +1,6 @@
 import { expect, spyOn, test } from "bun:test";
-import type { OwnershipConsumer } from "@autumn/kafka";
+import type { OwnershipConsumer, ProducerRecord } from "@autumn/kafka";
 import * as kafkaPackage from "@autumn/kafka";
-import type { ProducerRecord } from "kafkajs";
 import {
 	type BalanceWorkerKafka,
 	createBalanceWorkerKafka,

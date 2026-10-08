@@ -1,5 +1,5 @@
 import type { MiscCache } from "@autumn/cache";
-import type { Admin } from "kafkajs";
+import type { Admin } from "@autumn/kafka";
 
 /** What "ready to be promoted" means: the log and each job's group answer, and both stores herald writes to. */
 export type HeraldReadinessProbes = {

@@ -10,9 +10,9 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
 import {
 	type CatalogInvalidationConsumer,
+	createKafka,
 	createKafkaClient,
 	createKafkaTransport,
-	KafkaWithSettledTopicOffsets,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresClient } from "@autumn/postgres";
@@ -69,7 +69,7 @@ export function createHerald({
 	config: { env: HeraldEnv };
 }): Herald {
 	const { env } = config;
-	const kafka = new KafkaWithSettledTopicOffsets(
+	const kafka = createKafka(
 		createKafkaClient({
 			clientId: `herald-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,

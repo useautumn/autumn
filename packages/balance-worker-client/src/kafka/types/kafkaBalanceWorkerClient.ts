@@ -2,8 +2,8 @@ import type {
 	KafkaSaslCredentials,
 	KafkaSender,
 	OwnershipKafka,
+	ProducerConfig,
 } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
 import type { PartitionOwners } from "../../routing/types/routing.js";
 
 export type BalanceWorkerProducer = KafkaSender & {
