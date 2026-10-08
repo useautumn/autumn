@@ -104,11 +104,12 @@ export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
 export const BALANCE_WORKER_EVICTS_LOGGED = true;
 
 /** How long a revoked partition keeps serving while it waits for a successor's
- *  `ready`. A successor prepares in under a second; past this the old owner
- *  assumes nobody is coming and releases the way it always did. Must stay well
- *  inside the deploy's stop timeout (90s in prod), since a graceful stop waits
- *  this long per partition wave. */
-export const BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS = 5_000;
+ *  `ready`. Under KIP-848 the successor is only assigned on its next heartbeat
+ *  (the broker's group.consumer.heartbeat.interval.ms, 5s), then prepares in
+ *  under a second; past this the old owner assumes nobody is coming and
+ *  releases the way it always did. Must stay well inside the deploy's stop
+ *  timeout (90s in prod), since a graceful stop waits this long per partition wave. */
+export const BALANCE_WORKER_HANDOFF_READY_TIMEOUT_MS = 15_000;
 /** How long a prepared successor waits to be named owner after announcing
  *  `ready`. The predecessor only has to drain accepted work, normally one
  *  track latency; past this it is dead or stuck and the successor claims for
