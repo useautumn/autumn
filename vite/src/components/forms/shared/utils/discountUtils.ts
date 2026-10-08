@@ -1,9 +1,23 @@
-import type { AttachDiscount } from "@autumn/shared";
+import type { AttachDiscount, RemoveDiscount } from "@autumn/shared";
+import { z } from "zod/v4";
 
 export type DiscountMode = "reward" | "promo";
 
 /** Form discount with unique ID for stable React keys */
 export type FormDiscount = AttachDiscount & { _id: string };
+
+/** New discount rows, plus the applied discounts marked for removal. */
+export const DiscountsFormFieldsSchema = z.object({
+	discounts: z.custom<FormDiscount[]>(),
+	removedRewardIds: z.array(z.string()),
+});
+
+export type DiscountsFormFields = z.infer<typeof DiscountsFormFieldsSchema>;
+
+export const EMPTY_DISCOUNTS_FORM_VALUES: DiscountsFormFields = {
+	discounts: [],
+	removedRewardIds: [],
+};
 
 let discountIdCounter = 0;
 const generateDiscountId = (): string => {
@@ -79,4 +93,23 @@ export const filterValidDiscounts = (
 			return false;
 		}),
 	);
+};
+
+/** Only what changed: picked rows go to `discounts`, marked ones to `remove_discounts`, untouched ones are left to the server. */
+export const buildDiscountParams = ({
+	discounts,
+	removedRewardIds,
+}: DiscountsFormFields): {
+	discounts?: AttachDiscount[];
+	remove_discounts?: RemoveDiscount[];
+} => {
+	const addedDiscounts = filterValidDiscounts(discounts);
+	return {
+		...(addedDiscounts.length > 0 && { discounts: addedDiscounts }),
+		...(removedRewardIds.length > 0 && {
+			remove_discounts: removedRewardIds.map((rewardId) => ({
+				reward_id: rewardId,
+			})),
+		}),
+	};
 };

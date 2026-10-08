@@ -11,6 +11,7 @@ import {
 	anchorSummary,
 	carryOverSummary,
 	dateSummary,
+	discountsSummary,
 	editedTrialSummary,
 	prorationSummary,
 	renewsSummary,
@@ -19,6 +20,10 @@ import {
 } from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import { CarryOverConfigRow } from "@/components/forms/shared/CarryOverConfigRow";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import {
+	DISCOUNTS_FIELDS,
+	DiscountsFieldGroup,
+} from "@/components/forms/shared/discount-row/DiscountsFieldGroup";
 import { EndDateConfigRow } from "@/components/forms/shared/EndDateConfigRow";
 import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
@@ -59,7 +64,10 @@ export function CreateScheduleAdvancedSection() {
 		enablePlanImmediately,
 		carryOverUsages,
 		carryOverUsageFeatureIds,
+		discounts,
+		removedRewardIds,
 	} = formValues;
+	const appliedDiscounts = previewQuery.data?.discounts ?? [];
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",
@@ -94,6 +102,24 @@ export function CreateScheduleAdvancedSection() {
 		<BillingOptionSections
 			sections={{
 				charges: [
+					{
+						id: "discounts",
+						visible: rules.discounts.visible,
+						summary: discountsSummary({
+							discounts,
+							removedRewardIds,
+							appliedCount: appliedDiscounts.length,
+						}),
+						row: (
+							<DiscountsFieldGroup
+								form={form}
+								fields={DISCOUNTS_FIELDS}
+								description="Apply percentage or fixed-amount discounts to this subscription"
+								productId={undefined}
+								appliedDiscounts={appliedDiscounts}
+							/>
+						),
+					},
 					{
 						id: "proration",
 						visible: prorationRule.visible,

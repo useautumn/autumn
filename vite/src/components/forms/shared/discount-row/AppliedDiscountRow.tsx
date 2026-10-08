@@ -6,7 +6,8 @@ import {
 	XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { formatDiscountLabel } from "@/views/customers2/components/sheets/subscriptionDetailUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { appliedDiscountLabel } from "../utils/appliedDiscountLabel";
 
 export function AppliedDiscountRow({
 	discount,
@@ -17,6 +18,7 @@ export function AppliedDiscountRow({
 	removed: boolean;
 	onToggleRemoved: () => void;
 }) {
+	const { testClockFrozenTimeMs } = useCusQuery();
 	return (
 		<div className="flex items-center gap-2 h-8">
 			<TicketIcon
@@ -30,7 +32,10 @@ export function AppliedDiscountRow({
 					removed && "line-through text-tertiary-foreground",
 				)}
 			>
-				{formatDiscountLabel({ discount })}
+				{appliedDiscountLabel({
+					discount,
+					nowMs: testClockFrozenTimeMs ?? Date.now(),
+				})}
 			</span>
 			{removed && (
 				<span className="text-tertiary-foreground text-xs shrink-0">

@@ -6,7 +6,7 @@ import {
 	type DiscountOption,
 	stripeCouponAppliesToProduct,
 } from "@/components/forms/attach-v2/utils/discountOptionUtils";
-import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
+import type { FormDiscount } from "@/components/forms/shared/utils/discountUtils";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useStripeCouponsQuery } from "@/hooks/queries/useStripeCouponsQuery";
 import { useDiscountSearch } from "@/hooks/useDiscountSearch";

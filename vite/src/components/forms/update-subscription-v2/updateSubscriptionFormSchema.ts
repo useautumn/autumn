@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 
 import { z } from "zod/v4";
-import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
+import { DiscountsFormFieldsSchema } from "@/components/forms/shared/utils/discountUtils";
 import { RefundBehaviorSchema } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 
 export const UpdateSubscriptionFormSchema = z.object({
@@ -34,8 +34,7 @@ export const UpdateSubscriptionFormSchema = z.object({
 	refundBehavior: RefundBehaviorSchema.nullable(),
 	refundAmount: z.enum(["prorated", "full"]).nullable(),
 	noBillingChanges: z.boolean(),
-	discounts: z.custom<FormDiscount[]>(),
-	removedRewardIds: z.array(z.string()),
+	...DiscountsFormFieldsSchema.shape,
 });
 
 export type UpdateSubscriptionForm = z.infer<

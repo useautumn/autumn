@@ -4,6 +4,7 @@ import {
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/discountUtils";
 import { useAppForm } from "@/hooks/form/form";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -67,8 +68,7 @@ export function useUpdateSubscriptionForm({
 			refundBehavior: null,
 			refundAmount: null,
 			noBillingChanges: false,
-			discounts: [],
-			removedRewardIds: [],
+			...EMPTY_DISCOUNTS_FORM_VALUES,
 			...defaultOverrides,
 		} as UpdateSubscriptionForm,
 		validators: {

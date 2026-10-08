@@ -1,6 +1,6 @@
 import type { Reward } from "@autumn/shared";
 import { CouponDurationType } from "@autumn/shared";
-import type { FormDiscount } from "../../attach-v2/utils/discountUtils";
+import type { FormDiscount } from "@/components/forms/shared/utils/discountUtils";
 import type { CreateInvoiceForm } from "../createInvoiceFormSchema";
 
 const rewardIdsOf = ({ discounts }: { discounts: FormDiscount[] }) =>

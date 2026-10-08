@@ -391,6 +391,11 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const getDiscounts = useCallback(() => {
+		const { discounts, removedRewardIds } = form.store.state.values;
+		return { discounts, removedRewardIds };
+	}, [form.store]);
+
 	const buildRequestBody = useBuildCreateScheduleRequestBody({
 		customerId,
 		products,
@@ -406,6 +411,7 @@ export function CreateScheduleFormProvider({
 		getCarryOverUsages,
 		getFreeTrial,
 		getOmitFirstPhaseProration,
+		getDiscounts,
 		defaultFirstPhaseProration,
 		currentTrial,
 		catalogFreeTrial,
@@ -433,6 +439,8 @@ export function CreateScheduleFormProvider({
 		catalogFreeTrial,
 		defaultFirstPhaseProration,
 		omitFirstPhaseProration: prorationOverride !== undefined,
+		discounts: formValues.discounts,
+		removedRewardIds: formValues.removedRewardIds,
 	});
 
 	// Clear stale backdates when the selected scope can no longer use them.

@@ -1,7 +1,7 @@
 import type { InvoiceUsageEntry, ProductItem } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { FormDiscount } from "@/components/forms/shared/utils/discountUtils";
 import type { FormCustomLineItem } from "../attach-v2/attachFormSchema";
-import type { FormDiscount } from "../attach-v2/utils/discountUtils";
 
 const FeatureQuantitiesSchema = z.record(
 	z.string(),

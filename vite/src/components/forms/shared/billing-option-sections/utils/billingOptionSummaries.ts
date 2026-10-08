@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import {
 	type FormDiscount,
 	filterValidDiscounts,
-} from "@/components/forms/attach-v2/utils/discountUtils";
+} from "@/components/forms/shared/utils/discountUtils";
 import type { BillingCycleAnchorMode } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import type { BillingOptionSummary } from "../types/billingOptionSectionTypes";
 

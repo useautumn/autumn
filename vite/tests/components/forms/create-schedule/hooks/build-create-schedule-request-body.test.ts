@@ -1252,3 +1252,64 @@ describe("buildCreateScheduleRequestBody", () => {
 		);
 	});
 });
+
+describe("buildCreateScheduleRequestBody discounts", () => {
+	const products = [makeProduct({ id: "prod_1", items: [basePriceItem] })];
+	const now = Date.UTC(2027, 0, 1);
+	const bodyWith = (
+		params: Partial<Parameters<typeof buildCreateScheduleRequestBody>[0]>,
+	) =>
+		buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: null })],
+			products,
+			features,
+			nowMs: now,
+			...params,
+		});
+
+	test("leaves the subscription's discounts to the server when they're untouched", () => {
+		const body = bodyWith({ discounts: [], removedRewardIds: [] });
+
+		expect(body).not.toHaveProperty("discounts");
+		expect(body).not.toHaveProperty("remove_discounts");
+	});
+
+	test("sends a removed prefilled discount as remove_discounts", () => {
+		const body = bodyWith({ removedRewardIds: ["launch_20"] });
+
+		expect(body?.remove_discounts).toEqual([{ reward_id: "launch_20" }]);
+		expect(body).not.toHaveProperty("discounts");
+	});
+
+	test("sends an added discount as discounts, skipping empty rows", () => {
+		const body = bodyWith({
+			discounts: [
+				{ _id: "d1", reward_id: "loyalty_10" },
+				{ _id: "d2", reward_id: "" },
+			],
+		});
+
+		expect(body?.discounts).toEqual([{ reward_id: "loyalty_10" }]);
+		expect(body).not.toHaveProperty("remove_discounts");
+	});
+
+	test("a submit outside the invoice stage omits invoice_mode, so a send_invoice subscription stays send_invoice", () => {
+		const submit = (stageParams: BillingStageParams) =>
+			buildCreateScheduleStageRequestBody({
+				stageParams,
+				customerId: "cus_1",
+				phases: [schedulePhase({ startsAt: null })],
+				products,
+				features,
+				nowMs: now,
+				removedRewardIds: ["launch_20"],
+			});
+
+		expect(submit({})).not.toHaveProperty("invoice_mode");
+		expect(
+			submit({ useInvoice: true, netTermsDays: 45 })?.invoice_mode,
+		).toMatchObject({ enabled: true, net_terms_days: 45 });
+		expect(submit({})?.remove_discounts).toEqual([{ reward_id: "launch_20" }]);
+	});
+});
