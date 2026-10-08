@@ -89,6 +89,13 @@ export function BillingUsageAlertsFeatureSheet() {
 		planAlerts[0]?.origin?.type === "plan"
 			? planAlerts[0].origin.planName
 			: undefined;
+	// Size the threshold column to the longest label so large values like
+	// "2,500,000" don't overlap the description and rows stay aligned.
+	const longestThresholdChars = Math.max(
+		0,
+		...featureAlerts.map(({ alert }) => thresholdLabel(alert).length),
+	);
+	const thresholdColumnWidth = `max(3.5rem, ${longestThresholdChars}ch)`;
 
 	const ownAlerts = (): DbUsageAlert[] => [
 		...((selectedEntity ?? (fullCustomer as FullCustomer | undefined))
@@ -226,7 +233,10 @@ export function BillingUsageAlertsFeatureSheet() {
 											ownIndex !== null && openEdit({ index: ownIndex, alert })
 										}
 									>
-										<span className="w-14 shrink-0 text-base font-semibold text-foreground">
+										<span
+											className="shrink-0 whitespace-nowrap text-base font-semibold tabular-nums text-foreground"
+											style={{ minWidth: thresholdColumnWidth }}
+										>
 											{thresholdLabel(alert)}
 										</span>
 										<span className="flex min-w-0 flex-col gap-0.5">
