@@ -1,5 +1,5 @@
 import type { AppEnv, Metadata } from "@autumn/shared";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type { RepoContext } from "@/db/repoContext";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { hasStripeInvoicePayment } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
@@ -79,9 +79,13 @@ export const expirePendingPlanAtDueDate = async ({
 			},
 		});
 	} catch (error) {
+		const stripeError =
+			error instanceof Stripe.errors.StripeError
+				? { stripe_error_code: error.code, stripe_error_type: error.type }
+				: {};
 		ctx.logger.error(
 			`[expirePendingPlanAtDueDate] Failed for invoice ${params.stripeInvoice.id}; retrying next run: ${error}`,
-			{ error_type: "pending_plan_expiry_failed" },
+			{ error_type: "pending_plan_expiry_failed", ...stripeError },
 		);
 	}
 };
