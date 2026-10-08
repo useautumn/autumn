@@ -288,3 +288,62 @@ test.concurrent(
 		]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("invoices.create periods: base and seat descriptions leave the period to the line's own period")}`,
+	async () => {
+		const customerId = "inv-create-line-periods-description";
+		const parent = products.pro({ id: `pro-${customerId}`, items: [] });
+		const seat = products.base({
+			id: `seat-${customerId}`,
+			items: [items.monthlyPrice({ price: 15 })],
+		});
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [parent, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: seat.id,
+					included: 0,
+				}),
+			],
+		});
+
+		const { preview } = await createInvoice({
+			autumnV2_3,
+			params: {
+				customer_id: customerId,
+				preview: true,
+				period_start: JAN_1,
+				period_end: FEB_1,
+				plans: [
+					{
+						plan_id: parent.id,
+						license_quantities: [
+							{
+								license_plan_id: seat.id,
+								quantity: 2,
+								period_start: JAN_1,
+								period_end: JAN_16,
+							},
+						],
+					},
+				],
+			},
+		});
+
+		expect(
+			preview.lines.map((line) => ({
+				description: line.description,
+				period: [line.period_start, line.period_end],
+			})),
+		).toEqual([
+			{ description: parent.name, period: [JAN_1, FEB_1] },
+			{ description: `2x ${seat.name}`, period: [JAN_1, JAN_16] },
+		]);
+	},
+);
