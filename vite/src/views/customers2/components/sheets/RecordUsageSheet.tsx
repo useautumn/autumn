@@ -246,6 +246,8 @@ export function RecordUsageSheet() {
 			customer_id: customerId,
 			feature_id: trackingFeatureId,
 			value: parsedValue,
+			// The toast reads deductions from the response, so track must apply before responding.
+			async: false,
 		};
 
 		if (scopeEntityId) params.entity_id = scopeEntityId;

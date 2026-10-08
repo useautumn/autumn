@@ -13,8 +13,8 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { trackOnBalanceWorker } from "@/internal/balances/track/balanceWorker/trackOnBalanceWorker.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
-import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
+import { getValidatedTrackFeatureDeductions } from "@/internal/balances/track/utils/getValidatedTrackFeatureDeductions.js";
 import { isQueuedTrack } from "@/internal/balances/track/utils/isQueuedTrack.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
@@ -38,6 +38,8 @@ async function track(
 
 	const isAsync = isQueuedTrack({ ctx, body });
 
+	const featureDeductions = getValidatedTrackFeatureDeductions({ ctx, body });
+
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
 		const { result, status } = await trackOnBalanceWorker({
 			ctx,
@@ -46,8 +48,6 @@ async function track(
 		});
 		return c.json(result, status);
 	}
-
-	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
 	if (isAsync) {
 		await runAsyncTrack({ ctx, body });

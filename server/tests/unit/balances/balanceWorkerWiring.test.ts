@@ -315,7 +315,9 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 		await expectSelectedPath({
 			response,
 			status: 202,
-			path: async ? ["balanceWorker"] : ["async-config", "balanceWorker"],
+			path: async
+				? ["feature-deductions", "balanceWorker"]
+				: ["async-config", "feature-deductions", "balanceWorker"],
 		});
 		expect(await response.json()).toEqual(balanceWorkerResponse);
 	}
@@ -323,7 +325,7 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 	await expectSelectedPath({
 		response: await postTrack({ async: true }),
 		status: 500,
-		path: ["balanceWorker"],
+		path: ["feature-deductions", "balanceWorker"],
 	});
 	expect(receivedFailure).toBe(balanceWorkerFailure);
 

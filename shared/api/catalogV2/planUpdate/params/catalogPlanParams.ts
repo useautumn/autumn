@@ -79,7 +79,8 @@ export const UpdateCatalogPlanParamsSchema = z
 			description: "Free trial. Omit to leave unchanged; null removes it.",
 		}),
 		config: ProductConfigParamsSchema.optional().meta({
-			description: "Miscellaneous plan-level configuration flags.",
+			description:
+				"Plan-level configuration flags. Omit to leave unchanged; when stated, it is the full set and any flag it omits is turned off.",
 		}),
 		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Plan-level billing controls used as customer defaults.",

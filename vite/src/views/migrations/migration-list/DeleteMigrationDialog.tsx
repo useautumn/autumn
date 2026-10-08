@@ -8,10 +8,8 @@ import {
 	DialogTitle,
 } from "@autumn/ui";
 import { toast } from "sonner";
-import {
-	type MigrationWithRunInfo,
-	useMigrationsQuery,
-} from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
+import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
 
 export function DeleteMigrationDialog({
 	migration,
@@ -22,7 +20,7 @@ export function DeleteMigrationDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const { deleteMigration, isDeleting } = useMigrationsQuery();
+	const { deleteMigration, isDeleting } = useMigrationMutations();
 
 	const handleDelete = async () => {
 		try {
