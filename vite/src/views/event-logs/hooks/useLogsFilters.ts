@@ -36,7 +36,11 @@ export const useLogsFilters = () => {
 		},
 		{ history: "push" },
 	);
-	return { filters, setFilters };
+	return {
+		filters,
+		setFilters,
+		propertyFilters: toPropertyFilters({ properties: filters.properties }),
+	};
 };
 
 /** Parses `key=value` (spaces allowed around `=`); null when either side is empty. */
@@ -59,30 +63,52 @@ export const parsePropertyFilter = ({
 const formatPropertyFilter = ({ key, value }: PropertyFilter) =>
 	`${key}=${value}`;
 
-/** The URL's property filters as a `filter_by` record, later keys winning. */
-export const toFilterBy = ({
+/** The URL's well-formed filters, one per key (later wins), capped at the API limit. */
+export const toPropertyFilters = ({
 	properties,
 }: {
 	properties: string[];
-}): Record<string, string> | undefined => {
-	const filterBy: Record<string, string> = {};
-	for (const raw of properties.slice(0, MAX_PROPERTY_FILTERS)) {
+}): PropertyFilter[] => {
+	const byKey = new Map<string, PropertyFilter>();
+	for (const raw of properties) {
 		const parsed = parsePropertyFilter({ raw });
-		if (parsed) filterBy[parsed.key] = parsed.value;
+		if (!parsed) continue;
+		byKey.delete(parsed.key);
+		byKey.set(parsed.key, parsed);
 	}
-	return Object.keys(filterBy).length > 0 ? filterBy : undefined;
+	return [...byKey.values()].slice(0, MAX_PROPERTY_FILTERS);
 };
 
-/** Adds a filter, replacing any existing filter on the same key. */
+/** The parsed property filters as a `filter_by` record. */
+export const toFilterBy = ({
+	propertyFilters,
+}: {
+	propertyFilters: PropertyFilter[];
+}): Record<string, string> | undefined =>
+	propertyFilters.length > 0
+		? Object.fromEntries(propertyFilters.map(({ key, value }) => [key, value]))
+		: undefined;
+
+/** The URL value after adding a filter; replaces any filter on the same key and drops malformed ones. */
 export const withPropertyFilter = ({
-	properties,
+	propertyFilters,
 	filter,
 }: {
-	properties: string[];
+	propertyFilters: PropertyFilter[];
 	filter: PropertyFilter;
 }): string[] => [
-	...properties.filter(
-		(raw) => parsePropertyFilter({ raw })?.key !== filter.key,
-	),
+	...withoutPropertyFilter({ propertyFilters, key: filter.key }),
 	formatPropertyFilter(filter),
 ];
+
+/** The URL value after removing the filter on `key`; drops malformed ones too. */
+export const withoutPropertyFilter = ({
+	propertyFilters,
+	key,
+}: {
+	propertyFilters: PropertyFilter[];
+	key: string;
+}): string[] =>
+	propertyFilters
+		.filter((filter) => filter.key !== key)
+		.map(formatPropertyFilter);

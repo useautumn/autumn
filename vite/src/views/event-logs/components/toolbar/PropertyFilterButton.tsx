@@ -12,29 +12,25 @@ import {
 	MAX_PROPERTY_FILTERS,
 	parsePropertyFilter,
 	useLogsFilters,
+	withoutPropertyFilter,
 	withPropertyFilter,
 } from "../../hooks/useLogsFilters";
 
 /** Adds a `key=value` property filter on Enter; Backspace on an empty draft drops the last one. */
 export const PropertyFilterButton = () => {
-	const { filters, setFilters } = useLogsFilters();
+	const { setFilters, propertyFilters } = useLogsFilters();
 	const [draft, setDraft] = useState("");
-	const isFull = filters.properties.length >= MAX_PROPERTY_FILTERS;
+	const isFull = propertyFilters.length >= MAX_PROPERTY_FILTERS;
+	const lastFilter = propertyFilters.at(-1);
 
 	const addDraft = () => {
 		const filter = parsePropertyFilter({ raw: draft });
 		if (!filter) return;
 		setFilters({
-			properties: withPropertyFilter({
-				properties: filters.properties,
-				filter,
-			}),
+			properties: withPropertyFilter({ propertyFilters, filter }),
 		});
 		setDraft("");
 	};
-
-	const removeLastFilter = () =>
-		setFilters({ properties: filters.properties.slice(0, -1) });
 
 	return (
 		<Popover>
@@ -56,8 +52,13 @@ export const PropertyFilterButton = () => {
 					onChange={(e) => setDraft(e.target.value)}
 					onKeyDown={(e) => {
 						if (e.key === "Enter") addDraft();
-						if (e.key === "Backspace" && !draft && filters.properties.length) {
-							removeLastFilter();
+						if (e.key === "Backspace" && !draft && lastFilter) {
+							setFilters({
+								properties: withoutPropertyFilter({
+									propertyFilters,
+									key: lastFilter.key,
+								}),
+							});
 						}
 					}}
 					disabled={isFull}
