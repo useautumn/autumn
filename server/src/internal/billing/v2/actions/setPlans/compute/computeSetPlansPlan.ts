@@ -16,8 +16,10 @@ import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/util
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isOnCanceledReplacedSubscription } from "../utils/isOnCanceledReplacedSubscription";
+import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
 import { nowReplacedCustomerProducts } from "../utils/nowReplacedCustomerProducts";
+import { paidBackdateAnchorMove } from "../utils/paidBackdateAnchorMove";
 import { backdateGapLineItems } from "./backdateGapLineItems";
 import {
 	diffToCustomerProducts,
@@ -26,6 +28,7 @@ import {
 import { diffToSchedule } from "./diffToSchedule";
 import { keptCustomerProductsBilledByReplacement } from "./keptCustomerProductsBilledByReplacement";
 import { keptReplacementEntitlementUpdates } from "./keptReplacementEntitlementUpdates";
+import { paidBackdateAnchorMoveLineItems } from "./paidBackdateAnchorMoveLineItems";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -113,6 +116,18 @@ export const computeSetPlansPlan = ({
 		billingContext,
 		keptCustomerProducts,
 	});
+	// A paid backdate recreate moved off its paid-through date carries its kept rows onto the new anchor.
+	const keptReanchoredByPaidBackdate = paidBackdateAnchorMove({
+		billingContext,
+	})
+		? keptCustomerProducts.filter((customerProduct) =>
+				isOnReplacedStripeSubscription({ billingContext, customerProduct }),
+			)
+		: [];
+	const keptOnNewAnchor = [
+		...keptBilledByReplacement,
+		...keptReanchoredByPaidBackdate,
+	];
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: [
@@ -209,17 +224,22 @@ export const computeSetPlansPlan = ({
 			...allLineItems,
 			...trialStartLineItems,
 			...backdateGapLineItems({ ctx, billingContext, customerProductChanges }),
+			...paidBackdateAnchorMoveLineItems({
+				ctx,
+				billingContext,
+				keptCustomerProducts: keptReanchoredByPaidBackdate,
+			}),
 		],
 		updateCustomerEntitlements: [
 			...updateCustomerEntitlements,
 			...keptReplacementEntitlementUpdates({
 				billingContext,
-				keptCustomerProducts: keptBilledByReplacement,
+				keptCustomerProducts: keptOnNewAnchor,
 				carriesUsage: (customerEntitlement) =>
 					carriesOverUsage({
 						carryOverUsages: billingContext.carryOverUsages,
 						sourceCustomerProductIds: new Set(
-							keptBilledByReplacement.map(({ id }) => id),
+							keptOnNewAnchor.map(({ id }) => id),
 						),
 						customerEntitlement,
 					}),

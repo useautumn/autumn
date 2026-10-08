@@ -8,7 +8,6 @@ import {
 	ACTIVE_STATUSES,
 	acceptsCarryOverUsages,
 	type BillingBehavior,
-	backdateSetsNewBillingTerms,
 	CusProductStatus,
 	isFreeProductV2,
 	isOneOffProductV2,
@@ -88,8 +87,6 @@ interface CreateScheduleFormContextValue {
 	allowStartedPhaseBackdate: boolean;
 	/** The first phase is backdated over a live subscription, which set_plans recreates from that date. */
 	backdatesLiveSubscription: boolean;
-	/** The backdate keeps the live subscription's renewal date: a paid one can't take a new anchor, a trialing one can. */
-	backdateKeepsRenewalDate: boolean;
 	hasActiveSubscription: boolean;
 	/** The first phase replaces a live plan, resets the cycle or ends a trial now, so its usage can carry over. */
 	carriesUsageNow: boolean;
@@ -287,15 +284,9 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const backdateKeepsRenewalDate =
-		backdatesLiveSubscription &&
-		!backdateSetsNewBillingTerms({ liveSubscriptionTrialing });
-
 	const getResetBillingCycle = useCallback(
-		() =>
-			!backdateKeepsRenewalDate &&
-			(form.store.state.values.resetBillingCycle ?? false),
-		[form.store, backdateKeepsRenewalDate],
+		() => form.store.state.values.resetBillingCycle ?? false,
+		[form.store],
 	);
 
 	const getBillingCycleAnchor = useCallback(() => {
@@ -427,8 +418,7 @@ export function CreateScheduleFormProvider({
 		products,
 		features,
 		nowMs,
-		resetBillingCycle:
-			formValues.resetBillingCycle && !backdateKeepsRenewalDate,
+		resetBillingCycle: formValues.resetBillingCycle,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
@@ -516,7 +506,6 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
-			backdateKeepsRenewalDate,
 			hasActiveSubscription,
 			carriesUsageNow,
 			prorationDefaultsToNone,
@@ -546,7 +535,6 @@ export function CreateScheduleFormProvider({
 			allowFirstPhaseBackdate,
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
-			backdateKeepsRenewalDate,
 			hasActiveSubscription,
 			carriesUsageNow,
 			prorationDefaultsToNone,

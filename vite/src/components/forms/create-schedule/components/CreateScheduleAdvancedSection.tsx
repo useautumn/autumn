@@ -42,7 +42,6 @@ export function CreateScheduleAdvancedSection() {
 		features,
 		nowMs,
 		backdatesLiveSubscription,
-		backdateKeepsRenewalDate,
 		hasActiveSubscription,
 		carriesUsageNow,
 		prorationDefaultsToNone,
@@ -69,14 +68,7 @@ export function CreateScheduleAdvancedSection() {
 			carriesUsageNow,
 		},
 	});
-	const resetRule = backdateKeepsRenewalDate
-		? {
-				...rules.resetBillingCycle,
-				disabled: true,
-				disabledReason:
-					"A backdated subscription keeps its current renewal date",
-			}
-		: rules.resetBillingCycle;
+	const resetRule = rules.resetBillingCycle;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 	const anchorBounds = scheduleBillingCycleAnchorBounds({
@@ -173,7 +165,7 @@ export function CreateScheduleAdvancedSection() {
 						row: (
 							<BillingCycleAnchorConfigRow
 								rule={resetRule}
-								enabled={resetBillingCycle && !backdateKeepsRenewalDate}
+								enabled={resetBillingCycle}
 								mode={anchorMode}
 								customAnchor={billingCycleAnchorDate}
 								allowCustomAnchor={anchorBounds.allowCustomAnchor}

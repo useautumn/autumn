@@ -1,5 +1,5 @@
 import {
-	backdateSetsNewBillingTerms,
+	backdateAcceptsFreeTrial,
 	CusProductStatus,
 	customerProductHasActiveStatus,
 	type FreeTrial,
@@ -132,7 +132,7 @@ export const canScheduleFreeTrial = ({
 		nowMs,
 		SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	);
-	return backdates && backdateSetsNewBillingTerms({ liveSubscriptionTrialing });
+	return backdates && backdateAcceptsFreeTrial({ liveSubscriptionTrialing });
 };
 
 /** Switching a running trial off on a first phase starting now ends it now (set_plans' `free_trial: null`). */

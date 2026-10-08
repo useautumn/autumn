@@ -127,7 +127,7 @@ export const setupKeptSubscriptionCycle = ({
 			billingContext,
 		})
 			? (backdatedCycleRenewalMs({ billingContext, timeline }) ?? periodEndMs)
-			: periodEndMs;
+			: keptPlansAnchorMs({ billingContext, periodEndMs });
 		return { billingCycleAnchorMs, requestedProrationBehavior };
 	}
 
