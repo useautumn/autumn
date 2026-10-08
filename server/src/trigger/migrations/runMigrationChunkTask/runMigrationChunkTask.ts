@@ -15,7 +15,7 @@ export const runMigrationChunkTask = task({
 	id: "run-migration-chunk",
 	queue: migrationTaskQueue,
 	retry: MIGRATION_TASK_RETRY,
-	machine: "medium-1x",
+	machine: "large-1x",
 	maxDuration: MIGRATION_CHUNK_MAX_DURATION_SECONDS,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
 		const payload = RunMigrationChunkPayloadSchema.parse(rawPayload);
