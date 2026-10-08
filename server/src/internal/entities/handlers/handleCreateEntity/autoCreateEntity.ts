@@ -8,7 +8,9 @@ import {
 } from "@autumn/shared";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -53,6 +55,9 @@ export const autoCreateEntity = async ({
 	};
 
 	if (!fullCus) {
+		// The entities map is rewritten whole from this read, so the worker's writes must be in Postgres first.
+		if (isBalanceWorkerRolloutEnabled({ ctx, customerId }))
+			await flushBalanceWorkerCustomer({ ctx, customerId });
 		fullCus = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
