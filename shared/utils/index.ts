@@ -98,6 +98,7 @@ export * from "./productV3Utils/productItemUtils/productV3ItemUtils";
 
 // Stripe resource utils
 export * from "./stripeUtils/classifyStripeResource/isPreviewStripeId";
+export * from "./stripeUtils/convertStripeResource/stripeDiscountToApiDiscount";
 export * from "./stripeUtils/convertStripeResource/stripeRefToId";
 export * from "./taxIdUtils/stripeTaxIdOptions";
 export * from "./utils";

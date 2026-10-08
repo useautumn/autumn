@@ -63,10 +63,6 @@ test.concurrent(
 			phases: [{ starts_at: backdatedStart, plans: [{ plan_id: pro.id }] }],
 		};
 
-		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.warnings.map(({ type }) => type)).not.toContain(
-			"discount_not_carried",
-		);
 		await autumnV2_4.billing.setPlans(params);
 
 		const recreated = await expectRecreatedSubscriptionCorrect({

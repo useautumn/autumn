@@ -18,7 +18,10 @@ const throwInvalidRequest = (message: string) => {
 export const handleRemoveDiscountsErrors = ({
 	params,
 }: {
-	params: AttachParamsV1;
+	params: Pick<
+		AttachParamsV1,
+		"discounts" | "remove_discounts" | "no_billing_changes"
+	>;
 }) => {
 	if (addsAndRemovesSameReward(params)) {
 		throwInvalidRequest(ADDS_AND_REMOVES_SAME_REWARD_MESSAGE);

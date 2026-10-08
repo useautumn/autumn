@@ -5,10 +5,10 @@ import {
 	type SetPlansBackdateConflict,
 } from "@autumn/shared";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import { replacedSubscriptionPeriodEndMs } from "@/internal/billing/v2/setup/carryReplacedSubscription/replacedSubscriptionPeriodEndMs";
 import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
-import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { setPlansError } from "./setPlansError";
 
 /** A paid subscription's recreate continues the period it paid, which must still be running. */

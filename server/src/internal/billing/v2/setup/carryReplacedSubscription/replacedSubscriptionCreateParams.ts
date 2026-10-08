@@ -27,8 +27,8 @@ export const replacedSubscriptionCreateParams = ({
 	return {
 		...(paymentMethodId && { default_payment_method: paymentMethodId }),
 		...(sourceId && { default_source: sourceId }),
+		collection_method: collectionMethod,
 		...(collectionMethod === "send_invoice" && {
-			collection_method: collectionMethod,
 			days_until_due: daysUntilDue ?? undefined,
 		}),
 		...(defaultTaxRates?.length && {
