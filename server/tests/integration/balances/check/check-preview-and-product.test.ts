@@ -28,9 +28,14 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 		const customerId = "check-preview1";
-		await initScenario({
+		// Own sub-org: the preview ranks every plan in the org's catalog, so concurrent files' plans leak in.
+		const { autumnV2_3: subOrgAutumn } = await initScenario({
 			customerId,
 			setup: [
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: "check-preview1@autumn.test",
+				}),
 				s.customer({ testClock: false }),
 				s.products({ list: [free, pro] }),
 			],
@@ -40,7 +45,7 @@ test.concurrent(
 			],
 		});
 
-		const response = await autumnV2_3.check({
+		const response = await subOrgAutumn.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			with_preview: true,
