@@ -122,10 +122,12 @@ const fixture = ({
 		trackInline: () => ({ kind: "refused", reason: "not_resident" }),
 		trackBatchInline: () => ({ kind: "refused", reason: "not_resident" }),
 		checkInline: () => ({ kind: "refused", reason: "not_resident" }),
-		initialize: async () => {
+		initialize: async (params) => {
+			submitted.push(params);
 			throw new Error("Initialization is not configured in this fixture");
 		},
-		applyBillingPlan: async () => {
+		applyBillingPlan: async (params) => {
+			submitted.push(params);
 			throw new Error("Billing plans are not configured in this fixture");
 		},
 		track: async (params) => {
@@ -424,6 +426,44 @@ describe("Balance worker HTTP", () => {
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([{ command: sent }]);
 	});
+	test.each(["initialize", "apply-billing-plan"])(
+		"%s hands the processor the routed command, never one carried inside the payload",
+		async (path) => {
+			const { app, submitted } = fixture();
+			const routed =
+				path === "initialize"
+					? { ...command, type: "initialize", commandId: "routed" }
+					: {
+							...command,
+							type: "applyBillingPlan",
+							commandId: "routed",
+							entityIds: [],
+							ops: [{ op: "delete", table: "customerPrices", id: "cp_1" }],
+							expiringPooledBalanceIds: [],
+						};
+			const smuggled = {
+				...routed,
+				commandId: "smuggled",
+				identity: { ...routed.identity, customerId: "other" },
+			};
+			await app.request(`/v1/${path}`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					route,
+					command: routed,
+					payload: { state, catalogRows: [], command: smuggled },
+				}),
+			});
+			expect(submitted).toHaveLength(1);
+			expect(submitted[0]).toMatchObject({
+				request: {
+					command: { commandId: "routed", identity: command.identity },
+				},
+			});
+		},
+	);
+
 	test("reads past a newer server's envelope field", async () => {
 		const { post, submitted, lookups } = fixture();
 		const response = await post({ ...request, futureField: true });
