@@ -1,4 +1,8 @@
-import type { BillingContext, SetPlansParamsV0 } from "@autumn/shared";
+import {
+	type BillingContext,
+	type SetPlansParamsV0,
+	secondsToMs,
+} from "@autumn/shared";
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import { endsLiveTrial } from "./endsLiveTrial";
 
@@ -29,7 +33,8 @@ const requestedImmediatePhaseAnchor = ({
 
 /**
  * 'phase_start' on a first phase starting now resets the cycle now; a backdated or later start already anchors on itself.
- * Ending a live trial already resets the cycle now (Stripe's trial_end now), so a reset now on top of it is dropped.
+ * Ending a live trial anchors on a date: a reset now is what Stripe's trial_end now already does, so it is dropped,
+ * and with no anchor the cycle starts on the old trial end.
  */
 export const immediatePhaseBillingCycleAnchor = ({
 	params,
@@ -45,7 +50,11 @@ export const immediatePhaseBillingCycleAnchor = ({
 		params,
 		currentEpochMs: billingContext.currentEpochMs,
 	});
-	const trialEndResetsCycleNow =
-		anchor === "now" && endsLiveTrial({ billingContext });
-	return trialEndResetsCycleNow ? undefined : anchor;
+	if (!endsLiveTrial({ billingContext })) return anchor;
+	if (anchor === "now") return undefined;
+
+	return (
+		anchor ??
+		secondsToMs(billingContext.stripeSubscription?.trial_end ?? undefined)
+	);
 };

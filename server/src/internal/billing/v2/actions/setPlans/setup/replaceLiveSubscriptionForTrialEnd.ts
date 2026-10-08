@@ -7,8 +7,8 @@ import {
 } from "./replaceStripeSubscription";
 
 /**
- * Ending a live trial now on a future anchor recreates the subscription: Stripe's update only anchors on now
- * and invoices a full period when a trial ends, while a new subscription anchors on the date.
+ * Ending a live trial now on a future anchor (the requested one, else the old trial end) recreates the subscription:
+ * Stripe's update only anchors on now and invoices a full period when a trial ends, while a new one anchors on the date.
  */
 export const replaceLiveSubscriptionForTrialEnd = ({
 	billingContext,
