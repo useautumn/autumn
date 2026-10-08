@@ -89,7 +89,7 @@ export const setupSetPlansBillingContext = async ({
 						billingContext: initialBillingContext,
 						requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
 							params,
-							currentEpochMs: initialBillingContext.currentEpochMs,
+							billingContext: initialBillingContext,
 						}),
 					}),
 		}),
@@ -151,7 +151,7 @@ export const setupSetPlansBillingContext = async ({
 		requestedProrationBehavior: immediatePhaseProrationBehavior({ params }),
 		requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
 			params,
-			currentEpochMs: billingContext.currentEpochMs,
+			billingContext,
 		}),
 		billingStartsAt: firstPhaseBillingStartsAt({
 			startsAt: immediatePhase.starts_at,

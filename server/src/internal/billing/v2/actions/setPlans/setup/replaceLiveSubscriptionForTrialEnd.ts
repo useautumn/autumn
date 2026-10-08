@@ -1,5 +1,5 @@
 import type { CreateScheduleBillingContext } from "@autumn/shared";
-import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { classifyFirstPhaseStart } from "./classifyFirstPhaseStart";
 import {
 	type LiveSubscriptionFields,
@@ -23,17 +23,10 @@ export const replaceLiveSubscriptionForTrialEnd = ({
 		| "immediatePhase"
 	>;
 }): LiveSubscriptionFields => {
-	const {
-		stripeSubscription,
-		trialContext,
-		requestedBillingCycleAnchor,
-		currentEpochMs,
-	} = billingContext;
+	const { stripeSubscription, requestedBillingCycleAnchor, currentEpochMs } =
+		billingContext;
 	if (!stripeSubscription) return {};
 
-	const endsLiveTrial =
-		isStripeSubscriptionTrialing(stripeSubscription) &&
-		trialContext?.trialEndsAt === null;
 	const anchorsInFuture =
 		typeof requestedBillingCycleAnchor === "number" &&
 		requestedBillingCycleAnchor > currentEpochMs;
@@ -42,7 +35,9 @@ export const replaceLiveSubscriptionForTrialEnd = ({
 			startsAt: billingContext.immediatePhase.starts_at,
 			currentEpochMs,
 		}) === "now";
-	if (!endsLiveTrial || !anchorsInFuture || !startsNow) return {};
+	if (!endsLiveTrial({ billingContext }) || !anchorsInFuture || !startsNow) {
+		return {};
+	}
 
 	return replaceStripeSubscription({
 		stripeSubscription,
