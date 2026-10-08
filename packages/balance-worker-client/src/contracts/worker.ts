@@ -54,8 +54,7 @@ export function readWorkerEnvelope({
 }): Record<string, unknown> {
 	if (typeof input !== "object" || input === null || Array.isArray(input))
 		throw new WorkerProtocolError("Worker envelope must be an object");
-	if (Object.keys(input).length !== keys.length)
-		throw new WorkerProtocolError("Worker envelope has unexpected fields");
+	// Required keys only: a newer caller's envelope field must not make the request invalid.
 	for (const key of keys) {
 		if (!Object.hasOwn(input, key))
 			throw new WorkerProtocolError(`Worker envelope is missing ${key}`);

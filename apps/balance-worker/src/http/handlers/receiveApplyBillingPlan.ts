@@ -7,7 +7,7 @@ import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 
 const applyBillingPlanPayloadSchema = z
 	.object({ catalogRows: z.unknown() })
-	.strict();
+	.loose();
 
 export async function receiveApplyBillingPlan(
 	context: Context<BalanceWorkerHttpEnv>,

@@ -11,6 +11,10 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import {
+	parseTrustedMeteringRecord,
+	serializeMeteringRecord,
+} from "@autumn/kafka";
+import {
 	createCatalogFor,
 	createCustomerEntitlement,
 	createCustomerProduct,
@@ -143,6 +147,33 @@ describe("recordToUsageEvent", () => {
 		expect(recordToUsageEvent({ position, record })).toEqual(
 			recordToUsageEvent({ position, record }),
 		);
+	});
+
+	test("a record from a newer worker makes the same event, through the trusted stream parse", () => {
+		const record = trackRecord({ balance: 10, value: 5 });
+		const serialized = serializeMeteringRecord({ record });
+		const envelope = JSON.parse(serialized.value.toString("utf8"));
+		envelope.payload.futureField = true;
+		envelope.payload.command.futureField = true;
+		envelope.payload.result.futureField = true;
+		const newer = parseTrustedMeteringRecord({
+			key: serialized.key,
+			value: Buffer.from(JSON.stringify(envelope)),
+		});
+
+		expect(recordToUsageEvent({ position, record: newer })).toEqual(
+			recordToUsageEvent({ position, record }),
+		);
+	});
+
+	test("a record whose verdict this build does not know makes no event, the way a refused one does", () => {
+		const record = trackRecord({ balance: 10, value: 5 });
+		const newer = {
+			...record,
+			result: { ...record.result, status: "future_status" },
+		} as MutationRecord;
+
+		expect(recordToUsageEvent({ position, record: newer })).toBeNull();
 	});
 
 	test("a refused track moved no usage, so it makes no event", () => {

@@ -408,7 +408,6 @@ describe("Balance worker HTTP", () => {
 		{ ...request, route: { ...route, routeEpoch: "01" } },
 		{ ...request, route: { ...route, routeEpoch: 1 } },
 		{ route },
-		{ ...request, extra: true },
 	])("rejects invalid wire request %j", async (body) => {
 		const { post, submitted, lookups } = fixture();
 		const response = await post(body);
@@ -424,6 +423,13 @@ describe("Balance worker HTTP", () => {
 		expect(response.status).toBe(200);
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([{ command: sent }]);
+	});
+	test("reads past a newer server's envelope field", async () => {
+		const { post, submitted, lookups } = fixture();
+		const response = await post({ ...request, futureField: true });
+		expect(response.status).toBe(200);
+		expect(lookups).toEqual([route]);
+		expect(submitted).toEqual([{ command }]);
 	});
 	test("rejects malformed and empty JSON before routing", async () => {
 		const { app, submitted, lookups } = fixture();
@@ -785,6 +791,18 @@ function commandWithId(id: string) {
 }
 
 describe("Track batches", () => {
+	test("reads past a newer server's batch envelope field", async () => {
+		const { postBatch, submitted, lookups } = fixture();
+		const response = await postBatch({
+			route,
+			commands: [command],
+			futureField: true,
+		});
+		expect(response.status).toBe(200);
+		expect(lookups).toEqual([route]);
+		expect(submitted).toEqual([{ command }]);
+	});
+
 	test("answers every command in order, mapping failures exactly as /v1/track does", async () => {
 		const causeFor: Record<string, Error> = {
 			overloaded: new PartitionWriterCapacityError(),
@@ -973,7 +991,6 @@ describe("Track batches", () => {
 		{ commands: [command] },
 		{ route, commands: [] },
 		{ route, commands: command },
-		{ route, commands: [command], extra: true },
 		{ route: { ...route, routeEpoch: "01" }, commands: [command] },
 		{ route, commands: Array.from({ length: 1001 }, () => command) },
 	])("rejects invalid batch envelope %#", async (body) => {

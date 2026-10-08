@@ -1,3 +1,4 @@
+import { logUnknownInput } from "@autumn/balance-engine";
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import {
 	createSlotGate,
@@ -69,6 +70,7 @@ export function createHerald({
 	config: { env: HeraldEnv };
 }): Herald {
 	const { env } = config;
+	logUnknownInput({ logger: ctx.logger });
 	const kafka = new KafkaWithSettledTopicOffsets(
 		createKafkaClient({
 			clientId: `herald-${crypto.randomUUID()}`,

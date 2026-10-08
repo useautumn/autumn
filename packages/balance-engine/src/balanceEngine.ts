@@ -128,8 +128,10 @@ export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";
 // models
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
+export { logUnknownInput } from "./models/common/logUnknownInput.js";
 export {
 	onUnknownInput,
+	sightUnknownInput,
 	type UnknownInput,
 } from "./models/common/openSchema.js";
 export type { MeteringIdentity } from "./models/identity/meteringIdentity.js";

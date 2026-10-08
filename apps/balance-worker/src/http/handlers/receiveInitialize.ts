@@ -7,7 +7,7 @@ import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 
 const initializePayloadSchema = z
 	.object({ state: z.unknown(), catalogRows: z.unknown() })
-	.strict();
+	.loose();
 
 export async function receiveInitialize(
 	context: Context<BalanceWorkerHttpEnv>,

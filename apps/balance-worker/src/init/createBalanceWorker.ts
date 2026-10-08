@@ -1,4 +1,5 @@
 import { cpus } from "node:os";
+import { logUnknownInput } from "@autumn/balance-engine";
 import { defaultBalanceWorkerThreadsEdgeConfig } from "@autumn/edge-config";
 import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
@@ -85,6 +86,7 @@ export async function createBalanceWorker({
 }): Promise<BalanceWorker> {
 	const { env } = config;
 	assertIdempotentCommits({ mode: env.BALANCE_WORKER_COMMIT_MODE });
+	logUnknownInput({ logger: dependencies.logger });
 	const checkpointConfig = createWorkerCheckpointConfig({ env });
 	const address = await resolveWorkerAddress({ env });
 	const identity = await resolveTaskIdentity({

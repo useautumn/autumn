@@ -47,6 +47,15 @@ function preservesEnvelopes(): void {
 		route,
 		command,
 	});
+	expect(
+		parseWorkerRequest({
+			input: {
+				route: { ...route, futureField: true },
+				command,
+				futureField: 1,
+			},
+		}),
+	).toEqual({ route, command });
 }
 
 function rejectsInvalidRoutes(): void {
@@ -84,11 +93,9 @@ function rejectsInvalidRequestEnvelopes(): void {
 		{},
 		{ route },
 		{ command },
-		{ route, command, extra: true },
 		{ route: null, command },
 		{ route: [], command },
 		{ route: { partition: 0 }, command },
-		{ route: { ...route, extra: true }, command },
 	]) {
 		function parse(): void {
 			parseWorkerRequest({ input });

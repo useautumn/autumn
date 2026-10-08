@@ -26,6 +26,7 @@ import type {
 	FlushCall,
 	FlushOutcome,
 } from "../types/committer.js";
+import { keepKnownColumns } from "./keepKnownColumns.js";
 
 const definedNumbers = (record: Record<string, number | undefined>) =>
 	Object.fromEntries(
@@ -216,9 +217,11 @@ const collectChanges = ({
 		for (const record of call.records) {
 			for (const change of record.mutation.changes) {
 				changes.push(
-					rowChangeToSubjectRowChange({
-						change,
-						commandType: record.mutation.command.type,
+					keepKnownColumns({
+						change: rowChangeToSubjectRowChange({
+							change,
+							commandType: record.mutation.command.type,
+						}),
 					}),
 				);
 				recordOf.push(record);

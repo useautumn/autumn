@@ -9,7 +9,8 @@ export type UnknownInput =
 			op: string;
 			commandId: string;
 			identity: unknown;
-	  };
+	  }
+	| { kind: "row_column"; table: string; column: string };
 
 type UnknownInputListener = (input: UnknownInput) => void;
 
