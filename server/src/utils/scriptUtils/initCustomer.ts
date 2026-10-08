@@ -7,7 +7,13 @@ export const attachPaymentMethod = async ({
 }: {
 	stripeCli: Stripe;
 	stripeCusId: string;
-	type: "success" | "fail" | "authenticate" | "alipay";
+	type:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 }) => {
 	try {
 		// Use pre-defined payment method IDs for special test cards
@@ -28,6 +34,27 @@ export const attachPaymentMethod = async ({
 			await stripeCli.customers.update(stripeCusId, {
 				invoice_settings: {
 					default_payment_method: pms.data[0].id,
+				},
+			});
+			return;
+		}
+
+		// Stripe test bank accounts: charges sit in `processing`, then settle (or never do)
+		if (type === "us_bank_account" || type === "us_bank_account_processing") {
+			const setupIntent = await stripeCli.setupIntents.create({
+				customer: stripeCusId,
+				payment_method_types: ["us_bank_account"],
+				payment_method:
+					type === "us_bank_account"
+						? "pm_usBankAccount_success"
+						: "pm_usBankAccount_processing",
+				confirm: true,
+				mandate_data: { customer_acceptance: { type: "offline" } },
+			});
+
+			await stripeCli.customers.update(stripeCusId, {
+				invoice_settings: {
+					default_payment_method: setupIntent.payment_method as string,
 				},
 			});
 			return;
