@@ -192,7 +192,6 @@ export {
 	parseEvictCommand,
 	parseFinalizeCommand,
 	parseFlushCommand,
-	parseInitializeCommand,
 	parseInitializeRequest,
 	parseMeteringIdentity,
 	parseMutationRecord,

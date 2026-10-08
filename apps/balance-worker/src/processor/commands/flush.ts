@@ -1,7 +1,6 @@
 import {
 	type FlushCommand,
 	meteringIdentityToPartitionKey,
-	parseFlushCommand,
 } from "@autumn/balance-engine";
 import type { FlushReply } from "@autumn/balance-worker-client/protocol";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
@@ -14,7 +13,7 @@ export async function flush({
 	scope: PartitionProcessorScope;
 	command: FlushCommand;
 }): Promise<FlushReply> {
-	const { identity } = parseFlushCommand({ input: command });
+	const { identity } = command;
 	const customerKey = meteringIdentityToPartitionKey({ identity });
 	await scope.ctx.writer.waitForPendingCommits({ customerKey });
 	await scope.ctx.writer.waitForStore();

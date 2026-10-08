@@ -61,8 +61,7 @@ const showDisabledSilently = (
 	disabled: boolean,
 ): BillingOptionRule => ({ visible, disabled, disabledReason: null });
 
-// A multi-plan attach hides the options that only make sense per-plan; the rest
-// ride along with the start date it exposes for backdating.
+// A multi-plan attach hides the options its request body doesn't send.
 function attachRules(state: BillingOptionState): BillingOptionRules {
 	const singlePlanOnly = !state.isMultiPlan;
 	return {
@@ -74,9 +73,9 @@ function attachRules(state: BillingOptionState): BillingOptionRules {
 		planSchedule: show(!!state.hasActiveSubscription && !state.isMultiPlan),
 		startDate: show(!!state.showStartDate),
 		endDate: show(singlePlanOnly && !!state.showEndDate),
-		carryOverBalances: show(!!state.hasCustomerEntitlements),
-		carryOverUsages: show(!!state.hasCustomerEntitlements),
-		overrideLineItems: show(true),
+		carryOverBalances: show(singlePlanOnly && !!state.hasCustomerEntitlements),
+		carryOverUsages: show(singlePlanOnly && !!state.hasCustomerEntitlements),
+		overrideLineItems: show(singlePlanOnly),
 		newBillingSubscription: show(!!state.canChooseBillingCycle),
 		resetBillingCycle: show(!!state.hasActiveSubscription),
 		skipBilling: show(singlePlanOnly),

@@ -287,3 +287,31 @@ describe("schedule carry over usages rule", () => {
 		).toBe(false);
 	});
 });
+
+const attachRules = (
+	state: Parameters<typeof getBillingOptionRules>[0]["state"],
+) => getBillingOptionRules({ flow: "attach", state });
+
+describe("attach single-plan-only options", () => {
+	const shared = {
+		hasActiveSubscription: true,
+		hasCustomerEntitlements: true,
+		showStartDate: true,
+	};
+
+	test("shows carry-over and line items for a single plan", () => {
+		const rules = attachRules({ ...shared, isMultiPlan: false });
+		expect(rules.carryOverBalances.visible).toBe(true);
+		expect(rules.carryOverUsages.visible).toBe(true);
+		expect(rules.overrideLineItems.visible).toBe(true);
+	});
+
+	test("hides carry-over and line items for multi-plan, which never sends them", () => {
+		const rules = attachRules({ ...shared, isMultiPlan: true });
+		expect(rules.carryOverBalances.visible).toBe(false);
+		expect(rules.carryOverUsages.visible).toBe(false);
+		expect(rules.overrideLineItems.visible).toBe(false);
+		expect(rules.startDate.visible).toBe(true);
+		expect(rules.resetBillingCycle.visible).toBe(true);
+	});
+});

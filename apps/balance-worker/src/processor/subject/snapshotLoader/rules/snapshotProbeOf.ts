@@ -1,7 +1,7 @@
 import {
 	readsSubjectSnapshots,
 	servesSubjectSnapshots,
-} from "../../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+} from "@autumn/edge-config";
 import type { SubjectScope } from "../../types/subject.js";
 
 /** A read further from now than this is a replay, which never trusts a row written for now. */

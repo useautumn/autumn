@@ -53,6 +53,7 @@ import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config
 import { handleGetAdminShadowAtomConfig } from "./handleGetAdminShadowAtomConfig.js";
 import { handleGetAdminShadowAtomNames } from "./handleGetAdminShadowAtomNames.js";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
+import { handleGetAdminSubjectSnapshotsConfig } from "./handleGetAdminSubjectSnapshotsConfig.js";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
 import { handleGetInvoiceLineItems } from "./handleGetInvoiceLineItems";
@@ -93,6 +94,7 @@ import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestB
 import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
 import { handleUpsertAdminShadowAtomConfig } from "./handleUpsertAdminShadowAtomConfig.js";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
+import { handleUpsertAdminSubjectSnapshotsConfig } from "./handleUpsertAdminSubjectSnapshotsConfig.js";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleCreateImpersonationCliTokens } from "./impersonation/handleCreateImpersonationCliTokens";
 import { handleAddRolloutCustomers } from "./rollouts/handleAddRolloutCustomers";
@@ -231,6 +233,14 @@ honoAdminRouter.delete(
 );
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);
+honoAdminRouter.get(
+	"/subject-snapshots-config",
+	...handleGetAdminSubjectSnapshotsConfig,
+);
+honoAdminRouter.put(
+	"/subject-snapshots-config",
+	...handleUpsertAdminSubjectSnapshotsConfig,
+);
 honoAdminRouter.get(
 	"/full-subject-gate-config",
 	...handleGetAdminFullSubjectGateConfig,

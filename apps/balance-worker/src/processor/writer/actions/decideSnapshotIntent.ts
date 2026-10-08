@@ -4,7 +4,7 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 } from "@autumn/balance-engine";
-import { writesSubjectSnapshots } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { writesSubjectSnapshots } from "@autumn/edge-config";
 import type {
 	SnapshotIntent,
 	SnapshotIntentEntry,

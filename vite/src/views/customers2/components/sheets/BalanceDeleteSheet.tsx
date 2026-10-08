@@ -16,6 +16,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -156,7 +157,7 @@ export function BalanceDeleteSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Delete Balance"
 					description="Permanently delete this balance from the customer."
@@ -309,7 +310,7 @@ export function BalanceDeleteSheet() {
 						Delete
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

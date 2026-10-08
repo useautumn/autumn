@@ -1,7 +1,4 @@
-import {
-	type WorkerErrorResponse,
-	workerErrorStatus,
-} from "../contracts/worker.js";
+import type { WorkerErrorResponse } from "../contracts/worker.js";
 import type { HttpResponse } from "../http/types/httpClient.js";
 import {
 	BalanceWorkerClientError,
@@ -178,16 +175,15 @@ export function canRetryNotReady({
 }
 
 /** Null for a success; the NOT_OWNER answer with any successor it names, or a NOT_READY
- *  answer from an owner still activating; throws for every other worker error. */
+ *  answer from an owner still activating; throws a WORKER_ERROR for anything else, whatever its body. */
 export function readNotOwnerResponse({
 	response,
 }: {
 	response: HttpResponse;
 }): NotOwnerAnswer | null {
 	if (response.status === 200) return null;
-	const error = (response.body as WorkerErrorResponse | null)?.error;
-	if (!error || workerErrorStatus({ code: error.code }) !== response.status)
-		throw new Error("Worker error does not match HTTP status");
+	const error: Partial<WorkerErrorResponse["error"]> =
+		(response.body as WorkerErrorResponse | null)?.error ?? {};
 	if (error.code === "NOT_OWNER") {
 		const successor = readSuccessor({ input: error.successor });
 		return successor ? { successor } : {};
@@ -196,10 +192,12 @@ export function readNotOwnerResponse({
 	// request for its activation wait and gave up first; the activation is usually a
 	// second or so, so the request tries the same owner again while its budget lasts.
 	if (error.code === "NOT_READY") return { notReady: true };
+	// A refused record never landed, though it answers 500.
+	const mayHaveRun = response.status >= 500 && error.code !== "RECORD_REFUSED";
 	throw new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
-		outcome: error.code === "INTERNAL" ? "unknown" : "not_submitted",
-		message: error.message,
+		outcome: mayHaveRun ? "unknown" : "not_submitted",
+		message: error.message ?? `Worker answered ${response.status}`,
 		workerCode: error.code,
 		workerReason: error.reason,
 	});

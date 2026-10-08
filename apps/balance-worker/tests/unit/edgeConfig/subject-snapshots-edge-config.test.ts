@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import type { EdgeConfigS3Client } from "@autumn/edge-config";
-import { createWorkerEdgeConfigs } from "../../../src/edgeConfig/createWorkerEdgeConfigs.js";
 import {
 	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	defaultSubjectSnapshotsEdgeConfig,
+	type EdgeConfigS3Client,
 	readsSubjectSnapshots,
 	type SubjectSnapshotMode,
 	SubjectSnapshotsEdgeConfigSchema,
 	servesSubjectSnapshots,
 	writesSubjectSnapshots,
-} from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
+} from "@autumn/edge-config";
+import { createWorkerEdgeConfigs } from "../../../src/edgeConfig/createWorkerEdgeConfigs.js";
 import { createMemoryS3Client } from "../../fixtures/subjectSnapshotsStore.js";
 
 const workerEdgeConfigsOver = (s3Client: EdgeConfigS3Client) =>

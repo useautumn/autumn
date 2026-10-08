@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	createMigrationChunkScheduler,
 	MIGRATION_CHUNK_FETCH_SIZE,
+	MIGRATION_DB_POOL_MAX,
 	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 	MIGRATION_SLICE_DURATION_MS,
 } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
@@ -15,10 +16,6 @@ import {
 	migrationTaskQueue,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 
-/** Trigger prod's GENERAL_DB_POOL_MAX. Each in-flight customer holds a general
- * connection; past this, checkouts time out and claims strand as `running`. */
-const TRIGGER_GENERAL_DB_POOL_MAX = 15;
-
 describe("migration task scheduler", () => {
 	test("defines one fleet-wide queue with a conservative initial limit", () => {
 		expect(migrationTaskQueue.name).toBe("migration-customer-work");
@@ -30,12 +27,12 @@ describe("migration task scheduler", () => {
 
 	test("keeps fleet and per-run concurrency independently tunable", () => {
 		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(15);
+		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(100);
 	});
 
-	test("keeps in-flight customers within the chunk worker's general DB pool", () => {
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBeLessThanOrEqual(
-			TRIGGER_GENERAL_DB_POOL_MAX,
+	test("sizes the migration DB pool for two connections per in-flight customer", () => {
+		expect(MIGRATION_DB_POOL_MAX).toBeGreaterThanOrEqual(
+			MIGRATION_RUN_CUSTOMER_CONCURRENCY * 2,
 		);
 	});
 

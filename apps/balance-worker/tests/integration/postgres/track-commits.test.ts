@@ -18,6 +18,12 @@ import {
 	type BalanceWorkerClient,
 	createBalanceWorkerClient,
 } from "@autumn/balance-worker-client";
+import {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
+	defaultSubjectSnapshotsEdgeConfig,
+	type SubjectSnapshotMode,
+	type SubjectSnapshotsEdgeConfig,
+} from "@autumn/edge-config";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
@@ -29,12 +35,6 @@ import {
 import type { PostgresClient } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { Kafka, logLevel } from "kafkajs";
-import {
-	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
-	defaultSubjectSnapshotsEdgeConfig,
-	type SubjectSnapshotMode,
-	type SubjectSnapshotsEdgeConfig,
-} from "../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
 	openFixturePostgres,

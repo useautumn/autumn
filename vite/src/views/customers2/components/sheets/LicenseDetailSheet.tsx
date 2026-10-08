@@ -8,6 +8,7 @@ import {
 import { format } from "date-fns";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCustomerContext } from "../../customer/CustomerContext";
@@ -75,7 +76,7 @@ export function LicenseDetailSheet() {
 	};
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
+		<SheetBody>
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
@@ -138,6 +139,6 @@ export function LicenseDetailSheet() {
 					Unassign License
 				</Button>
 			</div>
-		</div>
+		</SheetBody>
 	);
 }

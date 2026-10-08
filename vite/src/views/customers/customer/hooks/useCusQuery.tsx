@@ -22,6 +22,7 @@ import {
 	DEFAULT_PRODUCT_STATUSES,
 } from "@/views/customers2/hooks/useCustomerProductsTableState";
 import { useCachedCustomer } from "./useCachedCustomer";
+import { useCustomerScheduleQueryOptions } from "./useCustomerScheduleQueryOptions";
 
 type UseCusQueryOptions = {
 	enabled?: boolean;
@@ -33,11 +34,6 @@ type UseCusQueryOptions = {
 	 * to avoid an extra network request and unnecessary loading latency.
 	 */
 	schedule?: boolean;
-};
-
-type ScheduleResponse = {
-	schedule: unknown | null;
-	entity_schedules: Record<string, unknown>;
 };
 
 export const useCusQuery = ({
@@ -114,29 +110,14 @@ export const useCusQuery = ({
 		placeholderData: keepPreviousData,
 	});
 
-	const scheduleFetcher = async (): Promise<ScheduleResponse> => {
-		try {
-			const { data: scheduleData } = await axiosInstance.get(
-				`/customers/${customer_id}/schedule`,
-			);
-			return scheduleData;
-		} catch (error) {
-			throwBackendError(error);
-			// throwBackendError always throws — this return is unreachable but
-			// keeps TypeScript happy about the declared return type.
-			return { schedule: null, entity_schedules: {} };
-		}
-	};
-
+	const scheduleQueryOptions = useCustomerScheduleQueryOptions();
 	const {
 		data: scheduleData,
 		isLoading: scheduleLoading,
 		refetch: refetchSchedule,
 	} = useQuery({
-		queryKey: buildKey(["customer-schedule", customer_id]),
-		queryFn: scheduleFetcher,
-		enabled: fetchSchedule && enabled && !!customer_id,
-		retry: false,
+		...scheduleQueryOptions,
+		enabled: fetchSchedule && enabled && scheduleQueryOptions.enabled,
 	});
 
 	const { products, isLoading: productsLoading } = useProductsQuery();

@@ -5,7 +5,6 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
-
 import { useMemo } from "react";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
@@ -17,7 +16,6 @@ import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
 	UpdateSubscriptionGenerationBar,
-	UpdateSubscriptionPlanOptions,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
@@ -28,6 +26,7 @@ import {
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -56,7 +55,7 @@ function SendInvoiceContent() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex flex-col h-full overflow-y-auto">
+			<SheetBody>
 				<SendInvoiceStageWithPreview
 					productName={customerProduct.product.name}
 					previewQuery={previewQuery}
@@ -66,7 +65,7 @@ function SendInvoiceContent() {
 					env={env}
 					onBack={() => setSheet({ type: "subscription-update", itemId })}
 				/>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }
@@ -87,7 +86,7 @@ function EditContent() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex flex-col h-full overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Update Subscription"
 					description={`Update ${customerProduct.product.name} for this customer`}
@@ -140,7 +139,6 @@ function EditContent() {
 					)}
 
 				<EditPlanSection />
-				<UpdateSubscriptionPlanOptions />
 				<UpdateSubscriptionAdvancedSection />
 				<UpdateSubscriptionPreviewSection />
 				<UpdateSubscriptionFooter />
@@ -155,7 +153,7 @@ function EditContent() {
 						initialAddLicenses={formValues.addLicenses}
 					/>
 				)}
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

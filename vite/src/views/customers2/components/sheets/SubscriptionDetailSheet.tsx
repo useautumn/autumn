@@ -29,6 +29,7 @@ import {
 import { getPendingBillingCycleAnchor } from "@/components/forms/update-subscription-v2/utils/pendingBillingCycleAnchor";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
@@ -150,7 +151,7 @@ export function SubscriptionDetailSheet() {
 	const planBillingControls = billingControlsFromColumns(cusProduct.product);
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
+		<SheetBody>
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
@@ -429,6 +430,6 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			)}
-		</div>
+		</SheetBody>
 	);
 }

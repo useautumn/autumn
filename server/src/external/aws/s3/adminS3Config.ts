@@ -1,4 +1,5 @@
 import {
+	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	DB_CONTROL_CONFIG_KEY,
 	EDGE_CONFIG_TIMESTAMP_KEY,
 	MISC_REDIS_CONFIG_KEY,
@@ -145,6 +146,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "db-control",
 			label: "DB Control",
 			key: ADMIN_DB_CONTROL_CONFIG_KEY,
+		},
+		{
+			id: "subject-snapshots",
+			label: "Subject Snapshots",
+			key: BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 		},
 		{
 			id: "stripe-sync",

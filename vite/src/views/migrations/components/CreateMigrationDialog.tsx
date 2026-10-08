@@ -12,7 +12,7 @@ import type { AxiosError } from "axios";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 
@@ -34,7 +34,7 @@ export function CreateMigrationDialog({
 		(controlledOnOpenChange || setInternalOpen)(nextOpen);
 	};
 
-	const { createMigration, isCreating } = useMigrationsQuery();
+	const { createMigration, isCreating } = useMigrationMutations();
 
 	const handleCreateMigration = async () => {
 		if (!id.trim()) {

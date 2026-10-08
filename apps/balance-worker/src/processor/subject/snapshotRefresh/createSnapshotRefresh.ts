@@ -1,4 +1,4 @@
-import { defaultSubjectSnapshotsEdgeConfig } from "../../../edgeConfig/subjectSnapshotsEdgeConfig.js";
+import { defaultSubjectSnapshotsEdgeConfig } from "@autumn/edge-config";
 import { databaseTimings } from "../../../logging/databaseTimings.js";
 import type { SubjectHydratorContext, SubjectScope } from "../types/subject.js";
 import { readSubjectForRefresh } from "./actions/readSubjectForRefresh.js";

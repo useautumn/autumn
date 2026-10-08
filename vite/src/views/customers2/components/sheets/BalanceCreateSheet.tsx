@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -190,7 +191,7 @@ export function BalanceCreateSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Create Balance"
 					description="Create a separate balance for this customer that is not associated with any plan."
@@ -362,7 +363,7 @@ export function BalanceCreateSheet() {
 						Create
 					</ShortcutButton>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

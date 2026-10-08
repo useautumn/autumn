@@ -35,6 +35,7 @@ import {
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -266,7 +267,7 @@ export function BillingUsageAlertSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={isEdit ? "Edit Usage Alert" : "Add Usage Alert"}
 					description="Configure alerts that notify when usage reaches a threshold."
@@ -426,7 +427,7 @@ export function BillingUsageAlertSheet() {
 						{isEdit ? "Save" : "Add"}
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

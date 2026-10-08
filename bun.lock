@@ -393,7 +393,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "2.0.81",
+      "version": "2.0.88",
       "bin": {
         "atmn": "dist/bin.js",
       },
@@ -1281,6 +1281,7 @@
       "dependencies": {
         "@ai-sdk/react": "^3.0.25",
         "@autumn/atmn-old": "workspace:*",
+        "@autumn/edge-config": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/render": "workspace:*",
         "@autumn/shared": "workspace:*",

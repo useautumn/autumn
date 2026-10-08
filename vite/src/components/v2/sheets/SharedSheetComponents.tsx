@@ -143,6 +143,26 @@ interface SheetFooterProps {
 	className?: string;
 }
 
+/** Scrolling sheet body; the reserved gutter stops content shifting when a scrollbar appears. */
+export function SheetBody({
+	children,
+	className,
+}: {
+	children: React.ReactNode;
+	className?: string;
+}) {
+	return (
+		<div
+			className={cn(
+				"flex h-full flex-col overflow-y-auto [scrollbar-gutter:stable]",
+				className,
+			)}
+		>
+			{children}
+		</div>
+	);
+}
+
 /** Shared spring transition for layout animations */
 export const LAYOUT_TRANSITION = {
 	type: "spring",

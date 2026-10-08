@@ -12,6 +12,7 @@ import type { BillingControlOrigin } from "@/components/billing-controls/resolve
 import { USAGE_ALERT_BASIS_LABELS } from "@/components/billing-controls/usageAlertBasisOptions";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -173,7 +174,7 @@ export function BillingUsageAlertsFeatureSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title="Usage alerts"
 					description={`${featureName} · ${featureAlerts.length} ${
@@ -293,7 +294,7 @@ export function BillingUsageAlertsFeatureSheet() {
 						Done
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

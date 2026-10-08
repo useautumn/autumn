@@ -27,6 +27,7 @@ import {
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
+	SheetBody,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
@@ -186,7 +187,7 @@ export function BillingSpendLimitSheet() {
 
 	return (
 		<LayoutGroup>
-			<div className="flex h-full flex-col overflow-y-auto">
+			<SheetBody>
 				<SheetHeader
 					title={isEdit ? "Edit Spend Limit" : "Add Spend Limit"}
 					description="Set an overage spend limit for a feature or globally."
@@ -321,7 +322,7 @@ export function BillingSpendLimitSheet() {
 						{isEdit ? "Save" : "Add"}
 					</Button>
 				</SheetFooter>
-			</div>
+			</SheetBody>
 		</LayoutGroup>
 	);
 }

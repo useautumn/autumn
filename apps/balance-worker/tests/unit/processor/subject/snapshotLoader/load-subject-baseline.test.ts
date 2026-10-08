@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { MeteringIdentity } from "@autumn/balance-engine";
+import type { SubjectSnapshotMode } from "@autumn/edge-config";
 import type { SubjectRowsEnvelope } from "@autumn/postgres";
 import { AppEnv } from "@autumn/shared";
-import type { SubjectSnapshotMode } from "../../../../../src/edgeConfig/subjectSnapshotsEdgeConfig.js";
 import { subjectEnvelopeToState } from "../../../../../src/processor/subject/actions/ensureSubject/readSubjectBaseline.js";
 import { createEntityLoads } from "../../../../../src/processor/subject/entityLoads/createEntityLoads.js";
 import { createInFlightLoads } from "../../../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";

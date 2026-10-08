@@ -9,6 +9,11 @@
 			"types": "./src/edgeConfig.ts",
 			"import": "./src/edgeConfig.ts",
 			"default": "./src/edgeConfig.ts"
+		},
+		"./subjectSnapshots": {
+			"types": "./src/configs/subjectSnapshots/subjectSnapshotsEdgeConfig.ts",
+			"import": "./src/configs/subjectSnapshots/subjectSnapshotsEdgeConfig.ts",
+			"default": "./src/configs/subjectSnapshots/subjectSnapshotsEdgeConfig.ts"
 		}
 	},
 	"scripts": {

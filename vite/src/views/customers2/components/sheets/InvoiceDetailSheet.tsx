@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -441,7 +442,7 @@ export function InvoiceDetailSheet({
 	}
 
 	return (
-		<div className="flex flex-col h-full overflow-y-auto">
+		<SheetBody>
 			<div className="p-4">
 				<div className="flex items-center gap-2 text-sm font-medium text-tertiary-foreground">
 					<span>Invoice</span>
@@ -588,7 +589,7 @@ export function InvoiceDetailSheet({
 					invoice={invoice}
 				/>
 			)}
-		</div>
+		</SheetBody>
 	);
 }
 
