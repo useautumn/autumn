@@ -70,7 +70,6 @@ const groupId = workerConsumerGroupIdOf({ env, fleetId });
 const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 	env,
 	endpoint: address.endpoint,
-	groupId,
 });
 const resources = await openWorkerResources({
 	ctx: {
@@ -198,7 +197,6 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	emit("consumer.group_join", {
 		partitions:
 			event.payload.memberAssignment[env.BALANCE_WORKER_METERING_TOPIC] ?? [],
-		generation: event.payload.groupProtocol,
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>

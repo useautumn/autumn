@@ -20,7 +20,6 @@ import {
 	type OwnershipConsumer,
 	type PartitionOwner,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import { createReplayHydrationCoordinator } from "../../../../../server/src/internal/balances/replay/createReplayHydrationCoordinator.js";
 import type {
 	ReplayHydrationCoordinator,
@@ -33,6 +32,7 @@ import {
 	createCatalogRowsFor,
 	createCustomerEntitlement,
 } from "../../fixtures/mutations.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 
 const LOOPBACK_BROKER_PATTERN = /^(?:127\.0\.0\.1|localhost):(\d{1,5})$/;
 
@@ -253,16 +253,14 @@ async function createReplayHarness(): Promise<ReplayHarness> {
 		ownership: `${deployment}-owners`,
 		commands: `${deployment}-commands`,
 	};
-	const kafka = new Kafka({
+	const kafka = createTestKafka({
 		clientId: deployment,
 		brokers: loopbackBrokers,
-		logLevel: logLevel.NOTHING,
 	});
 	const admin = kafka.admin();
 	await admin.connect();
 	try {
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{
 					topic: topics.metering,

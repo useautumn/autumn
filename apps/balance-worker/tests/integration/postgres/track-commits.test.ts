@@ -30,12 +30,13 @@ import {
 	createCommandPublisher,
 	createIdempotentProducerConfig,
 	createOwnershipConsumer,
+	type Kafka,
 	type OwnershipConsumer,
 } from "@autumn/kafka";
 import type { PostgresClient } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
-import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 import {
 	openFixturePostgres,
 	planEntityOfCustomer,
@@ -136,15 +137,10 @@ async function createHarness(): Promise<Harness> {
 		// The worker derives this name from its deployment and refuses to start without it.
 		catalogInvalidations: `${deployment}-catalog-invalidations`,
 	};
-	const kafka = new Kafka({
-		clientId: deployment,
-		brokers,
-		logLevel: logLevel.NOTHING,
-	});
+	const kafka = createTestKafka({ clientId: deployment, brokers });
 	const admin = kafka.admin();
 	await admin.connect();
 	await admin.createTopics({
-		waitForLeaders: true,
 		topics: [
 			{
 				topic: topics.metering,
@@ -811,10 +807,9 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					harness: isolated,
 					nextOffset: 2n,
 				});
-				const sender = new Kafka({
+				const sender = createTestKafka({
 					clientId: "command-poison",
 					brokers,
-					logLevel: logLevel.NOTHING,
 				}).producer();
 				await sender.connect();
 				try {

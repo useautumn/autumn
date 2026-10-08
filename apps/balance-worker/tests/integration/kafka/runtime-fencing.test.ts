@@ -3,8 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseTrackCommand } from "@autumn/balance-engine";
-import { createProducerSession } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
+import { createProducerSession, type Kafka } from "@autumn/kafka";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import {
 	createWorkerProducer,
@@ -21,6 +20,7 @@ import {
 	createTestCatalogCache,
 } from "../../fixtures/catalog.js";
 import { restoreSubjectStates } from "../../fixtures/mutations.js";
+import { createTestKafka as createKafkaFor } from "../../fixtures/testKafka.js";
 import {
 	createState,
 	identity,
@@ -33,13 +33,9 @@ function createTestKafka(): Kafka {
 	const brokers: string[] = [];
 	for (const broker of process.env.KAFKA_BROKERS.split(","))
 		brokers.push(broker.trim());
-	return new Kafka({
+	return createKafkaFor({
 		clientId: `runtime-fencing-${crypto.randomUUID()}`,
 		brokers,
-		logLevel: logLevel.NOTHING,
-		connectionTimeout: 3_000,
-		requestTimeout: 10_000,
-		retry: { retries: 2, initialRetryTime: 100, maxRetryTime: 1_000 },
 	});
 }
 
@@ -123,7 +119,6 @@ async function replacementFencesPreviousRuntime(): Promise<void> {
 	try {
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [{ topic, numPartitions: 1, replicationFactor: 1 }],
 		});
 		topicCreated = true;

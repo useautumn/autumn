@@ -3,14 +3,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSubjectState, parseTrackCommand } from "@autumn/balance-engine";
-import { createProducerSession, serializeMeteringRecord } from "@autumn/kafka";
+import {
+	createProducerSession,
+	type Kafka,
+	serializeMeteringRecord,
+} from "@autumn/kafka";
 import {
 	CreateBucketCommand,
 	DeleteBucketCommand,
 	DeleteObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
-import { Kafka, logLevel } from "kafkajs";
 import { createPartitionCheckpointScheduler } from "../../../src/checkpoint/scheduling/partitionCheckpointScheduler.js";
 import { defaultPartitionCheckpointSchedulerConfig } from "../../../src/checkpoint/scheduling/partitionCheckpointSchedulerConfig.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
@@ -38,6 +41,7 @@ import {
 	createCustomerEntitlement,
 	createInitializeMutation,
 } from "../../fixtures/mutations.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 
 const timings = {
 	fetchMaxWaitTimeMs: 100,
@@ -208,11 +212,9 @@ describe("automatic checkpoint recovery", () => {
 			const directory = mkdtempSync(
 				join(tmpdir(), "autumn-scheduled-recovery-"),
 			);
-			const kafka = new Kafka({
+			const kafka = createTestKafka({
 				clientId: runId,
 				brokers: (process.env.KAFKA_BROKERS ?? "127.0.0.1:19092").split(","),
-				logLevel: logLevel.NOTHING,
-				retry: { retries: 2 },
 			});
 			const admin = kafka.admin();
 			const clientConfig = {
@@ -266,7 +268,6 @@ describe("automatic checkpoint recovery", () => {
 			try {
 				await admin.connect();
 				await admin.createTopics({
-					waitForLeaders: true,
 					topics: [
 						{ topic, numPartitions: 1, replicationFactor: 1 },
 						{

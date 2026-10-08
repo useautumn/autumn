@@ -67,6 +67,17 @@ export function createLibrdkafkaAdmin({
 		return admin.deleteTopics(options);
 	}
 
+	/** Moves each partition's log start up to `offset`; tests use it to drop a replayable tail. */
+	async function deleteTopicRecords(options: {
+		topic: string;
+		partitions: PartitionOffset[];
+	}): Promise<void> {
+		await admin.deleteTopicRecords({
+			topic: options.topic,
+			partitions: partitionOffsetsOf(options.partitions),
+		});
+	}
+
 	function listTopics(): Promise<string[]> {
 		return admin.listTopics();
 	}
@@ -161,6 +172,7 @@ export function createLibrdkafkaAdmin({
 		disconnect,
 		createTopics,
 		deleteTopics,
+		deleteTopicRecords,
 		listTopics,
 		fetchTopicMetadata,
 		fetchTopicOffsets,

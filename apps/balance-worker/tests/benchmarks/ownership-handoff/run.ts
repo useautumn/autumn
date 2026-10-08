@@ -43,7 +43,6 @@ import {
 	meteringIdentityToPartition,
 	ownershipTopic,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import {
 	SLOT_HEARTBEAT_KEY_PREFIX,
@@ -51,6 +50,7 @@ import {
 	SlotHeartbeatSchema,
 } from "../../../src/blueGreen/types/slotHeartbeat.js";
 import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 import {
 	openFixturePostgres,
 	type SeededCustomer,
@@ -147,15 +147,10 @@ const topics = {
 	commands: `${deployment}-commands`,
 	catalog: `${deployment}-catalog-invalidations`,
 };
-const kafka = new Kafka({
-	clientId: deployment,
-	brokers,
-	logLevel: logLevel.NOTHING,
-});
+const kafka = createTestKafka({ clientId: deployment, brokers });
 const admin = kafka.admin();
 await admin.connect();
 await admin.createTopics({
-	waitForLeaders: true,
 	topics: [
 		{
 			topic: topics.metering,
@@ -192,12 +187,9 @@ while (customers.size < PARTITION_COUNT) {
 }
 
 // Raw view of the ownership log: every record with its payload timestamp and when we saw it.
-const watcher = kafka.consumer({
-	groupId: `${deployment}-watch`,
-	sessionTimeout: 60_000,
-});
+const watcher = kafka.consumer({ groupId: `${deployment}-watch` });
 await watcher.connect();
-await watcher.subscribe({ topic: topics.ownership, fromBeginning: true });
+await watcher.subscribe({ topics: [topics.ownership], fromBeginning: true });
 await watcher.run({
 	eachMessage: async ({ partition, message }) => {
 		const record = ownershipTopic.parse({

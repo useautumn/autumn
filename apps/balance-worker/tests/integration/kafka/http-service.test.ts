@@ -11,13 +11,13 @@ import {
 	type PartitionOwner,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
 	createCustomerEntitlement,
 	createInitializeMutation,
 	createState,
 } from "../../fixtures/mutations.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 
 function ignoreLog(): void {}
 
@@ -55,15 +55,10 @@ describe("Real balance worker HTTP service", () => {
 			BALANCE_WORKER_GROUP_ID: id,
 			BALANCE_WORKER_PARTITION_COUNT: 1,
 		};
-		const kafka = new Kafka({
-			clientId: id,
-			brokers: env.KAFKA_BROKERS,
-			logLevel: logLevel.NOTHING,
-		});
+		const kafka = createTestKafka({ clientId: id, brokers: env.KAFKA_BROKERS });
 		const admin = kafka.admin();
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
 				{ topic: commands, numPartitions: 1, replicationFactor: 1 },
