@@ -57,6 +57,12 @@ export const buildStripeCheckoutSessionAction = ({
 			.map(applyTaxRateToLineItem),
 	];
 
+	// A recreate keeps the old subscription's manual tax rates unless the request sets one.
+	const carriedTaxRates =
+		mode === "subscription" && !taxRateId
+			? billingContext.carriedSubscriptionParams?.default_tax_rates
+			: undefined;
+
 	// 4. Trial handling (only for subscription mode)
 	const trialEnd =
 		mode === "subscription" && trialContext?.trialEndsAt
@@ -76,12 +82,8 @@ export const buildStripeCheckoutSessionAction = ({
 							end_behavior: { missing_payment_method: "cancel" },
 						},
 					}),
-					...(taxRateId
-						? { default_tax_rates: [taxRateId] }
-						: billingContext.carriedSubscriptionParams?.default_tax_rates && {
-								default_tax_rates:
-									billingContext.carriedSubscriptionParams.default_tax_rates,
-							}),
+					...(taxRateId && { default_tax_rates: [taxRateId] }),
+					...(carriedTaxRates && { default_tax_rates: carriedTaxRates }),
 					metadata: buildAutumnSubscriptionMetadata({
 						actionSource: billingContext.actionSource,
 					}),
@@ -96,7 +98,10 @@ export const buildStripeCheckoutSessionAction = ({
 	// 7. Build params. Tax policy is baked in here (not at execute time) so
 	// the action object is self-describing in logs/EXTRA_LOGS.
 	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> =
-		org.config.automatic_tax && billingContext.automaticTaxEnabled !== false
+		// Stripe rejects automatic_tax alongside default_tax_rates; carried manual rates take precedence.
+		org.config.automatic_tax &&
+		billingContext.automaticTaxEnabled !== false &&
+		!carriedTaxRates?.length
 			? {
 					automatic_tax: { enabled: true },
 					billing_address_collection: "required",
