@@ -322,6 +322,7 @@ export const processMessage = async ({
 				ctx,
 				body: job.data.body,
 				apiVersion: job.data.apiVersion,
+				tokens: job.data.tokens,
 				validateTrackBodyIdempotencyKey:
 					job.data.validateTrackBodyIdempotencyKey !== false,
 			});

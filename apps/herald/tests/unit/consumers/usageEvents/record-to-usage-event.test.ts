@@ -227,6 +227,58 @@ describe("recordToUsageEvent", () => {
 		).toMatchObject({ id: "local-events:3:44", idempotency_key: null });
 	});
 
+	test("a token track records what each other feature was charged as credit_cost, as legacy does", () => {
+		const tokenTrack = ({
+			recordsCreditCost,
+		}: {
+			recordsCreditCost: boolean;
+		}) => {
+			const record = trackRecord({
+				balance: 10,
+				value: 5,
+				overrides: {
+					usageEvent: {
+						name: "messages",
+						idempotencyKey: null,
+						id: null,
+						...(recordsCreditCost && { recordsCreditCost }),
+					},
+				},
+			});
+			if (record.result.type !== "track") throw new Error("Expected a track");
+			// The tracked feature's own draw is not a credit cost; a parent pool's is.
+			const [ownDraw] = record.result.deductions;
+			return {
+				...record,
+				result: {
+					...record.result,
+					deductions: [
+						ownDraw,
+						{
+							...ownDraw,
+							balance_id: "orbs_monthly",
+							feature_id: "orbs",
+							value: 20_000,
+						},
+					],
+				},
+			};
+		};
+
+		expect(
+			recordToUsageEvent({
+				position,
+				record: tokenTrack({ recordsCreditCost: true }),
+			})?.properties,
+		).toEqual({ model: "x", credit_cost: { orbs: 20_000 } });
+		expect(
+			recordToUsageEvent({
+				position,
+				record: tokenTrack({ recordsCreditCost: false }),
+			})?.properties,
+		).toEqual({ model: "x" });
+	});
+
 	test("a record written before it named its subject makes no event", () => {
 		const { subject: _subject, ...older } = trackRecord({
 			balance: 10,

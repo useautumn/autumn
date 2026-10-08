@@ -23,6 +23,7 @@ const expectedCommands = new Set([
 	"refreshOwnedLock",
 	"acquireQueuePermits",
 	"releaseQueuePermit",
+	"incrementOrgThenCustomer",
 ]);
 
 const registerCommands = () => {

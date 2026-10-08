@@ -7,7 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
-import { AppEnv } from "@autumn/shared";
+import { ApiVersionClass, AppEnv, LATEST_VERSION } from "@autumn/shared";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 
@@ -71,6 +71,7 @@ const createCtx = () =>
 		id: "req_batch_status",
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
+		apiVersion: new ApiVersionClass(LATEST_VERSION),
 		logger: testLogger,
 	}) as unknown as AutumnContext;
 

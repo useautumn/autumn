@@ -195,16 +195,12 @@ describe("a subject state from a newer worker", () => {
 		parseSubjectState({ input: state });
 		parseSubjectState({ input: { ...state, revision: 7 } });
 
+		// api_semver is a plain string on the row, so a new API version is not a sighting at all.
 		expect(sightings).toEqual([
 			{
 				kind: "enum_value",
 				schema: "workerCustomerProduct.status",
 				value: "future_status_b",
-			},
-			{
-				kind: "enum_value",
-				schema: "workerCustomerProduct.api_semver",
-				value: "9.9.0",
 			},
 		]);
 	});

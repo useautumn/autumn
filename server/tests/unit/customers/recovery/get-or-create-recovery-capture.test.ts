@@ -6,6 +6,7 @@
  * - The validated request is captured once with the execution stage at failure.
  * - Recovery workers can explicitly disable capture to prevent recursive enqueue.
  * - billing_details is captured too, so a replayed creation still applies it.
+ * - An org over its rate cap gets the same capture, then a 429.
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -150,6 +151,33 @@ describe("getOrCreateApiCustomerByRollout recovery capture", () => {
 
 		expect(mockState.queueCalls).toEqual([
 			expect.objectContaining({ billingDetails }),
+		]);
+	});
+
+	test("captures the request and answers 429 when the org is over its rate cap", async () => {
+		const ctx = { ...buildContext(), orgRateLimitDegraded: true };
+
+		await expect(
+			getOrCreateApiCustomerByRollout({
+				ctx,
+				params,
+				source: "handleGetOrCreateCustomerV2",
+				withAutumnId: true,
+			}),
+		).rejects.toMatchObject({
+			statusCode: 429,
+			code: "rate_limit_exceeded",
+			message: "Rate limit exceeded.",
+		});
+
+		expect(mockState.queueCalls).toEqual([
+			expect.objectContaining({
+				ctx,
+				params,
+				source: "handleGetOrCreateCustomerV2",
+				withAutumnId: true,
+				failureStage: "lookup",
+			}),
 		]);
 	});
 
