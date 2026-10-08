@@ -197,6 +197,7 @@ export const setupAutoTopupContext = async ({
 			fullCustomer,
 			autoTopupConfig: normalizedAutoTopupConfig,
 			paymentMethod,
+			invoiceMode: Boolean(invoiceMode),
 		});
 
 	if (!allowed) {

@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 
-/** Stripe documents these as delayed-notification: charges sit in `processing` for days. */
+/** Non-exhaustive: only types Stripe documents as delayed-notification, blocked before charging.
+ * Any other type that comes back `processing` is caught by the delayed-payment suspension in autoTopup. */
 export const DELAYED_PAYMENT_METHOD_TYPES = new Set<string>([
 	"us_bank_account",
 	"sepa_debit",

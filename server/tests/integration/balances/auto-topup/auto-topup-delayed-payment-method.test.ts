@@ -26,6 +26,7 @@ import {
 	parseEventBody,
 	setupWebhookTest,
 	type WebhookTestSetup,
+	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -90,6 +91,25 @@ const countAutoTopupWebhooks = async ({
 			return false;
 		}
 	}).length;
+};
+
+/** Polls Svix Play: delivery lands a few seconds after the job fires it. */
+const expectAutoTopupFailedWebhook = async ({
+	customerId,
+	reason,
+}: {
+	customerId: string;
+	reason: BillingAutoTopupFailed["reason"];
+}) => {
+	const received = await waitForWebhook<AutoTopupWebhookPayload>({
+		token: webhook.playToken,
+		predicate: (payload) =>
+			payload.type === WebhookEventType.BillingAutoTopupFailed &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.reason === reason,
+		timeoutMs: 30000,
+	});
+	expect(received).not.toBeNull();
 };
 
 const getLimitState = async ({
@@ -267,13 +287,10 @@ test(`${chalk.yellowBright("auto-topup delay1: ACH default is not charged and ge
 	await dropBelowThreshold(scenario);
 
 	await expectCustomerInvoiceCorrect({ customerId, count: 1 });
-	expect(
-		await countAutoTopupWebhooks({
-			customerId,
-			type: WebhookEventType.BillingAutoTopupFailed,
-			reason: "payment_method_not_supported",
-		}),
-	).toBe(1);
+	await expectAutoTopupFailedWebhook({
+		customerId,
+		reason: "payment_method_not_supported",
+	});
 });
 
 test(`${chalk.yellowBright("auto-topup delay2: processing charge suspends, blocks the next top-up, and stays suspended after it settles")}`, async () => {
@@ -291,13 +308,10 @@ test(`${chalk.yellowBright("auto-topup delay2: processing charge suspends, block
 	const suspended = await getLimitState({ ctx, customerId });
 	expect(suspended?.suspended_at).not.toBeNull();
 	expect(suspended?.suspended_reason).toBe("delayed_payment_method");
-	expect(
-		await countAutoTopupWebhooks({
-			customerId,
-			type: WebhookEventType.BillingAutoTopupFailed,
-			reason: "payment_method_delayed",
-		}),
-	).toBe(1);
+	await expectAutoTopupFailedWebhook({
+		customerId,
+		reason: "payment_method_delayed",
+	});
 	expect(
 		await countAutoTopupWebhooks({
 			customerId,
@@ -353,4 +367,41 @@ test(`${chalk.yellowBright("auto-topup delay3: adding a card lifts the delayed-p
 	});
 	const lifted = await getLimitState({ ctx, customerId });
 	expect(lifted?.suspended_at).toBeNull();
+});
+
+test(`${chalk.yellowBright("auto-topup delay4: switching to invoice mode tops up despite a delayed-payment suspension")}`, async () => {
+	const scenario = await setupAchCustomer({
+		id: "delay4",
+		achType: "us_bank_account_processing",
+	});
+	const { customerId, autumnV2_1, ctx } = scenario;
+
+	await dropBelowThreshold(scenario);
+	await runAutoTopupPastDenyList({ ctx, customerId });
+	const suspended = await getLimitState({ ctx, customerId });
+	expect(suspended?.suspended_reason).toBe("delayed_payment_method");
+
+	// Invoice mode never charges the saved method, so the suspension must not block it.
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 20,
+			quantity: 100,
+			invoiceMode: true,
+		}),
+	});
+	await expireAutoTopupWindows({ ctx, customerId });
+	await runAutoTopupInProcess({ ctx, customerId });
+
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 3,
+		latestTotal: 10,
+		latestStatus: "open",
+	});
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 115,
+	});
 });
