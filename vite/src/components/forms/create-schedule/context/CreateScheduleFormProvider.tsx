@@ -1,4 +1,5 @@
 import type {
+	ApiDiscount,
 	Feature,
 	FullCustomer,
 	ProductV2,
@@ -46,6 +47,7 @@ import {
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { defaultProrationBehavior } from "@/components/forms/shared/utils/defaultProrationBehavior";
+import { filterSubscriptionDiscounts } from "@/components/forms/shared/utils/filterSubscriptionDiscounts";
 import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialForm";
 import { pickFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -112,6 +114,8 @@ interface CreateScheduleFormContextValue {
 		paymentUrl: string | null | undefined;
 	}>;
 	preview: SetPlansPreviewResponse | null | undefined;
+	/** The preview's discounts on the edited subscription; customer-level coupons aren't removable here. */
+	appliedDiscounts: ApiDiscount[];
 	previewQuery: { data: SetPlansPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;
@@ -391,33 +395,6 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const getDiscounts = useCallback(() => {
-		const { discounts, removedRewardIds } = form.store.state.values;
-		return { discounts, removedRewardIds };
-	}, [form.store]);
-
-	const buildRequestBody = useBuildCreateScheduleRequestBody({
-		customerId,
-		products,
-		features,
-		nowMs,
-		getPhases,
-		getUnscheduledPlans,
-		getResetBillingCycle,
-		getBillingCycleAnchor,
-		getEndDate,
-		getEnablePlanImmediately,
-		getAllowFirstPhaseBackdate,
-		getCarryOverUsages,
-		getFreeTrial,
-		getOmitFirstPhaseProration,
-		getDiscounts,
-		defaultFirstPhaseProration,
-		currentTrial,
-		catalogFreeTrial,
-		stripeSubscriptionId,
-	});
-
 	const generationRequestBody = useCreateScheduleRequestBody({
 		customerId,
 		phases: formValues.phases,
@@ -484,6 +461,48 @@ export function CreateScheduleFormProvider({
 		}
 	}, [preview?.redirect_to_checkout, startsLater, form]);
 
+	const appliedDiscounts = useMemo(
+		() =>
+			filterSubscriptionDiscounts({
+				discounts: preview?.discounts ?? [],
+				subscriptionIds: scopedCustomerProducts.flatMap(
+					(customerProduct) => customerProduct.subscription_ids ?? [],
+				),
+			}),
+		[preview?.discounts, scopedCustomerProducts],
+	);
+
+	const getDiscounts = useCallback(() => {
+		const { discounts, removedRewardIds } = form.store.state.values;
+		return {
+			discounts,
+			removedRewardIds,
+			removableRewardIds: appliedDiscounts.map((discount) => discount.id),
+		};
+	}, [form.store, appliedDiscounts]);
+
+	const buildRequestBody = useBuildCreateScheduleRequestBody({
+		customerId,
+		products,
+		features,
+		nowMs,
+		getPhases,
+		getUnscheduledPlans,
+		getResetBillingCycle,
+		getBillingCycleAnchor,
+		getEndDate,
+		getEnablePlanImmediately,
+		getAllowFirstPhaseBackdate,
+		getCarryOverUsages,
+		getFreeTrial,
+		getOmitFirstPhaseProration,
+		getDiscounts,
+		defaultFirstPhaseProration,
+		currentTrial,
+		catalogFreeTrial,
+		stripeSubscriptionId,
+	});
+
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,
 		customerId,
@@ -528,6 +547,7 @@ export function CreateScheduleFormProvider({
 			handleInvoiceSubmit,
 			handleCheckoutSubmit,
 			preview,
+			appliedDiscounts,
 			previewQuery,
 			isPreviewLoading,
 			error: phaseTimingError ? new Error(phaseTimingError) : previewError,
@@ -557,6 +577,7 @@ export function CreateScheduleFormProvider({
 			handleInvoiceSubmit,
 			handleCheckoutSubmit,
 			preview,
+			appliedDiscounts,
 			previewQuery,
 			isPreviewLoading,
 			phaseTimingError,

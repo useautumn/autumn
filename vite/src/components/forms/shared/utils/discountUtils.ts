@@ -95,19 +95,25 @@ export const filterValidDiscounts = (
 	);
 };
 
-/** Only what changed: picked rows go to `discounts`, marked ones to `remove_discounts`, untouched ones are left to the server. */
+/** Only what changed: picked rows go to `discounts`, marked ones to `remove_discounts`, untouched ones are left to the server.
+ * Pass `removableRewardIds` to drop any marked discount that isn't removable, such as a customer-level coupon. */
 export const buildDiscountParams = ({
 	discounts,
 	removedRewardIds,
-}: DiscountsFormFields): {
+	removableRewardIds,
+}: DiscountsFormFields & { removableRewardIds?: string[] }): {
 	discounts?: AttachDiscount[];
 	remove_discounts?: RemoveDiscount[];
 } => {
 	const addedDiscounts = filterValidDiscounts(discounts);
+	const removable = removableRewardIds && new Set(removableRewardIds);
+	const removals = removable
+		? removedRewardIds.filter((rewardId) => removable.has(rewardId))
+		: removedRewardIds;
 	return {
 		...(addedDiscounts.length > 0 && { discounts: addedDiscounts }),
-		...(removedRewardIds.length > 0 && {
-			remove_discounts: removedRewardIds.map((rewardId) => ({
+		...(removals.length > 0 && {
+			remove_discounts: removals.map((rewardId) => ({
 				reward_id: rewardId,
 			})),
 		}),

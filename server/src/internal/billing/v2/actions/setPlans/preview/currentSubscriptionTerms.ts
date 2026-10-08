@@ -30,15 +30,17 @@ export const currentSubscriptionTerms = async ({
 		billingContext.stripeSubscription ??
 		billingContext.replacedStripeSubscription;
 	// Billing setup fetched both with their discounts expanded.
+	const stripeCustomer = billingContext.stripeCustomer as
+		| StripeCustomerWithDiscount
+		| undefined;
 	const discounts = await extractStripeDiscounts({
 		ctx,
 		stripeSubscription: currentSubscription as
 			| StripeSubscriptionWithDiscounts
 			| undefined,
-		stripeCustomer: billingContext.stripeCustomer as
-			| StripeCustomerWithDiscount
-			| undefined,
+		stripeCustomer,
 	});
+	const customerDiscountId = stripeCustomer?.discount?.id;
 	const sendsInvoice =
 		currentSubscription?.collection_method === "send_invoice";
 
@@ -46,7 +48,11 @@ export const currentSubscriptionTerms = async ({
 		discounts: discounts.map((discount) =>
 			stripeDiscountToApiDiscount({
 				discount,
-				subscriptionId: currentSubscription?.id,
+				// A customer-level coupon isn't on the subscription, matching the customer rewards list.
+				subscriptionId:
+					discount.id === customerDiscountId
+						? undefined
+						: currentSubscription?.id,
 			}),
 		),
 		invoice_mode: {

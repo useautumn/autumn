@@ -54,6 +54,7 @@ export function CreateScheduleAdvancedSection() {
 		canScheduleTrial,
 		isExistingSchedule,
 		previewQuery,
+		appliedDiscounts,
 	} = useCreateScheduleFormContext();
 	const {
 		resetBillingCycle,
@@ -67,7 +68,6 @@ export function CreateScheduleAdvancedSection() {
 		discounts,
 		removedRewardIds,
 	} = formValues;
-	const appliedDiscounts = previewQuery.data?.discounts ?? [];
 
 	const rules = getBillingOptionRules({
 		flow: "schedule",

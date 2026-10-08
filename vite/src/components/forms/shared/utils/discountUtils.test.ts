@@ -26,4 +26,21 @@ describe("buildDiscountParams", () => {
 		expect(params).not.toHaveProperty("discounts");
 		expect(params).not.toHaveProperty("remove_discounts");
 	});
+
+	test("never sends a discount outside the removable list, like a customer-level coupon", () => {
+		expect(
+			buildDiscountParams({
+				discounts: [],
+				removedRewardIds: ["customer_coupon", "launch_30"],
+				removableRewardIds: ["launch_30"],
+			}),
+		).toEqual({ remove_discounts: [{ reward_id: "launch_30" }] });
+		expect(
+			buildDiscountParams({
+				discounts: [],
+				removedRewardIds: ["customer_coupon"],
+				removableRewardIds: [],
+			}),
+		).toEqual({});
+	});
 });

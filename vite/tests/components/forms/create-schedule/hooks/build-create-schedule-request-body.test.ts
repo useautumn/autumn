@@ -1313,3 +1313,17 @@ describe("buildCreateScheduleRequestBody discounts", () => {
 		expect(submit({})?.remove_discounts).toEqual([{ reward_id: "launch_20" }]);
 	});
 });
+
+test("Set Plans never sends a customer-level coupon in remove_discounts", () => {
+	const body = buildCreateScheduleRequestBody({
+		customerId: "cus_1",
+		phases: [schedulePhase({ startsAt: null })],
+		products: [makeProduct({ id: "prod_1", items: [basePriceItem] })],
+		features,
+		nowMs: Date.UTC(2027, 0, 1),
+		removedRewardIds: ["customer_coupon"],
+		removableRewardIds: ["launch_20"],
+	});
+
+	expect(body).not.toHaveProperty("remove_discounts");
+});

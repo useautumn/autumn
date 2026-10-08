@@ -55,6 +55,7 @@ export function buildCreateScheduleRequestBody({
 	omitFirstPhaseProration = false,
 	discounts = [],
 	removedRewardIds = [],
+	removableRewardIds,
 }: {
 	customerId: string | undefined;
 	phases: CustomerStatePhase[];
@@ -80,6 +81,8 @@ export function buildCreateScheduleRequestBody({
 	omitFirstPhaseProration?: boolean;
 	discounts?: FormDiscount[];
 	removedRewardIds?: string[];
+	/** Marked discounts outside this list, like customer-level coupons, are never sent. */
+	removableRewardIds?: string[];
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
@@ -197,7 +200,10 @@ export function buildCreateScheduleRequestBody({
 				})
 			: undefined;
 	if (freeTrialParam !== undefined) body.free_trial = freeTrialParam;
-	Object.assign(body, buildDiscountParams({ discounts, removedRewardIds }));
+	Object.assign(
+		body,
+		buildDiscountParams({ discounts, removedRewardIds, removableRewardIds }),
+	);
 	return body as SetPlansParamsV0;
 }
 
@@ -355,7 +361,7 @@ export function useBuildCreateScheduleRequestBody({
 	>;
 	getFreeTrial?: () => FreeTrialFormValues;
 	getOmitFirstPhaseProration?: () => boolean;
-	getDiscounts?: () => DiscountsFormFields;
+	getDiscounts?: () => DiscountsFormFields & { removableRewardIds?: string[] };
 	defaultFirstPhaseProration?: BillingBehavior;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
