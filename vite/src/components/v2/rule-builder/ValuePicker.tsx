@@ -13,20 +13,15 @@ import { CheckIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { type PopupSide, pickPopupSide } from "./pickPopupSide";
 import { ValueChip } from "./ValueChip";
 
 const MAX_VISIBLE_CHIPS = 3;
-const MIN_LIST_HEIGHT = 240;
-
-type PickerSide = "top" | "bottom";
-
-/** Chosen once on open so the list never flips while chips change or the page scrolls. */
-const sideForTrigger = (trigger: Element | undefined): PickerSide => {
-	if (!trigger) return "bottom";
-	const { top, bottom } = trigger.getBoundingClientRect();
-	const spaceBelow = window.innerHeight - bottom;
-	return spaceBelow < MIN_LIST_HEIGHT && top > spaceBelow ? "top" : "bottom";
-};
+const POPUP_MAX_HEIGHT = 340;
+const SIDE_OFFSET = 4;
+// Base UI's default collisionPadding, which --available-height subtracts.
+const COLLISION_PADDING = 5;
+const POPUP_FOOTPRINT = POPUP_MAX_HEIGHT + SIDE_OFFSET + COLLISION_PADDING;
 
 export type ValuePickerOption = {
 	value: string;
@@ -52,7 +47,7 @@ export function ValuePicker({
 	className?: string;
 	defaultOpen?: boolean;
 }) {
-	const [popup, setPopup] = useState<{ open: boolean; side: PickerSide }>({
+	const [popup, setPopup] = useState<{ open: boolean; side: PopupSide }>({
 		open: defaultOpen,
 		side: "bottom",
 	});
@@ -64,7 +59,12 @@ export function ValuePicker({
 			<Popover
 				open={popup.open}
 				onOpenChange={(open, { trigger }) =>
-					setPopup({ open, side: open ? sideForTrigger(trigger) : popup.side })
+					setPopup({
+						open,
+						side: open
+							? pickPopupSide({ trigger, popupHeight: POPUP_FOOTPRINT })
+							: popup.side,
+					})
 				}
 			>
 				<PopoverTrigger
@@ -101,13 +101,17 @@ export function ValuePicker({
 				</PopoverTrigger>
 				<PopoverContent
 					side={popup.side}
+					sideOffset={SIDE_OFFSET}
 					align="start"
 					collisionAvoidance={{ side: "none", fallbackAxisSide: "none" }}
-					className="flex flex-col w-(--anchor-width) max-h-(--available-height) p-0 overflow-hidden"
+					className="flex flex-col w-(--anchor-width) p-0 overflow-hidden"
+					style={{
+						maxHeight: `min(var(--available-height), ${POPUP_MAX_HEIGHT}px)`,
+					}}
 				>
 					<Command className="bg-interactive-secondary *:data-[slot=command-input-wrapper]:shrink-0">
 						<CommandInput placeholder="Search..." className="text-sm" />
-						<CommandList>
+						<CommandList className="max-h-none min-h-0">
 							<CommandEmpty className="text-tertiary-foreground text-sm p-2">
 								No results
 							</CommandEmpty>
