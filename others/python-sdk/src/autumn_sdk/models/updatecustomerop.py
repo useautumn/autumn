@@ -28,7 +28,7 @@ class UpdateCustomerGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.4.0"
+    ] = "2.5.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

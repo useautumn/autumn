@@ -1,6 +1,6 @@
 info:
   title: Autumn API
-  version: 2.4.0
+  version: 2.5.0
 servers:
   - url: https://api.useautumn.com
     description: Production server
@@ -6135,7 +6135,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/customers.get:
     post:
@@ -7927,7 +7927,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/customers.list:
     post:
@@ -9449,7 +9449,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/customers.update:
     post:
@@ -11338,7 +11338,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/customers.delete:
     post:
@@ -11389,7 +11389,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/customers.advance_test_clock:
     post:
@@ -11454,7 +11454,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/subscriptions.list:
     post:
@@ -11688,7 +11688,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/purchases.list:
     post:
@@ -11868,7 +11868,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/plans.create:
     post:
@@ -17373,7 +17373,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/plans.get:
     post:
@@ -21143,7 +21143,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/plans.list:
     post:
@@ -27916,7 +27916,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/plans.update:
     post:
@@ -35255,7 +35255,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/plans.delete:
     post:
@@ -35313,7 +35313,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/features.create:
     post:
@@ -36301,7 +36301,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/features.get:
     post:
@@ -36884,7 +36884,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/features.list:
     post:
@@ -37497,7 +37497,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/features.update:
     post:
@@ -38487,7 +38487,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/features.delete:
     post:
@@ -38540,7 +38540,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.attach:
     post:
@@ -41403,7 +41403,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.create_schedule:
     post:
@@ -49054,7 +49054,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.multi_attach:
     post:
@@ -50230,7 +50230,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.preview_attach:
     post:
@@ -53438,7 +53438,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.preview_multi_attach:
     post:
@@ -54946,7 +54946,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.update:
     post:
@@ -57681,7 +57681,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.preview_update:
     post:
@@ -60745,7 +60745,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.multi_update:
     post:
@@ -60951,7 +60951,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.preview_multi_update:
     post:
@@ -61488,7 +61488,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.open_customer_portal:
     post:
@@ -61554,7 +61554,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.setup_payment:
     post:
@@ -64299,7 +64299,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.verify:
     post:
@@ -65150,7 +65150,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/billing.import:
     post:
@@ -65582,7 +65582,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.create:
     post:
@@ -65713,7 +65713,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.list:
     post:
@@ -66053,7 +66053,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.update:
     post:
@@ -66153,7 +66153,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.delete:
     post:
@@ -66230,7 +66230,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.finalize:
     post:
@@ -66311,7 +66311,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.check:
     post:
@@ -68941,13 +68941,14 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.track:
     post:
       operationId: track
       description: >-
-        Records usage for a customer feature and returns updated balances.
+        Records usage for a customer feature. Queued by default; pass async:
+        false to apply it before responding with updated balances.
 
 
         Use this after an action happens to decrement usage, or send a negative
@@ -69004,9 +69005,9 @@ paths:
                   type: string
                 async:
                   type: boolean
-                  description: If true, enqueue the event for asynchronous processing and return
-                    204 immediately. The response will not include balance
-                    information.
+                  description: "Defaults to true: the event is queued and the response is a 202
+                    with balance: null. Set to false to apply the usage before
+                    responding with a 200 and the updated balance."
               required:
                 - customer_id
               title: TrackParams
@@ -69195,9 +69196,9 @@ paths:
                       resets_at: 1781288736881
                     value: 1
         "202":
-          description: Accepted. Autumn is experiencing degraded service from a downstream
-            provider, so the event was accepted for replay and will be tracked
-            as soon as the service is restored.
+          description: Accepted. The event was queued and will be applied shortly, so
+            balance is null. Returned by default unless async is false, and when
+            Autumn is experiencing degraded service.
           content:
             application/json:
               schema:
@@ -69378,7 +69379,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.track_tokens:
     post:
@@ -69478,9 +69479,9 @@ paths:
                   type: string
                 async:
                   type: boolean
-                  description: If true, enqueue the event for asynchronous processing and return
-                    204 immediately. The response will not include balance
-                    information.
+                  description: "Defaults to true: the event is queued and the response is a 202
+                    with balance: null. Set to false to apply the usage before
+                    responding with a 200 and the updated balance."
               required:
                 - customer_id
                 - model_id
@@ -69676,9 +69677,9 @@ paths:
                       resets_at: 1781288736881
                     value: 0.006
         "202":
-          description: Accepted. Autumn is experiencing degraded service from a downstream
-            provider, so the token usage event was accepted for replay and will
-            be tracked as soon as the service is restored.
+          description: Accepted. The token usage event was queued and will be applied
+            shortly, so balance is null. Returned by default unless async is
+            false, and when Autumn is experiencing degraded service.
           content:
             application/json:
               schema:
@@ -69859,7 +69860,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/balances.batch_track:
     post:
@@ -69932,11 +69933,6 @@ paths:
                       - cap
                       - overflow
                     type: string
-                  async:
-                    type: boolean
-                    description: If true, enqueue the event for asynchronous processing and return
-                      204 immediately. The response will not include balance
-                      information.
                 required:
                   - customer_id
               title: BatchTrackParams
@@ -69996,7 +69992,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/events.list:
     post:
@@ -70254,7 +70250,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/events.aggregate:
     post:
@@ -70623,7 +70619,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/logs.search:
     post:
@@ -70858,7 +70854,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.create:
     post:
@@ -72091,7 +72087,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.finalize:
     post:
@@ -72371,7 +72367,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.insert:
     post:
@@ -72594,7 +72590,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.list:
     post:
@@ -72938,7 +72934,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.listTemplates:
     post:
@@ -73066,7 +73062,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.pay:
     post:
@@ -73344,7 +73340,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.issue_credit_note:
     post:
@@ -73626,7 +73622,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.reissue:
     post:
@@ -74984,7 +74980,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/invoices.void:
     post:
@@ -75264,7 +75260,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/licenses.attach:
     post:
@@ -75339,7 +75335,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/licenses.release:
     post:
@@ -75397,7 +75393,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/licenses.list_assignments:
     post:
@@ -75485,7 +75481,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/licenses.list:
     post:
@@ -75581,7 +75577,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/entities.create:
     post:
@@ -76902,7 +76898,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/entities.get:
     post:
@@ -78026,7 +78022,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/entities.list:
     post:
@@ -79224,7 +79220,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/entities.update:
     post:
@@ -80594,7 +80590,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/entities.delete:
     post:
@@ -80652,7 +80648,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referrals.create_code:
     post:
@@ -80719,7 +80715,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referrals.redeem_code:
     post:
@@ -80786,7 +80782,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referral_programs.create:
     post:
@@ -80954,7 +80950,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referral_programs.list:
     post:
@@ -81072,7 +81068,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referral_programs.get:
     post:
@@ -81177,7 +81173,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referral_programs.update:
     post:
@@ -81322,7 +81318,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/referral_programs.delete:
     post:
@@ -81369,7 +81365,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/rewards.create:
     post:
@@ -81802,7 +81798,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/rewards.list:
     post:
@@ -82044,7 +82040,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/rewards.get:
     post:
@@ -82312,7 +82308,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/rewards.update:
     post:
@@ -82657,7 +82653,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/rewards.delete:
     post:
@@ -82704,7 +82700,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/rewards.redeem:
     post:
@@ -82781,7 +82777,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/platform.get_stripe_connection:
     post:
@@ -82865,7 +82861,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/platform.disconnect_stripe:
     post:
@@ -82927,7 +82923,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/platform.link_revenuecat:
     post:
@@ -82997,7 +82993,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/platform.sync_revenuecat:
     post:
@@ -83139,7 +83135,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/platform.get_revenuecat_keys:
     post:
@@ -83266,7 +83262,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/keys.mint:
     post:
@@ -83343,7 +83339,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/keys.refresh:
     post:
@@ -83411,7 +83407,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/keys.revoke:
     post:
@@ -83462,7 +83458,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/sandboxes.create:
     post:
@@ -83586,7 +83582,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/sandboxes.list:
     post:
@@ -83680,7 +83676,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/sandboxes.delete:
     post:
@@ -83732,7 +83728,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/sandboxes.reset:
     post:
@@ -83782,7 +83778,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.create:
     post:
@@ -83937,7 +83933,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.get:
     post:
@@ -84040,7 +84036,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.list:
     post:
@@ -84142,7 +84138,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.update:
     post:
@@ -84279,7 +84275,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.delete:
     post:
@@ -84334,7 +84330,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.preview_sync:
     post:
@@ -84831,7 +84827,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
   /v1/webhooks.sync:
     post:
@@ -85052,7 +85048,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.4.0
+            default: 2.5.0
           x-speakeasy-globals-hidden: true
 security:
   - secretKey: []
@@ -85063,7 +85059,7 @@ x-speakeasy-globals:
       required: true
       schema:
         type: string
-        default: 2.4.0
+        default: 2.5.0
       x-speakeasy-globals-hidden: true
     - name: fail-open
       in: header

@@ -89,7 +89,7 @@ For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.4.0",
+  xApiVersion: "2.5.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -124,7 +124,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-  xApiVersion: "2.4.0",
+  xApiVersion: "2.5.0",
 });
 
 async function run() {
@@ -181,7 +181,7 @@ const response = await client.check({
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
 @returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
-* [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
+* [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
 
@@ -205,9 +205,9 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
 @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
-@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
+@param async - Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance. (optional)
 
-@returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
+@returns The usage value recorded. By default the event is queued and the API returns 202 with balance: null. With async: false it returns 200 with either a single updated balance or a map of updated balances, or 202 if Autumn is experiencing degraded service and accepted the event for replay.
 * [trackTokens](docs/sdks/autumn/README.md#tracktokens) - Records AI token usage for a customer and returns the updated AI credit balance.
 
 Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
@@ -239,9 +239,9 @@ const response = await client.trackTokens({
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
 @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
-@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
+@param async - Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance. (optional)
 
-@returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
+@returns The dollar value recorded. By default the event is queued and the API returns 202 with balance: null. With async: false it returns 200 with the updated AI credit system balance, or 202 if Autumn is experiencing degraded service and accepted the event for replay.
 * [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 200 (or 202) immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 200 (or 202) and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
@@ -1610,7 +1610,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`sandboxesDelete`](docs/sdks/sandboxes/README.md#delete) - Permanently deletes a sandbox and everything inside it: its catalog, customers and secret key. Cannot be undone.
 - [`sandboxesList`](docs/sdks/sandboxes/README.md#list) - Lists every sandbox belonging to your organization, newest first. Secret keys are never returned here — only `sandboxes.create` shows one.
 - [`sandboxesReset`](docs/sdks/sandboxes/README.md#reset) - Wipes every customer, plan, feature and migration draft in the sandbox the calling key belongs to, leaving the sandbox itself, its secret keys and its settings in place. There is no id to pass: a sandbox's own key resets that sandbox, and an organization's test-mode key resets its default sandbox environment. Refused for live keys — only sandboxes can be reset. Cannot be undone.
-- [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
+- [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
 
@@ -1634,9 +1634,9 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
 @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
-@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
+@param async - Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance. (optional)
 
-@returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
+@returns The usage value recorded. By default the event is queued and the API returns 202 with balance: null. With async: false it returns 200 with either a single updated balance or a map of updated balances, or 202 if Autumn is experiencing degraded service and accepted the event for replay.
 - [`trackTokens`](docs/sdks/autumn/README.md#tracktokens) - Records AI token usage for a customer and returns the updated AI credit balance.
 
 Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
@@ -1668,9 +1668,9 @@ const response = await client.trackTokens({
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
 @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
-@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
+@param async - Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance. (optional)
 
-@returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
+@returns The dollar value recorded. By default the event is queued and the API returns 202 with balance: null. With async: false it returns 200 with the updated AI credit system balance, or 202 if Autumn is experiencing degraded service and accepted the event for replay.
 - [`webhooksCreate`](docs/sdks/webhooks/README.md#create) - Creates a webhook: a URL Autumn sends the listed events to, in the environment of the calling key. You choose the `id`, and it can't be changed later. Returns the signing secret once, in this response — store it, it cannot be read back.
 - [`webhooksDelete`](docs/sdks/webhooks/README.md#delete) - Permanently deletes a webhook. Autumn stops sending it events immediately. Cannot be undone.
 - [`webhooksGet`](docs/sdks/webhooks/README.md#get) - Gets one webhook by ID. The signing secret is never returned here — only `webhooks.create` and `webhooks.sync` show one, when they create the webhook.
@@ -1692,7 +1692,7 @@ To change the default retry strategy for a single API call, simply provide a ret
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.4.0",
+  xApiVersion: "2.5.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1735,7 +1735,7 @@ const autumn = new Autumn({
     },
     retryConnectionErrors: false,
   },
-  xApiVersion: "2.4.0",
+  xApiVersion: "2.5.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1772,7 +1772,7 @@ import * as models from "@useautumn/sdk";
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.4.0",
+  xApiVersion: "2.5.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1831,7 +1831,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   serverURL: "https://api.useautumn.com",
-  xApiVersion: "2.4.0",
+  xApiVersion: "2.5.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 

@@ -57,6 +57,50 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 {
   "customerId": "user_123",
   "value": 1,
+  "balance": null
+}
+```
+
+Track is queued by default: it responds immediately with a `202` and `balance: null`, and the usage is applied a moment later. Pass `async: false` when you need the updated balance in the response (it has [lower rate limits](/documentation/rate-limits)):
+
+<CodeGroup>
+
+```typescript TypeScript
+const { balance } = await autumn.track({
+  customerId: "user_123",
+  featureId: "ai-messages",
+  value: 1,
+  async: false,
+});
+```
+
+```python Python
+response = await autumn.track(
+    customer_id="user_123",
+    feature_id="ai-messages",
+    value=1,
+    async_=False,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer $AUTUMN_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "ai-messages",
+    "value": 1,
+    "async": false
+  }'
+```
+
+</CodeGroup>
+
+```json
+{
+  "customerId": "user_123",
+  "value": 1,
   "balance": {
     "featureId": "ai-messages",
     "granted": 100,
@@ -68,6 +112,8 @@ curl -X POST "https://api.useautumn.com/v1/track" \
   }
 }
 ```
+
+On API version `2.4.0` and earlier, track is synchronous by default, and `async: true` opts in to queuing.
 
   You can also send a negative `value` to increase the balance counter, which is
   useful for increasing a feature limit (eg, if a customer removes a seat).

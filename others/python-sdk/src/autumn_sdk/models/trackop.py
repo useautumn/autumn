@@ -19,7 +19,7 @@ class TrackGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.4.0"
+    ] = "2.5.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -63,7 +63,7 @@ class TrackParamsTypedDict(TypedDict):
     overage_behavior: NotRequired[TrackOverageBehavior]
     r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
     async_: NotRequired[bool]
-    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
+    r"""Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance."""
 
 
 class TrackParams(BaseModel):
@@ -92,7 +92,7 @@ class TrackParams(BaseModel):
     r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
 
     async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
-    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
+    r"""Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -240,7 +240,7 @@ class TrackDeduction2(BaseModel):
 
 
 class TrackResponseBody2TypedDict(TypedDict):
-    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored."""
+    r"""Accepted. The event was queued and will be applied shortly, so balance is null. Returned by default unless async is false, and when Autumn is experiencing degraded service."""
 
     customer_id: str
     r"""The ID of the customer whose usage was tracked."""
@@ -259,7 +259,7 @@ class TrackResponseBody2TypedDict(TypedDict):
 
 
 class TrackResponseBody2(BaseModel):
-    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored."""
+    r"""Accepted. The event was queued and will be applied shortly, so balance is null. Returned by default unless async is false, and when Autumn is experiencing degraded service."""
 
     customer_id: str
     r"""The ID of the customer whose usage was tracked."""

@@ -58,9 +58,9 @@ import { Result } from "../types/fp.js";
  * @param properties - Additional properties to attach to this usage event. (optional)
  * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
  * @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
- * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
+ * @param async - Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance. (optional)
  *
- * @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
+ * @returns The dollar value recorded. By default the event is queued and the API returns 202 with balance: null. With async: false it returns 200 with the updated AI credit system balance, or 202 if Autumn is experiencing degraded service and accepted the event for replay.
  */
 export function trackTokens(
   client: AutumnCore,

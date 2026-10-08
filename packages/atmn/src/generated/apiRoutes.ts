@@ -21,7 +21,7 @@ export type ApiRoute = {
 };
 
 /** The x-api-version every request carries: the spec's default. */
-export const API_VERSION = "2.4.0";
+export const API_VERSION = "2.5.0";
 
 export const API_ROUTES: readonly ApiRoute[] = [
 	{
@@ -2917,7 +2917,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 		method: "track",
 		path: "/v1/balances.track",
 		description:
-			"Records usage for a customer feature and returns updated balances.",
+			"Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.",
 		body: "object",
 		fields: [
 			{
@@ -2979,7 +2979,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "boolean",
 				required: false,
 				description:
-					"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
+					"Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.",
 			},
 		],
 	},
@@ -3086,7 +3086,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "boolean",
 				required: false,
 				description:
-					"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
+					"Defaults to true: the event is queued and the response is a 202 with balance: null. Set to false to apply the usage before responding with a 200 and the updated balance.",
 			},
 		],
 	},
