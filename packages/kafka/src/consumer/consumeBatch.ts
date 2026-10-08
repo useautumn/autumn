@@ -1,5 +1,5 @@
-import type { EachBatchPayload } from "kafkajs";
 import { parseKafkaOffset } from "../client/kafkaOffsetUtils.js";
+import type { EachBatchPayload } from "../client/types/kafkaWire.js";
 import {
 	commitBatchOffsets,
 	hasCurrentBatchGeneration,

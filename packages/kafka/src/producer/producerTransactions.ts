@@ -1,8 +1,11 @@
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import type {
 	KafkaProducerClient,
 	KafkaTransaction,
 } from "../client/types/kafkaClient.js";
+import type {
+	ProducerRecord,
+	RecordMetadata,
+} from "../client/types/kafkaWire.js";
 import { isKafkaProducerFencingCause } from "./producerErrors.js";
 import type { ProducerSessionState } from "./types/producer.js";
 

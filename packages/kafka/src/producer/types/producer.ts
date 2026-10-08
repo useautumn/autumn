@@ -26,6 +26,8 @@ export type KafkaProducerSessionConfig = {
 
 export type ProducerSessionState = {
 	initialized: boolean;
+	connected: boolean;
+	connecting?: Promise<void>;
 	closed: boolean;
 	terminal: boolean;
 	transactions: Promise<void>;

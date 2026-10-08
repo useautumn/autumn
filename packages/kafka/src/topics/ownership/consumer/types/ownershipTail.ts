@@ -1,5 +1,5 @@
-import type { ConsumerConfig } from "kafkajs";
 import type { KafkaConsumerGroupTimings } from "../../../../client/types/kafkaLimits.js";
+import type { ConsumerConfig } from "../../../../client/types/kafkaWire.js";
 import type { KafkaConsumerClient } from "../../../../consumer/types/consumer.js";
 import type { OwnershipRecord } from "../../types/ownershipRecord.js";
 

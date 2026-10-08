@@ -34,6 +34,7 @@
 			"packages/edge-config",
 			"packages/blue-green",
 			"packages/postgres",
+			"packages/librdkafka",
 			"packages/auto-topup",
 			"packages/sqs",
 			"packages/cache",
@@ -268,7 +269,8 @@
 		"@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch",
 		"kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch",
 		"eve@0.47.2": "patches/eve@0.47.2.patch",
-		"chat@4.38.1": "patches/chat@4.38.1.patch"
+		"chat@4.38.1": "patches/chat@4.38.1.patch",
+		"@confluentinc/kafka-javascript@1.10.0": "patches/@confluentinc%2Fkafka-javascript@1.10.0.patch"
 	},
 	"atmn": {
 		"config": "packages/billing/config/autumn.config.ts"

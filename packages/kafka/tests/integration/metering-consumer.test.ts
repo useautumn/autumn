@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
 import type { MutationRecord } from "@autumn/balance-engine";
-import { Kafka, logLevel, type Producer } from "kafkajs";
 import {
+	createKafka,
 	createMeteringConsumer,
 	createMeteringPublisher,
 	createMeteringReader,
 	createProgressTracker,
+	type Kafka,
 	type MeteringRecordApplication,
+	type Producer,
 	readPartitionLogRange,
 	serializeMeteringRecord,
 } from "../../src/kafka.js";
@@ -24,10 +26,9 @@ function createTestKafka(): Kafka {
 	for (const broker of process.env.KAFKA_BROKERS.split(",")) {
 		brokers.push(broker.trim());
 	}
-	return new Kafka({
+	return createKafka({
 		clientId: `metering-consumer-test-${crypto.randomUUID()}`,
 		brokers,
-		logLevel: logLevel.NOTHING,
 		connectionTimeout: 3_000,
 		requestTimeout: 10_000,
 		retry: { retries: 3, initialRetryTime: 100, maxRetryTime: 1_000 },
@@ -138,7 +139,6 @@ async function consumesAndReadsMeteringWithoutWorkerState(): Promise<void> {
 	await admin.connect();
 	try {
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [{ topic, numPartitions: 1, replicationFactor: 1 }],
 		});
 		topicCreated = true;

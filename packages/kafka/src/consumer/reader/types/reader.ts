@@ -1,4 +1,7 @@
-import type { Consumer, ConsumerConfig } from "kafkajs";
+import type {
+	Consumer,
+	ConsumerConfig,
+} from "../../../client/types/kafkaWire.js";
 
 export type PartitionReaderConsumer = Pick<
 	Consumer,

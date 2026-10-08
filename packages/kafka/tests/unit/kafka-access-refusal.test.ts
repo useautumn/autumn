@@ -1,40 +1,29 @@
 import { expect, test } from "bun:test";
-import {
-	KafkaJSNonRetriableError,
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-} from "kafkajs";
 import { isKafkaAccessRefusal } from "../../src/consumer/consumerErrors.js";
 
-function protocolError({
-	type,
+/** A librdkafka error as the client hands it over: a message and the broker's (or the client's) code. */
+function librdkafkaError({
 	code,
 	message,
 }: {
-	type: string;
 	code: number;
 	message: string;
-}): KafkaJSProtocolError {
-	return new KafkaJSProtocolError(
-		Object.assign(new Error(message), { type, code, retriable: false }),
-	);
+}): Error {
+	return Object.assign(new Error(message), { code, isRetriable: false });
 }
 
 test("a broker refusing the group, a topic or the cluster is an access refusal, through any wrapping", () => {
-	const group = protocolError({
-		type: "GROUP_AUTHORIZATION_FAILED",
+	const group = librdkafkaError({
 		code: 30,
-		message: "Not authorized to access group: Group authorization failed",
+		message: "Broker: Group authorization failed",
 	});
-	const topic = protocolError({
-		type: "TOPIC_AUTHORIZATION_FAILED",
+	const topic = librdkafkaError({
 		code: 29,
-		message: "Not authorized to access topics: [Topic authorization failed]",
+		message: "Broker: Topic authorization failed",
 	});
-	const cluster = protocolError({
-		type: "CLUSTER_AUTHORIZATION_FAILED",
+	const cluster = librdkafkaError({
 		code: 31,
-		message: "Cluster authorization failed",
+		message: "Broker: Cluster authorization failed",
 	});
 	expect(isKafkaAccessRefusal({ cause: group })).toBe(true);
 	expect(isKafkaAccessRefusal({ cause: topic })).toBe(true);
@@ -46,35 +35,43 @@ test("a broker refusing the group, a topic or the cluster is an access refusal, 
 	).toBe(true);
 	expect(
 		isKafkaAccessRefusal({
-			cause: new KafkaJSNumberOfRetriesExceeded(topic, {
-				retryCount: 2,
-				retryTime: 100,
-			}),
+			cause: new AggregateError(
+				[new Error("other"), topic],
+				"retries exhausted",
+			),
 		}),
 	).toBe(true);
 });
 
 test("a failed SASL authentication is an access refusal too", () => {
-	const sasl = Object.assign(
-		new KafkaJSNonRetriableError("SASL OAUTHBEARER authentication failed"),
-		{ name: "KafkaJSSASLAuthenticationError" },
-	);
-	expect(isKafkaAccessRefusal({ cause: sasl })).toBe(true);
+	const broker = librdkafkaError({
+		code: 58,
+		message: "Broker: SASL Authentication failed",
+	});
+	const client = librdkafkaError({
+		code: -169,
+		message: "Local: Authentication failure",
+	});
+	expect(isKafkaAccessRefusal({ cause: broker })).toBe(true);
+	expect(isKafkaAccessRefusal({ cause: client })).toBe(true);
 });
 
 test("anything else is not: a refused batch, a lost connection, a bad record, or a cycle", () => {
 	expect(
 		isKafkaAccessRefusal({
-			cause: protocolError({
-				type: "CONCURRENT_TRANSACTIONS",
+			cause: librdkafkaError({
 				code: 51,
-				message: "concurrent operation ongoing",
+				message:
+					"Broker: Producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing",
 			}),
 		}),
 	).toBe(false);
 	expect(
 		isKafkaAccessRefusal({
-			cause: new KafkaJSNonRetriableError("Connection closed"),
+			cause: librdkafkaError({
+				code: -195,
+				message: "Local: Broker transport failure",
+			}),
 		}),
 	).toBe(false);
 	expect(isKafkaAccessRefusal({ cause: "not an error" })).toBe(false);

@@ -1,7 +1,9 @@
-import type { KafkaConfig } from "kafkajs";
 import { assertPositiveSafeInteger } from "../lib/assert.js";
-import { createKafkaLogCreator } from "./kafkaLogCreator.js";
-import type { KafkaTransportConfig } from "./types/kafkaClient.js";
+import type {
+	KafkaClientConfig,
+	KafkaLogSink,
+	KafkaTransportConfig,
+} from "./types/kafkaClient.js";
 import type { KafkaClientLimits } from "./types/kafkaLimits.js";
 
 const maximumKafkaClientRetryCount = 10;
@@ -11,12 +13,14 @@ export function createKafkaClient({
 	brokers,
 	transport,
 	limits,
+	logSink,
 }: {
 	clientId: string;
 	brokers: string[];
 	transport: KafkaTransportConfig;
 	limits: KafkaClientLimits;
-}): KafkaConfig {
+	logSink?: KafkaLogSink;
+}): KafkaClientConfig {
 	if (clientId.trim().length === 0) throw new Error("clientId cannot be empty");
 	if (!hasNonEmptyBrokers({ brokers })) {
 		throw new Error("brokers must contain non-empty addresses");
@@ -50,12 +54,10 @@ export function createKafkaClient({
 	return {
 		clientId,
 		brokers,
-		// Routine broker refusals are lowered from ERROR; a transport may bring its own creator.
-		logCreator: createKafkaLogCreator(),
 		...transport,
+		...(logSink && { logSink }),
 		connectionTimeout: limits.connectionTimeoutMs,
 		requestTimeout: limits.requestTimeoutMs,
-		enforceRequestTimeout: true,
 		retry: {
 			retries: limits.retryCount,
 			initialRetryTime: limits.initialRetryTimeMs,

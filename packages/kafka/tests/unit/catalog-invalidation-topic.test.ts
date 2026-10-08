@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ConsumerConfig, ProducerRecord } from "kafkajs";
+import type { ConsumerConfig, ProducerRecord } from "../../src/kafka.js";
 import {
 	createCatalogInvalidationConsumer,
 	createCatalogInvalidationPublisher,

@@ -1,9 +1,9 @@
-import type { ConsumerCrashEvent } from "kafkajs";
 import {
 	createConsumerGroupConfig,
 	TAIL_FETCH_MAX_WAIT_MS,
 } from "../../../client/createConsumerGroupConfig.js";
 import { parseKafkaOffset } from "../../../client/kafkaOffsetUtils.js";
+import type { ConsumerCrashEvent } from "../../../client/types/kafkaWire.js";
 import { createProgressTracker } from "../../../consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../../consumer/createTopicConsumer.js";
 import type {

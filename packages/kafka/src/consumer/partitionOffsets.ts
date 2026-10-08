@@ -1,5 +1,5 @@
-import type { Admin } from "kafkajs";
 import { parseKafkaOffset } from "../client/kafkaOffsetUtils.js";
+import type { Admin } from "../client/types/kafkaWire.js";
 import { KafkaPartitionOffsetsNotFoundError } from "./consumerErrors.js";
 import type { PartitionLogRange } from "./types/progress.js";
 

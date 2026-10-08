@@ -1,4 +1,3 @@
-import { CompressionTypes } from "kafkajs";
 import { serializeCommandRecord } from "../commandTopic.js";
 import type {
 	CommandAppend,
@@ -56,7 +55,6 @@ export function createCommandPublisher({
 				topic: ctx.topic,
 				messages,
 				acks: -1,
-				compression: CompressionTypes.GZIP,
 			});
 		} catch (cause) {
 			for (const append of batch) append.reject(cause);

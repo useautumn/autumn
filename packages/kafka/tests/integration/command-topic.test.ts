@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
-import { Kafka, logLevel } from "kafkajs";
 import { createKafkaClient } from "../../src/client/createKafkaClient.js";
+import { createKafka } from "../../src/client/librdkafka/createKafka.js";
 import { createPartitionReader } from "../../src/consumer/reader/createPartitionReader.js";
 import { meteringIdentityToPartition } from "../../src/partitioning/meteringIdentityToPartition.js";
 import { createIdempotentProducerConfig } from "../../src/producer/producerConfig.js";
@@ -53,11 +53,11 @@ const trackFor = ({ customerId }: { customerId: string }): TrackCommand =>
 
 describe("command topic", () => {
 	test("one append lands each command on the partition its identity routes to, and it parses back", async () => {
-		const kafka = new Kafka(
+		const kafka = createKafka(
 			createKafkaClient({
 				clientId: uniqueName({ prefix: "command-test" }),
 				brokers,
-				transport: { logLevel: logLevel.NOTHING },
+				transport: {},
 				limits: {
 					connectionTimeoutMs: 3_000,
 					requestTimeoutMs: 10_000,
@@ -71,7 +71,6 @@ describe("command topic", () => {
 		const topic = uniqueName({ prefix: "commands" });
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [{ topic, numPartitions: partitionCount, replicationFactor: 1 }],
 		});
 		const producer = kafka.producer(

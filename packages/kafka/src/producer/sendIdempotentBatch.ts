@@ -1,4 +1,4 @@
-import { CompressionTypes, KafkaJSProtocolError } from "kafkajs";
+import { isKafkaProtocolError } from "../client/kafkaErrorClassification.js";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -63,10 +63,9 @@ export async function sendIdempotentBatch({
 			topic,
 			messages: partitionMessages,
 			acks: -1,
-			compression: CompressionTypes.GZIP,
 		});
 	} catch (cause) {
-		if (cause instanceof KafkaJSProtocolError) {
+		if (isKafkaProtocolError({ cause })) {
 			throw new KafkaBatchNotCommittedError({ cause });
 		}
 		throw new KafkaTransactionStateUnknownError({

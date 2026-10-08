@@ -1,5 +1,5 @@
-import type { RecordMetadata } from "kafkajs";
 import { InvalidKafkaOffsetError } from "./kafkaErrors.js";
+import type { RecordMetadata } from "./types/kafkaWire.js";
 
 export function parseKafkaOffset({ offset }: { offset: string }): bigint {
 	let parsedOffset: bigint;

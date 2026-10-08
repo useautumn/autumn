@@ -8,7 +8,6 @@ import {
 import {
 	assertTopicRecordKey,
 	readTopicEnvelope,
-	serializeTopicRecord,
 } from "../../src/lib/topicEnvelope.js";
 import {
 	parseMeteringRecord,

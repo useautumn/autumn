@@ -1,6 +1,4 @@
-import type { RequestEvent } from "kafkajs";
 import type {
-	KafkaProducerClient,
 	KafkaProducerFactory,
 	KafkaRequestTiming,
 	KafkaSender,
@@ -30,12 +28,10 @@ export function createProducerSession({
 		producer: dependencies.kafka.producer(createProducerConfig(config)),
 	};
 	if (dependencies.onRequest)
-		observeRequests({
-			producer: ctx.producer,
-			onRequest: dependencies.onRequest,
-		});
+		ctx.producer.onRequestTimings?.(guardTelemetry(dependencies.onRequest));
 	const state: ProducerSessionState = {
 		initialized: false,
+		connected: false,
 		closed: false,
 		terminal: false,
 		transactions: Promise.resolve(),
@@ -45,20 +41,31 @@ export function createProducerSession({
 		return state.initialized && !state.closed && !state.terminal;
 	}
 
-	async function connect(): Promise<void> {
-		if (state.closed || state.terminal)
-			throw new Error("Producer session cannot reconnect");
+	async function connectProducer(): Promise<void> {
 		try {
 			await ctx.producer.connect();
+			state.connected = true;
 		} catch (cause) {
 			state.terminal = true;
 			throw cause;
 		}
 	}
 
-	function transaction(): Promise<KafkaTransaction> {
+	/** A transactional producer connects in `fence()`: librdkafka bumps the epoch on connect, and only startup may fence. */
+	async function connect(): Promise<void> {
+		if (state.closed || state.terminal)
+			throw new Error("Producer session cannot reconnect");
+		if (mode === "idempotent") await connectProducer();
+	}
+
+	/** A transaction before `fence()` fences on the spot, as kafkajs did on its first transaction. */
+	async function transaction(): Promise<KafkaTransaction> {
 		if (mode === "idempotent")
 			throw new Error("An idempotent producer session has no transactions");
+		if (!state.connected && !state.closed && !state.terminal) {
+			state.connecting ??= connectProducer();
+			await state.connecting;
+		}
 		return beginProducerTransaction({ ctx, state });
 	}
 
@@ -79,15 +86,11 @@ export function createProducerSession({
 			state.initialized = true;
 			return;
 		}
-		try {
-			// Only startup initializes the epoch; cleanup must never fence a successor.
-			const current = await transaction();
-			await current.abort();
-			state.initialized = true;
-		} catch (cause) {
-			state.terminal = true;
-			throw cause;
-		}
+		if (state.closed || state.terminal)
+			throw new Error("Producer session is unavailable");
+		// Only startup initializes the epoch; cleanup must never fence a successor.
+		await connectProducer();
+		state.initialized = true;
 	}
 
 	async function disconnect({
@@ -97,31 +100,21 @@ export function createProducerSession({
 	} = {}): Promise<void> {
 		state.closed = true;
 		if (waitForTransactions) await state.transactions;
-		await ctx.producer.disconnect();
+		if (state.connected) await ctx.producer.disconnect();
 	}
 
 	return { connect, fence, transaction, send, isUsable, disconnect, mode };
 }
 
-function observeRequests({
-	producer,
-	onRequest,
-}: {
-	producer: KafkaProducerClient;
-	onRequest: (timing: KafkaRequestTiming) => void;
-}): void {
-	if (!producer.on || !producer.events) return;
-	function report({ payload }: RequestEvent): void {
+function guardTelemetry(
+	onRequest: (timing: KafkaRequestTiming) => void,
+): (timing: KafkaRequestTiming) => void {
+	function report(timing: KafkaRequestTiming): void {
 		try {
-			onRequest({
-				apiName: payload.apiName,
-				broker: payload.broker,
-				durationMs: payload.duration,
-				pendingMs: payload.pendingDuration,
-			});
+			onRequest(timing);
 		} catch {
 			// Timing is telemetry; it must never fail a produce.
 		}
 	}
-	producer.on(producer.events.REQUEST, report);
+	return report;
 }

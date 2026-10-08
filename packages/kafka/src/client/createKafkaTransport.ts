@@ -1,5 +1,4 @@
 import { generateAuthToken } from "aws-msk-iam-sasl-signer-js";
-import type { OauthbearerProviderResponse } from "kafkajs";
 import {
 	type KafkaTokenRecord,
 	processKafkaTokens,
@@ -39,8 +38,11 @@ export function createKafkaTransport({
 	if (!signingRegion)
 		throw new Error("MSK IAM authentication requires a region");
 
-	async function oauthBearerProvider(): Promise<OauthbearerProviderResponse> {
-		// KafkaJS calls this again on reauthentication; never capture a startup token.
+	async function oauthBearerProvider(): Promise<{
+		value: string;
+		lifetimeMs: number;
+	}> {
+		// librdkafka asks again before every expiry; never capture a startup token.
 		const { token, expiryTime } = await generateToken({
 			region: signingRegion,
 		});
@@ -51,7 +53,7 @@ export function createKafkaTransport({
 		} catch {
 			// Telemetry must never fail an authentication.
 		}
-		return { value: token };
+		return { value: token, lifetimeMs: expiryTime };
 	}
 
 	return {

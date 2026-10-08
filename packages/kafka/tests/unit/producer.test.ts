@@ -1,9 +1,14 @@
 import { expect, test } from "bun:test";
-import type { ProducerConfig, ProducerRecord, RecordMetadata } from "kafkajs";
 import type {
 	KafkaProducerClient,
+	KafkaRequestTiming,
 	KafkaTransaction,
 } from "../../src/client/types/kafkaClient.js";
+import type {
+	ProducerConfig,
+	ProducerRecord,
+	RecordMetadata,
+} from "../../src/client/types/kafkaWire.js";
 import { createProducerSession } from "../../src/producer/createProducerSession.js";
 import { partitionProducerTransactionalIdOf } from "../../src/producer/producerConfig.js";
 import { isKafkaProducerFencingCause } from "../../src/producer/producerErrors.js";
@@ -89,7 +94,6 @@ function usesBoundedSettingsWithoutStarting(): void {
 				"autumn-balance-worker:staging%2Feu-west-1:metering-events-v1:3",
 			idempotent: true,
 			maxInFlightRequests: 1,
-			createPartitioner: expect.any(Function),
 			transactionTimeout: 15_000,
 			retry: {
 				retries: 3,
@@ -130,13 +134,8 @@ async function fencesOnceAndCannotReconnectAfterClosing(): Promise<void> {
 	await disconnect();
 	expect(session.isUsable()).toBe(false);
 	await expect(connect()).rejects.toThrow("cannot reconnect");
-	expect(events).toEqual([
-		"connect",
-		"transaction:1",
-		"abort:1",
-		"aborted:1",
-		"disconnect",
-	]);
+	// librdkafka bumps the epoch when a transactional producer connects, so the connect is the fence.
+	expect(events).toEqual(["connect", "disconnect"]);
 }
 
 async function serializesUntilCommitSettles(): Promise<void> {
@@ -148,11 +147,13 @@ async function serializesUntilCommitSettles(): Promise<void> {
 	await first.send({ topic: "events", messages: [] });
 	const committing = first.commit();
 	await Promise.resolve();
-	expect(events).toEqual(["transaction:1", "send:1", "commit:1"]);
+	// The first transaction connects, and so fences, the producer it was never fenced on.
+	expect(events).toEqual(["connect", "transaction:1", "send:1", "commit:1"]);
 	committed.resolve();
 	await committing;
 	const next = await second;
 	expect(events).toEqual([
+		"connect",
 		"transaction:1",
 		"send:1",
 		"commit:1",
@@ -178,12 +179,12 @@ async function serializesAbortAndPreservesRecoverableSends(): Promise<void> {
 	const second = session.transaction();
 	const aborting = first.abort();
 	await Promise.resolve();
-	expect(events).not.toContain("transaction:3");
+	expect(events).not.toContain("transaction:2");
 	aborted.resolve();
 	await aborting;
 	const next = await second;
-	expect(events.indexOf("aborted:2")).toBeLessThan(
-		events.indexOf("transaction:3"),
+	expect(events.indexOf("aborted:1")).toBeLessThan(
+		events.indexOf("transaction:2"),
 	);
 	await next.abort();
 	expect(session.isUsable()).toBe(true);
@@ -202,10 +203,10 @@ async function terminalFailuresKeepOriginalCauses(): Promise<void> {
 		const { session, failures } = createProducerFixture();
 		if (action !== "connect") await session.fence();
 		const cause = new Error(`${action} failed`);
-		if (action === "send") Object.assign(cause, { type: "PRODUCER_FENCED" });
+		if (action === "send") Object.assign(cause, { code: 90 });
 		failures[action] = cause;
 		if (action === "connect") {
-			await expect(session.connect()).rejects.toBe(cause);
+			await expect(session.fence()).rejects.toBe(cause);
 		} else if (action === "transaction") {
 			await expect(session.transaction()).rejects.toBe(cause);
 		} else {
@@ -230,12 +231,13 @@ async function rejectsQueuedTransactionsBeforeDisconnecting(): Promise<void> {
 	const { session, events, waits } = createProducerFixture();
 	const committed = Promise.withResolvers<void>();
 	waits.commit = committed.promise;
+	await session.fence();
 	const first = await session.transaction();
 	const queued = Promise.allSettled([session.transaction()]);
 	const disconnecting = session.disconnect();
 	const committing = first.commit();
 	await Promise.resolve();
-	expect(events).toEqual(["transaction:1", "commit:1"]);
+	expect(events).toEqual(["connect", "transaction:1", "commit:1"]);
 	committed.resolve();
 	await committing;
 	expect(await queued).toMatchObject([
@@ -246,6 +248,7 @@ async function rejectsQueuedTransactionsBeforeDisconnecting(): Promise<void> {
 	]);
 	await disconnecting;
 	expect(events).toEqual([
+		"connect",
 		"transaction:1",
 		"commit:1",
 		"committed:1",
@@ -255,14 +258,14 @@ async function rejectsQueuedTransactionsBeforeDisconnecting(): Promise<void> {
 
 async function failedFenceCannotReinitialize(): Promise<void> {
 	const { session, failures, events } = createProducerFixture();
-	const cause = new Error("fencing abort failed");
-	failures.abort = cause;
+	const cause = new Error("fencing connect failed");
+	failures.connect = cause;
 	await expect(session.fence()).rejects.toBe(cause);
 	expect(session.isUsable()).toBe(false);
-	delete failures.abort;
+	delete failures.connect;
 	await expect(session.fence()).rejects.toThrow("unavailable");
 	await session.disconnect();
-	expect(events).toEqual(["transaction:1", "abort:1", "disconnect"]);
+	expect(events).toEqual(["connect"]);
 }
 
 async function disconnectsWithoutRepeatingTheRuntimeDrain(): Promise<void> {
@@ -330,16 +333,11 @@ test(
 );
 
 function recognizesAllFencingTypesAndCodes(): void {
-	for (const type of [
-		"INVALID_PRODUCER_EPOCH",
-		"INVALID_PRODUCER_ID_MAPPING",
-		"PRODUCER_FENCED",
-	]) {
-		expect(isKafkaProducerFencingCause({ cause: { type } })).toBe(true);
-	}
-	for (const code of [47, 49, 90]) {
+	// INVALID_PRODUCER_EPOCH, INVALID_PRODUCER_ID_MAPPING, PRODUCER_FENCED, and librdkafka's own _FENCED.
+	for (const code of [47, 49, 90, -144]) {
 		expect(isKafkaProducerFencingCause({ cause: { code } })).toBe(true);
 	}
+	expect(isKafkaProducerFencingCause({ cause: { code: 7 } })).toBe(false);
 }
 
 function traversesNestedAndCyclicCauses(): void {
@@ -363,75 +361,39 @@ test(
 	traversesNestedAndCyclicCauses,
 );
 
-test("reports each broker request the producer makes, and survives a throwing listener", () => {
-	type RequestListener = (event: {
-		payload: {
-			apiName: string;
-			broker: string;
-			duration: number;
-			pendingDuration: number;
-		};
-	}) => void;
-	let listener: RequestListener | undefined;
-	const client = {
-		connect: async () => {},
-		disconnect: async () => {},
-		transaction: async (): Promise<KafkaTransaction> => {
-			throw new Error("unused");
-		},
-		events: { REQUEST: "producer.network.request" as const },
-		on: (_event: string, handler: RequestListener) => {
-			listener = handler;
-			return () => {};
-		},
+test("reports each broker's request latency, and survives a throwing listener", () => {
+	let listener: ((timing: KafkaRequestTiming) => void) | undefined;
+	async function noop(): Promise<void> {}
+	async function unused(): Promise<KafkaTransaction> {
+		throw new Error("unused");
+	}
+	function onRequestTimings(
+		handler: (timing: KafkaRequestTiming) => void,
+	): void {
+		listener = handler;
+	}
+	const client: KafkaProducerClient = {
+		connect: noop,
+		disconnect: noop,
+		transaction: unused,
+		onRequestTimings,
 	};
 	const timings: unknown[] = [];
-	createProducerSession({
-		ctx: {
-			kafka: { producer: () => client as unknown as KafkaProducerClient },
-			onRequest: (timing) => {
-				timings.push(timing);
-				if (timings.length === 2) throw new Error("listener failed");
-			},
-		},
-		config,
-	});
-	const event = {
-		payload: {
-			apiName: "EndTxn",
-			broker: "b-1:9098",
-			duration: 41,
-			pendingDuration: 2,
-		},
-	};
-	listener?.(event);
-	expect(() => listener?.(event)).not.toThrow();
-	expect(timings[0]).toEqual({
-		apiName: "EndTxn",
-		broker: "b-1:9098",
+	function producer(): KafkaProducerClient {
+		return client;
+	}
+	function onRequest(timing: KafkaRequestTiming): void {
+		timings.push(timing);
+		if (timings.length === 2) throw new Error("listener failed");
+	}
+	createProducerSession({ ctx: { kafka: { producer }, onRequest }, config });
+	const timing = {
+		apiName: "Produce",
+		broker: "b-1:9092/1",
 		durationMs: 41,
 		pendingMs: 2,
-	});
-});
-
-test("partition producers use the named partition without scanning topic metadata", () => {
-	const { receivedConfigs } = createProducerFixture();
-	const createPartitioner = receivedConfigs[0]?.createPartitioner;
-	expect(createPartitioner).toBeDefined();
-	const partitionOf = createPartitioner?.();
-	let metadataRead = false;
-	const partitionMetadata = new Proxy([], {
-		get(target, key) {
-			metadataRead = true;
-			return Reflect.get(target, key);
-		},
-	});
-	expect(
-		partitionOf?.({
-			topic: "events",
-			partitionMetadata,
-			message: { partition: 5, value: "x" },
-		}),
-	).toBe(5);
-	expect(metadataRead).toBe(false);
+	};
+	listener?.(timing);
+	expect(() => listener?.(timing)).not.toThrow();
+	expect(timings[0]).toEqual(timing);
 });

@@ -1,0 +1,452 @@
+diff --git a/src/admin.cc b/src/admin.cc
+index 813f7d2..220edd4 100644
+--- a/src/admin.cc
++++ b/src/admin.cc
+@@ -991,13 +991,13 @@ Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
+ 
+ void AdminClient::ActivateDispatchers() {
+   // Listen to global config
+-  m_gconfig->listen();
++  m_gconfig->listen(Env());
+ 
+   // Listen to non global config
+   // tconfig->listen();
+ 
+   // This should be refactored to config based management
+-  m_event_cb.dispatcher.Activate();
++  m_event_cb.dispatcher.Activate(Env());
+ }
+ void AdminClient::DeactivateDispatchers() {
+   // Stop listening to the config dispatchers
+diff --git a/src/callbacks.cc b/src/callbacks.cc
+index b573102..7306738 100644
+--- a/src/callbacks.cc
++++ b/src/callbacks.cc
+@@ -52,11 +52,11 @@ Napi::Array TopicPartitionListToV8Array(
+ }
+ 
+ Dispatcher::Dispatcher() {
+-  async = NULL;
+   uv_mutex_init(&async_lock);
+ }
+ 
+ Dispatcher::~Dispatcher() {
++  Deactivate();
+   if (callbacks.size() < 1) return;
+ 
+   for (size_t i=0; i < callbacks.size(); i++) {
+@@ -67,26 +67,31 @@ Dispatcher::~Dispatcher() {
+ }
+ 
+ // Only run this if we aren't already listening
+-void Dispatcher::Activate() {
+-  if (!async) {
+-    async = new uv_async_t;
+-    uv_async_init(uv_default_loop(), async, Dispatcher::func);
+-
+-    async->data = this;
+-  }
++void Dispatcher::Activate(Napi::Env env) {
++  std::lock_guard<std::mutex> lock(m_tsfn_lock);
++  if (m_tsfn) return;
++  m_flush_pending = false;
++  napi_value name = Napi::String::New(env, "KafkaDispatcher");
++  napi_status status = napi_create_threadsafe_function(
++    env, nullptr, nullptr, name, 0, 1, nullptr, nullptr, this,
++    Dispatcher::CallJs, &m_tsfn);
++  NAPI_THROW_IF_FAILED_VOID(env, status);
+ }
+ 
+-void Dispatcher::AsyncHandleCloseCallback(uv_handle_t *handle) {
+-  uv_async_t *a = reinterpret_cast<uv_async_t *>(handle);
+-  delete a;
++void Dispatcher::CallJs(napi_env env, napi_value, void *context, void *) {
++  // env is null when the function was aborted with a call still queued.
++  if (env == nullptr) return;
++  Dispatcher *dispatcher = static_cast<Dispatcher*>(context);
++  dispatcher->m_flush_pending = false;
++  dispatcher->Flush();
+ }
+ 
+ // Should be able to run this regardless of whether it is active or not
+ void Dispatcher::Deactivate() {
+-  if (async) {
+-    uv_close(reinterpret_cast<uv_handle_t *>(async),
+-       Dispatcher::AsyncHandleCloseCallback);
+-    async = NULL;
++  std::lock_guard<std::mutex> lock(m_tsfn_lock);
++  if (m_tsfn) {
++    napi_release_threadsafe_function(m_tsfn, napi_tsfn_abort);
++    m_tsfn = nullptr;
+   }
+ }
+ 
+@@ -95,8 +100,11 @@ bool Dispatcher::HasCallbacks() {
+ }
+ 
+ void Dispatcher::Execute() {
+-  if (async) {
+-    uv_async_send(async);
++  std::lock_guard<std::mutex> lock(m_tsfn_lock);
++  if (!m_tsfn || m_flush_pending.exchange(true)) return;
++  if (napi_call_threadsafe_function(m_tsfn, nullptr, napi_tsfn_nonblocking)
++      != napi_ok) {
++    m_flush_pending = false;
+   }
+ }
+ 
+diff --git a/src/callbacks.h b/src/callbacks.h
+index 7e01f9b..8f62827 100644
+--- a/src/callbacks.h
++++ b/src/callbacks.h
+@@ -13,6 +13,8 @@
+ #include <uv.h>
+ #include <napi.h>
+ 
++#include <atomic>
++#include <mutex>
+ #include <vector>
+ #include <deque>
+ 
+@@ -35,7 +37,7 @@ class Dispatcher {
+   bool HasCallbacks();
+   virtual void Flush() = 0;
+   void Execute();
+-  void Activate();
++  void Activate(Napi::Env env);
+   void Deactivate();
+ 
+  protected:
+@@ -44,14 +46,11 @@ class Dispatcher {
+   uv_mutex_t async_lock;
+ 
+  private:
+-  inline static void func(uv_async_t *async) {
+-    Dispatcher *dispatcher =
+-      static_cast<Dispatcher*>(async->data);
+-    dispatcher->Flush();
+-  }
+-  static void AsyncHandleCloseCallback(uv_handle_t *);
++  static void CallJs(napi_env, napi_value, void *context, void *);
+ 
+-  uv_async_t *async;
++  std::mutex m_tsfn_lock;
++  napi_threadsafe_function m_tsfn = nullptr;
++  std::atomic<bool> m_flush_pending{false};
+ };
+ 
+ struct event_t {
+diff --git a/src/common.h b/src/common.h
+index 40b6dad..b63e800 100644
+--- a/src/common.h
++++ b/src/common.h
+@@ -15,6 +15,9 @@
+ #include <uv.h>
+ 
+ #include <list>
++#include <memory>
++#include <mutex>
++#include <shared_mutex>
+ #include <iostream>
+ #include <string>
+ #include <vector>
+@@ -62,34 +65,25 @@ int uv_rwlock_tryrdlock(uv_rwlock_t* rwlock)
+ int uv_rwlock_trywrlock(uv_rwlock_t* rwlock)
+  */
+ 
++// Shared so a Connection derived from another one locks the same mutex.
++typedef std::shared_ptr<std::shared_mutex> shared_rwlock_t;
++
+ class scoped_shared_write_lock {
+  public:
+-  explicit scoped_shared_write_lock(uv_rwlock_t& lock_) :  // NOLINT
+-    async_lock(lock_) {
+-      uv_rwlock_wrlock(&async_lock);
+-    }
+-
+-  ~scoped_shared_write_lock() {
+-    uv_rwlock_wrunlock(&async_lock);
+-  }
++  explicit scoped_shared_write_lock(const shared_rwlock_t& lock_) :
++    lock(*lock_) {}
+ 
+  private:
+-  uv_rwlock_t &async_lock;
++  std::unique_lock<std::shared_mutex> lock;
+ };
+ 
+ class scoped_shared_read_lock {
+  public:
+-  explicit scoped_shared_read_lock(uv_rwlock_t& lock_) :  // NOLINT
+-    async_lock(lock_) {
+-      uv_rwlock_rdlock(&async_lock);
+-    }
+-
+-  ~scoped_shared_read_lock() {
+-    uv_rwlock_rdunlock(&async_lock);
+-  }
++  explicit scoped_shared_read_lock(const shared_rwlock_t& lock_) :
++    lock(*lock_) {}
+ 
+  private:
+-  uv_rwlock_t &async_lock;
++  std::shared_lock<std::shared_mutex> lock;
+ };
+ 
+ namespace Conversion {
+diff --git a/src/config.cc b/src/config.cc
+index c5c7645..1bdfc2f 100644
+--- a/src/config.cc
++++ b/src/config.cc
+@@ -122,21 +122,21 @@ void Conf::ConfigureCallback(
+   }
+ }
+ 
+-void Conf::listen() {
++void Conf::listen(Napi::Env env) {
+   NodeKafka::Callbacks::Rebalance *rebalance = rebalance_cb();
+   if (rebalance) {
+-    rebalance->dispatcher.Activate();
++    rebalance->dispatcher.Activate(env);
+   }
+ 
+   NodeKafka::Callbacks::OffsetCommit *offset_commit = offset_commit_cb();
+   if (offset_commit) {
+-    offset_commit->dispatcher.Activate();
++    offset_commit->dispatcher.Activate(env);
+   }
+ 
+   NodeKafka::Callbacks::OAuthBearerTokenRefresh *oauthbearer_token_refresh =
+       oauthbearer_token_refresh_cb();
+   if (oauthbearer_token_refresh) {
+-    oauthbearer_token_refresh->dispatcher.Activate();
++    oauthbearer_token_refresh->dispatcher.Activate(env);
+   }
+ }
+ 
+diff --git a/src/config.h b/src/config.h
+index 7d41cc7..39fe58c 100644
+--- a/src/config.h
++++ b/src/config.h
+@@ -30,7 +30,7 @@ class Conf : public RdKafka::Conf {
+   static Conf* create(RdKafka::Conf::ConfType, Napi::Object, std::string &);  // NOLINT
+   static void DumpConfig(std::list<std::string> *);
+ 
+-  void listen();
++  void listen(Napi::Env env);
+   void stop();
+ 
+   void ConfigureCallback(
+diff --git a/src/connection.h b/src/connection.h
+index d551f46..171c016 100644
+--- a/src/connection.h
++++ b/src/connection.h
+@@ -328,7 +328,7 @@ template <class T> class Connection : public Napi::ObjectWrap<T> {
+ 
+     m_client = NULL;
+     m_is_closing = false;
+-    uv_rwlock_init(&m_connection_lock);
++    m_connection_lock = std::make_shared<std::shared_mutex>();
+     m_lock_initialized = true;
+ 
+     // Try to set the event cb. Shouldn't be an error here, but if there
+@@ -358,9 +358,6 @@ template <class T> class Connection : public Napi::ObjectWrap<T> {
+       return;
+     }
+ 
+-    if (m_lock_initialized) {
+-      uv_rwlock_destroy(&m_connection_lock);
+-    }
+     if (m_tconfig) {
+       delete m_tconfig;
+     }
+@@ -417,7 +414,7 @@ template <class T> class Connection : public Napi::ObjectWrap<T> {
+   Conf* m_tconfig = nullptr;
+   std::string m_errstr;
+ 
+-  uv_rwlock_t m_connection_lock;
++  shared_rwlock_t m_connection_lock;
+   bool m_has_underlying = false;
+   bool m_is_background_polling = false;
+   bool m_lock_initialized = false;
+diff --git a/src/kafka-consumer.cc b/src/kafka-consumer.cc
+index aa8475c..fe34b4f 100644
+--- a/src/kafka-consumer.cc
++++ b/src/kafka-consumer.cc
+@@ -129,14 +129,14 @@ Baton KafkaConsumer::Connect() {
+ 
+ void KafkaConsumer::ActivateDispatchers() {
+   // Listen to global config
+-  m_gconfig->listen();
++  m_gconfig->listen(Env());
+ 
+   // Listen to non global config
+   // tconfig->listen();
+ 
+   // This should be refactored to config based management
+-  m_event_cb.dispatcher.Activate();
+-  m_queue_not_empty_cb.dispatcher.Activate();
++  m_event_cb.dispatcher.Activate(Env());
++  m_queue_not_empty_cb.dispatcher.Activate(Env());
+ }
+ 
+ Baton KafkaConsumer::Disconnect() {
+diff --git a/src/producer.cc b/src/producer.cc
+index 02daf8d..6729fd2 100644
+--- a/src/producer.cc
++++ b/src/producer.cc
+@@ -178,9 +178,9 @@ Baton Producer::Connect() {
+ }
+ 
+ void Producer::ActivateDispatchers() {
+-  m_gconfig->listen();               // From global config.
+-  m_event_cb.dispatcher.Activate();  // From connection
+-  m_dr_cb.dispatcher.Activate();
++  m_gconfig->listen(Env());               // From global config.
++  m_event_cb.dispatcher.Activate(Env());  // From connection
++  m_dr_cb.dispatcher.Activate(Env());
+ }
+ 
+ void Producer::DeactivateDispatchers() {
+diff --git a/src/workers.cc b/src/workers.cc
+index 685fd00..a3421d5 100644
+--- a/src/workers.cc
++++ b/src/workers.cc
+@@ -716,24 +716,22 @@ KafkaConsumerConsumeLoop::KafkaConsumerConsumeLoop(
+   m_looping(true),
+   m_timeout_ms(timeout_ms),
+   m_timeout_sleep_delay_ms(timeout_sleep_delay_ms) {
+-  uv_thread_create(&thread_event_loop, KafkaConsumerConsumeLoop::ConsumeLoop,
+-      reinterpret_cast<void*>(this));
++  thread_event_loop = std::thread(KafkaConsumerConsumeLoop::ConsumeLoop, this);
+ }
+ 
+ KafkaConsumerConsumeLoop::~KafkaConsumerConsumeLoop() {}
+ 
+ void KafkaConsumerConsumeLoop::Close() {
+   m_looping = false;
+-  uv_thread_join(&thread_event_loop);
++  if (thread_event_loop.joinable()) thread_event_loop.join();
+ }
+ 
+ void KafkaConsumerConsumeLoop::Execute(const ExecutionMessageBus& bus) {
+   // ConsumeLoop is used instead
+ }
+ 
+-void KafkaConsumerConsumeLoop::ConsumeLoop(void* arg) {
+-  KafkaConsumerConsumeLoop* consumerLoop =
+-      reinterpret_cast<KafkaConsumerConsumeLoop*>(arg);
++void KafkaConsumerConsumeLoop::ConsumeLoop(
++    KafkaConsumerConsumeLoop* consumerLoop) {
+   ExecutionMessageBus bus(consumerLoop);
+   KafkaConsumer* consumer = consumerLoop->consumer;
+ 
+diff --git a/src/workers.h b/src/workers.h
+index 49d5245..9157d60 100644
+--- a/src/workers.h
++++ b/src/workers.h
+@@ -14,6 +14,7 @@
+ #include <uv.h>
+ #include <napi.h>
+ #include <string>
++#include <thread>
+ #include <optional>
+ #include <vector>
+ 
+@@ -93,14 +94,13 @@ class MessageWorker : public ErrorAwareWorker {
+  public:
+   explicit MessageWorker(Napi::FunctionReference* callback_)
+       : ErrorAwareWorker(callback_), m_asyncdata() {
+-    m_async = new uv_async_t;
+-    uv_async_init(
+-      uv_default_loop(),
+-      m_async,
+-      m_async_message);
+-    m_async->data = this;
+-
+     uv_mutex_init(&m_async_lock);
++    napi_env env = Env();
++    napi_value name = Napi::String::New(env, "KafkaMessageWorker");
++    napi_status status = napi_create_threadsafe_function(
++      env, nullptr, nullptr, name, 0, 1, nullptr, AsyncFinalize_, this,
++      AsyncMessage_, &m_tsfn);
++    NAPI_THROW_IF_FAILED_VOID(env, status);
+   }
+ 
+   ~MessageWorker() override {
+@@ -163,8 +163,9 @@ class MessageWorker : public ErrorAwareWorker {
+   virtual void Execute(const ExecutionMessageBus&) = 0;
+   virtual void HandleMessageCallback(RdKafka::Message*, RdKafka::ErrorCode) = 0;
+ 
++  // Queued deliveries still run; the finalizer then deletes the worker.
+   void Destroy() override {
+-    uv_close(reinterpret_cast<uv_handle_t*>(m_async), AsyncClose_);
++    napi_release_threadsafe_function(m_tsfn, napi_tsfn_release);
+   }
+ 
+  private:
+@@ -176,33 +177,35 @@ class MessageWorker : public ErrorAwareWorker {
+   void Produce_(RdKafka::Message* m) {
+     scoped_mutex_lock lock(m_async_lock);
+     m_asyncdata.push_back(m);
+-    uv_async_send(m_async);
++    Notify_();
+   }
+ 
+   void ProduceWarning_(RdKafka::ErrorCode c) {
+     scoped_mutex_lock lock(m_async_lock);
+     m_asyncwarning.push_back(c);
+-    uv_async_send(m_async);
++    Notify_();
+   }
+ 
+   void ProduceError_(const Baton& b) {
+     scoped_mutex_lock lock(m_async_lock);
+     m_asyncerror.push_back(b);
+-    uv_async_send(m_async);
++    Notify_();
++  }
++
++  void Notify_() {
++    napi_call_threadsafe_function(m_tsfn, nullptr, napi_tsfn_nonblocking);
+   }
+ 
+-  inline static void m_async_message(uv_async_t *async) {
+-    MessageWorker *worker = static_cast<MessageWorker*>(async->data);
+-    worker->WorkMessage();
++  static void AsyncMessage_(napi_env env, napi_value, void *context, void *) {
++    if (env == nullptr) return;
++    static_cast<MessageWorker*>(context)->WorkMessage();
+   }
+ 
+-  inline static void AsyncClose_(uv_handle_t* handle) {
+-    MessageWorker *worker = static_cast<MessageWorker*>(handle->data);
+-    delete reinterpret_cast<uv_async_t*>(handle);
+-    delete worker;
++  static void AsyncFinalize_(napi_env, void *, void *context) {
++    delete static_cast<MessageWorker*>(context);
+   }
+ 
+-  uv_async_t *m_async;
++  napi_threadsafe_function m_tsfn = nullptr;
+   uv_mutex_t m_async_lock;
+   std::vector<RdKafka::Message*> m_asyncdata;
+   std::vector<RdKafka::ErrorCode> m_asyncwarning;
+@@ -418,7 +421,7 @@ class KafkaConsumerConsumeLoop : public MessageWorker {
+     NodeKafka::KafkaConsumer*, const int &, const int &);
+   ~KafkaConsumerConsumeLoop();
+ 
+-  static void ConsumeLoop(void *arg);
++  static void ConsumeLoop(KafkaConsumerConsumeLoop *consumerLoop);
+   void Close();
+   void Execute(const ExecutionMessageBus&) override;
+   void OnOK() override;
+@@ -426,7 +429,7 @@ class KafkaConsumerConsumeLoop : public MessageWorker {
+   void HandleMessageCallback(
+       RdKafka::Message*, RdKafka::ErrorCode) override;
+  private:
+-  uv_thread_t thread_event_loop;
++  std::thread thread_event_loop;
+   NodeKafka::KafkaConsumer* consumer;
+   const int m_timeout_ms;
+   unsigned int m_rand_seed;

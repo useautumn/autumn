@@ -1,4 +1,8 @@
-import type { Consumer, EachBatchPayload, IHeaders } from "kafkajs";
+import type {
+	Consumer,
+	EachBatchPayload,
+	IHeaders,
+} from "../../client/types/kafkaWire.js";
 import type { ProgressTracker } from "./progress.js";
 
 export type KafkaConsumerClient = Pick<

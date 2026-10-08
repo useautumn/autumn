@@ -1,16 +1,16 @@
 import { expect, test } from "bun:test";
-import type {
-	ConsumerRunConfig,
-	EachBatchPayload,
-	IHeaders,
-	KafkaMessage,
-} from "kafkajs";
 import { createProgressTracker } from "../../src/consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../src/consumer/createTopicConsumer.js";
 import type {
 	KafkaConsumerClient,
 	TopicRecordSlice,
 } from "../../src/consumer/types/consumer.js";
+import type {
+	ConsumerRunConfig,
+	EachBatchPayload,
+	IHeaders,
+	KafkaMessage,
+} from "../../src/kafka.js";
 import { OWNER_EPOCH_HEADER } from "../../src/producer/sendIdempotentBatch.js";
 import { OWNER_FENCE_HEADER } from "../../src/producer/sendOwnerFence.js";
 import { createMeteringConsumer } from "../../src/topics/metering/consumer/createMeteringConsumer.js";
@@ -99,7 +99,7 @@ function createConsumerFixture(options: FixtureOptions = {}) {
 		function isEmpty(): boolean {
 			return messages.length === 0;
 		}
-		function offsetLag(): string {
+		function _offsetLag(): string {
 			return "0";
 		}
 		function resolveOffset(offset: string): void {
@@ -145,8 +145,6 @@ function createConsumerFixture(options: FixtureOptions = {}) {
 				firstOffset,
 				lastOffset,
 				isEmpty,
-				offsetLag,
-				offsetLagLow: offsetLag,
 			},
 			resolveOffset,
 			heartbeat,

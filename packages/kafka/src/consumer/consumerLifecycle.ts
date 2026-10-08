@@ -1,5 +1,8 @@
-import type { ConsumerEndBatchProcessEvent, EachBatchPayload } from "kafkajs";
 import { parseKafkaOffset } from "../client/kafkaOffsetUtils.js";
+import type {
+	ConsumerEndBatchProcessEvent,
+	EachBatchPayload,
+} from "../client/types/kafkaWire.js";
 import { consumeBatch } from "./consumeBatch.js";
 import type {
 	TopicConsumerContext,

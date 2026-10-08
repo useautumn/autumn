@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { Kafka, logLevel } from "kafkajs";
 import { createKafkaClient } from "../../src/client/createKafkaClient.js";
+import { createKafka } from "../../src/client/librdkafka/createKafka.js";
 import { createProducerSession } from "../../src/producer/createProducerSession.js";
 import {
 	createIdempotentProducerConfig,
@@ -27,11 +27,11 @@ const uniqueName = ({ prefix }: { prefix: string }): string =>
 
 describe("ownership topic", () => {
 	test("claim is visible, release clears, and the later claim wins", async () => {
-		const kafka = new Kafka(
+		const kafka = createKafka(
 			createKafkaClient({
 				clientId: uniqueName({ prefix: "ownership-test" }),
 				brokers,
-				transport: { logLevel: logLevel.NOTHING },
+				transport: {},
 				limits: {
 					connectionTimeoutMs: 3_000,
 					requestTimeoutMs: 10_000,
@@ -45,7 +45,6 @@ describe("ownership topic", () => {
 		const topic = uniqueName({ prefix: "partition-owners" });
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{
 					topic,
@@ -158,11 +157,11 @@ describe("ownership topic", () => {
 
 describe("ownership tail", () => {
 	test("a worker's tail sees ready and claimed for its partition as they land", async () => {
-		const kafka = new Kafka(
+		const kafka = createKafka(
 			createKafkaClient({
 				clientId: uniqueName({ prefix: "ownership-tail-test" }),
 				brokers,
-				transport: { logLevel: logLevel.NOTHING },
+				transport: {},
 				limits: {
 					connectionTimeoutMs: 3_000,
 					requestTimeoutMs: 10_000,
@@ -176,7 +175,6 @@ describe("ownership tail", () => {
 		const topic = uniqueName({ prefix: "partition-owners" });
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{
 					topic,

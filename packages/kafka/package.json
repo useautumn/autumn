@@ -20,8 +20,8 @@
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
+		"@autumn/librdkafka": "workspace:*",
 		"aws-msk-iam-sasl-signer-js": "^1.0.3",
-		"kafkajs": "^2.2.4",
 		"zod": "^3.25.23"
 	},
 	"devDependencies": {

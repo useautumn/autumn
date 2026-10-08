@@ -1,10 +1,10 @@
+import { parseKafkaOffset } from "../../client/kafkaOffsetUtils.js";
 import type {
 	ConsumerCrashEvent,
 	ConsumerEndBatchProcessEvent,
 	ConsumerGroupJoinEvent,
 	EachBatchPayload,
-} from "kafkajs";
-import { parseKafkaOffset } from "../../client/kafkaOffsetUtils.js";
+} from "../../client/types/kafkaWire.js";
 import type {
 	PartitionLogRecord,
 	PartitionReaderConsumer,

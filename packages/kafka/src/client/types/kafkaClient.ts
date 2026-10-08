@@ -1,24 +1,41 @@
 import type {
-	KafkaConfig,
+	KafkaRequestTiming,
 	Producer,
 	ProducerConfig,
 	Transaction,
-} from "kafkajs";
+} from "./kafkaWire.js";
 
-export type KafkaTransportConfig = Omit<
-	KafkaConfig,
-	| "brokers"
-	| "clientId"
-	| "connectionTimeout"
-	| "requestTimeout"
-	| "enforceRequestTimeout"
-	| "retry"
->;
+export type { KafkaRequestTiming };
 
 export type KafkaSaslCredentials = {
 	mechanism: "scram-sha-256" | "scram-sha-512" | "plain";
 	username: string;
 	password: string;
+};
+
+export type KafkaOauthBearer = {
+	mechanism: "oauthbearer";
+	/** Asked again before every expiry; never cache a startup token. `lifetimeMs` is an absolute epoch ms. */
+	oauthBearerProvider(): Promise<{ value: string; lifetimeMs?: number }>;
+};
+
+export type KafkaTransportConfig = {
+	ssl?: boolean;
+	sasl?: KafkaSaslCredentials | KafkaOauthBearer;
+};
+
+export type KafkaLogLevel = "error" | "warn" | "info" | "debug";
+
+/** Where librdkafka's own log lines go; one line per call, already JSON. */
+export type KafkaLogSink = Record<KafkaLogLevel, (line: string) => void>;
+
+export type KafkaClientConfig = KafkaTransportConfig & {
+	clientId: string;
+	brokers: string[];
+	connectionTimeout: number;
+	requestTimeout: number;
+	retry: { retries: number; initialRetryTime: number; maxRetryTime: number };
+	logSink?: KafkaLogSink;
 };
 
 export type KafkaTransaction = Pick<
@@ -44,23 +61,12 @@ export type KafkaProducer = {
 	readonly mode?: KafkaCommitMode;
 };
 
-/** One request to a broker, as kafkajs instruments it. */
-export type KafkaRequestTiming = {
-	apiName: string;
-	broker: string;
-	/** Sent to response. */
-	durationMs: number;
-	/** Queued in the client before it was sent. */
-	pendingMs: number;
-};
-
 export type KafkaProducerClient = KafkaProducer & {
 	send?: KafkaSender["send"];
 	connect(): Promise<void>;
 	disconnect(): Promise<void>;
-	/** kafkajs instrumentation; absent on test doubles. */
-	on?: Producer["on"];
-	events?: Pick<Producer["events"], "REQUEST">;
+	/** Called once per broker per statistics window; absent on test doubles. */
+	onRequestTimings?(listener: (timing: KafkaRequestTiming) => void): void;
 };
 
 export type KafkaProducerFactory = {

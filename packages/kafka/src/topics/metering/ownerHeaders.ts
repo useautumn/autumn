@@ -1,4 +1,4 @@
-import type { IHeaders } from "kafkajs";
+import type { IHeaders } from "../../client/types/kafkaWire.js";
 import { InvalidRecordError } from "../../lib/recordErrors.js";
 import { OWNER_EPOCH_HEADER } from "../../producer/sendIdempotentBatch.js";
 import { OWNER_FENCE_HEADER } from "../../producer/sendOwnerFence.js";

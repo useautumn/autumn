@@ -2,16 +2,16 @@ import { describe, expect, test } from "bun:test";
 import { createRequire } from "node:module";
 import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import type {
-	ConsumerConfig,
-	ConsumerRunConfig,
-	ProducerRecord,
-	RecordMetadata,
-} from "kafkajs";
-import type {
 	KafkaProducer,
 	KafkaTransaction,
 } from "../../src/client/types/kafkaClient.js";
 import type { KafkaConsumerClient } from "../../src/consumer/types/consumer.js";
+import type {
+	ConsumerConfig,
+	ConsumerRunConfig,
+	ProducerRecord,
+	RecordMetadata,
+} from "../../src/kafka.js";
 import {
 	InvalidRecordError,
 	RecordKeyMismatchError,
@@ -486,7 +486,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 				function isEmpty(): boolean {
 					return false;
 				}
-				function offsetLag(): string {
+				function _offsetLag(): string {
 					return "0";
 				}
 				function uncommittedOffsets() {
@@ -522,8 +522,6 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 						firstOffset,
 						lastOffset,
 						isEmpty,
-						offsetLag,
-						offsetLagLow: offsetLag,
 					},
 					resolveOffset,
 					heartbeat,

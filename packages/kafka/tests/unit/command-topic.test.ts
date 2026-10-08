@@ -10,7 +10,7 @@ import {
 	parseEvictCommand,
 	parseTrackCommand,
 } from "@autumn/balance-engine";
-import { CompressionTypes, type ProducerRecord } from "kafkajs";
+import type { ProducerRecord } from "../../src/kafka.js";
 import {
 	type CommandRecord,
 	createCommandPublisher,
@@ -164,7 +164,6 @@ describe("command topic", () => {
 		expect(sent[0]).toMatchObject({
 			topic: "local-commands",
 			acks: -1,
-			compression: CompressionTypes.GZIP,
 		});
 		expect(sent[0]?.messages.map((message) => message.partition)).toEqual([
 			3, 5,

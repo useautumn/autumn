@@ -3,7 +3,7 @@
 # rather than a container. Redpanda was rejected because it fails the worker's handoff tests.
 set -euo pipefail
 
-CAPY_KAFKA_VERSION="3.9.1"
+CAPY_KAFKA_VERSION="4.3.1"
 CAPY_KAFKA_DIST="kafka_2.13-${CAPY_KAFKA_VERSION}"
 CAPY_KAFKA_HOME="${CAPY_KAFKA_HOME:-$HOME/.cache/autumn-capy/$CAPY_KAFKA_DIST}"
 export CAPY_KAFKA_HOME
@@ -59,6 +59,12 @@ capy_kafka_answers() {
 	"$CAPY_KAFKA_HOME/bin/kafka-topics.sh" --bootstrap-server "127.0.0.1:$1" --list >/dev/null 2>&1
 }
 
+# Data formatted by an older Kafka keeps its feature levels; KIP-848 consumer groups need group.version=1.
+capy_kafka_upgrade_features() {
+	"$CAPY_KAFKA_HOME/bin/kafka-features.sh" --bootstrap-server "127.0.0.1:$1" \
+		upgrade --release-version "${CAPY_KAFKA_VERSION%.*}" >/dev/null 2>&1 || true
+}
+
 capy_kafka_alive() {
 	[ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null
 }
@@ -72,6 +78,7 @@ start_capy_kafka() {
 	mkdir -p "$dir"
 
 	if capy_kafka_alive "$pid_file" && capy_kafka_answers "$port"; then
+		capy_kafka_upgrade_features "$port"
 		echo "$log_prefix kafka already running on :$port"
 		return 0
 	fi
@@ -116,6 +123,7 @@ EOF
 			break
 		fi
 		if capy_kafka_answers "$port"; then
+			capy_kafka_upgrade_features "$port"
 			echo "$log_prefix kafka ready on :$port"
 			return 0
 		fi

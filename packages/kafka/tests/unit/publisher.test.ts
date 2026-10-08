@@ -1,12 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import type { MutationRecord } from "@autumn/balance-engine";
-import {
-	CompressionTypes,
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-	type ProducerRecord,
-	type RecordMetadata,
-} from "kafkajs";
+import type {
+	Consumer,
+	ProducerRecord,
+	RecordMetadata,
+} from "../../src/kafka.js";
+
+/** A refusal as librdkafka reports it: the broker's error code, and its own verdict on retrying. */
+function brokerRefusal({
+	message,
+	code,
+	retriable,
+}: {
+	message: string;
+	code: number;
+	retriable: boolean;
+}): Error {
+	return Object.assign(new Error(message), { code, retriable });
+}
+
 import {
 	createMeteringPublisher,
 	KafkaBatchNotCommittedError,
@@ -22,6 +34,9 @@ import {
 	sendTransactionalOffsets,
 } from "../../src/kafka.js";
 import { createState, createTrackMutation } from "../meteringFixtures.js";
+
+/** The consumer whose group the offsets commit to; the fakes never read it. */
+const commandGroupConsumer = {} as Consumer;
 
 function transactionalBatchTests(): void {
 	const topic = "metering-events-v1";
@@ -96,7 +111,6 @@ function transactionalBatchTests(): void {
 					{ ...second, partition },
 				],
 				acks: -1,
-				compression: CompressionTypes.GZIP,
 			},
 		]);
 	}
@@ -260,37 +274,30 @@ function transactionalBatchTests(): void {
 		rejectsEmptyBatchBeforeTransaction,
 	);
 
-	function concurrentTransactions(): KafkaJSProtocolError {
-		return new KafkaJSProtocolError(
-			Object.assign(
-				new Error(
-					"The producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing",
-				),
-				{ type: "CONCURRENT_TRANSACTIONS", code: 51, retriable: true },
-			),
-		);
+	function concurrentTransactions(): Error {
+		return brokerRefusal({
+			message:
+				"Broker: Producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing",
+			code: 51,
+			retriable: true,
+		});
 	}
 
-	function notLeader(): KafkaJSProtocolError {
-		return new KafkaJSProtocolError(
-			Object.assign(
-				new Error("This server is not the leader for that topic-partition"),
-				{ type: "NOT_LEADER_OR_FOLLOWER", code: 6, retriable: true },
-			),
-		);
+	function notLeader(): Error {
+		return brokerRefusal({
+			message: "Broker: Not leader for partition",
+			code: 6,
+			retriable: true,
+		});
 	}
 
-	function producerFenced(): KafkaJSProtocolError {
-		return new KafkaJSProtocolError(
-			Object.assign(
-				new Error("There is a newer producer with the same transactionalId"),
-				{
-					type: "PRODUCER_FENCED",
-					code: 90,
-					retriable: false,
-				},
-			),
-		);
+	function producerFenced(): Error {
+		return brokerRefusal({
+			message:
+				"Broker: There is a newer producer with the same transactionalId",
+			code: 90,
+			retriable: false,
+		});
 	}
 
 	/** Refuses the first `refusals` sends with `refusal`, the way a coordinator or a moving leader does. */
@@ -373,7 +380,7 @@ function transactionalBatchTests(): void {
 		const fake = createRefusingProducer({ refusals: 1 });
 		await sendTransactionalOffsets({
 			producer: fake.producer,
-			offsets: { consumerGroupId: "g", topics: [] },
+			offsets: { consumer: commandGroupConsumer, topics: [] },
 			retry: fastRetry,
 		});
 		expect(fake.lifecycle).toEqual([
@@ -424,11 +431,10 @@ function transactionalBatchTests(): void {
 		]);
 	});
 
-	test("a refusal kafkajs already gave up on is still waited out", async () => {
+	test("a retriable refusal librdkafka already gave up on is still waited out", async () => {
 		function exhausted(): Error {
-			return new KafkaJSNumberOfRetriesExceeded(notLeader(), {
-				retryCount: 2,
-				retryTime: 300,
+			return new Error("Transaction aborted after its retries", {
+				cause: notLeader(),
 			});
 		}
 		const fake = createRefusingProducer({ refusals: 1, refusal: exhausted });
@@ -464,13 +470,11 @@ function transactionalBatchTests(): void {
 
 	test("any other send refusal is not retried", async () => {
 		const fake = createFakeProducer({
-			sendError: new KafkaJSProtocolError(
-				Object.assign(new Error("too large"), {
-					type: "MESSAGE_TOO_LARGE",
-					code: 10,
-					retriable: false,
-				}),
-			),
+			sendError: brokerRefusal({
+				message: "Broker: Message size too large",
+				code: 10,
+				retriable: false,
+			}),
 		});
 		await expect(
 			sendTransactionalBatch({
@@ -564,7 +568,6 @@ function meteringPublisherTests(): void {
 		expect(fake.records[0]).toEqual({
 			topic,
 			acks: -1,
-			compression: CompressionTypes.GZIP,
 			messages: expectedMessages,
 		});
 	}
@@ -658,13 +661,11 @@ describe("idempotent batches", () => {
 
 	test("a broker refusal is a batch not committed; a lost reply leaves the outcome unknown", async () => {
 		const refused = createFakeSender({
-			sendError: new KafkaJSProtocolError(
-				Object.assign(new Error("too large"), {
-					type: "MESSAGE_TOO_LARGE",
-					code: 10,
-					retriable: false,
-				}),
-			),
+			sendError: brokerRefusal({
+				message: "Broker: Message size too large",
+				code: 10,
+				retriable: false,
+			}),
 		});
 		await expect(
 			sendIdempotentBatch({
@@ -709,7 +710,7 @@ describe("idempotent batches", () => {
 			},
 		});
 		const offsets = {
-			consumerGroupId: "g",
+			consumer: commandGroupConsumer,
 			topics: [
 				{ topic: "commands", partitions: [{ partition, offset: "12" }] },
 			],
@@ -899,7 +900,7 @@ describe("transactional senders on an idempotent session", () => {
 			],
 		};
 		const offsets = {
-			consumerGroupId: "g",
+			consumer: commandGroupConsumer,
 			topics: [{ topic: "commands", partitions: [{ partition, offset: "3" }] }],
 		};
 		await expect(

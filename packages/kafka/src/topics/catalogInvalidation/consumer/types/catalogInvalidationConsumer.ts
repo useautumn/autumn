@@ -1,4 +1,4 @@
-import type { ConsumerConfig } from "kafkajs";
+import type { ConsumerConfig } from "../../../../client/types/kafkaWire.js";
 import type { KafkaConsumerClient } from "../../../../consumer/types/consumer.js";
 import type { CatalogInvalidationRecord } from "../../types/catalogInvalidationRecord.js";
 

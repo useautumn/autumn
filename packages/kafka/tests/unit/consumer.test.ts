@@ -1,13 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type {
-	ConsumerEndBatchProcessEvent,
-	ConsumerRunConfig,
-	EachBatchPayload,
-	IHeaders,
-	KafkaMessage,
-	OffsetsByTopicPartition,
-} from "kafkajs";
-import { KafkaJSNonRetriableError } from "kafkajs";
 import { createProgressTracker } from "../../src/consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../src/consumer/createTopicConsumer.js";
 import type {
@@ -16,6 +7,15 @@ import type {
 	TopicRecordResult,
 	TopicResumePosition,
 } from "../../src/consumer/types/consumer.js";
+import type {
+	ConsumerEndBatchProcessEvent,
+	ConsumerRunConfig,
+	EachBatchPayload,
+	IHeaders,
+	KafkaMessage,
+	OffsetsByTopicPartition,
+} from "../../src/kafka.js";
+import { KafkaConsumerNotRunningError } from "../../src/kafka.js";
 import { InvalidRecordError } from "../../src/lib/recordErrors.js";
 import { OWNER_EPOCH_HEADER } from "../../src/producer/sendIdempotentBatch.js";
 import { OWNER_FENCE_HEADER } from "../../src/producer/sendOwnerFence.js";
@@ -167,7 +167,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		function isEmpty(): boolean {
 			return messages.length === 0;
 		}
-		function offsetLag(): string {
+		function _offsetLag(): string {
 			return "0";
 		}
 		function resolveOffset(offset: string): void {
@@ -234,8 +234,6 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 				firstOffset,
 				lastOffset,
 				isEmpty,
-				offsetLag,
-				offsetLagLow: offsetLag,
 			},
 			resolveOffset,
 			heartbeat,
@@ -267,19 +265,14 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 			| ((event: ConsumerEndBatchProcessEvent) => void)
 			| undefined;
 		listener?.({
-			id: "event",
 			type: "consumer.end_batch_process",
 			timestamp: 0,
 			payload: {
 				topic: eventTopic,
 				partition,
 				highWatermark: (BigInt(lastOffset) + 1n).toString(),
-				offsetLag: "0",
-				offsetLagLow: "0",
 				batchSize,
-				firstOffset: lastOffset,
 				lastOffset,
-				duration: 1,
 			},
 		});
 	}
@@ -1003,11 +996,11 @@ function meteringConsumerTests(): void {
 describe("topicConsumer", topicConsumerTests);
 describe("meteringConsumer", meteringConsumerTests);
 
-import type { Consumer } from "kafkajs";
 import {
 	KafkaPartitionAssignmentRevokedError,
 	subscribePartitionChanges,
 } from "../../src/consumer/subscribePartitionChanges.js";
+import type { Consumer } from "../../src/kafka.js";
 
 describe("partition allocation events", function allocationEvents() {
 	const topic = "metering-events-v1";
@@ -1265,9 +1258,7 @@ test("a handler that declines a position gets the record passed without decoding
 
 test("steering a partition after the consumer group is gone is nothing to do, not a failure", async () => {
 	const gone = createConsumerFixture({
-		steeringFailure: new KafkaJSNonRetriableError(
-			"Consumer group was not initialized, consumer#run must be called first",
-		),
+		steeringFailure: new KafkaConsumerNotRunningError({ operation: "pause" }),
 	});
 	const consumer = createTopicConsumer({
 		ctx: {

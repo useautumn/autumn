@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { KafkaJSProtocolError } from "kafkajs";
 import type {
 	KafkaProducer,
 	KafkaTransaction,
@@ -14,14 +13,11 @@ const partition = 3;
 /** A successor that announced `ready` waits this long for the predecessor's claim before claiming for itself. */
 const HANDOFF_CLAIM_TIMEOUT_MS = 3_000;
 
-function concurrentTransactions(): KafkaJSProtocolError {
-	return new KafkaJSProtocolError(
-		Object.assign(new Error("concurrent operation ongoing"), {
-			type: "CONCURRENT_TRANSACTIONS",
-			code: 51,
-			retriable: true,
-		}),
-	);
+function concurrentTransactions(): Error {
+	return Object.assign(new Error("Broker: concurrent operation ongoing"), {
+		code: 51,
+		retriable: true,
+	});
 }
 
 function createRefusingProducer({ refusals }: { refusals: number }) {

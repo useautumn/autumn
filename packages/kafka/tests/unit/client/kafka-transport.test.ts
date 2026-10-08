@@ -107,8 +107,14 @@ test("IAM uses TLS and signs lazily for every authentication", async () => {
 	});
 	expect(requests).toEqual([]);
 	const authenticate = tokenProviderOf({ transport });
-	expect(await authenticate()).toEqual({ value: "token-1" });
-	expect(await authenticate()).toEqual({ value: "token-2" });
+	expect(await authenticate()).toEqual({
+		value: "token-1",
+		lifetimeMs: expect.any(Number),
+	});
+	expect(await authenticate()).toEqual({
+		value: "token-2",
+		lifetimeMs: expect.any(Number),
+	});
 	expect(requests).toEqual([{ region: "us-east-1" }, { region: "us-east-1" }]);
 });
 
@@ -132,7 +138,10 @@ test("signer failure propagates without retries or plaintext fallback", async ()
 	expect(transport.ssl).toBe(true);
 	expect(transport.sasl?.mechanism).toBe("oauthbearer");
 	unavailable = false;
-	expect(await authenticate()).toEqual({ value: "recovered-token" });
+	expect(await authenticate()).toEqual({
+		value: "recovered-token",
+		lifetimeMs: expect.any(Number),
+	});
 	expect(calls).toBe(2);
 });
 

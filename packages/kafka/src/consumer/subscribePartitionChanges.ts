@@ -2,7 +2,7 @@ import type {
 	Consumer,
 	ConsumerCrashEvent,
 	ConsumerGroupJoinEvent,
-} from "kafkajs";
+} from "../client/types/kafkaWire.js";
 import type { KafkaPartitionChangeListeners } from "./types/partitionChanges.js";
 
 export class KafkaPartitionAssignmentRevokedError extends Error {

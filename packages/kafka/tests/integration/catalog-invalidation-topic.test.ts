@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { Kafka, logLevel } from "kafkajs";
 import {
 	createCatalogInvalidationConsumer,
 	createCatalogInvalidationPublisher,
 	createIdempotentProducerConfig,
+	createKafka,
 	createKafkaClient,
 } from "../../src/kafka.js";
 
@@ -34,11 +34,11 @@ const waitFor = async ({
 };
 
 test("every subscriber reads every invalidation published after it started", async () => {
-	const kafka = new Kafka(
+	const kafka = createKafka(
 		createKafkaClient({
 			clientId: uniqueName({ prefix: "catalog-invalidation-test" }),
 			brokers,
-			transport: { logLevel: logLevel.NOTHING },
+			transport: {},
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,
@@ -52,7 +52,6 @@ test("every subscriber reads every invalidation published after it started", asy
 	const topic = uniqueName({ prefix: "catalog-invalidations" });
 	await admin.connect();
 	await admin.createTopics({
-		waitForLeaders: true,
 		topics: [{ topic, numPartitions: 1, replicationFactor: 1 }],
 	});
 

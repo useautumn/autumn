@@ -1,0 +1,32 @@
+{
+	"name": "@autumn/librdkafka",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/librdkafka.ts",
+			"import": "./src/librdkafka.ts",
+			"default": "./src/librdkafka.ts"
+		}
+	},
+	"scripts": {
+		"build": "bun scripts/buildNative.ts",
+		"patch:regenerate": "bun scripts/regeneratePatch.ts",
+		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:unit": "bun test --config ./bunfig.toml tests/unit",
+		"test:native": "bun test --config ./bunfig.toml tests/native",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@confluentinc/kafka-javascript": "1.10.0",
+		"node-addon-api": "8.6.0"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"@types/node": "^24.9.1",
+		"node-gyp": "^11.0.0",
+		"typescript": "~5.8.3"
+	}
+}

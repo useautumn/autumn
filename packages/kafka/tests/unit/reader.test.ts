@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { createPartitionReader } from "../../src/consumer/reader/createPartitionReader.js";
+import type { PartitionReaderConsumer } from "../../src/consumer/reader/types/reader.js";
 import {
 	type Batch,
 	type ConsumerConfig,
+	ConsumerEventNames,
 	type ConsumerRunConfig,
-	Kafka,
 	type KafkaMessage,
 	type TopicPartitionOffset,
-} from "kafkajs";
-import { createPartitionReader } from "../../src/consumer/reader/createPartitionReader.js";
-import type { PartitionReaderConsumer } from "../../src/consumer/reader/types/reader.js";
+} from "../../src/kafka.js";
 import { RecordKeyMismatchError } from "../../src/lib/recordErrors.js";
 import { createMeteringReader } from "../../src/topics/metering/consumer/createMeteringReader.js";
 import { serializeMeteringRecord } from "../../src/topics/metering/meteringTopic.js";
@@ -34,9 +34,7 @@ function createReaderFixture({
 	runFailure?: Error;
 	runGate?: Promise<void>;
 } = {}) {
-	const events = new Kafka({ brokers: [] }).consumer({
-		groupId: "reader-fixture",
-	}).events;
+	const events = ConsumerEventNames;
 	const listeners = new Map<string, (event: never) => void>();
 	const lifecycle: string[] = [];
 	const ready = createDeferred();
@@ -142,7 +140,7 @@ function createReaderFixture({
 		function lastOffset(): string {
 			return last;
 		}
-		function offsetLag(): string {
+		function _offsetLag(): string {
 			return "0";
 		}
 		const batch: Batch = {
@@ -153,8 +151,6 @@ function createReaderFixture({
 			isEmpty,
 			firstOffset,
 			lastOffset,
-			offsetLag,
-			offsetLagLow: offsetLag,
 		};
 		function resolveOffset(): void {}
 		async function heartbeat(): Promise<void> {}
