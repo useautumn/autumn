@@ -15,6 +15,6 @@ export const deleteBalanceCommandSchema = mutatingCommandSchema
 		/** Keep the deleted grants' usage: drawn from the feature's other rows, or carried as overage. */
 		recalculate: z.boolean(),
 	})
-	.strict();
+	.loose();
 
 export type DeleteBalanceCommand = z.infer<typeof deleteBalanceCommandSchema>;

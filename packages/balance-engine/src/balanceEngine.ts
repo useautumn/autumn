@@ -128,6 +128,10 @@ export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";
 // models
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
+export {
+	onUnknownInput,
+	type UnknownInput,
+} from "./models/common/openSchema.js";
 export type { MeteringIdentity } from "./models/identity/meteringIdentity.js";
 export type {
 	AutoTopupEffect,

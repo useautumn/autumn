@@ -1,6 +1,7 @@
 import { TrackDeductionSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 import { deductionDeltaSchema } from "../../../deduction/types/deductionDelta.js";
+import { openEnum, openSchema } from "../../../models/common/openSchema.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
@@ -10,12 +11,22 @@ import {
 export const trackResultSchema = z
 	.object({
 		type: z.literal("track"),
-		status: z.enum(["applied", "rejected"]),
+		status: openEnum({
+			name: "trackResult.status",
+			values: ["applied", "rejected"],
+		}),
 		reason: z.literal("insufficient_balance").nullable(),
 		/** How much each balance gave, in draw order; empty when rejected. */
 		deltas: z.array(deductionDeltaSchema),
 		/** The same movement as a usage event reports it; defaulted so records written before it existed still parse. */
-		deductions: z.array(TrackDeductionSchema).default([]),
+		deductions: z
+			.array(
+				openSchema({
+					name: "trackResult.deductions",
+					schema: TrackDeductionSchema,
+				}),
+			)
+			.default([]),
 		internalProductId: nonEmptyStringSchema.nullable().default(null),
 		/** The feature whose balance paid: the tracked one, or the credit system behind it. */
 		fundingFeatureId: nonEmptyStringSchema,

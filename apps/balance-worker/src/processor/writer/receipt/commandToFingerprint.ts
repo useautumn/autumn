@@ -1,8 +1,13 @@
 import {
 	canonicalizeJsonValue,
+	type JsonValue,
 	type MutatingCommand,
 	type SubjectState,
 } from "@autumn/balance-engine";
+
+/** Parsed from JSON, so every key is a JSON value, a newer server's included: a retry must repeat those too. */
+const filtersKey = (filters: object | undefined) =>
+	canonicalizeJsonValue((filters ?? null) as JsonValue);
 
 /** What a retry must repeat: the request, never its envelope (requestId, occurredAt) or the state it lands on. */
 export const commandToFingerprint = ({
@@ -61,7 +66,7 @@ export const commandToFingerprint = ({
 			return JSON.stringify([
 				...identityKey,
 				command.featureId,
-				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
+				filtersKey(command.customerEntitlementFilters),
 				command.remaining ?? null,
 				command.usage ?? null,
 				command.addToBalance ?? null,
@@ -73,14 +78,14 @@ export const commandToFingerprint = ({
 			return JSON.stringify([
 				...identityKey,
 				command.featureId ?? null,
-				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
+				filtersKey(command.customerEntitlementFilters),
 				command.recalculate,
 			]);
 		case "recalculateBalance":
 			return JSON.stringify([
 				...identityKey,
 				command.featureId,
-				canonicalizeJsonValue(command.customerEntitlementFilters ?? null),
+				filtersKey(command.customerEntitlementFilters),
 			]);
 		// Nothing but the customer is the request; each evict mints its own id, so none is ever retried.
 		case "evict":

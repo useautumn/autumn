@@ -6,6 +6,7 @@ import {
 	createSubjectState,
 	type MutationRecord,
 	type SubjectState,
+	type SubjectStateMutation,
 	subjectStateToFullSubject,
 	type TrackCommand,
 } from "@autumn/balance-engine";
@@ -51,7 +52,7 @@ const trackRecord = ({
 	return { ...mutation, receipt: { fingerprint: "f", expiresAt: 1 } };
 };
 
-const stamp = (mutation: Omit<MutationRecord, "receipt">): MutationRecord => ({
+const stamp = (mutation: SubjectStateMutation): MutationRecord => ({
 	...mutation,
 	receipt: { fingerprint: "f", expiresAt: 1 },
 });
