@@ -84,7 +84,7 @@ describe("getOrgRateLimitOverride", () => {
 		expect(
 			getOrgRateLimitOverride({
 				orgId: "org_a",
-				type: RateLimitType.Check,
+				type: RateLimitType.CheckCustomerGet,
 			}),
 		).toBeUndefined();
 		expect(
