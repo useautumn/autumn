@@ -1,12 +1,11 @@
 import type { CustomerWithProducts } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
-import { CheckIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
-import { cn } from "@/lib/utils";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
+import { SelectOptionLabel } from "./SelectOptionLabel";
 
 const ALL_CUSTOMERS = "__all_customers__";
 const SEARCH_PAGE_SIZE = 25;
@@ -81,24 +80,13 @@ export function CustomerComboBox({
 			isLoading={isFetchingUncached}
 			emptyText="No customers found"
 			trigger={renderTrigger(selectedOption?.name ?? "All customers")}
-			contentClassName="min-w-[280px]"
+			contentClassName="min-w-[280px] rounded-xl"
 			renderOption={(option, isSelected) => (
-				<>
-					<div className="flex min-w-0 flex-1 flex-col">
-						<span className="truncate">{option.name}</span>
-						{option.secondary && (
-							<span className="truncate font-mono text-tertiary-foreground text-xs">
-								{option.secondary}
-							</span>
-						)}
-					</div>
-					<CheckIcon
-						className={cn(
-							"size-4 shrink-0 transition-opacity",
-							isSelected ? "opacity-100" : "opacity-0",
-						)}
-					/>
-				</>
+				<SelectOptionLabel
+					name={option.name}
+					secondary={option.secondary}
+					isSelected={isSelected}
+				/>
 			)}
 		/>
 	);

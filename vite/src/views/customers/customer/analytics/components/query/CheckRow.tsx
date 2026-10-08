@@ -1,11 +1,15 @@
+import {
+	overlayItemClassName,
+	overlayItemHighlightClassName,
+} from "@autumn/ui/lib/overlay-classes";
 import { CheckIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { SeriesSwatch } from "./SeriesSwatch";
 
 export const CheckRow = ({
 	checked,
 	label,
 	title,
-	sublabel,
 	trailing,
 	color,
 	isMonospace = false,
@@ -16,9 +20,8 @@ export const CheckRow = ({
 	label: string;
 	/** Hover text; defaults to the label. */
 	title?: string;
-	sublabel?: string | null;
 	trailing?: string;
-	/** The row's chart colour, used to fill its checkbox when ticked. */
+	/** The row's chart colour, shown as a swatch beside the label. */
 	color?: string;
 	isMonospace?: boolean;
 	/** Keeps the row from being unticked, e.g. the last visible group. */
@@ -30,37 +33,34 @@ export const CheckRow = ({
 		onClick={onToggle}
 		disabled={isLocked}
 		title={title ?? label}
-		className="flex items-center gap-2.5 w-full min-h-[30px] px-1.5 py-1 rounded-md text-left hover:bg-muted disabled:cursor-default disabled:hover:bg-transparent"
+		className={cn(
+			overlayItemClassName,
+			overlayItemHighlightClassName,
+			"w-full shrink-0 text-left hover:bg-overlay-hover hover:text-foreground disabled:cursor-default disabled:hover:bg-transparent",
+		)}
 	>
 		<span
 			className={cn(
-				"flex items-center justify-center size-3.5 shrink-0 rounded-[4px] border border-input text-primary-foreground",
-				checked && "bg-primary border-primary",
+				"flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border border-input",
+				checked && "border-primary bg-primary",
 			)}
-			style={
-				checked && color ? { background: color, borderColor: color } : undefined
-			}
 		>
-			{checked && <CheckIcon size={10} weight="bold" />}
-		</span>
-		<span className="flex flex-col min-w-0 flex-1">
-			<span
-				className={cn(
-					"truncate text-[13px] leading-4",
-					checked ? "text-foreground" : "text-tertiary-foreground",
-					isMonospace && "font-mono text-xs",
-				)}
-			>
-				{label}
-			</span>
-			{sublabel && (
-				<span className="truncate text-[11px] leading-4 text-subtle">
-					{sublabel}
-				</span>
+			{checked && (
+				<CheckIcon weight="bold" className="size-2.5 text-primary-foreground" />
 			)}
+		</span>
+		{color && <SeriesSwatch color={color} />}
+		<span
+			className={cn(
+				"min-w-0 flex-1 truncate",
+				checked && "text-foreground",
+				isMonospace && "font-mono text-xs",
+			)}
+		>
+			{label}
 		</span>
 		{trailing && (
-			<span className="shrink-0 text-xs text-subtle tabular-nums">
+			<span className="shrink-0 text-xs text-tertiary-foreground tabular-nums">
 				{trailing}
 			</span>
 		)}

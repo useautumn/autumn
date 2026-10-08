@@ -1,10 +1,9 @@
 import type { Entity } from "@autumn/shared";
 import { SearchableSelect } from "@autumn/ui";
-import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsFilterState } from "../hooks/useAnalyticsFilterState";
+import { SelectOptionLabel } from "./SelectOptionLabel";
 
 const ALL_ENTITIES = "__all_entities__";
 const SEARCH_THRESHOLD = 5;
@@ -50,17 +49,9 @@ export const SelectEntityDropdown = ({
 					filterStates.entity_id ??
 					"All entities",
 			)}
-			contentClassName="min-w-[220px]"
+			contentClassName="min-w-[220px] rounded-xl"
 			renderOption={(option, isSelected) => (
-				<>
-					<span className="flex-1 truncate min-w-0">{option.name}</span>
-					<CheckIcon
-						className={cn(
-							"size-4 shrink-0 transition-opacity",
-							isSelected ? "opacity-100" : "opacity-0",
-						)}
-					/>
-				</>
+				<SelectOptionLabel name={option.name} isSelected={isSelected} />
 			)}
 		/>
 	);

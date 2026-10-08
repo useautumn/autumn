@@ -15,11 +15,6 @@ const SERIES_SLOT_COLORS = [
 
 export const OTHER_SERIES_COLOR = "var(--chart-series-other)";
 
-/** The palette color for a fixed position, e.g. a feature's place in the features list. */
-export function seriesSlotColor({ index }: { index: number }): string {
-	return SERIES_SLOT_COLORS[index] ?? OTHER_SERIES_COLOR;
-}
-
 /** True for the catch-all bucket the pipe folds groups beyond the top N into. */
 export function isOtherSeries({ key }: { key: string }): boolean {
 	return key.endsWith(`__${RESERVED_GROUP}`);

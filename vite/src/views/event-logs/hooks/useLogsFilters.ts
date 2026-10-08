@@ -56,7 +56,7 @@ export const parsePropertyFilter = ({
 	return key && value ? { key, value } : null;
 };
 
-export const formatPropertyFilter = ({ key, value }: PropertyFilter) =>
+const formatPropertyFilter = ({ key, value }: PropertyFilter) =>
 	`${key}=${value}`;
 
 /** The URL's property filters as a `filter_by` record, later keys winning. */
