@@ -37,6 +37,7 @@ function PopoverContent({
 	sideOffset = 4,
 	side = "bottom",
 	anchor,
+	collisionAvoidance,
 	onEscapeKeyDown: _onEscapeKeyDown,
 	onPointerDownOutside: _onPointerDownOutside,
 	onOpenAutoFocus: _onOpenAutoFocus,
@@ -47,7 +48,7 @@ function PopoverContent({
 }: PopoverPrimitive.Popup.Props &
 	Pick<
 		PopoverPrimitive.Positioner.Props,
-		"align" | "side" | "sideOffset" | "anchor"
+		"align" | "side" | "sideOffset" | "anchor" | "collisionAvoidance"
 	> & {
 		onEscapeKeyDown?: (e: any) => void;
 		onPointerDownOutside?: (e: any) => void;
@@ -63,6 +64,7 @@ function PopoverContent({
 				side={side}
 				sideOffset={sideOffset}
 				anchor={anchor}
+				collisionAvoidance={collisionAvoidance}
 				positionMethod="fixed"
 				className="isolate z-[300]"
 			>

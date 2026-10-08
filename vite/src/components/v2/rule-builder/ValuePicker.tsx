@@ -48,44 +48,45 @@ export function ValuePicker({
 	return (
 		<div className={cn("min-w-0", triggerClassName)}>
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger asChild>
-					<button
-						type="button"
-						className="flex items-center gap-1.5 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer min-w-0 w-full text-sm overflow-hidden"
-					>
-						{selectedValues.length === 0 ? (
-							<span className="text-tertiary-foreground">{placeholder}</span>
-						) : (
-							<>
-								{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
-									const opt = getOption(val);
-									return (
-										<ValueChip
-											key={val}
-											label={opt?.label ?? val}
-											icon={opt?.icon}
-											onRemove={() => onRemove(val)}
-											interactive={false}
-										/>
-									);
-								})}
-								{selectedValues.length > MAX_VISIBLE_CHIPS && (
-									<span className="text-sm text-tertiary-foreground px-1 shrink-0">
-										+{selectedValues.length - MAX_VISIBLE_CHIPS}
-									</span>
-								)}
-							</>
-						)}
-					</button>
+				<PopoverTrigger
+					render={
+						<button
+							type="button"
+							className="flex items-center gap-1.5 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer min-w-0 w-full text-sm overflow-hidden"
+						/>
+					}
+				>
+					{selectedValues.length === 0 ? (
+						<span className="text-tertiary-foreground">{placeholder}</span>
+					) : (
+						<>
+							{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
+								const opt = getOption(val);
+								return (
+									<ValueChip
+										key={val}
+										label={opt?.label ?? val}
+										icon={opt?.icon}
+										onRemove={() => onRemove(val)}
+										interactive={false}
+									/>
+								);
+							})}
+							{selectedValues.length > MAX_VISIBLE_CHIPS && (
+								<span className="text-sm text-tertiary-foreground px-1 shrink-0">
+									+{selectedValues.length - MAX_VISIBLE_CHIPS}
+								</span>
+							)}
+						</>
+					)}
 				</PopoverTrigger>
 				<PopoverContent
+					side="bottom"
 					align="start"
-					className="w-(--anchor-width) p-0 z-200 overflow-hidden"
-					style={{
-						transformOrigin: "var(--radix-popover-content-transform-origin)",
-					}}
+					collisionAvoidance={{ side: "none", fallbackAxisSide: "none" }}
+					className="flex flex-col w-(--anchor-width) max-h-(--available-height) p-0 overflow-hidden"
 				>
-					<Command className="bg-interactive-secondary">
+					<Command className="bg-interactive-secondary *:data-[slot=command-input-wrapper]:shrink-0">
 						<CommandInput placeholder="Search..." className="text-sm" />
 						<CommandList>
 							<CommandEmpty className="text-tertiary-foreground text-sm p-2">
