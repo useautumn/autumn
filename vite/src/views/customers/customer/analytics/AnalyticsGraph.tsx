@@ -9,7 +9,7 @@ import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
 import {
-	BAR_CATEGORY_GAP,
+	barSpacing,
 	CHART_MARGIN,
 	type PlotInsets,
 	Y_AXIS_WIDTH,
@@ -120,7 +120,9 @@ export const EventsBarChart = memo(function EventsBarChart({
 					data={data.data}
 					className="pt-3 pr-2"
 					margin={CHART_MARGIN}
-					barCategoryGap={BAR_CATEGORY_GAP}
+					barCategoryGap={
+						barSpacing({ barCount: data.data.length }).categoryGap
+					}
 					style={CHART_STYLE}
 					throttleDelay="raf"
 				>

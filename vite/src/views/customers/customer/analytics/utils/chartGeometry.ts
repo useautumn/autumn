@@ -24,8 +24,17 @@ export const TOP_INSET = CHART_MARGIN.top + CHART_PAD.top;
 export const BOTTOM_INSET = X_AXIS_HEIGHT + CHART_MARGIN.bottom;
 export const RIGHT_INSET = CHART_MARGIN.right + CHART_PAD.right;
 
-/** Px on each side of a bar; recharts applies it twice, so bars sit 4px apart like the Logs strip. */
-export const BAR_CATEGORY_GAP = 2;
+/** Past this many bins a 4px gap would eat most of each slot, so the gap turns proportional. */
+const DENSE_BAR_COUNT = 120;
+
+/**
+ * Bars sit 4px apart like the Logs strip; on dense ranges each keeps 80% of its slot instead.
+ * `categoryGap` feeds recharts (applied to both sides of a bar); `barWidth` sizes skeleton bars to match.
+ */
+export const barSpacing = ({ barCount }: { barCount: number }) =>
+	barCount > DENSE_BAR_COUNT
+		? { categoryGap: "10%", barWidth: "80%" }
+		: { categoryGap: 2, barWidth: "calc(100% - 4px)" };
 
 /** Pixel insets of the plot area from each edge of the chart body. */
 export interface PlotInsets {

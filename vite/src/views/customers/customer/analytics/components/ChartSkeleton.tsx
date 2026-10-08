@@ -1,5 +1,9 @@
 import { Skeleton } from "@autumn/ui";
-import { DEFAULT_PLOT_INSETS, type PlotInsets } from "../utils/chartGeometry";
+import {
+	barSpacing,
+	DEFAULT_PLOT_INSETS,
+	type PlotInsets,
+} from "../utils/chartGeometry";
 
 const Y_POSITIONS = [0, 25, 50, 75, 100] as const;
 const MIN_BAR_HEIGHT = 0.25;
@@ -18,32 +22,39 @@ export const ChartSkeleton = ({
 }: {
 	barCount: number;
 	geometry?: PlotInsets;
-}) => (
-	<div
-		className="relative flex-1"
-		style={{
-			marginTop: geometry.top,
-			marginRight: geometry.right,
-			marginBottom: geometry.bottom,
-			marginLeft: geometry.left,
-		}}
-	>
-		{Y_POSITIONS.map((top) => (
-			<div
-				key={top}
-				className="absolute inset-x-0 border-t border-dashed"
-				style={{ top: `${top}%`, borderColor: "var(--chart-grid-stroke)" }}
-			/>
-		))}
-		{/* px-0.5 + gap-1 matches BAR_CATEGORY_GAP: 2px either side of every bar. */}
-		<div className="absolute inset-0 flex items-end gap-1 px-0.5">
-			{Array.from({ length: barCount }, (_, index) => (
-				<Skeleton
-					key={index}
-					className="min-w-0 flex-1 rounded-t-[3px] rounded-b-none"
-					style={{ height: `${barHeight(index) * 100}%` }}
+}) => {
+	const { barWidth } = barSpacing({ barCount });
+
+	return (
+		<div
+			className="relative flex-1"
+			style={{
+				marginTop: geometry.top,
+				marginRight: geometry.right,
+				marginBottom: geometry.bottom,
+				marginLeft: geometry.left,
+			}}
+		>
+			{Y_POSITIONS.map((top) => (
+				<div
+					key={top}
+					className="absolute inset-x-0 border-t border-dashed"
+					style={{ top: `${top}%`, borderColor: "var(--chart-grid-stroke)" }}
 				/>
 			))}
+			<div className="absolute inset-0 flex items-end">
+				{Array.from({ length: barCount }, (_, index) => (
+					<div
+						key={index}
+						className="flex h-full min-w-0 flex-1 items-end justify-center"
+					>
+						<Skeleton
+							className="rounded-t-[3px] rounded-b-none"
+							style={{ width: barWidth, height: `${barHeight(index) * 100}%` }}
+						/>
+					</div>
+				))}
+			</div>
 		</div>
-	</div>
-);
+	);
+};
