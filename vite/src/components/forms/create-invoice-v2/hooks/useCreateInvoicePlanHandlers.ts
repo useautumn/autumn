@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef } from "react";
+import type { ServicePeriod } from "../createInvoiceFormSchema";
 import { EMPTY_INVOICE_PLAN, newInvoicePlan } from "../createInvoiceFormSchema";
 import { copyExistingPlansIntoInvoice } from "../utils/copyExistingPlansIntoInvoice";
 import type { InvoiceExistingPlan } from "../utils/customerStatePlanToInvoicePlan";
+import { withPlanServicePeriod } from "../utils/servicePeriod";
 import type { CreateInvoiceFormApi } from "./useCreateInvoiceForm";
 
 /** Row edits for the plans tray. New rows take the last scope picked, else the page's entity. */
@@ -52,6 +54,24 @@ export function useCreateInvoicePlanHandlers({
 		[form],
 	);
 
+	const handleSetPlanPeriod = useCallback(
+		({
+			planIndex,
+			period,
+		}: {
+			planIndex: number;
+			period: ServicePeriod | null;
+		}) => {
+			const plan = plansNow()[planIndex];
+			if (!plan) return;
+			form.setFieldValue(
+				`plans[${planIndex}]`,
+				withPlanServicePeriod({ plan, period }),
+			);
+		},
+		[form, plansNow],
+	);
+
 	const handleSelectPlan = useCallback(
 		({ planIndex, planId }: { planIndex: number; planId: string }) => {
 			const plan = plansNow()[planIndex];
@@ -91,6 +111,7 @@ export function useCreateInvoicePlanHandlers({
 			handleAddPlan,
 			handleRemovePlan,
 			handleSelectPlanScope,
+			handleSetPlanPeriod,
 			handleSelectPlan,
 			handleCopyExistingPlans,
 		}),
@@ -98,6 +119,7 @@ export function useCreateInvoicePlanHandlers({
 			handleAddPlan,
 			handleRemovePlan,
 			handleSelectPlanScope,
+			handleSetPlanPeriod,
 			handleSelectPlan,
 			handleCopyExistingPlans,
 		],

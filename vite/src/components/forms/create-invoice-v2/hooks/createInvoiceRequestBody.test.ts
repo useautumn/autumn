@@ -12,6 +12,7 @@ const emptyForm = (): CreateInvoiceForm => ({
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
+	issueDay: null,
 });
 
 const planItems = [
@@ -32,6 +33,7 @@ const planWith = (
 	licenses: [],
 	prorate: undefined,
 	entityId: null,
+	period: null,
 	...overrides,
 });
 
@@ -381,4 +383,61 @@ describe("buildCreateInvoiceRequestBody", () => {
 		expect(body).not.toHaveProperty("period_start");
 		expect(body).not.toHaveProperty("period_end");
 	});
+
+	test("sends a row's service period override on that plan only", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				periodStart: OCT_1,
+				periodEnd: NOV_1,
+				plans: [
+					planWith({ _id: "a", period: { start: OCT_1, end: OCT_15 } }),
+					planWith({ _id: "b" }),
+				],
+			},
+		});
+
+		expect(body).toMatchObject({ period_start: OCT_1, period_end: NOV_1 });
+		expect(body?.plans?.[0]).toMatchObject({
+			period_start: OCT_1,
+			period_end: OCT_15,
+		});
+		expect(body?.plans?.[1]).not.toHaveProperty("period_start");
+		expect(body?.plans?.[1]).not.toHaveProperty("period_end");
+	});
+
+	test("sends a backdated issue day at midday UTC", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			now: new Date(2026, 9, 8, 15),
+			form: {
+				...emptyForm(),
+				issueDay: new Date(2026, 9, 1).getTime(),
+				plans: [planWith()],
+			},
+		});
+
+		expect(new Date(body?.issue_date ?? 0).toISOString()).toBe(
+			"2026-10-01T12:00:00.000Z",
+		);
+	});
+
+	test("leaves an issue day of today to Stripe", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			now: new Date(2026, 9, 8, 15),
+			form: {
+				...emptyForm(),
+				issueDay: new Date(2026, 9, 8).getTime(),
+				plans: [planWith()],
+			},
+		});
+
+		expect(body).not.toHaveProperty("issue_date");
+	});
 });
+
+const OCT_1 = Date.UTC(2026, 9, 1);
+const OCT_15 = Date.UTC(2026, 9, 15);
+const NOV_1 = Date.UTC(2026, 10, 1);

@@ -30,6 +30,7 @@ describe("customerStatePlanToInvoicePlan", () => {
 			licenses: [],
 			prorate: undefined,
 			entityId: "workspace_a",
+			period: null,
 		});
 	});
 

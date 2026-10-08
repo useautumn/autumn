@@ -23,6 +23,7 @@ export function useCreateInvoiceForm({
 		taxRateId: null,
 		periodStart: null,
 		periodEnd: null,
+		issueDay: null,
 		...defaultOverrides,
 	}));
 

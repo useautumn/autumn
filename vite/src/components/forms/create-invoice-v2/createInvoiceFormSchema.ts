@@ -23,6 +23,11 @@ const FormInvoiceLicenseSchema = z.object({
 
 export type FormInvoiceLicense = z.infer<typeof FormInvoiceLicenseSchema>;
 
+const ServicePeriodSchema = z.object({ start: z.number(), end: z.number() });
+
+/** UTC midnights; end is the day the period runs up to. */
+export type ServicePeriod = z.infer<typeof ServicePeriodSchema>;
+
 const FormInvoicePlanSchema = z.object({
 	_id: z.string(),
 	planId: z.string(),
@@ -36,6 +41,8 @@ const FormInvoicePlanSchema = z.object({
 	prorate: z.boolean().optional(),
 	/** Null bills the plan at customer level. */
 	entityId: z.string().nullable(),
+	/** Overrides the invoice's service period for this plan. */
+	period: ServicePeriodSchema.nullable(),
 });
 
 export type FormInvoicePlan = z.infer<typeof FormInvoicePlanSchema>;
@@ -50,6 +57,7 @@ export const EMPTY_INVOICE_PLAN: Omit<FormInvoicePlan, "_id"> = {
 	licenses: [],
 	prorate: undefined,
 	entityId: null,
+	period: null,
 };
 
 let licenseCounter = 0;
@@ -92,6 +100,8 @@ export const CreateInvoiceFormSchema = z.object({
 	taxRateId: z.string().nullable(),
 	periodStart: z.number().nullable(),
 	periodEnd: z.number().nullable(),
+	/** Null issues today. */
+	issueDay: z.number().nullable(),
 });
 
 export type CreateInvoiceForm = z.infer<typeof CreateInvoiceFormSchema>;

@@ -15,6 +15,7 @@ import type {
 	FormInvoiceLicense,
 	FormInvoicePlan,
 } from "../createInvoiceFormSchema";
+import { issueDayToParams } from "../utils/issueDay";
 import { productItemsToInvoiceCustomize } from "../utils/productItemsToInvoiceCustomize";
 
 const toDiscounts = ({ discounts }: { discounts: FormDiscount[] }) => {
@@ -88,6 +89,9 @@ const toPlanParams = ({
 		}),
 		...(licenses.length > 0 ? { license_quantities: licenses } : {}),
 		...(plan.prorate === undefined ? {} : { prorate: plan.prorate }),
+		...(plan.period
+			? { period_start: plan.period.start, period_end: plan.period.end }
+			: {}),
 	};
 };
 
@@ -98,12 +102,14 @@ export function buildCreateInvoiceRequestBody({
 	preview,
 	catalogItemsByPlanId,
 	licenseItemsByPlanId,
+	now = new Date(),
 }: {
 	customerId: string | undefined;
 	form: CreateInvoiceForm;
 	preview?: boolean;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
 	licenseItemsByPlanId?: LicenseItemsByPlanId;
+	now?: Date;
 }): CreateInvoiceParams | null {
 	if (!customerId) return null;
 
@@ -140,6 +146,7 @@ export function buildCreateInvoiceRequestBody({
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
 			: {}),
+		...issueDayToParams({ issueDay: form.issueDay, now }),
 		...(preview ? { preview: true } : {}),
 	} as CreateInvoiceParams;
 }

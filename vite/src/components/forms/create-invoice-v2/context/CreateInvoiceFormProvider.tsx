@@ -17,6 +17,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import type { CreateInvoiceForm } from "../createInvoiceFormSchema";
@@ -35,6 +36,7 @@ import {
 	getInvoiceExistingPlans,
 	type InvoiceExistingPlan,
 } from "../utils/customerStatePlanToInvoicePlan";
+import { findPlansOutsideInvoicePeriod } from "../utils/servicePeriod";
 import { findBlockingDiscount } from "../utils/validateInvoiceDiscounts";
 
 interface CreateInvoiceFormContextValue {
@@ -53,6 +55,8 @@ interface CreateInvoiceFormContextValue {
 	planHandlers: ReturnType<typeof useCreateInvoicePlanHandlers>;
 	/** The customer's active plans, offered by "Copy existing plans". */
 	existingPlans: InvoiceExistingPlan[];
+	/** Rows whose service period the server rejected as outside the invoice's. */
+	planIdsOutsidePeriod: Set<string>;
 }
 
 const CreateInvoiceFormContext =
@@ -172,6 +176,20 @@ export function CreateInvoiceFormProvider({
 		enabled: requestBody !== null && blockingReason === null,
 	});
 
+	const previewError = previewQuery.error
+		? getBackendErr(previewQuery.error, "")
+		: null;
+	const planIdsOutsidePeriod = useMemo(
+		() =>
+			new Set(
+				findPlansOutsideInvoicePeriod({
+					errorMessage: previewError,
+					plans: formValues.plans,
+				}),
+			),
+		[previewError, formValues.plans],
+	);
+
 	const value = useMemo(
 		() => ({
 			form,
@@ -188,6 +206,7 @@ export function CreateInvoiceFormProvider({
 			planEditor,
 			planHandlers,
 			existingPlans,
+			planIdsOutsidePeriod,
 		}),
 		[
 			form,
@@ -204,6 +223,7 @@ export function CreateInvoiceFormProvider({
 			planEditor,
 			planHandlers,
 			existingPlans,
+			planIdsOutsidePeriod,
 		],
 	);
 
