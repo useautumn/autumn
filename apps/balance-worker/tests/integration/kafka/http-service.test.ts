@@ -62,6 +62,12 @@ describe("Real balance worker HTTP service", () => {
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
 				{ topic: commands, numPartitions: 1, replicationFactor: 1 },
+				// The worker refuses to start without its catalog invalidation topic.
+				{
+					topic: `${id}-catalog-invalidations`,
+					numPartitions: 1,
+					replicationFactor: 1,
+				},
 				{
 					topic: owners,
 					numPartitions: 1,
@@ -122,7 +128,8 @@ describe("Real balance worker HTTP service", () => {
 			).toEqual({ status: "alive" });
 			await routing.start();
 			let owner: PartitionOwner | undefined;
-			for (let attempt = 0; attempt < 100 && !owner; attempt++) {
+			// A lone worker claims only after the handoff's claim-silence window (3s) past its own `ready`.
+			for (let attempt = 0; attempt < 500 && !owner; attempt++) {
 				await routing.refresh();
 				owner = routing.findOwner({ partition: 0 });
 				if (!owner) await Bun.sleep(20);
@@ -212,7 +219,9 @@ describe("Real balance worker HTTP service", () => {
 		} finally {
 			await service.stop();
 			await routing.stop();
-			await admin.deleteTopics({ topics: [topic, owners, commands] });
+			await admin.deleteTopics({
+				topics: [topic, owners, commands, `${id}-catalog-invalidations`],
+			});
 			await admin.disconnect();
 			rmSync(directory, { recursive: true, force: true });
 		}

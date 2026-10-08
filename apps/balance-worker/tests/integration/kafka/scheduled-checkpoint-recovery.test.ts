@@ -174,6 +174,8 @@ const createOwner = ({
 			topic,
 			partitionsConsumedConcurrently: 1,
 			healthRefreshIntervalMs: timings.healthRefreshIntervalMs,
+			// Nobody succeeds the stopping owner here; the 15s production wait for a successor would outlast the test.
+			handoffReadyTimeoutMs: 1_000,
 		},
 	});
 	return {

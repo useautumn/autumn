@@ -58,8 +58,9 @@ const brokers = process.env.KAFKA_BROKERS.split(",").map((broker) =>
 	broker.trim(),
 );
 const partition = 2;
+// KIP-848 moves a partition on the next member heartbeat (5s apart on the broker), so a handoff can take ~10s.
 const waitFor = async (condition: () => boolean) => {
-	for (let attempt = 0; attempt < 1000; attempt++) {
+	for (let attempt = 0; attempt < 2000; attempt++) {
 		if (condition()) return;
 		await Bun.sleep(10);
 	}

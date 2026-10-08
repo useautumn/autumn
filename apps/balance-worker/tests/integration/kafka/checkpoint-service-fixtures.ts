@@ -94,7 +94,14 @@ export const createCheckpointServiceFixture = async () => {
 		for (const service of services) await service.stop();
 		await routing.stop();
 		await producer.disconnect();
-		await admin.deleteTopics({ topics: [topic, ownershipTopic, commandTopic] });
+		await admin.deleteTopics({
+			topics: [
+				topic,
+				ownershipTopic,
+				commandTopic,
+				`${id}-catalog-invalidations`,
+			],
+		});
 		await admin.disconnect();
 		await s3.send(
 			new DeleteObjectCommand({
@@ -117,6 +124,12 @@ export const createCheckpointServiceFixture = async () => {
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
 				{ topic: commandTopic, numPartitions: 1, replicationFactor: 1 },
+				// The worker refuses to start without its catalog invalidation topic.
+				{
+					topic: `${id}-catalog-invalidations`,
+					numPartitions: 1,
+					replicationFactor: 1,
+				},
 				{
 					topic: ownershipTopic,
 					numPartitions: 1,

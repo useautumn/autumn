@@ -23,5 +23,7 @@ export async function stopProducerThread({
 	state.stopping = true;
 	drainAcks({ scope });
 	failPendingAsUnknown({ scope, message: "Producer thread stopped" });
-	state.thread.terminate();
+	// Terminating a Worker that loaded the librdkafka addon crashes Bun on the next teardown; the idle thread ends with the process.
+	const thread: Worker & { unref?(): void } = state.thread;
+	thread.unref?.();
 }

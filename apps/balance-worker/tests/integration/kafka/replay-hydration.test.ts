@@ -272,6 +272,12 @@ async function createReplayHarness(): Promise<ReplayHarness> {
 					numPartitions: PARTITION_COUNT,
 					replicationFactor: 1,
 				},
+				// The worker refuses to start without its catalog invalidation topic.
+				{
+					topic: `${deployment}-catalog-invalidations`,
+					numPartitions: 1,
+					replicationFactor: 1,
+				},
 				{
 					topic: topics.ownership,
 					numPartitions: PARTITION_COUNT,
@@ -291,7 +297,12 @@ async function createReplayHarness(): Promise<ReplayHarness> {
 	async function stop(): Promise<void> {
 		await routing.stop();
 		await admin.deleteTopics({
-			topics: [topics.metering, topics.ownership, topics.commands],
+			topics: [
+				topics.metering,
+				topics.ownership,
+				topics.commands,
+				`${deployment}-catalog-invalidations`,
+			],
 		});
 		await admin.disconnect();
 	}

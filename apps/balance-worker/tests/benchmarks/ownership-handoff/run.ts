@@ -574,6 +574,8 @@ function claimsAfter(t0: number): Map<number, OwnershipEvent> {
 			byPartition.set(event.partition, event);
 	return byPartition;
 }
+/** Longer than the broker's KIP-848 heartbeat interval (5s): a join or leave reaches each member a heartbeat apart. */
+const ROSTER_QUIET_MS = 6_000;
 // A partition the roster hands back to its owner writes nothing on the ownership log, so the
 // transition is settled once the roster has moved, the log has been quiet, and every partition
 // has served a 200 since whichever of those came last.
@@ -588,7 +590,7 @@ function settled(t0: number): boolean {
 		...ownershipEvents.filter((e) => e.seenAt >= t0).map((e) => e.seenAt),
 	);
 	const lastActivity = Math.max(lastJoin, lastRecord);
-	if (Date.now() - lastActivity < 1_500) return false;
+	if (Date.now() - lastActivity < ROSTER_QUIET_MS) return false;
 	for (const partition of customers.keys())
 		if (
 			!outcomes.some(
