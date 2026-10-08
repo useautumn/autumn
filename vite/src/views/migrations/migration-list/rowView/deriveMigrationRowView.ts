@@ -89,12 +89,12 @@ export const toMigrationListRows = ({
 	migrations,
 	catalog,
 	now,
-	customerCountPending = false,
+	pendingCustomerCountIds = new Set(),
 }: {
 	migrations: MigrationWithRunInfo[];
 	catalog: MigrationCatalog;
 	now: number;
-	customerCountPending?: boolean;
+	pendingCustomerCountIds?: ReadonlySet<string>;
 }): MigrationListRow[] =>
 	migrations.map((migration) => ({
 		...migration,
@@ -102,6 +102,6 @@ export const toMigrationListRows = ({
 			migration,
 			catalog,
 			now,
-			customerCountPending,
+			customerCountPending: pendingCustomerCountIds.has(migration.id),
 		}),
 	}));

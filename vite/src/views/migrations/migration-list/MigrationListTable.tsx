@@ -30,10 +30,10 @@ const LIST_POLL_MS = 5000;
 
 function useMigrationListRows({
 	migrations,
-	customerCountPending,
+	pendingCustomerCountIds,
 }: {
 	migrations: MigrationWithRunInfo[];
-	customerCountPending: boolean;
+	pendingCustomerCountIds: ReadonlySet<string>;
 }): MigrationListRow[] {
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
@@ -46,20 +46,19 @@ function useMigrationListRows({
 				migrations,
 				catalog: createMigrationCatalog({ products, features, currency }),
 				now: Date.now(),
-				customerCountPending,
+				pendingCustomerCountIds,
 			}),
-		[migrations, products, features, currency, customerCountPending],
+		[migrations, products, features, currency, pendingCustomerCountIds],
 	);
 }
 
 export function MigrationListTable() {
-	const { migrations, isLoading, isCountsLoading } = useMigrationsQuery({
-		pollWhileActiveMs: LIST_POLL_MS,
-	});
-	const rows = useMigrationListRows({
-		migrations,
-		customerCountPending: isCountsLoading,
-	});
+	const { migrations, pendingCustomerCountIds, isLoading } = useMigrationsQuery(
+		{
+			pollWhileActiveMs: LIST_POLL_MS,
+		},
+	);
+	const rows = useMigrationListRows({ migrations, pendingCustomerCountIds });
 	return <MigrationListTableView rows={rows} isLoading={isLoading} />;
 }
 

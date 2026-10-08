@@ -49,7 +49,7 @@ export const useMigrationsQuery = ({
 				: false,
 	});
 
-	const { data: customerCounts, isLoading: isCountsLoading } = useQuery({
+	const { data: customerCounts } = useQuery({
 		queryKey: [...listKey, "customer_counts"],
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<{
@@ -75,5 +75,16 @@ export const useMigrationsQuery = ({
 		[data, customerCounts],
 	);
 
-	return { migrations, isLoading, isCountsLoading, error, refetch };
+	/** Loading, failed, or absent from the counts response: progress can't be measured yet. */
+	const pendingCustomerCountIds = useMemo(
+		() =>
+			new Set(
+				migrations
+					.filter((migration) => !customerCounts?.has(migration.id))
+					.map((migration) => migration.id),
+			),
+		[migrations, customerCounts],
+	);
+
+	return { migrations, pendingCustomerCountIds, isLoading, error, refetch };
 };
