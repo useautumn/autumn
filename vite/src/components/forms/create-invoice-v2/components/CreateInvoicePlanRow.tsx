@@ -106,6 +106,7 @@ export function CreateInvoicePlanRow({ planIndex }: { planIndex: number }) {
 				items={items}
 				planIndex={planIndex}
 				quantities={plan.featureQuantities}
+				overageQuantities={plan.overageQuantities}
 			/>
 			<CreateInvoiceLicenseRows plan={plan} planIndex={planIndex} />
 			{isOutsidePeriod && (

@@ -36,6 +36,8 @@ const FormInvoicePlanSchema = z.object({
 	items: z.custom<ProductItem[]>().nullable(),
 	isCustom: z.boolean(),
 	featureQuantities: FeatureQuantitiesSchema,
+	/** Usage-based units for a feature also priced prepaid; its prepaid units stay in featureQuantities. */
+	overageQuantities: FeatureQuantitiesSchema,
 	featureUsage: FeatureUsageSchema,
 	licenses: z.array(FormInvoiceLicenseSchema),
 	prorate: z.boolean().optional(),
@@ -55,6 +57,7 @@ export const EMPTY_INVOICE_PLAN: Omit<FormInvoicePlan, "_id"> = {
 	items: null,
 	isCustom: false,
 	featureQuantities: {},
+	overageQuantities: {},
 	featureUsage: {},
 	licenses: [],
 	prorate: undefined,

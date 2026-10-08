@@ -110,9 +110,7 @@ export function PlanServicePeriodEditor({
 			? `Replaces ${itemOverrideCount} item ${itemOverrideCount === 1 ? "period" : "periods"} on this plan.`
 			: target.kind === "base"
 				? "Items without their own period use these dates."
-				: target.kind === "feature"
-					? "Applies once this feature has a quantity on the invoice."
-					: null;
+				: null;
 
 	return (
 		<div className="flex w-72 flex-col gap-3">

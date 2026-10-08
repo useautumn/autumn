@@ -29,6 +29,7 @@ const plan = (overrides: Partial<FormInvoicePlan> = {}): FormInvoicePlan => ({
 	entityId: null,
 	period: null,
 	featurePeriods: {},
+	overageQuantities: {},
 	...overrides,
 });
 
@@ -83,5 +84,33 @@ describe("applyInvoicePlanEditorItems", () => {
 		});
 
 		expect(edited).toEqual(plan({ items: catalogItems, isCustom: true }));
+	});
+
+	test("an overage quantity is dropped once the editor removes the feature's prepaid price", () => {
+		const edited = applyInvoicePlanEditorItems({
+			plan: plan({
+				items: items([
+					{ feature_id: "words", usage_model: UsageModel.Prepaid, price: 5 },
+					...catalogItems,
+				]),
+				overageQuantities: { words: 40 },
+			}),
+			items: catalogItems,
+		});
+
+		expect(edited.overageQuantities).toEqual({});
+	});
+
+	test("keeps the overage quantity while the feature is priced both ways", () => {
+		const both = items([
+			{ feature_id: "words", usage_model: UsageModel.Prepaid, price: 5 },
+			...catalogItems,
+		]);
+		const edited = applyInvoicePlanEditorItems({
+			plan: plan({ items: both, overageQuantities: { words: 40 } }),
+			items: both,
+		});
+
+		expect(edited.overageQuantities).toEqual({ words: 40 });
 	});
 });

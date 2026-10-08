@@ -85,6 +85,7 @@ const toPlanParams = ({
 		...(customize ? { customize } : {}),
 		feature_quantities: convertToInvoiceFeatureQuantities({
 			quantities: plan.featureQuantities,
+			overageQuantities: plan.overageQuantities,
 			usageEntries: plan.featureUsage,
 			items: pricedItems,
 		})?.map((line) => {

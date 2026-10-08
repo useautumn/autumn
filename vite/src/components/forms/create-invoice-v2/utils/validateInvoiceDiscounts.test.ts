@@ -47,6 +47,7 @@ const plan = (overrides: Partial<CreateInvoiceForm["plans"][number]> = {}) => ({
 	entityId: null,
 	period: null,
 	featurePeriods: {},
+	overageQuantities: {},
 	...overrides,
 });
 

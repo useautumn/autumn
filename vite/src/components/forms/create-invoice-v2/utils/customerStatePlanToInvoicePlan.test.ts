@@ -32,6 +32,7 @@ describe("customerStatePlanToInvoicePlan", () => {
 			entityId: "workspace_a",
 			period: null,
 			featurePeriods: {},
+			overageQuantities: {},
 		});
 	});
 

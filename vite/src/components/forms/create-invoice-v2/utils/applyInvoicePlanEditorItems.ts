@@ -1,5 +1,6 @@
 import { type ProductItem, UsageModel } from "@autumn/shared";
 import type { FormInvoicePlan } from "../createInvoiceFormSchema";
+import { invoiceQuantityRows, isPricedBothWays } from "./invoiceQuantityRows";
 
 /** Usage models the invoice sheet shows a quantity field for. */
 export const INVOICE_USAGE_MODELS = [UsageModel.Prepaid, UsageModel.PayPerUse];
@@ -36,10 +37,20 @@ export function applyInvoicePlanEditorItems({
 		),
 	);
 
+	const pricedBothWaysIds = new Set(
+		invoiceQuantityRows({ items })
+			.filter(isPricedBothWays)
+			.map(({ featureId }) => featureId),
+	);
+
 	return {
 		...plan,
 		items,
 		isCustom: true,
+		overageQuantities: keepFeatures({
+			entries: plan.overageQuantities,
+			featureIds: pricedBothWaysIds,
+		}),
 		featureQuantities: keepFeatures({
 			entries: plan.featureQuantities,
 			featureIds: billedFeatureIds,

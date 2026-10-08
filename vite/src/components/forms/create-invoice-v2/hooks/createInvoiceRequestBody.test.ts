@@ -35,6 +35,7 @@ const planWith = (
 	entityId: null,
 	period: null,
 	featurePeriods: {},
+	overageQuantities: {},
 	...overrides,
 });
 
@@ -158,6 +159,65 @@ describe("buildCreateInvoiceRequestBody", () => {
 				billing_behavior: "usage_based",
 				quantity: 2500,
 			},
+		]);
+	});
+
+	test("bills a feature priced both ways as a prepaid line and a usage line, each with its own period", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						items: [
+							{ feature_id: "messages", usage_model: UsageModel.PayPerUse },
+							{ feature_id: "messages", usage_model: UsageModel.Prepaid },
+						] as CreateInvoiceForm["plans"][number]["items"],
+						featureQuantities: { messages: 1000 },
+						overageQuantities: { messages: 400 },
+						featurePeriods: {
+							"messages:prepaid": { start: OCT_1, end: OCT_15 },
+							"messages:usage_based": { start: OCT_15, end: NOV_1 },
+						},
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0]?.feature_quantities).toEqual([
+			{
+				feature_id: "messages",
+				billing_behavior: "prepaid",
+				quantity: 1000,
+				period_start: OCT_1,
+				period_end: OCT_15,
+			},
+			{
+				feature_id: "messages",
+				billing_behavior: "usage_based",
+				quantity: 400,
+				period_start: OCT_15,
+				period_end: NOV_1,
+			},
+		]);
+	});
+
+	test("drops an overage quantity once the feature is no longer priced both ways", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						featureQuantities: { seats: 5 },
+						overageQuantities: { seats: 9 },
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0]?.feature_quantities).toEqual([
+			{ feature_id: "seats", billing_behavior: "prepaid", quantity: 5 },
 		]);
 	});
 

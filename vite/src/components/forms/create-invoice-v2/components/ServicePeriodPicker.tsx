@@ -82,7 +82,8 @@ export function ServicePeriodPicker({
 			</div>
 			<Calendar
 				mode="range"
-				className="p-0"
+				className="p-0 [&_td>button]:w-full [&_td]:flex-1 [&_th]:flex-1"
+				classNames={{ months: "flex", month: "flex w-full flex-col gap-4" }}
 				selected={from ? { from, to } : undefined}
 				defaultMonth={from}
 				onSelect={(_range, day) => handleDayClick(day)}
