@@ -11,7 +11,7 @@ export const catalogInvalidationRecordSchema = z
 		env: nonEmptyStringSchema,
 		at: z.number().int().nonnegative(),
 	})
-	.strict();
+	.loose();
 
 export type CatalogInvalidationRecord = z.infer<
 	typeof catalogInvalidationRecordSchema

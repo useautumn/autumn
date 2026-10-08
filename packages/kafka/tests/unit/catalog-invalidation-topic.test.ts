@@ -33,6 +33,13 @@ describe("catalog invalidation topic", () => {
 		).toThrow(RecordKeyMismatchError);
 	});
 
+	test("a record from a newer writer reads with its unknown field kept", () => {
+		const newer = { ...record, futureField: true };
+		const serialized = serializeCatalogInvalidationRecord({ record: newer });
+
+		expect(parseCatalogInvalidationRecord(serialized)).toEqual(newer);
+	});
+
 	test("an envelope of another type is refused", () => {
 		const value = Buffer.from(
 			JSON.stringify({ schemaVersion: 1, type: "claimed", payload: record }),

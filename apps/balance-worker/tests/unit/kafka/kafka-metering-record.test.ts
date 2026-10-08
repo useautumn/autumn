@@ -81,7 +81,7 @@ describe("Kafka metering record", () => {
 		).toThrow(KafkaMeteringRecordKeyMismatchError);
 	});
 
-	test("rejects malformed and non-strict envelopes", () => {
+	test("rejects malformed envelopes and reads past a newer writer's envelope field", () => {
 		const mutation = createMutation({ state: createState() });
 		const serialized = serializeMeteringRecord({ record: mutation });
 		const envelope = JSON.parse(serialized.value.toString("utf8"));
@@ -92,14 +92,14 @@ describe("Kafka metering record", () => {
 				value: Buffer.from("not-json", "utf8"),
 			}),
 		).toThrow(InvalidKafkaMeteringRecordError);
-		expect(() =>
+		expect(
 			parseKafkaMeteringRecord({
 				key: serialized.key,
 				value: Buffer.from(
-					JSON.stringify({ ...envelope, unexpected: true }),
+					JSON.stringify({ ...envelope, futureField: true }),
 					"utf8",
 				),
 			}),
-		).toThrow(InvalidKafkaMeteringRecordError);
+		).toEqual(mutation);
 	});
 });

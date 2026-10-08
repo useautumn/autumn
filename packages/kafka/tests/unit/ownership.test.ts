@@ -138,7 +138,6 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 		for (const invalid of [
 			{ ...envelope, type: "unknown_record" },
 			{ ...envelope, type: "unowned" },
-			{ ...envelope, payload: { ...claimed, extra: true } },
 		]) {
 			function parse(): void {
 				ownershipTopic.parse({
@@ -162,9 +161,84 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 	}
 
 	test(
-		"preserves ownership wire bytes and strict payload validation",
+		"preserves ownership wire bytes and payload validation",
 		preservesOwnershipWireBytes,
 	);
+
+	/** Every record type as a newer worker writes it: a field this build does not know. */
+	const fromNewerWriter = [
+		{ ...claimed, futureField: true },
+		{
+			schemaVersion: 1 as const,
+			type: "unowned" as const,
+			partition: 7,
+			releasedAt: 1,
+			futureField: true,
+		},
+		{
+			schemaVersion: 1 as const,
+			type: "released" as const,
+			partition: 7,
+			endpoint: "http://10.0.0.4:8080",
+			releasedAt: 1,
+			futureField: true,
+		},
+		{
+			schemaVersion: 1 as const,
+			type: "ready" as const,
+			partition: 7,
+			endpoint: "http://10.0.0.5:8080",
+			readyAt: 1,
+			futureField: true,
+		},
+		{
+			schemaVersion: 1 as const,
+			type: "draining" as const,
+			partition: 7,
+			endpoint: "http://10.0.0.4:8080",
+			successor: "http://10.0.0.5:8080",
+			drainingAt: 1,
+			futureField: true,
+		},
+		{
+			schemaVersion: 1 as const,
+			type: "preparing" as const,
+			partition: 7,
+			endpoint: "http://10.0.0.5:8080",
+			preparingAt: 1,
+			futureField: true,
+		},
+	];
+
+	test("a record from a newer worker reads with its unknown field kept, for every type", () => {
+		for (const record of fromNewerWriter) {
+			expect(
+				ownershipTopic.parse(ownershipTopic.serialize({ record })),
+			).toEqual(record);
+		}
+	});
+
+	test("a claim from a newer worker still routes its partition", () => {
+		const state: OwnershipConsumerState = {
+			status: "started",
+			owners: new Map(),
+			lastAppliedOffsets: new Map(),
+			lifetime: new AbortController(),
+		};
+		const record = fromNewerWriter[0];
+		applyOwnershipMessage({
+			state,
+			message: ownershipTopic.serialize({ record }),
+			partition: 7,
+			offset: 3n,
+		});
+
+		expect(state.owners.get(7)).toEqual({
+			partition: 7,
+			endpoint: claimed.endpoint,
+			routeEpoch: "3",
+		});
+	});
 });
 
 describe("ownershipPublication", function ownershipPublicationTests() {
