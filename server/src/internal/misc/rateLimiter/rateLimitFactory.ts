@@ -67,7 +67,8 @@ export const orgRateLimitExceededError = () =>
 		statusCode: 429,
 	});
 
-export const rateLimitFactory = ({
+/** The limiter options for one bucket; every limiter for it, single or paired, is built from these. */
+export const createRateLimitOptions = ({
 	type,
 	config,
 	overLimit,
@@ -75,9 +76,7 @@ export const rateLimitFactory = ({
 	type: RateLimitType;
 	config: RateLimitConfig;
 	overLimit?: "degrade" | "reject";
-}): ReturnType<typeof rateLimiter> => {
-	const { windowMs } = config;
-
+}) => {
 	const dynamicLimit = (c: Context): number => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
 		const apiVersion = ctx?.apiVersion?.value as ApiVersion | undefined;
@@ -112,13 +111,25 @@ export const rateLimitFactory = ({
 	};
 
 	const handlers = { degrade: degradeHandler, reject: rejectHandler };
-	const options = {
-		windowMs,
+	return {
+		windowMs: config.windowMs,
 		limit: dynamicLimit,
 		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
 		...(overLimit && { handler: handlers[overLimit] }),
 	};
+};
+
+export const rateLimitFactory = ({
+	type,
+	config,
+	overLimit,
+}: {
+	type: RateLimitType;
+	config: RateLimitConfig;
+	overLimit?: "degrade" | "reject";
+}): ReturnType<typeof rateLimiter> => {
+	const options = createRateLimitOptions({ type, config, overLimit });
 
 	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;
 	let redisLimiter: ReturnType<typeof rateLimiter> | null = null;
