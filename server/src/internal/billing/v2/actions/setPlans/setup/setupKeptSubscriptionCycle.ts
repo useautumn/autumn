@@ -11,9 +11,9 @@ import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
 import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
-import { keptPlansProrationOverride } from "../utils/keptPlansProrationOverride";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
+import { setPlansProrationOverride } from "../utils/setPlansProrationOverride";
 
 type KeptSubscriptionCycle = Partial<
 	Pick<
@@ -150,7 +150,7 @@ export const setupKeptSubscriptionCycle = ({
 	// Like Stripe's create on a future anchor, nothing is billed before it unless proration is requested;
 	// an anchor after a kept trial is always prorated, since Stripe rejects none there.
 	const alwaysProrates =
-		keptPlansProrationOverride({ billingContext }) === "always_prorates";
+		setPlansProrationOverride({ billingContext }) === "always_prorates";
 	const defaultProrationBehavior: BillingBehavior = alwaysProrates
 		? "prorate_immediately"
 		: "none";

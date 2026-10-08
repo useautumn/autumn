@@ -8,6 +8,7 @@ import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/uti
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
 import { isCustomerProductOnOtherSubscription } from "../utils/isCustomerProductOnOtherSubscription";
+import { setPlansProrationOverride } from "../utils/setPlansProrationOverride";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
@@ -123,6 +124,7 @@ export const buildSetPlansPreview = async ({
 			lineItems: billingPlan.autumn.lineItems,
 			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
 			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			prorationOverride: setPlansProrationOverride({ billingContext }),
 			liveCustomerProducts: billingContext.stripeSubscription
 				? filterCustomerProductsByStripeSubscriptionId({
 						customerProducts: billingContext.fullCustomer.customer_products,

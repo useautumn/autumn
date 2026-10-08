@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
-import { keptPlansProrationOverride } from "../utils/keptPlansProrationOverride";
+import { setPlansProrationOverride } from "../utils/setPlansProrationOverride";
 import { invalidSetPlansRequest } from "./invalidSetPlansRequest";
 
 /**
@@ -32,7 +32,7 @@ export const handleKeptTrialAnchorErrors = ({
 		);
 	}
 	const alwaysProrates =
-		keptPlansProrationOverride({ billingContext }) === "always_prorates";
+		setPlansProrationOverride({ billingContext }) === "always_prorates";
 	if (alwaysProrates && billingContext.requestedProrationBehavior === "none") {
 		throw invalidSetPlansRequest(
 			`${PRORATION_BEHAVIOR_OVERRIDE_REASONS.always_prorates} proration_behavior can't be none here: use prorate_immediately, or turn the trial off.`,
