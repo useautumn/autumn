@@ -2,6 +2,7 @@ import {
 	type BillingBehavior,
 	featureUtils,
 	isBooleanFeature,
+	PRORATION_BEHAVIOR_OVERRIDE_REASONS,
 } from "@autumn/shared";
 import { Switch } from "@autumn/ui";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
@@ -42,7 +43,9 @@ export function CreateScheduleAdvancedSection() {
 		nowMs,
 		backdatesLiveSubscription,
 		hasActiveSubscription,
-		replacesPlanNow,
+		carriesUsageNow,
+		defaultFirstPhaseProration,
+		prorationOverride,
 		canScheduleTrial,
 		isExistingSchedule,
 		previewQuery,
@@ -62,17 +65,10 @@ export function CreateScheduleAdvancedSection() {
 		flow: "schedule",
 		state: {
 			hasPaidRecurringPlan: hasPaidRecurringSchedulePlan({ phases, products }),
-			replacesPlanNow,
+			carriesUsageNow,
 		},
 	});
-	const resetRule = backdatesLiveSubscription
-		? {
-				...rules.resetBillingCycle,
-				disabled: true,
-				disabledReason:
-					"A backdated subscription keeps its current renewal date",
-			}
-		: rules.resetBillingCycle;
+	const resetRule = rules.resetBillingCycle;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 	const anchorBounds = scheduleBillingCycleAnchorBounds({
@@ -84,10 +80,15 @@ export function CreateScheduleAdvancedSection() {
 	const anchorMode = anchorBounds.allowCustomAnchor
 		? billingCycleAnchorMode
 		: "now";
-	const defaultProration: BillingBehavior = backdatesLiveSubscription
-		? "none"
-		: "prorate_immediately";
+	const defaultProration = defaultFirstPhaseProration;
 	const proration = phases[0]?.prorationBehavior ?? defaultProration;
+	const prorationRule = prorationOverride
+		? {
+				...rules.proration,
+				disabled: true,
+				disabledReason: PRORATION_BEHAVIOR_OVERRIDE_REASONS[prorationOverride],
+			}
+		: rules.proration;
 
 	return (
 		<BillingOptionSections
@@ -95,8 +96,8 @@ export function CreateScheduleAdvancedSection() {
 				charges: [
 					{
 						id: "proration",
-						visible: rules.proration.visible,
-						locked: rules.proration.disabled,
+						visible: prorationRule.visible,
+						locked: prorationRule.disabled,
 						summary: prorationSummary({
 							value: proration,
 							defaultValue: defaultProration,
@@ -106,16 +107,13 @@ export function CreateScheduleAdvancedSection() {
 						}),
 						row: (
 							<ProrationBehaviorConfigRow
-								rule={rules.proration}
+								rule={prorationRule}
 								billsBackdatedGap={backdatesLiveSubscription}
 								value={proration}
 								onChange={(value) =>
 									form.setFieldValue(
 										"phases[0].prorationBehavior",
-										value === "prorate_immediately" &&
-											!backdatesLiveSubscription
-											? null
-											: value,
+										value === defaultProration ? null : value,
 									)
 								}
 							/>
@@ -165,7 +163,7 @@ export function CreateScheduleAdvancedSection() {
 						row: (
 							<BillingCycleAnchorConfigRow
 								rule={resetRule}
-								enabled={resetBillingCycle && !backdatesLiveSubscription}
+								enabled={resetBillingCycle}
 								mode={anchorMode}
 								customAnchor={billingCycleAnchorDate}
 								allowCustomAnchor={anchorBounds.allowCustomAnchor}

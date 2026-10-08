@@ -26,6 +26,14 @@ exec > >(tee -a "$STARTUP_LOG") 2> >(tee -a "$STARTUP_LOG" >&2)
 log() { echo "[capy-startup] $*"; }
 die() { echo "[capy-startup] ERROR: $*" >&2; exit 1; }
 
+# The Setup startup entry and an agent's `bun capy` can overlap right after a wake;
+# the second waits here, then finds this boot already provisioned and skips.
+exec 9>"$CAPY_PREFIX/startup.lock"
+if ! flock -n 9; then
+  log "another Capy startup is running; waiting for it to finish"
+  flock 9
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
@@ -96,6 +104,7 @@ else
     -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger stop >/dev/null 2>&1 || true
 fi
 
-start_capy_kafka "[capy-startup]"
+# Kafka outlives this script, so it must not inherit the startup lock.
+start_capy_kafka "[capy-startup]" 9>&-
 
 exec bun scripts/capy/provision.ts "$@"

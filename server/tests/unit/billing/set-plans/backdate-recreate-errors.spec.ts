@@ -1,7 +1,8 @@
 /**
  * A backdate over a healthy live subscription recreates it, so anything the recreate would
- * lose or rebill is rejected with structured details: a trial, Stripe Checkout, a paid period
- * already over, a changed anchor, a start too far back, or a plan it doesn't cover.
+ * lose or rebill is rejected with structured details: a trial added to a paid one, Stripe
+ * Checkout, a paid period already over, a start too far back, or a plan it doesn't cover.
+ * Any anchor is taken; a trialing subscription paid nothing, so it is recreated freely.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -136,14 +137,23 @@ describe(
 			).toBeUndefined();
 		});
 
-		test("a trial on the subscription, or a requested one, is rejected", () => {
-			expect(
-				rejectionOf({
-					billingContext: backdateContext({
-						replacedStripeSubscription: liveSubscription("trialing"),
+		test("a trialing subscription is recreated, with or without a new anchor", () => {
+			for (const requestedBillingCycleAnchor of [
+				undefined,
+				NOW + ms.days(20),
+			]) {
+				expect(
+					rejectionOf({
+						billingContext: backdateContext({
+							replacedStripeSubscription: liveSubscription("trialing"),
+							requestedBillingCycleAnchor,
+						}),
 					}),
-				}),
-			).toEqual(conflict("free_trial"));
+				).toBeUndefined();
+			}
+		});
+
+		test("a trial requested on a paid subscription is rejected", () => {
 			expect(
 				rejectionOf({
 					billingContext: backdateContext({
@@ -167,39 +177,36 @@ describe(
 			).toBeUndefined();
 		});
 
-		test("an anchor off the live period end is rejected; the period end itself is fine", () => {
-			expect(
-				rejectionOf({
-					billingContext: backdateContext({
-						requestedBillingCycleAnchor: NOW + ms.days(3),
+		test("a paid subscription takes any anchor, or a restart on the backdated start", () => {
+			for (const requestedBillingCycleAnchor of [
+				NOW + ms.days(3),
+				PERIOD_END,
+				PERIOD_END + ms.days(5),
+			]) {
+				expect(
+					rejectionOf({
+						billingContext: backdateContext({ requestedBillingCycleAnchor }),
 					}),
-				}),
-			).toEqual(conflict("billing_cycle_anchor"));
+				).toBeUndefined();
+			}
 			expect(
 				rejectionOf({
 					billingContext: backdateContext({
-						requestedBillingCycleAnchor: PERIOD_END,
+						immediatePhase: {
+							starts_at: BACKDATED_START,
+							plans: [],
+							billing_cycle_anchor: "phase_start",
+						},
 					}),
 				}),
 			).toBeUndefined();
 		});
 
-		test("restarting the cycle on the backdated start passes, but not alongside an anchor", () => {
-			const restartsCycle = {
-				immediatePhase: {
-					starts_at: BACKDATED_START,
-					plans: [],
-					billing_cycle_anchor: "phase_start" as const,
-				},
-			};
-			expect(
-				rejectionOf({ billingContext: backdateContext(restartsCycle) }),
-			).toBeUndefined();
+		test("resetting a paid subscription's cycle now is held back with a clean 400", () => {
 			expect(
 				rejectionOf({
 					billingContext: backdateContext({
-						...restartsCycle,
-						requestedBillingCycleAnchor: PERIOD_END,
+						requestedBillingCycleAnchor: "now",
 					}),
 				}),
 			).toEqual(conflict("billing_cycle_anchor"));

@@ -59,8 +59,10 @@ capy_kafka_answers() {
 	"$CAPY_KAFKA_HOME/bin/kafka-topics.sh" --bootstrap-server "127.0.0.1:$1" --list >/dev/null 2>&1
 }
 
+# A pid file survives reboots, so the pid must still be this broker, not a reused one.
 capy_kafka_alive() {
-	[ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null
+	[ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null &&
+		tr '\0' ' ' <"/proc/$(cat "$1")/cmdline" 2>/dev/null | grep -qE 'kafka-server-start|kafka\.Kafka'
 }
 
 start_capy_kafka() {
@@ -124,4 +126,17 @@ EOF
 	echo "$log_prefix ERROR: kafka did not become ready on :$port; see $dir/kafka.log" >&2
 	tail -20 "$dir/kafka.log" >&2 || true
 	return 1
+}
+
+stop_capy_kafka() {
+	local pid_file="${CAPY_PREFIX:?CAPY_PREFIX is required}/kafka/kafka.pid"
+	capy_kafka_alive "$pid_file" || return 0
+	local pid _
+	pid="$(cat "$pid_file")"
+	kill "$pid"
+	for _ in $(seq 1 30); do
+		kill -0 "$pid" 2>/dev/null || return 0
+		sleep 1
+	done
+	kill -9 "$pid" 2>/dev/null || true
 }

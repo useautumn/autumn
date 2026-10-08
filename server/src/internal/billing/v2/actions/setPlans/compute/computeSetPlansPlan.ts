@@ -2,11 +2,12 @@ import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
 	type FullCusProduct,
+	isCustomerProductTrialing,
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isUnbilledByStripe } from "@/internal/billing/v2/actions/setPlans/utils/isUnbilledByStripe";
-import { carriesOverUsage } from "@/internal/billing/v2/compute/carryOverUsages/carriesOverUsage";
+import { carriesUsageFrom } from "@/internal/billing/v2/compute/carryOverUsages/carriesUsageFrom";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
@@ -15,6 +16,7 @@ import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooled
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { isOnCanceledReplacedSubscription } from "../utils/isOnCanceledReplacedSubscription";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
 import { nowReplacedCustomerProducts } from "../utils/nowReplacedCustomerProducts";
 import { backdateGapLineItems } from "./backdateGapLineItems";
@@ -23,6 +25,9 @@ import {
 	type SetPlansCustomerProductChanges,
 } from "./diffToCustomerProducts/diffToCustomerProducts";
 import { diffToSchedule } from "./diffToSchedule";
+import { keptCustomerProductsOnNewAnchor } from "./keptCustomerProductsOnNewAnchor";
+import { keptReplacementEntitlementUpdates } from "./keptReplacementEntitlementUpdates";
+import { paidBackdateAnchorMoveLineItems } from "./paidBackdateAnchorMoveLineItems";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -102,26 +107,38 @@ export const computeSetPlansPlan = ({
 		outgoingCustomerProducts,
 		incomingCustomerProducts: immediateCustomerProducts,
 	});
-	const carryOverSourceCustomerProductIds = new Set(
-		replacedCustomerProducts.map(({ id }) => id),
-	);
+	// Finalize drops the stub charges for rows billed by the replacement under none, as Stripe's create bills nothing before its anchor.
+	const {
+		billedByReplacement: keptBilledByReplacement,
+		reanchoredByPaidBackdate: keptReanchoredByPaidBackdate,
+	} = keptCustomerProductsOnNewAnchor({ billingContext, keptCustomerProducts });
+	const keptOnNewAnchor = [
+		...keptBilledByReplacement,
+		...keptReanchoredByPaidBackdate,
+	];
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
-		newCustomerProducts: immediateCustomerProducts,
+		newCustomerProducts: [
+			...immediateCustomerProducts,
+			...keptBilledByReplacement,
+		],
 		deletedCustomerProducts: creditedCustomerProducts,
 		billingContext,
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
-		carriesUsage: (customerEntitlement) =>
-			carriesOverUsage({
-				carryOverUsages: billingContext.carryOverUsages,
-				sourceCustomerProductIds: carryOverSourceCustomerProductIds,
-				customerEntitlement,
-			}),
+		carriesUsage: carriesUsageFrom({
+			carryOverUsages: billingContext.carryOverUsages,
+			sourceCustomerProducts: replacedCustomerProducts,
+		}),
+		// A trialing plan paid nothing; once its subscription is replaced, the shared trial filter can no longer see that.
 		creditsUnusedTime: (customerProduct) =>
+			!isCustomerProductTrialing(customerProduct, {
+				nowMs: billingContext.currentEpochMs,
+			}) &&
 			!isUnbilledByStripe({
 				customerProduct,
 				now: billingContext.currentEpochMs,
-			}),
+			}) &&
+			!isOnCanceledReplacedSubscription({ billingContext, customerProduct }),
 	});
 
 	const { trialStartedCustomerProducts } = customerProductChanges;
@@ -197,8 +214,23 @@ export const computeSetPlansPlan = ({
 			...allLineItems,
 			...trialStartLineItems,
 			...backdateGapLineItems({ ctx, billingContext, customerProductChanges }),
+			...paidBackdateAnchorMoveLineItems({
+				ctx,
+				billingContext,
+				keptCustomerProducts: keptReanchoredByPaidBackdate,
+			}),
 		],
-		updateCustomerEntitlements,
+		updateCustomerEntitlements: [
+			...updateCustomerEntitlements,
+			...keptReplacementEntitlementUpdates({
+				billingContext,
+				keptCustomerProducts: keptOnNewAnchor,
+				carriesUsage: carriesUsageFrom({
+					carryOverUsages: billingContext.carryOverUsages,
+					sourceCustomerProducts: keptOnNewAnchor,
+				}),
+			}),
+		],
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 		pooledBalancePlan,
 		lockCustomerCurrency,

@@ -1,4 +1,5 @@
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
+import { parseVersion } from "@api/versionUtils/convertVersionUtils.js";
 import { BillingVersion } from "@models/billingModels/context/billingContext.js";
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
@@ -78,7 +79,12 @@ export const CusProductSchema = z.object({
 		.nullish(),
 
 	quantity: z.number().default(1),
-	api_semver: z.enum(ApiVersion).nullable(),
+	// Older rows hold pre-normalisation values like "1.2"; unknown versions read as null.
+	api_semver: z.preprocess(
+		(value) =>
+			typeof value === "string" ? parseVersion({ versionStr: value }) : value,
+		z.enum(ApiVersion).nullable(),
+	),
 
 	is_custom: z.boolean().default(false),
 	// Seat rows anchor to their pool's stable link (customer_licenses.link_id);

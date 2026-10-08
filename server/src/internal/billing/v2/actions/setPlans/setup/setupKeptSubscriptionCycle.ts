@@ -5,10 +5,13 @@ import {
 	type FullCusProduct,
 	getCycleEnd,
 	getSmallestInterval,
-	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
+import { endsLiveTrial } from "../utils/endsLiveTrial";
+import { filterOnReplacedStripeSubscription } from "../utils/filterOnReplacedStripeSubscription";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 
@@ -27,22 +30,17 @@ const keptCustomerProductsOnReplacedSubscription = ({
 	billingContext: CreateScheduleBillingContext;
 	operations: SetPlansTimeline["diff"]["operations"];
 }): FullCusProduct[] => {
-	const replacedSubscriptionId = billingContext.replacedStripeSubscription?.id;
-	if (!replacedSubscriptionId) return [];
-
 	const keptCustomerProductIds = new Set(
 		operations.flatMap((operation) =>
 			operation.type === "keep" ? [operation.customerProductId] : [],
 		),
 	);
-	return billingContext.fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			keptCustomerProductIds.has(customerProduct.id) &&
-			isCustomerProductOnStripeSubscription({
-				customerProduct,
-				stripeSubscriptionId: replacedSubscriptionId,
-			}),
-	);
+	return filterOnReplacedStripeSubscription({
+		billingContext,
+		customerProducts: billingContext.fullCustomer.customer_products.filter(
+			({ id }) => keptCustomerProductIds.has(id),
+		),
+	});
 };
 
 /** The first renewal of a cycle restarted on the backdated start, over every plan the recreated subscription runs. */
@@ -81,7 +79,29 @@ const backdatedCycleRenewalMs = ({
 };
 
 /**
- * A replacement subscription for kept plans continues their paid cycle: anchored on the old period end, charging nothing before it.
+ * The requested anchor, else the replaced period end; a trial ended on a backdated start with no anchor
+ * (phase_start) anchors on that start, like any backdate.
+ */
+const keptPlansAnchorMs = ({
+	billingContext,
+	periodEndMs,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	periodEndMs: number;
+}) => {
+	const { subscriptionBackdateStartMs } = billingContext;
+	const anchorMs = billingCycleAnchorToApply({ billingContext });
+	if (typeof anchorMs === "number") return anchorMs;
+	const anchorsOnBackdatedStart =
+		isTrialBackdateRecreate({ billingContext }) &&
+		endsLiveTrial({ billingContext });
+	return anchorsOnBackdatedStart && subscriptionBackdateStartMs !== undefined
+		? subscriptionBackdateStartMs
+		: periodEndMs;
+};
+
+/**
+ * A replacement subscription for kept plans continues them to a date: the requested anchor (an ended trial's), else the old period end.
  * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
  */
 export const setupKeptSubscriptionCycle = ({
@@ -106,7 +126,7 @@ export const setupKeptSubscriptionCycle = ({
 			billingContext,
 		})
 			? (backdatedCycleRenewalMs({ billingContext, timeline }) ?? periodEndMs)
-			: periodEndMs;
+			: keptPlansAnchorMs({ billingContext, periodEndMs });
 		return { billingCycleAnchorMs, requestedProrationBehavior };
 	}
 
@@ -126,8 +146,15 @@ export const setupKeptSubscriptionCycle = ({
 		}).length > 0;
 	if (!keepsReplacedPlan) return {};
 
+	// Like Stripe's create on a future anchor, nothing is billed before it unless proration is requested;
+	// an anchor after a kept trial is always prorated, since Stripe rejects none there.
+	const alwaysProrates = billingContext.prorationOverride === "always_prorates";
+	const defaultProrationBehavior: BillingBehavior = alwaysProrates
+		? "prorate_immediately"
+		: "none";
 	return {
-		billingCycleAnchorMs: periodEndMs,
-		requestedProrationBehavior: requestedProrationBehavior ?? "none",
+		billingCycleAnchorMs: keptPlansAnchorMs({ billingContext, periodEndMs }),
+		requestedProrationBehavior:
+			requestedProrationBehavior ?? defaultProrationBehavior,
 	};
 };

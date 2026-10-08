@@ -4,6 +4,7 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -18,6 +19,8 @@ const CAPY_SESSION = "capy";
 const CAPY_PREFIX =
 	process.env.CAPY_PREFIX ??
 	join(process.env.HOME ?? "/home/user", ".autumn-capy");
+const APP_MODE_PATH = join(CAPY_PREFIX, "app-mode");
+const SERVER_ONLY_FLAG = "--server-only";
 
 type CapyLogPaths = {
 	startup: string;
@@ -101,7 +104,7 @@ function capyLogsText({
 	].join("\n");
 }
 
-function ensureBunGlobalBin(): void {
+export function ensureBunGlobalBin(): void {
 	const bin =
 		sh("bun", ["pm", "-g", "bin"]).stdout ||
 		`${process.env.HOME ?? "/home/user"}/.bun/bin`;
@@ -125,13 +128,25 @@ export function ensureCapyBashrc({
 	appendFileSync(bashrc, `${contents.endsWith("\n") ? "" : "\n"}${command}\n`);
 }
 
-export function capyHandoffText(): string {
+export function capyHandoffText({
+	serverOnly = false,
+}: {
+	serverOnly?: boolean;
+} = {}): string {
 	return [
-		"Capy is ready.",
+		serverOnly
+			? "Capy server-only stack is ready (no dashboard)."
+			: "Capy is ready.",
 		`tmux session: ${CAPY_SESSION}`,
-		"local ports: 3000 dashboard, 8080 server (3001 checkout, 3099 leaf/chat when opted in)",
+		serverOnly
+			? "local ports: 8080 server | run `bun capy` for the dashboard"
+			: "local ports: 3000 dashboard, 8080 server (3001 checkout, 3099 leaf/chat when opted in)",
 		"opt-ins: ls ~/.autumn-capy/opt-ins | enable: bun capy restart --trigger|--eve|--checkout|--atom",
-		"browser API uses /__autumn_api via the Capy Vite proxy; expose only port 3000",
+		...(serverOnly
+			? []
+			: [
+					"browser API uses /__autumn_api via the Capy Vite proxy; expose only port 3000",
+				]),
 		`logs: bun capy logs | attach: tmux attach -t ${CAPY_SESSION}`,
 	].join("\n");
 }
@@ -145,20 +160,28 @@ function http200(url: string): boolean {
 	);
 }
 
-async function waitForReady(): Promise<void> {
+async function waitForReady({
+	serverOnly,
+}: {
+	serverOnly: boolean;
+}): Promise<void> {
 	for (let i = 0; i < 120; i++) {
 		if (!tmuxSessionExists(CAPY_SESSION)) {
 			fatal(`capy tmux session ${CAPY_SESSION} exited before readiness`);
 		}
 		if (
-			http200("http://localhost:3000/") &&
+			(serverOnly || http200("http://localhost:3000/")) &&
 			http200("http://localhost:8080/api/auth/get-session")
 		) {
 			return;
 		}
 		await Bun.sleep(250);
 	}
-	fatal("capy app did not become ready on :3000 and :8080");
+	fatal(
+		serverOnly
+			? "capy server did not become ready on :8080"
+			: "capy app did not become ready on :3000 and :8080",
+	);
 }
 
 function ensureStartup(): void {
@@ -178,15 +201,25 @@ export function capyUnsetCommand(keys: string[]): string {
 	return keys.length > 0 ? `unset ${keys.join(" ")}; ` : "";
 }
 
-function ensureAppProcess(): void {
+/** A running server-only stack lacks the dashboard, so a full `bun capy` replaces it. */
+function runningStackSatisfies({ serverOnly }: { serverOnly: boolean }) {
+	if (!tmuxSessionExists(CAPY_SESSION)) return false;
+	if (serverOnly) return true;
+	return readLog(APP_MODE_PATH)?.trim() !== "server-only";
+}
+
+function ensureAppProcess({ serverOnly }: { serverOnly: boolean }): void {
 	ensureBunGlobalBin();
-	if (tmuxSessionExists(CAPY_SESSION)) return;
+	if (runningStackSatisfies({ serverOnly })) return;
+	cmdCapyStop();
 	ensureStartup();
+	// Another `bun capy` may have launched the app while this one waited on the startup lock.
+	if (runningStackSatisfies({ serverOnly })) return;
 	const env: Record<string, string> = {
 		...process.env,
 		CAPY_DEV: "1",
 		VITE_EMULATE_GOOGLE_PROXY: "1",
-		DEV_SERVICES: capyDevServices().join(","),
+		DEV_SERVICES: capyDevServices({ serverOnly }).join(","),
 		WORKER_PROCESSES: "1",
 	} as Record<string, string>;
 	const withheld = withheldEnvKeys();
@@ -195,6 +228,9 @@ function ensureAppProcess(): void {
 	mkdirSync(dirname(appLog), { recursive: true, mode: 0o700 });
 	writeFileSync(appLog, "", { mode: 0o600 });
 	chmodSync(appLog, 0o600);
+	writeFileSync(APP_MODE_PATH, serverOnly ? "server-only\n" : "full\n", {
+		mode: 0o600,
+	});
 	spawnDevInTmux(
 		CAPY_SESSION,
 		env,
@@ -214,10 +250,11 @@ export async function cmdCapy({
 	args?: string[];
 } = {}): Promise<void> {
 	if (applyOptInFlags({ args })) cmdCapyStop();
+	const serverOnly = args.includes(SERVER_ONLY_FLAG);
 	ensureCapyBashrc();
-	ensureAppProcess();
-	await waitForReady();
-	console.log(capyHandoffText());
+	ensureAppProcess({ serverOnly });
+	await waitForReady({ serverOnly });
+	console.log(capyHandoffText({ serverOnly }));
 }
 
 export function cmdCapyStatus(): void {
@@ -238,10 +275,76 @@ export function cmdCapyLogs(): void {
 	);
 }
 
-export function cmdCapyStop(): void {
-	if (tmuxSessionExists(CAPY_SESSION)) {
-		sh("tmux", ["kill-session", "-t", CAPY_SESSION]);
+/** Every process under the given roots, roots included; `psOutput` is `ps -eo pid=,ppid=`. */
+export function descendantPids({
+	roots,
+	psOutput,
+}: {
+	roots: number[];
+	psOutput: string;
+}): number[] {
+	const children = new Map<number, number[]>();
+	for (const line of psOutput.split("\n")) {
+		const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+		if (!pid || ppid === undefined) continue;
+		children.set(ppid, [...(children.get(ppid) ?? []), pid]);
 	}
+	const found = new Set<number>();
+	const queue = [...roots];
+	while (queue.length > 0) {
+		const pid = queue.shift() as number;
+		if (found.has(pid)) continue;
+		found.add(pid);
+		queue.push(...(children.get(pid) ?? []));
+	}
+	return [...found];
+}
+
+function capySessionPids(): number[] {
+	const panes = sh("tmux", [
+		"list-panes",
+		"-s",
+		"-t",
+		CAPY_SESSION,
+		"-F",
+		"#{pane_pid}",
+	]);
+	if (panes.code !== 0) return [];
+	return descendantPids({
+		roots: panes.stdout.split("\n").map(Number).filter(Boolean),
+		psOutput: sh("ps", ["-eo", "pid=,ppid="]).stdout,
+	});
+}
+
+function signalPids({
+	pids,
+	signal,
+}: {
+	pids: number[];
+	signal: NodeJS.Signals | 0;
+}): number[] {
+	return pids.filter((pid) => {
+		try {
+			process.kill(pid, signal);
+			return true;
+		} catch {
+			return false;
+		}
+	});
+}
+
+// nodemon and friends survive the tmux SIGHUP and keep :8080 bound, so the tree is killed explicitly.
+export function cmdCapyStop(): void {
+	if (!tmuxSessionExists(CAPY_SESSION)) return;
+	const pids = capySessionPids();
+	sh("tmux", ["kill-session", "-t", CAPY_SESSION]);
+	let alive = signalPids({ pids, signal: "SIGTERM" });
+	for (let i = 0; i < 40 && alive.length > 0; i++) {
+		Bun.sleepSync(250);
+		alive = signalPids({ pids: alive, signal: 0 });
+	}
+	signalPids({ pids: alive, signal: "SIGKILL" });
+	rmSync(APP_MODE_PATH, { force: true });
 }
 
 export async function cmdCapyRestart({

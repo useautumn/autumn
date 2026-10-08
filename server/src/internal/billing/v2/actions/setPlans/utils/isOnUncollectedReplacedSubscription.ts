@@ -1,33 +1,17 @@
-import {
-	type BillingContext,
-	type FullCusProduct,
-	isCustomerProductOnStripeSubscription,
-} from "@autumn/shared";
-import type Stripe from "stripe";
-
-const UNCOLLECTED_STATUSES: Stripe.Subscription.Status[] = [
-	"incomplete",
-	"incomplete_expired",
-	"unpaid",
-	"paused",
-];
+import type { BillingContext, FullCusProduct } from "@autumn/shared";
+import { isOnReplacedStripeSubscription } from "./isOnReplacedStripeSubscription";
+import { replacementReason } from "./replacementReason";
 
 /** Stripe never collected the replaced subscription's current period, so its plans have no unused time to credit. */
 export const isOnUncollectedReplacedSubscription = ({
 	billingContext,
 	customerProduct,
 }: {
-	billingContext: BillingContext;
+	billingContext: Pick<
+		BillingContext,
+		"replacedStripeSubscription" | "subscriptionBackdateStartMs"
+	>;
 	customerProduct: FullCusProduct;
-}) => {
-	const { replacedStripeSubscription } = billingContext;
-	if (!replacedStripeSubscription) return false;
-
-	return (
-		UNCOLLECTED_STATUSES.includes(replacedStripeSubscription.status) &&
-		isCustomerProductOnStripeSubscription({
-			customerProduct,
-			stripeSubscriptionId: replacedStripeSubscription.id,
-		}) === true
-	);
-};
+}) =>
+	replacementReason({ billingContext }) === "uncollected" &&
+	isOnReplacedStripeSubscription({ billingContext, customerProduct });

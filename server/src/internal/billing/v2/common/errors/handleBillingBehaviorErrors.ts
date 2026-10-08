@@ -28,8 +28,12 @@ export const handleProrationBehaviorErrors = ({
 	const { isTrialing, willBeTrialing } = getTrialStateTransition({
 		billingContext,
 	});
+	const endsTrial = isTrialing && !willBeTrialing;
+	if (endsTrial && billingContext.prorationOverride === "bills_full_period") {
+		return;
+	}
 
-	if (isTrialing && !willBeTrialing) {
+	if (endsTrial) {
 		throw new RecaseError({
 			message:
 				"Cannot set proration_behavior to 'none' when removing a free trial",
