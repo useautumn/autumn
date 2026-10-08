@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Kafka } from "kafkajs";
+import { createKafka } from "@autumn/kafka";
 import { startWorker } from "../../../src/init/lifecycle/startWorker.js";
 import { stopWorker } from "../../../src/init/lifecycle/stopWorker.js";
 import type { WorkerLifecycleContext } from "../../../src/init/types/balanceWorker.js";
@@ -24,7 +24,13 @@ test.concurrent(
 		const events: string[] = [];
 		const resources = createWorkerResources({
 			ctx: {
-				kafka: new Kafka({ brokers: ["localhost:19092"] }),
+				kafka: createKafka({
+					clientId: "worker-resources-test",
+					brokers: ["localhost:19092"],
+					connectionTimeout: 1_000,
+					requestTimeout: 1_000,
+					retry: { retries: 1, initialRetryTime: 1, maxRetryTime: 1 },
+				}),
 				admin: {
 					disconnect: async () => {
 						events.push("disconnect");
@@ -85,7 +91,13 @@ test.concurrent.each([false, true])(
 		const events: string[] = [];
 		const resources = createWorkerResources({
 			ctx: {
-				kafka: new Kafka({ brokers: ["localhost:19092"] }),
+				kafka: createKafka({
+					clientId: "worker-resources-test",
+					brokers: ["localhost:19092"],
+					connectionTimeout: 1_000,
+					requestTimeout: 1_000,
+					retry: { retries: 1, initialRetryTime: 1, maxRetryTime: 1 },
+				}),
 				admin: {
 					disconnect: async () => {
 						events.push("disconnect");

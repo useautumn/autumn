@@ -24,15 +24,9 @@ function receive({
 			ack: { ok: false, error: message.error },
 		});
 	else if (message.kind === "request") {
-		const { event } = message;
-		const payload = {
-			apiName: event.apiName,
-			broker: event.broker,
-			duration: event.durationMs,
-			pendingDuration: event.pendingMs,
-		};
-		for (const listener of scope.requestListeners.get(event.producerId) ?? [])
-			listener({ payload });
+		const { producerId, ...timing } = message.event;
+		for (const listener of scope.requestListeners.get(producerId) ?? [])
+			listener(timing);
 	} else if (message.kind === "token")
 		scope.ctx.onToken?.(message.info as KafkaTokenInfo);
 	else if (message.kind === "stopped") scope.stopped.resolve();

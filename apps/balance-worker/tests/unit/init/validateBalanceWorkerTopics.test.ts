@@ -9,10 +9,8 @@ const env = createBalanceWorkerEnv({
 });
 const admin = ({
 	count = env.BALANCE_WORKER_PARTITION_COUNT,
-	policy = "compact",
 }: {
 	count?: number;
-	policy?: string;
 } = {}) => ({
 	fetchTopicMetadata: async () => ({
 		topics: [
@@ -31,31 +29,9 @@ const admin = ({
 			})),
 		})),
 	}),
-	describeConfigs: async () => ({
-		throttleTime: 0,
-		resources: [
-			{
-				errorCode: 0,
-				errorMessage: "",
-				resourceName: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
-				resourceType: 2,
-				configEntries: [
-					{
-						configName: "cleanup.policy",
-						configValue: policy,
-						readOnly: false,
-						isDefault: false,
-						isSensitive: false,
-						configSource: 1,
-						configSynonyms: [],
-					},
-				],
-			},
-		],
-	}),
 });
 describe("balance worker topic validation", () => {
-	test("accepts matching partitions and compact-only ownership", async () => {
+	test("accepts matching partitions; the ownership topic's cleanup policy is provisioning's to set", async () => {
 		await expect(
 			validateBalanceWorkerTopics({
 				admin: admin(),
@@ -63,17 +39,15 @@ describe("balance worker topic validation", () => {
 			}),
 		).resolves.toBeUndefined();
 	});
-	test.each([
-		{ count: 1 },
-		{ count: 8 },
-		{ policy: "compact,delete" },
-		{ policy: "delete" },
-	])("rejects unsafe topic layout %j", async (options) => {
-		await expect(
-			validateBalanceWorkerTopics({
-				admin: admin(options),
-				env,
-			}),
-		).rejects.toThrow();
-	});
+	test.each([{ count: 1 }, { count: 8 }])(
+		"rejects unsafe topic layout %j",
+		async (options) => {
+			await expect(
+				validateBalanceWorkerTopics({
+					admin: admin(options),
+					env,
+				}),
+			).rejects.toThrow();
+		},
+	);
 });

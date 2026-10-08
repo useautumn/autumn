@@ -12,6 +12,8 @@ import { type NativeDone, settleNative } from "../settleNative.js";
 const READ_COMMITTED = 1 as KafkaJS.IsolationLevel;
 
 type PartitionOffset = { partition: number; offset: string };
+const LEADER_WAIT_MS = 30_000;
+const LEADER_POLL_MS = 50;
 
 function topicMetadataOf(topic: KafkaJS.ITopicMetadata): ITopicMetadata {
 	const partitions: ITopicMetadata["partitions"] = [];
@@ -53,11 +55,41 @@ export function createLibrdkafkaAdmin({
 		return admin.disconnect();
 	}
 
-	function createTopics(options: {
+	/** Resolves once every new topic has a leader per partition, as kafkajs's default `waitForLeaders` did. */
+	async function createTopics(options: {
 		topics: ITopicConfig[];
 		timeout?: number;
 	}): Promise<boolean> {
-		return admin.createTopics(options);
+		const created = await admin.createTopics(options);
+		const names: string[] = [];
+		for (const { topic } of options.topics) names.push(topic);
+		const deadline = Date.now() + (options.timeout ?? LEADER_WAIT_MS);
+		while (!(await haveLeaders({ topics: names }))) {
+			if (Date.now() > deadline)
+				throw new Error(`Topics have no leaders yet: ${names.join(", ")}`);
+			await Bun.sleep(LEADER_POLL_MS);
+		}
+		return created;
+	}
+
+	/** The controller accepts a topic before every broker's metadata knows it; until then a read refuses it. */
+	async function haveLeaders({
+		topics,
+	}: {
+		topics: string[];
+	}): Promise<boolean> {
+		let described: KafkaJS.ITopicMetadata[];
+		try {
+			described = await admin.fetchTopicMetadata({ topics });
+		} catch {
+			return false;
+		}
+		if (described.length < topics.length) return false;
+		for (const topic of described) {
+			if (topic.partitions.length === 0) return false;
+			for (const { leader } of topic.partitions) if (leader < 0) return false;
+		}
+		return true;
 	}
 
 	function deleteTopics(options: {
@@ -65,6 +97,17 @@ export function createLibrdkafkaAdmin({
 		timeout?: number;
 	}): Promise<void> {
 		return admin.deleteTopics(options);
+	}
+
+	/** Moves each partition's log start up to `offset`; tests use it to drop a replayable tail. */
+	async function deleteTopicRecords(options: {
+		topic: string;
+		partitions: PartitionOffset[];
+	}): Promise<void> {
+		await admin.deleteTopicRecords({
+			topic: options.topic,
+			partitions: partitionOffsetsOf(options.partitions),
+		});
 	}
 
 	function listTopics(): Promise<string[]> {
@@ -161,6 +204,7 @@ export function createLibrdkafkaAdmin({
 		disconnect,
 		createTopics,
 		deleteTopics,
+		deleteTopicRecords,
 		listTopics,
 		fetchTopicMetadata,
 		fetchTopicOffsets,

@@ -17,9 +17,10 @@ import {
 	createProducerSession,
 	type KafkaTransaction as KafkaMutationTransactionPort,
 	type KafkaProducerClient as OwnedPartitionProducerPort,
+	type ProducerRecord,
+	type RecordMetadata,
 } from "@autumn/kafka";
 import { Glob } from "bun";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
 import ts from "typescript";
 import { workerErrorOf } from "../../../src/http/handlers/errorHandler/workerErrorOf.js";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
@@ -179,10 +180,10 @@ const createFakeProducer = ({
 	records: ProducerRecord[];
 } => {
 	const records: ProducerRecord[] = [];
-	let transactionCount = 0;
 	let nextOffset = 0n;
 
 	const producer: OwnedPartitionProducerPort = {
+		// librdkafka bumps the epoch when a transactional producer connects: the connect is the fence.
 		connect: async () => {
 			lifecycle.push("producer:connect");
 		},
@@ -190,19 +191,10 @@ const createFakeProducer = ({
 			lifecycle.push("producer:disconnect");
 		},
 		transaction: async () => {
-			const currentTransaction = transactionCount;
-			transactionCount += 1;
-			lifecycle.push(
-				currentTransaction === 0
-					? "producer:fence"
-					: "producer:append-transaction",
-			);
+			lifecycle.push("producer:append-transaction");
 
 			const transaction: KafkaMutationTransactionPort = {
 				send: async (record) => {
-					if (currentTransaction === 0) {
-						throw new Error("Fence transaction cannot send records");
-					}
 					lifecycle.push("producer:send");
 					records.push(record);
 					if (appendSendError) throw appendSendError;
@@ -221,19 +213,11 @@ const createFakeProducer = ({
 				commit: async () => {
 					lifecycle.push("producer:commit");
 					await appendCommitGate;
-					if (currentTransaction > 0 && appendCommitError) {
-						throw appendCommitError;
-					}
+					if (appendCommitError) throw appendCommitError;
 				},
 				abort: async () => {
-					lifecycle.push(
-						currentTransaction === 0
-							? "producer:fence-abort"
-							: "producer:abort",
-					);
-					if (currentTransaction > 0 && appendAbortError) {
-						throw appendAbortError;
-					}
+					lifecycle.push("producer:abort");
+					if (appendAbortError) throw appendAbortError;
 				},
 			};
 			return transaction;
@@ -555,8 +539,6 @@ describe("owned partition runtime", () => {
 			expect(runtime.getStatus()).toBe("catching_up");
 			expect(startup).toEqual([
 				"producer:connect",
-				"producer:fence",
-				"producer:fence-abort",
 				"store:claim",
 				"follower:range",
 				"bootstrap",

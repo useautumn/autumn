@@ -1,4 +1,4 @@
-import type { KafkaProducerFactory } from "@autumn/kafka";
+import type { KafkaProducerFactory, KafkaRequestTiming } from "@autumn/kafka";
 import type { ProducerThreadInit } from "./producerThreadMessages.js";
 
 export type ThreadedProducersConfig = Pick<
@@ -21,11 +21,4 @@ export type ThreadedProducers = KafkaProducerFactory & {
 	drainHealth(): { sendsAwaitingAck: number; sendsOverPort: number };
 };
 
-/** kafkajs's `producer.network.request` payload, the part `kafkaRequestTimings` reads. */
-export type RequestPayload = {
-	apiName: string;
-	broker: string;
-	duration: number;
-	pendingDuration: number;
-};
-export type RequestListener = (event: { payload: RequestPayload }) => void;
+export type RequestListener = (timing: KafkaRequestTiming) => void;

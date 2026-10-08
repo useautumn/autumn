@@ -13,7 +13,6 @@ import {
 	DeleteObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
-import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import type { BalanceWorker } from "../../../src/init/types/balanceWorker.js";
 import { createS3CheckpointObjectClient } from "../../../src/s3/s3CheckpointObjectClient.js";
@@ -27,6 +26,7 @@ import {
 	createState,
 	createTrackCommand,
 } from "../../fixtures/mutations.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 
 export const waitForCheckpointService = async ({
 	ready,
@@ -51,11 +51,7 @@ export const createCheckpointServiceFixture = async () => {
 	const endpoint = process.env.S3_TEST_ENDPOINT ?? "http://127.0.0.1:19000";
 	const brokers = process.env.KAFKA_BROKERS;
 	if (!brokers) throw new Error("Local Kafka test brokers are required");
-	const kafka = new Kafka({
-		clientId: id,
-		brokers: brokers.split(","),
-		logLevel: logLevel.NOTHING,
-	});
+	const kafka = createTestKafka({ clientId: id, brokers: brokers.split(",") });
 	const admin = kafka.admin();
 	const s3 = new S3Client({
 		region: "us-east-1",
@@ -98,7 +94,14 @@ export const createCheckpointServiceFixture = async () => {
 		for (const service of services) await service.stop();
 		await routing.stop();
 		await producer.disconnect();
-		await admin.deleteTopics({ topics: [topic, ownershipTopic, commandTopic] });
+		await admin.deleteTopics({
+			topics: [
+				topic,
+				ownershipTopic,
+				commandTopic,
+				`${id}-catalog-invalidations`,
+			],
+		});
 		await admin.disconnect();
 		await s3.send(
 			new DeleteObjectCommand({
@@ -118,10 +121,15 @@ export const createCheckpointServiceFixture = async () => {
 	try {
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
 				{ topic: commandTopic, numPartitions: 1, replicationFactor: 1 },
+				// The worker refuses to start without its catalog invalidation topic.
+				{
+					topic: `${id}-catalog-invalidations`,
+					numPartitions: 1,
+					replicationFactor: 1,
+				},
 				{
 					topic: ownershipTopic,
 					numPartitions: 1,

@@ -35,6 +35,12 @@ export function nativeProducerConfigOf({
 }): Record<string, unknown> {
 	const retry = { ...defaults.retry, ...config.retry };
 	const transactional = config.transactionalId !== undefined;
+	const window = retryWindowMs({
+		retries: retry.retries,
+		initialRetryTime: retry.initialRetryTime,
+		maxRetryTime: retry.maxRetryTime,
+		requestTimeout: defaults.requestTimeout,
+	});
 	return {
 		"enable.idempotence": config.idempotent ?? transactional,
 		...(transactional && { "transactional.id": config.transactionalId }),
@@ -49,12 +55,11 @@ export function nativeProducerConfigOf({
 		"linger.ms": config.lingerMs ?? 1,
 		// Mirrors kafkajs's per-key partitioning, for sends that leave the partition to the client.
 		partitioner: "murmur2_random",
-		"message.timeout.ms": retryWindowMs({
-			retries: retry.retries,
-			initialRetryTime: retry.initialRetryTime,
-			maxRetryTime: retry.maxRetryTime,
-			requestTimeout: defaults.requestTimeout,
-		}),
+		// librdkafka refuses a transactional producer whose sends could outlive its transaction.
+		"message.timeout.ms":
+			transactional && config.transactionTimeout
+				? Math.min(window, config.transactionTimeout)
+				: window,
 		"retry.backoff.ms": retry.initialRetryTime,
 		"retry.backoff.max.ms": retry.maxRetryTime,
 		"allow.auto.create.topics": config.allowAutoTopicCreation ?? false,

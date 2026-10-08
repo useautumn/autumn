@@ -1,6 +1,4 @@
 /** Control messages: create, connect and disconnect one producer, or stop them all. */
-import { explicitPartitioner } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
 import { readSendFrame } from "../frames/sendFrame.js";
 import type { ProducerLoopScope } from "../types/producerLoopScope.js";
 import type { ProducerConfigSnapshot } from "../types/producerThreadMessages.js";
@@ -16,24 +14,10 @@ export function createProducer({
 	producerId: number;
 	config: ProducerConfigSnapshot;
 }): void {
-	const { explicitPartitioner: explicit, ...rest } = config;
-	const producerConfig: ProducerConfig = explicit
-		? { ...rest, createPartitioner: explicitPartitioner }
-		: rest;
-	const producer = scope.ctx.kafka.producer(producerConfig);
+	const producer = scope.ctx.kafka.producer(config);
 	scope.producers.set(producerId, producer);
-	if (!producer.on || !producer.events) return;
-	producer.on(producer.events.REQUEST, function reportRequest({ payload }) {
-		scope.ctx.post({
-			kind: "request",
-			event: {
-				producerId,
-				apiName: payload.apiName,
-				broker: payload.broker,
-				durationMs: payload.duration,
-				pendingMs: payload.pendingDuration,
-			},
-		});
+	producer.onRequestTimings?.(function reportRequest(timing) {
+		scope.ctx.post({ kind: "request", event: { producerId, ...timing } });
 	});
 }
 

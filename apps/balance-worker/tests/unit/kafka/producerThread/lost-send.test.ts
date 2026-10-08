@@ -1,5 +1,4 @@
 import { expect, spyOn, test } from "bun:test";
-import { KafkaJSError } from "kafkajs";
 import { createThreadedProducers } from "../../../../src/kafka/producerThread/createThreadedProducers.js";
 import * as enqueue from "../../../../src/kafka/producerThread/producers/enqueueSend.js";
 
@@ -51,7 +50,8 @@ test("a send that cannot be handed to the thread fails, and so does every later 
 		};
 		const first = await rejectionOf(send(record));
 		const second = await rejectionOf(send(record));
-		expect(first).toBeInstanceOf(KafkaJSError);
+		expect(first).toBeInstanceOf(Error);
+		expect((first as Error).name).toBe("ProducerThreadError");
 		expect((first as Error).message).toContain(
 			"could not hand a send to the producer thread",
 		);

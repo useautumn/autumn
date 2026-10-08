@@ -1,19 +1,19 @@
-import type { KafkaSaslCredentials } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
+import type { KafkaSaslCredentials, ProducerConfig } from "@autumn/kafka";
 import type { Ring } from "../../../threads/ring/types/ring.js";
 import type { ProducerError } from "./producerError.js";
 
-/** The structured-clone-safe part of a kafkajs `ProducerConfig`; the thread adds the partitioner back. */
+/** The structured-clone-safe part of a `ProducerConfig`. */
 export type ProducerConfigSnapshot = Pick<
 	ProducerConfig,
 	| "transactionalId"
 	| "idempotent"
 	| "maxInFlightRequests"
+	| "transactionTimeout"
 	| "allowAutoTopicCreation"
 	| "retry"
-	| "transactionTimeout"
-	| "metadataMaxAge"
-> & { explicitPartitioner: boolean };
+	| "compression"
+	| "lingerMs"
+>;
 
 /** The decide thread's Kafka client inputs, rebuilt on the producer thread. */
 export type ProducerThreadInit = {
@@ -58,7 +58,7 @@ export type ProducerToDecideMessage =
 	| { kind: "error"; message: string }
 	| { kind: "done"; reqId: number }
 	| { kind: "failed"; reqId: number; error: ProducerError }
-	/** One per broker request a producer made, for `kafkaRequestTimings`. */
+	/** One per broker per statistics window, for `kafkaRequestTimings`. */
 	| { kind: "request"; event: KafkaRequestEvent }
 	| { kind: "token"; info: unknown }
 	| { kind: "stopped" };

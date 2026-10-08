@@ -56,8 +56,7 @@ export function answerDisconnected({
 		ack: {
 			ok: false,
 			error: {
-				kind: "other",
-				name: "KafkaJSError",
+				name: "ProducerThreadError",
 				message: `The producer is disconnected (no producer ${producerId} on the producer thread)`,
 				retriable: false,
 			},

@@ -4,23 +4,21 @@ import {
 	meteringIdentityToPartitionKey,
 } from "@autumn/balance-engine";
 import {
+	type Admin,
+	type Batch,
+	type ConsumerEndBatchProcessEvent,
+	type ConsumerRunConfig,
 	createProgressTracker,
+	type EachBatchHandler,
+	type EachMessageHandler,
 	InvalidRecordError,
 	type KafkaConsumerClient,
+	type KafkaMessage,
+	type OffsetsByTopicPartition,
 	type ProgressTracker,
 	serializeMeteringRecord,
 	type TopicRecordResult,
 } from "@autumn/kafka";
-import type {
-	Admin,
-	Batch,
-	ConsumerEndBatchProcessEvent,
-	ConsumerRunConfig,
-	EachBatchHandler,
-	EachMessageHandler,
-	KafkaMessage,
-	OffsetsByTopicPartition,
-} from "kafkajs";
 import { createMeteringConsumer } from "../../../src/kafka/meteringConsumer/createMeteringConsumer.js";
 import { createMeteringRecordHandler } from "../../../src/kafka/meteringConsumer/createMeteringRecordHandler.js";
 import {
@@ -266,8 +264,6 @@ const createFakeKafkaConsumer = ({
 					isEmpty: () => messages.length === 0,
 					firstOffset: () => messages[0]?.offset ?? null,
 					lastOffset: () => lastOffset ?? messages.at(-1)?.offset ?? "0",
-					offsetLag: () => "0",
-					offsetLagLow: () => "0",
 				};
 				await eachBatch({
 					batch,
@@ -318,19 +314,14 @@ const createFakeKafkaConsumer = ({
 		},
 		emitEndBatchProcess: ({ batchSize, lastOffset }) => {
 			endBatchProcessListener?.({
-				id: "event_1",
 				type: "consumer.end_batch_process",
 				timestamp: Date.now(),
 				payload: {
 					topic,
 					partition,
 					highWatermark: (BigInt(lastOffset) + 1n).toString(),
-					offsetLag: "0",
-					offsetLagLow: "0",
 					batchSize,
-					firstOffset: lastOffset,
 					lastOffset,
-					duration: 1,
 				},
 			});
 		},

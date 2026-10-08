@@ -5,10 +5,10 @@ import { createCatalogCache } from "@autumn/catalog-lru";
 import { createIdempotencyKeyStore } from "@autumn/dynamodb";
 import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import {
+	createKafka,
 	createKafkaClient,
 	createKafkaTransport,
 	type KafkaTokenInfo,
-	KafkaWithSettledTopicOffsets,
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
@@ -55,7 +55,7 @@ export type WorkerBootstrapConfig = {
 	checkpointSource?: PartitionCheckpointSource;
 };
 
-/** The client limits every worker Kafka client uses, the producer thread's included. */
+/** The client limits every worker Kafka client uses. */
 export const WORKER_KAFKA_CLIENT_LIMITS = {
 	connectionTimeoutMs: 5000,
 	requestTimeoutMs: 30000,
@@ -97,7 +97,7 @@ export async function openWorkerResources({
 	function logKafkaToken(info: KafkaTokenInfo): void {
 		logWorkerKafkaToken({ logger: dependencies.logger, info });
 	}
-	const kafka = new KafkaWithSettledTopicOffsets(
+	const kafka = createKafka(
 		createKafkaClient({
 			clientId: `balance-worker-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,

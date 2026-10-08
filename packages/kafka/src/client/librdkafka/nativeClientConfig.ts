@@ -36,8 +36,7 @@ function saslConfigOf({ sasl }: Pick<KafkaClientConfig, "sasl">): NativeConfig {
 	if (!sasl) return {};
 	if (sasl.mechanism === "oauthbearer") {
 		const provider = sasl.oauthBearerProvider;
-		async function refreshToken(
-			_config: unknown,
+		async function deliverToken(
 			done: (error: Error | null, token?: unknown) => void,
 		): Promise<void> {
 			try {
@@ -50,6 +49,13 @@ function saslConfigOf({ sasl }: Pick<KafkaClientConfig, "sasl">): NativeConfig {
 			} catch (cause) {
 				done(cause instanceof Error ? cause : new Error(String(cause)));
 			}
+		}
+		// The client reads a returned promise as the token itself, so the answer goes through `done` only.
+		function refreshToken(
+			_config: unknown,
+			done: (error: Error | null, token?: unknown) => void,
+		): void {
+			void deliverToken(done);
 		}
 		return {
 			"sasl.mechanisms": "OAUTHBEARER",

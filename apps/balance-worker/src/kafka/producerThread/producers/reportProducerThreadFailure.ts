@@ -12,7 +12,7 @@ export function failPendingAsUnknown({
 		scope.pending.delete(reqId);
 		resolve({
 			ok: false,
-			error: { kind: "other", name: "KafkaJSError", message, retriable: false },
+			error: { name: "ProducerThreadError", message, retriable: false },
 		});
 	}
 }

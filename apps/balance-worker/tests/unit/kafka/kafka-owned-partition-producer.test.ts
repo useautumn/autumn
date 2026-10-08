@@ -12,8 +12,9 @@ import {
 	type OwnershipTailRecord,
 	type OwnershipTailView,
 	ownershipTopic,
+	type ProducerConfig,
+	type ProducerRecord,
 } from "@autumn/kafka";
-import type { ProducerConfig, ProducerRecord } from "kafkajs";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../../src/kafka/createOwnershipPublisher.js";
 import {
@@ -89,7 +90,6 @@ describe("Kafka owned partition producer", () => {
 				"autumn-balance-worker:staging%2Feu-west-1:metering-events-v1:3",
 			idempotent: true,
 			maxInFlightRequests: 1,
-			createPartitioner: expect.any(Function),
 			transactionTimeout: 15_000,
 			retry: {
 				retries: 3,
@@ -691,13 +691,14 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			const append = await f.session.transaction();
 			const claim = f.publication.claim();
 			await Bun.sleep(1);
+			// The fence is the connect, so the append is the first transaction and the claim waits behind it.
 			expect(f.events.filter((event) => event === "transaction")).toHaveLength(
-				2,
+				1,
 			);
 			await append.commit();
 			await claim;
 			expect(f.events.filter((event) => event === "transaction")).toHaveLength(
-				3,
+				2,
 			);
 		});
 		for (const failure of ["ambiguous", "fenced"]) {

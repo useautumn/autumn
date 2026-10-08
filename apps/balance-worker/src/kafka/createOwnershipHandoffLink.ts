@@ -1,13 +1,13 @@
 import {
 	createIdempotentProducerConfig,
 	createOwnershipTail,
+	type Kafka,
 	type KafkaIdempotentProducerLimits,
 	type KafkaSender,
 	type OwnershipTail,
 	type OwnershipTailKafka,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { Kafka } from "kafkajs";
 
 /** What a worker shares across its partitions for handoffs: one ownership tail and one plain producer for `ready`. */
 export type OwnershipHandoffLink = {

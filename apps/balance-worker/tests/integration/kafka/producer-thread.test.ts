@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { KafkaTokenInfo } from "@autumn/kafka";
 import {
 	createIdempotentProducerConfig,
 	createProducerSession,
-	explicitPartitioner,
+	type Kafka,
+	type KafkaTokenInfo,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import {
 	createWorkerProducer,
 	createWorkerProducerConfig,
@@ -16,6 +15,7 @@ import {
 	type ThreadedProducers,
 } from "../../../src/kafka/producerThread/createThreadedProducers.js";
 import { OwnedPartitionLogDivergedError } from "../../../src/runtime/runtimeErrors.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 import { startTlsBrokerProxy } from "./tlsBrokerProxy.js";
 
 const partition = 0;
@@ -48,17 +48,15 @@ async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
 async function withTopic<T>(
 	run: (context: { kafka: Kafka; topic: string }) => Promise<T>,
 ): Promise<T> {
-	const kafka = new Kafka({
+	const kafka = createTestKafka({
 		clientId: `producer-thread-test-${crypto.randomUUID()}`,
 		brokers: brokers(),
-		logLevel: logLevel.NOTHING,
 	});
 	const topic = `producer-thread-${crypto.randomUUID()}`;
 	const admin = kafka.admin();
 	await admin.connect();
 	try {
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [{ topic, numPartitions: 1, replicationFactor: 1 }],
 		});
 		return await run({ kafka, topic });
@@ -181,7 +179,7 @@ async function readLog({
 	const done = Promise.withResolvers<void>();
 	await consumer.connect();
 	try {
-		await consumer.subscribe({ topic, fromBeginning: true });
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
 		await consumer.run({
 			async eachMessage({ message }) {
 				const headers: Record<string, string> = {};
@@ -334,17 +332,16 @@ describe("producer thread against a real broker", () => {
 		await withTopic(async ({ kafka, topic }) => {
 			const settled = await withProducerThread({
 				run: async (producers) => {
-					// Concurrent sends, so several are in flight at stop; kafkajs orders them freely, on any thread.
-					const producer = producers.producer({
-						...createIdempotentProducerConfig({
+					// Concurrent sends, so several are in flight at stop.
+					const producer = producers.producer(
+						createIdempotentProducerConfig({
 							limits: {
 								retryCount: 2,
 								initialRetryTimeMs: 100,
 								maxRetryTimeMs: 1_000,
 							},
 						}),
-						createPartitioner: explicitPartitioner,
-					});
+					);
 					await producer.connect();
 					const send = producer.send;
 					if (!send) throw new Error("threaded producers offer a plain send");

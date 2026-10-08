@@ -1,10 +1,12 @@
 /**
- * The producer thread: builds the same kafkajs client the decide thread would (brokers, MSK IAM signing,
- * limits) and runs the partition producers, so encoding, compression and the broker sockets never take
- * time on the decide thread.
+ * The producer thread: builds the same client the decide thread would (brokers, MSK IAM signing, limits)
+ * and runs the partition producers, so each record's N-API `produce` call never takes time on the decide thread.
  */
-import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
-import { Kafka } from "kafkajs";
+import {
+	createKafka,
+	createKafkaClient,
+	createKafkaTransport,
+} from "@autumn/kafka";
 import { type ProducerLoop, startProducerLoop } from "./startProducerLoop.js";
 import type {
 	DecideToProducerMessage,
@@ -36,7 +38,7 @@ function reportToken(info: unknown): void {
 function startThread(init: ProducerThreadInit): ProducerLoop | null {
 	let started: ProducerLoop;
 	try {
-		const kafka = new Kafka(
+		const kafka = createKafka(
 			createKafkaClient({
 				clientId: init.clientId,
 				brokers: init.brokers,

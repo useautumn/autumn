@@ -1,5 +1,5 @@
 /** A send's outcome crossing back from the producer thread: `[u32 reqId][json SendAck]`. */
-import type { RecordMetadata } from "kafkajs";
+import type { RecordMetadata } from "@autumn/kafka";
 import type { ProducerError } from "../types/producerError.js";
 
 export const ACK_FRAME = 2;

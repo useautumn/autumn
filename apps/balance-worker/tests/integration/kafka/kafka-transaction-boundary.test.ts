@@ -5,8 +5,11 @@ import { join } from "node:path";
 import { applyMutation, parseTrackCommand } from "@autumn/balance-engine";
 import {
 	createKafkaClient as balanceWorkerKafkaConfigOf,
+	createKafka as createLibrdkafkaClient,
 	createProducerSession,
 	createProgressTracker,
+	type Kafka,
+	type RecordMetadata,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
 import {
@@ -15,7 +18,6 @@ import {
 	DeleteObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
-import { Kafka, logLevel, type RecordMetadata } from "kafkajs";
 import { createPartitionCheckpointExporter } from "../../../src/checkpoint/partitionCheckpointExporter.js";
 import type { PartitionCheckpointSource } from "../../../src/checkpoint/partitionCheckpointSource.js";
 import type { KafkaBalanceWorkerTimings } from "../../../src/init/types/partitionRuntimeFactory.js";
@@ -89,11 +91,11 @@ const uniqueName = ({ prefix }: { prefix: string }): string =>
 	`${prefix}-${crypto.randomUUID().replaceAll("-", "")}`;
 
 const createKafka = ({ clientId }: { clientId: string }): Kafka =>
-	new Kafka(
+	createLibrdkafkaClient(
 		balanceWorkerKafkaConfigOf({
 			clientId,
 			brokers,
-			transport: { logLevel: logLevel.NOTHING },
+			transport: {},
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,
@@ -143,7 +145,6 @@ const createTopic = async ({ kafka }: { kafka: Kafka }) => {
 	const topic = uniqueName({ prefix: "balance-worker" });
 	await admin.connect();
 	await admin.createTopics({
-		waitForLeaders: true,
 		topics: [{ topic, numPartitions: 1, replicationFactor: 1 }],
 	});
 	return {

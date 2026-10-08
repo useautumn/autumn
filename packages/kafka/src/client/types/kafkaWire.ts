@@ -278,6 +278,11 @@ export type Admin = {
 		timeout?: number;
 	}): Promise<boolean>;
 	deleteTopics(options: { topics: string[]; timeout?: number }): Promise<void>;
+	/** Moves each partition's log start up to `offset`. */
+	deleteTopicRecords(options: {
+		topic: string;
+		partitions: { partition: number; offset: string }[];
+	}): Promise<void>;
 	listTopics(): Promise<string[]>;
 	fetchTopicMetadata(options?: {
 		topics?: string[];

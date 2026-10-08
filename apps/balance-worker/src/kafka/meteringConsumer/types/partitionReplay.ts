@@ -1,11 +1,11 @@
 import type {
+	Admin,
 	PartitionPosition,
 	PartitionProgress,
 	ProgressTracker,
 	TopicConsumer,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { Admin } from "kafkajs";
 import type { PartitionLogRange } from "../../../runtime/bootstrap/types/partitionBootstrap.js";
 import type { RuntimeUnavailableListener } from "../../../runtime/types/partitionRuntime.js";
 import type { StateStore } from "../../../state/types/stateStore.js";

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ConsumerConfig, Kafka, Producer } from "kafkajs";
+import type { ConsumerConfig, Kafka, Producer } from "@autumn/kafka";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 
 const limits = { retryCount: 1, initialRetryTimeMs: 1, maxRetryTimeMs: 1 };

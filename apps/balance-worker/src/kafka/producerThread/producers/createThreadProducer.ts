@@ -1,14 +1,13 @@
 /**
- * One kafkajs-shaped producer living on the producer thread: `RecordMetadata[]` on success, a
- * `KafkaJSProtocolError` when the broker refused, a `KafkaJSError` for every failure whose fate is unknown.
+ * One producer living on the producer thread: `RecordMetadata[]` on success, otherwise the producer's
+ * error rebuilt with its code, verdicts and causes, so it classifies as it would have on that thread.
  */
-import type { KafkaProducerClient } from "@autumn/kafka";
-import {
-	KafkaJSError,
-	type Producer,
-	type ProducerConfig,
-	type RecordMetadata,
-} from "kafkajs";
+import type {
+	KafkaProducerClient,
+	ProducerConfig,
+	ProducerRecord,
+	RecordMetadata,
+} from "@autumn/kafka";
 import { kafkaErrorOf } from "../rules/kafkaErrorOf.js";
 import { producerConfigSnapshotOf } from "../rules/producerConfigSnapshotOf.js";
 import { sendFrameOf } from "../rules/sendFrameOf.js";
@@ -19,7 +18,12 @@ import { enqueueSend } from "./enqueueSend.js";
 import { postToProducerThread } from "./postToProducerThread.js";
 import { awaitAck } from "./receiveAcks.js";
 
-const PRODUCER_EVENTS = { REQUEST: "producer.network.request" } as const;
+/** A failure the thread never saw: the send's fate is decided here, and it was never sent. */
+function producerThreadError(message: string): Error {
+	const error = Object.assign(new Error(message), { retriable: false });
+	error.name = "ProducerThreadError";
+	return error;
+}
 
 async function control({
 	scope,
@@ -50,7 +54,7 @@ export function createThreadProducer({
 	let nextSeq = 0;
 	let closed = false;
 	/** A send that never reached the thread leaves a gap in the sequence: every later send would be held. */
-	let lostSend: KafkaJSError | null = null;
+	let lostSend: Error | null = null;
 	postToProducerThread({
 		scope,
 		message: {
@@ -84,18 +88,12 @@ export function createThreadProducer({
 		});
 	}
 
-	async function send(
-		record: Parameters<Producer["send"]>[0],
-	): Promise<RecordMetadata[]> {
+	async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
 		const { meta, records } = sendFrameOf({ producerId, seq: nextSeq, record });
-		if (closed)
-			throw new KafkaJSError("The producer is disconnected", {
-				retriable: false,
-			});
+		if (closed) throw producerThreadError("The producer is disconnected");
 		if (state.failed || state.stopping)
-			throw new KafkaJSError(
+			throw producerThreadError(
 				state.failed ? "Producer thread failed" : "Producer thread stopped",
-				{ retriable: false },
 			);
 		if (lostSend) throw lostSend;
 		const reqId = takeReqId();
@@ -104,9 +102,8 @@ export function createThreadProducer({
 			enqueueSend({ scope, reqId, meta, records });
 		} catch (cause) {
 			scope.pending.delete(reqId);
-			lostSend = new KafkaJSError(
+			lostSend = producerThreadError(
 				`Producer ${producerId} could not hand a send to the producer thread: ${String((cause as Error)?.message ?? cause)}`,
-				{ retriable: false },
 			);
 			throw lostSend;
 		}
@@ -122,18 +119,11 @@ export function createThreadProducer({
 		);
 	}
 
-	function on(eventName: string, listener: RequestListener): () => void {
-		if (eventName !== PRODUCER_EVENTS.REQUEST)
-			throw new Error(
-				`A threaded producer reports ${PRODUCER_EVENTS.REQUEST} only`,
-			);
+	function onRequestTimings(listener: RequestListener): void {
 		const listeners =
 			scope.requestListeners.get(producerId) ?? new Set<RequestListener>();
 		scope.requestListeners.set(producerId, listeners);
 		listeners.add(listener);
-		return function off() {
-			listeners.delete(listener);
-		};
 	}
 
 	return {
@@ -141,7 +131,6 @@ export function createThreadProducer({
 		disconnect,
 		send,
 		transaction,
-		on: on as unknown as Producer["on"],
-		events: PRODUCER_EVENTS,
+		onRequestTimings,
 	};
 }

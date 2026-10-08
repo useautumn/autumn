@@ -324,7 +324,7 @@ describe("command record handler", () => {
 		expect(unowned.completed).toEqual([]);
 	});
 
-	test("a batch the broker refused parks the partition instead of reaching kafkajs, and the record is not consumed", async () => {
+	test("a batch the broker refused parks the partition instead of reaching the consumer, and the record is not consumed", async () => {
 		const cause = new MutationBatchNotCommittedError({
 			cause: new Error("CONCURRENT_TRANSACTIONS"),
 		});

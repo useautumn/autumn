@@ -19,11 +19,11 @@ import {
 import {
 	createOwnershipConsumer,
 	createProducerSession,
+	type Kafka,
 	meteringIdentityToPartition,
 	type PartitionOwner,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { activeSlotEdgeConfig } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
@@ -50,6 +50,7 @@ import {
 	createInitializeMutation,
 	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 
 if (!process.env.KAFKA_BROKERS?.trim())
 	throw new Error("Run test:kafka with an environment broker");
@@ -57,8 +58,9 @@ const brokers = process.env.KAFKA_BROKERS.split(",").map((broker) =>
 	broker.trim(),
 );
 const partition = 2;
+// KIP-848 moves a partition on the next member heartbeat (5s apart on the broker), so a handoff can take ~10s.
 const waitFor = async (condition: () => boolean) => {
-	for (let attempt = 0; attempt < 1000; attempt++) {
+	for (let attempt = 0; attempt < 2000; attempt++) {
 		if (condition()) return;
 		await Bun.sleep(10);
 	}
@@ -84,15 +86,10 @@ describe("Real ownership admission", () => {
 		const id = crypto.randomUUID();
 		const topic = `ownership-worker-${id}`;
 		const owners = `${topic}-owners`;
-		const kafka = new Kafka({
-			clientId: id,
-			brokers,
-			logLevel: logLevel.NOTHING,
-		});
+		const kafka = createTestKafka({ clientId: id, brokers });
 		const admin = kafka.admin();
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 3, replicationFactor: 1 },
 				{
@@ -289,15 +286,10 @@ describe("Real ownership admission", () => {
 		const id = crypto.randomUUID();
 		const topic = `ownership-fence-${id}`;
 		const owners = `${topic}-owners`;
-		const kafka = new Kafka({
-			clientId: id,
-			brokers,
-			logLevel: logLevel.NOTHING,
-		});
+		const kafka = createTestKafka({ clientId: id, brokers });
 		const admin = kafka.admin();
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 3, replicationFactor: 1 },
 				{
@@ -613,15 +605,10 @@ describe("Partition handoff under load", () => {
 		const id = crypto.randomUUID();
 		const topic = `slots-worker-${id}`;
 		const owners = `${topic}-owners`;
-		const kafka = new Kafka({
-			clientId: id,
-			brokers,
-			logLevel: logLevel.NOTHING,
-		});
+		const kafka = createTestKafka({ clientId: id, brokers });
 		const admin = kafka.admin();
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: partitionCount, replicationFactor: 1 },
 				{
@@ -823,15 +810,10 @@ describe("Partition handoff under load", () => {
 		const id = crypto.randomUUID();
 		const topic = `handoff-worker-${id}`;
 		const owners = `${topic}-owners`;
-		const kafka = new Kafka({
-			clientId: id,
-			brokers,
-			logLevel: logLevel.NOTHING,
-		});
+		const kafka = createTestKafka({ clientId: id, brokers });
 		const admin = kafka.admin();
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: partitionCount, replicationFactor: 1 },
 				{

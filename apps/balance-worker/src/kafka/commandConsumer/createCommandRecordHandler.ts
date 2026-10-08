@@ -218,7 +218,7 @@ export function createCommandRecordHandler({
 
 	/** A batch the broker refused says the partition fell behind, not that the worker is broken:
 	 *  the partition is parked and restarted alone, and the record stays unconsumed for the restart
-	 *  to read again from the bookmark. Thrown into kafkajs instead, the same failure retries the
+	 *  to read again from the bookmark. Thrown into the consumer instead, the same failure retries the
 	 *  batch a few times and then crashes the consumer every partition on this task shares, which
 	 *  takes the whole task down. Any other failure still goes to Kafka for redelivery. */
 	function parkOrRethrow({

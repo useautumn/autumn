@@ -43,7 +43,6 @@ import {
 	meteringIdentityToPartition,
 	ownershipTopic,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import {
 	SLOT_HEARTBEAT_KEY_PREFIX,
@@ -51,6 +50,7 @@ import {
 	SlotHeartbeatSchema,
 } from "../../../src/blueGreen/types/slotHeartbeat.js";
 import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 import {
 	openFixturePostgres,
 	type SeededCustomer,
@@ -147,15 +147,10 @@ const topics = {
 	commands: `${deployment}-commands`,
 	catalog: `${deployment}-catalog-invalidations`,
 };
-const kafka = new Kafka({
-	clientId: deployment,
-	brokers,
-	logLevel: logLevel.NOTHING,
-});
+const kafka = createTestKafka({ clientId: deployment, brokers });
 const admin = kafka.admin();
 await admin.connect();
 await admin.createTopics({
-	waitForLeaders: true,
 	topics: [
 		{
 			topic: topics.metering,
@@ -192,12 +187,9 @@ while (customers.size < PARTITION_COUNT) {
 }
 
 // Raw view of the ownership log: every record with its payload timestamp and when we saw it.
-const watcher = kafka.consumer({
-	groupId: `${deployment}-watch`,
-	sessionTimeout: 60_000,
-});
+const watcher = kafka.consumer({ groupId: `${deployment}-watch` });
 await watcher.connect();
-await watcher.subscribe({ topic: topics.ownership, fromBeginning: true });
+await watcher.subscribe({ topics: [topics.ownership], fromBeginning: true });
 await watcher.run({
 	eachMessage: async ({ partition, message }) => {
 		const record = ownershipTopic.parse({
@@ -582,6 +574,8 @@ function claimsAfter(t0: number): Map<number, OwnershipEvent> {
 			byPartition.set(event.partition, event);
 	return byPartition;
 }
+/** Longer than the broker's KIP-848 heartbeat interval (5s): a join or leave reaches each member a heartbeat apart. */
+const ROSTER_QUIET_MS = 6_000;
 // A partition the roster hands back to its owner writes nothing on the ownership log, so the
 // transition is settled once the roster has moved, the log has been quiet, and every partition
 // has served a 200 since whichever of those came last.
@@ -596,7 +590,7 @@ function settled(t0: number): boolean {
 		...ownershipEvents.filter((e) => e.seenAt >= t0).map((e) => e.seenAt),
 	);
 	const lastActivity = Math.max(lastJoin, lastRecord);
-	if (Date.now() - lastActivity < 1_500) return false;
+	if (Date.now() - lastActivity < ROSTER_QUIET_MS) return false;
 	for (const partition of customers.keys())
 		if (
 			!outcomes.some(

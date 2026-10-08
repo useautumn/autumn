@@ -1,11 +1,11 @@
 import {
+	type Admin,
 	createOwnershipPublisher as createKafkaOwnershipPublisher,
 	type KafkaProducerSession,
 	type KafkaSender,
 	type OwnershipTail,
 	type OwnershipTailRecord,
 } from "@autumn/kafka";
-import type { Admin } from "kafkajs";
 import type { PartitionOwnershipPublication } from "../partitions/types/partitions.js";
 
 export function createOwnershipPublisher({

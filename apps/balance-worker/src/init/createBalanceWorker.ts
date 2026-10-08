@@ -8,8 +8,8 @@ import type {
 	KafkaOffsetCommit,
 	KafkaProducerClient,
 	KafkaTokenInfo,
+	ProducerConfig,
 } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
@@ -100,7 +100,6 @@ export async function createBalanceWorker({
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: address.endpoint,
-		groupId,
 	});
 	const subjectMapBudget = runtimeConfig.writerLimits.subjectMapBudget;
 	if (subjectMapBudget)
@@ -132,18 +131,14 @@ export async function createBalanceWorker({
 			dependencies.logger.info(
 				`Blue-green fleet ${fleetId}: service ${identity.serviceArn}, group ${groupId}, build ${identity.imageSha ?? "unknown"}`,
 			);
-		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
+		// Every partition runtime records what it commits here and which partitions it serves.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const consumer = resources.kafka.consumer(
-			createWorkerConsumerConfig({
-				groupId,
-				timings: runtimeConfig.timings,
-				partitionLoad,
-			}),
+			createWorkerConsumerConfig({ groupId, timings: runtimeConfig.timings }),
 		);
 		// A command that leaves no record has no transaction to carry its offset, so the group commits it itself.
 		async function commitCommandOffsets(
-			offsets: KafkaOffsetCommit,
+			offsets: Pick<KafkaOffsetCommit, "topics">,
 		): Promise<void> {
 			const flat: { topic: string; partition: number; offset: string }[] = [];
 			for (const { topic, partitions } of offsets.topics) {
