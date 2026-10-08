@@ -26,6 +26,7 @@ import type {
 	FlushCall,
 	FlushOutcome,
 } from "../types/committer.js";
+import { keepKnownColumns } from "./keepKnownColumns.js";
 
 const definedNumbers = (record: Record<string, number | undefined>) =>
 	Object.fromEntries(
@@ -215,12 +216,15 @@ const collectChanges = ({
 	for (const call of flush.calls) {
 		for (const record of call.records) {
 			for (const change of record.mutation.changes) {
-				changes.push(
-					rowChangeToSubjectRowChange({
+				const known = keepKnownColumns({
+					change: rowChangeToSubjectRowChange({
 						change,
 						commandType: record.mutation.command.type,
 					}),
-				);
+				});
+				// An update that only touched a newer build's columns has nothing left to land.
+				if (known === null) continue;
+				changes.push(known);
 				recordOf.push(record);
 			}
 		}

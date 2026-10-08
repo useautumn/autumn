@@ -7,15 +7,17 @@ import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 
 const initializePayloadSchema = z
 	.object({ state: z.unknown(), catalogRows: z.unknown() })
-	.strict();
+	.loose();
 
 export async function receiveInitialize(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
 	const { command, payload } = context.get("request");
+	// The routed command stays authoritative: only the payload's own fields are read.
+	const { state, catalogRows } = initializePayloadSchema.parse(payload);
 	const request = parseInitializeRequest({
-		input: { command, ...initializePayloadSchema.parse(payload) },
+		input: { command, state, catalogRows },
 	});
 	const requestLog = context.get("requestLog");
 	requestLog.command = {

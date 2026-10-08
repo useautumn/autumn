@@ -6,6 +6,7 @@ import { useInlineProductEditor } from "./useInlineProductEditor";
 interface InlineEditorProviderProps {
 	children: ReactNode;
 	initialProduct: FrontendProduct;
+	isInvoiceEditor?: boolean;
 }
 
 /**
@@ -15,8 +16,13 @@ interface InlineEditorProviderProps {
 export function InlineEditorProvider({
 	children,
 	initialProduct,
+	isInvoiceEditor,
 }: InlineEditorProviderProps) {
 	const editor = useInlineProductEditor({ initialProduct });
 
-	return <ProductProvider {...editor}>{children}</ProductProvider>;
+	return (
+		<ProductProvider {...editor} isInvoiceEditor={isInvoiceEditor}>
+			{children}
+		</ProductProvider>
+	);
 }

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { rowChangeSchema } from "../../../src/models/mutation/rowChange.js";
+import {
+	type RowChange,
+	rowChangeSchema,
+} from "../../../src/models/mutation/rowChange.js";
 
 describe("row change", () => {
 	test("an update names only the columns it touches; defaults never fill the rest", () => {
@@ -16,16 +19,16 @@ describe("row change", () => {
 		expect(change.after).toEqual({ balance: 5 });
 	});
 
-	test("an update refuses columns the row does not have", () => {
-		expect(
-			rowChangeSchema.safeParse({
-				table: "customerEntitlements",
-				op: "update",
-				id: "ce_1",
-				before: { usage: 1 },
-				after: { usage: 2 },
-			}).success,
-		).toBe(false);
+	test("an update carries a column this build does not know, as a newer writer's would", () => {
+		const change = {
+			table: "customerEntitlements" as const,
+			op: "update" as const,
+			id: "ce_1",
+			before: { usage: 1 },
+			after: { usage: 2 },
+		};
+
+		expect(rowChangeSchema.parse(change)).toEqual(change);
 	});
 
 	test("an increment names counters and map entries; a guard is optional", () => {
@@ -54,18 +57,26 @@ describe("row change", () => {
 		).toBe("increment");
 	});
 
-	test("an increment refuses anything that is not a counter of its table", () => {
-		const refused = [
+	test("an increment adds a counter or map entry this build does not know, as a newer writer's would", () => {
+		for (const input of [
 			{ table: "customerEntitlements", add: { usage: 1 } },
-			{ table: "customerEntitlements", add: { next_reset_at: 1 } },
 			{ table: "usageWindows", add: { updated_at: 1 } },
-			{ table: "rollovers", add: { balance: "5" } },
 			{
 				table: "customerEntitlements",
 				add: {},
 				addEntries: { usage_attribution: { feat_a: { balance: 1 } } },
 			},
 			{ table: "usageWindows", add: {}, addEntries: { entities: {} } },
+		]) {
+			const change = { op: "increment", id: "row_1", ...input };
+			expect(rowChangeSchema.parse(change)).toEqual(change as RowChange);
+		}
+	});
+
+	test("an increment refuses a counter that is not a number, and a table that does not increment", () => {
+		const refused = [
+			{ table: "rollovers", add: { balance: "5" } },
+			{ table: "customerEntitlements", add: { usage: "1" } },
 			{ table: "customerProducts", add: { quantity: 1 } },
 		];
 		for (const input of refused) {

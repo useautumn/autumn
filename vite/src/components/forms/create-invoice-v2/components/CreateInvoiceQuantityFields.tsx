@@ -1,8 +1,7 @@
-import { type ProductItem, UsageModel } from "@autumn/shared";
+import type { ProductItem } from "@autumn/shared";
 import { PlanPrepaidQuantityFields } from "@/components/forms/shared";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
-
-const INVOICE_USAGE_MODELS = [UsageModel.Prepaid, UsageModel.PayPerUse];
+import { INVOICE_USAGE_MODELS } from "../utils/applyInvoicePlanEditorItems";
 
 export function CreateInvoiceQuantityFields({
 	items,

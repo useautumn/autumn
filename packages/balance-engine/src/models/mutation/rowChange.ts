@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { sightUnknownInput } from "../common/openSchema.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
 import {
 	type WorkerCustomer,
@@ -76,7 +77,7 @@ const tableRowChangeOptions = <
 	return [
 		z
 			.object({ table: tableSchema, op: z.literal("insert"), row: rowSchema })
-			.strict(),
+			.loose(),
 		z
 			.object({
 				table: tableSchema,
@@ -85,14 +86,14 @@ const tableRowChangeOptions = <
 				before: rowSchema.partial(),
 				after: rowSchema.partial(),
 			})
-			.strict(),
+			.loose(),
 		z
 			.object({
 				table: tableSchema,
 				op: z.literal("delete"),
 				id: nonEmptyStringSchema,
 			})
-			.strict(),
+			.loose(),
 	] as const;
 };
 
@@ -168,7 +169,7 @@ const subjectRowChangeSchema = <
 			op: z.literal("insert"),
 			row: rowSchema,
 		})
-		.strict();
+		.loose();
 
 /** A table whose rows are written once and removed once, never edited: the general row change without its update. */
 export type WriteOnceRowChange<Table extends string, Row> = Exclude<
@@ -216,7 +217,7 @@ const pooledContributionRowChangeSchema = () =>
 				pooledBalanceId: nonEmptyStringSchema,
 				dueBy: z.number(),
 			})
-			.strict(),
+			.loose(),
 	]);
 
 /** The customer row: inserted by the command that creates the subject, updated by a billing plan. Its id is `internal_id`. */
@@ -294,3 +295,42 @@ export const changesInsertCustomer = ({
 	changes.some(
 		(change) => change.table === "customer" && change.op === "insert",
 	);
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null;
+
+/** Every `table:op` this build can apply, read off the schema so the two never drift. */
+const knownRowChangeKinds: ReadonlySet<string> = new Set(
+	rowChangeSchema.options.flatMap((byTable) =>
+		("options" in byTable ? byTable.options : [byTable]).map((option) => {
+			const { table, op } = (option as z.ZodObject).shape;
+			return `${(table as z.ZodLiteral).value}:${(op as z.ZodLiteral).value}`;
+		}),
+	),
+);
+
+/** Before a mutation parses: a newer writer's change of a kind this build cannot apply is skipped and reported once per kind, the rest apply. */
+export const skipUnknownRowChanges = (input: unknown): unknown => {
+	if (!isObject(input) || !Array.isArray(input.changes)) return input;
+	const changes = input.changes.filter((change) => {
+		// Only a well-formed discriminator names a kind; anything else is left for the schema to refuse.
+		if (!isObject(change)) return true;
+		const { table, op } = change;
+		if (typeof table !== "string" || typeof op !== "string") return true;
+		if (knownRowChangeKinds.has(`${table}:${op}`)) return true;
+		sightUnknownInput({
+			key: `rowChange=${table}:${op}`,
+			input: {
+				kind: "row_change",
+				table,
+				op,
+				commandId: String(input.id),
+				identity: input.identity,
+			},
+		});
+		return false;
+	});
+	return changes.length === input.changes.length
+		? input
+		: { ...input, changes };
+};

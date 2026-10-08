@@ -122,10 +122,12 @@ const fixture = ({
 		trackInline: () => ({ kind: "refused", reason: "not_resident" }),
 		trackBatchInline: () => ({ kind: "refused", reason: "not_resident" }),
 		checkInline: () => ({ kind: "refused", reason: "not_resident" }),
-		initialize: async () => {
+		initialize: async (params) => {
+			submitted.push(params);
 			throw new Error("Initialization is not configured in this fixture");
 		},
-		applyBillingPlan: async () => {
+		applyBillingPlan: async (params) => {
+			submitted.push(params);
 			throw new Error("Billing plans are not configured in this fixture");
 		},
 		track: async (params) => {
@@ -408,7 +410,6 @@ describe("Balance worker HTTP", () => {
 		{ ...request, route: { ...route, routeEpoch: "01" } },
 		{ ...request, route: { ...route, routeEpoch: 1 } },
 		{ route },
-		{ ...request, extra: true },
 	])("rejects invalid wire request %j", async (body) => {
 		const { post, submitted, lookups } = fixture();
 		const response = await post(body);
@@ -424,6 +425,51 @@ describe("Balance worker HTTP", () => {
 		expect(response.status).toBe(200);
 		expect(lookups).toEqual([route]);
 		expect(submitted).toEqual([{ command: sent }]);
+	});
+	test.each(["initialize", "apply-billing-plan"])(
+		"%s hands the processor the routed command, never one carried inside the payload",
+		async (path) => {
+			const { app, submitted } = fixture();
+			const routed =
+				path === "initialize"
+					? { ...command, type: "initialize", commandId: "routed" }
+					: {
+							...command,
+							type: "applyBillingPlan",
+							commandId: "routed",
+							entityIds: [],
+							ops: [{ op: "delete", table: "customerPrices", id: "cp_1" }],
+							expiringPooledBalanceIds: [],
+						};
+			const smuggled = {
+				...routed,
+				commandId: "smuggled",
+				identity: { ...routed.identity, customerId: "other" },
+			};
+			await app.request(`/v1/${path}`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					route,
+					command: routed,
+					payload: { state, catalogRows: [], command: smuggled },
+				}),
+			});
+			expect(submitted).toHaveLength(1);
+			expect(submitted[0]).toMatchObject({
+				request: {
+					command: { commandId: "routed", identity: command.identity },
+				},
+			});
+		},
+	);
+
+	test("reads past a newer server's envelope field", async () => {
+		const { post, submitted, lookups } = fixture();
+		const response = await post({ ...request, futureField: true });
+		expect(response.status).toBe(200);
+		expect(lookups).toEqual([route]);
+		expect(submitted).toEqual([{ command }]);
 	});
 	test("rejects malformed and empty JSON before routing", async () => {
 		const { app, submitted, lookups } = fixture();
@@ -785,6 +831,18 @@ function commandWithId(id: string) {
 }
 
 describe("Track batches", () => {
+	test("reads past a newer server's batch envelope field", async () => {
+		const { postBatch, submitted, lookups } = fixture();
+		const response = await postBatch({
+			route,
+			commands: [command],
+			futureField: true,
+		});
+		expect(response.status).toBe(200);
+		expect(lookups).toEqual([route]);
+		expect(submitted).toEqual([{ command }]);
+	});
+
 	test("answers every command in order, mapping failures exactly as /v1/track does", async () => {
 		const causeFor: Record<string, Error> = {
 			overloaded: new PartitionWriterCapacityError(),
@@ -973,7 +1031,6 @@ describe("Track batches", () => {
 		{ commands: [command] },
 		{ route, commands: [] },
 		{ route, commands: command },
-		{ route, commands: [command], extra: true },
 		{ route: { ...route, routeEpoch: "01" }, commands: [command] },
 		{ route, commands: Array.from({ length: 1001 }, () => command) },
 	])("rejects invalid batch envelope %#", async (body) => {

@@ -1,4 +1,8 @@
-import type { ProductItem, ProductV2 } from "@autumn/shared";
+import {
+	mapToProductItems,
+	type ProductItem,
+	type ProductV2,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
@@ -8,6 +12,7 @@ import {
 	useMemo,
 } from "react";
 import type { LicenseCatalog } from "@/components/forms/shared";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
@@ -20,7 +25,10 @@ import {
 } from "../hooks/useCreateInvoiceForm";
 import { useCreateInvoicePlanEditor } from "../hooks/useCreateInvoicePlanEditor";
 import { useCreateInvoicePreview } from "../hooks/useCreateInvoicePreview";
-import { useCreateInvoiceRequestBody } from "../hooks/useCreateInvoiceRequestBody";
+import {
+	type LicenseItemsByPlanId,
+	useCreateInvoiceRequestBody,
+} from "../hooks/useCreateInvoiceRequestBody";
 import { findBlockingDiscount } from "../utils/validateInvoiceDiscounts";
 
 interface CreateInvoiceFormContextValue {
@@ -33,6 +41,7 @@ interface CreateInvoiceFormContextValue {
 	requestBody: ReturnType<typeof useCreateInvoiceRequestBody>;
 	catalogItemsByPlanId: Map<string, ProductItem[] | undefined>;
 	licenseCatalogByPlanId: Map<string, LicenseCatalog>;
+	licenseItemsByPlanId: LicenseItemsByPlanId;
 	blockingReason: string | null;
 	planEditor: ReturnType<typeof useCreateInvoicePlanEditor>;
 }
@@ -47,6 +56,7 @@ export function CreateInvoiceFormProvider({
 }) {
 	const { customer } = useCusQuery();
 	const { products } = useProductsQuery();
+	const { features } = useFeaturesQuery();
 	const { rewards } = useRewardsQuery();
 	const { setIsInlineEditorOpen } = useCustomerContext();
 	const form = useCreateInvoiceForm();
@@ -85,11 +95,33 @@ export function CreateInvoiceFormProvider({
 		);
 	}, [products]);
 
+	// Each link pins a license version, which may differ from the latest one in `products`.
+	const licenseItemsByPlanId: LicenseItemsByPlanId = useMemo(
+		() =>
+			new Map(
+				(products ?? []).map((product) => [
+					product.id,
+					new Map(
+						(product.licenses ?? []).map((link) => [
+							link.product.id,
+							mapToProductItems({
+								prices: link.product.prices,
+								entitlements: link.product.entitlements,
+								features,
+							}),
+						]),
+					),
+				]),
+			),
+		[products, features],
+	);
+
 	const requestBody = useCreateInvoiceRequestBody({
 		customerId,
 		form: formValues,
 		preview: true,
 		catalogItemsByPlanId,
+		licenseItemsByPlanId,
 	});
 	const openInlineEditor = useCallback(
 		() => setIsInlineEditorOpen(true),
@@ -127,6 +159,7 @@ export function CreateInvoiceFormProvider({
 			requestBody,
 			catalogItemsByPlanId,
 			licenseCatalogByPlanId,
+			licenseItemsByPlanId,
 			blockingReason,
 			planEditor,
 		}),
@@ -140,6 +173,7 @@ export function CreateInvoiceFormProvider({
 			requestBody,
 			catalogItemsByPlanId,
 			licenseCatalogByPlanId,
+			licenseItemsByPlanId,
 			blockingReason,
 			planEditor,
 		],

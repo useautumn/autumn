@@ -1,5 +1,6 @@
 import { BillingVersion, CusProductSchema } from "@autumn/shared";
 import { z } from "zod/v4";
+import { openSchema } from "../../common/openSchema.js";
 
 /** Columns only `customers.get` renders: absent on rows logged before it, and left out of the log's snapshot. */
 export const customerProductRenderedColumns = {
@@ -28,22 +29,24 @@ export const customerProductRenderedColumns = {
 } as const;
 
 /** The whole customer_products row: the columns check and track read, and the rest `customers.get` renders. */
-export const workerCustomerProductSchema = CusProductSchema.omit({
-	// Joined onto seat rows at read time; not columns of customer_products.
-	parent_customer_license: true,
-	parent_customer_product: true,
-})
-	// No defaults on stored columns: a default would leak into a change's `before`.
-	.extend({
-		quantity: z.number(),
-		starts_at: z.number(),
-		canceled: z.boolean(),
-		is_custom: z.boolean(),
-		billing_version: z.enum(BillingVersion),
-		// Stored as written: a new API version must not change the snapshot schema.
-		api_semver: z.string().nullable(),
+export const workerCustomerProductSchema = openSchema({
+	name: "workerCustomerProduct",
+	schema: CusProductSchema.omit({
+		// Joined onto seat rows at read time; not columns of customer_products.
+		parent_customer_license: true,
+		parent_customer_product: true,
 	})
-	.partial(customerProductRenderedColumns)
-	.strict();
+		// No defaults on stored columns: a default would leak into a change's `before`.
+		.extend({
+			quantity: z.number(),
+			starts_at: z.number(),
+			canceled: z.boolean(),
+			is_custom: z.boolean(),
+			billing_version: z.enum(BillingVersion),
+			// Stored as written: a new API version must not change the snapshot schema.
+			api_semver: z.string().nullable(),
+		})
+		.partial(customerProductRenderedColumns),
+});
 
 export type WorkerCustomerProduct = z.infer<typeof workerCustomerProductSchema>;

@@ -7,6 +7,7 @@ import {
 	type InsertDbInvoiceLineItem,
 	type InvoiceIssueMethod,
 	type InvoiceTemplate,
+	type LineItem,
 	MetadataType,
 	ProcessorType,
 	RecaseError,
@@ -738,11 +739,17 @@ const copyLineItemRows = async ({
 	original,
 	replacement,
 	autumnInvoiceId,
+	addedLineItems,
+	editedAmountLineIds,
 }: {
 	ctx: AutumnContext;
 	original: InvoiceListRow;
 	replacement: Stripe.Invoice;
 	autumnInvoiceId: string;
+	/** Autumn lines behind catalog plans the reissue added. */
+	addedLineItems: LineItem[];
+	/** Autumn line item ids whose amount the request edited. */
+	editedAmountLineIds: Set<string>;
 }) => {
 	const originalRows = await invoiceLineItemRepo.getByInvoiceIds({
 		db: ctx.db,
@@ -776,6 +783,11 @@ const copyLineItemRows = async ({
 				created_at: Date.now(),
 				amount,
 				amount_after_discounts: amount,
+				// One entity owns the whole line, so its share follows an amount edit.
+				entities:
+					editedAmountLineIds.has(row.id) && row.entities?.length === 1
+						? [{ ...row.entities[0], amount }]
+						: row.entities,
 				invoice_id: autumnInvoiceId,
 				stripe_id: line.id,
 				stripe_invoice_id: replacement.id,
@@ -796,6 +808,7 @@ const copyLineItemRows = async ({
 		stripeDiscounts: [],
 		invoiceId: autumnInvoiceId,
 		stripeInvoiceId: replacement.id,
+		autumnLineItems: addedLineItems,
 	});
 
 	const lineItems = [...copied, ...added];
@@ -808,11 +821,15 @@ const storeReplacementInAutumn = async ({
 	fullCustomer,
 	replacement,
 	original,
+	addedLineItems,
+	editedAmountLineIds,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	replacement: Stripe.Invoice;
 	original: InvoiceListRow;
+	addedLineItems: LineItem[];
+	editedAmountLineIds: Set<string>;
 }) => {
 	const fullProducts = fullCustomer.customer_products
 		.filter((customerProduct) =>
@@ -838,6 +855,8 @@ const storeReplacementInAutumn = async ({
 		original,
 		replacement,
 		autumnInvoiceId: autumnInvoice.id,
+		addedLineItems,
+		editedAmountLineIds,
 	});
 	return autumnInvoice;
 };
@@ -929,7 +948,7 @@ export const reissueInvoice = async ({
 		db: ctx.db,
 		invoiceIds: [row.invoice.id],
 	});
-	const replacementLines = await buildReissueLines({
+	const { lines: replacementLines, addedLineItems } = await buildReissueLines({
 		ctx,
 		customerId: previewCustomerId,
 		stripeCli,
@@ -968,6 +987,7 @@ export const reissueInvoice = async ({
 				overrides: invoiceOverrides,
 				lines: replacementLines,
 				storedLines,
+				addedLineItems,
 				credits,
 				dueDateMs,
 			}),
@@ -1021,6 +1041,12 @@ export const reissueInvoice = async ({
 		fullCustomer,
 		replacement: issued,
 		original: row,
+		addedLineItems,
+		editedAmountLineIds: new Set(
+			(lineEdits?.update ?? [])
+				.filter((update) => update.amount !== undefined)
+				.map((update) => update.id),
+		),
 	});
 	await deleteCachedFullCustomer({
 		ctx,
@@ -1036,6 +1062,7 @@ export const reissueInvoice = async ({
 			invoiceId: issued.id,
 		}),
 		storedLines,
+		addedLineItems,
 		// A credit note issued during the reissue moved the balance a draft will draw on.
 		credits: creditNoteId
 			? stripeCustomerToInvoiceCredits({

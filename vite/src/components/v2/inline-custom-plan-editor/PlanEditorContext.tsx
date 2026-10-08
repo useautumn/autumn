@@ -33,6 +33,7 @@ type SetProduct = (
 export interface ProductContextValue {
 	product: FrontendProduct;
 	isLicenseEditor?: boolean;
+	isInvoiceEditor?: boolean;
 	setProduct: SetProduct;
 	initialProduct?: FrontendProduct;
 	sheetType: string | null;
@@ -97,6 +98,11 @@ export function ProductProvider({
 /** True inside a license card's editor; the page-level plan editor is never one. */
 export function useIsLicenseEditor() {
 	return useContext(ProductContext)?.isLicenseEditor ?? false;
+}
+
+/** True when editing a plan for one invoice, which bills no grants. */
+export function useIsInvoiceEditor() {
+	return useContext(ProductContext)?.isInvoiceEditor ?? false;
 }
 
 /** Hook to get product and setProduct. Uses context if available, otherwise Zustand. */

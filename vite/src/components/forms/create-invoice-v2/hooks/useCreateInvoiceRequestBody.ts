@@ -44,20 +44,33 @@ const toLicenseQuantity = ({
 	};
 };
 
+/** Parent plan id → license plan id → items of the license version the link pins. */
+export type LicenseItemsByPlanId = Map<string, Map<string, ProductItem[]>>;
+
 const toPlanParams = ({
 	plan,
-	catalogItems,
+	catalogItemsByPlanId,
+	licenseItemsByPlanId,
 }: {
 	plan: FormInvoicePlan;
-	catalogItems: ProductItem[] | undefined;
+	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
+	licenseItemsByPlanId?: LicenseItemsByPlanId;
 }): InvoicePlanParams | null => {
 	if (!plan.planId) return null;
 
 	// An uncustomized plan has no items, so behavior comes from the catalog plan.
-	const pricedItems = plan.items ?? catalogItems ?? null;
+	const pricedItems =
+		plan.items ?? catalogItemsByPlanId?.get(plan.planId) ?? null;
 
+	// The server prices license features through the linked license version, never the parent.
+	const linkedLicenseItems = licenseItemsByPlanId?.get(plan.planId);
 	const licenses = plan.licenses
-		.map((license) => toLicenseQuantity({ license, items: pricedItems }))
+		.map((license) =>
+			toLicenseQuantity({
+				license,
+				items: linkedLicenseItems?.get(license.licensePlanId) ?? null,
+			}),
+		)
 		.filter((license): license is InvoiceLicenseQuantity => license !== null);
 
 	const customize = plan.isCustom
@@ -84,20 +97,19 @@ export function buildCreateInvoiceRequestBody({
 	form,
 	preview,
 	catalogItemsByPlanId,
+	licenseItemsByPlanId,
 }: {
 	customerId: string | undefined;
 	form: CreateInvoiceForm;
 	preview?: boolean;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
+	licenseItemsByPlanId?: LicenseItemsByPlanId;
 }): CreateInvoiceParams | null {
 	if (!customerId) return null;
 
 	const plans = form.plans
 		.map((plan) =>
-			toPlanParams({
-				plan,
-				catalogItems: catalogItemsByPlanId?.get(plan.planId),
-			}),
+			toPlanParams({ plan, catalogItemsByPlanId, licenseItemsByPlanId }),
 		)
 		.filter((plan): plan is InvoicePlanParams => plan !== null);
 
@@ -123,7 +135,10 @@ export function buildCreateInvoiceRequestBody({
 		...(form.invoiceTemplateId
 			? { invoice_template_id: form.invoiceTemplateId }
 			: {}),
-		...(form.netTermsDays ? { net_terms_days: form.netTermsDays } : {}),
+		// A picked due date replaces payment terms; the API refuses both.
+		...(form.netTermsDays && form.dueDay === null
+			? { net_terms_days: form.netTermsDays }
+			: {}),
 		...(form.taxRateId ? { tax_rate_id: form.taxRateId } : {}),
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
@@ -142,11 +157,13 @@ export function useCreateInvoiceRequestBody({
 	form,
 	preview,
 	catalogItemsByPlanId,
+	licenseItemsByPlanId,
 }: {
 	customerId: string | undefined;
 	form: CreateInvoiceForm;
 	preview?: boolean;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
+	licenseItemsByPlanId?: LicenseItemsByPlanId;
 }) {
 	return useMemo(
 		() =>
@@ -155,7 +172,8 @@ export function useCreateInvoiceRequestBody({
 				form,
 				preview,
 				catalogItemsByPlanId,
+				licenseItemsByPlanId,
 			}),
-		[customerId, form, preview, catalogItemsByPlanId],
+		[customerId, form, preview, catalogItemsByPlanId, licenseItemsByPlanId],
 	);
 }

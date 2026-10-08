@@ -41,6 +41,7 @@ function CreateInvoiceSheetContent() {
 					onCancel={planEditor.handlePlanEditorCancel}
 					onSave={planEditor.handlePlanEditorSave}
 					product={planEditor.planEditorProduct}
+					scope="invoice"
 				/>
 			)}
 		</LayoutGroup>

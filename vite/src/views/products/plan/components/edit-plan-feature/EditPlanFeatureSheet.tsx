@@ -6,6 +6,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
 import {
 	useHasItemChanges,
+	useIsInvoiceEditor,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -41,6 +42,7 @@ export function EditPlanFeatureSheet({
 	const { product, setProduct } = useProduct();
 	const { setInitialItem } = useSheet();
 	const hasItemChanges = useHasItemChanges();
+	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
 
 	const volumePricingMode: VolumePricingMode = item?.tiers?.some(
@@ -194,11 +196,13 @@ export function EditPlanFeatureSheet({
 							<BillingType />
 						</SheetSection>
 
-						<SheetSection
-							title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}
-						>
-							<IncludedUsage />
-						</SheetSection>
+						{!(isInvoiceEditor && isFeaturePrice) && (
+							<SheetSection
+								title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}
+							>
+								<IncludedUsage />
+							</SheetSection>
+						)}
 
 						{isFeaturePrice && (
 							<SheetSection

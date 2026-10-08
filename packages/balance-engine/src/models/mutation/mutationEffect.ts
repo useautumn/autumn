@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { openEnum } from "../common/openSchema.js";
 import { nonEmptyStringSchema } from "../common/primitives.js";
 
 /** One webhook to deliver, as the Svix message; the app it goes to is the host's, from the command's org. */
@@ -18,7 +19,10 @@ export const autoTopupEffectSchema = z
 	.object({
 		type: z.literal("auto_topup"),
 		featureId: nonEmptyStringSchema,
-		reason: z.enum(["balance_below_threshold", "threshold_settlement"]),
+		reason: openEnum({
+			name: "autoTopupEffect.reason",
+			values: ["balance_below_threshold", "threshold_settlement"],
+		}),
 	})
 	.loose();
 

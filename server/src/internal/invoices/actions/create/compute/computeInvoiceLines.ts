@@ -1,10 +1,13 @@
 import {
 	BillingMethod,
 	buildLineItem,
+	type Entity,
 	ErrCode,
 	type Feature,
 	type FullProduct,
+	type InvoiceCustomizeItem,
 	type InvoiceFeatureQuantity,
+	isOneOffPrice,
 	type LineItem,
 	type LineItemContext,
 	type Price,
@@ -16,16 +19,20 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customLineItemsToLineItems } from "@/internal/billing/v2/utils/lineItems/customLineItemsToLineItems";
 import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils";
+import { toInvoicePeriod } from "../setup/resolveInvoiceEnvelope";
 import type {
 	CreateInvoiceContext,
 	InvoicePlanContext,
 } from "../setup/setupCreateInvoiceContext";
 import { featureQuantityToAmount } from "./featureQuantityToAmount";
-import { findInvoiceFeaturePrice } from "./findInvoiceFeaturePrice";
 import { licenseQuantityToAmount } from "./licenseQuantityToAmount";
 import { namedStripePriceLineAmount } from "./namedStripePriceLineAmount";
-import { prorateInvoiceLineAmount } from "./prorateInvoiceLineAmount";
+import {
+	type InvoicePeriod,
+	prorateInvoiceLineAmount,
+} from "./prorateInvoiceLineAmount";
 import { resolveInvoiceBasePrice } from "./resolveInvoiceBasePrice";
+import { resolveInvoiceFeaturePrice } from "./resolveInvoiceFeaturePrice";
 import { usageEntriesToCredits } from "./usageEntriesToCredits";
 
 /** A billing line plus which request entry produced it. */
@@ -45,19 +52,24 @@ const lineContext = ({
 	price,
 	product,
 	feature,
+	entity,
+	period,
 	nowMs,
 }: {
 	invoiceContext: CreateInvoiceContext;
 	price: Price;
 	product: FullProduct;
 	feature?: Feature;
+	entity?: Entity;
+	period?: InvoicePeriod;
 	nowMs: number;
 }): LineItemContext => ({
 	price,
 	product,
 	feature,
+	entity,
 	currency: invoiceContext.currency,
-	effectivePeriod: invoiceContext.period,
+	effectivePeriod: period,
 	direction: "charge",
 	now: nowMs,
 	billingTiming: "in_advance",
@@ -88,6 +100,7 @@ const toLine = ({
 	stripePriceId?: string;
 	stripeQuantity?: number;
 }): InvoiceLine => {
+	const entityLabel = context.entity?.name || context.entity?.id;
 	const lineItem = buildLineItem({
 		context,
 		amount,
@@ -102,7 +115,15 @@ const toLine = ({
 		overage: quantity ?? undefined,
 	});
 	return {
-		lineItem: { ...lineItem, prorated },
+		// One-off prices are never prorated, whatever the request asked for.
+		lineItem: {
+			...lineItem,
+			// buildLineItem appends "(entity)"; invoices read "Pro — Workspace A".
+			description: entityLabel
+				? `${description} — ${entityLabel}`
+				: description,
+			prorated: prorated && !isOneOffPrice(context.price),
+		},
 		planKey,
 		planId,
 		featureId,
@@ -112,70 +133,32 @@ const toLine = ({
 	};
 };
 
-const customizedFeaturePrice = ({
-	plan,
-	featureId,
-	catalogPrice,
-}: {
-	plan: InvoicePlanContext;
-	featureId: string;
-	catalogPrice: Price;
-}): Price => {
-	const override = plan.params.customize?.items?.find(
-		(item) => item.feature_id === featureId,
-	)?.price;
-	if (!override) return catalogPrice;
-
-	return {
-		...catalogPrice,
-		is_custom: true,
-		tier_behavior: override.tier_behavior ?? catalogPrice.tier_behavior,
-		config: {
-			...catalogPrice.config,
-			interval: override.interval,
-			interval_count: override.interval_count,
-			billing_units: override.billing_units ?? 1,
-			usage_tiers: override.tiers
-				? override.tiers.map((tier) => ({
-						to: tier.to,
-						amount: tier.amount ?? 0,
-						flat_amount: tier.flat_amount,
-					}))
-				: [{ to: "inf" as const, amount: override.amount ?? 0 }],
-			stripe_price_id:
-				override.processors?.stripe?.price_id ??
-				catalogPrice.config.stripe_price_id,
-		} as Price["config"],
-	};
-};
-
 const customizedCreditSystem = ({
-	plan,
+	customizeItems,
 	feature,
 }: {
-	plan: InvoicePlanContext;
+	customizeItems?: InvoiceCustomizeItem[];
 	feature: Feature;
 }): Feature => {
-	const schema = plan.params.customize?.items?.find(
-		(item) => item.feature_id === feature.id,
-	)?.feature_override?.credit_schema;
+	const schema = customizeItems?.find((item) => item.feature_id === feature.id)
+		?.feature_override?.credit_schema;
 	if (!schema) return feature;
 	return { ...feature, config: { ...feature.config, schema } };
 };
 
 const billableUnitsFor = ({
-	plan,
+	customizeItems,
 	entry,
 	feature,
 }: {
-	plan: InvoicePlanContext;
+	customizeItems?: InvoiceCustomizeItem[];
 	entry: InvoiceFeatureQuantity;
 	feature: Feature;
 }): { units: number; alreadyMoney: boolean } => {
 	if (entry.quantity !== undefined) {
 		return { units: entry.quantity, alreadyMoney: false };
 	}
-	const creditSystem = customizedCreditSystem({ plan, feature });
+	const creditSystem = customizedCreditSystem({ customizeItems, feature });
 	const credits = usageEntriesToCredits({
 		creditSystem,
 		entries: entry.usage ?? [],
@@ -187,21 +170,29 @@ const billableUnitsFor = ({
 	};
 };
 
+/** `customizeItems` must belong to `product`'s own entry: a license is never priced by its parent's items. */
 const computeFeatureLine = ({
 	ctx,
 	invoiceContext,
-	plan,
+	planKey,
+	customizeItems,
 	product,
+	entity,
+	parentPeriod,
 	entry,
 	nowMs,
 }: {
 	ctx: AutumnContext;
 	invoiceContext: CreateInvoiceContext;
-	plan: InvoicePlanContext;
+	planKey: string;
+	customizeItems?: InvoiceCustomizeItem[];
 	product: FullProduct;
+	entity?: Entity;
+	parentPeriod?: InvoicePeriod;
 	entry: InvoiceFeatureQuantity;
 	nowMs: number;
 }): InvoiceLine | undefined => {
+	const period = toInvoicePeriod(entry) ?? parentPeriod;
 	const feature = ctx.features.find(
 		(candidate) => candidate.id === entry.feature_id,
 	);
@@ -213,20 +204,22 @@ const computeFeatureLine = ({
 		});
 	}
 
-	const price = customizedFeaturePrice({
-		plan,
-		featureId: entry.feature_id,
-		catalogPrice: findInvoiceFeaturePrice({
-			prices: product.prices,
-			featureId: entry.feature_id,
-			billingBehavior: entry.billing_behavior,
-		}),
+	const price = resolveInvoiceFeaturePrice({
+		ctx,
+		customizeItems,
+		product,
+		entry,
 	});
+	if (!price) return undefined;
 
-	const { units, alreadyMoney } = billableUnitsFor({ plan, entry, feature });
+	const { units, alreadyMoney } = billableUnitsFor({
+		customizeItems,
+		entry,
+		feature,
+	});
 	if (units <= 0) return undefined;
 
-	const namedPriceId = plan.params.customize?.items?.find(
+	const namedPriceId = customizeItems?.find(
 		(item) => item.feature_id === entry.feature_id,
 	)?.price?.processors?.stripe?.price_id;
 	const named = namedPriceId
@@ -254,11 +247,7 @@ const computeFeatureLine = ({
 	const amount =
 		named?.amount ??
 		(prorate
-			? prorateInvoiceLineAmount({
-					price,
-					amount: baseAmount,
-					period: invoiceContext.period,
-				})
+			? prorateInvoiceLineAmount({ price, amount: baseAmount, period })
 			: baseAmount);
 
 	const context = lineContext({
@@ -266,6 +255,8 @@ const computeFeatureLine = ({
 		price,
 		product,
 		feature,
+		entity,
+		period,
 		nowMs,
 	});
 	return toLine({
@@ -277,8 +268,8 @@ const computeFeatureLine = ({
 			includePeriodDescription: false,
 		}),
 		quantity: units,
-		prorated: prorate && Boolean(invoiceContext.period),
-		planKey: plan.planKey,
+		prorated: prorate && Boolean(period),
+		planKey,
 		planId: product.id,
 		featureId: feature.id,
 		stripePriceId: namedPriceId,
@@ -299,6 +290,7 @@ const computePlanLines = ({
 }): InvoiceLine[] => {
 	const { fullProduct, params } = plan;
 	const lines: InvoiceLine[] = [];
+	const planPeriod = toInvoicePeriod(params) ?? invoiceContext.period;
 
 	const base = resolveInvoiceBasePrice({
 		product: fullProduct,
@@ -320,6 +312,8 @@ const computePlanLines = ({
 			invoiceContext,
 			price: base.price,
 			product: fullProduct,
+			entity: plan.entity,
+			period: planPeriod,
 			nowMs,
 		});
 		lines.push(
@@ -331,12 +325,12 @@ const computePlanLines = ({
 						? prorateInvoiceLineAmount({
 								price: base.price,
 								amount: base.amount,
-								period: invoiceContext.period,
+								period: planPeriod,
 							})
 						: base.amount),
 				description: fixedPriceToDescription({ price: base.price, context }),
 				quantity: null,
-				prorated: prorate && Boolean(invoiceContext.period),
+				prorated: prorate && Boolean(planPeriod),
 				planKey: plan.planKey,
 				planId: fullProduct.id,
 				featureId: null,
@@ -350,8 +344,11 @@ const computePlanLines = ({
 		const line = computeFeatureLine({
 			ctx,
 			invoiceContext,
-			plan,
+			planKey: plan.planKey,
+			customizeItems: params.customize?.items,
 			product: fullProduct,
+			entity: plan.entity,
+			parentPeriod: planPeriod,
 			entry,
 			nowMs,
 		});
@@ -359,6 +356,7 @@ const computePlanLines = ({
 	}
 
 	for (const license of params.license_quantities ?? []) {
+		const licensePeriod = toInvoicePeriod(license) ?? planPeriod;
 		const resolved = licenseQuantityToAmount({
 			parent: fullProduct,
 			licensePlanId: license.license_plan_id,
@@ -383,6 +381,8 @@ const computePlanLines = ({
 				invoiceContext,
 				price: resolved.price,
 				product: resolved.licenseProduct,
+				entity: plan.entity,
+				period: licensePeriod,
 				nowMs,
 			});
 			lines.push(
@@ -394,7 +394,7 @@ const computePlanLines = ({
 							? prorateInvoiceLineAmount({
 									price: resolved.price,
 									amount: resolved.amount,
-									period: invoiceContext.period,
+									period: licensePeriod,
 								})
 							: resolved.amount),
 					description: fixedPriceToDescription({
@@ -403,7 +403,7 @@ const computePlanLines = ({
 						quantity: license.quantity,
 					}),
 					quantity: license.quantity,
-					prorated: prorate && Boolean(invoiceContext.period),
+					prorated: prorate && Boolean(licensePeriod),
 					planKey: plan.planKey,
 					planId: resolved.licenseProduct.id,
 					featureId: null,
@@ -415,8 +415,11 @@ const computePlanLines = ({
 			const line = computeFeatureLine({
 				ctx,
 				invoiceContext,
-				plan,
+				planKey: plan.planKey,
+				customizeItems: license.customize?.items,
 				product: resolved.licenseProduct,
+				entity: plan.entity,
+				parentPeriod: licensePeriod,
 				entry,
 				nowMs,
 			});
@@ -441,11 +444,19 @@ export const computeInvoiceLines = ({
 		computePlanLines({ ctx, invoiceContext, plan, nowMs }),
 	);
 
+	const customLineItems = invoiceContext.params.custom_line_items ?? [];
 	const customLines = customLineItemsToLineItems({
-		customLineItems: invoiceContext.params.custom_line_items ?? [],
+		customLineItems,
 		currency: invoiceContext.currency,
-	}).map((lineItem) => ({
-		lineItem,
+	}).map((lineItem, index) => ({
+		// A custom line prints a period only when it names its own.
+		lineItem: {
+			...lineItem,
+			context: {
+				...lineItem.context,
+				effectivePeriod: toInvoicePeriod(customLineItems[index]),
+			},
+		},
 		planKey: null,
 		planId: null,
 		featureId: null,

@@ -1,4 +1,8 @@
-import type { CreateInvoiceParams, InvoicePlanParams } from "@autumn/shared";
+import type {
+	CreateInvoiceParams,
+	InvoicePlanParams,
+	LineItem,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeInvoiceLines } from "../create/compute/computeInvoiceLines";
@@ -20,8 +24,12 @@ export const computeReissueCatalogLines = async ({
 	customerId: string;
 	currency: string;
 	plans: InvoicePlanParams[];
-}): Promise<Stripe.InvoiceAddLinesParams.Line[]> => {
-	if (plans.length === 0) return [];
+}): Promise<{
+	lines: Stripe.InvoiceAddLinesParams.Line[];
+	/** The Autumn lines behind them, so the replacement's stored rows keep plan, feature and entity. */
+	lineItems: LineItem[];
+}> => {
+	if (plans.length === 0) return { lines: [], lineItems: [] };
 
 	const params: CreateInvoiceParams = {
 		customer_id: customerId,
@@ -34,10 +42,12 @@ export const computeReissueCatalogLines = async ({
 		params,
 		preview: true,
 	});
-	return evaluateStripeInvoicePlan({
+	const invoiceLines = computeInvoiceLines({ ctx, invoiceContext });
+	const { lines } = evaluateStripeInvoicePlan({
 		invoiceContext,
-		lines: computeInvoiceLines({ ctx, invoiceContext }),
+		lines: invoiceLines,
 		issueDateMs: Date.now(),
 		dueDateMs: null,
-	}).lines;
+	});
+	return { lines, lineItems: invoiceLines.map((line) => line.lineItem) };
 };
