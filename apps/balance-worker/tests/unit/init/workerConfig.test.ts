@@ -140,14 +140,15 @@ describe("Kafka balance worker config", () => {
 
 describe("the worker's consumer group", () => {
 	const base = { BALANCE_WORKER_GROUP_ID: "tf-balance-staging-workers" };
-	test("off ECS it is the deployment's base group: local, tests and a fail-open boot are unchanged", () => {
+	// A classic group whose members advertised the load-aware assigner's metadata cannot be converted online to KIP-848.
+	test("off ECS it is the deployment's KIP-848 group, never the classic group kafkajs workers joined", () => {
 		expect(workerConsumerGroupIdOf({ env: base, fleetId: null })).toBe(
-			"tf-balance-staging-workers",
+			"tf-balance-staging-workers-kip848",
 		);
 	});
 	test("on ECS it carries the fleet id, so the two Flightcontrol fleets never share a group", () => {
 		expect(workerConsumerGroupIdOf({ env: base, fleetId: "1a2b3c4d" })).toBe(
-			"tf-balance-staging-workers-1a2b3c4d",
+			"tf-balance-staging-workers-kip848-1a2b3c4d",
 		);
 	});
 });

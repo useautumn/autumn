@@ -78,7 +78,9 @@ export function assertKafkaBalanceWorkerTimings({
 
 /**
  * Each ECS fleet consumes in its own group, so a green boot never rebalances blue's
- * partitions away; off ECS (local, tests) the base group is the whole fleet.
+ * partitions away; off ECS (local, tests) one group is the whole fleet. `kip848` keeps
+ * the worker out of the classic groups kafkajs joined: the broker will not convert a
+ * group whose members carried custom assignor metadata, so partitions move by handoff.
  */
 export function workerConsumerGroupIdOf({
 	env,
@@ -87,9 +89,8 @@ export function workerConsumerGroupIdOf({
 	env: Pick<BalanceWorkerEnv, "BALANCE_WORKER_GROUP_ID">;
 	fleetId: string | null;
 }): string {
-	return fleetId
-		? `${env.BALANCE_WORKER_GROUP_ID}-${fleetId}`
-		: env.BALANCE_WORKER_GROUP_ID;
+	const group = `${env.BALANCE_WORKER_GROUP_ID}-kip848`;
+	return fleetId ? `${group}-${fleetId}` : group;
 }
 
 export function createWorkerConsumerConfig({
