@@ -3,18 +3,12 @@
  *
  * Red (before):  the trial ended in place, billing $940 now, with next cycle on the old trial end.
  * Green (after): $0 now under none/unset, the stub under prorate/bill_difference, then $940 on the old trial end.
+ * Balances refill when the trial ends unless carry_over_usages keeps its usage, then reset again on the anchor.
  */
 
 import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import chalk from "chalk";
-import {
-	endTrialOnAnchorAndExpect,
-	proratedStub,
-	setupTrialingPlans,
-} from "./utils/trialEndUtils";
+import { endTrialOnAnchorAndExpect, proratedStub } from "./utils/trialEndUtils";
 
 test.concurrent(
 	`${chalk.yellowBright("set-plans trial off, no anchor: unset proration defaults to none, billing nothing until the old trial end")}`,
@@ -64,31 +58,13 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans trial off, no anchor: carry_over_usages is rejected, since nothing resets now")}`,
+	`${chalk.yellowBright("set-plans trial off, no anchor: carry_over_usages keeps the trial's usage until the old trial end")}`,
 	async () => {
-		const customerId = "set-plans-trial-off-carry";
-		const { pro, addOn, autumnV2_4 } = await setupTrialingPlans({
-			customerId,
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "carry_over_usages is only supported",
-			func: () =>
-				autumnV2_4.billing.previewSetPlans({
-					customer_id: customerId,
-					free_trial: null,
-					carry_over_usages: {
-						enabled: true,
-						feature_ids: [TestFeature.Messages],
-					},
-					phases: [
-						{
-							starts_at: "now",
-							plans: [{ plan_id: pro.id }, { plan_id: addOn.id }],
-						},
-					],
-				}),
+		await endTrialOnAnchorAndExpect({
+			customerId: "set-plans-trial-off-carry",
+			anchorSource: "trial_end",
+			carriesUsage: true,
+			expectedStub: () => 0,
 		});
 	},
 );

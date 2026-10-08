@@ -4,7 +4,8 @@
  * prorate_immediately and bill_difference bill the stub now.
  *
  * Red (before):  the trial ended in place, billing a full $940 now plus the anchor reset's prorated period.
- * Green (after): a new subscription anchored on the date bills as previewed, and balances reset there.
+ * Green (after): a new subscription anchored on the date bills as previewed; balances refill at the trial end
+ *                (unless carried) and reset again on the anchor.
  */
 
 import { test } from "bun:test";
@@ -54,6 +55,18 @@ test.concurrent(
 			anchorSource: "requested",
 			prorationBehavior: "bill_difference",
 			expectedStub: proratedStub,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans trial end anchor: carry_over_usages keeps the trial's usage until the anchor")}`,
+	async () => {
+		await endTrialOnAnchorAndExpect({
+			customerId: "set-plans-trial-anchor-carry",
+			anchorSource: "requested",
+			carriesUsage: true,
+			expectedStub: () => 0,
 		});
 	},
 );

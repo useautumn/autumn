@@ -40,7 +40,7 @@ const ANCHOR_DAYS = 8;
 const TRIAL_INVOICE_TOTALS = [0, 0];
 
 /** Pro and an add-on trialing on one subscription, with usage, ended now and anchored 8 days out. */
-export const setupTrialingPlans = async ({
+const setupTrialingPlans = async ({
 	customerId,
 }: {
 	customerId: string;
@@ -101,6 +101,22 @@ export const setupTrialingPlans = async ({
 	};
 };
 
+const carryOverMessages = ({ carriesUsage }: { carriesUsage: boolean }) =>
+	carriesUsage
+		? {
+				carry_over_usages: {
+					enabled: true,
+					feature_ids: [TestFeature.Messages],
+				},
+			}
+		: {};
+
+/** Ending the trial refills the balance now, unless carry_over_usages keeps the trial's usage. */
+const trialEndBalance = ({ carriesUsage }: { carriesUsage: boolean }) => {
+	const usage = carriesUsage ? TRACKED_MESSAGES : 0;
+	return { remaining: INCLUDED_MESSAGES - usage, usage };
+};
+
 /** Stripe prorates and rounds each item's stub separately. */
 export const proratedStub = ({
 	advancedTo,
@@ -125,11 +141,13 @@ export const endTrialOnAnchorAndExpect = async ({
 	anchorSource,
 	prorationBehavior,
 	expectedStub,
+	carriesUsage = false,
 }: {
 	customerId: string;
 	anchorSource: "requested" | "trial_end";
 	prorationBehavior?: BillingBehavior;
 	expectedStub: (args: { advancedTo: number; anchorMs: number }) => number;
+	carriesUsage?: boolean;
 }) => {
 	const {
 		pro,
@@ -148,6 +166,7 @@ export const endTrialOnAnchorAndExpect = async ({
 	const params: SetPlansParamsV0Input = {
 		customer_id: customerId,
 		free_trial: null,
+		...carryOverMessages({ carriesUsage }),
 		phases: [
 			{
 				starts_at: "now",
@@ -217,8 +236,7 @@ export const endTrialOnAnchorAndExpect = async ({
 	await expectBalanceCorrect({
 		customerId,
 		featureId: TestFeature.Messages,
-		remaining: INCLUDED_MESSAGES - TRACKED_MESSAGES,
-		usage: TRACKED_MESSAGES,
+		...trialEndBalance({ carriesUsage }),
 	});
 
 	// The anchor bills one full renewal, with no separate cycle reset on top, and resets usage.
@@ -251,12 +269,7 @@ export const endTrialResettingNowAndExpect = async ({
 	const params: SetPlansParamsV0Input = {
 		customer_id: customerId,
 		free_trial: null,
-		...(carriesUsage && {
-			carry_over_usages: {
-				enabled: true,
-				feature_ids: [TestFeature.Messages],
-			},
-		}),
+		...carryOverMessages({ carriesUsage }),
 		phases: [
 			{
 				starts_at: "now",
@@ -296,12 +309,10 @@ export const endTrialResettingNowAndExpect = async ({
 	});
 	// Like any reset now, the plans restart their cycle: usage resets unless carry_over_usages carries it.
 	await expectCustomerProducts({ customerId, active: [pro.id, addOn.id] });
-	const carriedUsage = carriesUsage ? TRACKED_MESSAGES : 0;
 	await expectBalanceCorrect({
 		customerId,
 		featureId: TestFeature.Messages,
-		remaining: INCLUDED_MESSAGES - carriedUsage,
-		usage: carriedUsage,
+		...trialEndBalance({ carriesUsage }),
 		nextResetAt: renewalAt,
 	});
 	const customer = await autumnV2_4.customers.get<ApiCustomerV5>(customerId);
