@@ -25,6 +25,7 @@ import {
 } from "./diffToCustomerProducts/diffToCustomerProducts";
 import { diffToSchedule } from "./diffToSchedule";
 import { keptCustomerProductsBilledByReplacement } from "./keptCustomerProductsBilledByReplacement";
+import { keptReplacementEntitlementUpdates } from "./keptReplacementEntitlementUpdates";
 
 /** The immediate phase's plan change, which the guards validate with attach's
  * immediate-timing rules. Future phases are validated at activation. */
@@ -209,7 +210,13 @@ export const computeSetPlansPlan = ({
 			...trialStartLineItems,
 			...backdateGapLineItems({ ctx, billingContext, customerProductChanges }),
 		],
-		updateCustomerEntitlements,
+		updateCustomerEntitlements: [
+			...updateCustomerEntitlements,
+			...keptReplacementEntitlementUpdates({
+				billingContext,
+				keptCustomerProducts: keptBilledByReplacement,
+			}),
+		],
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 		pooledBalancePlan,
 		lockCustomerCurrency,

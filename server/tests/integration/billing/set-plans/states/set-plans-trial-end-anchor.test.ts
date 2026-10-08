@@ -151,14 +151,12 @@ const endTrialOnAnchorAndExpect = async ({
 		testClockId,
 		trialing,
 		anchorMs: requestedAnchorMs,
-		advancedTo,
 		keptIds,
 	} = await setupTrialingPlans({ customerId });
 	const requestsAnchor = anchorSource === "requested";
 	const anchorMs = requestsAnchor
 		? requestedAnchorMs
 		: secondsToMs(trialing.trial_end!);
-	const stubTotal = expectedStub({ advancedTo, anchorMs });
 	const params: SetPlansParamsV0Input = {
 		customer_id: customerId,
 		free_trial: null,
@@ -173,7 +171,6 @@ const endTrialOnAnchorAndExpect = async ({
 	};
 
 	const preview = await autumnV2_4.billing.previewSetPlans(params);
-	expect(preview.total).toBe(stubTotal);
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: anchorMs,
@@ -196,6 +193,12 @@ const endTrialOnAnchorAndExpect = async ({
 		customerId,
 		status: "active",
 	});
+	// The stub runs from the instant Stripe created the subscription, which the preview shares.
+	const stubTotal = expectedStub({
+		advancedTo: secondsToMs(newSubscription.start_date),
+		anchorMs,
+	});
+	expect(preview.total).toBe(stubTotal);
 	expect({
 		status: newSubscription.status,
 		trialEnd: newSubscription.trial_end,
