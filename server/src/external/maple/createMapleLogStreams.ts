@@ -2,7 +2,7 @@ import { resolveDeployment } from "@autumn/logging";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { logs, resources } from "@opentelemetry/sdk-node";
 import type pino from "pino";
-import { isMapleLog } from "./isMapleLog.js";
+import { type PinoLogLine, parseMapleLog } from "./parseMapleLog.js";
 
 const MAPLE_LOGS_URL = "https://ingest.maple.dev/v1/logs";
 
@@ -20,8 +20,8 @@ type Compression = NonNullable<
 >["compression"];
 
 /** Nested objects become JSON strings so a large `extras` costs one stringify, not an attribute walk. */
-export const toMapleLogRecord = (line: string) => {
-	const { msg, level, time, ...attributes } = JSON.parse(line);
+export const toMapleLogRecord = (record: PinoLogLine) => {
+	const { msg, level, time, ...attributes } = record;
 	for (const key in attributes) {
 		if (typeof attributes[key] === "object" && attributes[key] !== null) {
 			attributes[key] = JSON.stringify(attributes[key]);
@@ -30,9 +30,9 @@ export const toMapleLogRecord = (line: string) => {
 	return {
 		body: msg,
 		severityText: level,
-		severityNumber: SEVERITY_NUMBERS[level],
+		severityNumber: level === undefined ? undefined : SEVERITY_NUMBERS[level],
 		timestamp: time,
-		attributes,
+		attributes: attributes as Record<string, string | number | boolean | null>,
 	};
 };
 
@@ -65,9 +65,9 @@ export const createMapleLogStreams = (): pino.StreamEntry[] => {
 			level: "info",
 			stream: {
 				write: (line: string) => {
-					if (!isMapleLog(line)) return;
 					try {
-						mapleLogger.emit(toMapleLogRecord(line));
+						const record = parseMapleLog(line);
+						if (record) mapleLogger.emit(toMapleLogRecord(record));
 					} catch {
 						// Maple is best effort: a bad line is dropped, never thrown into the request.
 					}
