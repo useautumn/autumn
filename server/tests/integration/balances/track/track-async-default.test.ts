@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+import { ErrCode } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -116,6 +118,38 @@ test.concurrent(
 
 		const applied = await autumnV2_4.post("/track_tokens", body);
 		expect(applied.balance.remaining).toBeLessThan(1000);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-async-default5: 2.5 default rejects what sync rejects before queueing")}`,
+	async () => {
+		const { autumnV2_5, customerId } = await setupCustomer({
+			customerId: "track-async-default5",
+		});
+
+		for (const async of [undefined, false]) {
+			await expectAutumnError({
+				errCode: ErrCode.FeatureNotFound,
+				func: () =>
+					autumnV2_5.track({
+						customer_id: customerId,
+						feature_id: "missing-feature",
+						async,
+					}),
+			});
+
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				func: () =>
+					autumnV2_5.track({
+						customer_id: customerId,
+						event_name: "missing-event",
+						overage_behavior: "reject",
+						async,
+					}),
+			});
+		}
 	},
 );
 

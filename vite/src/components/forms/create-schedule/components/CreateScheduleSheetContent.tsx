@@ -51,7 +51,7 @@ export function CreateScheduleSheetContent() {
 				<SheetSection withSeparator={false} className="pb-0">
 					<CreateScheduleGenerationBar />
 				</SheetSection>
-				<SheetSection title="Phases" withSeparator className="pt-2">
+				<SheetSection withSeparator className="pt-2">
 					<PhaseTimeline />
 				</SheetSection>
 

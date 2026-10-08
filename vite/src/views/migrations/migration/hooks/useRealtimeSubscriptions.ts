@@ -3,8 +3,8 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import {
 	type RetryableMigrationItemRunStatus,
-	useMigrationsQuery,
-} from "@/hooks/queries/useMigrationsQuery";
+	useMigrationMutations,
+} from "@/hooks/queries/useMigrationMutations";
 import { getBackendErr } from "@/utils/genUtils";
 import { buildRunMigrationRequest } from "./buildRunMigrationRequest";
 import type { RealtimeRunSubscription } from "./useMigrationRunRealtime";
@@ -18,7 +18,7 @@ export function useRealtimeSubscriptions({
 	migrationId: string;
 	invalidateRuns: () => void;
 }) {
-	const { runMigration, isRunning } = useMigrationsQuery();
+	const { runMigration, isRunning } = useMigrationMutations();
 	const [subscriptions, setSubscriptions] = useState<RealtimeRunSubscription[]>(
 		[],
 	);

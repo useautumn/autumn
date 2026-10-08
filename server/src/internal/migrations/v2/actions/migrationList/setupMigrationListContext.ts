@@ -1,10 +1,10 @@
 import type { Migration } from "@autumn/shared";
 import pLimit from "p-limit";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { migrationItemRunRepo } from "../../repos/index.js";
 import { countCustomersCached } from "../countCustomersCached.js";
 import { setupMigrationRunState } from "../migrationStatus/setupMigrationRunState.js";
+import { listMigrationProducts } from "./listMigrationProducts.js";
 import type { MigrationListContext } from "./types/migrationListContext.js";
 
 const CUSTOMER_COUNT_CONCURRENCY = 4;
@@ -96,14 +96,7 @@ export const setupMigrationListContext = async ({
 			),
 		}),
 		listCustomerCounts({ ctx, migrations }),
-		migrations.some((migration) => migration.operations)
-			? ProductService.listFull({
-					db: ctx.db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					returnAll: true,
-				})
-			: [],
+		listMigrationProducts({ ctx, migrations }),
 	]);
 
 	return { migrations, ...runsWithItemCounts, customerCounts, products };
