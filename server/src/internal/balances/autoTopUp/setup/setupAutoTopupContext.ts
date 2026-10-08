@@ -21,6 +21,7 @@ import {
 	isExpiringPurchase,
 } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
+import { isDelayedPaymentMethod } from "../helpers/delayedPaymentMethods.js";
 import { preflightAutoTopupLimits } from "../helpers/limits/preflightAutoTopupLimits.js";
 
 export type AutoTopupSetupFailure = {
@@ -166,6 +167,29 @@ export const setupAutoTopupContext = async ({
 		};
 	}
 
+	if (!invoiceMode && isDelayedPaymentMethod({ paymentMethod })) {
+		const message = `Payment method type ${paymentMethod?.type} settles too slowly for auto top-up, skipping`;
+		logger.info(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "payment_method_not_supported",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+				suppressionKey: [
+					"auto_topup_failed_webhook",
+					ctx.org.id,
+					ctx.env,
+					customerId,
+					featureId,
+					"payment_method_not_supported",
+				].join(":"),
+				suppressionTtlMs: 24 * 60 * 60 * 1000,
+			},
+		};
+	}
+
 	const { allowed, reason, blockedWindowEndsAt, limitState } =
 		await preflightAutoTopupLimits({
 			ctx,
@@ -173,6 +197,7 @@ export const setupAutoTopupContext = async ({
 			fullCustomer,
 			autoTopupConfig: normalizedAutoTopupConfig,
 			paymentMethod,
+			invoiceMode: Boolean(invoiceMode),
 		});
 
 	if (!allowed) {

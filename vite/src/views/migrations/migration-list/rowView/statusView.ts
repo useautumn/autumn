@@ -60,7 +60,8 @@ export type StatusView = {
 type RunProgress = {
 	counts: MigrationListItemCounts;
 	fraction: number;
-	percent: string;
+	/** Undefined while an unfinished run's filter count is still loading. */
+	percent: string | undefined;
 	segments: Segment[];
 };
 
@@ -80,9 +81,11 @@ const FINISHED_RUN_STATUSES: MigrationStatus[] = ["run", "no_changes"];
 const runProgress = ({
 	summary,
 	isFinished,
+	customerCountPending,
 }: {
 	summary: MigrationListSummary;
 	isFinished: boolean;
+	customerCountPending: boolean;
 }): RunProgress => {
 	const counts = summary.latest_run?.counts ?? EMPTY_COUNTS;
 	const completed =
@@ -90,14 +93,18 @@ const runProgress = ({
 		counts.no_updates_needed +
 		counts.ineligible +
 		counts.failed;
+	const isDenominatorKnown = isFinished || !customerCountPending;
 	const denominator = isFinished
 		? counts.total
 		: Math.max(counts.total, summary.customer_count ?? 0);
-	const fraction = denominator > 0 ? Math.min(completed / denominator, 1) : 0;
+	const fraction =
+		isDenominatorKnown && denominator > 0
+			? Math.min(completed / denominator, 1)
+			: 0;
 	return {
 		counts,
 		fraction,
-		percent: `${Math.round(fraction * 100)}%`,
+		percent: isDenominatorKnown ? `${Math.round(fraction * 100)}%` : undefined,
 		segments: [
 			{ kind: "migrated", value: counts.succeeded },
 			{ kind: "up_to_date", value: counts.no_updates_needed },
@@ -106,7 +113,9 @@ const runProgress = ({
 			{ kind: "in_flight", value: counts.running },
 			{
 				kind: "not_reached",
-				value: Math.max(denominator - completed - counts.running, 0),
+				value: isDenominatorKnown
+					? Math.max(denominator - completed - counts.running, 0)
+					: 0,
 			},
 		],
 	};
@@ -185,12 +194,12 @@ const PILLS: Record<
 	no_changes: () => ({ label: "No changes", fraction: 1 }),
 	failed: ({ progress }) => ({
 		label: "Incomplete",
-		detail: `at ${progress.percent}`,
+		detail: progress.percent && `at ${progress.percent}`,
 		fraction: progress.fraction,
 	}),
 	canceled: ({ progress }) => ({
 		label: "Canceled",
-		detail: `at ${progress.percent}`,
+		detail: progress.percent && `at ${progress.percent}`,
 		fraction: progress.fraction,
 	}),
 };
@@ -268,13 +277,15 @@ export const deriveStatusView = ({
 	status,
 	summary,
 	now,
+	customerCountPending = false,
 }: {
 	status: MigrationStatus;
 	summary: MigrationListSummary;
 	now: number;
+	customerCountPending?: boolean;
 }): StatusView => {
 	const isFinished = FINISHED_RUN_STATUSES.includes(status);
-	const progress = runProgress({ summary, isFinished });
+	const progress = runProgress({ summary, isFinished, customerCountPending });
 	const indicator = STATUS_INDICATORS[status];
 	const {
 		label,

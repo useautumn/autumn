@@ -1,4 +1,5 @@
 import { type AutumnLogger, createAppLogger } from "@autumn/logging";
+import { atomLogOutputs } from "./atomLogOutputs.js";
 
 let logger: AutumnLogger | undefined;
 
@@ -11,10 +12,7 @@ export function getAtomLogger(): AutumnLogger {
 		service: "atom",
 		preset: "console-only",
 		// Read raw: the logger must exist before, and without, the validated env.
-		outputs:
-			process.env.NODE_ENV === "development"
-				? ["console-pretty"]
-				: ["console-json"],
+		outputs: atomLogOutputs({ env: process.env }),
 	});
 	return logger;
 }

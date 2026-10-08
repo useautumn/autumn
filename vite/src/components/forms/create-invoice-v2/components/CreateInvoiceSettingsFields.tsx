@@ -9,7 +9,10 @@ import {
 } from "@autumn/ui";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
-import { CreateInvoiceDatesField } from "./CreateInvoiceDatesField";
+import {
+	CreateInvoiceIssueDateField,
+	CreateInvoiceServicePeriodField,
+} from "./CreateInvoiceDateFields";
 
 const NO_TEMPLATE = "none";
 
@@ -65,21 +68,31 @@ export function CreateInvoiceSettingsFields() {
 				</Select>
 			</div>
 
+			<CreateInvoiceIssueDateField />
+
 			<div>
 				<FormLabel>Payment terms</FormLabel>
-				<Input
-					min={1}
-					onChange={(event) =>
-						form.setFieldValue(
-							"netTermsDays",
-							event.target.value === "" ? null : Number(event.target.value),
-						)
-					}
-					placeholder="Days until due, or leave empty for the default"
-					type="number"
-					value={formValues.netTermsDays ?? ""}
-				/>
+				<div className="relative">
+					<Input
+						className="pr-12"
+						min={1}
+						onChange={(event) =>
+							form.setFieldValue(
+								"netTermsDays",
+								event.target.value === "" ? null : Number(event.target.value),
+							)
+						}
+						placeholder="Leave empty for the default"
+						type="number"
+						value={formValues.netTermsDays ?? ""}
+					/>
+					<span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-tertiary-foreground">
+						days
+					</span>
+				</div>
 			</div>
+
+			<CreateInvoiceServicePeriodField />
 
 			<div>
 				<FormLabel>Tax rate ID</FormLabel>
@@ -91,8 +104,6 @@ export function CreateInvoiceSettingsFields() {
 					value={formValues.taxRateId ?? ""}
 				/>
 			</div>
-
-			<CreateInvoiceDatesField />
 		</div>
 	);
 }

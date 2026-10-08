@@ -77,6 +77,22 @@ const lineContext = ({
 	discountable: false,
 });
 
+/** A fixed line's period prints from its own Stripe `period`, so the description doesn't repeat it. */
+const fixedLineDescription = ({
+	price,
+	context,
+	quantity,
+}: {
+	price: Price;
+	context: LineItemContext;
+	quantity?: number;
+}) =>
+	fixedPriceToDescription({
+		price,
+		context: { ...context, effectivePeriod: undefined },
+		quantity,
+	});
+
 const toLine = ({
 	context,
 	amount,
@@ -328,7 +344,7 @@ const computePlanLines = ({
 								period: planPeriod,
 							})
 						: base.amount),
-				description: fixedPriceToDescription({ price: base.price, context }),
+				description: fixedLineDescription({ price: base.price, context }),
 				quantity: null,
 				prorated: prorate && Boolean(planPeriod),
 				planKey: plan.planKey,
@@ -397,7 +413,7 @@ const computePlanLines = ({
 									period: licensePeriod,
 								})
 							: resolved.amount),
-					description: fixedPriceToDescription({
+					description: fixedLineDescription({
 						price: resolved.price,
 						context,
 						quantity: license.quantity,

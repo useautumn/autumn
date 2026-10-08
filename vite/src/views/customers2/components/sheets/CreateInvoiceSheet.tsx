@@ -21,7 +21,7 @@ function CreateInvoiceSheetContent() {
 			<div className="flex h-full min-h-0">
 				<CreateInvoicePreviewColumn />
 
-				<div className="flex h-full w-full shrink-0 flex-col overflow-y-auto md:w-[30rem]">
+				<div className="flex h-full w-full shrink-0 flex-col overflow-y-auto md:w-[42.5rem]">
 					<SheetHeader
 						description="Bill catalog pricing and one-off charges without changing plans, balances or subscriptions."
 						title="Create Invoice"

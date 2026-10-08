@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
+import { PlanScopeGroups } from "@/components/forms/shared/plan-tray/PlanScopeGroups";
+import { PlanTrayAddRow } from "@/components/forms/shared/plan-tray/PlanTrayAddRow";
 import { cn } from "@/lib/utils";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { areAllPlansAdded } from "../customerStateUtils";
 import { planRowKey } from "../utils/planRowKey";
 import { CustomerStatePlanRow } from "./CustomerStatePlanRow";
-import { PlanScopeGroups } from "./tray/PlanScopeGroups";
-import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 
 export function CustomerStatePhasePlans({
 	phaseIndex,

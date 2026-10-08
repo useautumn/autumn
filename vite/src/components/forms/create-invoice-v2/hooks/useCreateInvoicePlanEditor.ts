@@ -91,7 +91,11 @@ export function useCreateInvoicePlanEditor({
 				const edited =
 					patch.items == null
 						? plan
-						: applyInvoicePlanEditorItems({ plan, items: patch.items });
+						: applyInvoicePlanEditorItems({
+								plan,
+								previousItems: planEditorProduct.items,
+								items: patch.items,
+							});
 				form.setFieldValue(`plans[${index}]`, {
 					...edited,
 					...("version" in patch && { version: patch.version }),

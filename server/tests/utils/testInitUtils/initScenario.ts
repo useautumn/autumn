@@ -72,7 +72,13 @@ type GeneratedLicenseAssignment = {
 
 type OtherCustomerConfig = {
 	id: string;
-	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
+	paymentMethod?:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 	data?: CustomerData;
 	/** Create a separate Stripe test clock for this customer instead of sharing the primary customer's clock */
 	distinctTestClock?: boolean;
@@ -135,7 +141,13 @@ type AdvanceClockAction = {
 
 type AttachPaymentMethodAction = {
 	type: "attachPaymentMethod";
-	paymentMethodType: "success" | "fail" | "authenticate" | "alipay";
+	paymentMethodType:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 };
 
 type RemovePaymentMethodAction = {
@@ -282,7 +294,13 @@ type PlatformCreateConfig = {
 
 type ScenarioConfig = {
 	testClock: boolean;
-	attachPm?: "success" | "fail" | "authenticate" | "alipay";
+	attachPm?:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 	customerData?: CustomerData;
 	withDefault: boolean;
 	defaultGroup?: string;
@@ -343,7 +361,13 @@ const customer = ({
 	stripeCustomerOverrides,
 }: {
 	testClock?: boolean;
-	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
+	paymentMethod?:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 	data?: CustomerData;
 	withDefault?: boolean;
 	defaultGroup?: string;
@@ -563,7 +587,13 @@ const advanceTestClock = ({
 const attachPaymentMethod = ({
 	type,
 }: {
-	type: "success" | "fail" | "authenticate" | "alipay";
+	type:
+		| "success"
+		| "fail"
+		| "authenticate"
+		| "alipay"
+		| "us_bank_account"
+		| "us_bank_account_processing";
 }): ConfigFn => {
 	return (config) => ({
 		...config,

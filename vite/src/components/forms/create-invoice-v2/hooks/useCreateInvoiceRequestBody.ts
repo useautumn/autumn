@@ -15,8 +15,9 @@ import type {
 	FormInvoiceLicense,
 	FormInvoicePlan,
 } from "../createInvoiceFormSchema";
-import { invoiceDaysToParams } from "../utils/invoiceDates";
+import { issueDayToParams } from "../utils/issueDay";
 import { productItemsToInvoiceCustomize } from "../utils/productItemsToInvoiceCustomize";
+import { featurePeriodKey } from "../utils/servicePeriod";
 
 const toDiscounts = ({ discounts }: { discounts: FormDiscount[] }) => {
 	const valid = filterValidDiscounts(discounts);
@@ -79,15 +80,31 @@ const toPlanParams = ({
 
 	return {
 		plan_id: plan.planId,
+		entity_id: plan.entityId,
 		...(plan.version === undefined ? {} : { version: plan.version }),
 		...(customize ? { customize } : {}),
 		feature_quantities: convertToInvoiceFeatureQuantities({
 			quantities: plan.featureQuantities,
+			overageQuantities: plan.overageQuantities,
 			usageEntries: plan.featureUsage,
 			items: pricedItems,
+		})?.map((line) => {
+			const period =
+				plan.featurePeriods[
+					featurePeriodKey({
+						featureId: line.feature_id,
+						behavior: line.billing_behavior,
+					})
+				];
+			return period
+				? { ...line, period_start: period.start, period_end: period.end }
+				: line;
 		}),
 		...(licenses.length > 0 ? { license_quantities: licenses } : {}),
 		...(plan.prorate === undefined ? {} : { prorate: plan.prorate }),
+		...(plan.period
+			? { period_start: plan.period.start, period_end: plan.period.end }
+			: {}),
 	};
 };
 
@@ -98,12 +115,14 @@ export function buildCreateInvoiceRequestBody({
 	preview,
 	catalogItemsByPlanId,
 	licenseItemsByPlanId,
+	now = new Date(),
 }: {
 	customerId: string | undefined;
 	form: CreateInvoiceForm;
 	preview?: boolean;
 	catalogItemsByPlanId?: Map<string, ProductItem[] | undefined>;
 	licenseItemsByPlanId?: LicenseItemsByPlanId;
+	now?: Date;
 }): CreateInvoiceParams | null {
 	if (!customerId) return null;
 
@@ -135,19 +154,12 @@ export function buildCreateInvoiceRequestBody({
 		...(form.invoiceTemplateId
 			? { invoice_template_id: form.invoiceTemplateId }
 			: {}),
-		// A picked due date replaces payment terms; the API refuses both.
-		...(form.netTermsDays && form.dueDay === null
-			? { net_terms_days: form.netTermsDays }
-			: {}),
+		...(form.netTermsDays ? { net_terms_days: form.netTermsDays } : {}),
 		...(form.taxRateId ? { tax_rate_id: form.taxRateId } : {}),
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
 			: {}),
-		...invoiceDaysToParams({
-			issueDay: form.issueDay,
-			dueDay: form.dueDay,
-			now: new Date(),
-		}),
+		...issueDayToParams({ issueDay: form.issueDay, now }),
 		...(preview ? { preview: true } : {}),
 	} as CreateInvoiceParams;
 }
