@@ -1,3 +1,4 @@
+import { Skeleton } from "@autumn/ui";
 import {
 	type ReactNode,
 	useCallback,
@@ -25,12 +26,15 @@ const TOTAL_ROW = "flex items-center h-11";
 /** Each column draws its slice of the raised surface; together they read as one. */
 const SURFACE_SLICE = "border-y border-table-surface-border bg-table-surface";
 const PERIOD_CELL = "w-[88px] shrink-0 px-3 text-right tabular-nums";
+const TOTAL_VALUE = "font-semibold text-foreground tabular-nums";
 const PINNED_LEFT_SHADOW = "shadow-[6px_0_8px_-4px_rgba(0,0,0,0.18)]";
 const PINNED_RIGHT_SHADOW = "shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.18)]";
-const DASH = "—";
+// Varied widths so the placeholder reads like real numbers, not a uniform grid.
+const SKELETON_VALUE_WIDTHS = ["w-9", "w-7", "w-10", "w-8", "w-6"];
+const SKELETON_NAME_WIDTHS = ["w-28", "w-20", "w-24", "w-16"];
 
 interface TableCell {
-	text: string;
+	content: ReactNode;
 	title?: string;
 }
 
@@ -49,7 +53,7 @@ interface TableModel {
 	isPlaceholder: boolean;
 }
 
-/** The table's shape before any data arrives; every cell renders as a dash. */
+/** The table's shape before any data arrives; every cell renders as a skeleton bar. */
 export interface TablePlaceholder {
 	rowCount: number;
 	periodLabels: string[];
@@ -87,25 +91,60 @@ const SeriesName = ({ series }: { series: ChartSeriesConfig }) => {
 };
 
 const numberCell = (value: number): TableCell => ({
-	text: formatCompactNumber(value),
+	content: formatCompactNumber(value),
 	title: value.toLocaleString(),
 });
+
+const skeletonCell = ({ seed }: { seed: number }): TableCell => ({
+	content: (
+		<Skeleton
+			className={cn(
+				"inline-block h-3 rounded-sm align-middle",
+				SKELETON_VALUE_WIDTHS[seed % SKELETON_VALUE_WIDTHS.length],
+			)}
+		/>
+	),
+});
+
+const skeletonRowCells = ({
+	periodCount,
+	rowIndex,
+}: {
+	periodCount: number;
+	rowIndex: number;
+}) =>
+	Array.from({ length: periodCount }, (_, index) =>
+		skeletonCell({ seed: index * 3 + rowIndex }),
+	);
 
 const placeholderToModel = ({
 	placeholder,
 }: {
 	placeholder: TablePlaceholder;
 }): TableModel => {
-	const dashes = placeholder.periodLabels.map(() => ({ text: DASH }));
+	const periodCount = placeholder.periodLabels.length;
 	return {
 		periodLabels: placeholder.periodLabels,
 		seriesRows: Array.from({ length: placeholder.rowCount }, (_, index) => ({
 			key: String(index),
-			name: <span className="text-placeholder">{DASH}</span>,
-			cells: dashes,
-			total: { text: DASH },
+			name: (
+				<>
+					<Skeleton className="size-2.5 shrink-0 rounded-[3px]" />
+					<Skeleton
+						className={cn(
+							"h-3 rounded-sm",
+							SKELETON_NAME_WIDTHS[index % SKELETON_NAME_WIDTHS.length],
+						)}
+					/>
+				</>
+			),
+			cells: skeletonRowCells({ periodCount, rowIndex: index }),
+			total: skeletonCell({ seed: index + 2 }),
 		})),
-		totalRow: { cells: dashes, total: { text: DASH } },
+		totalRow: {
+			cells: skeletonRowCells({ periodCount, rowIndex: placeholder.rowCount }),
+			total: skeletonCell({ seed: 2 }),
+		},
 		isPlaceholder: true,
 	};
 };
@@ -219,13 +258,6 @@ export const UsageBreakdownTable = ({
 
 	if (!model) return null;
 
-	const valueTone = model.isPlaceholder
-		? "text-placeholder"
-		: "text-muted-foreground";
-	const totalTone = model.isPlaceholder
-		? "text-placeholder"
-		: "font-semibold text-foreground tabular-nums";
-
 	return (
 		<div className={cn(TABLE_TRAY_CLASS, "flex overflow-hidden text-[13px]")}>
 			{/* Pinned name column: sits above the scroller so its shadow falls on the numbers. */}
@@ -273,27 +305,21 @@ export const UsageBreakdownTable = ({
 								{row.cells.map((cell, index) => (
 									<span
 										key={index}
-										className={cn(PERIOD_CELL, valueTone)}
+										className={cn(PERIOD_CELL, "text-muted-foreground")}
 										title={cell.title}
 									>
-										{cell.text}
+										{cell.content}
 									</span>
 								))}
 							</div>
 						))}
 					</div>
 					<div
-						className={cn(
-							TOTAL_ROW,
-							"justify-end",
-							model.isPlaceholder
-								? "text-placeholder"
-								: "text-tertiary-foreground",
-						)}
+						className={cn(TOTAL_ROW, "justify-end text-tertiary-foreground")}
 					>
 						{model.totalRow.cells.map((cell, index) => (
 							<span key={index} className={PERIOD_CELL} title={cell.title}>
-								{cell.text}
+								{cell.content}
 							</span>
 						))}
 					</div>
@@ -316,18 +342,18 @@ export const UsageBreakdownTable = ({
 					{model.seriesRows.map((row) => (
 						<div
 							key={row.key}
-							className={cn(SERIES_ROW, "justify-end pr-4", totalTone)}
+							className={cn(SERIES_ROW, "justify-end pr-4", TOTAL_VALUE)}
 							title={row.total.title}
 						>
-							{row.total.text}
+							{row.total.content}
 						</div>
 					))}
 				</div>
 				<div
-					className={cn(TOTAL_ROW, "justify-end pr-4", totalTone)}
+					className={cn(TOTAL_ROW, "justify-end pr-4", TOTAL_VALUE)}
 					title={model.totalRow.total.title}
 				>
-					{model.totalRow.total.text}
+					{model.totalRow.total.content}
 				</div>
 			</div>
 		</div>
