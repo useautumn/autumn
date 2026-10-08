@@ -31,23 +31,20 @@ export function dualPricedRowCopy({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 
-	const packPrice = flatPrice(prepaid);
-	const packSize = prepaid.billing_units ?? 1;
-	const unitPrice = flatPrice(usage);
-	const after = prepaidQuantity
-		? new Intl.NumberFormat().format(prepaidQuantity)
-		: "prepaid";
+	const count = (value: number) => new Intl.NumberFormat().format(value);
+	const priced = ({ item, joiner }: { item: ProductItem; joiner: string }) => {
+		const price = flatPrice(item);
+		if (price === null) return null;
+		const packSize = item.billing_units ?? 1;
+		return packSize > 1
+			? `${amount(price)} ${joiner} ${count(packSize)} ${name(packSize)}`
+			: `${amount(price)} per ${name(1)}`;
+	};
+	const usagePrice = priced({ item: usage, joiner: "per" });
+	const after = prepaidQuantity ? count(prepaidQuantity) : "prepaid";
 
 	return {
-		prepaid:
-			packPrice === null
-				? null
-				: packSize > 1
-					? `${amount(packPrice)} for ${new Intl.NumberFormat().format(packSize)} ${name(packSize)}`
-					: `${amount(packPrice)} per ${name(1)}`,
-		usage:
-			unitPrice === null
-				? null
-				: `After ${after}, ${amount(unitPrice)} per ${name(1)}`,
+		prepaid: priced({ item: prepaid, joiner: "for" }),
+		usage: usagePrice && `After ${after}, ${usagePrice}`,
 	};
 }

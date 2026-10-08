@@ -69,4 +69,16 @@ describe("dualPricedRowCopy", () => {
 			}),
 		).toEqual({ prepaid: "$10 for 100 Messages", usage: null });
 	});
+
+	test("prices usage sold in packs per pack, as the invoice bills it", () => {
+		expect(
+			dualPricedRowCopy({
+				prepaid,
+				usage: { ...usage, price: 10, billing_units: 100 },
+				prepaidQuantity: 1000,
+				feature: messages,
+				currency: "USD",
+			}).usage,
+		).toBe("After 1,000, $10 per 100 Messages");
+	});
 });

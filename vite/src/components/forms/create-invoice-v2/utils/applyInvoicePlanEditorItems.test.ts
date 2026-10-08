@@ -54,6 +54,7 @@ describe("applyInvoicePlanEditorItems", () => {
 	test("a feature deleted in the plan editor is no longer billed", () => {
 		const edited = applyInvoicePlanEditorItems({
 			plan: plan(),
+			previousItems: catalogItems,
 			items: items([catalogItems[0]]),
 		});
 
@@ -67,6 +68,7 @@ describe("applyInvoicePlanEditorItems", () => {
 	test("a feature the editor turns into a free grant is no longer billed", () => {
 		const edited = applyInvoicePlanEditorItems({
 			plan: plan(),
+			previousItems: catalogItems,
 			items: items([
 				catalogItems[0],
 				{ feature_id: "words", included_usage: 100 },
@@ -80,37 +82,85 @@ describe("applyInvoicePlanEditorItems", () => {
 	test("keeps quantities for features the editor still bills", () => {
 		const edited = applyInvoicePlanEditorItems({
 			plan: plan(),
+			previousItems: catalogItems,
 			items: catalogItems,
 		});
 
 		expect(edited).toEqual(plan({ items: catalogItems, isCustom: true }));
 	});
 
-	test("an overage quantity is dropped once the editor removes the feature's prepaid price", () => {
+	const wordsBothWays = items([
+		{ feature_id: "words", usage_model: UsageModel.Prepaid, price: 5 },
+		...catalogItems,
+	]);
+	const wordsPrepaidOnly = items([
+		catalogItems[0],
+		{ feature_id: "words", usage_model: UsageModel.Prepaid, price: 5 },
+	]);
+
+	test("removing the prepaid price bills only the usage units the user entered", () => {
 		const edited = applyInvoicePlanEditorItems({
 			plan: plan({
-				items: items([
-					{ feature_id: "words", usage_model: UsageModel.Prepaid, price: 5 },
-					...catalogItems,
-				]),
-				overageQuantities: { words: 40 },
+				items: wordsBothWays,
+				featureQuantities: { seats: 5, words: 1000 },
+				overageQuantities: { words: 400 },
+				featureUsage: {},
 			}),
+			previousItems: wordsBothWays,
 			items: catalogItems,
 		});
 
+		expect(edited.featureQuantities).toEqual({ seats: 5, words: 400 });
+		expect(edited.overageQuantities).toEqual({});
+		expect(invoiceFor(edited)?.plans?.[0].feature_quantities).toContainEqual({
+			feature_id: "words",
+			billing_behavior: "usage_based",
+			quantity: 400,
+		});
+	});
+
+	test("removing the usage price keeps the prepaid units and drops the usage units", () => {
+		const edited = applyInvoicePlanEditorItems({
+			plan: plan({
+				items: wordsBothWays,
+				featureQuantities: { seats: 5, words: 1000 },
+				overageQuantities: { words: 400 },
+				featureUsage: {},
+			}),
+			previousItems: wordsBothWays,
+			items: wordsPrepaidOnly,
+		});
+
+		expect(edited.featureQuantities).toEqual({ seats: 5, words: 1000 });
 		expect(edited.overageQuantities).toEqual({});
 	});
 
-	test("keeps the overage quantity while the feature is priced both ways", () => {
-		const both = items([
-			{ feature_id: "words", usage_model: UsageModel.Prepaid, price: 5 },
-			...catalogItems,
-		]);
+	test("a prepaid quantity is never reused when the price turns usage-based", () => {
 		const edited = applyInvoicePlanEditorItems({
-			plan: plan({ items: both, overageQuantities: { words: 40 } }),
-			items: both,
+			plan: plan({
+				items: wordsPrepaidOnly,
+				featureQuantities: { seats: 5, words: 1000 },
+				featureUsage: {},
+			}),
+			previousItems: wordsPrepaidOnly,
+			items: catalogItems,
 		});
 
+		expect(edited.featureQuantities).toEqual({ seats: 5 });
+	});
+
+	test("keeps both quantities while the feature is priced both ways", () => {
+		const edited = applyInvoicePlanEditorItems({
+			plan: plan({
+				items: wordsBothWays,
+				featureQuantities: { seats: 5, words: 1000 },
+				overageQuantities: { words: 40 },
+			}),
+			previousItems: wordsBothWays,
+			items: wordsBothWays,
+		});
+
+		expect(edited.featureQuantities).toEqual({ seats: 5, words: 1000 });
 		expect(edited.overageQuantities).toEqual({ words: 40 });
 	});
 });
