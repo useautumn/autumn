@@ -96,6 +96,8 @@ export * from "./balances/check/prevVersions/CheckResponseV1.js";
 export * from "./balances/create/createBalanceParams.js";
 export * from "./balances/index.js";
 export * from "./balances/prevVersions/legacyUpdateBalanceModels.js";
+export * from "./balances/track/prevVersions/batchTrackParamsV2_4.js";
+export * from "./balances/track/prevVersions/batchTrackTokensParamsV2_4.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";
 export * from "./balances/track/trackResponseV2.js";

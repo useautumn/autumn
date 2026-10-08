@@ -23,12 +23,13 @@ export const runBatchTrack = async ({
 	// One queueTrack per item — the SQS send batcher packs them into
 	// SendMessageBatch calls, and each item resolves/fails independently.
 	const results = await Promise.all(
-		entries.map(({ item, index }) => {
+		entries.map(({ item, index, tokens }) => {
 			const messageDeduplicationId = `${ctx.id}-${index}`;
 
 			return queueTrack({
 				ctx,
 				body: item,
+				tokens,
 				options: {
 					// Per-item request id: seeds the per-item queue replay keys, so
 					// same-customer items in one batch never collide on dedup.

@@ -16,6 +16,7 @@ export * from "./creditDimensions/creditTierRules";
 export * from "./creditDimensions/findAmbiguousCreditDimensions";
 export * from "./creditDimensions/matchesEventProperties";
 export * from "./creditDimensions/resolveCreditDimensionRate";
+export * from "./creditRates/buildAiCreditCostProperty";
 export * from "./creditRates/creditRateCard";
 export * from "./creditRates/creditRateToCost";
 export * from "./creditRates/findCreditSchemaItemByFeatureId";

@@ -2,6 +2,7 @@ import type { Redis } from "ioredis";
 import {
 	ACQUIRE_QUEUE_PERMITS_SCRIPT,
 	DELETE_OWNED_LOCK_SCRIPT,
+	INCREMENT_ORG_THEN_CUSTOMER_SCRIPT,
 	REFRESH_OWNED_LOCK_SCRIPT,
 	RELEASE_QUEUE_PERMIT_SCRIPT,
 } from "../../../_luaScriptsMisc/luaScriptsMisc.js";
@@ -134,6 +135,11 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("releaseQueuePermit", {
 		numberOfKeys: 1,
 		lua: RELEASE_QUEUE_PERMIT_SCRIPT,
+	});
+
+	redisInstance.defineCommand("incrementOrgThenCustomer", {
+		numberOfKeys: 2,
+		lua: INCREMENT_ORG_THEN_CUSTOMER_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {
