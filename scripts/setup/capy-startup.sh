@@ -40,8 +40,11 @@ COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
 TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
 . "$SCRIPT_DIR/capy-trigger-image.sh"
 . "$SCRIPT_DIR/capy-kafka.sh"
+. "$SCRIPT_DIR/capy-bubble.sh"
 
 export PATH="$HOME/.bun/bin:$PATH"
+
+install_capy_bubble "[capy-startup]"
 
 command -v bun >/dev/null 2>&1 || die "bun not on PATH"
 docker info >/dev/null 2>&1 || die "Docker Engine is unavailable"
