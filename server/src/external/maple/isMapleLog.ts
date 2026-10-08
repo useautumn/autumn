@@ -1,6 +1,6 @@
 const STRIPE_WEBHOOK_MARKER = '"stripe_event":{';
-// The first " /v1/" in a request line is `req.name` ("POST /v1/billing.attach").
-const API_PATH_MARKER = " /v1/";
+// Every billing route is a POST, and JSON escaping keeps this sequence out of string values.
+const BILLING_ROUTE_MARKER = '"name":"POST /v1/';
 const BILLING_PATHS = [
 	"billing",
 	"attach",
@@ -13,12 +13,14 @@ const BILLING_PATHS = [
 export const isMapleLog = (line: string) => {
 	if (line.includes(STRIPE_WEBHOOK_MARKER)) return true;
 
-	const markerIndex = line.indexOf(API_PATH_MARKER);
-	if (markerIndex === -1) return false;
-
-	const pathStart = markerIndex + API_PATH_MARKER.length;
-	for (const path of BILLING_PATHS) {
-		if (line.startsWith(path, pathStart)) return true;
+	// A query param named `name` can serialize the same marker ahead of req.name, so check every hit.
+	let markerIndex = line.indexOf(BILLING_ROUTE_MARKER);
+	while (markerIndex !== -1) {
+		const pathStart = markerIndex + BILLING_ROUTE_MARKER.length;
+		for (const path of BILLING_PATHS) {
+			if (line.startsWith(path, pathStart)) return true;
+		}
+		markerIndex = line.indexOf(BILLING_ROUTE_MARKER, pathStart);
 	}
 	return false;
 };

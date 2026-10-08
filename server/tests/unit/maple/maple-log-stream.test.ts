@@ -11,7 +11,15 @@ import {
 } from "@/external/maple/createMapleLogStreams.js";
 import { isMapleLog } from "@/external/maple/isMapleLog.js";
 
-const requestLine = ({ name, msg }: { name: string; msg: string }) =>
+const requestLine = ({
+	name,
+	msg,
+	query = {},
+}: {
+	name: string;
+	msg: string;
+	query?: Record<string, string>;
+}) =>
 	`${JSON.stringify({
 		level: "INFO",
 		time: 1_760_000_000_000,
@@ -21,6 +29,7 @@ const requestLine = ({ name, msg }: { name: string; msg: string }) =>
 			id: "req_123",
 			method: "POST",
 			url: `https://api.example.com${name.split(" ")[1]}`,
+			query,
 			name,
 			route: name,
 		},
@@ -59,6 +68,36 @@ describe("isMapleLog", () => {
 			),
 		).toBe(true);
 		expect(isMapleLog(stripeWebhookLine)).toBe(true);
+	});
+
+	test("matches on req.name, not an earlier path-like value", () => {
+		expect(
+			isMapleLog(
+				requestLine({
+					name: "POST /v1/billing.attach",
+					msg: "[200] /v1/billing.attach (org_x) 412ms",
+					query: { note: "See /v1/check" },
+				}),
+			),
+		).toBe(true);
+		expect(
+			isMapleLog(
+				requestLine({
+					name: "POST /v1/billing.attach",
+					msg: "[200] /v1/billing.attach (org_x) 412ms",
+					query: { name: "POST /v1/check" },
+				}),
+			),
+		).toBe(true);
+		expect(
+			isMapleLog(
+				requestLine({
+					name: "POST /v1/balances.track",
+					msg: "[200] /v1/balances.track (org_x) 3ms",
+					query: { note: "See /v1/billing.attach" },
+				}),
+			),
+		).toBe(false);
 	});
 
 	test("rejects other requests and non-request lines", () => {
