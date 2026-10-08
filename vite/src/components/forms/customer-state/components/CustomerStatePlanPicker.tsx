@@ -1,13 +1,12 @@
 import type { ProductV2 } from "@autumn/shared";
-import { SearchableSelect } from "@autumn/ui";
-import { type ComponentProps, type ReactNode, useRef, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { PlanPicker } from "@/components/forms/shared/plan-tray/PlanPicker";
+import type { PlanPickerScopeRow } from "@/components/forms/shared/plan-tray/PlanPickerScopeRow";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanOptionStatus } from "./PlanOptionStatus";
-import { PlanPickerScopeRow } from "./PlanPickerScopeRow";
-import { PlanPickerTrigger } from "./PlanPickerTrigger";
 
-/** The empty plan row: a product picker that greys out conflicting groups. */
+/** The shared plan picker, greying out conflicting groups and subscriptions. */
 export function CustomerStatePlanPicker({
 	products,
 	usedKeys,
@@ -29,54 +28,31 @@ export function CustomerStatePlanPicker({
 }) {
 	const { shouldOpenPickerImmediately, findSubscriptionConflict } =
 		useCustomerStateContext();
-	const [open, setOpen] = useState(shouldOpenPickerImmediately);
-	const hasSelected = useRef(false);
 	const isGroupUsed = (product: ProductV2) =>
 		usedKeys.has(getProductGroupKey({ productId: product.id, products }));
 	const subscriptionConflictOf = (product: ProductV2) =>
 		findSubscriptionConflict({ product, entityId: scope?.value ?? null });
 
 	return (
-		<SearchableSelect
-			value={null}
-			onValueChange={(productId) => {
-				hasSelected.current = true;
-				onSelect(productId);
-			}}
-			options={products}
-			getOptionValue={(product) => product.id}
-			getOptionLabel={(product) => product.name}
-			getOptionDisabled={(product) =>
+		<PlanPicker
+			products={products}
+			header={header}
+			scope={scope}
+			disabled={disabled}
+			defaultOpen={shouldOpenPickerImmediately()}
+			isOptionDisabled={(product) =>
 				isGroupUsed(product) || Boolean(subscriptionConflictOf(product))
 			}
-			renderOption={(product) => (
-				<>
-					<span className="flex-1 truncate min-w-0">{product.name}</span>
-					<PlanOptionStatus
-						isSelectedElsewhere={siblingProductIds.has(product.id)}
-						isGroupUsed={isGroupUsed(product)}
-						subscriptionConflict={subscriptionConflictOf(product)}
-						productName={product.name}
-					/>
-				</>
+			renderOptionStatus={(product) => (
+				<PlanOptionStatus
+					isSelectedElsewhere={siblingProductIds.has(product.id)}
+					isGroupUsed={isGroupUsed(product)}
+					subscriptionConflict={subscriptionConflictOf(product)}
+					productName={product.name}
+				/>
 			)}
-			header={
-				<>
-					{scope && <PlanPickerScopeRow {...scope} />}
-					{header}
-				</>
-			}
-			trigger={<PlanPickerTrigger disabled={disabled} />}
-			searchable
-			searchPlaceholder="Search plans..."
-			emptyText="No plans found"
-			defaultOpen
-			open={open}
-			onOpenChange={(isOpen) => {
-				setOpen(isOpen);
-				if (!(isOpen || hasSelected.current)) onDismiss?.();
-			}}
-			disabled={disabled}
+			onSelect={onSelect}
+			onDismiss={onDismiss}
 		/>
 	);
 }

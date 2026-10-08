@@ -26,6 +26,7 @@ const plan = (overrides: Partial<FormInvoicePlan> = {}): FormInvoicePlan => ({
 	},
 	licenses: [],
 	prorate: undefined,
+	entityId: null,
 	...overrides,
 });
 
@@ -42,8 +43,6 @@ const invoiceFor = (invoicePlan: FormInvoicePlan) =>
 			taxRateId: null,
 			periodStart: null,
 			periodEnd: null,
-			issueDay: null,
-			dueDay: null,
 		} satisfies CreateInvoiceForm,
 	});
 

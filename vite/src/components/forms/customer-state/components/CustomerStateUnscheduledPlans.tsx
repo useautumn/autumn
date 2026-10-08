@@ -1,9 +1,9 @@
 import { Separator } from "@autumn/ui";
+import { PlanScopeGroups } from "@/components/forms/shared/plan-tray/PlanScopeGroups";
+import { PlanTrayAddRow } from "@/components/forms/shared/plan-tray/PlanTrayAddRow";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { planRowKey } from "../utils/planRowKey";
-import { PlanScopeGroups } from "./tray/PlanScopeGroups";
-import { PlanTrayAddRow } from "./tray/PlanTrayAddRow";
 import { PlanTraySectionTitle } from "./tray/PlanTraySectionTitle";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 

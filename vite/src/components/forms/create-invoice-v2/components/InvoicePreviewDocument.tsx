@@ -84,8 +84,6 @@ export function InvoicePreviewDocument({
 	memo,
 	footer,
 	discountRows = [],
-	issueDay,
-	dueDay,
 }: {
 	preview: CreateInvoicePreview;
 	issuerName: string;
@@ -94,9 +92,6 @@ export function InvoicePreviewDocument({
 	memo?: string;
 	footer?: string;
 	discountRows?: InvoiceDiscountRow[];
-	/** The picked calendar days, shown as chosen rather than as Stripe's timestamps. */
-	issueDay?: number | null;
-	dueDay?: number | null;
 }) {
 	const { currency } = preview;
 	// Stripe lists custom charges first, highest amount first, then catalog lines.
@@ -112,8 +107,8 @@ export function InvoicePreviewDocument({
 	}
 	const upperCurrency = currency.toUpperCase();
 	const total = money({ amount: preview.total, currency });
-	const issueDate = issueDay ?? preview.issue_date;
-	const dueDate = dueDay ?? preview.due_date;
+	const issueDate = preview.issue_date;
+	const dueDate = preview.due_date;
 	const dueLabel = dueDate
 		? `${total} ${upperCurrency} due ${formatDate(dueDate)}`
 		: `${total} ${upperCurrency} due`;

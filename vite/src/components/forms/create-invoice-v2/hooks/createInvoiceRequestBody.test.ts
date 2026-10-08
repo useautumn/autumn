@@ -12,8 +12,6 @@ const emptyForm = (): CreateInvoiceForm => ({
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
-	issueDay: null,
-	dueDay: null,
 });
 
 const planItems = [
@@ -33,6 +31,7 @@ const planWith = (
 	featureUsage: {},
 	licenses: [],
 	prorate: undefined,
+	entityId: null,
 	...overrides,
 });
 
@@ -46,25 +45,61 @@ describe("buildCreateInvoiceRequestBody", () => {
 		).toBeNull();
 	});
 
-	test("sends a picked due date instead of payment terms, never both", () => {
-		const dueDay = Date.UTC(2099, 0, 15);
+	test("sends payment terms and never a due or issue date", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: { ...emptyForm(), plans: [planWith()], netTermsDays: 14 },
+		});
+		expect(body?.net_terms_days).toBe(14);
+		expect(body).not.toHaveProperty("due_date");
+		expect(body).not.toHaveProperty("issue_date");
+	});
+
+	test("sends each plan row's scope, with customer-level as null", () => {
 		const body = buildCreateInvoiceRequestBody({
 			customerId: "cus_1",
 			form: {
 				...emptyForm(),
-				plans: [planWith()],
-				netTermsDays: 14,
-				dueDay,
+				plans: [
+					planWith({ _id: "a", entityId: "workspace_a" }),
+					planWith({ _id: "b", entityId: "workspace_b" }),
+					planWith({ _id: "c", planId: "addon", entityId: null }),
+				],
 			},
 		});
-		expect(body?.net_terms_days).toBeUndefined();
-		expect(body?.due_date).toBeDefined();
 
-		const termsOnly = buildCreateInvoiceRequestBody({
+		expect(body?.plans?.map((plan) => [plan.plan_id, plan.entity_id])).toEqual([
+			["pro", "workspace_a"],
+			["pro", "workspace_b"],
+			["addon", null],
+		]);
+		expect(body).not.toHaveProperty("entity_id");
+	});
+
+	test("keeps feature quantities on their own plan row when a plan repeats", () => {
+		const body = buildCreateInvoiceRequestBody({
 			customerId: "cus_1",
-			form: { ...emptyForm(), plans: [planWith()], netTermsDays: 14 },
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						_id: "a",
+						entityId: "workspace_a",
+						featureQuantities: { seats: 3 },
+					}),
+					planWith({
+						_id: "b",
+						entityId: "workspace_b",
+						featureQuantities: { seats: 7 },
+					}),
+				],
+			},
 		});
-		expect(termsOnly?.net_terms_days).toBe(14);
+
+		expect(body?.plans?.map((plan) => plan.feature_quantities)).toEqual([
+			[{ feature_id: "seats", billing_behavior: "prepaid", quantity: 3 }],
+			[{ feature_id: "seats", billing_behavior: "prepaid", quantity: 7 }],
+		]);
 	});
 
 	test("returns null when there is nothing to charge", () => {
@@ -331,25 +366,6 @@ describe("buildCreateInvoiceRequestBody", () => {
 			period_end: 1792022400000,
 			preview: true,
 		});
-	});
-
-	test("sends the issue and due dates", () => {
-		const body = buildCreateInvoiceRequestBody({
-			customerId: "cus_1",
-			form: {
-				...emptyForm(),
-				issueDay: new Date(2026, 8, 7).getTime(),
-				dueDay: new Date(2099, 9, 14).getTime(),
-				customLineItems: [{ _id: "c1", description: "Setup", amount: 10 }],
-			},
-		});
-
-		expect(new Date(body?.issue_date ?? 0).toISOString()).toBe(
-			"2026-09-07T12:00:00.000Z",
-		);
-		expect(new Date(body?.due_date ?? 0).toISOString()).toBe(
-			"2099-10-14T12:00:00.000Z",
-		);
 	});
 
 	test("ignores a half-set period", () => {

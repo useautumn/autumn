@@ -50,7 +50,7 @@ const WIDE_SHEET_TYPES = new Set<SheetType>([
 
 const sheetWidthClass = (sheetType: SheetType) => {
 	if (sheetType === "create-invoice") {
-		return "md:w-[76rem] md:max-w-[calc(100vw-5rem)]";
+		return "md:w-[75rem] md:max-w-[calc(100vw-5rem)]";
 	}
 	if (WIDE_SHEET_TYPES.has(sheetType)) return "md:max-w-[40rem]";
 	return "md:max-w-[32rem]";

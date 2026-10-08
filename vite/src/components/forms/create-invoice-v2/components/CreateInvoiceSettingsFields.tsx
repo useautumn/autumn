@@ -9,7 +9,6 @@ import {
 } from "@autumn/ui";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
-import { CreateInvoiceDatesField } from "./CreateInvoiceDatesField";
 
 const NO_TEMPLATE = "none";
 
@@ -91,8 +90,6 @@ export function CreateInvoiceSettingsFields() {
 					value={formValues.taxRateId ?? ""}
 				/>
 			</div>
-
-			<CreateInvoiceDatesField />
 		</div>
 	);
 }

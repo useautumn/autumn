@@ -15,7 +15,6 @@ import type {
 	FormInvoiceLicense,
 	FormInvoicePlan,
 } from "../createInvoiceFormSchema";
-import { invoiceDaysToParams } from "../utils/invoiceDates";
 import { productItemsToInvoiceCustomize } from "../utils/productItemsToInvoiceCustomize";
 
 const toDiscounts = ({ discounts }: { discounts: FormDiscount[] }) => {
@@ -79,6 +78,7 @@ const toPlanParams = ({
 
 	return {
 		plan_id: plan.planId,
+		entity_id: plan.entityId,
 		...(plan.version === undefined ? {} : { version: plan.version }),
 		...(customize ? { customize } : {}),
 		feature_quantities: convertToInvoiceFeatureQuantities({
@@ -135,19 +135,11 @@ export function buildCreateInvoiceRequestBody({
 		...(form.invoiceTemplateId
 			? { invoice_template_id: form.invoiceTemplateId }
 			: {}),
-		// A picked due date replaces payment terms; the API refuses both.
-		...(form.netTermsDays && form.dueDay === null
-			? { net_terms_days: form.netTermsDays }
-			: {}),
+		...(form.netTermsDays ? { net_terms_days: form.netTermsDays } : {}),
 		...(form.taxRateId ? { tax_rate_id: form.taxRateId } : {}),
 		...(hasPeriod
 			? { period_start: form.periodStart, period_end: form.periodEnd }
 			: {}),
-		...invoiceDaysToParams({
-			issueDay: form.issueDay,
-			dueDay: form.dueDay,
-			now: new Date(),
-		}),
 		...(preview ? { preview: true } : {}),
 	} as CreateInvoiceParams;
 }

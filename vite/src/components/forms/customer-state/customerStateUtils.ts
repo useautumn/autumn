@@ -75,14 +75,16 @@ export function findPreviousPhasePlan({
 	);
 }
 
+type ScopedPlan = Pick<CustomerStatePlan, "productId" | "entityId">;
+
 /** Plans sitting at exactly one scope — null is customer-level. */
-export function filterPlansByScope({
+export function filterPlansByScope<T extends ScopedPlan>({
 	plans,
 	entityId,
 }: {
-	plans: CustomerStatePlan[];
+	plans: T[];
 	entityId: string | null;
-}): CustomerStatePlan[] {
+}): T[] {
 	return plans.filter((plan) =>
 		isSameScope({ entityId: plan.entityId, otherEntityId: entityId }),
 	);
@@ -95,7 +97,7 @@ function unheldPlansAtScope({
 	entityId,
 }: {
 	existingPlans: CustomerStatePlan[];
-	phasePlans: CustomerStatePlan[];
+	phasePlans: ScopedPlan[];
 	entityId: string | null;
 }): CustomerStatePlan[] {
 	const held = new Set(
@@ -119,7 +121,7 @@ export function resolveCopySourceScope({
 	entityId,
 }: {
 	existingPlans: CustomerStatePlan[];
-	phasePlans: CustomerStatePlan[];
+	phasePlans: ScopedPlan[];
 	entityId: string | null;
 }): {
 	entityId: string | null;

@@ -1,4 +1,5 @@
 import {
+	type FullCustomer,
 	mapToProductItems,
 	type ProductItem,
 	type ProductV2,
@@ -11,6 +12,8 @@ import {
 	useContext,
 	useMemo,
 } from "react";
+import type { CustomerStatePlan } from "@/components/forms/customer-state/customerStateSchema";
+import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
 import type { LicenseCatalog } from "@/components/forms/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQuery";
@@ -24,6 +27,7 @@ import {
 	useCreateInvoiceForm,
 } from "../hooks/useCreateInvoiceForm";
 import { useCreateInvoicePlanEditor } from "../hooks/useCreateInvoicePlanEditor";
+import { useCreateInvoicePlanHandlers } from "../hooks/useCreateInvoicePlanHandlers";
 import { useCreateInvoicePreview } from "../hooks/useCreateInvoicePreview";
 import {
 	type LicenseItemsByPlanId,
@@ -44,6 +48,9 @@ interface CreateInvoiceFormContextValue {
 	licenseItemsByPlanId: LicenseItemsByPlanId;
 	blockingReason: string | null;
 	planEditor: ReturnType<typeof useCreateInvoicePlanEditor>;
+	planHandlers: ReturnType<typeof useCreateInvoicePlanHandlers>;
+	/** The customer's active plans, offered by "Copy existing plans". */
+	existingPlans: CustomerStatePlan[];
 }
 
 const CreateInvoiceFormContext =
@@ -58,8 +65,9 @@ export function CreateInvoiceFormProvider({
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const { rewards } = useRewardsQuery();
-	const { setIsInlineEditorOpen } = useCustomerContext();
-	const form = useCreateInvoiceForm();
+	const { setIsInlineEditorOpen, entityId: pageEntityId } =
+		useCustomerContext();
+	const form = useCreateInvoiceForm({ defaultEntityId: pageEntityId });
 	const formValues = useStore(form.store, (state) => state.values);
 
 	const customerId = customer?.id ?? customer?.internal_id;
@@ -71,6 +79,21 @@ export function CreateInvoiceFormProvider({
 		() => new Map(rewards.map((reward) => [reward.id, reward])),
 		[rewards],
 	);
+
+	const existingPlans = useMemo(
+		() =>
+			getActiveCustomerPlans({
+				customer: customer as FullCustomer | undefined,
+				products: products ?? [],
+			}),
+		[customer, products],
+	);
+	const planHandlers = useCreateInvoicePlanHandlers({
+		form,
+		defaultEntityId: pageEntityId,
+		existingPlans,
+		productsById,
+	});
 
 	const catalogItemsByPlanId = useMemo(
 		() =>
@@ -162,6 +185,8 @@ export function CreateInvoiceFormProvider({
 			licenseItemsByPlanId,
 			blockingReason,
 			planEditor,
+			planHandlers,
+			existingPlans,
 		}),
 		[
 			form,
@@ -176,6 +201,8 @@ export function CreateInvoiceFormProvider({
 			licenseItemsByPlanId,
 			blockingReason,
 			planEditor,
+			planHandlers,
+			existingPlans,
 		],
 	);
 

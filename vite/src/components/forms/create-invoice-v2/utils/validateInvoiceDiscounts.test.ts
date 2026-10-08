@@ -30,8 +30,6 @@ const form = (
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
-	issueDay: null,
-	dueDay: null,
 	...overrides,
 });
 
@@ -45,6 +43,7 @@ const plan = (overrides: Partial<CreateInvoiceForm["plans"][number]> = {}) => ({
 	featureUsage: {},
 	licenses: [],
 	prorate: undefined,
+	entityId: null,
 	...overrides,
 });
 

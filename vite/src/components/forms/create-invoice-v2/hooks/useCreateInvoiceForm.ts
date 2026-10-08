@@ -6,14 +6,16 @@ import {
 } from "../createInvoiceFormSchema";
 
 export function useCreateInvoiceForm({
+	defaultEntityId = null,
 	defaultOverrides,
 }: {
+	defaultEntityId?: string | null;
 	defaultOverrides?: Partial<CreateInvoiceForm>;
 } = {}) {
 	// FormApi.update re-applies defaultValues on every render, so a fresh plan
 	// id here would rewrite the store and loop.
 	const [defaultValues] = useState<CreateInvoiceForm>(() => ({
-		plans: [newInvoicePlan()],
+		plans: [newInvoicePlan({ entityId: defaultEntityId })],
 		customLineItems: [],
 		discounts: [],
 		invoiceTemplateId: null,
@@ -21,8 +23,6 @@ export function useCreateInvoiceForm({
 		taxRateId: null,
 		periodStart: null,
 		periodEnd: null,
-		issueDay: null,
-		dueDay: null,
 		...defaultOverrides,
 	}));
 

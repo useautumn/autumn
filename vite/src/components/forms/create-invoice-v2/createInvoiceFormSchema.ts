@@ -34,6 +34,8 @@ const FormInvoicePlanSchema = z.object({
 	featureUsage: FeatureUsageSchema,
 	licenses: z.array(FormInvoiceLicenseSchema),
 	prorate: z.boolean().optional(),
+	/** Null bills the plan at customer level. */
+	entityId: z.string().nullable(),
 });
 
 export type FormInvoicePlan = z.infer<typeof FormInvoicePlanSchema>;
@@ -47,6 +49,7 @@ export const EMPTY_INVOICE_PLAN: Omit<FormInvoicePlan, "_id"> = {
 	featureUsage: {},
 	licenses: [],
 	prorate: undefined,
+	entityId: null,
 };
 
 let licenseCounter = 0;
@@ -67,11 +70,16 @@ export const newInvoiceLicense = (
 
 let planCounter = 0;
 
-export const newInvoicePlan = (): FormInvoicePlan => {
+export const newInvoicePlan = ({
+	entityId = null,
+}: {
+	entityId?: string | null;
+} = {}): FormInvoicePlan => {
 	planCounter += 1;
 	return {
 		...EMPTY_INVOICE_PLAN,
 		_id: `plan_${Date.now()}_${planCounter}`,
+		entityId,
 	};
 };
 
@@ -84,8 +92,6 @@ export const CreateInvoiceFormSchema = z.object({
 	taxRateId: z.string().nullable(),
 	periodStart: z.number().nullable(),
 	periodEnd: z.number().nullable(),
-	issueDay: z.number().nullable(),
-	dueDay: z.number().nullable(),
 });
 
 export type CreateInvoiceForm = z.infer<typeof CreateInvoiceFormSchema>;

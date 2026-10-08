@@ -1,7 +1,7 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
 import { getSelectedPlanPriceProduct } from "@/components/forms/shared/selectedPlanRowUtils";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
-import { getBasePriceLabel } from "../customerStatePlanPrice";
+import { getBasePriceLabel } from "./utils/getBasePriceLabel";
 
 /** A plan row's base price, including any customized items. */
 export function PlanPriceLabel({
