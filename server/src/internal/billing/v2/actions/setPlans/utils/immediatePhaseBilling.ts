@@ -33,8 +33,7 @@ const requestedImmediatePhaseAnchor = ({
 
 /**
  * 'phase_start' on a first phase starting now resets the cycle now; a backdated or later start already anchors on itself.
- * Ending a live trial anchors on a date: a reset now is what Stripe's trial_end now already does, so it is dropped,
- * and with no anchor the cycle starts on the old trial end.
+ * Ending a live trial always anchors the cycle: with no anchor requested, it starts on the old trial end.
  */
 export const immediatePhaseBillingCycleAnchor = ({
 	params,
@@ -51,7 +50,6 @@ export const immediatePhaseBillingCycleAnchor = ({
 		currentEpochMs: billingContext.currentEpochMs,
 	});
 	if (!endsLiveTrial({ billingContext })) return anchor;
-	if (anchor === "now") return undefined;
 
 	return (
 		anchor ??

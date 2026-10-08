@@ -3,6 +3,7 @@ import {
 	CusProductStatus,
 	findActiveCustomerProductById,
 	ms,
+	msToSeconds,
 	type SetPlansPreviewResponse,
 	type SetPlansPreviewWarning,
 	stripeToAtmnAmount,
@@ -203,4 +204,31 @@ export const expectSubscriptionInvoiceTotals = async ({
 			}),
 		),
 	).toEqual(totals);
+};
+
+/** Stripe's own upcoming invoice for the subscription renews on `startsAt` for `total` (major units). */
+export const expectStripeUpcomingInvoiceCorrect = async ({
+	ctx,
+	subscriptionId,
+	startsAt,
+	total,
+}: {
+	ctx: TestContext;
+	subscriptionId: string;
+	startsAt: number;
+	total: number;
+}) => {
+	const subscription =
+		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
+	const upcoming = await ctx.stripeCli.invoices.createPreview({
+		customer: subscription.customer as string,
+		subscription: subscriptionId,
+	});
+	expect({
+		startsAt: upcoming.lines.data[0]?.period.start,
+		total: stripeToAtmnAmount({
+			amount: upcoming.total,
+			currency: upcoming.currency,
+		}),
+	}).toEqual({ startsAt: msToSeconds(startsAt), total });
 };
