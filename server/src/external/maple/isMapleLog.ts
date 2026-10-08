@@ -13,12 +13,14 @@ const BILLING_PATHS = [
 export const isMapleLog = (line: string) => {
 	if (line.includes(STRIPE_WEBHOOK_MARKER)) return true;
 
-	const markerIndex = line.indexOf(BILLING_ROUTE_MARKER);
-	if (markerIndex === -1) return false;
-
-	const pathStart = markerIndex + BILLING_ROUTE_MARKER.length;
-	for (const path of BILLING_PATHS) {
-		if (line.startsWith(path, pathStart)) return true;
+	// A query param named `name` can serialize the same marker ahead of req.name, so check every hit.
+	let markerIndex = line.indexOf(BILLING_ROUTE_MARKER);
+	while (markerIndex !== -1) {
+		const pathStart = markerIndex + BILLING_ROUTE_MARKER.length;
+		for (const path of BILLING_PATHS) {
+			if (line.startsWith(path, pathStart)) return true;
+		}
+		markerIndex = line.indexOf(BILLING_ROUTE_MARKER, pathStart);
 	}
 	return false;
 };
