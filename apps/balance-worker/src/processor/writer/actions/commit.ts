@@ -8,6 +8,7 @@ import type {
 	DurableMutationRecord,
 } from "../../../state/types/durableMutation.js";
 import type { SnapshotIntent } from "../../../state/types/snapshotIntent.js";
+import type { ApplyWaits } from "../../../state/types/stateStore.js";
 import {
 	advanceStored,
 	awaitStored,
@@ -208,7 +209,11 @@ function queueApply({
 	baseOffset: bigint;
 }): void {
 	const { state } = scope;
-	state.unapplied.push({ batch, baseOffset });
+	state.unapplied.push({
+		batch,
+		baseOffset,
+		committedAt: writerNowOf({ scope }),
+	});
 	if (state.applying) return;
 	state.applying = true;
 	state.applyTail = applyQueued({ scope });
@@ -223,6 +228,7 @@ async function applyQueued({
 	try {
 		while (state.unapplied.length > 0 && !state.recoveryError) {
 			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
+			const takenAt = writerNowOf({ scope });
 			const batch = taken.flatMap((entry) => entry.batch);
 			const records = timeSync({ label: "writer.apply.build" }, () =>
 				taken.flatMap((entry) =>
@@ -236,7 +242,13 @@ async function applyQueued({
 			const snapshotIntent = timeSync({ label: "writer.apply.intent" }, () =>
 				decideSnapshotIntent({ scope, batch }),
 			);
-			const ok = await applyBatch({ scope, batch, records, snapshotIntent });
+			const ok = await applyBatch({
+				scope,
+				batch,
+				records,
+				snapshotIntent,
+				waits: { unappliedMs: takenAt - (taken[0]?.committedAt ?? takenAt) },
+			});
 			state.unapplied.splice(0, taken.length);
 			if (!ok) return;
 		}
@@ -387,16 +399,19 @@ async function applyBatch({
 	batch,
 	records,
 	snapshotIntent,
+	waits,
 }: {
 	scope: PartitionWriterScope;
 	batch: PendingMutation[];
 	records: DurableMutationRecord[];
 	snapshotIntent: SnapshotIntent;
+	waits: ApplyWaits;
 }): Promise<boolean> {
 	try {
 		const results = await scope.ctx.stateStore.applyDurableMutations({
 			records,
 			snapshotIntent,
+			waits,
 		});
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");

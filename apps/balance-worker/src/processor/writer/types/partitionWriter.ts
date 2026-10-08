@@ -260,6 +260,7 @@ export type StoreWaiter = {
 export type UnappliedBatch = {
 	batch: PendingMutation[];
 	baseOffset: bigint;
+	committedAt: number;
 };
 
 export type PartitionWriterScope = {
