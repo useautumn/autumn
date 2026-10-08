@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"lib": ["ES2022"],
+		"types": ["@cloudflare/workers-types"],
+		"noEmit": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*.ts"]
+}
