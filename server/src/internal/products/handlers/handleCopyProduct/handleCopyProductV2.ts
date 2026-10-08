@@ -3,6 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { SANDBOX_ORG_HEADER } from "@/honoMiddlewares/sandboxAccess.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { copyProductForOrgs } from "./copyProductForOrgs.js";
+import { isSameEnvVariantCopy } from "./isSameEnvVariantCopy.js";
 
 /**
  * Route: POST /v1/products/:productId/copy - Copy a product
@@ -23,11 +24,14 @@ export const handleCopyProductV2 = createRoute({
 		const { product_id: fromProductId } = c.req.param();
 		const { env: toEnv, id: toId, name: toName } = body;
 
-		const promoting =
+		const fromNamedSandboxDashboard =
 			authType === AuthType.Dashboard &&
 			org.is_sandbox === true &&
 			!!c.req.header(SANDBOX_ORG_HEADER) &&
 			!!org.created_by;
+		const promoting =
+			fromNamedSandboxDashboard &&
+			!(await isSameEnvVariantCopy({ ctx, fromProductId, toEnv }));
 
 		const toOrg = promoting
 			? await OrgService.get({ db, orgId: org.created_by as string })
