@@ -55,13 +55,18 @@ export type WorkerBootstrapConfig = {
 	checkpointSource?: PartitionCheckpointSource;
 };
 
-/** The client limits every worker Kafka client uses, the producer thread's included. */
+/** The client limits the worker's consumers and admin client use. */
 export const WORKER_KAFKA_CLIENT_LIMITS = {
 	connectionTimeoutMs: 5000,
 	requestTimeoutMs: 30000,
 	retryCount: 2,
 	initialRetryTimeMs: 100,
 	maxRetryTimeMs: 1000,
+};
+
+export const WORKER_KAFKA_PRODUCER_LIMITS = {
+	...WORKER_KAFKA_CLIENT_LIMITS,
+	requestTimeoutMs: 5000,
 };
 
 /** Every token a client presents, so a broker's refusal can be read against the key and lifetime it was shown. */

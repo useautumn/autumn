@@ -71,7 +71,7 @@ import {
 import {
 	logWorkerKafkaToken,
 	openWorkerResources,
-	WORKER_KAFKA_CLIENT_LIMITS,
+	WORKER_KAFKA_PRODUCER_LIMITS,
 } from "./workerResources.js";
 
 /** Acks are small; the ring only needs room for a burst of them while the decide thread is busy. */
@@ -324,7 +324,7 @@ export async function createBalanceWorker({
 						authMode: env.KAFKA_AUTH_MODE,
 						region: env.AWS_REGION,
 						sasl: env.KAFKA_SASL,
-						limits: WORKER_KAFKA_CLIENT_LIMITS,
+						limits: WORKER_KAFKA_PRODUCER_LIMITS,
 						sendRingBytes: threads.sendRingBytes,
 						ackRingBytes: PRODUCER_ACK_RING_BYTES,
 					},

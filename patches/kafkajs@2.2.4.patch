@@ -1,3 +1,6 @@
+diff --git a/node_modules/kafkajs/.bun-tag-3d272d5bef54c1ac b/.bun-tag-3d272d5bef54c1ac
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/kafkajs/.bun-tag-53fc1d1c63a4d2e0 b/.bun-tag-53fc1d1c63a4d2e0
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
@@ -5,7 +8,7 @@ diff --git a/node_modules/kafkajs/.bun-tag-9af2d68b0d3bdbc0 b/.bun-tag-9af2d68b0
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/src/network/connection.js b/src/network/connection.js
-index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e2747e0a8 100644
+index dded584d8f8f2ccb001939a97f40739f3e51605a..e115dbacbb9cee4d78deb43d6ee25d1ad55a0ebd 100644
 --- a/src/network/connection.js
 +++ b/src/network/connection.js
 @@ -27,6 +27,24 @@ const isAuthenticatedRequest = request => {
@@ -33,7 +36,15 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e
  }
  
  module.exports = class Connection {
-@@ -112,6 +130,7 @@ module.exports = class Connection {
+@@ -99,6 +117,7 @@ module.exports = class Connection {
+       broker: this.broker,
+       logger: logger.namespace('RequestQueue'),
+       isConnected: () => this.isConnected(),
++      onRequestTimeout: request => this.closeAfterRequestTimeout(request),
+     })
+ 
+     this.versions = null
+@@ -112,6 +131,7 @@ module.exports = class Connection {
      }
  
      this.logDebug = log('debug')
@@ -41,7 +52,7 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e
      this.logError = log('error')
  
      const env = getEnv()
-@@ -122,6 +141,7 @@ module.exports = class Connection {
+@@ -122,6 +142,7 @@ module.exports = class Connection {
      this.authenticatedAt = null
      this.sessionLifetime = Long.ZERO
      this.supportAuthenticationProtocol = null
@@ -49,7 +60,7 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e
  
      /**
       * @private
-@@ -376,10 +396,17 @@ module.exports = class Connection {
+@@ -376,10 +397,17 @@ module.exports = class Connection {
     * @param {boolean} [protocol.logResponseError=true] Whether to log errors
     * @returns {Promise<data>} where data is the return of "response#parse"
     */
@@ -68,7 +79,7 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e
  
      this.failIfNotConnected()
  
-@@ -421,8 +448,9 @@ module.exports = class Connection {
+@@ -421,8 +449,9 @@ module.exports = class Connection {
        return
      }
  
@@ -79,7 +90,7 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e
  
        /**
         * @see KIP-219
-@@ -456,10 +484,40 @@ module.exports = class Connection {
+@@ -456,10 +485,40 @@ module.exports = class Connection {
            isBuffer && !this.shouldLogBuffers ? { type: 'Buffer', data: '[filtered]' } : payload,
        })
  
@@ -120,11 +131,60 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..2c213595a5f2e12d65492ff81bbcec3e
    /**
     * @private
     */
+@@ -540,4 +599,24 @@ module.exports = class Connection {
+   rejectRequests(error) {
+     this.requestQueue.rejectAll(error)
+   }
++
++  /**
++   * @private
++   */
++  closeAfterRequestTimeout({ apiName, correlationId }) {
++    if (!this.isConnected()) {
++      return
++    }
++
++    const broker = `${this.host}:${this.port}`
++    this.logWarn('Request timed out; closing the connection so the next request reconnects', {
++      broker,
++      apiName,
++      correlationId,
++    })
++    this.rejectRequests(
++      new KafkaJSConnectionError('Connection closed after a request timed out', { broker })
++    )
++    this.disconnect().catch(() => {})
++  }
+ }
 diff --git a/src/network/requestQueue/index.js b/src/network/requestQueue/index.js
-index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..ac44131f5148611a3e3c6d412559b4f5837b4498 100644
+index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..e12099e3ecaed58f55b4d7a64fb68243dbb4f6a5 100644
 --- a/src/network/requestQueue/index.js
 +++ b/src/network/requestQueue/index.js
-@@ -314,6 +314,9 @@ module.exports = class RequestQueue extends EventEmitter {
+@@ -32,6 +32,7 @@ module.exports = class RequestQueue extends EventEmitter {
+     broker,
+     logger,
+     isConnected = () => true,
++    onRequestTimeout = () => {},
+   }) {
+     super()
+     this.instrumentationEmitter = instrumentationEmitter
+@@ -42,6 +43,7 @@ module.exports = class RequestQueue extends EventEmitter {
+     this.broker = broker
+     this.logger = logger
+     this.isConnected = isConnected
++    this.onRequestTimeout = onRequestTimeout
+ 
+     this.inflight = new Map()
+     this.pending = []
+@@ -138,6 +140,7 @@ module.exports = class RequestQueue extends EventEmitter {
+         this.checkPendingRequests()
+         // Try to emit REQUEST_QUEUE_EMPTY. Otherwise, waitForPendingRequests may stuck forever
+         this[PRIVATE.EMIT_REQUEST_QUEUE_EMPTY]()
++        this.onRequestTimeout({ apiName: pushedRequest.entry.apiName, correlationId })
+       },
+     })
+ 
+@@ -314,6 +317,9 @@ module.exports = class RequestQueue extends EventEmitter {
        if (this.pending.length > 0) {
          scheduleAt = scheduleAt > 0 ? scheduleAt : CHECK_PENDING_REQUESTS_INTERVAL
        }
