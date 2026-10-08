@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	ACTIVE_STATUSES,
+	acceptsCarryOverUsages,
 	CusProductStatus,
 	isFreeProductV2,
 	isOneOffProductV2,
@@ -83,8 +84,8 @@ interface CreateScheduleFormContextValue {
 	/** The first phase is backdated over a live subscription, which keeps its renewal date. */
 	backdatesLiveSubscription: boolean;
 	hasActiveSubscription: boolean;
-	/** The first phase replaces a live plan now, so its usage can carry over. */
-	replacesPlanNow: boolean;
+	/** The first phase replaces a live plan or resets the cycle now, so its usage can carry over. */
+	carriesUsageNow: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -291,17 +292,27 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const replacesPlanNow = useMemo(
+	const carriesUsageNow = useMemo(
 		() =>
-			firstPhaseReplacesPlanNow({
-				phases: formValues.phases,
-				customerProducts: scopedCustomerProducts,
-				entities: fullCustomer?.entities ?? [],
-				products,
-				nowMs,
+			acceptsCarryOverUsages({
+				replacesPlanNow: firstPhaseReplacesPlanNow({
+					phases: formValues.phases,
+					customerProducts: scopedCustomerProducts,
+					entities: fullCustomer?.entities ?? [],
+					products,
+					nowMs,
+				}),
+				resetsCycleNow:
+					!firstPhaseStartsLater({ phases: formValues.phases, nowMs }) &&
+					formValues.resetBillingCycle &&
+					!backdatesLiveSubscription &&
+					formValues.billingCycleAnchorMode === "now",
 			}),
 		[
 			formValues.phases,
+			formValues.resetBillingCycle,
+			formValues.billingCycleAnchorMode,
+			backdatesLiveSubscription,
 			scopedCustomerProducts,
 			fullCustomer?.entities,
 			products,
@@ -313,10 +324,10 @@ export function CreateScheduleFormProvider({
 		const { carryOverUsages, carryOverUsageFeatureIds } =
 			form.store.state.values;
 		return {
-			carryOverUsages: replacesPlanNow && carryOverUsages,
+			carryOverUsages: carriesUsageNow && carryOverUsages,
 			carryOverUsageFeatureIds,
 		};
-	}, [form.store, replacesPlanNow]);
+	}, [form.store, carriesUsageNow]);
 
 	const getEnablePlanImmediately = useCallback(
 		() => form.store.state.values.enablePlanImmediately ?? false,
@@ -373,7 +384,7 @@ export function CreateScheduleFormProvider({
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,
-		carryOverUsages: replacesPlanNow && formValues.carryOverUsages,
+		carryOverUsages: carriesUsageNow && formValues.carryOverUsages,
 		carryOverUsageFeatureIds: formValues.carryOverUsageFeatureIds,
 		stripeSubscriptionId,
 		freeTrial: trialFormValues,
@@ -454,7 +465,7 @@ export function CreateScheduleFormProvider({
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			hasActiveSubscription,
-			replacesPlanNow,
+			carriesUsageNow,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -481,7 +492,7 @@ export function CreateScheduleFormProvider({
 			allowStartedPhaseBackdate,
 			backdatesLiveSubscription,
 			hasActiveSubscription,
-			replacesPlanNow,
+			carriesUsageNow,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,

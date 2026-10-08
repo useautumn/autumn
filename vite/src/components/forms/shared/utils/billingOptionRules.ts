@@ -37,7 +37,7 @@ export type BillingOptionState = {
 	showEndDate?: boolean;
 	// schedule
 	hasPaidRecurringPlan?: boolean;
-	replacesPlanNow?: boolean;
+	carriesUsageNow?: boolean;
 };
 
 const HIDDEN: BillingOptionRule = {
@@ -112,8 +112,8 @@ function scheduleRules(state: BillingOptionState): BillingOptionRules {
 		startDate: HIDDEN,
 		endDate: show(!!state.hasPaidRecurringPlan),
 		carryOverBalances: HIDDEN,
-		// set_plans rejects carry-over unless the first phase replaces a plan now.
-		carryOverUsages: show(!!state.replacesPlanNow),
+		// set_plans rejects carry-over unless the first phase replaces a plan or resets the cycle now.
+		carryOverUsages: show(!!state.carriesUsageNow),
 		overrideLineItems: HIDDEN,
 		newBillingSubscription: HIDDEN,
 	};

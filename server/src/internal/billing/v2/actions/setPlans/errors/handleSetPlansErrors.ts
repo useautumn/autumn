@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	acceptsCarryOverUsages,
 	type BillingPlan,
 	type CreateScheduleBillingContext,
 	ErrCode,
@@ -131,8 +132,11 @@ export const handleSetPlansComputeErrors = async ({
 	handleCarryOverUsagesErrors({
 		ctx,
 		carryOverUsages: params.carry_over_usages,
-		replacesPlanNow:
-			immediatePhaseTransition.replacedCustomerProducts.length > 0,
+		replacesPlanNow: acceptsCarryOverUsages({
+			replacesPlanNow:
+				immediatePhaseTransition.replacedCustomerProducts.length > 0,
+			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+		}),
 	});
 	handleFutureStartActivationErrors({ billingContext, autumnBillingPlan });
 	handleFreePhaseStripeConnectionErrors({

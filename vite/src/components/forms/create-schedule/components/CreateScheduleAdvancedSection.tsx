@@ -42,7 +42,7 @@ export function CreateScheduleAdvancedSection() {
 		nowMs,
 		backdatesLiveSubscription,
 		hasActiveSubscription,
-		replacesPlanNow,
+		carriesUsageNow,
 		canScheduleTrial,
 		isExistingSchedule,
 		previewQuery,
@@ -62,7 +62,7 @@ export function CreateScheduleAdvancedSection() {
 		flow: "schedule",
 		state: {
 			hasPaidRecurringPlan: hasPaidRecurringSchedulePlan({ phases, products }),
-			replacesPlanNow,
+			carriesUsageNow,
 		},
 	});
 	const resetRule = backdatesLiveSubscription
