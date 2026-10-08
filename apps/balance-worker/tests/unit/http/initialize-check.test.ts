@@ -233,6 +233,50 @@ function createFixture({
 }
 
 test.concurrent(
+	"a payload's own command cannot replace the routed command on initialize or a billing plan",
+	async () => {
+		const fixture = createFixture();
+		try {
+			const other = {
+				...initialization.command,
+				commandId: "smuggled",
+				identity: { ...initialization.command.identity, customerId: "other" },
+			};
+			for (const [path, payload] of [
+				[
+					"initialize",
+					{ state, catalogRows: initialization.catalogRows, command: other },
+				],
+				["apply-billing-plan", { catalogRows: [], command: other }],
+			] as const) {
+				const response = await fixture.app.request(`/v1/${path}`, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({
+						route: { partition: 0, routeEpoch: "1" },
+						command: initialization.command,
+						payload,
+					}),
+				});
+				const body = await response.json();
+				expect(body?.state?.identity?.customerId ?? body?.error?.code).not.toBe(
+					"other",
+				);
+			}
+			const stored = fixture.store.readState({
+				identity: initialization.command.identity,
+			});
+			expect(stored?.identity.customerId).toBe(
+				initialization.command.identity.customerId,
+			);
+			expect(fixture.store.readState({ identity: other.identity })).toBeNull();
+		} finally {
+			await fixture.close();
+		}
+	},
+);
+
+test.concurrent(
 	"initialize, track and check share committed state and durable retry identity",
 	async () => {
 		const fixture = createFixture();

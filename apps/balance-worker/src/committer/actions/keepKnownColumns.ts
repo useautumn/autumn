@@ -23,24 +23,33 @@ const knownColumnsOf = <Value>({
 		}),
 	);
 
-/** A newer build's column is dropped before the SQL is built: this build's table does not have it, so the row lands without it. */
+const isEmpty = (fields: object): boolean => Object.keys(fields).length === 0;
+
+/** A newer build's column is dropped before the SQL is built: this build's table does not have it, so the row lands
+ *  without it. Null for an update left with nothing to set: that row has nothing this build can land. */
 export const keepKnownColumns = ({
 	change,
 }: {
 	change: SubjectRowChange;
-}): SubjectRowChange => {
+}): SubjectRowChange | null => {
 	const { table } = change;
 	switch (change.op) {
 		case "insert":
 			return { ...change, row: knownColumnsOf({ table, fields: change.row }) };
-		case "update":
-			return {
+		case "update": {
+			const update = {
 				...change,
 				set: knownColumnsOf({ table, fields: change.set }),
 				add: knownColumnsOf({ table, fields: change.add }),
 				addEntries: knownColumnsOf({ table, fields: change.addEntries }),
 				guard: knownColumnsOf({ table, fields: change.guard }),
 			};
+			const landsNothing =
+				isEmpty(update.set) &&
+				isEmpty(update.add) &&
+				isEmpty(update.addEntries);
+			return landsNothing ? null : update;
+		}
 		default:
 			return change;
 	}

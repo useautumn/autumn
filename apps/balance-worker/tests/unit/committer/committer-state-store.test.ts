@@ -246,6 +246,35 @@ describe("committer state store", () => {
 		});
 	});
 
+	test("a change that only touched a newer build's columns lands nothing, and the flush still commits", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 0n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+		const newer = {
+			...mutation,
+			changes: mutation.changes.map((change) =>
+				change.op === "increment"
+					? { ...change, add: { future_counter: 1 } }
+					: change,
+			),
+		} as typeof mutation;
+		const results = await store.applyDurableMutations({
+			records: [
+				{ position: { topic, partition, offset: 0n }, mutation: newer },
+			],
+		});
+
+		expect(results).toEqual([
+			{ kind: "applied", mutation: newer, nextOffset: 1n },
+		]);
+		expect(fake.updates).toEqual([]);
+		expect(fake.transactions).toEqual(["committed"]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(1n);
+	});
+
 	test("a consumed command moves the command bookmark with the rows; one sent over HTTP leaves it alone", async () => {
 		const fake = createFakeCommitterDb({ storedNextOffset: 0n });
 		const store = createStore(fake);

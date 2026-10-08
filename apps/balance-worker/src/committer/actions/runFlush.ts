@@ -216,14 +216,15 @@ const collectChanges = ({
 	for (const call of flush.calls) {
 		for (const record of call.records) {
 			for (const change of record.mutation.changes) {
-				changes.push(
-					keepKnownColumns({
-						change: rowChangeToSubjectRowChange({
-							change,
-							commandType: record.mutation.command.type,
-						}),
+				const known = keepKnownColumns({
+					change: rowChangeToSubjectRowChange({
+						change,
+						commandType: record.mutation.command.type,
 					}),
-				);
+				});
+				// An update that only touched a newer build's columns has nothing left to land.
+				if (known === null) continue;
+				changes.push(known);
 				recordOf.push(record);
 			}
 		}

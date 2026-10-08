@@ -14,8 +14,10 @@ export async function receiveApplyBillingPlan(
 ) {
 	const { runtime } = context.get("ctx");
 	const { command, payload } = context.get("request");
+	// The routed command stays authoritative: only the payload's own fields are read.
+	const { catalogRows } = applyBillingPlanPayloadSchema.parse(payload);
 	const request = parseApplyBillingPlanRequest({
-		input: { command, ...applyBillingPlanPayloadSchema.parse(payload) },
+		input: { command, catalogRows },
 	});
 	const requestLog = context.get("requestLog");
 	requestLog.command = {
