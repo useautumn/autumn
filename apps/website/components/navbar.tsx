@@ -275,7 +275,7 @@ export default function Navbar({
 										Icon={IconDashboard}
 										ref={dashboardIconRef}
 									/>
-									<span className="font-sans font-medium tracking-tight">
+									<span className="font-sans text-[13px] font-medium antialiased">
 										Dashboard
 									</span>
 								</div>
