@@ -127,14 +127,15 @@ summary?: Array<{
 
 **goal** — `applyBillingPlan` says what the change was and which plans; every command says who asked, a person or a system (lock sweep, expiry timer, Stripe webhook, reset cron, migration run, auto top-up job); both required on the record from the first stamped one, so task 3 waits on this
 **steps** — two releases, because the request parsers and command schemas are strict and a worker only goes live on the manual blue/green swap: (a) engine and worker accept optional `actor` and `intent`, shipped and swapped live; (b) the server sends them, behind a flag or in a later release · `requestContextToCommandBase` fills `actor` from ctx: `authType`, `apiKeyId`, `userId`, `impersonatedBy` · every system path names itself where it builds its command: the lock sweep, the expiry timer, the Stripe webhook middlewares, the reset cron, the migration lane, the auto top-up job · `intent` on `applyBillingPlan`: action, from and to plan ids, the migration id when there is one; attach's action from its `AttachBranch`, the rest from the route that built the plan, set beside the plan in `writeCustomerRowsThroughWorker` · the worker's lazy reset carries `{ type: "reset" }` with the triggering request id in its details · the log is safe either way: records parse their command loose and replay applies only `changes`
-**verify** — bun ts · cd packages/balance-engine && bun test tests/unit/models (a command with the fields, one without, a record with them parsed by the loose log schema) · cd server && bun test tests/unit/balanceWorker · manual: (a) swapped live and a day of traffic before (b) is flagged on; one `billing.attach` on dev, read the command off the local log
+**verify** — bun ts · cd packages/balance-engine && bun test tests/unit/models (a command with the fields, one without, a record with them parsed by the loose log schema) · cd server && UNIT_TESTS=1 bun test tests/unit/balanceWorker (the unit runner's env; bare `bun test` opens a Neon branch) · manual: (a) swapped live and a day of traffic before (b) is flagged on; one `billing.attach` on dev, read the command off the local log
 
 **shape**
 ```
-baseCommand         + actor:  { type: AuthType | "lock_sweep" | "expiry_timer" | "reset_cron" | "reset" | "migration_run" | "auto_topup", id?, name? }
-applyBillingPlan    + intent: { action: "new" | "upgrade" | "downgrade" | "renew" | "add_on" | "one_off" | "new_version" | "scheduled_switch" | "cancel" | "uncancel"
-                                       | "quantity" | "manual_topup" | "auto_topup" | "set_plans" | "migration" | "sync" | "rollback" | "restore" | "license",
-                                from_plan_ids: string[], to_plan_ids: string[], migration_id?: string }
+baseCommand         + actor:  { type: string, id?, name? }        known types, exported for producers: AuthType | "lock_sweep" | "expiry_timer" | "reset_cron" | "reset" | "migration_run" | "auto_topup"
+applyBillingPlan    + intent: { action: string, fromPlanIds: string[], toPlanIds: string[], migrationId?: string }
+                                known actions, exported for producers: "new" | "upgrade" | "downgrade" | "renew" | "add_on" | "one_off" | "new_version" | "scheduled_switch"
+                                | "cancel" | "uncancel" | "quantity" | "manual_topup" | "auto_topup" | "set_plans" | "migration" | "sync" | "rollback" | "restore" | "license"
+on the wire both are open strings: a label that is never replayed must not be able to reject a command, and a new kind must not need two releases; a reader maps an unknown value to a generic label
 ```
 
 **scenarios** — the command that lands: its actor and its intent

@@ -132,10 +132,10 @@ events  + log_partition int · log_offset bigint · balance_feature_id text · r
 ApiBalanceHistoryEntry { id · occurred_at · effective_at · feature_id · entity_id · command_entity_id
   why:   { type: "track", value, event_id, properties, deductions }
        | { type: "track_bucket", count, total_value, from, to }                 tracks between two other entries, within one UTC day
-       | { type: "plan_change", action, from_plan_ids, to_plan_ids }
+       | { type: "plan_change", action, from_plan_ids, to_plan_ids }            action: a known one, else "other"
        | { type: "external_change", from, to }                                 the gap between two records
        | { type: "reset" | "update" | "delete" | "recalculate" | "finalize" | "initialize", … }
-  actor: { type: AuthType | "lock_sweep" | "expiry_timer" | "reset_cron" | "reset" | "migration_run" | "auto_topup" | "unknown", id, name }
+  actor: { type: AuthType | "lock_sweep" | "expiry_timer" | "reset_cron" | "reset" | "migration_run" | "auto_topup" | "unknown", id, name }   an unknown wire value reads as "unknown"
   before · after: { granted, remaining, usage } | null · rows: [{ id, plan_id, before, after }] | null }
 ListBalanceHistoryParams   = ListPageRequestSchema + { customer_id!, feature_id!, custom_range?, tracks?: "buckets" | "lines" }   lines needs custom_range
 ListBalanceHistoryResponse = page + engine: { routed: boolean, history_since: number | null }

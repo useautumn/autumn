@@ -25,6 +25,11 @@ export type { ApplyBillingPlanCommand } from "./commands/applyBillingPlan/types/
 export type { ApplyBillingPlanRequest } from "./commands/applyBillingPlan/types/applyBillingPlanRequest.js";
 export type { ApplyBillingPlanResult } from "./commands/applyBillingPlan/types/applyBillingPlanResult.js";
 export type {
+	BillingPlanIntent,
+	KnownBillingPlanAction,
+} from "./commands/applyBillingPlan/types/billingPlanIntent.js";
+export { knownBillingPlanActions } from "./commands/applyBillingPlan/types/billingPlanIntent.js";
+export type {
 	BillingPlanOp,
 	BillingPlanUpdateOp,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
@@ -121,6 +126,15 @@ export type {
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
+export type {
+	CommandActor,
+	KnownCommandActorType,
+	SystemActorType,
+} from "./models/command/commandActor.js";
+export {
+	knownCommandActorTypes,
+	systemActorTypes,
+} from "./models/command/commandActor.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
