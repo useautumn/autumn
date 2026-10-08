@@ -9,6 +9,7 @@ import {
 	type FullCusProduct,
 	isCustomerProductCanceling,
 	ProrationBehavior,
+	parseVersion,
 	SuccessCode,
 } from "@autumn/shared";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
@@ -56,8 +57,11 @@ export const handleLegacyUpgradeFlow = async ({
 
 	const { logger, db } = ctx;
 
-	if (curCusProduct?.api_semver) {
-		attachParams.apiVersion = curCusProduct.api_semver;
+	const curApiVersion = curCusProduct?.api_semver
+		? parseVersion({ versionStr: curCusProduct.api_semver })
+		: null;
+	if (curApiVersion) {
+		attachParams.apiVersion = curApiVersion;
 	}
 
 	let sub = curSub;
