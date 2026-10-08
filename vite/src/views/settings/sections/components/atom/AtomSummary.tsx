@@ -2,7 +2,7 @@ import type { ApiByocCache } from "@autumn/shared";
 import { CopyButton } from "@autumn/ui";
 import { format } from "date-fns";
 
-export const ByocCacheSummary = ({ cache }: { cache: ApiByocCache }) => (
+export const AtomSummary = ({ cache }: { cache: ApiByocCache }) => (
 	<dl className="flex flex-col text-sm">
 		<div className="flex items-center gap-3 py-1.5">
 			<dt className="w-32 shrink-0 text-tertiary-foreground">Environment</dt>

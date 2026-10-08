@@ -19,7 +19,7 @@ export const ByocCacheStatusSchema = z
 	);
 
 export const ApiByocCacheSchema = z.object({
-	env: z.enum(AppEnv).describe("The environment this cache serves."),
+	env: z.enum(AppEnv).describe("The environment this Atom serves."),
 	status: ByocCacheStatusSchema,
 	deployment_id: z
 		.string()
@@ -28,18 +28,16 @@ export const ApiByocCacheSchema = z.object({
 	endpoint_url: z
 		.string()
 		.nullable()
-		.describe("Where the cache answers, once it is running."),
-	created_at: z
-		.number()
-		.describe("When the cache was requested, ms since epoch."),
+		.describe("Where Atom answers, once it is running."),
+	created_at: z.number().describe("When Atom was requested, ms since epoch."),
 	cpu: z
 		.number()
 		.nullable()
-		.describe("vCPUs of the cache's machine, once it is running."),
+		.describe("vCPUs of Atom's machine, once it is running."),
 	memory: z
 		.number()
 		.nullable()
-		.describe("Memory of the cache's machine in GiB, once it is running."),
+		.describe("Memory of Atom's machine in GiB, once it is running."),
 });
 
 const OFFERED_MACHINES = BYOC_CACHE_MACHINES.map(
@@ -64,8 +62,8 @@ const isDefaultOrOfferedMachine = ({
 };
 
 const ByocCacheResourcesSchema = z.object({
-	cpu: z.number().describe("vCPUs of the cache's machine."),
-	memory: z.number().describe("Memory of the cache's machine in GiB."),
+	cpu: z.number().describe("vCPUs of Atom's machine."),
+	memory: z.number().describe("Memory of Atom's machine in GiB."),
 });
 
 const offeredMachineError = {
@@ -75,7 +73,7 @@ const offeredMachineError = {
 export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
 	.refine(isDefaultOrOfferedMachine, offeredMachineError)
 	.describe(
-		`The machine to start the cache on; defaults to ${DEFAULT_BYOC_CACHE_MACHINE.cpu} vCPU / ${DEFAULT_BYOC_CACHE_MACHINE.memory} GiB.`,
+		`The machine to start Atom on; defaults to ${DEFAULT_BYOC_CACHE_MACHINE.cpu} vCPU / ${DEFAULT_BYOC_CACHE_MACHINE.memory} GiB.`,
 	);
 
 export const ResizeByocCacheParamsSchema = ByocCacheResourcesSchema.refine(
@@ -92,7 +90,7 @@ export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 		),
 	token: z
 		.string()
-		.describe("Sent as `x-atom-token` on every request to the cache."),
+		.describe("Sent as `x-atom-token` on every request to Atom."),
 });
 
 export const GetByocCacheParamsSchema = z.object({});

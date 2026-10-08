@@ -5,7 +5,7 @@ import type {
 	GetByocCacheResponse,
 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useByocCacheQueryKey } from "@/hooks/queries/useByocCacheQuery";
+import { useAtomQueryKey } from "@/hooks/queries/useAtomQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /** Opened inside the click so the browser allows it; the setup link is loaded into it once the server returns one. */
@@ -16,10 +16,10 @@ const openSetupTab = (): Window | null => {
 };
 
 /** Create, resize and delete write straight into the query cache, so the card advances without a refetch. */
-export const useByocCacheActions = () => {
+export const useAtomActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const queryKey = useByocCacheQueryKey();
+	const queryKey = useAtomQueryKey();
 
 	const setCache = (cache: GetByocCacheResponse["cache"]) =>
 		queryClient.setQueryData<GetByocCacheResponse>(queryKey, { cache });

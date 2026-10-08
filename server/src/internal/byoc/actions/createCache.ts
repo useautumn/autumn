@@ -123,7 +123,7 @@ export const createCache = ({
 		lockKey: cacheLockKey({ ctx }),
 		ttlMs: CACHE_LOCK_TTL_MS,
 		errorMessage:
-			"Cache setup is already in progress, try again in a few seconds",
+			"Atom setup is already in progress, try again in a few seconds",
 		fn: () => startCacheSetup({ ctx, params }),
 	});
 

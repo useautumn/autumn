@@ -1,6 +1,6 @@
 import { StepBadge } from "@autumn/ui";
 
-export const ByocCacheSetupStep = ({
+export const AtomSetupStep = ({
 	number,
 	title,
 	description,

@@ -10,14 +10,11 @@ import {
 } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useAppForm } from "@/hooks/form/form";
-import { ByocCacheMachineCard } from "./ByocCacheMachineCard";
-import {
-	BYOC_CACHE_RESIZE_NOTE,
-	byocCacheMachineLabel,
-} from "./byocCacheMachineDisplay";
+import { AtomMachineCard } from "./AtomMachineCard";
+import { ATOM_RESIZE_NOTE, atomMachineLabel } from "./atomMachineDisplay";
 
-/** Nothing resizes until the user ticks that the cache will be briefly unavailable. */
-export const ResizeByocCacheDialog = ({
+/** Nothing resizes until the user ticks that Atom will be briefly unavailable. */
+export const ResizeAtomDialog = ({
 	open,
 	onOpenChange,
 	current,
@@ -26,7 +23,7 @@ export const ResizeByocCacheDialog = ({
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/** Null when the cache runs on a machine Autumn does not offer. */
+	/** Null when Atom runs on a machine Autumn does not offer. */
 	current: ByocCacheMachine | null;
 	target: ByocCacheMachine;
 	onConfirm: () => Promise<void>;
@@ -52,30 +49,28 @@ export const ResizeByocCacheDialog = ({
 					}}
 				>
 					<DialogHeader>
-						<DialogTitle>Resize cache</DialogTitle>
+						<DialogTitle>Resize Atom</DialogTitle>
 						<DialogDescription>
-							Moves the cache to a new machine in your AWS account.
+							Moves Atom to a new machine in your AWS account.
 						</DialogDescription>
 					</DialogHeader>
 
 					<div className="flex items-center gap-2">
 						{current && (
 							<>
-								<ByocCacheMachineCard caption="Current" machine={current} />
+								<AtomMachineCard caption="Current" machine={current} />
 								<ArrowRightIcon className="size-3.5 shrink-0 text-subtle" />
 							</>
 						)}
-						<ByocCacheMachineCard caption="New" machine={target} isTarget />
+						<AtomMachineCard caption="New" machine={target} isTarget />
 					</div>
 
-					<p className="text-sm text-tertiary-foreground">
-						{BYOC_CACHE_RESIZE_NOTE}
-					</p>
+					<p className="text-sm text-tertiary-foreground">{ATOM_RESIZE_NOTE}</p>
 
 					<form.AppField name="acknowledged">
 						{(field) => (
 							<field.CheckboxField
-								label="I understand the cache is unavailable for up to a minute"
+								label="I understand Atom is unavailable for up to a minute"
 								labelClassName="text-sm text-muted-foreground"
 								hideFieldInfo
 							/>
@@ -102,7 +97,7 @@ export const ResizeByocCacheDialog = ({
 									disabled={!acknowledged}
 									isLoading={isSubmitting}
 								>
-									Resize to {byocCacheMachineLabel(target)}
+									Resize to {atomMachineLabel(target)}
 								</Button>
 							)}
 						</form.Subscribe>

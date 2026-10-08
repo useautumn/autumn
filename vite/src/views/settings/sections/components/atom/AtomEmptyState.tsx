@@ -4,23 +4,23 @@ import {
 } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { useState } from "react";
-import { ByocCacheMachineTable } from "./ByocCacheMachineTable";
-import { ByocCacheSetupStep } from "./ByocCacheSetupStep";
+import { AtomMachineTable } from "./AtomMachineTable";
+import { AtomSetupStep } from "./AtomSetupStep";
 
 const LATER_STEPS = [
 	{
 		title: "Deploy it into your AWS account",
 		description:
-			"One CloudFormation stack runs the cache on that machine. Nothing in your network opens to us.",
+			"One CloudFormation stack runs Atom on that machine. Nothing in your network opens to us.",
 	},
 	{
 		title: "Autumn keeps it in sync",
 		description:
-			"Every balance change is pushed to the cache, so checks answer without a round trip to Autumn.",
+			"Every balance change is pushed to Atom, so checks answer without a round trip to Autumn.",
 	},
 ];
 
-export const ByocCacheEmptyState = ({
+export const AtomEmptyState = ({
 	onDeploy,
 	isDeploying,
 }: {
@@ -43,19 +43,19 @@ export const ByocCacheEmptyState = ({
 			</div>
 
 			<ol className="flex w-full flex-col gap-5">
-				<ByocCacheSetupStep
+				<AtomSetupStep
 					number={1}
 					title="Pick a machine size"
 					description="The AWS setup doesn't apply this yet: pick the same machine under Configure before you launch."
 				>
-					<ByocCacheMachineTable
+					<AtomMachineTable
 						selected={machine}
 						onSelect={setMachine}
 						disabled={isDeploying}
 					/>
-				</ByocCacheSetupStep>
+				</AtomSetupStep>
 				{LATER_STEPS.map((step, index) => (
-					<ByocCacheSetupStep key={step.title} number={index + 2} {...step} />
+					<AtomSetupStep key={step.title} number={index + 2} {...step} />
 				))}
 			</ol>
 
@@ -65,7 +65,7 @@ export const ByocCacheEmptyState = ({
 					onClick={() => onDeploy(machine)}
 					isLoading={isDeploying}
 				>
-					Deploy cache
+					Set up Atom
 				</Button>
 				<span className="text-xs text-subtle">
 					Opens the AWS setup in a new tab

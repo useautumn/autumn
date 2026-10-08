@@ -10,17 +10,17 @@ import {
 } from "@autumn/ui";
 import { useId } from "react";
 import { useAppForm } from "@/hooks/form/form";
-import type { ByocCacheRemovalDisplay } from "./byocCacheStatusDisplay";
+import type { AtomRemovalDisplay } from "./atomStatusDisplay";
 
 /** A removal that loses something only runs once `confirmPhrase` is typed out. */
-export const DeleteByocCacheDialog = ({
+export const DeleteAtomDialog = ({
 	removal,
 	confirmPhrase,
 	open,
 	onOpenChange,
 	onConfirm,
 }: {
-	removal: ByocCacheRemovalDisplay;
+	removal: AtomRemovalDisplay;
 	confirmPhrase: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;

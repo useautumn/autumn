@@ -1,16 +1,16 @@
 import type { ApiByocCache } from "@autumn/shared";
 import { cn } from "@/lib/utils";
-import { ByocCacheSummary } from "./ByocCacheSummary";
-import { BYOC_CACHE_STATUS_DISPLAY } from "./byocCacheStatusDisplay";
+import { AtomSummary } from "./AtomSummary";
+import { ATOM_STATUS_DISPLAY } from "./atomStatusDisplay";
 
-export const ByocCacheStatusCard = ({
+export const AtomStatusCard = ({
 	cache,
 	actions,
 }: {
 	cache: ApiByocCache;
 	actions: React.ReactNode;
 }) => {
-	const display = BYOC_CACHE_STATUS_DISPLAY[cache.status];
+	const display = ATOM_STATUS_DISPLAY[cache.status];
 
 	return (
 		<div className="flex flex-col gap-4 rounded-lg border bg-card p-4">
@@ -29,7 +29,7 @@ export const ByocCacheStatusCard = ({
 				</p>
 			</div>
 
-			<ByocCacheSummary cache={cache} />
+			<AtomSummary cache={cache} />
 
 			<div className="flex flex-wrap items-center gap-2">{actions}</div>
 		</div>

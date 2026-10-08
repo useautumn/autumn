@@ -11,7 +11,7 @@ import {
 	TableCell,
 	TableRow,
 } from "../../../SettingsTable";
-import { byocCacheMachineLabel } from "./byocCacheMachineDisplay";
+import { atomMachineLabel } from "./atomMachineDisplay";
 
 const COLUMNS = [
 	{ label: "Size", width: "32%" },
@@ -21,14 +21,14 @@ const COLUMNS = [
 	{ label: "Est. / month", width: "15%" },
 ] as const;
 
-export const ByocCacheMachineTable = ({
+export const AtomMachineTable = ({
 	selected,
 	current,
 	onSelect,
 	disabled = false,
 }: {
 	selected: ByocCacheMachine;
-	/** The machine the cache runs on now, marked in its row; none before setup. */
+	/** The machine Atom runs on now, marked in its row; none before setup. */
 	current?: ByocCacheMachine | null;
 	onSelect: (machine: ByocCacheMachine) => void;
 	disabled?: boolean;
@@ -67,7 +67,7 @@ export const ByocCacheMachineTable = ({
 									<div className="flex items-center gap-3">
 										<RadioGroupItem value={machine.instanceType} />
 										<span className="font-medium text-foreground">
-											{byocCacheMachineLabel(machine)}
+											{atomMachineLabel(machine)}
 										</span>
 										{isCurrent && (
 											<span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-tertiary-foreground">

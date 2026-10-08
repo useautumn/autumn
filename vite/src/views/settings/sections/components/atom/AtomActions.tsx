@@ -1,8 +1,8 @@
 import { type ApiByocCache, ByocCacheStatus } from "@autumn/shared";
 import { Button } from "@autumn/ui";
-import { BYOC_CACHE_STATUS_DISPLAY } from "./byocCacheStatusDisplay";
+import { ATOM_STATUS_DISPLAY } from "./atomStatusDisplay";
 
-export const ByocCacheActions = ({
+export const AtomActions = ({
 	cache,
 	setupUrl,
 	onGetSetupLink,
@@ -16,7 +16,7 @@ export const ByocCacheActions = ({
 	onDelete: () => void;
 }) => {
 	const isAwaitingSetup = cache.status === ByocCacheStatus.AwaitingSetup;
-	const { removal } = BYOC_CACHE_STATUS_DISPLAY[cache.status];
+	const { removal } = ATOM_STATUS_DISPLAY[cache.status];
 
 	return (
 		<>

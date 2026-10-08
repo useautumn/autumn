@@ -4,7 +4,7 @@ import {
 } from "@autumn/shared";
 
 /** How the destructive action reads: cancelling a setup is not deleting a live cache. */
-export type ByocCacheRemovalDisplay = {
+export type AtomRemovalDisplay = {
 	action: string;
 	description: string;
 	doneMessage: string;
@@ -12,14 +12,14 @@ export type ByocCacheRemovalDisplay = {
 	consequences: string[];
 };
 
-type ByocCacheStatusDisplay = {
+type AtomStatusDisplay = {
 	label: string;
 	description: string;
 	dotClassName: string;
-	removal: ByocCacheRemovalDisplay;
+	removal: AtomRemovalDisplay;
 };
 
-const CANCEL_SETUP: ByocCacheRemovalDisplay = {
+const CANCEL_SETUP: AtomRemovalDisplay = {
 	action: "Cancel setup",
 	description:
 		"Autumn forgets this setup. Nothing was created in your AWS account yet, and you can deploy again at any time.",
@@ -27,11 +27,11 @@ const CANCEL_SETUP: ByocCacheRemovalDisplay = {
 	consequences: [],
 };
 
-const DELETE_CACHE: ByocCacheRemovalDisplay = {
-	action: "Delete cache",
+const DELETE_ATOM: AtomRemovalDisplay = {
+	action: "Delete Atom",
 	description:
-		"Tears down the cache in your AWS account. You can deploy a new one later.",
-	doneMessage: "Cache deleted",
+		"Tears down Atom in your AWS account. You can deploy a new one later.",
+	doneMessage: "Atom deleted",
 	consequences: [
 		"Every check goes to the Autumn API, so expect slower answers",
 		"The machine and its volume are removed, with every stored balance",
@@ -39,10 +39,7 @@ const DELETE_CACHE: ByocCacheRemovalDisplay = {
 	],
 };
 
-export const BYOC_CACHE_STATUS_DISPLAY: Record<
-	ByocCacheStatus,
-	ByocCacheStatusDisplay
-> = {
+export const ATOM_STATUS_DISPLAY: Record<ByocCacheStatus, AtomStatusDisplay> = {
 	[CacheStatus.AwaitingSetup]: {
 		label: "Waiting for setup",
 		description:
@@ -52,22 +49,21 @@ export const BYOC_CACHE_STATUS_DISPLAY: Record<
 	},
 	[CacheStatus.Provisioning]: {
 		label: "Provisioning",
-		description:
-			"Creating the table in your account. This usually takes under a minute.",
+		description: "Starting Atom in your AWS account.",
 		dotClassName: "bg-amber-500 motion-safe:animate-pulse",
-		removal: DELETE_CACHE,
+		removal: DELETE_ATOM,
 	},
 	[CacheStatus.Ready]: {
 		label: "Ready",
-		description: "The cache is live in your account.",
+		description: "Atom is live in your account.",
 		dotClassName: "bg-green-500",
-		removal: DELETE_CACHE,
+		removal: DELETE_ATOM,
 	},
 	[CacheStatus.Failed]: {
 		label: "Setup failed",
 		description:
 			"The deployment did not finish. Delete it and deploy again to start over.",
 		dotClassName: "bg-red-500",
-		removal: { ...DELETE_CACHE, action: "Delete and start over" },
+		removal: { ...DELETE_ATOM, action: "Delete and start over" },
 	},
 };

@@ -30,7 +30,7 @@ const envToAlienConfig = (): AlienConfig | null => {
 const toByocUnavailable = ({ error }: { error: unknown }) => {
 	if (!isAlienRequestError(error)) return error;
 	return new RecaseError({
-		message: "Cache deployments are unavailable right now. Try again shortly.",
+		message: "Atom is unavailable right now. Try again shortly.",
 		code: ErrCode.ByocUnavailable,
 		statusCode: 503,
 		data: { path: error.path, status: error.status, detail: error.detail },

@@ -12,15 +12,15 @@ const POLL_INTERVAL_MS = 2000;
 const isSettling = (status: ByocCacheStatus | undefined) =>
 	status === CacheStatus.AwaitingSetup || status === CacheStatus.Provisioning;
 
-export const useByocCacheQueryKey = () => {
+export const useAtomQueryKey = () => {
 	const buildKey = useQueryKeyFactory();
-	return buildKey(["byoc-cache"]);
+	return buildKey(["atom"]);
 };
 
 /** The env's BYOC cache, polled while it waits on setup or provisions. */
-export const useByocCacheQuery = ({ enabled = true } = {}) => {
+export const useAtomQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
-	const queryKey = useByocCacheQueryKey();
+	const queryKey = useAtomQueryKey();
 
 	const { data, isLoading, error, refetch } = useQuery<GetByocCacheResponse>({
 		queryKey,

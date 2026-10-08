@@ -11,7 +11,7 @@ export const deleteCache = ({ ctx }: { ctx: AutumnContext }) =>
 		lockKey: cacheLockKey({ ctx }),
 		ttlMs: CACHE_LOCK_TTL_MS,
 		errorMessage:
-			"A cache change is already in progress, try again in a few seconds",
+			"An Atom change is already in progress, try again in a few seconds",
 		fn: () => tearDownCache({ ctx }),
 	});
 

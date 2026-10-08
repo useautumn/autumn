@@ -79,7 +79,7 @@ export const resourcesToMachine = ({
 	const machine = findByocCacheMachine({ cpu, memory });
 	if (machine) return machine;
 	throw new RecaseError({
-		message: `No cache machine has ${cpu} vCPU / ${memory} GiB`,
+		message: `No Atom machine has ${cpu} vCPU / ${memory} GiB`,
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});
@@ -98,7 +98,7 @@ export const cacheDeploymentToMachine = ({
 /** A resize moves a running cache; one still being set up takes its machine from `create_atom`. */
 export const cacheNotRunning = () =>
 	new RecaseError({
-		message: "The cache is not running yet, so it cannot be resized.",
+		message: "Atom is not running yet, so it cannot be resized.",
 		code: ErrCode.ByocCacheNotReady,
 		statusCode: 409,
 	});
