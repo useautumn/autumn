@@ -6,6 +6,7 @@ import { subjectStateSchema } from "../../../../../packages/balance-engine/src/m
 /** Every shape SubjectState has had, by the version written beside it. A new shape is a new entry with a new version. */
 const VERSION_BY_SCHEMA_SHA256: Record<string, number> = {
 	"3c3a4d72a84befab0db7be7952b5dc73a1b323eb7ac5c09dc96f2324b275e060": 1,
+	"29adcf623cf0935d3a64bec41512b4ee5cfd02af4d13552dc432c2103914e10f": 2,
 };
 
 // Output, not input: a snapshot serialises the parsed state, where defaulted fields are present.
