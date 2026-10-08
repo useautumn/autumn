@@ -9,6 +9,6 @@ export const meteringIdentitySchema = z
 		customerId: nonEmptyStringSchema,
 		entityId: nonEmptyStringSchema.nullable(),
 	})
-	.strict();
+	.loose();
 
 export type MeteringIdentity = z.infer<typeof meteringIdentitySchema>;

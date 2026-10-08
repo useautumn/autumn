@@ -11,7 +11,7 @@ export const initializeRequestSchema = z
 		// The worker caches these; the log never carries them.
 		catalogRows: z.array(catalogRowSchema),
 	})
-	.strict()
+	.loose()
 	.superRefine(({ command, state }, context) => {
 		const { identity } = command;
 		if (state.revision !== 0) {

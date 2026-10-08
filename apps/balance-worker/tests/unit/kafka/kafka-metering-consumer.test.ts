@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
 	meteringIdentityToPartitionKey,
+	onUnknownInput,
+	type UnknownInput,
 } from "@autumn/balance-engine";
 import {
 	createProgressTracker,
@@ -2270,6 +2272,103 @@ describe("owner fences", () => {
 			expect(f.staleLines()).toEqual([]);
 		} finally {
 			closeStoreFixture(f.fixture);
+		}
+	});
+	test("a record from a newer build with a field this build does not know is folded, not parked", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [state],
+			});
+			const outcome = createMutation({ state });
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaMeteringConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+
+			await consumer.start();
+			const { unavailable } = await followPartition({
+				consumer,
+				targetNextOffset: 0n,
+			});
+			await consumerPort.deliver({
+				offset: "0",
+				...serializeKafkaMutationRecord({
+					mutation: { ...outcome, futureField: true } as typeof outcome,
+				}),
+			});
+
+			expect(unavailable).toEqual([]);
+			expect(fixture.store.readState({ identity })).toEqual(
+				applyMutation({ state, mutation: outcome }),
+			);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("a record from a newer build with a change of an unknown kind applies its known rows and does not park", async () => {
+		const fixture = createStoreFixture();
+		const sightings: UnknownInput[] = [];
+		onUnknownInput((input) => sightings.push(input));
+		try {
+			const state = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [state],
+			});
+			const outcome = createMutation({ state });
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaMeteringConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+
+			await consumer.start();
+			const { unavailable } = await followPartition({
+				consumer,
+				targetNextOffset: 0n,
+			});
+			await consumerPort.deliver({
+				offset: "0",
+				...serializeKafkaMutationRecord({
+					mutation: {
+						...outcome,
+						changes: [
+							{ table: "futureTable", op: "insert", row: { id: "ft_1" } },
+							...outcome.changes,
+						],
+					} as typeof outcome,
+				}),
+			});
+
+			expect(unavailable).toEqual([]);
+			expect(consumerPort.lifecycle).not.toContain("pause");
+			expect(fixture.store.readState({ identity })).toEqual(
+				applyMutation({ state, mutation: outcome }),
+			);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			expect(sightings).toContainEqual({
+				kind: "row_change",
+				table: "futureTable",
+				op: "insert",
+				commandId: outcome.id,
+				identity: outcome.identity,
+			});
+		} finally {
+			closeStoreFixture(fixture);
 		}
 	});
 });

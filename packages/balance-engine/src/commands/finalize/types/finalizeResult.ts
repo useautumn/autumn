@@ -1,6 +1,7 @@
 import { TrackDeductionSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 import { deductionDeltaSchema } from "../../../deduction/types/deductionDelta.js";
+import { openEnum, openSchema } from "../../../models/common/openSchema.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
@@ -10,7 +11,10 @@ import {
 export const finalizeResultSchema = z
 	.object({
 		type: z.literal("finalize"),
-		status: z.enum(["applied", "rejected"]),
+		status: openEnum({
+			name: "finalizeResult.status",
+			values: ["applied", "rejected"],
+		}),
 		reason: z.literal("insufficient_balance").nullable(),
 		/** What the lock had taken, and what it was settled at; their difference is the usage the finalize adds. */
 		lockValue: finiteNumberSchema,
@@ -18,7 +22,14 @@ export const finalizeResultSchema = z
 		/** Every balance the finalize moved: the unwind first, then any further deduction. Empty when rejected. */
 		deltas: z.array(deductionDeltaSchema),
 		/** The same movement as a usage event reports it; defaulted so records written before it existed still parse. */
-		deductions: z.array(TrackDeductionSchema).default([]),
+		deductions: z
+			.array(
+				openSchema({
+					name: "finalizeResult.deductions",
+					schema: TrackDeductionSchema,
+				}),
+			)
+			.default([]),
 		internalProductId: nonEmptyStringSchema.nullable().default(null),
 	})
 	.loose();

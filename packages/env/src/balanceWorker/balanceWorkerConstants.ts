@@ -85,8 +85,9 @@ export const BALANCE_WORKER_SUBJECT_MAP_MEMORY_FRACTION = 0.125;
  *  boot in transactional mode. */
 export const BALANCE_WORKER_COMMIT_MODE = "idempotent" as const;
 
-/** Written beside every snapshot; a reader serves a row only at exactly this version. A code constant on purpose:
- *  the shape is what this build serialises, so the number must ship with the build, never be toggled at runtime. */
+/** Written beside every snapshot; a reader serves a row only at exactly this version. Bump it only when an existing
+ *  field of SubjectState changes type or meaning: a new field or enum value is read loosely, and a snapshot that
+ *  will not parse falls back to a full read. A code constant, because the shape ships with the build. */
 export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 2;
 
 /** Share of successful requests the worker logs a line for. Every failure is

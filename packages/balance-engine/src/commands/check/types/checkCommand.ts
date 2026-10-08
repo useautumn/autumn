@@ -18,6 +18,6 @@ export const checkParamsSchema = z.object({
 
 export const checkCommandSchema = baseCommandSchema
 	.extend({ type: z.literal("check"), ...checkParamsSchema.shape })
-	.strict();
+	.loose();
 
 export type CheckCommand = z.infer<typeof checkCommandSchema>;

@@ -4,6 +4,6 @@ import { baseCommandSchema } from "../../../models/command/baseCommand.js";
 /** Waits until Postgres holds every write the worker accepted for the customer; the copy stays. A reader of Postgres sends it first. */
 export const flushCommandSchema = baseCommandSchema
 	.extend({ type: z.literal("flush") })
-	.strict();
+	.loose();
 
 export type FlushCommand = z.infer<typeof flushCommandSchema>;

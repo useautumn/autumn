@@ -30,6 +30,6 @@ export const updateBalanceCommandSchema = mutatingCommandSchema
 		/** Sets the soonest expiry among the feature's own rows. */
 		expiresAt: timestampSchema.optional(),
 	})
-	.strict();
+	.loose();
 
 export type UpdateBalanceCommand = z.infer<typeof updateBalanceCommandSchema>;

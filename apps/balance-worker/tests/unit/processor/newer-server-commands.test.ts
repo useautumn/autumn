@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { EvictCommand } from "@autumn/balance-engine";
+import type { CommandOrg, EvictCommand } from "@autumn/balance-engine";
 import type { CommandRecord } from "@autumn/kafka";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import {
@@ -20,17 +20,16 @@ import {
 } from "../../fixtures/queuedCommands.js";
 
 /** `identity` is left alone: it is the record's own key, which the worker writes and keeps strict. */
-const fromNewerServer = <Command extends CommandRecord>(command: Command) =>
-	({
+const fromNewerServer = <Command extends CommandRecord>(command: Command) => {
+	const org = "org" in command ? (command.org as CommandOrg) : undefined;
+	return {
 		...command,
 		futureField: true,
-		...("org" in command && {
-			org: {
-				...command.org,
-				config: { ...command.org.config, future_setting: true },
-			},
+		...(org && {
+			org: { ...org, config: { ...org.config, future_setting: true } },
 		}),
-	}) as Command;
+	} as Command;
+};
 
 /** No `refreshSnapshots`: the optional flag is absent, as an older server sends it. */
 const evictOf = ({ customerId }: { customerId: string }): EvictCommand => ({

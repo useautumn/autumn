@@ -8,7 +8,7 @@ export const confirmExpiredLockCommandSchema = mutatingCommandSchema
 		type: z.literal("confirmExpiredLock"),
 		lock: openLockSchema,
 	})
-	.strict();
+	.loose();
 
 export type ConfirmExpiredLockCommand = z.infer<
 	typeof confirmExpiredLockCommandSchema

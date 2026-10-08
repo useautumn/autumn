@@ -13,7 +13,7 @@ export const applyBillingPlanCommandSchema = mutatingCommandSchema
 		/** Pools whose last share this plan removes, as the worker read Postgres before deciding; the server sends none. */
 		expiringPooledBalanceIds: z.array(nonEmptyStringSchema).default([]),
 	})
-	.strict();
+	.loose();
 
 export type ApplyBillingPlanCommand = z.infer<
 	typeof applyBillingPlanCommandSchema

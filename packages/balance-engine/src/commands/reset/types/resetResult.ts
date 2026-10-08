@@ -12,7 +12,7 @@ export const resetRowSchema = z
 		cycleEndedAt: timestampSchema,
 		nextResetAt: timestampSchema,
 	})
-	.strict();
+	.loose();
 
 export type ResetRow = z.infer<typeof resetRowSchema>;
 

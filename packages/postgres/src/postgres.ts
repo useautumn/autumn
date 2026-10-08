@@ -50,6 +50,7 @@ export { getOrgWithFeatures } from "./organizations/repos/getOrgWithFeatures.js"
 export { listPooledBalancesWithoutOtherContributions } from "./pooledBalances/repos/listPooledBalancesWithoutOtherContributions.js";
 export { sumPooledContributionGrants } from "./pooledBalances/repos/sumPooledContributionGrants.js";
 export {
+	isSubjectRowColumn,
 	SubjectRowColumnNotCounterError,
 	UnknownSubjectRowColumnError,
 } from "./subjects/repos/applySubjectRowUpdates/subjectRowUpdateSql.js";

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { onUnknownInput, type UnknownInput } from "@autumn/balance-engine";
 import {
 	FlushBookmarkConflictError,
 	type SubjectRowChange,
@@ -199,6 +200,79 @@ describe("committer state store", () => {
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(44n);
 		expect(store.readNextOffset({ topic, partition })).toBe(44n);
 		expect(store.readState({ identity: testIdentity })).toBeNull();
+	});
+
+	test("a newer build's column on a change is dropped before the SQL, and reported once; the known columns land", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 0n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+		const sightings: UnknownInput[] = [];
+		onUnknownInput((input) => sightings.push(input));
+
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+		const newer = {
+			...mutation,
+			changes: mutation.changes.map((change) =>
+				change.op === "increment"
+					? { ...change, add: { ...change.add, future_counter: 1 } }
+					: change,
+			),
+		} as typeof mutation;
+		const results = await store.applyDurableMutations({
+			records: [
+				{ position: { topic, partition, offset: 0n }, mutation: newer },
+			],
+		});
+
+		expect(results).toEqual([
+			{ kind: "applied", mutation: newer, nextOffset: 1n },
+		]);
+		expect(fake.updates).toEqual([
+			{
+				op: "update",
+				table: "customerEntitlements",
+				id: "messages_monthly",
+				set: {},
+				add: { balance: -5 },
+				addEntries: {},
+				guard: {},
+			},
+		]);
+		expect(sightings).toContainEqual({
+			kind: "row_column",
+			table: "customerEntitlements",
+			column: "future_counter",
+		});
+	});
+
+	test("a change that only touched a newer build's columns lands nothing, and the flush still commits", async () => {
+		const fake = createFakeCommitterDb({ storedNextOffset: 0n });
+		const store = createStore(fake);
+		await store.loadProgress({ topic, partition });
+
+		const state = createState({ balance: 100 });
+		const mutation = createTrackMutation({ state, value: 5 });
+		const newer = {
+			...mutation,
+			changes: mutation.changes.map((change) =>
+				change.op === "increment"
+					? { ...change, add: { future_counter: 1 } }
+					: change,
+			),
+		} as typeof mutation;
+		const results = await store.applyDurableMutations({
+			records: [
+				{ position: { topic, partition, offset: 0n }, mutation: newer },
+			],
+		});
+
+		expect(results).toEqual([
+			{ kind: "applied", mutation: newer, nextOffset: 1n },
+		]);
+		expect(fake.updates).toEqual([]);
+		expect(fake.transactions).toEqual(["committed"]);
+		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(1n);
 	});
 
 	test("a consumed command moves the command bookmark with the rows; one sent over HTTP leaves it alone", async () => {

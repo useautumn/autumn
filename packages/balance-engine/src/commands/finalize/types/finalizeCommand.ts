@@ -24,6 +24,6 @@ export const finalizeCommandSchema = mutatingCommandSchema
 		/** Overrides the lock's own properties on whatever the finalize deducts. */
 		properties: propertiesSchema,
 	})
-	.strict();
+	.loose();
 
 export type FinalizeCommand = z.infer<typeof finalizeCommandSchema>;
