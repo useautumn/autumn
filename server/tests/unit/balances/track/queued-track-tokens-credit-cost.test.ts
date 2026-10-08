@@ -98,9 +98,7 @@ const { getTokenTrackParams } = await import(
 const { runBatchTrackTokens } = await import(
 	"@/internal/balances/track/runBatchTrackTokens.js"
 );
-const { buildAiCreditCostProperty } = await import(
-	"@/internal/balances/track/utils/buildAiCreditCostProperty.js"
-);
+const { buildAiCreditCostProperty } = await import("@autumn/shared");
 
 const aiCredits = { id: "ai_credits", type: FeatureType.AiCreditSystem };
 const createCtx = (): AutumnContext =>
@@ -136,6 +134,19 @@ const drawn = [
 ];
 
 type QueuedTrackMessage = Omit<Parameters<typeof runQueuedTrack>[0], "ctx">;
+
+/** The credit_cost runRedisTrackV3 records for these deductions over the draws above. */
+const creditCostOf = (
+	featureDeductions: { feature: { id: string }; tokens?: unknown }[],
+) => {
+	const aiCreditFeatureId = featureDeductions.find(
+		(deduction) => deduction.tokens,
+	)?.feature.id;
+	return (
+		aiCreditFeatureId &&
+		buildAiCreditCostProperty({ aiCreditFeatureId, entries: drawn })
+	);
+};
 
 const captureQueuedMessages = async (
 	send: () => Promise<unknown>,
@@ -191,17 +202,13 @@ describe("queued track_tokens credit_cost", () => {
 			ctx: createCtx(),
 			input: requestBody,
 		});
-		const syncCreditCost = buildAiCreditCostProperty({
-			featureDeductions: sync.featureDeductions,
-			entries: drawn,
-		});
+		const syncCreditCost = creditCostOf(sync.featureDeductions);
 
 		const queuedMessage = await queueDefaultTrackTokens();
 		await runQueuedTrack({ ctx: createCtx(), ...queuedMessage });
-		const queuedCreditCost = buildAiCreditCostProperty({
-			featureDeductions: replayedDeductions[0] as typeof sync.featureDeductions,
-			entries: drawn,
-		});
+		const queuedCreditCost = creditCostOf(
+			replayedDeductions[0] as typeof sync.featureDeductions,
+		);
 
 		expect(replayedDeductions[0]).toEqual(sync.featureDeductions);
 		expect(syncCreditCost).toEqual({ orbs: 20_000 });

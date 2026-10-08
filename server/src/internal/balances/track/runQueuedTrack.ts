@@ -55,6 +55,7 @@ export const runQueuedTrack = async ({
 							ctx,
 							body,
 							validateTrackBodyIdempotencyKey: false,
+							recordsCreditCost: tokens !== undefined,
 						})
 					: runTrackV3({ ctx, body, featureDeductions, apiVersion }),
 		});
