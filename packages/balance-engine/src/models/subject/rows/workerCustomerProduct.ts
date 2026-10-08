@@ -40,6 +40,8 @@ export const workerCustomerProductSchema = CusProductSchema.omit({
 		canceled: z.boolean(),
 		is_custom: z.boolean(),
 		billing_version: z.enum(BillingVersion),
+		// Stored as written: a new API version must not change the snapshot schema.
+		api_semver: z.string().nullable(),
 	})
 	.partial(customerProductRenderedColumns)
 	.strict();
