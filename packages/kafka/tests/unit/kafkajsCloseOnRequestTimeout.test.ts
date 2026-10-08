@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.resolve("kafkajs"));
 const Connection = require("./src/network/connection.js");
 const {
-	KafkaJSConnectionError,
+	KafkaJSConnectionClosedError,
 	KafkaJSRequestTimeoutError,
 } = require("./src/errors.js");
 
@@ -104,7 +104,11 @@ test("a timed-out request closes the connection so the next request reconnects",
 	await waitFor(() => !connection.isConnected());
 
 	expect(timedOut.error).toBeInstanceOf(KafkaJSRequestTimeoutError);
-	expect(longPoll.error).toBeInstanceOf(KafkaJSConnectionError);
+	expect(longPoll.error).toBeInstanceOf(KafkaJSConnectionClosedError);
+	expect(longPoll.error).toMatchObject({
+		host: "lkc-test-g001.example",
+		port: 9092,
+	});
 	expect(socket.ended).toBe(true);
 	expect(warnings).toEqual([
 		{

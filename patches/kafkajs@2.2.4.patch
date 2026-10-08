@@ -7,8 +7,11 @@ index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2
 diff --git a/node_modules/kafkajs/.bun-tag-9af2d68b0d3bdbc0 b/.bun-tag-9af2d68b0d3bdbc0
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/kafkajs/.bun-tag-f1b111e363a9f75c b/.bun-tag-f1b111e363a9f75c
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/src/network/connection.js b/src/network/connection.js
-index dded584d8f8f2ccb001939a97f40739f3e51605a..e115dbacbb9cee4d78deb43d6ee25d1ad55a0ebd 100644
+index dded584d8f8f2ccb001939a97f40739f3e51605a..e976117984a30fb1bb82ef6fc488f0314defc0a7 100644
 --- a/src/network/connection.js
 +++ b/src/network/connection.js
 @@ -27,6 +27,24 @@ const isAuthenticatedRequest = request => {
@@ -131,7 +134,7 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..e115dbacbb9cee4d78deb43d6ee25d1a
    /**
     * @private
     */
-@@ -540,4 +599,24 @@ module.exports = class Connection {
+@@ -540,4 +599,26 @@ module.exports = class Connection {
    rejectRequests(error) {
      this.requestQueue.rejectAll(error)
    }
@@ -144,14 +147,16 @@ index dded584d8f8f2ccb001939a97f40739f3e51605a..e115dbacbb9cee4d78deb43d6ee25d1a
 +      return
 +    }
 +
-+    const broker = `${this.host}:${this.port}`
 +    this.logWarn('Request timed out; closing the connection so the next request reconnects', {
-+      broker,
++      broker: `${this.host}:${this.port}`,
 +      apiName,
 +      correlationId,
 +    })
 +    this.rejectRequests(
-+      new KafkaJSConnectionError('Connection closed after a request timed out', { broker })
++      new KafkaJSConnectionClosedError('Closed connection after a request timed out', {
++        host: this.host,
++        port: this.port,
++      })
 +    )
 +    this.disconnect().catch(() => {})
 +  }
