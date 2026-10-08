@@ -11,7 +11,7 @@ import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyK
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { TokenDeduction } from "../utils/types/featureDeduction.js";
 import { runBalanceWorkerTrack } from "./balanceWorker/runBalanceWorkerTrack.js";
-import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
+import { getValidatedTrackFeatureDeductions } from "./utils/getValidatedTrackFeatureDeductions.js";
 import { toTokenFeatureDeduction } from "./utils/tokenFeatureDeduction.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
@@ -32,7 +32,7 @@ export const runQueuedTrack = async ({
 	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
 }) => {
-	const featureDeductions = getTrackFeatureDeductionsForBody({
+	const featureDeductions = getValidatedTrackFeatureDeductions({
 		ctx,
 		body,
 	}).map((deduction) =>

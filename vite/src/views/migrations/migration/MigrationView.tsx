@@ -11,7 +11,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate, useParams } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { useMigrationQuery } from "@/hooks/queries/useMigrationQuery";
 import { navigateTo } from "@/utils/genUtils";
 import { SHEET_ANIMATION } from "@/views/customers2/customer/customerAnimations";
 import ErrorScreen from "@/views/general/ErrorScreen";
@@ -21,8 +21,10 @@ import { useMigrationSheetStore } from "./live/useMigrationSheetStore";
 import { MigrationEditor } from "./MigrationEditor";
 
 export function MigrationView() {
-	const { migration_id } = useParams<{ migration_id: string }>();
-	const { migrations, isLoading } = useMigrationsQuery();
+	const { migration_id = "" } = useParams<{ migration_id: string }>();
+	const { migration, isLoading } = useMigrationQuery({
+		migrationId: migration_id,
+	});
 	const navigate = useNavigate();
 
 	const selectedCustomer = useMigrationSheetStore((s) => s.selectedCustomer);
@@ -38,8 +40,6 @@ export function MigrationView() {
 
 	useHotkeys("escape", closeSheet);
 	useEffect(() => () => closeSheet(), [closeSheet]);
-
-	const migration = migrations.find((m) => m.id === migration_id);
 
 	const goToMigrations = () => navigateTo("/migrations", navigate);
 

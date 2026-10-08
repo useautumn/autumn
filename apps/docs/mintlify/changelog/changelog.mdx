@@ -4,6 +4,13 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="October 12th 2026">
+  ## API version 2.5.0: track is async by default
+
+  On API version `2.5.0`, [`balances.track`](/api-reference/core/track) and [`balances.track_tokens`](/api-reference/balances/trackTokens) queue usage by default and respond with `202` and `balance: null`. Pass `async: false` to apply the usage before responding with the updated balance. Requests on `2.4.0` and earlier are unchanged: synchronous unless `async: true`. See [tracking usage](/documentation/customers/tracking-usage).
+
+</Update>
+
 <Update label="October 2nd 2026">
   ## List subscriptions, purchases and balances
 
