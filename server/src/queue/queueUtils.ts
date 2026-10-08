@@ -11,6 +11,7 @@ import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
 import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
+import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import type { PublishedBalanceTransition } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
@@ -66,6 +67,7 @@ export interface Payloads {
 		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
+		tokens?: TokenDeduction;
 		/** False when the sync request path already claimed the body
 		 *  idempotency key at accept time — the worker must not re-claim. */
 		validateTrackBodyIdempotencyKey?: boolean;
