@@ -19,8 +19,7 @@ export type ProducerConfigSnapshot = Pick<
 export type ProducerThreadInit = {
 	clientId: string;
 	brokers: string[];
-	authMode: "none" | "msk_iam" | "scram" | "plain";
-	region?: string;
+	authMode: "none" | "scram" | "plain";
 	sasl?: KafkaSaslCredentials;
 	limits: {
 		connectionTimeoutMs: number;
@@ -60,5 +59,4 @@ export type ProducerToDecideMessage =
 	| { kind: "failed"; reqId: number; error: ProducerError }
 	/** One per broker per statistics window, for `kafkaRequestTimings`. */
 	| { kind: "request"; event: KafkaRequestEvent }
-	| { kind: "token"; info: unknown }
 	| { kind: "stopped" };

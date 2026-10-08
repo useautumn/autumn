@@ -75,7 +75,6 @@ export function createHerald({
 			brokers: env.KAFKA_BROKERS,
 			transport: createKafkaTransport({
 				authMode: env.KAFKA_AUTH_MODE,
-				region: env.AWS_REGION,
 				sasl: env.KAFKA_SASL,
 			}),
 			limits: {

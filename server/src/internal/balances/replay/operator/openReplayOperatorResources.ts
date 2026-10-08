@@ -1,3 +1,4 @@
+import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 import type { ReplayManifest } from "../manifest/replayManifestContracts.js";
 import type { ValidatedReplayStagingTarget } from "../targets/replayStagingTargetContracts.js";
 import {
@@ -76,12 +77,13 @@ function createReplayOwnershipConsumer({
 	modules: ReplayOperatorModules;
 	target: ValidatedReplayStagingTarget;
 }) {
+	const { KAFKA_AUTH_MODE, KAFKA_SASL } = getBalanceWorkerClientEnv();
 	const kafkaConfig = modules.createKafkaClient({
 		clientId: `${REPLAY_OPERATOR_CLIENT_ID}-${crypto.randomUUID()}`,
 		brokers: [...target.brokers],
 		transport: modules.createKafkaTransport({
-			authMode: "msk_iam",
-			region: target.region,
+			authMode: KAFKA_AUTH_MODE,
+			sasl: KAFKA_SASL,
 		}),
 		limits: REPLAY_KAFKA_LIMITS,
 	});

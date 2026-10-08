@@ -13,10 +13,10 @@ test.concurrent("client configuration validates Kafka auth", () => {
 			KAFKA_BROKERS: "broker:9098",
 			BALANCE_WORKER_DEPLOYMENT: "staging",
 		}),
-	).toThrow("KAFKA_AUTH_MODE=msk_iam requires AWS_REGION");
+	).toThrow("KAFKA_AUTH_MODE is required");
 	expect(() =>
 		createBalanceWorkerClientEnv({ KAFKA_AUTH_MODE: "invalid" }),
-	).toThrow("KAFKA_AUTH_MODE must be none, msk_iam, scram or plain");
+	).toThrow("KAFKA_AUTH_MODE must be none, scram or plain");
 });
 
 test.concurrent("production refuses to fall back to local settings", () => {
@@ -39,7 +39,6 @@ test.concurrent("production refuses to fall back to local settings", () => {
 test.concurrent("local development needs no balance worker settings", () => {
 	expect(createBalanceWorkerClientEnv(localEnv)).toEqual({
 		KAFKA_AUTH_MODE: "none",
-		AWS_REGION: undefined,
 		KAFKA_SASL: undefined,
 		KAFKA_BROKERS: ["127.0.0.1:19092"],
 		BALANCE_WORKER_OWNERSHIP_TOPIC: "local-ownership",
@@ -62,26 +61,29 @@ test.concurrent("the ownership topic derives from the deployment", () => {
 	);
 });
 
-test.concurrent("MSK is reached directly only from inside ECS", () => {
-	expect(
-		createBalanceWorkerTransportEnv({ NODE_ENV: "production" })
-			.BALANCE_WORKER_TRANSPORT,
-	).toBe("proxy");
-	expect(
-		createBalanceWorkerTransportEnv({
-			ECS_CONTAINER_METADATA_URI_V4: "http://169.254.170.2/v4/task",
-		}).BALANCE_WORKER_TRANSPORT,
-	).toBe("direct");
-	expect(
-		createBalanceWorkerTransportEnv(localEnv).BALANCE_WORKER_TRANSPORT,
-	).toBe("direct");
-	expect(
-		createBalanceWorkerTransportEnv({
-			...localEnv,
-			BALANCE_WORKER_TRANSPORT: "proxy",
-		}).BALANCE_WORKER_TRANSPORT,
-	).toBe("proxy");
-});
+test.concurrent(
+	"Kafka is reached directly only from inside ECS or a local cluster",
+	() => {
+		expect(
+			createBalanceWorkerTransportEnv({ NODE_ENV: "production" })
+				.BALANCE_WORKER_TRANSPORT,
+		).toBe("proxy");
+		expect(
+			createBalanceWorkerTransportEnv({
+				ECS_CONTAINER_METADATA_URI_V4: "http://169.254.170.2/v4/task",
+			}).BALANCE_WORKER_TRANSPORT,
+		).toBe("direct");
+		expect(
+			createBalanceWorkerTransportEnv(localEnv).BALANCE_WORKER_TRANSPORT,
+		).toBe("direct");
+		expect(
+			createBalanceWorkerTransportEnv({
+				...localEnv,
+				BALANCE_WORKER_TRANSPORT: "proxy",
+			}).BALANCE_WORKER_TRANSPORT,
+		).toBe("proxy");
+	},
+);
 
 test.concurrent("the proxy secret must be long enough to sign with", () => {
 	expect(() =>

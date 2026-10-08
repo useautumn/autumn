@@ -4,7 +4,7 @@ import * as kafka from "@autumn/kafka";
 import { createWorkerCheckpointConfig } from "../../../src/init/workerCheckpointConfig.js";
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 
-test.each(["none", "msk_iam"] as const)(
+test.each(["none", "plain"] as const)(
 	"worker resource opening passes %s transport to its shared Kafka client",
 	async (authMode) => {
 		const interrupted = new Error("stop before opening any connection");
@@ -20,7 +20,8 @@ test.each(["none", "msk_iam"] as const)(
 				DATABASE_URL: "postgres://worker:secret@127.0.0.1:1/never",
 				KAFKA_BROKERS: "broker:9098",
 				KAFKA_AUTH_MODE: authMode,
-				AWS_REGION: "us-east-1",
+				KAFKA_SASL_USERNAME_BALANCE_WORKER: "key",
+				KAFKA_SASL_PASSWORD_BALANCE_WORKER: "secret",
 			});
 			await expect(
 				openWorkerResources({
@@ -42,8 +43,10 @@ test.each(["none", "msk_iam"] as const)(
 			).rejects.toBe(interrupted);
 			expect(createTransport).toHaveBeenCalledWith({
 				authMode,
-				region: "us-east-1",
-				onToken: expect.any(Function),
+				sasl:
+					authMode === "none"
+						? undefined
+						: { mechanism: "plain", username: "key", password: "secret" },
 			});
 			expect(createClient).toHaveBeenCalledTimes(1);
 			expect(createClient.mock.calls[0]?.[0]).toMatchObject({
@@ -61,10 +64,7 @@ test.each(["none", "msk_iam"] as const)(
 					? {}
 					: {
 							ssl: true,
-							sasl: {
-								mechanism: "oauthbearer",
-								oauthBearerProvider: expect.any(Function),
-							},
+							sasl: { mechanism: "plain", username: "key", password: "secret" },
 						},
 			);
 		} finally {

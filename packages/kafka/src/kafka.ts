@@ -27,7 +27,6 @@ export {
 	KafkaConsumerNotRunningError,
 } from "./client/librdkafka/consumer/runnerErrors.js";
 export { createKafka } from "./client/librdkafka/createKafka.js";
-export type { KafkaTokenInfo } from "./client/mskTokenInfo.js";
 export type {
 	KafkaClientConfig,
 	KafkaCommitMode,

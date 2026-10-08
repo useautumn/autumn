@@ -3,7 +3,6 @@ import {
 	createIdempotentProducerConfig,
 	createProducerSession,
 	type Kafka,
-	type KafkaTokenInfo,
 } from "@autumn/kafka";
 import {
 	createWorkerProducer,
@@ -16,17 +15,11 @@ import {
 } from "../../../src/kafka/producerThread/createThreadedProducers.js";
 import { OwnedPartitionLogDivergedError } from "../../../src/runtime/runtimeErrors.js";
 import { createTestKafka } from "../../fixtures/testKafka.js";
-import { startTlsBrokerProxy } from "./tlsBrokerProxy.js";
 
 const partition = 0;
 const logger = { warn() {}, error() {} };
 const chaosThreadUrl = new URL("./producerThreadChaos.ts", import.meta.url)
 	.href;
-
-/** The test broker's SASL/OAUTHBEARER listener (compose.yml), beside the plaintext one. */
-function saslBroker(): string {
-	return process.env.KAFKA_SASL_BROKER?.trim() || "127.0.0.1:19094";
-}
 
 function brokers(): string[] {
 	const configured = process.env.KAFKA_BROKERS?.trim();
@@ -367,65 +360,5 @@ describe("producer thread against a real broker", () => {
 				Array.from({ length: 20 }, (_, index) => `v${index}`).sort(),
 			);
 		});
-	});
-
-	test("msk_iam: the producer thread signs MSK IAM tokens itself and presents them over SASL_SSL/OAUTHBEARER", async () => {
-		const tokens: KafkaTokenInfo[] = [];
-		const savedEnv = { ...process.env };
-		// Static throwaway credentials: SigV4 signing is local, so nothing here reaches AWS.
-		process.env.AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE";
-		process.env.AWS_SECRET_ACCESS_KEY = "producer-thread-test-secret";
-		// The proxy's certificate is self-signed; the Worker inherits this when it starts.
-		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-		const [host = "127.0.0.1", port = "19094"] = saslBroker().split(":");
-		const proxy = await startTlsBrokerProxy({
-			target: { host, port: Number(port) },
-		});
-		const producers = createThreadedProducers({
-			ctx: {
-				logger,
-				onFatal({ cause }) {
-					throw cause;
-				},
-				onToken: (info) => tokens.push(info),
-			},
-			config: {
-				clientId: `producer-thread-iam-${crypto.randomUUID()}`,
-				brokers: [proxy.address],
-				authMode: "msk_iam",
-				region: "us-east-1",
-				limits: {
-					connectionTimeoutMs: 3_000,
-					requestTimeoutMs: 5_000,
-					retryCount: 1,
-					initialRetryTimeMs: 100,
-					maxRetryTimeMs: 200,
-				},
-				sendRingBytes: 1 << 16,
-				ackRingBytes: 1 << 16,
-			},
-		});
-		await producers.start();
-		try {
-			const producer = producers.producer({ idempotent: true });
-			// The broker's unsecured validator refuses an MSK token and closes the connection.
-			const refused = await rejectionOf(producer.connect());
-			expect(refused).toBeInstanceOf(Error);
-			expect(tokens.length).toBeGreaterThan(0);
-			expect(tokens[0]).toMatchObject({
-				keyIdSuffix: "AKIAIOSFODNN7EXAMPLE".slice(-5),
-				ttlSeconds: expect.any(Number),
-			});
-		} finally {
-			await producers.stop();
-			await proxy.stop();
-			for (const name of [
-				"AWS_ACCESS_KEY_ID",
-				"AWS_SECRET_ACCESS_KEY",
-				"NODE_TLS_REJECT_UNAUTHORIZED",
-			])
-				if (savedEnv[name] === undefined) delete process.env[name];
-				else process.env[name] = savedEnv[name];
-		}
 	});
 });

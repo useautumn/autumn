@@ -34,34 +34,6 @@ function securityProtocolOf({
 
 function saslConfigOf({ sasl }: Pick<KafkaClientConfig, "sasl">): NativeConfig {
 	if (!sasl) return {};
-	if (sasl.mechanism === "oauthbearer") {
-		const provider = sasl.oauthBearerProvider;
-		async function deliverToken(
-			done: (error: Error | null, token?: unknown) => void,
-		): Promise<void> {
-			try {
-				const { value, lifetimeMs } = await provider();
-				done(null, {
-					tokenValue: value,
-					lifetime: lifetimeMs ?? Date.now() + 15 * 60_000,
-					principal: "autumn",
-				});
-			} catch (cause) {
-				done(cause instanceof Error ? cause : new Error(String(cause)));
-			}
-		}
-		// The client reads a returned promise as the token itself, so the answer goes through `done` only.
-		function refreshToken(
-			_config: unknown,
-			done: (error: Error | null, token?: unknown) => void,
-		): void {
-			void deliverToken(done);
-		}
-		return {
-			"sasl.mechanisms": "OAUTHBEARER",
-			oauthbearer_token_refresh_cb: refreshToken,
-		};
-	}
 	const mechanism = {
 		plain: "PLAIN",
 		"scram-sha-256": "SCRAM-SHA-256",

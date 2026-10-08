@@ -1,4 +1,3 @@
-import type { KafkaTokenInfo } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type {
 	Ring,
@@ -18,7 +17,6 @@ export type ThreadedProducersScope = {
 		logger: Pick<AutumnLogger, "warn" | "error">;
 		/** The thread died or a ring broke: nothing in flight can be trusted, so the task is replaced. */
 		onFatal(failure: { cause: unknown }): void;
-		onToken?(info: KafkaTokenInfo): void;
 	};
 	config: ThreadedProducersConfig;
 	rings: {

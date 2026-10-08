@@ -7,7 +7,6 @@ import {
 import type {
 	KafkaOffsetCommit,
 	KafkaProducerClient,
-	KafkaTokenInfo,
 	ProducerConfig,
 } from "@autumn/kafka";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
@@ -68,7 +67,6 @@ import {
 	workerConsumerGroupIdOf,
 } from "./workerConfig.js";
 import {
-	logWorkerKafkaToken,
 	openWorkerResources,
 	WORKER_KAFKA_CLIENT_LIMITS,
 } from "./workerResources.js";
@@ -277,10 +275,6 @@ export async function createBalanceWorker({
 			dependencies.onServiceStopped?.({ cause, scope });
 		}
 
-		function logProducerThreadToken(info: KafkaTokenInfo): void {
-			logWorkerKafkaToken({ logger: dependencies.logger, info });
-		}
-
 		async function listen(): Promise<WorkerListener> {
 			const threads =
 				resources.edgeConfigs?.balanceWorkerThreads.get() ??
@@ -290,7 +284,6 @@ export async function createBalanceWorker({
 					fetch: app.fetch,
 					logger: dependencies.logger,
 					onFatal: stopForThreads,
-					onToken: logProducerThreadToken,
 					heldReplies: {
 						positions: commitPositions,
 						renderFailure: heldFailureOf,
@@ -315,7 +308,6 @@ export async function createBalanceWorker({
 						clientId: `balance-worker-producers-${crypto.randomUUID()}`,
 						brokers: env.KAFKA_BROKERS,
 						authMode: env.KAFKA_AUTH_MODE,
-						region: env.AWS_REGION,
 						sasl: env.KAFKA_SASL,
 						limits: WORKER_KAFKA_CLIENT_LIMITS,
 						sendRingBytes: threads.sendRingBytes,

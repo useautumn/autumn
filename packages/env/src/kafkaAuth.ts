@@ -1,6 +1,6 @@
 const SCRAM_MECHANISMS = ["scram-sha-256", "scram-sha-512"] as const;
 type ScramMechanism = (typeof SCRAM_MECHANISMS)[number];
-const AUTH_MODES = ["none", "msk_iam", "scram", "plain"] as const;
+const AUTH_MODES = ["none", "scram", "plain"] as const;
 type KafkaAuthMode = (typeof AUTH_MODES)[number];
 type SaslCredentials = {
 	mechanism: ScramMechanism | "plain";
@@ -17,19 +17,14 @@ export function createKafkaAuthEnv({
 	runtimeEnv: Record<string, string | undefined>;
 	serviceUser: KafkaServiceUser;
 }) {
-	// Staging and production use MSK IAM without an Infisical auth-mode setting.
-	// Local plaintext Kafka and tests must explicitly opt into "none".
-	const authMode = runtimeEnv.KAFKA_AUTH_MODE ?? "msk_iam";
+	// No default: Confluent needs "plain" and its credentials, local plaintext Kafka opts into "none".
+	const authMode = runtimeEnv.KAFKA_AUTH_MODE;
+	if (authMode === undefined) throw new Error("KAFKA_AUTH_MODE is required");
 	if (!isKafkaAuthMode(authMode)) {
-		throw new Error("KAFKA_AUTH_MODE must be none, msk_iam, scram or plain");
-	}
-	const region = runtimeEnv.AWS_REGION?.trim() || undefined;
-	if (authMode === "msk_iam" && !region) {
-		throw new Error("KAFKA_AUTH_MODE=msk_iam requires AWS_REGION");
+		throw new Error("KAFKA_AUTH_MODE must be none, scram or plain");
 	}
 	return {
 		KAFKA_AUTH_MODE: authMode,
-		AWS_REGION: region,
 		KAFKA_SASL: readSaslCredentials({ runtimeEnv, serviceUser, authMode }),
 	} as const;
 }

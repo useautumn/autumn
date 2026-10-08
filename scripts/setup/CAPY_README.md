@@ -59,7 +59,7 @@ Kafka runs as a JVM process, not a container. Initialize installs Kafka 4.3.1
 into `~/.cache/autumn-capy/`, and Startup formats it once and keeps its data,
 pid and log in `~/.autumn-capy/kafka/`. `server/.env.local` gets
 `KAFKA_BROKERS=127.0.0.1:19092` and `KAFKA_AUTH_MODE=none`, so the dev server,
-balance worker and `bun t` all reach it without MSK auth.
+balance worker and `bun t` all reach it without SASL credentials.
 
 Trigger.dev runs a control plane matching the exact `trigger.dev` version in
 the root `package.json`. Startup creates its datastore credentials in

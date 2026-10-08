@@ -117,6 +117,7 @@ export function createBalanceWorkerEnv(
 	return {
 		...env,
 		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "BALANCE_WORKER" }),
+		AWS_REGION: runtimeEnv.AWS_REGION?.trim() || undefined,
 		BALANCE_WORKER_DEPLOYMENT: deployment,
 		BALANCE_WORKER_METERING_TOPIC: kafkaNames.meteringTopic,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: kafkaNames.ownershipTopic,

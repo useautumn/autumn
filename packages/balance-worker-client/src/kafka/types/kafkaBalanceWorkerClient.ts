@@ -19,8 +19,7 @@ export type BalanceWorkerKafka = OwnershipKafka & {
 export type BalanceWorkerKafkaConfig = {
 	clientId: string;
 	brokers: string[];
-	authMode: "none" | "msk_iam" | "scram" | "plain";
-	region?: string;
+	authMode: "none" | "scram" | "plain";
 	sasl?: KafkaSaslCredentials;
 };
 

@@ -14,8 +14,6 @@ export const REPLAY_STAGING_OWNERSHIP_TOPIC =
 
 export const REPLAY_STAGING_PARTITION_COUNT = 64;
 
-export const REPLAY_STAGING_REGION = "us-east-1";
-
 export const REPLAY_STAGING_DEFAULT_DATABASE_PORT = 5432;
 
 export const REPLAY_DATABASE_SUPPORTED_SCHEMES: ReadonlySet<string> = new Set([
@@ -45,7 +43,6 @@ export const replayStagingTargetInputSchema = z.strictObject({
 	deployment: z.string().min(1),
 	topic: z.string().min(1),
 	partitionCount: z.number().int(),
-	region: z.string().min(1),
 });
 
 export const replayStagingTargetPolicySchema = z.strictObject({
@@ -76,7 +73,6 @@ export type ValidatedReplayStagingTarget = Readonly<{
 	deployment: string;
 	topic: string;
 	partitionCount: number;
-	region: string;
 	brokers: readonly string[];
 	database: ReplayStagingDatabaseTarget;
 }>;

@@ -13,15 +13,9 @@ export type KafkaSaslCredentials = {
 	password: string;
 };
 
-export type KafkaOauthBearer = {
-	mechanism: "oauthbearer";
-	/** Asked again before every expiry; never cache a startup token. `lifetimeMs` is an absolute epoch ms. */
-	oauthBearerProvider(): Promise<{ value: string; lifetimeMs?: number }>;
-};
-
 export type KafkaTransportConfig = {
 	ssl?: boolean;
-	sasl?: KafkaSaslCredentials | KafkaOauthBearer;
+	sasl?: KafkaSaslCredentials;
 };
 
 export type KafkaLogLevel = "error" | "warn" | "info" | "debug";
