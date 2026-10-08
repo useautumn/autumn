@@ -1,11 +1,22 @@
+import { Skeleton } from "@autumn/ui";
 import { DEFAULT_PLOT_INSETS, type PlotInsets } from "../utils/chartGeometry";
 
 const Y_POSITIONS = [0, 25, 50, 75, 100] as const;
+const MIN_BAR_HEIGHT = 0.25;
+const BAR_HEIGHT_RANGE = 0.6;
 
-/** Empty grid for the usage chart's first load, laid out on the real plot geometry. */
+/** A stable 25–85% height per bar, so the skeleton never reshuffles between renders. */
+const barHeight = (index: number) => {
+	const noise = Math.sin(index * 12.9898) * 43758.5453;
+	return MIN_BAR_HEIGHT + (noise - Math.floor(noise)) * BAR_HEIGHT_RANGE;
+};
+
+/** Static bars on the real plot geometry; the shared Skeleton pulse is its only motion. */
 export const ChartSkeleton = ({
+	barCount,
 	geometry = DEFAULT_PLOT_INSETS,
 }: {
+	barCount: number;
 	geometry?: PlotInsets;
 }) => (
 	<div
@@ -24,5 +35,15 @@ export const ChartSkeleton = ({
 				style={{ top: `${top}%`, borderColor: "var(--chart-grid-stroke)" }}
 			/>
 		))}
+		{/* px-0.5 + gap-1 matches BAR_CATEGORY_GAP: 2px either side of every bar. */}
+		<div className="absolute inset-0 flex items-end gap-1 px-0.5">
+			{Array.from({ length: barCount }, (_, index) => (
+				<Skeleton
+					key={index}
+					className="min-w-0 flex-1 rounded-t-[3px] rounded-b-none"
+					style={{ height: `${barHeight(index) * 100}%` }}
+				/>
+			))}
+		</div>
 	</div>
 );

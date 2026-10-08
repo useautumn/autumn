@@ -437,7 +437,10 @@ export const AnalyticsView = () => {
 											className="absolute inset-0 flex flex-col"
 											exit={{ opacity: 0, transition: fade }}
 										>
-											<ChartSkeleton geometry={plotInsets} />
+											<ChartSkeleton
+												geometry={plotInsets}
+												barCount={tablePlaceholder?.periodLabels.length ?? 0}
+											/>
 										</motion.div>
 									)}
 								</AnimatePresence>

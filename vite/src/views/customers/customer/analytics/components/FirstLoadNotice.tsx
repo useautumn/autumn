@@ -1,4 +1,6 @@
+import { overlaySurfaceClassName } from "@autumn/ui/lib/overlay-classes";
 import { AnimatePresence, motion } from "motion/react";
+import { cn } from "@/lib/utils";
 import { useElapsedSeconds } from "../hooks/useElapsedSeconds";
 import { useFadeTransition } from "../hooks/useFadeTransition";
 import { useTimeRange } from "./query/useTimeRange";
@@ -26,7 +28,12 @@ export const FirstLoadNotice = ({ active }: { active: boolean }) => {
 					exit={{ opacity: 0 }}
 					transition={fade}
 				>
-					<div className="pointer-events-auto flex flex-col items-center gap-3 rounded-lg bg-background px-7 py-5">
+					<div
+						className={cn(
+							overlaySurfaceClassName,
+							"pointer-events-auto flex flex-col items-center gap-3 px-6 py-4",
+						)}
+					>
 						<div className="flex flex-col items-center gap-1">
 							<p className="text-sm font-medium text-foreground">
 								Still counting events
