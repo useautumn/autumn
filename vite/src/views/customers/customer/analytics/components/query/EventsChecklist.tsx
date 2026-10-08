@@ -62,6 +62,8 @@ export const EventsChecklist = ({ header }: { header?: ReactNode }) => {
 		});
 	}, [eventNames, features, searchValue]);
 
+	const selectedNames = new Set(selectedEventNames);
+
 	return (
 		<>
 			{eventNames.length > SEARCH_THRESHOLD && (
@@ -95,7 +97,7 @@ export const EventsChecklist = ({ header }: { header?: ReactNode }) => {
 				{visibleEvents.map((event: EventNameWithCount) => (
 					<CheckRow
 						key={event.event_name}
-						checked={selectedEventNames.includes(event.event_name)}
+						checked={selectedNames.has(event.event_name)}
 						// The feature name reads better; the raw event name stays on hover.
 						label={eventDisplayName({ eventName: event.event_name, features })}
 						title={event.event_name}
