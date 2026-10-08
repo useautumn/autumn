@@ -4,6 +4,12 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { toolOk } from "../../mcp/actions/toolResult.ts";
 import { defineTool } from "../../mcp/actions/toolServer.ts";
 import { createQaEnv } from "../actions/createQaEnv.ts";
+import {
+	execInQaEnv,
+	getQaEnvLogs,
+	QA_SERVICES,
+	restartQaEnv,
+} from "../actions/debugQaEnv.ts";
 import { deleteQaEnv } from "../actions/deleteQaEnv.ts";
 import { getQaEnv, listQaEnvs } from "../actions/listQaEnvs.ts";
 
@@ -83,5 +89,50 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 				summary: `Deleted ${name}.`,
 				data: await deleteQaEnv({ ctx, name }),
 			}),
+	}),
+	defineTool({
+		name: "qa_logs",
+		description:
+			"Tail one service's log in a QA env (wakes it if asleep). Services: boot, server, workers, cron, balance-worker, kafka, dragonfly, fakecloud, proxy. Logs start fresh on every wake.",
+		input: z.object({
+			name: NAME,
+			service: z.enum(QA_SERVICES).default("server"),
+			lines: z.number().int().min(1).max(2000).default(200),
+		}),
+		run: async ({ name, service, lines }) => {
+			const { output } = await getQaEnvLogs({ ctx, name, service, lines });
+			return toolOk({
+				summary: `Last ${lines} lines of ${service} in ${name}.`,
+				data: { text: output },
+			});
+		},
+	}),
+	defineTool({
+		name: "qa_exec",
+		description:
+			"Run a bash command inside a QA env (wakes it if asleep), with its runtime env: `psql \"$DATABASE_URL\" -c '...'` queries or fixes its Neon branch, `curl localhost:8080/...` hits the server, files live under /app and logs under /var/qa/logs. Changes to files are lost when the env sleeps; database changes persist. Use it to debug a QA env or set up data the human asked for.",
+		input: z.object({ name: NAME, command: z.string().min(1).max(20_000) }),
+		run: async ({ name, command }) => {
+			const result = await execInQaEnv({ ctx, name, command });
+			return toolOk({
+				summary: `Exit ${result.exitCode} in ${name}.`,
+				data: result,
+			});
+		},
+	}),
+	defineTool({
+		name: "qa_restart",
+		description:
+			"Restart a QA env's whole stack from its build (fresh Dragonfly, Kafka and queues; database kept). Use when it is wedged; waits until it is ready (~40 s).",
+		input: z.object({ name: NAME }),
+		run: async ({ name }) => {
+			const result = await restartQaEnv({ ctx, name });
+			return toolOk({
+				summary: result.ready
+					? `${name} restarted and ready.`
+					: `${name} restarted but is not ready yet.`,
+				data: result,
+			});
+		},
 	}),
 ];

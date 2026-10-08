@@ -54,16 +54,19 @@ const call = async <T>({
 	action,
 	init,
 	query = "",
+	timeoutMs = 120_000,
 }: {
 	ctx: TwdContext;
 	name: string;
 	action: string;
 	init?: RequestInit & { duplex?: "half" };
 	query?: string;
+	timeoutMs?: number;
 }): Promise<T> => {
 	const { url, token } = workerConfig({ ctx });
 	const res = await fetch(`${url}/__admin/${name}/${action}${query}`, {
 		...init,
+		signal: AbortSignal.timeout(timeoutMs),
 		headers: { authorization: `Bearer ${token}`, ...init?.headers },
 	});
 	if (!res.ok)
@@ -117,6 +120,7 @@ export const qaWorker = {
 			action: "source",
 			query: `?build=${buildId}`,
 			init: { method: "POST", body: tarball },
+			timeoutMs: 600_000,
 		}),
 	build: ({
 		ctx,
@@ -136,6 +140,50 @@ export const qaWorker = {
 		}),
 	status: ({ ctx, name }: { ctx: TwdContext; name: string }) =>
 		call<WorkerEnvStatus>({ ctx, name, action: "status" }),
+	logs: ({
+		ctx,
+		name,
+		service,
+		lines,
+	}: {
+		ctx: TwdContext;
+		name: string;
+		service: string;
+		lines: number;
+	}) =>
+		call<{ exitCode: number; output: string }>({
+			ctx,
+			name,
+			action: "logs",
+			query: `?service=${encodeURIComponent(service)}&lines=${lines}`,
+		}),
+	exec: ({
+		ctx,
+		name,
+		command,
+	}: {
+		ctx: TwdContext;
+		name: string;
+		command: string;
+	}) =>
+		call<{ exitCode: number; output: string }>({
+			ctx,
+			name,
+			action: "exec",
+			init: {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ command }),
+			},
+			timeoutMs: 300_000,
+		}),
+	restart: ({ ctx, name }: { ctx: TwdContext; name: string }) =>
+		call<{ ready: boolean }>({
+			ctx,
+			name,
+			action: "restart",
+			init: { method: "POST" },
+		}),
 	destroy: ({ ctx, name }: { ctx: TwdContext; name: string }) =>
 		call<{ ok: true }>({ ctx, name, action: "", init: { method: "DELETE" } }),
 };

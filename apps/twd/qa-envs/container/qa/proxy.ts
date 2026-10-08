@@ -29,6 +29,20 @@ const toApi = ({ req, path }: { req: Request; path: string }) => {
 	});
 };
 
+const isServerUp = () =>
+	fetch(`${API}/api/auth/get-session`)
+		.then((r) => r.status === 200)
+		.catch(() => false);
+
+const ROUTING_WAIT_MS = 90_000;
+const bootedAt = Date.now();
+
+/** boot.sh marks when the balance worker has claimed every partition; before that commands fail with NO_OWNER. */
+const isBalanceWorkerRouting = async () =>
+	// Never strand the env behind the waking page if the marker never lands.
+	Date.now() - bootedAt > ROUTING_WAIT_MS ||
+	(await Bun.file("/var/qa/balance-owned").exists());
+
 const cgroupStat = (file: string) => {
 	try {
 		return readFileSync(`/sys/fs/cgroup/${file}`, "utf8").trim();
@@ -63,9 +77,7 @@ Bun.serve({
 	async fetch(req) {
 		const { pathname } = new URL(req.url);
 		if (pathname === "/__qa/ready") {
-			const ok = await fetch(`${API}/api/auth/get-session`)
-				.then((r) => r.status === 200)
-				.catch(() => false);
+			const ok = (await isServerUp()) && (await isBalanceWorkerRouting());
 			return new Response(ok ? "ready" : "starting", {
 				status: ok ? 200 : 503,
 			});

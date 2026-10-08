@@ -6,6 +6,7 @@ set -uo pipefail
 log() { echo "[qa-boot] $(date -u +%H:%M:%S.%N | cut -c1-12) $*"; }
 mkdir -p /var/qa/logs /var/qa/kafka /var/qa/dragonfly
 L=/var/qa/logs
+exec > >(tee -a "$L/boot.log") 2>&1
 date +%s%N >/var/qa/boot-start
 log "boot"
 
@@ -69,22 +70,31 @@ done
 log "fakecloud queues ready"
 wait_port 6379 && log "dragonfly ready"
 
-cd /app/server
-supervise() { # name, cmd...: restart on exit, like dev's restart loop
-	local name=$1; shift
-	( while true; do "$@"; echo "[qa-boot] $name exited $?, restarting"; sleep 2; done ) >>"$L/$name.log" 2>&1 &
+supervise() { # name, dir, cmd...: restart on exit, like dev's restart loop
+	local name=$1 dir=$2; shift 2
+	( cd "$dir" && while true; do "$@"; echo "[qa-boot] $name exited $?, restarting"; sleep 2; done ) >>"$L/$name.log" 2>&1 &
 }
-supervise server bun src/index.ts
-# The dashboard needs only the server; the rest would compete with its 20+ s of module loading on 2 vCPUs.
-wait_port 8080 && log "server listening"
-supervise workers bun src/workers.ts
-supervise cron bun src/cron.ts
 
-# Kafka is fresh, so balance-worker bookmarks in Neon point past its empty logs.
-wait_port 19092 && log "kafka ready"
-psql "$DATABASE_URL" -q -c "DELETE FROM partition_progress WHERE topic LIKE 'local-%'" >>"$L/boot.log" 2>&1
-cd /app/apps/balance-worker
-bun --config=./bunfig.toml scripts/setupLocalTopics.ts >>"$L/balance-worker.log" 2>&1
-supervise balance-worker bun --config=./bunfig.toml src/main.ts
+# The balance worker owns every partition before the env reports ready; it needs only Kafka and Neon.
+(
+	wait_port 19092 && log "kafka ready"
+	# Kafka is fresh, so balance-worker bookmarks in Neon point past its empty logs.
+	psql "$DATABASE_URL" -q -c "DELETE FROM partition_progress WHERE topic LIKE 'local-%'"
+	cd /app/apps/balance-worker && bun --config=./bunfig.toml scripts/setupLocalTopics.ts >>"$L/balance-worker.log" 2>&1
+	supervise balance-worker /app/apps/balance-worker bun --config=./bunfig.toml src/main.ts
+	log "balance worker started"
+	# Commands fail with NO_OWNER until each partition's preparing → ready → claimed records land.
+	until /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server 127.0.0.1:19092 --topic local-ownership 2>/dev/null |
+		awk -F: '$3 >= 3 { n++ } END { exit !(n >= 4) }'; do sleep 1; done
+	sleep 1
+	touch /var/qa/balance-owned
+	log "balance worker owns every partition"
+) &
+
+supervise server /app/server bun src/index.ts
+# The rest would compete with the server's 20+ s of module loading on 2 vCPUs.
+wait_port 8080 && log "server listening"
+supervise workers /app/server bun src/workers.ts
+supervise cron /app/server bun src/cron.ts
 log "all processes started"
 wait

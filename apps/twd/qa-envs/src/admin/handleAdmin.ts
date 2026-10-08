@@ -63,6 +63,25 @@ export async function handleAdmin({
 			await qaEnvStub({ env, name: `build:${name}:${buildId}` }).runBuild();
 			return json({ ok: true });
 		}
+		case "GET logs":
+			return json(
+				await stub.logs({
+					service: url.searchParams.get("service") ?? "server",
+					lines: Number(url.searchParams.get("lines") ?? 200),
+				}),
+			);
+		case "POST exec": {
+			const { command } = (await req.json()) as { command?: string };
+			if (!command) return json({ error: "command is required" }, 400);
+			return json(await stub.run({ command }));
+		}
+		case "POST patch": {
+			const { command } = (await req.json()) as { command?: string };
+			if (!command) return json({ error: "command is required" }, 400);
+			return json(await stub.patch({ command }));
+		}
+		case "POST restart":
+			return json(await stub.restart());
 		case "POST sleep":
 			await stub.sleepNow();
 			return json({ ok: true });

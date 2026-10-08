@@ -12,6 +12,7 @@ import type {
 	LiveEvent,
 	LiveServerMessage,
 	Me,
+	QaEnv,
 	RunDetail,
 	RunEvent,
 	RunFile,
@@ -1308,6 +1309,97 @@ const apiKeys: ApiKey[] = [
 	},
 ];
 
+// ---- qa envs --------------------------------------------------------------
+
+const QA_BUILD_MS = 4 * MIN;
+const QA_PHASES = [
+	"cloning",
+	"installing deps",
+	"building image",
+	"pushing image",
+	"starting container",
+];
+
+const qaEnv = ({
+	createdMs,
+	...env
+}: Pick<QaEnv, "name" | "ref" | "state" | "awake" | "createdBy"> &
+	Partial<QaEnv> & { createdMs: number }): QaEnv => ({
+	url: `https://${env.name}.atmn.lol`,
+	sha: hex(40),
+	building: null,
+	error: null,
+	createdAt: iso(createdMs),
+	expiresAt: iso(createdMs + 3 * 24 * HOUR),
+	lastActiveAt: null,
+	jobId: id("job"),
+	...env,
+});
+
+const qaEnvs: QaEnv[] = [
+	qaEnv({
+		name: "feat-usage-alerts",
+		ref: "feat/usage-alerts",
+		state: "building",
+		awake: null,
+		createdBy: ME.email,
+		createdMs: START - 70_000,
+	}),
+	qaEnv({
+		name: "fix-proration-rounding",
+		ref: "fix/proration-rounding",
+		state: "ready",
+		awake: true,
+		createdBy: "john@useautumn.com",
+		createdMs: START - 5 * HOUR,
+		lastActiveAt: iso(START - 2 * MIN),
+	}),
+	qaEnv({
+		name: "charlie-plans-anchor",
+		ref: "charlie/set-plans-anchor-qa",
+		state: "ready",
+		awake: false,
+		createdBy: "ayush@useautumn.com",
+		createdMs: START - 52 * HOUR,
+		lastActiveAt: iso(START - 3 * HOUR),
+	}),
+	qaEnv({
+		name: "feat-credit-grants",
+		ref: "feat/feature-grant-rewards",
+		state: "failed",
+		awake: null,
+		createdBy: ME.email,
+		createdMs: START - 40 * MIN,
+		error:
+			"image build failed: bun install exited 1 (lockfile out of date: @autumn/shared@workspace:* not found)",
+	}),
+];
+
+/** Building envs advance through the phases, then land ready and awake. */
+const tickQaEnvs = () => {
+	for (const env of qaEnvs) {
+		if (env.state !== "building") continue;
+		const elapsedMs = Date.now() - Date.parse(env.createdAt);
+		if (elapsedMs >= QA_BUILD_MS) {
+			Object.assign(env, {
+				state: "ready",
+				awake: true,
+				building: null,
+				lastActiveAt: iso(Date.now()),
+			});
+			continue;
+		}
+		const percent = (elapsedMs / QA_BUILD_MS) * 100;
+		env.building = {
+			phase: QA_PHASES[Math.floor((percent / 100) * QA_PHASES.length)] ?? null,
+			elapsedMs,
+			remainingMs: QA_BUILD_MS - elapsedMs,
+			percent,
+		};
+	}
+	return qaEnvs;
+};
+
 // ---- routing --------------------------------------------------------------
 
 const err = (
@@ -1388,6 +1480,20 @@ export const handle = ({
 	if (route === "GET /keys") return ok(keysOverview());
 	if (route === "GET /accounts") return ok(accounts);
 	if (route === "GET /api-keys") return ok(apiKeys);
+	if (route === "GET /qa") return ok({ envs: tickQaEnvs() });
+	if (method === "DELETE" && seg[0] === "qa" && seg[1]) {
+		const name = decodeURIComponent(seg[1]);
+		const i = qaEnvs.findIndex((e) => e.name === name);
+		if (i === -1)
+			return err(
+				404,
+				"qa_env_not_found",
+				`No QA env named "${name}".`,
+				"GET /qa for valid names.",
+			);
+		qaEnvs.splice(i, 1);
+		return ok({ name, deleted: true });
+	}
 
 	if (method === "POST" && seg[0] === "branches" && seg[2] === "warm") {
 		const b = branches.find((x) => x.name === decodeURIComponent(seg[1]));

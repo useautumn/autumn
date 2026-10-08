@@ -151,6 +151,7 @@ export class QaEnv extends DurableObject<Env> {
 			"builderState",
 			"building" satisfies BuilderState,
 		);
+		await this.ctx.storage.put("buildStartedAt", Date.now());
 		await this.ctx.storage.setAlarm(Date.now() + BUILD_POLL_MS);
 	}
 
@@ -158,22 +159,38 @@ export class QaEnv extends DurableObject<Env> {
 		const builder = await this.ctx.storage.get<BuilderConfig>("builder");
 		const state = await this.ctx.storage.get<BuilderState>("builderState");
 		if (!builder) return null;
-		const log = this.container.running
-			? (
-					await this.exec({
-						cmd: [
-							"sh",
-							"-c",
-							"grep '^\\[qa-prepare\\]' /var/qa-prepare.log 2>/dev/null; tail -n 3 /var/qa-prepare.log 2>/dev/null | grep -v '^\\[qa-prepare\\]'",
-						],
-					}).catch(() => ({ output: "" }))
-				).output
-			: "";
+		const log =
+			state === "building" && this.container.running
+				? await this.readBuildLog()
+				: "";
+		const buildStartedAt = await this.ctx.storage.get<number>("buildStartedAt");
+		if (!buildStartedAt)
+			return {
+				state,
+				log,
+				phase: "starting build machine",
+				elapsedMs: Date.now() - builder.startedAt,
+				remainingMs: 135_000,
+				percent: 1,
+			};
 		return {
 			state,
 			log,
-			...buildProgress({ log, elapsedMs: Date.now() - builder.startedAt }),
+			...buildProgress({ log, elapsedMs: Date.now() - buildStartedAt }),
 		};
+	}
+
+	/** prepare.sh's step lines; never blocks a status read on a busy or still-starting container. */
+	private async readBuildLog() {
+		const read = this.exec({
+			cmd: [
+				"sh",
+				"-c",
+				"grep '^\\[qa-prepare\\]' /var/qa-prepare.log 2>/dev/null; tail -n 3 /var/qa-prepare.log 2>/dev/null | grep -v '^\\[qa-prepare\\]'",
+			],
+		}).then((r) => r.output);
+		const timeout = new Promise<string>((r) => setTimeout(() => r(""), 3_000));
+		return Promise.race([read, timeout]).catch(() => "");
 	}
 
 	private async pollBuild(builder: BuilderConfig) {
@@ -557,6 +574,89 @@ export class QaEnv extends DurableObject<Env> {
 			await this.ctx.storage.delete(key);
 		}
 		return true;
+	}
+
+	/** Agent debugging: last lines of one service's log, from a woken env. */
+	async logs({ service, lines }: { service: string; lines: number }) {
+		const config = await this.config();
+		if (!config) throw new Error("no such env");
+		if (!/^[a-z-]+$/.test(service)) throw new Error("invalid service");
+		await this.ensureAwake(config);
+		const file =
+			service === "boot" ? "/var/qa/boot.log" : `/var/qa/logs/${service}.log`;
+		return this.exec({
+			cmd: [
+				"sh",
+				"-c",
+				`ls /var/qa/logs; echo ---; tail -n ${Math.min(lines, 2000)} ${file} 2>&1`,
+			],
+		});
+	}
+
+	/** Agent debugging: one shell command in the env, with the env's runtime variables (DATABASE_URL for psql). */
+	async run({ command }: { command: string }) {
+		const config = await this.config();
+		if (!config) throw new Error("no such env");
+		await this.ensureAwake(config);
+		await this.markActive();
+		const { exitCode, output } = await this.exec({
+			cmd: ["bash", "-c", command],
+			env: {
+				...config.runtimeEnv,
+				PUBLIC_URL: config.publicUrl,
+				HOME: "/root",
+			},
+		});
+		return { exitCode, output: output.slice(-20_000) };
+	}
+
+	/** Restarts the stack from the snapshot (fresh Dragonfly/Kafka/fakecloud); data in Neon is kept. */
+	async restart() {
+		const config = await this.config();
+		if (!config) throw new Error("no such env");
+		if (this.container.running) await this.container.destroy("restart");
+		this.ready = false;
+		await this.wake(config);
+		return { ready: await this.waitReady(Date.now() + READY_WAIT_MS) };
+	}
+
+	/** Runs a command on the env's stopped filesystem and keeps the result as the env's snapshot. */
+	async patch({ command }: { command: string }) {
+		const config = await this.config();
+		const snapshot = await this.ctx.storage.get<ContainerSnapshot>("snapshot");
+		if (!config || !snapshot) throw new Error("env has no snapshot");
+		if (this.container.running) await this.container.destroy("patch");
+		this.ready = false;
+		this.container.start({
+			containerSnapshot: { id: snapshot.id },
+			entrypoint: ["sleep", "infinity"],
+			instance: config.instance,
+			enableInternet: true,
+		});
+		const result = await this.exec({
+			cmd: ["bash", "-c", command],
+			env: { HOME: "/root" },
+		});
+		if (result.exitCode === 0) {
+			const next = await this.container.snapshotContainer({
+				name: `${snapshot.name ?? "qa"}-patch`,
+			});
+			await this.ctx.storage.put("snapshot", next);
+		}
+		await this.container.destroy("patched");
+		return {
+			exitCode: result.exitCode,
+			output: result.output.slice(-20_000),
+			kept: result.exitCode === 0,
+		};
+	}
+
+	private async ensureAwake(config: EnvConfig) {
+		if ((await this.envState()) !== "ready")
+			throw new Error("env is not ready");
+		if (!this.container.running) await this.wake(config);
+		if (!(await this.waitReady(Date.now() + READY_WAIT_MS)))
+			throw new Error("env did not become ready");
 	}
 
 	async sleepNow() {

@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import { CreateQaEnvBody, QA_ENV_NAME } from "../../api/contract.ts";
 import { createQaEnv } from "../../internal/qa/actions/createQaEnv.ts";
+import {
+	execInQaEnv,
+	getQaEnvLogs,
+	QA_SERVICES,
+	restartQaEnv,
+} from "../../internal/qa/actions/debugQaEnv.ts";
 import { deleteQaEnv } from "../../internal/qa/actions/deleteQaEnv.ts";
 import { getQaEnv, listQaEnvs } from "../../internal/qa/actions/listQaEnvs.ts";
 import { TwdError } from "../apiError.ts";
@@ -39,6 +45,49 @@ export const qaRoutes = new Hono<TwdHono>()
 	.get("/qa/:name", async (c) =>
 		c.json(
 			await getQaEnv({
+				ctx: c.get("ctx"),
+				name: requireName(c.req.param("name")),
+			}),
+		),
+	)
+	.get("/qa/:name/logs", async (c) => {
+		const service = c.req.query("service") ?? "server";
+		if (!(QA_SERVICES as readonly string[]).includes(service))
+			throw new TwdError({
+				status: 400,
+				code: "invalid_service",
+				message: `Unknown service ${service}.`,
+				next: `Use one of ${QA_SERVICES.join(", ")}.`,
+			});
+		return c.json(
+			await getQaEnvLogs({
+				ctx: c.get("ctx"),
+				name: requireName(c.req.param("name")),
+				service: service as (typeof QA_SERVICES)[number],
+				lines: Math.min(2000, Number(c.req.query("lines") ?? 200) || 200),
+			}),
+		);
+	})
+	.post("/qa/:name/exec", async (c) => {
+		const { command } = (await c.req.json()) as { command?: string };
+		if (!command)
+			throw new TwdError({
+				status: 400,
+				code: "invalid_body",
+				message: "command is required.",
+				next: "Send { command }.",
+			});
+		return c.json(
+			await execInQaEnv({
+				ctx: c.get("ctx"),
+				name: requireName(c.req.param("name")),
+				command,
+			}),
+		);
+	})
+	.post("/qa/:name/restart", async (c) =>
+		c.json(
+			await restartQaEnv({
 				ctx: c.get("ctx"),
 				name: requireName(c.req.param("name")),
 			}),
