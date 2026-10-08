@@ -1,5 +1,6 @@
 import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getAsyncTrackProducerQueueUrl } from "@/queue/trackAsyncQueueUrls.js";
@@ -23,10 +24,13 @@ type QueueTrackOptions = {
 export const queueTrack = async ({
 	ctx,
 	body,
+	tokens,
 	options = {},
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	/** A track_tokens cost, so the replay prices the event the way the sync path does. */
+	tokens?: TokenDeduction;
 	options?: QueueTrackOptions;
 }) => {
 	const {
@@ -68,6 +72,7 @@ export const queueTrack = async ({
 				requestId: requestId ?? ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				body,
+				tokens,
 				// Sync/async paths claim the key at accept (default false) — only
 				// batch items ask the worker to claim.
 				validateTrackBodyIdempotencyKey,

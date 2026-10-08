@@ -2,6 +2,7 @@ import { ApiVersion, ApiVersionClass } from "@autumn/shared";
 import type { Context } from "hono";
 import { matchRoute } from "../../../honoMiddlewares/middlewareUtils";
 import type { HonoEnv } from "../../../honoUtils/HonoEnv";
+import { isSyncBalanceWrite } from "./isSyncBalanceWrite";
 
 export enum RateLimitType {
 	General = "general",
@@ -17,6 +18,8 @@ export enum RateLimitType {
 	CustomerEntitiesGet = "customer_entities_get",
 	CustomerEntitiesGetOrg = "entities_get_org",
 	Logs = "logs",
+	SyncBalanceWrite = "sync_balance_write",
+	SyncBalanceWriteOrg = "sync_balance_write_org",
 }
 
 type RoutePattern = {
@@ -155,6 +158,10 @@ export const getRateLimitRouteGroup = (
 	const method = c.req.method;
 	const path = c.req.path;
 
+	if (isSyncBalanceWrite({ ctx: c.get("ctx"), method, path })) {
+		return { type: RateLimitType.SyncBalanceWrite };
+	}
+
 	for (const { patterns, type, overLimit } of RATE_LIMIT_ROUTE_GROUPS) {
 		if (
 			patterns.some((pattern) => matchRoute({ url: path, method, pattern }))
@@ -257,6 +264,20 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	},
 	[RateLimitType.CheckCustomerGetOrg]: {
 		limit: 240_000,
+		windowMs: 60_000,
+		scope: RateLimitScope.Org,
+		store: "redis",
+	},
+	// Tracks the handler applies synchronously, and checks with a lock or send_event, share these.
+	[RateLimitType.SyncBalanceWrite]: {
+		limit: 1000,
+		windowMs: 1000,
+		scope: RateLimitScope.Customer,
+		store: "redis",
+		orgLimit: RateLimitType.SyncBalanceWriteOrg,
+	},
+	[RateLimitType.SyncBalanceWriteOrg]: {
+		limit: 120_000,
 		windowMs: 60_000,
 		scope: RateLimitScope.Org,
 		store: "redis",

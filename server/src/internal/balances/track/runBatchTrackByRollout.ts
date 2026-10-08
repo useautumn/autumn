@@ -1,8 +1,12 @@
 import type { BatchTrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import type { TokenDeduction } from "../utils/types/featureDeduction.js";
 import { runBalanceWorkerBatchTrack } from "./balanceWorker/runBalanceWorkerBatchTrack.js";
-import { type BatchTrackEntry, toBatchTrackEntries } from "./batchTrackEntries.js";
+import {
+	type BatchTrackEntry,
+	toBatchTrackEntries,
+} from "./batchTrackEntries.js";
 import { runBatchTrack } from "./runBatchTrack.js";
 
 const partitionByRollout = ({
@@ -28,13 +32,16 @@ const partitionByRollout = ({
 export const runBatchTrackByRollout = async ({
 	ctx,
 	body,
+	tokens,
 }: {
 	ctx: AutumnContext;
 	body: BatchTrackParams;
+	/** Per item, aligned with `body`: set for batch track_tokens items. */
+	tokens?: (TokenDeduction | undefined)[];
 }): Promise<void> => {
 	const { worker, legacy } = partitionByRollout({
 		ctx,
-		entries: toBatchTrackEntries({ body }),
+		entries: toBatchTrackEntries({ body, tokens }),
 	});
 	await Promise.all([
 		worker.length > 0 && runBalanceWorkerBatchTrack({ ctx, entries: worker }),

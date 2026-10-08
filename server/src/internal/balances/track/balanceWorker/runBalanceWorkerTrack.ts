@@ -41,6 +41,7 @@ type FeatureTrackScope = {
 	featureId: string;
 	/** Only a fan-out's first feature records the request's one usage event. */
 	recordsUsageEvent: boolean;
+	recordsCreditCost: boolean;
 };
 
 const isDuplicateCommand = (error: unknown): boolean =>
@@ -54,6 +55,7 @@ const trackFeature = ({
 	client,
 	featureId,
 	recordsUsageEvent,
+	recordsCreditCost,
 }: FeatureTrackScope): Promise<FeatureTrackOutcome> =>
 	withPaidAllocatedFallback<FeatureTrackOutcome>({
 		ctx,
@@ -66,6 +68,7 @@ const trackFeature = ({
 					body: { ...body, feature_id: featureId },
 					isFanOut: !body.feature_id,
 					recordsUsageEvent,
+					recordsCreditCost,
 				}),
 			});
 			return { engine: "worker", featureId, reply };
@@ -104,10 +107,12 @@ const trackEachFeature = async ({
 	ctx,
 	body,
 	client,
+	recordsCreditCost,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	client: TrackClient;
+	recordsCreditCost: boolean;
 }): Promise<FeatureTrackOutcome[]> => {
 	const isFanOut = !body.feature_id;
 	const outcomes: FeatureTrackOutcome[] = [];
@@ -122,6 +127,7 @@ const trackEachFeature = async ({
 					client,
 					featureId,
 					recordsUsageEvent: index === 0,
+					recordsCreditCost,
 				}),
 			);
 		} catch (error) {
@@ -171,17 +177,20 @@ export async function runBalanceWorkerTrack({
 	body,
 	isAsync = false,
 	validateTrackBodyIdempotencyKey = true,
+	recordsCreditCost = false,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	isAsync?: boolean;
+	/** A track_tokens request, whose event records `credit_cost`. */
+	recordsCreditCost?: boolean;
 	/** False when the caller already claimed the body key (a queued replay). */
 	validateTrackBodyIdempotencyKey?: boolean;
 	client?: TrackClient;
 }): Promise<TrackResponseV3> {
 	if (isAsync) {
-		await runBalanceWorkerAsyncTrack({ ctx, body });
+		await runBalanceWorkerAsyncTrack({ ctx, body, recordsCreditCost });
 		return getQueuedTrackResponse({ ctx, body });
 	}
 
@@ -203,7 +212,12 @@ export async function runBalanceWorkerTrack({
 				entityId: body.entity_id,
 				entityData: body.entity_data,
 				run: async () => {
-					const outcomes = await trackEachFeature({ ctx, body, client });
+					const outcomes = await trackEachFeature({
+						ctx,
+						body,
+						client,
+						recordsCreditCost,
+					});
 					fireReplyThresholdsReached({ ctx, body, outcomes });
 					return {
 						result: trackOutcomesToApiResponse({ ctx, body, outcomes }),

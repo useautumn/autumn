@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { RetryableMigrationItemRunStatus } from "@/hooks/queries/useMigrationsQuery";
+import type { RetryableMigrationItemRunStatus } from "@/hooks/queries/useMigrationMutations";
 
 // Mirrors server/src/internal/migrations/v2/webhookDelivery — the run route
 // clamps authoritatively; these drive the form's default and bounds.

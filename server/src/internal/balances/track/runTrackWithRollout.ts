@@ -11,6 +11,7 @@ import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSu
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { queueTrack } from "./utils/queueTrack.js";
+import { findTokenDeduction } from "./utils/tokenFeatureDeduction.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 const TRACK_V3_ENABLED = true;
@@ -38,7 +39,11 @@ export const runTrackWithRollout = async ({
 		routeGroup: RouteGroup.Balances,
 		run: async () => {
 			if (ctx.orgRateLimitDegraded) {
-				const queuedResponse = await queueTrack({ ctx, body });
+				const queuedResponse = await queueTrack({
+					ctx,
+					body,
+					tokens: findTokenDeduction({ featureDeductions }),
+				});
 				if (queuedResponse) return queuedResponse;
 			}
 
@@ -53,7 +58,11 @@ export const runTrackWithRollout = async ({
 					}),
 				alsoFailOpen: isFullSubjectGateRejection,
 				fallback: async (error) => {
-					const queuedResponse = await queueTrack({ ctx, body });
+					const queuedResponse = await queueTrack({
+						ctx,
+						body,
+						tokens: findTokenDeduction({ featureDeductions }),
+					});
 					if (queuedResponse) return queuedResponse;
 					throw error;
 				},

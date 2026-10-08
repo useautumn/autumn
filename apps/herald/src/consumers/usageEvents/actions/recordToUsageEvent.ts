@@ -1,5 +1,10 @@
-import type { MutationRecord } from "@autumn/balance-engine";
-import { AppEnv, type EventInsert } from "@autumn/shared";
+import type { MutationRecord, TrackCommand } from "@autumn/balance-engine";
+import {
+	AppEnv,
+	buildAiCreditCostProperty,
+	type EventInsert,
+	type TrackDeduction,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { z } from "zod/v4";
 import type { StreamRecord } from "../../../stream/types/streamConsumer.js";
@@ -26,6 +31,27 @@ type ReportedUsage = {
 	internalProductId: string | null;
 };
 
+/** A token track's properties plus what its parent credit pools were charged, as the API server writes them. */
+const trackPropertiesOf = ({
+	command,
+	deductions,
+}: {
+	command: TrackCommand;
+	deductions: TrackDeduction[];
+}): Record<string, unknown> | null => {
+	if (!command.usageEvent?.recordsCreditCost) return command.properties;
+	const creditCost = buildAiCreditCostProperty({
+		aiCreditFeatureId: command.featureId,
+		entries: deductions.map(({ feature_id, value }) => ({
+			featureId: feature_id,
+			amount: value,
+		})),
+	});
+	return creditCost
+		? { ...command.properties, credit_cost: creditCost }
+		: command.properties;
+};
+
 /** Null when the record reports no usage: it was refused, records no event, or is a command that moves none. */
 const recordToReportedUsage = ({
 	record,
@@ -43,7 +69,10 @@ const recordToReportedUsage = ({
 			eventId: command.usageEvent.id,
 			idempotencyKey: command.usageEvent.idempotencyKey,
 			value: command.value,
-			properties: command.properties,
+			properties: trackPropertiesOf({
+				command,
+				deductions: result.deductions,
+			}),
 			deductions: result.deductions,
 			internalProductId: result.internalProductId,
 		};

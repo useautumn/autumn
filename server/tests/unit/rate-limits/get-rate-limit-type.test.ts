@@ -20,7 +20,8 @@ const createContext = ({
 			method,
 			path,
 		},
-	}) as Context<HonoEnv>;
+		get: () => undefined,
+	}) as unknown as Context<HonoEnv>;
 
 describe("getRateLimitRouteGroup", () => {
 	test("classifies customer list endpoints into the list customers bucket", () => {

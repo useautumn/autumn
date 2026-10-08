@@ -50,7 +50,10 @@ describe("org rate limits", () => {
 
 	test("check and track degrade at their org cap, customer reads and entities.get reject", () => {
 		const groupFor = ({ method, path }: { method: string; path: string }) =>
-			getRateLimitRouteGroup({ req: { method, path } } as never);
+			getRateLimitRouteGroup({
+				req: { method, path },
+				get: () => undefined,
+			} as never);
 
 		expect(groupFor({ method: "POST", path: "/v1/check" })).toEqual({
 			type: RateLimitType.CheckCustomerGet,

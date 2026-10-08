@@ -10,7 +10,7 @@
  * - Both customer-level and entity-level consumables are covered
  *
  * For end-of-cycle cancel tests (where overage IS charged), see:
- * - cancel/end-of-cycle/cancel-end-of-cycle-consumable.test.ts
+ * - cancel/end-of-cycle/cancel-end-of-cycle-consumable-*.test.ts
  */
 
 import { expect, test } from "bun:test";
