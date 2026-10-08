@@ -58,10 +58,12 @@ the repo to librdkafka through Confluent's client, on Bun.
    `END_BATCH_PROCESS`, reports partition EOF as the empty batch kafkajs reported for filtered
    records and markers, and makes `heartbeat()` throw once the batch's partition was revoked.
    Producers and the admin use the shim, which covers what we call.
-6. **The producer thread is deleted.** It existed to keep kafkajs's encoding, compression and
-   socket work off the decide thread. librdkafka already does all three on its own native threads;
-   the thread added a ring copy, a frame decode and a `postMessage` per send. Producers run on the
-   decide thread; the idempotent-only assertion stays.
+6. **The producer thread stays; librdkafka runs inside it.** librdkafka encodes, compresses and talks to
+   brokers on native threads, but the JS side of a send is not free under Bun: the N-API `produce` call
+   per record dominates, and a 20-record idempotent commit costs the calling thread 216 µs (kafkajs:
+   215 µs). Moving producers onto the decide thread would hand it the work the thread exists to take
+   off. The patched addon loads and produces inside a Bun `Worker`; the thread builds its client with
+   `createKafka` and errors cross it as data (code, retriable/fatal flags, cause chain).
 7. **A transactional producer fences in `fence()`, never in `connect()`.** librdkafka's
    `init_transactions` (the epoch bump) runs on connect. The session defers the native connect to
    `fence()`, so "the successor never fences before the predecessor has drained" still holds.
@@ -71,6 +73,63 @@ the repo to librdkafka through Confluent's client, on Bun.
    the boot-time `describeConfigs` check that the ownership topic is compacted (not in the client;
    topic configuration is provisioning's job), and `admin.setOffsets` (herald seeds a new job's
    group with a group-only commit from a non-subscribed consumer instead).
+
+9. **The roster group is renamed once: `${base}-kip848[-${fleetId}]`.** Kafka converts a live classic
+   group to KIP-848 only when its members' assignor embeds no custom metadata; kafkajs's load-aware
+   assignor does, so new-code workers could never join the fleet's current group. A fresh group is a
+   consumer group from its first member, and partitions move into it the way the per-fleet rename moved
+   them: the new member prepares, announces `ready`, the old owner drains and writes `claimed{new}`.
+   One bounded detour per partition, one time. Herald keeps its groups (they are its committed
+   offsets); kafkajs's default assigner embeds nothing, so its groups convert online when the first
+   new-code member joins, and convert back if a rollback empties them of new members.
+10. **A stuck member is evicted by `max.poll.interval.ms`, set to the group's rebalance timeout.**
+    librdkafka heartbeats from its own thread, so a member wedged in a batch (the zombie the fence and
+    the handoff protocol exist for) stays in the group until it misses a poll for that long, not for a
+    session timeout. Worker and herald keep their 60 s; under KIP-848 it is also how long a member may
+    take to give back revoked partitions.
+11. **Idle fetches wait at most 500 ms.** librdkafka learns a partition reached its end only from a
+    fetch response, so a catch-up waiting to pass a trailing transaction marker hears of it one idle
+    fetch later; kafkajs saw markers inside the batch. Tails configured for 5 s waits now fetch every
+    500 ms when idle, which costs a few empty fetches a second per consumer.
+12. **A partition stays ours until the next poll.** Under KIP-848 the broker hands a revoked partition
+    on only after this member acknowledges, which librdkafka does from `consume()`; a batch in flight
+    can no longer lose its lease mid-way. `heartbeat()` still throws once the consumer restarted under
+    the batch, so a slice handler stops writing then.
+
+13. **Producers linger 1 ms.** A send's records are queued in one tick; librdkafka puts them in one
+    record batch (atomic per partition, which `sendIdempotentBatch` relies on) only if it waits for
+    them. At 0 ms a 20-record send splits into several requests: single-partition p50 drops from
+    2.8 ms to 1.15 ms, but 16 busy partitions commit 35% less (2,500 vs 3,800 commits/s) at twice the
+    CPU, and a batch is no longer all-or-nothing. 0.25 and 0.5 ms behave like 0.
+
+## What the benchmarks say
+
+Local Kafka 4.3.1 on loopback, same `@autumn/kafka` calls, kafkajs from `dev` against this branch:
+
+- Hot path is a wash or slightly worse here: idempotent commit p50 2.8 ms vs 0.9 ms on one partition
+  (the 1 ms linger), 3.9 vs 3.1 ms across 16; 3,780 vs 4,320 commits/s; JS-thread CPU per commit
+  equal; process CPU +54% (librdkafka's own threads). Catch-up reads 134k vs 268k records/s,
+  bound by Bun's N-API object creation per record. Loopback has no TLS and no RTT, which is where
+  kafkajs's JS sockets cost most; Confluent Cloud is SASL_SSL.
+- Startup is far better: a worker's ownership tail is ready in 158 ms instead of 5.0 s (no consumer
+  group join barrier), the kafka package's integration tests run 2.6× faster overall.
+- Rebalance: KIP-848 moves a partition on the receiving member's next heartbeat, 5 s by default on
+  the broker and not settable below it client-side, so moved partitions go dark ~5 s; unmoved ones
+  never stop. Locally an eager rebalance is cheap (all members rejoin in ~0.2 s), so eager wins this
+  benchmark on dark partition-seconds. We keep KIP-848 for the worker because the ownership handoff
+  already keeps serving across a move (the predecessor serves until the successor is ready) and an
+  eager rebalance revokes and re-seeks every partition on every member; switching back is
+  `groupProtocol: "classic"` in `createConsumerGroupConfig`.
+
+## Rollout
+
+1. Deploy to the green slot as usual. Green workers join the new `-kip848-` group, prepare, and hold at
+   the slot gate; the flip hands partitions over through the ownership topic exactly as today.
+2. Herald: the flip makes green join the job groups beside blue (online conversion), then blue leaves.
+3. Rollback is the flip back: blue (kafkajs) is still in its classic groups, untouched.
+4. Local and CI brokers are Kafka 4.3.1. A Capy machine whose broker data was formatted by 3.9 is
+   upgraded in place (`kafka-features.sh upgrade`) by `capy-kafka.sh`; a Docker volume from
+   `bun dev:services` needs `down --volumes` once.
 
 ## Follow-ups
 
