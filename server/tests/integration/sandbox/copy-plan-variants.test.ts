@@ -19,7 +19,9 @@ import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { copyProductForOrgs } from "@/internal/products/handlers/handleCopyProduct/copyProductForOrgs.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { constructFixedPrice } from "@/utils/scriptUtils/constructItem.js";
 
 // Copying a single base plan (the "Copy Plan to Production" dialog) must carry
 // the base's variants and license links along, remapped to the target env.
@@ -43,6 +45,9 @@ const PULLED_LICENSE_PLAN = `cpv_pulled_license_${suffix}`;
 const SIBLING_BASE_PLAN = `cpv_sibling_base_${suffix}`;
 const SIBLING_SOURCE_PLAN = `cpv_sibling_source_${suffix}`;
 const SIBLING_COPY_PLAN = `cpv_sibling_copy_${suffix}`;
+const PAID_SIBLING_BASE_PLAN = `cpv_paid_sibling_base_${suffix}`;
+const PAID_SIBLING_SOURCE_PLAN = `cpv_paid_sibling_source_${suffix}`;
+const PAID_SIBLING_COPY_PLAN = `cpv_paid_sibling_copy_${suffix}`;
 const CROSS_ENV_BASE_PLAN = `cpv_cross_env_base_${suffix}`;
 const CROSS_ENV_VARIANT_PLAN = `cpv_cross_env_variant_${suffix}`;
 
@@ -306,6 +311,62 @@ describe("copying a single variant plan", () => {
 		expect(copy.entitlements.map((e) => e.feature.id)).toEqual([
 			VARIANT_FEATURE,
 		]);
+	});
+
+	test("reuses the source variant's Stripe price and product", async () => {
+		if (!org) throw new Error("org not provisioned");
+		const ctx = ctxForEnv(AppEnv.Sandbox);
+		const base = await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: PAID_SIBLING_BASE_PLAN,
+		});
+		const source = await seedCopyTestPlan({
+			ctx,
+			planId: PAID_SIBLING_SOURCE_PLAN,
+			items: [constructFixedPrice({ price: 20 })],
+			baseInternalProductId: base.internal_id,
+		});
+		const stripeProductId = `prod_cpv_${suffix}`;
+		const stripePriceId = `price_cpv_${suffix}`;
+		const [sourcePrice] = source.prices;
+		if (!sourcePrice) throw new Error("source price not seeded");
+		await PriceService.update({
+			db,
+			id: sourcePrice.id,
+			update: {
+				config: {
+					...sourcePrice.config,
+					stripe_product_id: stripeProductId,
+					stripe_price_id: stripePriceId,
+				},
+			},
+		});
+		await ProductService.updateByInternalId({
+			db,
+			internalId: source.internal_id,
+			update: { processor: { type: "stripe", id: stripeProductId } },
+		});
+
+		await copyProductForOrgs({
+			ctx,
+			fromOrg: org,
+			fromEnv: AppEnv.Sandbox,
+			toOrg: org,
+			toEnv: AppEnv.Sandbox,
+			fromProductId: PAID_SIBLING_SOURCE_PLAN,
+			toId: PAID_SIBLING_COPY_PLAN,
+			toName: "Paid Sibling Copy",
+		});
+
+		const copy = await ProductService.getFull({
+			db,
+			idOrInternalId: PAID_SIBLING_COPY_PLAN,
+			orgId: org.id,
+			env: AppEnv.Sandbox,
+		});
+		expect(copy.processor?.id).toBe(stripeProductId);
+		expect(copy.prices).toHaveLength(1);
+		expect(copy.prices[0]?.config.stripe_price_id).toBe(stripePriceId);
 	});
 
 	test("refuses to copy a variant into another env", async () => {

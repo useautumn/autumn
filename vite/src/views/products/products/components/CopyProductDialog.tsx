@@ -50,6 +50,8 @@ export const CopyProductDialog = ({
 
 	// A variant's base only exists in its own env, so it can only be copied there.
 	const isVariant = !!product.base_internal_product_id;
+	// Variants are never promoted, so their copy stays in the current org.
+	const copiesIntoCurrentOrg = isVariant || !inNamedSandbox;
 	const otherEnv = env === AppEnv.Live ? AppEnv.Sandbox : AppEnv.Live;
 
 	const [loading, setLoading] = useState(false);
@@ -76,7 +78,7 @@ export const CopyProductDialog = ({
 		}
 		// 2. Same-org same-env copy with an unchanged id would collide (skip this
 		// when promoting from a named sandbox — the target is the master org).
-		if (!inNamedSandbox && env === effectiveEnv && id === product.id) {
+		if (copiesIntoCurrentOrg && env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
 		}
@@ -102,7 +104,7 @@ export const CopyProductDialog = ({
 
 			if (onSuccess) {
 				await onSuccess(copiedProduct);
-			} else if (!inNamedSandbox && env === effectiveEnv) {
+			} else if (copiesIntoCurrentOrg && env === effectiveEnv) {
 				// Same-org duplicate lands in this view; a promote goes to another
 				// org, so don't navigate to a same-id plan in the current context.
 				navigateTo(`/products/${id}`, navigate);
