@@ -9,8 +9,8 @@ import {
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
+import { filterOnReplacedStripeSubscription } from "../utils/filterOnReplacedStripeSubscription";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
-import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
 import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
@@ -35,11 +35,12 @@ const keptCustomerProductsOnReplacedSubscription = ({
 			operation.type === "keep" ? [operation.customerProductId] : [],
 		),
 	);
-	return billingContext.fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			keptCustomerProductIds.has(customerProduct.id) &&
-			isOnReplacedStripeSubscription({ billingContext, customerProduct }),
-	);
+	return filterOnReplacedStripeSubscription({
+		billingContext,
+		customerProducts: billingContext.fullCustomer.customer_products.filter(
+			({ id }) => keptCustomerProductIds.has(id),
+		),
+	});
 };
 
 /** The first renewal of a cycle restarted on the backdated start, over every plan the recreated subscription runs. */

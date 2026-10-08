@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isUnbilledByStripe } from "@/internal/billing/v2/actions/setPlans/utils/isUnbilledByStripe";
-import { carriesOverUsage } from "@/internal/billing/v2/compute/carryOverUsages/carriesOverUsage";
+import { carriesUsageFrom } from "@/internal/billing/v2/compute/carryOverUsages/carriesUsageFrom";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
@@ -16,17 +16,15 @@ import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/util
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isOnCanceledReplacedSubscription } from "../utils/isOnCanceledReplacedSubscription";
-import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
 import { isOnUncollectedReplacedSubscription } from "../utils/isOnUncollectedReplacedSubscription";
 import { nowReplacedCustomerProducts } from "../utils/nowReplacedCustomerProducts";
-import { paidBackdateAnchorMove } from "../utils/paidBackdateAnchorMove";
 import { backdateGapLineItems } from "./backdateGapLineItems";
 import {
 	diffToCustomerProducts,
 	type SetPlansCustomerProductChanges,
 } from "./diffToCustomerProducts/diffToCustomerProducts";
 import { diffToSchedule } from "./diffToSchedule";
-import { keptCustomerProductsBilledByReplacement } from "./keptCustomerProductsBilledByReplacement";
+import { keptCustomerProductsOnNewAnchor } from "./keptCustomerProductsOnNewAnchor";
 import { keptReplacementEntitlementUpdates } from "./keptReplacementEntitlementUpdates";
 import { paidBackdateAnchorMoveLineItems } from "./paidBackdateAnchorMoveLineItems";
 
@@ -108,22 +106,11 @@ export const computeSetPlansPlan = ({
 		outgoingCustomerProducts,
 		incomingCustomerProducts: immediateCustomerProducts,
 	});
-	const carryOverSourceCustomerProductIds = new Set(
-		replacedCustomerProducts.map(({ id }) => id),
-	);
-	// Finalize drops these stub charges under none, as Stripe's create bills nothing before its anchor.
-	const keptBilledByReplacement = keptCustomerProductsBilledByReplacement({
-		billingContext,
-		keptCustomerProducts,
-	});
-	// A paid backdate recreate moved off its paid-through date carries its kept rows onto the new anchor.
-	const keptReanchoredByPaidBackdate = paidBackdateAnchorMove({
-		billingContext,
-	})
-		? keptCustomerProducts.filter((customerProduct) =>
-				isOnReplacedStripeSubscription({ billingContext, customerProduct }),
-			)
-		: [];
+	// Finalize drops the stub charges for rows billed by the replacement under none, as Stripe's create bills nothing before its anchor.
+	const {
+		billedByReplacement: keptBilledByReplacement,
+		reanchoredByPaidBackdate: keptReanchoredByPaidBackdate,
+	} = keptCustomerProductsOnNewAnchor({ billingContext, keptCustomerProducts });
 	const keptOnNewAnchor = [
 		...keptBilledByReplacement,
 		...keptReanchoredByPaidBackdate,
@@ -137,12 +124,10 @@ export const computeSetPlansPlan = ({
 		deletedCustomerProducts: creditedCustomerProducts,
 		billingContext,
 		includeArrearLineItems: creditedCustomerProducts.length > 0,
-		carriesUsage: (customerEntitlement) =>
-			carriesOverUsage({
-				carryOverUsages: billingContext.carryOverUsages,
-				sourceCustomerProductIds: carryOverSourceCustomerProductIds,
-				customerEntitlement,
-			}),
+		carriesUsage: carriesUsageFrom({
+			carryOverUsages: billingContext.carryOverUsages,
+			sourceCustomerProducts: replacedCustomerProducts,
+		}),
 		creditsUnusedTime: (customerProduct) =>
 			!isUnbilledByStripe({
 				customerProduct,
@@ -235,14 +220,10 @@ export const computeSetPlansPlan = ({
 			...keptReplacementEntitlementUpdates({
 				billingContext,
 				keptCustomerProducts: keptOnNewAnchor,
-				carriesUsage: (customerEntitlement) =>
-					carriesOverUsage({
-						carryOverUsages: billingContext.carryOverUsages,
-						sourceCustomerProductIds: new Set(
-							keptOnNewAnchor.map(({ id }) => id),
-						),
-						customerEntitlement,
-					}),
+				carriesUsage: carriesUsageFrom({
+					carryOverUsages: billingContext.carryOverUsages,
+					sourceCustomerProducts: keptOnNewAnchor,
+				}),
 			}),
 		],
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,

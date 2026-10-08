@@ -10,8 +10,7 @@ import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/
 import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
-import { isBackdateRecreate } from "../utils/isBackdateRecreate";
-import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
+import { isBackdateReplacement } from "../utils/replacementReason";
 import { handleBackdateRecreateErrors } from "./handleBackdateRecreateErrors";
 import { setPlansError } from "./setPlansError";
 
@@ -68,9 +67,7 @@ const handlePastStartErrors = ({
 		});
 	}
 
-	const recreatesLiveSubscription =
-		isBackdateRecreate({ billingContext }) ||
-		isTrialBackdateRecreate({ billingContext });
+	const recreatesLiveSubscription = isBackdateReplacement({ billingContext });
 	if (recreatesLiveSubscription) {
 		handleBackdateRecreateErrors({ billingContext, timeline, preview });
 		return;

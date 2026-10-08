@@ -17,8 +17,8 @@ import type {
 import { endsLiveTrial } from "../../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../../utils/isOnReplacedStripeSubscription";
-import { isTrialBackdateRecreate } from "../../utils/isTrialBackdateRecreate";
 import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
+import { isBackdateReplacement } from "../../utils/replacementReason";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -307,9 +307,7 @@ export const diffToCustomerProducts = ({
 	const keptCustomerProducts: FullCusProduct[] = [];
 	const trialStartedCustomerProducts: TrialStartedCustomerProduct[] = [];
 
-	const recreatesFromBackdate =
-		isBackdateRecreate({ billingContext }) ||
-		isTrialBackdateRecreate({ billingContext });
+	const recreatesFromBackdate = isBackdateReplacement({ billingContext });
 	const backdatedStartsAtFor = (segmentId: string) => {
 		if (!recreatesFromBackdate) return undefined;
 		const declared = segmentsById.get(segmentId)?.origin === "declared";

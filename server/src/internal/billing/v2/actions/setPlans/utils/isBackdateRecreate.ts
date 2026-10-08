@@ -1,6 +1,5 @@
 import type { BillingContext } from "@autumn/shared";
-import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
-import { subscriptionStateAction } from "./subscriptionStateAction";
+import { replacementReason } from "./replacementReason";
 
 /**
  * A healthy paid subscription is being recreated from a backdated start; it is already paid through its period end.
@@ -13,15 +12,4 @@ export const isBackdateRecreate = ({
 		BillingContext,
 		"replacedStripeSubscription" | "subscriptionBackdateStartMs"
 	>;
-}) => {
-	const { replacedStripeSubscription, subscriptionBackdateStartMs } =
-		billingContext;
-	if (!replacedStripeSubscription) return false;
-	if (subscriptionBackdateStartMs === undefined) return false;
-	if (isStripeSubscriptionTrialing(replacedStripeSubscription)) return false;
-
-	return (
-		subscriptionStateAction({ state: replacedStripeSubscription.status })
-			.action === "update"
-	);
-};
+}) => replacementReason({ billingContext }) === "paidBackdate";
