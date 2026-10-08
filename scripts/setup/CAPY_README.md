@@ -68,6 +68,10 @@ everything under `~/.autumn-capy` except the opt-in markers. The next
 `dw-template`; that takes about two minutes. Teardown refuses to run while
 Startup holds the lock.
 
+Each `capy-<hash>` branch self-deletes 14 days after it was created; the
+expiry is fixed at creation and not extended on wake, so a machine idle that
+long starts with a fresh database on its next Startup.
+
 The old `.capy/settings.json` terminals and previews are intentionally gone.
 Project Setup is authoritative in v2, and Capy discovers listening HTTP services
 automatically.

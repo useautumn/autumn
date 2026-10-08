@@ -46,6 +46,7 @@ import {
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 import { sh } from "../dw/helpers/shell.ts";
+import { capyBranchExpiresAt } from "./branchExpiry.ts";
 import { getMachineId, stateForMachine } from "./machineIdentity.ts";
 import { isOptedIn } from "./optIns.ts";
 import {
@@ -575,7 +576,10 @@ function ensureNeonBranch(
 		`first run for ${branchName} — provisioning Neon branch off ${NEON_TEMPLATE_BRANCH}`,
 	);
 	ensureTemplateBranch();
-	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
+	const createdAt = Date.now();
+	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH, {
+		expiresAt: capyBranchExpiresAt({ createdAt }),
+	});
 	waitForNeonBranchOperations(branch);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
@@ -584,7 +588,7 @@ function ensureNeonBranch(
 			branchName,
 			branchId: branch.id,
 			databaseUrl: pooledUrl,
-			createdAt: Date.now(),
+			createdAt,
 		},
 		created: true,
 	};
