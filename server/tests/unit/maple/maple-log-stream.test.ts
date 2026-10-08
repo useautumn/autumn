@@ -83,6 +83,15 @@ describe("isMapleLog", () => {
 		expect(
 			isMapleLog(
 				requestLine({
+					name: "POST /v1/billing.attach",
+					msg: "[200] /v1/billing.attach (org_x) 412ms",
+					query: { name: "POST /v1/check" },
+				}),
+			),
+		).toBe(true);
+		expect(
+			isMapleLog(
+				requestLine({
 					name: "POST /v1/balances.track",
 					msg: "[200] /v1/balances.track (org_x) 3ms",
 					query: { note: "See /v1/billing.attach" },
