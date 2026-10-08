@@ -140,6 +140,13 @@ export type {
 	MutationSource,
 } from "./models/mutation/mutationRecord.js";
 export type {
+	BalanceTotals,
+	MutationSummary,
+	MutationSummaryView,
+	SummaryRow,
+	SummaryRowTotals,
+} from "./models/mutation/mutationSummary.js";
+export type {
 	CustomerEntitlementIncrement,
 	PooledBalanceIncrement,
 	PooledContributionPromote,

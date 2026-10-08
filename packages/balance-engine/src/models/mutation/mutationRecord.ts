@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { nonEmptyStringSchema, timestampSchema } from "../common/primitives.js";
 import { mutationEffectSchema } from "./mutationEffect.js";
+import { mutationSummarySchema } from "./mutationSummary.js";
 import {
 	refineSubjectStateMutation,
 	subjectStateMutationShape,
@@ -17,7 +18,7 @@ const mutationSourceSchema = z
 	.strict();
 
 /** What the log, the store and a checkpoint hold: the engine's mutation plus the writer's receipt. */
-export const mutationRecordSchema = z
+const mutationRecordObjectSchema = z
 	.object({
 		...subjectStateMutationShape,
 		receipt: mutationReceiptSchema,
@@ -25,9 +26,37 @@ export const mutationRecordSchema = z
 		source: mutationSourceSchema.optional(),
 		/** What must happen elsewhere because of this mutation. On the log only, for its readers: never replayed, and dropped before the record is stored or checkpointed. */
 		effects: z.array(mutationEffectSchema).optional(),
+		summary: mutationSummarySchema.optional(),
 	})
-	.strict()
-	.superRefine(refineSubjectStateMutation);
+	.strict();
+
+export const mutationRecordSchema =
+	mutationRecordObjectSchema.superRefine(refineMutationRecord);
+
+type MutationRecordShape = z.infer<typeof mutationRecordObjectSchema>;
+
+function refineMutationRecord(
+	record: MutationRecordShape,
+	context: z.RefinementCtx,
+): void {
+	refineSubjectStateMutation(record, context);
+	if (record.command.type === "evict" && record.summary) {
+		context.addIssue({
+			code: "custom",
+			message: "An evict carries no summary",
+			path: ["summary"],
+		});
+	}
+	if (record.command.type !== "track") return;
+	for (const [index, view] of (record.summary ?? []).entries()) {
+		if (!view.rows) continue;
+		context.addIssue({
+			code: "custom",
+			message: "A track's summary carries totals only",
+			path: ["summary", index, "rows"],
+		});
+	}
+}
 
 export type MutationReceipt = z.infer<typeof mutationReceiptSchema>;
 export type MutationSource = z.infer<typeof mutationSourceSchema>;
