@@ -8,13 +8,13 @@ import {
 	type CreateScheduleBillingContext,
 	ms,
 	msToSeconds,
+	remainingDiscountMonths,
 	type StripeDiscountWithCoupon,
 } from "@autumn/shared";
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryReplacedSubscriptionSettings } from "@/internal/billing/v2/setup/carryReplacedSubscription/carryReplacedSubscriptionSettings";
-import { remainingDiscountMonths } from "@/internal/billing/v2/setup/carryReplacedSubscription/remainingDiscountMonths";
 
 const NOW = Date.UTC(2026, 9, 2, 12);
 const PERIOD_END = Date.UTC(2026, 9, 14, 12);

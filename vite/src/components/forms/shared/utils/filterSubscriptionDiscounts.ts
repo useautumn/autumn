@@ -1,13 +1,13 @@
 import type { ApiDiscount } from "@autumn/shared";
 
 /** Discounts on one of these subscriptions; customer-level coupons stay on the customer, so they're excluded. */
-export const filterSubscriptionDiscounts = ({
+export const filterSubscriptionDiscounts = <Discount extends ApiDiscount>({
 	discounts,
 	subscriptionIds,
 }: {
-	discounts: ApiDiscount[];
+	discounts: Discount[];
 	subscriptionIds: string[];
-}): ApiDiscount[] => {
+}): Discount[] => {
 	const ids = new Set(subscriptionIds);
 	return discounts.filter(
 		(discount) =>

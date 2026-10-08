@@ -1,8 +1,4 @@
-import {
-	type StripeDiscountWithCoupon,
-	secondsToMs,
-	stripeRefToId,
-} from "@autumn/shared";
+import { type StripeDiscountWithCoupon, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeResourceAlreadyExists } from "@/external/stripe/common/utils/isStripeResourceAlreadyExists";
@@ -14,33 +10,13 @@ import {
 	stripeCouponToRewardId,
 } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeCouponToRewardId";
 import { subToDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/subToDiscounts";
-import {
-	remainingDiscountMonths,
-	type SubscriptionRenewal,
-} from "./remainingDiscountMonths";
-import { replacedSubscriptionPeriodEndMs } from "./replacedSubscriptionPeriodEndMs";
+import { repeatingDiscountMonthsLeft } from "./repeatingDiscountMonthsLeft";
 
 type CarryInput = {
 	ctx: AutumnContext;
 	replacedStripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
 	preview: boolean;
-};
-
-const DEFAULT_RENEWAL: SubscriptionRenewal = {
-	interval: "month",
-	intervalCount: 1,
-};
-
-const subscriptionRenewal = (
-	subscription: Stripe.Subscription,
-): SubscriptionRenewal => {
-	const recurring = subscription.items.data.find(
-		(item) => item.price?.recurring,
-	)?.price.recurring;
-	return recurring
-		? { interval: recurring.interval, intervalCount: recurring.interval_count }
-		: DEFAULT_RENEWAL;
 };
 
 /** The coupon cut to the months the old discount had left. */
@@ -158,27 +134,6 @@ const redeemAgain = async ({
 	return copyCoupon({ ...input, coupon });
 };
 
-const repeatingMonthsLeft = ({
-	discount,
-	replacedStripeSubscription,
-	currentEpochMs,
-}: CarryInput & { discount: StripeDiscountWithCoupon }) => {
-	const periodEndMs = replacedSubscriptionPeriodEndMs({
-		replacedStripeSubscription,
-	});
-	if (!discount.end || periodEndMs === undefined) return 0;
-
-	return remainingDiscountMonths({
-		currentEpochMs,
-		billingCycleAnchorMs: secondsToMs(
-			replacedStripeSubscription.billing_cycle_anchor,
-		),
-		periodEndMs,
-		renewal: subscriptionRenewal(replacedStripeSubscription),
-		discountEndMs: secondsToMs(discount.end),
-	});
-};
-
 /** A repeating coupon restarts its full duration when redeemed again, so a part-used one moves as a copy for the months left. */
 const carryDiscount = async ({
 	discount,
@@ -191,7 +146,11 @@ const carryDiscount = async ({
 		return redeemAgain({ ...input, discount, coupon });
 	}
 
-	const months = repeatingMonthsLeft({ ...input, discount });
+	const months = repeatingDiscountMonthsLeft({
+		discount,
+		subscription: input.replacedStripeSubscription,
+		currentEpochMs: input.currentEpochMs,
+	});
 	if (months === 0) return undefined;
 	if (months === coupon.duration_in_months) {
 		return redeemAgain({ ...input, discount, coupon });

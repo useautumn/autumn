@@ -1,15 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import {
-	type ApiDiscount,
 	CouponDurationType,
 	RewardType,
+	remainingDiscountMonths,
 } from "@autumn/shared";
-import { addDays, addMonths } from "date-fns";
-import { appliedDiscountLabel } from "./appliedDiscountLabel";
+import {
+	type AppliedDiscount,
+	appliedDiscountLabel,
+} from "./appliedDiscountLabel";
 
-const NOW_MS = new Date("2026-10-08T12:00:00Z").getTime();
-
-const discount = (overrides: Partial<ApiDiscount> = {}): ApiDiscount => ({
+const discount = (
+	overrides: Partial<AppliedDiscount> = {},
+): AppliedDiscount => ({
 	id: "launch_20",
 	name: "Launch",
 	type: RewardType.PercentageDiscount,
@@ -20,43 +22,42 @@ const discount = (overrides: Partial<ApiDiscount> = {}): ApiDiscount => ({
 });
 
 describe("appliedDiscountLabel", () => {
-	test("shows the months a part-used repeating coupon has left", () => {
+	test("shows the months the server carries, counted to cover the remaining discounted renewals", () => {
+		// Today Oct 2, renewal Oct 14, discount ends Dec 17: renewals Oct 14, Nov 14 and Dec 14 are still discounted.
+		const monthsLeft = remainingDiscountMonths({
+			currentEpochMs: Date.UTC(2026, 9, 2),
+			billingCycleAnchorMs: Date.UTC(2026, 8, 14),
+			periodEndMs: Date.UTC(2026, 9, 14),
+			renewal: { interval: "month", intervalCount: 1 },
+			discountEndMs: Date.UTC(2026, 11, 17),
+		});
+
+		expect(monthsLeft).toBe(3);
 		expect(
-			appliedDiscountLabel({
-				discount: discount({
-					end: addDays(addMonths(NOW_MS, 1), 10).getTime(),
-				}),
-				nowMs: NOW_MS,
-			}),
-		).toBe("Launch (20% off) · 1 month left");
-		expect(
-			appliedDiscountLabel({
-				discount: discount({ end: addMonths(NOW_MS, 2).getTime() }),
-				nowMs: NOW_MS,
-			}),
-		).toBe("Launch (20% off) · 2 months left");
+			appliedDiscountLabel({ discount: discount({ months_left: monthsLeft }) }),
+		).toBe("Launch (20% off) · 3 months left");
 	});
 
-	test("says a repeating coupon ends this period when no whole month is left", () => {
+	test("reads one month and ends this period", () => {
 		expect(
-			appliedDiscountLabel({
-				discount: discount({ end: addDays(NOW_MS, 12).getTime() }),
-				nowMs: NOW_MS,
-			}),
+			appliedDiscountLabel({ discount: discount({ months_left: 1 }) }),
+		).toBe("Launch (20% off) · 1 month left");
+		expect(
+			appliedDiscountLabel({ discount: discount({ months_left: 0 }) }),
 		).toBe("Launch (20% off) · ends this period");
 	});
 
-	test("adds nothing for forever and once coupons", () => {
-		for (const duration_type of [
-			CouponDurationType.Forever,
-			CouponDurationType.OneOff,
-		]) {
-			expect(
-				appliedDiscountLabel({
-					discount: discount({ duration_type, end: null }),
-					nowMs: NOW_MS,
+	test("adds nothing without a carried count, as for attach and update subscription", () => {
+		expect(appliedDiscountLabel({ discount: discount() })).toBe(
+			"Launch (20% off)",
+		);
+		expect(
+			appliedDiscountLabel({
+				discount: discount({
+					duration_type: CouponDurationType.Forever,
+					months_left: null,
 				}),
-			).toBe("Launch (20% off)");
-		}
+			}),
+		).toBe("Launch (20% off)");
 	});
 });

@@ -150,6 +150,17 @@ export const SetPlansPreviewWarningSchema = z.object({
 	}),
 });
 
+export const SetPlansPreviewDiscountSchema = ApiDiscountSchema.extend({
+	months_left: z.number().int().nonnegative().nullish().meta({
+		description:
+			"For a repeating discount on the subscription: the months a recreated subscription carries, enough to cover the renewals the discount still has. Null otherwise.",
+	}),
+});
+
+export type SetPlansPreviewDiscount = z.infer<
+	typeof SetPlansPreviewDiscountSchema
+>;
+
 export const SetPlansPreviewChangesSchema = z.object({
 	phases: z.array(SetPlansPreviewPhaseSchema).meta({
 		description:
@@ -167,7 +178,7 @@ export const SetPlansPreviewChangesSchema = z.object({
 		description:
 			"Side effects of the request worth confirming before it is sent, such as a replaced schedule or a reset balance.",
 	}),
-	discounts: z.array(ApiDiscountSchema).meta({
+	discounts: z.array(SetPlansPreviewDiscountSchema).meta({
 		description:
 			"The discounts on the customer's current subscription, before this request. A recreated subscription keeps them unless they are listed in remove_discounts.",
 	}),

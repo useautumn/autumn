@@ -1,30 +1,20 @@
-import { type ApiDiscount, CouponDurationType } from "@autumn/shared";
-import { differenceInMonths } from "date-fns";
+import type { ApiDiscount } from "@autumn/shared";
 import { formatDiscountLabel } from "@/views/customers2/components/sheets/subscriptionDetailUtils";
 
-/** Whole months left on a repeating coupon, the same count set_plans carries to a recreated subscription. */
-const monthsLeftText = ({
-	discount,
-	nowMs,
-}: {
-	discount: ApiDiscount;
-	nowMs: number;
-}): string | null => {
-	if (discount.duration_type !== CouponDurationType.Months) return null;
-	if (discount.end == null) return null;
+/** A discount on the subscription; `months_left` is the server's carried count when it sent one. */
+export type AppliedDiscount = ApiDiscount & { months_left?: number | null };
 
-	const months = differenceInMonths(discount.end, nowMs);
-	if (months <= 0) return "ends this period";
-	return `${months} ${months === 1 ? "month" : "months"} left`;
+const monthsLeftText = (monthsLeft: number) => {
+	if (monthsLeft === 0) return "ends this period";
+	return `${monthsLeft} ${monthsLeft === 1 ? "month" : "months"} left`;
 };
 
 export const appliedDiscountLabel = ({
 	discount,
-	nowMs,
 }: {
-	discount: ApiDiscount;
-	nowMs: number;
-}): string =>
-	[formatDiscountLabel({ discount }), monthsLeftText({ discount, nowMs })]
-		.filter(Boolean)
-		.join(" · ");
+	discount: AppliedDiscount;
+}): string => {
+	const label = formatDiscountLabel({ discount });
+	if (discount.months_left == null) return label;
+	return `${label} · ${monthsLeftText(discount.months_left)}`;
+};

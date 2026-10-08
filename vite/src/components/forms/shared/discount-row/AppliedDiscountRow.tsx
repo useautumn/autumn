@@ -1,4 +1,3 @@
-import type { ApiDiscount } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
@@ -6,19 +5,20 @@ import {
 	XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { appliedDiscountLabel } from "../utils/appliedDiscountLabel";
+import {
+	type AppliedDiscount,
+	appliedDiscountLabel,
+} from "../utils/appliedDiscountLabel";
 
 export function AppliedDiscountRow({
 	discount,
 	removed,
 	onToggleRemoved,
 }: {
-	discount: ApiDiscount;
+	discount: AppliedDiscount;
 	removed: boolean;
 	onToggleRemoved: () => void;
 }) {
-	const { testClockFrozenTimeMs } = useCusQuery();
 	return (
 		<div className="flex items-center gap-2 h-8">
 			<TicketIcon
@@ -32,10 +32,7 @@ export function AppliedDiscountRow({
 					removed && "line-through text-tertiary-foreground",
 				)}
 			>
-				{appliedDiscountLabel({
-					discount,
-					nowMs: testClockFrozenTimeMs ?? Date.now(),
-				})}
+				{appliedDiscountLabel({ discount })}
 			</span>
 			{removed && (
 				<span className="text-tertiary-foreground text-xs shrink-0">

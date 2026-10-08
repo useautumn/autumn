@@ -3,6 +3,7 @@ export * from "./cycleUtils/anchorFollowsKeptTrial";
 export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
 export * from "./cycleUtils/getNextMonthStart";
+export * from "./cycleUtils/remainingDiscountMonths";
 // Interval utils
 export * from "./intervalUtils/addDuration";
 export * from "./intervalUtils/intervalArithmetic";

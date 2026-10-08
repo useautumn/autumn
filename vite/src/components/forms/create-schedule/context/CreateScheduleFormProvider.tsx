@@ -1,8 +1,8 @@
 import type {
-	ApiDiscount,
 	Feature,
 	FullCustomer,
 	ProductV2,
+	SetPlansPreviewDiscount,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
 import {
@@ -115,7 +115,7 @@ interface CreateScheduleFormContextValue {
 	}>;
 	preview: SetPlansPreviewResponse | null | undefined;
 	/** The preview's discounts on the edited subscription; customer-level coupons aren't removable here. */
-	appliedDiscounts: ApiDiscount[];
+	appliedDiscounts: SetPlansPreviewDiscount[];
 	previewQuery: { data: SetPlansPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;

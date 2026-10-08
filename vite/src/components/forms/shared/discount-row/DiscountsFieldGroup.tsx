@@ -1,5 +1,5 @@
-import type { ApiDiscount } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
+import type { AppliedDiscount } from "@/components/forms/shared/utils/appliedDiscountLabel";
 import {
 	addDiscount,
 	EMPTY_DISCOUNTS_FORM_VALUES,
@@ -14,7 +14,7 @@ import { DiscountsConfigRow } from "./DiscountsConfigRow";
 const discountsProps: {
 	description: string;
 	productId: string | undefined;
-	appliedDiscounts: ApiDiscount[];
+	appliedDiscounts: AppliedDiscount[];
 } = {
 	description: "",
 	productId: undefined,

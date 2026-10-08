@@ -9,6 +9,7 @@ import type {
 } from "@/external/stripe/subscriptions";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
+import { repeatingDiscountMonthsLeft } from "@/internal/billing/v2/setup/carryReplacedSubscription/repeatingDiscountMonthsLeft";
 
 type CurrentSubscriptionTerms = Pick<
 	SetPlansPreviewResponse,
@@ -23,7 +24,10 @@ export const currentSubscriptionTerms = async ({
 	ctx: AutumnContext;
 	billingContext: Pick<
 		BillingContext,
-		"stripeSubscription" | "replacedStripeSubscription" | "stripeCustomer"
+		| "stripeSubscription"
+		| "replacedStripeSubscription"
+		| "stripeCustomer"
+		| "currentEpochMs"
 	>;
 }): Promise<CurrentSubscriptionTerms> => {
 	const currentSubscription =
@@ -45,16 +49,29 @@ export const currentSubscriptionTerms = async ({
 		currentSubscription?.collection_method === "send_invoice";
 
 	return {
-		discounts: discounts.map((discount) =>
-			stripeDiscountToApiDiscount({
-				discount,
-				// A customer-level coupon isn't on the subscription, matching the customer rewards list.
-				subscriptionId:
-					discount.id === customerDiscountId
+		discounts: discounts.map((discount) => {
+			const isCustomerDiscount = discount.id === customerDiscountId;
+			const carriesMonths =
+				!isCustomerDiscount &&
+				currentSubscription &&
+				discount.source.coupon.duration === "repeating";
+			return {
+				...stripeDiscountToApiDiscount({
+					discount,
+					// A customer-level coupon isn't on the subscription, matching the customer rewards list.
+					subscriptionId: isCustomerDiscount
 						? undefined
 						: currentSubscription?.id,
-			}),
-		),
+				}),
+				months_left: carriesMonths
+					? repeatingDiscountMonthsLeft({
+							discount,
+							subscription: currentSubscription,
+							currentEpochMs: billingContext.currentEpochMs,
+						})
+					: null,
+			};
+		}),
 		invoice_mode: {
 			enabled: sendsInvoice,
 			...(sendsInvoice &&
