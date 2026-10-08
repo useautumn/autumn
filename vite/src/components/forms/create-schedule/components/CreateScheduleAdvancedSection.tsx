@@ -123,9 +123,7 @@ export function CreateScheduleAdvancedSection() {
 								onChange={(value) =>
 									form.setFieldValue(
 										"phases[0].prorationBehavior",
-										value === "prorate_immediately" && !prorationDefaultsToNone
-											? null
-											: value,
+										value === defaultProration ? null : value,
 									)
 								}
 							/>

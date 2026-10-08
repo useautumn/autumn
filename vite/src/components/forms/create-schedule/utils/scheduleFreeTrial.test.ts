@@ -180,6 +180,36 @@ describe("schedule free_trial request mapping", () => {
 	});
 });
 
+describe("first-phase proration request mapping", () => {
+	test("a trialing sub's trial turned off with the shown Prorated untouched bills prorated", () => {
+		const body = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			features: [],
+			nowMs: NOW,
+			phases: phasesStarting(null),
+			products: [proPlan],
+			freeTrial: DISABLED_FREE_TRIAL_FORM_VALUES,
+			currentTrial: CURRENT_TRIAL,
+			defaultFirstPhaseProration: "prorate_immediately",
+		});
+		expect(body?.free_trial).toBeNull();
+		expect(body?.phases[0]?.proration_behavior).toBe("prorate_immediately");
+	});
+
+	test("a row locked by a proration override leaves proration_behavior to the server", () => {
+		const body = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			features: [],
+			nowMs: NOW,
+			phases: phasesStarting(null),
+			products: [proPlan],
+			defaultFirstPhaseProration: "prorate_immediately",
+			omitFirstPhaseProration: true,
+		});
+		expect(body?.phases[0]).not.toHaveProperty("proration_behavior");
+	});
+});
+
 describe("canScheduleFreeTrial", () => {
 	test("allows a first phase starting now or an already started schedule", () => {
 		for (const phases of [

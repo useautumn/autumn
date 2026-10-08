@@ -7,6 +7,7 @@ import type {
 import {
 	ACTIVE_STATUSES,
 	acceptsCarryOverUsages,
+	type BillingBehavior,
 	backdateSetsNewBillingTerms,
 	CusProductStatus,
 	isFreeProductV2,
@@ -335,6 +336,9 @@ export function CreateScheduleFormProvider({
 		resetsCycleNow,
 		anchorFollowsKeptTrial,
 	});
+	const defaultFirstPhaseProration: BillingBehavior = prorationDefaultsToNone
+		? "none"
+		: "prorate_immediately";
 	const getOmitFirstPhaseProration = useCallback(
 		() => prorationOverride !== undefined,
 		[prorationOverride],
@@ -410,6 +414,7 @@ export function CreateScheduleFormProvider({
 		getCarryOverUsages,
 		getFreeTrial,
 		getOmitFirstPhaseProration,
+		defaultFirstPhaseProration,
 		currentTrial,
 		catalogFreeTrial,
 		stripeSubscriptionId,
@@ -435,6 +440,7 @@ export function CreateScheduleFormProvider({
 		freeTrial: trialFormValues,
 		currentTrial,
 		catalogFreeTrial,
+		defaultFirstPhaseProration,
 		omitFirstPhaseProration: prorationOverride !== undefined,
 	});
 

@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	Feature,
 	FreeTrial,
 	ProductV2,
@@ -45,6 +46,7 @@ export function buildCreateScheduleRequestBody({
 	freeTrial,
 	currentTrial = null,
 	catalogFreeTrial = null,
+	defaultFirstPhaseProration,
 	omitFirstPhaseProration = false,
 }: {
 	customerId: string | undefined;
@@ -66,6 +68,8 @@ export function buildCreateScheduleRequestBody({
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
+	/** What the Proration row shows when untouched, sent so the request bills what the sheet displays. */
+	defaultFirstPhaseProration?: BillingBehavior;
 	omitFirstPhaseProration?: boolean;
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
@@ -129,7 +133,7 @@ export function buildCreateScheduleRequestBody({
 			// Where proration can't change what's billed, the server applies its own rule.
 			const firstPhaseProration = omitFirstPhaseProration
 				? undefined
-				: phases[0]?.prorationBehavior;
+				: (phases[0]?.prorationBehavior ?? defaultFirstPhaseProration);
 			const prorationBehavior = isFirstPhase
 				? firstPhaseProration
 				: ownProration;
@@ -219,6 +223,7 @@ export function useCreateScheduleRequestBody({
 	freeTrial,
 	currentTrial,
 	catalogFreeTrial,
+	defaultFirstPhaseProration,
 	omitFirstPhaseProration = false,
 }: {
 	customerId: string | undefined;
@@ -239,6 +244,7 @@ export function useCreateScheduleRequestBody({
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
+	defaultFirstPhaseProration?: BillingBehavior;
 	omitFirstPhaseProration?: boolean;
 }) {
 	return useMemo(
@@ -262,6 +268,7 @@ export function useCreateScheduleRequestBody({
 				freeTrial,
 				currentTrial,
 				catalogFreeTrial,
+				defaultFirstPhaseProration,
 				omitFirstPhaseProration,
 			}),
 		[
@@ -283,6 +290,7 @@ export function useCreateScheduleRequestBody({
 			freeTrial,
 			currentTrial,
 			catalogFreeTrial,
+			defaultFirstPhaseProration,
 			omitFirstPhaseProration,
 		],
 	);
@@ -303,6 +311,7 @@ export function useBuildCreateScheduleRequestBody({
 	getCarryOverUsages,
 	getFreeTrial,
 	getOmitFirstPhaseProration,
+	defaultFirstPhaseProration,
 	currentTrial,
 	catalogFreeTrial,
 	stripeSubscriptionId,
@@ -327,6 +336,7 @@ export function useBuildCreateScheduleRequestBody({
 	>;
 	getFreeTrial?: () => FreeTrialFormValues;
 	getOmitFirstPhaseProration?: () => boolean;
+	defaultFirstPhaseProration?: BillingBehavior;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
 	stripeSubscriptionId?: string | null;
@@ -353,6 +363,7 @@ export function useBuildCreateScheduleRequestBody({
 					currentTrial,
 					catalogFreeTrial,
 					omitFirstPhaseProration: getOmitFirstPhaseProration?.() ?? false,
+					defaultFirstPhaseProration,
 				}),
 		[
 			customerId,
@@ -369,6 +380,7 @@ export function useBuildCreateScheduleRequestBody({
 			getCarryOverUsages,
 			getFreeTrial,
 			getOmitFirstPhaseProration,
+			defaultFirstPhaseProration,
 			currentTrial,
 			catalogFreeTrial,
 			stripeSubscriptionId,
