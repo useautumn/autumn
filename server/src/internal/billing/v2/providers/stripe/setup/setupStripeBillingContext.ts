@@ -7,6 +7,7 @@ import {
 	isOneOffProduct,
 	type MultiAttachParamsV0,
 	notNullish,
+	stripeRefToId,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { all } from "better-all";
@@ -27,7 +28,7 @@ const getScheduleSubscriptionId = (
 	stripeSubscriptionSchedule: Stripe.SubscriptionSchedule | undefined,
 ) => {
 	const subscription = stripeSubscriptionSchedule?.subscription;
-	return typeof subscription === "string" ? subscription : subscription?.id;
+	return stripeRefToId(subscription);
 };
 
 export const setupStripeBillingContext = async ({

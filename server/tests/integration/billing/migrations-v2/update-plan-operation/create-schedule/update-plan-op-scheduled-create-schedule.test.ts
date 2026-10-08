@@ -13,7 +13,7 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
-import { CusProductStatus, ms } from "@autumn/shared";
+import { CusProductStatus, ms, stripeRefToId } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -40,7 +40,7 @@ const stripeScheduleSignature = (schedule: Stripe.SubscriptionSchedule) => ({
 		startDate: phase.start_date,
 		endDate: phase.end_date,
 		items: phase.items.map((item) => ({
-			price: typeof item.price === "string" ? item.price : item.price.id,
+			price: stripeRefToId(item.price),
 			quantity: item.quantity,
 		})),
 	})),
@@ -177,10 +177,14 @@ test(`${chalk.yellowBright("migrations update_plan scheduled createSchedule: fut
 	).toEqual([TestFeature.Messages]);
 	const stripeScheduleAfter =
 		await ctx.stripeCli.subscriptionSchedules.retrieve(stripeScheduleId);
-	expect(stripeScheduleSignature(stripeScheduleAfter as Stripe.SubscriptionSchedule)).toEqual(
-		stripeSignatureBefore,
-	);
-	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: futurePlan.id });
+	expect(
+		stripeScheduleSignature(stripeScheduleAfter as Stripe.SubscriptionSchedule),
+	).toEqual(stripeSignatureBefore);
+	await expectNoExpiredCustomerProducts({
+		ctx,
+		customerId,
+		productId: futurePlan.id,
+	});
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: 1,
@@ -196,10 +200,7 @@ test(`${chalk.yellowBright("migrations update_plan scheduled createSchedule: fea
 	});
 	const futurePlan = products.base({
 		id: "scheduled-quantity-future",
-		items: [
-			items.monthlyPrice({ price: 20 }),
-			items.prepaidMessages(),
-		],
+		items: [items.monthlyPrice({ price: 20 }), items.prepaidMessages()],
 	});
 
 	const { autumnV1, autumnV2_2, ctx } = await initScenario({
@@ -248,10 +249,7 @@ test(`${chalk.yellowBright("migrations update_plan scheduled createSchedule: fea
 	]);
 
 	await autumnV1.products.update(futurePlan.id, {
-		items: [
-			items.monthlyPrice({ price: 25 }),
-			items.prepaidMessages(),
-		],
+		items: [items.monthlyPrice({ price: 25 }), items.prepaidMessages()],
 	});
 
 	await runUpdatePlanMigration({

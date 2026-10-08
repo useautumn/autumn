@@ -1,4 +1,8 @@
-import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
+import {
+	type StripeDiscountWithCoupon,
+	secondsToMs,
+	stripeRefToId,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeResourceAlreadyExists } from "@/external/stripe/common/utils/isStripeResourceAlreadyExists";
@@ -16,9 +20,7 @@ const DEFAULT_RENEWAL: SubscriptionRenewal = {
 
 const subscriptionDiscountIds = (subscription: Stripe.Subscription) =>
 	new Set(
-		(subscription.discounts ?? []).map((discount) =>
-			typeof discount === "string" ? discount : discount.id,
-		),
+		(subscription.discounts ?? []).map((discount) => stripeRefToId(discount)),
 	);
 
 const subscriptionRenewal = (

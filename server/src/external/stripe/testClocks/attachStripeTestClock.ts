@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 const CLOCK_READY_POLL_MS = 1000;
@@ -32,9 +32,7 @@ const readAttachedStripeTestClockId = async ({
 }) => {
 	const customer = await stripe.customers.retrieve(stripeCustomerId);
 	if (customer.deleted || !customer.test_clock) return null;
-	return typeof customer.test_clock === "string"
-		? customer.test_clock
-		: customer.test_clock.id;
+	return stripeRefToId(customer.test_clock);
 };
 
 /** Stripe only attaches a clock to an existing customer at the current time, and the attach is permanent. */

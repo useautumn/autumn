@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	formatSeconds,
 	type Price,
+	stripeRefToId,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -79,8 +80,7 @@ const formatPhaseItemWithAutumnPrice = ({
 		return "unknown price";
 	}
 
-	const stripePriceId =
-		typeof item.price === "string" ? item.price : item.price?.id;
+	const stripePriceId = stripeRefToId(item.price);
 
 	if (!stripePriceId) {
 		return "unknown price";

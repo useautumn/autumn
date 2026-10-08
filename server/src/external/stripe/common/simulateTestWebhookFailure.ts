@@ -1,4 +1,4 @@
-import { tryCatch } from "@autumn/shared";
+import { stripeRefToId, tryCatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
 
@@ -46,8 +46,7 @@ const retrieveLiveCustomerMetadata = async ({
 	stripeCli: Stripe;
 	object: EventObjectWithMetadata;
 }): Promise<Record<string, string> | null | undefined> => {
-	const customerId =
-		typeof object.customer === "string" ? object.customer : object.customer?.id;
+	const customerId = stripeRefToId(object.customer);
 	if (!customerId) return object.metadata;
 
 	const customer = await stripeCli.customers.retrieve(customerId);

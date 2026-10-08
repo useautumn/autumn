@@ -9,6 +9,7 @@ import {
 	orgToCurrency,
 	type Price,
 	priceToEnt,
+	stripeRefToId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -49,7 +50,7 @@ const retrievedStripeProductId = ({
 	product,
 }: {
 	product: string | { id?: string } | null;
-}) => (typeof product === "string" ? product : (product?.id ?? null));
+}) => stripeRefToId(product) ?? null;
 
 export type UsableStripePriceEvaluation = {
 	usable: boolean;

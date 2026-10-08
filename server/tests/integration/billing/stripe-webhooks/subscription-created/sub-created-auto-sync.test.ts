@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, AppEnv } from "@autumn/shared";
+import { type ApiCustomerV3, AppEnv, stripeRefToId } from "@autumn/shared";
 import {
 	createStripeSubscriptionFromProduct,
 	createStripeSubscriptionFromProducts,
@@ -216,10 +216,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 		timeoutMs: 120_000,
 		intervalMs: 1_000,
 	});
-	const subscriptionId =
-		typeof completedSession.subscription === "string"
-			? completedSession.subscription
-			: completedSession.subscription?.id;
+	const subscriptionId = stripeRefToId(completedSession.subscription);
 	if (!subscriptionId) {
 		throw new Error(
 			`Checkout session did not produce a subscription. Browser ended on ${pageState?.url}: ${pageState?.text}`,

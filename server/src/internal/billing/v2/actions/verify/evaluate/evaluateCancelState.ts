@@ -1,4 +1,5 @@
 import type { SubscriptionMismatch } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { differenceInSeconds, fromUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
@@ -45,8 +46,7 @@ const getActiveScheduleState = async ({
 	const inactive = { scheduleActive: false, upcomingPhaseStarts: [] };
 	if (!sub.schedule) return inactive;
 
-	const scheduleId =
-		typeof sub.schedule === "string" ? sub.schedule : sub.schedule.id;
+	const scheduleId = stripeRefToId(sub.schedule);
 	const schedule = await stripeCli.subscriptionSchedules.retrieve(scheduleId);
 
 	if (

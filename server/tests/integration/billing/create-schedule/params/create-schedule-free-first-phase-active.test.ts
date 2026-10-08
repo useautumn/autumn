@@ -7,6 +7,7 @@ import {
 	BillingInterval,
 	CusProductStatus,
 	customerProducts,
+	stripeRefToId,
 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
@@ -89,10 +90,7 @@ test.concurrent(
 		const subscription = await ctx.stripeCli.subscriptions.retrieve(
 			stripeSubscriptionId!,
 		);
-		const stripeScheduleId =
-			typeof subscription.schedule === "string"
-				? subscription.schedule
-				: subscription.schedule?.id;
+		const stripeScheduleId = stripeRefToId(subscription.schedule);
 		expect(stripeScheduleId).toBeDefined();
 
 		const schedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
