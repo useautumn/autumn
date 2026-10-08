@@ -276,17 +276,10 @@ describe(
 		const tenDaysBack = LIVE_START - ms.days(10);
 		const fortyDaysBack = LIVE_START - ms.days(40);
 
-		test("none leaves the gap unbilled; omitted bills it like prorate_immediately, attach's default", () => {
+		test("omitted or none leaves the gap unbilled", () => {
 			expect(
 				billedLines(backdatedPro({ backdatedStart: tenDaysBack })),
-			).toEqual(
-				billedLines(
-					backdatedPro({
-						backdatedStart: tenDaysBack,
-						prorationBehavior: "prorate_immediately",
-					}),
-				),
-			);
+			).toEqual([]);
 			expect(
 				billedLines(
 					backdatedPro({

@@ -1,7 +1,6 @@
 import {
 	type BillingContext,
 	type BillingPeriod,
-	resolveProrationBehavior,
 	secondsToMs,
 } from "@autumn/shared";
 import { isBackdateRecreate } from "./isBackdateRecreate";
@@ -27,12 +26,11 @@ export const backdateGap = ({
 	return { start: subscriptionBackdateStartMs, end: replacedStartMs };
 };
 
-/** "none" leaves backdated or moved-anchor time unbilled; any other behavior, including an unset one, bills it. */
+/** Unset or "none" leaves backdated or moved-anchor time unbilled, as set_plans always has; the other behaviors bill it. */
 export const billsProratedTime = ({
 	billingContext,
 }: {
 	billingContext: Pick<BillingContext, "requestedProrationBehavior">;
 }) =>
-	resolveProrationBehavior({
-		prorationBehavior: billingContext.requestedProrationBehavior,
-	}) !== "none";
+	billingContext.requestedProrationBehavior === "prorate_immediately" ||
+	billingContext.requestedProrationBehavior === "bill_difference";

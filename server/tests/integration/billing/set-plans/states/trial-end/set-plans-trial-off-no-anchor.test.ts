@@ -2,7 +2,7 @@
  * Ending a live trial with no anchor anchors the cycle on the old trial end, through the same recreate.
  *
  * Red (before):  the trial ended in place, billing $940 now, with next cycle on the old trial end.
- * Green (after): $0 now under none, the stub under prorate/bill_difference or unset (attach's default), then $940 on the old trial end.
+ * Green (after): $0 now under none/unset, the stub under prorate/bill_difference, then $940 on the old trial end.
  * Balances refill when the trial ends unless carry_over_usages keeps its usage, then reset again on the anchor.
  */
 
@@ -11,12 +11,12 @@ import chalk from "chalk";
 import { endTrialOnAnchorAndExpect, proratedStub } from "./utils/trialEndUtils";
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans trial off, no anchor: unset proration prorates like attach, billing the stub to the old trial end now")}`,
+	`${chalk.yellowBright("set-plans trial off, no anchor: unset proration defaults to none, billing nothing until the old trial end")}`,
 	async () => {
 		await endTrialOnAnchorAndExpect({
 			customerId: "set-plans-trial-off-unset",
 			anchorSource: "trial_end",
-			expectedStub: proratedStub,
+			expectedStub: () => 0,
 		});
 	},
 );
@@ -64,7 +64,7 @@ test.concurrent(
 			customerId: "set-plans-trial-off-carry",
 			anchorSource: "trial_end",
 			carriesUsage: true,
-			expectedStub: proratedStub,
+			expectedStub: () => 0,
 		});
 	},
 );

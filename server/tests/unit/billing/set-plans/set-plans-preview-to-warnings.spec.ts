@@ -426,7 +426,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 	});
 
 	const backdateRecreateMessage = ({
-		requestedProrationBehavior = "none",
+		requestedProrationBehavior,
 		billingCycleAnchorMs = NOON_UTC + 12 * DAY_MS,
 		restartsCycle = false,
 		lineItems = [],

@@ -28,6 +28,5 @@ export * from "./invoicingUtils/prorationUtils/applyProration.js";
 export * from "./invoicingUtils/prorationUtils/getEffectivePeriod.js";
 export * from "./invoicingUtils/prorationUtils/prorationBehaviorOverride.js";
 export * from "./invoicingUtils/prorationUtils/prorationConfigUtils.js";
-export * from "./invoicingUtils/prorationUtils/resolveProrationBehavior.js";
 export * from "./usageUtils/acceptsCarryOverUsages.js";
 export * from "./usageUtils/roundUsageToNearestBillingUnit.js";

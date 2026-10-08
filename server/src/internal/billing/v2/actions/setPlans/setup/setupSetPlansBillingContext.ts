@@ -1,7 +1,6 @@
 import {
 	type CreateScheduleBillingContext,
 	isPastStartDate,
-	resolveProrationBehavior,
 	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	type SetPlansParamsV0,
 } from "@autumn/shared";
@@ -156,9 +155,7 @@ export const setupSetPlansBillingContext = async ({
 				billingContext: firstPhaseContext,
 			}),
 		}),
-		requestedProrationBehavior: resolveProrationBehavior({
-			prorationBehavior: immediatePhaseProrationBehavior({ params }),
-		}),
+		requestedProrationBehavior: immediatePhaseProrationBehavior({ params }),
 		requestedBillingCycleAnchor: immediatePhaseBillingCycleAnchor({
 			params,
 			currentEpochMs: billingContext.currentEpochMs,
@@ -199,11 +196,17 @@ export const setupSetPlansBillingContext = async ({
 		params,
 	});
 
-	const liveSubscriptionBillingContext: CreateScheduleBillingContext = {
+	const replacedForFutureStartContext: CreateScheduleBillingContext = {
 		...scheduleBillingContext,
 		...replaceLiveSubscriptionForFutureStart({
 			billingContext: scheduleBillingContext,
 			operations: timeline.diff.operations,
+		}),
+	};
+	const liveSubscriptionBillingContext: CreateScheduleBillingContext = {
+		...replacedForFutureStartContext,
+		prorationOverride: setPlansProrationOverride({
+			billingContext: replacedForFutureStartContext,
 		}),
 	};
 
@@ -223,9 +226,6 @@ export const setupSetPlansBillingContext = async ({
 			...setupSetPlansBillingCycleAnchor({
 				billingContext: keptCycleBillingContext,
 				timeline,
-			}),
-			prorationOverride: setPlansProrationOverride({
-				billingContext: keptCycleBillingContext,
 			}),
 		},
 		timeline,
