@@ -7,8 +7,10 @@ import {
 	getSmallestInterval,
 } from "@autumn/shared";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../utils/isOnReplacedStripeSubscription";
+import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 
@@ -75,6 +77,30 @@ const backdatedCycleRenewalMs = ({
 };
 
 /**
+ * The requested anchor, else the replaced period end; a trial ended on a backdated start with no anchor
+ * (phase_start) anchors on that start, like any backdate.
+ */
+const keptPlansAnchorMs = ({
+	billingContext,
+	periodEndMs,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	periodEndMs: number;
+}) => {
+	const { requestedBillingCycleAnchor, subscriptionBackdateStartMs } =
+		billingContext;
+	if (typeof requestedBillingCycleAnchor === "number") {
+		return requestedBillingCycleAnchor;
+	}
+	const anchorsOnBackdatedStart =
+		isTrialBackdateRecreate({ billingContext }) &&
+		endsLiveTrial({ billingContext });
+	return anchorsOnBackdatedStart && subscriptionBackdateStartMs !== undefined
+		? subscriptionBackdateStartMs
+		: periodEndMs;
+};
+
+/**
  * A replacement subscription for kept plans continues them to a date: the requested anchor (an ended trial's), else the old period end.
  * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
  */
@@ -121,12 +147,8 @@ export const setupKeptSubscriptionCycle = ({
 	if (!keepsReplacedPlan) return {};
 
 	// Like Stripe's create on a future anchor, nothing is billed before it unless proration is requested.
-	const { requestedBillingCycleAnchor } = billingContext;
 	return {
-		billingCycleAnchorMs:
-			typeof requestedBillingCycleAnchor === "number"
-				? requestedBillingCycleAnchor
-				: periodEndMs,
+		billingCycleAnchorMs: keptPlansAnchorMs({ billingContext, periodEndMs }),
 		requestedProrationBehavior: requestedProrationBehavior ?? "none",
 	};
 };

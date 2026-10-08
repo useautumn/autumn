@@ -33,7 +33,7 @@ const requestedImmediatePhaseAnchor = ({
 
 /**
  * 'phase_start' on a first phase starting now resets the cycle now; a backdated or later start already anchors on itself.
- * Ending a live trial always anchors the cycle: with no anchor requested, it starts on the old trial end.
+ * Ending a live trial otherwise anchors the cycle: with no anchor requested, it starts on the old trial end.
  */
 export const immediatePhaseBillingCycleAnchor = ({
 	params,
@@ -52,10 +52,13 @@ export const immediatePhaseBillingCycleAnchor = ({
 		params,
 		currentEpochMs: billingContext.currentEpochMs,
 	});
-	if (!endsLiveTrial({ billingContext })) return anchor;
+	const anchorsOnPhaseStart =
+		params.phases[0].billing_cycle_anchor === "phase_start";
+	if (!endsLiveTrial({ billingContext }) || anchorsOnPhaseStart) return anchor;
 
-	return (
-		anchor ??
-		secondsToMs(billingContext.stripeSubscription?.trial_end ?? undefined)
-	);
+	// A backdate has already moved the trialing subscription aside to be replaced.
+	const trialingSubscription =
+		billingContext.stripeSubscription ??
+		billingContext.replacedStripeSubscription;
+	return anchor ?? secondsToMs(trialingSubscription?.trial_end ?? undefined);
 };

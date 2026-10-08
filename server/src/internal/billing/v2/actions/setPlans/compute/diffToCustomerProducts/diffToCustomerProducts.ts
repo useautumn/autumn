@@ -16,6 +16,7 @@ import type {
 } from "../../timeline/types/timelineDiff";
 import { isBackdateRecreate } from "../../utils/isBackdateRecreate";
 import { isOnReplacedStripeSubscription } from "../../utils/isOnReplacedStripeSubscription";
+import { isTrialBackdateRecreate } from "../../utils/isTrialBackdateRecreate";
 import { replacedStripeScheduleId } from "../../utils/replacedStripeScheduleId";
 import { insertSegmentCustomerProduct } from "./insertSegmentCustomerProduct";
 
@@ -305,8 +306,11 @@ export const diffToCustomerProducts = ({
 	const keptCustomerProducts: FullCusProduct[] = [];
 	const trialStartedCustomerProducts: TrialStartedCustomerProduct[] = [];
 
+	const recreatesFromBackdate =
+		isBackdateRecreate({ billingContext }) ||
+		isTrialBackdateRecreate({ billingContext });
 	const backdatedStartsAtFor = (segmentId: string) => {
-		if (!isBackdateRecreate({ billingContext })) return undefined;
+		if (!recreatesFromBackdate) return undefined;
 		const declared = segmentsById.get(segmentId)?.origin === "declared";
 		return declared ? billingContext.subscriptionBackdateStartMs : undefined;
 	};

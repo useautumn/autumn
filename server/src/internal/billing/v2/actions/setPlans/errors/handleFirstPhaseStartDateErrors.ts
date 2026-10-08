@@ -11,6 +11,7 @@ import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/
 import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
+import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
 import { handleBackdateRecreateErrors } from "./handleBackdateRecreateErrors";
 import { setPlansError } from "./setPlansError";
 
@@ -67,7 +68,10 @@ const handlePastStartErrors = ({
 		});
 	}
 
-	if (isBackdateRecreate({ billingContext })) {
+	const recreatesLiveSubscription =
+		isBackdateRecreate({ billingContext }) ||
+		isTrialBackdateRecreate({ billingContext });
+	if (recreatesLiveSubscription) {
 		handleBackdateRecreateErrors({ billingContext, timeline, preview });
 		return;
 	}

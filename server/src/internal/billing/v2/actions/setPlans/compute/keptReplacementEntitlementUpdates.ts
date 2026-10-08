@@ -3,6 +3,7 @@ import {
 	type BillingContext,
 	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
+	getNextResetAt,
 	isResettingEntitlement,
 	type UpdateCustomerEntitlement,
 } from "@autumn/shared";
@@ -10,7 +11,29 @@ import { computeCycleBalanceResets } from "@/internal/billing/v2/compute/compute
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
 
-/** Kept balances reset next on the replacement's anchor, as its first renewal bills there; a sooner reset still runs first. */
+/** The anchor when it's ahead, unless a sooner reset runs first; a backdated anchor already passed, so its next boundary. */
+const nextResetOnAnchor = ({
+	customerEntitlement,
+	anchorMs,
+	now,
+}: {
+	customerEntitlement: FullCusProduct["customer_entitlements"][number];
+	anchorMs: number;
+	now: number;
+}) => {
+	const { next_reset_at: nextResetAt, entitlement } = customerEntitlement;
+	if (anchorMs > now) return Math.min(nextResetAt ?? anchorMs, anchorMs);
+	if (!entitlement.interval) return nextResetAt ?? undefined;
+
+	return getNextResetAt({
+		curReset: anchorMs,
+		interval: entitlement.interval,
+		intervalCount: entitlement.interval_count ?? 1,
+		now,
+	});
+};
+
+/** Kept balances reset next on the replacement's anchor, as its first renewal bills there. */
 const anchorResetUpdates = ({
 	billingContext,
 	customerProduct,
@@ -30,10 +53,11 @@ const anchorResetUpdates = ({
 					resetCycleAnchor: anchorMs,
 					now: billingContext.currentEpochMs,
 				}),
-				next_reset_at: Math.min(
-					customerEntitlement.next_reset_at ?? anchorMs,
+				next_reset_at: nextResetOnAnchor({
+					customerEntitlement,
 					anchorMs,
-				),
+					now: billingContext.currentEpochMs,
+				}),
 			},
 		}));
 
@@ -67,9 +91,8 @@ export const keptReplacementEntitlementUpdates = ({
 	keptCustomerProducts: FullCusProduct[];
 	carriesUsage: (customerEntitlement: FullCusEntWithFullCusProduct) => boolean;
 }): UpdateCustomerEntitlement[] => {
-	const { billingCycleAnchorMs, currentEpochMs } = billingContext;
+	const { billingCycleAnchorMs } = billingContext;
 	if (typeof billingCycleAnchorMs !== "number") return [];
-	if (billingCycleAnchorMs <= currentEpochMs) return [];
 
 	const endsTrial = endsLiveTrial({ billingContext });
 	const updatesById = new Map<string, UpdateCustomerEntitlement>();

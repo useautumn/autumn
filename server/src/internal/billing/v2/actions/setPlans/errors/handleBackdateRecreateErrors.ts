@@ -7,17 +7,10 @@ import {
 } from "@autumn/shared";
 import { exceedsStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
+import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { setPlansError } from "./setPlansError";
-
-const trialConflict = ({
-	billingContext,
-}: {
-	billingContext: CreateScheduleBillingContext;
-}) =>
-	!!billingContext.trialContext?.trialEndsAt ||
-	billingContext.replacedStripeSubscription?.status === "trialing";
 
 /** Only the live period end, or a restart on the backdated start alone, keeps every period billed once. */
 const movesBillingCycleAnchor = ({
@@ -34,6 +27,30 @@ const movesBillingCycleAnchor = ({
 	return (
 		truncateMsToSecondPrecision(requestedBillingCycleAnchor) !== periodEndMs
 	);
+};
+
+/**
+ * A paid subscription's recreate continues the period it paid, so it can't add a trial, outlive that period or move its
+ * anchor. A trialing one paid nothing and bills like a new subscription's backdate, so none of these apply.
+ */
+const paidPeriodConflict = ({
+	billingContext,
+}: {
+	billingContext: CreateScheduleBillingContext;
+}): SetPlansBackdateConflict | undefined => {
+	if (!isBackdateRecreate({ billingContext })) return undefined;
+	if (billingContext.trialContext?.trialEndsAt) return "free_trial";
+
+	const periodEndMs = replacedSubscriptionPeriodEndMs(billingContext);
+	if (
+		periodEndMs === undefined ||
+		periodEndMs <= billingContext.currentEpochMs
+	) {
+		return "period_ended";
+	}
+	return movesBillingCycleAnchor({ billingContext, periodEndMs })
+		? "billing_cycle_anchor"
+		: undefined;
 };
 
 /** A plan the recreated subscription would leave behind on the cancelled one. */
@@ -68,20 +85,11 @@ const backdateConflict = ({
 	timeline: Pick<SetPlansTimeline, "outOfScopeCustomerProductIds">;
 	preview: boolean;
 }): { conflict: SetPlansBackdateConflict; plan_name?: string } | undefined => {
-	if (trialConflict({ billingContext })) return { conflict: "free_trial" };
 	if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 		return { conflict: "stripe_checkout" };
 	}
-	const periodEndMs = replacedSubscriptionPeriodEndMs(billingContext);
-	if (
-		periodEndMs === undefined ||
-		periodEndMs <= billingContext.currentEpochMs
-	) {
-		return { conflict: "period_ended" };
-	}
-	if (movesBillingCycleAnchor({ billingContext, periodEndMs })) {
-		return { conflict: "billing_cycle_anchor" };
-	}
+	const paidConflict = paidPeriodConflict({ billingContext });
+	if (paidConflict) return { conflict: paidConflict };
 	if (
 		exceedsStripeBackdateInvoiceLineItemLimit({
 			products: billingContext.fullProducts,
