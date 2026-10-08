@@ -99,6 +99,8 @@ export function createLibrdkafkaConsumer({
 		paused: new Set(),
 		skippedFrom: new Map(),
 		pendingSeeks: new Map(),
+		fetched: new Set(),
+		deliveredNext: new Map(),
 		assigning: new Set(),
 		resolved: new Map(),
 		committed: new Map(),

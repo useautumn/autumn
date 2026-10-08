@@ -35,6 +35,8 @@ function forgetPartition({
 	const { state } = scope;
 	state.assigned.delete(key);
 	state.paused.delete(key);
+	state.fetched.delete(key);
+	state.deliveredNext.delete(key);
 	state.skippedFrom.delete(key);
 	state.pendingSeeks.delete(key);
 	bumpGeneration({ scope, key });

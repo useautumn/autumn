@@ -1,0 +1,32 @@
+diff --git a/deps/librdkafka/src/rdkafka_partition.c b/deps/librdkafka/src/rdkafka_partition.c
+--- a/deps/librdkafka/src/rdkafka_partition.c
++++ b/deps/librdkafka/src/rdkafka_partition.c
+@@ -1989,6 +1989,12 @@
+                 rd_kafka_offset_validate(rktp, "seek");
+         }
+ 
++        /* An active partition's seek changes no fetch state, so nothing else
++         * wakes a broker thread idling on IO: it would refetch up to 1s late. */
++        if (rktp->rktp_fetch_state == RD_KAFKA_TOPPAR_FETCH_ACTIVE &&
++            rktp->rktp_broker)
++                rd_kafka_broker_wakeup(rktp->rktp_broker, "seek");
++
+         /* Signal back to caller thread that seek has commenced, or err */
+ err_reply:
+         rd_kafka_toppar_unlock(rktp);
+@@ -2108,6 +2114,15 @@
+                                 rd_kafka_toppar_next_offset_handle(
+                                     rktp, rktp->rktp_next_fetch_start);
+ 
++                        /* Same for a resumed active partition: wake its broker
++                         * thread rather than leave it idling up to 1s. */
++                        if (!RD_KAFKA_TOPPAR_IS_PAUSED(rktp) &&
++                            rktp->rktp_fetch_state ==
++                                RD_KAFKA_TOPPAR_FETCH_ACTIVE &&
++                            rktp->rktp_broker)
++                                rd_kafka_broker_wakeup(rktp->rktp_broker,
++                                                       "resume");
++
+                 } else
+                         rd_kafka_dbg(
+                             rk, TOPIC, pause ? "PAUSE" : "RESUME",

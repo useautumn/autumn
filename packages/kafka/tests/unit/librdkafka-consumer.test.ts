@@ -34,6 +34,7 @@ function createFakeNative() {
 	const assignments: NativeTopicPartitionOffset[][] = [];
 	const current = new Map<number, NativeTopicPartition>();
 	const seeks: NativeTopicPartitionOffset[] = [];
+	const seekOutcomes: (NativeKafkaError | null)[] = [];
 	const commits: NativeTopicPartitionOffset[][] = [];
 	const committed = new Map<string, number>();
 	let rebalance: NativeRebalanceCallback | undefined;
@@ -133,7 +134,8 @@ function createFakeNative() {
 		rebalanceProtocol: () => "COOPERATIVE",
 		seek(position, _timeout, done) {
 			seeks.push(position);
-			done(null);
+			const outcome = seekOutcomes.shift() ?? null;
+			queueMicrotask(() => done(outcome));
 		},
 		pause(partitions) {
 			calls.push(`pause:${partitions.map((p) => p.partition).join(",")}`);
@@ -179,6 +181,7 @@ function createFakeNative() {
 		calls,
 		assignments,
 		seeks,
+		seekOutcomes,
 		commits,
 		committed,
 	};
@@ -292,28 +295,107 @@ describe("librdkafka consumer runner", () => {
 		await consumer.disconnect();
 	});
 
-	test("a partition end is reported as the empty batch kafkajs reported for markers", async () => {
+	test("a batch whose fetch ends past its last record spans the markers after it, as kafkajs's lastOffset did", async () => {
 		const { fake, consumer, events } = createRunner();
 		fake.chunks.push([
 			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
 			{ kind: "message", partition: 0, offset: 5 },
 			{ kind: "eof", partition: 0, offset: 8 },
 		]);
+		const batches: { offsets: string[]; last: string }[] = [];
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ batch, resolveOffset, uncommittedOffsets }) => {
+				batches.push({
+					offsets: batch.messages.map((m) => m.offset),
+					last: batch.lastOffset(),
+				});
+				resolveOffset(batch.lastOffset());
+				expect(uncommittedOffsets().topics[0]?.partitions).toEqual([
+					{ partition: 0, offset: "8" },
+				]);
+			},
+		});
+		await until(() => events.some((e) => e.startsWith("end:")));
+		await Bun.sleep(20);
+		expect(batches).toEqual([{ offsets: ["5"], last: "7" }]);
+		expect(events.filter((e) => e.startsWith("end:"))).toEqual(["end:0:1:7"]);
+		await consumer.disconnect();
+	});
+
+	test("markers fetched on their own are committed past once the handler has settled what came before", async () => {
+		const { fake, consumer, events } = createRunner();
+		fake.chunks.push(
+			[
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+				{ kind: "message", partition: 0, offset: 5 },
+			],
+			[{ kind: "eof", partition: 0, offset: 8 }],
+			[{ kind: "eof", partition: 0, offset: 8 }],
+		);
 		const batches: string[][] = [];
 		await consumer.connect();
 		await consumer.subscribe({ topics: [topic], fromBeginning: true });
 		await consumer.run({
-			eachBatch: async ({ batch, resolveOffset }) => {
+			eachBatch: async ({ batch, resolveOffset, commitOffsetsIfNecessary }) => {
 				batches.push(batch.messages.map((m) => m.offset));
 				resolveOffset(batch.lastOffset());
+				await commitOffsetsIfNecessary();
 			},
 		});
-		await until(() => events.some((e) => e.startsWith("end:0:0")));
+		await until(() => fake.commits.length === 2);
+		await Bun.sleep(20);
 		expect(batches).toEqual([["5"]]);
-		expect(events.filter((e) => e.startsWith("end:"))).toEqual([
+		expect(fake.commits.map((c) => c.map((o) => o.offset))).toEqual([[6], [8]]);
+		expect([...new Set(events.filter((e) => e.startsWith("end:")))]).toEqual([
 			"end:0:1:5",
 			"end:0:0:7",
 		]);
+		await consumer.disconnect();
+	});
+
+	test("markers after records the handler has not committed are left for its own commit", async () => {
+		const { fake, consumer } = createRunner();
+		fake.chunks.push(
+			[
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+				{ kind: "message", partition: 0, offset: 5 },
+			],
+			[{ kind: "eof", partition: 0, offset: 8 }],
+		);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.chunks.length === 0);
+		await Bun.sleep(20);
+		expect(fake.commits).toEqual([]);
+		await consumer.disconnect();
+	});
+
+	test("an end past records handed out but never resolved commits nothing past them", async () => {
+		const { fake, consumer } = createRunner();
+		fake.chunks.push(
+			[
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+				{ kind: "message", partition: 0, offset: 5 },
+			],
+			[{ kind: "message", partition: 0, offset: 6 }],
+			[{ kind: "eof", partition: 0, offset: 9 }],
+		);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatchAutoResolve: false,
+			eachBatch: async ({ batch, resolveOffset, commitOffsetsIfNecessary }) => {
+				if (batch.messages[0]?.offset !== "5") return;
+				resolveOffset("5");
+				await commitOffsetsIfNecessary();
+			},
+		});
+		await until(() => fake.chunks.length === 0);
+		await Bun.sleep(20);
+		expect(fake.commits.map((c) => c.map((o) => o.offset))).toEqual([[6]]);
 		await consumer.disconnect();
 	});
 
@@ -493,6 +575,56 @@ describe("librdkafka consumer runner", () => {
 			topics: [{ topic, partitions: [{ partition: 2, offset: "5" }] }],
 		});
 		expect(fake.commits[0]).toEqual([{ topic, partition: 2, offset: 5 }]);
+		await consumer.disconnect();
+	});
+	test("a fetch is reported only once every assigned partition has had a fetch answered", async () => {
+		const { fake, consumer } = createRunner();
+		const fetches: number[] = [];
+		consumer.on(consumer.events.FETCH, () => fetches.push(fetches.length));
+		fake.chunks.push(
+			[],
+			[{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) }],
+			[],
+			[{ kind: "eof", partition: 0, offset: 12 }],
+			[],
+			[{ kind: "message", partition: 1, offset: 0 }],
+		);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: false });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.chunks.length === 1);
+		expect(fetches).toEqual([]);
+		await until(() => fetches.length > 0);
+		await consumer.disconnect();
+	});
+	test("a seek librdkafka drops as outdated is asked for again, unless a newer seek replaced it", async () => {
+		const { fake, consumer } = createRunner();
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: false });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.assignments.length > 0);
+		const outdated = () => Object.assign(new Error("outdated"), { code: -167 });
+
+		fake.seekOutcomes.push(outdated());
+		consumer.seek({ topic, partition: 0, offset: "0" });
+		consumer.pause([{ topic, partitions: [0] }]);
+		await until(() => fake.seeks.length === 2);
+		expect(fake.seeks).toEqual([
+			{ topic, partition: 0, offset: 0 },
+			{ topic, partition: 0, offset: 0 },
+		]);
+
+		fake.seekOutcomes.push(outdated());
+		consumer.seek({ topic, partition: 1, offset: "5" });
+		consumer.seek({ topic, partition: 1, offset: "9" });
+		await Bun.sleep(20);
+		expect(fake.seeks.slice(2)).toEqual([
+			{ topic, partition: 1, offset: 5 },
+			{ topic, partition: 1, offset: 9 },
+		]);
 		await consumer.disconnect();
 	});
 });

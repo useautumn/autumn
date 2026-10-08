@@ -117,11 +117,14 @@ export function createBatchRun({
 	topic,
 	partition,
 	messages,
+	endOffset,
 }: {
 	scope: ConsumerRunnerScope;
 	topic: string;
 	partition: number;
 	messages: NativeMessage[];
+	/** Where the fetch ended, when it ran past the last record over markers librdkafka hides. */
+	endOffset?: number;
 }): BatchRun {
 	const { state } = scope;
 	const key = partitionKeyOf({ topic, partition });
@@ -186,7 +189,9 @@ export function createBatchRun({
 	}
 
 	function lastOffset(): string {
-		return converted.at(-1)?.offset ?? "-1";
+		const last = converted.at(-1)?.offset ?? "-1";
+		if (endOffset === undefined || endOffset - 1 <= Number(last)) return last;
+		return String(endOffset - 1);
 	}
 
 	function readLastResolved(): bigint | null {

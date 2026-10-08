@@ -27,6 +27,10 @@ export type ConsumerRunnerState = {
 	/** Bumped on every seek: records fetched before it are dropped. */
 	seekEpoch: Map<string, number>;
 	paused: Set<string>;
+	/** One past the last record handed to the handler since the partition's last seek or assignment. */
+	deliveredNext: Map<string, number>;
+	/** Partitions that have had a record or their end back since they were assigned. */
+	fetched: Set<string>;
 	/** The first offset a paused partition had fetched and not delivered; resume seeks back to it. */
 	skippedFrom: Map<string, number>;
 	/** Seeks and pauses asked for while a partition is being assigned, applied with the assignment. */

@@ -18,12 +18,15 @@ Needs a C/C++ toolchain, Python 3 and Perl (macOS: Xcode command line tools).
 ## The patch
 
 `patches/@confluentinc%2Fkafka-javascript@1.10.0.patch` at the repo root is applied by `bun install`.
-It is two patches, kept here for provenance:
+It is three patches, kept here for provenance:
 
 - `patches/pr471.patch`: upstream PR #471 (NAN → N-API) at `47334c9`, verbatim.
 - `patches/bunUvToNapi.patch`: ours. Bun implements only `uv_mutex_*` of libuv; the addon's rwlocks,
   consume thread and two `uv_async_t` dispatchers move to `std::shared_mutex`, `std::thread` and N-API
   threadsafe functions.
+- `patches/brokerWakeup.patch`: ours, in librdkafka itself. A seek or resume on a partition that is already
+  fetching changes no fetch state, so nothing wakes a broker thread idling on IO and the refetch waited up
+  to a second. Both now wake it.
 
-After editing either, `bun run --cwd packages/librdkafka patch:regenerate` rebuilds the root patch.
+After editing any, `bun run --cwd packages/librdkafka patch:regenerate` rebuilds the root patch.
 Drop ours once #471 (or its successor) lands upstream without libuv.

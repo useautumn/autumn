@@ -45,12 +45,16 @@ function readSources({
 		"binding.gyp",
 		readFileSync(join(packageDir, "binding.gyp"), "utf8"),
 	);
-	for (const file of readdirSync(join(packageDir, "src")).sort()) {
-		sources.set(
-			`src/${file}`,
-			readFileSync(join(packageDir, "src", file), "utf8"),
-		);
-	}
+	// librdkafka is compiled from deps/ too, and patched there.
+	for (const dir of ["src", "deps/librdkafka/src"])
+		for (const entry of readdirSync(join(packageDir, dir), {
+			withFileTypes: true,
+		}).sort((a, b) => a.name.localeCompare(b.name)))
+			if (entry.isFile())
+				sources.set(
+					`${dir}/${entry.name}`,
+					readFileSync(join(packageDir, dir, entry.name), "utf8"),
+				);
 	return sources;
 }
 

@@ -1,6 +1,10 @@
 import { LIBRDKAFKA_ERROR_CODES } from "@autumn/librdkafka";
 import { isKafkaAccessRefusal } from "../../../consumer/consumerErrors.js";
-import { createBatchRun, highWatermarkOf } from "./batchRun.js";
+import {
+	commitTopicOffsets,
+	createBatchRun,
+	highWatermarkOf,
+} from "./batchRun.js";
 import { emitConsumerEvent, emitGroupChange } from "./consumerEvents.js";
 import { KafkaConsumerLeaseLostError } from "./runnerErrors.js";
 import type {
@@ -122,10 +126,22 @@ export function seekNative({
 	offset: number;
 }): void {
 	const key = partitionKeyOf({ topic, partition });
-	scope.state.seekEpoch.set(key, (scope.state.seekEpoch.get(key) ?? 0) + 1);
+	const epoch = (scope.state.seekEpoch.get(key) ?? 0) + 1;
+	scope.state.seekEpoch.set(key, epoch);
 	scope.state.skippedFrom.delete(key);
+	scope.state.deliveredNext.delete(key);
 	function sought(error: NativeKafkaError | null | undefined): void {
 		if (!error) return;
+		// A pause or resume right after the seek supersedes it and librdkafka drops it; ask again.
+		if (
+			error.code === LIBRDKAFKA_ERROR_CODES.ERR__OUTDATED &&
+			scope.state.seekEpoch.get(key) === epoch &&
+			scope.state.assigned.has(key) &&
+			scope.state.native === native
+		) {
+			seekNative({ scope, native, topic, partition, offset });
+			return;
+		}
 		scope.log("warn", "Kafka consumer seek failed", {
 			topic,
 			partition,
@@ -164,17 +180,31 @@ async function runBatch({
 	topic,
 	partition,
 	messages,
+	endOffset,
 }: {
 	scope: ConsumerRunnerScope;
 	native: NativeConsumer;
 	topic: string;
 	partition: number;
 	messages: NativeMessage[];
+	endOffset?: number;
 }): Promise<void> {
 	const run = scope.state.run;
 	if (!run) return;
 	const firstOffset = messages[0]?.offset ?? 0;
-	const batch = createBatchRun({ scope, topic, partition, messages });
+	const batch = createBatchRun({
+		scope,
+		topic,
+		partition,
+		messages,
+		endOffset,
+	});
+	const lastMessage = messages.at(-1);
+	if (lastMessage)
+		scope.state.deliveredNext.set(
+			partitionKeyOf({ topic, partition }),
+			Number(lastMessage.offset) + 1,
+		);
 	try {
 		if (run.eachBatch) {
 			await run.eachBatch(batch.payload);
@@ -226,6 +256,46 @@ async function runBatch({
 		});
 }
 
+/** kafkajs saw the markers closing a batch inside that batch and committed past them with it. librdkafka
+ *  hides them, so a partition its handler had settled is committed through them here. */
+async function commitPastMarkers({
+	scope,
+	topic,
+	partition,
+	endOffset,
+}: {
+	scope: ConsumerRunnerScope;
+	topic: string;
+	partition: number;
+	endOffset: number;
+}): Promise<void> {
+	const { resolved, committed, deliveredNext } = scope.state;
+	const key = partitionKeyOf({ topic, partition });
+	const delivered = deliveredNext.get(key);
+	if (delivered === undefined || delivered >= endOffset) return;
+	const settled = String(delivered);
+	if (committed.get(key) !== settled || resolved.get(key) !== settled) return;
+	resolved.set(key, String(endOffset));
+	try {
+		await commitTopicOffsets({
+			scope,
+			offsets: {
+				topics: [
+					{ topic, partitions: [{ partition, offset: String(endOffset) }] },
+				],
+			},
+		});
+	} catch (cause) {
+		// The next batch's commit carries it instead.
+		scope.log("warn", "Kafka commit past transaction markers failed", {
+			topic,
+			partition,
+			offset: endOffset,
+			error: String(cause),
+		});
+	}
+}
+
 async function deliverPartition({
 	scope,
 	native,
@@ -239,11 +309,11 @@ async function deliverPartition({
 	const { topic, partition } = fetched;
 	const key = partitionKeyOf({ topic, partition });
 	let pending: NativeMessage[] = [];
-	async function flush(): Promise<void> {
+	async function flush(endOffset?: number): Promise<void> {
 		const messages = pending;
 		pending = [];
 		if (messages.length > 0)
-			await runBatch({ scope, native, topic, partition, messages });
+			await runBatch({ scope, native, topic, partition, messages, endOffset });
 	}
 	for (const item of fetched.items) {
 		if (!state.assigned.has(key) || state.restartPending || !state.running)
@@ -261,9 +331,18 @@ async function deliverPartition({
 			pending.push(item.message);
 			continue;
 		}
-		await flush();
+		if (pending.length > 0) {
+			await flush(item.offset);
+			continue;
+		}
 		// An empty partition's end says nothing kafkajs ever reported: there is no last offset.
 		if (item.offset <= 0) continue;
+		await commitPastMarkers({
+			scope,
+			topic,
+			partition,
+			endOffset: item.offset,
+		});
 		emitConsumerEvent({
 			scope,
 			type: "consumer.end_batch_process",
@@ -383,6 +462,20 @@ async function restartFromCommits({
 	return true;
 }
 
+/** kafkajs reported a fetch only once one was answered. Until every assigned partition has had a record or
+ *  its end back, "latest" may still resolve past a record produced now, and a tail would never see it. */
+function everyPartitionFetched({
+	scope,
+}: {
+	scope: ConsumerRunnerScope;
+}): boolean {
+	const { assigned, fetched, paused } = scope.state;
+	if (assigned.size === 0) return false;
+	for (const key of assigned.keys())
+		if (!fetched.has(key) && !paused.has(key)) return false;
+	return true;
+}
+
 /** A refusal or a fatal client error: the consumer ends, and its owner decides whether to come back. */
 export function failTerminally({
 	scope,
@@ -437,11 +530,14 @@ export async function runConsumeLoop({
 			partitions.length === 0 &&
 			(!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT);
 		if (idle) await Bun.sleep(IDLE_POLL_MS);
-		emitConsumerEvent({
-			scope,
-			type: "consumer.fetch",
-			payload: { numberOfBatches: partitions.length },
-		});
+		for (const { topic, partition } of partitions)
+			state.fetched.add(partitionKeyOf({ topic, partition }));
+		if (everyPartitionFetched({ scope }))
+			emitConsumerEvent({
+				scope,
+				type: "consumer.fetch",
+				payload: { numberOfBatches: partitions.length },
+			});
 		if (state.running && !state.restartPending)
 			await deliverConcurrently({ scope, native, partitions });
 		const pendingRestart = state.restartPending;

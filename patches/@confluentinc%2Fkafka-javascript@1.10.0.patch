@@ -51,6 +51,39 @@ index f5b7e40eb2b01629c0bb6a04ed290e32a0c6bfb6..373cb766a01f491ff7239a167d4db2ff
                      "/usr/include/librdkafka",
                      "/usr/local/include/librdkafka",
                      "/opt/include/librdkafka",
+diff --git a/deps/librdkafka/src/rdkafka_partition.c b/deps/librdkafka/src/rdkafka_partition.c
+index f7e5906a4a0a2213b3059af59c928277cf076931..3dff42824726a4981df70b152d148f07d307b238 100644
+--- a/deps/librdkafka/src/rdkafka_partition.c
++++ b/deps/librdkafka/src/rdkafka_partition.c
+@@ -1989,6 +1989,12 @@ void rd_kafka_toppar_seek(rd_kafka_toppar_t *rktp,
+                 rd_kafka_offset_validate(rktp, "seek");
+         }
+ 
++        /* An active partition's seek changes no fetch state, so nothing else
++         * wakes a broker thread idling on IO: it would refetch up to 1s late. */
++        if (rktp->rktp_fetch_state == RD_KAFKA_TOPPAR_FETCH_ACTIVE &&
++            rktp->rktp_broker)
++                rd_kafka_broker_wakeup(rktp->rktp_broker, "seek");
++
+         /* Signal back to caller thread that seek has commenced, or err */
+ err_reply:
+         rd_kafka_toppar_unlock(rktp);
+@@ -2108,6 +2114,15 @@ static void rd_kafka_toppar_pause_resume(rd_kafka_toppar_t *rktp,
+                                 rd_kafka_toppar_next_offset_handle(
+                                     rktp, rktp->rktp_next_fetch_start);
+ 
++                        /* Same for a resumed active partition: wake its broker
++                         * thread rather than leave it idling up to 1s. */
++                        if (!RD_KAFKA_TOPPAR_IS_PAUSED(rktp) &&
++                            rktp->rktp_fetch_state ==
++                                RD_KAFKA_TOPPAR_FETCH_ACTIVE &&
++                            rktp->rktp_broker)
++                                rd_kafka_broker_wakeup(rktp->rktp_broker,
++                                                       "resume");
++
+                 } else
+                         rd_kafka_dbg(
+                             rk, TOPIC, pause ? "PAUSE" : "RESUME",
 diff --git a/src/admin.cc b/src/admin.cc
 index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a5241062e 100644
 --- a/src/admin.cc
