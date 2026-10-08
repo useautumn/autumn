@@ -10,6 +10,7 @@ import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { prepaidTierStops } from "@/utils/billing/prepaidQuantityUtils";
+import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import { INVOICE_USAGE_MODELS } from "../utils/applyInvoicePlanEditorItems";
 import { dualPricedRowCopy } from "../utils/dualPricedRowCopy";
@@ -74,6 +75,13 @@ export function CreateInvoiceQuantityFields({
 	const singleItems = (items ?? []).filter(
 		(item) => !item.feature_id || !dualFeatureIds.has(item.feature_id),
 	);
+	const hasSingleRows = singleItems.some(
+		(item) =>
+			item.feature_id &&
+			item.usage_model &&
+			INVOICE_USAGE_MODELS.includes(item.usage_model),
+	);
+	if (!hasSingleRows && dualRows.length === 0) return null;
 
 	return (
 		<div className="space-y-1">
@@ -155,7 +163,6 @@ function DualPricedQuantityRows({
 			</p>
 			<div className="ml-1 space-y-0.5 border-l border-dashed border-border pl-3">
 				<DualPricedQuantityRow
-					tag="Prepaid"
 					text={copy.prepaid}
 					item={prepaid}
 					currency={currency}
@@ -166,7 +173,6 @@ function DualPricedQuantityRows({
 					{prepaidField}
 				</DualPricedQuantityRow>
 				<DualPricedQuantityRow
-					tag="Usage"
 					text={copy.usage}
 					item={usage}
 					currency={currency}
@@ -181,7 +187,6 @@ function DualPricedQuantityRows({
 }
 
 function DualPricedQuantityRow({
-	tag,
 	text,
 	item,
 	currency,
@@ -190,7 +195,6 @@ function DualPricedQuantityRow({
 	featureId,
 	children,
 }: {
-	tag: string;
 	text: string | null;
 	item: ProductItem;
 	currency?: string;
@@ -201,9 +205,9 @@ function DualPricedQuantityRow({
 }) {
 	return (
 		<div className="flex items-center gap-2">
-			<span className="w-14 shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-center text-xs text-muted-foreground">
-				{tag}
-			</span>
+			<div className="shrink-0">
+				<PlanFeatureIcon item={item} position="right" />
+			</div>
 			<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 				{text ? (
 					<p className="truncate text-body-secondary">{text}</p>
