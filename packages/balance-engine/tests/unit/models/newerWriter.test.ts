@@ -14,6 +14,7 @@ import {
 	parseRecalculateBalanceCommand,
 	parseResetCommand,
 	parseSubjectState,
+	parseTrackCommand,
 	parseUpdateBalanceCommand,
 	type UnknownInput,
 } from "../../../src/balanceEngine.js";
@@ -24,6 +25,7 @@ import {
 	createInitializeRequest,
 	createRecalculateBalanceCommand,
 	createState,
+	createTrackCommand,
 	createUpdateBalanceCommand,
 	identity,
 	occurredAt,
@@ -135,6 +137,21 @@ describe("a command from a newer server", () => {
 		});
 	}
 
+	test("track accepts an overage behaviour and a lock expiry action this build does not know", () => {
+		const command = {
+			...createTrackCommand(),
+			overageBehavior: "future_behaviour",
+			lock: {
+				id: "lock_row_1",
+				lockId: "lock_1",
+				expiresAt: occurredAt + 1,
+				expiryAction: "future_action",
+			},
+		};
+
+		expect<unknown>(parseTrackCommand({ input: command })).toEqual(command);
+	});
+
 	test("a field of a known name with the wrong type is still refused", () => {
 		expect(() =>
 			parseCheckCommand({ input: { ...createCheckCommand(), featureId: 5 } }),
@@ -149,30 +166,41 @@ describe("a subject state from a newer worker", () => {
 		onUnknownInput((input) => sightings.push(input));
 	});
 
-	const newerState = ({ apiSemver }: { apiSemver: string }) => {
+	/** Each test picks its own values, so what counts as a first sighting does not depend on test order. */
+	const newerState = ({
+		apiSemver,
+		status,
+	}: {
+		apiSemver: string;
+		status: string;
+	}) => {
 		const state = JSON.parse(JSON.stringify(createState()));
 		state.futureField = true;
 		state.customerProducts[0].api_semver = apiSemver;
-		state.customerProducts[0].status = "future_status";
+		state.customerProducts[0].status = status;
 		state.customerProducts[0].futureColumn = "kept";
 		state.customer.futureColumn = "kept";
 		return state;
 	};
 
 	test("keeps an unknown field, an unknown column and an unknown enum value", () => {
-		const state = newerState({ apiSemver: "9.8.0" });
+		const state = newerState({ apiSemver: "9.8.0", status: "future_status_a" });
 
 		expect(parseSubjectState({ input: state })).toEqual(state);
 	});
 
 	test("reports each unknown enum value once per process, however often it is read", () => {
-		const state = newerState({ apiSemver: "9.9.0" });
+		const state = newerState({ apiSemver: "9.9.0", status: "future_status_b" });
 		parseSubjectState({ input: state });
 		parseSubjectState({ input: state });
 		parseSubjectState({ input: { ...state, revision: 7 } });
 
-		// "future_status" was already sighted by the test above; only the new version is new to this process.
 		expect(sightings).toEqual([
+			{
+				kind: "enum_value",
+				schema: "workerCustomerProduct.status",
+				value: "future_status_b",
+			},
 			{
 				kind: "enum_value",
 				schema: "workerCustomerProduct.api_semver",

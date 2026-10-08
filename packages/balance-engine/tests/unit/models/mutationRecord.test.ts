@@ -138,13 +138,17 @@ describe("a record from a newer writer", () => {
 		]);
 	});
 
-	test("a malformed change of a known kind is still refused, not skipped", () => {
-		const logged = fromNewerWriter();
-		logged.changes = [
+	test("a malformed change is still refused, not skipped: a known kind with a bad field, or a discriminator that is not a string", () => {
+		for (const malformed of [
 			{ table: "customerEntitlements", op: "delete", id: 5 },
-			...logged.changes,
-		];
+			{ table: "customerEntitlements", op: null, id: "ce_1" },
+			{ table: 7, op: "delete", id: "ce_1" },
+			{ op: "delete", id: "ce_1" },
+		]) {
+			const logged = fromNewerWriter();
+			logged.changes = [malformed, ...logged.changes];
 
-		expect(() => parseMutationRecord({ input: logged })).toThrow();
+			expect(() => parseMutationRecord({ input: logged })).toThrow();
+		}
 	});
 });

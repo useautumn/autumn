@@ -313,9 +313,10 @@ const knownRowChangeKinds: ReadonlySet<string> = new Set(
 export const skipUnknownRowChanges = (input: unknown): unknown => {
 	if (!isObject(input) || !Array.isArray(input.changes)) return input;
 	const changes = input.changes.filter((change) => {
+		// Only a well-formed discriminator names a kind; anything else is left for the schema to refuse.
 		if (!isObject(change)) return true;
-		const table = String(change.table);
-		const op = String(change.op);
+		const { table, op } = change;
+		if (typeof table !== "string" || typeof op !== "string") return true;
 		if (knownRowChangeKinds.has(`${table}:${op}`)) return true;
 		sightUnknownInput({
 			key: `rowChange=${table}:${op}`,

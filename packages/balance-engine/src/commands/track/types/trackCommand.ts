@@ -2,13 +2,17 @@ import { z } from "zod/v4";
 import { mutatingCommandSchema } from "../../../models/command/baseCommand.js";
 import { commandOrgSchema } from "../../../models/command/commandOrg.js";
 import { propertiesSchema } from "../../../models/common/json.js";
+import { openEnum } from "../../../models/common/openSchema.js";
 import {
 	finiteNumberSchema,
 	nonEmptyStringSchema,
 	timestampSchema,
 } from "../../../models/common/primitives.js";
 
-export const overageBehaviorSchema = z.enum(["cap", "reject", "overflow"]);
+export const overageBehaviorSchema = openEnum({
+	name: "track.overageBehavior",
+	values: ["cap", "reject", "overflow"],
+});
 
 export type OverageBehavior = z.infer<typeof overageBehaviorSchema>;
 
@@ -20,7 +24,10 @@ export const trackLockSchema = z
 		/** The caller's id, unique among the customer's open locks. */
 		lockId: nonEmptyStringSchema,
 		expiresAt: timestampSchema,
-		expiryAction: z.enum(["release", "confirm"]),
+		expiryAction: openEnum({
+			name: "track.lock.expiryAction",
+			values: ["release", "confirm"],
+		}),
 	})
 	.loose();
 
