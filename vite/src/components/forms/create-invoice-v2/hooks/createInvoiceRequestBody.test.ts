@@ -34,6 +34,7 @@ const planWith = (
 	prorate: undefined,
 	entityId: null,
 	period: null,
+	featurePeriods: {},
 	...overrides,
 });
 
@@ -405,6 +406,35 @@ describe("buildCreateInvoiceRequestBody", () => {
 		});
 		expect(body?.plans?.[1]).not.toHaveProperty("period_start");
 		expect(body?.plans?.[1]).not.toHaveProperty("period_end");
+	});
+
+	test("sends a feature's period on its own feature quantity line", () => {
+		const body = buildCreateInvoiceRequestBody({
+			customerId: "cus_1",
+			form: {
+				...emptyForm(),
+				plans: [
+					planWith({
+						featureQuantities: { seats: 3, credits: 40 },
+						featurePeriods: {
+							"credits:usage_based": { start: OCT_15, end: NOV_1 },
+							"seats:usage_based": { start: OCT_1, end: OCT_15 },
+						},
+					}),
+				],
+			},
+		});
+
+		expect(body?.plans?.[0]?.feature_quantities).toEqual([
+			{ feature_id: "seats", billing_behavior: "prepaid", quantity: 3 },
+			{
+				feature_id: "credits",
+				billing_behavior: "usage_based",
+				quantity: 40,
+				period_start: OCT_15,
+				period_end: NOV_1,
+			},
+		]);
 	});
 
 	test("sends a backdated issue day at midday UTC", () => {

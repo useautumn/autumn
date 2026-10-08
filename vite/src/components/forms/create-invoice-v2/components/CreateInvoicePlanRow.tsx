@@ -14,6 +14,7 @@ import { CreateInvoiceCopyExistingPlans } from "./CreateInvoiceCopyExistingPlans
 import { CreateInvoiceLicenseRows } from "./CreateInvoiceLicenseRows";
 import { CreateInvoiceQuantityFields } from "./CreateInvoiceQuantityFields";
 import { PlanServicePeriodChip } from "./PlanServicePeriodChip";
+import { PlanServicePeriodEditor } from "./PlanServicePeriodEditor";
 
 /** One tray row: the plan picker until a plan is chosen, then the plan with its quantities. */
 export function CreateInvoicePlanRow({ planIndex }: { planIndex: number }) {
@@ -60,6 +61,10 @@ export function CreateInvoicePlanRow({ planIndex }: { planIndex: number }) {
 	}
 
 	const product = productsById.get(plan.planId);
+	const items = invoicePlanItems({
+		planItems: plan.items,
+		catalogItems: product?.items,
+	});
 	const isOutsidePeriod = planIdsOutsidePeriod.has(plan._id);
 	const actions: PlanRowAction[] = [
 		{
@@ -78,24 +83,27 @@ export function CreateInvoicePlanRow({ planIndex }: { planIndex: number }) {
 			isCustom={plan.isCustom}
 			badge={
 				<PlanServicePeriodChip
-					period={plan.period}
+					plan={plan}
 					isInvalid={isOutsidePeriod}
 					open={isPeriodOpen}
 					onOpenChange={setIsPeriodOpen}
-					onApply={(period) =>
-						planHandlers.handleSetPlanPeriod({ planIndex, period })
-					}
-				/>
+				>
+					<PlanServicePeriodEditor
+						plan={plan}
+						items={items}
+						onApply={({ target, period }) => {
+							planHandlers.handleSetPlanPeriod({ planIndex, target, period });
+							setIsPeriodOpen(false);
+						}}
+					/>
+				</PlanServicePeriodChip>
 			}
 			actions={actions}
 			onCustomize={() => planEditor.handleEditPlan({ planId: plan._id })}
 			onRemove={removePlan}
 		>
 			<CreateInvoiceQuantityFields
-				items={invoicePlanItems({
-					planItems: plan.items,
-					catalogItems: product?.items,
-				})}
+				items={items}
 				planIndex={planIndex}
 				quantities={plan.featureQuantities}
 			/>

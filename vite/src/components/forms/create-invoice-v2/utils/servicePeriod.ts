@@ -1,3 +1,8 @@
+import {
+	BillingMethod,
+	isFeaturePriceItem,
+	type ProductItem,
+} from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { getDate, getMonth, getYear } from "date-fns";
 import type {
@@ -41,16 +46,89 @@ export function formatServicePeriod(
 		: `${MONTH_DAY_YEAR.format(start)} – ${MONTH_DAY_YEAR.format(end)}`;
 }
 
-/** Sets or clears a row's service period override; an empty range is ignored. */
-export function withPlanServicePeriod({
+export type ServicePeriodTarget =
+	| { kind: "all" }
+	| { kind: "base" }
+	| { kind: "feature"; featureId: string; behavior: BillingMethod };
+
+export type ServicePeriodTargetOption =
+	| { kind: "all" }
+	| { kind: "base" }
+	| { kind: "feature"; featureId: string; behaviors: BillingMethod[] };
+
+const behaviorOf = (item: ProductItem) =>
+	item.usage_model === "prepaid"
+		? BillingMethod.Prepaid
+		: BillingMethod.UsageBased;
+
+export const featurePeriodKey = ({
+	featureId,
+	behavior,
+}: {
+	featureId: string;
+	behavior: BillingMethod;
+}) => `${featureId}:${behavior}`;
+
+/** All prices, the base price, then each priced feature with the behaviours it bills. */
+export function listServicePeriodTargets({
+	items,
+}: {
+	items: ProductItem[] | null | undefined;
+}): ServicePeriodTargetOption[] {
+	const behaviorsByFeature = new Map<string, BillingMethod[]>();
+	for (const item of items ?? []) {
+		if (!item.feature_id || !isFeaturePriceItem(item)) continue;
+		const behaviors = behaviorsByFeature.get(item.feature_id) ?? [];
+		if (!behaviors.includes(behaviorOf(item))) behaviors.push(behaviorOf(item));
+		behaviorsByFeature.set(item.feature_id, behaviors);
+	}
+	return [
+		{ kind: "all" },
+		{ kind: "base" },
+		...[...behaviorsByFeature].map(([featureId, behaviors]) => ({
+			kind: "feature" as const,
+			featureId,
+			behaviors,
+		})),
+	];
+}
+
+/**
+ * All prices replaces every item override; the base price is the plan's period that
+ * items inherit; a feature sets that line alone. Null clears; an empty range is ignored.
+ */
+export function applyServicePeriod({
 	plan,
+	target,
 	period,
 }: {
 	plan: FormInvoicePlan;
+	target: ServicePeriodTarget;
 	period: ServicePeriod | null;
 }): FormInvoicePlan {
 	if (period && period.end <= period.start) return plan;
-	return { ...plan, period };
+	if (target.kind === "all") return { ...plan, period, featurePeriods: {} };
+	if (target.kind === "base") return { ...plan, period };
+
+	const { [featurePeriodKey(target)]: _replaced, ...rest } =
+		plan.featurePeriods;
+	return {
+		...plan,
+		featurePeriods: period
+			? { ...rest, [featurePeriodKey(target)]: period }
+			: rest,
+	};
+}
+
+export function servicePeriodForTarget({
+	plan,
+	target,
+}: {
+	plan: FormInvoicePlan;
+	target: ServicePeriodTarget;
+}): ServicePeriod | null {
+	if (target.kind !== "feature") return plan.period;
+	return plan.featurePeriods[featurePeriodKey(target)] ?? null;
 }
 
 const OUTSIDE_PERIOD_ERROR = /\((\d+) to (\d+), unix ms\) falls outside/;
@@ -66,7 +144,13 @@ export function findPlansOutsideInvoicePeriod({
 	const match = errorMessage?.match(OUTSIDE_PERIOD_ERROR);
 	if (!match) return [];
 	const [start, end] = [Number(match[1]), Number(match[2])];
+	const matches = (period: ServicePeriod | null) =>
+		period?.start === start && period.end === end;
 	return plans
-		.filter((plan) => plan.period?.start === start && plan.period.end === end)
+		.filter(
+			(plan) =>
+				matches(plan.period) ||
+				Object.values(plan.featurePeriods).some(matches),
+		)
 		.map((plan) => plan._id);
 }

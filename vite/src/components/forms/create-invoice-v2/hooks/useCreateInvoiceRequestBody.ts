@@ -17,6 +17,7 @@ import type {
 } from "../createInvoiceFormSchema";
 import { issueDayToParams } from "../utils/issueDay";
 import { productItemsToInvoiceCustomize } from "../utils/productItemsToInvoiceCustomize";
+import { featurePeriodKey } from "../utils/servicePeriod";
 
 const toDiscounts = ({ discounts }: { discounts: FormDiscount[] }) => {
 	const valid = filterValidDiscounts(discounts);
@@ -86,6 +87,17 @@ const toPlanParams = ({
 			quantities: plan.featureQuantities,
 			usageEntries: plan.featureUsage,
 			items: pricedItems,
+		})?.map((line) => {
+			const period =
+				plan.featurePeriods[
+					featurePeriodKey({
+						featureId: line.feature_id,
+						behavior: line.billing_behavior,
+					})
+				];
+			return period
+				? { ...line, period_start: period.start, period_end: period.end }
+				: line;
 		}),
 		...(licenses.length > 0 ? { license_quantities: licenses } : {}),
 		...(plan.prorate === undefined ? {} : { prorate: plan.prorate }),

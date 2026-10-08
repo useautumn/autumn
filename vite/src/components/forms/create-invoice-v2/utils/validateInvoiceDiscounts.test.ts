@@ -46,6 +46,7 @@ const plan = (overrides: Partial<CreateInvoiceForm["plans"][number]> = {}) => ({
 	prorate: undefined,
 	entityId: null,
 	period: null,
+	featurePeriods: {},
 	...overrides,
 });
 

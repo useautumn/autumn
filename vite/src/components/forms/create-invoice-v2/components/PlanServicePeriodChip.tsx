@@ -1,30 +1,38 @@
 import { cn, Popover, PopoverContent } from "@autumn/ui";
 import { CalendarBlankIcon } from "@phosphor-icons/react";
-import { useRef } from "react";
-import type { ServicePeriod } from "../createInvoiceFormSchema";
+import { type ReactNode, useRef } from "react";
+import type { FormInvoicePlan } from "../createInvoiceFormSchema";
 import { formatServicePeriod } from "../utils/servicePeriod";
-import { ServicePeriodPicker } from "./ServicePeriodPicker";
 
-/** A row's service period chip, and the popover that sets it, anchored to the row's line. */
+const chipLabel = ({ plan }: { plan: FormInvoicePlan }): string | null => {
+	const itemCount = Object.keys(plan.featurePeriods).length;
+	const items = `${itemCount} item ${itemCount === 1 ? "period" : "periods"}`;
+	if (!plan.period) return itemCount > 0 ? items : null;
+	const base = formatServicePeriod(plan.period, { compact: true });
+	return itemCount > 0 ? `${base} · +${items}` : base;
+};
+
+/** A row's service period chip, and the popover that edits it, anchored to the row's line. */
 export function PlanServicePeriodChip({
-	period,
+	plan,
 	isInvalid,
 	open,
 	onOpenChange,
-	onApply,
+	children,
 }: {
-	period: ServicePeriod | null;
+	plan: FormInvoicePlan;
 	isInvalid: boolean;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onApply: (period: ServicePeriod | null) => void;
+	children: ReactNode;
 }) {
 	const anchorRef = useRef<HTMLSpanElement>(null);
+	const label = chipLabel({ plan });
 
 	return (
 		<>
 			<span ref={anchorRef} className="contents">
-				{period && (
+				{label && (
 					<button
 						type="button"
 						onClick={() => onOpenChange(true)}
@@ -36,7 +44,7 @@ export function PlanServicePeriodChip({
 						)}
 					>
 						<CalendarBlankIcon size={12} className="shrink-0" />
-						{formatServicePeriod(period, { compact: true })}
+						{label}
 					</button>
 				)}
 			</span>
@@ -48,13 +56,7 @@ export function PlanServicePeriodChip({
 						anchorRef.current?.closest("[data-plan-tray-line]") ?? null
 					}
 				>
-					<ServicePeriodPicker
-						value={period}
-						onApply={(next) => {
-							onApply(next);
-							onOpenChange(false);
-						}}
-					/>
+					{open && children}
 				</PopoverContent>
 			</Popover>
 		</>

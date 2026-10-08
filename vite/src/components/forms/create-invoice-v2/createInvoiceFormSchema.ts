@@ -43,6 +43,8 @@ const FormInvoicePlanSchema = z.object({
 	entityId: z.string().nullable(),
 	/** Overrides the invoice's service period for this plan. */
 	period: ServicePeriodSchema.nullable(),
+	/** Per-line overrides, keyed `featureId:billing_behavior`. */
+	featurePeriods: z.record(z.string(), ServicePeriodSchema),
 });
 
 export type FormInvoicePlan = z.infer<typeof FormInvoicePlanSchema>;
@@ -58,6 +60,7 @@ export const EMPTY_INVOICE_PLAN: Omit<FormInvoicePlan, "_id"> = {
 	prorate: undefined,
 	entityId: null,
 	period: null,
+	featurePeriods: {},
 };
 
 let licenseCounter = 0;

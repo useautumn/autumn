@@ -25,6 +25,7 @@ const baseForm = (): CreateInvoiceForm => ({
 			prorate: undefined,
 			entityId: null,
 			period: null,
+			featurePeriods: {},
 		},
 	],
 	customLineItems: [],

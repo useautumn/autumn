@@ -37,9 +37,11 @@ function PeriodBoundField({
 /** Start/End, a range calendar, then Clear or Apply. The first click picks the start, the next the end. */
 export function ServicePeriodPicker({
 	value,
+	showTitle = true,
 	onApply,
 }: {
 	value: ServicePeriod | null;
+	showTitle?: boolean;
 	onApply: (period: ServicePeriod | null) => void;
 }) {
 	const [draft, setDraft] = useState<DraftPeriod>({
@@ -67,7 +69,9 @@ export function ServicePeriodPicker({
 
 	return (
 		<div className="flex flex-col gap-3">
-			<p className="text-sm font-medium text-foreground">Service period</p>
+			{showTitle && (
+				<p className="text-sm font-medium text-foreground">Service period</p>
+			)}
 			<div className="flex gap-2">
 				<PeriodBoundField
 					label="Start"

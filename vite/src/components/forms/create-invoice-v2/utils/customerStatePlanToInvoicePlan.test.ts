@@ -31,6 +31,7 @@ describe("customerStatePlanToInvoicePlan", () => {
 			prorate: undefined,
 			entityId: "workspace_a",
 			period: null,
+			featurePeriods: {},
 		});
 	});
 
