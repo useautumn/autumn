@@ -19,6 +19,9 @@ export const hydrateSubject = async ({
 	/** The read to share; `rowsOnly` after an overtaken read, since the snapshot may predate the DELETE still on the lane. */
 	read: (params: { rowsOnly: boolean }) => Promise<InFlightRead>;
 }): Promise<SubjectState> => {
+	// A subject dropped for space may still have committed writes the store lacks; the read must not miss them.
+	const committedLanding = scope.ctx.writer.waitForCommittedToStore();
+	if (committedLanding) await committedLanding;
 	for (let attempt = 0; attempt < MAX_READS; attempt++) {
 		const { read: rows, load } = await read({ rowsOnly: attempt > 0 });
 		// Checked with no await before the keep, so overtaken rows never become resident.

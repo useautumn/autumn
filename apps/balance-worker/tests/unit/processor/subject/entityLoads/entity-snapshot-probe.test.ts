@@ -98,6 +98,7 @@ const createScope = ({
 				},
 			},
 			writer: {
+				waitForCommittedToStore: () => null,
 				decide: () => {
 					throw new Error("not exercised");
 				},

@@ -196,6 +196,7 @@ const createScope = ({
 			catalogCache,
 			db,
 			writer: {
+				waitForCommittedToStore: () => null,
 				adopt: () => {
 					throw new Error("not exercised");
 				},

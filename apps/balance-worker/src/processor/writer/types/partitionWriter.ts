@@ -32,6 +32,10 @@ import type {
 export type PartitionWriter = {
 	/** Snapshot: waits for the current writes to reach the store, not writes enqueued later. */
 	waitForStore(): Promise<void>;
+	/** `waitForStore`'s snapshot, taken now; it waits, and wakes a lingering apply, only once called. */
+	snapshotStore(): () => Promise<void>;
+	/** Snapshot: waits for every write Kafka already holds to reach the store; null when none is unapplied, so a caller need not yield. */
+	waitForCommittedToStore(): Promise<void> | null;
 	/** Resolves once every batch handed to the store so far has been applied or failed. */
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
@@ -233,6 +237,8 @@ export type PartitionWriterState = {
 	lastBatchSize: number;
 	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
 	lingerWake: (() => void) | null;
+	/** Set while the apply loop lingers; anything that must not wait for the store calls it. */
+	applyWake: (() => void) | null;
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;

@@ -20,8 +20,11 @@ import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
 import {
 	allStored,
+	awaitStored,
+	committedStored,
 	createPartitionWriterState,
 	rejectAllPending,
+	snapshotAllStored,
 } from "./pendingMutations.js";
 import type { OnSubjectEvicted } from "./subjectMap/types/subjectMap.js";
 import type {
@@ -165,14 +168,28 @@ export function createPartitionWriter({
 		return allStored({ state: scope.state });
 	}
 
+	function snapshotStore() {
+		return snapshotAllStored({ state: scope.state });
+	}
+
+	function waitForCommittedToStore() {
+		return committedStored({ state: scope.state });
+	}
+
 	/** The append in flight and every batch handed to the store so far, applied or failed; never rejects. */
 	async function waitForApplies(): Promise<void> {
+		// A waiter on everything handed out keeps the apply from lingering while the partition drains.
+		awaitStored({ state: scope.state, seq: scope.state.lastSeq }).catch(
+			() => undefined,
+		);
 		await scope.state.appending;
 		await scope.state.applyTail.catch(() => undefined);
 	}
 
 	return {
 		waitForStore,
+		snapshotStore,
+		waitForCommittedToStore,
 		waitForApplies,
 		decide,
 		decideHeld,

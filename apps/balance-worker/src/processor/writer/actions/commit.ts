@@ -214,9 +214,25 @@ function queueApply({
 		baseOffset,
 		committedAt: writerNowOf({ scope }),
 	});
+	if (applyIsDue({ state })) state.applyWake?.();
 	if (state.applying) return;
 	state.applying = true;
 	state.applyTail = applyQueued({ scope });
+}
+
+/** The store is awaited now: a reader is waiting on it, a store-durable caller is, or a full flush is queued. */
+function applyIsDue({
+	state,
+}: {
+	state: PartitionWriterScope["state"];
+}): boolean {
+	return (
+		state.storeWaiters.length > 0 ||
+		state.unapplied.length >= MAX_BATCHES_PER_FLUSH ||
+		state.unapplied.some(({ batch }) =>
+			batch.some((pending) => pending.durability === "store"),
+		)
+	);
 }
 
 async function applyQueued({

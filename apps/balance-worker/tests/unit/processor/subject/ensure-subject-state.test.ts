@@ -96,6 +96,7 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 		readState: () => state,
 		readFreshestState: () => state,
 		adopt: ({ state: adopted }: { state: SubjectState }) => adopted,
+		waitForCommittedToStore: () => null,
 	};
 };
 

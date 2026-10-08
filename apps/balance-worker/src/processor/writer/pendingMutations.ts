@@ -46,6 +46,7 @@ export function createPartitionWriterState({
 		recoveryError: null,
 		lastBatchSize: 0,
 		lingerWake: null,
+		applyWake: null,
 		deferredQueued: 0,
 		deferredCommitTimer: null,
 		deferredCommitDue: false,
@@ -371,6 +372,8 @@ export function awaitStored({
 	if (state.recoveryError) return Promise.reject(state.recoveryError);
 	const { promise, resolve, reject } = Promise.withResolvers<void>();
 	state.storeWaiters.push({ seq, resolve, reject });
+	// Somebody reads the store next: a lingering apply goes now.
+	state.applyWake?.();
 	return promise;
 }
 
@@ -380,11 +383,31 @@ export function allStored({
 }: {
 	state: PartitionWriterState;
 }): Promise<void> {
-	const stored = awaitStored({ state, seq: state.lastRowSeq });
-	const all = Promise.all([state.storeCompletion, stored]).then(nothing);
-	// Taken eagerly by callers that may never wait on it; those that do still see the failure.
-	all.catch(nothing);
-	return all;
+	return snapshotAllStored({ state })();
+}
+
+/** `allStored`'s snapshot taken now; its waiter registers only once called, so a caller that never waits wakes nothing. */
+export function snapshotAllStored({
+	state,
+}: {
+	state: PartitionWriterState;
+}): () => Promise<void> {
+	const { lastRowSeq, storeCompletion } = state;
+	return () =>
+		Promise.all([
+			storeCompletion,
+			awaitStored({ state, seq: lastRowSeq }),
+		]).then(nothing);
+}
+
+/** Snapshot: every write Kafka already holds is in the store; null when nothing is unapplied. */
+export function committedStored({
+	state,
+}: {
+	state: PartitionWriterState;
+}): Promise<void> | null {
+	const last = state.unapplied.at(-1)?.batch.at(-1);
+	return last ? awaitStored({ state, seq: last.seq }) : null;
 }
 
 function nothing(): void {}

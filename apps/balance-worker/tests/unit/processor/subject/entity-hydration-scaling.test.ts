@@ -171,7 +171,15 @@ const createMapWriter = ({
 	const decide: PartitionWriter["decide"] = () => {
 		throw new Error("Postgres is the baseline here; hydration decides nothing");
 	};
-	return { writer: { decide, readFreshestState, adopt }, map };
+	return {
+		writer: {
+			decide,
+			readFreshestState,
+			adopt,
+			waitForCommittedToStore: () => null,
+		},
+		map,
+	};
 };
 
 const createCustomer = ({

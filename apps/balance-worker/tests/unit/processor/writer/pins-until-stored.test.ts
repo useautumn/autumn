@@ -166,4 +166,29 @@ describe("off, pins are released when Kafka has the record, as without snapshots
 			held.resolve();
 		}
 	});
+
+	test("a cold load of the dropped subject waits until the store holds what Kafka already has", async () => {
+		const { writer, applyGate, track } = createWriter({ mode: "off" });
+		writer.adopt({ state: createState({ identity, balance: 100 }) });
+		const held = Promise.withResolvers<void>();
+		applyGate.held = held.promise;
+		try {
+			expect(writer.waitForCommittedToStore()).toBeNull();
+			await track("t1").waitForCommit();
+			writer.adopt({ state: createState({ identity: other, balance: 1 }) });
+			expect(writer.readFreshestState({ identity })).toBeNull();
+
+			let landed = false;
+			const committed = writer.waitForCommittedToStore()?.then(() => {
+				landed = true;
+			});
+			await Promise.resolve();
+			expect(landed).toBe(false);
+			held.resolve();
+			await committed;
+			expect(landed).toBe(true);
+		} finally {
+			held.resolve();
+		}
+	});
 });
