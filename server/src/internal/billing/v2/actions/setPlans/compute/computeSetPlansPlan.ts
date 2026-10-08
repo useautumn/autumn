@@ -2,6 +2,7 @@ import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
 	type FullCusProduct,
+	isCustomerProductTrialing,
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -128,7 +129,11 @@ export const computeSetPlansPlan = ({
 			carryOverUsages: billingContext.carryOverUsages,
 			sourceCustomerProducts: replacedCustomerProducts,
 		}),
+		// A trialing plan paid nothing; once its subscription is replaced, the shared trial filter can no longer see that.
 		creditsUnusedTime: (customerProduct) =>
+			!isCustomerProductTrialing(customerProduct, {
+				nowMs: billingContext.currentEpochMs,
+			}) &&
 			!isUnbilledByStripe({
 				customerProduct,
 				now: billingContext.currentEpochMs,
