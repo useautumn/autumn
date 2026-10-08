@@ -1,19 +1,4 @@
-/**
- * Ending a live trial with a future billing_cycle_anchor recreates the subscription: Stripe's update can't anchor
- * on a date and always invoices when a trial ends. Like subscriptions.create with that anchor, none (the default)
- * bills nothing until it and prorate_immediately bills the stub now; bill_difference prorates like any new subscription.
- *
- * A reset now (or phase_start starting now) is what Stripe's trial_end now already does, so the trial ends in place and the
- * full period is billed now under every proration_behavior.
- *
- * With no anchor the cycle starts on the old trial end, through the same recreate.
- *
- * Red (before):  a future anchor billed a full $940 now plus the anchor reset's prorated period; no anchor billed $940 now
- *                with next cycle on the old trial end; a reset now was a 400.
- * Green (after): the subscription is recreated on the date (or the reset now bills $940 once), as previewed.
- */
-
-import { expect, test } from "bun:test";
+import { expect } from "bun:test";
 import {
 	type ApiCustomerV5,
 	type BillingBehavior,
@@ -22,6 +7,15 @@ import {
 	type SetPlansParamsV0Input,
 	secondsToMs,
 } from "@autumn/shared";
+import { advancePastCycleStart } from "@tests/integration/billing/set-plans/billing-cycle-anchor/utils/anchorCycleUtils";
+import { expectPlanKept } from "@tests/integration/billing/set-plans/utils/resyncUtils";
+import {
+	expectLiveSubscriptionCharged,
+	expectPreviewWarning,
+	expectStripeUpcomingInvoiceCorrect,
+	expectSubscriptionInvoiceTotals,
+	findStripeSubscriptionByStatus,
+} from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
 import { expectSubscriptionNotTrialing } from "@tests/integration/billing/utils/expect-customer-products/expectSubscriptionTrialing";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
@@ -31,19 +25,9 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
 import { CusService } from "@/internal/customers/CusService";
-import { advancePastCycleStart } from "../billing-cycle-anchor/utils/anchorCycleUtils";
-import { expectPlanKept } from "../utils/resyncUtils";
-import {
-	expectLiveSubscriptionCharged,
-	expectPreviewWarning,
-	expectStripeUpcomingInvoiceCorrect,
-	expectSubscriptionInvoiceTotals,
-	findStripeSubscriptionByStatus,
-} from "../utils/subscriptionStateUtils";
 
 const PRO_PRICE = 540;
 const ADD_ON_PRICE = 400;
@@ -56,7 +40,11 @@ const ANCHOR_DAYS = 8;
 const TRIAL_INVOICE_TOTALS = [0, 0];
 
 /** Pro and an add-on trialing on one subscription, with usage, ended now and anchored 8 days out. */
-const setupTrialingPlans = async ({ customerId }: { customerId: string }) => {
+export const setupTrialingPlans = async ({
+	customerId,
+}: {
+	customerId: string;
+}) => {
 	const pro = products.base({
 		id: "pro540",
 		items: [
@@ -114,7 +102,7 @@ const setupTrialingPlans = async ({ customerId }: { customerId: string }) => {
 };
 
 /** Stripe prorates and rounds each item's stub separately. */
-const proratedStub = ({
+export const proratedStub = ({
 	advancedTo,
 	anchorMs,
 }: {
@@ -132,7 +120,7 @@ const proratedStub = ({
 		.toNumber();
 
 /** Without a requested anchor the cycle starts on the old trial end. */
-const endTrialOnAnchorAndExpect = async ({
+export const endTrialOnAnchorAndExpect = async ({
 	customerId,
 	anchorSource,
 	prorationBehavior,
@@ -248,102 +236,8 @@ const endTrialOnAnchorAndExpect = async ({
 	});
 };
 
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end anchor: unset proration defaults to none, billing nothing until the anchor")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-anchor-unset",
-			anchorSource: "requested",
-			expectedStub: () => 0,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end anchor: none bills nothing until the anchor")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-anchor-none",
-			anchorSource: "requested",
-			prorationBehavior: "none",
-			expectedStub: () => 0,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end anchor: prorate_immediately bills the stub to the anchor now")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-anchor-prorate",
-			anchorSource: "requested",
-			prorationBehavior: "prorate_immediately",
-			expectedStub: proratedStub,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end anchor: bill_difference prorates the stub like prorate_immediately")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-anchor-bill-diff",
-			anchorSource: "requested",
-			prorationBehavior: "bill_difference",
-			expectedStub: proratedStub,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial off, no anchor: unset proration defaults to none, billing nothing until the old trial end")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-off-unset",
-			anchorSource: "trial_end",
-			expectedStub: () => 0,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial off, no anchor: none bills nothing until the old trial end")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-off-none",
-			anchorSource: "trial_end",
-			prorationBehavior: "none",
-			expectedStub: () => 0,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial off, no anchor: prorate_immediately bills the stub to the old trial end now")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-off-prorate",
-			anchorSource: "trial_end",
-			prorationBehavior: "prorate_immediately",
-			expectedStub: proratedStub,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial off, no anchor: bill_difference prorates the stub like prorate_immediately")}`,
-	async () => {
-		await endTrialOnAnchorAndExpect({
-			customerId: "set-plans-trial-off-bill-diff",
-			anchorSource: "trial_end",
-			prorationBehavior: "bill_difference",
-			expectedStub: proratedStub,
-		});
-	},
-);
-
 /** Ending the trial with a reset now keeps the subscription, restarts the plans' cycle and bills one full period now. */
-const endTrialResettingNowAndExpect = async ({
+export const endTrialResettingNowAndExpect = async ({
 	customerId,
 	prorationBehavior,
 	carriesUsage = false,
@@ -438,32 +332,3 @@ const endTrialResettingNowAndExpect = async ({
 		totals: [...TRIAL_INVOICE_TOTALS, MONTHLY_TOTAL, MONTHLY_TOTAL],
 	});
 };
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end reset now: phase_start with none ends the trial and bills the full period now")}`,
-	async () => {
-		await endTrialResettingNowAndExpect({
-			customerId: "set-plans-trial-reset-now-none",
-			prorationBehavior: "none",
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end reset now: phase_start with default proration ends the trial and bills the full period now")}`,
-	async () => {
-		await endTrialResettingNowAndExpect({
-			customerId: "set-plans-trial-reset-phase-start",
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("set-plans trial end reset now: carry_over_usages carries the trial's usage into the new cycle")}`,
-	async () => {
-		await endTrialResettingNowAndExpect({
-			customerId: "set-plans-trial-reset-carry",
-			carriesUsage: true,
-		});
-	},
-);
