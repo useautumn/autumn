@@ -53,9 +53,11 @@ describe("shadowAtomConfig", () => {
 	test("there are no per-env keys: one config serves both envs", () => {
 		expect(Object.keys(shadowAtomConfig.defaultValue()).sort()).toEqual([
 			"adminEncryptedToken",
+			"deployment",
 			"deploymentGroupId",
 			"endpointUrl",
 			"orgs",
+			"pushTransport",
 		]);
 	});
 

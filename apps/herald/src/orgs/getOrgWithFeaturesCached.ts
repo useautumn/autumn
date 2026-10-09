@@ -3,9 +3,11 @@ import {
 	readThroughOrgWithFeatures,
 } from "@autumn/cache";
 import { getOrgWithFeatures, type PostgresDb } from "@autumn/postgres";
-import type { AppEnv, Feature, Organization } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 
-type OrgWithFeatures = { org: Organization; features: Feature[] };
+type OrgWithFeatures = NonNullable<
+	Awaited<ReturnType<typeof getOrgWithFeatures>>
+>;
 
 /** The server's cached org, else Postgres; a burst of pushes for one org shares one lookup. */
 export const getOrgWithFeaturesCached = ({
