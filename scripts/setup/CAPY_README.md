@@ -12,50 +12,54 @@ Configure this repository under **Settings → Project → Dev environment**:
 | --- | --- | --- |
 | Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs the [memory bubble](#memory-bubble), `neonctl`, the pinned Stripe CLI and native Kafka, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
-| Startup | `bash scripts/setup/capy-startup.sh` | idempotently re-applies the [memory bubble](#memory-bubble), starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files. Starts no app processes |
-| App (on demand) | `bun capy` | runs Startup (a near no-op when it already ran this boot) and starts the app in a detached tmux session |
+| App and Startup (on demand) | `bun capy` | runs `scripts/setup/capy-startup.sh` (the [memory bubble](#memory-bubble), local infrastructure, the VM's Neon branch, pending migrations and SQL functions, local env files), then starts the app in a detached tmux session |
 
+The Setup has no startup entry: nothing runs when a VM boots or wakes.
 Initialize does not start services or create per-VM state, so it is safe to run
-during a snapshot build. Startup is blocking but bounded: its containers detach,
-its readiness checks finish, and the script exits as required by Capy v2.
+during a snapshot build.
 
-## The app is lazy
+## Everything is on demand
 
-Every Capy sleep is a reboot, so Startup only prepares the machine. Nothing
-listens on :3000 or :8080 until an agent asks for it. Editing code,
-typechecking and unit tests need nothing more. Start the app only when the task
-needs it:
+Every Capy sleep is a reboot, and nothing starts on boot. Nothing listens on
+:3000 or :8080 until an agent asks for it. Editing code, typechecking and unit
+tests need nothing. Start the app only when the task needs it:
 
 | Need | Command | Runs |
 | --- | --- | --- |
-| Integration tests (`bun t`) | `bun capy --server-only` | server, workers, cron, balance worker, `stripe listen` and backend opt-ins; no Vite or other frontends |
-| Dashboard, browser, webhooks by hand | `bun capy` | the full slim stack; expose port 3000 afterwards |
+| Integration tests (`bun t`) | `bun capy` | Startup, then server, workers, cron, balance worker, `stripe listen` and backend opt-ins; no frontend |
+| Seeing a dashboard change yourself | `bun capy restart --frontend` | adds Vite on :3000; expose port 3000. `bun capy restart --no-frontend` when done |
+| A human wants to try the branch | the `qahandoff` skill | a per-branch QA env, not this machine |
 | Stop the app, keep infra and DB | `bun capy stop` | kills the tmux session and every process under it |
 | Fresh start | `bun capy teardown` | see below |
 
 Integration tests talk to the server over HTTP on :8080 (Stripe webhook tests
-also need `stripe listen`), so they fail with "Unable to connect" against
-Startup alone. `bun t` prints a warning when the server is down on Capy. Unit
-tests need only Startup. A full `bun capy` replaces a running server-only stack;
-`bun capy --server-only` keeps a running full stack, since it is a superset.
+also need `stripe listen`), so they fail with "Unable to connect" without
+`bun capy`. `bun t` prints a warning when the server is down on Capy. A
+`bun capy` reuses a running stack only when it already runs every service the
+opt-ins ask for (recorded in `~/.autumn-capy/app-services`); otherwise it
+replaces it. `bun capy --server-only` is kept as an alias: it starts the stack
+without any frontend for that run, whatever the opt-ins say.
 
-Startup and `bun capy` share a lock (`~/.autumn-capy/startup.lock`), so an
-agent that runs `bun capy` while the boot's Startup is still going waits for
-it. Provisioning then records a fingerprint in `~/.autumn-capy/provisioned`:
+Concurrent `bun capy` runs share a lock (`~/.autumn-capy/startup.lock`), so the
+second waits for the first's Startup. Provisioning then records a fingerprint in `~/.autumn-capy/provisioned`:
 the boot id, machine id, Trigger opt-in, migrations, SQL functions and
 `.env.local` contents. A later run with the same fingerprint skips Neon,
 migrations and setup-test after re-checking the infra, so `bun capy` only adds
 the app. A reboot, a pulled migration or an edited env file re-provisions;
 `bash scripts/setup/capy-startup.sh --force` always does.
 
-Measured on a Capy VM with the branch already provisioned:
+Measured on a 2 vCPU / 8 GB Capy VM:
 
-| | Before | After |
-| --- | --- | --- |
-| Startup (provision only) | 27 s | 25 s first run, 1.8 s repeat in the same boot |
-| `bun capy` after Startup | 47 s (re-provisioned) | 22 s full, 16 s `--server-only` |
-| Memory used, infra only | | 1.3 GB |
-| Memory used, server-only / full app | 4.1 GB full | 3.5 GB / 4.1 GB |
+| | |
+| --- | --- |
+| First `bun capy`, fresh Neon branch | 129 s |
+| `bun capy` with the stack stopped, same boot | 17 s |
+| `bun capy restart --frontend` | 34 s |
+| Memory used, `bun capy` / with `--frontend` | 3.5 GB / 4.6–6.3 GB |
+
+With `--frontend` on 8 GB, startup is tight: in three of three starts earlyoom
+killed the server's `bun` once or twice (at 2–3.5 GB) while Vite warmed up, and
+nodemon restarted it. The server-only stack peaked at 4.3 GB with no kills.
 
 ## Memory bubble
 
@@ -63,9 +67,9 @@ Capy VMs are 2 vCPU / 8 GB with no swap. Without help, a process that eats the
 last of RAM makes the kernel thrash page cache for minutes instead of killing
 anything: on 8 GB, `tsgo --build` in `server/` beside `bun capy --server-only`
 froze the machine for 845 s (one stall of 175 s) and every agent command timed
-out. `scripts/setup/capy-bubble.sh` makes the greedy process die instead. Both
-Initialize and Startup install it, so snapshots carry it and older machines get
-it on their next wake:
+out. `scripts/setup/capy-bubble.sh` makes the greedy process die instead.
+Initialize installs it and enables its units, so snapshots carry it and it is
+active on every boot before anything runs; Startup re-applies it idempotently:
 
 | Piece | What it does |
 | --- | --- |
@@ -76,8 +80,12 @@ it on their next wake:
 What gets killed is whatever is largest when memory runs out, nearly always the
 typecheck (`tsgo` peaks around 6.6 GB). If the app itself is the largest
 process, earlyoom can kill the server's `bun` process; `bun capy` brings it
-back. The full stack (`bun capy`) already uses about 6.5 GB on 8 GB, so run
-typechecks with the app stopped (`bun capy stop`) or with `--server-only`.
+back. `bun capy` uses about 3.5 GB and server `tsgo` peaks near 6.9 GB, so
+earlyoom kills `tsgo` within about 20 s if they run together: run typechecks
+with the app stopped (`bun capy stop`). Even with nothing running, the root
+`bun ts` runs several `tsgo` builds at once and earlyoom kills the server's
+(exit 137, also with `--concurrency=2`); `bun ts --concurrency=1` passes in
+about 2.5 minutes, and `bunx tsgo --build --noEmit` in `server/` in about 30 s.
 
 Measured on an 8 GB VM (worst stall is the longest the machine stopped
 scheduling a 250 ms timer):
@@ -108,7 +116,7 @@ Startup holds the lock.
 
 Each `capy-<hash>` branch self-deletes 14 days after it was created; the
 expiry is fixed at creation and not extended on wake, so a machine idle that
-long starts with a fresh database on its next Startup.
+long starts with a fresh database on its next `bun capy`.
 
 The old `.capy/settings.json` terminals and previews are intentionally gone.
 Project Setup is authoritative in v2, and Capy discovers listening HTTP services
@@ -163,14 +171,15 @@ The control plane uses about 2.4 GB of RAM, so it is opt-in.
 
 ## Slim stack and opt-ins
 
-`bun capy` starts a slim stack by default: Vite, the server, one worker
-process, cron, the balance worker and `stripe listen` (about 4.5 GB used on a
-16 GB VM, versus 11.5 GB for the full stack). Opt-ins are marker files in
+`bun capy` starts a slim server stack by default: the server, one worker
+process, cron, the balance worker and `stripe listen` (about 3.5 GB used on an
+8 GB VM). Opt-ins are marker files in
 `~/.autumn-capy/opt-ins/`, toggled with `bun capy restart --<name>` and
 `bun capy restart --no-<name>`:
 
 | Opt-in | Adds |
 | --- | --- |
+| `frontend` | Vite dashboard on :3000 |
 | `trigger` | Trigger.dev control plane and the `trigger dev` worker |
 | `eve` | Eve and leaf/chat |
 | `checkout` | Checkout app |

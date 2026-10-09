@@ -382,7 +382,7 @@ async function warnIfCapyServerDown() {
 	);
 	if (up) return;
 	console.warn(
-		`[capy] Autumn server is not running on :${port}; integration tests will fail to connect. Start it with \`bun capy --server-only\`.\n`,
+		`[capy] Autumn server is not running on :${port}; integration tests will fail to connect. Start it with \`bun capy\`.\n`,
 	);
 }
 
