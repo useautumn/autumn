@@ -6,7 +6,7 @@ import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
-import { checkAuthMiddleware } from "./middlewares/checkAuthMiddleware.js";
+import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
@@ -24,7 +24,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const authorized = new Hono<AtomHttpEnv>();
 	authorized.post(
 		"/balances.check",
-		checkAuthMiddleware({ ctx }),
+		clientAuthMiddleware({ ctx }),
 		receiveCheck,
 	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject);
