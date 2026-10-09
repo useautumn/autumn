@@ -24,6 +24,8 @@ export const installPageFaults = async () => {
 	const realQueue = { ...(await import(queueModulePath)) };
 	const pageFaults = new Map<string, PageFault>();
 	const enqueueFaults = new Map<string, EnqueueFault[]>();
+	/** Customer id → webhook enqueues that actually reached Svix. */
+	const enqueueSends = new Map<string, number>();
 
 	mock.module(addModulePath, () => ({
 		...realAdd,
@@ -58,6 +60,8 @@ export const installPageFaults = async () => {
 			if (fault === "before_send")
 				throw new Error("injected: webhook enqueue failed before sending");
 			const batches = await realQueue.queueMigrationWebhooks(args);
+			for (const { customerId } of args.records)
+				enqueueSends.set(customerId, (enqueueSends.get(customerId) ?? 0) + 1);
 			if (fault === "after_send")
 				throw new Error("injected: webhook enqueue failed after sending");
 			return batches;
@@ -67,6 +71,7 @@ export const installPageFaults = async () => {
 	return {
 		pageFaults,
 		enqueueFaults,
+		enqueueSends,
 		restore: () => {
 			mock.module(addModulePath, () => realAdd);
 			mock.module(queueModulePath, () => realQueue);

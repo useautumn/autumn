@@ -281,8 +281,8 @@ export const runBatchMigrationChunk = async ({
 		}
 	};
 
-	// The bounded drain runs on every exit path: an orphaned cache invalidation
-	// is silent, unrecoverable staleness.
+	// The bounded drain runs on every exit path; a publish that fails leaves its
+	// changes on the item runs for the run's sweep.
 	const loop = await runPages().then(
 		(result): LoopOutcome => ({ ok: true, result }),
 		(error: unknown): LoopOutcome => ({ ok: false, error }),
@@ -290,16 +290,16 @@ export const runBatchMigrationChunk = async ({
 	clearInterval(stallWatchdog);
 	const drained = await publishes.drain();
 	if (!loop.ok) throw loop.error;
-	if (drained.failures.length > 0) {
-		const timedOut = drained.failures.filter(
-			(failure) => failure.timedOut,
-		).length;
-		throw new BatchMigrationStallError({
-			phase: "publish",
-			message: `batch-migration: publishing did not complete for ${drained.failures.length} page(s) (${timedOut} timed out; ${drained.failures.map((failure) => failure.label).join(", ")})`,
-		});
-	}
-	// "finished" means every page's side effects landed, not just the loop.
+	if (drained.failures.length > 0)
+		ctx.logger.warn(
+			"batch-migration: some pages' publishes did not complete; the run's sweep republishes them",
+			{
+				data: {
+					migrationRunId,
+					pages: drained.failures.map((failure) => failure.label),
+				},
+			},
+		);
 	ctx.logger.info("batch-migration: chunk finished", {
 		data: {
 			migrationRunId,

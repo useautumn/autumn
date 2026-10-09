@@ -45,3 +45,35 @@ export const updatePlanAddingItems = ({
 	plan_filter: { plan_id: planId },
 	customize: { add_items: addItems },
 });
+
+/** The batch plan a run of this migration executes, for driving one batch
+ * step (such as the publish sweep) directly. */
+export const computeBatchExecutionPlan = async ({
+	ctx,
+	migration,
+}: {
+	ctx: AutumnContext;
+	migration: Migration;
+}) => {
+	const { prepareMigration } = await import(
+		"@/internal/migrations/v2/run/runMigration.js"
+	);
+	const { shouldRunBatchLane } = await import(
+		"@/internal/migrations/v2/utils/shouldRunBatchLane.js"
+	);
+	const { batchMigrationPlanToExecutionPlan } = await import(
+		"@/internal/migrations/v2/batchOperations/compute/index.js"
+	);
+	const batchLane = await shouldRunBatchLane({
+		ctx,
+		migration: await prepareMigration({ ctx, migration, dryRun: false }),
+		migrationRunId: generateId("mrun"),
+		dryRun: false,
+		controls: undefined,
+		hasCustomHooks: false,
+		hasCloudBatchAdapter: false,
+	});
+	if (!batchLane.shouldRun)
+		throw new Error("expected the migration to be batch-eligible");
+	return batchMigrationPlanToExecutionPlan({ plan: batchLane.plan });
+};
