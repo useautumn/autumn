@@ -336,15 +336,38 @@ export const runFlush = async ({
 	});
 	if (landed)
 		attributeDeletedSnapshots({ flush, outcomes, deleted: landed.deleted });
-	const staleRows = changes.flatMap((change, index) => {
-		const record = recordOf[index];
-		return applied[index] || !record
-			? []
-			: [{ id: subjectRowIdOf(change), record }];
-	});
+	const staleRows = staleRowsOf({ changes, applied, recordOf });
 	if (staleRows.length > 0)
 		throw new StaleSubjectRowsError({ rows: staleRows });
 	return outcomes;
+};
+
+/** The changes that did not land, each with its record. Changes folded onto one row miss together; where one of them carried
+ *  a guard, that guard is why (the row is still there), so only the guarded changes are stale and the rest land without them. */
+const staleRowsOf = ({
+	changes,
+	applied,
+	recordOf,
+}: {
+	changes: SubjectRowChange[];
+	applied: boolean[];
+	recordOf: DurableMutationRecord[];
+}): { id: string; record: DurableMutationRecord }[] => {
+	const rowOf = (change: SubjectRowChange) =>
+		`${change.table}:${subjectRowIdOf(change)}`;
+	const isGuarded = (change: SubjectRowChange) =>
+		change.op === "update" && Object.keys(change.guard).length > 0;
+	const guardMissed = new Set(
+		changes.flatMap((change, index) =>
+			!applied[index] && isGuarded(change) ? [rowOf(change)] : [],
+		),
+	);
+	return changes.flatMap((change, index) => {
+		const record = recordOf[index];
+		if (applied[index] || !record) return [];
+		if (guardMissed.has(rowOf(change)) && !isGuarded(change)) return [];
+		return [{ id: subjectRowIdOf(change), record }];
+	});
 };
 
 /** Each deleted row goes to the call whose intent deleted its customer, so a lane tick learns what its evicts removed. */
