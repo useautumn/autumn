@@ -1,7 +1,19 @@
+import type { AtomMetricsStatistic } from "@autumn/shared";
 import { format } from "date-fns";
 import { niceAxisTicks } from "@/views/customers/customer/analytics/utils/chartGeometry";
 
 const NO_READING = "—";
+
+const MINUTE_MS = 60_000;
+
+/** Each statistic's name on the toggle, and its column when hovering a period. */
+export const STATISTIC_LABELS: Record<
+	AtomMetricsStatistic,
+	{ name: string; column: string }
+> = {
+	maximum: { name: "Maximum", column: "Max" },
+	average: { name: "Average", column: "Avg" },
+};
 
 /** The smallest rate two decimals can show. */
 const SMALLEST_RATE = 0.01;
@@ -47,15 +59,18 @@ const timeZoneName = (at: number) =>
 		.formatToParts(at)
 		.find((part) => part.type === "timeZoneName")?.value;
 
-/** e.g. "Oct 9, 14:30 BST" */
+/** e.g. "Oct 9, 14:30:10 BST" */
 export const formatMetricsTimestamp = (at: number) =>
-	[format(at, "MMM d, HH:mm"), timeZoneName(at)].filter(Boolean).join(" ");
+	[format(at, "MMM d, HH:mm:ss"), timeZoneName(at)].filter(Boolean).join(" ");
 
-/** e.g. "Oct 9, 14:00–14:30" */
+/** e.g. "Oct 9, 14:00–14:30", or "Oct 9, 14:30:10–14:30:20" for a window under a minute */
 export const formatMetricsWindow = ({
 	at,
 	endAt,
 }: {
 	at: number;
 	endAt: number;
-}) => `${format(at, "MMM d, HH:mm")}–${format(endAt, "HH:mm")}`;
+}) => {
+	const timeFormat = endAt - at < MINUTE_MS ? "HH:mm:ss" : "HH:mm";
+	return `${format(at, `MMM d, ${timeFormat}`)}–${format(endAt, timeFormat)}`;
+};

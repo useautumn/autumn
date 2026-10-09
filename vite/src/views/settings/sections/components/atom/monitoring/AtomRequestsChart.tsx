@@ -1,8 +1,9 @@
 import { Bar } from "recharts";
 import type {
 	AtomMetricsChartData,
-	AtomMetricsRow,
+	AtomMetricsReading,
 	AtomMetricsSeries,
+	AtomMetricsValues,
 } from "./atomMetricsChartData";
 import { formatPercent, formatRate, rateAxisTicks } from "./atomMetricsFormat";
 import { MonitoringChartCard } from "./MonitoringChartCard";
@@ -30,18 +31,14 @@ const PUSHES: AtomMetricsSeries = {
 
 const SERIES = [ANSWERED, FORWARDED, PUSHES];
 
-const requestsOf = (row: AtomMetricsRow) =>
-	(row.answered ?? 0) + (row.forwarded ?? 0);
+const requestsOf = (
+	values: Pick<AtomMetricsValues, "answered" | "forwarded">,
+) => (values.answered ?? 0) + (values.forwarded ?? 0);
 
-/** The latest req/s, and how much of it Atom answered without Autumn. */
-const RequestsSummary = ({
-	latest,
-}: {
-	latest: AtomMetricsRow | undefined;
-}) => {
-	const requests = latest ? requestsOf(latest) : null;
-	const answeredShare =
-		latest && requests ? (latest.answered ?? 0) / requests : null;
+/** The req/s in the latest 10s, and how much of it Atom answered without Autumn. */
+const RequestsSummary = ({ now }: { now: AtomMetricsReading | null }) => {
+	const requests = now ? requestsOf(now) : null;
+	const answeredShare = now && requests ? (now.answered ?? 0) / requests : null;
 	return (
 		<div className="flex flex-wrap items-end justify-between gap-3">
 			<div className="flex flex-col gap-0.5">
@@ -60,11 +57,7 @@ const RequestsSummary = ({
 					</span>
 				)}
 			</div>
-			<MonitoringLegend
-				series={SERIES}
-				latest={latest}
-				formatValue={formatRate}
-			/>
+			<MonitoringLegend series={SERIES} latest={now} formatValue={formatRate} />
 		</div>
 	);
 };
@@ -80,7 +73,8 @@ export const AtomRequestsChart = ({
 	<MonitoringChartCard
 		title="Requests per second"
 		description="Checks your app sends to this Atom"
-		summary={<RequestsSummary latest={chartData?.latest} />}
+		readingAt={chartData?.now?.at}
+		summary={<RequestsSummary now={chartData?.now ?? null} />}
 		isLoading={isLoading}
 		isEmpty={!chartData}
 	>
@@ -93,6 +87,7 @@ export const AtomRequestsChart = ({
 				})}
 				formatValue={formatRate}
 				unit="req/s"
+				showStatistics
 			>
 				<Bar
 					dataKey={ANSWERED.key}
