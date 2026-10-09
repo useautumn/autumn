@@ -32,13 +32,24 @@ const REASON_NOTES: Record<
 		"The comparison with the catalog failed, so this plan is treated as custom.",
 };
 
-const formatTerm = (term: string | null) => {
-	if (term === null) return "none";
-	const value: unknown = JSON.parse(term);
-	if (value === null) return "none";
+/** Arrays and objects (tiers, license customizations) read as their terms, not `[object Object]`. */
+const describeValue = (value: unknown): string => {
+	if (value === null || value === undefined) return "none";
 	if (typeof value === "number") return value.toLocaleString("en-US");
-	return typeof value === "string" ? value : String(value);
+	if (Array.isArray(value))
+		return value.length === 0 ? "none" : value.map(describeValue).join(" · ");
+	if (typeof value === "object")
+		return Object.entries(value)
+			.filter(([, child]) => child !== null && child !== undefined)
+			.map(
+				([key, child]) => `${key.replace(/_/g, " ")} ${describeValue(child)}`,
+			)
+			.join(", ");
+	return String(value);
 };
+
+const formatTerm = (term: string | null) =>
+	term === null ? "none" : describeValue(JSON.parse(term));
 
 /** A whole added or removed item lists only the terms that say something about it. */
 const isTellingField = ({
@@ -69,9 +80,9 @@ function ChangedField({
 			<span className="shrink-0 text-tertiary-foreground">
 				{formatPath(field.path)}
 			</span>
-			<span className="flex min-w-0 items-baseline gap-1.5 tabular-nums">
+			<span className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-1.5 text-right tabular-nums">
 				{kind !== "added" && field.catalog !== null && (
-					<span className="truncate text-tertiary-foreground line-through decoration-tertiary-foreground/60">
+					<span className="min-w-0 break-words text-tertiary-foreground line-through decoration-tertiary-foreground/60">
 						{formatTerm(field.catalog)}
 					</span>
 				)}
@@ -79,7 +90,7 @@ function ChangedField({
 					<span className="text-tertiary-foreground">→</span>
 				)}
 				{kind !== "removed" && (
-					<span className="truncate font-medium text-foreground">
+					<span className="min-w-0 break-words font-medium text-foreground">
 						{formatTerm(field.customer)}
 					</span>
 				)}
