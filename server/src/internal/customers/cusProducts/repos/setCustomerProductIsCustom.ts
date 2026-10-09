@@ -1,5 +1,5 @@
 import { customerProducts } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
@@ -26,7 +26,9 @@ export const setCustomerProductIsCustom = async ({
 				eq(customerProducts.id, customerProductId),
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				eq(customerProducts.is_custom, from),
-				sql`${customerProducts.updated_at} IS NOT DISTINCT FROM ${readUpdatedAt}`,
+				readUpdatedAt === null
+					? isNull(customerProducts.updated_at)
+					: eq(customerProducts.updated_at, readUpdatedAt),
 			),
 		)
 		.returning({ id: customerProducts.id });
