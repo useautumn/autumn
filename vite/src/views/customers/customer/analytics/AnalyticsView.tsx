@@ -114,6 +114,7 @@ export const AnalyticsView = () => {
 		customer,
 		deductions,
 		aggregateOn,
+		measure,
 		features,
 		events,
 		queryLoading,
@@ -499,6 +500,7 @@ export const AnalyticsView = () => {
 													chartConfig={displayedChart.chartConfig}
 													ticks={displayedChart.chartTicks}
 													onGeometry={handlePlotGeometry}
+													unit={measure === "count" ? "events" : undefined}
 												/>
 											</div>
 										</motion.div>

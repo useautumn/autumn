@@ -12,6 +12,8 @@ export const useAnalyticsQueryState = () => {
 			// "deducted" swaps the view from tracked usage to what each balance
 			// actually gave up. Only valid with a customer selected.
 			aggregate_on: parseAsString,
+			// "count" charts how many events were tracked instead of their summed value.
+			measure: parseAsString,
 			bin_size: parseAsString,
 			start: parseAsInteger,
 			end: parseAsInteger,

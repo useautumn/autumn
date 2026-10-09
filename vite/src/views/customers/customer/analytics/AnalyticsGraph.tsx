@@ -5,7 +5,11 @@ import { createPortal } from "react-dom";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
-import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
+import {
+	formatWithUnit,
+	TooltipItem,
+	tooltipItemHref,
+} from "./components/TooltipItem";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
 import {
@@ -29,12 +33,21 @@ const Y_TICK = {
 	dx: -15,
 	dy: -3,
 } as const;
+const Y_UNIT_LABEL = {
+	position: "insideTopLeft" as const,
+	angle: -90,
+	fontSize: 11,
+	fill: "#666",
+	dx: -6,
+	dy: 40,
+};
 
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
 	ticks,
 	onGeometry,
+	unit,
 }: {
 	data: {
 		meta: any[];
@@ -44,6 +57,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 	chartConfig: ChartSeriesConfig[];
 	ticks?: number[];
 	onGeometry?: (insets: PlotInsets) => void;
+	unit?: string;
 }) {
 	const { queryStates } = useAnalyticsQueryState();
 	const selectedInterval = queryStates.interval;
@@ -129,6 +143,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 						domain={ticks ? [0, ticks[ticks.length - 1]] : undefined}
 						tick={Y_TICK}
 						tickFormatter={formatCompactNumber}
+						label={unit ? { ...Y_UNIT_LABEL, value: unit } : undefined}
 					/>
 					{chartConfig.map((series, si) => (
 						<Bar
@@ -160,6 +175,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 			rechartsConfig,
 			chartConfig,
 			ticks,
+			unit,
 			formatXAxis,
 			barHandlers,
 			handleBarMouseLeave,
@@ -216,6 +232,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 										item.dataKey
 									}
 									href={pinned ? tooltipItemHref({ item }) : undefined}
+									unit={unit}
 								/>
 							))}
 							{overflowItems.length > 0 && (
@@ -223,7 +240,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 									<span className="h-2.5 w-2.5 shrink-0" />
 									<span className="flex-1">+{overflowItems.length} more</span>
 									<span className="tabular-nums">
-										{overflowSum.toLocaleString()}
+										{formatWithUnit({ value: overflowSum, unit })}
 									</span>
 								</div>
 							)}

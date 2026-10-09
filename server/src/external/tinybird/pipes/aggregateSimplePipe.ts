@@ -6,6 +6,8 @@ export const aggregateSimplePipeResponseSchema = z.object({
 	period: z.string(),
 	event_name: z.string(),
 	total_value: z.number(),
+	// Optional so sum queries keep parsing against a deployment predating the column.
+	event_count: z.number().optional(),
 });
 
 export type AggregateSimplePipeRow = z.infer<
