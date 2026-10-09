@@ -2,6 +2,7 @@ import type { ApiDiscount } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
+import { filterSubscriptionDiscounts } from "@/components/forms/shared/utils/filterSubscriptionDiscounts";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -36,14 +37,8 @@ export const useCusRewardsQuery = ({
 	);
 
 	const getDiscountsForSubscription = useCallback(
-		({ subscriptionIds }: { subscriptionIds: string[] }) => {
-			if (subscriptionIds.length === 0) return [];
-			return discounts.filter(
-				(discount) =>
-					discount.subscription_id &&
-					subscriptionIds.includes(discount.subscription_id),
-			);
-		},
+		({ subscriptionIds }: { subscriptionIds: string[] }) =>
+			filterSubscriptionDiscounts({ discounts, subscriptionIds }),
 		[discounts],
 	);
 

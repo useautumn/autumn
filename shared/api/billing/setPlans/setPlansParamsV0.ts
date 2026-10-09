@@ -7,6 +7,7 @@ import {
 	createScheduleTimingIssues,
 	schedulePhaseBillingIssues,
 } from "../createSchedule/createScheduleParamsV0";
+import { RemoveDiscountsSchema } from "../updateSubscription/removeDiscount";
 
 /** A first phase starting within this of now starts now: further back it backdates, further ahead it starts later. */
 export const SET_PLANS_FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
@@ -37,6 +38,10 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 		ends_at: UnixMsTimestampSchema.optional().meta({
 			description:
 				"Unix timestamp in milliseconds for when the plans should end. The Stripe subscription is cancelled on that date.",
+		}),
+		remove_discounts: RemoveDiscountsSchema.optional().meta({
+			description:
+				"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged; when the subscription is recreated, the rest carry over.",
 		}),
 		carry_over_usages: CarryOverUsagesSchema.meta({
 			description:

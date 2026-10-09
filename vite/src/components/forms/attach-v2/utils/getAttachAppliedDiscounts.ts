@@ -5,6 +5,7 @@ import {
 	isOneOffProductV2,
 	type ProductV2,
 } from "@autumn/shared";
+import { filterSubscriptionDiscounts } from "@/components/forms/shared/utils/filterSubscriptionDiscounts";
 
 const getTargetSubscriptionIds = ({
 	customer,
@@ -38,7 +39,7 @@ const getTargetSubscriptionIds = ({
 	return targetCustomerProduct?.subscription_ids ?? [];
 };
 
-/** Discounts on the subscription the plan joins; customer-level coupons stay on the customer, so they are not removable here. */
+/** Discounts on the subscription the plan joins. */
 export const getAttachAppliedDiscounts = ({
 	customer,
 	entityId,
@@ -54,16 +55,13 @@ export const getAttachAppliedDiscounts = ({
 }): ApiDiscount[] => {
 	if (!customer || !product) return [];
 
-	const subscriptionIds = getTargetSubscriptionIds({
-		customer,
-		entityId,
-		product,
-		newBillingSubscription,
+	return filterSubscriptionDiscounts({
+		discounts,
+		subscriptionIds: getTargetSubscriptionIds({
+			customer,
+			entityId,
+			product,
+			newBillingSubscription,
+		}),
 	});
-
-	return discounts.filter(
-		(discount) =>
-			discount.subscription_id &&
-			subscriptionIds.includes(discount.subscription_id),
-	);
 };

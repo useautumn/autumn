@@ -1,4 +1,9 @@
-import { type FullProduct, isFixedPrice, isPrepaidPrice } from "@autumn/shared";
+import {
+	type FullProduct,
+	isFixedPrice,
+	isPrepaidPrice,
+	stripeRefToId,
+} from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
@@ -160,10 +165,7 @@ export const createStripeSubscriptionSchedule = async ({
 		})),
 	});
 
-	const subscriptionId =
-		typeof created.subscription === "string"
-			? created.subscription
-			: created.subscription?.id;
+	const subscriptionId = stripeRefToId(created.subscription);
 	if (!subscriptionId) {
 		throw new Error(
 			`subscriptionSchedules.create did not return a subscription id (schedule ${created.id})`,

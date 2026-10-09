@@ -26,4 +26,3 @@ export * from "./hooks/useLicenseLossEntities";
 export * from "./hooks/usePreviewDiff";
 // Utils
 export * from "./utils/attachDiffUtils";
-export * from "./utils/discountUtils";

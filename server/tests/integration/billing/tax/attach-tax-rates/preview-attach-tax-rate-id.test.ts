@@ -15,6 +15,7 @@
 
 import { expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -204,10 +205,7 @@ test.concurrent(
 		const { stripeCli, subscription } = await getStripeSubscription({
 			customerId,
 		});
-		const latestInvoiceId =
-			typeof subscription.latest_invoice === "string"
-				? subscription.latest_invoice
-				: subscription.latest_invoice?.id;
+		const latestInvoiceId = stripeRefToId(subscription.latest_invoice);
 
 		expect(latestInvoiceId).toBeDefined();
 

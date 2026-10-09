@@ -82,6 +82,12 @@ export async function handleAdmin({
 		}
 		case "POST restart":
 			return json(await stub.restart());
+		case "POST cancel-build": {
+			const buildId = url.searchParams.get("build");
+			if (!buildId) return json({ error: "build is required" }, 400);
+			await stub.cancelBuild({ buildId });
+			return json({ ok: true });
+		}
 		case "POST sleep":
 			await stub.sleepNow();
 			return json({ ok: true });

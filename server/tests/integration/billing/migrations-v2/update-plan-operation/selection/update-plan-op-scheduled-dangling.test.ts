@@ -11,14 +11,13 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
-import { CusProductStatus, ms } from "@autumn/shared";
+import { CusProductStatus, ms, stripeRefToId } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario";
-import { s } from "@tests/utils/testInitUtils/initScenario";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
@@ -38,7 +37,7 @@ const stripeScheduleSignature = (schedule: Stripe.SubscriptionSchedule) => ({
 		startDate: phase.start_date,
 		endDate: phase.end_date,
 		items: phase.items.map((item) => ({
-			price: typeof item.price === "string" ? item.price : item.price.id,
+			price: stripeRefToId(item.price),
 			quantity: item.quantity,
 		})),
 	})),
@@ -144,9 +143,9 @@ test(`${chalk.yellowBright("migrations update_plan scheduled dangling: server-ru
 
 	const stripeScheduleAfter =
 		await ctx.stripeCli.subscriptionSchedules.retrieve(stripeScheduleId);
-	expect(stripeScheduleSignature(stripeScheduleAfter as Stripe.SubscriptionSchedule)).toEqual(
-		stripeSignatureBefore,
-	);
+	expect(
+		stripeScheduleSignature(stripeScheduleAfter as Stripe.SubscriptionSchedule),
+	).toEqual(stripeSignatureBefore);
 	expect(
 		await getCustomerProductRows({
 			ctx,

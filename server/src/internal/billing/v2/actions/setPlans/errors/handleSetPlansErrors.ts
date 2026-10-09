@@ -16,6 +16,7 @@ import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/commo
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
+import { handleRemoveDiscountsErrors } from "@/internal/billing/v2/common/errors/handleRemoveDiscountsErrors";
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
@@ -53,9 +54,17 @@ export const handleSetPlansErrors = async ({
 	ctx: AutumnContext;
 	billingContext: CreateScheduleBillingContext;
 	timeline: SetPlansTimeline;
-	params: Pick<SetPlansParamsV0, "currency" | "ends_at">;
+	params: Pick<
+		SetPlansParamsV0,
+		| "currency"
+		| "ends_at"
+		| "discounts"
+		| "remove_discounts"
+		| "no_billing_changes"
+	>;
 	preview?: boolean;
 }) => {
+	handleRemoveDiscountsErrors({ params });
 	validateSetPlansPhasePlans({
 		plans: billingContext.productContexts.map((productContext) => ({
 			fullProduct: productContext.fullProduct,

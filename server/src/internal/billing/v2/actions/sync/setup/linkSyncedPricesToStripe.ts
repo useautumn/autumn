@@ -6,6 +6,7 @@ import {
 	isFixedPrice,
 	type Price,
 	type SyncProductContext,
+	stripeRefToId,
 	stripeToAtmnAmount,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -13,9 +14,7 @@ import type Stripe from "stripe";
 import { generateId } from "@/utils/genUtils";
 
 const stripeProductIdOf = (stripePrice: Stripe.Price) =>
-	typeof stripePrice.product === "string"
-		? stripePrice.product
-		: stripePrice.product.id;
+	stripeRefToId(stripePrice.product);
 
 const stripeUnitAmount = (stripePrice: Stripe.Price) =>
 	Number(stripePrice.unit_amount_decimal ?? stripePrice.unit_amount);

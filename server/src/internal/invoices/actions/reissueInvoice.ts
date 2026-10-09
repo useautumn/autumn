@@ -15,6 +15,7 @@ import {
 	type ReissueInvoiceOverrides,
 	type ReissueLineEdits,
 	secondsToMs,
+	stripeRefToId,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -74,10 +75,7 @@ const stripeInvoiceToStripeCustomerId = ({
 }: {
 	stripeInvoice: Stripe.Invoice;
 }) => {
-	const stripeCusId =
-		typeof stripeInvoice.customer === "string"
-			? stripeInvoice.customer
-			: stripeInvoice.customer?.id;
+	const stripeCusId = stripeRefToId(stripeInvoice.customer);
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
 	}
@@ -221,10 +219,7 @@ const createReplacementDraft = async ({
 	dropDeferredPointer: boolean;
 }) => {
 	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
-	const stripeCusId =
-		typeof stripeInvoice.customer === "string"
-			? stripeInvoice.customer
-			: stripeInvoice.customer?.id;
+	const stripeCusId = stripeRefToId(stripeInvoice.customer);
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
 	}

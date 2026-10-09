@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
@@ -31,11 +32,7 @@ export async function handleCusDiscountDeleted({
 	if (redemptions.length === 0) return;
 
 	const paidProductRedemption = redemptions.find(
-		(r) =>
-			r.reward_program.reward.id ===
-			(typeof discount.coupon === "string"
-				? discount.coupon
-				: discount.coupon.id),
+		(r) => r.reward_program.reward.id === stripeRefToId(discount.coupon),
 	);
 
 	if (discount.subscription) {

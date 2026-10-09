@@ -34,7 +34,7 @@ await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 }));
 
 const { carryReplacedSubscriptionDiscounts } = await import(
-	"@/internal/billing/v2/actions/setPlans/setup/carryReplacedSubscription/carryReplacedSubscriptionDiscounts"
+	"@/internal/billing/v2/setup/carryReplacedSubscription/carryReplacedSubscriptionDiscounts"
 );
 
 const repeatingDiscount: StripeDiscountWithCoupon = {
@@ -53,7 +53,7 @@ const repeatingDiscount: StripeDiscountWithCoupon = {
 
 const replacedStripeSubscription = {
 	id: "sub_live",
-	discounts: ["di_repeating"],
+	discounts: [repeatingDiscount],
 	billing_cycle_anchor: msToSeconds(PERIOD_END),
 	items: {
 		data: [

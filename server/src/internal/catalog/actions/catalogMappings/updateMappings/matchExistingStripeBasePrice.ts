@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -12,7 +13,7 @@ const stripeProductId = ({
 	product: string | Stripe.Product | Stripe.DeletedProduct | null;
 }) => {
 	if (!product) return null;
-	return typeof product === "string" ? product : product.id;
+	return stripeRefToId(product);
 };
 
 const runBatches = async <T, R>({
@@ -82,7 +83,8 @@ export const listExistingStripePricesByProduct = async ({
 	const uniqueProductIds = [...new Set(stripeProductIds)];
 	const pricesByProduct = new Map<string, Stripe.Price[]>();
 	if (uniqueProductIds.length === 0) return pricesByProduct;
-	if (!isStripeConnected({ org: ctx.org, env: ctx.env })) return pricesByProduct;
+	if (!isStripeConnected({ org: ctx.org, env: ctx.env }))
+		return pricesByProduct;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const entries = await runBatches({

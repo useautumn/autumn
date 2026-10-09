@@ -1,9 +1,23 @@
-import type { AttachDiscount } from "@autumn/shared";
+import type { AttachDiscount, RemoveDiscount } from "@autumn/shared";
+import { z } from "zod/v4";
 
 export type DiscountMode = "reward" | "promo";
 
 /** Form discount with unique ID for stable React keys */
 export type FormDiscount = AttachDiscount & { _id: string };
+
+/** New discount rows, plus the applied discounts marked for removal. */
+export const DiscountsFormFieldsSchema = z.object({
+	discounts: z.custom<FormDiscount[]>(),
+	removedRewardIds: z.array(z.string()),
+});
+
+export type DiscountsFormFields = z.infer<typeof DiscountsFormFieldsSchema>;
+
+export const EMPTY_DISCOUNTS_FORM_VALUES: DiscountsFormFields = {
+	discounts: [],
+	removedRewardIds: [],
+};
 
 let discountIdCounter = 0;
 const generateDiscountId = (): string => {
@@ -79,4 +93,29 @@ export const filterValidDiscounts = (
 			return false;
 		}),
 	);
+};
+
+/** Only what changed: picked rows go to `discounts`, marked ones to `remove_discounts`, untouched ones are left to the server.
+ * Pass `removableRewardIds` to drop any marked discount that isn't removable, such as a customer-level coupon. */
+export const buildDiscountParams = ({
+	discounts,
+	removedRewardIds,
+	removableRewardIds,
+}: DiscountsFormFields & { removableRewardIds?: string[] }): {
+	discounts?: AttachDiscount[];
+	remove_discounts?: RemoveDiscount[];
+} => {
+	const addedDiscounts = filterValidDiscounts(discounts);
+	const removable = removableRewardIds && new Set(removableRewardIds);
+	const removals = removable
+		? removedRewardIds.filter((rewardId) => removable.has(rewardId))
+		: removedRewardIds;
+	return {
+		...(addedDiscounts.length > 0 && { discounts: addedDiscounts }),
+		...(removals.length > 0 && {
+			remove_discounts: removals.map((rewardId) => ({
+				reward_id: rewardId,
+			})),
+		}),
+	};
 };
