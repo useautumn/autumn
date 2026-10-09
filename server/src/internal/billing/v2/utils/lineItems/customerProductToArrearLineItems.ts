@@ -17,10 +17,11 @@ import {
 	type LineItem,
 	type LineItemContext,
 	secondsToMs,
-	usagePriceToLineItem,
+	usagePriceToLineItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
+import { arrearUsageLineItemId } from "./arrearUsageLineItemId";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export const customerProductToArrearLineItems = ({
@@ -163,7 +164,7 @@ export const customerProductToArrearLineItems = ({
 				);
 			}
 		} else {
-			const generatedLineItem = usagePriceToLineItem({
+			const generatedLineItems = usagePriceToLineItems({
 				cusEnt: customerEntitlement,
 				context,
 				options: {
@@ -171,14 +172,21 @@ export const customerProductToArrearLineItems = ({
 					discountable: options.discountable,
 				},
 			});
-			const lineItem = options.idempotencyScope
-				? {
-						...generatedLineItem,
-						id: `invoice_li_usage_${options.idempotencyScope}_${customerPrice.id}`,
-					}
-				: generatedLineItem;
-			if (options.includeZeroAmounts || lineItem.amount !== 0) {
-				lineItems.push(lineItem);
+			for (const [index, generatedLineItem] of generatedLineItems.entries()) {
+				const { idempotencyScope } = options;
+				const lineItem = idempotencyScope
+					? {
+							...generatedLineItem,
+							id: arrearUsageLineItemId({
+								idempotencyScope,
+								customerPriceId: customerPrice.id,
+								index,
+							}),
+						}
+					: generatedLineItem;
+				if (options.includeZeroAmounts || lineItem.amount !== 0) {
+					lineItems.push(lineItem);
+				}
 			}
 		}
 

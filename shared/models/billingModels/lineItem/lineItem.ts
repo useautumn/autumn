@@ -33,6 +33,11 @@ export const LineItemSchema = z
 		totalQuantity: z.number().optional(), // Total usage (e.g., 500 messages used)
 		paidQuantity: z.number().optional(), // Quantity being charged (overage)
 
+		/** Sent to Stripe as quantity × unit amount when that equals the line amount exactly. */
+		unitPricing: z
+			.object({ quantity: z.number(), unitAmount: z.number() })
+			.optional(),
+
 		// Optional - for testing
 		chargeImmediately: z.boolean().default(true),
 
