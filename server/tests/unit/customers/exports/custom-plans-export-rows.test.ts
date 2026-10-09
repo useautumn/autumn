@@ -150,6 +150,25 @@ describe("customerProductToCustomPlansExportRow", () => {
 		});
 	});
 
+	test("an entity plan keeps its entity id even when getFull capped the entities", () => {
+		const customerProduct = {
+			...customerPlan({ items: [includedItem()] }),
+			entity_id: "ent_42",
+			internal_entity_id: "internal_ent_42",
+		};
+		const row = customerProductToCustomPlansExportRow({
+			scalar,
+			fullCustomer: { entities: [] } as never,
+			customerProduct,
+			result: derive({
+				customer: customerProduct,
+				catalog: catalogPlan({ items: [includedItem()] }),
+			}),
+		});
+
+		expect(row.entity_id).toBe("ent_42");
+	});
+
 	test("a failed read still yields a row naming the customer", () => {
 		expect(
 			failedCustomerToCustomPlansExportRow({
