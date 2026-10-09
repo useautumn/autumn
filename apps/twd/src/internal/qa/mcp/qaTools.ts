@@ -26,7 +26,7 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 	defineTool({
 		name: "qa_create",
 		description:
-			"Hand a pushed branch to a human for QA: deploys it as https://<name>.atmn.lol with the full Autumn stack (dashboard, server, workers, Stripe sandbox webhooks), logged in as Capy Admin, on a 3-day Neon branch of your Capy branch. Returns the URL immediately; the build takes ~2-3 min and the URL shows live progress until then. It sleeps after 5 min idle and opening the URL wakes it (~25 s). Re-using a name re-ships that env at the new commit and keeps its QA data (freshDb: true re-branches the DB). Pass supersedes to delete your previous env in the same call. parentBranch is `branchName` and secrets are the `secrets` object from ~/.autumn-capy/state.json.",
+			"Hand a pushed branch to a human for QA: deploys it as https://<name>.atmn.lol with the full Autumn stack (dashboard, server, workers, Stripe sandbox webhooks), logged in as Capy Admin, on a 3-day Neon branch of your Capy branch. Returns the URL immediately; the build takes ~2-3 min (the URL shows live progress) and the env boots itself as soon as it finishes, so the link is warm when opened. It sleeps after 5 min idle and opening the URL wakes it (~25 s). Re-using a name re-ships that env at the new commit and keeps its QA data (freshDb: true re-branches the DB). Pass supersedes to delete your previous env in the same call. parentBranch is `branchName` and secrets are the `secrets` object from ~/.autumn-capy/state.json.",
 		input: z.object({
 			ref: z.string().min(1).describe("Pushed branch (or full sha)."),
 			name: NAME.optional().describe(
