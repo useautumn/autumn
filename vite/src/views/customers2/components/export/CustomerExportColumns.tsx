@@ -6,6 +6,7 @@ import { ConditionalTooltip, IconButton } from "@autumn/ui";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { CustomerExportModeBadge } from "./CustomerExportModeBadge";
 import { CustomerExportStatusBadge } from "./CustomerExportStatusBadge";
 
 const FAILED_FALLBACK_MESSAGE = "Export failed — you can start a new one.";
@@ -14,12 +15,24 @@ const isApplyRun = (customerExport: CustomerExportResponse) =>
 	customerExport.kind === CustomerExportKind.CustomPlans &&
 	customerExport.snapshot.apply;
 
+const modeColumn: ColumnDef<CustomerExportResponse, unknown> = {
+	header: "Mode",
+	id: "mode",
+	size: 120,
+	cell: ({ row }: { row: Row<CustomerExportResponse> }) => (
+		<CustomerExportModeBadge applied={isApplyRun(row.original)} />
+	),
+};
+
 export const createCustomerExportColumns = ({
 	downloadingExportId,
 	onDownload,
+	showMode = false,
 }: {
 	downloadingExportId: string | undefined;
 	onDownload: (exportId: string) => void;
+	/** Custom plans runs either apply or only report, so their list shows which. */
+	showMode?: boolean;
 }): ColumnDef<CustomerExportResponse, unknown>[] => [
 	{
 		header: "Status",
@@ -51,12 +64,10 @@ export const createCustomerExportColumns = ({
 		cell: ({ row }: { row: Row<CustomerExportResponse> }) => (
 			<span className="truncate text-foreground">
 				{formatUnixToDateTimeString(row.original.created_at)}
-				{isApplyRun(row.original) ? (
-					<span className="text-tertiary-foreground"> · applied</span>
-				) : null}
 			</span>
 		),
 	},
+	...(showMode ? [modeColumn] : []),
 	{
 		header: "Rows",
 		id: "row_count",

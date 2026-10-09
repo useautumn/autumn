@@ -137,6 +137,7 @@ export function CustomerExportSheet({
 								className="flex min-h-0 flex-col"
 							>
 								<CustomerExportJobList
+									kind={kind}
 									customerExports={customerExports}
 									isLoading={isExportsLoading}
 									isInitialError={isExportsInitialError}
