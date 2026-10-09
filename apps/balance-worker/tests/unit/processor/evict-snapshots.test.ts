@@ -20,6 +20,7 @@ import {
 } from "../../fixtures/catalog.js";
 import {
 	createInitializeRequest,
+	createState,
 	createTrackCommand,
 	testIdentity,
 	testOccurredAt,
@@ -227,12 +228,20 @@ describe("evict snapshot deletes", () => {
 		},
 	);
 
-	test("off, an evict waits only for the writes before it, as without snapshots: a commit pinning the customer after it is not waited on", async () => {
+	test("off, an evict waits only for the writes before it, as without snapshots: a write after it is not waited on", async () => {
 		const { processor, deleted, applyGates } = await createProcessor({
 			logsEvicts: false,
 			mode: "off",
 		});
+		const other = { ...testIdentity, customerId: "cus_other" };
 		await processor.initialize({ request: createInitializeRequest() });
+		await processor.initialize({
+			request: createInitializeRequest({
+				state: createState({ identity: other }),
+				commandId: "init_other",
+				requestId: "req_init_other",
+			}),
+		});
 		await processor.drain();
 		const first = Promise.withResolvers<void>();
 		const second = Promise.withResolvers<void>();
@@ -248,7 +257,11 @@ describe("evict snapshot deletes", () => {
 					answered = true;
 				});
 			await processor.track({
-				command: createTrackCommand({ commandId: "t2", value: 1 }),
+				command: createTrackCommand({
+					identity: other,
+					commandId: "t2",
+					value: 1,
+				}),
 			});
 			first.resolve();
 			for (let attempt = 0; !answered && attempt < 50; attempt++)

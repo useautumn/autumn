@@ -24,8 +24,12 @@ export type SubjectMap = {
 	/** Held while a mutation is pending for the subject; released once the store holds it. */
 	pin(params: { subjectKey: string }): void;
 	unpin(params: { subjectKey: string }): void;
-	/** Drops the customer's resident rows, entities included. A pinned subject goes when its last pin is released. */
+	/** Drops the customer's resident rows, entities included. A pinned subject is unreadable at once and goes when its last pin is released. */
 	evictCustomer(params: { customerKey: string }): void;
+	/** Makes the customer's rows unreadable at once, ahead of an `evictCustomer` that waits for the store. */
+	hideCustomer(params: { customerKey: string }): void;
+	/** A subject of the customer is hidden and not yet dropped: Postgres may lack a write its rows carried. */
+	isEvicting(params: { customerKey: string }): boolean;
 	clear(): void;
 	/** Bytes held by resident states, for tests and health. */
 	sizeBytes(): number;

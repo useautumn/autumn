@@ -62,6 +62,7 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 /** Applies `mutate` against the held state and commits synchronously, the way the real writer does minus Kafka. */
 const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 	let state = initial;
+	let eviction: Promise<void> | null = null;
 	const committed: MutationRecord[] = [];
 	const decide = <Reply>(submission: MutationSubmission<Reply>) => {
 		const result = submission.mutate({ state });
@@ -96,6 +97,16 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 		readState: () => state,
 		readFreshestState: () => state,
 		adopt: ({ state: adopted }: { state: SubjectState }) => adopted,
+		waitForEvicted: () => eviction,
+		/** An evict whose dropped writes the store does not hold yet, until the returned release runs. */
+		evictUnstored: () => {
+			const stored = Promise.withResolvers<void>();
+			eviction = stored.promise;
+			return () => {
+				eviction = null;
+				stored.resolve();
+			};
+		},
 	};
 };
 
@@ -239,6 +250,23 @@ describe("ensure subject state", () => {
 		);
 		expect(writer.committed).toHaveLength(1);
 		expect(scope.state.inFlightLoads.count()).toBe(0);
+	});
+
+	test("a load after an evict reads Postgres only once the store holds the writes the evict dropped", async () => {
+		const { scope, writer, sourceCalls, releaseSource } = createScope({
+			initial: null,
+			rows: emptyEnvelope,
+		});
+		releaseSource();
+		const store = writer.evictUnstored();
+
+		const loading = ensureSubjectState({ scope, identity });
+		await settle();
+		expect(sourceCalls()).toBe(0);
+
+		store();
+		await loading;
+		expect(sourceCalls()).toBe(1);
 	});
 
 	test("a command arriving during the second read joins it and sees the fresh rows", async () => {

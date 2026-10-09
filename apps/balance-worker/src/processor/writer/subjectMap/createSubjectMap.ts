@@ -11,7 +11,7 @@ type Entry = {
 	customerKey: string | null;
 	bytes: number;
 	pins: number;
-	/** Evicted while a write was unapplied: the rows go as soon as the last pin is released. */
+	/** Evicted while a write was unapplied: unreadable at once, the entry goes as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
 };
@@ -235,12 +235,37 @@ export const createSubjectMap = ({
 		]) {
 			const entry = entries.get(subjectKey);
 			if (!entry) continue;
-			if (entry.pins > 0) entry.evictOnUnpin = true;
-			else dropState({ subjectKey, entry });
-			pinned += entry.pins > 0 ? 1 : 0;
+			if (entry.pins === 0) {
+				dropState({ subjectKey, entry });
+				continue;
+			}
+			hide({ entry });
+			entry.evictOnUnpin = true;
+			pinned += 1;
 		}
 		if (pinned === 0) onEvicted?.({ customerKey });
 	};
+
+	/** Unreadable at once; the entry stays indexed until an unpin or `evictCustomer` drops it. */
+	const hide = ({ entry }: { entry: Entry }) => {
+		totalBytes -= entry.bytes;
+		entry.state = null as unknown as SubjectState;
+		entry.bytes = 0;
+		entry.baselineAt = null;
+	};
+
+	const hideCustomer = ({ customerKey }: { customerKey: string }) => {
+		for (const subjectKey of subjectKeysByCustomer.get(customerKey) ?? []) {
+			const entry = entries.get(subjectKey);
+			if (entry) hide({ entry });
+		}
+	};
+
+	// Only a hidden entry is indexed with nothing resident: a pin-only placeholder is never indexed.
+	const isEvicting = ({ customerKey }: { customerKey: string }) =>
+		[...(subjectKeysByCustomer.get(customerKey) ?? [])].some(
+			(subjectKey) => entries.get(subjectKey)?.bytes === 0,
+		);
 
 	const clear = () => {
 		entries.clear();
@@ -256,6 +281,8 @@ export const createSubjectMap = ({
 		pin,
 		unpin,
 		evictCustomer,
+		hideCustomer,
+		isEvicting,
 		clear,
 		sizeBytes: () => totalBytes,
 		bytesOf: ({ subjectKey }: { subjectKey: string }) =>
