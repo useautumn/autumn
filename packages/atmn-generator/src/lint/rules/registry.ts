@@ -1,6 +1,6 @@
 import type { LintRule } from "../runtime/lintDocument";
 import { featureRules } from "./features";
-import { planItemPriceRules, planItemRules, planRules } from "./plans";
+import { planItemRules, planRules } from "./plans";
 import {
 	couponRules,
 	featureGrantGrantRules,
@@ -38,7 +38,7 @@ export const LINT_REGISTRY: Record<string, RegistryEntry> = {
 		required: ["versionSlug"],
 	},
 	"plans.items": { label: "item", idField: "featureId", rules: planItemRules },
-	"plans.items.price": { label: "price", rules: planItemPriceRules },
+	"plans.items.price": { label: "price" },
 	"plans.licenses": {
 		label: "license",
 		idField: "licensePlanId",

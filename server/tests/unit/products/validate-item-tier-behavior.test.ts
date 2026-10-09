@@ -3,75 +3,54 @@ import {
 	type ProductItem,
 	ProductItemInterval,
 	TierBehavior,
-	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
 import { validateItemTierBehavior } from "@/internal/products/product-items/validateItemTierBehavior.js";
 
-const volumeItem = ({
-	usageModel,
-	tiers,
+const payPerUseItem = ({
+	tierBehavior,
+	thresholdBilling,
 }: {
-	usageModel: UsageModel;
-	tiers: ProductItem["tiers"];
+	tierBehavior: TierBehavior;
+	thresholdBilling?: { threshold: number };
 }): ProductItem =>
 	({
 		feature_id: "messages",
 		included_usage: 100,
 		interval: ProductItemInterval.Month,
-		usage_model: usageModel,
-		tier_behavior: TierBehavior.VolumeBased,
-		tiers,
+		usage_model: UsageModel.PayPerUse,
+		tier_behavior: tierBehavior,
+		price: 0.5,
+		config: thresholdBilling ? { threshold_billing: thresholdBilling } : null,
 	}) as ProductItem;
 
-const SINGLE_TIER: ProductItem["tiers"] = [{ to: TierInfinite, amount: 0.5 }];
-const MULTI_TIER: ProductItem["tiers"] = [
-	{ to: 100, amount: 1 },
-	{ to: TierInfinite, amount: 0.5 },
-];
-
 describe("validateItemTierBehavior", () => {
-	test("authoring: rejects single-tier pay-per-use volume", () => {
+	test("accepts pay-per-use volume", () => {
 		expect(() =>
 			validateItemTierBehavior({
-				item: volumeItem({
-					usageModel: UsageModel.PayPerUse,
-					tiers: SINGLE_TIER,
-				}),
-				validateAuthoringRules: true,
-			}),
-		).toThrow("Volume-based pricing is only supported for prepaid items");
-	});
-
-	test("billing re-validation: accepts persisted single-tier pay-per-use volume", () => {
-		expect(() =>
-			validateItemTierBehavior({
-				item: volumeItem({
-					usageModel: UsageModel.PayPerUse,
-					tiers: SINGLE_TIER,
-				}),
-				validateAuthoringRules: false,
+				item: payPerUseItem({ tierBehavior: TierBehavior.VolumeBased }),
 			}),
 		).not.toThrow();
 	});
 
-	test("billing re-validation: still rejects multi-tier pay-per-use volume", () => {
+	test("rejects volume with threshold_billing, even on a single tier", () => {
 		expect(() =>
 			validateItemTierBehavior({
-				item: volumeItem({
-					usageModel: UsageModel.PayPerUse,
-					tiers: MULTI_TIER,
+				item: payPerUseItem({
+					tierBehavior: TierBehavior.VolumeBased,
+					thresholdBilling: { threshold: 50 },
 				}),
-				validateAuthoringRules: false,
 			}),
-		).toThrow("Volume-based pricing is only supported for prepaid items");
+		).toThrow("threshold_billing can't be combined with volume-based pricing");
 	});
 
-	test("prepaid volume is allowed", () => {
+	test("accepts graduated single price with threshold_billing", () => {
 		expect(() =>
 			validateItemTierBehavior({
-				item: volumeItem({ usageModel: UsageModel.Prepaid, tiers: MULTI_TIER }),
-				validateAuthoringRules: true,
+				item: payPerUseItem({
+					tierBehavior: TierBehavior.Graduated,
+					thresholdBilling: { threshold: 50 },
+				}),
 			}),
 		).not.toThrow();
 	});

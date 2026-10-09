@@ -137,7 +137,7 @@ test("with features omitted, item references are not checked: absent means not m
 	).not.toThrow();
 });
 
-test("a volume-tiered item price must be prepaid", () => {
+test("a volume-tiered item price can be usage-based", () => {
 	const issues = issuesOf(() =>
 		atmn({
 			features: [
@@ -169,13 +169,7 @@ test("a volume-tiered item price must be prepaid", () => {
 			],
 		}),
 	);
-	expect(issues).toEqual([
-		{
-			path: 'plan "pro" › item "api" › price',
-			message:
-				'billingMethod must be "prepaid" when tierBehavior is "volume". Volume tiers are prepaid-only.',
-		},
-	]);
+	expect(issues).toEqual([]);
 });
 
 test("featureOverride is only honoured on classic credit-system features", () => {

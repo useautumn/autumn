@@ -1,34 +1,22 @@
 import {
 	ErrCode,
+	notNullish,
 	type ProductItem,
 	RecaseError,
 	TierBehavior,
-	UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { isFeaturePriceItem } from "./productItemUtils/getItemType";
 
-/** Volume pricing is prepaid-only for now. Billing paths still accept persisted
- * single-tier pay-per-use volume items, which predate the single-tier check. */
-export const validateItemTierBehavior = ({
-	item,
-	validateAuthoringRules,
-}: {
-	item: ProductItem;
-	validateAuthoringRules: boolean;
-}) => {
-	const isPayPerUseVolume =
-		isFeaturePriceItem(item) &&
+/** Each threshold charge prices its chunk on its own, but a volume band (and its
+ * charge on included units) depends on the whole period's usage. */
+export const validateItemTierBehavior = ({ item }: { item: ProductItem }) => {
+	const hasVolumeThresholdBilling =
 		item.tier_behavior === TierBehavior.VolumeBased &&
-		item.usage_model !== UsageModel.Prepaid;
-	if (!isPayPerUseVolume) return;
-
-	const isPersistedSingleTier =
-		(item.tiers?.length ?? 1) <= 1 && !validateAuthoringRules;
-	if (isPersistedSingleTier) return;
+		notNullish(item.config?.threshold_billing);
+	if (!hasVolumeThresholdBilling) return;
 
 	throw new RecaseError({
-		message: `Volume-based pricing is only supported for prepaid items (feature: ${item.feature_id}). Set usage_model to prepaid, or remove tier_behavior.`,
+		message: `threshold_billing can't be combined with volume-based pricing (feature: ${item.feature_id}): each threshold charge would be priced on its own band. Remove threshold_billing or use graduated pricing.`,
 		code: ErrCode.InvalidInputs,
 		statusCode: StatusCodes.BAD_REQUEST,
 	});

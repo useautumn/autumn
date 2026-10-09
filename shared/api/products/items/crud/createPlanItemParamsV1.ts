@@ -376,16 +376,6 @@ export const planItemParamsIssues = (
 			});
 		}
 
-		if (
-			value.price?.tier_behavior === TierBehavior.VolumeBased &&
-			value.price?.billing_method !== BillingMethod.Prepaid
-		) {
-			issues.push({
-				message: "volume-based pricing is only supported for prepaid features.",
-				input: value.price,
-			});
-		}
-
 		if (value.price?.tiers.length === 0) {
 			issues.push({ message: "tiers cannot be empty.", input: value.price });
 		} else if (!tiersAreAscendingToInfinity({ tiers: value.price.tiers })) {

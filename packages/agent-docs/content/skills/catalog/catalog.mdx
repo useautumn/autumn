@@ -236,7 +236,7 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - A prepaid quantity **includes** the included amount, and so does each tier's `to` — the first tier's `to` must exceed `included`.
 - `billingUnits` rounds usage **up** when billing.
 - Set explicitly, never lean on defaults: `billingMethod` and `interval` on every item price, `tierBehavior` on tiered prices, and every trial field (`durationLength`, `durationType`, `cardRequired`, `onEnd`). Explicit defaults cause no spurious diffs.
-- Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
+- Volume tiers charge every unit (included ones too, once total usage passes the included amount) at the rate and flat amount of the reached tier, on prepaid or usage-based items; graduated (the default) sums across brackets. Volume can't be combined with threshold billing.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
 - `billingControls` is a plain object on the plan with camelCase fields like the rest of the config (`featureId`, `overageLimit`); each control list replaces wholesale on update.
 - Plan `config` (`ignorePastDue`, `anchorToMonthStart`) is unmanaged when omitted. Once stated it is the whole set: a flag left out is off, so `config: {}` turns every flag off.

@@ -6,7 +6,6 @@ import {
 	targetHas,
 	targetLacks,
 	unique,
-	valueWhen,
 } from "./define";
 
 export const planItemRules: LintRule[] = [
@@ -37,16 +36,6 @@ export const planItemRules: LintRule[] = [
 		parentLabel: "plan",
 		because:
 			"An archived feature should not gain new customers through a live plan.",
-	}),
-];
-
-export const planItemPriceRules: LintRule[] = [
-	valueWhen({
-		when: "tierBehavior",
-		equals: "volume",
-		field: "billingMethod",
-		mustBe: "prepaid",
-		because: "Volume tiers are prepaid-only.",
 	}),
 ];
 
