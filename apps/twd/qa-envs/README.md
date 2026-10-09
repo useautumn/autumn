@@ -19,6 +19,8 @@ twd     ──► qa-envs.<subdomain>.workers.dev/__admin/<name>/… (bearer QA_
   the snapshot; `boot.sh` starts Dragonfly, fakecloud, Kafka, the balance worker, server,
   worker and cron. The env reports ready once the balance worker has claimed every
   partition, so balance commands never see `NO_OWNER`. Scanners can't wake it.
+- **Size**: standard-4 (4 vCPU, 12 GiB). Memory and disk are billed while awake on the provisioned
+  size, CPU only when used: about $0.22 per env at 30 min/day for 3 days.
 - **Sleep** after 5 min without requests; tabs idle for 10 min stop counting.
 - **Expiry** after 3 days (reset on re-ship): container, hostname, Stripe routes and Neon
   branch are deleted and the URL answers 410.

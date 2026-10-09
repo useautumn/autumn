@@ -24,6 +24,8 @@ const APP_PORT = 3000;
 const DEFAULT_TTL_MS = 3 * 24 * 60 * 60_000;
 const IDLE_MS = 5 * 60_000;
 const IDLE_CHECK_MS = 60_000;
+// 4 vCPU: the server and balance worker boot in parallel instead of contending for 2 (~$0.22/env vs ~$0.15).
+const RUN_INSTANCE = "standard-4";
 const TOMBSTONE_MS = 7 * 24 * 60 * 60_000;
 /** Tabs report ms since the user last interacted; past this their polling stops counting as activity. */
 const BACKGROUND_POLL_MS = 10 * 60_000;
@@ -297,7 +299,6 @@ export class QaEnv extends DurableObject<Env> {
 			publicUrl,
 			createdAt: previous?.createdAt ?? now,
 			expiresAt: now + (input.ttlMs ?? DEFAULT_TTL_MS),
-			instance: input.instance ?? "standard-3",
 		};
 		const buildId = crypto.randomUUID().slice(0, 8);
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
@@ -432,7 +433,7 @@ export class QaEnv extends DurableObject<Env> {
 		this.ready = false;
 		this.container.start({
 			containerSnapshot: { id: snapshot.id },
-			instance: config.instance,
+			instance: RUN_INSTANCE,
 			enableInternet: true,
 			env: {
 				...sharedEnv({ env: this.env }),
@@ -668,7 +669,7 @@ export class QaEnv extends DurableObject<Env> {
 		this.container.start({
 			containerSnapshot: { id: snapshot.id },
 			entrypoint: ["sleep", "infinity"],
-			instance: config.instance,
+			instance: RUN_INSTANCE,
 			enableInternet: true,
 		});
 		const result = await this.exec({
