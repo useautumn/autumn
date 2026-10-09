@@ -701,6 +701,13 @@
       "when": 1791564841800,
       "tag": "0099_nice_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1791564897729,
+      "tag": "0100_old_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

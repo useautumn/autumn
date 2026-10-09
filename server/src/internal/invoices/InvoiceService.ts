@@ -206,7 +206,10 @@ export class InvoiceService {
 	}> {
 		const cursor = StandardCursor.decode(query.start_cursor);
 
+		// invoices.org_id/env drive the org index; customers.org_id/env keep customer_id lookups indexed.
 		const conditions = [
+			eq(invoices.org_id, ctx.org.id),
+			eq(invoices.env, ctx.env),
 			eq(customers.org_id, ctx.org.id),
 			eq(customers.env, ctx.env),
 		];
