@@ -103,6 +103,24 @@ describe("deriveCustomerProductIsCustom diff", () => {
 		]);
 	});
 
+	test("an extra grant beside an unchanged one reads as only the extra", () => {
+		const diff = diffOf({
+			catalog: items(includedItem()),
+			customer: items(
+				includedItem(),
+				includedItem({ id: "ent_credits_extra", allowance: 9 }),
+			),
+		});
+
+		expect(diff.items).toEqual([
+			{
+				feature_id: "credits",
+				catalog: null,
+				customer: expect.objectContaining({ included: 9 }),
+			},
+		]);
+	});
+
 	test("unchanged items are left out", () => {
 		const diff = diffOf({
 			catalog: items(includedItem(), booleanItem()),

@@ -9,6 +9,7 @@ import {
 	type Feature,
 	type FullCusProduct,
 	type FullProduct,
+	itemsEqual,
 	toBasePriceParams,
 	toCreatePlanItemParams,
 } from "@autumn/shared";
@@ -27,7 +28,38 @@ const toComparablePlanItem = (item: ApiPlanItemV1): CreatePlanItemParamsV1 => {
 	return { ...params, price };
 };
 
-/** Pairs a removed catalog item with the added customer item of the same identity, so an edit reads as one change. */
+type SameKeyItems = { catalog: ApiPlanItemV1[]; customer: ApiPlanItemV1[] };
+
+/** Within one identity, identical items cancel out and the rest pair up in order. */
+const pairSameKeyItems = ({
+	catalog,
+	customer,
+}: SameKeyItems): CustomizedPlanItem[] => {
+	const unmatchedCustomer = [...customer];
+	const changedCatalog = catalog.filter((catalogItem) => {
+		const match = unmatchedCustomer.findIndex((customerItem) =>
+			itemsEqual(catalogItem, customerItem),
+		);
+		if (match === -1) return true;
+		unmatchedCustomer.splice(match, 1);
+		return false;
+	});
+
+	return Array.from(
+		{ length: Math.max(changedCatalog.length, unmatchedCustomer.length) },
+		(_, index) => {
+			const catalogItem = changedCatalog[index];
+			const customerItem = unmatchedCustomer[index];
+			return {
+				feature_id: (catalogItem ?? customerItem).feature_id,
+				catalog: catalogItem ? toComparablePlanItem(catalogItem) : null,
+				customer: customerItem ? toComparablePlanItem(customerItem) : null,
+			};
+		},
+	);
+};
+
+/** Groups changed items by identity, so an edit reads as one change with both sides. */
 const pairCustomizedPlanItems = ({
 	catalog,
 	customer,
@@ -35,35 +67,18 @@ const pairCustomizedPlanItems = ({
 	catalog: ApiPlanV1;
 	customer: ApiPlanV1;
 }): CustomizedPlanItem[] => {
-	const itemsByKey = new Map<string, CustomizedPlanItem[]>();
+	const itemsByKey = new Map<string, SameKeyItems>();
 
 	for (const change of diffPlanV1ItemChanges({ from: catalog, to: customer })) {
 		const key = composeMatchKey(change.item);
-		const sameKey = itemsByKey.get(key) ?? [];
+		const sameKey = itemsByKey.get(key) ?? { catalog: [], customer: [] };
 		itemsByKey.set(key, sameKey);
-
-		if (change.action === "deleted") {
-			sameKey.push({
-				feature_id: change.feature_id,
-				catalog: toComparablePlanItem(change.item),
-				customer: null,
-			});
-			continue;
-		}
-
-		const unpaired = sameKey.find((item) => item.customer === null);
-		if (unpaired) {
-			unpaired.customer = toComparablePlanItem(change.item);
-			continue;
-		}
-		sameKey.push({
-			feature_id: change.feature_id,
-			catalog: null,
-			customer: toComparablePlanItem(change.item),
-		});
+		const side =
+			change.action === "deleted" ? sameKey.catalog : sameKey.customer;
+		side.push(change.item);
 	}
 
-	return [...itemsByKey.values()].flat();
+	return [...itemsByKey.values()].flatMap(pairSameKeyItems);
 };
 
 /**
