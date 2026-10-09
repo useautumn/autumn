@@ -3,6 +3,7 @@ import type {
 	CustomPlansExportRow,
 	CustomPlansExportSpec,
 } from "@autumn/shared";
+import { dbReplica } from "@/db/initDrizzle.js";
 import type { BaseProductCache } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
 import { customerToCustomPlansExportRows } from "../../customPlans/customerToCustomPlansExportRows.js";
 import type { CustomerExportScalarRow } from "../../queries/getCustomerExportScalars.js";
@@ -17,6 +18,8 @@ export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 	CustomPlansExportSpec
 > = ({ ctx, snapshot, population, onPageProcessed }) => {
 	const baseProducts: BaseProductCache = new Map();
+	// A report run only reads, so it stays off the primary like the page walk.
+	const readCtx = { ...ctx, db: dbReplica ?? ctx.db };
 
 	const exportRows = async function* (): AsyncGenerator<CustomPlansExportRow> {
 		const pages = walkCustomerExportPages({ ctx, snapshot, population });
@@ -26,7 +29,7 @@ export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 			concurrency: CUSTOM_PLANS_EXPORT_CONCURRENCY,
 			run: (scalar: CustomerExportScalarRow) =>
 				customerToCustomPlansExportRows({
-					ctx,
+					ctx: readCtx,
 					scalar,
 					filters: snapshot.filters,
 					baseProducts,

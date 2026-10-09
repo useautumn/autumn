@@ -1,4 +1,4 @@
-import type { DbCustomerExport } from "@autumn/shared";
+import { CustomerExportKind, type DbCustomerExport } from "@autumn/shared";
 import { dbReplica } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -6,6 +6,26 @@ import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportT
 import { findPublishedExportObject } from "../../findPublishedExportObject.js";
 import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import { markCompletedWithRetry } from "../complete/markCompletedWithRetry.js";
+
+/** Recounting the frozen bounds can drift below the file's rows if customers were deleted since. */
+const recountCustomers = async ({
+	ctx,
+	customerExport,
+	payload,
+}: {
+	ctx: AutumnContext;
+	customerExport: DbCustomerExport;
+	payload: RunCustomerExportPayload;
+}) => {
+	const { totalCount } = await resolveCustomerExportPopulation({
+		db: dbReplica ?? ctx.db,
+		orgId: payload.orgId,
+		env: payload.env,
+		snapshot: customerExport.snapshot,
+		createdAtCutoff: customerExport.created_at,
+	});
+	return totalCount;
+};
 
 /** A retry can reconcile an object published before its completion write. */
 export const reconcileUploadedExport = async ({
@@ -31,21 +51,18 @@ export const reconcileUploadedExport = async ({
 	});
 	if (published.status !== "published") return false;
 
-	// The exact count died with the failed completion write; recounting the frozen
-	// bounds can drift below the file's rows if customers were deleted since.
-	const { totalCount } = await resolveCustomerExportPopulation({
-		db: dbReplica ?? ctx.db,
-		orgId: payload.orgId,
-		env: payload.env,
-		snapshot: customerExport.snapshot,
-		createdAtCutoff: customerExport.created_at,
-	});
+	// The exact count died with the failed completion write. Only a customers export has one
+	// row per customer, so only it can recount; other kinds leave the count unknown.
+	const rowCount =
+		customerExport.kind === CustomerExportKind.Customers
+			? await recountCustomers({ ctx, customerExport, payload })
+			: null;
 
 	const completed = await markCompletedWithRetry({
 		ctx,
 		logger,
 		exportId: customerExport.id,
-		rowCount: totalCount,
+		rowCount,
 		byteCount: published.byteCount,
 	});
 	if (completed) {
