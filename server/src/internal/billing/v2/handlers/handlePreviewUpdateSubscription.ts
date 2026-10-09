@@ -33,7 +33,11 @@ export const handlePreviewUpdateSubscription = createRoute({
 			});
 			handleSwitchCollectionMethodErrors({ ctx, switchContext });
 		}
-		const { invoice_mode: _invoiceMode, ...unchangedPlanParams } = body;
+		const {
+			invoice_mode: _invoiceMode,
+			redirect_mode: _redirectMode,
+			...unchangedPlanParams
+		} = body;
 
 		const { billingContext, billingPlan } =
 			await billingActions.updateSubscription({
