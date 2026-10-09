@@ -91,3 +91,60 @@ echo '[{"branch_id":"branch-1","action":"start_compute","status":"failed"}]'
 		"[dw] neon branch capy-1234567 operation start_compute entered terminal failure status failed",
 	);
 });
+
+function runCreateBranch(opts: string) {
+	const directory = mkdtempSync(join(tmpdir(), "autumn-neon-create-"));
+	tempDirectories.push(directory);
+	const binDir = join(directory, "bin");
+	const callsPath = join(directory, "calls");
+	const neonPath = join(binDir, "neon");
+	mkdirSync(binDir);
+	writeFileSync(
+		neonPath,
+		`#!/bin/sh
+printf '%s\\n' "$@" > "$NEON_CREATE_TEST_CALLS"
+echo '{"branch":{"id":"branch-1","name":"capy-1234567"}}'
+`,
+	);
+	chmodSync(neonPath, 0o755);
+
+	const result = Bun.spawnSync(
+		[
+			"bun",
+			"-e",
+			`import { createBranch } from ${JSON.stringify(neonHelperUrl)}; createBranch("capy-1234567", "dw-template", ${opts});`,
+		],
+		{
+			cwd: projectRoot,
+			env: {
+				...process.env,
+				PATH: `${binDir}:${process.env.PATH}`,
+				NEON_CREATE_TEST_CALLS: callsPath,
+			},
+			stdout: "pipe",
+			stderr: "pipe",
+		},
+	);
+
+	return {
+		args: readFileSync(callsPath, "utf8").trim().split("\n"),
+		code: result.exitCode,
+	};
+}
+
+test("createBranch passes --expires-at when given", () => {
+	const result = runCreateBranch(`{ expiresAt: "2026-10-22T00:00:00.000Z" }`);
+
+	expect(result.code).toBe(0);
+	expect(result.args.slice(-2)).toEqual([
+		"--expires-at",
+		"2026-10-22T00:00:00.000Z",
+	]);
+});
+
+test("createBranch sets no expiry by default", () => {
+	const result = runCreateBranch("{}");
+
+	expect(result.code).toBe(0);
+	expect(result.args).not.toContain("--expires-at");
+});

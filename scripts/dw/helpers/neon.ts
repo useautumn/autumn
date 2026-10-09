@@ -92,12 +92,18 @@ export function findBranchByName(name: string): NeonBranch | undefined {
 	return listBranches().find((b) => b.name === name);
 }
 
-export function createBranch(name: string, parent: string): NeonBranch {
+export function createBranch(
+	name: string,
+	parent: string,
+	opts: { expiresAt?: string } = {},
+): NeonBranch {
 	if (!BRANCH_NAME_RE.test(name) && name !== NEON_TEMPLATE_BRANCH) {
 		fatal(`refusing to create branch with unexpected name: ${name}`);
 	}
-	log(`creating neon branch ${name} (parent: ${parent})`);
-	const res = neon([
+	log(
+		`creating neon branch ${name} (parent: ${parent}${opts.expiresAt ? `, expires: ${opts.expiresAt}` : ""})`,
+	);
+	const args = [
 		"branches",
 		"create",
 		"--project-id",
@@ -108,7 +114,9 @@ export function createBranch(name: string, parent: string): NeonBranch {
 		parent,
 		"--output",
 		"json",
-	]);
+	];
+	if (opts.expiresAt) args.push("--expires-at", opts.expiresAt);
+	const res = neon(args);
 	if (res.code !== 0) {
 		fatal(`neon branches create failed: ${res.stderr || res.stdout}`);
 	}
