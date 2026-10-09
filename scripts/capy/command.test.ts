@@ -59,9 +59,16 @@ describe("ensureCapyBashrc", () => {
 });
 
 describe("capyHandoffText", () => {
-	test("describes the bounded Capy handoff", () => {
+	test("defaults to the server stack and names the frontend opt-in", () => {
 		const text = capyHandoffText();
 		expect(text).toContain("tmux session: capy");
+		expect(text).toContain("no dashboard");
+		expect(text).toContain("bun capy restart --frontend");
+		expect(text).not.toContain("expose only port 3000");
+	});
+
+	test("describes the dashboard handoff when the frontend is on", () => {
+		const text = capyHandoffText({ frontend: true });
 		expect(text).toContain("browser API uses /__autumn_api");
 		expect(text).toContain("expose only port 3000");
 	});

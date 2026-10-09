@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 /** Stack pieces a Capy machine runs only after an agent opts in; markers survive sleep and reboot. */
 const OPT_INS = {
+	frontend: { envKeys: [], devServices: ["vite"] },
 	alien: { envKeys: ["ALIEN_API_KEY"], devServices: [] },
 	trigger: { envKeys: [], devServices: ["trigger"] },
 	eve: { envKeys: [], devServices: ["eve", "leaf"] },
@@ -14,13 +15,12 @@ const OPT_INS = {
 	{ envKeys: readonly string[]; devServices: readonly string[] }
 >;
 
-/** scripts/dev.ts service names every Capy stack runs. */
+/** scripts/dev.ts service names every Capy stack runs: what integration tests need, no frontend. */
 const DEFAULT_DEV_SERVICES = [
 	"server",
 	"workers",
 	"cron",
 	"balance-worker",
-	"vite",
 	"stripe",
 ];
 

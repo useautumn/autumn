@@ -2,7 +2,7 @@
 #
 # capy-startup.sh — Startup lifecycle for Capy v2 VMs.
 #
-# Runs whenever Capy starts or resumes a VM. Idempotent.
+# Run by `bun capy` on demand; nothing runs it on boot. Idempotent.
 # Delegates the real work to scripts/capy/provision.ts so the heavy lifting
 # (Neon branching, migrations, env-file writing) is one type-checked bun
 # script instead of bash. This wrapper handles shell-only lifecycle work:
@@ -26,8 +26,8 @@ exec > >(tee -a "$STARTUP_LOG") 2> >(tee -a "$STARTUP_LOG" >&2)
 log() { echo "[capy-startup] $*"; }
 die() { echo "[capy-startup] ERROR: $*" >&2; exit 1; }
 
-# The Setup startup entry and an agent's `bun capy` can overlap right after a wake;
-# the second waits here, then finds this boot already provisioned and skips.
+# Two `bun capy` runs can overlap; the second waits here, then finds this boot
+# already provisioned and skips.
 exec 9>"$CAPY_PREFIX/startup.lock"
 if ! flock -n 9; then
   log "another Capy startup is running; waiting for it to finish"
