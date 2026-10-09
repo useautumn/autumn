@@ -40,9 +40,14 @@ EOF
 # kafka-native (GraalVM build of the same Kafka) starts in well under a second, against ~9 s for the JVM.
 (
 	CLUSTER_ID=4L6g3nShT-eMCtK--X86sw /opt/kafka/kafka.Kafka setup --default-configs-dir /var/qa/kafka \
-		--mounted-configs-dir /var/qa/kafka/mounted --final-configs-dir /var/qa/kafka/final &&
-		exec /opt/kafka/kafka.Kafka start --config /var/qa/kafka/final/server.properties \
+		--mounted-configs-dir /var/qa/kafka/mounted --final-configs-dir /var/qa/kafka/final || exit 1
+	# The native binary can rarely crash at startup, so restart it like the app processes.
+	while true; do
+		/opt/kafka/kafka.Kafka start --config /var/qa/kafka/final/server.properties \
 			-Dkafka.logs.dir="$L/kafka" -Dlog4j.configuration=file:/var/qa/kafka/final/log4j.properties
+		echo "[qa-boot] kafka exited $?, restarting"
+		sleep 1
+	done
 ) >"$L/kafka.log" 2>&1 &
 
 SQS="http://localhost:4566/123456789012"
@@ -89,7 +94,7 @@ supervise() { # name, dir, cmd...: restart on exit, like dev's restart loop
 	supervise balance-worker /app/apps/balance-worker bun --config=./bunfig.toml src/main.ts
 	log "balance worker started"
 	# Commands fail with NO_OWNER until each partition's preparing → ready → claimed records land.
-	bun /qa/ownership-ready.ts
+	until bun /qa/ownership-ready.ts; do sleep 1; done
 	sleep 1
 	touch /var/qa/balance-owned
 	log "balance worker owns every partition"
