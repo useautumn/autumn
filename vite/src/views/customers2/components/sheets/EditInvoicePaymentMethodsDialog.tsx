@@ -44,7 +44,7 @@ export function EditInvoicePaymentMethodsDialog({
 
 	const {
 		data: stripeInvoice,
-		isLoading,
+		isFetching,
 		isError,
 		refetch: refetchStripeInvoice,
 	} = useQuery({
@@ -106,7 +106,7 @@ export function EditInvoicePaymentMethodsDialog({
 				<PaymentMethodTypesSelect
 					value={value}
 					onValueChange={setPaymentMethodTypes}
-					disabled={isLoading || isError}
+					disabled={isFetching || isError}
 				/>
 				{isError && (
 					<p className="text-sm text-destructive">
@@ -121,7 +121,7 @@ export function EditInvoicePaymentMethodsDialog({
 						className="w-full"
 						onClick={() => updateInvoice.mutate()}
 						isLoading={updateInvoice.isPending}
-						disabled={isLoading || isError || !value?.length}
+						disabled={isFetching || isError || !value?.length}
 					>
 						Save
 					</Button>

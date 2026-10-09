@@ -25,7 +25,7 @@ export function CollectionMethodConfigRow() {
 		selected,
 		locked,
 		sendsInvoice,
-		switchesMethod,
+		isActive,
 		missingCard,
 		netTermsDays,
 		paymentMethodTypes,
@@ -78,7 +78,7 @@ export function CollectionMethodConfigRow() {
 				</div>
 			)}
 
-			{(sendsInvoice || switchesMethod) && !locked && (
+			{isActive && (
 				<ConfigRow
 					title="Apply to auto top-ups"
 					description={
