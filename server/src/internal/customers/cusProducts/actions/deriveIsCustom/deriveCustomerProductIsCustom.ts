@@ -31,14 +31,8 @@ const reportDerivationFailure = ({
 	} catch {}
 };
 
-/**
- * Is this customer product a customized version of the plan it points at, and
- * if so, what differs? Diffs against the catalog version `internal_product_id`
- * references, via `diffPlanV1` — the same diff catalog and migration drafts use.
- *
- * Biased towards custom: a false positive only skips the customer in version
- * migrations; a false negative lets a migration overwrite real customizations.
- */
+/** Whether, and how, a customer product differs from its catalog version. Biased towards
+ * custom: a false negative lets a migration overwrite real customizations. */
 export const deriveCustomerProductIsCustom = ({
 	ctx,
 	customerProduct,
