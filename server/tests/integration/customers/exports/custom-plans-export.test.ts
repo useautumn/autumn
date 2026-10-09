@@ -1,14 +1,4 @@
-/**
- * Custom plans export
- *
- * Contract under test (custom_plans producer):
- *   - A plan that matches its catalog version but is flagged custom yields a
- *     matches_catalog row with no diff.
- *   - A plan customized at attach yields a customized row, with the
- *     diff of what differs from the catalog.
- *   - A custom_plans job runs to completion: published to S3, downloadable
- *     under its own file name, one row per customer product in scope.
- */
+/** Custom plans export: report rows, apply writes with compare-and-set, and the S3 job end to end. */
 
 import { expect, test } from "bun:test";
 import {

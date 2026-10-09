@@ -2,8 +2,7 @@ import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
 
-/** The catalog version a customer product points at. A load failure resolves to
- * null, which derivation reads as custom rather than failing the caller. */
+/** A load failure resolves to null, which derivation reads as custom. */
 export const loadBaseProduct = async ({
 	ctx,
 	internalProductId,
@@ -30,10 +29,9 @@ export const loadBaseProduct = async ({
 	}
 };
 
-/** Catalog versions keyed by internal product id, shared by every derivation in one run. */
 export type BaseProductCache = Map<string, Promise<FullProduct | null>>;
 
-/** `loadBaseProduct`, at most once per cache. A null result is not kept, so a failed read is retried. */
+/** A null result is not kept, so a failed read is retried. */
 export const loadCachedBaseProduct = async ({
 	ctx,
 	internalProductId,

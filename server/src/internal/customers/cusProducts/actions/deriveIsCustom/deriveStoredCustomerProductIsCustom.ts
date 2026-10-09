@@ -8,8 +8,6 @@ import {
 import type { CustomerProductIsCustomResult } from "./types/customerProductIsCustomResult";
 import { withLicenseBaseProducts } from "./withLicenseBaseProducts";
 
-/** `deriveCustomerProductIsCustom` for a customer product read from the DB: loads its catalog
- * version and its customised licenses' catalog products first. */
 export const deriveStoredCustomerProductIsCustom = async ({
 	ctx,
 	customerProduct,

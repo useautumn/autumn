@@ -7,7 +7,6 @@ const reasonToText = (reason: CustomReason): string => {
 	return reason.kind;
 };
 
-/** One clause per reason, e.g. `price_changed; item_removed:dashboard`, so the column filters cleanly. */
 export const customReasonsToText = ({
 	reasons,
 }: {

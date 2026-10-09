@@ -18,7 +18,7 @@ export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 	CustomPlansExportSpec
 > = ({ ctx, snapshot, population, onPageProcessed }) => {
 	const baseProducts: BaseProductCache = new Map();
-	// A report run only reads, so it stays off the primary like the page walk.
+	// Apply runs stay on the primary so compare-and-set judges current rows.
 	const readCtx = { ...ctx, db: dbReplica ?? ctx.db };
 
 	const exportRows = async function* (): AsyncGenerator<CustomPlansExportRow> {

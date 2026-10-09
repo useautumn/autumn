@@ -14,7 +14,6 @@ import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalar
 import { customPlansDiffToChanges } from "./customPlansDiffToChanges.js";
 import { customReasonsToText } from "./customReasonsToText.js";
 
-/** A plan/version filter scopes customer products too, not just which customers are walked. */
 export const isCustomerProductInExportScope = ({
 	customerProduct,
 	filters,
@@ -72,7 +71,6 @@ export const customerProductToCustomPlansExportRow = ({
 	diff: result.outcome === "customized" ? JSON.stringify(result.diff) : null,
 });
 
-/** A customer whose read failed still gets a row, so a gap in the file is never silent. */
 export const failedCustomerToCustomPlansExportRow = ({
 	scalar,
 	error,

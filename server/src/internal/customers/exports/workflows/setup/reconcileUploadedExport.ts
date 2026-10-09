@@ -7,7 +7,7 @@ import { findPublishedExportObject } from "../../findPublishedExportObject.js";
 import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import { markCompletedWithRetry } from "../complete/markCompletedWithRetry.js";
 
-/** Recounting the frozen bounds can drift below the file's rows if customers were deleted since. */
+/** Recounting can drift below the file's rows if customers were deleted since. */
 const recountCustomers = async ({
 	ctx,
 	customerExport,
@@ -51,8 +51,7 @@ export const reconcileUploadedExport = async ({
 	});
 	if (published.status !== "published") return false;
 
-	// The exact count died with the failed completion write. Only a customers export has one
-	// row per customer, so only it can recount; other kinds leave the count unknown.
+	// Only a customers export has one row per customer, so other kinds leave the count unknown.
 	const rowCount =
 		customerExport.kind === CustomerExportKind.Customers
 			? await recountCustomers({ ctx, customerExport, payload })

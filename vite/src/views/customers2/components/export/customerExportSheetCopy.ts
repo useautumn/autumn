@@ -12,7 +12,6 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		menuIcon: Icon;
 		menuLabel: string;
 		title: string;
-		/** Fixed-column kinds describe their columns instead of offering a picker. */
 		columnsSummary?: string;
 		description: string;
 		scanningLabel?: string;

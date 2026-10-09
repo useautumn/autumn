@@ -161,7 +161,6 @@ export const CUSTOM_PLANS_EXPORT_COLUMNS = [
 	{ key: "diff", header: "Diff JSON" },
 ] as const;
 
-/** One row per customer product in scope; `changes` is readable, `diff` is the raw JSON. */
 export type CustomPlansExportRow = Record<
 	(typeof CUSTOM_PLANS_EXPORT_COLUMNS)[number]["key"],
 	string | null

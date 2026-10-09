@@ -68,7 +68,6 @@ const describeSide = ({
 	return `${label}: ${describeTermChanges({ catalog, customer })}`;
 };
 
-/** One readable clause per difference, catalog value first, e.g. `credits: included 300 → 200`. */
 export const customPlansDiffToChanges = ({
 	diff,
 }: {
