@@ -11,6 +11,7 @@ import * as atomMetricsModule from "@/internal/byoc/actions/telemetry/atomLogs/q
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { shadowAtomRpcRouter } from "@/internal/misc/shadowAtom/shadowAtomRouter.js";
+import { shadowAtomStorage } from "@/internal/misc/shadowAtom/shadowAtomStorage.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 
 const ENDPOINT = "https://shadow-atom.example.com";
@@ -307,6 +308,22 @@ test("delete forgets the registered orgs at once and keeps the Atom under removi
 		endpointUrl: null,
 		deployment: null,
 	});
+});
+
+test("a refresh that read the Atom before a delete never undoes the removal", async () => {
+	await startedConfig();
+	deployment = runningDeployment;
+	await getAtom();
+	const readBeforeDelete = await shadowAtomStorage.find();
+	if (!readBeforeDelete) throw new Error("expected a record");
+
+	await call({ route: "delete_atom" });
+	await shadowAtomStorage.update({
+		from: readBeforeDelete,
+		to: { ...readBeforeDelete, error: "stale" },
+	});
+
+	expect(stored.deployment).toMatchObject({ status: "removing", error: null });
 });
 
 test("a setup nobody ran is forgotten as soon as it is deleted", async () => {

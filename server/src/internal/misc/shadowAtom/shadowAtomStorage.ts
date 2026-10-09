@@ -4,10 +4,14 @@ import {
 	type ByocCacheMachine,
 	ByocCacheStatus,
 } from "@autumn/shared";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AtomStorage } from "@/internal/byoc/atomRecords/types/atomStorage.js";
 import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
-import { patchShadowAtomConfig } from "./actions/patchShadowAtomConfig.js";
-import { shadowAtomConfigStore } from "./shadowAtomConfigStore.js";
+import { pickChangedFields } from "@/internal/byoc/utils/pickChangedFields.js";
+import {
+	SHADOW_ATOM_CONFIG_LOCK_KEY,
+	shadowAtomConfigStore,
+} from "./shadowAtomConfigStore.js";
 import type { ShadowAtomRecord } from "./types/shadowAtomRecord.js";
 
 /** The record but for its group and endpoint, which sit beside it in the file because herald and the shadow check route by them. */
@@ -86,6 +90,27 @@ const findShadowAtomRecord = async (): Promise<ShadowAtomRecord | null> =>
 		config: await shadowAtomConfigStore.readFromSource(),
 	});
 
+/** Under the config lock, against the record the file holds now; a null patch leaves the file alone. */
+const rewriteShadowAtomRecord = ({
+	toPatch,
+}: {
+	toPatch: (
+		current: ShadowAtomRecord | null,
+	) => Partial<ShadowAtomConfig> | null;
+}): Promise<void> =>
+	withLock({
+		lockKey: SHADOW_ATOM_CONFIG_LOCK_KEY,
+		fn: async () => {
+			const config = await shadowAtomConfigStore.readFromSource();
+			const patch = toPatch(configToShadowAtomRecord({ config }));
+			if (patch)
+				await shadowAtomConfigStore.writeToSource({
+					config: { ...config, ...patch },
+				});
+		},
+	});
+
+/** As an org's row: only what changed, and only while the status is still the one read, so a stale refresh never undoes a delete. */
 const updateShadowAtomRecord = ({
 	from,
 	to,
@@ -93,9 +118,16 @@ const updateShadowAtomRecord = ({
 	from: ShadowAtomRecord;
 	to: ShadowAtomRecord;
 }): Promise<void> =>
-	patchShadowAtomConfig({
-		patch: shadowAtomRecordToConfig({ record: to }),
-		followingGroupId: from.deployment_group_id,
+	rewriteShadowAtomRecord({
+		toPatch: (current) => {
+			const changed = pickChangedFields({ from, to });
+			const isAsRead =
+				current?.deployment_group_id === from.deployment_group_id &&
+				current.status === from.status;
+			if (!current || !isAsRead || Object.keys(changed).length === 0)
+				return null;
+			return shadowAtomRecordToConfig({ record: { ...current, ...changed } });
+		},
 	});
 
 const forgetShadowAtomRecord = ({
@@ -103,9 +135,11 @@ const forgetShadowAtomRecord = ({
 }: {
 	record: ShadowAtomRecord;
 }): Promise<void> =>
-	patchShadowAtomConfig({
-		patch: { deploymentGroupId: null, endpointUrl: null, deployment: null },
-		followingGroupId: record.deployment_group_id,
+	rewriteShadowAtomRecord({
+		toPatch: (current) =>
+			current?.deployment_group_id === record.deployment_group_id
+				? { deploymentGroupId: null, endpointUrl: null, deployment: null }
+				: null,
 	});
 
 /** Our shadow Atom's record in its edge config, in place of an org's `atom_deployments` row. */
