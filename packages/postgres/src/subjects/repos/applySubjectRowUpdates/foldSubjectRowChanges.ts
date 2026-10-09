@@ -32,7 +32,8 @@ const addEntriesToValue = ({
 };
 
 /** Later changes land on top of earlier ones: a set replaces what an add moved, an add after a set moves the set value.
- *  A later guard on a column the chain has not moved still describes the row the chain began on, so it joins the first's. */
+ *  A later guard joins the first's as what the row held when the chain began: as is on a column the chain has not moved,
+ *  less what it added on a column only added to. One a set or a map entry moved cannot be carried back, and is dropped. */
 const foldInto = ({
 	folded,
 	next,
@@ -41,11 +42,11 @@ const foldInto = ({
 	next: SubjectRowUpdate;
 }): void => {
 	for (const [column, value] of Object.entries(next.guard)) {
-		const moved =
-			column in folded.set ||
-			column in folded.add ||
-			column in folded.addEntries;
-		if (!moved && !(column in folded.guard)) folded.guard[column] = value;
+		if (column in folded.guard || column in folded.set) continue;
+		if (column in folded.addEntries) continue;
+		const added = folded.add[column];
+		if (added === undefined) folded.guard[column] = value;
+		else if (isNumber(value)) folded.guard[column] = value - added;
 	}
 	for (const [column, value] of Object.entries(next.set)) {
 		folded.set[column] = value;

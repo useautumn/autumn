@@ -371,6 +371,30 @@ describe("a reset never overwrites a billing write", () => {
 		});
 	});
 
+	test("a balance-only billing write supersedes a reset folded behind a track in the same flush: the guard is carried back across the track", async () => {
+		const rows = createRowStore({ nextOffset: 0n });
+		const { initial, before, reset, after } = decideSequence();
+		rows.seed(initial);
+		const store = await createStore(rows);
+
+		// t1: billing rewrites the balance in place while the track, the reset and its track are unapplied.
+		rows.writeOutsideWorker({ balance: 500 });
+		const results = await store.applyDurableMutations({
+			records: [at(0n, before), at(1n, reset), at(2n, after)],
+		});
+
+		expect(results.map((result) => result.kind)).toEqual([
+			"applied",
+			"rejected",
+			"applied",
+		]);
+		expect(rows.row()).toMatchObject({
+			balance: 490,
+			next_reset_at: cycleEnded,
+		});
+		expect(rows.bookmark()).toBe(3n);
+	});
+
 	test("a successor replaying an unapplied reset after the renewal skips it the same way, and replays on", async () => {
 		const rows = createRowStore({ nextOffset: 1n });
 		const { initial, before, reset, after } = decideSequence();

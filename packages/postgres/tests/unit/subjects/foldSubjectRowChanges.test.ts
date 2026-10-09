@@ -50,7 +50,7 @@ describe("foldSubjectRowChanges", () => {
 		expect(foldedIndexOf).toEqual([0, 1, 0]);
 	});
 
-	test("a window roll then consumes: the set wins over earlier adds, later adds move the set value, the first guard stays", () => {
+	test("a window roll then consumes: the set wins over earlier adds, later adds move the set value, the roll's guard is carried back to the chain's start", () => {
 		const { folded } = foldSubjectRowChanges({
 			changes: [
 				update({
@@ -78,12 +78,12 @@ describe("foldSubjectRowChanges", () => {
 				table: "usageWindows",
 				id: "uw_1",
 				set: { usage: 5, window_start_at: 2, window_end_at: 3 },
-				guard: { window_start_at: 1 },
+				guard: { window_start_at: 1, usage: 5 },
 			}),
 		]);
 	});
 
-	test("a later change's guard on a column the chain never moved still holds at the chain's start, so it joins the fold", () => {
+	test("a later change's guard joins the fold as the chain's start: as is where the chain never moved it, less what it added where it only added", () => {
 		const { folded } = foldSubjectRowChanges({
 			changes: [
 				update({
@@ -110,7 +110,7 @@ describe("foldSubjectRowChanges", () => {
 				table: "customerEntitlements",
 				id: "ce_1",
 				set: { balance: 100, next_reset_at: 3 },
-				guard: { next_reset_at: 1 },
+				guard: { next_reset_at: 1, balance: 100 },
 			}),
 		]);
 	});
