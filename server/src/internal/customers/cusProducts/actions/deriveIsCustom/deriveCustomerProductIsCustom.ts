@@ -1,0 +1,74 @@
+import { reportError } from "@autumn/errors";
+import type { Feature, FullCusProduct, FullProduct } from "@autumn/shared";
+import { cusProductToProcessorType, ProcessorType } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { diffCustomerProductAgainstCatalog } from "./diffCustomerProductAgainstCatalog";
+import type { CustomerProductIsCustomResult } from "./types/customerProductIsCustomResult";
+
+/** Best-effort: a reporting failure must never change the derived flag. */
+const reportDerivationFailure = ({
+	ctx,
+	customerProduct,
+	error,
+}: {
+	ctx: Pick<AutumnContext, "logger">;
+	customerProduct: FullCusProduct;
+	error: unknown;
+}) => {
+	try {
+		const ids = {
+			customer_product_id: customerProduct.id,
+			internal_product_id: customerProduct.internal_product_id,
+		};
+		reportError({
+			ctx: { logger: ctx.logger.child({ context: ids }) },
+			error: new Error(
+				`is_custom derivation failed for customer product ${ids.customer_product_id} (product ${ids.internal_product_id}): ${error instanceof Error ? error.message : String(error)}`,
+				{ cause: error },
+			),
+			operation: "derive customer product is_custom",
+		});
+	} catch {}
+};
+
+/**
+ * Is this customer product a customized version of the plan it points at, and
+ * if so, what differs? Diffs against the catalog version `internal_product_id`
+ * references, via `diffPlanV1` — the same diff catalog and migration drafts use.
+ *
+ * Biased towards custom: a false positive only skips the customer in version
+ * migrations; a false negative lets a migration overwrite real customizations.
+ */
+export const deriveCustomerProductIsCustom = ({
+	ctx,
+	customerProduct,
+	baseProduct,
+	features,
+}: {
+	ctx: Pick<AutumnContext, "logger">;
+	customerProduct: FullCusProduct;
+	/** The catalog version `customerProduct.internal_product_id` points at,
+	 * loaded with custom rows excluded. Nullish when it could not be resolved. */
+	baseProduct?: FullProduct | null;
+	features: Feature[];
+}): CustomerProductIsCustomResult => {
+	// RevenueCat purchases carry no params and can't be customised, so any diff is catalog drift.
+	if (cusProductToProcessorType(customerProduct) === ProcessorType.RevenueCat) {
+		return { isCustom: false, reason: "revenuecat" };
+	}
+
+	if (!baseProduct) return { isCustom: true, reason: "catalog_missing" };
+
+	try {
+		const diff = diffCustomerProductAgainstCatalog({
+			customerProduct,
+			baseProduct,
+			features,
+		});
+		if (!diff) return { isCustom: false, reason: "matches_catalog" };
+		return { isCustom: true, reason: "customized", diff };
+	} catch (error) {
+		reportDerivationFailure({ ctx, customerProduct, error });
+		return { isCustom: true, reason: "comparison_failed" };
+	}
+};
