@@ -27,6 +27,12 @@ export type SubjectBaseline = "log" | "map";
 /** The latest ownership fence a partition's log carried: records above `offset` from an epoch below `epoch` are a stale owner's. */
 export type OwnerFence = { epoch: bigint; offset: bigint };
 
+/** How long the batches one apply carries waited for it; telemetry only, every store ignores it. */
+export type ApplyWaits = {
+	/** From the oldest batch's commit to the apply taking it. */
+	unappliedMs: number;
+};
+
 /** One partition's resident state: subject states, mutation receipts, Kafka progress. */
 export type StateStore = {
 	/** "log" when the store is private and must learn baselines from the log; "map" when Postgres already holds them. */
@@ -76,6 +82,7 @@ export type StateStore = {
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
 		snapshotIntent?: SnapshotIntent;
+		waits?: ApplyWaits;
 	}): DurableMutationApplyResult[] | Promise<DurableMutationApplyResult[]>;
 	close(): void;
 };

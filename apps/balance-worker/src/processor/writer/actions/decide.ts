@@ -6,11 +6,11 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 import {
-	allStored,
 	enqueueMutation,
 	pendingCommitsFor,
 	pendingKeyOf,
 	settlementOf,
+	snapshotAllStored,
 } from "../pendingMutations.js";
 import { commandToFingerprint } from "../receipt/commandToFingerprint.js";
 import { mutationToRecord } from "../receipt/mutationToRecord.js";
@@ -59,7 +59,7 @@ export function decide<Reply>({
 			committed: settlementOf({ pending: inFlight }).join({
 				kind: "duplicate",
 			}),
-			stored: settlementOf({ pending: inFlight }).waitForStore(),
+			waitForStore: settlementOf({ pending: inFlight }).waitForStore,
 		});
 	}
 
@@ -75,7 +75,7 @@ export function decide<Reply>({
 			throw new PartitionWriterStateNotFoundError({ customerKey });
 		return decidedWith<Reply>({
 			kind: "duplicate",
-			stored: Promise.resolve(),
+			waitForStore: () => Promise.resolve(),
 			committed: Promise.resolve({
 				kind: "duplicate",
 				mutation: receipt,
@@ -95,7 +95,7 @@ export function decide<Reply>({
 		return decidedWith<Reply>({
 			kind: "reply",
 			committed: Promise.resolve(result.reply),
-			stored: allStored({ state }),
+			waitForStore: snapshotAllStored({ state }),
 		});
 
 	ctx.onStateAdvanced?.({
@@ -127,7 +127,7 @@ export function decide<Reply>({
 	return decidedWith<Reply>({
 		kind: "write",
 		committed: settlementOf({ pending }).join({ kind: "new" }),
-		stored: settlementOf({ pending }).waitForStore(),
+		waitForStore: settlementOf({ pending }).waitForStore,
 	});
 }
 
@@ -152,17 +152,14 @@ function durabilityFor({
 function decidedWith<Reply>({
 	kind,
 	committed,
-	stored,
+	waitForStore,
 }: {
 	kind: DecidedMutation<Reply>["kind"];
 	committed: Promise<Reply | CommittedMutation>;
-	stored: Promise<void>;
+	waitForStore: () => Promise<void>;
 }): DecidedMutation<Reply> {
 	function waitForCommit(): Promise<Reply | CommittedMutation> {
 		return committed;
-	}
-	function waitForStore(): Promise<void> {
-		return stored;
 	}
 	return { kind, waitForCommit, waitForStore };
 }

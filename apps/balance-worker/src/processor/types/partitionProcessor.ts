@@ -31,6 +31,7 @@ import type {
 } from "@autumn/balance-worker-client/protocol";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -129,6 +130,7 @@ export type PartitionProcessorDependencies = {
 	db: WorkerDb;
 	appender: CommittedOutcomeAppender;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
 	/** Where the partition's writer publishes its commit position. */

@@ -1,9 +1,11 @@
 import {
 	FeatureNotFoundError,
-	UpdateBalancesParamsSchema,
 	Scopes,
+	UpdateBalancesParamsSchema,
 } from "@autumn/shared";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer";
 import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import type { FeatureDeduction } from "../../balances/utils/types/featureDeduction";
 import { CusService } from "../CusService";
@@ -18,6 +20,9 @@ export const handleUpdateBalancesV2 = createRoute({
 		const { customer_id } = c.req.param();
 		const { balances, entity_id } = c.req.valid("json");
 
+		// Target balances become deltas against this read, so the worker's writes must be in Postgres first.
+		if (isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }))
+			await flushBalanceWorkerCustomer({ ctx, customerId: customer_id });
 		const fullCus = await CusService.getFull({
 			ctx,
 			idOrInternalId: customer_id,

@@ -9,6 +9,7 @@ import type {
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type {
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -32,6 +33,8 @@ import type {
 export type PartitionWriter = {
 	/** Snapshot: waits for the current writes to reach the store, not writes enqueued later. */
 	waitForStore(): Promise<void>;
+	/** `waitForStore`'s snapshot, taken now; it waits, and wakes a lingering apply, only once called. */
+	snapshotStore(): () => Promise<void>;
 	/** Resolves once every batch handed to the store so far has been applied or failed. */
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
@@ -129,6 +132,8 @@ export type PartitionWriterContext = {
 	appender: CommittedOutcomeAppender;
 	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	/** Read before each apply: a set `applyLingerMs` overrides the boot value in `limits`. */
+	dbControl?: Pick<EdgeConfigStore<DbControlEdgeConfig>, "get">;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */
@@ -158,6 +163,8 @@ export type PartitionWriterLimits = {
 	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
+	/** How long committed batches gather before a store flush, unless DB control overrides it; unset applies each batch at once. */
+	applyLingerMs?: number;
 	deferredCommitMs?: number;
 };
 
@@ -187,9 +194,8 @@ export type PendingMutation = {
 	/** The partition's sequence number for this write, in decide order. */
 	seq: number;
 	customerKey: string;
-	/** The subjects this mutation projected; pinned in the map until it commits, or until it is stored while snapshots are written. */
+	/** The subjects this mutation projected; pinned in the map until the store has it. */
 	projectedSubjectKeys: string[];
-	pinsReleased?: boolean;
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied; null for a log-only record. */
 	nextState: SubjectState | null;
@@ -233,6 +239,8 @@ export type PartitionWriterState = {
 	lastBatchSize: number;
 	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
 	lingerWake: (() => void) | null;
+	/** Set while the apply loop lingers; anything that must not wait for the store calls it. */
+	applyWake: (() => void) | null;
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
@@ -260,6 +268,7 @@ export type StoreWaiter = {
 export type UnappliedBatch = {
 	batch: PendingMutation[];
 	baseOffset: bigint;
+	committedAt: number;
 };
 
 export type PartitionWriterScope = {

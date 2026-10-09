@@ -86,6 +86,7 @@ export function createPartitionCommitLogging({
 			partition: position.partition,
 			baseOffset: position.offset,
 		};
+		const apply = { partition: position.partition, waits: params.waits };
 		const startedAt = now();
 		let result: DurableMutationApplyResult[];
 		try {
@@ -93,7 +94,7 @@ export function createPartitionCommitLogging({
 		} catch (cause) {
 			summarize((window) =>
 				window.applied({
-					partition: position.partition,
+					...apply,
 					durationMs: elapsedMs(startedAt),
 					failed: true,
 				}),
@@ -102,7 +103,7 @@ export function createPartitionCommitLogging({
 		}
 		summarize((window) =>
 			window.applied({
-				partition: position.partition,
+				...apply,
 				durationMs: elapsedMs(startedAt),
 				failed: false,
 			}),

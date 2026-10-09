@@ -247,7 +247,10 @@ export const createCommitterDb = ({
 	ctx: Omit<WorkerDbContext, "subjectLoads" | "timings"> & {
 		timings: Pick<
 			DatabaseTimings,
-			"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
+			| "queryStarted"
+			| "queryFinished"
+			| "recordSubjectSnapshots"
+			| "recordFlushRows"
 		>;
 	};
 }): CommitterDb => ({
@@ -278,7 +281,11 @@ export const createCommitterDb = ({
 			kind: "flush",
 			run: () =>
 				commitFlush({
-					ctx: { db: ctx.postgres.db, timing: timeFlushSection },
+					ctx: {
+						db: ctx.postgres.db,
+						timing: timeFlushSection,
+						recordFold: ctx.timings.recordFlushRows,
+					},
 					request,
 					statementTimeoutMs: FLUSH_STATEMENT_TIMEOUT_MS,
 					roundTrips: "single",

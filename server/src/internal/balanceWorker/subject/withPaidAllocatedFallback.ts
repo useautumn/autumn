@@ -14,7 +14,7 @@ const isPaidAllocatedRefusal = (error: unknown): boolean =>
 	error.workerCode === "UNSUPPORTED_COMMAND" &&
 	error.workerReason === "paid_allocated_not_supported";
 
-/** The subject as Postgres holds it now, on the primary and past any cache. */
+/** The subject as Postgres holds it now, on the primary and past any cache. Resets are the worker's to land, never this read's. */
 const readFreshSubject = async ({
 	ctx,
 	customerId,
@@ -29,6 +29,7 @@ const readFreshSubject = async ({
 		customerId,
 		entityId,
 		readFrom: "primary",
+		runLazyResets: false,
 	});
 	if (fullSubject) return fullSubject;
 	if (entityId) throw new EntityNotFoundError({ entityId });

@@ -196,6 +196,7 @@ export async function createBalanceWorker({
 				bootstrapper: resources.bootstrapper,
 				checkpointMaintenance: resources.checkpoints?.maintenance,
 				subjectSnapshotsConfig: resources.edgeConfigs?.subjectSnapshotsConfig,
+				dbControl: resources.edgeConfigs?.dbControl,
 				commandOffsets: { commit: commitCommandOffsets },
 			},
 			config: runtimeConfig,

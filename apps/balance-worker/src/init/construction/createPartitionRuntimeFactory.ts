@@ -127,6 +127,7 @@ export function createPartitionRuntimeFactory({
 				recentCommands,
 				commitPositions: ctx.commitPositions?.sinkFor({ partition }),
 				subjectSnapshotsConfig: ctx.subjectSnapshotsConfig,
+				dbControl: ctx.dbControl,
 			},
 			config: {
 				topic,
