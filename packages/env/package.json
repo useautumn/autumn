@@ -20,6 +20,11 @@
 			"import": "./src/balanceWorker/balanceWorkerConstants.ts",
 			"default": "./src/balanceWorker/balanceWorkerConstants.ts"
 		},
+		"./database": {
+			"types": "./src/database.ts",
+			"import": "./src/database.ts",
+			"default": "./src/database.ts"
+		},
 		"./balanceWorkerClient": {
 			"types": "./src/balanceWorkerClient.ts",
 			"import": "./src/balanceWorkerClient.ts",
