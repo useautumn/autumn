@@ -1,4 +1,4 @@
-import type { AttachPreviewResponse } from "@autumn/shared";
+import type { ApiVersion, AttachPreviewResponse } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useMemo } from "react";
@@ -20,6 +20,7 @@ export function useBillingPreview<
 	requestBody,
 	enabled,
 	expand = BILLING_PREVIEW_EXPAND,
+	apiVersion,
 }: {
 	path: string;
 	queryKeyPrefix: string;
@@ -27,6 +28,8 @@ export function useBillingPreview<
 	enabled?: boolean;
 	/** Endpoints with a strict schema reject unknown keys; pass [] to omit it. */
 	expand?: readonly string[];
+	/** Overrides the dashboard's default x-api-version for bodies in a newer shape. */
+	apiVersion?: ApiVersion;
 }) {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -35,8 +38,9 @@ export function useBillingPreview<
 			body: requestBody,
 			key: JSON.stringify(requestBody),
 			path,
+			apiVersion,
 		}),
-		[path, requestBody],
+		[path, requestBody, apiVersion],
 	);
 	const debouncedRequest = useDebounce({ value: request, delayMs: 300 });
 
@@ -58,6 +62,9 @@ export function useBillingPreview<
 				expand.length > 0
 					? { ...debouncedRequest.body, expand }
 					: debouncedRequest.body,
+				debouncedRequest.apiVersion
+					? { headers: { "x-api-version": debouncedRequest.apiVersion } }
+					: undefined,
 			);
 			return response.data;
 		},

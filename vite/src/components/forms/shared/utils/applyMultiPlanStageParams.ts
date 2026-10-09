@@ -10,6 +10,7 @@ export function applyMultiPlanStageParams<T extends MultiPlanParams>({
 	finalizeInvoice,
 	invoiceTemplateId,
 	netTermsDays,
+	paymentMethodTypes,
 }: BillingStageParams & {
 	requestBody: T | null;
 }): T | null {
@@ -26,6 +27,9 @@ export function applyMultiPlanStageParams<T extends MultiPlanParams>({
 					? { invoice_template_id: invoiceTemplateId }
 					: {}),
 				...(netTermsDays !== undefined ? { net_terms_days: netTermsDays } : {}),
+				...(paymentMethodTypes !== undefined
+					? { payment_method_types: paymentMethodTypes }
+					: {}),
 			},
 		};
 	}

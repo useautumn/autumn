@@ -9,6 +9,7 @@ const emptyForm = (): CreateInvoiceForm => ({
 	discounts: [],
 	invoiceTemplateId: null,
 	netTermsDays: null,
+	paymentMethodTypes: null,
 	taxRateId: null,
 	periodStart: null,
 	periodEnd: null,
@@ -57,6 +58,19 @@ describe("buildCreateInvoiceRequestBody", () => {
 		expect(body?.net_terms_days).toBe(14);
 		expect(body).not.toHaveProperty("due_date");
 		expect(body).not.toHaveProperty("issue_date");
+	});
+
+	test("sends payment methods only once they are chosen", () => {
+		const form = { ...emptyForm(), plans: [planWith()] };
+		expect(
+			buildCreateInvoiceRequestBody({ customerId: "cus_1", form }),
+		).not.toHaveProperty("payment_method_types");
+		expect(
+			buildCreateInvoiceRequestBody({
+				customerId: "cus_1",
+				form: { ...form, paymentMethodTypes: ["card", "customer_balance"] },
+			})?.payment_method_types,
+		).toEqual(["card", "customer_balance"]);
 	});
 
 	test("sends each plan row's scope, with customer-level as null", () => {
