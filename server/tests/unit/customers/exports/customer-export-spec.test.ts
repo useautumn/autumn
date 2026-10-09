@@ -94,4 +94,20 @@ describe("createParamsToCustomerExportSpec", () => {
 			}).snapshot,
 		).toEqual({ search: "", filters: {} });
 	});
+
+	it("gives a custom plans export the plain scope and no fields", () => {
+		expect(
+			createParamsToCustomerExportSpec({
+				params: {
+					kind: CustomerExportKind.CustomPlans,
+					search: " pro ",
+					filters: { version: ["pro_yearly:3"] },
+				},
+			}),
+		).toEqual({
+			kind: CustomerExportKind.CustomPlans,
+			fields: [],
+			snapshot: { search: "pro", filters: { version: ["pro_yearly:3"] } },
+		});
+	});
 });

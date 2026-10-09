@@ -6,6 +6,7 @@ import {
 	CustomerExportKindSchema,
 	CustomerExportStatusSchema,
 	CustomersExportSpecSchema,
+	CustomPlansExportSpecSchema,
 } from "../../../models/cusModels/cusExportModels.js";
 import { CustomerListFiltersSchema } from "../customerListFilters.js";
 
@@ -30,6 +31,9 @@ export const CreateCustomerExportParamsSchema = z.discriminatedUnion("kind", [
 	ExportScopeParamsSchema.extend({
 		kind: z.literal(CustomerExportKind.BillingVerify),
 		include_unlinked_stripe_customers: z.boolean().optional().default(false),
+	}),
+	ExportScopeParamsSchema.extend({
+		kind: z.literal(CustomerExportKind.CustomPlans),
 	}),
 ]);
 
@@ -138,6 +142,7 @@ const CustomerExportResponseBaseSchema = z.object({
 export const CustomerExportResponseSchema = z.discriminatedUnion("kind", [
 	CustomersExportSpecSchema.extend(CustomerExportResponseBaseSchema.shape),
 	BillingVerifyExportSpecSchema.extend(CustomerExportResponseBaseSchema.shape),
+	CustomPlansExportSpecSchema.extend(CustomerExportResponseBaseSchema.shape),
 ]);
 
 export type CustomerExportResponse = z.infer<

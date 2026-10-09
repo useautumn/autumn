@@ -26,6 +26,7 @@ export const isCustomerExportActive = (customerExport: {
 export const CustomerExportKind = {
 	Customers: "customers",
 	BillingVerify: "billing_verify",
+	CustomPlans: "custom_plans",
 } as const;
 
 export type CustomerExportKind =
@@ -103,10 +104,17 @@ export const BillingVerifyExportSpecSchema = z.object({
 	snapshot: BillingVerifyExportSnapshotSchema,
 });
 
+export const CustomPlansExportSpecSchema = z.object({
+	kind: z.literal(CustomerExportKind.CustomPlans),
+	fields: z.array(CustomerExportFieldSchema).max(0).default([]),
+	snapshot: CustomerExportScopeSchema,
+});
+
 /** What an export produces; kind decides which fields and snapshot options apply. */
 export const CustomerExportSpecSchema = z.discriminatedUnion("kind", [
 	CustomersExportSpecSchema,
 	BillingVerifyExportSpecSchema,
+	CustomPlansExportSpecSchema,
 ]);
 
 export type CustomerExportSpec = z.infer<typeof CustomerExportSpecSchema>;
@@ -116,6 +124,8 @@ export type CustomersExportSpec = z.infer<typeof CustomersExportSpecSchema>;
 export type BillingVerifyExportSpec = z.infer<
 	typeof BillingVerifyExportSpecSchema
 >;
+
+export type CustomPlansExportSpec = z.infer<typeof CustomPlansExportSpecSchema>;
 
 export type CustomerExportSnapshot = CustomerExportSpec["snapshot"];
 
@@ -133,5 +143,28 @@ export const BILLING_VERIFY_EXPORT_COLUMNS = [
 /** One row per customer; list columns hold every mismatch, comma-separated. */
 export type BillingVerifyExportRow = Record<
 	(typeof BILLING_VERIFY_EXPORT_COLUMNS)[number]["key"],
+	string | null
+>;
+
+export const CUSTOM_PLANS_EXPORT_COLUMNS = [
+	{ key: "customer_id", header: "Customer ID" },
+	{ key: "name", header: "Name" },
+	{ key: "email", header: "Email" },
+	{ key: "entity_id", header: "Entity ID" },
+	{ key: "customer_product_id", header: "Customer Product ID" },
+	{ key: "plan_id", header: "Plan ID" },
+	{ key: "plan_version", header: "Plan Version" },
+	{ key: "status", header: "Status" },
+	{ key: "current_is_custom", header: "Currently Custom" },
+	{ key: "derived_is_custom", header: "Derived Custom" },
+	{ key: "would_change", header: "Would Change" },
+	{ key: "reason", header: "Reason" },
+	{ key: "changes", header: "Changes" },
+	{ key: "diff", header: "Diff JSON" },
+] as const;
+
+/** One row per customer product in scope; `changes` is readable, `diff` is the raw JSON. */
+export type CustomPlansExportRow = Record<
+	(typeof CUSTOM_PLANS_EXPORT_COLUMNS)[number]["key"],
 	string | null
 >;
