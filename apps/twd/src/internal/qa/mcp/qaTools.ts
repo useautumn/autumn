@@ -12,6 +12,7 @@ import {
 } from "../actions/debugQaEnv.ts";
 import { deleteQaEnv } from "../actions/deleteQaEnv.ts";
 import { getQaEnv, listQaEnvs } from "../actions/listQaEnvs.ts";
+import { waitForWarmQaEnv } from "../actions/waitForWarmQaEnv.ts";
 
 const NAME = z
 	.string()
@@ -51,9 +52,27 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 				"Another env of yours to delete once this one is created.",
 			),
 			freshDb: z.boolean().optional(),
+			wait: z
+				.boolean()
+				.optional()
+				.describe(
+					"Return only once the env is built and warm (~3-4 min, capped at 9). Use it when you'd rather hand over a link that opens instantly.",
+				),
 		}),
-		run: async (body) => {
+		run: async ({ wait, ...body }) => {
 			const result = await createQaEnv({ ctx, body });
+			if (wait) {
+				const { env, warm } = await waitForWarmQaEnv({
+					ctx,
+					name: result.env.name,
+				});
+				return toolOk({
+					summary: warm
+						? `QA env is warm: ${describeEnv(env)} Give the human the URL; it opens instantly.`
+						: `QA env is not warm yet: ${describeEnv(env)}${env.error ? ` Error: ${env.error}` : " Give the human the URL anyway; it shows progress until ready."}`,
+					data: { ...result, env, warm },
+				});
+			}
 			return toolOk({
 				summary: `QA env ${result.deduped ? "re-ship already in progress" : "build started"}: ${describeEnv(result.env)} Give the human the URL now; it shows build progress until ready.`,
 				data: result,
