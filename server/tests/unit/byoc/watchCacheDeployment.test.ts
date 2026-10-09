@@ -156,7 +156,9 @@ describe("watching an Atom's deploy", () => {
 	test("follows a delete until the record is gone", async () => {
 		reports = [
 			removingWith({ removedStages: [] }),
-			removingWith({ removedStages: [ByocCacheStage.Connected, ByocCacheStage.Atom] }),
+			removingWith({
+				removedStages: [ByocCacheStage.Connected, ByocCacheStage.Atom],
+			}),
 			null,
 		];
 
