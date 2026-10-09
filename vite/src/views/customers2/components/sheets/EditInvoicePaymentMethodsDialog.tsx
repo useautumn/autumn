@@ -41,6 +41,7 @@ export function EditInvoicePaymentMethodsDialog({
 	const {
 		data: stripeInvoice,
 		isLoading,
+		isError,
 		refetch: refetchStripeInvoice,
 	} = useQuery({
 		queryKey: ["stripe-invoice", invoice.stripe_id],
@@ -55,11 +56,13 @@ export function EditInvoicePaymentMethodsDialog({
 
 	const invoicePaymentMethodTypes = stripeInvoice?.payment_settings
 		?.payment_method_types as InvoicePaymentMethod[] | null | undefined;
-	const value =
-		paymentMethodTypes ??
-		(invoicePaymentMethodTypes?.length
-			? invoicePaymentMethodTypes
-			: orgPaymentMethodTypes);
+	// Without the live invoice we'd overwrite its methods with unrelated org defaults.
+	const value = !stripeInvoice
+		? null
+		: (paymentMethodTypes ??
+			(invoicePaymentMethodTypes?.length
+				? invoicePaymentMethodTypes
+				: orgPaymentMethodTypes));
 
 	const updateInvoice = useMutation({
 		mutationFn: () =>
@@ -99,8 +102,14 @@ export function EditInvoicePaymentMethodsDialog({
 				<PaymentMethodTypesSelect
 					value={value}
 					onValueChange={setPaymentMethodTypes}
-					disabled={isLoading}
+					disabled={isLoading || isError}
 				/>
+				{isError && (
+					<p className="text-sm text-destructive">
+						Couldn't load this invoice from Stripe. Close the dialog and try
+						again.
+					</p>
+				)}
 
 				<DialogFooter>
 					<Button
@@ -108,7 +117,7 @@ export function EditInvoicePaymentMethodsDialog({
 						className="w-full"
 						onClick={() => updateInvoice.mutate()}
 						isLoading={updateInvoice.isPending}
-						disabled={isLoading || !value?.length}
+						disabled={isLoading || isError || !value?.length}
 					>
 						Save
 					</Button>

@@ -48,6 +48,8 @@ export function useCollectionMethodSwitch({
 			customerId,
 			scopeEntityId: null,
 			enabled: Boolean(stripeSubscription),
+			// A card added via the setup link must unblock the switch without a reload.
+			staleTime: 0,
 		});
 
 	const current = stripeSubscription?.collection_method as

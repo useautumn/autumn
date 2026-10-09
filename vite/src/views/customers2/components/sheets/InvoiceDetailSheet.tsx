@@ -315,6 +315,8 @@ export function InvoiceDetailSheet({
 			invoice.status === InvoiceStatus.Paid);
 	const canEditPaymentMethods =
 		invoiceIsStripe &&
+		!metadataLoading &&
+		!metadataError &&
 		!isVercelInvoice &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Draft);
