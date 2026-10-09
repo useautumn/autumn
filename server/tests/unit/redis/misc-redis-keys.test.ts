@@ -57,7 +57,7 @@ describe("misc redis key formats", () => {
 	test("org with features", () => {
 		expect(
 			buildOrgWithFeaturesCacheKey({ orgId: "org_1", env: AppEnv.Live }),
-		).toBe("org_with_features:v2:org_1:live");
+		).toBe("org_with_features:org_1:live");
 		expect(ORG_WITH_FEATURES_CACHE_TTL_SECONDS).toBe(60);
 	});
 
