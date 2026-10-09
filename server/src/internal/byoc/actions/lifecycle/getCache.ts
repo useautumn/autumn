@@ -1,6 +1,6 @@
 import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { cacheDeploymentRepo } from "../../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
 	cacheDeploymentStackName,
 	cacheDeploymentToApiCache,
