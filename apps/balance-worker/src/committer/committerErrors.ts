@@ -1,5 +1,6 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import { SubjectStaleError } from "../processor/subject/subjectErrors.js";
+import type { DurableMutationRecord } from "../state/types/durableMutation.js";
 export class UnsupportedRowChangeError extends Error {
 	constructor({ table, op }: { table: string; op: string }) {
 		super(`Row change not supported by the postgres backend: ${op} ${table}`);
@@ -9,9 +10,19 @@ export class UnsupportedRowChangeError extends Error {
 
 /** A guarded update matched no row: Postgres no longer holds the `before` the decision was made on. */
 export class StaleSubjectRowsError extends Error {
-	constructor({ ids }: { ids: string[] }) {
-		super(`Subject rows moved underneath the worker: ${ids.join(", ")}`);
+	/** The records whose changes did not land, so the flush can go again without them. */
+	readonly records: Set<DurableMutationRecord>;
+
+	constructor({
+		rows,
+	}: {
+		rows: { id: string; record: DurableMutationRecord }[];
+	}) {
+		super(
+			`Subject rows moved underneath the worker: ${rows.map(({ id, record }) => `${id} (${record.mutation.id})`).join(", ")}`,
+		);
 		this.name = "StaleSubjectRowsError";
+		this.records = new Set(rows.map(({ record }) => record));
 	}
 }
 

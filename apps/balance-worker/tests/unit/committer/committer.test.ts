@@ -370,11 +370,115 @@ describe("committer", () => {
 		expect((cause as SubjectStaleError).identity).toEqual(
 			stale.mutation.identity,
 		);
-		// The skip carries no row changes: nothing of the stale decision reaches Postgres.
-		expect(fake.transactions.at(-2)?.updates).toEqual([]);
+		// One more flush lands the rest together; nothing of the stale decision reaches Postgres.
+		expect(fake.transactions).toHaveLength(2);
+		expect(
+			fake.transactions[1]?.updates.map((change) => subjectRowIdOf(change)),
+		).not.toContain("poison");
+		expect(addsOf(fake.transactions[1]?.updates ?? [])).toEqual([
+			{ balance: -5 },
+			{ balance: -5 },
+		]);
 		expect(warnings.some((message) => message.includes("underneath"))).toBe(
 			true,
 		);
+		await committer.drain();
+	});
+
+	test("a stale record in a multi-call flush costs one more flush: every other record lands with it, only it is rejected", async () => {
+		const fake = createGatedDb({ staleIds: new Set(["poison"]) });
+		const committer = createCommitter({
+			ctx: { db: fake.db },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+		const stale = record({ partition: 1, offset: 21n, commandId: "s" });
+		stale.mutation.changes = stale.mutation.changes.map((change) => ({
+			...change,
+			id: "poison",
+		}));
+		// The lane is busy with a held flush while both calls queue, so they land in one flush together.
+		const held = committer.apply({
+			topic,
+			partition: 9,
+			expectedOffset: 0n,
+			records: [record({ partition: 9, offset: 0n, commandId: "h" })],
+		});
+		const landing = Promise.all([
+			committer.apply({
+				topic,
+				partition: 0,
+				expectedOffset: 10n,
+				records: [record({ partition: 0, offset: 10n, commandId: "a" })],
+			}),
+			committer.apply({
+				topic,
+				partition: 1,
+				expectedOffset: 20n,
+				records: [
+					record({ partition: 1, offset: 20n, commandId: "b" }),
+					stale,
+					record({ partition: 1, offset: 22n, commandId: "c" }),
+				],
+			}),
+		]);
+		fake.openGate();
+		await held;
+		const [healthy, withStale] = await landing;
+
+		expect(healthy).toEqual({ nextOffset: 11n });
+		expect(withStale.nextOffset).toBe(23n);
+		expect(withStale.failure).toBeUndefined();
+		expect(withStale.rejections?.map(({ record }) => record)).toEqual([stale]);
+		expect(withStale.rejections?.[0]?.cause).toBeInstanceOf(SubjectStaleError);
+		// The held flush, the shared flush the stale row rolled back, and one retry carrying both calls.
+		expect(
+			fake.transactions.map((transaction) => transaction.partitions),
+		).toEqual([[9], [0, 1], [0, 1]]);
+		expect(
+			fake.transactions[2]?.updates.map((change) => subjectRowIdOf(change)),
+		).not.toContain("poison");
+		await committer.drain();
+	});
+
+	test("a retry without the stale record that fails too lands record by record, with the same outcome", async () => {
+		const fake = createGatedDb({ staleIds: new Set(["poison"]) });
+		fake.openGate();
+		const flush = fake.db.flush;
+		fake.db.flush = async (request) => {
+			if (fake.transactions.length === 1) {
+				await flush(request);
+				throw new Error("value too long for type character varying(64)");
+			}
+			return flush(request);
+		};
+		const committer = createCommitter({
+			ctx: { db: fake.db },
+			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
+		});
+		const stale = record({ partition: 0, offset: 1n, commandId: "b" });
+		stale.mutation.changes = stale.mutation.changes.map((change) => ({
+			...change,
+			id: "poison",
+		}));
+
+		const outcome = await committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [
+				record({ partition: 0, offset: 0n, commandId: "a" }),
+				stale,
+				record({ partition: 0, offset: 2n, commandId: "c" }),
+			],
+		});
+
+		expect(outcome.nextOffset).toBe(3n);
+		expect(outcome.failure).toBeUndefined();
+		expect(outcome.rejections?.map(({ record }) => record)).toEqual([stale]);
+		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(SubjectStaleError);
+		// The flush, its failed retry, then a, the stale record, its bookmark-only skip, and c.
+		expect(fake.transactions).toHaveLength(6);
+		expect(fake.transactions.at(-2)?.updates).toEqual([]);
 		await committer.drain();
 	});
 

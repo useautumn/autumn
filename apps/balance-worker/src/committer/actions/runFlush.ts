@@ -331,13 +331,14 @@ export const runFlush = async ({
 	});
 	if (landed)
 		attributeDeletedSnapshots({ flush, outcomes, deleted: landed.deleted });
-	const staleIds = changes
-		.filter((_, index) => !applied[index])
-		.map(
-			(change, index) =>
-				`${subjectRowIdOf(change)} (${recordOf[index]?.mutation.id})`,
-		);
-	if (staleIds.length > 0) throw new StaleSubjectRowsError({ ids: staleIds });
+	const staleRows = changes.flatMap((change, index) => {
+		const record = recordOf[index];
+		return applied[index] || !record
+			? []
+			: [{ id: subjectRowIdOf(change), record }];
+	});
+	if (staleRows.length > 0)
+		throw new StaleSubjectRowsError({ rows: staleRows });
 	return outcomes;
 };
 

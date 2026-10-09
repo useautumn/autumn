@@ -343,9 +343,59 @@ const landRecordsOneByOne = async ({
 	return { nextOffset, commandNextOffset, rejections };
 };
 
+/** The flush once more with its stale records landing only their bookmarks, each rejected as landing it alone would; null when that fails too. */
+const landWithoutStaleRecords = async ({
+	scope,
+	flush,
+	cause,
+}: {
+	scope: CommitterScope;
+	flush: Flush;
+	cause: StaleSubjectRowsError;
+}): Promise<Map<FlushCall, FlushOutcome> | null> => {
+	const isStale = (record: DurableMutationRecord) => cause.records.has(record);
+	const attempted: Flush = {
+		calls: flush.calls.map((call) =>
+			call.records.some(isStale)
+				? {
+						...call,
+						records: call.records.map((record) =>
+							isStale(record) ? withoutChanges({ record }) : record,
+						),
+						// As landing piece by piece: a call that skips a record no longer lands its customers' snapshots whole.
+						snapshotIntent: withSnapshotsDeleted({
+							intent: call.snapshotIntent,
+						}),
+					}
+				: call,
+		),
+	};
+	let outcomes: Map<FlushCall, FlushOutcome>;
+	try {
+		outcomes = keyedByOriginalCalls({
+			flush,
+			attempted,
+			outcomes: await runWithRetries({ scope, flush: attempted }),
+		});
+	} catch (retryCause) {
+		if (retryCause instanceof CommitterStoppedError) throw retryCause;
+		return null;
+	}
+	for (const [call, outcome] of outcomes) {
+		const rejections = call.records.flatMap((record) => {
+			const refusal = isStale(record) && refusalOf({ record, cause });
+			return refusal ? [{ record, cause: refusal }] : [];
+		});
+		for (const { cause: refusal } of rejections)
+			reportRefusal({ ctx: scope.ctx, refusal });
+		if (rejections.length > 0) outcome.rejections = rejections;
+	}
+	return outcomes;
+};
+
 /**
- * Lands a flush, then shrinks around whatever refuses to land: retry while transient, then each
- * call alone, then each record alone. Every call gets an outcome; only the bad record is left behind.
+ * Lands a flush, then shrinks around whatever refuses to land: retry while transient, once more without
+ * its stale records, then each call alone, then each record alone. Every call gets an outcome; only the bad record is left behind.
  */
 export const landFlush = async ({
 	scope,
@@ -359,6 +409,10 @@ export const landFlush = async ({
 		return await runWithRetries({ scope, flush });
 	} catch (cause) {
 		if (cause instanceof CommitterStoppedError) throw cause;
+		if (cause instanceof StaleSubjectRowsError) {
+			const landed = await landWithoutStaleRecords({ scope, flush, cause });
+			if (landed) return landed;
+		}
 		const outcomes = new Map<FlushCall, FlushOutcome>();
 		const recordCount = flush.calls.reduce(
 			(total, call) => total + call.records.length,
