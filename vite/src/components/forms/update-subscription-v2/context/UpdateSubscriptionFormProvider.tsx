@@ -366,7 +366,8 @@ export function UpdateSubscriptionFormProvider({
 
 	const collectionMethodSwitch = useCollectionMethodSwitch({
 		formContext,
-		hasOtherChanges: hasChanges,
+		// Reset usage alone isn't a plan change, but a switch request would drop it.
+		hasOtherChanges: hasChanges || formValues.resetUsage,
 		onApplied,
 		onSuccess,
 	});

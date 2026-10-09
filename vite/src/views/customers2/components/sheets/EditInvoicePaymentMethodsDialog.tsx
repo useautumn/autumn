@@ -13,7 +13,7 @@ import {
 	DialogTitle,
 } from "@autumn/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type Stripe from "stripe";
 import { useOrgPaymentMethodTypes } from "@/components/forms/shared/hooks/useOrgPaymentMethodTypes";
@@ -37,6 +37,10 @@ export function EditInvoicePaymentMethodsDialog({
 	const [paymentMethodTypes, setPaymentMethodTypes] = useState<
 		InvoicePaymentMethod[] | null
 	>(null);
+
+	// Unsaved edits must never carry over to another invoice or a reopened dialog.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset is keyed on these on purpose
+	useEffect(() => setPaymentMethodTypes(null), [open, invoice.id]);
 
 	const {
 		data: stripeInvoice,
