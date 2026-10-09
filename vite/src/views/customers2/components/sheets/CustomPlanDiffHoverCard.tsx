@@ -6,7 +6,6 @@ import {
 	StatusChipIcon,
 } from "@autumn/ui";
 import { overlaySurfaceClassName } from "@autumn/ui/lib/overlay-classes";
-import { useState } from "react";
 import {
 	type CustomDiffChange,
 	type CustomDiffField,
@@ -37,7 +36,22 @@ const formatTerm = (term: string | null) => {
 	if (term === null) return "none";
 	const value: unknown = JSON.parse(term);
 	if (value === null) return "none";
+	if (typeof value === "number") return value.toLocaleString("en-US");
 	return typeof value === "string" ? value : String(value);
+};
+
+/** A whole added or removed item lists only the terms that say something about it. */
+const isTellingField = ({
+	field,
+	kind,
+}: {
+	field: CustomDiffField;
+	kind: CustomDiffChange["kind"];
+}) => {
+	if (kind === "changed") return true;
+	if (field.path === "feature_id") return false;
+	const term = kind === "added" ? field.customer : field.catalog;
+	return term !== "false" && term !== "null";
 };
 
 const formatPath = (path: string) =>
@@ -82,6 +96,9 @@ function ChangeEntry({
 	featureNameById: Map<string, string>;
 }) {
 	const icon = KIND_ICONS[change.kind];
+	const fields = change.fields.filter((field) =>
+		isTellingField({ field, kind: change.kind }),
+	);
 	const label =
 		change.target === "base_price"
 			? "Base price"
@@ -100,9 +117,9 @@ function ChangeEntry({
 					{icon.label}
 				</span>
 			</div>
-			{change.fields.length > 0 && (
+			{fields.length > 0 && (
 				<div className="flex flex-col gap-1 pl-[22px]">
-					{change.fields.map((field) => (
+					{fields.map((field) => (
 						<ChangedField key={field.path} field={field} kind={change.kind} />
 					))}
 				</div>
@@ -168,15 +185,14 @@ export function CustomPlanDiffHoverCard({
 	catalogVersion: number;
 	featureNameById: Map<string, string>;
 }) {
-	const [open, setOpen] = useState(false);
+	// Fetched with the sheet, so the card is ready by the time it's hovered.
 	const { data, isLoading, isError } = useCustomerProductCustomDiff({
 		customerId,
 		customerProductId,
-		enabled: open,
 	});
 
 	return (
-		<HoverCard open={open} onOpenChange={setOpen}>
+		<HoverCard>
 			<HoverCardTrigger asChild delay={150} closeDelay={0}>
 				<span className="inline-flex cursor-default">
 					<StatusChip tone="fuchsia" glyph="pencil">

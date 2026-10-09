@@ -28,11 +28,9 @@ export type CustomerProductCustomDiff = {
 export const useCustomerProductCustomDiff = ({
 	customerId,
 	customerProductId,
-	enabled,
 }: {
 	customerId?: string;
 	customerProductId?: string;
-	enabled: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 
@@ -44,7 +42,7 @@ export const useCustomerProductCustomDiff = ({
 			);
 			return data;
 		},
-		enabled: enabled && !!customerId && !!customerProductId,
+		enabled: !!customerId && !!customerProductId,
 		staleTime: 30_000,
 	});
 };
