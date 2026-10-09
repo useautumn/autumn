@@ -1,20 +1,51 @@
-import { orgToCacheDeployment } from "@autumn/byoc";
-import type { ApiByocCache } from "@autumn/shared";
+import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { cacheDeploymentToApiCache } from "../utils/byocCacheUtils.js";
+import {
+	findCacheDeployment,
+	findRemovingCacheDeployments,
+} from "../repos/cacheDeployments.js";
+import {
+	cacheDeploymentStackName,
+	cacheDeploymentToApiCache,
+	cacheStackName,
+	cacheStackNameSuffix,
+	nextCacheAtomId,
+} from "../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
-/** The env's cache as alien has it now; a ready one can still be torn down or fail outside Autumn. */
+/** The env's Atom and any earlier ones still coming down, as alien has them now, and the stack name its Atom (or the next one) takes. */
 export const getCache = async ({
 	ctx,
 }: {
 	ctx: AutumnContext;
-}): Promise<ApiByocCache | null> => {
-	const existing = orgToCacheDeployment({ org: ctx.org, env: ctx.env });
-	if (!existing) return null;
-	const cacheDeployment = await refreshCacheDeployment({
-		ctx,
-		cacheDeployment: existing,
-	});
-	return cacheDeploymentToApiCache({ cacheDeployment, env: ctx.env });
+}): Promise<GetByocCacheResponse> => {
+	const { org, env } = ctx;
+	const [existing, removingRows] = await Promise.all([
+		findCacheDeployment({ ctx }),
+		findRemovingCacheDeployments({ ctx }),
+	]);
+	const [cacheDeployment, ...removing] = await Promise.all(
+		[existing, ...removingRows].map(
+			(row) => row && refreshCacheDeployment({ ctx, cacheDeployment: row }),
+		),
+	);
+	const atomId =
+		existing?.id ??
+		nextCacheAtomId({
+			org,
+			env,
+			existingAtomIds: removingRows.map(({ id }) => id),
+		});
+	return {
+		cache: cacheDeployment
+			? cacheDeploymentToApiCache({ cacheDeployment, org })
+			: null,
+		removing: removing
+			.filter((row) => row !== null)
+			.map((row) => cacheDeploymentToApiCache({ cacheDeployment: row, org })),
+		stack_name: existing
+			? cacheDeploymentStackName({ cacheDeployment: existing, org })
+			: cacheStackName({ org, env, atomId }),
+		stack_name_suffix: cacheStackNameSuffix({ org, env, atomId }),
+	};
 };

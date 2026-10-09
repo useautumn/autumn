@@ -27,5 +27,9 @@ export const findShadowAtom =
 			status: deployment?.status ?? ByocCacheStatus.AwaitingSetup,
 			endpointUrl: reportedUrl,
 			machine: deployment?.machine ?? null,
+			region: deployment?.region ?? null,
+			doneStages: deployment?.doneStages ?? [],
+			removedStages: deployment?.removedStages ?? [],
+			error: deployment?.error ?? null,
 		};
 	};

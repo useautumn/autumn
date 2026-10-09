@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { toDeploymentGroupName } from "@autumn/alien";
 import { SHADOW_ATOM_EXTERNAL_ID } from "@autumn/edge-config";
 import {
 	type ApiByocCache,
@@ -28,16 +30,36 @@ export const toAlienExternalId = ({ parts }: { parts: string[] }): string => {
 	return externalId;
 };
 
-/** One env's Atom, as its deployer knows it: one deployment group each, so lookups never match two. */
+/** One Atom, as its deployer knows it: one deployment group each, so an Atom being removed never shares a group with its replacement. Records from before Atom ids keep `<org>.<env>`. */
 export const cacheExternalId = ({
 	org,
 	env,
+	atomId,
 }: {
 	org: Pick<Organization, "id">;
 	env: AppEnv;
-}) => toAlienExternalId({ parts: [org.id, env] });
+	atomId?: string;
+}) =>
+	toAlienExternalId({
+		parts: [org.id, env, atomId].filter((part) => part !== undefined),
+	});
 
-/** The deployment group's name, which also names the org's stack in AWS. */
+/** The id the env's next Atom takes, fixed by the Atoms it has, so the page can show its stack name before it exists. */
+export const nextCacheAtomId = ({
+	org,
+	env,
+	existingAtomIds,
+}: {
+	org: Pick<Organization, "id">;
+	env: AppEnv;
+	existingAtomIds: string[];
+}) =>
+	`atom_${createHash("sha256")
+		.update([org.id, env, ...[...existingAtomIds].sort()].join("."))
+		.digest("hex")
+		.slice(0, 24)}`;
+
+/** The label records made before stack names could be chosen were set up under. */
 export const cacheGroupLabel = ({
 	org,
 	env,
@@ -47,19 +69,70 @@ export const cacheGroupLabel = ({
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
 
-/** An org's Atom names, as `createCache` starts it. */
+/** Six hex chars of the external id, so every Atom, and every dev stack, names its stack apart. */
+export const cacheStackNameSuffix = ({
+	org,
+	env,
+	atomId,
+}: {
+	org: Pick<Organization, "id">;
+	env: AppEnv;
+	atomId?: string;
+}) =>
+	createHash("sha256")
+		.update(cacheExternalId({ org, env, atomId }))
+		.digest("hex")
+		.slice(0, 6);
+
+/** The stack's name in the org's cloud, which is also its deployment group's: the chosen base, or `atom-<slug>-<env>`, then the suffix. */
+export const cacheStackName = ({
+	org,
+	env,
+	atomId,
+	base,
+}: {
+	org: Pick<Organization, "id" | "slug">;
+	env: AppEnv;
+	atomId?: string;
+	base?: string;
+}) =>
+	toDeploymentGroupName({
+		label: [
+			base ?? `atom-${org.slug}-${env}`,
+			cacheStackNameSuffix({ org, env, atomId }),
+		].join("-"),
+	});
+
+/** A record from before stack names were stored keeps the name it was set up under. */
+export const cacheDeploymentStackName = ({
+	cacheDeployment,
+	org,
+}: {
+	cacheDeployment: ByocCacheDeployment;
+	org: Pick<Organization, "slug">;
+}) =>
+	cacheDeployment.stack_name ??
+	toDeploymentGroupName({
+		label: cacheGroupLabel({ org, env: cacheDeployment.env }),
+	});
+
+/** An Atom's names, as `createCache` starts it. */
 export const cacheNames = ({
 	org,
 	env,
+	atomId,
+	stackName = cacheStackName({ org, env, atomId }),
 }: {
 	org: Organization;
 	env: AppEnv;
+	atomId?: string;
+	stackName?: string;
 }) => ({
-	externalId: cacheExternalId({ org, env }),
-	label: cacheGroupLabel({ org, env }),
+	externalId: cacheExternalId({ org, env, atomId }),
+	label: stackName,
 });
 
-/** Our one shadow Atom's names. An org's external id always ends `.<env>` and its label reads `autumn-byoc-…`, so neither can match. */
+/** Our one shadow Atom's names. An org's external id always holds `.<env>` and its label ends in a hash suffix, so neither can match. */
 export const shadowAtomCacheNames = () => ({
 	externalId: toAlienExternalId({ parts: [SHADOW_ATOM_EXTERNAL_ID] }),
 	label: [cacheNamePrefix(), SHADOW_ATOM_EXTERNAL_ID].filter(Boolean).join("-"),
@@ -79,7 +152,7 @@ export const resourcesToMachine = ({
 	const machine = findByocCacheMachine({ cpu, memory });
 	if (machine) return machine;
 	throw new RecaseError({
-		message: `No cache machine has ${cpu} vCPU / ${memory} GiB`,
+		message: `No Atom machine has ${cpu} vCPU / ${memory} GiB`,
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});
@@ -98,8 +171,16 @@ export const cacheDeploymentToMachine = ({
 /** A resize moves a running cache; one still being set up takes its machine from `create_atom`. */
 export const cacheNotRunning = () =>
 	new RecaseError({
-		message: "The cache is not running yet, so it cannot be resized.",
+		message: "Atom is not running yet, so it cannot be resized.",
 		code: ErrCode.ByocCacheNotReady,
+		statusCode: 409,
+	});
+
+/** Only a deploy that stopped can be resumed. */
+export const cacheNotFailed = () =>
+	new RecaseError({
+		message: "Atom's deploy has not failed, so there is nothing to retry.",
+		code: ErrCode.InvalidRequest,
 		statusCode: 409,
 	});
 
@@ -109,31 +190,38 @@ export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 
 export const cacheDeploymentToApiCache = ({
 	cacheDeployment,
-	env,
+	org,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-	env: AppEnv;
+	org: Pick<Organization, "slug">;
 }): ApiByocCache => ({
-	env,
+	id: cacheDeployment.id,
+	env: cacheDeployment.env,
+	stack_name: cacheDeploymentStackName({ cacheDeployment, org }),
 	status: cacheDeployment.status,
 	deployment_id: cacheDeployment.deployment_id,
 	endpoint_url: cacheDeployment.endpoint_url,
 	created_at: cacheDeployment.created_at,
+	first_check_at: cacheDeployment.first_check_at,
 	cpu: cacheDeployment.cpu,
 	memory: cacheDeployment.memory,
+	region: cacheDeployment.region,
+	network: cacheDeployment.network,
+	stages: cacheDeployment.stages,
+	error: cacheDeployment.error,
 });
 
 /** Only a create hands out the token, so reading a cache never reveals it. */
 export const cacheDeploymentToCreateResponse = ({
 	cacheDeployment,
-	env,
+	org,
 	setupUrl,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-	env: AppEnv;
+	org: Pick<Organization, "slug">;
 	setupUrl: string | null;
 }): CreateByocCacheResponse => ({
-	...cacheDeploymentToApiCache({ cacheDeployment, env }),
+	...cacheDeploymentToApiCache({ cacheDeployment, org }),
 	setup_url: setupUrl,
 	token: cacheDeploymentToAtomToken({ cacheDeployment }),
 });

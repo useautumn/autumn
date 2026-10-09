@@ -1,26 +1,62 @@
-import { orgToCacheDeployment } from "@autumn/byoc";
+import { ByocCacheStatus } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import { deleteCacheDeployment } from "../repos/cacheDeployments.js";
+import {
+	findCacheDeployment,
+	findCacheDeploymentById,
+	updateCacheDeployment,
+} from "../repos/cacheDeployments.js";
 import { CACHE_LOCK_TTL_MS, cacheLockKey } from "../utils/byocCacheUtils.js";
+import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
+import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
 
-/** Tears down the env's Atom, then forgets it. Deleting nothing is a no-op. */
-export const deleteCache = ({ ctx }: { ctx: AutumnContext }) =>
+/** Tears down the env's Atom, or retries one whose removal stopped. The record stays as removing until its stack is gone too. Deleting nothing is a no-op. */
+export const deleteCache = ({
+	ctx,
+	atomId,
+}: {
+	ctx: AutumnContext;
+	atomId?: string;
+}) =>
 	withLock({
 		lockKey: cacheLockKey({ ctx }),
 		ttlMs: CACHE_LOCK_TTL_MS,
 		errorMessage:
-			"A cache change is already in progress, try again in a few seconds",
-		fn: () => tearDownCache({ ctx }),
+			"An Atom change is already in progress, try again in a few seconds",
+		fn: () => tearDownCache({ ctx, atomId }),
 	});
 
-const tearDownCache = async ({ ctx }: { ctx: AutumnContext }) => {
-	const existing = orgToCacheDeployment({ org: ctx.org, env: ctx.env });
+const tearDownCache = async ({
+	ctx,
+	atomId,
+}: {
+	ctx: AutumnContext;
+	atomId?: string;
+}) => {
+	const existing = atomId
+		? await findCacheDeploymentById({ ctx, id: atomId })
+		: await findCacheDeployment({ ctx });
 	if (!existing) return;
 
 	await getAtomDeployer().delete({
 		deploymentGroupId: existing.deployment_group_id,
 	});
-	await deleteCacheDeployment({ ctx, cacheDeployment: existing });
+	const removing = {
+		...existing,
+		status: ByocCacheStatus.Removing,
+		error: null,
+	};
+	await updateCacheDeployment({ ctx, from: existing, to: removing });
+
+	// A setup that never ran has nothing to tear down, so this read forgets it at once.
+	const remaining = await refreshCacheDeployment({
+		ctx,
+		cacheDeployment: removing,
+	});
+	if (remaining)
+		await startCacheDeploymentWatch({
+			ctx,
+			deploymentGroupId: remaining.deployment_group_id,
+		});
 };
