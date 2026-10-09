@@ -1,9 +1,11 @@
 import { Skeleton } from "@autumn/ui";
-import {
-	TABLE_TRAY_CLASS,
-	TABLE_TRAY_SURFACE_CLASS,
-} from "@/components/general/table";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import {
+	ATOM_PAGE_CARD_CLASS,
+	ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
+	ATOM_PAGE_CARD_TRAY_ROW_CLASS,
+} from "../atomCardLayout";
 
 const ChartArea = ({
 	isLoading,
@@ -42,8 +44,13 @@ export const MonitoringChartCard = ({
 	isEmpty: boolean;
 	children: React.ReactNode;
 }) => (
-	<div className={TABLE_TRAY_CLASS}>
-		<div className="flex h-9 items-center gap-2 px-3 text-sm">
+	<div className={ATOM_PAGE_CARD_CLASS}>
+		<div
+			className={cn(
+				"flex h-9 items-center gap-2 text-sm",
+				ATOM_PAGE_CARD_TRAY_ROW_CLASS,
+			)}
+		>
 			<span className="shrink-0 font-medium text-foreground">{title}</span>
 			<span className="truncate text-tertiary-foreground">{description}</span>
 			{aside && (
@@ -52,7 +59,13 @@ export const MonitoringChartCard = ({
 				</span>
 			)}
 		</div>
-		<div className={cn(TABLE_TRAY_SURFACE_CLASS, "flex flex-col gap-3 p-4")}>
+		<div
+			className={cn(
+				TABLE_TRAY_SURFACE_CLASS,
+				"flex flex-col gap-3 py-4",
+				ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
+			)}
+		>
 			{summary}
 			<div className="h-44">
 				<ChartArea isLoading={isLoading} isEmpty={isEmpty}>

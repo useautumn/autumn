@@ -153,12 +153,9 @@ export const atomDeployPercent = (cache: ApiByocCache) => {
 	return Math.round((doneCount / BYOC_CACHE_STAGES.length) * 100);
 };
 
-/** Where a delete stands, as one chip: waiting on the org in AWS, stopped, or under way. */
-export const atomRemovalChip = (cache: ApiByocCache): AtomChipDisplay => {
-	if (cache.status === ByocCacheStatus.TeardownRequired)
-		return ATOM_ACTION_IN_AWS_CHIP;
-	return cache.error ? ATOM_REMOVAL_FAILED_CHIP : ATOM_REMOVING_CHIP;
-};
+/** A delete waits on the org: to delete its stack in AWS, or to retry once what stopped it is fixed. */
+export const isAtomRemovalWaitingOnYou = (cache: ApiByocCache) =>
+	cache.status === ByocCacheStatus.TeardownRequired || Boolean(cache.error);
 
 export const atomRemovalPercent = (cache: ApiByocCache) => {
 	const removedCount = BYOC_CACHE_REMOVAL_STAGES.filter((stage) =>

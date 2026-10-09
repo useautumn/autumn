@@ -1,29 +1,127 @@
 import type { ApiByocCache } from "@autumn/shared";
-import { Button, CopyButton, StatusChip } from "@autumn/ui";
+import {
+	Button,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+	IconButton,
+} from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
-	CaretUpIcon,
+	CopyIcon,
+	DotsThreeIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
-import {
-	TABLE_TRAY_CLASS,
-	TABLE_TRAY_SURFACE_CLASS,
-	TABLE_TRAY_SURFACE_DIVIDER_CLASS,
-} from "@/components/general/table";
-import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
+import { useAtomQuery } from "@/hooks/queries/useAtomQuery";
 import { cn } from "@/lib/utils";
-import { SettingsListRow } from "@/views/settings/components/SettingsListRow";
-import { AtomFieldRow } from "./AtomFieldRow";
+import { AtomCopyValue } from "./AtomCopyValue";
 import { AtomStatusChip } from "./AtomStatusChip";
+import {
+	ATOM_PAGE_CARD_CLASS,
+	ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
+	ATOM_PAGE_CARD_TRAY_ROW_CLASS,
+} from "./atomCardLayout";
 import { ATOM_CONNECTED_CHIP, awsStackConsoleUrl } from "./atomDisplay";
 import { atomMachineSpecs, cacheToMachine } from "./atomMachineDisplay";
 import { atomNetwork } from "./atomNetworkDisplay";
 import { awsRegionLabel } from "./atomRegionDisplay";
 
-const COPY_VALUE_CLASS =
-	"min-w-0 max-w-full shrink font-mono text-xs [&>span]:min-w-0";
+const NO_VALUE = "—";
 
-/** The connected Atom at a glance as chips; its details and delete fold away beneath. */
+/** One labelled value; a cell after the first in its row draws the divider, which takes 1px of its inset. */
+const DetailCell = ({
+	label,
+	hasDivider = false,
+	className,
+	children,
+}: {
+	label: string;
+	hasDivider?: boolean;
+	className?: string;
+	children: React.ReactNode;
+}) => (
+	<div
+		className={cn(
+			"flex h-18 min-w-0 flex-col justify-center gap-1.5",
+			ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
+			hasDivider && "border-l border-table-row-divider pl-[13px]",
+			className,
+		)}
+	>
+		<span className="text-xs text-subtle">{label}</span>
+		<div className="flex h-6 min-w-0 items-center gap-2 text-sm text-foreground">
+			{children}
+		</div>
+	</div>
+);
+
+const copyToClipboard = ({ text, label }: { text: string; label: string }) => {
+	navigator.clipboard.writeText(text);
+	toast.success(`${label} copied`);
+};
+
+/** Copying what the cards show, and deleting this Atom. */
+const AtomDetailsMenu = ({
+	url,
+	stackName,
+	onDelete,
+}: {
+	url: string | null;
+	stackName: string;
+	onDelete: () => void;
+}) => (
+	<DropdownMenu>
+		<DropdownMenuTrigger asChild>
+			<IconButton
+				aria-label="Atom actions"
+				variant="secondary"
+				size="icon"
+				className="size-6 justify-center"
+				icon={<DotsThreeIcon className="size-3.5" />}
+			/>
+		</DropdownMenuTrigger>
+		<DropdownMenuContent align="end" className="w-72">
+			{url && (
+				<DropdownMenuItem
+					onClick={() => copyToClipboard({ text: url, label: "URL" })}
+				>
+					<CopyIcon className="text-tertiary-foreground" />
+					Copy URL
+				</DropdownMenuItem>
+			)}
+			<DropdownMenuItem
+				onClick={() =>
+					copyToClipboard({ text: stackName, label: "Stack name" })
+				}
+			>
+				<CopyIcon className="text-tertiary-foreground" />
+				Copy stack name
+			</DropdownMenuItem>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem
+				variant="destructive"
+				className="items-start"
+				onClick={onDelete}
+			>
+				<TrashIcon className="mt-0.5" />
+				<span className="flex flex-col gap-0.5">
+					Delete Atom…
+					<span className="text-xs text-tertiary-foreground">
+						Removes it from Autumn, then walks you through deleting its stack in
+						AWS.
+					</span>
+				</span>
+			</DropdownMenuItem>
+		</DropdownMenuContent>
+	</DropdownMenu>
+);
+
+/** The connected Atom: its status and actions on the tray, where it runs and how to reach it beneath. */
 export const AtomDetails = ({
 	cache,
 	onDelete,
@@ -31,106 +129,87 @@ export const AtomDetails = ({
 	cache: ApiByocCache;
 	onDelete: () => void;
 }) => {
-	const [isOpen, setIsOpen] = useLocalStorage("atom:details-open", false);
+	const { checkedAt } = useAtomQuery();
 	const machine = cacheToMachine(cache);
 	const network = atomNetwork(cache);
 	const { stack_name: stackName, region, endpoint_url: url } = cache;
 
 	return (
-		<div className={cn(TABLE_TRAY_CLASS, "@container")}>
-			<div className="flex h-10 items-center gap-1.5 pr-1 pl-2">
-				<div className="flex shrink-0 items-center gap-1.5">
+		<div className={ATOM_PAGE_CARD_CLASS}>
+			<div
+				className={cn(
+					"flex h-11 items-center justify-between gap-4",
+					ATOM_PAGE_CARD_TRAY_ROW_CLASS,
+				)}
+			>
+				<div className="flex items-center gap-2.5">
 					<AtomStatusChip chip={ATOM_CONNECTED_CHIP} />
-					{region && <StatusChip className="font-mono">{region}</StatusChip>}
-					{machine && <StatusChip>{atomMachineSpecs(machine)}</StatusChip>}
-					<StatusChip>
-						<network.Icon className="size-3.5" />
-						{network.label}
-					</StatusChip>
-				</div>
-				{/* The rows below name the stack too, so a narrow card drops it first. */}
-				<StatusChip className="hidden max-w-44 font-mono @xl:inline-flex">
-					{stackName}
-				</StatusChip>
-				<Button
-					variant="secondary"
-					size="mini"
-					className="ml-auto shrink-0"
-					aria-expanded={isOpen}
-					onClick={() => setIsOpen(!isOpen)}
-				>
-					{isOpen ? "Hide details" : "Show details"}
-					<CaretUpIcon className={cn("size-3", !isOpen && "rotate-180")} />
-				</Button>
-			</div>
-			{isOpen && (
-				<div className={TABLE_TRAY_SURFACE_CLASS}>
-					{url && (
-						<AtomFieldRow label="URL" isMuted>
-							<CopyButton text={url} className={COPY_VALUE_CLASS} />
-						</AtomFieldRow>
+					{checkedAt > 0 && (
+						<span className="text-sm text-subtle">
+							Checked {format(checkedAt, "HH:mm")}
+						</span>
 					)}
-					<AtomFieldRow label="Stack name" isMuted>
-						<CopyButton text={stackName} className={COPY_VALUE_CLASS} />
-						<Button
-							variant="secondary"
-							size="mini"
-							className="ml-auto shrink-0"
-							asChild
+				</div>
+				<div className="flex items-center gap-2">
+					<Button variant="secondary" size="mini" asChild>
+						<a
+							href={awsStackConsoleUrl({ stackName, region })}
+							target="_blank"
+							rel="noreferrer"
 						>
-							<a
-								href={awsStackConsoleUrl({ stackName, region })}
-								target="_blank"
-								rel="noreferrer"
-							>
-								Open in AWS
-								<ArrowSquareOutIcon className="size-3.5" />
-							</a>
-						</Button>
-					</AtomFieldRow>
-					{region && (
-						<AtomFieldRow label="Region" isMuted>
+							Open in AWS
+							<ArrowSquareOutIcon className="size-3.5" />
+						</a>
+					</Button>
+					<AtomDetailsMenu
+						url={url}
+						stackName={stackName}
+						onDelete={onDelete}
+					/>
+				</div>
+			</div>
+			<div
+				className={cn(TABLE_TRAY_SURFACE_CLASS, "grid grid-cols-[3fr_3fr_2fr]")}
+			>
+				<DetailCell label="URL" className="border-b border-table-row-divider">
+					{url ? <AtomCopyValue text={url} /> : NO_VALUE}
+				</DetailCell>
+				<DetailCell
+					label="Stack name"
+					hasDivider
+					className="border-b border-table-row-divider"
+				>
+					<AtomCopyValue text={stackName} />
+				</DetailCell>
+				<DetailCell
+					label="Region"
+					hasDivider
+					className="border-b border-table-row-divider"
+				>
+					{region ? (
+						<>
 							<span className="shrink-0 font-mono text-xs">{region}</span>
-							<span className="truncate text-tertiary-foreground">
+							<span
+								className="truncate text-subtle"
+								title={awsRegionLabel(region)}
+							>
 								{awsRegionLabel(region)}
 							</span>
-						</AtomFieldRow>
+						</>
+					) : (
+						NO_VALUE
 					)}
-					{machine && (
-						<AtomFieldRow label="Machine" isMuted>
-							{atomMachineSpecs(machine)}
-						</AtomFieldRow>
-					)}
-					<AtomFieldRow label="Network" isMuted>
-						<network.Icon className="size-3.5 shrink-0" />
-						<span className="shrink-0 font-medium">{network.label}</span>
-						<span
-							className="min-w-0 truncate text-tertiary-foreground"
-							title={network.hint}
-						>
-							{network.hint}
-						</span>
-					</AtomFieldRow>
-					<div
-						className={cn(TABLE_TRAY_SURFACE_DIVIDER_CLASS, "bg-destructive/5")}
-					>
-						<SettingsListRow
-							title="Delete this Atom"
-							description="Removes it from Autumn, then walks you through deleting its stack in AWS."
-						>
-							<Button
-								variant="secondary"
-								size="mini"
-								className="border-red-500/40 bg-red-500/10 text-red-500 hover:bg-red-500/15"
-								onClick={onDelete}
-							>
-								<TrashIcon className="size-3.5" />
-								Delete Atom
-							</Button>
-						</SettingsListRow>
-					</div>
-				</div>
-			)}
+				</DetailCell>
+				<DetailCell label="Machine">
+					{machine ? atomMachineSpecs(machine) : NO_VALUE}
+				</DetailCell>
+				<DetailCell label="Network" hasDivider className="col-span-2">
+					<span className="shrink-0 font-medium">{network.label}</span>
+					<span className="truncate text-subtle" title={network.hint}>
+						{network.hint}
+					</span>
+				</DetailCell>
+			</div>
 		</div>
 	);
 };
