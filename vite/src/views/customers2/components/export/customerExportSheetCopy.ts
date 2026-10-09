@@ -41,7 +41,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 	},
 	[CustomerExportKind.CustomPlans]: {
 		menuIcon: SlidersHorizontalIcon,
-		menuLabel: "Export custom plans",
+		menuLabel: "Custom plans",
 		title: "Export custom plans",
 		columnsSummary: "Customer, plan, reason and what differs",
 		description:
