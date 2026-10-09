@@ -6,6 +6,7 @@ import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
+import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
@@ -18,12 +19,16 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant) mountMultiTenantRoutes({ app, ctx: ctx.multiTenant });
 
-	// Everything else needs the Atom token: the customer's app asks, Autumn keeps the subjects current.
+	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
+	const pushAuth = atomTokenMiddleware({ ctx });
 	const authorized = new Hono<AtomHttpEnv>();
-	authorized.use(atomTokenMiddleware({ ctx }));
-	authorized.post("/balances.check", receiveCheck);
-	authorized.post("/subjects.set", receiveSetSubject);
-	authorized.post("/catalog.set", receiveSetCatalog);
+	authorized.post(
+		"/balances.check",
+		clientAuthMiddleware({ ctx }),
+		receiveCheck,
+	);
+	authorized.post("/subjects.set", pushAuth, receiveSetSubject);
+	authorized.post("/catalog.set", pushAuth, receiveSetCatalog);
 	app.route("/v1", authorized);
 	return app;
 }

@@ -2,7 +2,7 @@ import type { AlienDeployment } from "../types/alienClient.js";
 
 const TERMINAL_FAILURE_STATUSES = ["error", "teardown-required"];
 
-/** The portal creates the deployment when a setup method is picked; nothing has run in the cloud yet. */
+/** Registered by the customer's stack, but alien has not deployed anything into it yet. */
 export const isDeploymentAwaitingSetup = ({
 	deployment,
 }: {
@@ -32,3 +32,41 @@ export const isDeploymentBeingDeleted = ({
 }: {
 	deployment: AlienDeployment;
 }) => DELETION_STATUSES.includes(deployment.status);
+
+const SETUP_STATUSES = [
+	"pending",
+	"preflights-failed",
+	"initial-setup",
+	"initial-setup-failed",
+];
+
+/** The customer's stack is not in place yet, or failed going in. */
+export const isDeploymentInSetup = ({
+	deployment,
+}: {
+	deployment: AlienDeployment;
+}) => SETUP_STATUSES.includes(deployment.status);
+
+const REMOVING_STATUSES = ["delete-pending", "deleting", "delete-failed"];
+
+/** A delete is tearing down what runs, or stopped partway. */
+export const isDeploymentRemoving = ({
+	deployment,
+}: {
+	deployment: AlienDeployment;
+}) => REMOVING_STATUSES.includes(deployment.status);
+
+const TEARDOWN_STATUSES = ["teardown-required", "teardown-failed"];
+
+/** What ran is gone; the customer's stack waits on them to delete it. */
+export const isDeploymentAwaitingTeardown = ({
+	deployment,
+}: {
+	deployment: AlienDeployment;
+}) => TEARDOWN_STATUSES.includes(deployment.status);
+
+export const isDeploymentDeleted = ({
+	deployment,
+}: {
+	deployment: AlienDeployment;
+}) => deployment.status === "deleted";

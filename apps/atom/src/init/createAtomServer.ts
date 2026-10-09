@@ -1,3 +1,5 @@
+import { fetchInvalidKeys } from "../auth/secretKeys/fetchInvalidKeys.js";
+import { startSecretKeys } from "../auth/secretKeys/startSecretKeys.js";
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
@@ -28,6 +30,21 @@ export const createAtomServer = ({
 				},
 			})
 		: undefined;
+	// Each thread learns and checks its own keys: no state crosses threads, at a forward and a sync per thread.
+	const secretKeys =
+		env.ATOM_MODE === "deployed"
+			? startSecretKeys({
+					findInvalid: ({ keyHashes }) =>
+						fetchInvalidKeys({
+							ctx: {
+								autumnApiUrl: env.ATOM_AUTUMN_API_URL,
+								tokenHash: env.ATOM_TOKEN_HASH,
+								logger: ctx.logger,
+							},
+							keyHashes,
+						}),
+				})
+			: undefined;
 	const app = createAtomApp({
 		ctx: {
 			auth: ctx.auth,
@@ -36,6 +53,7 @@ export const createAtomServer = ({
 			health: ctx.health,
 			counters: ctx.counters,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
+			secretKeys,
 		},
 	});
 	const statsTick = startThreadStatsTick({
@@ -66,6 +84,7 @@ export const createAtomServer = ({
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), receiving]);
 		statsTick.stop();
+		secretKeys?.stop();
 		ctx.auth.close();
 	}
 

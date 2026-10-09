@@ -1,22 +1,26 @@
-import { type ByocCacheMachine, ByocCacheStatus } from "@autumn/shared";
+import type { ApiByocCache, ByocCacheMachine } from "@autumn/shared";
+import { resizeAtomRecord } from "@/internal/byoc/atomRecords/resizeAtomRecord.js";
 import { cacheNotRunning } from "@/internal/byoc/utils/byocCacheUtils.js";
-import { getShadowAtomDeployer } from "../getShadowAtomDeployer.js";
+import { shadowAtomContext } from "../shadowAtomContext.js";
+import { shadowAtomRecordToApiCache } from "../shadowAtomRecordToApiCache.js";
+import { shadowAtomStorage } from "../shadowAtomStorage.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
-import { findShadowAtom } from "./findShadowAtom.js";
 
-/** Only a running Atom moves; one still being set up takes its machine from create. */
+/** Moves our running shadow Atom to another machine; its folders stay on the volume. */
 export const resizeShadowAtom = ({
 	machine,
 }: {
 	machine: ByocCacheMachine;
-}): Promise<void> =>
+}): Promise<ApiByocCache> =>
 	withShadowAtomLock({
 		fn: async () => {
-			const deployment = await findShadowAtom();
-			if (deployment?.status !== ByocCacheStatus.Ready) throw cacheNotRunning();
-			await getShadowAtomDeployer().resize({
-				deploymentGroupId: deployment.deploymentGroupId,
+			const existing = await shadowAtomStorage.find();
+			if (!existing) throw cacheNotRunning();
+			const record = await resizeAtomRecord({
+				ctx: shadowAtomContext(),
+				record: existing,
 				machine,
 			});
+			return shadowAtomRecordToApiCache({ record });
 		},
 	});

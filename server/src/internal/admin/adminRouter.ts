@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
+import { shadowAtomRpcRouter } from "../misc/shadowAtom/shadowAtomRouter.js";
 import {
 	handleDeleteAdminCacheV2Ramp,
 	handleGetAdminCacheV2Ramp,
@@ -24,12 +25,6 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
-import {
-	handleCreateAdminShadowAtomDeployment,
-	handleDeleteAdminShadowAtomDeployment,
-	handleGetAdminShadowAtomDeployment,
-	handleResizeAdminShadowAtomDeployment,
-} from "./handleAdminShadowAtomDeployment.js";
 import { handleGetAdminAgentProvisionRateLimitConfig } from "./handleGetAdminAgentProvisionRateLimitConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
@@ -61,7 +56,6 @@ import { handleGetOrgMember } from "./handleGetOrgMember";
 import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
-import { handleMintAdminShadowAtomToken } from "./handleMintAdminShadowAtomToken.js";
 import { handleRegisterAdminShadowAtomOrg } from "./handleRegisterAdminShadowAtomOrg.js";
 import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
 import { handleSetAdminShadowAtomOrgPercent } from "./handleSetAdminShadowAtomOrgPercent.js";
@@ -193,10 +187,6 @@ honoAdminRouter.put(
 	"/shadow-atom-config",
 	...handleUpsertAdminShadowAtomConfig,
 );
-honoAdminRouter.post(
-	"/shadow-atom-config/token",
-	...handleMintAdminShadowAtomToken,
-);
 honoAdminRouter.put(
 	"/shadow-atom-config/orgs/:org_id",
 	...handleRegisterAdminShadowAtomOrg,
@@ -213,22 +203,7 @@ honoAdminRouter.get(
 	"/shadow-atom-config/names",
 	...handleGetAdminShadowAtomNames,
 );
-honoAdminRouter.get(
-	"/shadow-atom-config/deployment",
-	...handleGetAdminShadowAtomDeployment,
-);
-honoAdminRouter.post(
-	"/shadow-atom-config/deployment",
-	...handleCreateAdminShadowAtomDeployment,
-);
-honoAdminRouter.patch(
-	"/shadow-atom-config/deployment",
-	...handleResizeAdminShadowAtomDeployment,
-);
-honoAdminRouter.delete(
-	"/shadow-atom-config/deployment",
-	...handleDeleteAdminShadowAtomDeployment,
-);
+honoAdminRouter.route("/shadow-atom", shadowAtomRpcRouter);
 honoAdminRouter.get("/db-control-config", ...handleGetAdminDbControlConfig);
 honoAdminRouter.put("/db-control-config", ...handleUpsertAdminDbControlConfig);
 honoAdminRouter.get(
