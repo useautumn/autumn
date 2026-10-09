@@ -58,6 +58,8 @@ export type ByocCacheDeployment = {
 	memory: number | null;
 	/** The Atom's token, encrypted at rest. The Atom itself holds only its hash. */
 	encrypted_token: string;
+	/** The token's SHA-256, which the Atom holds and calls Autumn with. Absent until the record's first refresh. */
+	token_hash?: string;
 	created_at: number;
 	/** The cloud region its setup asked for, then the one its deployment reports. Absent on records made before setup asked for one. */
 	region?: string | null;

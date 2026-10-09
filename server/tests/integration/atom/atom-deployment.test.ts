@@ -5,13 +5,15 @@
  *  1. a track through the API reaches the Atom: its check answers off the new balance;
  *  2. the same for an entity: its check answers off the entity's own balance, and a second entity's is untouched;
  *  3. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
- *     creating again returns the same Atom; byoc.delete_atom forgets it and the token stops working.
+ *     creating again returns the same Atom; byoc.delete_atom forgets it and the token stops working;
+ *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's.
  *
  * The scenarios use the test org's one Atom, so they run in order, in this one file.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { ByocCacheStatus } from "@autumn/shared";
+import { ATOM_KEYS_PATH, ATOM_TOKEN_HASH_HEADER } from "@autumn/byoc";
+import { AppEnv, apiKeys, ByocCacheStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -19,7 +21,15 @@ import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { and, eq, ne } from "drizzle-orm";
+import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
+import {
+	ApiKeyPrefix,
+	createKey,
+	hashApiKey,
+} from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import {
 	atomIsHosted,
 	deleteAtomDeployment,
@@ -212,3 +222,67 @@ test.skipIf(hostedAtom)(
 		expect(checkAfterDelete.status).toBe(401);
 	},
 );
+
+test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's")}`, async () => {
+	const { db } = initDrizzle();
+	const atom = await ensureAtomDeployment({ autumn });
+	const liveKey = await createKey({
+		db,
+		env: AppEnv.Live,
+		name: "Atom keys live key",
+		orgId: defaultCtx.org.id,
+		prefix: ApiKeyPrefix.Live,
+		meta: {},
+	});
+	const [otherOrgKey] = await db
+		.select({ hashedKey: apiKeys.hashed_key })
+		.from(apiKeys)
+		.where(ne(apiKeys.org_id, defaultCtx.org.id))
+		.limit(1);
+	const checkKeys = ({
+		tokenHash,
+		keyHashes,
+	}: {
+		tokenHash: string;
+		keyHashes: (string | null | undefined)[];
+	}) =>
+		fetch(`${autumn.baseUrl.replace(/\/v1$/, "")}${ATOM_KEYS_PATH}`, {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				[ATOM_TOKEN_HASH_HEADER]: tokenHash,
+			},
+			body: JSON.stringify({ key_hashes: keyHashes }),
+		});
+
+	try {
+		const own = hashApiKey(defaultCtx.orgSecretKey);
+		const live = hashApiKey(liveKey);
+		const revoked = hashApiKey("am_sk_test_never_issued");
+		const other = otherOrgKey?.hashedKey;
+		const reply = await checkKeys({
+			tokenHash: atomTokenToHash({ token: atom.token }),
+			keyHashes: [own, live, revoked, other],
+		});
+		const unknownAtom = await checkKeys({
+			tokenHash: "f".repeat(64),
+			keyHashes: [own],
+		});
+
+		expect(other).toBeString();
+		expect(reply.status).toBe(200);
+		expect(await reply.json()).toEqual({
+			invalid_key_hashes: [live, revoked, other],
+		});
+		expect(unknownAtom.status).toBe(401);
+	} finally {
+		await db
+			.delete(apiKeys)
+			.where(
+				and(
+					eq(apiKeys.org_id, defaultCtx.org.id),
+					eq(apiKeys.hashed_key, hashApiKey(liveKey)),
+				),
+			);
+	}
+});

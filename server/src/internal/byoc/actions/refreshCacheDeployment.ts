@@ -11,6 +11,10 @@ import {
 	deleteCacheDeployment,
 	updateCacheDeployment,
 } from "../repos/cacheDeployments.js";
+import {
+	atomTokenToHash,
+	cacheDeploymentToAtomToken,
+} from "../utils/atomTokenUtils.js";
 import { toCacheStages } from "../utils/cacheStageUtils.js";
 import { isCacheBeingRemoved } from "../utils/classifyCacheDeployment.js";
 import { isAtomReachable } from "../utils/isAtomReachable.js";
@@ -52,6 +56,11 @@ const deploymentToCacheDeployment = async ({
 		region: deployment?.region ?? cacheDeployment.region ?? null,
 		stages: toCacheStages({ doneStages, status }),
 		error: deployment?.error ?? null,
+		token_hash:
+			cacheDeployment.token_hash ??
+			atomTokenToHash({
+				token: cacheDeploymentToAtomToken({ cacheDeployment }),
+			}),
 	};
 };
 

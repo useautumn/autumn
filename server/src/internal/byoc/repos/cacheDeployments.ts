@@ -3,7 +3,8 @@ import {
 	type ByocCacheDeployment,
 	organizations,
 } from "@autumn/shared";
-import { and, eq, type SQL, sql } from "drizzle-orm";
+import { and, type Column, eq, or, type SQL, sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
@@ -87,3 +88,33 @@ export const deleteCacheDeployment = ({
 		value: sql`${envByocConfig({ ctx })} - 'cache'`,
 		condition: sql`(${envCache({ ctx })}->>'created_at')::bigint = ${cacheDeployment.created_at}`,
 	});
+
+/** The org and env whose Atom holds this token hash; null when no Atom does. */
+export const findCacheByTokenHash = async ({
+	db,
+	tokenHash,
+}: {
+	db: DrizzleCli;
+	tokenHash: string;
+}): Promise<{ orgId: string; env: AppEnv } | null> => {
+	const holdsTokenHash = (byocConfig: Column) =>
+		sql<boolean>`${byocConfig}->'cache'->>'token_hash' = ${tokenHash}`;
+	const [found] = await db
+		.select({
+			orgId: organizations.id,
+			isLive: holdsTokenHash(organizations.live_byoc_config),
+		})
+		.from(organizations)
+		.where(
+			or(
+				holdsTokenHash(organizations.live_byoc_config),
+				holdsTokenHash(organizations.sandbox_byoc_config),
+			),
+		)
+		.limit(1);
+	if (!found) return null;
+	return {
+		orgId: found.orgId,
+		env: found.isLive ? AppEnv.Live : AppEnv.Sandbox,
+	};
+};
