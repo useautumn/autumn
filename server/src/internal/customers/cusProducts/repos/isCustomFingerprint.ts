@@ -1,24 +1,18 @@
-import {
-	customerEntitlements,
-	customerLicenses,
-	customerPrices,
-	customerProducts,
-	type FullCusProduct,
-} from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 
-// Everything the derivation reads, so products with equal fingerprints share a flag.
-// isCustomFingerprintOf must build the same string from a loaded product.
+// Equal fingerprints share a flag; isCustomFingerprintOf must build the same string.
+// Columns are spelled out: Drizzle renders them unqualified, which rebinds them inside the subqueries.
 export const isCustomFingerprintSql = sql<string>`concat_ws(
 	'|',
-	${customerProducts.internal_product_id},
-	${customerProducts.processor}->>'type',
-	(SELECT string_agg(${customerEntitlements.entitlement_id}, ',' ORDER BY ${customerEntitlements.entitlement_id} COLLATE "C")
-		FROM ${customerEntitlements} WHERE ${customerEntitlements.customer_product_id} = ${customerProducts.id}),
-	(SELECT string_agg(${customerPrices.price_id}, ',' ORDER BY ${customerPrices.price_id} COLLATE "C")
-		FROM ${customerPrices} WHERE ${customerPrices.customer_product_id} = ${customerProducts.id}),
-	(SELECT string_agg(coalesce(${customerLicenses.plan_license_id}, '-'), ',' ORDER BY coalesce(${customerLicenses.plan_license_id}, '-') COLLATE "C")
-		FROM ${customerLicenses} WHERE ${customerLicenses.parent_customer_product_id} = ${customerProducts.id})
+	customer_products.internal_product_id,
+	customer_products.processor->>'type',
+	(SELECT string_agg(ce.entitlement_id, ',' ORDER BY ce.entitlement_id COLLATE "C")
+		FROM customer_entitlements ce WHERE ce.customer_product_id = customer_products.id),
+	(SELECT string_agg(cpr.price_id, ',' ORDER BY cpr.price_id COLLATE "C")
+		FROM customer_prices cpr WHERE cpr.customer_product_id = customer_products.id),
+	(SELECT string_agg(coalesce(cl.plan_license_id, '-'), ',' ORDER BY coalesce(cl.plan_license_id, '-') COLLATE "C")
+		FROM customer_licenses cl WHERE cl.parent_customer_product_id = customer_products.id)
 )`;
 
 // Matches string_agg: nulls skipped, null for no rows, ids sorted in "C" order.
