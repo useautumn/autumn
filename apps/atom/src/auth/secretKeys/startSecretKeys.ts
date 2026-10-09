@@ -14,7 +14,25 @@ export const startSecretKeys = ({
 	const known = new Set<string>();
 	const pending = new Set<string>();
 
-	async function sync(): Promise<void> {
+	let inFlight: Promise<void> | null = null;
+	let hasNewKeys = false;
+
+	/** One call to Autumn at a time; keys learned meanwhile go in one more call once it settles. */
+	function sync(): Promise<void> {
+		if (inFlight) {
+			hasNewKeys = true;
+			return inFlight;
+		}
+		inFlight = syncOnce().finally(() => {
+			inFlight = null;
+			if (!hasNewKeys) return;
+			hasNewKeys = false;
+			void sync();
+		});
+		return inFlight;
+	}
+
+	async function syncOnce(): Promise<void> {
 		const keyHashes = [...known, ...pending];
 		if (keyHashes.length === 0) return;
 		const invalid = await findInvalid({ keyHashes });
