@@ -555,10 +555,13 @@ const runNextBatchMigrationPage = async ({
 	// A retried customer may already be converged (skipped) yet carry a stale
 	// cache from the interrupted attempt, so retries invalidate skipped too.
 	const invalidateSkipped = (controls?.retryItemStatuses?.length ?? 0) > 0;
+	// Converged customers whose flag the is_custom re-derivation may have changed; their
+	// caches need dropping too, so a failed drop revokes their checkpoints as well.
+	let flippedSkipped: BatchMigrationPageCustomer[] = [];
 	const revokeCheckpoints = async (error: unknown) => {
 		const internalCustomerIds = [
 			...pageResult.succeeded,
-			...(invalidateSkipped ? pageResult.skipped : []),
+			...(invalidateSkipped ? pageResult.skipped : flippedSkipped),
 		].map((customer) => customer.internalId);
 		const logData = {
 			migrationRunId,
@@ -623,12 +626,13 @@ const runNextBatchMigrationPage = async ({
 								pageResult,
 								cache: isCustomCache,
 							});
+							flippedSkipped = invalidateSkipped
+								? []
+								: withoutSucceeded({ customers: flipped, pageResult });
 							await invalidate();
-							await invalidateFlippedSkipped({
+							await invalidateCustomersCaches({
 								ctx,
-								pageResult,
-								flipped,
-								skippedInvalidated: invalidateSkipped,
+								customers: flippedSkipped,
 							});
 						},
 						onFailure: revokeCheckpoints,
@@ -646,31 +650,31 @@ const runNextBatchMigrationPage = async ({
 	};
 };
 
-/** The page's own invalidation covers its changed customers; a converged one whose flag
- * flipped needs its cache dropped too, unless skipped customers were already included. */
-const invalidateFlippedSkipped = async ({
-	ctx,
+const withoutSucceeded = ({
+	customers,
 	pageResult,
-	flipped,
-	skippedInvalidated,
 }: {
-	ctx: AutumnContext;
+	customers: BatchMigrationPageCustomer[];
 	pageResult: BatchMigrationPageResult;
-	flipped: BatchMigrationPageCustomer[];
-	skippedInvalidated: boolean;
 }) => {
-	if (skippedInvalidated) return;
 	const succeededIds = new Set(
 		pageResult.succeeded.map(({ internalId }) => internalId),
 	);
-	const flippedSkipped = flipped.filter(
-		({ internalId }) => !succeededIds.has(internalId),
-	);
-	if (flippedSkipped.length === 0) return;
+	return customers.filter(({ internalId }) => !succeededIds.has(internalId));
+};
+
+const invalidateCustomersCaches = async ({
+	ctx,
+	customers,
+}: {
+	ctx: AutumnContext;
+	customers: BatchMigrationPageCustomer[];
+}) => {
+	if (customers.length === 0) return;
 	await invalidateBatchMigrationCaches({
 		ctx,
 		pageResult: {
-			succeeded: flippedSkipped,
+			succeeded: customers,
 			skipped: [],
 			insertedItems: [],
 			removedItems: [],

@@ -1,4 +1,4 @@
-import { MigrationItemRunSkipReason, withTimeout } from "@autumn/shared";
+import { MigrationItemRunSkipReason } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type IsCustomDerivationCache,
@@ -8,7 +8,6 @@ import type {
 	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
 } from "../execute/types/batchMigrationExecutionTypes.js";
-import { BATCH_MIGRATION_IS_CUSTOM_REPAIR_TIMEOUT_MS } from "../execute/utils/batchMigrationExecutionConstants.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 
 const planInternalProductIds = ({
@@ -57,16 +56,12 @@ export const rederivePageIsCustom = async ({
 	if (customers.length === 0) return [];
 
 	try {
-		const { changedCustomers } = await withTimeout({
-			timeoutMs: BATCH_MIGRATION_IS_CUSTOM_REPAIR_TIMEOUT_MS,
-			fn: () =>
-				rederiveIsCustomForCustomers({
-					ctx,
-					internalCustomerIds: customers.map(({ internalId }) => internalId),
-					internalProductIds: planInternalProductIds({ plan }),
-					cache,
-				}),
-			timeoutMessage: `is_custom re-derivation exceeded ${BATCH_MIGRATION_IS_CUSTOM_REPAIR_TIMEOUT_MS}ms`,
+		// Awaited in full: a write landing after the page's cache drop would leave a stale cache.
+		const { changedCustomers } = await rederiveIsCustomForCustomers({
+			ctx,
+			internalCustomerIds: customers.map(({ internalId }) => internalId),
+			internalProductIds: planInternalProductIds({ plan }),
+			cache,
 		});
 		const changedIds = new Set(
 			changedCustomers.map(({ internalId }) => internalId),
