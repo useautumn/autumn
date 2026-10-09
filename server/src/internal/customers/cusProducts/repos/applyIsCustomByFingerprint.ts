@@ -1,8 +1,41 @@
-import { RELEVANT_STATUSES } from "@autumn/shared";
+import { type FullCusProduct, RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type IsCustomByFingerprint = Map<string, boolean | null>;
+
+/** Matches string_agg: nulls skipped, null for no rows, ids sorted in "C" order. */
+const joinSorted = (ids: (string | null)[]) => {
+	const present = ids.filter((id): id is string => id !== null);
+	return present.length > 0 ? present.sort().join(",") : null;
+};
+
+export const isCustomFingerprintOf = ({
+	customerProduct,
+}: {
+	customerProduct: FullCusProduct;
+}): string =>
+	[
+		customerProduct.internal_product_id,
+		customerProduct.processor?.type ?? null,
+		joinSorted(
+			customerProduct.customer_entitlements.map(
+				(customerEntitlement) => customerEntitlement.entitlement_id,
+			),
+		),
+		joinSorted(
+			customerProduct.customer_prices.map(
+				(customerPrice) => customerPrice.price_id,
+			),
+		),
+		joinSorted(
+			(customerProduct.customer_licenses ?? []).map(
+				(customerLicense) => customerLicense.plan_license_id ?? "-",
+			),
+		),
+	]
+		.filter((segment) => segment !== null)
+		.join("|");
 
 export type ApplyIsCustomByFingerprintResult = {
 	updated: {
@@ -40,11 +73,11 @@ export const applyIsCustomByFingerprint = async ({
 					'|',
 					cp.internal_product_id,
 					cp.processor->>'type',
-					(SELECT string_agg(ce.entitlement_id, ',' ORDER BY ce.entitlement_id)
+					(SELECT string_agg(ce.entitlement_id, ',' ORDER BY ce.entitlement_id COLLATE "C")
 						FROM customer_entitlements ce WHERE ce.customer_product_id = cp.id),
-					(SELECT string_agg(cpr.price_id, ',' ORDER BY cpr.price_id)
+					(SELECT string_agg(cpr.price_id, ',' ORDER BY cpr.price_id COLLATE "C")
 						FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id),
-					(SELECT string_agg(coalesce(cl.plan_license_id, '-'), ',' ORDER BY cl.plan_license_id)
+					(SELECT string_agg(coalesce(cl.plan_license_id, '-'), ',' ORDER BY coalesce(cl.plan_license_id, '-') COLLATE "C")
 						FROM customer_licenses cl WHERE cl.parent_customer_product_id = cp.id)
 				) AS fingerprint
 			FROM customer_products cp

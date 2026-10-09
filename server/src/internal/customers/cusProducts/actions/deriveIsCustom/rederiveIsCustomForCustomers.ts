@@ -1,6 +1,7 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { IsCustomByFingerprint } from "@/internal/customers/cusProducts/repos/applyIsCustomByFingerprint.js";
+import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/applyIsCustomByFingerprint.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { listFullCustomerLicensesByParentIds } from "@/internal/licenses/repos/customerLicenseRepo/listFullCustomerLicensesByParentIds.js";
 import { deriveCustomerProductIsCustom } from "./deriveCustomerProductIsCustom.js";
@@ -63,10 +64,10 @@ const deriveFingerprints = async ({
 	await Promise.all(
 		representatives.map(async ({ id, fingerprint }) => {
 			const customerProduct = customerProducts.find((cp) => cp.id === id);
-			if (!customerProduct) {
-				cache.flagsByFingerprint.set(fingerprint, null);
-				return;
-			}
+			const stillMatches =
+				customerProduct !== undefined &&
+				isCustomFingerprintOf({ customerProduct }) === fingerprint;
+			if (!customerProduct || !stillMatches) return;
 			const result = deriveCustomerProductIsCustom({
 				ctx,
 				customerProduct,

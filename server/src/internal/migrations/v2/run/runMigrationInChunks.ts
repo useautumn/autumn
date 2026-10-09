@@ -93,14 +93,13 @@ const runBatchMigrationLane = async ({
 				}),
 			),
 	});
-	if (!result.canceled) {
-		await rederiveMigrationRunIsCustom({
-			ctx,
-			migrationInternalId: getMigrationEventInternalId(migrationSnapshot),
-			migrationRunId,
-			plan,
-		});
-	}
+	// A canceled run still committed its finished pages, so they are repaired too.
+	await rederiveMigrationRunIsCustom({
+		ctx,
+		migrationInternalId: getMigrationEventInternalId(migrationSnapshot),
+		migrationRunId,
+		plan,
+	});
 	return {
 		processed: result.processed,
 		chunks: result.pages,
