@@ -5,6 +5,7 @@ import { UnixMsTimestampSchema } from "@api/billing/common/unixMsTimestamp.js";
 import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
 import {
 	PlanItemPriceParamsSchema,
@@ -357,6 +358,14 @@ export const CreateInvoiceParamsSchema = z
 		tax_rate_id: z.string().optional().meta({
 			description: "Stripe tax rate ID (txr_...) applied to every line.",
 		}),
+		payment_method_types: z
+			.array(InvoicePaymentMethodSchema)
+			.min(1)
+			.optional()
+			.meta({
+				description:
+					"Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.",
+			}),
 		period_start: UnixMsTimestampSchema.optional().meta({
 			description:
 				"Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.",
