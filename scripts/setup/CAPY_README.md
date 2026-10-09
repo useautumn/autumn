@@ -10,9 +10,9 @@ Configure this repository under **Settings → Project → Dev environment**:
 
 | Lifecycle | Command | Responsibility |
 | --- | --- | --- |
-| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl`, the pinned Stripe CLI and native Kafka, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
+| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs the [memory bubble](#memory-bubble), `neonctl`, the pinned Stripe CLI and native Kafka, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
-| Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files. Starts no app processes |
+| Startup | `bash scripts/setup/capy-startup.sh` | idempotently re-applies the [memory bubble](#memory-bubble), starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files. Starts no app processes |
 | App (on demand) | `bun capy` | runs Startup (a near no-op when it already ran this boot) and starts the app in a detached tmux session |
 
 Initialize does not start services or create per-VM state, so it is safe to run
@@ -56,6 +56,44 @@ Measured on a Capy VM with the branch already provisioned:
 | `bun capy` after Startup | 47 s (re-provisioned) | 22 s full, 16 s `--server-only` |
 | Memory used, infra only | | 1.3 GB |
 | Memory used, server-only / full app | 4.1 GB full | 3.5 GB / 4.1 GB |
+
+## Memory bubble
+
+Capy VMs are 2 vCPU / 8 GB with no swap. Without help, a process that eats the
+last of RAM makes the kernel thrash page cache for minutes instead of killing
+anything: on 8 GB, `tsgo --build` in `server/` beside `bun capy --server-only`
+froze the machine for 845 s (one stall of 175 s) and every agent command timed
+out. `scripts/setup/capy-bubble.sh` makes the greedy process die instead. Both
+Initialize and Startup install it, so snapshots carry it and older machines get
+it on their next wake:
+
+| Piece | What it does |
+| --- | --- |
+| earlyoom | Sends SIGTERM to the process with the highest OOM score once `MemAvailable` drops to 256 MiB, SIGKILL at 128 MiB. `tsgo`/`tsc` are preferred; the Capy machine server (`MainThread`), envd, kappu, Xvfb, Docker, tmux, sshd and systemd are avoided. Config: `/etc/default/earlyoom` |
+| `capy-bubble.service` | Boot oneshot that sets `system.slice` `MemoryMax` to MemTotal minus 256 MB and `MemorySwapMax=0`. A backstop for when earlyoom misses: the kernel OOM-kills inside the slice instead of thrashing the whole VM |
+| `capy-machine-server.service.d/oom.conf` | `OOMPolicy=continue`. Without it one OOM kill inside the machine server stops the server and every agent command with it |
+
+What gets killed is whatever is largest when memory runs out, nearly always the
+typecheck (`tsgo` peaks around 6.6 GB). If the app itself is the largest
+process, earlyoom can kill the server's `bun` process; `bun capy` brings it
+back. The full stack (`bun capy`) already uses about 6.5 GB on 8 GB, so run
+typechecks with the app stopped (`bun capy stop`) or with `--server-only`.
+
+Measured on an 8 GB VM (worst stall is the longest the machine stopped
+scheduling a 250 ms timer):
+
+| Scenario | Without bubble | With bubble |
+| --- | --- | --- |
+| Fast memory bomb, idle machine | kernel OOM after 6 s, worst stall 1.6 s | earlyoom kill in 3 s, worst stall 0.02 s |
+| `--server-only` + server `tsgo` + git churn | 845 s thrash, worst stall 175 s, nothing killed | `tsgo` killed in 23–43 s, worst stall 0.11 s |
+| Full `bun capy` + server `tsgo` | 300 s thrash until the test timeout, worst stall 90 s, nothing killed, agent commands timed out | `tsgo` killed in 8 s, worst stall 0.11 s, dashboard and API still 200 |
+
+The cgroup cap alone does not fix slow growth (`tsgo` with earlyoom off and a
+256 MB reserve: 140 s with stalls up to 22 s before the kernel killed it), so
+earlyoom does the real work. Tune with `CAPY_BUBBLE_RESERVE_MB` and
+`CAPY_BUBBLE_EARLYOOM_MIN_KIB` when rerunning Startup. Check the state with
+`systemctl show -P MemoryMax system.slice`, `systemctl is-active earlyoom` and
+`sudo journalctl -u earlyoom`.
 
 ## Teardown
 
