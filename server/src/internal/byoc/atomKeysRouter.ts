@@ -1,7 +1,7 @@
 import { ATOM_TOKEN_HASH_HEADER, AtomKeysRequestSchema } from "@autumn/byoc";
 import { type Context, Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { findInvalidAtomKeys } from "./actions/findInvalidAtomKeys.js";
+import { findInvalidAtomKeys } from "./actions/keys/findInvalidAtomKeys.js";
 
 /** An org's Atom asks which secret keys it learned to drop, proving itself by its token hash rather than a key or session. */
 async function handleCheckAtomKeys(c: Context<HonoEnv>) {

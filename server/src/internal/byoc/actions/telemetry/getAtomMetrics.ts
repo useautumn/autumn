@@ -3,8 +3,8 @@ import type {
 	GetAtomMetricsResponse,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { queryAtomMetrics } from "../atomLogs/queryAtomMetrics.js";
-import { cacheDeploymentRepo } from "../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
+import { queryAtomMetrics } from "./atomLogs/queryAtomMetrics.js";
 
 /** The env's Atom's CPU, memory and traffic over the range, for its Monitoring charts. */
 export const getAtomMetrics = async ({

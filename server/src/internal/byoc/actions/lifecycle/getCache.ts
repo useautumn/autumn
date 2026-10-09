@@ -1,13 +1,13 @@
 import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { cacheDeploymentRepo } from "../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
 import {
 	cacheDeploymentStackName,
 	cacheDeploymentToApiCache,
 	cacheStackName,
 	cacheStackNameSuffix,
 	nextCacheAtomId,
-} from "../utils/byocCacheUtils.js";
+} from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
 /** The env's Atom and any earlier ones still coming down, as alien has them now, and the stack name its Atom (or the next one) takes. */

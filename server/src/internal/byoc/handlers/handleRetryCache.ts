@@ -1,6 +1,6 @@
 import { RetryByocCacheParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { retryCache } from "../actions/retryCache.js";
+import { retryCache } from "../actions/lifecycle/retryCache.js";
 
 export const handleRetryCache = createRoute({
 	scopes: [Scopes.Organisation.Write],

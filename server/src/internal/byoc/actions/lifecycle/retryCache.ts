@@ -1,14 +1,14 @@
 import { type ApiByocCache, ByocCacheStatus } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import { cacheDeploymentRepo } from "../repos/index.js";
+import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
 import {
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToApiCache,
 	cacheLockKey,
 	cacheNotFailed,
-} from "../utils/byocCacheUtils.js";
+} from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
 

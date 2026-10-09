@@ -2,7 +2,7 @@ import { type ByocCacheDeployment, ByocCacheStatus } from "@autumn/shared";
 import {
 	isCacheConnected,
 	isCacheSettled,
-} from "../../../utils/classifyCacheDeployment.js";
+} from "../../../../utils/classifyCacheDeployment.js";
 import type {
 	CacheDeploymentPoll,
 	WatchCacheDeploymentOutcome,

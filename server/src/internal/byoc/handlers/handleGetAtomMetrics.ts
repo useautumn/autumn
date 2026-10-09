@@ -1,6 +1,6 @@
 import { GetAtomMetricsParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getAtomMetrics } from "../actions/getAtomMetrics.js";
+import { getAtomMetrics } from "../actions/telemetry/getAtomMetrics.js";
 
 export const handleGetAtomMetrics = createRoute({
 	scopes: [Scopes.Organisation.Read],
