@@ -5,6 +5,11 @@ import {
 	readCpuCounters,
 } from "./cpuCounters.js";
 import type { SyncSectionRecorder } from "./syncSections.js";
+import {
+	readTcpCounters,
+	type TcpCounters,
+	tcpWindowOf,
+} from "./tcpCounters.js";
 
 type EventLoopStallMonitorConfig = {
 	deployment: string;
@@ -41,6 +46,8 @@ export function createEventLoopStallMonitor({
 		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
 		memory?: () => { heapUsed: number; rss: number };
 		cpu?: () => CpuCounters;
+		/** Diffed per window so a slow read or commit can be matched to retransmission timeouts in the same 10 s. */
+		tcp?: () => TcpCounters | null;
 		/** Counters the window drains into its summary line: inline answers and fallbacks, thread health. */
 		signals?: () => Record<string, unknown>;
 	};
@@ -49,7 +56,9 @@ export function createEventLoopStallMonitor({
 	const now = ctx.now ?? (() => performance.now());
 	const memory = ctx.memory ?? (() => process.memoryUsage());
 	const cpu = ctx.cpu ?? (() => readCpuCounters());
+	const tcp = ctx.tcp ?? (() => readTcpCounters());
 	let lastCpu: CpuCounters | undefined;
+	let lastTcp: TcpCounters | null = null;
 	let cancel: (() => void) | undefined;
 	let lastTickAt = 0;
 	let lastReportAt = 0;
@@ -129,6 +138,12 @@ export function createEventLoopStallMonitor({
 			? cpuWindowOf({ previous: lastCpu, current: currentCpu, windowMs })
 			: {};
 		lastCpu = currentCpu;
+		const currentTcp = tcp();
+		const tcpWindow =
+			lastTcp && currentTcp
+				? { tcp: tcpWindowOf({ previous: lastTcp, current: currentTcp }) }
+				: {};
+		lastTcp = currentTcp;
 		ctx.logger.info(
 			{
 				event: "balance_worker.event_loop",
@@ -141,6 +156,7 @@ export function createEventLoopStallMonitor({
 					maxLagMs: round(window.maxLagMs),
 					cpuModel: config.cpuModel,
 					...cpuWindow,
+					...tcpWindow,
 					...ctx.signals?.(),
 					sections,
 				},
@@ -156,6 +172,7 @@ export function createEventLoopStallMonitor({
 		lastTickAt = now();
 		lastReportAt = lastTickAt;
 		lastCpu = cpu();
+		lastTcp = tcp();
 		ctx.recorder.drainTotals();
 		cancel = (ctx.schedule ?? scheduleProbe)({
 			intervalMs: config.intervalMs,

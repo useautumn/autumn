@@ -63,8 +63,12 @@ export const attachQueryDeadline = ({
 			};
 
 			const timer = setTimeout(() => {
-				deadlineError = new Error(
-					`migration database query exceeded its ${timeoutMs}ms deadline`,
+				// A lost reply is a dropped connection: callers retry it like any other.
+				deadlineError = Object.assign(
+					new Error(
+						`migration database query exceeded its ${timeoutMs}ms deadline`,
+					),
+					{ code: "CONNECTION_DESTROYED" },
 				);
 				releaseOnce();
 				fail({ error: deadlineError, reason: "deadline" });

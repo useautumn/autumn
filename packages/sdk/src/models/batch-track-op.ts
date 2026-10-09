@@ -66,10 +66,6 @@ export type RequestBody = {
    * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
    */
   overageBehavior?: BatchTrackOverageBehavior | undefined;
-  /**
-   * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
-   */
-  async?: boolean | undefined;
 };
 
 /**
@@ -106,7 +102,6 @@ export type RequestBody$Outbound = {
   idempotency_key?: string | undefined;
   timestamp?: number | undefined;
   overage_behavior?: string | undefined;
-  async?: boolean | undefined;
 };
 
 /** @internal */
@@ -124,7 +119,6 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
     idempotencyKey: z.optional(z.string()),
     timestamp: z.optional(z.int()),
     overageBehavior: z.optional(BatchTrackOverageBehavior$outboundSchema),
-    async: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {

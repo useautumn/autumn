@@ -122,7 +122,7 @@ from autumn_sdk import Autumn
 
 
 with Autumn(
-    x_api_version="2.4.0",
+    x_api_version="2.5.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -144,7 +144,7 @@ from autumn_sdk import Autumn
 async def main():
 
     async with Autumn(
-        x_api_version="2.4.0",
+        x_api_version="2.5.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
 
@@ -175,7 +175,7 @@ from autumn_sdk import Autumn
 
 with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
-    x_api_version="2.4.0",
+    x_api_version="2.5.0",
 ) as autumn:
 
     res = autumn.check(customer_id="cus_123", feature_id="messages")
@@ -197,7 +197,7 @@ with Autumn(
 * [check](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
 
 Use this to gate access before a feature action. Enable sendEvent when you want to check and consume balance atomically in one request.
-* [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
+* [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature. Queued by default; pass async: false to apply it before responding with updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
 * [track_tokens](docs/sdks/autumn/README.md#track_tokens) - Records AI token usage for a customer and returns the updated AI credit balance.
@@ -399,7 +399,7 @@ from autumn_sdk.utils import BackoffStrategy, RetryConfig
 
 
 with Autumn(
-    x_api_version="2.4.0",
+    x_api_version="2.5.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -419,7 +419,7 @@ from autumn_sdk.utils import BackoffStrategy, RetryConfig
 
 with Autumn(
     retry_config=RetryConfig("backoff", BackoffStrategy(1, 50, 1.1, 100), False),
-    x_api_version="2.4.0",
+    x_api_version="2.5.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -450,7 +450,7 @@ from autumn_sdk import Autumn, errors
 
 
 with Autumn(
-    x_api_version="2.4.0",
+    x_api_version="2.5.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
     res = None
@@ -504,7 +504,7 @@ from autumn_sdk import Autumn
 
 with Autumn(
     server_url="https://api.useautumn.com",
-    x_api_version="2.4.0",
+    x_api_version="2.5.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -609,7 +609,7 @@ from autumn_sdk import Autumn
 def main():
 
     with Autumn(
-        x_api_version="2.4.0",
+        x_api_version="2.5.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
         # Rest of application here...
@@ -619,7 +619,7 @@ def main():
 async def amain():
 
     async with Autumn(
-        x_api_version="2.4.0",
+        x_api_version="2.5.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
         # Rest of application here...
