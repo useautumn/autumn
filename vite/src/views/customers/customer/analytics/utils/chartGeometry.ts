@@ -7,28 +7,59 @@ import { type Granularity, getEffectiveBinSize } from "./intervals";
  * the morph between them has zero shift.
  *
  * The values mirror what recharts reserves: the explicit BarChart `margin`, the
- * fixed `YAxis width`, the default `XAxis height`, and the `pt-3 pr-2` padding
- * applied to the BarChart element.
+ * fixed `YAxis width` and the default `XAxis height`. Spacing lives in the margin,
+ * never in CSS padding on the svg, which would scale it off whole pixels.
  */
 
-export const CHART_MARGIN = { top: 5, right: 5, bottom: 5, left: 5 } as const;
+export const CHART_MARGIN = { top: 17, right: 13, bottom: 5, left: 5 } as const;
 export const Y_AXIS_WIDTH = 40;
 export const X_AXIS_HEIGHT = 30;
 
-/** `pt-3 pr-2` on the BarChart element, in pixels. */
-const CHART_PAD = { top: 12, right: 8 } as const;
-
 /** Plot insets (px) from each edge of the chart body (below the legend). */
 export const LEFT_GUTTER = CHART_MARGIN.left + Y_AXIS_WIDTH;
-export const TOP_INSET = CHART_MARGIN.top + CHART_PAD.top;
+export const TOP_INSET = CHART_MARGIN.top;
 export const BOTTOM_INSET = X_AXIS_HEIGHT + CHART_MARGIN.bottom;
-export const RIGHT_INSET = CHART_MARGIN.right + CHART_PAD.right;
+export const RIGHT_INSET = CHART_MARGIN.right;
 
-/** Share of each band a bar fills, matching the mockup. */
-export const BAR_WIDTH_FRACTION = 0.62;
+/** Past this many bins a 4px gap would eat most of each slot, so the gap turns proportional. */
+const DENSE_BAR_COUNT = 120;
+/** Past this many bins a bar is only a few pixels wide, so a segment gap would hide it. */
+const NO_SEGMENT_GAP_BAR_COUNT = 90;
+const BUSY_SERIES_COUNT = 20;
 
-/** recharts applies `barCategoryGap` to both sides of a bar, so halve the slack. */
-export const BAR_CATEGORY_GAP = `${((1 - BAR_WIDTH_FRACTION) / 2) * 100}%`;
+/**
+ * Bar layout shared by the chart and its loading stubs. `categoryGap` feeds recharts (both sides of
+ * a bar) and `segmentGap` its background stroke; `fillInset`/`fillWidth` place, within one bin's
+ * slot, exactly the fill recharts paints: its rounded width, less half the stroke on each side.
+ */
+export const barLayout = ({
+	barCount,
+	seriesCount,
+}: {
+	barCount: number;
+	seriesCount: number;
+}) => {
+	const segmentGap =
+		barCount > NO_SEGMENT_GAP_BAR_COUNT
+			? 0
+			: seriesCount >= BUSY_SERIES_COUNT
+				? 1
+				: 2;
+	if (barCount > DENSE_BAR_COUNT) {
+		return {
+			categoryGap: "10%",
+			segmentGap,
+			fillInset: "10%",
+			fillWidth: "round(80%, 1px)",
+		};
+	}
+	return {
+		categoryGap: 2,
+		segmentGap,
+		fillInset: `${2 + segmentGap / 2}px`,
+		fillWidth: `calc(round(100% - 4px, 1px) - ${segmentGap}px)`,
+	};
+};
 
 /** Pixel insets of the plot area from each edge of the chart body. */
 export interface PlotInsets {

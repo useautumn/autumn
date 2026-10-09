@@ -17,7 +17,7 @@ export type VolumeBin = { period: number; total: number };
 export const useLogsVolume = () => {
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
-	const { filters } = useLogsFilters();
+	const { filters, propertyFilters } = useLogsFilters();
 	const { features, isLoading: featuresLoading } = useFeaturesQuery();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
@@ -51,7 +51,7 @@ export const useLogsVolume = () => {
 					range: filters.range,
 					bin_size: binSize,
 					timezone,
-					filter_by: toFilterBy({ properties: filters.properties }),
+					filter_by: toFilterBy({ propertyFilters }),
 				},
 			);
 			return data;

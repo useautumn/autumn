@@ -1,8 +1,8 @@
 import type { ApiEventsListItem } from "@autumn/shared";
-import { Skeleton } from "@autumn/ui";
+import { StatusChip } from "@autumn/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format } from "date-fns";
-import { type CSSProperties, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
 	TABLE_TRAY_CLASS,
 	TABLE_TRAY_SURFACE_CLASS,
@@ -11,27 +11,31 @@ import {
 import { cn } from "@/lib/utils";
 import { useLogFeatures } from "../hooks/useLogFeatures";
 import { LogsIcon } from "../LogsIcon";
+import { LogsSkeletonRow } from "./LogsSkeletonRow";
+import { ROW_GRID, ROW_HEIGHT } from "./logsListGrid";
 
-const ROW_HEIGHT = 34;
 const LOADING_ROWS = 24;
 /** Rows from the end at which the next page starts loading. */
 const PREFETCH_THRESHOLD = 20;
-
-/** One grid template for the header and every row, so columns always line up. */
-const ROW_GRID: CSSProperties = {
-	display: "grid",
-	gridTemplateColumns:
-		"150px minmax(0, 180px) minmax(0, 220px) 80px minmax(0, 1fr)",
-	columnGap: "16px",
-	alignItems: "center",
-};
 
 const CELL = "min-w-0 truncate";
 const VALUE_CELL = "min-w-0 truncate text-right tabular-nums";
 const PROPERTIES_CELL = "min-w-0 truncate pl-4";
 
-export const formatLogTime = ({ timestamp }: { timestamp: number }) =>
-	format(new Date(timestamp), "MMM d · HH:mm:ss");
+const formatLogTime = ({ timestamp }: { timestamp: number }) =>
+	format(new Date(timestamp), "d MMM HH:mm:ss");
+
+const formatProperties = ({
+	properties,
+}: {
+	properties: ApiEventsListItem["properties"];
+}) =>
+	Object.entries(properties ?? {})
+		.map(
+			([key, value]) =>
+				`${key}=${typeof value === "string" ? value : JSON.stringify(value)}`,
+		)
+		.join(" ");
 
 const ColumnHeaders = () => (
 	<div
@@ -48,62 +52,46 @@ const ColumnHeaders = () => (
 
 const LogRow = ({
 	event,
-	color,
-	isSelected,
+	featureName,
 	top,
-	onSelect,
+	onOpen,
 }: {
 	event: ApiEventsListItem;
-	color: string;
-	isSelected: boolean;
+	featureName: string;
 	top: number;
-	onSelect: () => void;
-}) => {
-	return (
-		<button
-			type="button"
-			onClick={onSelect}
-			style={{ ...ROW_GRID, top, height: ROW_HEIGHT }}
-			className={cn(
-				"absolute inset-x-0 px-4 text-left",
-				TABLE_TRAY_SURFACE_ROW_CLASS,
-				isSelected &&
-					"bg-primary/10 hover:bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]",
-			)}
+	onOpen: () => void;
+}) => (
+	<button
+		type="button"
+		onClick={onOpen}
+		style={{ ...ROW_GRID, top, height: ROW_HEIGHT }}
+		className={cn(
+			"absolute inset-x-0 px-4 text-left",
+			TABLE_TRAY_SURFACE_ROW_CLASS,
+		)}
+	>
+		<span className={cn(CELL, "text-xs text-tertiary-foreground")}>
+			{formatLogTime({ timestamp: event.timestamp })}
+		</span>
+		<span className="min-w-0">
+			<StatusChip title={event.feature_id}>{featureName}</StatusChip>
+		</span>
+		<span
+			className="min-w-0 truncate text-tiny-id text-tertiary-foreground"
+			title={event.customer_id}
 		>
-			<span
-				className={cn(
-					CELL,
-					"font-mono text-xs",
-					isSelected ? "text-foreground" : "text-tertiary-foreground",
-				)}
-			>
-				{formatLogTime({ timestamp: event.timestamp })}
-			</span>
-			<span className="flex items-center gap-2 min-w-0">
-				<span
-					className="size-2 shrink-0 rounded-sm"
-					style={{ background: color }}
-				/>
-				<span className="min-w-0 truncate text-[13px] text-foreground">
-					{event.feature_id}
-				</span>
-			</span>
-			<span
-				className={cn(CELL, "font-mono text-xs text-muted-foreground")}
-				title={event.customer_id}
-			>
-				{event.customer_id}
-			</span>
-			<span className={cn(VALUE_CELL, "text-[13px] text-foreground")}>
-				{event.value.toLocaleString()}
-			</span>
-			<span className={cn(PROPERTIES_CELL, "font-mono text-xs text-subtle")}>
-				{JSON.stringify(event.properties ?? {})}
-			</span>
-		</button>
-	);
-};
+			{event.customer_id}
+		</span>
+		<span
+			className={cn(VALUE_CELL, "text-sm font-medium text-muted-foreground")}
+		>
+			{event.value.toLocaleString()}
+		</span>
+		<span className="min-w-0 truncate pl-4 text-tiny-id text-subtle">
+			{formatProperties({ properties: event.properties })}
+		</span>
+	</button>
+);
 
 export const LogsList = ({
 	events,
@@ -111,18 +99,16 @@ export const LogsList = ({
 	hasNextPage,
 	isFetchingNextPage,
 	fetchNextPage,
-	selectedId,
-	onSelect,
+	onOpen,
 }: {
 	events: ApiEventsListItem[];
 	isLoading: boolean;
 	hasNextPage: boolean;
 	isFetchingNextPage: boolean;
 	fetchNextPage: () => void;
-	selectedId: string | null;
-	onSelect: (event: ApiEventsListItem) => void;
+	onOpen: (event: ApiEventsListItem) => void;
 }) => {
-	const { colorFor } = useLogFeatures();
+	const { nameFor } = useLogFeatures();
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const virtualizer = useVirtualizer({
 		count: events.length,
@@ -148,10 +134,7 @@ export const LogsList = ({
 
 	return (
 		<div
-			className={cn(
-				TABLE_TRAY_CLASS,
-				"m-3 flex flex-col flex-1 min-w-0 min-h-0",
-			)}
+			className={cn(TABLE_TRAY_CLASS, "flex flex-col flex-1 min-w-0 min-h-0")}
 		>
 			<ColumnHeaders />
 			{isEmpty ? (
@@ -175,19 +158,7 @@ export const LogsList = ({
 				>
 					{isLoading ? (
 						Array.from({ length: LOADING_ROWS }, (_, i) => (
-							<div
-								key={i}
-								className={cn(
-									"flex items-center gap-6 px-4",
-									TABLE_TRAY_SURFACE_ROW_CLASS,
-								)}
-								style={{ height: ROW_HEIGHT }}
-							>
-								<Skeleton className="h-2.5 w-28" />
-								<Skeleton className="h-2.5 w-24" />
-								<Skeleton className="h-2.5 w-20" />
-								<Skeleton className="h-2.5 w-1/3" />
-							</div>
+							<LogsSkeletonRow key={i} index={i} />
 						))
 					) : (
 						<div
@@ -200,10 +171,9 @@ export const LogsList = ({
 									<LogRow
 										key={event.id}
 										event={event}
-										color={colorFor(event.feature_id)}
-										isSelected={event.id === selectedId}
+										featureName={nameFor(event.feature_id)}
 										top={item.start}
-										onSelect={() => onSelect(event)}
+										onOpen={() => onOpen(event)}
 									/>
 								);
 							})}
