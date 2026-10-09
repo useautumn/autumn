@@ -18,12 +18,12 @@ export const FilterTriggerButton = ({
 	<Button
 		variant="secondary"
 		className={cn(
-			"btn-secondary-popup min-w-0 max-w-72 [&>span]:min-w-0",
+			"btn-secondary-popup min-w-0 max-w-72 [&>span]:w-full [&>span]:min-w-0",
 			className,
 		)}
 		{...props}
 	>
-		<span className="flex min-w-0 items-center gap-1">
+		<span className="flex w-full min-w-0 items-center gap-1">
 			{leading}
 			{label && (
 				<span className="shrink-0 text-tertiary-foreground">{label}</span>
@@ -35,7 +35,7 @@ export const FilterTriggerButton = ({
 					value
 				)}
 			</span>
-			<CaretDownIcon className="ml-0.5 size-3 text-tertiary-foreground" />
+			<CaretDownIcon className="ml-auto size-3 shrink-0 pl-0.5 text-tertiary-foreground" />
 		</span>
 	</Button>
 );

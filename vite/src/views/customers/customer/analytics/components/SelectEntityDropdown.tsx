@@ -18,11 +18,11 @@ export const SelectEntityDropdown = ({
 }) => {
 	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 	const { customer } = useAnalyticsContext();
-	const entities: Entity[] = customer?.entities || [];
+	// Shown as soon as a customer is picked, so the row never reflows when their record lands.
+	if (!filterStates.customer_id) return null;
 
-	if (!customer || entities.length === 0) {
-		return null;
-	}
+	const entities: Entity[] = customer?.entities ?? [];
+	const hasNoEntities = Boolean(customer) && entities.length === 0;
 
 	const options: EntityOption[] = [
 		{ id: ALL_ENTITIES, name: `All entities (${entities.length})` },
@@ -42,12 +42,16 @@ export const SelectEntityDropdown = ({
 			getOptionValue={(option) => option.id}
 			getOptionLabel={(option) => option.name}
 			searchable={entities.length > SEARCH_THRESHOLD}
+			disabled={hasNoEntities}
 			searchPlaceholder="Search entities..."
 			emptyText="No entities found"
 			trigger={renderTrigger(
-				entities.find((entity) => entity.id === filterStates.entity_id)?.name ??
-					filterStates.entity_id ??
-					"All entities",
+				hasNoEntities
+					? "None"
+					: (entities.find((entity) => entity.id === filterStates.entity_id)
+							?.name ??
+							filterStates.entity_id ??
+							"All entities"),
 			)}
 			contentClassName="min-w-[220px] rounded-xl"
 			renderOption={(option, isSelected) => (

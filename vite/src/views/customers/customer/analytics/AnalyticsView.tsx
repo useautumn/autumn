@@ -519,9 +519,10 @@ export const AnalyticsView = () => {
 							</div>
 						</div>
 
-						<div className="flex-1 min-h-0 overflow-y-auto pb-2">
+						<div className="flex flex-1 min-h-0 flex-col pb-2">
 							<motion.div
 								key={isShowingStubs ? "table-placeholder" : "table"}
+								className="flex min-h-0 flex-col"
 								initial={{ opacity: 0 }}
 								animate={{ opacity: isStale ? STALE_TABLE_OPACITY : 1 }}
 								transition={fade}

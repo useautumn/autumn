@@ -22,6 +22,8 @@ export const EventsCell = () => {
 			<PopoverTrigger asChild>
 				<FilterTriggerButton
 					label="Events"
+					// Fixed: the default events resolve after a customer change, and the row must not reflow.
+					className="w-52"
 					value={
 						firstEvent ? (
 							<>
