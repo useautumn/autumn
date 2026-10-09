@@ -49,6 +49,9 @@ export const BATCH_MIGRATION_DEFERRED_INFLIGHT = 3;
  * events); a hung call otherwise parks settle/drain until trigger kills the chunk. */
 export const BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS = 5 * 60_000;
 
+/** Ceiling for one page's is_custom re-derivation, well inside the deferred op it runs in. */
+export const BATCH_MIGRATION_IS_CUSTOM_REPAIR_TIMEOUT_MS = 60_000;
+
 /** Budget for one page. Pages run in ~15s; anything past this is a stall,
  * not a big page. */
 export const BATCH_MIGRATION_PAGE_TIMEOUT_MS = 5 * 60_000;

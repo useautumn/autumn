@@ -1,4 +1,4 @@
-import { type FullCusProduct, RELEVANT_STATUSES } from "@autumn/shared";
+import { type FullCusProduct, MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -83,7 +83,7 @@ export const applyIsCustomByFingerprint = async ({
 			FROM customer_products cp
 			WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 				AND cp.internal_product_id = ANY(${sql.param(internalProductIds)}::text[])
-				AND cp.status = ANY(${sql.param(RELEVANT_STATUSES)}::text[])
+				AND cp.status = ANY(${sql.param(MIGRATABLE_STATUSES)}::text[])
 		),
 		known AS (
 			SELECT *

@@ -2,6 +2,10 @@ import { withTimeout } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	createIsCustomDerivationCache,
+	type IsCustomDerivationCache,
+} from "@/internal/customers/cusProducts/actions/deriveIsCustom/rederiveIsCustomForCustomers.js";
 import type {
 	MigrationRunControls,
 	MigrationWebhookControls,
@@ -11,6 +15,7 @@ import {
 	type MigrationRuntimeWithEventId,
 } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { invalidateBatchMigrationCaches } from "../finalize/invalidateBatchMigrationCaches.js";
+import { rederivePageIsCustom } from "../finalize/rederivePageIsCustom.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import {
 	claimNextBatchMigrationPage,
@@ -160,6 +165,8 @@ export const runBatchMigrationChunk = async ({
 		timeoutMs: deferredOperationTimeoutMs,
 	});
 
+	const isCustomCache = createIsCustomDerivationCache();
+
 	const progress: ChunkProgress = {
 		page: 0,
 		stage: null,
@@ -246,6 +253,7 @@ export const runBatchMigrationChunk = async ({
 						recoveryWriteMs,
 						eventsDefer: events.defer,
 						cachesDefer: caches.defer,
+						isCustomCache,
 						settle: () => Promise.all([caches.settle(), events.settle()]),
 					}),
 				onTimeout: () => {
@@ -484,6 +492,7 @@ const runNextBatchMigrationPage = async ({
 	recoveryWriteMs,
 	eventsDefer,
 	cachesDefer,
+	isCustomCache,
 	settle,
 }: {
 	ctx: AutumnContext;
@@ -500,6 +509,7 @@ const runNextBatchMigrationPage = async ({
 	recoveryWriteMs: number;
 	eventsDefer: (operation: DeferredOperation) => void;
 	cachesDefer: (operation: DeferredOperation) => void;
+	isCustomCache: IsCustomDerivationCache;
 	settle: () => Promise<unknown>;
 }): Promise<NextPageOutcome> => {
 	const pageCtx = { ...ctx, db: pageDb.db };
@@ -605,7 +615,22 @@ const runNextBatchMigrationPage = async ({
 				deferCaches: (invalidate) =>
 					cachesDefer({
 						label,
-						run: invalidate,
+						run: async () => {
+							const flipped = await rederivePageIsCustom({
+								ctx,
+								migrationRunId,
+								plan,
+								pageResult,
+								cache: isCustomCache,
+							});
+							await invalidate();
+							await invalidateFlippedSkipped({
+								ctx,
+								pageResult,
+								flipped,
+								skippedInvalidated: invalidateSkipped,
+							});
+						},
 						onFailure: revokeCheckpoints,
 					}),
 			}),
@@ -619,4 +644,36 @@ const runNextBatchMigrationPage = async ({
 		pageResult,
 		pagePhases,
 	};
+};
+
+/** The page's own invalidation covers its changed customers; a converged one whose flag
+ * flipped needs its cache dropped too, unless skipped customers were already included. */
+const invalidateFlippedSkipped = async ({
+	ctx,
+	pageResult,
+	flipped,
+	skippedInvalidated,
+}: {
+	ctx: AutumnContext;
+	pageResult: BatchMigrationPageResult;
+	flipped: BatchMigrationPageCustomer[];
+	skippedInvalidated: boolean;
+}) => {
+	if (skippedInvalidated) return;
+	const succeededIds = new Set(
+		pageResult.succeeded.map(({ internalId }) => internalId),
+	);
+	const flippedSkipped = flipped.filter(
+		({ internalId }) => !succeededIds.has(internalId),
+	);
+	if (flippedSkipped.length === 0) return;
+	await invalidateBatchMigrationCaches({
+		ctx,
+		pageResult: {
+			succeeded: flippedSkipped,
+			skipped: [],
+			insertedItems: [],
+			removedItems: [],
+		},
+	});
 };
