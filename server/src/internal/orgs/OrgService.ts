@@ -191,9 +191,9 @@ export class OrgService {
 				planAliases: productAliasesToPlanAliasMap({
 					rows: result.product_aliases,
 				}),
+				atomDeployments: result.atom_deployments || [],
 			},
 			features: result.features || [],
-			atomDeployments: result.atom_deployments || [],
 		};
 	}
 

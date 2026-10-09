@@ -93,7 +93,8 @@ const createPushContext = ({
 			logged.push({ level, target: meta?.data?.target });
 	const redis = {
 		status: "ready",
-		get: async () => JSON.stringify({ org, features: [], atomDeployments }),
+		get: async () =>
+			JSON.stringify({ org: { ...org, atomDeployments }, features: [] }),
 	};
 	const atomAt = (endpointUrl: string) => async () => {
 		if (failing.includes(endpointUrl)) throw new Error("Atom down");

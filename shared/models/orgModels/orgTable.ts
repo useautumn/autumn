@@ -1,5 +1,6 @@
 import type { ProcessorConfigs } from "@models/genModels/processorSchemas.js";
 import type { PendingMigration } from "@models/migrationV2Models/pendingMigrationModel.js";
+import type { AtomRoute } from "@models/orgModels/atomDeploymentTable.js";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
@@ -182,6 +183,8 @@ export type Organization = typeof organizations.$inferSelect & {
 	pendingMigrations?: PendingMigration[];
 	/** alias_id → live plan id. Empty (or omitted) for orgs with no renames. */
 	planAliases?: Record<string, string>;
+	/** The env's Atoms, routing columns only; set when the org is read with its features. */
+	atomDeployments?: AtomRoute[];
 };
 
 // Multi tenancy flow <-> stripe connect...

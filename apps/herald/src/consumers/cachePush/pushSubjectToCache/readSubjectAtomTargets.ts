@@ -23,11 +23,10 @@ export const readSubjectAtomTargets = async ({
 		env,
 	});
 	if (!orgWithFeatures) return null;
-	const { org, atomDeployments } = orgWithFeatures;
+	const { org } = orgWithFeatures;
 	const atomConnections = orgToAtomTargets({
 		shadowAtomConfig: ctx.shadowAtomConfig.get(),
 		org,
-		atomDeployments,
 		env,
 		customerId: identity.customerId,
 	});
