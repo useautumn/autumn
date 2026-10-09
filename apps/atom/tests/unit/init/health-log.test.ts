@@ -3,8 +3,12 @@ import {
 	type AtomHealthSource,
 	readAtomHealth,
 } from "../../../src/init/atomHealth.js";
+import type { HealthInterval } from "../../../src/init/healthInterval.js";
 import { startHealthLog } from "../../../src/init/startHealthLog.js";
-import { createThreadStatsBuffer } from "../../../src/threads/stats/threadStats.js";
+import {
+	createThreadStatsBuffer,
+	openThreadCounters,
+} from "../../../src/threads/stats/threadStats.js";
 
 const EVERY_MS = 10;
 
@@ -51,9 +55,47 @@ describe("the health log", () => {
 		for (const line of logged)
 			expect(line).toEqual({
 				level: "info",
-				fields: { type: "atom_health", data: readAtomHealth(source) },
+				fields: {
+					type: "atom_health",
+					data: { ...readAtomHealth(source), interval: expect.any(Object) },
+				},
 				message: "atom health",
 			});
+	});
+
+	test("each line reports what its threads did since the line before, the first since boot", () => {
+		const threadStats = createThreadStatsBuffer({ threads: 2 });
+		const [thread0, thread1] = [0, 1].map((index) =>
+			openThreadCounters({ buffer: threadStats, index }),
+		);
+		const { logged, logger } = createLogger();
+		const healthLog = start({
+			source: { ...source, bootedAt: new Date().toISOString(), threadStats },
+			everyMs: 60_000,
+			logger,
+		});
+		const intervalOf = (line: Line | undefined) =>
+			(line?.fields as { data: { interval: HealthInterval } }).data.interval;
+
+		thread0?.add("requests", 3);
+		thread1?.add("requests", 2);
+		thread1?.add("forwarded");
+		healthLog.log();
+		thread0?.add("requests", 4);
+		thread0?.add("pushes");
+		healthLog.log();
+
+		expect(intervalOf(logged[0])).toMatchObject({
+			requests: 5,
+			forwarded: 1,
+			pushes: 0,
+			seconds: expect.any(Number),
+		});
+		expect(intervalOf(logged[1])).toMatchObject({
+			requests: 4,
+			forwarded: 0,
+			pushes: 1,
+		});
 	});
 
 	test("logs nothing once stopped, and stopping twice is harmless", async () => {
