@@ -21,6 +21,7 @@ import { SeriesNameHoverCard } from "./SeriesNameHoverCard";
 const HEADER_ROW =
 	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
 const TOTAL_ROW = "flex items-center h-11";
+const HIDDEN_SCROLLBAR = { scrollbarWidth: "none" } as const;
 /** Each cell draws its piece of the raised surface; together the rows read as one. */
 const SURFACE_CELL = "flex h-full items-center bg-table-surface";
 const PERIOD_CELL = "w-[88px] shrink-0 px-3 text-right tabular-nums";
@@ -302,8 +303,9 @@ export const UsageBreakdownTable = ({
 				ref={scrollRef}
 				onScroll={updateEdges}
 				// Bars would span the header, Total and tray padding; pinned shadows and clipped rows show the overflow.
-				// Important: the global unlayered `* { scrollbar-width: thin }` otherwise beats the utility.
-				className="min-h-0 overflow-auto scrollbar-hide!"
+				// Inline because the global unlayered `* { scrollbar-width: thin }` outranks any utility.
+				className="min-h-0 overflow-auto scrollbar-hide"
+				style={HIDDEN_SCROLLBAR}
 			>
 				<div className="flex w-max min-w-full flex-col">
 					<div className={cn(HEADER_ROW, "sticky top-0 z-20 bg-table-tray")}>
