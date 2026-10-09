@@ -13,6 +13,7 @@ import {
 	capyUnsetCommand,
 	descendantPids,
 	ensureCapyBashrc,
+	stackRunsServices,
 } from "./command.ts";
 
 describe("ensureCapyBashrc", () => {
@@ -96,5 +97,31 @@ describe("descendantPids", () => {
 		expect(descendantPids({ roots: [10], psOutput }).sort()).toEqual([
 			10, 11, 12,
 		]);
+	});
+});
+
+describe("stackRunsServices", () => {
+	test("a --server-only stack doesn't satisfy a later run that wants checkout", () => {
+		expect(
+			stackRunsServices({
+				running: "server,workers,stripe\n",
+				requested: ["server", "workers", "stripe", "checkout"],
+			}),
+		).toBe(false);
+	});
+
+	test("a running superset satisfies --server-only", () => {
+		expect(
+			stackRunsServices({
+				running: "server,vite,checkout\n",
+				requested: ["server"],
+			}),
+		).toBe(true);
+	});
+
+	test("an unknown running stack satisfies nothing", () => {
+		expect(
+			stackRunsServices({ running: undefined, requested: ["server"] }),
+		).toBe(false);
 	});
 });

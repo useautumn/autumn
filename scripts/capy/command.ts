@@ -19,7 +19,7 @@ const CAPY_SESSION = "capy";
 const CAPY_PREFIX =
 	process.env.CAPY_PREFIX ??
 	join(process.env.HOME ?? "/home/user", ".autumn-capy");
-const APP_MODE_PATH = join(CAPY_PREFIX, "app-mode");
+const APP_SERVICES_PATH = join(CAPY_PREFIX, "app-services");
 const SERVER_ONLY_FLAG = "--server-only";
 
 type CapyLogPaths = {
@@ -201,26 +201,33 @@ export function capyUnsetCommand(keys: string[]): string {
 	return keys.length > 0 ? `unset ${keys.join(" ")}; ` : "";
 }
 
-/** A running stack without the dashboard is replaced when this run wants the frontend. */
-function runningStackSatisfies({ frontend }: { frontend: boolean }) {
-	if (!tmuxSessionExists(CAPY_SESSION)) return false;
-	if (!frontend) return true;
-	return readLog(APP_MODE_PATH)?.trim() !== "server-only";
+/** True when every requested service is already in the running stack. */
+export function stackRunsServices({
+	running,
+	requested,
+}: {
+	running: string | undefined;
+	requested: string[];
+}): boolean {
+	const runningServices = running?.trim().split(",") ?? [];
+	return requested.every((name) => runningServices.includes(name));
 }
 
-function ensureAppProcess({
-	services,
-	frontend,
-}: {
-	services: string[];
-	frontend: boolean;
-}): void {
+function runningStackSatisfies({ services }: { services: string[] }) {
+	if (!tmuxSessionExists(CAPY_SESSION)) return false;
+	return stackRunsServices({
+		running: readLog(APP_SERVICES_PATH),
+		requested: services,
+	});
+}
+
+function ensureAppProcess({ services }: { services: string[] }): void {
 	ensureBunGlobalBin();
-	if (runningStackSatisfies({ frontend })) return;
+	if (runningStackSatisfies({ services })) return;
 	cmdCapyStop();
 	ensureStartup();
 	// Another `bun capy` may have launched the app while this one waited on the startup lock.
-	if (runningStackSatisfies({ frontend })) return;
+	if (runningStackSatisfies({ services })) return;
 	const env: Record<string, string> = {
 		...process.env,
 		CAPY_DEV: "1",
@@ -234,7 +241,7 @@ function ensureAppProcess({
 	mkdirSync(dirname(appLog), { recursive: true, mode: 0o700 });
 	writeFileSync(appLog, "", { mode: 0o600 });
 	chmodSync(appLog, 0o600);
-	writeFileSync(APP_MODE_PATH, frontend ? "full\n" : "server-only\n", {
+	writeFileSync(APP_SERVICES_PATH, `${services.join(",")}\n`, {
 		mode: 0o600,
 	});
 	spawnDevInTmux(
@@ -262,7 +269,7 @@ export async function cmdCapy({
 	});
 	const frontend = services.includes("vite");
 	ensureCapyBashrc();
-	ensureAppProcess({ services, frontend });
+	ensureAppProcess({ services });
 	await waitForReady({ frontend });
 	console.log(capyHandoffText({ frontend }));
 }
@@ -354,7 +361,7 @@ export function cmdCapyStop(): void {
 		alive = signalPids({ pids: alive, signal: 0 });
 	}
 	signalPids({ pids: alive, signal: "SIGKILL" });
-	rmSync(APP_MODE_PATH, { force: true });
+	rmSync(APP_SERVICES_PATH, { force: true });
 }
 
 export async function cmdCapyRestart({

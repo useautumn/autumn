@@ -35,9 +35,10 @@ tests need nothing. Start the app only when the task needs it:
 Integration tests talk to the server over HTTP on :8080 (Stripe webhook tests
 also need `stripe listen`), so they fail with "Unable to connect" without
 `bun capy`. `bun t` prints a warning when the server is down on Capy. A
-`bun capy` that wants the frontend replaces a running stack without it.
-`bun capy --server-only` is kept as an alias: it starts the stack without any
-frontend for that run, whatever the opt-ins say, and keeps a running stack.
+`bun capy` reuses a running stack only when it already runs every service the
+opt-ins ask for (recorded in `~/.autumn-capy/app-services`); otherwise it
+replaces it. `bun capy --server-only` is kept as an alias: it starts the stack
+without any frontend for that run, whatever the opt-ins say.
 
 Concurrent `bun capy` runs share a lock (`~/.autumn-capy/startup.lock`), so the
 second waits for the first's Startup. Provisioning then records a fingerprint in `~/.autumn-capy/provisioned`:
@@ -54,7 +55,11 @@ Measured on a 2 vCPU / 8 GB Capy VM:
 | First `bun capy`, fresh Neon branch | 129 s |
 | `bun capy` with the stack stopped, same boot | 17 s |
 | `bun capy restart --frontend` | 34 s |
-| Memory used, `bun capy` / with `--frontend` | 3.5 GB / 6.3 GB |
+| Memory used, `bun capy` / with `--frontend` | 3.5 GB / 4.6–6.3 GB |
+
+With `--frontend` on 8 GB, startup is tight: in three of three starts earlyoom
+killed the server's `bun` once or twice (at 2–3.5 GB) while Vite warmed up, and
+nodemon restarted it. The server-only stack peaked at 4.3 GB with no kills.
 
 ## Memory bubble
 
