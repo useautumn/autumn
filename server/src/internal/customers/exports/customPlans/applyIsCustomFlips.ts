@@ -1,6 +1,7 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
+import { isDefinitiveIsCustomResult } from "@/internal/customers/cusProducts/actions/deriveIsCustom/isDefinitiveIsCustomResult.js";
 import type { CustomerProductIsCustomResult } from "@/internal/customers/cusProducts/actions/deriveIsCustom/types/customerProductIsCustomResult.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
@@ -13,13 +14,9 @@ export type DerivedCustomerProduct = {
 export const isApplicableFlip = ({
 	customerProduct,
 	result,
-}: DerivedCustomerProduct) => {
-	const flagChanges = customerProduct.is_custom !== result.isCustom;
-	const isDefinitive =
-		result.outcome !== "catalog_missing" &&
-		result.outcome !== "comparison_failed";
-	return flagChanges && isDefinitive;
-};
+}: DerivedCustomerProduct) =>
+	customerProduct.is_custom !== result.isCustom &&
+	isDefinitiveIsCustomResult({ result });
 
 export const applyIsCustomFlips = async ({
 	ctx,

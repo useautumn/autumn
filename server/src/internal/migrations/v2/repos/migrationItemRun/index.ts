@@ -3,6 +3,7 @@ import {
 	getCustomerMigrationItemRun,
 	getMigrationItemRun,
 } from "./getMigrationItemRun.js";
+import { listConvergedCustomerItemIds } from "./listConvergedCustomerItemIds.js";
 import { listItemRunCountRows } from "./listItemRunCountRows.js";
 import {
 	getMigrationItemRunCounts,
@@ -24,6 +25,7 @@ export const migrationItemRunRepo = {
 	listCountsByRun: listMigrationItemRunCountsByRun,
 	listCountRows: listItemRunCountRows,
 	listForItems: listMigrationItemRunsForItems,
+	listConvergedCustomerIds: listConvergedCustomerItemIds,
 	markSucceeded: markMigrationItemRunSucceeded,
 	markSkipped: markMigrationItemRunSkipped,
 	markFailed: markMigrationItemRunFailed,

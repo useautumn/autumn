@@ -1,0 +1,38 @@
+import type { FullCustomer } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { deriveCustomerProductIsCustom } from "./deriveCustomerProductIsCustom.js";
+import { isDefinitiveIsCustomResult } from "./isDefinitiveIsCustomResult.js";
+import {
+	type BaseProductCache,
+	loadCachedBaseProduct,
+} from "./loadBaseProduct.js";
+
+/** Guesses keep the stored flag, since they are never written either. */
+export const fullCustomerWithDerivedIsCustom = async ({
+	ctx,
+	fullCustomer,
+	baseProducts = new Map(),
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	baseProducts?: BaseProductCache;
+}): Promise<FullCustomer> => {
+	const derivedProducts = await Promise.all(
+		fullCustomer.customer_products.map(async (customerProduct) => {
+			const result = deriveCustomerProductIsCustom({
+				ctx,
+				customerProduct,
+				baseProduct: await loadCachedBaseProduct({
+					ctx,
+					internalProductId: customerProduct.internal_product_id,
+					baseProducts,
+				}),
+				features: ctx.features,
+			});
+			if (!isDefinitiveIsCustomResult({ result })) return customerProduct;
+			return { ...customerProduct, is_custom: result.isCustom };
+		}),
+	);
+
+	return { ...fullCustomer, customer_products: derivedProducts };
+};

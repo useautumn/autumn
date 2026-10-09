@@ -5,12 +5,16 @@ import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batc
 import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
 import type { BatchMigrationChunkResult } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_PAGES_PER_CHUNK } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
+import { rederiveMigrationRunIsCustom } from "@/internal/migrations/v2/batchOperations/finalize/rederiveMigrationRunIsCustom.js";
 import type { BatchMigrationExecutionPlan } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withMigrationRunTracking } from "../actions/migrationRun/index.js";
 import type { MigrationWebhookControls } from "../cloudAdapter/types.js";
-import type { MigrationRuntimeWithEventId } from "../types/migrationDefinition.js";
+import {
+	getMigrationEventInternalId,
+	type MigrationRuntimeWithEventId,
+} from "../types/migrationDefinition.js";
 import { shouldRunBatchLane } from "../utils/shouldRunBatchLane.js";
 import { resolveMigrationWebhookControls } from "../webhookDelivery/utils/resolveMigrationWebhookControls.js";
 import { iterateBatchMigrationChunks } from "./chunks/iterateBatchMigrationChunks.js";
@@ -89,6 +93,14 @@ const runBatchMigrationLane = async ({
 				}),
 			),
 	});
+	if (!result.canceled) {
+		await rederiveMigrationRunIsCustom({
+			ctx,
+			migrationInternalId: getMigrationEventInternalId(migrationSnapshot),
+			migrationRunId,
+			plan,
+		});
+	}
 	return {
 		processed: result.processed,
 		chunks: result.pages,
