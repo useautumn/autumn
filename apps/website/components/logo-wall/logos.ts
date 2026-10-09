@@ -46,7 +46,7 @@ export const LOGOS: Logo[] = [
 		id: "mastra",
 		name: "Mastra",
 		href: "https://mastra.ai",
-		src: "/images/logos/Mastra.svg.svg",
+		src: "/images/logos/mastra.svg",
 		aspectRatio: 192.45 / 31.05,
 		opticalScale: 1.04,
 	},
