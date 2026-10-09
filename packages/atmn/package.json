@@ -1,6 +1,6 @@
 {
 	"name": "atmn",
-	"version": "2.0.101",
+	"version": "2.0.102",
 	"license": "MIT",
 	"description": "The CLI for Autumn \u2014 define your pricing in code, sync it to Autumn, and keep everything in version control.",
 	"bin": {

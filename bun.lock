@@ -393,7 +393,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "2.0.101",
+      "version": "2.0.102",
       "bin": {
         "atmn": "dist/bin.js",
       },
