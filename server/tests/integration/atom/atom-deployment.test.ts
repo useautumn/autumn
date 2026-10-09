@@ -7,11 +7,13 @@
  *  3. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
  *     creating again returns the same Atom; byoc.delete_atom forgets it and the token stops working;
  *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's;
- *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) until the entity's next
- *     track, then answers it itself again;
+ *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) and pulls the entity,
+ *     then answers it itself again, as it does after the entity's next track;
  *  6. an entity's own changes reach its check: the Atom answers off a balance update; new billing controls come with
- *     an evict, so the Atom forwards the entity until its next track, then answers off them;
- *  7. a track on the customer reaches the check of its entity, which the Atom keeps answering itself.
+ *     an evict, so the Atom forwards the entity until it pulls it again or the next track lands, then answers off them;
+ *  7. a track on the customer reaches the check of its entity, which the Atom keeps answering itself;
+ *  8. a customer the Atom does not hold: its first check is forwarded (customer_not_stored), the Atom pulls the
+ *     customer from Autumn by its token hash, and answers the next checks itself; /health counts the pull and the fill.
  * From 5 on, every reply the Atom gives equals the API's answer to the same check.
  *
  * The scenarios use the test org's one Atom, so they run in order, in this one file.
@@ -491,6 +493,76 @@ test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
 			requiredBalance: 50,
 			allowed: true,
 		});
+	},
+	120_000,
+);
+
+/** The Atom's pull counters, summed over its threads. */
+const readPullCounters = async ({
+	atom,
+}: {
+	atom: { endpointUrl: string };
+}) => {
+	const health = await (await fetch(`${atom.endpointUrl}/health`)).json();
+	const sumOf = (field: string): number =>
+		health.threads.reduce(
+			(sum: number, thread: Record<string, number>) => sum + thread[field],
+			0,
+		);
+	return {
+		misses: sumOf("subjectMisses"),
+		pulls: sumOf("subjectPulls"),
+		fills: sumOf("subjectFills"),
+	};
+};
+
+// The pull reads the subject from its balance worker, so only a worker-routed customer is pulled.
+test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
+	`${chalk.yellowBright("atom-deployment8: a customer the Atom does not hold is forwarded once, pulled, then answered by the Atom")}`,
+	async () => {
+		const customerId = "atom-deployment8";
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		// Every change to the customer lands before its Atom exists, so herald has nothing to push it afterwards.
+		await deleteAtomDeployment({ autumn });
+		const { autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [
+				s.billing.attach({ productId: free.id }),
+				s.track({ featureId: TestFeature.Messages, value: 30 }),
+			],
+		});
+		const atom = await ensureAtomDeployment({ autumn });
+		const messages = {
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId,
+			featureId: TestFeature.Messages,
+			api: autumnV2_4,
+		};
+		const before = await readPullCounters({ atom });
+
+		const first = await checkOnAtom({ ...messages, requiredBalance: 70 });
+		expect(first.forwarded).toBe("customer_not_stored");
+		expect(first.body).toMatchObject({ allowed: true });
+
+		await expectAtomCheckCorrect({
+			...messages,
+			requiredBalance: 70,
+			allowed: true,
+		});
+		await expectAtomCheckCorrect({
+			...messages,
+			requiredBalance: 71,
+			allowed: false,
+		});
+		const after = await readPullCounters({ atom });
+		expect(after.misses - before.misses).toBeGreaterThanOrEqual(1);
+		expect(after.pulls - before.pulls).toBeGreaterThanOrEqual(1);
+		expect(after.fills - before.fills).toBeGreaterThanOrEqual(1);
 	},
 	120_000,
 );

@@ -3,13 +3,35 @@ import {
 	mergeSubjectStates,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
-import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import {
+	CannotAnswerError,
+	type ForwardReason,
+} from "../../../lib/forward/cannotAnswerError.js";
 import { deepFreeze } from "../../../state/deepFreeze.js";
 import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "./freshestCatalog.js";
+
+/** The API answers, and the subject is pulled beside it so a later check can be answered here. */
+const subjectNotStored = ({
+	ctx,
+	customerId,
+	entityId,
+	reason,
+}: {
+	ctx: SlotProcessorContext;
+	customerId: string;
+	entityId: string | null;
+	reason: Extract<
+		ForwardReason,
+		"customer_not_stored" | "entity_not_stored" | "entity_stale"
+	>;
+}): CannotAnswerError => {
+	ctx.subjectPulls.request({ customerId, entityId });
+	return new CannotAnswerError({ reason });
+};
 
 /** The customer's own rows, and the entity's own beside them when the request is for an entity. */
 const readStoredParts = ({
@@ -22,14 +44,32 @@ const readStoredParts = ({
 	entityId: string | null;
 }): { customer: StoredSubject; entity: StoredSubject | null } => {
 	const customer = ctx.sqliteStore.readSubject({ customerId, entityId: null });
-	if (!customer) throw new CannotAnswerError({ reason: "customer_not_stored" });
+	if (!customer)
+		throw subjectNotStored({
+			ctx,
+			customerId,
+			entityId,
+			reason: "customer_not_stored",
+		});
 	if (entityId === null) return { customer, entity: null };
 
 	const entity = ctx.sqliteStore.readSubject({ customerId, entityId });
-	if (!entity) throw new CannotAnswerError({ reason: "entity_not_stored" });
+	if (!entity)
+		throw subjectNotStored({
+			ctx,
+			customerId,
+			entityId,
+			reason: "entity_not_stored",
+		});
 	// Read from before the customer's latest evict, the entity may still hold rows that evict replaced.
 	const isEntityCurrent = entity.logOffset >= customer.customerVersion;
-	if (!isEntityCurrent) throw new CannotAnswerError({ reason: "entity_stale" });
+	if (!isEntityCurrent)
+		throw subjectNotStored({
+			ctx,
+			customerId,
+			entityId,
+			reason: "entity_stale",
+		});
 	return { customer, entity };
 };
 

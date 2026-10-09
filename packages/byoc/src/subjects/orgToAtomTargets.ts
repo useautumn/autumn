@@ -6,7 +6,7 @@ import {
 } from "@autumn/edge-config";
 import type { AppEnv, Organization } from "@autumn/shared";
 import { atomDeploymentToConnection } from "./atomDeploymentToConnection.js";
-import type { AtomConnection } from "./types/atomClient.js";
+import type { AtomConnection } from "./types/atomConnection.js";
 
 /** Our shadow Atom's folder for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
 const shadowAtomConnection = ({

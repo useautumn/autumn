@@ -1,10 +1,8 @@
-import type { AtomSubjectBody } from "../../../atom/types/atomClient.js";
+import { readAtomSubjectBody } from "@autumn/byoc/subjects";
 import type { CachePushTiming } from "../pushQueue/createCachePushStats.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
-import { orgToAtomOrg } from "../utils/orgToAtomOrg.js";
 import { readSubjectAtomTargets } from "./readSubjectAtomTargets.js";
-import { readSubjectState } from "./readSubjectState.js";
 import { sendSubjectToAtom } from "./sendSubjectToAtom.js";
 
 /** One subject into every Atom that holds it, as its worker holds it now; null when no Atom does. */
@@ -20,24 +18,16 @@ export const pushSubjectToCache = async ({
 	const targets = await readSubjectAtomTargets({ ctx, identity });
 	if (!targets) return null;
 
-	// Taken before the read: a catalog change that lands during it must still count as newer.
-	const readAt = Date.now();
 	const readStartedAt = performance.now();
-	const { state, catalog } = await readSubjectState({
+	const body = await readAtomSubjectBody({
 		ctx,
 		identity,
 		org: targets.org,
+		requestId: `herald_cache_push_${crypto.randomUUID()}`,
+		fallbackLogOffset: logOffset,
+		customerVersion,
 	});
-	const body: AtomSubjectBody = {
-		state,
-		catalog,
-		org: orgToAtomOrg({ org: targets.org }),
-		log_offset: logOffset.toString(),
-		read_at: readAt,
-		...(customerVersion !== null && {
-			customer_version: customerVersion.toString(),
-		}),
-	};
+	if (!body) return null;
 	const sendStartedAt = performance.now();
 	await Promise.all(
 		targets.atomConnections.map((atomConnection) =>

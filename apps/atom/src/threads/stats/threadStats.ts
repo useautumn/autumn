@@ -6,6 +6,11 @@ export const THREAD_STAT_FIELDS = [
 	/** Of those requests, the ones the Autumn API answered instead of Atom. */
 	"forwarded",
 	"pushes",
+	/** Checks the stored rows could not answer: no customer, no entity, or an entity read before its customer's evict. */
+	"subjectMisses",
+	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
+	"subjectPulls",
+	"subjectFills",
 	"heldSubjects",
 	"heldBytes",
 	"heldLookups",

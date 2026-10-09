@@ -44,6 +44,7 @@ export function createPartitionWriterState({
 		applying: false,
 		drainScheduled: false,
 		recoveryError: null,
+		appendedThrough: null,
 		lastBatchSize: 0,
 		lingerWake: null,
 		deferredQueued: 0,

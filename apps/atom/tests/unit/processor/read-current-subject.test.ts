@@ -14,6 +14,7 @@ import {
 	atomOrg,
 	forwardReasonOf,
 	freshHeld,
+	noFolderPulls,
 	storedEntitySubjectWith,
 } from "../utils/atomFixtures.js";
 
@@ -60,7 +61,12 @@ const createContext = ({
 		},
 	});
 	if (shared) catalogStore.set({ rows: shared, readAt: 2000 });
-	return { sqliteStore, catalogStore, logger: getAtomLogger() };
+	return {
+		sqliteStore,
+		catalogStore,
+		logger: getAtomLogger(),
+		subjectPulls: noFolderPulls,
+	};
 };
 afterEach(() => {
 	for (const close of closers.splice(0)) close();
