@@ -1,5 +1,5 @@
-/** Regression: a committed page whose deferred cache invalidation never
- * settles must not park the whole chunk until trigger's maxDuration kills it. */
+/** Regression: a committed page whose deferred publish never settles must
+ * not park the whole chunk until trigger's maxDuration kills it. */
 
 import {
 	afterAll,
@@ -23,8 +23,8 @@ const executeModulePath =
 	"@/internal/migrations/v2/batchOperations/execute/executeBatchMigrationPage.js";
 const invalidateModulePath =
 	"@/internal/migrations/v2/batchOperations/finalize/invalidateBatchMigrationCaches.js";
-const emitEventsModulePath =
-	"@/internal/migrations/v2/batchOperations/finalize/emitBatchMigrationItemEvents.js";
+const publishModulePath =
+	"@/internal/migrations/v2/batchOperations/finalize/publishBatchMigrationChanges.js";
 const cancelTokenModulePath =
 	"@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 
@@ -32,7 +32,7 @@ const cancelTokenModulePath =
 const realClaim = { ...(await import(claimModulePath)) };
 const realExecute = { ...(await import(executeModulePath)) };
 const realInvalidate = { ...(await import(invalidateModulePath)) };
-const realEmitEvents = { ...(await import(emitEventsModulePath)) };
+const realPublish = { ...(await import(publishModulePath)) };
 const realCancelToken = { ...(await import(cancelTokenModulePath)) };
 
 type Deferred<T> = {
@@ -59,13 +59,14 @@ type Scenario = {
 	pages: BatchMigrationPageCustomer[][];
 	/** Customers per page the executor reports as already converged. */
 	skippedPerPage: number;
-	/** Per page (1-based): how the deferred cache invalidation behaves. */
-	invalidation: (page: number) => Promise<number>;
+	/** Per page (1-based): how the deferred publish behaves. */
+	publish: (page: number) => Promise<unknown>;
 	/** Per page (1-based): resolves when the page's mutations may commit. */
 	execution: (page: number) => Promise<void>;
 	executedPages: number[];
-	invalidationStarts: number[];
-	invalidationCustomers: Map<number, string[]>;
+	publishStarts: number[];
+	publishCustomers: Map<number, string[]>;
+	publishInvalidatesSkipped: boolean;
 	revokedIds: string[];
 	/** Simulates a dead Postgres socket under the checkpoint writes. */
 	checkpointWritesHang: boolean;
@@ -142,30 +143,36 @@ mock.module(executeModulePath, () => ({
 	},
 }));
 
+// Only a failed page's recovery bust reaches the cache directly.
 mock.module(invalidateModulePath, () => ({
 	invalidateBatchMigrationCaches: async ({
-		pageResult,
+		customers,
 	}: {
-		pageResult: BatchMigrationPageResult;
-	}) => {
-		const page = pageOf(pageResult.succeeded);
-		scenario.invalidationStarts.push(page);
-		scenario.invalidationCustomers.set(
-			page,
-			[...pageResult.succeeded, ...pageResult.skipped].map(
-				(customer) => customer.internalId,
-			),
-		);
-		return scenario.invalidation(page);
-	},
+		customers: BatchMigrationPageCustomer[];
+	}) => customers.length,
 }));
 
-mock.module(emitEventsModulePath, () => ({
-	emitBatchMigrationItemEvents: async ({
-		pageResult,
+mock.module(publishModulePath, () => ({
+	publishBatchMigrationChanges: async ({
+		internalCustomerIds,
+		invalidateSkipped,
 	}: {
-		pageResult: BatchMigrationPageResult;
-	}) => ({ eventCount: pageResult.succeeded.length }),
+		internalCustomerIds: string[];
+		invalidateSkipped?: boolean;
+	}) => {
+		const page = pageOf(
+			internalCustomerIds.map((internalId) => ({
+				internalId,
+				id: null,
+				name: null,
+				email: null,
+			})),
+		);
+		scenario.publishStarts.push(page);
+		scenario.publishCustomers.set(page, internalCustomerIds);
+		scenario.publishInvalidatesSkipped = invalidateSkipped === true;
+		return scenario.publish(page);
+	},
 }));
 
 mock.module(cancelTokenModulePath, () => ({
@@ -176,16 +183,15 @@ mock.module(cancelTokenModulePath, () => ({
 const { runBatchMigrationChunk } = await import(
 	"@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js"
 );
-const { BatchMigrationCacheInvalidationError, BatchMigrationStallError } =
-	await import(
-		"@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js"
-	);
+const { BatchMigrationStallError } = await import(
+	"@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js"
+);
 
 afterAll(() => {
 	mock.module(claimModulePath, () => realClaim);
 	mock.module(executeModulePath, () => realExecute);
 	mock.module(invalidateModulePath, () => realInvalidate);
-	mock.module(emitEventsModulePath, () => realEmitEvents);
+	mock.module(publishModulePath, () => realPublish);
 	mock.module(cancelTokenModulePath, () => realCancelToken);
 });
 
@@ -233,13 +239,13 @@ const plan = { patches: [] } as unknown as BatchMigrationExecutionPlan;
 
 const setScenario = ({
 	pageCount,
-	invalidation,
+	publish,
 	execution = async () => {},
 	skippedPerPage = 0,
 	checkpointWritesHang = false,
 }: {
 	pageCount: number;
-	invalidation: Scenario["invalidation"];
+	publish: Scenario["publish"];
 	execution?: Scenario["execution"];
 	skippedPerPage?: number;
 	checkpointWritesHang?: boolean;
@@ -249,11 +255,12 @@ const setScenario = ({
 			buildCustomers({ page: index + 1, count: PAGE_SIZE }),
 		),
 		skippedPerPage,
-		invalidation,
+		publish,
 		execution,
 		executedPages: [],
-		invalidationStarts: [],
-		invalidationCustomers: new Map(),
+		publishStarts: [],
+		publishCustomers: new Map(),
+		publishInvalidatesSkipped: false,
 		revokedIds: [],
 		checkpointWritesHang,
 	};
@@ -349,9 +356,9 @@ const expectStall = ({
 };
 
 describe("runBatchMigrationChunk — deferred finalization that never settles", () => {
-	test("a single page whose cache invalidation never resolves does not park the chunk in drain()", async () => {
+	test("a single page whose publish never resolves does not park the chunk in drain()", async () => {
 		const never = createDeferred<number>();
-		setScenario({ pageCount: 1, invalidation: () => never.promise });
+		setScenario({ pageCount: 1, publish: () => never.promise });
 
 		const outcome = await raceWithDeadline({
 			promise: settle(runChunk()),
@@ -361,9 +368,8 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		// The page's marks committed (execute ran) — the caller must still get
 		// an answer, and it must name the phase that stalled.
 		expect(scenario.executedPages).toEqual([1]);
-		expect(scenario.invalidationStarts).toEqual([1]);
-		const error = expectStall({ outcome, phase: "finalize_caches" });
-		expect(error).toBeInstanceOf(BatchMigrationCacheInvalidationError);
+		expect(scenario.publishStarts).toEqual([1]);
+		const error = expectStall({ outcome, phase: "publish" });
 		expect(error.message).toContain("page 1");
 		expect(error.message).toContain("1 timed out");
 		expect(
@@ -377,7 +383,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 				(line) =>
 					line.level === "error" &&
 					line.message ===
-						"batch-migration: deferred finalize_caches_drain timed out" &&
+						"batch-migration: deferred publish_drain timed out" &&
 					line.data?.label === "page 1",
 			),
 		).toBe(true);
@@ -385,9 +391,9 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		never.resolve(PAGE_SIZE);
 	});
 
-	test("three pages with unresolved cache invalidations do not park the chunk in settle()", async () => {
+	test("three pages with unresolved publishes do not park the chunk in settle()", async () => {
 		const never = createDeferred<number>();
-		setScenario({ pageCount: 4, invalidation: () => never.promise });
+		setScenario({ pageCount: 4, publish: () => never.promise });
 
 		const outcome = await raceWithDeadline({
 			promise: settle(runChunk()),
@@ -397,17 +403,17 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		// The settle() cap no longer blocks page 4 forever: every page commits,
 		// then the chunk fails naming the stalled finalization.
 		expect(scenario.executedPages).toEqual([1, 2, 3, 4]);
-		const error = expectStall({ outcome, phase: "finalize_caches" });
+		const error = expectStall({ outcome, phase: "publish" });
 		expect(error.message).toContain("4 page(s)");
 
 		never.resolve(PAGE_SIZE);
 	});
 
-	test("a stalled page's cache invalidation leaves every page's claims settled", async () => {
+	test("a stalled page's publish leaves every page's claims settled", async () => {
 		const never = createDeferred<number>();
 		setScenario({
 			pageCount: 4,
-			invalidation: (page) =>
+			publish: (page) =>
 				page === 3 ? never.promise : Promise.resolve(PAGE_SIZE),
 		});
 
@@ -416,7 +422,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			ms: 2_500,
 		});
 
-		const error = expectStall({ outcome, phase: "finalize_caches" });
+		const error = expectStall({ outcome, phase: "publish" });
 		expect(error.message).toContain("page 3");
 		expect(scenario.executedPages).toEqual([1, 2, 3, 4]);
 		expect(scenario.revokedIds).toEqual([]);
@@ -424,11 +430,11 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		never.resolve(PAGE_SIZE);
 	});
 
-	test("on a retry run a stalled page's invalidation also covers its converged (skipped) customers", async () => {
+	test("on a retry run a page publishes all its customers and busts converged (skipped) ones too", async () => {
 		const never = createDeferred<number>();
 		setScenario({
 			pageCount: 1,
-			invalidation: () => never.promise,
+			publish: () => never.promise,
 			skippedPerPage: 2,
 		});
 
@@ -439,12 +445,13 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			ms: 1_500,
 		});
 
-		expectStall({ outcome, phase: "finalize_caches" });
+		expectStall({ outcome, phase: "publish" });
 		const pageIds =
 			scenario.pages[0]?.map((customer) => customer.internalId) ?? [];
-		expect(scenario.invalidationCustomers.get(1)?.sort()).toEqual(
+		expect(scenario.publishCustomers.get(1)?.sort()).toEqual(
 			[...pageIds].sort(),
 		);
+		expect(scenario.publishInvalidatesSkipped).toBe(true);
 		expect(scenario.revokedIds).toEqual([]);
 
 		never.resolve(PAGE_SIZE);
@@ -452,13 +459,13 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 
 	test("a rejection that arrives after the deadline is captured, never unhandled", async () => {
 		const late = createDeferred<number>();
-		setScenario({ pageCount: 1, invalidation: () => late.promise });
+		setScenario({ pageCount: 1, publish: () => late.promise });
 
 		const outcome = await raceWithDeadline({
 			promise: settle(runChunk()),
 			ms: 1_500,
 		});
-		expectStall({ outcome, phase: "finalize_caches" });
+		expectStall({ outcome, phase: "publish" });
 
 		late.reject(new Error("redis gave up after the chunk moved on"));
 		// afterEach asserts no unhandledRejection reached the process.
@@ -468,7 +475,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		const never = createDeferred<void>();
 		setScenario({
 			pageCount: 3,
-			invalidation: () => Promise.resolve(PAGE_SIZE),
+			publish: () => Promise.resolve(PAGE_SIZE),
 			execution: (page) => (page === 2 ? never.promise : Promise.resolve()),
 		});
 
@@ -504,7 +511,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		const never = createDeferred<void>();
 		setScenario({
 			pageCount: 1,
-			invalidation: () => Promise.resolve(PAGE_SIZE),
+			publish: () => Promise.resolve(PAGE_SIZE),
 			execution: () => never.promise,
 			checkpointWritesHang: true,
 		});
@@ -531,7 +538,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 	test("yields slice_complete instead of starting a page the chunk deadline cannot fit", async () => {
 		setScenario({
 			pageCount: 5,
-			invalidation: () => Promise.resolve(PAGE_SIZE),
+			publish: () => Promise.resolve(PAGE_SIZE),
 			execution: () => sleep(200),
 		});
 
@@ -553,7 +560,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		const never = createDeferred<void>();
 		setScenario({
 			pageCount: 2,
-			invalidation: () => Promise.resolve(PAGE_SIZE),
+			publish: () => Promise.resolve(PAGE_SIZE),
 			execution: (page) => (page === 1 ? never.promise : Promise.resolve()),
 		});
 
@@ -577,7 +584,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		const completed: number[] = [];
 		setScenario({
 			pageCount: 2,
-			invalidation: async (page) => {
+			publish: async (page) => {
 				await sleep(60);
 				completed.push(page);
 				return PAGE_SIZE;

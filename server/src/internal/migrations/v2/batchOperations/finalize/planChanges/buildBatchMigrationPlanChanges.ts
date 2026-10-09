@@ -148,10 +148,15 @@ const toPlanChangeEntry = ({
 
 	const [first] = appliedItems;
 	if (!first) return undefined;
+	const isOneOff = first.isOneOff ?? oneOffByPlanId.get(first.planId);
+	if (isOneOff === undefined)
+		throw new Error(
+			`batch-migration: missing plan snapshot for ${first.planId}`,
+		);
 
 	const planChange = migratedProductToPlanChange({
 		planId: first.planId,
-		isOneOff: oneOffByPlanId.get(first.planId) ?? false,
+		isOneOff,
 		lifecycle: {
 			status: first.status,
 			startsAt: first.startsAt,
