@@ -1,5 +1,6 @@
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
+import { copyNeonDatabase } from "./copyNeonDatabase.ts";
 
 const NEON_API = "https://console.neon.tech/api/v2";
 const ROLE = "neondb_owner";
@@ -41,7 +42,48 @@ const neonFetch = async <T>({
 	return (await res.json()) as T;
 };
 
-type NeonBranch = { id: string; name: string };
+type NeonBranch = {
+	id: string;
+	name: string;
+	parent_id?: string;
+	expires_at?: string | null;
+};
+
+const getNeonBranch = async ({
+	ctx,
+	branchId,
+}: {
+	ctx: TwdContext;
+	branchId: string;
+}) =>
+	(
+		await neonFetch<{ branch: NeonBranch }>({
+			ctx,
+			path: `/branches/${branchId}`,
+		})
+	).branch;
+
+/** Neon deletes an expiring branch with its data, so only a non-expiring one may have children. */
+const findNonExpiringAncestor = async ({
+	ctx,
+	branch,
+}: {
+	ctx: TwdContext;
+	branch: NeonBranch;
+}): Promise<string> => {
+	if (!branch.expires_at) return branch.id;
+	if (!branch.parent_id)
+		throw new TwdError({
+			status: 409,
+			code: "neon_no_branchable_ancestor",
+			message: `Neon branch ${branch.name} expires and has no non-expiring ancestor to branch from.`,
+			next: "Ask a twd admin to check the Neon project's branch tree.",
+		});
+	return findNonExpiringAncestor({
+		ctx,
+		branch: await getNeonBranch({ ctx, branchId: branch.parent_id }),
+	});
+};
 
 /** Accepts a branch id (`br-…`) or name (`capy-…`). */
 export const resolveNeonBranchId = async ({
@@ -67,8 +109,44 @@ export const resolveNeonBranchId = async ({
 	return match.id;
 };
 
-/** A child branch that Neon itself deletes at `expiresAt`, so a lost env can't leak it. */
+/**
+ * A branch holding the parent's current data, which Neon itself deletes at `expiresAt`.
+ * Neon refuses children of an expiring parent, so those are copied onto a branch of its nearest non-expiring ancestor.
+ */
 export const createNeonBranch = async ({
+	ctx,
+	parentId,
+	name,
+	expiresAt,
+}: {
+	ctx: TwdContext;
+	parentId: string;
+	name: string;
+	expiresAt: Date;
+}) => {
+	const parent = await getNeonBranch({ ctx, branchId: parentId });
+	if (!parent.expires_at)
+		return createChildBranch({ ctx, parentId, name, expiresAt });
+
+	const branchId = await createChildBranch({
+		ctx,
+		parentId: await findNonExpiringAncestor({ ctx, branch: parent }),
+		name,
+		expiresAt,
+	});
+	try {
+		await copyNeonDatabase({
+			from: await neonConnectionUrl({ ctx, branchId: parentId, pooled: false }),
+			to: await neonConnectionUrl({ ctx, branchId, pooled: false }),
+		});
+	} catch (error) {
+		await deleteNeonBranch({ ctx, branchId }).catch(() => {});
+		throw error;
+	}
+	return branchId;
+};
+
+const createChildBranch = async ({
 	ctx,
 	parentId,
 	name,
@@ -138,17 +216,19 @@ export const deleteNeonBranch = async ({
 	});
 };
 
-/** Pooled URL, as `bun capy` writes it. */
+/** Pooled by default, as `bun capy` writes it. */
 export const neonConnectionUrl = async ({
 	ctx,
 	branchId,
+	pooled = true,
 }: {
 	ctx: TwdContext;
 	branchId: string;
+	pooled?: boolean;
 }) => {
 	const { uri } = await neonFetch<{ uri: string }>({
 		ctx,
-		path: `/connection_uri?branch_id=${branchId}&database_name=${DATABASE}&role_name=${ROLE}&pooled=true`,
+		path: `/connection_uri?branch_id=${branchId}&database_name=${DATABASE}&role_name=${ROLE}&pooled=${pooled}`,
 	});
 	return uri;
 };
