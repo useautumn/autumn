@@ -126,7 +126,7 @@ export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 		.string()
 		.nullable()
 		.describe(
-			"Where to run the setup in your cloud. Minted per call, so call again for a fresh link.",
+			"The AWS CloudFormation console page that creates Atom's stack in your account, prefilled with your region and network. Minted per call, so call again for a fresh link.",
 		),
 	token: z
 		.string()

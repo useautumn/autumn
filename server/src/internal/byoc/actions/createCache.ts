@@ -7,6 +7,7 @@ import {
 	ByocCacheStatus,
 	type CreateByocCacheParams,
 	type CreateByocCacheResponse,
+	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
 } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
@@ -37,7 +38,7 @@ import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDepl
 /** What a setup asks the org's cloud for. */
 type CacheSetupSettings = {
 	machine: ByocCacheMachine;
-	region: string | null;
+	region: string;
 	network: ByocCacheNetwork | null;
 };
 
@@ -57,7 +58,7 @@ const setupSettings = ({
 			: null;
 	return {
 		machine: namedMachine ?? askedMachine ?? DEFAULT_BYOC_CACHE_MACHINE,
-		region: region ?? existing?.region ?? null,
+		region: region ?? existing?.region ?? DEFAULT_BYOC_CACHE_AWS_REGION,
 		network: network ?? existing?.network ?? null,
 	};
 };
@@ -175,6 +176,7 @@ const startCacheSetup = async ({
 		names: cacheNames({ org, env }),
 		auth: { mode: "deployed", tokenHash: atomTokenToHash({ token }) },
 		machine: settings.machine,
+		region: settings.region,
 		network: settings.network,
 	});
 	const claimed = existing

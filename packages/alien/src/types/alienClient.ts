@@ -50,7 +50,7 @@ export type AlienEnvironmentVariable = {
 
 export type AlienSetup = {
 	deploymentGroupId: string;
-	/** Null when the manager deploys without the customer's hand (local dev). */
+	/** The AWS console's quick-create page for the stack; null when the manager deploys without the customer's hand (local dev). */
 	setupUrl: string | null;
 };
 
@@ -61,10 +61,12 @@ export type AlienConfig =
 
 /** Everything Autumn asks of alien. A deployment group is one customer, keyed by our external id. */
 export type AlienClient = {
-	/** `label` is shown in alien's dashboard; it is reduced to a valid group name. `pools` and `network` are the setup's defaults. */
+	/** `label` is shown in alien's dashboard; it is reduced to a valid group name, which also names the stack. `pools` and `network` are the setup's defaults. */
 	startSetup(params: {
 		externalId: string;
 		label: string;
+		/** The AWS region the stack's console link opens in. */
+		region: string;
 		environmentVariables: AlienEnvironmentVariable[];
 		pools: AlienFixedPools;
 		network: AlienNetwork | null;

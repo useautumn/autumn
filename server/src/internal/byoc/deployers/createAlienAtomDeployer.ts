@@ -108,17 +108,19 @@ const startAlienAtom = ({
 	names,
 	auth,
 	machine,
+	region,
 	network = null,
 }: {
 	ctx: AlienContext;
 	names: AtomNames;
 	auth: AtomAuth;
 	machine: ByocCacheMachine;
+	region: string;
 	network?: ByocCacheNetwork | null;
 }): Promise<AtomSetup> =>
-	// TODO: alien's setup link takes no region or endpoint access yet; both follow once we build our own quick-create link.
 	ctx.alienClient.startSetup({
 		...names,
+		region,
 		pools: machineToAtomPools({ machine }),
 		network: cacheNetworkToAlienNetwork({ network }),
 		environmentVariables: [

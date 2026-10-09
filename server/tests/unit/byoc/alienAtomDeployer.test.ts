@@ -6,6 +6,7 @@ import {
 	type ByocCacheNetwork,
 	ByocCacheStage,
 	ByocCacheStatus,
+	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
 	type Organization,
 } from "@autumn/shared";
@@ -44,6 +45,7 @@ describe("starting an Atom on alien", () => {
 			names: cacheNames({ org, env: AppEnv.Sandbox }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
 		});
 
 		expect(started).toHaveLength(1);
@@ -71,11 +73,26 @@ describe("starting an Atom on alien", () => {
 			names: cacheNames({ org, env: AppEnv.Sandbox }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
 		});
 
 		expect(started[0]?.pools).toEqual({
 			stateful: { machine: "t4g.micro", machines: 1 },
 		});
+	});
+
+	test("the setup opens in the chosen region", async () => {
+		const { alienClient, started } = recordingAlienClient();
+		const deployer = createAlienAtomDeployer({ alienClient });
+
+		await deployer.start({
+			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			auth: { mode: "deployed", tokenHash: "hash_1" },
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: "eu-west-2",
+		});
+
+		expect(started[0]?.region).toBe("eu-west-2");
 	});
 
 	test("our shadow Atom starts multi-tenant, its ATOM_TOKEN_HASH the admin token's", async () => {
@@ -86,6 +103,7 @@ describe("starting an Atom on alien", () => {
 			names: shadowAtomCacheNames(),
 			auth: { mode: "multi_tenant", tokenHash: "admin_hash" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
 		});
 
 		expect(started[0]?.environmentVariables).toEqual([
@@ -118,6 +136,7 @@ describe("an Atom's network on alien", () => {
 			names: cacheNames({ org, env: AppEnv.Sandbox }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
 			network,
 		});
 		return started[0]?.network;

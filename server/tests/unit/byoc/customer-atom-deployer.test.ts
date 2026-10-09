@@ -2,6 +2,7 @@ import { afterAll, expect, mock, test } from "bun:test";
 import type { AlienClient } from "@autumn/alien";
 import {
 	AppEnv,
+	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
 	type Organization,
 } from "@autumn/shared";
@@ -80,6 +81,7 @@ test("off a dev stack the customer path resolves alien, even beside a multi-tena
 		}),
 		auth: { mode: "deployed", tokenHash: "a".repeat(64) },
 		machine: DEFAULT_BYOC_CACHE_MACHINE,
+		region: DEFAULT_BYOC_CACHE_AWS_REGION,
 	});
 
 	expect(alienStarts).toHaveLength(1);

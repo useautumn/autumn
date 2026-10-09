@@ -10,8 +10,10 @@ import type {
 	AlienNetwork,
 	AlienSetup,
 } from "../types/alienClient.js";
+import { buildQuickCreateUrl } from "./buildQuickCreateUrl.js";
 import { toDeploymentGroupName } from "./deploymentGroupName.js";
 import { revokeSetupLinks } from "./setupLinks.js";
+import { getAwsTemplateUrl } from "./templateUrls.js";
 
 /** The local manager has no setup links; deploying straight away stands in for the customer running the setup. */
 const startLocalSetup = async ({
@@ -51,6 +53,7 @@ const startHostedSetup = async ({
 	config,
 	externalId,
 	name,
+	region,
 	environmentVariables,
 	pools,
 	network,
@@ -59,6 +62,7 @@ const startHostedSetup = async ({
 	config: { project: string; workspace: string };
 	externalId: string;
 	name: string;
+	region: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
 	network: AlienNetwork | null;
@@ -72,47 +76,57 @@ const startHostedSetup = async ({
 			ctx: { api },
 			deploymentGroupId: existingGroup.id,
 		});
-	const setup = await alienRequest({
-		api,
-		method: "POST",
-		path: `/v1/deployment-groups/setup-links?workspace=${encodeURIComponent(config.workspace)}`,
-		body: {
-			project: config.project,
-			externalId,
-			name,
-			deploymentSetupConfig: {
-				metadata: {},
-				policy: {
-					allowedPlatforms: ["aws"],
-					allowedSetupMethods: ["cloudformation"],
-					stackSettings: {
-						defaults: {
-							compute: fixedPoolsToCompute({ pools }),
-							...(network && { network }),
+	const [templateUrl, setup] = await Promise.all([
+		getAwsTemplateUrl({ api, project: config.project }),
+		alienRequest({
+			api,
+			method: "POST",
+			path: `/v1/deployment-groups/setup-links?workspace=${encodeURIComponent(config.workspace)}`,
+			body: {
+				project: config.project,
+				externalId,
+				name,
+				deploymentSetupConfig: {
+					metadata: {},
+					policy: {
+						allowedPlatforms: ["aws"],
+						allowedSetupMethods: ["cloudformation"],
+						stackSettings: {
+							defaults: {
+								compute: fixedPoolsToCompute({ pools }),
+								...(network && { network }),
+							},
 						},
 					},
+					environmentVariables,
 				},
-				environmentVariables,
+				// Without a setup item the portal has nothing to run and reports setup complete.
+				setupItems: [{ item: "deployment", required: true }],
 			},
-			// Without a setup item the portal has nothing to run and reports setup complete.
-			setupItems: [{ item: "deployment", required: true }],
-		},
-		schema: z.object({
-			deploymentLink: z.string(),
-			deploymentGroup: z.object({ id: z.string() }),
+			schema: z.object({
+				token: z.string(),
+				deploymentGroup: z.object({ id: z.string() }),
+			}),
 		}),
-	});
+	]);
 	return {
 		deploymentGroupId: setup.deploymentGroup.id,
-		setupUrl: setup.deploymentLink,
+		setupUrl: buildQuickCreateUrl({
+			templateUrl,
+			region,
+			stackName: name,
+			token: setup.token,
+			network,
+		}),
 	};
 };
 
-/** The local manager runs no machines or networks, so only a hosted setup takes `pools` and `network`. */
+/** The local manager runs no machines or networks, so only a hosted setup takes `region`, `pools` and `network`. */
 export const startSetup = ({
 	ctx,
 	externalId,
 	label,
+	region,
 	environmentVariables,
 	pools,
 	network,
@@ -120,6 +134,7 @@ export const startSetup = ({
 	ctx: { api: AlienApi };
 	externalId: string;
 	label: string;
+	region: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
 	network: AlienNetwork | null;
@@ -133,6 +148,7 @@ export const startSetup = ({
 		config: api.config,
 		externalId,
 		name,
+		region,
 		environmentVariables,
 		pools,
 		network,

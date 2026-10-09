@@ -23,7 +23,7 @@ export type AtomDeployment = {
 
 export type AtomSetup = {
 	deploymentGroupId: string;
-	/** Null when the Atom starts without the org running a setup. */
+	/** The AWS console page that creates the org's stack; null when the Atom starts without the org running a setup. */
 	setupUrl: string | null;
 };
 
@@ -40,6 +40,7 @@ export type AtomDeployer = {
 		names: AtomNames;
 		auth: AtomAuth;
 		machine: ByocCacheMachine;
+		region: string;
 		network?: ByocCacheNetwork | null;
 	}): Promise<AtomSetup>;
 	/** The deployment we know by id, followed through its delete; else the group's live one. Null once neither exists. */

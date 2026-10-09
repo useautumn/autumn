@@ -1,4 +1,7 @@
-import type { ByocCacheMachine } from "@autumn/shared";
+import {
+	type ByocCacheMachine,
+	DEFAULT_BYOC_CACHE_AWS_REGION,
+} from "@autumn/shared";
 import type { AtomSetup } from "@/internal/byoc/deployers/types/atomDeployer.js";
 import { shadowAtomCacheNames } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { getShadowAtomDeployer } from "../getShadowAtomDeployer.js";
@@ -19,6 +22,7 @@ export const startShadowAtom = ({
 				names: shadowAtomCacheNames(),
 				auth: { mode: "multi_tenant", tokenHash: adminTokenHash },
 				machine,
+				region: DEFAULT_BYOC_CACHE_AWS_REGION,
 			});
 			await patchShadowAtomConfig({
 				patch: { deploymentGroupId: setup.deploymentGroupId },
