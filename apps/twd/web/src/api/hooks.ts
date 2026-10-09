@@ -256,7 +256,9 @@ export const useQaEnvs = () =>
 				})
 			).envs,
 		refetchInterval: (query) =>
-			query.state.data?.some((e) => e.state === "building") ? 5_000 : 30_000,
+			query.state.data?.some((e) => e.building || e.state === "building")
+				? 5_000
+				: 30_000,
 	});
 
 export const useDeleteQaEnv = () => {

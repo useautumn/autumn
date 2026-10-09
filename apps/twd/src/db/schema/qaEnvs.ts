@@ -1,4 +1,11 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+	boolean,
+	index,
+	integer,
+	pgTable,
+	text,
+	timestamp,
+} from "drizzle-orm/pg-core";
 
 export type QaEnvState = "building" | "ready" | "failed" | "deleted";
 
@@ -16,6 +23,12 @@ export const qaEnvs = pgTable(
 		neonBranchId: text("neon_branch_id"),
 		/** sealSecret(JSON) of the Capy machine's BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD. */
 		sealedSecrets: text("sealed_secrets").notNull(),
+		/** Bumped by every create/re-ship; the qa job keeps building until appliedVersion catches up. */
+		requestVersion: integer("request_version").notNull().default(1),
+		appliedVersion: integer("applied_version").notNull().default(0),
+		/** Options of the latest request, consumed by the job that applies it. */
+		freshDbRequested: boolean("fresh_db_requested").notNull().default(false),
+		supersedes: text("supersedes"),
 		lastJobId: text("last_job_id"),
 		error: text("error"),
 		createdBy: text("created_by").notNull(),

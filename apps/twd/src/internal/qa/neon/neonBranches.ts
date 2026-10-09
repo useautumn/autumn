@@ -14,19 +14,19 @@ const neonFetch = async <T>({
 	path: string;
 	init?: RequestInit;
 }): Promise<T> => {
-	const { NEON_API_KEY, QA_NEON_PROJECT_ID } = ctx.env;
-	if (!NEON_API_KEY)
+	const { QA_NEON_API_KEY, QA_NEON_PROJECT_ID } = ctx.env;
+	if (!QA_NEON_API_KEY)
 		throw new TwdError({
 			status: 503,
 			code: "qa_unconfigured",
 			message:
-				"NEON_API_KEY is not set on twd, so it can't branch QA databases.",
-			next: "Ask a twd admin to set NEON_API_KEY.",
+				"QA_NEON_API_KEY is not set on twd, so it can't branch QA databases.",
+			next: "Ask a twd admin to set QA_NEON_API_KEY.",
 		});
 	const res = await fetch(`${NEON_API}/projects/${QA_NEON_PROJECT_ID}${path}`, {
 		...init,
 		headers: {
-			authorization: `Bearer ${NEON_API_KEY}`,
+			authorization: `Bearer ${QA_NEON_API_KEY}`,
 			"content-type": "application/json",
 			accept: "application/json",
 		},

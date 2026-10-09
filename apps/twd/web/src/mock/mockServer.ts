@@ -1373,6 +1373,18 @@ const qaEnvs: QaEnv[] = [
 		error:
 			"image build failed: bun install exited 1 (lockfile out of date: @autumn/shared@workspace:* not found)",
 	}),
+	// Enough rows to show the table scrolling inside the page.
+	...Array.from({ length: 30 }, (_, i) =>
+		qaEnv({
+			name: `capy-branch-${i + 1}`,
+			ref: `capy/branch-${i + 1}`,
+			state: "ready",
+			awake: i % 4 === 0,
+			createdBy: i % 2 ? "john@useautumn.com" : ME.email,
+			createdMs: START - (i + 1) * 2 * HOUR,
+			lastActiveAt: iso(START - (i + 1) * 20 * MIN),
+		}),
+	),
 ];
 
 /** Building envs advance through the phases, then land ready and awake. */

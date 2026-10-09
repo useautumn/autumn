@@ -16,7 +16,8 @@ import { formatDate, handle, timeAgo } from "../lib/format.ts";
 import { useNow } from "../lib/useNow.ts";
 
 const QaState = ({ env }: { env: QaEnv }) => {
-	if (env.state === "building")
+	// A re-ship keeps serving the old build (state "ready") while env.building tracks the new one.
+	if (env.building || env.state === "building")
 		return (
 			<span className="flex w-full flex-col gap-1">
 				<span className="flex items-center gap-1.5 text-xs tabular-nums">

@@ -28,7 +28,7 @@ const TwdEnvSchema = z.object({
 	QA_WORKER_URL: z.string().url().optional(),
 	QA_ADMIN_TOKEN: z.string().optional(),
 	/** Branches each QA env's database off the requester's Capy Neon branch. */
-	NEON_API_KEY: z.string().optional(),
+	QA_NEON_API_KEY: z.string().optional(),
 	QA_NEON_PROJECT_ID: z.string().default("weathered-morning-43833874"),
 	/** Local dev only: skip auth and act as this @useautumn.com email. */
 	TWD_DEV_AUTH_EMAIL: z.string().optional(),

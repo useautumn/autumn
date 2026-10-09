@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type {
 	CreateQaEnvBody,
 	CreateQaEnvResponse,
@@ -60,23 +61,41 @@ export const createQaEnv = async ({
 		deletedAt: null,
 	};
 	const existing = await getQaEnvRow({ ctx, name });
-	const reviveDeleted =
-		existing?.state === "deleted"
-			? { state: "building" as const, neonBranchId: null }
-			: {};
+	// The Worker deletes an expired env's branch on its own, so the row's branch id is stale too.
+	const isDead =
+		existing?.state === "deleted" ||
+		(existing && existing.expiresAt.getTime() < now.getTime());
+	const request = {
+		freshDbRequested: Boolean(body.freshDb),
+		supersedes: body.supersedes ?? null,
+	};
 	await ctx.db
 		.insert(qaEnvs)
-		.values({ name, ...values, state: "building", createdBy: actor.email })
+		.values({
+			name,
+			...values,
+			...request,
+			state: "building",
+			createdBy: actor.email,
+		})
 		.onConflictDoUpdate({
 			target: qaEnvs.name,
-			set: { ...values, ...reviveDeleted, updatedAt: now },
+			set: {
+				...values,
+				...request,
+				...(isDead
+					? {
+							state: "building" as const,
+							neonBranchId: null,
+							appliedVersion: 0,
+						}
+					: {}),
+				requestVersion: sql`${qaEnvs.requestVersion} + 1`,
+				updatedAt: now,
+			},
 		});
 
-	const payload: QaJobPayload = {
-		name,
-		freshDb: body.freshDb,
-		supersedes: body.supersedes,
-	};
+	const payload: QaJobPayload = { name };
 	const { job, deduped } = await enqueueJob({
 		ctx,
 		kind: "qa",

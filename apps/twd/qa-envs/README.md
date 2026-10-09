@@ -30,12 +30,12 @@ cd apps/twd/qa-envs && bun install
 CLOUDFLARE_API_TOKEN=… bun run deploy   # stages the dev lockfile's manifests, builds and pushes the image
 ```
 
-Secrets (`wrangler secret put`): `QA_ADMIN_TOKEN`, `NEON_API_KEY`, `CLOUDFLARE_API_TOKEN`
+Secrets (`wrangler secret put`): `QA_ADMIN_TOKEN`, `NEON_API_KEY` (Worker side, deletes expired branches), `CLOUDFLARE_API_TOKEN`
 (zone DNS + Workers Routes edit on atmn.lol), `STRIPE_CONNECT_WEBHOOK_SECRET` (the sandbox
 platform's Connect endpoint pointing at `hooks.atmn.lol/stripe/connect/sandbox`),
 `QA_SHARED_ENV` (JSON of the shared Capy keys; see `src/qaEnv/sharedEnv.ts`).
 
-twd needs `QA_WORKER_URL`, `QA_ADMIN_TOKEN` and `NEON_API_KEY`.
+twd needs `QA_WORKER_URL`, `QA_ADMIN_TOKEN` and `QA_NEON_API_KEY`.
 
 Redeploy after a lockfile change to keep the baked node_modules close to dev (a branch's
 diff installs at build time either way). The `durable_object` scheduling policy is in beta.

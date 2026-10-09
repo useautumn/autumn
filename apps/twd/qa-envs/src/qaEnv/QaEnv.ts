@@ -31,8 +31,9 @@ const BUILD_IDLE_MS = 30 * 60_000;
 const BUILD_POLL_MS = 5_000;
 const BUILDER_RETENTION_MS = 60 * 60_000;
 const PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+// OAuth-connected orgs keep their account in account_id, platform-created ones in default_account_id.
 const ACCOUNTS_QUERY =
-	"select distinct test_stripe_connect->>'default_account_id' from organizations where test_stripe_connect->>'default_account_id' is not null";
+	"select distinct a from organizations, lateral (values (test_stripe_connect->>'account_id'), (test_stripe_connect->>'default_account_id')) v(a) where a is not null";
 
 type BuilderConfig = {
 	envName: string;
@@ -293,15 +294,19 @@ export class QaEnv extends DurableObject<Env> {
 		};
 		const buildId = crypto.randomUUID().slice(0, 8);
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
-		await this.ctx.storage.put("config", config);
+		// A live build keeps its config (database, secrets, expiry) until the new one is adopted.
+		const hasLiveBuild = Boolean(await this.ctx.storage.get("snapshot"));
+		if (!hasLiveBuild) await this.ctx.storage.put("config", config);
+		await this.ctx.storage.put("pendingConfig", config);
 		await this.ctx.storage.put("pendingBuild", {
 			buildId,
 			sha: input.sha,
 			startedAt: now,
 		});
-		if (!(await this.ctx.storage.get("snapshot")))
+		if (!hasLiveBuild)
 			await this.ctx.storage.put("state", "building" satisfies EnvState);
-		await this.ctx.storage.setAlarm(config.expiresAt);
+		// The alarm reschedules itself: idle checks while awake, else the live expiry.
+		await this.ctx.storage.setAlarm(Date.now() + IDLE_CHECK_MS);
 		await this.builderStub(buildId, name).startBuilder({
 			envName: name,
 			buildId,
@@ -324,13 +329,17 @@ export class QaEnv extends DurableObject<Env> {
 		);
 		await this.ctx.storage.put("lastBuild", result);
 		if (pending?.buildId !== result.buildId) return;
-		await this.ctx.storage.delete("pendingBuild");
+		if ((await this.envState()) === "expired") return;
+		const pendingConfig =
+			await this.ctx.storage.get<EnvConfig>("pendingConfig");
+		await this.ctx.storage.delete(["pendingBuild", "pendingConfig"]);
 		if (!result.ok || !snapshot) {
 			if (!(await this.ctx.storage.get("snapshot")))
 				await this.ctx.storage.put("state", "failed" satisfies EnvState);
 			return;
 		}
 		await this.ctx.storage.put("snapshot", snapshot);
+		if (pendingConfig) await this.ctx.storage.put("config", pendingConfig);
 		await this.ctx.storage.put("sha", result.sha);
 		await this.ctx.storage.put("state", "ready" satisfies EnvState);
 		if (accounts) await this.registerAccounts(accounts);
@@ -459,6 +468,9 @@ export class QaEnv extends DurableObject<Env> {
 			return new Response("This QA env has expired", { status: 410 });
 
 		const url = new URL(req.url);
+		// Webhooks arrive only through the signed hooks.<domain> router; the server here skips verification.
+		if (url.pathname.startsWith("/webhooks/"))
+			return new Response("Not found", { status: 404 });
 		if (url.pathname === "/__qa_progress")
 			return Response.json(await this.progress(state));
 		if (state !== "ready")
@@ -582,8 +594,7 @@ export class QaEnv extends DurableObject<Env> {
 		if (!config) throw new Error("no such env");
 		if (!/^[a-z-]+$/.test(service)) throw new Error("invalid service");
 		await this.ensureAwake(config);
-		const file =
-			service === "boot" ? "/var/qa/boot.log" : `/var/qa/logs/${service}.log`;
+		const file = `/var/qa/logs/${service}.log`;
 		return this.exec({
 			cmd: [
 				"sh",
@@ -659,14 +670,18 @@ export class QaEnv extends DurableObject<Env> {
 			throw new Error("env did not become ready");
 	}
 
+	/** Keeps webhook routing current while QA connects or swaps Stripe accounts. */
+	private async refreshStripeAccounts(config: EnvConfig) {
+		const accounts = await this.stripeAccounts({
+			databaseUrl: config.runtimeEnv.DATABASE_URL ?? "",
+		}).catch(() => null);
+		if (accounts) await this.registerAccounts(accounts);
+	}
+
 	async sleepNow() {
 		const config = await this.config();
-		if (config && this.container.running) {
-			const accounts = await this.stripeAccounts({
-				databaseUrl: config.runtimeEnv.DATABASE_URL ?? "",
-			}).catch(() => null);
-			if (accounts) await this.registerAccounts(accounts);
-		}
+		if (config && this.container.running)
+			await this.refreshStripeAccounts(config);
 		if (this.container.running) await this.container.destroy("idle");
 		this.ready = false;
 	}
@@ -684,7 +699,11 @@ export class QaEnv extends DurableObject<Env> {
 					branchId: config.neonBranchId,
 				});
 		}
-		await this.ctx.storage.delete(["snapshot", "pendingBuild"]);
+		await this.ctx.storage.delete([
+			"snapshot",
+			"pendingBuild",
+			"pendingConfig",
+		]);
 		await this.ctx.storage.put("state", "expired" satisfies EnvState);
 		// Keep a tombstone so the URL answers 410; nothing else needs the instance.
 		await this.ctx.storage.deleteAlarm();
@@ -713,6 +732,7 @@ export class QaEnv extends DurableObject<Env> {
 			await this.sleepNow();
 			return this.ctx.storage.setAlarm(config.expiresAt);
 		}
+		await this.refreshStripeAccounts(config);
 		await this.ctx.storage.setAlarm(
 			Math.min(config.expiresAt, Date.now() + IDLE_CHECK_MS),
 		);
