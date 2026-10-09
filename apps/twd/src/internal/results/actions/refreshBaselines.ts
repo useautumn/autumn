@@ -16,7 +16,12 @@ export const refreshBaselines = async ({
 }: {
 	ctx: TwdContext;
 }): Promise<{ files: number }> => {
-	const upserted = await ctx.db.execute<{ file: string }>(sql`
+	const upserted = await ctx.db.transaction(async (tx) => {
+		// Serialize refreshes so one never prunes a CI baseline another just rebuilt.
+		await tx.execute(
+			sql`select pg_advisory_xact_lock(hashtext('refresh_baselines'))`,
+		);
+		return tx.execute<{ file: string }>(sql`
 		with recent as (
 			select id from runs
 			where is_baseline
@@ -76,6 +81,7 @@ export const refreshBaselines = async ({
 			updated_at = excluded.updated_at
 		returning file
 	`);
+	});
 	ctx.logger.info("baselines refreshed", { files: upserted.length });
 	return { files: upserted.length };
 };
