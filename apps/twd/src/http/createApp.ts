@@ -13,6 +13,7 @@ import { jobsRoutes } from "./routes/jobs.ts";
 import { keysRoutes } from "./routes/keys.ts";
 import { liveRoutes } from "./routes/live.ts";
 import { mcpRoutes } from "./routes/mcp.ts";
+import { qaRoutes } from "./routes/qa.ts";
 import { resultsRoutes } from "./routes/results.ts";
 import { runsRoutes } from "./routes/runs.ts";
 import { webhooksRoutes } from "./routes/webhooks.ts";
@@ -35,6 +36,7 @@ const createApi = () =>
 		.route("/", capacityRoutes)
 		.route("/", costsRoutes)
 		.route("/", mcpRoutes)
+		.route("/", qaRoutes)
 		.route("/", liveRoutes);
 
 /**

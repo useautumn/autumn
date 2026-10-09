@@ -261,9 +261,8 @@ export const Consent = () => {
 		requestedScopes,
 		sessionScopes,
 	});
-	const selectableResources = getOAuthResourcesForScopes(
-		getSelectableOAuthResourceScopes(requestedScopes),
-	);
+	const selectableScopes = getSelectableOAuthResourceScopes(requestedScopes);
+	const selectableResources = getOAuthResourcesForScopes(selectableScopes);
 	const selectedScopes = scopeOverride ?? defaultScopes;
 	const selectedEnvironment =
 		environmentOverride ?? clientInfo?.default_env ?? initialEnv;
@@ -319,7 +318,10 @@ export const Consent = () => {
 			});
 
 			if (error) {
-				toast.error(error.message || "Authorization failed");
+				const { error_description } = error as { error_description?: string };
+				toast.error(
+					error.message || error_description || "Authorization failed",
+				);
 				setIsSubmitting(false);
 				return;
 			}
@@ -634,6 +636,7 @@ export const Consent = () => {
 								value={selectedScopes}
 								onChange={setScopeOverride}
 								availableScopes={sessionScopes}
+								requestedScopes={selectableScopes}
 								resources={selectableResources}
 								allowUnrestricted={false}
 								disabled={isSubmitting || clientInfo.is_atmn}
