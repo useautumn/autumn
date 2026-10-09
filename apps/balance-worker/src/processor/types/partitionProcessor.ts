@@ -89,6 +89,8 @@ export type PartitionProcessor = {
 		command: EvictCommand;
 		waitsForSnapshotDelete?: boolean;
 	}): Promise<EvictReply>;
+	/** Leaves the partition cold once its earlier writes are stored; Postgres keeps every row true, so nothing is logged. */
+	evictResident(): Promise<{ evicted: number; resident: number }>;
 	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	decideFinalize(params: {

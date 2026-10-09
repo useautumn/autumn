@@ -1,4 +1,10 @@
 export {
+	type BalanceWorkerColdStartEdgeConfig,
+	BalanceWorkerColdStartEdgeConfigSchema,
+	balanceWorkerColdStartEdgeConfig,
+	defaultBalanceWorkerColdStartEdgeConfig,
+} from "./configs/balanceWorkerColdStart/balanceWorkerColdStartEdgeConfig.js";
+export {
 	type BalanceWorkerThreadsEdgeConfig,
 	BalanceWorkerThreadsEdgeConfigSchema,
 	balanceWorkerThreadsEdgeConfig,
@@ -53,6 +59,7 @@ export {
 } from "./configs/subjectSnapshots/subjectSnapshotsEdgeConfig.js";
 export { EdgeConfigNotConfiguredError } from "./errors.js";
 export {
+	BALANCE_WORKER_COLD_START_KEY,
 	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
 	BALANCE_WORKER_THREADS_CONFIG_KEY,
 	DB_CONTROL_CONFIG_KEY,

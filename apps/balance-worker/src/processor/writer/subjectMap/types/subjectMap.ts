@@ -30,6 +30,10 @@ export type SubjectMap = {
 	hideCustomer(params: { customerKey: string }): void;
 	/** A subject of the customer is hidden and not yet dropped: Postgres may lack a write its rows carried. */
 	isEvicting(params: { customerKey: string }): boolean;
+	/** Drops every resident subject with no unapplied write, returning how many; nothing reaches `onEvicted`, since Postgres holds them true. */
+	dropUnpinned(): number;
+	/** Subjects whose rows are resident now. */
+	residentCount(): number;
 	clear(): void;
 	/** Bytes held by resident states, for tests and health. */
 	sizeBytes(): number;

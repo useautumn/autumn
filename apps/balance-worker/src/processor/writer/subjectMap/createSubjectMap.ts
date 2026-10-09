@@ -267,6 +267,23 @@ export const createSubjectMap = ({
 			(subjectKey) => entries.get(subjectKey)?.bytes === 0,
 		);
 
+	/** As a restart would: every subject whose rows the store already holds goes; pinned and hidden ones stay with their writes. */
+	const dropUnpinned = (): number => {
+		let dropped = 0;
+		for (const [subjectKey, entry] of [...entries]) {
+			if (entry.pins > 0 || entry.bytes === 0) continue;
+			dropState({ subjectKey, entry });
+			dropped += 1;
+		}
+		return dropped;
+	};
+
+	const residentCount = (): number => {
+		let resident = 0;
+		for (const entry of entries.values()) if (entry.bytes > 0) resident += 1;
+		return resident;
+	};
+
 	const clear = () => {
 		entries.clear();
 		subjectKeysByCustomer.clear();
@@ -283,6 +300,8 @@ export const createSubjectMap = ({
 		evictCustomer,
 		hideCustomer,
 		isEvicting,
+		dropUnpinned,
+		residentCount,
 		clear,
 		sizeBytes: () => totalBytes,
 		bytesOf: ({ subjectKey }: { subjectKey: string }) =>

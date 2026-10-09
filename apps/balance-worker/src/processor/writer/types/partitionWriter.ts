@@ -80,6 +80,8 @@ export type PartitionWriter = {
 	}): SubjectState | null;
 	/** Hides the customer's resident rows at once and drops them once Postgres holds the writes before it. */
 	evict(params: { customerKey: string }): Promise<void>;
+	/** Once Postgres holds every write before it, drops every resident subject; returns how many went and how many stay pinned. */
+	evictResident(): Promise<{ evicted: number; resident: number }>;
 	/** Null unless an evict hid rows whose writes Postgres may still lack; then resolves once it holds them, so a load can read. */
 	waitForEvicted(params: { customerKey: string }): Promise<void> | null;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.

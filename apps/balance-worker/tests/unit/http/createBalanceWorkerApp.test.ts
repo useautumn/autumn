@@ -153,6 +153,7 @@ const fixture = ({
 			catalog: catalogRowsToCatalog({ rows: [] }),
 		}),
 		evict: async () => ({ evicted: false }),
+		evictResident: async () => ({ evicted: 0, resident: 0 }),
 		flush: async () => ({ stored: true as const }),
 		finalize: async () => {
 			throw new Error("Finalize is not configured in this fixture");
