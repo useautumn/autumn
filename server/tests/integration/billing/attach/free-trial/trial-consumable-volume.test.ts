@@ -39,8 +39,8 @@ const setupVolumeTrial = async ({ customerId }: { customerId: string }) => {
 };
 
 // Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of 100 included → total bands 0-600 / 601+.
-// DISABLED: the in-trial upcoming-invoice preview bills trial usage (150 × $0.10 = $15, total
-// $35) but the trial-end invoice skips consumables ($20). getCusInvoicePreviews has no trial skip.
+// DISABLED: in-trial preview bills trial usage ($35) but the trial-end invoice skips it ($20); not
+// volume-specific. Re-enable once the shared trial-usage preview fix (separate thread off dev) lands.
 test.skip(`${chalk.yellowBright("trial-consumable-volume 1: in-trial preview matches the trial-end invoice (base only)")}`, async () => {
 	const customerId = "trial-cons-vol-end";
 	const { ctx, autumnV1, autumnV2_2, testClockId, advancedTo } =
