@@ -6,12 +6,14 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	priceToStripeNickname,
+	priceToStripeTiersMode,
+	priceToStripeUnitTiers,
+	RecaseError,
+	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
-	RecaseError,
-	priceToStripeNickname,
-	type StripePriceNicknameSource,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -23,7 +25,6 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { buildStripePriceIdempotencyKey } from "../prices/utils/buildIdempotencyKey";
 import { billingIntervalToStripe } from "../stripePriceUtils";
-import { priceToInArrearTiers } from "./createStripeInArrear";
 
 interface StripeMeteredPriceParams {
 	stripeCli: Stripe;
@@ -74,7 +75,7 @@ export const createStripeMeteredPrice = async ({
 		}
 	}
 
-	const tiers = priceToInArrearTiers({
+	const tiers = priceToStripeUnitTiers({
 		price,
 		entitlement: ent,
 		org,
@@ -89,7 +90,7 @@ export const createStripeMeteredPrice = async ({
 	} else {
 		priceAmountData = {
 			billing_scheme: "tiered",
-			tiers_mode: "graduated",
+			tiers_mode: priceToStripeTiersMode({ price }),
 			tiers: tiers,
 		};
 	}
@@ -210,7 +211,7 @@ export const createStripeArrearProrated = async ({
 	}
 
 	// let tiers = arrearProratedToStripeTiers(price, relatedEnt);
-	const tiers = priceToInArrearTiers({
+	const tiers = priceToStripeUnitTiers({
 		price,
 		entitlement: relatedEnt,
 		org,
@@ -225,7 +226,7 @@ export const createStripeArrearProrated = async ({
 	} else {
 		priceAmountData = {
 			billing_scheme: "tiered",
-			tiers_mode: "graduated",
+			tiers_mode: priceToStripeTiersMode({ price }),
 			tiers: tiers,
 		};
 	}

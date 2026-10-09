@@ -1,24 +1,21 @@
 import {
-	atmnToStripeAmountDecimal,
-	type Entitlement,
 	type EntitlementWithFeature,
 	ErrCode,
 	type Feature,
 	type Organization,
 	type Price,
 	type Product,
-	priceConfigForCurrency,
 	priceToEnt,
 	priceToStripeNickname,
+	priceToStripeTiersMode,
+	priceToStripeUnitTiers,
 	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
-	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import RecaseError from "@server/utils/errorUtils";
-import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import {
@@ -148,72 +145,6 @@ const getStripeMeter = async ({
 	return meter;
 };
 
-// IN ARREAR
-export const priceToInArrearTiers = ({
-	price,
-	entitlement,
-	org,
-	currency: targetCurrency,
-}: {
-	price: Price;
-	entitlement: Entitlement;
-	org: Organization;
-	currency?: string;
-}) => {
-	const config = price.config as UsagePriceConfig;
-	const orgDefault = (org.default_currency || "usd").toLowerCase();
-	const currency = (
-		targetCurrency ??
-		config.base_currency ??
-		orgDefault
-	).toLowerCase();
-	const usageTiers = structuredClone(
-		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
-			config.usage_tiers,
-	);
-
-	const tiers: any[] = [];
-	if (entitlement.allowance) {
-		tiers.push({
-			unit_amount: 0,
-			up_to: entitlement.allowance,
-		});
-
-		for (const tier of usageTiers) {
-			if (tier.to !== -1 && tier.to !== TierInfinite) {
-				tier.to = (tier.to || 0) + entitlement.allowance;
-			}
-		}
-	}
-
-	for (const tier of usageTiers) {
-		const atmnUnitAmount = new Decimal(tier.amount).div(
-			config.billing_units ?? 1,
-		);
-
-		const stripeUnitAmountDecimal = atmnToStripeAmountDecimal({
-			amount: atmnUnitAmount,
-			currency,
-		});
-
-		const stripeTier: Record<string, unknown> = {
-			unit_amount_decimal: stripeUnitAmountDecimal,
-			up_to: tier.to === -1 ? "inf" : tier.to,
-		};
-
-		if (tier.flat_amount) {
-			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
-				amount: tier.flat_amount,
-				currency,
-			});
-		}
-
-		tiers.push(stripeTier);
-	}
-
-	return tiers;
-};
-
 export const createStripeInArrearPrice = async ({
 	db,
 	stripeCli,
@@ -307,7 +238,7 @@ export const createStripeInArrearPrice = async ({
 	config.stripe_meter_id = meter.id;
 	config.stripe_event_name = meter.event_name;
 
-	const tiers = priceToInArrearTiers({
+	const tiers = priceToStripeUnitTiers({
 		price,
 		entitlement: relatedEnt,
 		org,
@@ -322,7 +253,7 @@ export const createStripeInArrearPrice = async ({
 	} else {
 		priceAmountData = {
 			billing_scheme: "tiered",
-			tiers_mode: "graduated",
+			tiers_mode: priceToStripeTiersMode({ price }),
 			tiers: tiers,
 		};
 	}
