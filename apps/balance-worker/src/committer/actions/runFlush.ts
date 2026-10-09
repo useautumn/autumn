@@ -50,7 +50,11 @@ const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
 	table === "pooledBalances" ||
 	table === "locks";
 
-/** An update replaces its columns; with guards on, under its `before` unless a billing plan's, which lands last-write-wins. */
+/**
+ * An update replaces its columns; with guards on, under its `before` unless a billing plan's, which lands last-write-wins.
+ * A reset's refill is always guarded: it was decided from the cycle it ended, so a writer outside the worker that moved
+ * the row since (a renewal, an anchor sync) superseded it, and the reset is skipped rather than landed over that write.
+ */
 const updateToSubjectRowUpdate = ({
 	table,
 	change,
@@ -67,8 +71,9 @@ const updateToSubjectRowUpdate = ({
 	addEntries: {},
 	// `before` stays on the log for its readers either way.
 	guard:
-		BALANCE_WORKER_COMMITTER_GUARDS_ENABLED &&
-		commandType !== "applyBillingPlan"
+		(commandType === "reset" && table === "customerEntitlements") ||
+		(BALANCE_WORKER_COMMITTER_GUARDS_ENABLED &&
+			commandType !== "applyBillingPlan")
 			? { ...change.before }
 			: {},
 });

@@ -31,7 +31,8 @@ const addEntriesToValue = ({
 	return map;
 };
 
-/** Later changes land on top of earlier ones: a set replaces what an add moved, an add after a set moves the set value. */
+/** Later changes land on top of earlier ones: a set replaces what an add moved, an add after a set moves the set value.
+ *  A later guard on a column the chain has not moved still describes the row the chain began on, so it joins the first's. */
 const foldInto = ({
 	folded,
 	next,
@@ -39,6 +40,13 @@ const foldInto = ({
 	folded: SubjectRowUpdate;
 	next: SubjectRowUpdate;
 }): void => {
+	for (const [column, value] of Object.entries(next.guard)) {
+		const moved =
+			column in folded.set ||
+			column in folded.add ||
+			column in folded.addEntries;
+		if (!moved && !(column in folded.guard)) folded.guard[column] = value;
+	}
 	for (const [column, value] of Object.entries(next.set)) {
 		folded.set[column] = value;
 		delete folded.add[column];
@@ -160,7 +168,7 @@ const foldChange = ({
 
 /**
  * One change per row, in first-seen order. A statement may not touch a row twice, and a hot row's
- * many moves become one write. An update's guard stays the first change's: what the row held when the chain began.
+ * many moves become one write. An update's guard is what the row held when the chain began.
  * `foldedIndexOf[i]` is null when change i cancelled out (an insert this flush later deleted).
  */
 export const foldSubjectRowChanges = ({

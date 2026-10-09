@@ -83,6 +83,38 @@ describe("foldSubjectRowChanges", () => {
 		]);
 	});
 
+	test("a later change's guard on a column the chain never moved still holds at the chain's start, so it joins the fold", () => {
+		const { folded } = foldSubjectRowChanges({
+			changes: [
+				update({
+					table: "customerEntitlements",
+					id: "ce_1",
+					add: { balance: -5 },
+				}),
+				update({
+					table: "customerEntitlements",
+					id: "ce_1",
+					set: { balance: 100, next_reset_at: 2 },
+					guard: { next_reset_at: 1, balance: 95 },
+				}),
+				update({
+					table: "customerEntitlements",
+					id: "ce_1",
+					set: { balance: 100, next_reset_at: 3 },
+					guard: { next_reset_at: 2 },
+				}),
+			],
+		});
+		expect(folded).toEqual([
+			update({
+				table: "customerEntitlements",
+				id: "ce_1",
+				set: { balance: 100, next_reset_at: 3 },
+				guard: { next_reset_at: 1 },
+			}),
+		]);
+	});
+
 	test("map entries sum per key and field, and land on a set map value when one is present", () => {
 		const { folded } = foldSubjectRowChanges({
 			changes: [
