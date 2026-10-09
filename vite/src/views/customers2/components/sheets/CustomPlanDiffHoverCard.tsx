@@ -32,7 +32,6 @@ const OUTCOME_NOTES: Record<
 		"The comparison with the catalog failed, so this plan is treated as custom.",
 };
 
-/** Arrays and objects (tiers, license customizations) read as their terms, not `[object Object]`. */
 const describeValue = (value: unknown): string => {
 	if (value === null || value === undefined) return "none";
 	if (typeof value === "number")
@@ -52,7 +51,6 @@ const describeValue = (value: unknown): string => {
 const formatTerm = (term: string | null) =>
 	term === null ? "none" : describeValue(JSON.parse(term));
 
-/** A whole added or removed item lists only the terms that say something about it. */
 const isTellingField = ({
 	field,
 	kind,
@@ -185,7 +183,6 @@ function CustomDiffBody({
 	);
 }
 
-/** The Custom chip; hovering it shows how the plan differs from its catalog version. */
 export function CustomPlanDiffHoverCard({
 	customerId,
 	customerProductId,
@@ -197,7 +194,6 @@ export function CustomPlanDiffHoverCard({
 	catalogVersion: number;
 	featureNameById: Map<string, string>;
 }) {
-	// Fetched with the sheet, so the card is ready by the time it's hovered.
 	const { data, isLoading, isError } = useCustomerProductCustomDiff({
 		customerId,
 		customerProductId,

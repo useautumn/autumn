@@ -5,14 +5,13 @@ import { deriveStoredCustomerProductIsCustom } from "@/internal/customers/cusPro
 import { loadFullCustomerProductsWithLicenses } from "@/internal/customers/cusProducts/actions/deriveIsCustom/rederiveIsCustomForCustomers";
 import { CusService } from "../CusService";
 
-/** The derived is_custom result for one customer product, for the dashboard's custom badge. */
 export const handleGetCustomerProductCustomDiff = createRoute({
 	scopes: [Scopes.Customers.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { customer_id, customer_product_id } = c.req.param();
 
-		// Loaded by id: the customer's product list is paged and status-filtered, and so are its licenses.
+		// By id: the customer's product list is paged and status-filtered.
 		const customer = await CusService.get({
 			db: ctx.db,
 			idOrInternalId: customer_id,

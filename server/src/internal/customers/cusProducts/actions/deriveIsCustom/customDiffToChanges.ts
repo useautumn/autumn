@@ -7,7 +7,6 @@ import type {
 
 type Terms = Map<string, string>;
 
-/** Leaf values keyed by dotted path, so two snapshots compare field by field. */
 const flattenTerms = ({
 	value,
 	prefix = "",
@@ -93,7 +92,6 @@ const withoutLicensePlanId = ({
 	...terms
 }: NonNullable<CustomizedPlanLicense["catalog"]>) => terms;
 
-/** One entry per difference, in a stable order: base price, items, then licenses. */
 export const customDiffToChanges = ({
 	diff,
 }: {

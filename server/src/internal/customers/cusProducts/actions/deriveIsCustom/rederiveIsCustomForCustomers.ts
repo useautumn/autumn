@@ -19,7 +19,6 @@ export const createIsCustomDerivationCache = (): IsCustomDerivationCache => ({
 	baseProducts: new Map(),
 });
 
-/** Full customer products by id with their stored licenses, whatever their status. */
 export const loadFullCustomerProductsWithLicenses = async ({
 	ctx,
 	customerProductIds,
