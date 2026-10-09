@@ -34,8 +34,11 @@ const settle = async (): Promise<void> => {
 /** A writer whose store records each apply call's command ids, over an appender that commits at once. */
 const createLingeringWriter = ({
 	applyLingerMs = HELD_LINGER_MS,
+	dbControlLingerMs = null,
 }: {
 	applyLingerMs?: number;
+	/** DB control's live override; null leaves `applyLingerMs` in force. */
+	dbControlLingerMs?: number | null;
 } = {}) => {
 	const applied: string[][] = [];
 	const stateStore: PartitionWriterContext["stateStore"] = {
@@ -65,6 +68,14 @@ const createLingeringWriter = ({
 			},
 			receiptPolicy: { retentionMs: 60_000, now: () => 1_700_000_000_000 },
 			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+			dbControl: {
+				get: () => ({
+					balanceCommitter: {
+						concurrency: null,
+						applyLingerMs: dbControlLingerMs,
+					},
+				}),
+			},
 		},
 		config: {
 			topic: "writer-linger",
@@ -135,6 +146,15 @@ describe("apply linger", () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 60));
 		expect(applied).toEqual([["t1", "t2"]]);
+	});
+
+	test("DB control's applyLingerMs overrides the boot value: 0 applies each commit at once", async () => {
+		const { applied, commitEach } = createLingeringWriter({
+			dbControlLingerMs: 0,
+		});
+		await commitEach(["t1", "t2"]);
+
+		expect(applied).toEqual([["t1"], ["t2"]]);
 	});
 
 	test("a store-durable write is stored without waiting out the linger", async () => {

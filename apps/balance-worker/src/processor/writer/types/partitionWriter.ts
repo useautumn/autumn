@@ -9,6 +9,7 @@ import type {
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type {
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -131,6 +132,8 @@ export type PartitionWriterContext = {
 	appender: CommittedOutcomeAppender;
 	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	/** Read before each apply: a set `applyLingerMs` overrides the boot value in `limits`. */
+	dbControl?: Pick<EdgeConfigStore<DbControlEdgeConfig>, "get">;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */
@@ -160,7 +163,7 @@ export type PartitionWriterLimits = {
 	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
-	/** How long committed batches gather before a store flush; unset applies each batch at once. */
+	/** How long committed batches gather before a store flush, unless DB control overrides it; unset applies each batch at once. */
 	applyLingerMs?: number;
 	deferredCommitMs?: number;
 };

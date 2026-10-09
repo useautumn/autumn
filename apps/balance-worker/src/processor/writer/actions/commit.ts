@@ -241,8 +241,11 @@ function lingerForApply({
 }: {
 	scope: PartitionWriterScope;
 }): Promise<void> | null {
-	const { state, config } = scope;
-	const lingerMs = config.limits.applyLingerMs ?? 0;
+	const { state, config, ctx } = scope;
+	const lingerMs =
+		ctx.dbControl?.get().balanceCommitter.applyLingerMs ??
+		config.limits.applyLingerMs ??
+		0;
 	if (lingerMs <= 0 || applyIsDue({ state })) return null;
 	return new Promise<void>((resolve) => {
 		function wake(): void {
