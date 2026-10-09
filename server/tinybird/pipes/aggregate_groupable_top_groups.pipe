@@ -8,8 +8,8 @@ TOKEN "aggregate_groupable_top_groups_read" READ
 NODE group_totals
 DESCRIPTION >
     Window total per group: customers read complete UTC days from the daily rollup and remaining full
-    hours from the org dimension rollup; property values read the org property rollup. Both include a
-    live final hour from the rollup and read partial edge hours from raw events.
+    hours from the org dimension rollup; property values do the same from the org property daily and
+    hourly rollups. Both include a live final hour from the rollup and read partial edge hours from raw events.
 SQL >
     %
     WITH
@@ -24,6 +24,20 @@ SQL >
     SELECT event_name, group_value, sum(value) AS total
     FROM (
         SELECT event_name, property_value AS group_value, sumMerge(total_value) AS value
+        FROM events_org_property_daily_mv
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND property_key = {{ String(property_key, '') }}
+            AND property_value != ''
+            AND day >= full_days_start
+            AND day < full_days_end
+        GROUP BY event_name, group_value
+
+        UNION ALL
+
+        SELECT event_name, property_value AS group_value, sumMerge(total_value) AS value
         FROM events_org_property_hourly_mv
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -33,6 +47,7 @@ SQL >
             AND property_value != ''
             AND hour >= full_hours_start
             AND hour < full_hours_end
+            AND NOT (hour >= full_days_start AND hour < full_days_end)
         GROUP BY event_name, group_value
 
         UNION ALL
