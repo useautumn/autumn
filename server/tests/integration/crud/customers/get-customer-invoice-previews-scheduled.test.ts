@@ -7,12 +7,14 @@
  *                upcoming invoice previewed $0 with no plans.
  * Green (after): the preview includes plans on the subscription's schedule, so it
  *                bills the downgraded quantity and matches Stripe's upcoming invoice.
+ *                Another subscription's scheduled plans and unlinked free plans stay out.
  */
 
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
 	type ApiInvoicePreviewV0,
+	type AttachParamsV0Input,
 	type CreateScheduleParamsV0Input,
 	CustomerExpand,
 	customerProductsToStripeSubscriptionIds,
@@ -86,6 +88,19 @@ const setupPrepaidUpgrade = async ({ customerId }: { customerId: string }) => {
 	];
 
 	return { ...scenario, prepaid, downgradePhases, downgradeAt };
+};
+
+const getInvoicePreviews = async ({
+	autumn,
+	customerId,
+}: {
+	autumn: Awaited<ReturnType<typeof initScenario>>["autumnV2_5"];
+	customerId: string;
+}): Promise<ApiInvoicePreviewV0[]> => {
+	const customer = await autumn.customers.get<ApiCustomerV5>(customerId, {
+		expand: [CustomerExpand.InvoicePreviews],
+	});
+	return customer.invoice_previews ?? [];
 };
 
 const getUpcomingInvoicePreview = async ({
@@ -197,6 +212,103 @@ test.concurrent(
 		expect(setPlansPreview.next_cycle).toMatchObject({
 			starts_at: preview.invoice_at,
 			total: DOWNGRADED_TOTAL,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoice_previews: a downgrade scheduled on another subscription and an unlinked free plan stay out of a subscription's preview")}`,
+	async () => {
+		const customerId = "inv-preview-multi-sub-downgrade";
+		const pro = products.pro({
+			id: `${customerId}-pro`,
+			items: [items.monthlyUsers({ includedUsage: 5 })],
+		});
+		const prepaidAddOn = products.base({
+			id: `${customerId}-prepaid`,
+			isAddOn: true,
+			items: [items.prepaidMessages()],
+		});
+		const freeAddOn = products.base({
+			id: `${customerId}-free`,
+			isAddOn: true,
+			items: [items.monthlyWords({ includedUsage: 10 })],
+		});
+
+		const { autumnV1, autumnV2_5, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, prepaidAddOn, freeAddOn] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({
+					productId: prepaidAddOn.id,
+					newBillingSubscription: true,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: UPGRADED_QUANTITY },
+					],
+				}),
+			],
+		});
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const subscriptionIdFor = (productId: string) =>
+			fullCustomer.customer_products.find(
+				(customerProduct) => customerProduct.product.id === productId,
+			)?.subscription_ids?.[0];
+		const subscriptionA = subscriptionIdFor(pro.id)!;
+		const subscriptionB = subscriptionIdFor(prepaidAddOn.id)!;
+		expect(subscriptionA).not.toBe(subscriptionB);
+
+		const downgradeAt = addMonths(advancedTo, 1).getTime();
+		const prepaidPlan = (quantity: number) => ({
+			plan_id: prepaidAddOn.id,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity }],
+		});
+		await autumnV2_5.billing.setPlans({
+			customer_id: customerId,
+			stripe_subscription_id: subscriptionB,
+			phases: [
+				{ starts_at: "now", plans: [prepaidPlan(UPGRADED_QUANTITY)] },
+				{ starts_at: downgradeAt, plans: [prepaidPlan(DOWNGRADED_QUANTITY)] },
+			],
+		} satisfies SetPlansParamsV0Input);
+		// Attached after set_plans, which would otherwise end this customer-wide free plan.
+		await autumnV1.billing.attach<AttachParamsV0Input>({
+			customer_id: customerId,
+			product_id: freeAddOn.id,
+		});
+
+		const previews = await getInvoicePreviews({
+			autumn: autumnV2_5,
+			customerId,
+		});
+		const previewA = previews.find((preview) =>
+			preview.plan_ids.includes(pro.id),
+		);
+		const previewB = previews.find((preview) =>
+			preview.plan_ids.includes(prepaidAddOn.id),
+		);
+
+		expect(previews).toHaveLength(2);
+		expect(previews.map((preview) => preview.plan_ids)).toEqual(
+			expect.arrayContaining([[pro.id], [prepaidAddOn.id]]),
+		);
+		expect(previewA).toMatchObject({ plan_ids: [pro.id], total: 20 });
+		await expectStripeUpcomingInvoiceCorrect({
+			ctx,
+			subscriptionId: subscriptionA,
+			startsAt: previewA!.invoice_at,
+			total: 20,
+		});
+		expectDowngradedPreviewCorrect({
+			preview: previewB!,
+			planId: prepaidAddOn.id,
+			invoiceAt: downgradeAt,
 		});
 	},
 );
