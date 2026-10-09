@@ -46,6 +46,7 @@ import {
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 import { sh } from "../dw/helpers/shell.ts";
+import { capyBranchExpiresAt, hasCapyBranchExpired } from "./branchExpiry.ts";
 import { getMachineId, stateForMachine } from "./machineIdentity.ts";
 import { isOptedIn } from "./optIns.ts";
 import {
@@ -126,6 +127,7 @@ type State = {
 	branchName?: string;
 	branchId?: string;
 	databaseUrl?: string;
+	branchExpiresAt?: string;
 	createdAt: number;
 	// Per-machine secrets — generated once on first run, persisted, then
 	// re-used so a server restart doesn't invalidate every session.
@@ -543,7 +545,11 @@ function ensureNeonBranch(
 			log(`reusing existing Neon branch ${branchName} (${state.branchId})`);
 			const pooledUrl = connectionString(branchName, { pooled: true });
 			return {
-				state: { ...state, databaseUrl: pooledUrl },
+				state: {
+					...state,
+					databaseUrl: pooledUrl,
+					branchExpiresAt: existing.expires_at,
+				},
 				created: false,
 			};
 		}
@@ -564,6 +570,7 @@ function ensureNeonBranch(
 				branchName,
 				branchId: existingByName.id,
 				databaseUrl: pooledUrl,
+				branchExpiresAt: existingByName.expires_at,
 				createdAt: state?.createdAt ?? Date.now(),
 			},
 			created: false,
@@ -575,7 +582,11 @@ function ensureNeonBranch(
 		`first run for ${branchName} — provisioning Neon branch off ${NEON_TEMPLATE_BRANCH}`,
 	);
 	ensureTemplateBranch();
-	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
+	const createdAt = Date.now();
+	const branchExpiresAt = capyBranchExpiresAt({ createdAt });
+	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH, {
+		expiresAt: branchExpiresAt,
+	});
 	waitForNeonBranchOperations(branch);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
@@ -584,7 +595,8 @@ function ensureNeonBranch(
 			branchName,
 			branchId: branch.id,
 			databaseUrl: pooledUrl,
-			createdAt: Date.now(),
+			branchExpiresAt,
+			createdAt,
 		},
 		created: true,
 	};
@@ -691,9 +703,17 @@ async function main(): Promise<void> {
 			optIns: triggerOptedIn ? ["trigger"] : [],
 		});
 	const currentFingerprint = fingerprint();
+	const stampedBranchExpiresAt = stateForMachine({
+		state: loadState(),
+		machineId,
+	})?.branchExpiresAt;
 	if (
 		currentFingerprint &&
 		!process.argv.includes("--force") &&
+		!hasCapyBranchExpired({
+			expiresAt: stampedBranchExpiresAt,
+			now: Date.now(),
+		}) &&
 		isProvisionCurrent({
 			stampPath: PROVISION_STAMP,
 			fingerprint: currentFingerprint,

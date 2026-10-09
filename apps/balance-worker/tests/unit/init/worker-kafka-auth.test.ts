@@ -2,7 +2,10 @@ import { expect, spyOn, test } from "bun:test";
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import * as kafka from "@autumn/kafka";
 import { createWorkerCheckpointConfig } from "../../../src/init/workerCheckpointConfig.js";
-import { openWorkerResources } from "../../../src/init/workerResources.js";
+import {
+	openWorkerResources,
+	WORKER_KAFKA_CLIENT_LIMITS,
+} from "../../../src/init/workerResources.js";
 
 test.each(["none", "msk_iam"] as const)(
 	"worker resource opening passes %s transport to its shared Kafka client",
@@ -48,13 +51,7 @@ test.each(["none", "msk_iam"] as const)(
 			expect(createClient).toHaveBeenCalledTimes(1);
 			expect(createClient.mock.calls[0]?.[0]).toMatchObject({
 				brokers: ["broker:9098"],
-				limits: {
-					connectionTimeoutMs: 5000,
-					requestTimeoutMs: 30000,
-					retryCount: 2,
-					initialRetryTimeMs: 100,
-					maxRetryTimeMs: 1000,
-				},
+				limits: WORKER_KAFKA_CLIENT_LIMITS,
 			});
 			expect(createClient.mock.calls[0]?.[0].transport).toEqual(
 				authMode === "none"
