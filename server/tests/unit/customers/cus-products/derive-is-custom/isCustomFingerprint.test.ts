@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/applyIsCustomByFingerprint";
+import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/isCustomFingerprint";
 import { basePrice, customerPlan, includedItem } from "./isCustomFixtures";
 
 const planWithRowIds = ({

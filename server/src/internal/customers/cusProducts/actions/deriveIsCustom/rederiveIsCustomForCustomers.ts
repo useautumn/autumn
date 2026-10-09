@@ -1,15 +1,16 @@
 import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { IsCustomByFingerprint } from "@/internal/customers/cusProducts/repos/applyIsCustomByFingerprint.js";
-import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/applyIsCustomByFingerprint.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
+import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/isCustomFingerprint.js";
+import type { IsCustomFingerprintRow } from "@/internal/customers/cusProducts/repos/listIsCustomFingerprints.js";
 import { listFullCustomerLicensesByParentIds } from "@/internal/licenses/repos/customerLicenseRepo/listFullCustomerLicensesByParentIds.js";
 import { deriveStoredCustomerProductIsCustom } from "./deriveStoredCustomerProductIsCustom.js";
 import { isDefinitiveIsCustomResult } from "./isDefinitiveIsCustomResult.js";
 import type { BaseProductCache } from "./loadBaseProduct.js";
 
 export type IsCustomDerivationCache = {
-	flagsByFingerprint: IsCustomByFingerprint;
+	// null: the derivation only guessed, so the flag is never written.
+	flagsByFingerprint: Map<string, boolean | null>;
 	baseProducts: BaseProductCache;
 };
 
@@ -78,6 +79,42 @@ const deriveFingerprints = async ({
 	);
 };
 
+const unknownRepresentatives = ({
+	products,
+	flagsByFingerprint,
+}: {
+	products: IsCustomFingerprintRow[];
+	flagsByFingerprint: IsCustomDerivationCache["flagsByFingerprint"];
+}) => {
+	const representatives = new Map<
+		string,
+		{ id: string; fingerprint: string }
+	>();
+	for (const { id, fingerprint } of products) {
+		if (flagsByFingerprint.has(fingerprint) || representatives.has(fingerprint))
+			continue;
+		representatives.set(fingerprint, { id, fingerprint });
+	}
+	return [...representatives.values()];
+};
+
+const idsFlippingTo = ({
+	products,
+	flagsByFingerprint,
+	to,
+}: {
+	products: IsCustomFingerprintRow[];
+	flagsByFingerprint: IsCustomDerivationCache["flagsByFingerprint"];
+	to: boolean;
+}) =>
+	products
+		.filter(
+			(product) =>
+				product.isCustom !== to &&
+				flagsByFingerprint.get(product.fingerprint) === to,
+		)
+		.map(({ id }) => id);
+
 export const rederiveIsCustomForCustomers = async ({
 	ctx,
 	internalCustomerIds,
@@ -92,25 +129,41 @@ export const rederiveIsCustomForCustomers = async ({
 	changedCustomers: { internalId: string; id: string | null }[];
 	changed: number;
 }> => {
-	const apply = () =>
-		customerProductRepo.applyIsCustomByFingerprint({
-			db: ctx.db,
-			internalCustomerIds,
-			internalProductIds,
-			flagsByFingerprint: cache.flagsByFingerprint,
-		});
+	const products = await customerProductRepo.listIsCustomFingerprints({
+		db: ctx.db,
+		internalCustomerIds,
+		internalProductIds,
+	});
+	const { flagsByFingerprint } = cache;
 
-	const first = await apply();
-	const updated = [...first.updated];
-	if (first.unknown.length > 0) {
-		await deriveFingerprints({ ctx, representatives: first.unknown, cache });
-		updated.push(...(await apply()).updated);
+	const representatives = unknownRepresentatives({
+		products,
+		flagsByFingerprint,
+	});
+	if (representatives.length > 0) {
+		await deriveFingerprints({ ctx, representatives, cache });
 	}
 
+	const updated = (
+		await Promise.all(
+			[true, false].map((to) =>
+				customerProductRepo.flipIsCustom({
+					db: ctx.db,
+					customerProductIds: idsFlippingTo({
+						products,
+						flagsByFingerprint,
+						to,
+					}),
+					to,
+				}),
+			),
+		)
+	).flat();
+
 	const changedCustomers = new Map(
-		updated.map((row) => [
-			row.internal_customer_id,
-			{ internalId: row.internal_customer_id, id: row.customer_id },
+		updated.map(({ internalCustomerId, customerId }) => [
+			internalCustomerId,
+			{ internalId: internalCustomerId, id: customerId },
 		]),
 	);
 	return {
