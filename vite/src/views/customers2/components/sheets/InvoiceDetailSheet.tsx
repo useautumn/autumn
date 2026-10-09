@@ -48,6 +48,7 @@ import {
 	useInvoiceMetadataQuery,
 } from "@/views/customers2/hooks/useInvoiceMetadataQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
+import { EditInvoicePaymentMethodsDialog } from "./EditInvoicePaymentMethodsDialog";
 import {
 	type InvoiceSheetAction,
 	InvoiceSheetFooter,
@@ -112,6 +113,8 @@ export function InvoiceDetailSheet({
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+	const [paymentMethodsDialogOpen, setPaymentMethodsDialogOpen] =
+		useState(false);
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildQueryKey = useQueryKeyFactory();
@@ -310,6 +313,11 @@ export function InvoiceDetailSheet({
 		!isReissuedDraft &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Paid);
+	const canEditPaymentMethods =
+		invoiceIsStripe &&
+		!isVercelInvoice &&
+		(invoice.status === InvoiceStatus.Open ||
+			invoice.status === InvoiceStatus.Draft);
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
@@ -405,6 +413,13 @@ export function InvoiceDetailSheet({
 					type: "invoice-credit-note",
 					data: { invoice, lineItems, taxedAmount },
 				}),
+		});
+	}
+	if (canEditPaymentMethods) {
+		menuActions.push({
+			label: "Edit payment methods",
+			icon: <CreditCardIcon size={16} />,
+			onSelect: () => setPaymentMethodsDialogOpen(true),
 		});
 	}
 	if (stripeInvoiceUrl) {
@@ -587,6 +602,14 @@ export function InvoiceDetailSheet({
 					open={refundDialogOpen}
 					onOpenChange={setRefundDialogOpen}
 					invoice={invoice}
+				/>
+			)}
+			{canEditPaymentMethods && (
+				<EditInvoicePaymentMethodsDialog
+					open={paymentMethodsDialogOpen}
+					onOpenChange={setPaymentMethodsDialogOpen}
+					invoice={invoice}
+					onSaved={refreshCustomer}
 				/>
 			)}
 		</SheetBody>

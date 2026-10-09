@@ -1,0 +1,119 @@
+import {
+	formatAmount,
+	type Invoice,
+	type InvoicePaymentMethod,
+} from "@autumn/shared";
+import {
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@autumn/ui";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import type Stripe from "stripe";
+import { useOrgPaymentMethodTypes } from "@/components/forms/shared/hooks/useOrgPaymentMethodTypes";
+import { PaymentMethodTypesSelect } from "@/components/forms/shared/PaymentMethodTypesSelect";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+
+export function EditInvoicePaymentMethodsDialog({
+	open,
+	onOpenChange,
+	invoice,
+	onSaved,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	invoice: Invoice;
+	onSaved: () => Promise<unknown>;
+}) {
+	const axiosInstance = useAxiosInstance();
+	const orgPaymentMethodTypes = useOrgPaymentMethodTypes();
+	const [paymentMethodTypes, setPaymentMethodTypes] = useState<
+		InvoicePaymentMethod[] | null
+	>(null);
+
+	const {
+		data: stripeInvoice,
+		isLoading,
+		refetch: refetchStripeInvoice,
+	} = useQuery({
+		queryKey: ["stripe-invoice", invoice.stripe_id],
+		enabled: open,
+		queryFn: async () => {
+			const { data } = await axiosInstance.get<Stripe.Invoice>(
+				`/v1/invoices/${invoice.stripe_id}/stripe`,
+			);
+			return data;
+		},
+	});
+
+	const invoicePaymentMethodTypes = stripeInvoice?.payment_settings
+		?.payment_method_types as InvoicePaymentMethod[] | null | undefined;
+	const value =
+		paymentMethodTypes ??
+		(invoicePaymentMethodTypes?.length
+			? invoicePaymentMethodTypes
+			: orgPaymentMethodTypes);
+
+	const updateInvoice = useMutation({
+		mutationFn: () =>
+			axiosInstance.post("/v1/invoices.update", {
+				invoice_id: invoice.id,
+				payment_method_types: value,
+			}),
+		onSuccess: async () => {
+			toast.success("Payment methods updated");
+			onOpenChange(false);
+			setPaymentMethodTypes(null);
+			await Promise.all([onSaved(), refetchStripeInvoice()]);
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to update payment methods"));
+		},
+	});
+
+	const formattedTotal = formatAmount({
+		amount: invoice.total,
+		currency: invoice.currency,
+		minFractionDigits: 2,
+		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+	});
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="max-w-sm">
+				<DialogHeader>
+					<DialogTitle>Edit payment methods</DialogTitle>
+					<DialogDescription>
+						Choose how the customer can pay this {formattedTotal} invoice.
+						Changes show on the hosted invoice page straight away.
+					</DialogDescription>
+				</DialogHeader>
+
+				<PaymentMethodTypesSelect
+					value={value}
+					onValueChange={setPaymentMethodTypes}
+					disabled={isLoading}
+				/>
+
+				<DialogFooter>
+					<Button
+						variant="primary"
+						className="w-full"
+						onClick={() => updateInvoice.mutate()}
+						isLoading={updateInvoice.isPending}
+						disabled={isLoading || !value?.length}
+					>
+						Save
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
