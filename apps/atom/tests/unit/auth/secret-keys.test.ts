@@ -55,3 +55,23 @@ test("a pending key Autumn names invalid never opens the Atom", async () => {
 
 	expect(knownOf(keys)).toEqual([]);
 });
+
+test("syncs are singleflight: keys learned while Autumn answers go in one more call, not one each", async () => {
+	const calls: string[][] = [];
+	const keys = startSecretKeys({
+		findInvalid: async ({ keyHashes }) => {
+			calls.push(keyHashes);
+			await Bun.sleep(5);
+			return [];
+		},
+	});
+	started.push(keys);
+
+	keys.learn({ keyHash: KEY_A });
+	keys.learn({ keyHash: KEY_B });
+	void keys.sync();
+	await Bun.sleep(20);
+
+	expect(calls).toEqual([[KEY_A], [KEY_A, KEY_B]]);
+	expect(knownOf(keys)).toEqual([KEY_A, KEY_B]);
+});
