@@ -79,6 +79,8 @@ import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js"
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
 import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
+import { atomDeploymentsRelations } from "../models/orgModels/atomDeploymentRelations.js";
+import { atomDeployments } from "../models/orgModels/atomDeploymentTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
@@ -208,6 +210,8 @@ export {
 	oauthConsent,
 	oauthRefreshToken,
 	agentRules,
+	atomDeployments,
+	atomDeploymentsRelations,
 	transitionRules,
 	// Tables
 	organizations,

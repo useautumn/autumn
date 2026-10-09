@@ -185,6 +185,8 @@ export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
+export * from "./models/orgModels/atomDeploymentRelations";
+export * from "./models/orgModels/atomDeploymentTable";
 export * from "./models/orgModels/byocCacheMachines";
 export * from "./models/orgModels/byocCacheRegions";
 export * from "./models/orgModels/byocConfig";

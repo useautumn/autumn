@@ -1,6 +1,9 @@
 import {
 	AppEnv,
+	type AtomRoute,
 	apiKeys,
+	atomDeployments,
+	atomRouteColumns,
 	ErrCode,
 	type Feature,
 	features,
@@ -146,6 +149,10 @@ export class OrgService {
 		const result = (await db.query.organizations.findFirst({
 			where: eq(organizations.id, orgId),
 			with: {
+				atom_deployments: {
+					where: eq(atomDeployments.env, env),
+					columns: atomRouteColumns,
+				},
 				features: {
 					where: eq(features.env, env),
 				},
@@ -155,6 +162,7 @@ export class OrgService {
 				master: true,
 			},
 		})) as Organization & {
+			atom_deployments?: AtomRoute[];
 			features?: Feature[];
 			product_aliases?: { alias_id: string; canonical_plan_id: string }[];
 		};
@@ -172,6 +180,7 @@ export class OrgService {
 		}
 
 		const org = structuredClone(result);
+		delete org.atom_deployments;
 		delete org.features;
 		delete org.product_aliases;
 
@@ -184,6 +193,7 @@ export class OrgService {
 				}),
 			},
 			features: result.features || [],
+			atomDeployments: result.atom_deployments || [],
 		};
 	}
 

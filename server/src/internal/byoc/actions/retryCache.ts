@@ -1,8 +1,8 @@
-import { orgToCacheDeployment } from "@autumn/byoc";
 import { type ApiByocCache, ByocCacheStatus } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
+import { findCacheDeployment } from "../repos/cacheDeployments.js";
 import {
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToApiCache,
@@ -31,7 +31,7 @@ const resumeCacheDeploy = async ({
 }: {
 	ctx: AutumnContext;
 }): Promise<ApiByocCache> => {
-	const existing = orgToCacheDeployment({ org: ctx.org, env: ctx.env });
+	const existing = await findCacheDeployment({ ctx });
 	if (existing?.status !== ByocCacheStatus.Failed) throw cacheNotFailed();
 
 	await getAtomDeployer().retry({
@@ -44,5 +44,5 @@ const resumeCacheDeploy = async ({
 		ctx,
 		deploymentGroupId: resumed.deployment_group_id,
 	});
-	return cacheDeploymentToApiCache({ cacheDeployment: resumed, env: ctx.env });
+	return cacheDeploymentToApiCache({ cacheDeployment: resumed });
 };

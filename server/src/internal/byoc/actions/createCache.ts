@@ -1,5 +1,4 @@
 import { isDeepStrictEqual } from "node:util";
-import { orgToCacheDeployment } from "@autumn/byoc";
 import {
 	type ByocCacheDeployment,
 	type ByocCacheMachine,
@@ -12,10 +11,11 @@ import {
 } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { encryptData } from "@/utils/encryptUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
 import {
+	findCacheDeployment,
 	insertCacheDeployment,
 	updateCacheDeployment,
 } from "../repos/cacheDeployments.js";
@@ -32,6 +32,7 @@ import {
 	cacheNames,
 	resourcesToMachine,
 } from "../utils/byocCacheUtils.js";
+import { toCacheStages } from "../utils/cacheStageUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
 
@@ -75,25 +76,28 @@ const claimCacheDeployment = async ({
 	token: string;
 	settings: CacheSetupSettings;
 }): Promise<ByocCacheDeployment> => {
+	const status = ByocCacheStatus.AwaitingSetup;
 	const cacheDeployment: ByocCacheDeployment = {
+		id: generateId("atom"),
+		org_id: ctx.org.id,
+		env: ctx.env,
 		deployment_group_id: deploymentGroupId,
 		deployment_id: null,
-		status: ByocCacheStatus.AwaitingSetup,
+		status,
 		endpoint_url: null,
 		cpu: machine.cpu,
 		memory: machine.memory,
 		encrypted_token: encryptData(token),
-		created_at: Date.now(),
+		token_hash: atomTokenToHash({ token }),
 		region,
 		network,
+		stages: toCacheStages({ doneStages: [], status }),
+		error: null,
+		created_at: Date.now(),
 	};
 	if (await insertCacheDeployment({ ctx, cacheDeployment }))
 		return cacheDeployment;
-	const winner = await OrgService.get({ db: ctx.db, orgId: ctx.org.id });
-	return (
-		(winner && orgToCacheDeployment({ org: winner, env: ctx.env })) ??
-		cacheDeployment
-	);
+	return (await findCacheDeployment({ ctx })) ?? cacheDeployment;
 };
 
 /** A fresh link moves the record to the group it landed in (the org's external id changed) and the settings it asks for; token kept. */
@@ -111,8 +115,8 @@ const followSetup = async ({
 	const sameGroup = existing.deployment_group_id === deploymentGroupId;
 	const sameMachine =
 		existing.cpu === machine.cpu && existing.memory === machine.memory;
-	const sameRegion = (existing.region ?? null) === region;
-	const sameNetwork = isDeepStrictEqual(existing.network ?? null, network);
+	const sameRegion = existing.region === region;
+	const sameNetwork = isDeepStrictEqual(existing.network, network);
 	if (sameGroup && sameMachine && sameRegion && sameNetwork) return existing;
 	const moved: ByocCacheDeployment = {
 		...existing,
@@ -125,11 +129,7 @@ const followSetup = async ({
 		region,
 		network,
 	};
-	await updateCacheDeployment({
-		ctx,
-		cacheDeployment: moved,
-		fromDeploymentGroupId: existing.deployment_group_id,
-	});
+	await updateCacheDeployment({ ctx, from: existing, to: moved });
 	return moved;
 };
 
@@ -158,12 +158,11 @@ const startCacheSetup = async ({
 	params: CreateByocCacheParams;
 }): Promise<CreateByocCacheResponse> => {
 	const { org, env } = ctx;
-	const existing = orgToCacheDeployment({ org, env });
+	const existing = await findCacheDeployment({ ctx });
 	const isAwaitingSetup = existing?.status === ByocCacheStatus.AwaitingSetup;
 	if (existing && !isAwaitingSetup)
 		return cacheDeploymentToCreateResponse({
 			cacheDeployment: existing,
-			env,
 			setupUrl: null,
 		});
 
@@ -201,7 +200,6 @@ const startCacheSetup = async ({
 	});
 	return cacheDeploymentToCreateResponse({
 		cacheDeployment,
-		env,
 		setupUrl: setup.setupUrl,
 	});
 };

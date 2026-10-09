@@ -13,7 +13,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
-import { cacheDeploymentToStages } from "./cacheStageUtils.js";
 
 /** A dev stack's name goes in front, so two worktrees can hold the same org on alien at once; only `scripts/dev.ts` sets it. */
 const cacheNamePrefix = (): string | null =>
@@ -128,35 +127,31 @@ export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 
 export const cacheDeploymentToApiCache = ({
 	cacheDeployment,
-	env,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-	env: AppEnv;
 }): ApiByocCache => ({
-	env,
+	env: cacheDeployment.env,
 	status: cacheDeployment.status,
 	deployment_id: cacheDeployment.deployment_id,
 	endpoint_url: cacheDeployment.endpoint_url,
 	created_at: cacheDeployment.created_at,
 	cpu: cacheDeployment.cpu,
 	memory: cacheDeployment.memory,
-	region: cacheDeployment.region ?? null,
-	network: cacheDeployment.network ?? null,
-	stages: cacheDeploymentToStages({ cacheDeployment }),
-	error: cacheDeployment.error ?? null,
+	region: cacheDeployment.region,
+	network: cacheDeployment.network,
+	stages: cacheDeployment.stages,
+	error: cacheDeployment.error,
 });
 
 /** Only a create hands out the token, so reading a cache never reveals it. */
 export const cacheDeploymentToCreateResponse = ({
 	cacheDeployment,
-	env,
 	setupUrl,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-	env: AppEnv;
 	setupUrl: string | null;
 }): CreateByocCacheResponse => ({
-	...cacheDeploymentToApiCache({ cacheDeployment, env }),
+	...cacheDeploymentToApiCache({ cacheDeployment }),
 	setup_url: setupUrl,
 	token: cacheDeploymentToAtomToken({ cacheDeployment }),
 });

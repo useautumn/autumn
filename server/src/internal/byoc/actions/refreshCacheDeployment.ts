@@ -53,7 +53,7 @@ const deploymentToCacheDeployment = async ({
 		memory: deployment
 			? (deployment.machine?.memory ?? null)
 			: cacheDeployment.memory,
-		region: deployment?.region ?? cacheDeployment.region ?? null,
+		region: deployment?.region ?? cacheDeployment.region,
 		stages: toCacheStages({ doneStages, status }),
 		error: deployment?.error ?? null,
 		token_hash:
@@ -88,6 +88,6 @@ export const refreshCacheDeployment = async ({
 		deployment,
 	});
 	if (!isDeepStrictEqual(refreshed, cacheDeployment))
-		await updateCacheDeployment({ ctx, cacheDeployment: refreshed });
+		await updateCacheDeployment({ ctx, from: cacheDeployment, to: refreshed });
 	return refreshed;
 };

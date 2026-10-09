@@ -1,18 +1,19 @@
 import {
+	type AtomRoute,
+	atomRouteColumns,
 	type ByocCacheDeployment,
 	ByocCacheStageStatus,
 	ByocCacheStatus,
 } from "@autumn/shared";
-import { cacheDeploymentToStages } from "./cacheStageUtils.js";
+
+const ATOM_ROUTE_KEYS = Object.keys(atomRouteColumns) as (keyof AtomRoute)[];
 
 /** Running, and Autumn reaches it. */
 export const isCacheConnected = ({
 	cacheDeployment,
 }: {
 	cacheDeployment: ByocCacheDeployment;
-}) =>
-	cacheDeploymentToStages({ cacheDeployment }).connected ===
-	ByocCacheStageStatus.Done;
+}) => cacheDeployment.stages.connected === ByocCacheStageStatus.Done;
 
 /** A delete was asked for; the record stays until the org's stack is gone too. */
 export const isCacheBeingRemoved = ({
@@ -32,3 +33,12 @@ export const isCacheSettled = ({
 	isCacheConnected({ cacheDeployment }) ||
 	cacheDeployment.status === ByocCacheStatus.Failed ||
 	cacheDeployment.status === ByocCacheStatus.TeardownRequired;
+
+/** What the cached org holds of an Atom changed, so herald must re-read it. */
+export const changesAtomRoute = ({
+	from,
+	to,
+}: {
+	from: AtomRoute;
+	to: AtomRoute;
+}) => ATOM_ROUTE_KEYS.some((key) => from[key] !== to[key]);

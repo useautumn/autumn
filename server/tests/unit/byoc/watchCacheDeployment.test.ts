@@ -8,6 +8,7 @@ import {
 	test,
 } from "bun:test";
 import {
+	AppEnv,
 	type ByocCacheDeployment,
 	ByocCacheStage,
 	ByocCacheStatus,
@@ -31,6 +32,9 @@ const cacheDeploymentIn = ({
 	status: ByocCacheDeployment["status"];
 	doneStages?: ByocCacheStage[];
 }): ByocCacheDeployment => ({
+	id: "atom_1",
+	org_id: "org_1",
+	env: AppEnv.Sandbox,
 	deployment_group_id: "dg_1",
 	deployment_id: "dep_1",
 	status,
@@ -38,8 +42,12 @@ const cacheDeploymentIn = ({
 	cpu: 4,
 	memory: 8,
 	encrypted_token: "encrypted",
-	created_at: 1,
+	token_hash: null,
+	region: null,
+	network: null,
 	stages: toCacheStages({ doneStages, status }),
+	error: null,
+	created_at: 1,
 });
 
 /** What alien reports on each poll, in order; a thrown error stands in for an outage. */

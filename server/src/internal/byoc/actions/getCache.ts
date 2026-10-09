@@ -1,6 +1,6 @@
-import { orgToCacheDeployment } from "@autumn/byoc";
 import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { findCacheDeployment } from "../repos/cacheDeployments.js";
 import {
 	cacheDeploymentToApiCache,
 	cacheStackName,
@@ -14,13 +14,13 @@ export const getCache = async ({
 	ctx: AutumnContext;
 }): Promise<GetByocCacheResponse> => {
 	const stackName = cacheStackName({ org: ctx.org, env: ctx.env });
-	const existing = orgToCacheDeployment({ org: ctx.org, env: ctx.env });
+	const existing = await findCacheDeployment({ ctx });
 	const cacheDeployment =
 		existing &&
 		(await refreshCacheDeployment({ ctx, cacheDeployment: existing }));
 	return {
 		cache: cacheDeployment
-			? cacheDeploymentToApiCache({ cacheDeployment, env: ctx.env })
+			? cacheDeploymentToApiCache({ cacheDeployment })
 			: null,
 		stack_name: stackName,
 	};

@@ -1,93 +1,91 @@
 import {
-	AppEnv,
+	type AppEnv,
+	atomDeployments,
 	type ByocCacheDeployment,
-	organizations,
 } from "@autumn/shared";
-import { and, type Column, eq, or, type SQL, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+import { changesAtomRoute } from "../utils/classifyCacheDeployment.js";
 
-const envByocConfigKey = ({ ctx }: { ctx: AutumnContext }) =>
-	ctx.env === AppEnv.Live ? "live_byoc_config" : "sandbox_byoc_config";
-
-const envByocConfig = ({ ctx }: { ctx: AutumnContext }) =>
-	organizations[envByocConfigKey({ ctx })];
-
-const envCache = ({ ctx }: { ctx: AutumnContext }) =>
-	sql`${envByocConfig({ ctx })}->'cache'`;
-
-const withCache = ({
+/** The row as it was read: a delete or a move that landed since leaves nothing to match. */
+const isReadRow = ({
 	ctx,
 	cacheDeployment,
 }: {
 	ctx: AutumnContext;
 	cacheDeployment: ByocCacheDeployment;
 }) =>
-	sql`COALESCE(${envByocConfig({ ctx })}, '{}'::jsonb) || jsonb_build_object('cache', ${JSON.stringify(cacheDeployment)}::jsonb)`;
+	and(
+		eq(atomDeployments.org_id, ctx.org.id),
+		eq(atomDeployments.env, ctx.env),
+		eq(atomDeployments.id, cacheDeployment.id),
+		eq(
+			atomDeployments.deployment_group_id,
+			cacheDeployment.deployment_group_id,
+		),
+	);
 
-const writeByocConfig = async ({
+/** The env's Atom as stored now; `ctx.org` is a cached copy, so it never says. */
+export const findCacheDeployment = async ({
 	ctx,
-	value,
-	condition,
 }: {
 	ctx: AutumnContext;
-	value: SQL;
-	condition: SQL;
+}): Promise<ByocCacheDeployment | null> =>
+	(await ctx.db.query.atomDeployments.findFirst({
+		where: and(
+			eq(atomDeployments.org_id, ctx.org.id),
+			eq(atomDeployments.env, ctx.env),
+		),
+	})) ?? null;
+
+/** Claims the env's Atom; false when another request already holds it. */
+export const insertCacheDeployment = async ({
+	ctx,
+	cacheDeployment,
+}: {
+	ctx: AutumnContext;
+	cacheDeployment: ByocCacheDeployment;
 }): Promise<boolean> => {
-	const written = await ctx.db
-		.update(organizations)
-		.set({ [envByocConfigKey({ ctx })]: value })
-		.where(and(eq(organizations.id, ctx.org.id), condition))
-		.returning({ id: organizations.id });
-	await clearOrgCache({ db: ctx.db, orgId: ctx.org.id });
-	return written.length > 0;
+	const inserted = await ctx.db
+		.insert(atomDeployments)
+		.values(cacheDeployment)
+		.onConflictDoNothing()
+		.returning({ id: atomDeployments.id });
+	return inserted.length > 0;
 };
 
-/** Claims the env's cache; false when another request already holds it. */
-export const insertCacheDeployment = ({
+/** Writes `to` over the row as `from` read it; the cached org only drops when herald would route differently. */
+export const updateCacheDeployment = async ({
 	ctx,
-	cacheDeployment,
+	from,
+	to,
 }: {
 	ctx: AutumnContext;
-	cacheDeployment: ByocCacheDeployment;
-}) =>
-	writeByocConfig({
-		ctx,
-		value: withCache({ ctx, cacheDeployment }),
-		condition: sql`${envCache({ ctx })} IS NULL`,
-	});
+	from: ByocCacheDeployment;
+	to: ByocCacheDeployment;
+}): Promise<void> => {
+	await ctx.db
+		.update(atomDeployments)
+		.set(to)
+		.where(isReadRow({ ctx, cacheDeployment: from }));
+	if (changesAtomRoute({ from, to }))
+		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
+};
 
-/** Only lands on the group the record holds, so a refresh racing a delete cannot bring it back. */
-export const updateCacheDeployment = ({
-	ctx,
-	cacheDeployment,
-	fromDeploymentGroupId = cacheDeployment.deployment_group_id,
-}: {
-	ctx: AutumnContext;
-	cacheDeployment: ByocCacheDeployment;
-	/** The group the record is moving from, when a new setup landed it elsewhere. */
-	fromDeploymentGroupId?: string;
-}) =>
-	writeByocConfig({
-		ctx,
-		value: withCache({ ctx, cacheDeployment }),
-		condition: sql`${envCache({ ctx })}->>'deployment_group_id' = ${fromDeploymentGroupId}`,
-	});
-
-/** Only forgets the cache this delete began with: a replacement reuses its group, so `created_at` tells them apart. */
-export const deleteCacheDeployment = ({
+/** Forgets an Atom whose removal finished; a replacement is a new row, so it is never the one forgotten. */
+export const deleteCacheDeployment = async ({
 	ctx,
 	cacheDeployment,
 }: {
 	ctx: AutumnContext;
 	cacheDeployment: ByocCacheDeployment;
-}) =>
-	writeByocConfig({
-		ctx,
-		value: sql`${envByocConfig({ ctx })} - 'cache'`,
-		condition: sql`(${envCache({ ctx })}->>'created_at')::bigint = ${cacheDeployment.created_at}`,
-	});
+}): Promise<void> => {
+	await ctx.db
+		.delete(atomDeployments)
+		.where(isReadRow({ ctx, cacheDeployment }));
+};
 
 /** The org and env whose Atom holds this token hash; null when no Atom does. */
 export const findCacheByTokenHash = async ({
@@ -97,24 +95,10 @@ export const findCacheByTokenHash = async ({
 	db: DrizzleCli;
 	tokenHash: string;
 }): Promise<{ orgId: string; env: AppEnv } | null> => {
-	const holdsTokenHash = (byocConfig: Column) =>
-		sql<boolean>`${byocConfig}->'cache'->>'token_hash' = ${tokenHash}`;
 	const [found] = await db
-		.select({
-			orgId: organizations.id,
-			isLive: holdsTokenHash(organizations.live_byoc_config),
-		})
-		.from(organizations)
-		.where(
-			or(
-				holdsTokenHash(organizations.live_byoc_config),
-				holdsTokenHash(organizations.sandbox_byoc_config),
-			),
-		)
+		.select({ orgId: atomDeployments.org_id, env: atomDeployments.env })
+		.from(atomDeployments)
+		.where(eq(atomDeployments.token_hash, tokenHash))
 		.limit(1);
-	if (!found) return null;
-	return {
-		orgId: found.orgId,
-		env: found.isLive ? AppEnv.Live : AppEnv.Sandbox,
-	};
+	return found ?? null;
 };

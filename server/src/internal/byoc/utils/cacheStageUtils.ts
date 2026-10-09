@@ -1,6 +1,5 @@
 import {
 	BYOC_CACHE_STAGES,
-	type ByocCacheDeployment,
 	type ByocCacheStage,
 	ByocCacheStageStatus,
 	type ByocCacheStages,
@@ -42,12 +41,3 @@ export const toCacheStages = ({
 		BYOC_CACHE_STAGES.map((stage, index) => [stage, stageStatusAt(index)]),
 	) as ByocCacheStages;
 };
-
-/** A record from before stages were kept reads as not started. */
-export const cacheDeploymentToStages = ({
-	cacheDeployment,
-}: {
-	cacheDeployment: ByocCacheDeployment;
-}): ByocCacheStages =>
-	cacheDeployment.stages ??
-	toCacheStages({ doneStages: [], status: cacheDeployment.status });

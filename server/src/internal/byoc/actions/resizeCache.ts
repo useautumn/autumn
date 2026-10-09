@@ -1,8 +1,9 @@
-import { isByocCacheReady, orgToCacheDeployment } from "@autumn/byoc";
+import { isByocCacheReady } from "@autumn/byoc";
 import type { ApiByocCache, ResizeByocCacheParams } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
+import { findCacheDeployment } from "../repos/cacheDeployments.js";
 import {
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToApiCache,
@@ -35,7 +36,7 @@ const moveCacheMachine = async ({
 	ctx: AutumnContext;
 	params: ResizeByocCacheParams;
 }): Promise<ApiByocCache> => {
-	const existing = orgToCacheDeployment({ org: ctx.org, env: ctx.env });
+	const existing = await findCacheDeployment({ ctx });
 	if (!existing) throw cacheNotRunning();
 	const current = await refreshCacheDeployment({
 		ctx,
@@ -51,5 +52,5 @@ const moveCacheMachine = async ({
 	const resized =
 		(await refreshCacheDeployment({ ctx, cacheDeployment: current })) ??
 		current;
-	return cacheDeploymentToApiCache({ cacheDeployment: resized, env: ctx.env });
+	return cacheDeploymentToApiCache({ cacheDeployment: resized });
 };

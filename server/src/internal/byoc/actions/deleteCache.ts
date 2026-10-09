@@ -1,9 +1,11 @@
-import { orgToCacheDeployment } from "@autumn/byoc";
 import { ByocCacheStatus } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import { updateCacheDeployment } from "../repos/cacheDeployments.js";
+import {
+	findCacheDeployment,
+	updateCacheDeployment,
+} from "../repos/cacheDeployments.js";
 import { CACHE_LOCK_TTL_MS, cacheLockKey } from "../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
@@ -19,14 +21,14 @@ export const deleteCache = ({ ctx }: { ctx: AutumnContext }) =>
 	});
 
 const tearDownCache = async ({ ctx }: { ctx: AutumnContext }) => {
-	const existing = orgToCacheDeployment({ org: ctx.org, env: ctx.env });
+	const existing = await findCacheDeployment({ ctx });
 	if (!existing) return;
 
 	await getAtomDeployer().delete({
 		deploymentGroupId: existing.deployment_group_id,
 	});
 	const removing = { ...existing, status: ByocCacheStatus.Removing };
-	await updateCacheDeployment({ ctx, cacheDeployment: removing });
+	await updateCacheDeployment({ ctx, from: existing, to: removing });
 
 	// A setup that never ran has nothing to tear down, so this read forgets it at once.
 	const remaining = await refreshCacheDeployment({

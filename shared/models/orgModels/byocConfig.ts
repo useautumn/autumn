@@ -1,3 +1,5 @@
+import type { ByocCacheDeployment } from "./atomDeploymentTable.js";
+
 export const ByocCacheStatus = {
 	AwaitingSetup: "awaiting_setup",
 	Provisioning: "provisioning",
@@ -44,31 +46,6 @@ export type ByocCacheStages = Record<ByocCacheStage, ByocCacheStageStatus>;
 export type ByocCacheNetwork =
 	| { type: "existing_vpc"; vpc_id: string; subnet_ids: string[] }
 	| { type: "new_vpc" };
-
-/** One env's cache deployment in the org's own cloud, as alien knows it. */
-export type ByocCacheDeployment = {
-	deployment_group_id: string;
-	/** Null until the org runs the setup and alien creates the deployment. */
-	deployment_id: string | null;
-	status: ByocCacheStatus;
-	/** Where the env's Atom answers; null until its deployment reports one. */
-	endpoint_url: string | null;
-	/** The machine's vCPUs and GiB: the one its setup asked for, then the one its deployment reports; null for a machine not in `BYOC_CACHE_MACHINES`. */
-	cpu: number | null;
-	memory: number | null;
-	/** The Atom's token, encrypted at rest. The Atom itself holds only its hash. */
-	encrypted_token: string;
-	/** The token's SHA-256, which the Atom holds and calls Autumn with. Absent until the record's first refresh. */
-	token_hash?: string;
-	created_at: number;
-	/** The cloud region its setup asked for, then the one its deployment reports. Absent on records made before setup asked for one. */
-	region?: string | null;
-	network?: ByocCacheNetwork | null;
-	/** How far the deploy got, as of the last refresh. */
-	stages?: ByocCacheStages;
-	/** Why the deploy or teardown stopped, in alien's words. */
-	error?: string | null;
-};
 
 /** One env's infra in the org's own cloud; each env has its own column. */
 export type ByocConfig = {
