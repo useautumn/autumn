@@ -35,7 +35,8 @@ const REASON_NOTES: Record<
 /** Arrays and objects (tiers, license customizations) read as their terms, not `[object Object]`. */
 const describeValue = (value: unknown): string => {
 	if (value === null || value === undefined) return "none";
-	if (typeof value === "number") return value.toLocaleString("en-US");
+	if (typeof value === "number")
+		return value.toLocaleString("en-US", { maximumFractionDigits: 20 });
 	if (Array.isArray(value))
 		return value.length === 0 ? "none" : value.map(describeValue).join(" · ");
 	if (typeof value === "object")
