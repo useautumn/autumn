@@ -12,6 +12,7 @@ import {
 } from "../../getFullCusQuery.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import { customPlansDiffToChanges } from "./customPlansDiffToChanges.js";
+import { customReasonsToText } from "./customReasonsToText.js";
 
 /** A plan/version filter scopes customer products too, not just which customers are walked. */
 export const isCustomerProductInExportScope = ({
@@ -59,12 +60,16 @@ export const customerProductToCustomPlansExportRow = ({
 	plan_id: customerProduct.product.id,
 	plan_version: String(customerProduct.product.version),
 	status: customerProduct.status,
-	reason: result.reason,
+	outcome: result.outcome,
+	reasons:
+		result.outcome === "customized"
+			? customReasonsToText({ reasons: result.reasons })
+			: null,
 	changes:
-		result.reason === "customized"
+		result.outcome === "customized"
 			? customPlansDiffToChanges({ diff: result.diff })
 			: null,
-	diff: result.reason === "customized" ? JSON.stringify(result.diff) : null,
+	diff: result.outcome === "customized" ? JSON.stringify(result.diff) : null,
 });
 
 /** A customer whose read failed still gets a row, so a gap in the file is never silent. */
@@ -83,7 +88,8 @@ export const failedCustomerToCustomPlansExportRow = ({
 	plan_id: null,
 	plan_version: null,
 	status: null,
-	reason: "export_failed",
+	outcome: "export_failed",
+	reasons: null,
 	changes: error instanceof Error ? error.message : String(error),
 	diff: null,
 });

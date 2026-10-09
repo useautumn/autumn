@@ -155,7 +155,8 @@ export const CUSTOM_PLANS_EXPORT_COLUMNS = [
 	{ key: "plan_id", header: "Plan ID" },
 	{ key: "plan_version", header: "Plan Version" },
 	{ key: "status", header: "Status" },
-	{ key: "reason", header: "Reason" },
+	{ key: "outcome", header: "Outcome" },
+	{ key: "reasons", header: "Reasons" },
 	{ key: "changes", header: "Changes" },
 	{ key: "diff", header: "Diff JSON" },
 ] as const;

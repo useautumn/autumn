@@ -27,7 +27,7 @@ export const deriveStoredCustomerProductIsCustom = async ({
 		}),
 		withLicenseBaseProducts({ ctx, customerProduct, baseProducts }),
 	]);
-	if (!hydrated) return { isCustom: true, reason: "catalog_missing" };
+	if (!hydrated) return { isCustom: true, outcome: "catalog_missing" };
 
 	return deriveCustomerProductIsCustom({
 		ctx,

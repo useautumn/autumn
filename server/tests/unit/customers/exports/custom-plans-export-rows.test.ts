@@ -6,6 +6,7 @@ import {
 	failedCustomerToCustomPlansExportRow,
 	isCustomerProductInExportScope,
 } from "@/internal/customers/exports/customPlans/customPlansExportRow.js";
+import { customReasonsToText } from "@/internal/customers/exports/customPlans/customReasonsToText.js";
 import type { CustomerExportScalarRow } from "@/internal/customers/exports/queries/getCustomerExportScalars.js";
 import {
 	basePrice,
@@ -125,7 +126,8 @@ describe("customerProductToCustomPlansExportRow", () => {
 			plan_id: "pro",
 			plan_version: "3",
 			status: "active",
-			reason: "matches_catalog",
+			outcome: "matches_catalog",
+			reasons: null,
 			changes: null,
 			diff: null,
 		});
@@ -139,7 +141,8 @@ describe("customerProductToCustomPlansExportRow", () => {
 		});
 
 		expect(row).toMatchObject({
-			reason: "customized",
+			outcome: "customized",
+			reasons: "price_changed",
 			changes: "base price: amount 49 → 39",
 		});
 		expect(JSON.parse(row.diff ?? "null")).toEqual({
@@ -177,7 +180,8 @@ describe("customerProductToCustomPlansExportRow", () => {
 			}),
 		).toMatchObject({
 			customer_id: "cus_123",
-			reason: "export_failed",
+			outcome: "export_failed",
+			reasons: null,
 			changes: "timed out",
 			customer_product_id: null,
 		});
@@ -196,7 +200,7 @@ describe("customPlansDiffToChanges", () => {
 			customer: customerPlan(customer),
 			catalog: catalogPlan(catalog),
 		});
-		if (result.reason !== "customized") throw new Error(result.reason);
+		if (result.outcome !== "customized") throw new Error(result.outcome);
 		return customPlansDiffToChanges({ diff: result.diff });
 	};
 
@@ -236,5 +240,19 @@ describe("customPlansDiffToChanges", () => {
 		).toBe(
 			'license seat_plan: included 20, prepaid_only true, version_slug "v1"',
 		);
+	});
+});
+
+describe("customReasonsToText", () => {
+	test("each reason is one clause naming what it's about", () => {
+		expect(
+			customReasonsToText({
+				reasons: [
+					{ kind: "price_changed" },
+					{ kind: "item_removed", feature_id: "dashboard" },
+					{ kind: "license_added", license_plan_id: "seat_plan" },
+				],
+			}),
+		).toBe("price_changed; item_removed:dashboard; license_added:seat_plan");
 	});
 });

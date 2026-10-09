@@ -68,7 +68,7 @@ describe("deriveStoredCustomerProductIsCustom licenses", () => {
 				licenses: [customizedLicense({ withBaseProduct: false })],
 			}),
 		});
-		expect(result.reason).toBe("matches_catalog");
+		expect(result.outcome).toBe("matches_catalog");
 	});
 
 	test("a license customised only for the customer reads as custom", async () => {
@@ -78,8 +78,8 @@ describe("deriveStoredCustomerProductIsCustom licenses", () => {
 				licenses: [customizedLicense({ withBaseProduct: false })],
 			}),
 		});
-		expect(result.reason).toBe("customized");
-		if (result.reason !== "customized") return;
+		expect(result.outcome).toBe("customized");
+		if (result.outcome !== "customized") return;
 		expect(result.diff.upsert_licenses?.[0]?.license_plan_id).toBe("seat_plan");
 	});
 
@@ -91,6 +91,6 @@ describe("deriveStoredCustomerProductIsCustom licenses", () => {
 			}),
 			licenseCatalog: null,
 		});
-		expect(result.reason).toBe("catalog_missing");
+		expect(result.outcome).toBe("catalog_missing");
 	});
 });

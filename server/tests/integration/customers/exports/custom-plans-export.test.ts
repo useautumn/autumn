@@ -95,7 +95,7 @@ test.concurrent(
 		expect(rows).toEqual([
 			expect.objectContaining({
 				customer_product_id: customerProduct.id,
-				reason: "matches_catalog",
+				outcome: "matches_catalog",
 				diff: null,
 			}),
 		]);
@@ -121,7 +121,8 @@ test.concurrent(
 		expect(rows).toEqual([
 			expect.objectContaining({
 				customer_product_id: customerProduct.id,
-				reason: "customized",
+				outcome: "customized",
+				reasons: "item_changed:messages",
 				changes: "messages: included 100 → 250",
 			}),
 		]);

@@ -43,7 +43,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		menuIcon: SlidersHorizontalIcon,
 		menuLabel: "Custom plans",
 		title: "Export custom plans",
-		columnsSummary: "Customer, plan, reason and what differs",
+		columnsSummary: "Customer, plan, outcome, reasons and what differs",
 		description:
 			"Compare each customer's plan with the catalog version it's on and download one row per plan: whether it's really custom, and what differs.",
 		runningLabel: "Checking plans",
