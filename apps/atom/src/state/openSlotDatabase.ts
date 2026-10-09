@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 
 /** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema. */
-const SLOT_SCHEMA_VERSION = 5;
+const SLOT_SCHEMA_VERSION = 6;
 
 const dropSlotSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS subject_states");
@@ -22,6 +22,8 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 			read_at INTEGER NOT NULL,
 			state_json TEXT NOT NULL,
 			slice_hash TEXT NOT NULL,
+			-- On the customer's own row: the log offset of its latest evict. It only rises, even past rows older than held.
+			customer_version INTEGER NOT NULL DEFAULT 0 CHECK (customer_version >= 0),
 			PRIMARY KEY (customer_id, entity_id)
 		) WITHOUT ROWID
 	`);

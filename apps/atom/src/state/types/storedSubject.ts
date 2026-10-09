@@ -10,4 +10,6 @@ export type StoredSubject = {
 	logOffset: bigint;
 	/** When Autumn read the subject from its worker, in epoch ms. */
 	readAt: number;
+	/** On the customer's own part, the log offset of its latest evict: an entity part read from before it may be stale. 0n on an entity's part. */
+	customerVersion: bigint;
 };

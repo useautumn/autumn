@@ -1,3 +1,4 @@
+import type { AtomSubjectBody } from "../../../atom/types/atomClient.js";
 import type { CachePushTiming } from "../pushQueue/createCachePushStats.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
@@ -14,7 +15,7 @@ export const pushSubjectToCache = async ({
 	ctx: CachePushContext;
 	cacheSubject: CacheSubjectRef;
 }): Promise<CachePushTiming | null> => {
-	const { identity, logOffset } = cacheSubject;
+	const { identity, logOffset, customerVersion } = cacheSubject;
 	const targetsStartedAt = performance.now();
 	const targets = await readSubjectAtomTargets({ ctx, identity });
 	if (!targets) return null;
@@ -27,12 +28,15 @@ export const pushSubjectToCache = async ({
 		identity,
 		org: targets.org,
 	});
-	const body = {
+	const body: AtomSubjectBody = {
 		state,
 		catalog,
 		org: orgToAtomOrg({ org: targets.org }),
 		log_offset: logOffset.toString(),
 		read_at: readAt,
+		...(customerVersion !== null && {
+			customer_version: customerVersion.toString(),
+		}),
 	};
 	const sendStartedAt = performance.now();
 	await Promise.all(

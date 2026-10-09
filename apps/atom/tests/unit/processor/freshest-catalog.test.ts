@@ -19,6 +19,7 @@ const storedReadAt = ({ readAt }: { readAt: number }): StoredSubject => ({
 	org: atomOrg,
 	logOffset: 1n,
 	readAt,
+	customerVersion: 0n,
 });
 
 /** The customer's entitlement rows as edited since, and nothing else: allowance 777. */
