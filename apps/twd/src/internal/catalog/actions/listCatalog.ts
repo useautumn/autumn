@@ -1,6 +1,7 @@
 import { relative } from "node:path";
 import { createTestFileResolver } from "@tw/testDiscovery/createTestFileResolver.ts";
 import { readTestFileIndex } from "@tw/testDiscovery/readTestFileIndex.ts";
+import { eq } from "drizzle-orm";
 import type { Catalog } from "../../../api/contract.ts";
 import { fileBaselines } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
@@ -72,7 +73,8 @@ export const listCatalog = async ({
 
 	const baselines = await ctx.db
 		.select({ file: fileBaselines.file, p90Ms: fileBaselines.p90Ms })
-		.from(fileBaselines);
+		.from(fileBaselines)
+		.where(eq(fileBaselines.source, "swarm"));
 	const p90ByFile = new Map(baselines.map((row) => [row.file, row.p90Ms]));
 
 	return {

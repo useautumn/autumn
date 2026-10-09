@@ -747,6 +747,10 @@ export const ROUTES = {
 	baselines: "GET /baselines",
 	costs: "GET /costs",
 	fileHistory: "GET /files/history?file=",
+	/** Per file: passed | failing | flaky | no_data on dev, from swarm runs and CI uploads. */
+	devStatus: "POST /files/dev-status",
+	/** CI uploads per-file results it ran outside twd (source=ci); never priced or profiled. */
+	ingestResults: "POST /results/ingest",
 
 	// capacity + MCP (http/routes/capacity.ts, http/routes/mcp.ts)
 	capacity: "GET /capacity",

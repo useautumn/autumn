@@ -5,7 +5,12 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 export const BASELINE_BRANCH = "dev";
 const BASELINE_WINDOW_RUNS = 10;
 
-/** Recompute file_baselines from the final attempt of each file in the last 10 finished baseline runs. */
+const CI_WINDOW_DAYS = 30;
+
+/**
+ * Recompute file_baselines from the final attempt of each file in the last 10 finished baseline runs.
+ * Files no baseline run covers fall back to their last 10 dev CI shas (source=ci).
+ */
 export const refreshBaselines = async ({
 	ctx,
 }: {
@@ -20,19 +25,39 @@ export const refreshBaselines = async ({
 			order by finished_at desc
 			limit ${BASELINE_WINDOW_RUNS}
 		),
-		final as (
-			select distinct on (run_id, file) run_id, file, status, duration_ms
+		swarm as (
+			select distinct on (run_id, file) file, status, duration_ms
 			from test_results
 			where run_id in (select id from recent)
 			order by run_id, file, attempt desc, created_at desc
+		),
+		ci_per_sha as (
+			select distinct on (sha, file) file, status, duration_ms, created_at
+			from test_results
+			where source = 'ci' and branch = ${BASELINE_BRANCH}
+				and created_at > now() - make_interval(days => ${CI_WINDOW_DAYS})
+			order by sha, file, created_at desc, attempt desc
+		),
+		ci as (
+			select file, status, duration_ms from (
+				select *, row_number() over (partition by file order by created_at desc) as rn
+				from ci_per_sha
+			) ranked
+			where rn <= ${BASELINE_WINDOW_RUNS} and file not in (select file from swarm)
+		),
+		final as (
+			select file, status, duration_ms, 'swarm' as source from swarm
+			union all
+			select file, status, duration_ms, 'ci' as source from ci
 		)
-		insert into file_baselines (file, p50_ms, p90_ms, pass_rate, samples, updated_at)
+		insert into file_baselines (file, p50_ms, p90_ms, pass_rate, samples, source, updated_at)
 		select
 			file,
 			round(percentile_cont(0.5) within group (order by duration_ms))::int,
 			round(percentile_cont(0.9) within group (order by duration_ms))::int,
 			avg(case when status = 'passed' then 1.0 else 0.0 end)::real,
 			count(*)::int,
+			min(source),
 			now()
 		from final
 		where status <> 'skipped'
@@ -42,6 +67,7 @@ export const refreshBaselines = async ({
 			p90_ms = excluded.p90_ms,
 			pass_rate = excluded.pass_rate,
 			samples = excluded.samples,
+			source = excluded.source,
 			updated_at = excluded.updated_at
 		returning file
 	`);

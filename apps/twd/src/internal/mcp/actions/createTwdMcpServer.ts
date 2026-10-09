@@ -10,7 +10,9 @@ import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { listCatalog } from "../../catalog/actions/listCatalog.ts";
 import { warmBranch } from "../../catalog/actions/warmBranch.ts";
 import { qaTools } from "../../qa/mcp/qaTools.ts";
+import { getDevStatus } from "../../results/actions/getDevStatus.ts";
 import { getFileHistory } from "../../results/actions/queryResults.ts";
+import type { FileDevStatus } from "../../results/types/resultsSchemas.ts";
 import { cancelRun } from "../../runs/actions/cancelRun.ts";
 import { createRun } from "../../runs/actions/createRun.ts";
 import { getRun } from "../../runs/actions/getRun.ts";
@@ -92,6 +94,21 @@ const summariseRun = (run: RunDetail) => {
 	};
 	const summary = `Run ${run.id} on ${run.branch}@${run.sha.slice(0, 12)} is ${run.status}${run.phase ? ` (${run.phase})` : ""}${queue}; ${workers}: ${run.passed} passed, ${run.failed} failed${timedOut ? ` (${timedOut} timed out)` : ""}, ${done}/${run.fileCount ?? "?"} files done, ${run.drift.length} drift flag(s).${run.etaMs === null ? "" : ` About ${Math.ceil(run.etaMs / 60_000)} min left (p90 ${Math.ceil((run.etaP90Ms ?? run.etaMs) / 60_000)} min).`}${describeRepeats(run)}`;
 	return { summary, data };
+};
+
+const describeDevStatus = (f: FileDevStatus) => {
+	if (f.status === "no_data")
+		return `${f.file}: NO DATA on dev, not a pass. ${f.reason}`;
+	const rate = `pass rate ${Math.round((f.passRate ?? 0) * 100)}% over ${f.samples}`;
+	const latest = f.latest
+		? `latest ${f.latest.status} at dev ${f.latest.sha.slice(0, 12)} (${f.latest.source}, ${f.latest.at})`
+		: "";
+	const verdict = {
+		passed: "passes on dev",
+		failing: "FAILS on dev too",
+		flaky: "FLAKY on dev",
+	}[f.status];
+	return `${f.file}: ${verdict} (${rate}; ${latest})`;
 };
 
 /** A fresh MCP server per request (stateless); every tool calls the same actions as REST. */
@@ -241,7 +258,7 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 		defineTool({
 			name: "wait_for_run",
 			description:
-				"Step 3 of 'test my branch'. Blocks until the run finishes (passed|failed|cancelled|errored) or timeout_s elapses (default and max 600), then returns the same shape as get_run (including workers X/Y and queue position). If terminal is false, call it again; a queued run is waiting for its first free account and starts on its own. On finish, read failures and drift: a new_failure is most likely caused by your branch; files failing without drift may be flaky on dev too.",
+				"Step 3 of 'test my branch'. Blocks until the run finishes (passed|failed|cancelled|errored) or timeout_s elapses (default and max 600), then returns the same shape as get_run (including workers X/Y and queue position). If terminal is false, call it again; a queued run is waiting for its first free account and starts on its own. On finish, read failures and drift: a new_failure is most likely caused by your branch; for files failing without drift, call dev_status before calling them pre-existing.",
 			input: z.object({
 				run_id: z.string().min(1),
 				timeout_s: z
@@ -338,9 +355,31 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 			},
 		}),
 		defineTool({
+			name: "dev_status",
+			description:
+				"Is this test failure already on dev? Call it before calling any failure pre-existing or running a test on dev to find out. For each file returns status passed | failing | flaky | no_data on dev, judged by the final attempt of its latest `limit` (default 10) dev results from twd runs (source swarm) and dev CI uploads (source ci, how unit tests arrive), with passRate, the latest result (status, dev sha, source, time) and the recent results newest first. failing = the latest two dev results failed; flaky = mixed or passing only on retry; no_data says why and is never a pass. files take server/tests-relative paths (unit/…, integration/…); server/tests/ prefixes are stripped.",
+			input: z.object({
+				files: z.array(z.string().min(1)).min(1).max(100),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(50)
+					.optional()
+					.describe("Latest dev results to judge by, per file (default 10)."),
+			}),
+			run: async ({ files, limit }) => {
+				const statuses = await getDevStatus({ ctx, files, limit: limit ?? 10 });
+				return toolOk({
+					summary: statuses.map(describeDevStatus).join("\n"),
+					data: statuses,
+				});
+			},
+		}),
+		defineTool({
 			name: "get_file_history",
 			description:
-				"How one test file's speed and stability changed over time, keyed by file path with commit metadata. Returns byCommit (oldest first: sha, branch, runs, p50Ms, maxMs, passRate), the dev baseline (p50/p90), and raw recent results (newest first; status passed|failed|crashed|timed_out|skipped, where timed_out means the file hit bun's per-test timeout). Use it to spot a commit that made a file slower or flaky. file is server/tests-relative, as list_catalog shows it.",
+				"How one test file's speed and stability changed over time, keyed by file path with commit metadata. Returns byCommit (oldest first: sha, branch, runs, p50Ms, maxMs, passRate), the dev baseline (p50/p90), and raw recent results (newest first; status passed|failed|crashed|timed_out|skipped, where timed_out means the file hit bun's per-test timeout; source swarm = a twd run, ci = a CI upload such as dev unit tests). Use it to spot a commit that made a file slower or flaky. file is server/tests-relative, as list_catalog shows it.",
 			input: z.object({
 				file: z.string().min(1),
 				branch: z.string().optional(),
