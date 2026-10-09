@@ -27,7 +27,7 @@ const IOWAIT_FIELD = 4;
 const THREAD_UTIME_FIELD = 11;
 const MICROS_PER_TICK = 10_000;
 
-function readCounterFile({ path }: { path: string }): string | null {
+export function readCounterFile({ path }: { path: string }): string | null {
 	try {
 		return readFileSync(path, "utf8");
 	} catch {
