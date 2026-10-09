@@ -7,6 +7,7 @@ import {
 	RecaseError,
 	TierBehavior,
 	UsageModel,
+	volumeTiersToIssue,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
@@ -21,11 +22,23 @@ const throwInvalidVolumeItem = ({ message }: { message: string }) => {
 export const validateItemTierBehavior = ({
 	item,
 	feature,
+	validateAuthoringRules,
 }: {
 	item: ProductItem;
 	feature?: Feature;
+	validateAuthoringRules: boolean;
 }) => {
 	if (item.tier_behavior !== TierBehavior.VolumeBased) return;
+
+	// Billing paths re-validate persisted single-tier items written before this rule.
+	const singleTierIssue = validateAuthoringRules
+		? volumeTiersToIssue({
+				tierBehavior: item.tier_behavior,
+				isPrepaid: item.usage_model === UsageModel.Prepaid,
+				tierCount: item.tiers?.length ?? 1,
+			})
+		: null;
+	if (singleTierIssue) throwInvalidVolumeItem({ message: singleTierIssue });
 
 	// Each threshold charge prices its chunk on its own, but a volume band (and its
 	// charge on included units) depends on the whole period's usage.

@@ -20,6 +20,7 @@ import {
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
 import { withSpecDefault } from "@utils/common/withSpecDefault";
+import { volumeTiersToIssue } from "@utils/productV2Utils/productItemUtils/volumeTiersToIssue";
 import { z } from "zod/v4";
 
 export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
@@ -374,6 +375,15 @@ export const planItemParamsIssues = (
 				message: "flat_amount must be 0 or greater.",
 				input: value.price,
 			});
+		}
+
+		const volumeTiersIssue = volumeTiersToIssue({
+			tierBehavior: value.price.tier_behavior,
+			isPrepaid: value.price.billing_method === BillingMethod.Prepaid,
+			tierCount: value.price.tiers.length,
+		});
+		if (volumeTiersIssue) {
+			issues.push({ message: volumeTiersIssue, input: value.price });
 		}
 
 		if (value.price?.tiers.length === 0) {

@@ -3,6 +3,7 @@ import {
 	exactlyOneActive,
 	exists,
 	linkedOnce,
+	refusedWhen,
 	targetForbids,
 	targetHas,
 	targetLacks,
@@ -52,6 +53,16 @@ export const planItemRules: LintRule[] = [
 		whenUnstated: ["included"],
 		because:
 			"A volume-tiered allocated item needs included usage before a first-tier flatAmount: Stripe would charge that fee at 0 seats. Add included usage or move the fee to a later tier.",
+	}),
+];
+
+export const planItemPriceRules: LintRule[] = [
+	refusedWhen({
+		whenEquals: { tierBehavior: "volume", billingMethod: "usage_based" },
+		whenStated: [],
+		whenUnstated: ["tiers.1"],
+		because:
+			"Volume-based pricing on a usage-based item needs at least two tiers. Add a tier, or use graduated pricing for a single rate.",
 	}),
 ];
 

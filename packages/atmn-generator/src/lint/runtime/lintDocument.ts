@@ -178,6 +178,15 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
+			/** The entry is refused when it matches every `whenEquals`,
+			 * `whenStated` and `whenUnstated` path. */
+			readonly kind: "refusedWhen";
+			readonly whenEquals: Readonly<Record<string, string>>;
+			readonly whenStated: readonly string[];
+			readonly whenUnstated: readonly string[];
+			readonly because: string;
+	  }
+	| {
 			/** `field` names a row of top-level collection `in` by `matching`. The
 			 * entry is refused when that row's `target` equals `equals` and the entry
 			 * matches every `whenEquals`, `whenStated` and `whenUnstated` path. */
@@ -480,6 +489,30 @@ const COMPARE = {
 	">=": { holds: (a: number, b: number) => a >= b, words: "at least" },
 } as const;
 
+/** Whether an entry matches a rule's `whenEquals`, `whenStated` and `whenUnstated`
+ * paths; zero, false and null count as unstated. */
+const entryMatchesWhen = ({
+	entry,
+	rule,
+}: {
+	entry: Entry;
+	rule: Extract<LintRule, { kind: "refusedWhen" | "targetForbids" }>;
+}): boolean => {
+	const isStated = (path: string) => {
+		const value = valueAtPath({ entry, path });
+		return (
+			value !== undefined && value !== null && value !== 0 && value !== false
+		);
+	};
+	return (
+		Object.entries(rule.whenEquals).every(
+			([path, value]) => valueAtPath({ entry, path }) === value,
+		) &&
+		rule.whenStated.every(isStated) &&
+		!rule.whenUnstated.some(isStated)
+	);
+};
+
 const entryRuleFailures = ({
 	entry,
 	rule,
@@ -636,23 +669,10 @@ const entryRuleFailures = ({
 				`${rule.label} ${show(entry[rule.field])} is ${rule.target}. Unarchive it, or archive ${rule.parentLabel} ${show(parent?.[rule.parentIdField])}. ${rule.because}`,
 			];
 		}
+		case "refusedWhen":
+			return entryMatchesWhen({ entry, rule }) ? [rule.because] : [];
 		case "targetForbids": {
-			const isStated = (path: string) => {
-				const value = valueAtPath({ entry, path });
-				return (
-					value !== undefined &&
-					value !== null &&
-					value !== 0 &&
-					value !== false
-				);
-			};
-			const entryMatches =
-				Object.entries(rule.whenEquals).every(
-					([path, value]) => valueAtPath({ entry, path }) === value,
-				) &&
-				rule.whenStated.every(isStated) &&
-				!rule.whenUnstated.some(isStated);
-			if (!entryMatches) return [];
+			if (!entryMatchesWhen({ entry, rule })) return [];
 			const target = document[rule.in];
 			if (!Array.isArray(target)) return [];
 			const row = target.find(

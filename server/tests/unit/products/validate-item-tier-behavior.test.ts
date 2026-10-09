@@ -24,7 +24,10 @@ const payPerUseItem = ({
 		interval: ProductItemInterval.Month,
 		usage_model: UsageModel.PayPerUse,
 		tier_behavior: tierBehavior,
-		price: 0.5,
+		tiers: [
+			{ to: 100, amount: 1 },
+			{ to: TierInfinite, amount: 0.5 },
+		],
 		config: thresholdBilling ? { threshold_billing: thresholdBilling } : null,
 	}) as ProductItem;
 
@@ -32,6 +35,7 @@ describe("validateItemTierBehavior", () => {
 	test("accepts pay-per-use volume", () => {
 		expect(() =>
 			validateItemTierBehavior({
+				validateAuthoringRules: true,
 				item: payPerUseItem({ tierBehavior: TierBehavior.VolumeBased }),
 			}),
 		).not.toThrow();
@@ -40,6 +44,7 @@ describe("validateItemTierBehavior", () => {
 	test("rejects volume with threshold_billing, even on a single tier", () => {
 		expect(() =>
 			validateItemTierBehavior({
+				validateAuthoringRules: true,
 				item: payPerUseItem({
 					tierBehavior: TierBehavior.VolumeBased,
 					thresholdBilling: { threshold: 50 },
@@ -51,6 +56,7 @@ describe("validateItemTierBehavior", () => {
 	test("accepts graduated single price with threshold_billing", () => {
 		expect(() =>
 			validateItemTierBehavior({
+				validateAuthoringRules: true,
 				item: payPerUseItem({
 					tierBehavior: TierBehavior.Graduated,
 					thresholdBilling: { threshold: 50 },
@@ -85,6 +91,7 @@ describe("validateItemTierBehavior", () => {
 		test("rejects it without included usage", () => {
 			expect(() =>
 				validateItemTierBehavior({
+					validateAuthoringRules: true,
 					item: allocatedItem({ includedUsage: 0 }),
 					feature: seats,
 				}),
@@ -94,8 +101,48 @@ describe("validateItemTierBehavior", () => {
 		test("accepts it with included usage", () => {
 			expect(() =>
 				validateItemTierBehavior({
+					validateAuthoringRules: true,
 					item: allocatedItem({ includedUsage: 3 }),
 					feature: seats,
+				}),
+			).not.toThrow();
+		});
+	});
+
+	describe("single-tier usage-based volume", () => {
+		const singleTierItem = ({ usageModel }: { usageModel: UsageModel }) =>
+			({
+				feature_id: "messages",
+				included_usage: 100,
+				interval: ProductItemInterval.Month,
+				usage_model: usageModel,
+				tier_behavior: TierBehavior.VolumeBased,
+				price: 0.5,
+			}) as ProductItem;
+
+		test("rejects it when authoring", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: true,
+					item: singleTierItem({ usageModel: UsageModel.PayPerUse }),
+				}),
+			).toThrow("needs at least two tiers");
+		});
+
+		test("accepts persisted rows on billing paths", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: false,
+					item: singleTierItem({ usageModel: UsageModel.PayPerUse }),
+				}),
+			).not.toThrow();
+		});
+
+		test("accepts single-tier prepaid volume", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: true,
+					item: singleTierItem({ usageModel: UsageModel.Prepaid }),
 				}),
 			).not.toThrow();
 		});

@@ -381,6 +381,14 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: ACCEPT volume-based with
 // V0 product items: volume-based on usage-based items, but never with thresholds
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const VOLUME_SINGLE_TIER =
+	"Volume-based pricing on a usage-based item needs at least two tiers";
+
+const VOLUME_TWO_TIERS: ProductItem["tiers"] = [
+	{ to: 200, amount: 1 },
+	{ to: TierInfinite, amount: 0.5 },
+];
+
 const VOLUME_THRESHOLD =
 	"threshold_billing can't be combined with volume-based pricing";
 
@@ -427,13 +435,18 @@ const createV0Product = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("tier-errors V0 create: ACCEPT volume on pay-per-use (single tier)")}`,
+	`${chalk.yellowBright("tier-errors V0 create: REJECT single-tier volume on pay-per-use")}`,
 	async () => {
-		await createV0Product({
-			productId: `ok_v0_vol_price_${getSuffix()}`,
-			items: [
-				volumeMessagesItem({ usageModel: UsageModel.PayPerUse, price: 0.5 }),
-			],
+		await expectAutumnError({
+			errCode: "invalid_inputs",
+			errMessage: VOLUME_SINGLE_TIER,
+			func: () =>
+				createV0Product({
+					productId: `err_v0_vol_single_${getSuffix()}`,
+					items: [
+						volumeMessagesItem({ usageModel: UsageModel.PayPerUse, price: 0.5 }),
+					],
+				}),
 		});
 	},
 );
@@ -475,14 +488,17 @@ test.concurrent(
 
 		await autumnV1_2.products.update<ApiPlan>(productId, {
 			items: [
-				volumeMessagesItem({ usageModel: UsageModel.PayPerUse, price: 0.5 }),
+				volumeMessagesItem({
+					usageModel: UsageModel.PayPerUse,
+					tiers: VOLUME_TWO_TIERS,
+				}),
 			],
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("tier-errors V0 create: REJECT volume with threshold_billing (single tier)")}`,
+	`${chalk.yellowBright("tier-errors V0 create: REJECT volume with threshold_billing")}`,
 	async () => {
 		await expectAutumnError({
 			errCode: "invalid_inputs",
@@ -493,7 +509,7 @@ test.concurrent(
 					items: [
 						volumeMessagesItem({
 							usageModel: UsageModel.PayPerUse,
-							price: 0.5,
+							tiers: VOLUME_TWO_TIERS,
 							thresholdBilling: { threshold: 50 },
 						}),
 					],
@@ -607,6 +623,42 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT allocated volume 
 			},
 		],
 		errMessage: ALLOCATED_VOLUME_FLAT,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT single-tier volume with usage_based billing")}`, async () => {
+	await expectRestError({
+		productId: `err_vol_single_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				price: {
+					tiers: [{ to: TierInfinite, amount: 0.5 }],
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: VOLUME_SINGLE_TIER,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT single-tier volume with usage_based billing")}`, async () => {
+	await expectRpcError({
+		productId: `err_vol_single_rpc_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				price: {
+					tiers: [{ to: TierInfinite, amount: 0.5 }],
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: VOLUME_SINGLE_TIER,
 	});
 });
 

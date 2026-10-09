@@ -41,6 +41,7 @@ export type InvalidMutation =
 	| "zero_billing_units"
 	| "amount_and_tiers"
 	| "flat_amount_on_graduated"
+	| "single_tier_volume_usage_based"
 	| "unsorted_tiers"
 	| "missing_inf_tier"
 	| "duplicate_item";
@@ -418,6 +419,17 @@ const applyInvalidMutation = ({
 				},
 				billingBehavior: behavior,
 			});
+		case "single_tier_volume_usage_based":
+			return addOverridden({
+				price: {
+					billing_method: BillingMethod.UsageBased,
+					interval: BillingInterval.Month,
+					billing_units: 1,
+					tier_behavior: TierBehavior.VolumeBased,
+					tiers: [{ to: "inf", amount: 0.5 }],
+				},
+				billingBehavior: BillingMethod.UsageBased,
+			});
 		case "unsorted_tiers":
 		case "missing_inf_tier":
 			return addOverridden({
@@ -707,6 +719,7 @@ export const generateCustomizeScenario = ({
 		"zero_billing_units",
 		"amount_and_tiers",
 		"flat_amount_on_graduated",
+		"single_tier_volume_usage_based",
 		"unsorted_tiers",
 		"missing_inf_tier",
 		"duplicate_item",

@@ -75,6 +75,12 @@ export const targetHas = (rule: RuleOf<"targetHas">): LintRule => ({
 	...rule,
 });
 
+/** The entry is refused when every `when*` path matches. */
+export const refusedWhen = (rule: RuleOf<"refusedWhen">): LintRule => ({
+	kind: "refusedWhen",
+	...rule,
+});
+
 /** `field` names a row of top-level collection `in`; the entry is refused when
  * that row's `target` equals `equals` and every `when*` path matches. */
 export const targetForbids = (rule: RuleOf<"targetForbids">): LintRule => ({

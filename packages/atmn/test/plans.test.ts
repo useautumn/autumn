@@ -137,39 +137,64 @@ test("with features omitted, item references are not checked: absent means not m
 	).not.toThrow();
 });
 
+const usageBasedVolumeConfig = ({
+	tiers,
+}: {
+	tiers: { to: number | "inf"; amount: number }[];
+}) =>
+	atmn({
+		features: [
+			feature({
+				featureId: "api",
+				name: "API calls",
+				type: "metered",
+				consumable: true,
+			}),
+		],
+		plans: [
+			plan({
+				active: true,
+				planId: "pro",
+				name: "Pro",
+				versionSlug: "v1",
+				items: [
+					{
+						featureId: "api",
+						price: {
+							billingMethod: "usage_based",
+							tierBehavior: "volume",
+							tiers,
+							interval: "month",
+						},
+					},
+				],
+			}),
+		],
+	});
+
 test("a volume-tiered item price can be usage-based", () => {
 	const issues = issuesOf(() =>
-		atmn({
-			features: [
-				feature({
-					featureId: "api",
-					name: "API calls",
-					type: "metered",
-					consumable: true,
-				}),
-			],
-			plans: [
-				plan({
-					active: true,
-					planId: "pro",
-					name: "Pro",
-					versionSlug: "v1",
-					items: [
-						{
-							featureId: "api",
-							price: {
-								billingMethod: "usage_based",
-								tierBehavior: "volume",
-								tiers: [{ to: "inf", amount: 1 }],
-								interval: "month",
-							},
-						},
-					],
-				}),
+		usageBasedVolumeConfig({
+			tiers: [
+				{ to: 100, amount: 1 },
+				{ to: "inf", amount: 0.5 },
 			],
 		}),
 	);
 	expect(issues).toEqual([]);
+});
+
+test("a usage-based volume price needs at least two tiers", () => {
+	const issues = issuesOf(() =>
+		usageBasedVolumeConfig({ tiers: [{ to: "inf", amount: 1 }] }),
+	);
+	expect(issues).toEqual([
+		{
+			path: 'plan "pro" › item "api" › price',
+			message:
+				"Volume-based pricing on a usage-based item needs at least two tiers. Add a tier, or use graduated pricing for a single rate.",
+		},
+	]);
 });
 
 const allocatedVolumeConfig = ({ included }: { included?: number }) =>

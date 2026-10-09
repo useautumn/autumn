@@ -46,6 +46,12 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [rule.when, rule.field];
 		case "targetLacks":
 			return [rule.field];
+		case "refusedWhen":
+			return [
+				...Object.keys(rule.whenEquals),
+				...rule.whenStated,
+				...rule.whenUnstated,
+			];
 		case "targetForbids":
 			return [
 				rule.field,
