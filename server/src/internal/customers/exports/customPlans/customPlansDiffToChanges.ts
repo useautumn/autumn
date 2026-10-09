@@ -13,12 +13,6 @@ const changeLabel = ({ target, id }: CustomDiffChange) => {
 const describeChange = (change: CustomDiffChange): string => {
 	const label = changeLabel(change);
 	if (change.kind !== "changed") return `${label}: ${change.kind}`;
-	if (change.target === "license") {
-		const terms = [...change.fields]
-			.sort((left, right) => left.path.localeCompare(right.path))
-			.map(({ path, customer }) => `${path} ${customer}`);
-		return `${label}: ${terms.join(", ")}`;
-	}
 	const fields = change.fields.map(
 		({ path, catalog, customer }) =>
 			`${path} ${catalog ?? "unset"} → ${customer ?? "unset"}`,

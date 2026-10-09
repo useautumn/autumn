@@ -1,11 +1,8 @@
-import {
-	CusProductNotFoundError,
-	CusProductStatus,
-	Scopes,
-} from "@autumn/shared";
+import { CusProductNotFoundError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { customDiffToChanges } from "@/internal/customers/cusProducts/actions/deriveIsCustom/customDiffToChanges";
 import { deriveStoredCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveStoredCustomerProductIsCustom";
+import { loadFullCustomerProductsWithLicenses } from "@/internal/customers/cusProducts/actions/deriveIsCustom/rederiveIsCustomForCustomers";
 import { CusService } from "../CusService";
 
 /** The derived is_custom result for one customer product, for the dashboard's custom badge. */
@@ -15,17 +12,24 @@ export const handleGetCustomerProductCustomDiff = createRoute({
 		const ctx = c.get("ctx");
 		const { customer_id, customer_product_id } = c.req.param();
 
-		const fullCustomer = await CusService.getFull({
-			ctx,
+		// Loaded by id: the customer's product list is paged and status-filtered, and so are its licenses.
+		const customer = await CusService.get({
+			db: ctx.db,
 			idOrInternalId: customer_id,
-			inStatuses: Object.values(CusProductStatus),
-			withEntities: false,
-			skipReset: true,
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
-		const customerProduct = fullCustomer.customer_products.find(
-			(candidate) => candidate.id === customer_product_id,
-		);
-		if (!customerProduct) {
+		const [customerProduct] = customer
+			? await loadFullCustomerProductsWithLicenses({
+					ctx,
+					customerProductIds: [customer_product_id],
+				})
+			: [];
+		if (
+			!customer ||
+			!customerProduct ||
+			customerProduct.internal_customer_id !== customer.internal_id
+		) {
 			throw new CusProductNotFoundError({
 				customerId: customer_id,
 				productId: customer_product_id,

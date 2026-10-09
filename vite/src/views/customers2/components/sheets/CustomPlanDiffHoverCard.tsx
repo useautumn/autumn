@@ -215,12 +215,14 @@ export function CustomPlanDiffHoverCard({
 					</span>
 				</div>
 				<div className="h-px shrink-0 bg-overlay-separator preset:bg-border" />
-				<CustomDiffBody
-					diff={data}
-					isLoading={isLoading}
-					isError={isError}
-					featureNameById={featureNameById}
-				/>
+				<div className="-mr-3 flex max-h-[min(24rem,calc(var(--available-height)-6rem))] flex-col gap-2.5 overflow-y-auto pr-3">
+					<CustomDiffBody
+						diff={data}
+						isLoading={isLoading}
+						isError={isError}
+						featureNameById={featureNameById}
+					/>
+				</div>
 			</HoverCardContent>
 		</HoverCard>
 	);

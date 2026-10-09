@@ -19,7 +19,8 @@ export const createIsCustomDerivationCache = (): IsCustomDerivationCache => ({
 	baseProducts: new Map(),
 });
 
-const loadFullWithLicenses = async ({
+/** Full customer products by id with their stored licenses, whatever their status. */
+export const loadFullCustomerProductsWithLicenses = async ({
 	ctx,
 	customerProductIds,
 }: {
@@ -54,7 +55,7 @@ const deriveFingerprints = async ({
 	representatives: { id: string; fingerprint: string }[];
 	cache: IsCustomDerivationCache;
 }) => {
-	const customerProducts = await loadFullWithLicenses({
+	const customerProducts = await loadFullCustomerProductsWithLicenses({
 		ctx,
 		customerProductIds: representatives.map(({ id }) => id),
 	});

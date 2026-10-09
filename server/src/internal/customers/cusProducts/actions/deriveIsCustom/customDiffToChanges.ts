@@ -2,6 +2,7 @@ import type {
 	CustomDiffChange,
 	CustomDiffField,
 	CustomerProductCustomDiff,
+	CustomizedPlanLicense,
 } from "./types/customerProductCustomDiff";
 
 type Terms = Map<string, string>;
@@ -87,6 +88,11 @@ const sideChange = ({
 	};
 };
 
+const withoutLicensePlanId = ({
+	license_plan_id: _licensePlanId,
+	...terms
+}: NonNullable<CustomizedPlanLicense["catalog"]>) => terms;
+
 /** One entry per difference, in a stable order: base price, items, then licenses. */
 export const customDiffToChanges = ({
 	diff,
@@ -111,20 +117,12 @@ export const customDiffToChanges = ({
 			customer: item.customer,
 		}),
 	),
-	...(diff.upsert_licenses ?? []).map(
-		({ license_plan_id, ...terms }): CustomDiffChange => ({
+	...(diff.licenses ?? []).map((license) =>
+		sideChange({
 			target: "license",
-			id: license_plan_id,
-			kind: "changed",
-			fields: changedFields({ catalog: null, customer: terms }),
-		}),
-	),
-	...(diff.remove_licenses ?? []).map(
-		({ license_plan_id }): CustomDiffChange => ({
-			target: "license",
-			id: license_plan_id,
-			kind: "removed",
-			fields: [],
+			id: license.license_plan_id,
+			catalog: license.catalog && withoutLicensePlanId(license.catalog),
+			customer: license.customer && withoutLicensePlanId(license.customer),
 		}),
 	),
 ];

@@ -7,6 +7,7 @@ import {
 	customerPlan,
 	derive,
 	includedItem,
+	planLicense,
 	prepaidItem,
 } from "./isCustomFixtures";
 
@@ -74,5 +75,24 @@ describe("customDiffToChanges", () => {
 			catalog: "49",
 			customer: "39",
 		});
+	});
+
+	test("a license added for the customer reads as added, an edited one shows both sides", () => {
+		const added = changesOf({
+			catalog: {},
+			customer: { licenses: [planLicense()] },
+		});
+		expect(added.map(({ target, kind }) => ({ target, kind }))).toEqual([
+			{ target: "license", kind: "added" },
+		]);
+
+		const [edited] = changesOf({
+			catalog: { licenses: [planLicense({ included: 2 })] },
+			customer: { licenses: [planLicense({ included: 20 })] },
+		});
+		expect(edited?.kind).toBe("changed");
+		expect(edited?.fields).toEqual([
+			{ path: "included", catalog: "2", customer: "20" },
+		]);
 	});
 });

@@ -35,7 +35,8 @@ export const useCustomerProductCustomDiff = ({
 	const axiosInstance = useAxiosInstance();
 
 	return useQuery({
-		queryKey: ["customer-product-custom-diff", customerId, customerProductId],
+		// Under "customer", so billing writes that refresh the customer refresh this too.
+		queryKey: ["customer", customerId, "custom-diff", customerProductId],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get<CustomerProductCustomDiff>(
 				`/customers/${customerId}/products/${customerProductId}/custom_diff`,
