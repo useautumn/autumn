@@ -10,6 +10,8 @@ import {
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
+import { startSecretKeys } from "../../../src/auth/secretKeys/startSecretKeys.js";
+import type { SecretKeys } from "../../../src/auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
@@ -64,8 +66,12 @@ const createLogger = () => {
 	};
 };
 
-/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder. */
-const createDeployedApp = () => {
+/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder, and checks the org's secret keys when given them. */
+const createDeployedApp = ({
+	secretKeys,
+}: {
+	secretKeys?: SecretKeys;
+} = {}) => {
 	const auth = createDeployedAuth({
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
@@ -83,6 +89,7 @@ const createDeployedApp = () => {
 				autumnApiUrl: AUTUMN_API_URL,
 				health: HEALTH,
 				counters,
+				secretKeys,
 			},
 		}),
 		logged,
@@ -354,6 +361,72 @@ describe("an Atom in an org's cloud", () => {
 		);
 
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("an org's own Atom opened by the org's secret key", () => {
+	const SECRET_KEY_HASH = hashToken({
+		token: SECRET_KEY.slice("Bearer ".length),
+	});
+
+	/** Autumn names `invalid` as not the org's keys on every sync. */
+	const createSecretKeyApp = ({
+		invalid = [],
+	}: {
+		invalid?: string[];
+	} = {}) => {
+		const secretKeys = startSecretKeys({ findInvalid: async () => invalid });
+		const { app } = createDeployedApp({ secretKeys });
+		return { app, secretKeys };
+	};
+
+	const checkWithKeyOnly = async ({
+		app,
+	}: {
+		app: ReturnType<typeof createAtomApp>;
+	}) => app.request("/v1/balances.check", checkMessages({ token: null }));
+
+	test("a key the API accepted answers here once Autumn confirms it is the org's", async () => {
+		const { app, secretKeys } = createSecretKeyApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		const fetchSpy = autumnAnswering({ status: 200, body: { allowed: true } });
+
+		const first = await checkWithKeyOnly({ app });
+		await secretKeys.sync();
+		const second = await checkWithKeyOnly({ app });
+
+		secretKeys.stop();
+		expect(first.headers.get("x-atom-forwarded")).toBe("secret_key_not_known");
+		expect(second.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await second.json()).toMatchObject({
+			allowed: true,
+			balance: { feature_id: "messages", remaining: 10 },
+		});
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+	});
+
+	test("a key the API refused, or one Autumn says is not the org's, keeps going to the API", async () => {
+		const answered: (string | null)[] = [];
+		for (const { status, invalid } of [
+			{ status: 401, invalid: [] },
+			{ status: 403, invalid: [] },
+			{ status: 200, invalid: [SECRET_KEY_HASH] },
+		]) {
+			const { app, secretKeys } = createSecretKeyApp({ invalid });
+			await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+			autumnAnswering({ status, body: {} });
+			await checkWithKeyOnly({ app });
+			await secretKeys.sync();
+			const again = await checkWithKeyOnly({ app });
+			secretKeys.stop();
+			answered.push(again.headers.get("x-atom-forwarded"));
+		}
+
+		expect(answered).toEqual([
+			"secret_key_not_known",
+			"secret_key_not_known",
+			"secret_key_not_known",
+		]);
 	});
 });
 

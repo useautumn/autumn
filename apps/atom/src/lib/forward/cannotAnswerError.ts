@@ -11,7 +11,9 @@ export type ForwardReason =
 	| "skip_cache"
 	| "customer_not_stored"
 	| "entity_not_stored"
-	| "feature_not_stored";
+	| "feature_not_stored"
+	/** A secret key this thread does not hold yet: the API answers, and its verdict decides whether to hold it. */
+	| "secret_key_not_known";
 
 /**
  * Thrown wherever Atom finds it cannot answer a request itself. One place catches it
