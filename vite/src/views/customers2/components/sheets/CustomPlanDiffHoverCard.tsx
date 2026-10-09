@@ -6,6 +6,7 @@ import {
 	StatusChipIcon,
 } from "@autumn/ui";
 import { overlaySurfaceClassName } from "@autumn/ui/lib/overlay-classes";
+import { cn } from "@/lib/utils";
 import {
 	type CustomDiffChange,
 	type CustomDiffField,
@@ -212,7 +213,10 @@ export function CustomPlanDiffHoverCard({
 				side="bottom"
 				align="start"
 				sideOffset={8}
-				className={`${overlaySurfaceClassName} flex w-80 flex-col gap-2.5 p-3 text-xs`}
+				className={cn(
+					overlaySurfaceClassName,
+					"flex w-80 flex-col gap-2.5 p-3 text-xs",
+				)}
 			>
 				<div className="flex flex-col gap-0.5">
 					<span className="text-[13px] leading-[18px] font-semibold text-foreground">
