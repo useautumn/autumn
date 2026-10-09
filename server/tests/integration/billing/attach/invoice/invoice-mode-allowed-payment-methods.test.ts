@@ -11,10 +11,13 @@
  *     offering the configured methods.
  *   - Unset config sends no payment_method_types, so Stripe's own account
  *     invoice settings keep applying (no behavior change for existing orgs).
+ *   - A request-level `invoice_mode.payment_method_types` overrides the org
+ *     list on both the subscription and its first invoice.
  */
 
 import { expect, test } from "bun:test";
 import {
+	type AttachParamsV1Input,
 	type InvoicePaymentMethod,
 	InvoicePaymentMethodSchema,
 } from "@autumn/shared";
@@ -227,5 +230,64 @@ test.concurrent(
 		expect(subscription).toBeDefined();
 		expect(subscription.collection_method).toBe("send_invoice");
 		expect(subscription.payment_settings?.payment_method_types).toBeNull();
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TEST 3: request-level payment_method_types overrides the org list
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-mode payment methods: request payment_method_types overrides the org list")}`,
+	async () => {
+		const customerId = "invoice-payment-methods-request";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, customer, autumnV2_4 } = await initScenario({
+			customerId,
+			setup: [
+				s.platform.create({
+					slug: `invoice-pm-req-${Math.random().toString(36).slice(2, 8)}`,
+					configOverrides: {
+						allowed_payment_methods: ["card", "customer_balance"],
+					},
+					setupDefaultFeatures: true,
+				}),
+				s.customer({ testClock: false }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_4.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: {
+				enabled: true,
+				finalize: true,
+				enable_plan_immediately: true,
+				payment_method_types: ["card"],
+			},
+		});
+
+		const subscriptions = await ctx.stripeCli.subscriptions.list({
+			customer: customer!.processor!.id!,
+			limit: 1,
+		});
+		const subscription = subscriptions.data[0];
+
+		expect(subscription).toBeDefined();
+		expect(subscription.collection_method).toBe("send_invoice");
+		expect(subscription.payment_settings?.payment_method_types).toEqual([
+			"card",
+		]);
+
+		const invoice = await ctx.stripeCli.invoices.retrieve(
+			subscription.latest_invoice as string,
+		);
+		expect(invoice.payment_settings.payment_method_types).toEqual(["card"]);
 	},
 );
