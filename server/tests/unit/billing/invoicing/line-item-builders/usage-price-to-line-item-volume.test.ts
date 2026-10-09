@@ -1,6 +1,6 @@
 /**
- * Pay-per-use volume prices only the overage against the stored tiers, which are
- * net of included usage, so included units are never charged.
+ * Pay-per-use volume follows the prepaid (Stripe) rule: once total usage passes the
+ * included amount, every unit is charged at the band total usage lands in.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -118,10 +118,10 @@ const priceVolumeLine = ({
 const SINGLE_TIER = [{ to: "inf", amount: 0.5 }] as UsageTier[];
 
 describe("usagePriceToLineItem: pay-per-use volume", () => {
-	test("100 included, 150 used → only the 50 overage is charged ($25, not $0)", () => {
+	test("100 included, 150 used → all 150 at the band rate ($75, not $0)", () => {
 		expect(
 			priceVolumeLine({ tiers: SINGLE_TIER, allowance: 100, balance: -50 }),
-		).toBe(25);
+		).toBe(75);
 	});
 
 	test("no included, 40 used → 40 × $0.50 = $20", () => {
@@ -136,7 +136,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 		).toBe(0);
 	});
 
-	test("billing units round the overage up: 150 overage in packs of 100 → 2 packs × $5 = $10", () => {
+	test("billing units round total usage up: 250 used in packs of 100 → 3 packs × $5 = $15", () => {
 		expect(
 			priceVolumeLine({
 				tiers: [{ to: "inf", amount: 5 }] as UsageTier[],
@@ -144,10 +144,10 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 				balance: -150,
 				billingUnits: 100,
 			}),
-		).toBe(10);
+		).toBe(15);
 	});
 
-	test("band is picked from total usage on the net tiers: 5 included, 25 used → 20 × $0.80 = $16", () => {
+	test("band is picked from total usage on the net tiers: 5 included, 25 used → 25 × $0.80 = $20", () => {
 		// Total-usage bands 10/20/30/40 stored net of 5 included.
 		const netTiers = [
 			{ to: 5, amount: 1 },
@@ -159,7 +159,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 
 		expect(
 			priceVolumeLine({ tiers: netTiers, allowance: 5, balance: -20 }),
-		).toBe(16);
+		).toBe(20);
 	});
 
 	describe("flat_amount", () => {
@@ -168,7 +168,7 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 			{ to: "inf", amount: 0, flat_amount: 20 },
 		] as UsageTier[];
 
-		test("no overage → $0, the tier-1 flat fee is not charged", () => {
+		test("usage at the included amount → $0, the tier-1 flat fee is not charged", () => {
 			expect(
 				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 100, balance: 0 }),
 			).toBe(0);
@@ -185,9 +185,16 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 100, balance: -1 }),
 			).toBe(5);
 		});
+
+		test("total usage past tier 1 → only tier-2 flat fee ($20)", () => {
+			expect(
+				priceVolumeLine({ tiers: FLAT_TIERS, allowance: 100, balance: -150 }),
+			).toBe(20);
+		});
 	});
 
-	test("entity feature: overage is summed across entities (customer total)", () => {
+	test("entity feature: band and amount come from the customer total (overage + every entity's allowance)", () => {
+		// 50 overage + 3 entities × 100 included = 350 units at $0.50.
 		const entities = {
 			ent_a: { id: "ent_a", balance: -30, adjustment: 0 },
 			ent_b: { id: "ent_b", balance: -20, adjustment: 0 },
@@ -201,12 +208,12 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 				balance: 0,
 				entities,
 			}),
-		).toBe(25);
+		).toBe(175);
 	});
 });
 
 describe("usagePriceToLineItem: allocated (v1) volume", () => {
-	test("3 included, 5 seats → only the 2 extra seats are charged ($20, not $0)", () => {
+	test("3 included, 5 seats → all 5 seats at the band rate ($50, not $0)", () => {
 		expect(
 			priceVolumeLine({
 				kind: "allocated",
@@ -214,7 +221,7 @@ describe("usagePriceToLineItem: allocated (v1) volume", () => {
 				allowance: 3,
 				balance: -2,
 			}),
-		).toBe(20);
+		).toBe(50);
 	});
 
 	test("within included seats → $0", () => {

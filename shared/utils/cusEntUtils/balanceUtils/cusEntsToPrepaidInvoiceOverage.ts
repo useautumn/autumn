@@ -1,13 +1,11 @@
 import { cusEntToCusPrice } from "@utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
-import { Decimal } from "decimal.js";
 import {
 	type FullCusEntWithFullCusProduct,
 	isPrepaidPrice,
-	isVolumeBasedCusEnt,
 	sumValues,
 } from "../../..";
+import { cusEntToVolumeInvoiceQuantity } from "../overageUtils/cusEntToVolumeInvoiceQuantity";
 import { cusEntToPrepaidQuantity } from "./cusEntsToPrepaidQuantity";
-import { cusEntsToAllowance } from "./grantedBalanceUtils/cusEntsToAllowance";
 
 export const cusEntToPrepaidInvoiceOverage = ({
 	cusEnt,
@@ -28,13 +26,11 @@ export const cusEntToPrepaidInvoiceOverage = ({
 		cusEnt,
 		useUpcomingQuantity,
 	});
-	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 
-	const isVolume = isVolumeBasedCusEnt(cusEnt);
-
-	return isVolume
-		? new Decimal(prepaidQuantity).add(allowance).toNumber()
-		: prepaidQuantity;
+	return cusEntToVolumeInvoiceQuantity({
+		cusEnt,
+		paidQuantity: prepaidQuantity,
+	});
 };
 
 export const cusEntsToPrepaidInvoiceOverage = ({

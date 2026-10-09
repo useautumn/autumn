@@ -9,10 +9,11 @@ import { Decimal } from "decimal.js";
  * Volume-based tier pricing: the ENTIRE usage is charged at the rate of
  * whichever single tier it falls into (unlike graduated, which splits across bands).
  *
- * When `allowance` > 0 (prepaid only), a free $0 tier is prepended and paid-tier
- * boundaries are shifted up, so once usage exceeds the allowance the ENTIRE
- * usage (including the free portion) is charged at the matching tier's rate.
- * Pay-per-use passes the overage with no allowance, so included units stay free.
+ * When `allowance` > 0, a free $0 tier is prepended and paid-tier boundaries
+ * are shifted up. If usage <= allowance, cost is $0. If usage exceeds the
+ * allowance, the ENTIRE usage (including the free portion) is charged at the
+ * matching paid tier's rate. This is intentional — volume pricing does not
+ * subtract included usage before applying the rate.
  */
 export const volumeTiersToLineAmount = ({
 	tiers,
