@@ -1,42 +1,44 @@
-import { MigrationItemRunSkipReason } from "@autumn/shared";
+import {
+	MigrationItemRunSkipReason,
+	MigrationItemRunStatus,
+} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Set-based settle of the page's `running` claims: flips them to succeeded or
- * skipped in one statement, inside the page transaction (visible only with
- * mutations). Only settles claims held by this run — a concurrent run sharing
- * the migration must never flip another run's claims. */
+/** Settles the page's `running` claims in one statement. A customer succeeds
+ * iff it holds unpublished changes, from this attempt or an earlier one. */
 export const markPageItemRuns = async ({
 	db,
 	migrationInternalId,
 	migrationRunId,
-	succeededInternalCustomerIds,
+	internalCustomerIds,
+	excludedInternalCustomerIds,
 	noUpdatesNeededInternalCustomerIds,
-	ineligibleInternalCustomerIds,
 }: {
 	db: DrizzleCli;
 	migrationInternalId: string;
 	migrationRunId: string;
-	succeededInternalCustomerIds: string[];
+	internalCustomerIds: string[];
+	/** Customers a patch cannot serve: skipped as ineligible whatever they hold. */
+	excludedInternalCustomerIds: string[];
+	/** Unchanged customers still in scope; every other unchanged one is ineligible. */
 	noUpdatesNeededInternalCustomerIds: string[];
-	ineligibleInternalCustomerIds: string[];
-}): Promise<void> => {
-	const allIds = [
-		...succeededInternalCustomerIds,
-		...noUpdatesNeededInternalCustomerIds,
-		...ineligibleInternalCustomerIds,
-	];
-	if (allIds.length === 0) return;
+}): Promise<{ succeededInternalCustomerIds: Set<string> }> => {
+	if (internalCustomerIds.length === 0)
+		return { succeededInternalCustomerIds: new Set() };
 
-	await db.execute(sql`
+	const isExcluded = sql`item_id = ANY(${sql.param(excludedInternalCustomerIds)}::text[])`;
+	const hasChanges = sql`unpublished_changes IS NOT NULL`;
+	const settled = await db.execute<{ item_id: string; status: string }>(sql`
 		UPDATE migration_item_runs
 		SET status = CASE
-				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
-				THEN 'succeeded' ELSE 'skipped'
+				WHEN ${isExcluded} THEN ${MigrationItemRunStatus.Skipped}
+				WHEN ${hasChanges} THEN ${MigrationItemRunStatus.Succeeded}
+				ELSE ${MigrationItemRunStatus.Skipped}
 			END,
 			skip_reason = CASE
-				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
-				THEN NULL
+				WHEN ${isExcluded} THEN ${MigrationItemRunSkipReason.Ineligible}
+				WHEN ${hasChanges} THEN NULL
 				WHEN item_id = ANY(${sql.param(noUpdatesNeededInternalCustomerIds)}::text[])
 				THEN ${MigrationItemRunSkipReason.NoUpdatesNeeded}
 				ELSE ${MigrationItemRunSkipReason.Ineligible}
@@ -46,7 +48,16 @@ export const markPageItemRuns = async ({
 			AND migration_run_id = ${migrationRunId}
 			AND item_kind = 'customer'
 			AND dry_run = false
-			AND status = 'running'
-			AND item_id = ANY(${sql.param(allIds)}::text[])
+			AND status = ${MigrationItemRunStatus.Running}
+			AND item_id = ANY(${sql.param(internalCustomerIds)}::text[])
+		RETURNING item_id, status
 	`);
+
+	return {
+		succeededInternalCustomerIds: new Set(
+			settled
+				.filter((row) => row.status === MigrationItemRunStatus.Succeeded)
+				.map((row) => row.item_id),
+		),
+	};
 };

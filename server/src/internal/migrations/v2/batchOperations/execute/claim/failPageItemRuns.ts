@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Flips a page's claims to `failed` so a retry re-claims them: after a stalled
- * page (late marks then find no `running` row) or a dropped cache invalidation. */
+/** Releases a failed page's unsettled claims as `failed` so a retry re-claims
+ * them. Settled rows keep their status: a succeeded customer never regresses. */
 export const failPageItemRuns = async ({
 	db,
 	migrationInternalId,
@@ -23,7 +23,7 @@ export const failPageItemRuns = async ({
 			AND migration_run_id = ${migrationRunId}
 			AND item_kind = 'customer'
 			AND dry_run = false
-			AND status IN ('running', 'succeeded', 'skipped')
+			AND status = 'running'
 			AND item_id = ANY(${sql.param(internalCustomerIds)}::text[])
 		RETURNING item_id
 	`);

@@ -29,9 +29,8 @@ import {
 
 /**
  * Executes one claimed page: every patch's ops (scoped by the patch's
- * OperationScope), then the set-based status marks. Succeeded = customers a
- * patch actually changed (≥1 inserted row); everyone else — out-of-scope OR
- * already converged — is skipped.
+ * OperationScope), then the set-based status marks. Succeeded = customers
+ * holding changes this migration made; everyone else is skipped.
  *
  * The unit of atomicity is one op transaction, not the page: each commits its
  * writes together with the item-run record of what it changed (`recordChanges`).
@@ -245,29 +244,23 @@ export const executeBatchMigrationPage = async ({
 		}
 	}
 
-	// A repointed pool or a dropped row is a real change even with nothing
-	// inserted; leaving it out of `succeeded` would skip its cache invalidation.
-	const succeeded = new Set([
+	// Customers an earlier attempt changed hold unpublished changes, so the
+	// marks, not this attempt's writes, decide who succeeded.
+	const changedIds = new Set([
 		...insertedItems.map((item) => item.internalCustomerId),
 		...removedItems.map((item) => item.internalCustomerId),
 		...repointedIds,
 	]);
-	for (const id of excludedIds) succeeded.delete(id);
-	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
 	const skipReasons = await resolveSkipReasons({
 		ctx,
 		plan,
-		skippedIds,
+		skippedIds: pageInternalIds.filter(
+			(id) => !changedIds.has(id) || excludedIds.has(id),
+		),
 		excludedIds,
 	});
-	const noUpdatesNeededIds = skippedIds.filter(
-		(id) => skipReasons[id] === MigrationItemRunSkipReason.NoUpdatesNeeded,
-	);
-	const ineligibleIds = skippedIds.filter(
-		(id) => skipReasons[id] === MigrationItemRunSkipReason.Ineligible,
-	);
 
-	await timePhase({
+	const { succeededInternalCustomerIds } = await timePhase({
 		phases,
 		phase: "marks",
 		run: () =>
@@ -278,23 +271,31 @@ export const executeBatchMigrationPage = async ({
 						db: transaction,
 						migrationInternalId,
 						migrationRunId,
-						succeededInternalCustomerIds: [...succeeded],
-						noUpdatesNeededInternalCustomerIds: noUpdatesNeededIds,
-						ineligibleInternalCustomerIds: ineligibleIds,
+						internalCustomerIds: pageInternalIds,
+						excludedInternalCustomerIds: [...excludedIds],
+						noUpdatesNeededInternalCustomerIds: Object.keys(skipReasons).filter(
+							(id) =>
+								skipReasons[id] === MigrationItemRunSkipReason.NoUpdatesNeeded,
+						),
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				{ forceCustomPlan: true },
 			),
 	});
 
+	const isSucceeded = (customer: BatchMigrationPageCustomer) =>
+		succeededInternalCustomerIds.has(customer.internalId);
+	const skipped = customers.filter((customer) => !isSucceeded(customer));
 	return {
-		succeeded: customers.filter((customer) =>
-			succeeded.has(customer.internalId),
+		succeeded: customers.filter(isSucceeded),
+		skipped,
+		skipReasons: Object.fromEntries(
+			skipped.map((customer) => [
+				customer.internalId,
+				skipReasons[customer.internalId] ??
+					MigrationItemRunSkipReason.Ineligible,
+			]),
 		),
-		skipped: customers.filter(
-			(customer) => !succeeded.has(customer.internalId),
-		),
-		skipReasons,
 		insertedItems,
 		removedItems,
 		repointedProducts,

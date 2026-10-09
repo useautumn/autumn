@@ -1,5 +1,5 @@
-/** A page whose checkpoint COMMIT reply is lost must not keep `succeeded`
- * checkpoints with stale caches: the runner busts its caches and releases its claims. */
+/** A page whose checkpoint COMMIT reply is lost busts its customers' caches and
+ * leaves the committed claims settled, holding their changes for publishing. */
 
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -75,15 +75,22 @@ mock.module(executeModulePath, () => ({
 				await transaction.execute(
 					sql`INSERT INTO migration_runner_customer_writes VALUES (${customer.internalId})`,
 				);
+			const internalCustomerIds = customers.map(
+				(customer) => customer.internalId,
+			);
+			await realClaim.recordItemRunChanges({
+				db: transaction,
+				migrationInternalId: MIGRATION_INTERNAL_ID,
+				migrationRunId: MIGRATION_RUN_ID,
+				changes: { repointedPoolCustomerIds: internalCustomerIds },
+			});
 			await realClaim.markPageItemRuns({
 				db: transaction,
 				migrationInternalId: MIGRATION_INTERNAL_ID,
 				migrationRunId: MIGRATION_RUN_ID,
-				succeededInternalCustomerIds: customers.map(
-					(customer) => customer.internalId,
-				),
+				internalCustomerIds,
+				excludedInternalCustomerIds: [],
 				noUpdatesNeededInternalCustomerIds: [],
-				ineligibleInternalCustomerIds: [],
 			});
 		});
 		return {
@@ -140,6 +147,7 @@ const SCHEMA = `
 		item_id text NOT NULL,
 		status text NOT NULL,
 		skip_reason text,
+		unpublished_changes jsonb,
 		created_at bigint,
 		updated_at bigint
 	);
@@ -153,7 +161,7 @@ const silentLogger = {
 };
 
 describe.skipIf(!databaseUrl)("batch migration runner", () => {
-	test("a lost checkpoint COMMIT reply busts caches and releases claims without replaying writes", async () => {
+	test("a lost checkpoint COMMIT reply busts caches and keeps committed claims settled without replaying writes", async () => {
 		await withScratchSchema({
 			databaseUrl,
 			run: async ({ options }) => {
@@ -171,7 +179,7 @@ describe.skipIf(!databaseUrl)("batch migration runner", () => {
 					await admin.query(SCHEMA);
 					for (const customer of customers)
 						await admin.query(
-							`INSERT INTO migration_item_runs VALUES ($1, $2, $3, false, 'customer', $4, 'running', NULL, 0, NULL)`,
+							`INSERT INTO migration_item_runs VALUES ($1, $2, $3, false, 'customer', $4, 'running', NULL, NULL, 0, NULL)`,
 							[
 								`mir_${customer.internalId}`,
 								MIGRATION_INTERNAL_ID,
@@ -218,12 +226,13 @@ describe.skipIf(!databaseUrl)("batch migration runner", () => {
 						customers.map((customer) => customer.internalId),
 					);
 					const claims = await admin.query(
-						"SELECT item_id, status FROM migration_item_runs ORDER BY item_id",
+						"SELECT item_id, status, unpublished_changes FROM migration_item_runs ORDER BY item_id",
 					);
 					expect(claims.rows).toEqual(
 						customers.map((customer) => ({
 							item_id: customer.internalId,
-							status: "failed",
+							status: "succeeded",
+							unpublished_changes: [{ kind: "license_pool_repointed" }],
 						})),
 					);
 				} finally {

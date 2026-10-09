@@ -370,10 +370,8 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			logs.some((line) => line.message === "batch-migration: chunk finished"),
 		).toBe(false);
 
-		// The stalled page's checkpoints are revoked so a retry re-claims them.
-		expect(scenario.revokedIds.sort()).toEqual(
-			[...(scenario.invalidationCustomers.get(1) ?? [])].sort(),
-		);
+		// Settled claims are never revoked: a succeeded customer stays succeeded.
+		expect(scenario.revokedIds).toEqual([]);
 		expect(
 			logs.some(
 				(line) =>
@@ -405,7 +403,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		never.resolve(PAGE_SIZE);
 	});
 
-	test("only the stalled page loses its checkpoint; the other pages stay succeeded", async () => {
+	test("a stalled page's cache invalidation leaves every page's claims settled", async () => {
 		const never = createDeferred<number>();
 		setScenario({
 			pageCount: 4,
@@ -421,14 +419,12 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		const error = expectStall({ outcome, phase: "finalize_caches" });
 		expect(error.message).toContain("page 3");
 		expect(scenario.executedPages).toEqual([1, 2, 3, 4]);
-		expect(scenario.revokedIds.sort()).toEqual(
-			[...(scenario.invalidationCustomers.get(3) ?? [])].sort(),
-		);
+		expect(scenario.revokedIds).toEqual([]);
 
 		never.resolve(PAGE_SIZE);
 	});
 
-	test("on a retry run a stalled page also revokes its converged (skipped) customers", async () => {
+	test("on a retry run a stalled page's invalidation also covers its converged (skipped) customers", async () => {
 		const never = createDeferred<number>();
 		setScenario({
 			pageCount: 1,
@@ -449,7 +445,7 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		expect(scenario.invalidationCustomers.get(1)?.sort()).toEqual(
 			[...pageIds].sort(),
 		);
-		expect(scenario.revokedIds.sort()).toEqual([...pageIds].sort());
+		expect(scenario.revokedIds).toEqual([]);
 
 		never.resolve(PAGE_SIZE);
 	});
@@ -504,31 +500,32 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		never.resolve();
 	});
 
-	test("a hung checkpoint write during recovery cannot re-stall the chunk", async () => {
-		const never = createDeferred<number>();
+	test("a hung claim release during recovery cannot re-stall the chunk", async () => {
+		const never = createDeferred<void>();
 		setScenario({
 			pageCount: 1,
-			invalidation: () => never.promise,
+			invalidation: () => Promise.resolve(PAGE_SIZE),
+			execution: () => never.promise,
 			checkpointWritesHang: true,
 		});
 
 		const outcome = await raceWithDeadline({
 			promise: settle(runChunk()),
-			ms: 1_500,
+			ms: 2_500,
 		});
 
-		expectStall({ outcome, phase: "finalize_caches" });
+		expectStall({ outcome, phase: "page_execute" });
 		expect(scenario.revokedIds).toEqual([]);
 		expect(
 			logs.some(
 				(line) =>
 					line.level === "error" &&
-					line.message.includes("checkpoint revoke failed") &&
-					String(line.data?.revokeError).includes("no answer from Postgres"),
+					line.message.includes("could not release a failed page's claims") &&
+					String(line.data?.error).includes("no answer from Postgres"),
 			),
 		).toBe(true);
 
-		never.resolve(PAGE_SIZE);
+		never.resolve();
 	});
 
 	test("yields slice_complete instead of starting a page the chunk deadline cannot fit", async () => {
