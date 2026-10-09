@@ -59,7 +59,7 @@ export type WorkerBootstrapConfig = {
 export const WORKER_KAFKA_CLIENT_LIMITS = {
 	connectionTimeoutMs: 5000,
 	requestTimeoutMs: 30000,
-	retryCount: 2,
+	retryCount: 5,
 	initialRetryTimeMs: 100,
 	maxRetryTimeMs: 1000,
 };
@@ -67,6 +67,7 @@ export const WORKER_KAFKA_CLIENT_LIMITS = {
 export const WORKER_KAFKA_PRODUCER_LIMITS = {
 	...WORKER_KAFKA_CLIENT_LIMITS,
 	requestTimeoutMs: 5000,
+	retryCount: 2,
 };
 
 /** Every token a client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
