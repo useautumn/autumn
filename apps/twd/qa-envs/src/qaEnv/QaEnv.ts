@@ -300,6 +300,7 @@ export class QaEnv extends DurableObject<Env> {
 			instance: input.instance ?? "standard-3",
 		};
 		const buildId = crypto.randomUUID().slice(0, 8);
+		await this.ctx.storage.delete("tombstoneUntil");
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
 		// A live build keeps its config (database, secrets, expiry) until the new one is adopted.
 		const hasLiveBuild = Boolean(await this.ctx.storage.get("snapshot"));
@@ -730,13 +731,20 @@ export class QaEnv extends DurableObject<Env> {
 		]);
 		await this.ctx.storage.put("state", "expired" satisfies EnvState);
 		// The hostname stays for a week so old links answer 410 instead of a Cloudflare DNS error.
-		await this.ctx.storage.setAlarm(Date.now() + TOMBSTONE_MS);
+		const tombstoneUntil = Date.now() + TOMBSTONE_MS;
+		await this.ctx.storage.put("tombstoneUntil", tombstoneUntil);
+		await this.ctx.storage.setAlarm(tombstoneUntil);
 	}
 
 	/** Blocks other calls so a re-create can't land between the hostname delete and the wipe. */
 	private removeTombstone(config: EnvConfig) {
 		return this.ctx.blockConcurrencyWhile(async () => {
 			if ((await this.envState()) !== "expired") return;
+			// Another alarm may fire early (e.g. an idle check rescheduled during destroy).
+			const tombstoneUntil =
+				(await this.ctx.storage.get<number>("tombstoneUntil")) ?? 0;
+			if (Date.now() < tombstoneUntil)
+				return this.ctx.storage.setAlarm(tombstoneUntil);
 			await deleteEnvHostname({ env: this.env, name: config.name });
 			await this.ctx.storage.deleteAll();
 		});
