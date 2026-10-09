@@ -1,5 +1,11 @@
-import { describe, expect, test } from "bun:test";
-import { junitFileResults } from "../../testRunner/junitFileResults";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import {
+	filesWithoutCases,
+	junitFileResults,
+} from "../../testRunner/junitFileResults";
 
 const XML = `<?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="bun test" tests="4">
@@ -26,12 +32,16 @@ const PATHS = [
 ];
 
 describe("junitFileResults", () => {
-	test("rolls test cases up per file, and a file without cases in a failed shard crashed", () => {
+	test("rolls cases up per file as twd test ids; a listed case-less file is crashed", () => {
 		expect(
-			junitFileResults({ xml: XML, paths: PATHS, shardFailed: true }),
+			junitFileResults({
+				xml: XML,
+				paths: PATHS,
+				crashedFiles: new Set(["tests/unit/b.test.ts"]),
+			}),
 		).toEqual([
 			{
-				file: "tests/unit/a.test.ts",
+				file: "unit/a.test.ts",
 				status: "failed",
 				durationMs: 750,
 				passedTests: 1,
@@ -39,7 +49,7 @@ describe("junitFileResults", () => {
 				failureSummary: "it's bad",
 			},
 			{
-				file: "tests/unit/b.test.ts",
+				file: "unit/b.test.ts",
 				status: "crashed",
 				durationMs: 0,
 				passedTests: 0,
@@ -48,7 +58,7 @@ describe("junitFileResults", () => {
 					"No test reported: the file failed before its tests ran.",
 			},
 			{
-				file: "tests/unit/c.test.ts",
+				file: "unit/c.test.ts",
 				status: "skipped",
 				durationMs: 0,
 				passedTests: 0,
@@ -58,21 +68,62 @@ describe("junitFileResults", () => {
 		]);
 	});
 
-	test("a file without cases in a passing shard is left out", () => {
+	test("an unlisted case-less file (e.g. fully commented out) is left out", () => {
+		expect(filesWithoutCases({ xml: XML, paths: PATHS })).toEqual([
+			"tests/unit/b.test.ts",
+		]);
 		const files = junitFileResults({
 			xml: XML,
 			paths: PATHS,
-			shardFailed: false,
+			crashedFiles: new Set(),
 		}).map((r) => r.file);
-		expect(files).toEqual(["tests/unit/a.test.ts", "tests/unit/c.test.ts"]);
+		expect(files).toEqual(["unit/a.test.ts", "unit/c.test.ts"]);
 	});
+});
 
-	test("a missing report in a failed shard marks every file crashed", () => {
-		const statuses = junitFileResults({
-			xml: "",
-			paths: PATHS,
-			shardFailed: true,
-		}).map((r) => r.status);
-		expect(statuses).toEqual(["crashed", "crashed", "crashed"]);
+describe("junitFileResults on real bun reporter output", () => {
+	const dir = mkdtempSync(path.join(tmpdir(), "junit-real-"));
+	afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+	test("passing, failing, skipped and empty files", async () => {
+		const files = {
+			"pass.test.ts": `import { test } from "bun:test";\ntest("p", () => {});`,
+			"fail.test.ts": `import { expect, test } from "bun:test";\ntest("f", () => expect(1).toBe(2));`,
+			"skip.test.ts": `import { test } from "bun:test";\ntest.skip("s", () => {});`,
+			"empty.test.ts": `// import { test } from "bun:test";`,
+		};
+		for (const [name, body] of Object.entries(files))
+			writeFileSync(path.join(dir, name), body);
+		const paths = Object.keys(files).map((name) => `./${name}`);
+		const outfile = path.join(dir, "out.xml");
+		const proc = Bun.spawn(
+			[
+				"bun",
+				"test",
+				"--reporter=junit",
+				`--reporter-outfile=${outfile}`,
+				...paths,
+			],
+			{
+				cwd: dir,
+				env: { ...process.env, UNIT_TESTS: "" },
+				stdout: "ignore",
+				stderr: "ignore",
+			},
+		);
+		expect(await proc.exited).toBe(1);
+		const xml = await Bun.file(outfile).text();
+		const ids = paths.map((p) => p.replace("./", ""));
+
+		expect(filesWithoutCases({ xml, paths: ids })).toEqual(["empty.test.ts"]);
+		expect(
+			junitFileResults({ xml, paths: ids, crashedFiles: new Set() }).map(
+				(r) => [r.file, r.status],
+			),
+		).toEqual([
+			["pass.test.ts", "passed"],
+			["fail.test.ts", "failed"],
+			["skip.test.ts", "skipped"],
+		]);
 	});
 });

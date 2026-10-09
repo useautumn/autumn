@@ -42,18 +42,30 @@ const parseTestCases = ({ xml }: { xml: string }): Case[] =>
 		}),
 	);
 
-/**
- * A file with no test cases in a failed shard crashed before any test ran (e.g. an import error);
- * in a passing shard it is left out.
- */
-export const junitFileResults = ({
+/** Files bun reported no test cases for, which only a solo re-run can tell apart (crashed vs empty). */
+export const filesWithoutCases = ({
 	xml,
 	paths,
-	shardFailed,
 }: {
 	xml: string;
 	paths: string[];
-	shardFailed: boolean;
+}) => {
+	const reported = new Set(parseTestCases({ xml }).map((c) => c.file));
+	return paths.filter((file) => !reported.has(file));
+};
+
+/** twd ids are server/tests-relative; the runner's paths are server-relative. */
+const toTestId = (file: string) => file.replace(/^tests\//, "");
+
+/** Rolls test cases up per file; a case-less file is crashed when listed in `crashedFiles`, else left out. */
+export const junitFileResults = ({
+	xml,
+	paths,
+	crashedFiles,
+}: {
+	xml: string;
+	paths: string[];
+	crashedFiles: Set<string>;
 }): UnitFileResult[] => {
 	const casesByFile = new Map<string, Case[]>();
 	for (const c of parseTestCases({ xml }))
@@ -61,10 +73,10 @@ export const junitFileResults = ({
 	return paths.flatMap((file): UnitFileResult[] => {
 		const cases = casesByFile.get(file) ?? [];
 		if (cases.length === 0) {
-			if (!shardFailed) return [];
+			if (!crashedFiles.has(file)) return [];
 			return [
 				{
-					file,
+					file: toTestId(file),
 					status: "crashed",
 					durationMs: 0,
 					passedTests: 0,
@@ -78,7 +90,7 @@ export const junitFileResults = ({
 		const passed = cases.filter((c) => c.outcome === "pass");
 		return [
 			{
-				file,
+				file: toTestId(file),
 				status:
 					failed.length > 0
 						? "failed"

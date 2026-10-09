@@ -23,7 +23,7 @@
 import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { junitFileResults } from "./junitFileResults";
+import { filesWithoutCases, junitFileResults } from "./junitFileResults";
 
 const SERVER_ROOT = path.resolve(import.meta.dir, "../..");
 const UNIT_ROOT = path.join(SERVER_ROOT, "tests/unit");
@@ -143,13 +143,32 @@ const startedAt = performance.now();
 const shards = packShards(collectGroups());
 const results = await Promise.all(shards.map(runShard));
 
+/** A case-less file in a failed shard is either empty or broke at import; running it alone tells which. */
+const crashesAlone = async (file: string) => {
+	const proc = Bun.spawn(["bun", "test", file], {
+		cwd: SERVER_ROOT,
+		env: { ...process.env, UNIT_TESTS: "1", UNIT_TEST_FILES: file },
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	return (await proc.exited) !== 0;
+};
+
 if (RESULTS_FILE) {
-	const fileResults = results.flatMap((result) =>
-		junitFileResults({
-			xml: readJunit(result.junitFile),
-			paths: result.paths,
-			shardFailed: result.exitCode !== 0,
-		}),
+	const reports = results.map((result) => ({
+		result,
+		xml: readJunit(result.junitFile),
+	}));
+	const suspects = reports.flatMap(({ result, xml }) =>
+		result.exitCode === 0
+			? []
+			: filesWithoutCases({ xml, paths: result.paths }),
+	);
+	const crashedFiles = new Set<string>();
+	for (const file of suspects)
+		if (await crashesAlone(file)) crashedFiles.add(file);
+	const fileResults = reports.flatMap(({ result, xml }) =>
+		junitFileResults({ xml, paths: result.paths, crashedFiles }),
 	);
 	await Bun.write(RESULTS_FILE, JSON.stringify(fileResults));
 	console.log(
