@@ -70,8 +70,8 @@ const atomRow = ({
 const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env: ctx.env });
 
 const cachedRoutes = async () =>
-	(await getOrgWithFeaturesCached({ db: ctx.db, orgId, env: ctx.env }))
-		?.org.atomDeployments;
+	(await getOrgWithFeaturesCached({ db: ctx.db, orgId, env: ctx.env }))?.org
+		.atomDeployments;
 
 beforeAll(async () => {
 	await ctx.db.insert(organizations).values({
