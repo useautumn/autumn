@@ -172,6 +172,55 @@ test("a volume-tiered item price can be usage-based", () => {
 	expect(issues).toEqual([]);
 });
 
+const allocatedVolumeConfig = ({ included }: { included?: number }) =>
+	atmn({
+		features: [
+			feature({
+				featureId: "seats",
+				name: "Seats",
+				type: "metered",
+				consumable: false,
+			}),
+		],
+		plans: [
+			plan({
+				active: true,
+				planId: "pro",
+				name: "Pro",
+				versionSlug: "v1",
+				items: [
+					{
+						featureId: "seats",
+						...(included === undefined ? {} : { included }),
+						price: {
+							billingMethod: "usage_based",
+							tierBehavior: "volume",
+							tiers: [
+								{ to: 10, amount: 10, flatAmount: 5 },
+								{ to: "inf", amount: 8 },
+							],
+							interval: "month",
+						},
+					},
+				],
+			}),
+		],
+	});
+
+test("an allocated volume item can't have a first-tier flatAmount without included usage", () => {
+	expect(issuesOf(() => allocatedVolumeConfig({}))).toEqual([
+		{
+			path: 'plan "pro" › item "seats"',
+			message:
+				'features "seats" has consumable false, so this is refused. A volume-tiered allocated item needs included usage before a first-tier flatAmount: Stripe would charge that fee at 0 seats. Add included usage or move the fee to a later tier.',
+		},
+	]);
+});
+
+test("an allocated volume item with included usage can have a first-tier flatAmount", () => {
+	expect(issuesOf(() => allocatedVolumeConfig({ included: 3 }))).toEqual([]);
+});
+
 test("featureOverride is only honoured on classic credit-system features", () => {
 	const items = [
 		{ featureId: "credits", featureOverride: { creditSchema: [] } },

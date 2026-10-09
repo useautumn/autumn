@@ -3,6 +3,7 @@ import {
 	exactlyOneActive,
 	exists,
 	linkedOnce,
+	targetForbids,
 	targetHas,
 	targetLacks,
 	unique,
@@ -36,6 +37,21 @@ export const planItemRules: LintRule[] = [
 		parentLabel: "plan",
 		because:
 			"An archived feature should not gain new customers through a live plan.",
+	}),
+	targetForbids({
+		field: "featureId",
+		in: "features",
+		matching: "featureId",
+		target: "consumable",
+		equals: false,
+		whenEquals: {
+			"price.tierBehavior": "volume",
+			"price.billingMethod": "usage_based",
+		},
+		whenStated: ["price.tiers.0.flatAmount"],
+		whenUnstated: ["included"],
+		because:
+			"A volume-tiered allocated item needs included usage before a first-tier flatAmount: Stripe would charge that fee at 0 seats. Add included usage or move the fee to a later tier.",
 	}),
 ];
 

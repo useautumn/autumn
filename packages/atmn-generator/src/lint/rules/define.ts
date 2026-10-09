@@ -75,6 +75,13 @@ export const targetHas = (rule: RuleOf<"targetHas">): LintRule => ({
 	...rule,
 });
 
+/** `field` names a row of top-level collection `in`; the entry is refused when
+ * that row's `target` equals `equals` and every `when*` path matches. */
+export const targetForbids = (rule: RuleOf<"targetForbids">): LintRule => ({
+	kind: "targetForbids",
+	...rule,
+});
+
 /** `field` names a row of top-level collection `in`; that row's `target` must
  * not be `true`, unless the entry's own parent already has `parentGuard` true. */
 export const targetLacks = (rule: RuleOf<"targetLacks">): LintRule => ({

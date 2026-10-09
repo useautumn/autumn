@@ -526,6 +526,91 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Allocated volume: a tier-1 flat_amount needs included usage
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ALLOCATED_VOLUME_FLAT =
+	"Volume-based allocated items can't have a flat_amount on the first tier without included usage";
+
+const ALLOCATED_VOLUME_FLAT_TIERS: { to: number | "inf"; amount: number; flat_amount?: number }[] = [
+	{ to: 10, amount: 10, flat_amount: 5 },
+	{ to: TierInfinite, amount: 8 },
+];
+
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
+	await expectAutumnError({
+		errCode: "invalid_inputs",
+		errMessage: ALLOCATED_VOLUME_FLAT,
+		func: () =>
+			createV0Product({
+				productId: `err_v0_alloc_flat_${getSuffix()}`,
+				items: [
+					{
+						feature_id: TestFeature.Users,
+						included_usage: 0,
+						usage_model: UsageModel.PayPerUse,
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: ProductItemInterval.Month,
+						tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					},
+				],
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors V0 create: ACCEPT allocated volume with tier-1 flat_amount and included usage")}`, async () => {
+	await createV0Product({
+		productId: `ok_v0_alloc_flat_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Users,
+				included_usage: 3,
+				usage_model: UsageModel.PayPerUse,
+				tier_behavior: TierBehavior.VolumeBased,
+				interval: ProductItemInterval.Month,
+				tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+			},
+		],
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
+	await expectRestError({
+		productId: `err_alloc_flat_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Users,
+				price: {
+					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: ALLOCATED_VOLUME_FLAT,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
+	await expectRpcError({
+		productId: `err_alloc_flat_rpc_${getSuffix()}`,
+		items: [
+			{
+				feature_id: TestFeature.Users,
+				price: {
+					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+				},
+			},
+		],
+		errMessage: ALLOCATED_VOLUME_FLAT,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // tiers[0].to must be greater than included
 // ═══════════════════════════════════════════════════════════════════════════════
 
