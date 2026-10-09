@@ -24,6 +24,7 @@ type PriceLite = {
 	interval?: string;
 	intervalCount?: number;
 	tiers?: unknown[];
+	tierBehavior?: string;
 } | null;
 
 type TrialLite = { durationLength?: number; durationType?: string } | null;
@@ -264,8 +265,10 @@ const formatInterval = (interval?: string, count?: number): string => {
 
 const formatPrice = (price: PriceLite | undefined): string => {
 	if (price === null || price === undefined) return "Free";
-	if (price.tiers !== undefined && price.tiers.length > 0)
-		return `${price.tiers.length} tiers ${formatInterval(price.interval, price.intervalCount)}`;
+	if (price.tiers !== undefined && price.tiers.length > 0) {
+		const behavior = price.tierBehavior ? `${price.tierBehavior} ` : "";
+		return `${price.tiers.length} ${behavior}tiers ${formatInterval(price.interval, price.intervalCount)}`;
+	}
 	return `${formatMoney(price.amount ?? 0)} ${formatInterval(price.interval, price.intervalCount)}`;
 };
 

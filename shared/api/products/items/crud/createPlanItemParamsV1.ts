@@ -56,7 +56,10 @@ export const PlanItemPriceParamsSchema = z.object({
 	tiers: z.array(ApiUsageTierWithCurrenciesSchema).optional().meta({
 		description: "Tiered pricing.  Either 'amount' or 'tiers' is required.",
 	}),
-	tier_behavior: z.enum(TierBehavior).optional(),
+	tier_behavior: z.enum(TierBehavior).optional().meta({
+		description:
+			"How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage and charges every unit at that tier's rate plus its flat_amount. Under 'volume', nothing is charged at or below the included amount; above it, the included units are charged too.",
+	}),
 
 	interval: z.enum(BillingInterval).meta({
 		description:

@@ -1,3 +1,5 @@
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import { isVolumeFlatFeeTiers } from "@utils/productUtils/priceUtils/classifyPrice/isVolumeFlatFeeTiers";
 import {
 	FeatureType,
 	FeatureUsageType,
@@ -8,6 +10,10 @@ import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import { formatAmount } from "./common/formatUtils/formatAmount.js";
 import { formatInterval } from "./common/formatUtils/formatInterval.js";
+import {
+	formatVolumeTierRule,
+	tiersToVolumeTierPricing,
+} from "./common/formatUtils/formatVolumeTierRule.js";
 import { getFeatureName, numberWithCommas } from "./displayUtils.js";
 import {
 	isFeatureItem,
@@ -18,7 +24,6 @@ import {
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 } from "./productV2Utils/productItemUtils/itemIntervalUtils.js";
-import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import { notNullish, nullish } from "./utils.js";
 
 // ============================================================================
@@ -80,14 +85,29 @@ const isSingleUseFeature = (feature: Feature): boolean => {
 	return feature.config?.usage_type === FeatureUsageType.Single;
 };
 
-/** Volume-based tiers where pricing is a flat amount per tier band (not per-unit). */
-const isVolumeFlatAmountItem = (item: ProductItem): boolean => {
-	if (item.tier_behavior !== TierBehavior.VolumeBased) return false;
-	if (!item.tiers || item.tiers.length === 0) return false;
-	return (
-		item.tiers.every((t) => t.amount === 0) &&
-		item.tiers.some((t) => (t.flat_amount ?? 0) > 0)
-	);
+const isVolumeFlatAmountItem = (item: ProductItem): boolean =>
+	isVolumeFlatFeeTiers({ tierBehavior: item.tier_behavior, tiers: item.tiers });
+
+/** Appends the volume rate rule, since a volume price range reads the same as a
+ * graduated one but bills every unit at a single tier. */
+const withVolumeTierRule = ({
+	item,
+	text,
+}: {
+	item: ProductItem;
+	text: string;
+}): string => {
+	const isVolumeTiered =
+		item.tier_behavior === TierBehavior.VolumeBased &&
+		(item.tiers?.length ?? 0) > 1;
+	if (!isVolumeTiered || !item.tiers) return text;
+
+	const rule = formatVolumeTierRule({
+		includedUsage:
+			typeof item.included_usage === "number" ? item.included_usage : 0,
+		pricing: tiersToVolumeTierPricing({ tiers: item.tiers }),
+	});
+	return `${text} (${rule})`;
 };
 
 // ============================================================================
@@ -293,14 +313,18 @@ export const getFeaturePriceItemDisplay = ({
 			const featureName = getFeatureName({ feature, units: 2 });
 			return {
 				primary_text: includedUsageStr,
-				secondary_text:
-					`then ${priceStr} for ${featureName} ${intervalStr}`.trim(),
+				secondary_text: withVolumeTierRule({
+					item,
+					text: `then ${priceStr} for ${featureName} ${intervalStr}`.trim(),
+				}),
 			};
 		}
 		return {
 			primary_text: includedUsageStr,
-			secondary_text:
-				`then ${priceStr} per ${perUnitStr} ${intervalStr}`.trim(),
+			secondary_text: withVolumeTierRule({
+				item,
+				text: `then ${priceStr} per ${perUnitStr} ${intervalStr}`.trim(),
+			}),
 		};
 	}
 
@@ -309,11 +333,17 @@ export const getFeaturePriceItemDisplay = ({
 		if (showInterval) {
 			return {
 				primary_text: priceStr,
-				secondary_text: `for ${featureName} ${intervalStr}`.trim(),
+				secondary_text: withVolumeTierRule({
+					item,
+					text: `for ${featureName} ${intervalStr}`.trim(),
+				}),
 			};
 		}
 		return {
-			primary_text: `${priceStr} for ${featureName}`.trim(),
+			primary_text: withVolumeTierRule({
+				item,
+				text: `${priceStr} for ${featureName}`.trim(),
+			}),
 			secondary_text: undefined,
 		};
 	}
@@ -321,12 +351,18 @@ export const getFeaturePriceItemDisplay = ({
 	if (showInterval) {
 		return {
 			primary_text: priceStr,
-			secondary_text: `per ${perUnitStr} ${intervalStr}`.trim(),
+			secondary_text: withVolumeTierRule({
+				item,
+				text: `per ${perUnitStr} ${intervalStr}`.trim(),
+			}),
 		};
 	}
 
 	return {
-		primary_text: `${priceStr} per ${perUnitStr}`.trim(),
+		primary_text: withVolumeTierRule({
+			item,
+			text: `${priceStr} per ${perUnitStr}`.trim(),
+		}),
 		secondary_text: undefined,
 	};
 };

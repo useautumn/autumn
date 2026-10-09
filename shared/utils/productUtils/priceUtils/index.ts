@@ -3,6 +3,7 @@ import { priceToAllowanceInPacks } from "@utils/productUtils/priceUtils/convertP
 import { priceToStripeCreatePriceParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeCreatePriceParams.js";
 import { priceToStripeTiersMode } from "./convertPrice/priceToStripeTiersMode.js";
 
+export * from "./classifyPrice/isVolumeFlatFeeTiers.js";
 export * from "./classifyPrice/priceIsTieredOneOff.js";
 export * from "./classifyPriceUtils.js";
 export * from "./comparePrice/pricesAreSame.js";

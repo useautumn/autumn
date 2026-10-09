@@ -1,6 +1,7 @@
 import {
 	type AdditionalCurrencyPrice,
 	type AdditionalCurrencyTier,
+	type PriceTier,
 	type ProductItem,
 	roundToCurrencyPrecision,
 } from "@autumn/shared";
@@ -187,10 +188,13 @@ export const migrateTierCurrenciesForMode = ({
 	mode,
 }: {
 	entries: AdditionalCurrencyTier[] | null | undefined;
-	mode: "flat" | "per_unit";
+	mode: "flat" | "per_unit" | "per_unit_and_flat";
 }): AdditionalCurrencyTier[] | undefined =>
-	entries?.map((entry) =>
-		mode === "flat"
+	entries?.map((entry) => {
+		if (mode === "per_unit_and_flat") {
+			return { ...entry, flat_amount: entry.flat_amount ?? 0 };
+		}
+		return mode === "flat"
 			? {
 					...entry,
 					flat_amount: entry.flat_amount ?? entry.amount ?? 0,
@@ -200,8 +204,13 @@ export const migrateTierCurrenciesForMode = ({
 					...entry,
 					amount: entry.amount || entry.flat_amount || 0,
 					flat_amount: undefined,
-				},
-	);
+				};
+	});
+
+const tierToCurrencyMode = (tier: PriceTier) => {
+	if (tier.flat_amount == null) return "per_unit";
+	return tier.amount ? "per_unit_and_flat" : "flat";
+};
 
 // The API rejects currency tiers whose flat_amount presence differs from the
 // base tier, so realign entries before building request payloads.
@@ -213,7 +222,7 @@ export const alignTierCurrencyShapes = (item: ProductItem): ProductItem => {
 			...tier,
 			additional_currencies: migrateTierCurrenciesForMode({
 				entries: tier.additional_currencies,
-				mode: tier.flat_amount != null ? "flat" : "per_unit",
+				mode: tierToCurrencyMode(tier),
 			}),
 		})),
 	};

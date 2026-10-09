@@ -177,7 +177,69 @@ export const updateTier = ({
 	setItem({ ...item, tiers: newTiers });
 };
 
-export type VolumePricingMode = "flat" | "per_unit";
+export type VolumePricingMode = "flat" | "per_unit" | "per_unit_and_flat";
+
+/** Reads the mode from tier data, so mixed tiers from the API keep both amounts. */
+export const tiersToVolumePricingMode = ({
+	tiers,
+}: {
+	tiers: PriceTier[] | null | undefined;
+}): VolumePricingMode => {
+	const hasUnitAmounts = tiers?.some((tier) => tier.amount !== 0) ?? false;
+	const hasFlatAmounts =
+		tiers?.some((tier) => tier.flat_amount != null) ?? false;
+	const hasFlatFee =
+		tiers?.some((tier) => (tier.flat_amount ?? 0) > 0) ?? false;
+
+	if (hasUnitAmounts && hasFlatFee) return "per_unit_and_flat";
+	if (hasFlatAmounts && !hasUnitAmounts) return "flat";
+	return "per_unit";
+};
+
+const tierToVolumePricingMode = ({
+	tier,
+	mode,
+}: {
+	tier: PriceTier;
+	mode: VolumePricingMode;
+}): PriceTier => {
+	const additional_currencies = migrateTierCurrenciesForMode({
+		entries: tier.additional_currencies,
+		mode,
+	});
+	if (mode === "flat") {
+		return {
+			...tier,
+			flat_amount: tier.flat_amount ?? tier.amount,
+			amount: 0,
+			additional_currencies,
+		};
+	}
+	if (mode === "per_unit") {
+		return {
+			...tier,
+			amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
+			flat_amount: undefined,
+			additional_currencies,
+		};
+	}
+	return { ...tier, flat_amount: tier.flat_amount ?? 0, additional_currencies };
+};
+
+/** Moves each tier's price into the fields the chosen mode edits. */
+export const migrateTiersToVolumePricingMode = ({
+	item,
+	mode,
+}: {
+	item: ProductItem;
+	mode: VolumePricingMode;
+}): ProductItem => {
+	if (!item.tiers) return item;
+	return {
+		...item,
+		tiers: item.tiers.map((tier) => tierToVolumePricingMode({ tier, mode })),
+	};
+};
 
 /** Cleans tier data based on the active pricing mode before committing. */
 export const cleanTiersForMode = ({
@@ -191,7 +253,8 @@ export const cleanTiersForMode = ({
 
 	const cleanedTiers = item.tiers.map((tier) => ({
 		...tier,
-		...(mode === "flat" ? { amount: 0 } : { flat_amount: undefined }),
+		...(mode === "flat" ? { amount: 0 } : {}),
+		...(mode === "per_unit" ? { flat_amount: undefined } : {}),
 		additional_currencies: migrateTierCurrenciesForMode({
 			entries: tier.additional_currencies,
 			mode,
@@ -200,3 +263,15 @@ export const cleanTiersForMode = ({
 
 	return { ...item, tiers: cleanedTiers };
 };
+
+/** Commit-time cleanup keyed off the tier data, never the toggle, so a save
+ * can't zero amounts the editor didn't show. */
+export const cleanVolumeTiersForCommit = ({
+	item,
+}: {
+	item: ProductItem;
+}): ProductItem =>
+	cleanTiersForMode({
+		item,
+		mode: tiersToVolumePricingMode({ tiers: item.tiers }),
+	});
