@@ -42,7 +42,7 @@ export const validateInvoiceCustomizeItems = ({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
-			validateRollover: false,
+			validateAuthoringRules: false,
 		});
 	}
 };

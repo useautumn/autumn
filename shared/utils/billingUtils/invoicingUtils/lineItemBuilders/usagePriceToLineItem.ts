@@ -57,9 +57,6 @@ export const usagePriceToLineItem = ({
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
 
-	// Volume pricing: the total quantity (purchased + allowance) determines
-	// which tier applies, and the ENTIRE total is charged at that tier's rate.
-	// So we add allowance back to overage before pricing.
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 
 	// 2. Get usage
@@ -92,12 +89,18 @@ export const usagePriceToLineItem = ({
 	});
 
 	// 4. Get amount
-	const amount = priceToLineAmount({
-		price,
-		overage,
-		allowance: allowance,
-		currency: context.currency,
-	});
+	// Pay-per-use prices only the overage on the stored (net-of-included) tiers, and
+	// nothing at all without overage, so a tier's flat_amount never bills included usage.
+	const isPrepaid = isPrepaidPrice(price);
+	const hasNoPayPerUseOverage = !isPrepaid && overage === 0;
+	const amount = hasNoPayPerUseOverage
+		? 0
+		: priceToLineAmount({
+				price,
+				overage,
+				allowance: isPrepaid ? allowance : 0,
+				currency: context.currency,
+			});
 
 	// 5. Get stripe price / product IDs
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({

@@ -31,17 +31,18 @@ import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productItemUtils/getItemType";
+import { validateItemTierBehavior } from "./validateItemTierBehavior";
 
 const validateProductItem = ({
 	item,
 	features,
 	multiCurrencyEnabled,
-	validateRollover,
+	validateAuthoringRules,
 }: {
 	item: ProductItem;
 	features: Feature[];
 	multiCurrencyEnabled: boolean;
-	validateRollover: boolean;
+	validateAuthoringRules: boolean;
 }) => {
 	item = ProductItemSchema.parse(item);
 	const feature = features.find((f) => f.id === item.feature_id);
@@ -230,6 +231,8 @@ const validateProductItem = ({
 		});
 	}
 
+	validateItemTierBehavior({ item, validateAuthoringRules });
+
 	if (isFeaturePriceItem(item) && item.tiers) {
 		// if (
 		// 	item.tiers.some(
@@ -254,18 +257,6 @@ const validateProductItem = ({
 		if (item.billing_units && item.billing_units <= 0) {
 			throw new RecaseError({
 				message: `Billing units must be greater than 0`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (
-			item.tier_behavior === TierBehavior.VolumeBased &&
-			item.tiers.length > 1 &&
-			item.usage_model !== UsageModel.Prepaid
-		) {
-			throw new RecaseError({
-				message: `Volume-based pricing is only supported for prepaid items`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -338,7 +329,7 @@ const validateProductItem = ({
 
 	// Authoring-time checks only: billing paths revalidate items round-tripped
 	// from persisted entitlements, which no longer answer for their own shape.
-	if (!validateRollover) return;
+	if (!validateAuthoringRules) return;
 
 	if (item.included_usage === Infinite) {
 		throw new RecaseError({
@@ -384,7 +375,7 @@ export const validateProductItems = ({
 	orgId,
 	env,
 	multiCurrencyEnabled,
-	validateRollover = true,
+	validateAuthoringRules = true,
 }: {
 	newItems: ProductItem[];
 	features: Feature[];
@@ -392,7 +383,7 @@ export const validateProductItems = ({
 	env: AppEnv;
 	multiCurrencyEnabled: boolean;
 	/** Off for billing paths, whose items come from already-persisted plans. */
-	validateRollover?: boolean;
+	validateAuthoringRules?: boolean;
 }) => {
 	const { allFeatures, newFeatures } = createFeaturesFromItems({
 		items: newItems,
@@ -416,7 +407,7 @@ export const validateProductItems = ({
 			item: newItems[index],
 			features,
 			multiCurrencyEnabled,
-			validateRollover,
+			validateAuthoringRules,
 		});
 		const feature = features.find((f) => f.id === newItems[index].feature_id);
 

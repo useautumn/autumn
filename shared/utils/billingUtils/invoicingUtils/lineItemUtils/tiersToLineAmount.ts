@@ -10,14 +10,16 @@ import { graduatedTiersToLineAmount } from "./graduatedTiersToLineAmount";
  *
  * - **Graduated**: `overage` should be net of allowance. Each tier band is
  *   charged at its own rate. `allowance` param is unused.
- * - **Volume**: `overage` should be total usage (purchased + allowance).
- *   `allowance` is passed through to prepend a free $0 tier and shift
- *   boundaries. If total exceeds the free tier, the ENTIRE quantity
- *   (including included) is charged at the matching tier's rate.
+ * - **Volume, pay-per-use**: `overage` is net of allowance and `allowance` is
+ *   omitted. The stored tiers are net of included, so the band is picked from
+ *   total usage and only the overage is charged at that band's rate.
+ * - **Volume, prepaid**: `overage` is total quantity (purchased + allowance)
+ *   and `allowance` prepends a free $0 tier and shifts boundaries. If total
+ *   exceeds the free tier, the ENTIRE quantity (including included) is charged.
  *
  * Callers (e.g. `usagePriceToLineItem`) are responsible for adjusting
- * `overage` before calling — volume adds allowance to overage, graduated
- * does not.
+ * `overage` before calling — prepaid volume adds allowance to overage,
+ * everything else does not.
  */
 export const tiersToLineAmount = ({
 	price,
