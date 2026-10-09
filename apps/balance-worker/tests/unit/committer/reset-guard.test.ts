@@ -190,7 +190,7 @@ async function createStore(rows: ReturnType<typeof createRowStore>) {
 }
 
 describe("a reset never overwrites a billing write", () => {
-	test("a reset's refill lands under the cycle it ended: the engine's `before` is its guard", async () => {
+	test("a reset's refill lands under the cycle it ended and the balances it replaces: the engine's `before` is its guard", async () => {
 		const rows = createRowStore({ nextOffset: 0n });
 		const { initial, reset } = decideSequence();
 		rows.seed(initial);
@@ -203,6 +203,9 @@ describe("a reset never overwrites a billing write", () => {
 		);
 		expect(refill?.op === "update" && refill.guard).toEqual({
 			next_reset_at: cycleEnded,
+			balance: 5,
+			additional_balance: 0,
+			adjustment: 0,
 		});
 	});
 
@@ -323,6 +326,49 @@ describe("a reset never overwrites a billing write", () => {
 			next_reset_at: renewedCycleEnd,
 		});
 		expect(rows.bookmark()).toBe(2n);
+	});
+
+	test("a billing write that changes the balance but keeps the cycle supersedes the reset too: it is skipped, then decided again on the new rows", async () => {
+		const rows = createRowStore({ nextOffset: 0n });
+		const { initial, before, reset } = decideSequence();
+		rows.seed(initial);
+		const store = await createStore(rows);
+		// The track before the reset has landed, so Postgres holds what the reset was decided on.
+		await store.applyDurableMutations({ records: [at(0n, before)] });
+
+		// t1: a quantity change adds 100 to the row in Postgres; its cycle stays where it was.
+		const paidFor = Number(rows.row()?.balance) + 100;
+		rows.writeOutsideWorker({ balance: paidFor });
+		// t2: the reset decided before it lands.
+		const [result] = await store.applyDurableMutations({
+			records: [at(1n, reset)],
+		});
+
+		expect(result?.kind).toBe("rejected");
+		expect(rows.row()).toMatchObject({
+			balance: paidFor,
+			next_reset_at: cycleEnded,
+		});
+		expect(rows.bookmark()).toBe(2n);
+
+		// t3: the evicted customer reloads from Postgres; the row is still due, so the reset is decided on what it holds now.
+		const reloaded = createState({
+			customerEntitlements: [
+				{
+					...initial.customerEntitlements[0],
+					...rows.row(),
+				} as SubjectState["customerEntitlements"][number],
+			],
+		});
+		const redecided = decideReset({ state: reloaded });
+		const [again] = await store.applyDurableMutations({
+			records: [at(2n, redecided.record)],
+		});
+
+		expect(again?.kind).toBe("applied");
+		expect(rows.row()).toMatchObject({
+			next_reset_at: redecided.refilled.customerEntitlements[0]?.next_reset_at,
+		});
 	});
 
 	test("a successor replaying an unapplied reset after the renewal skips it the same way, and replays on", async () => {
