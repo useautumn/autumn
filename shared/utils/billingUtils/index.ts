@@ -4,6 +4,7 @@ export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
 export * from "./cycleUtils/getNextMonthStart";
 export * from "./cycleUtils/remainingDiscountMonths";
+export * from "./cycleUtils/trialAnchorsBillingCycle";
 // Interval utils
 export * from "./intervalUtils/addDuration";
 export * from "./intervalUtils/intervalArithmetic";
