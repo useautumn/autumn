@@ -186,6 +186,7 @@
 		"tb:prod": "bun scripts/tinybird/index.ts prod",
 		"tb:prod-legacy": "bun scripts/tinybird/index.ts prod-legacy",
 		"axiom": "ENV_FILE=.env bun scripts/withSecrets.ts --env=dev -- bun scripts/axiom/cli.ts",
+		"axiom:staging": "ENV_FILE=.env bun scripts/withSecrets.ts --env=staging -- bun scripts/axiom/cli.ts",
 		"axiom:prod": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/axiom/cli.ts",
 		"slack": "ENV_FILE=.env bun scripts/withSecrets.ts --env=dev -- bun scripts/slack/index.ts",
 		"add-mcp": "bun scripts/mcp/addMcp.ts",
