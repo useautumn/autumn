@@ -1,3 +1,4 @@
+import type { ApiVersion } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ export function useBillingMutation<
 	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
+	apiVersion,
 }: {
 	customerId: string | undefined;
 	path: string;
@@ -40,6 +42,8 @@ export function useBillingMutation<
 	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
+	/** Overrides the dashboard's default x-api-version for bodies in a newer shape. */
+	apiVersion?: ApiVersion;
 }) {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -56,7 +60,11 @@ export function useBillingMutation<
 			const requestBody = buildRequestBody(stageParams);
 			if (!requestBody) throw new Error("Failed to build request body");
 
-			const { data } = await axiosInstance.post<TResponse>(path, requestBody);
+			const { data } = await axiosInstance.post<TResponse>(
+				path,
+				requestBody,
+				apiVersion ? { headers: { "x-api-version": apiVersion } } : undefined,
+			);
 			return {
 				data,
 				useInvoice: stageParams.useInvoice,
