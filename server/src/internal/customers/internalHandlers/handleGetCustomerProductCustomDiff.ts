@@ -5,8 +5,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { customDiffToChanges } from "@/internal/customers/cusProducts/actions/deriveIsCustom/customDiffToChanges";
-import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom";
-import { loadBaseProduct } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct";
+import { deriveStoredCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveStoredCustomerProductIsCustom";
 import { CusService } from "../CusService";
 
 /** The derived is_custom result for one customer product, for the dashboard's custom badge. */
@@ -33,14 +32,10 @@ export const handleGetCustomerProductCustomDiff = createRoute({
 			});
 		}
 
-		const result = deriveCustomerProductIsCustom({
+		const result = await deriveStoredCustomerProductIsCustom({
 			ctx,
 			customerProduct,
-			baseProduct: await loadBaseProduct({
-				ctx,
-				internalProductId: customerProduct.internal_product_id,
-			}),
-			features: ctx.features,
+			baseProducts: new Map(),
 		});
 
 		return c.json({
