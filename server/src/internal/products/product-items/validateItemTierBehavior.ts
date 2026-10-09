@@ -44,7 +44,7 @@ export const validateItemTierBehavior = ({
 	// charge on included units) depends on the whole period's usage.
 	if (notNullish(item.config?.threshold_billing)) {
 		throwInvalidVolumeItem({
-			message: `threshold_billing can't be combined with volume-based pricing (feature: ${item.feature_id}): each threshold charge would be priced on its own band. Remove threshold_billing or use graduated pricing.`,
+			message: `threshold_billing can't be combined with tiered pricing (feature: ${item.feature_id}): a volume band depends on the whole period's usage, so each threshold charge would be mis-priced. Use a single price, or remove threshold_billing.`,
 		});
 	}
 

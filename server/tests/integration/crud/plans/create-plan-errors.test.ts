@@ -390,7 +390,7 @@ const VOLUME_TWO_TIERS: ProductItem["tiers"] = [
 ];
 
 const VOLUME_THRESHOLD =
-	"threshold_billing can't be combined with volume-based pricing";
+	"threshold_billing can't be combined with tiered pricing";
 
 const volumeMessagesItem = ({
 	usageModel,

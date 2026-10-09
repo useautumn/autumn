@@ -50,7 +50,7 @@ describe("validateItemTierBehavior", () => {
 					thresholdBilling: { threshold: 50 },
 				}),
 			}),
-		).toThrow("threshold_billing can't be combined with volume-based pricing");
+		).toThrow("threshold_billing can't be combined with tiered pricing");
 	});
 
 	test("accepts graduated single price with threshold_billing", () => {
