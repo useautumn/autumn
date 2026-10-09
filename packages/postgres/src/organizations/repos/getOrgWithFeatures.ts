@@ -29,11 +29,7 @@ export const getOrgWithFeatures = async ({
 	ctx: { db: PostgresDb };
 	orgId: string;
 	env: AppEnv;
-}): Promise<{
-	org: Organization;
-	features: Feature[];
-	atomDeployments: AtomRoute[];
-} | null> => {
+}): Promise<{ org: Organization; features: Feature[] } | null> => {
 	const result = (await ctx.db.query.organizations.findFirst({
 		where: eq(organizations.id, orgId),
 		with: {
@@ -64,8 +60,8 @@ export const getOrgWithFeatures = async ({
 			planAliases: productAliasesToPlanAliasMap({
 				rows: result.product_aliases,
 			}),
+			atomDeployments: result.atom_deployments || [],
 		},
 		features: result.features || [],
-		atomDeployments: result.atom_deployments || [],
 	};
 };
