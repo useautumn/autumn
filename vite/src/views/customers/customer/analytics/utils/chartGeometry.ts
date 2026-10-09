@@ -1,25 +1,20 @@
 import { MONTH_RANGES, type MonthRangeEnum } from "@autumn/shared";
 import { type Granularity, getEffectiveBinSize } from "./intervals";
 
-/**
- * Single source of truth for the usage chart's layout, shared between the real
- * recharts chart (EventsBarChart) and the loading skeleton (ChartSkeleton) so
- * the morph between them has zero shift.
- *
- * The values mirror what recharts reserves: the explicit BarChart `margin`, the
- * fixed `YAxis width` and the default `XAxis height`. Spacing lives in the margin,
- * never in CSS padding on the svg, which would scale it off whole pixels.
- */
+/** The usage chart's layout, read by UsageChartFrame (chart and skeleton) and the loading stubs.
+ * Spacing lives in the margin, never in CSS padding on the svg, which would scale it off whole pixels. */
 
 export const CHART_MARGIN = { top: 17, right: 13, bottom: 5, left: 5 } as const;
 export const Y_AXIS_WIDTH = 40;
 export const X_AXIS_HEIGHT = 30;
 
-/** Plot insets (px) from each edge of the chart body (below the legend). */
-export const LEFT_GUTTER = CHART_MARGIN.left + Y_AXIS_WIDTH;
-export const TOP_INSET = CHART_MARGIN.top;
-export const BOTTOM_INSET = X_AXIS_HEIGHT + CHART_MARGIN.bottom;
-export const RIGHT_INSET = CHART_MARGIN.right;
+/** Plot insets (px) from each edge of the chart box; the loading stubs sit on its bottom edge. */
+export const PLOT_INSETS = {
+	left: CHART_MARGIN.left + Y_AXIS_WIDTH,
+	right: CHART_MARGIN.right,
+	top: CHART_MARGIN.top,
+	bottom: X_AXIS_HEIGHT + CHART_MARGIN.bottom,
+} as const;
 
 /** Past this many bins a 4px gap would eat most of each slot, so the gap turns proportional. */
 const DENSE_BAR_COUNT = 120;
@@ -61,39 +56,6 @@ export const barLayout = ({
 	};
 };
 
-/** Pixel insets of the plot area from each edge of the chart body. */
-export interface PlotInsets {
-	left: number;
-	right: number;
-	top: number;
-	bottom: number;
-}
-
-/** Fallback used before the real chart has been measured once. */
-export const DEFAULT_PLOT_INSETS: PlotInsets = {
-	left: LEFT_GUTTER,
-	right: RIGHT_INSET,
-	top: TOP_INSET,
-	bottom: BOTTOM_INSET,
-};
-
-// recharts computes the exact gutter dynamically; the real chart measures its
-// plot rect and caches it here so the skeleton (which renders before the chart)
-// can mirror it exactly across loads within a session.
-let cachedPlotInsets: PlotInsets | null = null;
-
-export const getCachedPlotInsets = (): PlotInsets | null => cachedPlotInsets;
-
-export const setCachedPlotInsets = (insets: PlotInsets): void => {
-	cachedPlotInsets = insets;
-};
-
-export const plotInsetsEqual = (a: PlotInsets, b: PlotInsets): boolean =>
-	a.left === b.left &&
-	a.right === b.right &&
-	a.top === b.top &&
-	a.bottom === b.bottom;
-
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 86_400_000;
 const MS_PER_WEEK = 7 * MS_PER_DAY;
@@ -110,6 +72,12 @@ const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 
 const NICE_STEP_FRACTIONS = [1, 2, 2.5, 5, 10];
 const MAX_AXIS_INTERVALS = 4;
+
+/** Before data lands, the skeleton draws the gridlines a full four-interval axis would. */
+export const SKELETON_Y_TICKS = Array.from(
+	{ length: MAX_AXIS_INTERVALS + 1 },
+	(_, i) => i,
+);
 
 /** Y-axis ticks on an even, readable step (1/2/2.5/5 × 10^n) with at most
  * four intervals, so the top tick sits just above the tallest bar. */

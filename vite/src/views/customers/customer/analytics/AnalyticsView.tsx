@@ -2,7 +2,7 @@ import { ErrCode } from "@autumn/shared";
 import { PageContainer } from "@autumn/ui";
 import { ChartBarIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { AnalyticsContext } from "./AnalyticsContext";
@@ -24,15 +24,7 @@ import { useFadeTransition } from "./hooks/useFadeTransition";
 import { type ShownChart, useLastShownChart } from "./hooks/useLastShownChart";
 import { useResetQuery } from "./hooks/useResetQuery";
 import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
-import {
-	DEFAULT_PLOT_INSETS,
-	getCachedPlotInsets,
-	niceAxisTicks,
-	type PlotInsets,
-	plotInsetsEqual,
-	predictBinStarts,
-	setCachedPlotInsets,
-} from "./utils/chartGeometry";
+import { niceAxisTicks, predictBinStarts } from "./utils/chartGeometry";
 import { chartGeometryOf, chartLoadingState } from "./utils/chartLoadingState";
 import { deductionsToEventsData } from "./utils/deductionsToEventsData";
 import { SOURCE_FEATURE_GROUP } from "./utils/displayLabels";
@@ -102,13 +94,6 @@ export const AnalyticsView = () => {
 	const fade = useFadeTransition();
 	const { queryStates } = useAnalyticsQueryState();
 	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
-	const [plotInsets, setPlotInsets] = useState<PlotInsets>(
-		() => getCachedPlotInsets() ?? DEFAULT_PLOT_INSETS,
-	);
-	const handlePlotGeometry = useCallback((insets: PlotInsets) => {
-		setCachedPlotInsets(insets);
-		setPlotInsets((prev) => (plotInsetsEqual(prev, insets) ? prev : insets));
-	}, []);
 
 	const {
 		customer,
@@ -462,18 +447,12 @@ export const AnalyticsView = () => {
 							<div className="relative flex flex-col h-[300px]">
 								<AnimatePresence initial={false}>
 									{loadingBinStarts && (
-										<motion.div
+										<ChartLoadingStubs
 											key="stubs"
-											className="absolute inset-0 flex flex-col"
-											exit={{ opacity: 0, transition: fade }}
-										>
-											<ChartLoadingStubs
-												binStarts={loadingBinStarts}
-												interval={interval}
-												seriesCount={lastChart?.chartConfig.length ?? 1}
-												geometry={plotInsets}
-											/>
-										</motion.div>
+											binStarts={loadingBinStarts}
+											interval={interval}
+											seriesCount={lastChart?.chartConfig.length ?? 1}
+										/>
 									)}
 								</AnimatePresence>
 								<AnimatePresence>
@@ -498,7 +477,6 @@ export const AnalyticsView = () => {
 													}
 													chartConfig={displayedChart.chartConfig}
 													ticks={displayedChart.chartTicks}
-													onGeometry={handlePlotGeometry}
 												/>
 											</div>
 										</motion.div>
