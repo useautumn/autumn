@@ -16,6 +16,7 @@ import {
 import {
 	ChevronsUpDown,
 	CircleDollarSign,
+	FlaskConical,
 	KeyRound,
 	List,
 	LogOut,
@@ -285,6 +286,13 @@ const Sidebar = ({ className }: { className?: string }) => (
 						to="/keys"
 						title="Stripe keys"
 						icon={<KeyRound strokeWidth={ICON_STROKE} />}
+					/>
+				</NavSection>
+				<NavSection title="QA">
+					<NavItem
+						to="/qa"
+						title="QA envs"
+						icon={<FlaskConical strokeWidth={ICON_STROKE} />}
 					/>
 				</NavSection>
 			</nav>
