@@ -173,10 +173,12 @@ function createProcessor({
 		});
 	}
 
-	function evictResident() {
+	function evictResident({
+		coldStart,
+	}: Parameters<PartitionProcessor["evictResident"]>[0]) {
 		return acceptCommand({
 			accepted: scope.accepted,
-			operation: scope.ctx.writer.evictResident(),
+			operation: scope.ctx.writer.evictResident({ coldStart }),
 		});
 	}
 

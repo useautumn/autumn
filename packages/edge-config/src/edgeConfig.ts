@@ -2,6 +2,7 @@ export {
 	type BalanceWorkerColdStartEdgeConfig,
 	BalanceWorkerColdStartEdgeConfigSchema,
 	balanceWorkerColdStartEdgeConfig,
+	type ColdStartScope,
 	defaultBalanceWorkerColdStartEdgeConfig,
 } from "./configs/balanceWorkerColdStart/balanceWorkerColdStartEdgeConfig.js";
 export {
