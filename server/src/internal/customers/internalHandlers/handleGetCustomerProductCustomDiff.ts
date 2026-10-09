@@ -44,9 +44,10 @@ export const handleGetCustomerProductCustomDiff = createRoute({
 
 		return c.json({
 			is_custom: result.isCustom,
-			reason: result.reason,
+			outcome: result.outcome,
+			reasons: result.outcome === "customized" ? result.reasons : [],
 			changes:
-				result.reason === "customized"
+				result.outcome === "customized"
 					? customDiffToChanges({ diff: result.diff })
 					: [],
 		});

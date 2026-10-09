@@ -16,7 +16,7 @@ export type CustomDiffChange = {
 
 export type CustomerProductCustomDiff = {
 	is_custom: boolean;
-	reason:
+	outcome:
 		| "customized"
 		| "matches_catalog"
 		| "revenuecat"

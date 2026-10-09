@@ -19,8 +19,8 @@ const KIND_ICONS = {
 	changed: { tone: "amber", glyph: "pencil", label: "Changed" },
 } as const;
 
-const REASON_NOTES: Record<
-	Exclude<CustomerProductCustomDiff["reason"], "customized">,
+const OUTCOME_NOTES: Record<
+	Exclude<CustomerProductCustomDiff["outcome"], "customized">,
 	string
 > = {
 	matches_catalog:
@@ -161,10 +161,10 @@ function CustomDiffBody({
 				Couldn't load the differences.
 			</span>
 		);
-	if (diff.reason !== "customized")
+	if (diff.outcome !== "customized")
 		return (
 			<span className="text-tertiary-foreground">
-				{REASON_NOTES[diff.reason]}
+				{OUTCOME_NOTES[diff.outcome]}
 			</span>
 		);
 

@@ -22,7 +22,7 @@ const changesOf = ({
 		customer: customerPlan(customer),
 		catalog: catalogPlan(catalog),
 	});
-	if (result.reason !== "customized") throw new Error(result.reason);
+	if (result.outcome !== "customized") throw new Error(result.outcome);
 	return customDiffToChanges({ diff: result.diff });
 };
 
