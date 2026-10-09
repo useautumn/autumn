@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { AtomCopyValue } from "./AtomCopyValue";
 import { AtomStepMarker } from "./AtomStepper";
+import { ATOM_PAGE_CARD_SURFACE_CELL_CLASS } from "./atomCardLayout";
 import {
 	ATOM_ACTION_IN_AWS_CHIP,
 	ATOM_REMOVAL_FAILED_CHIP,
@@ -95,16 +96,23 @@ const AtomRemovalCard = ({
 	hint,
 	action,
 	isWaitingOnYou = false,
+	className,
 }: {
 	cache: ApiByocCache;
 	steps: AtomRemovalStep[];
 	hint: React.ReactNode;
 	action: React.ReactNode;
 	isWaitingOnYou?: boolean;
+	className?: string;
 }) => (
-	<div className={TABLE_TRAY_CLASS}>
+	<div className={cn(TABLE_TRAY_CLASS, className)}>
 		<div className={TABLE_TRAY_SURFACE_CLASS}>
-			<div className="flex h-11 items-center justify-between gap-4 border-b border-table-row-divider px-4">
+			<div
+				className={cn(
+					"flex h-11 items-center justify-between gap-4 border-b border-table-row-divider",
+					ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
+				)}
+			>
 				<AtomCopyValue text={cache.stack_name} />
 				{cache.region && (
 					<span className="shrink-0 font-mono text-xs text-subtle">
@@ -112,7 +120,9 @@ const AtomRemovalCard = ({
 					</span>
 				)}
 			</div>
-			<ol className="flex flex-col px-4 py-2">
+			<ol
+				className={cn("flex flex-col py-2", ATOM_PAGE_CARD_SURFACE_CELL_CLASS)}
+			>
 				{steps.map((step, index) => (
 					<li
 						key={step.key}
@@ -141,7 +151,8 @@ const AtomRemovalCard = ({
 			</ol>
 			<div
 				className={cn(
-					"flex h-13 items-center justify-between gap-4 border-t border-table-row-divider px-4",
+					"flex h-13 items-center justify-between gap-4 border-t border-table-row-divider",
+					ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
 					isWaitingOnYou && "bg-amber-500/[0.03]",
 				)}
 			>
@@ -182,7 +193,14 @@ const AwsStackLink = ({
 );
 
 /** An Atom being deleted: Autumn takes it down, the org deletes its stack in AWS, then it is removed. */
-export const AtomRemoval = ({ cache }: { cache: ApiByocCache }) => {
+export const AtomRemoval = ({
+	cache,
+	className,
+}: {
+	cache: ApiByocCache;
+	/** e.g. to hang into the gutter when it sits on a page rather than in the sheet. */
+	className?: string;
+}) => {
 	const { remove } = useAtomActions();
 	const steps = atomRemovalSteps(cache);
 
@@ -191,6 +209,7 @@ export const AtomRemoval = ({ cache }: { cache: ApiByocCache }) => {
 			<AtomRemovalCard
 				cache={cache}
 				steps={steps}
+				className={className}
 				hint="AWS resources still running"
 				action={
 					<AwsStackLink cache={cache} isPrimary>
@@ -206,6 +225,7 @@ export const AtomRemoval = ({ cache }: { cache: ApiByocCache }) => {
 			<AtomRemovalCard
 				cache={cache}
 				steps={steps}
+				className={className}
 				hint={
 					<span className="text-destructive" title={cache.error}>
 						{cache.error}
@@ -240,6 +260,7 @@ export const AtomRemoval = ({ cache }: { cache: ApiByocCache }) => {
 		<AtomRemovalCard
 			cache={cache}
 			steps={steps}
+			className={className}
 			hint="Updates on its own. Nothing to do."
 			action={<AwsStackLink cache={cache}>Open in AWS</AwsStackLink>}
 		/>

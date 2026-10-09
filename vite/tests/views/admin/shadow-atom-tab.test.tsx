@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { ByocCacheStatus } from "@autumn/shared";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ShadowAtomDeploymentCard } from "../../../src/views/admin/shadow-atom/ShadowAtomDeploymentCard";
+import { ShadowAtomCreate } from "../../../src/views/admin/shadow-atom/ShadowAtomCreate";
 import { ShadowAtomOrgTable } from "../../../src/views/admin/shadow-atom/ShadowAtomOrgTable";
 import type {
 	ShadowAtomConfigView,
-	ShadowAtomDeployment,
 	ShadowAtomNames,
 } from "../../../src/views/admin/shadow-atom/shadowAtomTypes";
+import type { AtomActions } from "../../../src/views/settings/sections/components/atom/useAtomActions";
 
 const noop = () => {};
 const added = async () => true;
@@ -33,70 +32,18 @@ const ready = (orgs: ShadowAtomConfigView["orgs"]) =>
 		orgs,
 	});
 
-const renderDeployment = ({
-	deployment,
-	created = null,
-}: {
-	deployment: ShadowAtomDeployment | null;
-	created?: { adminTokenHash: string; setupUrl: string | null } | null;
-}) =>
-	renderToStaticMarkup(
-		<ShadowAtomDeploymentCard
-			deployment={deployment}
-			created={created}
-			onCreate={noop}
-			onResize={noop}
-			onDelete={noop}
-			isCreating={false}
-			isResizing={false}
-			isDeleting={false}
-			isBusy={false}
-		/>,
-	);
+describe("shadow Atom with nothing deployed", () => {
+	test("offers the org Atom's machine sizes and a create", () => {
+		const actions = {
+			create: { isPending: false },
+			startSetup: async () => {},
+		} as unknown as AtomActions;
 
-describe("shadow Atom deployment card", () => {
-	test("with nothing deployed it offers Create and nothing to delete", () => {
-		const html = renderDeployment({ deployment: null });
+		const html = renderToStaticMarkup(<ShadowAtomCreate actions={actions} />);
 
-		expect(html).toContain("Not deployed");
-		expect(html).toContain("Create");
-		expect(html).not.toContain("Delete");
-		expect(html).not.toContain("Resize");
-	});
-
-	test("right after create it shows the admin token hash once and the setup link", () => {
-		const html = renderDeployment({
-			deployment: {
-				deployment_group_id: "dg_1",
-				status: ByocCacheStatus.AwaitingSetup,
-				endpoint_url: null,
-				machine: null,
-			},
-			created: { adminTokenHash: "a1b2c3", setupUrl: "https://setup.example" },
-		});
-
-		expect(html).toContain("Awaiting setup");
-		expect(html).toContain("a1b2c3");
-		expect(html).toContain("Shown once");
-		expect(html).toContain("https://setup.example");
-		expect(html).toContain("Resize");
-		expect(html).toContain("Delete");
-	});
-
-	test("a ready Atom shows its endpoint and machine, and no token", () => {
-		const html = renderDeployment({
-			deployment: {
-				deployment_group_id: "dg_1",
-				status: ByocCacheStatus.Ready,
-				endpoint_url: "https://shadow-atom.example.com",
-				machine: { cpu: 4, memory: 8 },
-			},
-		});
-
-		expect(html).toContain("Ready");
-		expect(html).toContain("https://shadow-atom.example.com");
-		expect(html).toContain("4 vCPU · 8 GiB");
-		expect(html).not.toContain("Admin token hash");
+		expect(html).toContain("Medium");
+		expect(html).toContain("RECOMMENDED");
+		expect(html).toContain("Create shadow Atom");
 	});
 });
 
@@ -177,7 +124,7 @@ describe("orgs on the shadow Atom", () => {
 	});
 });
 
-test("the page has no Sandbox/Live switch: one shadow Atom serves both envs", async () => {
+test("the page's tabs are the Atom and its orgs, with no Sandbox/Live switch: one shadow Atom serves both envs", async () => {
 	const source = await Bun.file(
 		new URL(
 			"../../../src/views/admin/shadow-atom/ShadowAtomTab.tsx",
@@ -185,6 +132,6 @@ test("the page has no Sandbox/Live switch: one shadow Atom serves both envs", as
 		),
 	).text();
 
-	expect(source).not.toContain("TabsTrigger");
+	expect(source).toMatch(/SHADOW_ATOM_TABS = \["atom", "orgs"\]/);
 	expect(source).not.toContain("shadow_env");
 });

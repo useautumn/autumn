@@ -3,23 +3,19 @@ import {
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
 import { Badge } from "@autumn/ui";
-import { useState } from "react";
 import { toast } from "sonner";
 import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import { getBackendErr } from "@/utils/genUtils";
 import { AtomAccountSection } from "./AtomAccountSection";
 import { AtomCloudSection } from "./AtomCloudSection";
-import {
-	ATOM_DELETE_PROMPTS,
-	AtomDeleteDialog,
-	type AtomDeletePrompt,
-} from "./AtomDeleteDialog";
+import { ATOM_DELETE_PROMPTS } from "./AtomDeleteDialog";
 import { AtomDeploySection } from "./AtomDeploySection";
 import { AtomSteadyState } from "./AtomSteadyState";
 import { type AtomStep, AtomStepper } from "./AtomStepper";
 import { AtomVerifySection } from "./AtomVerifySection";
 import { atomMachineSpecs } from "./atomMachineDisplay";
 import { useAtomActions } from "./useAtomActions";
+import { useAtomDeleteDialog } from "./useAtomDeleteDialog";
 import { useAtomSetupFlow } from "./useAtomSetupFlow";
 import { type AtomSetupValues, useAtomSetupForm } from "./useAtomSetupForm";
 
@@ -73,10 +69,6 @@ export const AtomSetupFlow = ({
 		startSetup: actions.startSetup,
 		onStarted: () => setOpenStep(null),
 	});
-	const [deletePrompt, setDeletePrompt] = useState<AtomDeletePrompt | null>(
-		null,
-	);
-
 	const showError = (fallback: string) => (error: unknown) =>
 		toast.error(getBackendErr(error, fallback));
 
@@ -88,19 +80,12 @@ export const AtomSetupFlow = ({
 		setOpenStep("cloud");
 	};
 
-	const askToDelete = (prompt: AtomDeletePrompt) => {
-		if (hasStack) setDeletePrompt(prompt);
-		else resetSetup();
-	};
-
-	const confirmDelete = () =>
-		actions.remove.mutate(
-			{},
-			{
-				onSuccess: () => setDeletePrompt(null),
-				onError: showError("Failed to delete Atom"),
-			},
-		);
+	const { askToDelete, deleteDialog } = useAtomDeleteDialog({
+		hasStack,
+		stackName,
+		remove: actions.remove,
+		onNoStack: resetSetup,
+	});
 
 	const retry = () =>
 		actions.retry.mutate(undefined, { onError: showError("Failed to retry") });
@@ -121,16 +106,6 @@ export const AtomSetupFlow = ({
 		deploy: { key: "deploy", title: "Deploy", state: states.deploy },
 		verify: { key: "verify", title: "Verify", state: states.verify },
 	} satisfies Record<string, AtomStep>;
-
-	const deleteDialog = (
-		<AtomDeleteDialog
-			prompt={deletePrompt}
-			stackName={stackName}
-			onOpenChange={(open) => !open && setDeletePrompt(null)}
-			onConfirm={confirmDelete}
-			isDeleting={actions.remove.isPending}
-		/>
-	);
 
 	if (isSetUp && cache)
 		return (

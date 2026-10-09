@@ -205,9 +205,6 @@ export const AtomDetails = ({
 				</DetailCell>
 				<DetailCell label="Network" hasDivider className="col-span-2">
 					<span className="shrink-0 font-medium">{network.label}</span>
-					<span className="truncate text-subtle" title={network.hint}>
-						{network.hint}
-					</span>
 				</DetailCell>
 			</div>
 		</div>

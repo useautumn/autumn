@@ -6,7 +6,7 @@ import type {
 	GetByocCacheResponse,
 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAtomQueryKey } from "@/hooks/queries/useAtomQuery";
+import { useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /** Opened inside the click so the browser allows it; the setup link is loaded into it once the server returns one. */
@@ -20,7 +20,7 @@ const openSetupTab = (): Window | null => {
 export const useAtomActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const queryKey = useAtomQueryKey();
+	const { basePath, queryKey } = useAtomApi();
 
 	const setCache = (cache: ApiByocCache | null) =>
 		queryClient.setQueryData<GetByocCacheResponse>(
@@ -34,7 +34,7 @@ export const useAtomActions = () => {
 		body: object = {},
 	): Promise<Response> => {
 		const { data } = await axiosInstance.post<Response>(
-			`/v1/byoc.${route}`,
+			`${basePath}/byoc.${route}`,
 			body,
 		);
 		return data;

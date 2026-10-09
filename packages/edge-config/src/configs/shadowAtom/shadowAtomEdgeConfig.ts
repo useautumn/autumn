@@ -44,6 +44,8 @@ export const ShadowAtomConfigSchema = ShadowAtomSettingsSchema.extend({
 	orgs: z.record(z.string(), ShadowAtomOrgSchema).default({}),
 	/** The alien deployment group our shadow Atom runs in; only the admin deployment routes set it. */
 	deploymentGroupId: z.string().nullable().default(null),
+	/** The rest of that deployment's record as the server last read it; the server owns its shape. */
+	deployment: z.record(z.string(), z.unknown()).nullable().default(null),
 });
 
 export type ShadowAtomOrg = z.infer<typeof ShadowAtomOrgSchema>;

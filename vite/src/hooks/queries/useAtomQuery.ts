@@ -5,7 +5,7 @@ import {
 	type GetByocCacheResponse,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const POLL_INTERVAL_MS = 2000;
@@ -29,21 +29,16 @@ const pollIntervalFor = (cache: ApiByocCache | null | undefined) => {
 	return isSettling ? POLL_INTERVAL_MS : false;
 };
 
-export const useAtomQueryKey = () => {
-	const buildKey = useQueryKeyFactory();
-	return buildKey(["atom"]);
-};
-
 /** The env's Atom and earlier ones still coming down, polled until each is connected, failed, or gone. */
 export const useAtomQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
-	const queryKey = useAtomQueryKey();
+	const { basePath, queryKey } = useAtomApi();
 
 	const { data, dataUpdatedAt, isLoading, error, refetch } = useQuery({
 		queryKey,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<GetByocCacheResponse>(
-				"/v1/byoc.get_atom",
+				`${basePath}/byoc.get_atom`,
 				{},
 			);
 			return data;

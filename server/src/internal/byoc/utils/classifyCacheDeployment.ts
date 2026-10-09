@@ -12,7 +12,7 @@ const ATOM_ROUTE_KEYS = Object.keys(atomRouteColumns) as (keyof AtomRoute)[];
 export const isCacheConnected = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: ByocCacheDeployment;
+	cacheDeployment: Pick<ByocCacheDeployment, "status" | "stages">;
 }) =>
 	cacheDeployment.status === ByocCacheStatus.Ready &&
 	cacheDeployment.stages.connected === ByocCacheStageStatus.Done;
@@ -21,7 +21,7 @@ export const isCacheConnected = ({
 export const isCacheBeingRemoved = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: ByocCacheDeployment;
+	cacheDeployment: Pick<ByocCacheDeployment, "status">;
 }) =>
 	cacheDeployment.status === ByocCacheStatus.Removing ||
 	cacheDeployment.status === ByocCacheStatus.TeardownRequired;
@@ -30,7 +30,7 @@ export const isCacheBeingRemoved = ({
 export const isCacheSettled = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: ByocCacheDeployment;
+	cacheDeployment: Pick<ByocCacheDeployment, "status" | "stages">;
 }) =>
 	isCacheConnected({ cacheDeployment }) ||
 	cacheDeployment.status === ByocCacheStatus.Failed ||
