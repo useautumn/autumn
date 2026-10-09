@@ -1,4 +1,5 @@
 import {
+	type AggregateMeasure,
 	BILLING_CYCLE_INTERVALS,
 	type BillingCycleIntervalEnum,
 	type BillingCycleResult,
@@ -235,11 +236,27 @@ const buildColumnName = ({
 	return noCount ? eventName : `${eventName}_count`;
 };
 
+/** A row's value for the requested measure: summed event value, or number of events. */
+const rowMeasureValue = ({
+	row,
+	measure,
+}: {
+	row: { total_value: number; event_count?: number };
+	measure?: AggregateMeasure;
+}): number => {
+	if (measure !== "count") return row.total_value;
+	if (row.event_count === undefined) {
+		throw new Error("Aggregate pipe returned no event_count for a count query");
+	}
+	return row.event_count;
+};
+
 /** Formats simple pipe results (no grouping) into pivoted format */
 const formatSimpleResults = ({
 	rows,
 	eventNames,
 	noCount,
+	measure,
 	startDate,
 	endDate,
 	binSize,
@@ -248,6 +265,7 @@ const formatSimpleResults = ({
 	rows: AggregateSimplePipeRow[];
 	eventNames: string[];
 	noCount?: boolean;
+	measure?: AggregateMeasure;
 	startDate: string;
 	endDate: string;
 	binSize: string;
@@ -277,7 +295,7 @@ const formatSimpleResults = ({
 
 		const columnName = buildColumnName({ eventName: row.event_name, noCount });
 		if (eventNames.includes(row.event_name)) {
-			periodData[columnName] = new Decimal(row.total_value)
+			periodData[columnName] = new Decimal(rowMeasureValue({ row, measure }))
 				.toDecimalPlaces(10)
 				.toNumber();
 		}
@@ -304,6 +322,7 @@ const formatGroupableResults = ({
 	eventNames,
 	groupBy,
 	noCount,
+	measure,
 	startDate,
 	endDate,
 	binSize,
@@ -313,6 +332,7 @@ const formatGroupableResults = ({
 	eventNames: string[];
 	groupBy: string;
 	noCount?: boolean;
+	measure?: AggregateMeasure;
 	startDate: string;
 	endDate: string;
 	binSize: string;
@@ -369,7 +389,7 @@ const formatGroupableResults = ({
 				noCount,
 			});
 			record[columnName] = new Decimal(record[columnName] ?? 0)
-				.plus(new Decimal(row.total_value))
+				.plus(new Decimal(rowMeasureValue({ row, measure })))
 				.toDecimalPlaces(10)
 				.toNumber();
 		}
@@ -427,6 +447,7 @@ export const aggregate = async ({
 	const intervalType = params.interval ?? "24h";
 	const timezone = sanitizeTimezone({ timezone: params.timezone });
 	const binSize = params.bin_size ?? (intervalType === "24h" ? "hour" : "day");
+	const rankBy = params.measure === "count" ? ("count" as const) : undefined;
 
 	const { startDate, endDate } = await calculateDateRange({ ctx, params });
 
@@ -513,6 +534,7 @@ export const aggregate = async ({
 			...filterParams,
 			max_groups: params.max_groups,
 			group_ranking: params.group_ranking,
+			rank_by: rankBy,
 			use_daily_rollup: useDailyRollup ? ("1" as const) : undefined,
 			use_monthly_rollup: useMonthlyRollup ? ("1" as const) : undefined,
 			use_org_dimension_rollup: useOrgDimensionRollup
@@ -537,6 +559,7 @@ export const aggregate = async ({
 					endDate,
 					maxGroups: params.max_groups,
 					propertyKey: groupColumn === "property" ? propertyKey : undefined,
+					rankBy,
 				}).catch((error: unknown) => {
 					// Ranking is an optimization; fall back to the single-query path if it fails.
 					ctx.logger.warn("Top-group ranking failed; using full grouping", {
@@ -667,6 +690,7 @@ export const aggregate = async ({
 			eventNames: params.event_names,
 			groupBy: params.group_by,
 			noCount: params.no_count,
+			measure: params.measure,
 			startDate,
 			endDate,
 			binSize,
@@ -704,6 +728,7 @@ export const aggregate = async ({
 			rows: result.data,
 			eventNames: params.event_names,
 			noCount: params.no_count,
+			measure: params.measure,
 			startDate,
 			endDate,
 			binSize,

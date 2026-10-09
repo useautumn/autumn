@@ -16,6 +16,7 @@ export const rankTopGroups = async ({
 	endDate,
 	maxGroups,
 	propertyKey,
+	rankBy,
 }: {
 	orgId: string;
 	env: string;
@@ -24,6 +25,7 @@ export const rankTopGroups = async ({
 	endDate: string;
 	maxGroups?: number;
 	propertyKey?: string;
+	rankBy?: "count";
 }) => {
 	const { data } = await getTinybirdPipes().aggregateGroupableTopGroups({
 		org_id: orgId,
@@ -32,6 +34,7 @@ export const rankTopGroups = async ({
 		start_date: startDate,
 		end_date: endDate,
 		max_groups: maxGroups,
+		rank_by: rankBy,
 		...(propertyKey
 			? { group_column: "property" as const, property_key: propertyKey }
 			: {}),
