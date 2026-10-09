@@ -1,5 +1,8 @@
 import {
 	type AppEnv,
+	type AtomRoute,
+	atomDeployments,
+	atomRouteColumns,
 	type Feature,
 	features,
 	type Organization,
@@ -12,11 +15,12 @@ import { eq } from "drizzle-orm";
 import type { PostgresDb } from "../../types/postgresClient.js";
 
 type OrgWithRelations = Organization & {
+	atom_deployments?: AtomRoute[];
 	features?: Feature[];
 	product_aliases?: { alias_id: string; canonical_plan_id: string }[];
 };
 
-/** An org with its env's features and plan aliases; kept line-for-line with the server's OrgService.getWithFeatures. */
+/** An org with its env's features, plan aliases and Atoms; kept line-for-line with the server's OrgService.getWithFeatures. */
 export const getOrgWithFeatures = async ({
 	ctx,
 	orgId,
@@ -29,6 +33,10 @@ export const getOrgWithFeatures = async ({
 	const result = (await ctx.db.query.organizations.findFirst({
 		where: eq(organizations.id, orgId),
 		with: {
+			atom_deployments: {
+				where: eq(atomDeployments.env, env),
+				columns: atomRouteColumns,
+			},
 			features: {
 				where: eq(features.env, env),
 			},
@@ -41,6 +49,7 @@ export const getOrgWithFeatures = async ({
 	if (!result) return null;
 
 	const org = structuredClone(result);
+	delete org.atom_deployments;
 	delete org.features;
 	delete org.product_aliases;
 
@@ -51,6 +60,7 @@ export const getOrgWithFeatures = async ({
 			planAliases: productAliasesToPlanAliasMap({
 				rows: result.product_aliases,
 			}),
+			atomDeployments: result.atom_deployments || [],
 		},
 		features: result.features || [],
 	};

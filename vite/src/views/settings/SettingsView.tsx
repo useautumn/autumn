@@ -10,11 +10,11 @@ import {
 } from "@autumn/ui";
 import {
 	ArrowRightLeftIcon,
+	AtomIcon,
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
 	CreditCardIcon,
-	DatabaseIcon,
 	KeyRoundIcon,
 	MousePointerClickIcon,
 	PaletteIcon,
@@ -26,6 +26,7 @@ import {
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
+import { LabelTag } from "@/components/general/LabelTag";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
@@ -36,9 +37,9 @@ import { SettingsGroupContext } from "./SettingsSection";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
+import { AtomSection } from "./sections/AtomSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
-import { ByocCacheSection } from "./sections/ByocCacheSection";
 import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
@@ -68,12 +69,13 @@ export type SettingsTab =
 	| "stripe"
 	| "vercel"
 	| "revenuecat"
-	| "cache";
+	| "atom";
 
 export interface SettingsNavItem {
 	readonly id: SettingsTab;
 	readonly label: string;
 	readonly icon: React.ReactNode;
+	readonly badge?: string;
 }
 
 interface SettingsNavGroup {
@@ -178,9 +180,10 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				icon: <RevenueCatIcon size={16} />,
 			},
 			{
-				id: "cache",
-				label: "Cache",
-				icon: <DatabaseIcon className="size-4" />,
+				id: "atom",
+				label: "Atom",
+				icon: <AtomIcon className="size-4" />,
+				badge: "PREVIEW",
 			},
 		],
 	},
@@ -203,7 +206,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	stripe: StripeSection,
 	vercel: VercelSection,
 	revenuecat: RevenueCatSection,
-	cache: ByocCacheSection,
+	atom: AtomSection,
 };
 
 /** Tabs that only render while their feature flag is on. */
@@ -213,7 +216,7 @@ const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel">> = {
 };
 
 /** Tabs only Autumn admins see while the feature is internal. */
-const ADMIN_TABS: readonly SettingsTab[] = ["cache"];
+const ADMIN_TABS: readonly SettingsTab[] = ["atom"];
 
 /** Integrations were previously behind the developer page's scope. */
 const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
@@ -279,6 +282,9 @@ export const SettingsView = () => {
 									)}
 								>
 									{tab.label}
+									{tab.badge && (
+										<LabelTag label={tab.badge} className="ml-auto" />
+									)}
 								</button>
 							))}
 						</div>

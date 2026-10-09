@@ -45,6 +45,11 @@
 			"import": "./src/herald.ts",
 			"default": "./src/herald.ts"
 		},
+		"./axiom": {
+			"types": "./src/axiom.ts",
+			"import": "./src/axiom.ts",
+			"default": "./src/axiom.ts"
+		},
 		"./cache": {
 			"types": "./src/cache.ts",
 			"import": "./src/cache.ts",

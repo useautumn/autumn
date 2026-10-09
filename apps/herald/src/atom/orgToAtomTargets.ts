@@ -5,7 +5,7 @@ import {
 	shadowAtomIdOf,
 } from "@autumn/edge-config";
 import type { AppEnv, Organization } from "@autumn/shared";
-import { orgToAtomConnection } from "./orgToAtomConnection.js";
+import { atomDeploymentToConnection } from "./atomDeploymentToConnection.js";
 import type { AtomConnection } from "./types/atomClient.js";
 
 /** Our shadow Atom's folder for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
@@ -43,7 +43,7 @@ const shadowAtomConnection = ({
 };
 
 /**
- * Every Atom a push goes to: the org's own whenever it is ready, and our shadow Atom when it holds the customer.
+ * Every Atom a push goes to: the org's own whenever they are ready, and our shadow Atom when it holds the customer.
  * A catalog push names no customer, so the shadow Atom takes every registered org's catalog.
  */
 export const orgToAtomTargets = ({
@@ -58,6 +58,8 @@ export const orgToAtomTargets = ({
 	customerId?: string | null;
 }): AtomConnection[] =>
 	[
-		orgToAtomConnection({ org, env }),
+		...(org.atomDeployments ?? []).map((atomDeployment) =>
+			atomDeploymentToConnection({ atomDeployment }),
+		),
 		shadowAtomConnection({ shadowAtomConfig, org, env, customerId }),
 	].filter((connection) => connection !== null);

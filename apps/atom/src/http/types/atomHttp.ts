@@ -1,4 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
+import type { SecretKeys } from "../../auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../auth/types/auth.js";
 import type { AtomHealthSource } from "../../init/atomHealth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
@@ -14,6 +15,8 @@ export type AtomHttpContext = {
 	counters: ThreadCounters;
 	/** Present only on a multi-tenant Atom. */
 	multiTenant?: MultiTenantContext;
+	/** Present only on an org's own Atom, whose checks open with the org's secret keys. */
+	secretKeys?: SecretKeys;
 };
 
 /** How a request failed, as its error response said; the request line carries it. */

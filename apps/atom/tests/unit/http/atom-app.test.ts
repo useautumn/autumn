@@ -10,8 +10,11 @@ import {
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
+import { startSecretKeys } from "../../../src/auth/secretKeys/startSecretKeys.js";
+import type { SecretKeys } from "../../../src/auth/secretKeys/types/secretKeys.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
+import { FIRST_ALLOWED_CHECKS_LOGGED } from "../../../src/http/middlewares/requestLog/requestLogMiddleware.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
 import {
 	createThreadStatsBuffer,
@@ -64,8 +67,12 @@ const createLogger = () => {
 	};
 };
 
-/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder. */
-const createDeployedApp = () => {
+/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder, and checks the org's secret keys when given them. */
+const createDeployedApp = ({
+	secretKeys,
+}: {
+	secretKeys?: SecretKeys;
+} = {}) => {
 	const auth = createDeployedAuth({
 		dataDir: newDataDir(),
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
@@ -83,6 +90,7 @@ const createDeployedApp = () => {
 				autumnApiUrl: AUTUMN_API_URL,
 				health: HEALTH,
 				counters,
+				secretKeys,
 			},
 		}),
 		logged,
@@ -114,6 +122,19 @@ const createMultiTenantApp = () => {
 /** The Autumn API answering whatever Atom forwards to it. */
 const autumnAnswering = ({ status, body }: { status: number; body: unknown }) =>
 	spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
+
+/** A thread's first allowed checks are all logged; these use them up, and drop their lines. */
+const answerFirstAllowedChecks = async ({
+	app,
+	logged,
+}: {
+	app: ReturnType<typeof createDeployedApp>["app"];
+	logged: LogLine[];
+}) => {
+	for (let i = 0; i < FIRST_ALLOWED_CHECKS_LOGGED; i++)
+		await app.request("/v1/balances.check", checkMessages());
+	logged.length = 0;
+};
 
 /** Every allowed check falls inside the 1-in-100 sample, or none does. */
 const sampleEveryAllow = ({ sampled }: { sampled: boolean }) =>
@@ -357,6 +378,72 @@ describe("an Atom in an org's cloud", () => {
 	});
 });
 
+describe("an org's own Atom opened by the org's secret key", () => {
+	const SECRET_KEY_HASH = hashToken({
+		token: SECRET_KEY.slice("Bearer ".length),
+	});
+
+	/** Autumn names `invalid` as not the org's keys on every sync. */
+	const createSecretKeyApp = ({
+		invalid = [],
+	}: {
+		invalid?: string[];
+	} = {}) => {
+		const secretKeys = startSecretKeys({ findInvalid: async () => invalid });
+		const { app } = createDeployedApp({ secretKeys });
+		return { app, secretKeys };
+	};
+
+	const checkWithKeyOnly = async ({
+		app,
+	}: {
+		app: ReturnType<typeof createAtomApp>;
+	}) => app.request("/v1/balances.check", checkMessages({ token: null }));
+
+	test("a key the API accepted answers here once Autumn confirms it is the org's", async () => {
+		const { app, secretKeys } = createSecretKeyApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		const fetchSpy = autumnAnswering({ status: 200, body: { allowed: true } });
+
+		const first = await checkWithKeyOnly({ app });
+		await secretKeys.sync();
+		const second = await checkWithKeyOnly({ app });
+
+		secretKeys.stop();
+		expect(first.headers.get("x-atom-forwarded")).toBe("secret_key_not_known");
+		expect(second.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await second.json()).toMatchObject({
+			allowed: true,
+			balance: { feature_id: "messages", remaining: 10 },
+		});
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+	});
+
+	test("a key the API refused, or one Autumn says is not the org's, keeps going to the API", async () => {
+		const answered: (string | null)[] = [];
+		for (const { status, invalid } of [
+			{ status: 401, invalid: [] },
+			{ status: 403, invalid: [] },
+			{ status: 200, invalid: [SECRET_KEY_HASH] },
+		]) {
+			const { app, secretKeys } = createSecretKeyApp({ invalid });
+			await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+			autumnAnswering({ status, body: {} });
+			await checkWithKeyOnly({ app });
+			await secretKeys.sync();
+			const again = await checkWithKeyOnly({ app });
+			secretKeys.stop();
+			answered.push(again.headers.get("x-atom-forwarded"));
+		}
+
+		expect(answered).toEqual([
+			"secret_key_not_known",
+			"secret_key_not_known",
+			"secret_key_not_known",
+		]);
+	});
+});
+
 describe("a customer push that arrives late", () => {
 	test("is reported as not stored, and the newer customer stays", async () => {
 		const { app } = createDeployedApp();
@@ -498,6 +585,7 @@ describe("the request line", () => {
 		sampleEveryAllow({ sampled: true });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await answerFirstAllowedChecks({ app, logged });
 
 		await app.request("/v1/balances.check", checkMessages());
 		await app.request(
@@ -505,10 +593,10 @@ describe("the request line", () => {
 			checkMessages({ required_balance: 11 }),
 		);
 
-		expect(logged.map((line) => line.level)).toEqual(["info", "info", "info"]);
+		expect(logged.map((line) => line.level)).toEqual(["info", "info"]);
 		for (const [index, allowed] of [
-			[1, true],
-			[2, false],
+			[0, true],
+			[1, false],
 		] as const) {
 			expect(logged[index]?.fields).toEqual({
 				...(allowed && { sample_rate: 0.01 }),
@@ -533,6 +621,7 @@ describe("the request line", () => {
 		sampleEveryAllow({ sampled: false });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		await answerFirstAllowedChecks({ app, logged });
 		const checksBefore = (await (await app.request("/health")).json())
 			.threads[0].checks;
 
@@ -545,13 +634,26 @@ describe("the request line", () => {
 		const health = await (await app.request("/health")).json();
 
 		expect(logged.map((line) => line.fields)).toEqual([
-			expect.objectContaining({
-				req: expect.objectContaining({ path: "/v1/subjects.set" }),
-			}),
 			expect.objectContaining({ res: { allowed: false } }),
 		]);
-		expect(logged[1]?.fields).not.toHaveProperty("sample_rate");
+		expect(logged[0]?.fields).not.toHaveProperty("sample_rate");
 		expect(health.threads[0].checks).toBe(checksBefore + 4);
+	});
+
+	test("a thread's first allowed checks are all logged, outside the sample and with no sample rate", async () => {
+		sampleEveryAllow({ sampled: false });
+		const { app, logged } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		logged.length = 0;
+
+		for (let i = 0; i < FIRST_ALLOWED_CHECKS_LOGGED + 1; i++)
+			await app.request("/v1/balances.check", checkMessages());
+
+		expect(logged).toHaveLength(FIRST_ALLOWED_CHECKS_LOGGED);
+		for (const line of logged) {
+			expect(line.fields).toMatchObject({ res: { allowed: true } });
+			expect(line.fields).not.toHaveProperty("sample_rate");
+		}
 	});
 
 	test("a refused request is a warning that carries the answer; a push Atom cannot read names what failed", async () => {
@@ -601,6 +703,27 @@ describe("the request line", () => {
 			res: null,
 		});
 		expect(logged[0]?.message).toMatch(/→ Autumn API \(customer_not_stored\)$/);
+	});
+
+	test("a check its key got through is a request, forwarded when the API answered it; a refused one is only a check", async () => {
+		const { app } = createDeployedApp();
+		const threadStats = async () =>
+			(await (await app.request("/health")).json()).threads[0];
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		const before = await threadStats();
+
+		await app.request("/v1/balances.check", checkMessages());
+		await app.request("/v1/balances.check", checkMessages({ token: null }));
+		autumnAnswering({ status: 200, body: { allowed: true } });
+		await app.request(
+			"/v1/balances.check",
+			checkMessages({ customer_id: "cus_2" }),
+		);
+		const after = await threadStats();
+
+		expect(after.checks - before.checks).toBe(3);
+		expect(after.requests - before.requests).toBe(2);
+		expect(after.forwarded - before.forwarded).toBe(1);
 	});
 
 	test("the health probe reports boot, restarts, the container and every thread's counters; a check counts", async () => {

@@ -4,12 +4,14 @@ import { apiKeys } from "../devModels/apiKeyTable.js";
 import { features } from "../featureModels/featureTable.js";
 import { migrationRuns } from "../migrationV2Models/migrationRunTable.js";
 import { productAliases } from "../productModels/productAliasTable.js";
+import { atomDeployments } from "./atomDeploymentTable.js";
 import { organizations } from "./orgTable.js";
 
 export const organizationsRelations = relations(
 	organizations,
 	({ many, one }) => ({
 		api_keys: many(apiKeys),
+		atom_deployments: many(atomDeployments),
 		features: many(features),
 		product_aliases: many(productAliases),
 		members: many(member),

@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import {
 	hasDeploymentFailed,
 	isDeploymentAwaitingSetup,
+	isDeploymentAwaitingTeardown,
 	isDeploymentBeingDeleted,
+	isDeploymentInSetup,
+	isDeploymentRemoving,
 	isDeploymentRunning,
 } from "../../src/alien.js";
 
@@ -59,6 +62,35 @@ describe("where a deployment is in its lifecycle", () => {
 			).toBe(true);
 		expect(
 			isDeploymentBeingDeleted({ deployment: deploymentIn("pending") }),
+		).toBe(false);
+	});
+
+	test("setup lasts until the stack is in place, failures included", () => {
+		for (const status of [
+			"pending",
+			"preflights-failed",
+			"initial-setup",
+			"initial-setup-failed",
+		])
+			expect(isDeploymentInSetup({ deployment: deploymentIn(status) })).toBe(
+				true,
+			);
+		expect(
+			isDeploymentInSetup({ deployment: deploymentIn("provisioning") }),
+		).toBe(false);
+	});
+
+	test("a delete removes what runs, then waits on the customer's stack", () => {
+		for (const status of ["delete-pending", "deleting", "delete-failed"])
+			expect(isDeploymentRemoving({ deployment: deploymentIn(status) })).toBe(
+				true,
+			);
+		for (const status of ["teardown-required", "teardown-failed"])
+			expect(
+				isDeploymentAwaitingTeardown({ deployment: deploymentIn(status) }),
+			).toBe(true);
+		expect(
+			isDeploymentRemoving({ deployment: deploymentIn("teardown-required") }),
 		).toBe(false);
 	});
 });

@@ -28,7 +28,7 @@ export const getAtomDeployer = (): AtomDeployer => {
 	if (atomDeployer === undefined) atomDeployer = createAtomDeployer();
 	if (atomDeployer) return atomDeployer;
 	throw new RecaseError({
-		message: "Cache deployments are not configured on this server.",
+		message: "Atom is not configured on this server.",
 		code: ErrCode.ByocUnavailable,
 		statusCode: 503,
 	});

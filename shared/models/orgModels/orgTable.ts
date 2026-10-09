@@ -1,5 +1,6 @@
 import type { ProcessorConfigs } from "@models/genModels/processorSchemas.js";
 import type { PendingMigration } from "@models/migrationV2Models/pendingMigrationModel.js";
+import type { AtomRoute } from "@models/orgModels/atomDeploymentTable.js";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
@@ -11,7 +12,6 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
-import type { ByocConfig } from "./byocConfig.js";
 import type { CustomButton } from "./customButton.js";
 import type { IdempotencyConfig } from "./idempotencyConfig.js";
 import type { OrgConfig } from "./orgConfig.js";
@@ -137,12 +137,6 @@ export const organizations = pgTable(
 		sandbox_icon: text("sandbox_icon"),
 
 		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
-		sandbox_byoc_config: jsonb("sandbox_byoc_config")
-			.$type<ByocConfig>()
-			.default(sql`'{}'::jsonb`),
-		live_byoc_config: jsonb("live_byoc_config")
-			.$type<ByocConfig>()
-			.default(sql`'{}'::jsonb`),
 		provisioning_source: text(
 			"provisioning_source",
 		).$type<OrgProvisioningSource>(),
@@ -189,6 +183,8 @@ export type Organization = typeof organizations.$inferSelect & {
 	pendingMigrations?: PendingMigration[];
 	/** alias_id → live plan id. Empty (or omitted) for orgs with no renames. */
 	planAliases?: Record<string, string>;
+	/** The env's Atoms, routing columns only; set when the org is read with its features. */
+	atomDeployments?: AtomRoute[];
 };
 
 // Multi tenancy flow <-> stripe connect...
