@@ -138,6 +138,22 @@ export const qaWorker = {
 			query: `?build=${buildId}`,
 			init: { method: "POST" },
 		}),
+	cancelBuild: ({
+		ctx,
+		name,
+		buildId,
+	}: {
+		ctx: TwdContext;
+		name: string;
+		buildId: string;
+	}) =>
+		call<{ ok: true }>({
+			ctx,
+			name,
+			action: "cancel-build",
+			query: `?build=${buildId}`,
+			init: { method: "POST" },
+		}),
 	status: ({ ctx, name }: { ctx: TwdContext; name: string }) =>
 		call<WorkerEnvStatus>({ ctx, name, action: "status" }),
 	logs: ({

@@ -156,6 +156,12 @@ export class QaEnv extends DurableObject<Env> {
 		await this.ctx.storage.setAlarm(Date.now() + BUILD_POLL_MS);
 	}
 
+	async abandonBuild() {
+		if (this.container.running) await this.container.destroy("build cancelled");
+		await this.ctx.storage.put("builderState", "failed" satisfies BuilderState);
+		await this.ctx.storage.setAlarm(Date.now() + BUILDER_RETENTION_MS);
+	}
+
 	async builderProgress() {
 		const builder = await this.ctx.storage.get<BuilderConfig>("builder");
 		const state = await this.ctx.storage.get<BuilderState>("builderState");
@@ -296,7 +302,12 @@ export class QaEnv extends DurableObject<Env> {
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
 		// A live build keeps its config (database, secrets, expiry) until the new one is adopted.
 		const hasLiveBuild = Boolean(await this.ctx.storage.get("snapshot"));
-		if (!hasLiveBuild) await this.ctx.storage.put("config", config);
+		const live = await this.config();
+		// The new lifetime applies now; database and secrets switch only with the build.
+		await this.ctx.storage.put(
+			"config",
+			hasLiveBuild && live ? { ...live, expiresAt: config.expiresAt } : config,
+		);
 		await this.ctx.storage.put("pendingConfig", config);
 		await this.ctx.storage.put("pendingBuild", {
 			buildId,
@@ -313,6 +324,19 @@ export class QaEnv extends DurableObject<Env> {
 			config,
 		});
 		return { buildId, publicUrl, expiresAt: config.expiresAt };
+	}
+
+	/** Stops a pending build so it can never be adopted, e.g. after its database was dropped. */
+	async cancelBuild({ buildId }: { buildId: string }) {
+		const config = await this.config();
+		const pending = await this.ctx.storage.get<{ buildId: string }>(
+			"pendingBuild",
+		);
+		if (pending?.buildId === buildId)
+			await this.ctx.storage.delete(["pendingBuild", "pendingConfig"]);
+		if (config) await this.builderStub(buildId, config.name).abandonBuild();
+		if (!(await this.ctx.storage.get("snapshot")))
+			await this.ctx.storage.put("state", "failed" satisfies EnvState);
 	}
 
 	async adoptBuild({
