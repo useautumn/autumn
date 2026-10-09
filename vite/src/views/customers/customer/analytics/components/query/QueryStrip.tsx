@@ -12,13 +12,13 @@ import { useBreakdown } from "./useBreakdown";
 const CUSTOMER_SLOT = "w-56";
 const ENTITY_SLOT = "w-44";
 
-/** The whole analytics query as one row of filter buttons: what on the left, when on the right. */
+/** The whole analytics query as filter buttons: what on the left, when on the right. */
 export const QueryStrip = ({ propertyKeys }: { propertyKeys: string[] }) => {
 	const { customerId } = useBreakdown();
 
 	return (
-		<div className="flex shrink-0 flex-wrap items-center justify-between gap-2 pb-4">
-			<div className="flex min-w-0 flex-wrap items-center gap-2">
+		<div className="flex shrink-0 items-start justify-between gap-2 pb-4">
+			<div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 				<CustomerComboBox
 					renderTrigger={(label) => (
 						<FilterTriggerButton
@@ -42,7 +42,7 @@ export const QueryStrip = ({ propertyKeys }: { propertyKeys: string[] }) => {
 				{customerId && <MeasureCell />}
 				<GroupByCell propertyKeys={propertyKeys} />
 			</div>
-			<div className="flex items-center gap-2">
+			<div className="flex shrink-0 items-center gap-2">
 				<RangeCell />
 				<BinSizeCell />
 			</div>
