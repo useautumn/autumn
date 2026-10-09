@@ -27,7 +27,7 @@ describe("findBlockingIndexStatements", () => {
 
 	test("matches schema-qualified names across migrations", () => {
 		const newTables = findCreatedTables([
-			`CREATE TABLE IF NOT EXISTS "public"."subject_snapshots" ("id" text);`,
+			`CREATE TABLE "public"."subject_snapshots" ("id" text);`,
 		]);
 		const blockers = findBlockingIndexStatements(
 			`CREATE INDEX "idx_a" ON "subject_snapshots" ("id");--> statement-breakpoint
@@ -35,5 +35,12 @@ DROP INDEX "idx_b";`,
 			newTables,
 		);
 		expect(blockers.map((blocker) => blocker.kind)).toEqual(["DROP INDEX"]);
+	});
+
+	test("keeps blocking indexes on CREATE TABLE IF NOT EXISTS tables", () => {
+		const sql = `CREATE TABLE IF NOT EXISTS "customers" ("id" text);--> statement-breakpoint
+CREATE INDEX "idx_customers_id" ON "customers" ("id");`;
+		const blockers = findBlockingIndexStatements(sql, findCreatedTables([sql]));
+		expect(blockers.map((blocker) => blocker.kind)).toEqual(["CREATE INDEX"]);
 	});
 });

@@ -5,8 +5,8 @@ import { type Env, targetHost, wrapInInfisical } from "../helpers/env.ts";
 import { MIGRATIONS_DIR } from "../helpers/paths.ts";
 import {
 	getPendingMigrations,
-	isLocalDatabase,
 	type PendingMigration,
+	selectMigrationsToApply,
 } from "../helpers/pendingMigrations.ts";
 import {
 	type BlockingStatement,
@@ -135,32 +135,6 @@ async function applyPending(
 	}
 
 	console.log(`done — applied ${toApply.length} migration(s)`);
-}
-
-/**
- * A shared DB that recorded a newer branch-only migration would skip older ones forever,
- * so local DBs apply those gaps; remote DBs keep drizzle-kit's order and only warn.
- */
-function selectMigrationsToApply({
-	unrecorded,
-	databaseUrl,
-}: {
-	unrecorded: PendingMigration[];
-	databaseUrl: string;
-}): PendingMigration[] {
-	const outOfOrder = unrecorded.filter((migration) => migration.outOfOrder);
-	if (outOfOrder.length === 0) return unrecorded;
-
-	const tags = outOfOrder.map((migration) => migration.tag).join(", ");
-	if (isLocalDatabase(databaseUrl)) {
-		console.log(`applying out-of-order migration(s) on a local DB: ${tags}`);
-		return unrecorded;
-	}
-
-	console.warn(
-		`WARNING: unrecorded migration(s) older than the newest applied one are skipped: ${tags}`,
-	);
-	return unrecorded.filter((migration) => !migration.outOfOrder);
 }
 
 type FlaggedBlocker = {
