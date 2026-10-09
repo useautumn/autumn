@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { findCacheDeploymentByGroupId } from "../../../repos/cacheDeployments.js";
 
 /** The record as stored now, never the copy the run started with; null once no Atom follows this group. */
-export const setupWatchedCacheDeployment = ({
+export const readWatchedCacheDeployment = ({
 	ctx,
 	deploymentGroupId,
 }: {

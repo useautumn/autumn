@@ -18,11 +18,11 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
 
-const SETUP_MODULE =
-	"@/internal/byoc/actions/watchCacheDeployment/setup/setupWatchedCacheDeployment.js";
+const READ_MODULE =
+	"@/internal/byoc/actions/watchCacheDeployment/steps/readWatchedCacheDeployment.js";
 const REFRESH_MODULE = "@/internal/byoc/actions/refreshCacheDeployment.js";
 // Kept so afterAll can hand the real modules back: mock.module is process-wide.
-const realSetupModule: Record<string, unknown> = await import(SETUP_MODULE);
+const realReadModule: Record<string, unknown> = await import(READ_MODULE);
 const realRefreshModule: Record<string, unknown> = await import(REFRESH_MODULE);
 
 const cacheDeploymentIn = ({
@@ -56,8 +56,8 @@ const cacheDeploymentIn = ({
 let reports: (ByocCacheDeployment | null | Error)[] = [];
 let stored: ByocCacheDeployment | null = null;
 
-mock.module(SETUP_MODULE, () => ({
-	setupWatchedCacheDeployment: async () => stored,
+mock.module(READ_MODULE, () => ({
+	readWatchedCacheDeployment: async () => stored,
 }));
 mock.module(REFRESH_MODULE, () => ({
 	refreshCacheDeployment: async () => {
@@ -69,7 +69,7 @@ mock.module(REFRESH_MODULE, () => ({
 }));
 
 afterAll(() => {
-	mock.module(SETUP_MODULE, () => realSetupModule);
+	mock.module(READ_MODULE, () => realReadModule);
 	mock.module(REFRESH_MODULE, () => realRefreshModule);
 });
 
