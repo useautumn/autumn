@@ -2,6 +2,7 @@ import { reportError } from "@autumn/errors";
 import type { Feature, FullCusProduct, FullProduct } from "@autumn/shared";
 import { cusProductToProcessorType, ProcessorType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { customDiffToReasons } from "./customDiffToReasons";
 import { diffCustomerProductAgainstCatalog } from "./diffCustomerProductAgainstCatalog";
 import type { CustomerProductIsCustomResult } from "./types/customerProductIsCustomResult";
 
@@ -48,10 +49,10 @@ export const deriveCustomerProductIsCustom = ({
 }): CustomerProductIsCustomResult => {
 	// RevenueCat purchases carry no params and can't be customised, so any diff is catalog drift.
 	if (cusProductToProcessorType(customerProduct) === ProcessorType.RevenueCat) {
-		return { isCustom: false, reason: "revenuecat" };
+		return { isCustom: false, outcome: "revenuecat" };
 	}
 
-	if (!baseProduct) return { isCustom: true, reason: "catalog_missing" };
+	if (!baseProduct) return { isCustom: true, outcome: "catalog_missing" };
 
 	try {
 		const diff = diffCustomerProductAgainstCatalog({
@@ -59,10 +60,15 @@ export const deriveCustomerProductIsCustom = ({
 			baseProduct,
 			features,
 		});
-		if (!diff) return { isCustom: false, reason: "matches_catalog" };
-		return { isCustom: true, reason: "customized", diff };
+		if (!diff) return { isCustom: false, outcome: "matches_catalog" };
+		return {
+			isCustom: true,
+			outcome: "customized",
+			reasons: customDiffToReasons({ diff }),
+			diff,
+		};
 	} catch (error) {
 		reportDerivationFailure({ ctx, customerProduct, error });
-		return { isCustom: true, reason: "comparison_failed" };
+		return { isCustom: true, outcome: "comparison_failed" };
 	}
 };

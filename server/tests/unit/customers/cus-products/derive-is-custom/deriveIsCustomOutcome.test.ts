@@ -20,13 +20,13 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 
 		expect(
 			derive({ customer: customerPlan(plan), catalog: catalogPlan(plan) }),
-		).toEqual({ isCustom: false, reason: "matches_catalog" });
+		).toEqual({ isCustom: false, outcome: "matches_catalog" });
 	});
 
 	test("an empty plan on both sides → not custom", () => {
 		expect(
 			derive({ customer: customerPlan(), catalog: catalogPlan() }),
-		).toEqual({ isCustom: false, reason: "matches_catalog" });
+		).toEqual({ isCustom: false, outcome: "matches_catalog" });
 	});
 
 	test("a diverging plan → custom, carrying the diff", () => {
@@ -36,7 +36,7 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 		});
 
 		expect(result.isCustom).toBe(true);
-		expect(result.reason).toBe("customized");
+		expect(result.outcome).toBe("customized");
 		expect("diff" in result && result.diff.items).toHaveLength(1);
 	});
 
@@ -135,7 +135,7 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 						prices: [basePrice()],
 					}),
 				}),
-			).toEqual({ isCustom: false, reason: "revenuecat" });
+			).toEqual({ isCustom: false, outcome: "revenuecat" });
 		});
 
 		test("with an unresolvable catalog version → not custom", () => {
@@ -147,7 +147,7 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 					}),
 					catalog: null,
 				}),
-			).toEqual({ isCustom: false, reason: "revenuecat" });
+			).toEqual({ isCustom: false, outcome: "revenuecat" });
 		});
 
 		test("a Stripe product diverging the same way → custom", () => {
@@ -170,7 +170,7 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 					customer: customerPlan({ items: [includedItem()] }),
 					catalog: null,
 				}),
-			).toEqual({ isCustom: true, reason: "catalog_missing" });
+			).toEqual({ isCustom: true, outcome: "catalog_missing" });
 		});
 
 		const malformedCustomerProduct = () =>
@@ -191,7 +191,7 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 					catalog: catalogPlan({ items: [includedItem()] }),
 					logger,
 				}),
-			).toEqual({ isCustom: true, reason: "comparison_failed" });
+			).toEqual({ isCustom: true, outcome: "comparison_failed" });
 
 			expect(logger.child).toHaveBeenCalledWith({
 				context: {
@@ -222,7 +222,7 @@ describe("deriveCustomerProductIsCustom outcome", () => {
 					catalog: catalogPlan({ items: [includedItem()] }),
 					logger,
 				}),
-			).toEqual({ isCustom: true, reason: "comparison_failed" });
+			).toEqual({ isCustom: true, outcome: "comparison_failed" });
 			expect(logger.error).toHaveBeenCalledTimes(1);
 		});
 	});

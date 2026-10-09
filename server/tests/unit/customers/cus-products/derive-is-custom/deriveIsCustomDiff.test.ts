@@ -24,8 +24,8 @@ const diffOf = ({
 		customer: customerPlan(customer),
 		catalog: catalogPlan(catalog),
 	});
-	if (result.reason !== "customized") {
-		throw new Error(`expected a customized result, got ${result.reason}`);
+	if (result.outcome !== "customized") {
+		throw new Error(`expected a customized result, got ${result.outcome}`);
 	}
 	return result.diff;
 };
@@ -222,6 +222,7 @@ describe("deriveCustomerProductIsCustom diff", () => {
 
 		expect(Object.keys(diff).sort()).toEqual([
 			"items",
+			"licenses",
 			"price",
 			"upsert_licenses",
 		]);

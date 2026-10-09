@@ -4,6 +4,7 @@ import {
 	type CreatePlanItemParamsV1,
 	composeMatchKey,
 	cusProductToProduct,
+	type DiffablePlanV1,
 	diffPlanV1,
 	diffPlanV1ItemChanges,
 	type Feature,
@@ -17,6 +18,7 @@ import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPl
 import type {
 	CustomerProductCustomDiff,
 	CustomizedPlanItem,
+	CustomizedPlanLicense,
 } from "./types/customerProductCustomDiff";
 
 /** User-controlled fields only, so ids and Stripe processor refs never read as a difference. */
@@ -81,6 +83,28 @@ const pairCustomizedPlanItems = ({
 	return [...itemsByKey.values()].flatMap(pairSameKeyItems);
 };
 
+/** Pairs each changed license link with its catalog side, so additions and edits read apart. */
+const pairCustomizedPlanLicenses = ({
+	catalog,
+	customer,
+	changedLicensePlanIds,
+}: {
+	catalog: DiffablePlanV1;
+	customer: DiffablePlanV1;
+	changedLicensePlanIds: string[];
+}): CustomizedPlanLicense[] =>
+	[...new Set(changedLicensePlanIds)].map((licensePlanId) => ({
+		license_plan_id: licensePlanId,
+		catalog:
+			catalog.licenses?.find(
+				(license) => license.license_plan_id === licensePlanId,
+			) ?? null,
+		customer:
+			customer.licenses?.find(
+				(license) => license.license_plan_id === licensePlanId,
+			) ?? null,
+	}));
+
 /**
  * Diffs a customer product against the catalog version it points at, keeping
  * only what makes it custom. Free trials and product-level details never count.
@@ -109,6 +133,14 @@ export const diffCustomerProductAgainstCatalog = ({
 		includeAdds: true,
 	});
 	const items = pairCustomizedPlanItems({ catalog, customer });
+	const licenses = pairCustomizedPlanLicenses({
+		catalog,
+		customer,
+		changedLicensePlanIds: [
+			...(planDiff.upsert_licenses ?? []),
+			...(planDiff.remove_licenses ?? []),
+		].map(({ license_plan_id }) => license_plan_id),
+	});
 
 	const diff: CustomerProductCustomDiff = {
 		...(planDiff.price !== undefined
@@ -126,6 +158,7 @@ export const diffCustomerProductAgainstCatalog = ({
 		...(planDiff.remove_licenses
 			? { remove_licenses: planDiff.remove_licenses }
 			: {}),
+		...(licenses.length > 0 ? { licenses } : {}),
 	};
 
 	return Object.keys(diff).length > 0 ? diff : null;
