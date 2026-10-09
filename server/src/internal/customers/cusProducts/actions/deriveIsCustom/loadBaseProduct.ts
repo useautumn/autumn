@@ -29,3 +29,25 @@ export const loadBaseProduct = async ({
 		return null;
 	}
 };
+
+/** Catalog versions keyed by internal product id, shared by every derivation in one run. */
+export type BaseProductCache = Map<string, Promise<FullProduct | null>>;
+
+/** `loadBaseProduct`, at most once per cache. A null result is not kept, so a failed read is retried. */
+export const loadCachedBaseProduct = async ({
+	ctx,
+	internalProductId,
+	baseProducts,
+}: {
+	ctx: AutumnContext;
+	internalProductId: string;
+	baseProducts: BaseProductCache;
+}): Promise<FullProduct | null> => {
+	const cached = baseProducts.get(internalProductId);
+	if (cached) return cached;
+	const loading = loadBaseProduct({ ctx, internalProductId });
+	baseProducts.set(internalProductId, loading);
+	const baseProduct = await loading;
+	if (!baseProduct) baseProducts.delete(internalProductId);
+	return baseProduct;
+};

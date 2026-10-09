@@ -1,11 +1,10 @@
-import type {
-	CustomerListFilters,
-	CustomPlansExportRow,
-	FullProduct,
-} from "@autumn/shared";
+import type { CustomerListFilters, CustomPlansExportRow } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom.js";
-import { loadBaseProduct } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
+import {
+	type BaseProductCache,
+	loadCachedBaseProduct,
+} from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
 import { CusService } from "../../CusService.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import { retryExportDbRead } from "../verify/retryExportDbRead.js";
@@ -15,24 +14,8 @@ import {
 	isCustomerProductInExportScope,
 } from "./customPlansExportRow.js";
 
-/** Catalog versions shared across the whole run, keyed by internal product id. */
-export type BaseProductCache = Map<string, Promise<FullProduct | null>>;
-
-const loadCachedBaseProduct = ({
-	ctx,
-	internalProductId,
-	baseProducts,
-}: {
-	ctx: AutumnContext;
-	internalProductId: string;
-	baseProducts: BaseProductCache;
-}) => {
-	const cached = baseProducts.get(internalProductId);
-	if (cached) return cached;
-	const loading = loadBaseProduct({ ctx, internalProductId });
-	baseProducts.set(internalProductId, loading);
-	return loading;
-};
+/** Every plan must reach the file, so the org's customer-product page size is lifted. */
+const CUSTOM_PLANS_EXPORT_CUS_PRODUCT_LIMIT = 10_000;
 
 export const customerToCustomPlansExportRows = async ({
 	ctx,
@@ -58,6 +41,7 @@ export const customerToCustomPlansExportRows = async ({
 			idOrInternalId: scalar.internal_id,
 			withEntities: true,
 			skipReset: true,
+			cusProductLimit: CUSTOM_PLANS_EXPORT_CUS_PRODUCT_LIMIT,
 		});
 		const customerProducts = fullCustomer.customer_products.filter(
 			(customerProduct) =>

@@ -3,10 +3,8 @@ import type {
 	CustomPlansExportRow,
 	CustomPlansExportSpec,
 } from "@autumn/shared";
-import {
-	type BaseProductCache,
-	customerToCustomPlansExportRows,
-} from "../../customPlans/customerToCustomPlansExportRows.js";
+import type { BaseProductCache } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
+import { customerToCustomPlansExportRows } from "../../customPlans/customerToCustomPlansExportRows.js";
 import type { CustomerExportScalarRow } from "../../queries/getCustomerExportScalars.js";
 import type { CustomerExportRowStreamFactory } from "./customerExportProducers.js";
 import { mapStreamWithConcurrency } from "./mapStreamWithConcurrency.js";
