@@ -17,7 +17,10 @@ import {
 } from "@autumn/shared";
 import type { AtomContext } from "@/internal/byoc/atomRecords/types/atomContext.js";
 import type { AtomDeployer } from "@/internal/byoc/deployers/types/atomDeployer.js";
-import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
+import {
+	toCacheStages,
+	toRemovalStages,
+} from "@/internal/byoc/utils/cacheStageUtils.js";
 
 const REFRESH_MODULE = "@/internal/byoc/atomRecords/refreshAtomRecord.js";
 // Kept so afterAll can hand the real module back: mock.module is process-wide.
@@ -48,6 +51,16 @@ const cacheDeploymentIn = ({
 	error: null,
 	first_check_at: null,
 	created_at: 1,
+});
+
+/** A delete under way, with its stages as a removal reports them. */
+const removingWith = ({
+	removedStages,
+}: {
+	removedStages: ByocCacheStage[];
+}): ByocCacheDeployment => ({
+	...cacheDeploymentIn({ status: ByocCacheStatus.Removing }),
+	stages: toRemovalStages({ removedStages, hasFailed: false }),
 });
 
 /** What alien reports on each poll, in order; a thrown error stands in for an outage. */
@@ -143,9 +156,15 @@ describe("watching an Atom's deploy", () => {
 	});
 
 	test("follows a delete until the record is gone", async () => {
-		reports = [cacheDeploymentIn({ status: ByocCacheStatus.Removing }), null];
+		reports = [
+			removingWith({ removedStages: [] }),
+			removingWith({
+				removedStages: [ByocCacheStage.Connected, ByocCacheStage.Atom],
+			}),
+			null,
+		];
 
-		expect(await watch()).toEqual({ outcome: "gone", waits: [10] });
+		expect(await watch()).toEqual({ outcome: "gone", waits: [10, 10] });
 	});
 
 	test("stops when the org must delete its stack", async () => {

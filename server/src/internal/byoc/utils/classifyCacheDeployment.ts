@@ -8,12 +8,14 @@ import {
 
 const ATOM_ROUTE_KEYS = Object.keys(atomRouteColumns) as (keyof AtomRoute)[];
 
-/** Running, and Autumn reaches it. */
+/** Running, and Autumn reaches it; a removal marks `connected` done too, as it is no removal step. */
 export const isCacheConnected = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: Pick<ByocCacheDeployment, "stages">;
-}) => cacheDeployment.stages.connected === ByocCacheStageStatus.Done;
+	cacheDeployment: Pick<ByocCacheDeployment, "status" | "stages">;
+}) =>
+	cacheDeployment.status === ByocCacheStatus.Ready &&
+	cacheDeployment.stages.connected === ByocCacheStageStatus.Done;
 
 /** A delete was asked for; the record stays until the org's stack is gone too. */
 export const isCacheBeingRemoved = ({
