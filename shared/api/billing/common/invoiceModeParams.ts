@@ -30,6 +30,10 @@ export const InvoiceModeParamsSchema = z
 				description:
 					"Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Overrides the org's allowed payment methods.",
 			}),
+		apply_to_auto_topups: z.boolean().optional().meta({
+			description:
+				"Only on billing.update when invoice_mode is the only change: also switches the customer's auto top-ups to the same collection method.",
+		}),
 	})
 	.meta({
 		title: "InvoiceMode",

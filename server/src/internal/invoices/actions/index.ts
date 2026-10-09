@@ -5,6 +5,7 @@ import { insertInvoices } from "./insertInvoices";
 import { payInvoiceOutOfBand } from "./payOutOfBand";
 import { reissueInvoice } from "./reissueInvoice";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
+import { updateInvoicePaymentMethodTypes } from "./updateInvoicePaymentMethodTypes";
 import { upsertInvoiceToDbAndCache } from "./upsertDbAndCache";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
 import { voidInvoice } from "./voidInvoice";
@@ -18,6 +19,7 @@ export const invoiceActions = {
 	reissue: reissueInvoice,
 	upsertFromStripe: upsertInvoiceFromStripe,
 	updateFromStripe: updateInvoiceFromStripe,
+	updatePaymentMethodTypes: updateInvoicePaymentMethodTypes,
 	upsertToDbAndCache: upsertInvoiceToDbAndCache,
 	void: voidInvoice,
 } as const;

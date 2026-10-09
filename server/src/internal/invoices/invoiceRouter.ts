@@ -11,6 +11,7 @@ import { handleListInvoiceTemplates } from "./handlers/handleListInvoiceTemplate
 import { handlePayInvoice } from "./handlers/handlePayInvoice.js";
 import { handleRedirectToInvoice } from "./handlers/handleRedirectToInvoice.js";
 import { handleReissueInvoice } from "./handlers/handleReissueInvoice.js";
+import { handleUpdateInvoice } from "./handlers/handleUpdateInvoice.js";
 import { handleVoidInvoice } from "./handlers/handleVoidInvoice.js";
 
 export const publicInvoiceRouter = new Hono<HonoEnv>();
@@ -48,4 +49,5 @@ invoiceRpcRouter.post("/invoices.listTemplates", ...handleListInvoiceTemplates);
 invoiceRpcRouter.post("/invoices.pay", ...handlePayInvoice);
 invoiceRpcRouter.post("/invoices.void", ...handleVoidInvoice);
 invoiceRpcRouter.post("/invoices.reissue", ...handleReissueInvoice);
+invoiceRpcRouter.post("/invoices.update", ...handleUpdateInvoice);
 invoiceRpcRouter.post("/invoices.issue_credit_note", ...handleIssueCreditNote);

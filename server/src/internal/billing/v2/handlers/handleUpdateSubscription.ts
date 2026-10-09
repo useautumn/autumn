@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	ApiVersion,
 	InternalError,
+	isCollectionMethodSwitch,
 	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
@@ -39,6 +40,13 @@ export const handleUpdateSubscription = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
+
+		if (isCollectionMethodSwitch(body)) {
+			return c.json(
+				await billingActions.switchCollectionMethod({ ctx, params: body }),
+				200,
+			);
+		}
 
 		const pendingUpdate = await updatePendingPlanIfAny({ ctx, params: body });
 
