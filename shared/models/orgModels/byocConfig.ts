@@ -1,5 +1,3 @@
-import type { ByocCacheDeployment } from "./atomDeploymentTable.js";
-
 export const ByocCacheStatus = {
 	AwaitingSetup: "awaiting_setup",
 	Provisioning: "provisioning",
@@ -54,8 +52,3 @@ export type ByocCacheStages = Record<ByocCacheStage, ByocCacheStageStatus>;
 export type ByocCacheNetwork =
 	| { type: "existing_vpc"; vpc_id: string; subnet_ids: string[] }
 	| { type: "new_vpc" };
-
-/** One env's infra in the org's own cloud; each env has its own column. */
-export type ByocConfig = {
-	cache?: ByocCacheDeployment;
-};

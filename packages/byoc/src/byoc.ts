@@ -19,10 +19,6 @@ export {
 	BYOC_CACHE_SCHEMA_VERSION,
 } from "./byocConstants.js";
 export { isByocCacheReady } from "./cacheDeployments/classifyCacheDeployments.js";
-export {
-	orgToByocConfig,
-	orgToCacheDeployment,
-} from "./cacheDeployments/orgToCacheDeployment.js";
 export { ByocCacheEntrySchema } from "./cacheEntries/cacheEntrySchemas.js";
 export {
 	customerByocCacheKey,
