@@ -10,10 +10,12 @@ const SLOW_AFTER_SECONDS = 5;
 export const ChartLoadingStubs = ({
 	binStarts,
 	interval,
+	seriesCount,
 	geometry,
 }: {
 	binStarts: number[];
 	interval: string;
+	seriesCount: number;
 	geometry: PlotInsets;
 }) => {
 	const seconds = useElapsedSeconds({ active: true });
@@ -25,6 +27,7 @@ export const ChartLoadingStubs = ({
 				binStarts={binStarts}
 				interval={interval}
 				isSweeping={!isSlow}
+				seriesCount={seriesCount}
 				geometry={geometry}
 			/>
 			<AnimatePresence>

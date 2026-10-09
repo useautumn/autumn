@@ -46,7 +46,7 @@ import {
 	hideGroupSeries,
 } from "./utils/hideGroupValues";
 import { formatBinStartLabel } from "./utils/parseTimestamp";
-import { assignSeriesColors } from "./utils/seriesColors";
+import { assignSeriesColors, eventColor } from "./utils/seriesColors";
 import {
 	dropZeroSeries,
 	generateChartConfig,
@@ -196,7 +196,7 @@ export const AnalyticsView = () => {
 	const chartGroupBy = isDeducted ? (groupBy ?? SOURCE_FEATURE_GROUP) : groupBy;
 	const chartSource = isDeducted ? deductionEvents : events;
 
-	// Ranked before hiding groups, so hiding one never repaints the others.
+	// Coloured before hiding groups, so hiding one never repaints the others.
 	const seriesColors = useMemo(() => {
 		if (!chartSource) return {};
 		return assignSeriesColors({
@@ -206,8 +206,9 @@ export const AnalyticsView = () => {
 				chartGroupBy,
 				isDeducted,
 			}),
+			eventNames: responseEventNames,
 		});
-	}, [chartSource, groupBy, chartGroupBy, isDeducted]);
+	}, [chartSource, groupBy, chartGroupBy, isDeducted, responseEventNames]);
 
 	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
@@ -274,18 +275,17 @@ export const AnalyticsView = () => {
 		return niceAxisTicks({ max: Math.max(...totals, 1) });
 	}, [chartData, chartConfig]);
 
-	// Only an ungrouped chart has one colour per event; grouped series belong to groups.
-	const eventColors = useMemo(() => {
-		const colorsByEvent: Record<string, string> = {};
-		if (groupBy || isDeducted || !chartConfig) return colorsByEvent;
-		for (const name of responseEventNames) {
-			const series = chartConfig.find(
-				(c) => c.yKey === `${name}_count` || c.yKey === name,
-			);
-			if (series) colorsByEvent[name] = series.fill;
-		}
-		return colorsByEvent;
-	}, [chartConfig, groupBy, isDeducted, responseEventNames]);
+	// Each selected event's own colour, known before data lands and kept when grouping recolours its series.
+	const eventColors = useMemo(
+		() =>
+			Object.fromEntries(
+				responseEventNames.map((name: string, eventIndex: number) => [
+					name,
+					eventColor({ eventIndex }),
+				]),
+			),
+		[responseEventNames],
+	);
 
 	// A group can own several series (one per event); its first colour stands for it.
 	const groupColors = useMemo(() => {
@@ -470,6 +470,7 @@ export const AnalyticsView = () => {
 											<ChartLoadingStubs
 												binStarts={loadingBinStarts}
 												interval={interval}
+												seriesCount={lastChart?.chartConfig.length ?? 1}
 												geometry={plotInsets}
 											/>
 										</motion.div>

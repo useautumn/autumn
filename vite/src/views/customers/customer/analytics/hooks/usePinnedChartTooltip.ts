@@ -11,7 +11,6 @@ import type { Row } from "../components/analytics-types";
 import type { TooltipEntry } from "../components/tooltipItemLink";
 import type { PlotInsets } from "../utils/chartGeometry";
 import type { ChartSeriesConfig } from "../utils/transformGroupedChartData";
-import { useSegmentHoverDim } from "./useSegmentHoverDim";
 
 /**
  * Hover + pin state machine for the events bar chart: which column is active,
@@ -39,9 +38,7 @@ export const usePinnedChartTooltip = ({
 		setPinnedState(next);
 	}, []);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const { trackSegmentHover, clearSegmentHover } = useSegmentHoverDim({
-		containerRef,
-	});
+	const cursorBandRef = useRef<HTMLDivElement>(null);
 
 	// Cursor tracking is imperative: a per-pixel setState here re-renders the
 	// whole recharts tree per mousemove, which is what made the tooltip choppy.
@@ -78,8 +75,13 @@ export const usePinnedChartTooltip = ({
 		}
 	}, []);
 
-	// Plot-area x-range, used to resolve which column the cursor is over.
-	const plotXRef = useRef<{ left: number; width: number } | null>(null);
+	// Plot-area rect, used to resolve which column the cursor is over.
+	const plotXRef = useRef<{
+		left: number;
+		width: number;
+		top: number;
+		height: number;
+	} | null>(null);
 	// Lets mousemove retry when the first measure ran before recharts drew the
 	// grid — the ResizeObserver never refires if the container size is stable.
 	const measureRef = useRef<(() => void) | null>(null);
@@ -99,7 +101,12 @@ export const usePinnedChartTooltip = ({
 			if (g.width === 0 || g.height === 0) {
 				return;
 			}
-			plotXRef.current = { left: g.left - c.left, width: g.width };
+			plotXRef.current = {
+				left: g.left - c.left,
+				width: g.width,
+				top: g.top - c.top,
+				height: g.height,
+			};
 			onGeometry?.({
 				left: Math.round(g.left - c.left),
 				right: Math.round(c.right - g.right),
@@ -138,21 +145,39 @@ export const usePinnedChartTooltip = ({
 
 	// `undefined` means the plot geometry is not measurable yet, which must not
 	// be confused with `null` — the cursor sitting outside every column.
-	const resolveRowAt = useCallback(
-		(x: number): Row | null | undefined => {
+	const resolveIndexAt = useCallback(
+		(x: number): number | null | undefined => {
 			if (!plotXRef.current) measureRef.current?.();
 			const plot = plotXRef.current;
 			const count = data.data.length;
 			if (!plot || count === 0 || plot.width <= 0) return undefined;
 			const index = Math.floor(((x - plot.left) / plot.width) * count);
-			return index >= 0 && index < count ? data.data[index] : null;
+			return index >= 0 && index < count ? index : null;
+		},
+		[data],
+	);
+
+	// Imperative like the tooltip, so following the cursor never re-renders the chart.
+	const placeCursorBand = useCallback(
+		(index: number | null) => {
+			const band = cursorBandRef.current;
+			const plot = plotXRef.current;
+			if (!band) return;
+			if (index === null || !plot) {
+				band.style.opacity = "0";
+				return;
+			}
+			const columnWidth = plot.width / data.data.length;
+			band.style.width = `${columnWidth}px`;
+			band.style.height = `${plot.height}px`;
+			band.style.transform = `translate(${plot.left + index * columnWidth}px, ${plot.top}px)`;
+			band.style.opacity = "0.6";
 		},
 		[data],
 	);
 
 	const handleMouseMove = useCallback(
 		(e: React.MouseEvent) => {
-			trackSegmentHover(e.target);
 			if (pinnedRef.current) return;
 			const rect = containerRef.current?.getBoundingClientRect();
 			if (!rect) return;
@@ -160,11 +185,16 @@ export const usePinnedChartTooltip = ({
 			lastMousePos.current = { x, y: e.clientY - rect.top };
 			positionTooltip();
 
-			const row = resolveRowAt(x);
-			if (row === undefined) return;
-			startTransition(() => setActivePeriod(row ? String(row.period) : null));
+			const index = resolveIndexAt(x);
+			if (index === undefined) return;
+			placeCursorBand(index);
+			startTransition(() =>
+				setActivePeriod(
+					index === null ? null : String(data.data[index].period),
+				),
+			);
 		},
-		[trackSegmentHover, positionTooltip, resolveRowAt],
+		[positionTooltip, resolveIndexAt, placeCursorBand, data],
 	);
 
 	const handleChartClick = useCallback(
@@ -174,38 +204,40 @@ export const usePinnedChartTooltip = ({
 			if (tooltipRef.current?.contains(e.target as Node)) return;
 			const rect = containerRef.current?.getBoundingClientRect();
 			if (!rect) return;
-			const row = resolveRowAt(e.clientX - rect.left);
-			if (!row) return;
+			const index = resolveIndexAt(e.clientX - rect.left);
+			if (index === null || index === undefined) return;
+			placeCursorBand(index);
 			pinnedAnchorRef.current = { clientX: e.clientX, clientY: e.clientY };
 			// The pin must show exactly what the hover tooltip showed — one segment,
 			// or the whole stack when the click landed on empty column space.
 			setHoveredKey(liveHoveredKeyRef.current);
-			setActivePeriod(String(row.period));
+			setActivePeriod(String(data.data[index].period));
 			setPinned(true);
 			// Re-pinning to the same row and segment changes no state, so the
 			// reposition effect would not fire and the card would sit at the old anchor.
 			positionTooltip();
 		},
-		[positionTooltip, resolveRowAt, setPinned],
+		[positionTooltip, resolveIndexAt, placeCursorBand, setPinned, data],
 	);
 
 	const unpin = useCallback(() => {
 		pinnedAnchorRef.current = null;
 		lastMousePos.current = null;
 		liveHoveredKeyRef.current = null;
+		placeCursorBand(null);
 		setPinned(false);
 		setHoveredKey(null);
 		setActivePeriod(null);
-	}, [setPinned]);
+	}, [setPinned, placeCursorBand]);
 
 	const handleChartMouseLeave = useCallback(() => {
-		clearSegmentHover();
 		if (pinnedRef.current) return;
+		placeCursorBand(null);
 		setHoveredKey(null);
 		setActivePeriod(null);
 		lastMousePos.current = null;
 		liveHoveredKeyRef.current = null;
-	}, [clearSegmentHover]);
+	}, [placeCursorBand]);
 
 	// The tooltip is fixed in viewport coords, so scrolling moves the chart out
 	// from under it: dismiss rather than track. A pin is deliberate, so it stays.
@@ -255,8 +287,7 @@ export const usePinnedChartTooltip = ({
 				entityCustomerId: s.entityCustomerId,
 			}))
 			.filter((i) => i.value !== 0);
-		// A stale or zero-valued hoveredKey must not blank the tooltip while the
-		// CSS hover state is still lit — fall back to the full stack instead.
+		// A stale or zero-valued hoveredKey must not blank the tooltip; fall back to the full stack.
 		const hoveredItems = hoveredKey
 			? allItems.filter((i) => i.dataKey === hoveredKey)
 			: [];
@@ -286,6 +317,7 @@ export const usePinnedChartTooltip = ({
 	return {
 		containerRef,
 		tooltipRef,
+		cursorBandRef,
 		pinned,
 		tooltipData,
 		// Nothing to anchor a card to until the cursor has been over the plot.
