@@ -6,7 +6,9 @@ export const ColdStartAckSchema = z.object({
 	completedAt: z.string(),
 	durationMs: z.number(),
 	evictedSubjects: z.number(),
-	/** Still resident after the eviction: subjects pinned by a write that landed meanwhile. */
+	/** Resident subjects the request's scope spared: outside its fraction or active within its window. */
+	keptSubjects: z.number(),
+	/** In scope but still resident after the eviction: subjects pinned by a write that landed meanwhile. */
 	residentSubjects: z.number(),
 	/** Partitions whose eviction failed; the request counts as not handled while any are listed. */
 	failedPartitions: z.array(z.number()),

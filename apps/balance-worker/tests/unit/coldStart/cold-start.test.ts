@@ -7,6 +7,7 @@ import {
 } from "@autumn/balance-engine";
 import type {
 	BalanceWorkerColdStartEdgeConfig,
+	ColdStartScope,
 	EdgeConfigS3Client,
 } from "@autumn/edge-config";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
@@ -18,6 +19,7 @@ import type { PartitionProcessor } from "../../../src/processor/types/partitionP
 import { createPartitionWriter } from "../../../src/processor/writer/createPartitionWriter.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createSubjectMap } from "../../../src/processor/writer/subjectMap/createSubjectMap.js";
+import type { ResidentDrop } from "../../../src/processor/writer/subjectMap/types/subjectMap.js";
 import type { MutateParams } from "../../../src/processor/writer/types/mutation.js";
 import type { PartitionWriterContext } from "../../../src/processor/writer/types/partitionWriter.js";
 import {
@@ -34,8 +36,10 @@ const identity: MeteringIdentity = {
 };
 const other: MeteringIdentity = { ...identity, customerId: "cus_other" };
 
-describe("subject map: dropUnpinned", () => {
-	test("drops every resident subject but the pinned, without an evict's DELETE", () => {
+const everything: ColdStartScope = { fraction: 1, keepActiveWithinMs: null };
+
+describe("subject map: dropResident", () => {
+	test("drops every picked subject but the pinned, without an evict's DELETE", () => {
 		const evicted: string[] = [];
 		const map = createSubjectMap({
 			onEvicted: ({ customerKey }) => evicted.push(customerKey),
@@ -45,13 +49,41 @@ describe("subject map: dropUnpinned", () => {
 		map.setState({ subjectKey: "b", customerKey: "b", state });
 		map.setState({ subjectKey: "pinned", customerKey: "pinned", state });
 		map.pin({ subjectKey: "pinned" });
-		expect(map.residentCount()).toBe(3);
 
-		expect(map.dropUnpinned()).toBe(2);
+		expect(map.dropResident({ drops: () => true })).toEqual({
+			evicted: 2,
+			kept: 0,
+			resident: 1,
+		});
 		expect(map.readState({ subjectKey: "a" })).toBeNull();
 		expect(map.readState({ subjectKey: "pinned" })).toEqual(state);
-		expect(map.residentCount()).toBe(1);
 		expect(evicted).toEqual([]);
+	});
+
+	test("hands each subject's customer and time since its last read or write to the picker", () => {
+		let clock = 0;
+		const map = createSubjectMap({ now: () => clock });
+		const state = createState();
+		map.setState({ subjectKey: "idle", customerKey: "cus_idle", state });
+		map.setState({ subjectKey: "read", customerKey: "cus_read", state });
+		clock = 1_000;
+		map.readState({ subjectKey: "read" });
+		clock = 1_500;
+		const seen: { customerKey: string; idleMs: number }[] = [];
+
+		expect(
+			map.dropResident({
+				drops: (subject) => {
+					seen.push(subject);
+					return subject.idleMs >= 1_000;
+				},
+			}),
+		).toEqual({ evicted: 1, kept: 1, resident: 0 });
+		expect(seen).toEqual([
+			{ customerKey: "cus_idle", idleMs: 1_500 },
+			{ customerKey: "cus_read", idleMs: 500 },
+		]);
+		expect(map.readState({ subjectKey: "read" })).toEqual(state);
 	});
 });
 
@@ -132,24 +164,70 @@ describe("writer: evictResident", () => {
 		await tracked.waitForCommit();
 
 		let settled = false;
-		const evicting = writer.evictResident().then((result) => {
-			settled = true;
-			return result;
-		});
+		const evicting = writer
+			.evictResident({ coldStart: everything })
+			.then((result) => {
+				settled = true;
+				return result;
+			});
 		await Bun.sleep(5);
 		expect(settled).toBe(false);
 		expect(writer.readFreshestState({ identity })).not.toBeNull();
 
 		held.resolve();
-		expect(await evicting).toEqual({ evicted: 2, resident: 0 });
+		expect(await evicting).toEqual({ evicted: 2, kept: 0, resident: 0 });
 		await tracked.waitForStore();
 		expect(writer.readFreshestState({ identity })).toBeNull();
 		expect(writer.readFreshestState({ identity: other })).toBeNull();
 	});
+
+	const adoptCustomers = (count: number) => {
+		const { writer } = createWriter();
+		const identities = Array.from({ length: count }, (_, index) => ({
+			...identity,
+			customerId: `cus_${index}`,
+		}));
+		for (const each of identities)
+			writer.adopt({ state: createState({ identity: each }) });
+		const evictedIds = () =>
+			identities
+				.filter((each) => !writer.readFreshestState({ identity: each }))
+				.map(({ customerId }) => customerId);
+		return { writer, evictedIds };
+	};
+
+	test("a fraction evicts that share of customers, the same ones on every worker and rerun", async () => {
+		const first = adoptCustomers(2_000);
+		const second = adoptCustomers(2_000);
+		const scope = { fraction: 0.2, keepActiveWithinMs: null };
+
+		const result = await first.writer.evictResident({ coldStart: scope });
+		await second.writer.evictResident({ coldStart: scope });
+
+		expect(result.evicted + result.kept).toBe(2_000);
+		expect(result.evicted).toBeGreaterThan(340);
+		expect(result.evicted).toBeLessThan(460);
+		expect(first.evictedIds()).toEqual(second.evictedIds());
+		expect(first.evictedIds()).toHaveLength(result.evicted);
+	});
+
+	test("subjects active within keepActiveWithinMs stay resident", async () => {
+		const { writer, evictedIds } = adoptCustomers(3);
+
+		expect(
+			await writer.evictResident({
+				coldStart: { fraction: 1, keepActiveWithinMs: 60_000 },
+			}),
+		).toEqual({ evicted: 0, kept: 3, resident: 0 });
+		expect(evictedIds()).toEqual([]);
+	});
 });
 
 const createRequests = (initial: string | null) => {
-	let current: BalanceWorkerColdStartEdgeConfig = { requestId: initial };
+	let current: BalanceWorkerColdStartEdgeConfig = {
+		requestId: initial,
+		...everything,
+	};
 	const listeners = new Set<
 		(config: BalanceWorkerColdStartEdgeConfig) => void
 	>();
@@ -161,8 +239,8 @@ const createRequests = (initial: string | null) => {
 			listeners.add(listener);
 			return () => listeners.delete(listener);
 		},
-		publish: (requestId: string | null) => {
-			current = { requestId };
+		publish: (requestId: string | null, scope: ColdStartScope = everything) => {
+			current = { requestId, ...scope };
 			for (const listener of listeners) listener(current);
 		},
 		listeners,
@@ -209,42 +287,41 @@ const createHarness = ({
 };
 
 describe("createColdStart", () => {
-	test("each new request empties every served partition once and acks the sum", async () => {
-		let calls = 0;
-		const evictingAndCounting = (result: {
-			evicted: number;
-			resident: number;
-		}) =>
-			runtimeEvicting(async () => {
-				calls += 1;
+	test("each new request empties its scope of every served partition once and acks the sum", async () => {
+		const scopes: ColdStartScope[] = [];
+		const evictingAndCounting = (result: ResidentDrop) =>
+			runtimeEvicting(async ({ coldStart }) => {
+				scopes.push(coldStart);
 				return result;
 			});
 		const runtimes = new Map([
-			[0, evictingAndCounting({ evicted: 3, resident: 0 })],
-			[1, evictingAndCounting({ evicted: 4, resident: 1 })],
+			[0, evictingAndCounting({ evicted: 3, kept: 10, resident: 0 })],
+			[1, evictingAndCounting({ evicted: 4, kept: 20, resident: 1 })],
 		]);
+		const scope = { fraction: 0.2, keepActiveWithinMs: 600_000 };
 		const { coldStart, requests, settle, acked } = createHarness({ runtimes });
 		coldStart.start();
 		await settle();
 		expect(coldStart.readAck()).toBeNull();
 
-		requests.publish("lt42");
-		requests.publish("lt42");
+		requests.publish("lt42", scope);
+		requests.publish("lt42", scope);
 		await settle();
 		const ack = coldStart.readAck() as ColdStartAck;
 		expect(ack).toMatchObject({
 			requestId: "lt42",
 			evictedSubjects: 7,
+			keptSubjects: 30,
 			residentSubjects: 1,
 			failedPartitions: [],
 		});
-		expect(calls).toBe(2);
+		expect(scopes).toEqual([scope, scope]);
 		expect(acked()).toBe(1);
 	});
 
 	test("a request already pending at start is handled, so a fresh worker still acks it", async () => {
 		const runtimes = new Map([
-			[0, runtimeEvicting(async () => ({ evicted: 0, resident: 0 }))],
+			[0, runtimeEvicting(async () => ({ evicted: 0, kept: 0, resident: 0 }))],
 		]);
 		const { coldStart, settle } = createHarness({ initial: "lt7", runtimes });
 		coldStart.start();
@@ -254,7 +331,7 @@ describe("createColdStart", () => {
 
 	test("a partition that fails is listed, so the request doesn't count as handled", async () => {
 		const runtimes = new Map([
-			[0, runtimeEvicting(async () => ({ evicted: 2, resident: 0 }))],
+			[0, runtimeEvicting(async () => ({ evicted: 2, kept: 0, resident: 0 }))],
 			[5, runtimeEvicting(async () => Promise.reject(new Error("fenced")))],
 		]);
 		const { coldStart, requests, settle, warnings } = createHarness({
@@ -319,6 +396,7 @@ describe("heartbeat", () => {
 			completedAt: new Date(0).toISOString(),
 			durationMs: 3,
 			evictedSubjects: 7,
+			keptSubjects: 0,
 			residentSubjects: 0,
 			failedPartitions: [],
 		};

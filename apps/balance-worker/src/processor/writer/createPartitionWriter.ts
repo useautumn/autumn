@@ -160,8 +160,10 @@ export function createPartitionWriter({
 		return evictCustomer({ scope, customerKey });
 	}
 
-	function evictResident() {
-		return evictResidentSubjects({ scope });
+	function evictResident({
+		coldStart,
+	}: Parameters<PartitionWriter["evictResident"]>[0]) {
+		return evictResidentSubjects({ scope, coldStart });
 	}
 
 	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
