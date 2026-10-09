@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ColdStartAckSchema } from "../../coldStart/types/coldStartAck.js";
 
 /** One object per task; the dashboard lists the fleet's prefix and sums the fresh ones. */
 export const SLOT_HEARTBEAT_KEY_PREFIX =
@@ -58,6 +59,8 @@ export const SlotHeartbeatSchema = z.object({
 			}),
 		),
 	}),
+	/** Absent where cold starts are not honoured; null until this worker handles its first request. */
+	coldStart: ColdStartAckSchema.nullable().optional(),
 	startedAt: z.string(),
 	writtenAt: z.string(),
 });

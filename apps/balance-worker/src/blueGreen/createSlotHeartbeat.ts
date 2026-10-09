@@ -4,6 +4,7 @@ import type {
 } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import type { ColdStartAck } from "../coldStart/types/coldStartAck.js";
 import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import type { SlotGate } from "./createSlotGate.js";
 import {
@@ -26,6 +27,8 @@ type SlotHeartbeatContext = {
 	readAssignmentSettled(): boolean;
 	readStoreHealthy(): boolean;
 	probes: { kafka(): Promise<void>; postgres(): Promise<void> };
+	/** Present only where cold starts are honoured (staging); the heartbeat then always carries the latest ack. */
+	readColdStart?(): ColdStartAck | null;
 	logger?: Pick<AutumnLogger, "warn">;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 };
@@ -43,7 +46,7 @@ export function createSlotHeartbeat({
 }: {
 	ctx: SlotHeartbeatContext;
 	config: SlotHeartbeatConfig;
-}): { start(): Promise<void>; stop(): void } {
+}): { start(): Promise<void>; stop(): void; writeSoon(): void } {
 	const instanceId = `${process.pid}-${crypto.randomUUID().split("-")[0]}`;
 	const key = slotHeartbeatKeyOf({ fleetId: config.fleetId, instanceId });
 	const startedAt = new Date().toISOString();
@@ -102,6 +105,7 @@ export function createSlotHeartbeat({
 					lagRecords: p.lag === null ? null : Number(p.lag),
 				})),
 			},
+			...(ctx.readColdStart ? { coldStart: ctx.readColdStart() } : {}),
 			startedAt,
 			writtenAt: new Date().toISOString(),
 		};
@@ -130,6 +134,13 @@ export function createSlotHeartbeat({
 		});
 	}
 
+	/** Writes now, or right after the write in flight, which may have read the state from before. */
+	function writeSoon(): void {
+		if (!cancel) return;
+		if (writing) void writing.then(writeWhenIdle);
+		else writeWhenIdle();
+	}
+
 	async function start(): Promise<void> {
 		if (cancel) return;
 		cancel = (ctx.schedule ?? scheduleWrites)({
@@ -145,7 +156,7 @@ export function createSlotHeartbeat({
 		cancel = undefined;
 	}
 
-	return { start, stop };
+	return { start, stop, writeSoon };
 }
 
 function scheduleWrites({

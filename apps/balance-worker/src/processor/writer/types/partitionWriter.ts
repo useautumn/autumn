@@ -79,6 +79,8 @@ export type PartitionWriter = {
 	}): SubjectState | null;
 	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
 	evict(params: { customerKey: string }): Promise<void>;
+	/** Once Postgres holds every write before it, drops every resident subject; returns how many went and how many stay pinned. */
+	evictResident(): Promise<{ evicted: number; resident: number }>;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
 	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
 	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;

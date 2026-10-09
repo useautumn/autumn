@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createKafkaAuthEnv } from "../kafkaAuth.js";
+import { isStagingEnv } from "../staging.js";
 import {
 	BALANCE_WORKER_CATALOG_MAX_BYTES,
 	BALANCE_WORKER_CATALOG_TTL_MS,
@@ -118,6 +119,8 @@ export function createBalanceWorkerEnv(
 		...env,
 		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "BALANCE_WORKER" }),
 		BALANCE_WORKER_DEPLOYMENT: deployment,
+		/** Staging alone honours a load test's cold-start request. */
+		BALANCE_WORKER_STAGING: isStagingEnv({ runtimeEnv }),
 		BALANCE_WORKER_METERING_TOPIC: kafkaNames.meteringTopic,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: kafkaNames.ownershipTopic,
 		BALANCE_WORKER_COMMAND_TOPIC: kafkaNames.commandTopic,

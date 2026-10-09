@@ -137,7 +137,10 @@ export async function openWorkerResources({
 				logger: dependencies.logger,
 				s3Client: dependencies.edgeConfigS3Client,
 			},
-			config: { location: { bucket: env.S3_BUCKET, region: env.S3_REGION } },
+			config: {
+				location: { bucket: env.S3_BUCKET, region: env.S3_REGION },
+				coldStart: env.BALANCE_WORKER_STAGING,
+			},
 		});
 		const postgres = createWorkerPostgresClient({
 			ctx: { logger: dependencies.logger },

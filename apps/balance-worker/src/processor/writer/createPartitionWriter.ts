@@ -16,6 +16,7 @@ import {
 	waitForHeldCommit as waitForHeldMutationCommit,
 } from "./actions/decideHeld.js";
 import { evict as evictCustomer } from "./actions/evict.js";
+import { evictResident as evictResidentSubjects } from "./actions/evictResident.js";
 import { log as logMutation } from "./actions/log.js";
 import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
 import {
@@ -159,6 +160,10 @@ export function createPartitionWriter({
 		return evictCustomer({ scope, customerKey });
 	}
 
+	function evictResident() {
+		return evictResidentSubjects({ scope });
+	}
+
 	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
 		return adoptState({ scope, ...params });
 	}
@@ -196,6 +201,7 @@ export function createPartitionWriter({
 		assertCommitsHealthy,
 		readFreshestState,
 		evict,
+		evictResident,
 		adopt,
 		dispose,
 	};

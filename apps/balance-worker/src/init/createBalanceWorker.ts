@@ -16,6 +16,7 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import { createColdStart } from "../coldStart/createColdStart.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import {
@@ -356,6 +357,16 @@ export async function createBalanceWorker({
 			},
 		});
 		const reportsHealth = process.env.NODE_ENV === "production";
+		const coldStart = resources.edgeConfigs?.coldStart
+			? createColdStart({
+					ctx: {
+						requests: resources.edgeConfigs.coldStart,
+						partitions,
+						logger: dependencies.logger,
+						onAcked: writeColdStartAck,
+					},
+				})
+			: undefined;
 		// Only a task with an ECS identity is part of a fleet the dashboard can swap.
 		const slotHeartbeat =
 			slotGate && resources.edgeConfigs && fleetId
@@ -368,6 +379,7 @@ export async function createBalanceWorker({
 							readAssignmentSettled: partitions.hasAssignment,
 							readStoreHealthy: readSlotStoreHealthy,
 							probes: { kafka: probeKafka, postgres: probePostgres },
+							readColdStart: coldStart?.readAck,
 							logger: dependencies.logger,
 						},
 						config: {
@@ -378,6 +390,9 @@ export async function createBalanceWorker({
 						},
 					})
 				: undefined;
+		function writeColdStartAck(): void {
+			slotHeartbeat?.writeSoon();
+		}
 		function readSlotStoreHealthy(): boolean {
 			return resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false;
 		}
@@ -461,6 +476,7 @@ export async function createBalanceWorker({
 			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
 			healthReporter: { start: startTelemetry, stop: stopTelemetry },
 			catalogInvalidations: resources.catalogInvalidations,
+			coldStart,
 			listen,
 			settleResources: resources.settleResources,
 			closeStore: resources.closeStore,

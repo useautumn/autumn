@@ -172,6 +172,13 @@ function createProcessor({
 		});
 	}
 
+	function evictResident() {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: scope.ctx.writer.evictResident(),
+		});
+	}
+
 	function flush({ command }: { command: FlushCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -324,6 +331,7 @@ function createProcessor({
 		readSubjectState,
 		initialize,
 		evict,
+		evictResident,
 		flush,
 		finalize,
 		decideFinalize,
