@@ -16,8 +16,6 @@ export interface Env {
 	QA_SHARED_ENV?: string;
 }
 
-export type Instance = "standard-2" | "standard-3" | "standard-4";
-
 /** What twd sends to create or re-ship an env. */
 export type CreateEnvInput = {
 	sha: string;
@@ -25,7 +23,6 @@ export type CreateEnvInput = {
 	/** DATABASE_URL plus the Capy machine's BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD. */
 	runtimeEnv: Record<string, string>;
 	neonBranchId?: string;
-	instance?: Instance;
 	ttlMs?: number;
 };
 
@@ -34,7 +31,6 @@ export type EnvConfig = CreateEnvInput & {
 	publicUrl: string;
 	createdAt: number;
 	expiresAt: number;
-	instance: Instance;
 };
 
 export type EnvState = "building" | "ready" | "failed" | "expired";
