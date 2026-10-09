@@ -88,294 +88,335 @@ const expectRpcError = async ({
  * Red-failure mode: a plan with more than 10 trillion included units is accepted.
  * Green-success criteria: plan creation rejects it and recommends unlimited usage.
  */
-test.concurrent(`${chalk.yellowBright("included usage: REJECT more than 10 trillion")}`, async () => {
-	await expectRestError({
-		productId: `err_included_usage_${getSuffix()}`,
-		items: [{ feature_id: TestFeature.Messages, included: 10_000_000_000_001 }],
-		errMessage:
-			"Included usage cannot exceed 10 trillion; use unlimited usage instead",
-	});
-});
+test.concurrent(
+	`${chalk.yellowBright("included usage: REJECT more than 10 trillion")}`,
+	async () => {
+		await expectRestError({
+			productId: `err_included_usage_${getSuffix()}`,
+			items: [
+				{ feature_id: TestFeature.Messages, included: 10_000_000_000_001 },
+			],
+			errMessage:
+				"Included usage cannot exceed 10 trillion; use unlimited usage instead",
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRICE: amount OR tiers (not neither, not both)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT price with neither amount nor tiers")}`, async () => {
-	const id = `err_neither_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT price with neither amount nor tiers")}`,
+	async () => {
+		const id = `err_neither_${getSuffix()}`;
+		await expectRestError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "either 'amount' or 'tiers' must be defined",
-	});
-});
+			],
+			errMessage: "either 'amount' or 'tiers' must be defined",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT price with neither amount nor tiers")}`, async () => {
-	const id = `err_neither_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT price with neither amount nor tiers")}`,
+	async () => {
+		const id = `err_neither_rpc_${getSuffix()}`;
+		await expectRpcError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "either 'amount' or 'tiers' must be defined",
-	});
-});
+			],
+			errMessage: "either 'amount' or 'tiers' must be defined",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT price with both amount and tiers")}`, async () => {
-	const id = `err_both_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					amount: 10,
-					tiers: [
-						{ to: 100, amount: 5 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT price with both amount and tiers")}`,
+	async () => {
+		const id = `err_both_${getSuffix()}`;
+		await expectRestError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						amount: 10,
+						tiers: [
+							{ to: 100, amount: 5 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "'amount' and 'tiers' cannot both be defined",
-	});
-});
+			],
+			errMessage: "'amount' and 'tiers' cannot both be defined",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT price with both amount and tiers")}`, async () => {
-	const id = `err_both_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					amount: 10,
-					tiers: [
-						{ to: 100, amount: 5 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT price with both amount and tiers")}`,
+	async () => {
+		const id = `err_both_rpc_${getSuffix()}`;
+		await expectRpcError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						amount: 10,
+						tiers: [
+							{ to: 100, amount: 5 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "'amount' and 'tiers' cannot both be defined",
-	});
-});
+			],
+			errMessage: "'amount' and 'tiers' cannot both be defined",
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // flat_amount only for volume-based pricing
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT flat_amount on graduated tiers")}`, async () => {
-	const id = `err_flat_grad_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5, flat_amount: 10 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					tier_behavior: TierBehavior.Graduated,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT flat_amount on graduated tiers")}`,
+	async () => {
+		const id = `err_flat_grad_${getSuffix()}`;
+		await expectRestError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5, flat_amount: 10 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						tier_behavior: TierBehavior.Graduated,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage:
-			"flat_amount on tiers is only supported for volume-based pricing",
-	});
-});
+			],
+			errMessage:
+				"flat_amount on tiers is only supported for volume-based pricing",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT flat_amount on graduated tiers")}`, async () => {
-	const id = `err_flat_grad_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5, flat_amount: 10 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					tier_behavior: TierBehavior.Graduated,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT flat_amount on graduated tiers")}`,
+	async () => {
+		const id = `err_flat_grad_rpc_${getSuffix()}`;
+		await expectRpcError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5, flat_amount: 10 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						tier_behavior: TierBehavior.Graduated,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage:
-			"flat_amount on tiers is only supported for volume-based pricing",
-	});
-});
+			],
+			errMessage:
+				"flat_amount on tiers is only supported for volume-based pricing",
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // flat_amount not on single-tier
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT flat_amount on single-tier")}`, async () => {
-	const id = `err_flat_single_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [{ to: TierInfinite, amount: 5, flat_amount: 10 }],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT flat_amount on single-tier")}`,
+	async () => {
+		const id = `err_flat_single_${getSuffix()}`;
+		await expectRestError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [{ to: TierInfinite, amount: 5, flat_amount: 10 }],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "flat_amount is not supported on single-tier pricing",
-	});
-});
+			],
+			errMessage: "flat_amount is not supported on single-tier pricing",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT flat_amount on single-tier")}`, async () => {
-	const id = `err_flat_single_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [{ to: TierInfinite, amount: 5, flat_amount: 10 }],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT flat_amount on single-tier")}`,
+	async () => {
+		const id = `err_flat_single_rpc_${getSuffix()}`;
+		await expectRpcError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [{ to: TierInfinite, amount: 5, flat_amount: 10 }],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "flat_amount is not supported on single-tier pricing",
-	});
-});
+			],
+			errMessage: "flat_amount is not supported on single-tier pricing",
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // flat_amount must be >= 0
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT negative flat_amount")}`, async () => {
-	const id = `err_flat_neg_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5, flat_amount: -10 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT negative flat_amount")}`,
+	async () => {
+		const id = `err_flat_neg_${getSuffix()}`;
+		await expectRestError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5, flat_amount: -10 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "flat_amount must be 0 or greater",
-	});
-});
+			],
+			errMessage: "flat_amount must be 0 or greater",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT negative flat_amount")}`, async () => {
-	const id = `err_flat_neg_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5, flat_amount: -10 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT negative flat_amount")}`,
+	async () => {
+		const id = `err_flat_neg_rpc_${getSuffix()}`;
+		await expectRpcError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5, flat_amount: -10 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "flat_amount must be 0 or greater",
-	});
-});
+			],
+			errMessage: "flat_amount must be 0 or greater",
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // volume-based only for prepaid
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: ACCEPT volume-based with usage_based billing")}`, async () => {
-	const id = `ok_vol_usage_${getSuffix()}`;
-	try {
-		await autumnV2.products.delete(id);
-	} catch (_e) {}
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: ACCEPT volume-based with usage_based billing")}`,
+	async () => {
+		const id = `ok_vol_usage_${getSuffix()}`;
+		try {
+			await autumnV2.products.delete(id);
+		} catch (_e) {}
 
-	await autumnV2.products.create<ApiPlan, CreatePlanParamsInput>({
-		id,
-		name: `Test ${id}`,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.UsageBased,
+		await autumnV2.products.create<ApiPlan, CreatePlanParamsInput>({
+			id,
+			name: `Test ${id}`,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.UsageBased,
+					},
 				},
-			},
-		],
-	});
-});
+			],
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: ACCEPT volume-based with usage_based billing")}`, async () => {
-	const id = `ok_vol_usage_rpc_${getSuffix()}`;
-	try {
-		await autumnRpc.plans.delete(id, { allVersions: true });
-	} catch (_e) {}
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: ACCEPT volume-based with usage_based billing")}`,
+	async () => {
+		const id = `ok_vol_usage_rpc_${getSuffix()}`;
+		try {
+			await autumnRpc.plans.delete(id, { allVersions: true });
+		} catch (_e) {}
 
-	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
-		plan_id: id,
-		name: `Test ${id}`,
-		group: `grp_${id}`,
-		auto_enable: false,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.UsageBased,
+		await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+			plan_id: id,
+			name: `Test ${id}`,
+			group: `grp_${id}`,
+			auto_enable: false,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.UsageBased,
+					},
 				},
-			},
-		],
-	});
-});
+			],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // V0 product items: volume-based on usage-based items, but never with thresholds
@@ -532,186 +573,258 @@ test.concurrent(
 const ALLOCATED_VOLUME_FLAT =
 	"Volume-based allocated items can't have a flat_amount on the first tier without included usage";
 
-const ALLOCATED_VOLUME_FLAT_TIERS: { to: number | "inf"; amount: number; flat_amount?: number }[] = [
+const ALLOCATED_VOLUME_FLAT_TIERS: {
+	to: number | "inf";
+	amount: number;
+	flat_amount?: number;
+}[] = [
 	{ to: 10, amount: 10, flat_amount: 5 },
 	{ to: TierInfinite, amount: 8 },
 ];
 
-test.concurrent(`${chalk.yellowBright("tier-errors V0 create: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
-	await expectAutumnError({
-		errCode: "invalid_inputs",
-		errMessage: ALLOCATED_VOLUME_FLAT,
-		func: () =>
-			createV0Product({
-				productId: `err_v0_alloc_flat_${getSuffix()}`,
-				items: [
-					{
-						feature_id: TestFeature.Users,
-						included_usage: 0,
-						usage_model: UsageModel.PayPerUse,
-						tier_behavior: TierBehavior.VolumeBased,
-						interval: ProductItemInterval.Month,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: REJECT allocated volume with tier-1 flat_amount and no included")}`,
+	async () => {
+		await expectAutumnError({
+			errCode: "invalid_inputs",
+			errMessage: ALLOCATED_VOLUME_FLAT,
+			func: () =>
+				createV0Product({
+					productId: `err_v0_alloc_flat_${getSuffix()}`,
+					items: [
+						{
+							feature_id: TestFeature.Users,
+							included_usage: 0,
+							usage_model: UsageModel.PayPerUse,
+							tier_behavior: TierBehavior.VolumeBased,
+							interval: ProductItemInterval.Month,
+							tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+						},
+					],
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: ACCEPT allocated volume with tier-1 flat_amount and included usage")}`,
+	async () => {
+		await createV0Product({
+			productId: `ok_v0_alloc_flat_${getSuffix()}`,
+			items: [
+				{
+					feature_id: TestFeature.Users,
+					included_usage: 3,
+					usage_model: UsageModel.PayPerUse,
+					tier_behavior: TierBehavior.VolumeBased,
+					interval: ProductItemInterval.Month,
+					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+				},
+			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT allocated volume with tier-1 flat_amount and no included")}`,
+	async () => {
+		await expectRestError({
+			productId: `err_alloc_flat_${getSuffix()}`,
+			items: [
+				{
+					feature_id: TestFeature.Users,
+					price: {
 						tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.UsageBased,
 					},
-				],
-			}),
-	});
-});
-
-test.concurrent(`${chalk.yellowBright("tier-errors V0 create: ACCEPT allocated volume with tier-1 flat_amount and included usage")}`, async () => {
-	await createV0Product({
-		productId: `ok_v0_alloc_flat_${getSuffix()}`,
-		items: [
-			{
-				feature_id: TestFeature.Users,
-				included_usage: 3,
-				usage_model: UsageModel.PayPerUse,
-				tier_behavior: TierBehavior.VolumeBased,
-				interval: ProductItemInterval.Month,
-				tiers: ALLOCATED_VOLUME_FLAT_TIERS,
-			},
-		],
-	});
-});
-
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
-	await expectRestError({
-		productId: `err_alloc_flat_${getSuffix()}`,
-		items: [
-			{
-				feature_id: TestFeature.Users,
-				price: {
-					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.UsageBased,
 				},
-			},
-		],
-		errMessage: ALLOCATED_VOLUME_FLAT,
-	});
-});
+			],
+			errMessage: ALLOCATED_VOLUME_FLAT,
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT allocated volume with tier-1 flat_amount and no included")}`, async () => {
-	await expectRpcError({
-		productId: `err_alloc_flat_rpc_${getSuffix()}`,
-		items: [
-			{
-				feature_id: TestFeature.Users,
-				price: {
-					tiers: ALLOCATED_VOLUME_FLAT_TIERS,
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.UsageBased,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT allocated volume with tier-1 flat_amount and no included")}`,
+	async () => {
+		await expectRpcError({
+			productId: `err_alloc_flat_rpc_${getSuffix()}`,
+			items: [
+				{
+					feature_id: TestFeature.Users,
+					price: {
+						tiers: ALLOCATED_VOLUME_FLAT_TIERS,
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.UsageBased,
+					},
 				},
-			},
-		],
-		errMessage: ALLOCATED_VOLUME_FLAT,
-	});
-});
+			],
+			errMessage: ALLOCATED_VOLUME_FLAT,
+		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// V1: threshold_billing can't be combined with volume tiers (V0 is covered by #4554)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const THRESHOLD_FLAT_ONLY =
+	"threshold_billing currently requires a flat usage price";
+
+const volumeThresholdItem: NonNullable<CreatePlanParamsInput["items"]>[number] =
+	{
+		feature_id: TestFeature.Messages,
+		threshold_billing: { threshold: 50 },
+		price: {
+			tiers: [
+				{ to: 100, amount: 1 },
+				{ to: TierInfinite, amount: 0.5 },
+			],
+			tier_behavior: TierBehavior.VolumeBased,
+			interval: BillingInterval.Month,
+			billing_method: BillingMethod.UsageBased,
+		},
+	};
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT threshold_billing with volume tiers")}`,
+	async () => {
+		await expectRestError({
+			productId: `err_vol_threshold_${getSuffix()}`,
+			items: [volumeThresholdItem],
+			errMessage: THRESHOLD_FLAT_ONLY,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT threshold_billing with volume tiers")}`,
+	async () => {
+		await expectRpcError({
+			productId: `err_vol_threshold_rpc_${getSuffix()}`,
+			items: [volumeThresholdItem],
+			errMessage: THRESHOLD_FLAT_ONLY,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // tiers[0].to must be greater than included
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT tiers[0].to <= included")}`, async () => {
-	const id = `err_tier_incl_${getSuffix()}`;
-	await expectRestError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				included: 200,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: REJECT tiers[0].to <= included")}`,
+	async () => {
+		const id = `err_tier_incl_${getSuffix()}`;
+		await expectRestError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included: 200,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "tiers[0].to must be greater than included",
-	});
-});
+			],
+			errMessage: "tiers[0].to must be greater than included",
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT tiers[0].to <= included")}`, async () => {
-	const id = `err_tier_incl_rpc_${getSuffix()}`;
-	await expectRpcError({
-		productId: id,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				included: 200,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5 },
-						{ to: TierInfinite, amount: 2 },
-					],
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: REJECT tiers[0].to <= included")}`,
+	async () => {
+		const id = `err_tier_incl_rpc_${getSuffix()}`;
+		await expectRpcError({
+			productId: id,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included: 200,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5 },
+							{ to: TierInfinite, amount: 2 },
+						],
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-		errMessage: "tiers[0].to must be greater than included",
-	});
-});
+			],
+			errMessage: "tiers[0].to must be greater than included",
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ACCEPT: valid volume-based with flat_amount (positive case)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("tier-errors REST: ACCEPT valid volume-based flat_amount")}`, async () => {
-	const id = `ok_vol_flat_${getSuffix()}`;
-	try {
-		await autumnV2.products.delete(id);
-	} catch (_e) {}
+test.concurrent(
+	`${chalk.yellowBright("tier-errors REST: ACCEPT valid volume-based flat_amount")}`,
+	async () => {
+		const id = `ok_vol_flat_${getSuffix()}`;
+		try {
+			await autumnV2.products.delete(id);
+		} catch (_e) {}
 
-	await autumnV2.products.create<ApiPlan, CreatePlanParamsInput>({
-		id,
-		name: `Test ${id}`,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5, flat_amount: 10 },
-						{ to: TierInfinite, amount: 2, flat_amount: 20 },
-					],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+		await autumnV2.products.create<ApiPlan, CreatePlanParamsInput>({
+			id,
+			name: `Test ${id}`,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5, flat_amount: 10 },
+							{ to: TierInfinite, amount: 2, flat_amount: 20 },
+						],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-	});
-});
+			],
+		});
+	},
+);
 
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: ACCEPT valid volume-based flat_amount")}`, async () => {
-	const id = `ok_vol_flat_rpc_${getSuffix()}`;
-	try {
-		await autumnRpc.plans.delete(id, { allVersions: true });
-	} catch (_e) {}
+test.concurrent(
+	`${chalk.yellowBright("tier-errors RPC: ACCEPT valid volume-based flat_amount")}`,
+	async () => {
+		const id = `ok_vol_flat_rpc_${getSuffix()}`;
+		try {
+			await autumnRpc.plans.delete(id, { allVersions: true });
+		} catch (_e) {}
 
-	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
-		plan_id: id,
-		name: `Test ${id}`,
-		group: `grp_${id}`,
-		auto_enable: false,
-		items: [
-			{
-				feature_id: TestFeature.Messages,
-				price: {
-					tiers: [
-						{ to: 100, amount: 5, flat_amount: 10 },
-						{ to: TierInfinite, amount: 2, flat_amount: 20 },
-					],
-					tier_behavior: TierBehavior.VolumeBased,
-					interval: BillingInterval.Month,
-					billing_method: BillingMethod.Prepaid,
+		await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+			plan_id: id,
+			name: `Test ${id}`,
+			group: `grp_${id}`,
+			auto_enable: false,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					price: {
+						tiers: [
+							{ to: 100, amount: 5, flat_amount: 10 },
+							{ to: TierInfinite, amount: 2, flat_amount: 20 },
+						],
+						tier_behavior: TierBehavior.VolumeBased,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.Prepaid,
+					},
 				},
-			},
-		],
-	});
-});
+			],
+		});
+	},
+);

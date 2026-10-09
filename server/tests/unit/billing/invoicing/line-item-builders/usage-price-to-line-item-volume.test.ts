@@ -193,8 +193,8 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 		});
 	});
 
-	test("entity feature: band and amount come from the customer total (overage + every entity's allowance)", () => {
-		// 50 overage + 3 entities × 100 included = 350 units at $0.50.
+	test("entity feature: band and amount come from the customer's actual total usage", () => {
+		// 130 + 120 + 90 used = 340 units at $0.50; ent_c's 10 unused included units aren't billed.
 		const entities = {
 			ent_a: { id: "ent_a", balance: -30, adjustment: 0 },
 			ent_b: { id: "ent_b", balance: -20, adjustment: 0 },
@@ -208,7 +208,24 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 				balance: 0,
 				entities,
 			}),
-		).toBe(175);
+		).toBe(170);
+	});
+
+	test("entity feature: total usage within the customer's included amount → $0", () => {
+		// 150 + 50 used against 2 × 100 included.
+		const entities = {
+			ent_a: { id: "ent_a", balance: -50, adjustment: 0 },
+			ent_b: { id: "ent_b", balance: 50, adjustment: 0 },
+		} as Record<string, EntityBalance>;
+
+		expect(
+			priceVolumeLine({
+				tiers: SINGLE_TIER,
+				allowance: 100,
+				balance: 0,
+				entities,
+			}),
+		).toBe(0);
 	});
 });
 
