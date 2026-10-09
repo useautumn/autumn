@@ -6,7 +6,7 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 } from "@autumn/ui";
-import { CaretDownIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CustomerExportSheet } from "../../export/CustomerExportSheet";
 import { CUSTOMER_EXPORT_SHEET_COPY } from "../../export/customerExportSheetCopy";
@@ -28,12 +28,6 @@ export function CustomerListExportMenu() {
 						<IconButton
 							variant="secondary"
 							className="btn-secondary-popup"
-							icon={
-								<DownloadSimpleIcon
-									size={14}
-									className="text-tertiary-foreground"
-								/>
-							}
 							rightIcon={
 								<CaretDownIcon className="size-3 text-tertiary-foreground" />
 							}
