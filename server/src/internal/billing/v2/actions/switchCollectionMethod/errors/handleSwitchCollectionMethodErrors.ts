@@ -1,6 +1,12 @@
-import { CollectionMethod, ErrCode, RecaseError } from "@autumn/shared";
+import {
+	CollectionMethod,
+	ErrCode,
+	orgDisableStripeWrites,
+	RecaseError,
+} from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { SwitchCollectionMethodContext } from "../setup/setupSwitchCollectionMethodContext";
 
 const invalidRequest = (message: string) =>
@@ -19,16 +25,33 @@ const scheduleHasPinnedCollectionMethod = (
 };
 
 export const handleSwitchCollectionMethodErrors = ({
+	ctx,
 	switchContext,
 }: {
+	ctx: AutumnContext;
 	switchContext: SwitchCollectionMethodContext;
 }) => {
 	const {
 		fullCustomer,
 		targetCollectionMethod,
+		invoiceMode,
 		paymentMethod,
 		stripeSubscription,
+		requestedInvoiceTerms,
 	} = switchContext;
+
+	if (orgDisableStripeWrites({ ctx })) {
+		throw invalidRequest(
+			"Stripe writes are disabled for this organization, so the subscription's collection method can't be switched.",
+		);
+	}
+
+	// Without a Stripe subscription there's nowhere to keep net terms or payment methods.
+	if (!stripeSubscription && invoiceMode && requestedInvoiceTerms) {
+		throw invalidRequest(
+			"This plan has no Stripe subscription yet, so net_terms_days and payment_method_types can't be saved. Switch without them.",
+		);
+	}
 
 	if (fullCustomer.processors?.vercel?.installation_id) {
 		throw invalidRequest(

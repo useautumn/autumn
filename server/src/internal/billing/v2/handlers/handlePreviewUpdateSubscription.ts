@@ -2,11 +2,14 @@ import {
 	AffectedResource,
 	ApiVersion,
 	InternalError,
+	isCollectionMethodSwitch,
+	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
+import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
@@ -21,10 +24,21 @@ export const handlePreviewUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
+		// A switch bills nothing now: validate it like billing.update does, then preview the unchanged plan.
+		const isSwitch = isCollectionMethodSwitch(body);
+		if (isSwitch) {
+			const switchContext = await setupSwitchCollectionMethodContext({
+				ctx,
+				params: body,
+			});
+			handleSwitchCollectionMethodErrors({ ctx, switchContext });
+		}
+		const { invoice_mode: _invoiceMode, ...unchangedPlanParams } = body;
+
 		const { billingContext, billingPlan } =
 			await billingActions.updateSubscription({
 				ctx,
-				params: body,
+				params: isSwitch ? unchangedPlanParams : body,
 				preview: true,
 			});
 
