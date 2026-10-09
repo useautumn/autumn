@@ -32,6 +32,7 @@ import {
 	isPriceItem,
 } from "./productItemUtils/getItemType";
 import { validateItemTierBehavior } from "./validateItemTierBehavior";
+import { validateItemThresholdBilling } from "./validateItemThresholdBilling";
 
 const validateProductItem = ({
 	item,
@@ -293,6 +294,8 @@ const validateProductItem = ({
 			});
 		}
 	}
+
+	validateItemThresholdBilling({ item });
 
 	if (
 		item.usage_model === UsageModel.Prepaid &&
