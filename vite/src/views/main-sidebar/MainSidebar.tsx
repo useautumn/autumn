@@ -11,7 +11,6 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { LabelTag } from "@/components/general/LabelTag";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
@@ -34,12 +33,12 @@ export const DEV_SUB_TABS = [
 	{
 		title: "API keys",
 		value: "api_keys",
-		icon: <KeyIcon weight="bold" />,
+		icon: <KeyIcon />,
 	},
 	{
 		title: "Webhooks",
 		value: "webhooks",
-		icon: <WebhooksLogoIcon weight="bold" />,
+		icon: <WebhooksLogoIcon />,
 	},
 ];
 
@@ -78,7 +77,7 @@ export const MainSidebar = ({
 					isMobileSheet
 						? "min-w-[200px]"
 						: expanded
-							? "min-w-[200px] max-w-[200px]"
+							? "min-w-[220px] max-w-[220px]"
 							: "min-w-[52px] max-w-[52px]",
 				)}
 			>
@@ -86,69 +85,72 @@ export const MainSidebar = ({
 					<div
 						className={cn(
 							"flex items-center gap-1",
-							expanded ? "justify-between" : "justify-center",
+							expanded ? "justify-between" : "flex-col",
 						)}
 					>
 						<OrgDropdown />
-						{expanded && !isMobileSheet && (
-							<button
-								type="button"
-								aria-label="Collapse sidebar"
-								title="Collapse sidebar (⌘B)"
-								onClick={() => setExpanded((prev) => !prev)}
-								className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
-							>
-								<PanelLeft className="size-[15px]" strokeWidth={ICON_STROKE} />
-							</button>
-						)}
+						<div
+							className={cn(
+								"flex shrink-0 items-center gap-1",
+								!expanded && "flex-col",
+							)}
+						>
+							<SidebarSearchButton />
+							{expanded && !isMobileSheet && (
+								<button
+									type="button"
+									aria-label="Collapse sidebar"
+									title="Collapse sidebar (⌘B)"
+									onClick={() => setExpanded((prev) => !prev)}
+									className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
+								>
+									<PanelLeft
+										className="size-[15px]"
+										strokeWidth={ICON_STROKE}
+									/>
+								</button>
+							)}
+						</div>
 					</div>
 					<EnvDropdown env={env} />
-					<nav className="flex flex-col gap-[18px]">
-						<SidebarSearchButton />
+					<nav className="flex flex-col gap-4">
 						<NavSection title="Catalog">
 							<NavButton
 								value="products"
 								subValue="products"
 								isDefaultSubValue
-								icon={<PackageIcon weight="bold" />}
+								icon={<PackageIcon />}
 								title="Plans"
-								env={env}
 							/>
 							<NavButton
 								value="products"
 								subValue="features"
-								icon={<StackIcon weight="bold" />}
+								icon={<StackIcon />}
 								title="Features"
-								env={env}
 							/>
 							<NavButton
 								value="products"
 								subValue="rewards"
-								icon={<GiftIcon weight="bold" />}
+								icon={<GiftIcon />}
 								title="Rewards"
-								env={env}
 							/>
 						</NavSection>
 						<NavSection title="Customers">
 							<NavButton
 								value="customers"
-								icon={<UsersIcon weight="bold" />}
+								icon={<UsersIcon />}
 								title="Customers"
-								env={env}
 							/>
 							<NavButton
 								value="analytics"
-								icon={<ChartBarIcon weight="bold" />}
+								icon={<ChartBarIcon />}
 								title="Usage"
-								env={env}
 							/>
 							{canSeeMigrations && (
 								<NavButton
 									value="migrations"
-									icon={<ArrowsSplitIcon weight="bold" />}
+									icon={<ArrowsSplitIcon />}
 									title="Migrations"
-									badge={<LabelTag label="BETA" className="ml-auto" />}
-									env={env}
 								/>
 							)}
 						</NavSection>
@@ -162,7 +164,6 @@ export const MainSidebar = ({
 										isDefaultSubValue={devTab.value === "api_keys"}
 										icon={devTab.icon}
 										title={devTab.title}
-										env={env}
 									/>
 								))}
 							</NavSection>
