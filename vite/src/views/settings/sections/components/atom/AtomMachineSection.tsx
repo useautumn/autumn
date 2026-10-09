@@ -1,11 +1,9 @@
 import type { ApiByocCache } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { CpuIcon } from "@phosphor-icons/react";
-import {
-	TABLE_TRAY_CLASS,
-	TABLE_TRAY_SURFACE_CLASS,
-} from "@/components/general/table";
+import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
 import { AtomMachineTable } from "./AtomMachineTable";
+import { ATOM_PAGE_CARD_CLASS } from "./atomCardLayout";
 import { ATOM_RESIZE_NOTE } from "./atomMachineDisplay";
 import { ResizeAtomDialog } from "./ResizeAtomDialog";
 import type { useAtomActions } from "./useAtomActions";
@@ -38,11 +36,11 @@ export const AtomMachineSection = ({
 					form.handleSubmit();
 				}}
 			>
-				<div className="flex items-center gap-2 px-2 text-[15px] text-muted-foreground">
+				<div className="flex items-center gap-2 text-[15px] text-muted-foreground">
 					<CpuIcon className="size-4 text-subtle" />
 					Machine size
 				</div>
-				<div className={TABLE_TRAY_CLASS}>
+				<div className={ATOM_PAGE_CARD_CLASS}>
 					<div className={TABLE_TRAY_SURFACE_CLASS}>
 						<AtomMachineTable
 							selected={selected}

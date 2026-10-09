@@ -9,6 +9,7 @@ import { AtomDeploySection } from "@/views/settings/sections/components/atom/Ato
 import { AtomMachineSection } from "@/views/settings/sections/components/atom/AtomMachineSection";
 import { AtomRemoval } from "@/views/settings/sections/components/atom/AtomRemoval";
 import { AtomSteadyState } from "@/views/settings/sections/components/atom/AtomSteadyState";
+import { ATOM_PAGE_CARD_HANG_CLASS } from "@/views/settings/sections/components/atom/atomCardLayout";
 import {
 	hasAtomStack,
 	isAtomConnected,
@@ -50,7 +51,12 @@ const ShadowAtomDeployment = () => {
 			what="the shadow Atom"
 			onRetry={() => void refetch()}
 		>
-			{removingCache && <AtomRemoval cache={removingCache} />}
+			{removingCache && (
+				<AtomRemoval
+					cache={removingCache}
+					className={ATOM_PAGE_CARD_HANG_CLASS}
+				/>
+			)}
 			{!removingCache && !cache && <ShadowAtomCreate actions={actions} />}
 			{cache && isAtomConnected(cache) && (
 				<div className="flex flex-col gap-10">
