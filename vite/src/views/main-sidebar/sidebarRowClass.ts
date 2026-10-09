@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Shared look for every sidebar row (dark values mirror the Paper 08e sidebar exactly). */
+/** Shared look for every sidebar row: a flat soft fill marks the active row, hover and an open menu. */
 export const sidebarRowClass = ({
 	isActive = false,
 	isCollapsed = false,
@@ -10,10 +10,10 @@ export const sidebarRowClass = ({
 } = {}) =>
 	cn(
 		"group/row flex shrink-0 cursor-pointer items-center rounded-md text-[13px] font-[450] leading-4 outline-none transition-colors duration-150 ease-out focus-visible:bg-black/[0.05] dark:focus-visible:bg-white/[0.06]",
-		isCollapsed ? "size-8 justify-center px-0" : "h-[30px] w-full px-2.5",
+		isCollapsed ? "size-8 justify-center px-0" : "h-7 w-full px-2.5",
 		isActive
 			? "bg-black/[0.06] text-foreground dark:bg-white/[0.08] dark:text-[#F5F5F5]"
-			: "text-[#555555] hover:bg-black/[0.03] hover:text-foreground dark:text-[#A1A1A1] dark:hover:bg-white/[0.04] dark:hover:text-[#F5F5F5]",
+			: "text-[#555555] hover:bg-black/[0.03] hover:text-foreground data-[popup-open]:bg-black/[0.03] data-[popup-open]:text-foreground dark:text-[#B4B4B4] dark:hover:bg-white/[0.04] dark:hover:text-[#F5F5F5] dark:data-[popup-open]:bg-white/[0.04] dark:data-[popup-open]:text-[#F5F5F5]",
 	);
 
 export const sidebarIconClass = ({
@@ -29,6 +29,10 @@ export const sidebarIconClass = ({
 	);
 
 export const SIDEBAR_ICON_STROKE = 1.5;
+
+/** Section header label: sentence case, muted, with a caret that turns when the section closes. */
+export const SIDEBAR_SECTION_HEADER_CLASS =
+	"flex h-6 cursor-pointer items-center gap-1 self-start rounded-md px-2.5 text-xs font-medium leading-4 text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:text-[#7A7A7A] dark:hover:text-[#B4B4B4]";
 
 export const SIDEBAR_HEADER_ICON_BUTTON_CLASS =
 	"flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-md text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:text-[#7A7A7A] dark:hover:text-[#EDEDED]";

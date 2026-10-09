@@ -15,6 +15,7 @@ import {
 } from "@autumn/ui";
 import {
 	Check,
+	ChevronDown,
 	ChevronsUpDown,
 	Monitor,
 	Moon,
@@ -143,9 +144,9 @@ export const OrgDropdown = () => {
 								{org.name}
 							</span>
 							{expanded && (
-								<ChevronsUpDown
-									className="size-[11px] shrink-0 text-[#8A8A8A] dark:text-[#5C5C5C]"
-									strokeWidth={2.5}
+								<ChevronDown
+									className="size-3 shrink-0 text-[#8A8A8A] dark:text-[#5C5C5C]"
+									strokeWidth={2}
 								/>
 							)}
 						</Button>
