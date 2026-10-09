@@ -140,7 +140,7 @@ test.concurrent(
 		});
 		expect(appliedRows).toEqual([
 			expect.objectContaining({
-				reason: "matches_catalog",
+				outcome: "matches_catalog",
 				applied: "true",
 			}),
 		]);
@@ -163,7 +163,7 @@ test.concurrent(
 		});
 		expect(rerunRows).toEqual([
 			expect.objectContaining({
-				reason: "matches_catalog",
+				outcome: "matches_catalog",
 				applied: "false",
 			}),
 		]);

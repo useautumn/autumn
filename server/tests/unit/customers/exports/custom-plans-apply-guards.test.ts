@@ -17,31 +17,31 @@ describe("isApplicableFlip", () => {
 		{
 			name: "a definitive result that moves the flag → written",
 			stored: true,
-			result: { isCustom: false, reason: "matches_catalog" },
+			result: { isCustom: false, outcome: "matches_catalog" },
 			applicable: true,
 		},
 		{
 			name: "a customized result that moves the flag → written",
 			stored: false,
-			result: { isCustom: true, reason: "customized", diff: {} },
+			result: { isCustom: true, outcome: "customized", reasons: [], diff: {} },
 			applicable: true,
 		},
 		{
 			name: "a result matching the stored flag → nothing to write",
 			stored: false,
-			result: { isCustom: false, reason: "matches_catalog" },
+			result: { isCustom: false, outcome: "matches_catalog" },
 			applicable: false,
 		},
 		{
 			name: "a missing catalog version → never written",
 			stored: false,
-			result: { isCustom: true, reason: "catalog_missing" },
+			result: { isCustom: true, outcome: "catalog_missing" },
 			applicable: false,
 		},
 		{
 			name: "a failed comparison → never written",
 			stored: false,
-			result: { isCustom: true, reason: "comparison_failed" },
+			result: { isCustom: true, outcome: "comparison_failed" },
 			applicable: false,
 		},
 	] as {

@@ -16,8 +16,8 @@ export const isApplicableFlip = ({
 }: DerivedCustomerProduct) => {
 	const flagChanges = customerProduct.is_custom !== result.isCustom;
 	const isDefinitive =
-		result.reason !== "catalog_missing" &&
-		result.reason !== "comparison_failed";
+		result.outcome !== "catalog_missing" &&
+		result.outcome !== "comparison_failed";
 	return flagChanges && isDefinitive;
 };
 
