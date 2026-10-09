@@ -72,8 +72,7 @@ const LogRow = ({
 		className={cn(
 			"absolute inset-x-0 px-4 text-left",
 			TABLE_TRAY_SURFACE_ROW_CLASS,
-			isSelected &&
-				"bg-table-row-hover shadow-[inset_2px_0_0_var(--foreground)]",
+			isSelected && "bg-table-row-hover",
 		)}
 	>
 		<span

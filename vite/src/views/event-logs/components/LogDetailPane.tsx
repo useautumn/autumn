@@ -123,7 +123,7 @@ export const LogDetailPane = ({
 	return (
 		<aside
 			style={PANE_STYLE}
-			className="flex flex-col shrink-0 min-h-0 overflow-y-auto border-l bg-card"
+			className="flex flex-col shrink-0 min-h-0 overflow-y-auto rounded-xl border bg-card"
 		>
 			<div className="flex flex-col gap-3.5 px-5 pt-5 pb-4 border-b shrink-0">
 				<div className="flex items-center justify-between gap-3">
