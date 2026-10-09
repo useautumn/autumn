@@ -20,29 +20,12 @@ import {
 	updateStripeInvoiceLine,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
+import { shouldWaiveTrialUsage } from "@/internal/billing/v2/utils/lineItems/shouldWaiveTrialUsage";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 
 const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
-
-/**
- * Checks if the subscription's trial just ended.
- * When a trial ends, Stripe creates the first real billing period where
- * `current_period_start` equals `trial_end`. In this case, we should skip
- * billing for consumable usage since trial usage is free.
- */
-const hasTrialJustEnded = ({
-	stripeSubscription,
-}: {
-	stripeSubscription: InvoiceCreatedContext["stripeSubscription"];
-}): boolean => {
-	const trialEnd = stripeSubscription.trial_end;
-	if (!trialEnd) return false;
-
-	const periodStart = getLatestPeriodStart({ sub: stripeSubscription });
-	return trialEnd === periodStart;
-};
 
 /**
  * billedMinor is Stripe's gross amount for the line; percentOffFactor is the
@@ -430,7 +413,15 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	const isPeriodicInvoice =
 		stripeInvoice.billing_reason === "subscription_cycle";
 
-	const trialJustEnded = hasTrialJustEnded({ stripeSubscription });
+	// At the trial end Stripe opens the first paid period, starting at `trial_end`.
+	const trialJustEnded = shouldWaiveTrialUsage({
+		trialEndsAtMs: stripeSubscription.trial_end
+			? secondsToMs(stripeSubscription.trial_end)
+			: undefined,
+		periodStartMs: secondsToMs(
+			getLatestPeriodStart({ sub: stripeSubscription }),
+		),
+	});
 
 	if (!isPeriodicInvoice) return [];
 
