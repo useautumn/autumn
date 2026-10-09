@@ -143,8 +143,8 @@ export function PriceTiers({
 	// Multi-tier UI - full tier management
 	const isVolume = item.tier_behavior === TierBehavior.VolumeBased;
 	const isFlatMode = volumePricingMode === "flat";
-	const showsFlatAmount =
-		isFlatMode || volumePricingMode === "per_unit_and_flat";
+	const isUnitAndFlatMode = volumePricingMode === "per_unit_and_flat";
+	const amountField = isFlatMode ? "flat_amount" : "amount";
 	const volumeRule = isVolume
 		? formatVolumeTierRule({
 				includedUsage: Number(includedUsage),
@@ -160,60 +160,69 @@ export function PriceTiers({
 
 	return (
 		<div className="space-y-2">
-			{tiers.map((tier: PriceTier, index: number) => (
-				<div key={`tier-${index}`} className="flex gap-2 w-full items-center">
-					<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
-						{tierLabel(index)}
-					</span>
+			{tiers.map((tier: PriceTier, index: number) => {
+				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
 
-					<TierToInput index={index} />
+				return (
+					<div key={`tier-${index}`} className="space-y-1">
+						<div className="flex gap-2 w-full items-center">
+							<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
+								{tierLabel(index)}
+							</span>
 
-					{!isFlatMode && (
-						<CurrencyAmountInput
-							className="min-w-0 w-26 shrink-0"
-							currencyCode={currency}
-							displayValue={amountDisplayValue(tier.amount)}
-							onRawChange={(raw) =>
-								updateTier({
-									item,
-									setItem,
-									index,
-									field: "amount",
-									value: raw,
-								})
-							}
-						/>
-					)}
+							<TierToInput index={index} />
 
-					{showsFlatAmount && (
-						<CurrencyAmountInput
-							className="min-w-0 w-26 shrink-0"
-							currencyCode={isFlatMode ? currency : `${currency} flat`}
-							displayValue={amountDisplayValue(tier.flat_amount ?? 0)}
-							onRawChange={(raw) =>
-								updateTier({
-									item,
-									setItem,
-									index,
-									field: "flat_amount",
-									value: raw,
-								})
-							}
-						/>
-					)}
+							<CurrencyAmountInput
+								className="min-w-0 w-26 shrink-0"
+								currencyCode={currency}
+								displayValue={amountDisplayValue(amountValue)}
+								onRawChange={(raw) =>
+									updateTier({
+										item,
+										setItem,
+										index,
+										field: amountField,
+										value: raw,
+									})
+								}
+							/>
 
-					{!isFlatMode && <BillingUnits />}
+							{!isFlatMode && <BillingUnits />}
 
-					<div className="flex items-center gap-1 shrink-0">
-						<IconButton
-							variant="muted"
-							onClick={() => removeTier({ item, setItem, index })}
-							icon={<TrashIcon size={10} />}
-							className="p-1 text-tertiary-foreground hover:text-red-500"
-						/>
+							<div className="flex items-center gap-1 shrink-0">
+								<IconButton
+									variant="muted"
+									onClick={() => removeTier({ item, setItem, index })}
+									icon={<TrashIcon size={10} />}
+									className="p-1 text-tertiary-foreground hover:text-red-500"
+								/>
+							</div>
+						</div>
+
+						{isUnitAndFlatMode && (
+							<div className="flex gap-2 w-full items-center">
+								<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0">
+									+ flat fee
+								</span>
+								<CurrencyAmountInput
+									className="min-w-0 w-26 shrink-0"
+									currencyCode={currency}
+									displayValue={amountDisplayValue(tier.flat_amount ?? 0)}
+									onRawChange={(raw) =>
+										updateTier({
+											item,
+											setItem,
+											index,
+											field: "flat_amount",
+											value: raw,
+										})
+									}
+								/>
+							</div>
+						)}
 					</div>
-				</div>
-			))}
+				);
+			})}
 			{volumeRule && (
 				<p className="text-tertiary-foreground text-xs">{volumeRule}</p>
 			)}
@@ -229,7 +238,7 @@ export function PriceTiers({
 
 			{org?.config?.multi_currency && (
 				<TieredCurrenciesEditor
-					amountField={isFlatMode ? "flat_amount" : "amount"}
+					amountField={amountField}
 					baseCurrency={currency}
 					item={item}
 					onItemChange={setItem}
