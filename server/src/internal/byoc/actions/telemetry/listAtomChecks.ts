@@ -1,10 +1,7 @@
 import type { ListAtomChecksResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { queryRecentAtomChecks } from "../atomLogs/queryRecentAtomChecks.js";
-import {
-	findCacheDeployment,
-	setCacheFirstCheckAt,
-} from "../repos/cacheDeployments.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
+import { queryRecentAtomChecks } from "./atomLogs/queryRecentAtomChecks.js";
 
 /** The env's Atom's latest checks, for setup to show the org's first ones arriving; the first seen marks setup done. */
 export const listAtomChecks = async ({
@@ -12,7 +9,7 @@ export const listAtomChecks = async ({
 }: {
 	ctx: AutumnContext;
 }): Promise<ListAtomChecksResponse> => {
-	const cacheDeployment = await findCacheDeployment({ ctx });
+	const cacheDeployment = await cacheDeploymentRepo.find({ ctx });
 	if (!cacheDeployment?.deployment_id) return { checks: [] };
 
 	const checks = await queryRecentAtomChecks({
@@ -20,7 +17,7 @@ export const listAtomChecks = async ({
 	});
 	const firstCheck = checks.at(-1);
 	if (firstCheck && cacheDeployment.first_check_at === null)
-		await setCacheFirstCheckAt({
+		await cacheDeploymentRepo.setFirstCheckAt({
 			ctx,
 			cacheDeployment,
 			firstCheckAt: firstCheck.at,

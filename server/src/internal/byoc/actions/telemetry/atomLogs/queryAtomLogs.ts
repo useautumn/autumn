@@ -1,4 +1,4 @@
-import { atomLogsAxiomClient } from "@/external/axiom/initAxiom.js";
+import { getAtomAxiomClient } from "@/external/axiom/initAxiom.js";
 import { queryAxiomTabular } from "@/external/axiom/queryAxiom.js";
 import { escapeApl } from "@/external/axiom/utils/aplUtils.js";
 
@@ -15,9 +15,10 @@ export const queryAtomLogs = async ({
 	pipeline: string;
 	startTime: string;
 }) => {
-	if (!atomLogsAxiomClient) return [];
+	const client = getAtomAxiomClient();
+	if (!client) return [];
 	return queryAxiomTabular({
-		client: atomLogsAxiomClient,
+		client,
 		apl: `['${ATOM_LOGS_DATASET}'] | where ['attributes.horizon.cluster_id'] == '${escapeApl(deploymentId)}' ${pipeline}`,
 		options: { startTime, endTime: "now" },
 	});

@@ -1,18 +1,15 @@
 import { isDeepStrictEqual } from "node:util";
 import { type ByocCacheDeployment, ByocCacheStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import type { AtomDeployment } from "../deployers/types/atomDeployer.js";
-import {
-	deleteCacheDeployment,
-	updateCacheDeployment,
-} from "../repos/cacheDeployments.js";
+import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
+import type { AtomDeployment } from "../../deployers/types/atomDeployer.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
 import {
 	atomTokenToHash,
 	cacheDeploymentToAtomToken,
-} from "../utils/atomTokenUtils.js";
-import { toCacheStages, toRemovalStages } from "../utils/cacheStageUtils.js";
-import { isCacheBeingRemoved } from "../utils/classifyCacheDeployment.js";
+} from "../../utils/atomTokenUtils.js";
+import { toCacheStages, toRemovalStages } from "../../utils/cacheStageUtils.js";
+import { isCacheBeingRemoved } from "../../utils/classifyCacheDeployment.js";
 
 const deploymentToCacheDeployment = ({
 	cacheDeployment,
@@ -72,7 +69,7 @@ export const refreshCacheDeployment = async ({
 
 	const isRemovalDone = !deployment && isCacheBeingRemoved({ cacheDeployment });
 	if (isRemovalDone) {
-		await deleteCacheDeployment({ ctx, cacheDeployment });
+		await cacheDeploymentRepo.delete({ ctx, cacheDeployment });
 		return null;
 	}
 
@@ -81,6 +78,10 @@ export const refreshCacheDeployment = async ({
 		deployment,
 	});
 	if (!isDeepStrictEqual(refreshed, cacheDeployment))
-		await updateCacheDeployment({ ctx, from: cacheDeployment, to: refreshed });
+		await cacheDeploymentRepo.update({
+			ctx,
+			from: cacheDeployment,
+			to: refreshed,
+		});
 	return refreshed;
 };

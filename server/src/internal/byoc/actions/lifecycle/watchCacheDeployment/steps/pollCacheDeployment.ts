@@ -1,8 +1,11 @@
-import type { ByocCacheDeployment } from "@autumn/shared";
+import { type ByocCacheDeployment, ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { refreshCacheDeployment } from "../../refreshCacheDeployment.js";
-import { isAtomUnavailableError } from "../errors/isAtomUnavailableError.js";
 import type { CacheDeploymentPoll } from "../types/watchCacheDeploymentTypes.js";
+
+/** alien or the stack's Atom did not answer; the watch waits it out rather than failing. */
+const isAtomUnavailableError = (error: unknown): boolean =>
+	error instanceof RecaseError && error.code === ErrCode.ByocUnavailable;
 
 /** Writes alien's latest into the record; an outage is a result to back off from, anything else throws. */
 export const pollCacheDeployment = async ({

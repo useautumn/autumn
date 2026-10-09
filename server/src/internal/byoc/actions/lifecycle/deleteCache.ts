@@ -1,13 +1,9 @@
 import { ByocCacheStatus } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import {
-	findCacheDeployment,
-	findCacheDeploymentById,
-	updateCacheDeployment,
-} from "../repos/cacheDeployments.js";
-import { CACHE_LOCK_TTL_MS, cacheLockKey } from "../utils/byocCacheUtils.js";
+import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
+import { CACHE_LOCK_TTL_MS, cacheLockKey } from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
 
@@ -35,8 +31,8 @@ const tearDownCache = async ({
 	atomId?: string;
 }) => {
 	const existing = atomId
-		? await findCacheDeploymentById({ ctx, id: atomId })
-		: await findCacheDeployment({ ctx });
+		? await cacheDeploymentRepo.findById({ ctx, id: atomId })
+		: await cacheDeploymentRepo.find({ ctx });
 	if (!existing) return;
 
 	await getAtomDeployer().delete({
@@ -47,7 +43,7 @@ const tearDownCache = async ({
 		status: ByocCacheStatus.Removing,
 		error: null,
 	};
-	await updateCacheDeployment({ ctx, from: existing, to: removing });
+	await cacheDeploymentRepo.update({ ctx, from: existing, to: removing });
 
 	// A setup that never ran has nothing to tear down, so this read forgets it at once.
 	const remaining = await refreshCacheDeployment({

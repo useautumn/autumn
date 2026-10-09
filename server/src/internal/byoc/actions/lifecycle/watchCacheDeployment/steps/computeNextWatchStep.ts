@@ -2,17 +2,26 @@ import { type ByocCacheDeployment, ByocCacheStatus } from "@autumn/shared";
 import {
 	isCacheConnected,
 	isCacheSettled,
-} from "../../../utils/classifyCacheDeployment.js";
+} from "../../../../utils/classifyCacheDeployment.js";
 import type {
 	CacheDeploymentPoll,
 	WatchCacheDeploymentOutcome,
 	WatchCacheDeploymentStep,
 } from "../types/watchCacheDeploymentTypes.js";
-import {
-	WATCH_BACKOFF_BASE_SECONDS,
-	WATCH_BACKOFF_MAX_SECONDS,
-	WATCH_POLL_SECONDS,
-} from "../utils/watchCacheDeploymentConstants.js";
+
+/** Slow while the org works in AWS, faster as alien provisions, fastest until Autumn reaches it. */
+const WATCH_POLL_SECONDS: Record<ByocCacheStatus, number> = {
+	[ByocCacheStatus.AwaitingSetup]: 15,
+	[ByocCacheStatus.Provisioning]: 10,
+	[ByocCacheStatus.Ready]: 5,
+	[ByocCacheStatus.Failed]: 10,
+	[ByocCacheStatus.Removing]: 10,
+	[ByocCacheStatus.TeardownRequired]: 15,
+};
+
+/** Each poll alien misses doubles the wait from here, up to the cap. */
+const WATCH_BACKOFF_BASE_SECONDS = 10;
+const WATCH_BACKOFF_MAX_SECONDS = 120;
 
 const settledOutcome = ({
 	cacheDeployment,
@@ -32,7 +41,7 @@ const backoffSeconds = ({ failedPolls }: { failedPolls: number }) =>
 	);
 
 /** Stop once the Atom settles or its record is gone; otherwise wait as long as its status calls for. */
-export const computeWatchStep = ({
+export const computeNextWatchStep = ({
 	poll,
 	failedPolls,
 }: {

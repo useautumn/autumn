@@ -1,16 +1,13 @@
 import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	findCacheDeployment,
-	findRemovingCacheDeployments,
-} from "../repos/cacheDeployments.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
 import {
 	cacheDeploymentStackName,
 	cacheDeploymentToApiCache,
 	cacheStackName,
 	cacheStackNameSuffix,
 	nextCacheAtomId,
-} from "../utils/byocCacheUtils.js";
+} from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
 /** The env's Atom and any earlier ones still coming down, as alien has them now, and the stack name its Atom (or the next one) takes. */
@@ -21,8 +18,8 @@ export const getCache = async ({
 }): Promise<GetByocCacheResponse> => {
 	const { org, env } = ctx;
 	const [existing, removingRows] = await Promise.all([
-		findCacheDeployment({ ctx }),
-		findRemovingCacheDeployments({ ctx }),
+		cacheDeploymentRepo.find({ ctx }),
+		cacheDeploymentRepo.findRemoving({ ctx }),
 	]);
 	const [cacheDeployment, ...removing] = await Promise.all(
 		[existing, ...removingRows].map(

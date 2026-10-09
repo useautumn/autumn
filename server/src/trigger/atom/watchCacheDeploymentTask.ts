@@ -1,8 +1,8 @@
 import { AppEnv } from "@autumn/shared";
 import { idempotencyKeys, task, wait } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
-import { cacheWatchIdempotencyKey } from "@/internal/byoc/actions/watchCacheDeployment/utils/cacheWatchIdempotencyKey.js";
-import { watchCacheDeployment } from "@/internal/byoc/actions/watchCacheDeployment/watchCacheDeployment.js";
+import { cacheWatchIdempotencyKey } from "@/internal/byoc/actions/lifecycle/watchCacheDeployment/cacheWatchIdempotencyKey.js";
+import { watchCacheDeployment } from "@/internal/byoc/actions/lifecycle/watchCacheDeployment/watchCacheDeployment.js";
 import { runWithTriggerContext } from "@/trigger/utils/runWithTriggerContext.js";
 
 const WatchCacheDeploymentPayloadSchema = z.object({

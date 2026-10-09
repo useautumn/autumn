@@ -12,18 +12,13 @@ import {
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { encryptData } from "@/utils/encryptUtils.js";
-import { getAtomDeployer } from "../deployers/getAtomDeployer.js";
-import {
-	findCacheDeployment,
-	findRemovingCacheDeployments,
-	insertCacheDeployment,
-	updateCacheDeployment,
-} from "../repos/cacheDeployments.js";
+import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
+import { cacheDeploymentRepo } from "../../repos/index.js";
 import {
 	atomTokenToHash,
 	cacheDeploymentToAtomToken,
 	generateAtomToken,
-} from "../utils/atomTokenUtils.js";
+} from "../../utils/atomTokenUtils.js";
 import {
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToCreateResponse,
@@ -33,8 +28,8 @@ import {
 	cacheStackName,
 	nextCacheAtomId,
 	resourcesToMachine,
-} from "../utils/byocCacheUtils.js";
-import { toCacheStages } from "../utils/cacheStageUtils.js";
+} from "../../utils/byocCacheUtils.js";
+import { toCacheStages } from "../../utils/cacheStageUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
 
@@ -109,9 +104,9 @@ const claimCacheDeployment = async ({
 		first_check_at: null,
 		created_at: Date.now(),
 	};
-	if (await insertCacheDeployment({ ctx, cacheDeployment }))
+	if (await cacheDeploymentRepo.insert({ ctx, cacheDeployment }))
 		return cacheDeployment;
-	return (await findCacheDeployment({ ctx })) ?? cacheDeployment;
+	return (await cacheDeploymentRepo.find({ ctx })) ?? cacheDeployment;
 };
 
 /** A fresh link moves the record to the group it landed in (the org's external id changed) and the settings it asks for; token kept. */
@@ -146,7 +141,7 @@ const followSetup = async ({
 		network,
 		stack_name: stackName,
 	};
-	await updateCacheDeployment({ ctx, from: existing, to: moved });
+	await cacheDeploymentRepo.update({ ctx, from: existing, to: moved });
 	return moved;
 };
 
@@ -175,7 +170,7 @@ const startCacheSetup = async ({
 	params: CreateByocCacheParams;
 }): Promise<CreateByocCacheResponse> => {
 	const { org, env } = ctx;
-	const existing = await findCacheDeployment({ ctx });
+	const existing = await cacheDeploymentRepo.find({ ctx });
 	const isAwaitingSetup = existing?.status === ByocCacheStatus.AwaitingSetup;
 	if (existing && !isAwaitingSetup)
 		return cacheDeploymentToCreateResponse({
@@ -189,7 +184,7 @@ const startCacheSetup = async ({
 		nextCacheAtomId({
 			org,
 			env,
-			existingAtomIds: (await findRemovingCacheDeployments({ ctx })).map(
+			existingAtomIds: (await cacheDeploymentRepo.findRemoving({ ctx })).map(
 				({ id }) => id,
 			),
 		});
