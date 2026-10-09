@@ -71,7 +71,7 @@ const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env: ctx.env });
 
 const cachedRoutes = async () =>
 	(await getOrgWithFeaturesCached({ db: ctx.db, orgId, env: ctx.env }))
-		?.atomDeployments;
+		?.org.atomDeployments;
 
 beforeAll(async () => {
 	await ctx.db.insert(organizations).values({
