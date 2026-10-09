@@ -56,7 +56,6 @@ export const AtomMonitoring = ({
 	return (
 		<SettingsGroup
 			title="Monitoring"
-			description="How hard the machine is working, and how much traffic Atom answers on its own."
 			trailing={
 				<div className="flex items-center gap-2">
 					<GroupedTabButton
