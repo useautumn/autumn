@@ -9,6 +9,7 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCapacity } from "../../capacity/actions/getCapacity.ts";
 import { listCatalog } from "../../catalog/actions/listCatalog.ts";
 import { warmBranch } from "../../catalog/actions/warmBranch.ts";
+import { qaTools } from "../../qa/mcp/qaTools.ts";
 import { getFileHistory } from "../../results/actions/queryResults.ts";
 import { cancelRun } from "../../runs/actions/cancelRun.ts";
 import { createRun } from "../../runs/actions/createRun.ts";
@@ -366,4 +367,5 @@ export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 				});
 			},
 		}),
+		...qaTools({ ctx }),
 	]);

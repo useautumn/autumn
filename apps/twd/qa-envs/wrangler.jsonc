@@ -1,0 +1,29 @@
+{
+	// Per-branch QA envs: one Durable Object + Container per env on *.atmn.lol. See README.md.
+	"name": "qa-envs",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-01",
+	"observability": { "enabled": true },
+	"vars": {
+		"QA_DOMAIN": "atmn.lol",
+		"NEON_PROJECT_ID": "weathered-morning-43833874",
+		"CLOUDFLARE_ZONE_ID": "0d69684b35da249fb60eb4a130a11a8d"
+	},
+	"containers": [
+		{
+			"class_name": "QaEnv",
+			"scheduling_policy": "durable_object",
+			"images": { "base": { "dockerfile": "./container/Dockerfile" } }
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{ "name": "QA_ENV", "class_name": "QaEnv" },
+			{ "name": "QA_ROUTER", "class_name": "QaRouter" }
+		]
+	},
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["QaEnv"] },
+		{ "tag": "v2", "new_sqlite_classes": ["QaRouter"] }
+	]
+}

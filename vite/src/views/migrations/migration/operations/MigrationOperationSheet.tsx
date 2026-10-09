@@ -10,6 +10,7 @@ import { disabledItemDraftController } from "@/hooks/inline-editor/useItemDraftC
 import { getItemId } from "@/utils/product/productItemUtils";
 import { EditPlanPriceSheet } from "@/views/products/plan/components/EditPlanPriceSheet";
 import { EditPlanFeatureSheet } from "@/views/products/plan/components/edit-plan-feature/EditPlanFeatureSheet";
+import { NewFeatureSheet } from "@/views/products/plan/components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "@/views/products/plan/components/SelectFeatureSheet";
 import { ProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
@@ -133,7 +134,8 @@ function MigrationOperationSheetContent({
 
 	const handleSetSheet = useCallback(
 		({ type, itemId: id }: { type: string | null; itemId?: string | null }) => {
-			if (type) setSheetType(type);
+			// There is no plan view in this sheet, so "back to plan" returns to the feature picker.
+			if (type) setSheetType(type === "edit-plan" ? "select-feature" : type);
 			setItemId(id ?? null);
 
 			if (type === "edit-feature" && id) {
@@ -197,6 +199,7 @@ function MigrationSheetInner({
 		<div className="flex flex-col h-full">
 			<div className="flex-1 overflow-y-auto">
 				{sheetType === "select-feature" && <SelectFeatureSheet />}
+				{sheetType === "new-feature" && <NewFeatureSheet />}
 				{sheetType === "edit-plan-price" && <EditPlanPriceSheet hideFooter />}
 				{sheetType === "edit-feature" && currentItem && (
 					<ProductItemContext.Provider
