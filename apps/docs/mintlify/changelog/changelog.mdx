@@ -11,6 +11,66 @@ description: "Some new things we've shipped at Autumn HQ"
 
 </Update>
 
+<Update label="October 9th 2026">
+  ## Allocate shared credits to entities
+
+  You can now give each entity its own share of a customer's shared credits. Set `billing_controls.balance_allocations` on [`customers.update`](/api-reference/customers/updateCustomer), or manage allocations from the customer's billing controls in the dashboard. Requested amounts are scaled proportionally to fit the pool. Balances report `allocated` and `unallocated` credits, and [`check`](/api-reference/core/check) returns each entity's spendable share. See [billing controls](/documentation/customers/billing-controls) — [#3975](https://github.com/useautumn/autumn/pull/3975), [#4040](https://github.com/useautumn/autumn/pull/4040), [#4063](https://github.com/useautumn/autumn/pull/4063), [#4143](https://github.com/useautumn/autumn/pull/4143), [#4157](https://github.com/useautumn/autumn/pull/4157), [#4161](https://github.com/useautumn/autumn/pull/4161)
+
+  ## Issue credit notes
+
+  The new [`invoices.issue_credit_note`](/api-reference/invoices/issueCreditNote) endpoint credits an open or paid invoice, for a flat amount or for specific lines. On a paid invoice, choose where the money goes: the customer's balance (default), a refund or an out-of-band record — [#4177](https://github.com/useautumn/autumn/pull/4177)
+
+  ## Automatic tax in invoice mode
+
+  [`billing.attach`](/api-reference/billing/attach) accepts a `tax` object to turn automatic tax on or off per request, or to apply a fixed Stripe tax rate. It also accepts `billing_details`, so an invoice-mode attach can supply the address automatic tax needs in the same call. Missing addresses return `customer_tax_location_missing`. See [tax](/documentation/customers/tax) — [#4182](https://github.com/useautumn/autumn/pull/4182), [#4222](https://github.com/useautumn/autumn/pull/4222)
+
+  ## No-card trials run in Autumn
+
+  Trials that don't require a card now run in Autumn without creating a Stripe subscription. At trial end, Autumn bills customers who have added a payment method and expires the trial for those who haven't. See [trials](/documentation/modelling-pricing/trials#card-not-required-trials) — [#4024](https://github.com/useautumn/autumn/pull/4024)
+
+  ## Set plans upgrades
+
+  The dashboard's Set plans sheet can now target a specific subscription and shows Stripe-style review cards with a phase timeline. Each phase has its own proration and billing cycle anchor settings, and you can set a custom anchor date. A schedule-wide free trial applies to kept plans, the first phase can be backdated over a live subscription, and you can create an invoice straight from the tray — [#3981](https://github.com/useautumn/autumn/pull/3981), [#4035](https://github.com/useautumn/autumn/pull/4035), [#4162](https://github.com/useautumn/autumn/pull/4162), [#4171](https://github.com/useautumn/autumn/pull/4171), [#4172](https://github.com/useautumn/autumn/pull/4172), [#4253](https://github.com/useautumn/autumn/pull/4253), [#4299](https://github.com/useautumn/autumn/pull/4299), [#4477](https://github.com/useautumn/autumn/pull/4477)
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Invalid tracks are rejected before they are queued, so async tracks return validation errors immediately — [#4403](https://github.com/useautumn/autumn/pull/4403)
+      - [`advance_test_clock`](/api-reference/customers/advanceTestClock) attaches a Stripe test clock on first use — [#4154](https://github.com/useautumn/autumn/pull/4154)
+      - RevenueCat `TRANSFER` events move restored purchases to the new owner. See [RevenueCat](/documentation/external-providers/revenuecat) — [#4145](https://github.com/useautumn/autumn/pull/4145)
+      - Plans set to enable immediately are granted when long-lived checkout links are created. Invoice-mode plans stay pending until the draft is finalized — [#4278](https://github.com/useautumn/autumn/pull/4278), [#4275](https://github.com/useautumn/autumn/pull/4275)
+      - The billing verify export reports Stripe subscriptions on customers not linked to Autumn — [#4228](https://github.com/useautumn/autumn/pull/4228)
+      - `checkout_session_params.tax_id_collection` now overrides the default tax ID collection on checkout — [#4041](https://github.com/useautumn/autumn/pull/4041)
+      - Search customers by Stripe customer ID in the dashboard — [#4053](https://github.com/useautumn/autumn/pull/4053)
+      - The features and credit systems tables are sortable — [#4293](https://github.com/useautumn/autumn/pull/4293)
+      - Billing options in Attach, Update subscription and Set plans are collapsible sections — [#4299](https://github.com/useautumn/autumn/pull/4299)
+      - The migrations list leads with progress, and failed runs show as Incomplete — [#3867](https://github.com/useautumn/autumn/pull/3867), [#4362](https://github.com/useautumn/autumn/pull/4362)
+      - Variants can be copied within the same environment, and the copy dialog is prefilled — [#4503](https://github.com/useautumn/autumn/pull/4503)
+      - Payment actions that need 3D Secure return `3ds_required`. Stripe errors caused by the request return 400 or 404 — [#4081](https://github.com/useautumn/autumn/pull/4081), [#4028](https://github.com/useautumn/autumn/pull/4028)
+      - Refunds are hidden for Stripe invoices, and credit notes are blocked on Vercel invoices — [#4359](https://github.com/useautumn/autumn/pull/4359)
+      - Analytics charts load and hover faster — [#4160](https://github.com/useautumn/autumn/pull/4160), [#4498](https://github.com/useautumn/autumn/pull/4498)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Monthly usage caps no longer reset daily on daily-reset features — [#4065](https://github.com/useautumn/autumn/pull/4065)
+      - Credit schema items with 0 credits are treated as free instead of charging 1 — [#4225](https://github.com/useautumn/autumn/pull/4225)
+      - Overage goes to priced rows before free allocated grants — [#4161](https://github.com/useautumn/autumn/pull/4161)
+      - Abandoned trial checkouts no longer use up the trial — [#4424](https://github.com/useautumn/autumn/pull/4424)
+      - Auto top-ups no longer charge delayed payment methods repeatedly — [#4467](https://github.com/useautumn/autumn/pull/4467)
+      - `check` upgrade previews stay within the customer's groups and only offer plans that cost more — [#4470](https://github.com/useautumn/autumn/pull/4470)
+      - Cross-group swaps bill on the removed plan's subscription, and paid → free → free changes hand over correctly — [#4163](https://github.com/useautumn/autumn/pull/4163), [#4147](https://github.com/useautumn/autumn/pull/4147)
+      - Backdating a new subscription with proration `none` charges nothing, and previews always show the next cycle for paid recurring plans — [#4255](https://github.com/useautumn/autumn/pull/4255), [#4271](https://github.com/useautumn/autumn/pull/4271)
+      - Preview amounts and fixed tax rates round like Stripe — [#4204](https://github.com/useautumn/autumn/pull/4204), [#4222](https://github.com/useautumn/autumn/pull/4222)
+      - Threshold billing settles invoice-credit balances — [#4030](https://github.com/useautumn/autumn/pull/4030)
+      - Scheduled attach switches reject `custom_line_items`, and subscription updates with only `redirect_mode` return 400 again — [#4149](https://github.com/useautumn/autumn/pull/4149), [#4152](https://github.com/useautumn/autumn/pull/4152)
+      - Invoice line descriptions drop the "Base Price" label and no longer repeat the period. Reissue edits keep entity attribution — [#4291](https://github.com/useautumn/autumn/pull/4291), [#4491](https://github.com/useautumn/autumn/pull/4491), [#4448](https://github.com/useautumn/autumn/pull/4448)
+      - Version migrations keep RevenueCat plans on RevenueCat — [#3996](https://github.com/useautumn/autumn/pull/3996), [#4361](https://github.com/useautumn/autumn/pull/4361)
+      - Renaming a license plan in `atmn` keeps its link instead of removing and re-adding it — [#3963](https://github.com/useautumn/autumn/pull/3963)
+      - `customers.list` with `created_at_range` and a cursor no longer returns 500 — [#4023](https://github.com/useautumn/autumn/pull/4023)
+      - The SDKs surface timeouts while reading debug-logged responses — [#4144](https://github.com/useautumn/autumn/pull/4144)
+      - The dashboard explains when a track deducts no balance, and rate-card usage no longer shows float drift — [#4227](https://github.com/useautumn/autumn/pull/4227), [#4029](https://github.com/useautumn/autumn/pull/4029)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="October 2nd 2026">
   ## List subscriptions, purchases and balances
 
