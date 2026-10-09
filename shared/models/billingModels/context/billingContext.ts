@@ -106,6 +106,7 @@ export interface BillingContext {
 		| "days_until_due"
 		| "default_tax_rates"
 		| "automatic_tax"
+		| "payment_settings"
 	>;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.

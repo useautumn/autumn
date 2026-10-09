@@ -144,8 +144,20 @@ export const setupAutoTopupContext = async ({
 	const shouldUseInvoiceMode =
 		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
 
+	// Vercel moves the money itself, so org payment settings don't apply there.
 	const invoiceMode = shouldUseInvoiceMode
-		? { finalizeInvoice: true, enableProductImmediately: true }
+		? {
+				finalizeInvoice: true,
+				enableProductImmediately: true,
+				...(vercelInstallationId
+					? {}
+					: {
+							daysUntilDue:
+								ctx.org.config.default_invoice_net_terms_days ?? undefined,
+							paymentMethodTypes:
+								ctx.org.config.allowed_payment_methods ?? undefined,
+						}),
+			}
 		: undefined;
 
 	// Fetched before the preflight because the circuit breaker needs the current

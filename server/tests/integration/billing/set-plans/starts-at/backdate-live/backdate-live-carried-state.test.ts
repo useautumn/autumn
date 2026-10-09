@@ -4,7 +4,8 @@
  *   exactly as long as they would have been;
  * - a past_due subscription's open invoice stays open and is not charged a second time;
  * - a plan canceling at period end stays canceling: the recreated subscription keeps the old
- *   period end as its cancel date.
+ *   period end as its cancel date;
+ * - a send_invoice subscription keeps its net terms and invoice payment method types.
  */
 
 import { expect, test } from "bun:test";
@@ -241,6 +242,44 @@ test.concurrent(
 			periods: [
 				{ startMs: live.periodStartMs, endMs: live.periodEndMs, total: 20 },
 			],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans backdate live: a send_invoice subscription keeps its net terms and payment method types")}`,
+	async () => {
+		const { pro, customerId, autumnV2_4, ctx } = await initLiveProScenario({
+			customerId: "set-plans-backdate-live-send-invoice",
+		});
+		const live = await liveSubscriptionPeriod({ ctx, customerId });
+		await ctx.stripeCli.subscriptions.update(live.subscription.id, {
+			collection_method: "send_invoice",
+			days_until_due: 14,
+			payment_settings: { payment_method_types: ["card"] },
+		});
+
+		const backdatedStart = live.startMs - ms.days(10);
+		await autumnV2_4.billing.setPlans<SetPlansParamsV0Input>({
+			customer_id: customerId,
+			phases: [{ starts_at: backdatedStart, plans: [{ plan_id: pro.id }] }],
+		});
+
+		const recreated = await expectRecreatedSubscriptionCorrect({
+			ctx,
+			customerId,
+			replacedSubscriptionId: live.subscription.id,
+			startMs: backdatedStart,
+			periodEndMs: live.periodEndMs,
+		});
+		expect({
+			collectionMethod: recreated.collection_method,
+			daysUntilDue: recreated.days_until_due,
+			paymentMethodTypes: recreated.payment_settings?.payment_method_types,
+		}).toEqual({
+			collectionMethod: "send_invoice",
+			daysUntilDue: 14,
+			paymentMethodTypes: ["card"],
 		});
 	},
 );

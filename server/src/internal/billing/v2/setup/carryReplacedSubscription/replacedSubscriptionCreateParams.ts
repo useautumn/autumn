@@ -20,10 +20,12 @@ export const replacedSubscriptionCreateParams = ({
 		days_until_due: daysUntilDue,
 		default_tax_rates: defaultTaxRates,
 		automatic_tax: automaticTax,
+		payment_settings: paymentSettings,
 	} = replacedStripeSubscription;
 
 	const paymentMethodId = stripeRefToId(defaultPaymentMethod);
 	const sourceId = stripeRefToId(defaultSource);
+	const paymentMethodTypes = paymentSettings?.payment_method_types;
 	return {
 		...(paymentMethodId && { default_payment_method: paymentMethodId }),
 		...(sourceId && { default_source: sourceId }),
@@ -31,6 +33,10 @@ export const replacedSubscriptionCreateParams = ({
 		...(collectionMethod === "send_invoice" && {
 			days_until_due: daysUntilDue ?? undefined,
 		}),
+		...(collectionMethod === "send_invoice" &&
+			paymentMethodTypes?.length && {
+				payment_settings: { payment_method_types: paymentMethodTypes },
+			}),
 		...(defaultTaxRates?.length && {
 			default_tax_rates: defaultTaxRates.map(({ id }) => id),
 		}),
