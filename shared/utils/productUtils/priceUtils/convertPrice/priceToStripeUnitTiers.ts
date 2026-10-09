@@ -23,17 +23,23 @@ import type Stripe from "stripe";
  *   (included units too) is charged at the band total usage lands in, plus
  *   that band's flat_amount. At or below the allowance it lands in the free
  *   tier, which has no flat fee, so it costs $0.
+ *
+ * Pass `withFlatAmounts: false` for metered prices: Autumn invoices their
+ * usage itself and they never receive meter events, so their quantity stays 0
+ * and Stripe would bill tier 1's flat fee every cycle.
  */
 export const priceToStripeUnitTiers = ({
 	price,
 	entitlement,
 	org,
 	currency: targetCurrency,
+	withFlatAmounts = true,
 }: {
 	price: Price;
 	entitlement: Entitlement;
 	org: Organization;
 	currency?: string;
+	withFlatAmounts?: boolean;
 }): Stripe.PriceCreateParams.Tier[] => {
 	const config = price.config as UsagePriceConfig;
 	const orgDefault = orgToCurrency({ org }).toLowerCase();
@@ -69,7 +75,7 @@ export const priceToStripeUnitTiers = ({
 			up_to: isNotFinalTier(tier) ? tier.to + allowance : "inf",
 		};
 
-		if (tier.flat_amount) {
+		if (withFlatAmounts && tier.flat_amount) {
 			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
 				amount: tier.flat_amount,
 				currency,

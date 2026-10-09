@@ -80,6 +80,7 @@ export const createStripeMeteredPrice = async ({
 		entitlement: ent,
 		org,
 		currency,
+		withFlatAmounts: false,
 	});
 
 	let priceAmountData = {};

@@ -243,6 +243,7 @@ export const createStripeInArrearPrice = async ({
 		entitlement: relatedEnt,
 		org,
 		currency,
+		withFlatAmounts: false,
 	});
 
 	let priceAmountData = {};

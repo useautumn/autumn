@@ -19,6 +19,7 @@ await mockModuleWithRestore(
 );
 
 import { createStripeArrearProrated } from "@/external/stripe/createStripePrice/createStripeArrearProrated";
+import { createStripeInArrearPrice } from "@/external/stripe/createStripePrice/createStripeInArrear";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
@@ -123,8 +124,14 @@ describe("allocated Stripe price tiers", () => {
 			},
 			{ up_to: "inf", unit_amount_decimal: "600", flat_amount_decimal: "200" },
 		]);
+		// The metered placeholder never receives usage, so it carries no flat fees
+		// (Stripe would bill tier 1's at quantity 0 every cycle).
 		expect(placeholderPrice.tiers_mode).toBe("volume");
-		expect(placeholderPrice.tiers).toEqual(seatPrice.tiers);
+		expect(placeholderPrice.tiers).toEqual([
+			{ unit_amount_decimal: "0", up_to: INCLUDED },
+			{ up_to: 5 + INCLUDED, unit_amount_decimal: "1000" },
+			{ up_to: "inf", unit_amount_decimal: "600" },
+		]);
 	});
 
 	test("volume with billing units: unit amount per seat, bands in seats", async () => {
@@ -161,6 +168,42 @@ describe("allocated Stripe price tiers", () => {
 		expect(seatPrice.tiers).toEqual([
 			{ unit_amount_decimal: "0", up_to: INCLUDED },
 			{ up_to: 5 + INCLUDED, unit_amount_decimal: "1000" },
+			{ up_to: "inf", unit_amount_decimal: "600" },
+		]);
+	});
+
+	test("pay-per-use metered price: volume, no flat fees, so an unbilled quantity of 0 costs $0", async () => {
+		const priceCreates: Record<string, unknown>[] = [];
+		const stripeCli = {
+			prices: {
+				create: async (params: Record<string, unknown>) => {
+					priceCreates.push(params);
+					return { id: "price_metered", product: "prod_shared" };
+				},
+			},
+			billing: {
+				meters: {
+					list: async () => ({ data: [], has_more: false }),
+					create: async () => ({ id: "meter_1", event_name: "evt" }),
+				},
+			},
+		};
+
+		await createStripeInArrearPrice({
+			db: {} as never,
+			stripeCli: stripeCli as never,
+			product,
+			price: allocatedPrice({ tierBehavior: TierBehavior.VolumeBased }),
+			entitlements: [{ ...entitlement, allowance: 0 }],
+			org,
+			logger: { info: () => undefined, error: () => undefined },
+			curStripePrice: null,
+			curStripeProduct: { id: "prod_shared" } as never,
+		});
+
+		expect(priceCreates[0].tiers_mode).toBe("volume");
+		expect(priceCreates[0].tiers).toEqual([
+			{ up_to: 5, unit_amount_decimal: "1000" },
 			{ up_to: "inf", unit_amount_decimal: "600" },
 		]);
 	});
