@@ -733,9 +733,13 @@ export class QaEnv extends DurableObject<Env> {
 		await this.ctx.storage.setAlarm(Date.now() + TOMBSTONE_MS);
 	}
 
-	private async removeTombstone(config: EnvConfig) {
-		await deleteEnvHostname({ env: this.env, name: config.name });
-		await this.ctx.storage.deleteAll();
+	/** Blocks other calls so a re-create can't land between the hostname delete and the wipe. */
+	private removeTombstone(config: EnvConfig) {
+		return this.ctx.blockConcurrencyWhile(async () => {
+			if ((await this.envState()) !== "expired") return;
+			await deleteEnvHostname({ env: this.env, name: config.name });
+			await this.ctx.storage.deleteAll();
+		});
 	}
 
 	override async alarm() {
