@@ -2,7 +2,8 @@
  * Deferred invoice plans are only given up when the invoice has no payment at all.
  *
  * Contract:
- *   cron, open + unpaid             → void, expire pending, cancel created sub, delete metadata
+ *   cron, open + unpaid             → void, mirror void onto the Autumn row, expire pending, cancel created sub, delete metadata
+ *   cron, already void + unpaid     → mirror void onto the Autumn row (webhook may never arrive)
  *   cron, open + partially paid     → untouched, expires_at cleared so the cron stops re-picking it
  *   cron, void + partially paid     → untouched, expires_at cleared
  *   void webhook, partially paid    → pending plan untouched
@@ -27,6 +28,7 @@ const state = {
 	expiredMetadataIds: [] as string[],
 	deletedMetadataIds: [] as string[],
 	metadataUpdates: [] as { id: string; expiresAt: number | null }[],
+	syncedInvoices: [] as { id: string; status: string }[],
 };
 
 const resetState = ({
@@ -49,6 +51,7 @@ const resetState = ({
 	state.expiredMetadataIds = [];
 	state.deletedMetadataIds = [];
 	state.metadataUpdates = [];
+	state.syncedInvoices = [];
 };
 
 const buildStripeInvoice = () => ({
@@ -135,6 +138,23 @@ await mockModuleWithRestore(
 	() => ({ deleteCachedFullCustomer: async () => {} }),
 );
 
+await mockModuleWithRestore(
+	"@/internal/invoices/actions/syncClosedInvoiceStatus.js",
+	() => ({
+		syncClosedInvoiceStatus: async ({
+			stripeInvoice,
+		}: {
+			stripeInvoice: { id: string; status: string };
+		}) => {
+			state.syncedInvoices.push({
+				id: stripeInvoice.id,
+				status: stripeInvoice.status,
+			});
+			return null;
+		},
+	}),
+);
+
 await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 	MetadataService: {
 		getByStripeInvoiceId: async () => metadata,
@@ -180,6 +200,7 @@ const expectUntouchedWithExpiryCleared = () => {
 	expect(state.canceledSubscriptionIds).toEqual([]);
 	expect(state.deletedMetadataIds).toEqual([]);
 	expect(state.metadataUpdates).toEqual([{ id: metadata.id, expiresAt: null }]);
+	expect(state.syncedInvoices).toEqual([]);
 };
 
 test("cron: an unpaid deferred invoice voids, expires the plan and cancels the created sub", async () => {
@@ -188,6 +209,7 @@ test("cron: an unpaid deferred invoice voids, expires the plan and cancels the c
 	await runCron();
 
 	expect(state.voidedInvoiceIds).toEqual(["in_deferred"]);
+	expect(state.syncedInvoices).toEqual([{ id: "in_deferred", status: "void" }]);
 	expect(state.expiredMetadataIds).toEqual([metadata.id]);
 	expect(state.canceledSubscriptionIds).toEqual([STRIPE_SUBSCRIPTION_ID]);
 	expect(state.deletedMetadataIds).toEqual([metadata.id]);
@@ -237,6 +259,16 @@ test("cron: a failed sub cancel keeps the metadata so the next run retries", asy
 	expect(state.expiredMetadataIds).toEqual([metadata.id]);
 	expect(state.canceledSubscriptionIds).toEqual([]);
 	expect(state.deletedMetadataIds).toEqual([]);
+});
+
+test("cron: an already voided unpaid invoice is mirrored onto the Autumn row", async () => {
+	resetState({ invoiceStatus: "void", amountPaid: 0 });
+
+	await runCron();
+
+	expect(state.voidedInvoiceIds).toEqual([]);
+	expect(state.syncedInvoices).toEqual([{ id: "in_deferred", status: "void" }]);
+	expect(state.deletedMetadataIds).toEqual([metadata.id]);
 });
 
 test("cron: an already canceled sub is not canceled again", async () => {

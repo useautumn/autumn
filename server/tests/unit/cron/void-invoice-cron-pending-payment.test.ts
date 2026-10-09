@@ -11,6 +11,7 @@ const state = {
 	errorLogs: [] as string[],
 	invoiceStatus: "open" as "open" | "paid",
 	pendingPayment: true,
+	syncedInvoices: [] as { id: string; status: string }[],
 };
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
@@ -26,10 +27,28 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 						"Invoices with pending payments waiting to clear cannot be paid, voided, or marked uncollectible.",
 					);
 				}
+				return { id: "in_pending_payment", status: "void" };
 			},
 		},
 	}),
 }));
+
+await mockModuleWithRestore(
+	"@/internal/invoices/actions/syncClosedInvoiceStatus.js",
+	() => ({
+		syncClosedInvoiceStatus: async ({
+			stripeInvoice,
+		}: {
+			stripeInvoice: { id: string; status: string };
+		}) => {
+			state.syncedInvoices.push({
+				id: stripeInvoice.id,
+				status: stripeInvoice.status,
+			});
+			return null;
+		},
+	}),
+);
 
 await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 	MetadataService: {
@@ -68,6 +87,7 @@ const resetState = () => {
 	state.errorLogs = [];
 	state.invoiceStatus = "open";
 	state.pendingPayment = true;
+	state.syncedInvoices = [];
 };
 
 const runCron = () =>
@@ -96,6 +116,7 @@ test("backs off cleanup when Stripe has a pending payment", async () => {
 		startedAt + 23 * 60 * 60 * 1000,
 	);
 	expect(state.errorLogs).toHaveLength(0);
+	expect(state.syncedInvoices).toEqual([]);
 });
 
 test("preserves metadata when the pending payment later succeeds", async () => {
@@ -116,4 +137,7 @@ test("cleans up after the pending payment later fails", async () => {
 	await runCron();
 
 	expect(state.deletedMetadataIds).toEqual([metadata.id]);
+	expect(state.syncedInvoices).toEqual([
+		{ id: "in_pending_payment", status: "void" },
+	]);
 });

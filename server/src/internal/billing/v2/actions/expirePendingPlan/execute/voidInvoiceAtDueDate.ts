@@ -2,6 +2,7 @@ import type { Metadata } from "@autumn/shared";
 import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import type { RepoContext } from "@/db/repoContext";
+import { syncClosedInvoiceStatus } from "@/internal/invoices/actions/syncClosedInvoiceStatus";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 const PENDING_PAYMENT_ERROR = "pending payments waiting to clear";
@@ -22,11 +23,17 @@ export const voidInvoiceAtDueDate = async ({
 	metadata: Metadata;
 	stripeInvoice: Stripe.Invoice;
 }): Promise<boolean> => {
-	if (UNPAID_CLOSED_STATUSES.has(stripeInvoice.status ?? "")) return true;
+	if (UNPAID_CLOSED_STATUSES.has(stripeInvoice.status ?? "")) {
+		await syncClosedInvoiceStatus({ db: ctx.db, stripeInvoice });
+		return true;
+	}
 	if (stripeInvoice.status !== "open") return false;
 
 	try {
-		await stripeCli.invoices.voidInvoice(stripeInvoice.id);
+		const voidedInvoice = await stripeCli.invoices.voidInvoice(
+			stripeInvoice.id,
+		);
+		await syncClosedInvoiceStatus({ db: ctx.db, stripeInvoice: voidedInvoice });
 		ctx.logger.info(
 			`[voidInvoiceAtDueDate] Voided invoice ${stripeInvoice.id}`,
 		);

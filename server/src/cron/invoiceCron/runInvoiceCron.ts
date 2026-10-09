@@ -7,6 +7,7 @@ import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { expirePendingPlanAtDueDate } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanAtDueDate";
 import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
+import { syncClosedInvoiceStatus } from "@/internal/invoices/actions/syncClosedInvoiceStatus";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
@@ -109,7 +110,10 @@ export const handleVoidInvoiceCron = async ({
 
 	if (invoice.status === "open") {
 		try {
-			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
+			const voidedInvoice = await stripeCli.invoices.voidInvoice(
+				metadata.stripe_invoice_id,
+			);
+			await syncClosedInvoiceStatus({ db, stripeInvoice: voidedInvoice });
 			logger.info(
 				`voided invoice ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
 			);
@@ -157,6 +161,7 @@ export const handleVoidInvoiceCron = async ({
 			}
 		}
 	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
+		await syncClosedInvoiceStatus({ db, stripeInvoice: invoice });
 		await expirePendingRows();
 		await MetadataService.delete({
 			db,
