@@ -112,7 +112,7 @@ export function useCustomerExportSheet({
 			fields: [...CUSTOMER_EXPORT_FIELD_ORDER],
 			restrictToCurrentFilters: true,
 			includeUnlinkedStripeCustomers: false,
-			dryRun: true,
+			dryRun: false,
 		},
 		validators: {
 			onChange: CustomerExportFormSchema,
