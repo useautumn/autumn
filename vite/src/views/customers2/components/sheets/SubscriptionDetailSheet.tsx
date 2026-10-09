@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Button, CopyButton, InfoRow, StatusChip } from "@autumn/ui";
+import { Button, CopyButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -40,6 +40,7 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
+import { CustomPlanDiffHoverCard } from "./CustomPlanDiffHoverCard";
 import { ReadOnlyPlanItems } from "./ReadOnlyPlanItems";
 import {
 	cusProductLicenses,
@@ -194,9 +195,12 @@ export function SubscriptionDetailSheet() {
 								<span className="flex items-center gap-1.5 min-w-0">
 									<span className="truncate">{cusProduct.product.name}</span>
 									{cusProduct.is_custom && (
-										<StatusChip tone="fuchsia" glyph="pencil">
-											Custom
-										</StatusChip>
+										<CustomPlanDiffHoverCard
+											customerId={customer?.id ?? customer?.internal_id}
+											customerProductId={cusProduct.id}
+											catalogVersion={cusProduct.product.version}
+											featureNameById={featureNameById}
+										/>
 									)}
 								</span>
 							}

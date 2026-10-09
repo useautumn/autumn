@@ -1,0 +1,211 @@
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+	StatusChip,
+	StatusChipIcon,
+} from "@autumn/ui";
+import { overlaySurfaceClassName } from "@autumn/ui/lib/overlay-classes";
+import { useState } from "react";
+import {
+	type CustomDiffChange,
+	type CustomDiffField,
+	type CustomerProductCustomDiff,
+	useCustomerProductCustomDiff,
+} from "./useCustomerProductCustomDiff";
+
+const KIND_ICONS = {
+	added: { tone: "green", glyph: "plusCircle", label: "Added" },
+	removed: { tone: "red", glyph: "minus", label: "Removed" },
+	changed: { tone: "amber", glyph: "pencil", label: "Changed" },
+} as const;
+
+const REASON_NOTES: Record<
+	Exclude<CustomerProductCustomDiff["reason"], "customized">,
+	string
+> = {
+	matches_catalog:
+		"Matches its catalog version, so the stored flag is out of date.",
+	revenuecat: "RevenueCat plans can't be customized.",
+	catalog_missing:
+		"The catalog version couldn't be loaded, so this plan is treated as custom.",
+	comparison_failed:
+		"The comparison with the catalog failed, so this plan is treated as custom.",
+};
+
+const formatTerm = (term: string | null) => {
+	if (term === null) return "none";
+	const value: unknown = JSON.parse(term);
+	if (value === null) return "none";
+	return typeof value === "string" ? value : String(value);
+};
+
+const formatPath = (path: string) =>
+	path.replace(/_/g, " ").replace(/\./g, " › ");
+
+function ChangedField({
+	field,
+	kind,
+}: {
+	field: CustomDiffField;
+	kind: CustomDiffChange["kind"];
+}) {
+	return (
+		<div className="flex items-baseline justify-between gap-3">
+			<span className="shrink-0 text-tertiary-foreground">
+				{formatPath(field.path)}
+			</span>
+			<span className="flex min-w-0 items-baseline gap-1.5 tabular-nums">
+				{kind !== "added" && field.catalog !== null && (
+					<span className="truncate text-tertiary-foreground line-through decoration-tertiary-foreground/60">
+						{formatTerm(field.catalog)}
+					</span>
+				)}
+				{kind === "changed" && field.catalog !== null && (
+					<span className="text-tertiary-foreground">→</span>
+				)}
+				{kind !== "removed" && (
+					<span className="truncate font-medium text-foreground">
+						{formatTerm(field.customer)}
+					</span>
+				)}
+			</span>
+		</div>
+	);
+}
+
+function ChangeEntry({
+	change,
+	featureNameById,
+}: {
+	change: CustomDiffChange;
+	featureNameById: Map<string, string>;
+}) {
+	const icon = KIND_ICONS[change.kind];
+	const label =
+		change.target === "base_price"
+			? "Base price"
+			: change.target === "license"
+				? `License · ${change.id}`
+				: (featureNameById.get(change.id ?? "") ?? change.id);
+
+	return (
+		<div className="flex flex-col gap-1.5">
+			<div className="flex items-center gap-1.5">
+				<StatusChipIcon tone={icon.tone} glyph={icon.glyph} />
+				<span className="min-w-0 truncate text-[13px] leading-[18px] font-medium text-foreground">
+					{label}
+				</span>
+				<span className="ml-auto shrink-0 text-tertiary-foreground">
+					{icon.label}
+				</span>
+			</div>
+			{change.fields.length > 0 && (
+				<div className="flex flex-col gap-1 pl-[22px]">
+					{change.fields.map((field) => (
+						<ChangedField key={field.path} field={field} kind={change.kind} />
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function CustomDiffBody({
+	diff,
+	isLoading,
+	isError,
+	featureNameById,
+}: {
+	diff?: CustomerProductCustomDiff;
+	isLoading: boolean;
+	isError: boolean;
+	featureNameById: Map<string, string>;
+}) {
+	if (isLoading)
+		return (
+			<span className="text-tertiary-foreground">Comparing with catalog…</span>
+		);
+	if (isError || !diff)
+		return (
+			<span className="text-tertiary-foreground">
+				Couldn't load the differences.
+			</span>
+		);
+	if (diff.reason !== "customized")
+		return (
+			<span className="text-tertiary-foreground">
+				{REASON_NOTES[diff.reason]}
+			</span>
+		);
+
+	return (
+		<>
+			{diff.changes.map((change, index) => (
+				<div
+					key={`${change.target}-${change.id ?? index}`}
+					className="flex flex-col gap-2.5"
+				>
+					{index > 0 && (
+						<div className="h-px shrink-0 bg-overlay-separator preset:bg-border" />
+					)}
+					<ChangeEntry change={change} featureNameById={featureNameById} />
+				</div>
+			))}
+		</>
+	);
+}
+
+/** The Custom chip; hovering it shows how the plan differs from its catalog version. */
+export function CustomPlanDiffHoverCard({
+	customerId,
+	customerProductId,
+	catalogVersion,
+	featureNameById,
+}: {
+	customerId?: string;
+	customerProductId: string;
+	catalogVersion: number;
+	featureNameById: Map<string, string>;
+}) {
+	const [open, setOpen] = useState(false);
+	const { data, isLoading, isError } = useCustomerProductCustomDiff({
+		customerId,
+		customerProductId,
+		enabled: open,
+	});
+
+	return (
+		<HoverCard open={open} onOpenChange={setOpen}>
+			<HoverCardTrigger asChild delay={150} closeDelay={0}>
+				<span className="inline-flex cursor-default">
+					<StatusChip tone="fuchsia" glyph="pencil">
+						Custom
+					</StatusChip>
+				</span>
+			</HoverCardTrigger>
+			<HoverCardContent
+				side="bottom"
+				align="start"
+				sideOffset={8}
+				className={`${overlaySurfaceClassName} flex w-80 flex-col gap-2.5 p-3 text-xs`}
+			>
+				<div className="flex flex-col gap-0.5">
+					<span className="text-[13px] leading-[18px] font-semibold text-foreground">
+						Custom plan
+					</span>
+					<span className="text-tertiary-foreground">
+						Differences from version {catalogVersion} of the catalog plan
+					</span>
+				</div>
+				<div className="h-px shrink-0 bg-overlay-separator preset:bg-border" />
+				<CustomDiffBody
+					diff={data}
+					isLoading={isLoading}
+					isError={isError}
+					featureNameById={featureNameById}
+				/>
+			</HoverCardContent>
+		</HoverCard>
+	);
+}

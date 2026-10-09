@@ -24,3 +24,19 @@ export type CustomerProductCustomDiff = {
 	remove_licenses?: DiffedCustomizePlanV1["remove_licenses"];
 	licenses?: CustomizedPlanLicense[];
 };
+
+/** One leaf that differs; values are JSON-encoded, null when that side lacks the field. */
+export type CustomDiffField = {
+	path: string;
+	catalog: string | null;
+	customer: string | null;
+};
+
+/** A readable entry of a diff: what changed, and how, field by field. */
+export type CustomDiffChange = {
+	target: "base_price" | "item" | "license";
+	/** The feature id for items, the license plan id for licenses. */
+	id: string | null;
+	kind: "added" | "removed" | "changed";
+	fields: CustomDiffField[];
+};
