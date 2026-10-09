@@ -282,6 +282,39 @@ describe("usagePriceToLineItems: graduated", () => {
 	});
 });
 
+describe("usagePriceToLineItems: reported quantities", () => {
+	test("a single-rate line keeps total usage and overage", () => {
+		const [line] = buildUsageLines({
+			tiers: [{ to: Infinite, amount: 0.5 }] as UsageTier[],
+			allowance: 100,
+			balance: -50,
+		});
+
+		expect([line.totalQuantity, line.paidQuantity]).toEqual([150, 50]);
+	});
+
+	test("split bands report their own units, and a flat fee none", () => {
+		const graduated = buildUsageLines({
+			tiers: GRADUATED_TIERS,
+			balance: -250,
+		});
+		expect(graduated.map((line) => line.paidQuantity)).toEqual([100, 100, 50]);
+
+		const volumeWithFee = buildUsageLines({
+			tiers: [
+				{ to: 100, amount: 0.4, flat_amount: 5 },
+				{ to: Infinite, amount: 0.25, flat_amount: 20 },
+			] as UsageTier[],
+			tierBehavior: TierBehavior.VolumeBased,
+			balance: -300,
+		});
+		expect(volumeWithFee.map((line) => line.totalQuantity)).toEqual([
+			300,
+			undefined,
+		]);
+	});
+});
+
 describe("usagePriceToLineItems: single-line fallbacks", () => {
 	test("within the included amount: one $0 line", () => {
 		const lines = buildUsageLines({

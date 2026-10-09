@@ -35,7 +35,12 @@ const listStripeInvoiceLines = async ({
 	return lines;
 };
 
-/** Asserts the lines Autumn added to a Stripe invoice, in order. */
+const byDescription = <T extends { description: string | null }>(lines: T[]) =>
+	[...lines].sort((a, b) =>
+		(a.description ?? "").localeCompare(b.description ?? ""),
+	);
+
+/** Asserts the lines Autumn added to a Stripe invoice; Stripe doesn't keep add-lines order. */
 export const expectStripeUsageLines = ({
 	stripeLines,
 	expectedLines,
@@ -46,20 +51,23 @@ export const expectStripeUsageLines = ({
 	const autumnLines = stripeLines.filter(
 		(line) => line.metadata?.autumn_line_item_id,
 	);
+	const expected = byDescription(
+		expectedLines.map(({ previewQuantity: _, ...line }) => line),
+	);
 
 	expect(
-		autumnLines.map((line, index) => ({
+		byDescription(autumnLines).map((line, index) => ({
 			description: line.description,
 			amount: stripeToAtmnAmount({
 				amount: line.amount,
 				currency: line.currency,
 			}),
 			quantity: line.quantity,
-			...(expectedLines[index]?.unitAmountDecimal !== undefined && {
+			...(expected[index]?.unitAmountDecimal !== undefined && {
 				unitAmountDecimal: line.pricing?.unit_amount_decimal,
 			}),
 		})),
-	).toEqual(expectedLines.map(({ previewQuantity: _, ...line }) => line));
+	).toEqual(expected);
 	return autumnLines;
 };
 
@@ -104,16 +112,22 @@ export const expectRenewalUsageLinesMatchPreview = async ({
 		(line: PreviewLineItem) => line.feature_id !== null,
 	);
 	expect(
-		previewLines.map((line: PreviewLineItem) => ({
-			description: line.description,
-			amount: line.subtotal,
-			quantity: line.quantity,
-		})),
+		byDescription(
+			previewLines.map((line: PreviewLineItem) => ({
+				description: line.description,
+				amount: line.subtotal,
+				quantity: line.quantity,
+			})),
+		),
 	).toEqual(
-		expectedLines.map(({ description, amount, quantity, previewQuantity }) => ({
-			description,
-			amount,
-			quantity: previewQuantity ?? quantity,
-		})),
+		byDescription(
+			expectedLines.map(
+				({ description, amount, quantity, previewQuantity }) => ({
+					description,
+					amount,
+					quantity: previewQuantity ?? quantity,
+				}),
+			),
+		),
 	);
 };

@@ -259,10 +259,12 @@ test.concurrent(
 				ctx.stripeCli.invoices.list({
 					customer: customer.stripe_id as string,
 				}),
+			// The invoice exists before its lines are added, so wait for its total.
 			until: ({ data }) =>
 				data.some(
 					(invoice) =>
-						invoice.metadata?.autumn_action_source === "threshold_billing",
+						invoice.metadata?.autumn_action_source === "threshold_billing" &&
+						invoice.total > 0,
 				),
 			timeoutMs: 60_000,
 		});
@@ -307,12 +309,14 @@ test.concurrent(
 					amount: 7.5,
 					quantity: 1,
 					unitAmountDecimal: "750",
+					previewQuantity: 150,
 				},
 				{
 					description: `${productName} · Messages — 150 @ $3.00 per 100 (tier 151+)`,
 					amount: 4.5,
 					quantity: 1,
 					unitAmountDecimal: "450",
+					previewQuantity: 150,
 				},
 			],
 		});

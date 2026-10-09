@@ -1,11 +1,4 @@
 import type { LineItem, PreviewLineItem } from "@autumn/shared";
-import { lineItemToStripeUnitPricing } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToStripeUnitPricing";
-
-// A line priced per tier shows the quantity its invoice line carries (1 when billed as one total).
-const lineItemToPreviewQuantity = ({ line }: { line: LineItem }): number => {
-	if (!line.unitPricing) return line.totalQuantity ?? 1;
-	return lineItemToStripeUnitPricing({ lineItem: line })?.quantity ?? 1;
-};
 
 /**
  * Transforms an internal LineItem to a PreviewLineItem for API responses.
@@ -30,7 +23,7 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		plan_id: line.context.product.id,
 		feature_id: feature?.id ?? null,
 		custom: false,
-		quantity: lineItemToPreviewQuantity({ line }),
+		quantity: line.totalQuantity ?? 1,
 		period: line.context.effectivePeriod,
 	};
 };

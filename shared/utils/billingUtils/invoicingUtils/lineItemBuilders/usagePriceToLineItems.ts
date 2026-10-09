@@ -30,6 +30,28 @@ const bandToUnitPricing = ({
 				unitAmount: band.unitAmount,
 			};
 
+// A lone usage band keeps the line's usage and overage; split bands report their own units.
+const bandToReportedQuantities = ({
+	band,
+	lineItem,
+	hasOneUsageBand,
+}: {
+	band: TierLineBand;
+	lineItem: LineItem;
+	hasOneUsageBand: boolean;
+}): Pick<LineItem, "totalQuantity" | "paidQuantity"> => {
+	if (band.kind === "flat_fee") {
+		return { totalQuantity: undefined, paidQuantity: undefined };
+	}
+	if (hasOneUsageBand) {
+		return {
+			totalQuantity: lineItem.totalQuantity,
+			paidQuantity: lineItem.paidQuantity,
+		};
+	}
+	return { totalQuantity: band.quantity, paidQuantity: band.quantity };
+};
+
 const bandsSumToLineAmount = ({
 	bands,
 	lineItem,
@@ -85,11 +107,12 @@ export const usagePriceToLineItems = ({
 		currency,
 	});
 	const billingUnits = price.config.billing_units ?? 1;
+	const hasOneUsageBand =
+		bands.filter((band) => band.kind === "usage").length === 1;
 
 	const bandLineItems = bands
 		.map((band, index) => {
 			const amount = billedAmounts[index];
-			const bandQuantity = band.kind === "usage" ? band.quantity : undefined;
 			return {
 				...lineItem,
 				id:
@@ -104,8 +127,7 @@ export const usagePriceToLineItems = ({
 					}),
 					context: lineItem.context,
 				}),
-				totalQuantity: bandQuantity,
-				paidQuantity: bandQuantity,
+				...bandToReportedQuantities({ band, lineItem, hasOneUsageBand }),
 				unitPricing: bandToUnitPricing({ band, billingUnits }),
 			} satisfies LineItem;
 		})
