@@ -231,7 +231,7 @@ const validateProductItem = ({
 		});
 	}
 
-	validateItemTierBehavior({ item, validateAuthoringRules });
+	validateItemTierBehavior({ item, feature, validateAuthoringRules });
 
 	if (isFeaturePriceItem(item) && item.tiers) {
 		// if (

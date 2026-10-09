@@ -1,7 +1,7 @@
-import { type PriceTier, TierBehavior, UsageModel } from "@autumn/shared";
+import type { PriceTier } from "@autumn/shared";
 import { IconButton, Input } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
@@ -61,17 +61,6 @@ export function PriceTiers({
 	const { item, setItem } = useProductItemContext();
 	const { org } = useOrg();
 	const currency = org?.default_currency?.toUpperCase() ?? "USD";
-
-	// Auto-select prepaid when volume-based is active with multiple tiers
-	useEffect(() => {
-		if (
-			item?.tier_behavior === TierBehavior.VolumeBased &&
-			(item?.tiers?.length ?? 0) > 1 &&
-			item?.usage_model !== UsageModel.Prepaid
-		) {
-			setItem({ ...item, usage_model: UsageModel.Prepaid });
-		}
-	}, [item?.tier_behavior, item?.tiers?.length]);
 
 	if (!item) return null;
 

@@ -91,6 +91,7 @@ export * from "./productV2Utils/productItemUtils/matchPlanItem";
 export * from "./productV2Utils/productItemUtils/productItemUtils";
 export * from "./productV2Utils/productItemUtils/rolloverConfigToIssue";
 export * from "./productV2Utils/productItemUtils/sortPlanItems";
+export * from "./productV2Utils/productItemUtils/volumeTiersToIssue";
 export * from "./productV2Utils/productV2ToApiPlanV1";
 export * from "./productV2Utils/productV2ToFrontendProduct";
 export * from "./productV2Utils/productV2ToV1";

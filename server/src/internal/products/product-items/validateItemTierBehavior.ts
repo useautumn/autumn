@@ -1,35 +1,65 @@
 import {
 	ErrCode,
+	type Feature,
+	featureUtils,
+	notNullish,
 	type ProductItem,
 	RecaseError,
 	TierBehavior,
 	UsageModel,
+	volumeTiersToIssue,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { isFeaturePriceItem } from "./productItemUtils/getItemType";
 
-/** Volume pricing is prepaid-only for now. Billing paths still accept persisted
- * single-tier pay-per-use volume items, which predate the single-tier check. */
-export const validateItemTierBehavior = ({
-	item,
-	validateAuthoringRules,
-}: {
-	item: ProductItem;
-	validateAuthoringRules: boolean;
-}) => {
-	const isPayPerUseVolume =
-		isFeaturePriceItem(item) &&
-		item.tier_behavior === TierBehavior.VolumeBased &&
-		item.usage_model !== UsageModel.Prepaid;
-	if (!isPayPerUseVolume) return;
-
-	const isPersistedSingleTier =
-		(item.tiers?.length ?? 1) <= 1 && !validateAuthoringRules;
-	if (isPersistedSingleTier) return;
-
+const throwInvalidVolumeItem = ({ message }: { message: string }) => {
 	throw new RecaseError({
-		message: `Volume-based pricing is only supported for prepaid items (feature: ${item.feature_id}). Set usage_model to prepaid, or remove tier_behavior.`,
+		message,
 		code: ErrCode.InvalidInputs,
 		statusCode: StatusCodes.BAD_REQUEST,
 	});
+};
+
+export const validateItemTierBehavior = ({
+	item,
+	feature,
+	validateAuthoringRules,
+}: {
+	item: ProductItem;
+	feature?: Feature;
+	validateAuthoringRules: boolean;
+}) => {
+	if (item.tier_behavior !== TierBehavior.VolumeBased) return;
+
+	// Billing paths re-validate persisted single-tier items written before this rule.
+	const singleTierIssue = validateAuthoringRules
+		? volumeTiersToIssue({
+				tierBehavior: item.tier_behavior,
+				isPrepaid: item.usage_model === UsageModel.Prepaid,
+				tierCount: item.tiers?.length ?? 1,
+			})
+		: null;
+	if (singleTierIssue) throwInvalidVolumeItem({ message: singleTierIssue });
+
+	// Each threshold charge prices its chunk on its own, but a volume band (and its
+	// charge on included units) depends on the whole period's usage.
+	if (notNullish(item.config?.threshold_billing)) {
+		throwInvalidVolumeItem({
+			message: `threshold_billing can't be combined with tiered pricing (feature: ${item.feature_id}): a volume band depends on the whole period's usage, so each threshold charge would be mis-priced. Use a single price, or remove threshold_billing.`,
+		});
+	}
+
+	// Stripe prices allocated seats and bills tier 1's flat fee even at 0 seats;
+	// included usage puts a free tier first, so the fee only applies past it.
+	const isAllocatedItem =
+		item.usage_model === UsageModel.PayPerUse &&
+		feature !== undefined &&
+		featureUtils.isAllocated(feature);
+	const hasFirstTierFlatAmount = (item.tiers?.[0]?.flat_amount ?? 0) > 0;
+	const hasIncludedUsage =
+		notNullish(item.included_usage) && item.included_usage !== 0;
+	if (isAllocatedItem && hasFirstTierFlatAmount && !hasIncludedUsage) {
+		throwInvalidVolumeItem({
+			message: `Volume-based allocated items can't have a flat_amount on the first tier without included usage (feature: ${item.feature_id}): Stripe would charge it at 0 seats. Add included usage or move the fee to a later tier.`,
+		});
+	}
 };

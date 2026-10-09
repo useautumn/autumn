@@ -3,7 +3,7 @@
  *
  * Contract:
  *   - Prices that the catalog would refuse (amount+tiers, neither, flat_amount on
- *     graduated, volume on usage_based, tiers not ascending or not ending in inf,
+ *     graduated, tiers not ascending or not ending in inf,
  *     billing_units <= 0) are a 400, as are negative amounts and duplicate items.
  *   - The same rules apply to license_quantities[].customize.items.
  *   - An override only prices lines of its own billing_method.
@@ -259,35 +259,6 @@ const invalidRequests: [string, Omit<PlanParams, "plan_id">][] = [
 			]),
 			quantity: 200,
 		}),
-	],
-	[
-		"volume tiers on a usage_based price",
-		{
-			customize: {
-				items: [
-					{
-						feature_id: TestFeature.Words,
-						price: {
-							billing_method: BillingMethod.UsageBased,
-							interval: BillingInterval.Month,
-							billing_units: 1,
-							tier_behavior: TierBehavior.VolumeBased,
-							tiers: [
-								{ to: 10, amount: 1 },
-								{ to: "inf", amount: 0.5 },
-							],
-						},
-					},
-				],
-			},
-			feature_quantities: [
-				{
-					feature_id: TestFeature.Words,
-					billing_behavior: BillingMethod.UsageBased,
-					quantity: 5,
-				},
-			],
-		},
 	],
 	[
 		"two customize.items for one feature",

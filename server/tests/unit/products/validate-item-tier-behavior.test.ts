@@ -1,78 +1,150 @@
 import { describe, expect, test } from "bun:test";
 import {
+	type Feature,
+	FeatureUsageType,
 	type ProductItem,
 	ProductItemInterval,
 	TierBehavior,
 	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
+import { features } from "@tests/utils/fixtures/db/features.js";
 import { validateItemTierBehavior } from "@/internal/products/product-items/validateItemTierBehavior.js";
 
-const volumeItem = ({
-	usageModel,
-	tiers,
+const payPerUseItem = ({
+	tierBehavior,
+	thresholdBilling,
 }: {
-	usageModel: UsageModel;
-	tiers: ProductItem["tiers"];
+	tierBehavior: TierBehavior;
+	thresholdBilling?: { threshold: number };
 }): ProductItem =>
 	({
 		feature_id: "messages",
 		included_usage: 100,
 		interval: ProductItemInterval.Month,
-		usage_model: usageModel,
-		tier_behavior: TierBehavior.VolumeBased,
-		tiers,
+		usage_model: UsageModel.PayPerUse,
+		tier_behavior: tierBehavior,
+		tiers: [
+			{ to: 100, amount: 1 },
+			{ to: TierInfinite, amount: 0.5 },
+		],
+		config: thresholdBilling ? { threshold_billing: thresholdBilling } : null,
 	}) as ProductItem;
 
-const SINGLE_TIER: ProductItem["tiers"] = [{ to: TierInfinite, amount: 0.5 }];
-const MULTI_TIER: ProductItem["tiers"] = [
-	{ to: 100, amount: 1 },
-	{ to: TierInfinite, amount: 0.5 },
-];
-
 describe("validateItemTierBehavior", () => {
-	test("authoring: rejects single-tier pay-per-use volume", () => {
+	test("accepts pay-per-use volume", () => {
 		expect(() =>
 			validateItemTierBehavior({
-				item: volumeItem({
-					usageModel: UsageModel.PayPerUse,
-					tiers: SINGLE_TIER,
-				}),
 				validateAuthoringRules: true,
-			}),
-		).toThrow("Volume-based pricing is only supported for prepaid items");
-	});
-
-	test("billing re-validation: accepts persisted single-tier pay-per-use volume", () => {
-		expect(() =>
-			validateItemTierBehavior({
-				item: volumeItem({
-					usageModel: UsageModel.PayPerUse,
-					tiers: SINGLE_TIER,
-				}),
-				validateAuthoringRules: false,
+				item: payPerUseItem({ tierBehavior: TierBehavior.VolumeBased }),
 			}),
 		).not.toThrow();
 	});
 
-	test("billing re-validation: still rejects multi-tier pay-per-use volume", () => {
+	test("rejects volume with threshold_billing, even on a single tier", () => {
 		expect(() =>
 			validateItemTierBehavior({
-				item: volumeItem({
-					usageModel: UsageModel.PayPerUse,
-					tiers: MULTI_TIER,
+				validateAuthoringRules: true,
+				item: payPerUseItem({
+					tierBehavior: TierBehavior.VolumeBased,
+					thresholdBilling: { threshold: 50 },
 				}),
-				validateAuthoringRules: false,
 			}),
-		).toThrow("Volume-based pricing is only supported for prepaid items");
+		).toThrow("threshold_billing can't be combined with tiered pricing");
 	});
 
-	test("prepaid volume is allowed", () => {
+	test("accepts graduated single price with threshold_billing", () => {
 		expect(() =>
 			validateItemTierBehavior({
-				item: volumeItem({ usageModel: UsageModel.Prepaid, tiers: MULTI_TIER }),
 				validateAuthoringRules: true,
+				item: payPerUseItem({
+					tierBehavior: TierBehavior.Graduated,
+					thresholdBilling: { threshold: 50 },
+				}),
 			}),
 		).not.toThrow();
+	});
+
+	describe("allocated seats with a tier-1 flat_amount", () => {
+		const seats = features.create({
+			id: "users",
+			name: "Users",
+			config: { usage_type: FeatureUsageType.Continuous },
+		}) as Feature;
+		const allocatedItem = ({
+			includedUsage,
+		}: {
+			includedUsage: number;
+		}): ProductItem =>
+			({
+				feature_id: "users",
+				included_usage: includedUsage,
+				interval: ProductItemInterval.Month,
+				usage_model: UsageModel.PayPerUse,
+				tier_behavior: TierBehavior.VolumeBased,
+				tiers: [
+					{ to: 10, amount: 10, flat_amount: 5 },
+					{ to: TierInfinite, amount: 8 },
+				],
+			}) as ProductItem;
+
+		test("rejects it without included usage", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: true,
+					item: allocatedItem({ includedUsage: 0 }),
+					feature: seats,
+				}),
+			).toThrow("can't have a flat_amount on the first tier");
+		});
+
+		test("accepts it with included usage", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: true,
+					item: allocatedItem({ includedUsage: 3 }),
+					feature: seats,
+				}),
+			).not.toThrow();
+		});
+	});
+
+	describe("single-tier usage-based volume", () => {
+		const singleTierItem = ({ usageModel }: { usageModel: UsageModel }) =>
+			({
+				feature_id: "messages",
+				included_usage: 100,
+				interval: ProductItemInterval.Month,
+				usage_model: usageModel,
+				tier_behavior: TierBehavior.VolumeBased,
+				price: 0.5,
+			}) as ProductItem;
+
+		test("rejects it when authoring", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: true,
+					item: singleTierItem({ usageModel: UsageModel.PayPerUse }),
+				}),
+			).toThrow("needs at least two tiers");
+		});
+
+		test("accepts persisted rows on billing paths", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: false,
+					item: singleTierItem({ usageModel: UsageModel.PayPerUse }),
+				}),
+			).not.toThrow();
+		});
+
+		test("accepts single-tier prepaid volume", () => {
+			expect(() =>
+				validateItemTierBehavior({
+					validateAuthoringRules: true,
+					item: singleTierItem({ usageModel: UsageModel.Prepaid }),
+				}),
+			).not.toThrow();
+		});
 	});
 });
