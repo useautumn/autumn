@@ -21,13 +21,7 @@ import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
-import {
-	deleteCacheDeployment,
-	findCacheByTokenHash,
-	findCacheDeployment,
-	insertCacheDeployment,
-	updateCacheDeployment,
-} from "@/internal/byoc/repos/cacheDeployments.js";
+import { cacheDeploymentRepo } from "@/internal/byoc/repos/index.js";
 import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -92,40 +86,40 @@ test(`${chalk.yellowBright("atom-rows1: a second claim for the env loses, and th
 	const first = atomRow({ deploymentGroupId: `dg_${orgId}_a` });
 	const second = atomRow({ deploymentGroupId: `dg_${orgId}_b` });
 
-	expect(await insertCacheDeployment({ ctx, cacheDeployment: first })).toBe(
-		true,
-	);
-	expect(await insertCacheDeployment({ ctx, cacheDeployment: second })).toBe(
-		false,
-	);
-	expect(await findCacheDeployment({ ctx })).toEqual(first);
+	expect(
+		await cacheDeploymentRepo.insert({ ctx, cacheDeployment: first }),
+	).toBe(true);
+	expect(
+		await cacheDeploymentRepo.insert({ ctx, cacheDeployment: second }),
+	).toBe(false);
+	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(first);
 
-	await deleteCacheDeployment({ ctx, cacheDeployment: first });
-	expect(await findCacheDeployment({ ctx })).toBeNull();
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: first });
+	expect(await cacheDeploymentRepo.find({ ctx })).toBeNull();
 });
 
 test(`${chalk.yellowBright("atom-rows2: a stale copy neither undoes a move nor forgets a replacement")}`, async () => {
 	const original = atomRow({ deploymentGroupId: `dg_${orgId}_c` });
 	const moved = { ...original, deployment_group_id: `dg_${orgId}_d` };
-	await insertCacheDeployment({ ctx, cacheDeployment: original });
-	await updateCacheDeployment({ ctx, from: original, to: moved });
+	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: original });
+	await cacheDeploymentRepo.update({ ctx, from: original, to: moved });
 
 	// A refresh that read the row before the move lands nowhere.
-	await updateCacheDeployment({
+	await cacheDeploymentRepo.update({
 		ctx,
 		from: original,
 		to: { ...original, status: ByocCacheStatus.Failed },
 	});
-	expect(await findCacheDeployment({ ctx })).toEqual(moved);
+	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(moved);
 
 	// A replacement reuses the group but is a new row, so the old one's delete misses it.
-	await deleteCacheDeployment({ ctx, cacheDeployment: moved });
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: moved });
 	const replacement = atomRow({ deploymentGroupId: moved.deployment_group_id });
-	await insertCacheDeployment({ ctx, cacheDeployment: replacement });
-	await deleteCacheDeployment({ ctx, cacheDeployment: moved });
-	expect(await findCacheDeployment({ ctx })).toEqual(replacement);
+	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: replacement });
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: moved });
+	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(replacement);
 
-	await deleteCacheDeployment({ ctx, cacheDeployment: replacement });
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: replacement });
 });
 
 test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route and ignores its deploy progress")}`, async () => {
@@ -133,7 +127,7 @@ test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route 
 		deploymentGroupId: `dg_${orgId}_e`,
 		status: ByocCacheStatus.Provisioning,
 	});
-	await insertCacheDeployment({ ctx, cacheDeployment: provisioning });
+	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: provisioning });
 	expect(await cachedRoutes()).toEqual([
 		{
 			status: ByocCacheStatus.Provisioning,
@@ -150,7 +144,7 @@ test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route 
 			status: ByocCacheStatus.Provisioning,
 		}),
 	};
-	await updateCacheDeployment({ ctx, from: provisioning, to: progressed });
+	await cacheDeploymentRepo.update({ ctx, from: provisioning, to: progressed });
 	expect(await getMiscRedis().exists(cacheKey)).toBe(1);
 
 	const ready = {
@@ -159,7 +153,7 @@ test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route 
 		deployment_id: "dep_1",
 		endpoint_url: "https://atom.example.com",
 	};
-	await updateCacheDeployment({ ctx, from: progressed, to: ready });
+	await cacheDeploymentRepo.update({ ctx, from: progressed, to: ready });
 	expect(await getMiscRedis().exists(cacheKey)).toBe(0);
 	expect(await cachedRoutes()).toEqual([
 		{
@@ -170,22 +164,25 @@ test(`${chalk.yellowBright("atom-rows3: the cached org follows the Atom's route 
 		},
 	]);
 
-	await deleteCacheDeployment({ ctx, cacheDeployment: ready });
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: ready });
 });
 
 test(`${chalk.yellowBright("atom-rows4: a token hash names its Atom's org and env")}`, async () => {
 	const atom = atomRow({ deploymentGroupId: `dg_${orgId}_f` });
-	await insertCacheDeployment({ ctx, cacheDeployment: atom });
+	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: atom });
 
 	expect(
-		await findCacheByTokenHash({
+		await cacheDeploymentRepo.findByTokenHash({
 			db: ctx.db,
 			tokenHash: atom.token_hash ?? "",
 		}),
 	).toEqual({ orgId, env: AppEnv.Sandbox });
 	expect(
-		await findCacheByTokenHash({ db: ctx.db, tokenHash: "unknown" }),
+		await cacheDeploymentRepo.findByTokenHash({
+			db: ctx.db,
+			tokenHash: "unknown",
+		}),
 	).toBeNull();
 
-	await deleteCacheDeployment({ ctx, cacheDeployment: atom });
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: atom });
 });
