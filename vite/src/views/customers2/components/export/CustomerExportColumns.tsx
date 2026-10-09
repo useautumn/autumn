@@ -20,7 +20,7 @@ const modeColumn: ColumnDef<CustomerExportResponse, unknown> = {
 	id: "mode",
 	size: 120,
 	cell: ({ row }: { row: Row<CustomerExportResponse> }) => (
-		<CustomerExportModeBadge applied={isApplyRun(row.original)} />
+		<CustomerExportModeBadge apply={isApplyRun(row.original)} />
 	),
 };
 
@@ -31,7 +31,6 @@ export const createCustomerExportColumns = ({
 }: {
 	downloadingExportId: string | undefined;
 	onDownload: (exportId: string) => void;
-	/** Custom plans runs either apply or only report, so their list shows which. */
 	showMode?: boolean;
 }): ColumnDef<CustomerExportResponse, unknown>[] => [
 	{

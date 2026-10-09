@@ -16,6 +16,7 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { isCustomerExportsS3Configured } from "@/external/aws/s3/customerExportsS3Config";
 import { CusService } from "@/internal/customers/CusService";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index";
 import { downloadCustomerExport } from "@/internal/customers/exports/actions/downloadCustomerExport";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService";
 import { customerToCustomPlansExportRows } from "@/internal/customers/exports/customPlans/customerToCustomPlansExportRows";
@@ -169,10 +170,52 @@ test.concurrent(
 	},
 );
 
+test.concurrent(
+	`${chalk.yellowBright("custom-plans export 4: apply leaves a row another write changed since it was read")}`,
+	async () => {
+		const { ctx, scalar, customerProduct } = await setupCustomer({
+			customerId: "custom-plans-export-apply-race",
+		});
+		await ctx.db
+			.update(customerProducts)
+			.set({ is_custom: true, updated_at: 1 })
+			.where(eq(customerProducts.id, customerProduct.id));
+
+		const write = ({
+			from,
+			readUpdatedAt,
+		}: {
+			from: boolean;
+			readUpdatedAt: number;
+		}) =>
+			customerProductRepo.setIsCustom({
+				ctx,
+				internalCustomerId: scalar.internal_id,
+				customerProductId: customerProduct.id,
+				from,
+				to: false,
+				readUpdatedAt,
+			});
+
+		// The flag moved since the read.
+		expect(await write({ from: false, readUpdatedAt: 1 })).toBe(false);
+		// The plan was written since the read.
+		expect(await write({ from: true, readUpdatedAt: 0 })).toBe(false);
+
+		const [row] = await ctx.db
+			.select({ isCustom: customerProducts.is_custom })
+			.from(customerProducts)
+			.where(eq(customerProducts.id, customerProduct.id));
+		expect(row?.isCustom).toBe(true);
+
+		expect(await write({ from: true, readUpdatedAt: 1 })).toBe(true);
+	},
+);
+
 const testWithS3 = isCustomerExportsS3Configured() ? test : test.skip;
 
 testWithS3(
-	`${chalk.yellowBright("custom-plans export 4: job runs end to end -> downloadable CSV, one row per plan")}`,
+	`${chalk.yellowBright("custom-plans export 5: job runs end to end -> downloadable CSV, one row per plan")}`,
 	async () => {
 		const searchTerm = "custom-plans-export-job";
 		const { ctx, customerProduct } = await setupCustomer({

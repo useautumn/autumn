@@ -10,7 +10,7 @@ export type DerivedCustomerProduct = {
 	result: CustomerProductIsCustomResult;
 };
 
-const isApplicableFlip = ({
+export const isApplicableFlip = ({
 	customerProduct,
 	result,
 }: DerivedCustomerProduct) => {
@@ -32,23 +32,28 @@ export const applyIsCustomFlips = async ({
 }): Promise<Set<string>> => {
 	const written = new Set<string>();
 
-	for (const { customerProduct, result } of derived.filter(isApplicableFlip)) {
-		const wrote = await customerProductRepo.setIsCustom({
-			ctx,
-			internalCustomerId: scalar.internal_id,
-			customerProductId: customerProduct.id,
-			from: customerProduct.is_custom,
-			to: result.isCustom,
-		});
-		if (wrote) written.add(customerProduct.id);
-	}
-
-	if (written.size > 0 && scalar.id) {
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId: scalar.id,
-			source: "custom-plans-export",
-		});
+	try {
+		for (const { customerProduct, result } of derived.filter(
+			isApplicableFlip,
+		)) {
+			const wrote = await customerProductRepo.setIsCustom({
+				ctx,
+				internalCustomerId: scalar.internal_id,
+				customerProductId: customerProduct.id,
+				from: customerProduct.is_custom,
+				to: result.isCustom,
+				readUpdatedAt: customerProduct.updated_at,
+			});
+			if (wrote) written.add(customerProduct.id);
+		}
+	} finally {
+		if (written.size > 0 && scalar.id) {
+			await invalidateCachedFullSubject({
+				ctx,
+				customerId: scalar.id,
+				source: "custom-plans-export",
+			});
+		}
 	}
 	return written;
 };

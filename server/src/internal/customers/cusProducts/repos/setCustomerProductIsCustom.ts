@@ -1,21 +1,22 @@
 import { customerProducts } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
-/** Compare-and-set, so a flag another write changed since it was read is left alone. Returns whether it was written. */
 export const setCustomerProductIsCustom = async ({
 	ctx,
 	internalCustomerId,
 	customerProductId,
 	from,
 	to,
+	readUpdatedAt,
 }: {
 	ctx: RepoContext;
 	internalCustomerId: string;
 	customerProductId: string;
 	from: boolean;
 	to: boolean;
+	readUpdatedAt: number | null;
 }): Promise<boolean> => {
 	const written = await ctx.db
 		.update(customerProducts)
@@ -25,6 +26,7 @@ export const setCustomerProductIsCustom = async ({
 				eq(customerProducts.id, customerProductId),
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				eq(customerProducts.is_custom, from),
+				sql`${customerProducts.updated_at} IS NOT DISTINCT FROM ${readUpdatedAt}`,
 			),
 		)
 		.returning({ id: customerProducts.id });

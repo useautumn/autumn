@@ -1,10 +1,9 @@
 import { StatusChip } from "@autumn/ui";
 
-/** Whether a custom plans run wrote its flag changes or only reported them. */
-export function CustomerExportModeBadge({ applied }: { applied: boolean }) {
-	return applied ? (
+export function CustomerExportModeBadge({ apply }: { apply: boolean }) {
+	return apply ? (
 		<StatusChip tone="blue" glyph="pencil">
-			Applied
+			Apply
 		</StatusChip>
 	) : (
 		<StatusChip tone="neutral" glyph="dashed">
