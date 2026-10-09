@@ -15,7 +15,10 @@ import { createMemoryS3Client } from "../../fixtures/subjectSnapshotsStore.js";
 const workerEdgeConfigsOver = (s3Client: EdgeConfigS3Client) =>
 	createWorkerEdgeConfigs({
 		ctx: { s3Client },
-		config: { location: { bucket: "test", region: "us-east-2" } },
+		config: {
+			location: { bucket: "test", region: "us-east-2" },
+			coldStart: false,
+		},
 	});
 
 describe("the subject snapshots edge config", () => {

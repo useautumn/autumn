@@ -9,6 +9,7 @@ import type {
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type {
+	ColdStartScope,
 	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
@@ -18,7 +19,10 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../../state/types/stateStore.js";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 import type { RecentCommands } from "../recentCommands/types/recentCommands.js";
-import type { SubjectMap } from "../subjectMap/types/subjectMap.js";
+import type {
+	ResidentDrop,
+	SubjectMap,
+} from "../subjectMap/types/subjectMap.js";
 import type { SubjectMapBudget } from "../subjectMap/types/subjectMapBudget.js";
 import type { CommitPositionSink } from "./commitPositionSink.js";
 import type {
@@ -80,6 +84,8 @@ export type PartitionWriter = {
 	}): SubjectState | null;
 	/** Hides the customer's resident rows at once and drops them once Postgres holds the writes before it. */
 	evict(params: { customerKey: string }): Promise<void>;
+	/** Once Postgres holds every write before it, drops the cold start's resident subjects; counts what went, was spared and stays pinned. */
+	evictResident(params: { coldStart: ColdStartScope }): Promise<ResidentDrop>;
 	/** Null unless an evict hid rows whose writes Postgres may still lack; then resolves once it holds them, so a load can read. */
 	waitForEvicted(params: { customerKey: string }): Promise<void> | null;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
