@@ -75,6 +75,8 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
+	/** The offset of the last record this writer appended; null until its first append. */
+	readAppendedThrough(): bigint | null;
 	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
 	evict(params: { customerKey: string }): Promise<void>;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
@@ -229,6 +231,8 @@ export type PartitionWriterState = {
 	applying: boolean;
 	drainScheduled: boolean;
 	recoveryError: Error | null;
+	/** The offset of the last record this writer appended; null until its first append. */
+	appendedThrough: bigint | null;
 	/** Records in the last batch taken; more than one means arrivals outpace commits and a linger pays. */
 	lastBatchSize: number;
 	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */

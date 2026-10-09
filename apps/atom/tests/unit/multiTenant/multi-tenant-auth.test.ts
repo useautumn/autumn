@@ -15,6 +15,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -32,6 +33,7 @@ const open = ({ dataDir }: { dataDir: string }) => {
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		heldSubjects: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	return auth;
@@ -185,6 +187,7 @@ const openTwoProcesses = () => {
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
 			heldSubjects: freshHeld(),
+			subjectPulls: noSubjectPulls,
 			clock,
 		});
 		opened.push(auth);

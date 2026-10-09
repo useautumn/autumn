@@ -10,6 +10,7 @@ import {
 	checkRequestFor,
 	checkResponseOf,
 	freshHeld,
+	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -27,6 +28,7 @@ const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
 		slotCount,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
+		pulls: { subjectPulls: noSubjectPulls, tokenHash: () => "hash_folder" },
 	});
 	opened.push(slots);
 	return slots;

@@ -1,5 +1,4 @@
 import { BALANCE_WORKER_PROXY_PATH } from "@autumn/balance-worker-client";
-import { ATOM_KEYS_PATH } from "@autumn/byoc";
 import { ssoProvider } from "@autumn/shared";
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { eq } from "drizzle-orm";
@@ -24,7 +23,7 @@ import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrgan
 import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
 import { withTrustedSsoOrigin } from "./internal/auth/sso/ssoTrustedOrigins.js";
 import { balanceWorkerProxyRouter } from "./internal/balanceWorker/proxy/balanceWorkerProxyRouter.js";
-import { atomKeysRouter } from "./internal/byoc/atomKeysRouter.js";
+import { atomRouter } from "./internal/byoc/atomRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleRevenueCatOAuthCallback } from "./internal/orgs/handlers/revenueCatHandlers/handleRevenueCatOAuthCallback.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
@@ -152,7 +151,7 @@ export const createHonoApp = () => {
 	app.route(BALANCE_WORKER_PROXY_PATH, balanceWorkerProxyRouter);
 
 	// An org's Atom, by its token hash, not session or API-key auth.
-	app.route(ATOM_KEYS_PATH, atomKeysRouter);
+	app.route("/atom", atomRouter);
 
 	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {

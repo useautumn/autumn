@@ -23,6 +23,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	noSubjectPulls,
 	storedEntitySubjectWith,
 	subjectBody,
 	subjectPushOf,
@@ -81,6 +82,7 @@ const createDeployedApp = ({
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	const { logger, logged } = createLogger();
@@ -106,6 +108,7 @@ const createMultiTenantApp = () => {
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		heldSubjects: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	const { logger } = createLogger();

@@ -667,6 +667,9 @@
       "name": "@autumn/byoc",
       "version": "0.0.1",
       "dependencies": {
+        "@autumn/balance-engine": "workspace:*",
+        "@autumn/balance-worker-client": "workspace:*",
+        "@autumn/edge-config": "workspace:*",
         "@autumn/shared": "workspace:*",
         "zod": "^3.25.23",
       },

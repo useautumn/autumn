@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
-import { allSlotsOwnedHere, freshHeld } from "../utils/atomFixtures.js";
+import {
+	allSlotsOwnedHere,
+	freshHeld,
+	noSubjectPulls,
+} from "../utils/atomFixtures.js";
 
 const opened: Auth[] = [];
 const directories: string[] = [];
@@ -18,6 +22,7 @@ const createAuth = () => {
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	return { auth, dataDir };

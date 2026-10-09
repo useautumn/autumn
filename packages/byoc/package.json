@@ -9,6 +9,11 @@
 			"types": "./src/byoc.ts",
 			"import": "./src/byoc.ts",
 			"default": "./src/byoc.ts"
+		},
+		"./subjects": {
+			"types": "./src/subjects/atomSubjects.ts",
+			"import": "./src/subjects/atomSubjects.ts",
+			"default": "./src/subjects/atomSubjects.ts"
 		}
 	},
 	"scripts": {
@@ -17,6 +22,9 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@autumn/balance-engine": "workspace:*",
+		"@autumn/balance-worker-client": "workspace:*",
+		"@autumn/edge-config": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"zod": "^3.25.23"
 	},

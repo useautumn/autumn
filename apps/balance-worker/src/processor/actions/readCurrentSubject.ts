@@ -24,23 +24,29 @@ export const readCurrentSubject = async ({
 	scope: PartitionProcessorScope;
 	command: TriggeringCommand;
 }): Promise<Subject> => {
-	const { ctx } = scope;
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});
 	return withResidentSubject<Subject>({
 		customerKey,
 		ensure: () => ensureSubjectCurrent({ scope, command }),
-		attempt: () => {
-			ctx.writer.assertCommitsHealthy();
-			ctx.assertCanRead();
-
-			// Null here means an evict landed since ensure; the caller hydrates again.
-			const state = ctx.writer.readFreshestState({
-				identity: command.identity,
-			});
-			if (!state) return null;
-			return { state, catalog: ctx.subjectHydrator.readCatalog({ state }) };
-		},
+		attempt: () => readResidentSubject({ scope, command }),
 	});
+};
+
+/** Synchronous, so whatever is sampled beside it describes the same moment. Null means an evict landed since ensure; the caller hydrates again. */
+export const readResidentSubject = ({
+	scope,
+	command,
+}: {
+	scope: PartitionProcessorScope;
+	command: TriggeringCommand;
+}): Subject | null => {
+	const { ctx } = scope;
+	ctx.writer.assertCommitsHealthy();
+	ctx.assertCanRead();
+
+	const state = ctx.writer.readFreshestState({ identity: command.identity });
+	if (!state) return null;
+	return { state, catalog: ctx.subjectHydrator.readCatalog({ state }) };
 };

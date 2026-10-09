@@ -1,7 +1,9 @@
 import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
+import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
+import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
 import { openThreadCounters } from "./stats/threadStats.js";
@@ -16,7 +18,16 @@ import type {
 const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
-	const { auth, multiTenant, held } = openAuth({ env, owners });
+	const counters = openThreadCounters({ buffer: init.stats, index });
+	// Per thread, like secret keys: a subject's misses are all decided on its owner thread.
+	const subjectPulls = createSubjectPulls({
+		ctx: {
+			autumnClient: getAutumnClient({ env }),
+			counters,
+			logger: getAtomLogger(),
+		},
+	});
+	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
 	const answerPorts = new Map<number, MessagePort>();
 	const server = createAtomServer({
 		ctx: {
@@ -28,7 +39,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 				restarts: new Int32Array(init.restarts),
 				threadStats: init.stats,
 			},
-			counters: openThreadCounters({ buffer: init.stats, index }),
+			counters,
 			held,
 		},
 		config: {
@@ -50,7 +61,13 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	return { start: server.start, stop: server.stop, join, leave };
+	/** Pulls stop first, so none lands in a folder as it closes. */
+	async function stop(): Promise<void> {
+		subjectPulls.stop();
+		await server.stop();
+	}
+
+	return { start: server.start, stop, join, leave };
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */
