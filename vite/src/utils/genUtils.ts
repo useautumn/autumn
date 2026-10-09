@@ -211,12 +211,6 @@ const parseNumberInput = ({
 	return Number.isNaN(numValue) ? fallback : numValue;
 };
 
-const getMetaKey = () => {
-	if (navigator.userAgent.includes("Mac")) {
-		return "⌘";
-	}
-	return "Ctrl";
-};
 /**
  * Throws an error with backend message if available, otherwise rethrows original error
  */

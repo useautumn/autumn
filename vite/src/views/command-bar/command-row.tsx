@@ -1,8 +1,6 @@
-import { CommandItem, CommandShortcut } from "@autumn/ui";
+import { CommandItem, CommandShortcut, getMetaKey } from "@autumn/ui";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-
-const getMetaKey = () => (navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl");
 
 interface CommandRowProps {
 	icon?: React.ReactNode;
