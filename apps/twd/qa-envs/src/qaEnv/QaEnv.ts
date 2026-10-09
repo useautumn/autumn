@@ -24,6 +24,7 @@ const APP_PORT = 3000;
 const DEFAULT_TTL_MS = 3 * 24 * 60 * 60_000;
 const IDLE_MS = 5 * 60_000;
 const IDLE_CHECK_MS = 60_000;
+const TOMBSTONE_MS = 7 * 24 * 60 * 60_000;
 /** Tabs report ms since the user last interacted; past this their polling stops counting as activity. */
 const BACKGROUND_POLL_MS = 10 * 60_000;
 const READY_WAIT_MS = 90_000;
@@ -716,7 +717,6 @@ export class QaEnv extends DurableObject<Env> {
 		this.ready = false;
 		if (config) {
 			await routerStub({ env: this.env }).setAccounts(config.name, []);
-			await deleteEnvHostname({ env: this.env, name: config.name });
 			if (config.neonBranchId)
 				await deleteNeonBranch({
 					env: this.env,
@@ -729,8 +729,13 @@ export class QaEnv extends DurableObject<Env> {
 			"pendingConfig",
 		]);
 		await this.ctx.storage.put("state", "expired" satisfies EnvState);
-		// Keep a tombstone so the URL answers 410; nothing else needs the instance.
-		await this.ctx.storage.deleteAlarm();
+		// The hostname stays for a week so old links answer 410 instead of a Cloudflare DNS error.
+		await this.ctx.storage.setAlarm(Date.now() + TOMBSTONE_MS);
+	}
+
+	private async removeTombstone(config: EnvConfig) {
+		await deleteEnvHostname({ env: this.env, name: config.name });
+		await this.ctx.storage.deleteAll();
 	}
 
 	override async alarm() {
@@ -744,7 +749,9 @@ export class QaEnv extends DurableObject<Env> {
 		}
 
 		const config = await this.config();
-		if (!config || (await this.envState()) === "expired") return;
+		if (!config) return;
+		if ((await this.envState()) === "expired")
+			return this.removeTombstone(config);
 		if (Date.now() >= config.expiresAt) return this.destroyEnv();
 		if (!(await this.deliverWebhooks(config)))
 			return this.ctx.storage.setAlarm(Date.now() + 15_000);
