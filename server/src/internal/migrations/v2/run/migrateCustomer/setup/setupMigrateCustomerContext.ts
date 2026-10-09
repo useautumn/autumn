@@ -37,7 +37,7 @@ export const setupMigrateCustomerContext = async ({
 	preview: boolean;
 }): Promise<MigrateCustomerContext> => {
 	// Ops branch on is_custom, so they read the derived flag; the billing-plan hook persists it.
-	const fullCustomer = await fullCustomerWithDerivedIsCustom({
+	const { fullCustomer, corrections } = await fullCustomerWithDerivedIsCustom({
 		ctx,
 		fullCustomer: await setupFullCustomerContext({
 			ctx,
@@ -50,6 +50,7 @@ export const setupMigrateCustomerContext = async ({
 		migration,
 		fullCustomer,
 		preview,
+		isCustomCorrections: corrections,
 		stripeCache: createMigrationStripeCache({
 			ctx,
 			fullCustomer,

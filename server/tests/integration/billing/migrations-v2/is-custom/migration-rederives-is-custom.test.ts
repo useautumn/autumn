@@ -227,45 +227,49 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
-	`${chalk.yellowBright("migration is_custom (batch): an already-converged customer's stale flag is corrected")}`,
-	async () => {
-		const id = "mig-is-custom-converged";
-		const { ctx, autumnV2_2, plan } = await setupOnPlan({
-			id,
-			catalogMessages: 200,
-		});
-		await ctx.db
-			.update(customerProducts)
-			.set({ is_custom: true })
-			.where(
-				eq(
-					customerProducts.internal_customer_id,
-					await getInternalCustomerId({ ctx, customerId: id }),
-				),
+for (const lane of LANES) {
+	test.concurrent(
+		`${chalk.yellowBright(`migration is_custom (${lane}): an already-converged customer's stale flag is corrected`)}`,
+		async () => {
+			const id = `mig-is-custom-converged-${lane}`;
+			const { ctx, autumnV2_2, plan } = await setupOnPlan({
+				id,
+				catalogMessages: 200,
+			});
+			await ctx.db
+				.update(customerProducts)
+				.set({ is_custom: true })
+				.where(
+					eq(
+						customerProducts.internal_customer_id,
+						await getInternalCustomerId({ ctx, customerId: id }),
+					),
+				);
+
+			// The customer already has the item, so the run skips them as converged.
+			const { result } = await runChunkedMigration({
+				ctx,
+				migrationClient: autumnV2_2,
+				migrationId: `${id}-migration`,
+				filter: { customer: { plan: { plan_id: plan.id } } },
+				operations: {
+					customer: [
+						{
+							type: "update_plan",
+							plan_filter: { plan_id: plan.id },
+							customize: { add_items: [itemsV2.dashboard()] },
+						},
+					],
+				},
+				noBillingChanges: true,
+				// A run limit keeps the migration off the batch lane.
+				...(lane === "per_customer" ? { controls: { limit: 10 } } : {}),
+			});
+			expect(result?.lane).toBe(lane);
+
+			expect(await readIsCustom({ ctx, customerId: id, planId: plan.id })).toBe(
+				false,
 			);
-
-		// The customer already has the item, so the run skips them as converged.
-		const { result } = await runChunkedMigration({
-			ctx,
-			migrationClient: autumnV2_2,
-			migrationId: `${id}-migration`,
-			filter: { customer: { plan: { plan_id: plan.id } } },
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: plan.id },
-						customize: { add_items: [itemsV2.dashboard()] },
-					},
-				],
-			},
-			noBillingChanges: true,
-		});
-		expect(result?.lane).toBe("batch");
-
-		expect(await readIsCustom({ ctx, customerId: id, planId: plan.id })).toBe(
-			false,
-		);
-	},
-);
+		},
+	);
+}
