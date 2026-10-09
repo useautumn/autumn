@@ -115,6 +115,44 @@ test("pairs a deleted+created item on the same feature as a change", () => {
 	expect(out).not.toContain("- messages");
 });
 
+test("names the tier behaviour when a tiered item switches graduated to volume", () => {
+	const tiers = [
+		{ to: 200, amount: 1 },
+		{ to: "inf", amount: 0.5 },
+	];
+	const out = render({
+		features: [],
+		plans: [
+			planRow({
+				previousAttributes: null,
+				itemChanges: [
+					{
+						action: "deleted",
+						featureId: "messages",
+						item: {
+							featureId: "messages",
+							included: 100,
+							price: { tiers, tierBehavior: "graduated", interval: "month" },
+						},
+					},
+					{
+						action: "created",
+						featureId: "messages",
+						item: {
+							featureId: "messages",
+							included: 100,
+							price: { tiers, tierBehavior: "volume", interval: "month" },
+						},
+					},
+				],
+			}),
+		],
+	});
+	expect(out).toContain(
+		"~ messages  100 messages (2 graduated tiers per month) -> 100 messages (2 volume tiers per month)",
+	);
+});
+
 test("shows an added and a removed item separately when features differ", () => {
 	const out = render({
 		features: [],
