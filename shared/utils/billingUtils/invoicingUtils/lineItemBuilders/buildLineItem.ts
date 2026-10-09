@@ -8,6 +8,7 @@ import {
 } from "../../../../models/billingModels/lineItem/lineItem";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import { applyBackdatedLineItemAmount } from "../backdateUtils/applyBackdatedLineItemAmount";
+import { descriptionWithEntityLabel } from "../descriptionUtils/descriptionWithEntityLabel";
 import { applyProration } from "../prorationUtils/applyProration";
 import { getEffectivePeriod } from "../prorationUtils/getEffectivePeriod";
 
@@ -74,10 +75,7 @@ export const buildLineItem = ({
 		});
 	}
 
-	const entityLabel = context.entity?.name || context.entity?.id;
-	const finalDescription = entityLabel
-		? `${description} (${entityLabel})`
-		: description;
+	const finalDescription = descriptionWithEntityLabel({ description, context });
 
 	// 5. Return LineItem
 	const lineItemData = {

@@ -1,6 +1,7 @@
 import { atmnToStripeAmount, type LineItem, msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
 import { lineItemToMetadata } from "./lineItemToMetadata";
+import { lineItemToStripePriceData } from "./lineItemToStripePriceData";
 import { lineItemToStripeProductId } from "./lineItemToStripeProductId";
 
 /**
@@ -29,13 +30,9 @@ const toStripeAddLineParams = ({
 		amount: shouldUsePriceData
 			? undefined
 			: atmnToStripeAmount({ amount: lineAmount, currency }),
-		price_data: shouldUsePriceData
-			? {
-					unit_amount: atmnToStripeAmount({ amount: lineAmount, currency }),
-					currency,
-					product: stripeProductId,
-				}
-			: undefined,
+		...(shouldUsePriceData
+			? lineItemToStripePriceData({ lineItem, lineAmount, stripeProductId })
+			: {}),
 		metadata: lineItemToMetadata({ lineItem }),
 		discountable: discountable ?? false,
 		period: effectivePeriod

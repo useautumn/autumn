@@ -1,8 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { UsageTier } from "../../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
-import { Infinite } from "../../../../models/productModels/productEnums";
 import { nullish } from "../../../utils";
-import { roundUsageToNearestBillingUnit } from "../../usageUtils/roundUsageToNearestBillingUnit";
+import { graduatedTiersToLineBands } from "./graduatedTiersToLineBands";
 
 /**
  * Core graduated tiered pricing calculation used across all billing contexts:
@@ -52,32 +51,11 @@ export const graduatedTiersToLineAmount = ({
 	const isNegative = allowNegative && usage < 0;
 	const absoluteUsage = allowNegative ? Math.abs(usage) : usage;
 
-	const roundedUsage = roundUsageToNearestBillingUnit({
+	const amount = graduatedTiersToLineBands({
+		tiers,
 		usage: absoluteUsage,
 		billingUnits,
-	});
-
-	let amount = new Decimal(0);
-	let remaining = new Decimal(roundedUsage);
-	let lastTierTo = 0;
-
-	for (const tier of tiers) {
-		if (remaining.lte(0)) break;
-
-		const isFinalTier = tier.to === Infinite || tier.to === -1;
-
-		const tierSize = isFinalTier
-			? remaining
-			: Decimal.min(remaining, new Decimal(tier.to).minus(lastTierTo));
-
-		const rate = new Decimal(tier.amount).div(billingUnits);
-		amount = amount.plus(rate.mul(tierSize));
-		remaining = remaining.minus(tierSize);
-
-		if (!isFinalTier) {
-			lastTierTo = tier.to as number;
-		}
-	}
+	}).reduce((sum, band) => sum.plus(band.amount), new Decimal(0));
 
 	const finalAmount = amount.toDecimalPlaces(10).toNumber();
 	return isNegative ? -finalAmount : finalAmount;
