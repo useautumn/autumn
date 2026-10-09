@@ -4,12 +4,9 @@ import type { IsCustomByFingerprint } from "@/internal/customers/cusProducts/rep
 import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/applyIsCustomByFingerprint.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { listFullCustomerLicensesByParentIds } from "@/internal/licenses/repos/customerLicenseRepo/listFullCustomerLicensesByParentIds.js";
-import { deriveCustomerProductIsCustom } from "./deriveCustomerProductIsCustom.js";
+import { deriveStoredCustomerProductIsCustom } from "./deriveStoredCustomerProductIsCustom.js";
 import { isDefinitiveIsCustomResult } from "./isDefinitiveIsCustomResult.js";
-import {
-	type BaseProductCache,
-	loadCachedBaseProduct,
-} from "./loadBaseProduct.js";
+import type { BaseProductCache } from "./loadBaseProduct.js";
 
 export type IsCustomDerivationCache = {
 	flagsByFingerprint: IsCustomByFingerprint;
@@ -68,15 +65,10 @@ const deriveFingerprints = async ({
 				customerProduct !== undefined &&
 				isCustomFingerprintOf({ customerProduct }) === fingerprint;
 			if (!customerProduct || !stillMatches) return;
-			const result = deriveCustomerProductIsCustom({
+			const result = await deriveStoredCustomerProductIsCustom({
 				ctx,
 				customerProduct,
-				baseProduct: await loadCachedBaseProduct({
-					ctx,
-					internalProductId: customerProduct.internal_product_id,
-					baseProducts: cache.baseProducts,
-				}),
-				features: ctx.features,
+				baseProducts: cache.baseProducts,
 			});
 			cache.flagsByFingerprint.set(
 				fingerprint,
