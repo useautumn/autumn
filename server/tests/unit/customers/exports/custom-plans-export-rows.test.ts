@@ -169,6 +169,7 @@ describe("customerProductToCustomPlansExportRow", () => {
 				customer: customerProduct,
 				catalog: catalogPlan({ items: [includedItem()] }),
 			}),
+			applied: null,
 		});
 
 		expect(row.entity_id).toBe("ent_42");
