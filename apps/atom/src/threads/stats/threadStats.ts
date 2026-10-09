@@ -1,6 +1,10 @@
 /** What each thread reports since boot: work served, the held copies and their hit rate, and its event loop's health. */
 export const THREAD_STAT_FIELDS = [
 	"checks",
+	/** Checks the org's app sent with a key Atom or the API accepted: its real traffic. */
+	"requests",
+	/** Of those requests, the ones the Autumn API answered instead of Atom. */
+	"forwarded",
 	"pushes",
 	"heldSubjects",
 	"heldBytes",
