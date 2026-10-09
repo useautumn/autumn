@@ -20,7 +20,8 @@ export type AtomStep = {
 const isPast = (state: AtomSectionState) =>
 	state === "done" || state === "locked";
 
-const StepMarker = ({
+/** A step's number until it is reached; done and failed steps show their status instead. */
+export const AtomStepMarker = ({
 	index,
 	state,
 }: {
@@ -72,7 +73,7 @@ export const AtomStepper = ({ steps }: { steps: AtomStep[] }) => (
 									"font-normal text-tertiary-foreground",
 							)}
 						>
-							<StepMarker index={index} state={step.state} />
+							<AtomStepMarker index={index} state={step.state} />
 							{step.title}
 						</button>
 					</li>

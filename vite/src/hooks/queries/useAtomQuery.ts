@@ -34,7 +34,7 @@ export const useAtomQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const { basePath, queryKey } = useAtomApi();
 
-	const { data, isLoading, error, refetch } = useQuery<GetByocCacheResponse>({
+	const { data, dataUpdatedAt, isLoading, error, refetch } = useQuery({
 		queryKey,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<GetByocCacheResponse>(
@@ -59,6 +59,8 @@ export const useAtomQuery = ({ enabled = true } = {}) => {
 		removing: data?.removing ?? [],
 		stackName: data?.stack_name ?? "",
 		stackNameSuffix: data?.stack_name_suffix ?? "",
+		/** When the Atom's status was last read, ms since epoch. */
+		checkedAt: dataUpdatedAt,
 		isLoading,
 		error,
 		refetch,
