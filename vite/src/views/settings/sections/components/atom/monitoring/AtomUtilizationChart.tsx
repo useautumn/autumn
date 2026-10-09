@@ -5,7 +5,7 @@ import type {
 	AtomMetricsChartData,
 	AtomMetricsSeries,
 } from "./atomMetricsChartData";
-import { formatMetricsTimestamp, formatPercent } from "./atomMetricsFormat";
+import { formatPercent } from "./atomMetricsFormat";
 import { MonitoringChartCard } from "./MonitoringChartCard";
 import { MonitoringLegend } from "./MonitoringLegend";
 import { MonitoringPlot } from "./MonitoringPlot";
@@ -37,14 +37,7 @@ export const AtomUtilizationChart = ({
 			]
 				.filter(Boolean)
 				.join(", ")}
-			aside={
-				latest && (
-					<>
-						<span className="size-1.5 rounded-full bg-green-500" />
-						{formatMetricsTimestamp(latest.at)}
-					</>
-				)
-			}
+			readingAt={latest?.at}
 			summary={
 				<MonitoringLegend
 					series={SERIES}

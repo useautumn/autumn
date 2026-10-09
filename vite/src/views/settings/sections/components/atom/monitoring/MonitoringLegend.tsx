@@ -1,5 +1,8 @@
 import { StatusChip } from "@autumn/ui";
-import type { AtomMetricsRow, AtomMetricsSeries } from "./atomMetricsChartData";
+import type {
+	AtomMetricsSeries,
+	AtomMetricsValues,
+} from "./atomMetricsChartData";
 
 /** Each series' colour and name beside its latest reading. */
 export const MonitoringLegend = ({
@@ -8,7 +11,7 @@ export const MonitoringLegend = ({
 	formatValue,
 }: {
 	series: AtomMetricsSeries[];
-	latest: AtomMetricsRow | undefined;
+	latest: Partial<AtomMetricsValues> | null | undefined;
 	formatValue: (value: number | null) => string;
 }) => (
 	<div className="flex flex-wrap items-center gap-1.5">
