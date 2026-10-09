@@ -81,8 +81,9 @@ const read = spyOn(shadowAtomConfigStore, "readFromSource").mockImplementation(
 	async () => structuredClone(stored),
 );
 const metrics = spyOn(atomMetricsModule, "queryAtomMetrics").mockResolvedValue({
-	bucket_seconds: 60,
+	period_seconds: 10,
 	points: [],
+	latest: null,
 });
 
 beforeEach(() => {
