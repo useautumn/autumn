@@ -93,6 +93,30 @@ test.skipIf(!testDatabaseUrl)(
 				duration_ms: 60_000,
 			})}`;
 
+			// A grep run only ran some of a file's tests, so it never counts as a whole-file result.
+			await client`insert into runs ${client({
+				id: "run_grep",
+				branch: "dev",
+				sha: SHA2,
+				selection: JSON.stringify({
+					files: ["unit/broken.test.ts"],
+					grep: "one case",
+				}),
+				status: "passed",
+				created_by: "u",
+				via: "session",
+				finished_at: new Date().toISOString(),
+			})}`;
+			await client`insert into test_results ${client({
+				id: "tr_grep",
+				run_id: "run_grep",
+				branch: "dev",
+				sha: SHA2,
+				file: "unit/broken.test.ts",
+				status: "passed",
+				duration_ms: 1_000,
+			})}`;
+
 			await ingestResults({
 				ctx,
 				body: ciUpload(SHA1, "gh-1-1", {
@@ -158,6 +182,26 @@ test.skipIf(!testDatabaseUrl)(
 				["unit/broken.test.ts", "ci", 2, 0],
 				["unit/flaky.test.ts", "ci", 2, 0.5],
 				["unit/ok.test.ts", "ci", 2, 1],
+			]);
+
+			// A corrected re-post that drops a file's only result drops its CI baseline too.
+			await ingestResults({
+				ctx,
+				body: ciUpload(SHA1, "gh-1-1", {
+					"tests/unit/ok.test.ts": "passed",
+					"tests/unit/broken.test.ts": "failed",
+				}),
+			});
+			await ingestResults({
+				ctx,
+				body: ciUpload(SHA2, "gh-2-1", { "tests/unit/ok.test.ts": "passed" }),
+			});
+			const remaining = await client<
+				{ file: string }[]
+			>`select file from file_baselines where source = 'ci' order by file`;
+			expect(remaining.map((b) => b.file)).toEqual([
+				"unit/broken.test.ts",
+				"unit/ok.test.ts",
 			]);
 
 			// CI timings never steer swarm scheduling or ETA, and CI rows never become profiles.

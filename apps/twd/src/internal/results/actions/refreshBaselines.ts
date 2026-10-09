@@ -9,7 +9,7 @@ const CI_WINDOW_DAYS = 30;
 
 /**
  * Recompute file_baselines from the final attempt of each file in the last 10 finished baseline runs.
- * Files no baseline run covers fall back to their last 10 dev CI shas (source=ci).
+ * Files no baseline run covers fall back to their last 10 dev CI shas (source=ci); CI rows that lose them are dropped.
  */
 export const refreshBaselines = async ({
 	ctx,
@@ -49,6 +49,11 @@ export const refreshBaselines = async ({
 			select file, status, duration_ms, 'swarm' as source from swarm
 			union all
 			select file, status, duration_ms, 'ci' as source from ci
+		),
+		pruned as (
+			delete from file_baselines
+			where source = 'ci'
+				and file not in (select file from final where status <> 'skipped')
 		)
 		insert into file_baselines (file, p50_ms, p90_ms, pass_rate, samples, source, updated_at)
 		select

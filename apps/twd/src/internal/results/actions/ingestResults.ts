@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { testResults } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type {
@@ -35,6 +35,7 @@ export const ingestResults = async ({
 	}));
 
 	await ctx.db.transaction(async (tx) => {
+		await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${runId}))`);
 		await tx.delete(testResults).where(eq(testResults.runId, runId));
 		for (let i = 0; i < rows.length; i += INSERT_CHUNK)
 			await tx.insert(testResults).values(rows.slice(i, i + INSERT_CHUNK));

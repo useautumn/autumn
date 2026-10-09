@@ -16,7 +16,7 @@ type DevRow = {
 	created_at: Date | string;
 };
 
-/** Per file: passed / failing / flaky / no_data on dev, judged by the final attempt of its latest `limit` dev results (swarm and CI). */
+/** Per file: passed / failing / flaky / no_data on dev, from the final attempt of its latest `limit` whole-file dev results (swarm and CI; grep runs excluded). */
 export const getDevStatus = async ({
 	ctx,
 	files,
@@ -31,8 +31,12 @@ export const getDevStatus = async ({
 		with final as (
 			select distinct on (run_id, file, coalesce(repetition, 0))
 				file, run_id, sha, status, attempt, source, created_at
-			from test_results
+			from test_results t
 			where branch = ${BASELINE_BRANCH}
+				and not exists (
+					select 1 from runs r
+					where r.id = t.run_id and coalesce(r.selection->>'grep', '') <> ''
+				)
 				and file in (${sql.join(
 					ids.map((id) => sql`${id}`),
 					sql`, `,
