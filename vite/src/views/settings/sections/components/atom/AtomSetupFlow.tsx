@@ -95,7 +95,6 @@ export const AtomSetupFlow = ({
 				<AtomVerifySection
 					cache={cache}
 					state={states.verify}
-					revealToken={actions.revealToken}
 					onDelete={() => askToDelete(ATOM_DELETE_PROMPTS.delete)}
 				/>
 			) : (

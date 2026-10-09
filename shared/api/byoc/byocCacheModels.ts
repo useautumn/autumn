@@ -69,9 +69,6 @@ export const ApiByocCacheSchema = z.object({
 		.string()
 		.nullable()
 		.describe("Why the deploy or teardown stopped, once it has."),
-	token_revealed: z
-		.boolean()
-		.describe("Whether the dashboard already handed the token over."),
 });
 
 const OFFERED_MACHINES = BYOC_CACHE_MACHINES.map(
@@ -130,7 +127,7 @@ export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 		),
 	token: z
 		.string()
-		.describe("Sent as `x-atom-token` on every request to Atom."),
+		.describe("Sent as `x-atom-token` on Autumn's pushes to Atom."),
 });
 
 export const GetByocCacheParamsSchema = z.object({});
@@ -146,16 +143,6 @@ export const DeleteByocCacheParamsSchema = z.object({});
 
 export const RetryByocCacheParamsSchema = z.object({});
 
-export const RevealByocCacheTokenParamsSchema = z.object({});
-
-export const RevealByocCacheTokenResponseSchema = z.object({
-	token: z
-		.string()
-		.describe(
-			"Sent as `x-atom-token` on every request to Atom. Handed over once.",
-		),
-});
-
 export type ApiByocCache = z.infer<typeof ApiByocCacheSchema>;
 export type CreateByocCacheResponse = z.infer<
 	typeof CreateByocCacheResponseSchema
@@ -163,6 +150,3 @@ export type CreateByocCacheResponse = z.infer<
 export type GetByocCacheResponse = z.infer<typeof GetByocCacheResponseSchema>;
 export type CreateByocCacheParams = z.infer<typeof CreateByocCacheParamsSchema>;
 export type ResizeByocCacheParams = z.infer<typeof ResizeByocCacheParamsSchema>;
-export type RevealByocCacheTokenResponse = z.infer<
-	typeof RevealByocCacheTokenResponseSchema
->;

@@ -40,7 +40,7 @@ export type ByocCacheStageStatus =
 
 export type ByocCacheStages = Record<ByocCacheStage, ByocCacheStageStatus>;
 
-/** An existing VPC keeps Atom private to it; a new VPC serves it over the internet with its token. */
+/** An existing VPC keeps Atom private to it; a new VPC serves it over the internet to the org's secret keys. */
 export type ByocCacheNetwork =
 	| { type: "existing_vpc"; vpc_id: string; subnet_ids: string[] }
 	| { type: "new_vpc" };
@@ -66,8 +66,6 @@ export type ByocCacheDeployment = {
 	stages?: ByocCacheStages;
 	/** Why the deploy or teardown stopped, in alien's words. */
 	error?: string | null;
-	/** When the dashboard handed the token over; it is only ever handed over once. */
-	token_revealed_at?: number | null;
 };
 
 /** One env's infra in the org's own cloud; each env has its own column. */

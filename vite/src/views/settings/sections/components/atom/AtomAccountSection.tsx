@@ -12,7 +12,8 @@ const VPC_OPTIONS = [
 
 const VPC_HINTS: Record<AtomSetupValues["vpc"], string> = {
 	existing_vpc: "Your app reaches Atom privately from inside this VPC.",
-	new_vpc: "Your app reaches Atom over the internet with its URL and token.",
+	new_vpc:
+		"Your app reaches Atom over the internet with its URL and your secret key.",
 };
 
 const VPC_SUMMARIES: Record<AtomSetupValues["vpc"], string> = {

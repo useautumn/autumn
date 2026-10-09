@@ -4,7 +4,6 @@ import type {
 	CreateByocCacheParams,
 	CreateByocCacheResponse,
 	GetByocCacheResponse,
-	RevealByocCacheTokenResponse,
 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtomQueryKey } from "@/hooks/queries/useAtomQuery";
@@ -65,12 +64,6 @@ export const useAtomActions = () => {
 		onSuccess: refetchCache,
 	});
 
-	const revealToken = useMutation({
-		mutationFn: () =>
-			postAtom<RevealByocCacheTokenResponse>("reveal_atom_token"),
-		onSuccess: refetchCache,
-	});
-
 	/** Creates the setup, then opens its AWS link in a new tab; with no link to open (local dev) the tab closes again. */
 	const startSetup = async (params: CreateByocCacheParams): Promise<void> => {
 		const setupTab = openSetupTab();
@@ -84,7 +77,7 @@ export const useAtomActions = () => {
 		}
 	};
 
-	return { create, resize, retry, remove, revealToken, startSetup };
+	return { create, resize, retry, remove, startSetup };
 };
 
 export type AtomActions = ReturnType<typeof useAtomActions>;
