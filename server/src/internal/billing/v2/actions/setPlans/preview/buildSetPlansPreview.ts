@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
-import { isCustomerProductOnOtherSubscription } from "../utils/isCustomerProductOnOtherSubscription";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
 import { currentSubscriptionTerms } from "./currentSubscriptionTerms";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
@@ -32,8 +31,6 @@ export const buildSetPlansPreview = async ({
 		timeline,
 		schedulePlan: { phases, immediatePhaseTransition, customerProductChanges },
 	} = result;
-	// Stripe invoices each subscription on its own, so next_cycle covers only the one this request bills.
-	const stripeSubscriptionId = billingContext.stripeSubscription?.id;
 
 	const [
 		attachPreview,
@@ -46,13 +43,7 @@ export const buildSetPlansPreview = async ({
 			ctx,
 			billingContext,
 			billingPlan,
-			nextCycleCustomerProductFilter: stripeSubscriptionId
-				? (customerProduct) =>
-						!isCustomerProductOnOtherSubscription({
-							customerProduct,
-							stripeSubscriptionId,
-						})
-				: undefined,
+			nextCycleStripeSubscriptionId: billingContext.stripeSubscription?.id,
 		}),
 		buildStripePriceLookup({
 			ctx,

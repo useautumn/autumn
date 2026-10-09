@@ -180,7 +180,10 @@ export const createCustomerListColumns = (): ColumnDef<
 			if (!email) return null;
 			return (
 				<div className="truncate">
-					<MiniCopyButton text={email} />
+					<MiniCopyButton
+						text={email}
+						innerClassName="text-sm text-tertiary-foreground"
+					/>
 				</div>
 			);
 		},

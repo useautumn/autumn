@@ -1,7 +1,6 @@
 import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
 import {
-	isCustomerProductOnStripeSubscription,
-	isCustomerProductOnStripeSubscriptionSchedule,
+	isCustomerProductInStripeSubscriptionScope,
 	isCustomerProductUnlinkedFree,
 } from "../classifyCustomerProduct/classifyCustomerProduct";
 
@@ -18,14 +17,9 @@ export const filterCustomerProductsByStripeSubscriptionScope = ({
 }): FullCusProduct[] =>
 	customerProducts.filter(
 		(customerProduct) =>
-			(stripeSubscriptionId &&
-				isCustomerProductOnStripeSubscription({
-					customerProduct,
-					stripeSubscriptionId,
-				})) ||
-			isCustomerProductOnStripeSubscriptionSchedule({
+			isCustomerProductInStripeSubscriptionScope({
 				customerProduct,
-				stripeSubscriptionScheduleId: stripeScheduleId ?? undefined,
-			}) ||
-			isCustomerProductUnlinkedFree(customerProduct),
+				stripeSubscriptionId,
+				stripeSubscriptionScheduleId: stripeScheduleId,
+			}) || isCustomerProductUnlinkedFree(customerProduct),
 	);
