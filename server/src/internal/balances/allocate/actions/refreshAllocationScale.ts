@@ -9,8 +9,10 @@ import {
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	readAllocationCounters,
@@ -146,7 +148,8 @@ const refitAllocations = async ({
 	return { next, changed, dirty, counterPatches };
 };
 
-/** Flushing first is only safe when the caller hasn't just written balances to Postgres itself. */
+/** Flushing first is only safe when the caller hasn't just written balances to Postgres itself.
+ *  A routed customer's worker lands its writes either way, and its resets are the worker's, never this read's. */
 const loadFreshSubject = async ({
 	ctx,
 	customerId,
@@ -156,6 +159,7 @@ const loadFreshSubject = async ({
 	customerId: string;
 	flushBalances: boolean;
 }) => {
+	const routed = isBalanceWorkerRolloutEnabled({ ctx, customerId });
 	if (flushBalances)
 		await invalidateCachedFullSubject({
 			ctx,
@@ -163,7 +167,13 @@ const loadFreshSubject = async ({
 			source: "refreshAllocationScale",
 			flushBalances: true,
 		});
-	return getFullSubject({ ctx, customerId, readFrom: "primary" });
+	else if (routed) await flushBalanceWorkerCustomer({ ctx, customerId });
+	return getFullSubject({
+		ctx,
+		customerId,
+		readFrom: "primary",
+		runLazyResets: !routed,
+	});
 };
 
 export type AllocationRefresh = {

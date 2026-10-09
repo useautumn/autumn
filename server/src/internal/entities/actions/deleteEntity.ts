@@ -7,6 +7,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { releaseEntityAllocations } from "@/internal/balances/allocate/actions/refreshAllocationScale";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -16,6 +17,7 @@ import {
 	replaceEntityInCusEnt,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled";
 import { cancelSubsForEntity } from "./deleteEntity/cancelEntitySubscriptions";
 
 export const deleteEntity = async ({
@@ -32,6 +34,9 @@ export const deleteEntity = async ({
 
 	const { db, org, env, features, logger } = ctx;
 
+	// The entities map is rewritten whole from this read, so the worker's writes must be in Postgres first.
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId }))
+		await flushBalanceWorkerCustomer({ ctx, customerId });
 	const fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,

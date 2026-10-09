@@ -1,7 +1,7 @@
 import { allStored } from "../pendingMutations.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
 
-/** Drops the customer's resident rows; a subject pinned by an in-flight commit goes when that commit releases it. */
+/** Drops the customer's resident rows; a subject pinned by an unapplied write goes once the store has it. */
 export async function evict({
 	scope,
 	customerKey,

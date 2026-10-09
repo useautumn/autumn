@@ -1,6 +1,7 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -93,6 +94,7 @@ export type PartitionRuntimeDependencies = {
 	/** Where the partition's writer publishes its commit position. */
 	commitPositions?: CommitPositionSink;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 };
 

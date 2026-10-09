@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { refreshAllocationScaleAfterWrite } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -65,13 +66,17 @@ const deleteBalanceRows = async ({
 	}
 
 	// The worker holds no expired grant, and only the dashboard deletes one.
-	if (
-		isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }) &&
-		!includeExpired
-	) {
+	const routed = isBalanceWorkerRolloutEnabled({
+		ctx,
+		customerId: customer_id,
+	});
+	if (routed && !includeExpired) {
 		await runBalanceWorkerDeleteBalance({ ctx, params });
 		return;
 	}
+	// Recalculated usage is read from these rows, so the worker's writes must be in Postgres first.
+	if (routed)
+		await flushBalanceWorkerCustomer({ ctx, customerId: customer_id });
 
 	// 1. Get full customer
 	const fullCustomer = await CusService.getFull({

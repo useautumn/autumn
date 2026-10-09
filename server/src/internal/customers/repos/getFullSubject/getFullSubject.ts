@@ -209,6 +209,7 @@ export async function getFullSubject({
 	entityId,
 	inStatuses = RELEVANT_STATUSES,
 	allowMissingEntity = false,
+	runLazyResets = true,
 	readFrom = "primary",
 	routeSource,
 	useDelayedPostgresBackupRead = false,
@@ -218,6 +219,7 @@ export async function getFullSubject({
 	entityId?: string;
 	inStatuses?: CusProductStatus[];
 	allowMissingEntity?: boolean;
+	runLazyResets?: boolean;
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
 	useDelayedPostgresBackupRead?: boolean;
@@ -248,6 +250,7 @@ export async function getFullSubject({
 		markReplicaSourced(fullSubject);
 		return fullSubject;
 	}
+	if (!runLazyResets) return fullSubject;
 
 	await lazyResetSubjectEntitlements({ ctx, fullSubject });
 	await lazyResetSubjectUsageWindows({ ctx, fullSubject });

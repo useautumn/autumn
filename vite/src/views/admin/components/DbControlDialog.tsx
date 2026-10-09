@@ -52,7 +52,7 @@ export function DbControlDialog({
 				>
 					{(config) => (
 						<DbControlConfigForm
-							key={String(config.balanceCommitter.concurrency)}
+							key={JSON.stringify(config.balanceCommitter)}
 							config={config}
 							onClose={() => onOpenChange(false)}
 						/>
