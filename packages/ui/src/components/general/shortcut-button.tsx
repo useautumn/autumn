@@ -1,5 +1,5 @@
 import { Button, type ButtonProps } from "@autumn/ui/components/ui/button";
-import { cn } from "@autumn/ui/lib/utils";
+import { cn, getMetaKey } from "@autumn/ui/lib/utils";
 import { useHotkeys } from "react-hotkeys-hook";
 
 export const ShortcutButton = ({
@@ -16,13 +16,6 @@ export const ShortcutButton = ({
 	isLoading?: boolean;
 	variant?: "primary" | "secondary";
 } & ButtonProps) => {
-	const getMetaKey = () => {
-		if (navigator.userAgent.includes("Mac")) {
-			return "⌘";
-		}
-		return "Ctrl";
-	};
-
 	useHotkeys(
 		metaShortcut
 			? [`mod+${metaShortcut}`]
