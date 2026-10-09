@@ -50,6 +50,9 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 		if (row.state === "deleted" || row.appliedVersion >= row.requestVersion)
 			return;
 		const version = row.requestVersion;
+		// A fresh-DB replacement that hasn't been adopted yet; dropped on any failure.
+		let unadoptedBranchId: string | null = null;
+		let buildId: string | null = null;
 
 		try {
 			let branchId = row.neonBranchId;
@@ -67,6 +70,15 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 					name: `qa-${name}-${Date.now()}`,
 					expiresAt: row.expiresAt,
 				});
+				if (replacedBranchId) {
+					unadoptedBranchId = branchId;
+					// The live build keeps serving the old database until adoption, so it lives as long as the env.
+					await extendNeonBranch({
+						ctx,
+						branchId: replacedBranchId,
+						expiresAt: row.expiresAt,
+					});
+				}
 				// A first branch is the env's own from the start; a fresh-DB replacement waits for adoption.
 				if (!replacedBranchId)
 					await updateLiveRow({ ctx, name, set: { neonBranchId: branchId } });
@@ -79,7 +91,7 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 			) as Record<string, string>;
 			const DATABASE_URL = await neonConnectionUrl({ ctx, branchId });
 			assertLive();
-			const { buildId } = await qaWorker.begin({
+			({ buildId } = await qaWorker.begin({
 				ctx,
 				name,
 				input: {
@@ -88,7 +100,7 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 					neonBranchId: branchId,
 					runtimeEnv: { ...secrets, DATABASE_URL },
 				},
-			});
+			}));
 			const tarball = await archiveSourceAtSha({ sha: row.sha });
 			const upload = await qaWorker.uploadSource({
 				ctx,
@@ -120,15 +132,10 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 			}
 			const result =
 				status.lastBuild?.buildId === buildId ? status.lastBuild : undefined;
-			if (!result?.ok) {
-				// The old database stays: the live build still uses it.
-				if (replacedBranchId) await deleteNeonBranch({ ctx, branchId });
+			if (!result?.ok)
 				throw new Error(result?.log?.slice(-2000) ?? "build timed out");
-			}
 
-			// Adopted: the Worker now serves this build on branchId, so the replaced database can go.
-			if (replacedBranchId)
-				await deleteNeonBranch({ ctx, branchId: replacedBranchId });
+			unadoptedBranchId = null;
 			await updateLiveRow({
 				ctx,
 				name,
@@ -139,6 +146,16 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 					appliedVersion: version,
 				},
 			});
+			// Adopted and saved: the replaced database is unused now; a failed delete only leaks until Neon expires it.
+			if (replacedBranchId)
+				await deleteNeonBranch({ ctx, branchId: replacedBranchId }).catch(
+					(error: unknown) =>
+						ctx.logger.warn("replaced qa branch delete failed", {
+							name,
+							branchId: replacedBranchId,
+							error: String(error),
+						}),
+				);
 			// Consume this request's options unless a newer request replaced them meanwhile.
 			await ctx.db
 				.update(qaEnvs)
@@ -153,6 +170,18 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 						}),
 				);
 		} catch (error) {
+			// The old build and database stay live; stop the replacement from being adopted, then drop its database.
+			const cancelled = buildId
+				? await qaWorker.cancelBuild({ ctx, name, buildId }).then(
+						() => true,
+						() => false,
+					)
+				: true;
+			// An unconfirmed cancel could still adopt this database later; Neon's expiry cleans it up instead.
+			if (unadoptedBranchId && cancelled)
+				await deleteNeonBranch({ ctx, branchId: unadoptedBranchId }).catch(
+					() => undefined,
+				);
 			const message = error instanceof Error ? error.message : String(error);
 			const current = await requireQaEnvRow({ ctx, name });
 			// A newer request already arrived: build that instead of failing the env.
