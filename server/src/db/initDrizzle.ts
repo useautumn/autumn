@@ -69,6 +69,7 @@ export const initDrizzle = ({
 	const client = new pg.Pool({
 		connectionString: dbUrl,
 		keepAlive: true,
+		keepAliveInitialDelayMillis: 60_000,
 		idleTimeoutMillis: 30_000,
 		...poolConfig,
 		max: maxConnections,
