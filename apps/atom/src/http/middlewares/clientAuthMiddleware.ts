@@ -10,7 +10,7 @@ import {
 const BEARER = /^Bearer (.+)$/;
 
 /** An org's own Atom opens a check to the org's secret key; a multi-tenant one, or a call sending the Atom token, goes by the token. */
-export function checkAuthMiddleware({
+export function clientAuthMiddleware({
 	ctx,
 }: {
 	ctx: AtomHttpContext;
