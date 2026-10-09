@@ -1,8 +1,4 @@
-import type {
-	BillingContext,
-	BillingPlan,
-	FullCusProduct,
-} from "@autumn/shared";
+import type { BillingContext, BillingPlan } from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
 	billingContextResetsUsage,
@@ -83,13 +79,13 @@ export const billingPlanToPreviewResponse = async ({
 	ctx,
 	billingContext,
 	billingPlan,
-	nextCycleCustomerProductFilter,
+	nextCycleStripeSubscriptionId,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-	/** Scope next_cycle to a subset of products (e.g. one subscription's). */
-	nextCycleCustomerProductFilter?: (customerProduct: FullCusProduct) => boolean;
+	/** Scope next_cycle to the plans this Stripe subscription's next invoice bills. */
+	nextCycleStripeSubscriptionId?: string;
 }): Promise<BillingPreviewResponse & { credit_applied: number }> => {
 	const { fullCustomer } = billingContext;
 
@@ -120,7 +116,7 @@ export const billingPlanToPreviewResponse = async ({
 			ctx,
 			billingContext,
 			billingPlan,
-			customerProductFilter: nextCycleCustomerProductFilter,
+			nextCycleStripeSubscriptionId,
 		});
 
 	const nextCycle = await applyNextCycleTaxPreview({
