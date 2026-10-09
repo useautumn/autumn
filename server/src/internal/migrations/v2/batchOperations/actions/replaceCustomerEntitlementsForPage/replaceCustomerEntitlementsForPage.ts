@@ -6,6 +6,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { CustomerEntitlementPatch } from "@/internal/billing/v2/actions/batchTransition/types/entitlementPriceOperationTypes.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationRemovedItem,
@@ -73,6 +74,7 @@ const toInsertedItem = ({
  */
 export const replaceCustomerEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	features,
 	scope,
 	internalCustomerIds,
@@ -84,6 +86,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 	patchGroupConcurrency = BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -103,6 +106,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
+		recordChanges,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
 			transaction,

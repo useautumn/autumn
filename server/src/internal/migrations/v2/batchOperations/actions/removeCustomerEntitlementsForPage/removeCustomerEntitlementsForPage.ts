@@ -9,6 +9,7 @@ import {
 } from "@/internal/migrations/v2/batchOperations/execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { BatchMigrationExecutionRemove } from "@/internal/migrations/v2/batchOperations/types/index.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { toRemovedItem } from "../utils/toRemovedItem.js";
 import { deleteCustomerEntitlementRows } from "./deleteCustomerEntitlementRows.js";
 import { selectRemoveCandidateRows } from "./selectRemoveCandidateRows.js";
@@ -23,6 +24,7 @@ export type RemoveCustomerEntitlementsForPageResult = {
  * customer products never balloons a statement or a transaction. */
 export const removeCustomerEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	features,
 	scope,
 	internalCustomerIds,
@@ -32,6 +34,7 @@ export const removeCustomerEntitlementsForPage = async ({
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -44,6 +47,7 @@ export const removeCustomerEntitlementsForPage = async ({
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
+		recordChanges,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
 			transaction,
@@ -67,7 +71,7 @@ export const removeCustomerEntitlementsForPage = async ({
 					}),
 			});
 			if (candidates.length === 0)
-				return { rows: candidates, result: pageRemovedItems };
+				return { rows: candidates, result: { removedItems: pageRemovedItems } };
 			assertWithinCeiling(candidates.length);
 
 			const deletedIds = await timePhase({
@@ -96,10 +100,10 @@ export const removeCustomerEntitlementsForPage = async ({
 					}),
 				);
 			}
-			return { rows: candidates, result: pageRemovedItems };
+			return { rows: candidates, result: { removedItems: pageRemovedItems } };
 		},
 		onCommit: (result) => {
-			removedItems.push(...result);
+			removedItems.push(...result.removedItems);
 		},
 	});
 

@@ -1,5 +1,6 @@
 import type { Feature } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { RecordBatchMigrationChanges } from "../execute/types/batchMigrationChanges.js";
 import type { BatchMigrationPagePhases } from "../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../scope/operationScope.js";
 import type { BatchMigrationExecutionLicenseOp } from "../types/batchMigrationExecutionPlan.js";
@@ -14,6 +15,7 @@ import { repointLicensePoolForPage } from "./repointLicensePoolForPage/repointLi
  * minted link before any candidate select reads it. */
 export const runLicenseEntitlementOp = async ({
 	db,
+	recordChanges,
 	features,
 	scope,
 	internalCustomerIds,
@@ -23,6 +25,7 @@ export const runLicenseEntitlementOp = async ({
 	candidateRowBatchSize,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -35,6 +38,7 @@ export const runLicenseEntitlementOp = async ({
 		case "repoint_license_pool":
 			return repointLicensePoolForPage({
 				db,
+				recordChanges,
 				scope,
 				internalCustomerIds,
 				operation,
@@ -44,6 +48,7 @@ export const runLicenseEntitlementOp = async ({
 		case "remove_license_entitlement":
 			return removeLicenseEntitlementsForPage({
 				db,
+				recordChanges,
 				features,
 				scope,
 				internalCustomerIds,
@@ -54,6 +59,7 @@ export const runLicenseEntitlementOp = async ({
 		case "replace_license_entitlement":
 			return replaceLicenseEntitlementsForPage({
 				db,
+				recordChanges,
 				features,
 				scope,
 				internalCustomerIds,
@@ -66,6 +72,7 @@ export const runLicenseEntitlementOp = async ({
 		case "add_license_entitlement":
 			return addLicenseEntitlementsForPage({
 				db,
+				recordChanges,
 				scope,
 				internalCustomerIds,
 				operation,

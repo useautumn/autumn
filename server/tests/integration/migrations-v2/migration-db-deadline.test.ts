@@ -168,7 +168,7 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 
 	test("a retried batch publishes each committed result exactly once", async () => {
 		const table = "migration_deadline_batches";
-		const published: number[] = [];
+		const published: string[] = [];
 		const attemptsByBatch = new Map<number, number>();
 		await withScratchTable({
 			table,
@@ -180,10 +180,12 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 					run: async ({ page }) => {
 						await iterateCustomerProductPages({
 							db: page.db,
+							recordChanges: async () => {},
 							pageSize: 1,
 							executePage: async ({ transaction, afterCustomerProductId }) => {
 								const batch = Number(afterCustomerProductId ?? 0) + 1;
-								if (batch > 3) return { rows: [], result: [] };
+								if (batch > 3)
+									return { rows: [], result: { repointedPoolCustomerIds: [] } };
 								const attempt = (attemptsByBatch.get(batch) ?? 0) + 1;
 								attemptsByBatch.set(batch, attempt);
 								await transaction.execute(
@@ -193,16 +195,17 @@ describe.skipIf(!databaseUrl)("migration query deadline", () => {
 									await transaction.execute(sql`select pg_sleep(0.3)`);
 								return {
 									rows: [{ customerProductId: String(batch) }],
-									result: [batch],
+									result: { repointedPoolCustomerIds: [String(batch)] },
 								};
 							},
-							onCommit: (result) => published.push(...result),
+							onCommit: (result) =>
+								published.push(...(result.repointedPoolCustomerIds ?? [])),
 						});
 					},
 				}),
 		});
 		expect(attemptsByBatch.get(2)).toBe(2);
-		expect(published).toEqual([1, 2, 3]);
+		expect(published).toEqual(["1", "2", "3"]);
 	}, 5000);
 
 	test("a statement's deadline starts when it is sent, not while queued behind others", async () => {

@@ -101,6 +101,7 @@ test.concurrent(
 		// One row per batch: three customers → at least three select→insert
 		// loops, every batch boundary crossed.
 		const result = await addCustomerEntitlementsForPage({
+			recordChanges: async () => {},
 			db: ctx.db,
 			scope: patch.scope,
 			internalCustomerIds,
@@ -128,6 +129,7 @@ test.concurrent(
 
 		// Replay over the paginated path: dedup holds per batch — no inserts.
 		const replay = await addCustomerEntitlementsForPage({
+			recordChanges: async () => {},
 			db: ctx.db,
 			scope: patch.scope,
 			internalCustomerIds,

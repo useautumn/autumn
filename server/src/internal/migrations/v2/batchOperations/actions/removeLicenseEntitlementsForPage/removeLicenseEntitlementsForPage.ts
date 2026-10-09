@@ -1,6 +1,7 @@
 import type { Feature } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "../../execute/utils/batchMigrationExecutionConstants.js";
 import {
 	type BatchMigrationPagePhases,
@@ -17,6 +18,7 @@ export type RemoveLicenseEntitlementsForPageResult = LicenseOpPageResult & {
 
 export const removeLicenseEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	features,
 	scope,
 	internalCustomerIds,
@@ -24,6 +26,7 @@ export const removeLicenseEntitlementsForPage = async ({
 	phases,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -36,15 +39,21 @@ export const removeLicenseEntitlementsForPage = async ({
 		run: () =>
 			withStatementTimeout(
 				db,
-				(transaction) =>
-					removeLicenseEntitlementRows({
+				async (transaction) => {
+					const removed = await removeLicenseEntitlementRows({
 						db: transaction,
 						internalCustomerIds,
 						scope,
 						filter: operation.filter,
 						licensePlanId: operation.licensePlanId,
 						features,
-					}),
+					});
+					await recordChanges({
+						db: transaction,
+						changes: { removedItems: removed.removedItems },
+					});
+					return removed;
+				},
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				{ forceCustomPlan: true },
 			),

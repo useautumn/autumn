@@ -10,6 +10,7 @@ import {
 } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
 import type { CustomerEntitlementPatch } from "@/internal/billing/v2/actions/batchTransition/types/entitlementPriceOperationTypes.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationRemovedItem,
@@ -120,6 +121,7 @@ const toRemovedItem = ({
  */
 export const replaceLicenseEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	features,
 	scope,
 	internalCustomerIds,
@@ -130,6 +132,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 	maxDistinctEntitlements,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -181,6 +184,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 
 	await iterateCustomerProductPages({
 		db,
+		recordChanges,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
 			transaction,

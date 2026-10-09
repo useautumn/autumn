@@ -18,6 +18,7 @@ import {
 	enrichCustomerEntitlementCycles,
 } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 import { generateId } from "@/utils/genUtils.js";
+import type { RecordBatchMigrationChanges } from "../../execute/types/batchMigrationChanges.js";
 import { insertCustomerEntitlementRows } from "./insertCustomerEntitlementRows.js";
 import { selectAddCandidateRows } from "./selectAddCandidateRows.js";
 
@@ -44,6 +45,7 @@ export type AddCustomerEntitlementsForPageResult = {
  */
 export const addCustomerEntitlementsForPage = async ({
 	db,
+	recordChanges,
 	scope,
 	internalCustomerIds,
 	fromProduct,
@@ -53,6 +55,7 @@ export const addCustomerEntitlementsForPage = async ({
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
+	recordChanges: RecordBatchMigrationChanges;
 	/** The patch's lowered row-level scope. */
 	scope: OperationScope;
 	internalCustomerIds: string[];
@@ -70,6 +73,7 @@ export const addCustomerEntitlementsForPage = async ({
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
+		recordChanges,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
 			transaction,
