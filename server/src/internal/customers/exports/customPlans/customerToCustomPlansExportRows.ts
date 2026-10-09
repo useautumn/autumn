@@ -17,6 +17,7 @@ import {
 	failedCustomerToCustomPlansExportRow,
 	isCustomerProductInExportScope,
 } from "./customPlansExportRow.js";
+import { rederiveFlipsAgainstFreshCatalog } from "./rederiveFlipsAgainstFreshCatalog.js";
 
 /** Every plan must reach the file, so the org's customer-product page size is lifted. */
 const CUSTOM_PLANS_EXPORT_CUS_PRODUCT_LIMIT = 10_000;
@@ -68,11 +69,14 @@ export const customerToCustomPlansExportRows = async ({
 			),
 		);
 
+		const confirmed = snapshot.apply
+			? await rederiveFlipsAgainstFreshCatalog({ ctx, derived })
+			: derived;
 		const applied = snapshot.apply
-			? await applyIsCustomFlips({ ctx, scalar, derived })
+			? await applyIsCustomFlips({ ctx, scalar, derived: confirmed })
 			: null;
 
-		return derived.map(({ customerProduct, result }) =>
+		return confirmed.map(({ customerProduct, result }) =>
 			customerProductToCustomPlansExportRow({
 				scalar,
 				fullCustomer,

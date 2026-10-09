@@ -16,6 +16,7 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { isCustomerExportsS3Configured } from "@/external/aws/s3/customerExportsS3Config";
 import { CusService } from "@/internal/customers/CusService";
+import { loadBaseProduct } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index";
 import { downloadCustomerExport } from "@/internal/customers/exports/actions/downloadCustomerExport";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService";
@@ -209,6 +210,53 @@ test.concurrent(
 		expect(row?.isCustom).toBe(true);
 
 		expect(await write({ from: true, readUpdatedAt: 1 })).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("custom-plans export 4b: apply rechecks a flip against a fresh catalog read")}`,
+	async () => {
+		const { ctx, scalar, customerProduct } = await setupCustomer({
+			customerId: "custom-plans-export-stale-catalog",
+			customize: { items: [itemsV2.monthlyMessages({ included: 250 })] },
+		});
+		expect(customerProduct.is_custom).toBe(true);
+
+		// The run's cached catalog says 250, as if the version was edited in place mid-run.
+		const catalog = await loadBaseProduct({
+			ctx,
+			internalProductId: customerProduct.internal_product_id,
+		});
+		if (!catalog) throw new Error("Catalog version missing");
+		const staleCatalog = {
+			...catalog,
+			entitlements: catalog.entitlements.map((entitlement) => ({
+				...entitlement,
+				allowance: 250,
+			})),
+		};
+
+		const rows = await customerToCustomPlansExportRows({
+			ctx,
+			scalar,
+			snapshot: { search: "", filters: {}, apply: true },
+			baseProducts: new Map([
+				[customerProduct.internal_product_id, Promise.resolve(staleCatalog)],
+			]),
+		});
+
+		expect(rows).toEqual([
+			expect.objectContaining({
+				customer_product_id: customerProduct.id,
+				outcome: "customized",
+				applied: "false",
+			}),
+		]);
+		const [row] = await ctx.db
+			.select({ isCustom: customerProducts.is_custom })
+			.from(customerProducts)
+			.where(eq(customerProducts.id, customerProduct.id));
+		expect(row?.isCustom).toBe(true);
 	},
 );
 

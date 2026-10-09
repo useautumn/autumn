@@ -33,8 +33,6 @@ export const isCustomerProductInExportScope = ({
 	});
 };
 
-const formatBoolean = (value: boolean) => (value ? "true" : "false");
-
 export const customerProductToCustomPlansExportRow = ({
 	scalar,
 	fullCustomer,
@@ -63,7 +61,7 @@ export const customerProductToCustomPlansExportRow = ({
 	plan_id: customerProduct.product.id,
 	plan_version: String(customerProduct.product.version),
 	status: customerProduct.status,
-	applied: applied === null ? null : formatBoolean(applied),
+	applied: applied === null ? null : String(applied),
 	outcome: result.outcome,
 	reasons:
 		result.outcome === "customized"
