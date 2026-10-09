@@ -1,3 +1,5 @@
+import { ScrollBar, Skeleton } from "@autumn/ui";
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import {
 	type ReactNode,
 	useCallback,
@@ -19,18 +21,32 @@ import { SeriesNameHoverCard } from "./SeriesNameHoverCard";
 
 const HEADER_ROW =
 	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
-const SERIES_ROW =
-	"flex items-center h-11 border-b border-table-row-divider last:border-b-0";
 const TOTAL_ROW = "flex items-center h-11";
-/** Each column draws its slice of the raised surface; together they read as one. */
-const SURFACE_SLICE = "border-y border-table-surface-border bg-table-surface";
+// Overlay bars framed to the body rows (past the h-7 header, above the h-11 Total, between the pinned columns), shown on hover or scroll.
+const OVERLAY_BAR =
+	"z-30 opacity-0 transition-opacity data-[hovering]:opacity-100 data-[scrolling]:opacity-100";
+const VERTICAL_BAR = cn(OVERLAY_BAR, "mt-7 mb-11 h-auto w-2");
+const HORIZONTAL_BAR = cn(OVERLAY_BAR, "mr-[112px] mb-11 ml-[220px] h-2");
+/** Each cell draws its piece of the raised surface; together the rows read as one. */
+const SURFACE_CELL = "flex h-full items-center bg-table-surface";
 const PERIOD_CELL = "w-[88px] shrink-0 px-3 text-right tabular-nums";
-const PINNED_LEFT_SHADOW = "shadow-[6px_0_8px_-4px_rgba(0,0,0,0.18)]";
-const PINNED_RIGHT_SHADOW = "shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.18)]";
-const DASH = "—";
+const TOTAL_VALUE = "font-semibold text-foreground tabular-nums";
+// Opaque tray behind each pinned cell hides the numbers scrolling underneath.
+const PINNED_LEFT =
+	"sticky left-0 z-10 h-full w-[220px] shrink-0 bg-table-tray";
+const PINNED_RIGHT =
+	"sticky right-0 z-10 h-full w-[112px] shrink-0 bg-table-tray";
+// Negative spread keeps each cell's shadow inside its own row, so stacked rows read as one edge.
+const PINNED_LEFT_SHADOW = "shadow-[8px_0_8px_-8px_rgba(0,0,0,0.3)]";
+const PINNED_RIGHT_SHADOW = "shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.3)]";
+// Varied widths so the placeholder reads like real numbers, not a uniform grid.
+// The tray is near-white in light mode, so the bars need more than the default skeleton fill.
+const SKELETON_FILL = "bg-tertiary-foreground/15";
+const SKELETON_VALUE_WIDTHS = ["w-9", "w-7", "w-10", "w-8", "w-6"];
+const SKELETON_NAME_WIDTHS = ["w-28", "w-20", "w-24", "w-16"];
 
 interface TableCell {
-	text: string;
+	content: ReactNode;
 	title?: string;
 }
 
@@ -49,7 +65,7 @@ interface TableModel {
 	isPlaceholder: boolean;
 }
 
-/** The table's shape before any data arrives; every cell renders as a dash. */
+/** The table's shape before any data arrives; every cell renders as a skeleton bar. */
 export interface TablePlaceholder {
 	rowCount: number;
 	periodLabels: string[];
@@ -87,25 +103,64 @@ const SeriesName = ({ series }: { series: ChartSeriesConfig }) => {
 };
 
 const numberCell = (value: number): TableCell => ({
-	text: formatCompactNumber(value),
+	content: formatCompactNumber(value),
 	title: value.toLocaleString(),
 });
+
+const skeletonCell = ({ seed }: { seed: number }): TableCell => ({
+	content: (
+		<Skeleton
+			className={cn(
+				"inline-block h-3 rounded-sm align-middle",
+				SKELETON_FILL,
+				SKELETON_VALUE_WIDTHS[seed % SKELETON_VALUE_WIDTHS.length],
+			)}
+		/>
+	),
+});
+
+const skeletonRowCells = ({
+	periodCount,
+	rowIndex,
+}: {
+	periodCount: number;
+	rowIndex: number;
+}) =>
+	Array.from({ length: periodCount }, (_, index) =>
+		skeletonCell({ seed: index * 3 + rowIndex }),
+	);
 
 const placeholderToModel = ({
 	placeholder,
 }: {
 	placeholder: TablePlaceholder;
 }): TableModel => {
-	const dashes = placeholder.periodLabels.map(() => ({ text: DASH }));
+	const periodCount = placeholder.periodLabels.length;
 	return {
 		periodLabels: placeholder.periodLabels,
 		seriesRows: Array.from({ length: placeholder.rowCount }, (_, index) => ({
 			key: String(index),
-			name: <span className="text-placeholder">{DASH}</span>,
-			cells: dashes,
-			total: { text: DASH },
+			name: (
+				<>
+					<Skeleton
+						className={cn("size-2.5 shrink-0 rounded-[3px]", SKELETON_FILL)}
+					/>
+					<Skeleton
+						className={cn(
+							"h-3 rounded-sm",
+							SKELETON_FILL,
+							SKELETON_NAME_WIDTHS[index % SKELETON_NAME_WIDTHS.length],
+						)}
+					/>
+				</>
+			),
+			cells: skeletonRowCells({ periodCount, rowIndex: index }),
+			total: skeletonCell({ seed: index + 2 }),
 		})),
-		totalRow: { cells: dashes, total: { text: DASH } },
+		totalRow: {
+			cells: skeletonRowCells({ periodCount, rowIndex: placeholder.rowCount }),
+			total: skeletonCell({ seed: 2 }),
+		},
 		isPlaceholder: true,
 	};
 };
@@ -160,6 +215,24 @@ const chartDataToModel = ({
 		isPlaceholder: false,
 	};
 };
+
+/** Borders and corners for one row's piece of the raised surface. */
+const surfaceEdge = ({
+	isFirst,
+	isLast,
+}: {
+	isFirst: boolean;
+	isLast: boolean;
+}) => ({
+	border: cn(
+		isFirst && "border-t border-t-table-surface-border",
+		isLast
+			? "border-b border-b-table-surface-border"
+			: "border-b border-b-table-row-divider",
+	),
+	left: cn(isFirst && "rounded-tl-lg", isLast && "rounded-bl-lg"),
+	right: cn(isFirst && "rounded-tr-lg", isLast && "rounded-br-lg"),
+});
 
 /** Whether columns are scrolled out of view on either side of the pinned columns. */
 const useHiddenColumnEdges = ({ resetKey }: { resetKey: string }) => {
@@ -219,117 +292,133 @@ export const UsageBreakdownTable = ({
 
 	if (!model) return null;
 
-	const valueTone = model.isPlaceholder
-		? "text-placeholder"
-		: "text-muted-foreground";
-	const totalTone = model.isPlaceholder
-		? "text-placeholder"
-		: "font-semibold text-foreground tabular-nums";
+	const lastRowIndex = model.seriesRows.length - 1;
+	const pinnedLeft = cn(PINNED_LEFT, edges.left && PINNED_LEFT_SHADOW);
+	const pinnedRight = cn(PINNED_RIGHT, edges.right && PINNED_RIGHT_SHADOW);
 
 	return (
-		<div className={cn(TABLE_TRAY_CLASS, "flex overflow-hidden text-[13px]")}>
-			{/* Pinned name column: sits above the scroller so its shadow falls on the numbers. */}
-			<div
-				className={cn(
-					"relative z-10 w-[220px] shrink-0 bg-table-tray transition-shadow",
-					edges.left && PINNED_LEFT_SHADOW,
-				)}
-			>
-				<div className={cn(HEADER_ROW, "pl-4")}>{nameHeader}</div>
-				<div
-					className={cn(
-						SURFACE_SLICE,
-						"rounded-l-lg border-l border-r border-r-table-row-divider",
-					)}
+		<div
+			className={cn(
+				TABLE_TRAY_CLASS,
+				"flex min-h-0 flex-col overflow-hidden text-[13px]",
+			)}
+		>
+			{/* One scroller for both axes, so header, rows and Total move together sideways and only rows scroll down. */}
+			<ScrollAreaPrimitive.Root className="relative flex min-h-0 flex-col">
+				<ScrollAreaPrimitive.Viewport
+					ref={scrollRef}
+					onScroll={updateEdges}
+					className="min-h-0"
 				>
-					{model.seriesRows.map((row) => (
-						<div key={row.key} className={cn(SERIES_ROW, "gap-2.5 pl-4 pr-3")}>
-							{row.name}
-						</div>
-					))}
-				</div>
-				{/* Indented to line up with series names, past the colour swatch. */}
-				<div className={cn(TOTAL_ROW, "pl-9 text-tertiary-foreground")}>
-					Total
-				</div>
-			</div>
-
-			<div
-				ref={scrollRef}
-				onScroll={updateEdges}
-				className="min-w-0 flex-1 overflow-x-auto"
-			>
-				<div className="flex flex-col w-max min-w-full">
-					<div className={cn(HEADER_ROW, "justify-end")}>
-						{model.periodLabels.map((label, index) => (
-							<span key={index} className={PERIOD_CELL}>
-								{label}
-							</span>
-						))}
-					</div>
-					<div className={SURFACE_SLICE}>
-						{model.seriesRows.map((row) => (
-							<div key={row.key} className={cn(SERIES_ROW, "justify-end")}>
-								{row.cells.map((cell, index) => (
-									<span
-										key={index}
-										className={cn(PERIOD_CELL, valueTone)}
-										title={cell.title}
-									>
-										{cell.text}
+					<div className="flex w-max min-w-full flex-col">
+						<div className={cn(HEADER_ROW, "sticky top-0 z-20 bg-table-tray")}>
+							<div className={cn(pinnedLeft, "flex h-full items-center pl-4")}>
+								{nameHeader}
+							</div>
+							<div className="flex flex-1 justify-end">
+								{model.periodLabels.map((label, index) => (
+									<span key={index} className={PERIOD_CELL}>
+										{label}
 									</span>
 								))}
 							</div>
-						))}
-					</div>
-					<div
-						className={cn(
-							TOTAL_ROW,
-							"justify-end",
-							model.isPlaceholder
-								? "text-placeholder"
-								: "text-tertiary-foreground",
-						)}
-					>
-						{model.totalRow.cells.map((cell, index) => (
-							<span key={index} className={PERIOD_CELL} title={cell.title}>
-								{cell.text}
-							</span>
-						))}
-					</div>
-				</div>
-			</div>
-
-			<div
-				className={cn(
-					"relative z-10 w-[112px] shrink-0 bg-table-tray transition-shadow",
-					edges.right && PINNED_RIGHT_SHADOW,
-				)}
-			>
-				<div className={cn(HEADER_ROW, "justify-end pr-4")}>Total</div>
-				<div
-					className={cn(
-						SURFACE_SLICE,
-						"rounded-r-lg border-r border-l border-l-table-row-divider",
-					)}
-				>
-					{model.seriesRows.map((row) => (
-						<div
-							key={row.key}
-							className={cn(SERIES_ROW, "justify-end pr-4", totalTone)}
-							title={row.total.title}
-						>
-							{row.total.text}
+							<div
+								className={cn(
+									pinnedRight,
+									"flex h-full items-center justify-end pr-4",
+								)}
+							>
+								Total
+							</div>
 						</div>
-					))}
-				</div>
-				<div
-					className={cn(TOTAL_ROW, "justify-end pr-4", totalTone)}
-					title={model.totalRow.total.title}
-				>
-					{model.totalRow.total.text}
-				</div>
-			</div>
+
+						{model.seriesRows.map((row, rowIndex) => {
+							const edge = surfaceEdge({
+								isFirst: rowIndex === 0,
+								isLast: rowIndex === lastRowIndex,
+							});
+							return (
+								<div key={row.key} className="flex h-11">
+									<div className={pinnedLeft}>
+										<div
+											className={cn(
+												SURFACE_CELL,
+												edge.border,
+												edge.left,
+												"gap-2.5 border-l border-r border-l-table-surface-border border-r-table-row-divider pl-4 pr-3",
+											)}
+										>
+											{row.name}
+										</div>
+									</div>
+									<div
+										className={cn(
+											SURFACE_CELL,
+											edge.border,
+											"flex-1 justify-end",
+										)}
+									>
+										{row.cells.map((cell, index) => (
+											<span
+												key={index}
+												className={cn(PERIOD_CELL, "text-muted-foreground")}
+												title={cell.title}
+											>
+												{cell.content}
+											</span>
+										))}
+									</div>
+									<div className={pinnedRight}>
+										<div
+											className={cn(
+												SURFACE_CELL,
+												edge.border,
+												edge.right,
+												"justify-end border-l border-r border-l-table-row-divider border-r-table-surface-border pr-4",
+												TOTAL_VALUE,
+											)}
+											title={row.total.title}
+										>
+											{row.total.content}
+										</div>
+									</div>
+								</div>
+							);
+						})}
+
+						<div
+							className={cn(
+								TOTAL_ROW,
+								"sticky bottom-0 z-20 bg-table-tray text-tertiary-foreground",
+							)}
+						>
+							{/* Indented to line up with series names, past the colour swatch. */}
+							<div className={cn(pinnedLeft, "flex h-full items-center pl-9")}>
+								Total
+							</div>
+							<div className="flex flex-1 justify-end">
+								{model.totalRow.cells.map((cell, index) => (
+									<span key={index} className={PERIOD_CELL} title={cell.title}>
+										{cell.content}
+									</span>
+								))}
+							</div>
+							<div
+								className={cn(
+									pinnedRight,
+									"flex h-full items-center justify-end pr-4",
+									TOTAL_VALUE,
+								)}
+								title={model.totalRow.total.title}
+							>
+								{model.totalRow.total.content}
+							</div>
+						</div>
+					</div>
+				</ScrollAreaPrimitive.Viewport>
+				<ScrollBar className={VERTICAL_BAR} />
+				<ScrollBar orientation="horizontal" className={HORIZONTAL_BAR} />
+			</ScrollAreaPrimitive.Root>
 		</div>
 	);
 };

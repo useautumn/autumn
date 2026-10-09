@@ -1,15 +1,16 @@
 import { useRef } from "react";
 import type { EventsData } from "../components/analytics-types";
+import type { ChartGeometry } from "../utils/chartLoadingState";
 import type { ChartSeriesConfig } from "../utils/transformGroupedChartData";
 
 export interface ShownChart {
 	chartData: EventsData;
 	chartConfig: ChartSeriesConfig[];
 	chartTicks: number[] | undefined;
-	interval: string;
+	geometry: ChartGeometry;
 }
 
-/** The chart to display: the fresh one, else the last one shown while a new query loads. */
+/** The most recent chart that rendered, held through later loads so they can dim it instead of blanking. */
 export const useLastShownChart = ({
 	chart,
 	isLoading,
@@ -26,6 +27,5 @@ export const useLastShownChart = ({
 		lastShownRef.current = null;
 	}
 
-	const displayedChart = chart ?? (isLoading ? lastShownRef.current : null);
-	return { displayedChart, isStale: !chart && displayedChart !== null };
+	return lastShownRef.current;
 };

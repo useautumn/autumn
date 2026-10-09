@@ -2,7 +2,7 @@ import { cn } from "@autumn/ui/lib/utils";
 import { type ComponentProps, useId } from "react";
 
 /** Light glyphs on the fill in light mode; dark glyphs in dark mode and on light fills. */
-const STATUS_TONES = {
+export const STATUS_TONES = {
 	green: "text-[#30A46C] [--glyph:#fff] dark:[--glyph:#0E1C15]",
 	blue: "text-[#3E8BD9] [--glyph:#fff] dark:[--glyph:#0C1726]",
 	red: "text-[#E5484D] [--glyph:#fff] dark:[--glyph:#2A0C0D]",

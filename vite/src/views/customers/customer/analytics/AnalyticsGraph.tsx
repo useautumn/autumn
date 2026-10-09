@@ -9,7 +9,7 @@ import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
 import {
-	BAR_CATEGORY_GAP,
+	barLayout,
 	CHART_MARGIN,
 	type PlotInsets,
 	Y_AXIS_WIDTH,
@@ -18,14 +18,6 @@ import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
 import type { ChartSeriesConfig } from "./utils/transformGroupedChartData";
 
 const MAX_TOOLTIP_ITEMS = 5;
-// Busy stacks get a hairline gap so small segments keep their colour.
-const SEGMENT_GAP = 2;
-const BUSY_SEGMENT_GAP = 1;
-const BUSY_SERIES_COUNT = 20;
-// Past this many bins a bar is only a few pixels wide, so the gap stroke would hide it.
-const DENSE_BIN_COUNT = 90;
-// Each segment fades on its own, so past this many the dim stalls whole frames; it snaps instead.
-const MAX_FADED_SEGMENTS = 500;
 const TOP_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
 const CHART_STYLE = { cursor: "default" } as const;
 const BAR_STYLE = { cursor: "pointer" } as const;
@@ -94,33 +86,22 @@ export const EventsBarChart = memo(function EventsBarChart({
 	// Recharts stacks bars in mount order, so a changed series set must remount to restack.
 	const seriesSetKey = chartConfig.map((series) => series.yKey).join("|");
 
-	const segmentGap =
-		data.data.length > DENSE_BIN_COUNT
-			? 0
-			: chartConfig.length >= BUSY_SERIES_COUNT
-				? BUSY_SEGMENT_GAP
-				: SEGMENT_GAP;
-
-	const fadesSegments =
-		data.data.length * chartConfig.length <= MAX_FADED_SEGMENTS;
+	const { categoryGap, segmentGap } = barLayout({
+		barCount: data.data.length,
+		seriesCount: chartConfig.length,
+	});
 
 	const chart = useMemo(
 		() => (
 			<ChartContainer
 				config={rechartsConfig}
-				className={cn(
-					"h-full w-full",
-					"[&_*:focus]:outline-none",
-					fadesSegments &&
-						"[&_.recharts-bar-rectangle]:transition-opacity [&_.recharts-bar-rectangle]:duration-150",
-				)}
+				className="h-full w-full [&_*:focus]:outline-none"
 			>
 				<BarChart
 					key={seriesSetKey}
 					data={data.data}
-					className="pt-3 pr-2"
 					margin={CHART_MARGIN}
-					barCategoryGap={BAR_CATEGORY_GAP}
+					barCategoryGap={categoryGap}
 					style={CHART_STYLE}
 					throttleDelay="raf"
 				>
@@ -155,6 +136,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 							dataKey={series.yKey}
 							stackId="a"
 							fill={series.fill}
+							// Read as currentColor by the hover dim, which mixes it toward the background.
+							color={series.fill}
 							// A background-colored stroke reads as a gap between stacked segments.
 							stroke="var(--background)"
 							strokeWidth={segmentGap}
@@ -171,8 +154,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 		),
 		[
 			seriesSetKey,
+			categoryGap,
 			segmentGap,
-			fadesSegments,
 			data,
 			rechartsConfig,
 			chartConfig,
@@ -186,7 +169,11 @@ export const EventsBarChart = memo(function EventsBarChart({
 	return (
 		<div
 			ref={containerRef}
-			className="h-full w-full relative [&[data-segment-hover]_.recharts-bar-rectangle:not(:hover)]:opacity-35"
+			className={cn(
+				"h-full w-full relative",
+				// Greyed with an opaque mix, not opacity, so the gridlines stay hidden behind the bars.
+				"[&[data-segment-hover]_.recharts-bar-rectangle:not(:hover)_path]:[fill:color-mix(in_oklab,currentColor_35%,var(--background))]",
+			)}
 			onMouseMove={handleMouseMove}
 			onMouseLeave={handleChartMouseLeave}
 			onClick={handleChartClick}

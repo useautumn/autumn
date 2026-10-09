@@ -1,18 +1,23 @@
 import { Calendar, Popover, PopoverContent, PopoverTrigger } from "@autumn/ui";
-import { CalendarBlankIcon, CaretLeftIcon } from "@phosphor-icons/react";
+import { overlaySeparatorClassName } from "@autumn/ui/lib/overlay-classes";
+import {
+	CalendarBlankIcon,
+	CaretLeftIcon,
+	CaretRightIcon,
+} from "@phosphor-icons/react";
 import { format, subMonths } from "date-fns";
-import { Check } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { CUSTOM_INTERVAL, INTERVAL_LABELS } from "../../utils/intervals";
-import { StripCell } from "./StripCell";
+import { FilterTriggerButton } from "../FilterTriggerButton";
+import { OptionRow } from "./OptionRow";
 import { useTimeRange } from "./useTimeRange";
 
 const formatRange = ({ from, to }: { from: Date; to: Date }) =>
 	`${format(from, "MMM d")} – ${format(to, "MMM d")}`;
 
-export const RangeCell = ({ className }: { className?: string }) => {
+export const RangeCell = () => {
 	const {
 		interval,
 		customRange,
@@ -34,9 +39,10 @@ export const RangeCell = ({ className }: { className?: string }) => {
 	return (
 		<Popover open={open} onOpenChange={openChange}>
 			<PopoverTrigger asChild>
-				<StripCell
-					label="Range"
-					className={className}
+				<FilterTriggerButton
+					leading={
+						<CalendarBlankIcon className="size-3.5 text-tertiary-foreground" />
+					}
 					value={
 						customRange ? formatRange(customRange) : INTERVAL_LABELS[interval]
 					}
@@ -51,7 +57,7 @@ export const RangeCell = ({ className }: { className?: string }) => {
 						<button
 							type="button"
 							onClick={() => setIsPickingCustom(false)}
-							className="flex items-center gap-1.5 h-[30px] px-2 text-xs text-tertiary-foreground hover:text-foreground"
+							className="flex h-[30px] items-center gap-1.5 px-2 text-xs text-tertiary-foreground hover:text-foreground"
 						>
 							<CaretLeftIcon size={12} />
 							Presets
@@ -76,39 +82,26 @@ export const RangeCell = ({ className }: { className?: string }) => {
 				) : (
 					<div className="flex flex-col">
 						{presetIntervals.map((preset) => (
-							<button
+							<OptionRow
 								key={preset}
-								type="button"
-								onClick={() => {
+								isSelected={interval === preset}
+								onSelect={() => {
 									selectPreset(preset);
 									setOpen(false);
 								}}
-								className={cn(
-									"flex items-center justify-between h-[30px] px-2 rounded-[5px] text-left text-[13px] text-muted-foreground hover:bg-muted",
-									interval === preset && "bg-muted text-foreground",
-								)}
 							>
 								{INTERVAL_LABELS[preset]}
-								{interval === preset && (
-									<Check className="h-3 w-3 text-primary" />
-								)}
-							</button>
+							</OptionRow>
 						))}
-						<span className="h-px my-1 bg-border" />
-						<button
-							type="button"
-							onClick={() => setIsPickingCustom(true)}
-							className={cn(
-								"flex items-center gap-2 h-[30px] px-2 rounded-[5px] text-left text-[13px] text-muted-foreground hover:bg-muted",
-								interval === CUSTOM_INTERVAL && "bg-muted text-foreground",
-							)}
+						<span className={overlaySeparatorClassName} />
+						<OptionRow
+							isSelected={interval === CUSTOM_INTERVAL}
+							onSelect={() => setIsPickingCustom(true)}
+							trailing={<CaretRightIcon />}
 						>
-							<CalendarBlankIcon
-								size={14}
-								className="text-tertiary-foreground"
-							/>
+							<CalendarBlankIcon />
 							Custom range
-						</button>
+						</OptionRow>
 					</div>
 				)}
 			</PopoverContent>
