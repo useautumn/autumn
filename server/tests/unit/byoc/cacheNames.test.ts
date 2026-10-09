@@ -4,6 +4,8 @@ import {
 	cacheExternalId,
 	cacheGroupLabel,
 	cacheNames,
+	cacheStackName,
+	cacheStackNameSuffix,
 	shadowAtomCacheNames,
 } from "@/internal/byoc/utils/byocCacheUtils.js";
 
@@ -37,6 +39,29 @@ describe("cache deployment names", () => {
 		delete process.env.ATOM_DEPLOYMENT_PREFIX;
 		expect(cacheExternalId({ org, env })).toBe("org_1.sandbox");
 		expect(cacheGroupLabel({ org, env })).toBe("autumn-byoc-acme-sandbox");
+	});
+
+	test("a stack is named atom-<slug>-<env> or the chosen base, then a suffix from its external id", () => {
+		delete process.env.ATOM_DEPLOYMENT_PREFIX;
+		const suffix = cacheStackNameSuffix({ org, env });
+		expect(suffix).toMatch(/^[0-9a-f]{6}$/);
+		expect(cacheStackName({ org, env })).toBe(`atom-acme-sandbox-${suffix}`);
+		expect(cacheStackName({ org, env, base: "acme-atom" })).toBe(
+			`acme-atom-${suffix}`,
+		);
+		expect(cacheNames({ org, env, stackName: "acme-atom-abc123" })).toEqual({
+			externalId: "org_1.sandbox",
+			label: "acme-atom-abc123",
+		});
+	});
+
+	test("the suffix differs per env and per dev stack, and leaves the branch out of the name", () => {
+		delete process.env.ATOM_DEPLOYMENT_PREFIX;
+		const sandbox = cacheStackNameSuffix({ org, env: AppEnv.Sandbox });
+		expect(cacheStackNameSuffix({ org, env: AppEnv.Live })).not.toBe(sandbox);
+		process.env.ATOM_DEPLOYMENT_PREFIX = "john-atom-setup-ui";
+		expect(cacheStackNameSuffix({ org, env })).not.toBe(sandbox);
+		expect(cacheStackName({ org, env })).not.toContain("john");
 	});
 
 	test("an org named to look like our shadow Atom still gets its own deployment group", () => {

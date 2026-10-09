@@ -47,6 +47,8 @@ const alienClient: AlienClient = {
 		calls.found.push(params);
 		return deployment;
 	},
+	getDeployment: async () => null,
+	retryDeployment: async () => {},
 	updateDeploymentCompute: async (params) => {
 		calls.resized.push(params);
 	},

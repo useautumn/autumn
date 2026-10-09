@@ -7,7 +7,8 @@ export const handleDeleteCache = createRoute({
 	body: DeleteByocCacheParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		await deleteCache({ ctx });
+		const { atom_id } = c.req.valid("json");
+		await deleteCache({ ctx, atomId: atom_id });
 		return c.json({ success: true });
 	},
 });
