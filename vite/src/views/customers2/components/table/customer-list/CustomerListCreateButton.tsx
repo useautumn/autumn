@@ -100,7 +100,7 @@ export function CustomerListCreateButton() {
 					size="default"
 					className="gap-1.5 font-medium"
 				>
-					Create Customer
+					Create customer
 				</Button>
 			</DialogTrigger>
 			<DialogContent>
