@@ -8,8 +8,9 @@ import {
 	withAutocommitDb,
 } from "@/db/autocommit/withAutocommitDb.js";
 import { isTransientDbError } from "@/db/dbUtils.js";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { type DrizzleCli, normalizeDbExecute } from "@/db/initDrizzle.js";
 import { runWithTransientDbRetry } from "@/internal/migrations/v2/batchOperations/execute/utils/runWithTransientDbRetry.js";
+import { iterateOverFilterResults } from "@/internal/migrations/v2/filters/iterateOverFilterResults.js";
 import { applyMigrationQueryDeadline } from "@/trigger/migrations/database/applyMigrationQueryDeadline.js";
 import {
 	migrationTestDatabaseUrl,
@@ -142,7 +143,7 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		}
 	}, 5000);
 
-	test("a stalled claim and a stalled terminal write both fail at the deadline and are not retried", async () => {
+	test("a stalled claim is retried on a fresh connection without re-claiming its committed row", async () => {
 		await withScratchDatabase({
 			databaseUrl: databaseUrl as string,
 			run: async ({ databaseUrl: scratchUrl }) => {
@@ -161,19 +162,18 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 				let attempts = 0;
 				try {
 					socket.pause();
-					await expect(
-						runWithTransientDbRetry({
-							maxAttempts: 3,
-							delayMs: 0,
-							run: () => {
-								attempts++;
-								return pool.query(
-									"insert into claims values (1, 'running') returning id",
-								);
-							},
-						}),
-					).rejects.toThrow("deadline");
-					expect(attempts).toBe(1);
+					const retried = await runWithTransientDbRetry({
+						maxAttempts: 3,
+						delayMs: 0,
+						run: () => {
+							attempts++;
+							return pool.query(
+								"insert into claims values (1, 'running') on conflict do nothing returning id",
+							);
+						},
+					});
+					expect(attempts).toBe(2);
+					expect(retried.rows).toEqual([]);
 					expect(socket.destroyed).toBe(true);
 					expect((await pool.query("select * from claims")).rows).toEqual([
 						{ id: 1, status: "running" },
@@ -193,6 +193,33 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 				}
 			},
 		});
+	}, 5000);
+
+	test("a filter page whose reply is lost is retried and still returns its rows", async () => {
+		const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
+		applyMigrationQueryDeadline({ pool, queryTimeoutMs: 100 });
+		const client = await pool.connect();
+		const socket = (client as unknown as { connection: { stream: Socket } })
+			.connection.stream;
+		client.release();
+		socket.pause();
+		try {
+			const pages = iterateOverFilterResults<{ internal_id: string }>({
+				db: normalizeDbExecute(drizzle(pool)),
+				batchSize: 10,
+				retryDelayMs: 0,
+				buildSelect: () =>
+					sql`select 'cus_1' as internal_id union all select 'cus_2'`,
+			});
+			const first = await pages.next();
+			expect(first.value).toEqual([
+				{ internal_id: "cus_1" },
+				{ internal_id: "cus_2" },
+			]);
+			expect(socket.destroyed).toBe(true);
+		} finally {
+			await pool.end();
+		}
 	}, 5000);
 
 	test("queued statements have separate dispatch deadlines", async () => {
