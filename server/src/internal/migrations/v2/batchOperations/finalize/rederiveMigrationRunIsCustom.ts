@@ -95,32 +95,44 @@ export const rederiveMigrationRunIsCustom = async ({
 		});
 	};
 
-	try {
-		const inFlight = new Set<Promise<void>>();
-		for await (const page of pagesOfConvergedCustomers({
-			ctx,
-			migrationInternalId,
-			migrationRunId,
-		})) {
-			const running: Promise<void> = rederivePage(page).finally(() =>
-				inFlight.delete(running),
-			);
-			inFlight.add(running);
-			if (inFlight.size >= CONCURRENCY) await Promise.race(inFlight);
+	const pages = pagesOfConvergedCustomers({
+		ctx,
+		migrationInternalId,
+		migrationRunId,
+	});
+	const failures: unknown[] = [];
+	// Workers share one generator and never reject, so every started page finishes before we log.
+	const worker = async () => {
+		for (;;) {
+			let next: IteratorResult<string[]>;
+			try {
+				next = await pages.next();
+			} catch (error) {
+				failures.push(error);
+				return;
+			}
+			if (next.done) return;
+			try {
+				await rederivePage(next.value);
+			} catch (error) {
+				failures.push(error);
+			}
 		}
-		await Promise.all(inFlight);
-		ctx.logger.info("batch-migration: re-derived is_custom", {
-			data: {
-				migrationRunId,
-				customers: derivedCustomers,
-				changed,
-				ms: Date.now() - startedAt,
-			},
-		});
-	} catch (error) {
-		ctx.logger.error("batch-migration: is_custom re-derivation failed", {
-			error,
-			data: { migrationRunId, customers: derivedCustomers },
-		});
+	};
+	await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+	const data = {
+		migrationRunId,
+		customers: derivedCustomers,
+		changed,
+		ms: Date.now() - startedAt,
+	};
+	if (failures.length === 0) {
+		ctx.logger.info("batch-migration: re-derived is_custom", { data });
+		return;
 	}
+	ctx.logger.error("batch-migration: is_custom re-derivation failed", {
+		error: failures[0],
+		data: { ...data, failures: failures.length },
+	});
 };

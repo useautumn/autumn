@@ -78,6 +78,16 @@ const runBatchMigrationLane = async ({
 				controls: payload.controls,
 			}));
 
+	const repairCommittedPages = () =>
+		rederiveMigrationRunIsCustom({
+			ctx,
+			migrationInternalId: getMigrationEventInternalId(migrationSnapshot),
+			migrationRunId,
+			plan,
+		});
+
+	// Canceled and failed runs still committed their finished pages, so those are repaired too;
+	// the repair never throws, so a chunk failure still surfaces.
 	const result = await iterateBatchMigrationChunks({
 		runChunk: ({ chunkIndex, cursor }) =>
 			executeBatchChunk(
@@ -92,14 +102,7 @@ const runBatchMigrationLane = async ({
 					controls,
 				}),
 			),
-	});
-	// A canceled run still committed its finished pages, so they are repaired too.
-	await rederiveMigrationRunIsCustom({
-		ctx,
-		migrationInternalId: getMigrationEventInternalId(migrationSnapshot),
-		migrationRunId,
-		plan,
-	});
+	}).finally(repairCommittedPages);
 	return {
 		processed: result.processed,
 		chunks: result.pages,
