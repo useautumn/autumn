@@ -33,8 +33,6 @@ export const isCustomerProductInExportScope = ({
 	});
 };
 
-const formatBoolean = (value: boolean) => (value ? "true" : "false");
-
 export const customerProductToCustomPlansExportRow = ({
 	scalar,
 	fullCustomer,
@@ -58,9 +56,6 @@ export const customerProductToCustomPlansExportRow = ({
 	plan_id: customerProduct.product.id,
 	plan_version: String(customerProduct.product.version),
 	status: customerProduct.status,
-	current_is_custom: formatBoolean(customerProduct.is_custom),
-	derived_is_custom: formatBoolean(result.isCustom),
-	would_change: formatBoolean(customerProduct.is_custom !== result.isCustom),
 	reason: result.reason,
 	changes:
 		result.reason === "customized"
@@ -85,9 +80,6 @@ export const failedCustomerToCustomPlansExportRow = ({
 	plan_id: null,
 	plan_version: null,
 	status: null,
-	current_is_custom: null,
-	derived_is_custom: null,
-	would_change: null,
 	reason: "export_failed",
 	changes: error instanceof Error ? error.message : String(error),
 	diff: null,

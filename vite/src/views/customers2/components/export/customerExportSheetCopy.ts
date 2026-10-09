@@ -43,9 +43,9 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 		menuIcon: SlidersHorizontalIcon,
 		menuLabel: "Export custom plans",
 		title: "Export custom plans",
-		columnsSummary: "Customer, plan, custom flag and what differs",
+		columnsSummary: "Customer, plan, reason and what differs",
 		description:
-			"Compare each customer's plan with the catalog version it's on and download one row per plan: whether it's really custom, whether its custom flag would change, and what differs.",
+			"Compare each customer's plan with the catalog version it's on and download one row per plan: whether it's really custom, and what differs.",
 		runningLabel: "Checking plans",
 		submitLabel: "Start check",
 	},

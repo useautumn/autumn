@@ -3,8 +3,8 @@
  *
  * Contract under test (custom_plans producer):
  *   - A plan that matches its catalog version but is flagged custom yields a
- *     row that would clear the flag, with no diff.
- *   - A plan customized at attach yields a row that keeps the flag, with the
+ *     matches_catalog row with no diff.
+ *   - A plan customized at attach yields a customized row, with the
  *     diff of what differs from the catalog.
  *   - A custom_plans job runs to completion: published to S3, downloadable
  *     under its own file name, one row per customer product in scope.
@@ -73,7 +73,7 @@ const setupCustomer = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("custom-plans export 1: catalog plan flagged custom -> row clears the flag")}`,
+	`${chalk.yellowBright("custom-plans export 1: catalog plan flagged custom -> matches_catalog row")}`,
 	async () => {
 		const { ctx, scalar, customerProduct } = await setupCustomer({
 			customerId: "custom-plans-export-wrong-flag",
@@ -95,9 +95,6 @@ test.concurrent(
 		expect(rows).toEqual([
 			expect.objectContaining({
 				customer_product_id: customerProduct.id,
-				current_is_custom: "true",
-				derived_is_custom: "false",
-				would_change: "true",
 				reason: "matches_catalog",
 				diff: null,
 			}),
@@ -106,7 +103,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("custom-plans export 2: customized at attach -> row keeps the flag and carries the diff")}`,
+	`${chalk.yellowBright("custom-plans export 2: customized at attach -> customized row carries the diff")}`,
 	async () => {
 		const { ctx, scalar, customerProduct } = await setupCustomer({
 			customerId: "custom-plans-export-customized",
@@ -124,9 +121,6 @@ test.concurrent(
 		expect(rows).toEqual([
 			expect.objectContaining({
 				customer_product_id: customerProduct.id,
-				current_is_custom: "true",
-				derived_is_custom: "true",
-				would_change: "false",
 				reason: "customized",
 				changes: "messages: included 100 → 250",
 			}),

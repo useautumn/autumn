@@ -113,7 +113,7 @@ describe("customerProductToCustomPlansExportRow", () => {
 		});
 	};
 
-	test("a plan wrongly flagged custom → would change, no diff", () => {
+	test("a plan matching its catalog → no diff", () => {
 		const plan = { items: [includedItem()], prices: [basePrice()] };
 
 		expect(rowFor({ customer: plan, catalog: plan, isCustom: true })).toEqual({
@@ -125,16 +125,13 @@ describe("customerProductToCustomPlansExportRow", () => {
 			plan_id: "pro",
 			plan_version: "3",
 			status: "active",
-			current_is_custom: "true",
-			derived_is_custom: "false",
-			would_change: "true",
 			reason: "matches_catalog",
 			changes: null,
 			diff: null,
 		});
 	});
 
-	test("a really custom plan already flagged → no change, carries the diff", () => {
+	test("a really custom plan carries the diff", () => {
 		const row = rowFor({
 			customer: { prices: [basePrice({ amount: 39 })] },
 			catalog: { prices: [basePrice({ amount: 49 })] },
@@ -142,9 +139,6 @@ describe("customerProductToCustomPlansExportRow", () => {
 		});
 
 		expect(row).toMatchObject({
-			current_is_custom: "true",
-			derived_is_custom: "true",
-			would_change: "false",
 			reason: "customized",
 			changes: "base price: amount 49 → 39",
 		});
