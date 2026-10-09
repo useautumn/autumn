@@ -2,7 +2,7 @@ import { CusProductNotFoundError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { customDiffToChanges } from "@/internal/customers/cusProducts/actions/deriveIsCustom/customDiffToChanges";
 import { deriveStoredCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveStoredCustomerProductIsCustom";
-import { loadFullCustomerProductsWithLicenses } from "@/internal/customers/cusProducts/actions/deriveIsCustom/rederiveIsCustomForCustomers";
+import { loadFullCustomerProductsWithLicenses } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadFullCustomerProductsWithLicenses";
 import { CusService } from "../CusService";
 
 export const handleGetCustomerProductCustomDiff = createRoute({
