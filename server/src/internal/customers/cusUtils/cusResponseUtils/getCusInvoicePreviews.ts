@@ -6,6 +6,7 @@ import {
 	customerProductsToStripeSubscriptionIds,
 	type FullCusProduct,
 	type FullCustomer,
+	isCustomerProductInStripeSubscriptionScope,
 	isCustomerProductOnStripeSubscription,
 	notNullish,
 	tryCatch,
@@ -16,6 +17,7 @@ import {
 	getExpandedStripeSubscription,
 	stripeSubscriptionToNowMs,
 } from "@/external/stripe/subscriptions/index.js";
+import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription.js";
 import { buildBillingContextForInvoicePreview } from "@/external/stripe/webhookHandlers/common/buildBillingContextFromWebhook.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling.js";
@@ -106,18 +108,27 @@ export const getCusInvoicePreviews = async ({
 					},
 					stripe: {},
 				},
-				customerProductFilter: isOnSubscription,
+				nextCycleStripeSubscriptionId: subscriptionId,
 				options: { chargeUsageLineItems: true },
 			});
 
 			// Nothing recurs past the boundary (e.g. cancelling at period end), but
 			// usage accrued this cycle is still invoiced.
 			if (!nextCycle) {
+				const stripeSubscriptionScheduleId = stripeSubscriptionToScheduleId({
+					stripeSubscription,
+				});
 				return getFinalUsageInvoicePreview({
 					ctx,
 					billingContext,
-					customerProducts:
-						fullCustomer.customer_products.filter(isOnSubscription),
+					customerProducts: fullCustomer.customer_products.filter(
+						(customerProduct) =>
+							isCustomerProductInStripeSubscriptionScope({
+								customerProduct,
+								stripeSubscriptionId: subscriptionId,
+								stripeSubscriptionScheduleId,
+							}),
+					),
 					subscriptionId,
 				});
 			}
