@@ -1,10 +1,7 @@
 import type { CustomerListFilters, CustomPlansExportRow } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom.js";
-import {
-	type BaseProductCache,
-	loadCachedBaseProduct,
-} from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
+import { deriveStoredCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveStoredCustomerProductIsCustom.js";
+import type { BaseProductCache } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct.js";
 import { CusService } from "../../CusService.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import { retryExportDbRead } from "../verify/retryExportDbRead.js";
@@ -50,16 +47,10 @@ export const customerToCustomPlansExportRows = async ({
 
 		return await Promise.all(
 			customerProducts.map(async (customerProduct) => {
-				const baseProduct = await loadCachedBaseProduct({
-					ctx,
-					internalProductId: customerProduct.internal_product_id,
-					baseProducts,
-				});
-				const result = deriveCustomerProductIsCustom({
+				const result = await deriveStoredCustomerProductIsCustom({
 					ctx,
 					customerProduct,
-					baseProduct,
-					features: ctx.features,
+					baseProducts,
 				});
 				return customerProductToCustomPlansExportRow({
 					scalar,
