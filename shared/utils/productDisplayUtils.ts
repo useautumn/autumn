@@ -10,11 +10,9 @@ import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import { formatAmount } from "./common/formatUtils/formatAmount.js";
 import { formatInterval } from "./common/formatUtils/formatInterval.js";
-import {
-	formatVolumeTierRule,
-	tiersToVolumeTierPricing,
-} from "./common/formatUtils/formatVolumeTierRule.js";
+import { formatVolumeTierRule } from "./common/formatUtils/formatVolumeTierRule.js";
 import { getFeatureName, numberWithCommas } from "./displayUtils.js";
+import { tiersToVolumeTierPricing } from "./productUtils/priceUtils/convertPrice/tiersToVolumeTierPricing.js";
 import {
 	isFeatureItem,
 	isFeaturePriceItem,
@@ -97,14 +95,16 @@ const withVolumeTierRule = ({
 	item: ProductItem;
 	text: string;
 }): string => {
-	const isVolumeTiered =
-		item.tier_behavior === TierBehavior.VolumeBased &&
-		(item.tiers?.length ?? 0) > 1;
-	if (!isVolumeTiered || !item.tiers) return text;
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
+	const isVolume = item.tier_behavior === TierBehavior.VolumeBased;
+	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
+	// A single tier still charges the included units once usage passes them.
+	const showsRule = isVolume && (hasMultipleTiers || includedUsage > 0);
+	if (!showsRule || !item.tiers?.length) return text;
 
 	const rule = formatVolumeTierRule({
-		includedUsage:
-			typeof item.included_usage === "number" ? item.included_usage : 0,
+		includedUsage,
 		pricing: tiersToVolumeTierPricing({ tiers: item.tiers }),
 	});
 	return `${text} (${rule})`;

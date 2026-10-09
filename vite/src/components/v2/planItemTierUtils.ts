@@ -61,11 +61,14 @@ export const itemToVolumeTierRule = ({
 }: {
 	item: ProductItem;
 }): string | undefined => {
-	if (item.tier_behavior !== TierBehavior.VolumeBased || !item.tiers?.length) {
-		return undefined;
-	}
+	const includedUsage = itemToIncludedUsage(item);
+	const isVolume = item.tier_behavior === TierBehavior.VolumeBased;
+	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
+	const showsRule = isVolume && (hasMultipleTiers || includedUsage > 0);
+	if (!showsRule || !item.tiers?.length) return undefined;
+
 	return formatVolumeTierRule({
-		includedUsage: itemToIncludedUsage(item),
+		includedUsage,
 		pricing: tiersToVolumeTierPricing({ tiers: item.tiers }),
 	});
 };

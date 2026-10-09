@@ -112,4 +112,28 @@ describe("getProductItemDisplay: volume tiers", () => {
 			"$5 - $20 for messages (volume: the reached tier's flat fee)",
 		);
 	});
+
+	test("single-tier volume with included usage shows the rule", () => {
+		const item = tieredItem({
+			tierBehavior: TierBehavior.VolumeBased,
+			includedUsage: 100,
+			tiers: [{ to: "inf", amount: 0.5 }],
+		});
+		expect(display(item)).toEqual({
+			primary_text: "100 messages",
+			secondary_text:
+				"then $0.5 per message (volume: past 100, all units at the reached tier's rate)",
+		});
+	});
+
+	test("single-tier volume with nothing included shows no rule", () => {
+		const item = tieredItem({
+			tierBehavior: TierBehavior.VolumeBased,
+			tiers: [{ to: "inf", amount: 0.5 }],
+		});
+		expect(display(item)).toEqual({
+			primary_text: "$0.5 per message",
+			secondary_text: undefined,
+		});
+	});
 });

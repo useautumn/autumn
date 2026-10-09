@@ -80,4 +80,19 @@ describe("itemToVolumeTierRule", () => {
 			}),
 		).toBeUndefined();
 	});
+
+	test("single-tier volume shows the rule only when usage is included", () => {
+		const singleTier = (included_usage: number) =>
+			({
+				...tieredItem({
+					tierBehavior: TierBehavior.VolumeBased,
+					tiers: [{ to: Infinite, amount: 0.5 }],
+				}),
+				included_usage,
+			}) as ProductItem;
+		expect(itemToVolumeTierRule({ item: singleTier(100) })).toBe(
+			"volume: past 100, all units at the reached tier's rate",
+		);
+		expect(itemToVolumeTierRule({ item: singleTier(0) })).toBeUndefined();
+	});
 });

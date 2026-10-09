@@ -80,4 +80,23 @@ describe("getPlanItemDisplay: volume tiers", () => {
 			"$5 - $20 for messages per month (volume: the reached tier's flat fee)",
 		);
 	});
+
+	test("single-tier volume with included usage shows the rule", () => {
+		const item = tieredItem({
+			tierBehavior: "volume",
+			included: 100,
+			tiers: [{ to: "inf", amount: 0.5 }],
+		});
+		expect(display(item).secondaryText).toBe(
+			"then $0.5 per message per month (volume: past 100, all units at the reached tier's rate)",
+		);
+	});
+
+	test("single-tier volume with nothing included shows no rule", () => {
+		const item = tieredItem({
+			tierBehavior: "volume",
+			tiers: [{ to: "inf", amount: 0.5 }],
+		});
+		expect(display(item).primaryText).toBe("$0.5 per message per month");
+	});
 });

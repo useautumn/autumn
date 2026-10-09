@@ -1,11 +1,9 @@
 import type { CreatePlanItemParamsV1Input } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { formatAmount } from "@utils/common/formatUtils/formatAmount.js";
-import {
-	formatVolumeTierRule,
-	tiersToVolumeTierPricing,
-} from "@utils/common/formatUtils/formatVolumeTierRule.js";
+import { formatVolumeTierRule } from "@utils/common/formatUtils/formatVolumeTierRule.js";
 import { numberWithCommas } from "@utils/displayUtils.js";
 import { isVolumeFlatFeeTiers } from "@utils/productUtils/priceUtils/classifyPrice/isVolumeFlatFeeTiers.js";
+import { tiersToVolumeTierPricing } from "@utils/productUtils/priceUtils/convertPrice/tiersToVolumeTierPricing.js";
 
 export type PlanItemDisplayFeature = {
 	id: string;
@@ -170,12 +168,15 @@ const formatTierDetails = ({
 
 const formatVolumeRule = (item: CreatePlanItemParamsV1Input) => {
 	const tiers = item.price?.tiers;
-	const isVolumeTiered =
-		item.price?.tier_behavior === "volume" && (tiers?.length ?? 0) > 1;
-	if (!isVolumeTiered || !tiers) return undefined;
+	const includedUsage = item.included ?? 0;
+	const isVolume = item.price?.tier_behavior === "volume";
+	const hasMultipleTiers = (tiers?.length ?? 0) > 1;
+	// A single tier still charges the included units once usage passes them.
+	const showsRule = isVolume && (hasMultipleTiers || includedUsage > 0);
+	if (!showsRule || !tiers?.length) return undefined;
 
 	return formatVolumeTierRule({
-		includedUsage: item.included ?? 0,
+		includedUsage,
 		pricing: tiersToVolumeTierPricing({ tiers }),
 	});
 };
