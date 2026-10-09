@@ -1,4 +1,7 @@
-import type { CustomerExportResponse } from "@autumn/shared";
+import {
+	CustomerExportKind,
+	type CustomerExportResponse,
+} from "@autumn/shared";
 import { ConditionalTooltip, IconButton } from "@autumn/ui";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
@@ -6,6 +9,10 @@ import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils"
 import { CustomerExportStatusBadge } from "./CustomerExportStatusBadge";
 
 const FAILED_FALLBACK_MESSAGE = "Export failed — you can start a new one.";
+
+const isApplyRun = (customerExport: CustomerExportResponse) =>
+	customerExport.kind === CustomerExportKind.CustomPlans &&
+	customerExport.snapshot.apply;
 
 export const createCustomerExportColumns = ({
 	downloadingExportId,
@@ -44,6 +51,9 @@ export const createCustomerExportColumns = ({
 		cell: ({ row }: { row: Row<CustomerExportResponse> }) => (
 			<span className="truncate text-foreground">
 				{formatUnixToDateTimeString(row.original.created_at)}
+				{isApplyRun(row.original) ? (
+					<span className="text-tertiary-foreground"> · applied</span>
+				) : null}
 			</span>
 		),
 	},

@@ -34,6 +34,7 @@ export const CreateCustomerExportParamsSchema = z.discriminatedUnion("kind", [
 	}),
 	ExportScopeParamsSchema.extend({
 		kind: z.literal(CustomerExportKind.CustomPlans),
+		apply: z.boolean().optional().default(false),
 	}),
 ]);
 

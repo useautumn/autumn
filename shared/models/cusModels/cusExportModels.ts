@@ -104,10 +104,16 @@ export const BillingVerifyExportSpecSchema = z.object({
 	snapshot: BillingVerifyExportSnapshotSchema,
 });
 
+export const CustomPlansExportSnapshotSchema = CustomerExportScopeSchema.extend(
+	{
+		apply: z.boolean().default(false),
+	},
+);
+
 export const CustomPlansExportSpecSchema = z.object({
 	kind: z.literal(CustomerExportKind.CustomPlans),
 	fields: z.array(CustomerExportFieldSchema).max(0).default([]),
-	snapshot: CustomerExportScopeSchema,
+	snapshot: CustomPlansExportSnapshotSchema,
 });
 
 /** What an export produces; kind decides which fields and snapshot options apply. */
@@ -155,6 +161,7 @@ export const CUSTOM_PLANS_EXPORT_COLUMNS = [
 	{ key: "plan_id", header: "Plan ID" },
 	{ key: "plan_version", header: "Plan Version" },
 	{ key: "status", header: "Status" },
+	{ key: "applied", header: "Applied" },
 	{ key: "outcome", header: "Outcome" },
 	{ key: "reasons", header: "Reasons" },
 	{ key: "changes", header: "Changes" },

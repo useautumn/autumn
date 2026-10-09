@@ -31,7 +31,7 @@ export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 				customerToCustomPlansExportRows({
 					ctx: readCtx,
 					scalar,
-					filters: snapshot.filters,
+					snapshot,
 					baseProducts,
 				}),
 			onBatchSettled: ({ batch, results }) =>

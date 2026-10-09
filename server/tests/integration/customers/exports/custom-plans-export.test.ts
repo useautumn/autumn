@@ -78,7 +78,7 @@ test.concurrent(
 		const rows = await customerToCustomPlansExportRows({
 			ctx,
 			scalar,
-			filters: {},
+			snapshot: { search: "", filters: {}, apply: false },
 			baseProducts: new Map(),
 		});
 
@@ -104,7 +104,7 @@ test.concurrent(
 		const rows = await customerToCustomPlansExportRows({
 			ctx,
 			scalar,
-			filters: {},
+			snapshot: { search: "", filters: {}, apply: false },
 			baseProducts: new Map(),
 		});
 
@@ -119,10 +119,60 @@ test.concurrent(
 	},
 );
 
+test.concurrent(
+	`${chalk.yellowBright("custom-plans export 3: apply run clears a wrong flag once")}`,
+	async () => {
+		const { ctx, scalar, customerProduct } = await setupCustomer({
+			customerId: "custom-plans-export-apply",
+		});
+		await ctx.db
+			.update(customerProducts)
+			.set({ is_custom: true })
+			.where(eq(customerProducts.id, customerProduct.id));
+
+		const snapshot = { search: "", filters: {}, apply: true };
+		const appliedRows = await customerToCustomPlansExportRows({
+			ctx,
+			scalar,
+			snapshot,
+			baseProducts: new Map(),
+		});
+		expect(appliedRows).toEqual([
+			expect.objectContaining({
+				reason: "matches_catalog",
+				applied: "true",
+			}),
+		]);
+
+		const refreshed = await CusService.getFull({
+			ctx,
+			idOrInternalId: scalar.internal_id,
+		});
+		expect(
+			refreshed.customer_products.find(
+				(cusProduct) => cusProduct.id === customerProduct.id,
+			)?.is_custom,
+		).toBe(false);
+
+		const rerunRows = await customerToCustomPlansExportRows({
+			ctx,
+			scalar,
+			snapshot,
+			baseProducts: new Map(),
+		});
+		expect(rerunRows).toEqual([
+			expect.objectContaining({
+				reason: "matches_catalog",
+				applied: "false",
+			}),
+		]);
+	},
+);
+
 const testWithS3 = isCustomerExportsS3Configured() ? test : test.skip;
 
 testWithS3(
-	`${chalk.yellowBright("custom-plans export 3: job runs end to end -> downloadable CSV, one row per plan")}`,
+	`${chalk.yellowBright("custom-plans export 4: job runs end to end -> downloadable CSV, one row per plan")}`,
 	async () => {
 		const searchTerm = "custom-plans-export-job";
 		const { ctx, customerProduct } = await setupCustomer({
