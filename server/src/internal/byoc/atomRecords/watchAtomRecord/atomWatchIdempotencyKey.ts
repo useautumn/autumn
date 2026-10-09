@@ -1,7 +1,7 @@
 import { idempotencyKeys } from "@trigger.dev/sdk/v3";
 
 /** One watch per deployment group, whoever starts it. */
-export const cacheWatchIdempotencyKey = ({
+export const atomWatchIdempotencyKey = ({
 	deploymentGroupId,
 }: {
 	deploymentGroupId: string;

@@ -1,13 +1,14 @@
-import { type ByocCacheDeployment, ByocCacheStatus } from "@autumn/shared";
+import { ByocCacheStatus } from "@autumn/shared";
 import {
 	isCacheConnected,
 	isCacheSettled,
-} from "../../../../utils/classifyCacheDeployment.js";
+} from "../../../utils/classifyCacheDeployment.js";
+import type { AtomRecord } from "../../types/atomRecord.js";
 import type {
-	CacheDeploymentPoll,
-	WatchCacheDeploymentOutcome,
-	WatchCacheDeploymentStep,
-} from "../types/watchCacheDeploymentTypes.js";
+	AtomRecordPoll,
+	WatchAtomRecordOutcome,
+	WatchAtomRecordStep,
+} from "../types/watchAtomRecordTypes.js";
 
 /** Slow while the org works in AWS, faster as alien provisions, fastest until Autumn reaches it. */
 const WATCH_POLL_SECONDS: Record<ByocCacheStatus, number> = {
@@ -24,12 +25,12 @@ const WATCH_BACKOFF_BASE_SECONDS = 10;
 const WATCH_BACKOFF_MAX_SECONDS = 120;
 
 const settledOutcome = ({
-	cacheDeployment,
+	record,
 }: {
-	cacheDeployment: ByocCacheDeployment;
-}): WatchCacheDeploymentOutcome => {
-	if (isCacheConnected({ cacheDeployment })) return "connected";
-	if (cacheDeployment.status === ByocCacheStatus.TeardownRequired)
+	record: AtomRecord;
+}): WatchAtomRecordOutcome => {
+	if (isCacheConnected({ cacheDeployment: record })) return "connected";
+	if (record.status === ByocCacheStatus.TeardownRequired)
 		return "teardown_required";
 	return "failed";
 };
@@ -45,18 +46,15 @@ export const computeNextWatchStep = ({
 	poll,
 	failedPolls,
 }: {
-	poll: CacheDeploymentPoll;
+	poll: AtomRecordPoll<AtomRecord>;
 	failedPolls: number;
-}): WatchCacheDeploymentStep => {
+}): WatchAtomRecordStep => {
 	if (!poll.ok)
 		return { settled: false, waitSeconds: backoffSeconds({ failedPolls }) };
 
-	const { cacheDeployment } = poll;
-	if (!cacheDeployment) return { settled: true, outcome: "gone" };
-	if (isCacheSettled({ cacheDeployment }))
-		return { settled: true, outcome: settledOutcome({ cacheDeployment }) };
-	return {
-		settled: false,
-		waitSeconds: WATCH_POLL_SECONDS[cacheDeployment.status],
-	};
+	const { record } = poll;
+	if (!record) return { settled: true, outcome: "gone" };
+	if (isCacheSettled({ cacheDeployment: record }))
+		return { settled: true, outcome: settledOutcome({ record }) };
+	return { settled: false, waitSeconds: WATCH_POLL_SECONDS[record.status] };
 };

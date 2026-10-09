@@ -15,15 +15,12 @@ import {
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { AtomContext } from "@/internal/byoc/atomRecords/types/atomContext.js";
+import type { AtomDeployer } from "@/internal/byoc/deployers/types/atomDeployer.js";
 import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
 
-const READ_MODULE =
-	"@/internal/byoc/actions/lifecycle/watchCacheDeployment/steps/readWatchedCacheDeployment.js";
-const REFRESH_MODULE =
-	"@/internal/byoc/actions/lifecycle/refreshCacheDeployment.js";
-// Kept so afterAll can hand the real modules back: mock.module is process-wide.
-const realReadModule: Record<string, unknown> = await import(READ_MODULE);
+const REFRESH_MODULE = "@/internal/byoc/atomRecords/refreshAtomRecord.js";
+// Kept so afterAll can hand the real module back: mock.module is process-wide.
 const realRefreshModule: Record<string, unknown> = await import(REFRESH_MODULE);
 
 const cacheDeploymentIn = ({
@@ -57,11 +54,8 @@ const cacheDeploymentIn = ({
 let reports: (ByocCacheDeployment | null | Error)[] = [];
 let stored: ByocCacheDeployment | null = null;
 
-mock.module(READ_MODULE, () => ({
-	readWatchedCacheDeployment: async () => stored,
-}));
 mock.module(REFRESH_MODULE, () => ({
-	refreshCacheDeployment: async () => {
+	refreshAtomRecord: async () => {
 		const report = reports.shift();
 		if (report instanceof Error) throw report;
 		stored = report ?? null;
@@ -70,13 +64,22 @@ mock.module(REFRESH_MODULE, () => ({
 }));
 
 afterAll(() => {
-	mock.module(READ_MODULE, () => realReadModule);
 	mock.module(REFRESH_MODULE, () => realRefreshModule);
 });
 
-const { watchCacheDeployment } = await import(
-	"@/internal/byoc/actions/lifecycle/watchCacheDeployment/watchCacheDeployment.js"
+const { watchAtomRecord } = await import(
+	"@/internal/byoc/atomRecords/watchAtomRecord/watchAtomRecord.js"
 );
+
+/** Each turn the watch reads `stored`; each refresh lands the next of `reports`. */
+const atomCtx: AtomContext<ByocCacheDeployment> = {
+	deployer: {} as AtomDeployer,
+	storage: {
+		find: async () => stored,
+		update: async () => {},
+		forget: async () => {},
+	},
+};
 
 const alienDown = () =>
 	new RecaseError({
@@ -87,9 +90,8 @@ const alienDown = () =>
 
 const watch = async () => {
 	const waits: number[] = [];
-	const outcome = await watchCacheDeployment({
-		ctx: {} as AutumnContext,
-		deploymentGroupId: "dg_1",
+	const outcome = await watchAtomRecord({
+		ctx: atomCtx,
 		waitFor: async ({ seconds }) => {
 			waits.push(seconds);
 		},
@@ -165,9 +167,8 @@ describe("watching an Atom's deploy", () => {
 			cacheDeploymentIn({ status: ByocCacheStatus.AwaitingSetup }),
 		);
 		setSystemTime(new Date("2026-10-08T00:00:00Z"));
-		const outcome = await watchCacheDeployment({
-			ctx: {} as AutumnContext,
-			deploymentGroupId: "dg_1",
+		const outcome = await watchAtomRecord({
+			ctx: atomCtx,
 			waitFor: async ({ seconds }) => {
 				setSystemTime(new Date(Date.now() + seconds * 1000));
 			},

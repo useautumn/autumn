@@ -1,11 +1,10 @@
-import { ByocCacheStatus } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
+import { tearDownAtomRecord } from "../../atomRecords/tearDownAtomRecord.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import { CACHE_LOCK_TTL_MS, cacheLockKey } from "../../utils/byocCacheUtils.js";
-import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
-import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
+import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
+import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 
 /** Tears down the env's Atom, or retries one whose removal stopped. The record stays as removing until its stack is gone too. Deleting nothing is a no-op. */
 export const deleteCache = ({
@@ -35,20 +34,12 @@ const tearDownCache = async ({
 		: await cacheDeploymentRepo.find({ ctx });
 	if (!existing) return;
 
-	await getAtomDeployer().delete({
-		deploymentGroupId: existing.deployment_group_id,
-	});
-	const removing = {
-		...existing,
-		status: ByocCacheStatus.Removing,
-		error: null,
-	};
-	await cacheDeploymentRepo.update({ ctx, from: existing, to: removing });
-
-	// A setup that never ran has nothing to tear down, so this read forgets it at once.
-	const remaining = await refreshCacheDeployment({
-		ctx,
-		cacheDeployment: removing,
+	const remaining = await tearDownAtomRecord({
+		ctx: cacheDeploymentAtomContext({
+			ctx,
+			deploymentGroupId: existing.deployment_group_id,
+		}),
+		record: existing,
 	});
 	if (remaining)
 		await startCacheDeploymentWatch({

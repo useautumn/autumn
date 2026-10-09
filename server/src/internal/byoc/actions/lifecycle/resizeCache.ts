@@ -1,8 +1,7 @@
-import { isByocCacheReady } from "@autumn/byoc";
 import type { ApiByocCache, ResizeByocCacheParams } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
+import { resizeAtomRecord } from "../../atomRecords/resizeAtomRecord.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
 	CACHE_LOCK_TTL_MS,
@@ -11,7 +10,7 @@ import {
 	cacheNotRunning,
 	resourcesToMachine,
 } from "../../utils/byocCacheUtils.js";
-import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
+import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
 
 /** Moves the env's running Atom to another machine; its balances stay on the volume. */
 export const resizeCache = ({
@@ -38,19 +37,13 @@ const moveCacheMachine = async ({
 }): Promise<ApiByocCache> => {
 	const existing = await cacheDeploymentRepo.find({ ctx });
 	if (!existing) throw cacheNotRunning();
-	const current = await refreshCacheDeployment({
-		ctx,
-		cacheDeployment: existing,
-	});
-	if (!isByocCacheReady(current)) throw cacheNotRunning();
-
-	await getAtomDeployer().resize({
-		deploymentGroupId: current.deployment_group_id,
+	const resized = await resizeAtomRecord({
+		ctx: cacheDeploymentAtomContext({
+			ctx,
+			deploymentGroupId: existing.deployment_group_id,
+		}),
+		record: existing,
 		machine: resourcesToMachine(params),
 	});
-
-	const resized =
-		(await refreshCacheDeployment({ ctx, cacheDeployment: current })) ??
-		current;
 	return cacheDeploymentToApiCache({ cacheDeployment: resized, org: ctx.org });
 };

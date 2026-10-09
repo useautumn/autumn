@@ -12,14 +12,14 @@ const ATOM_ROUTE_KEYS = Object.keys(atomRouteColumns) as (keyof AtomRoute)[];
 export const isCacheConnected = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: ByocCacheDeployment;
+	cacheDeployment: Pick<ByocCacheDeployment, "stages">;
 }) => cacheDeployment.stages.connected === ByocCacheStageStatus.Done;
 
 /** A delete was asked for; the record stays until the org's stack is gone too. */
 export const isCacheBeingRemoved = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: ByocCacheDeployment;
+	cacheDeployment: Pick<ByocCacheDeployment, "status">;
 }) =>
 	cacheDeployment.status === ByocCacheStatus.Removing ||
 	cacheDeployment.status === ByocCacheStatus.TeardownRequired;
@@ -28,7 +28,7 @@ export const isCacheBeingRemoved = ({
 export const isCacheSettled = ({
 	cacheDeployment,
 }: {
-	cacheDeployment: ByocCacheDeployment;
+	cacheDeployment: Pick<ByocCacheDeployment, "status" | "stages">;
 }) =>
 	isCacheConnected({ cacheDeployment }) ||
 	cacheDeployment.status === ByocCacheStatus.Failed ||
