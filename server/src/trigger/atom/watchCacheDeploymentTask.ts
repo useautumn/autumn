@@ -1,8 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import { idempotencyKeys, task, wait } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
-import { cacheWatchIdempotencyKey } from "@/internal/byoc/actions/lifecycle/watchCacheDeployment/cacheWatchIdempotencyKey.js";
-import { watchCacheDeployment } from "@/internal/byoc/actions/lifecycle/watchCacheDeployment/watchCacheDeployment.js";
+import { cacheDeploymentAtomContext } from "@/internal/byoc/actions/lifecycle/cacheDeploymentAtomContext.js";
+import { atomWatchIdempotencyKey } from "@/internal/byoc/atomRecords/watchAtomRecord/atomWatchIdempotencyKey.js";
+import { watchAtomRecord } from "@/internal/byoc/atomRecords/watchAtomRecord/watchAtomRecord.js";
 import { runWithTriggerContext } from "@/trigger/utils/runWithTriggerContext.js";
 
 const WatchCacheDeploymentPayloadSchema = z.object({
@@ -28,12 +29,16 @@ export const watchCacheDeploymentTask = task({
 			env,
 			triggerCtx,
 			args: { deploymentGroupId, waitFor: wait.for },
-			action: watchCacheDeployment,
+			action: ({ ctx, waitFor }) =>
+				watchAtomRecord({
+					ctx: cacheDeploymentAtomContext({ ctx, deploymentGroupId }),
+					waitFor,
+				}),
 		});
 		// A finished watch frees its group's key, so the next create, retry or delete starts a new one.
 		await idempotencyKeys.reset(
 			WATCH_CACHE_DEPLOYMENT_TASK_ID,
-			await cacheWatchIdempotencyKey({ deploymentGroupId }),
+			await atomWatchIdempotencyKey({ deploymentGroupId }),
 		);
 		return { outcome };
 	},

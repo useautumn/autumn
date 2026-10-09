@@ -1,87 +1,44 @@
-import { isDeepStrictEqual } from "node:util";
-import { type ByocCacheDeployment, ByocCacheStatus } from "@autumn/shared";
+import type { ByocCacheDeployment } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
-import type { AtomDeployment } from "../../deployers/types/atomDeployer.js";
+import { refreshAtomRecord } from "../../atomRecords/refreshAtomRecord.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
 	atomTokenToHash,
 	cacheDeploymentToAtomToken,
 } from "../../utils/atomTokenUtils.js";
-import { toCacheStages, toRemovalStages } from "../../utils/cacheStageUtils.js";
-import { isCacheBeingRemoved } from "../../utils/classifyCacheDeployment.js";
+import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
 
-const deploymentToCacheDeployment = ({
+/** A row backfilled before token hashes gets its hash saved, so its Atom can call Autumn. */
+const withTokenHash = async ({
+	ctx,
 	cacheDeployment,
-	deployment,
 }: {
+	ctx: AutumnContext;
 	cacheDeployment: ByocCacheDeployment;
-	deployment: AtomDeployment | null;
-}): ByocCacheDeployment => {
-	const reportedStatus = deployment?.status ?? ByocCacheStatus.AwaitingSetup;
-	// A delete never goes back: the env may already have a new Atom in its place.
-	const isStillRemoving =
-		isCacheBeingRemoved({ cacheDeployment }) &&
-		!isCacheBeingRemoved({
-			cacheDeployment: { ...cacheDeployment, status: reportedStatus },
-		});
-	const status = isStillRemoving ? cacheDeployment.status : reportedStatus;
-	return {
+}): Promise<ByocCacheDeployment> => {
+	if (cacheDeployment.token_hash) return cacheDeployment;
+	const hashed = {
 		...cacheDeployment,
-		deployment_id: deployment?.id ?? null,
-		status,
-		endpoint_url: deployment?.endpointUrl ?? null,
-		// Until setup creates a deployment, the record keeps the machine and region its setup asked for.
-		cpu: deployment ? (deployment.machine?.cpu ?? null) : cacheDeployment.cpu,
-		memory: deployment
-			? (deployment.machine?.memory ?? null)
-			: cacheDeployment.memory,
-		region: deployment?.region ?? cacheDeployment.region,
-		stages: isCacheBeingRemoved({
-			cacheDeployment: { ...cacheDeployment, status },
-		})
-			? toRemovalStages({
-					removedStages: deployment?.removedStages ?? [],
-					hasFailed: Boolean(deployment?.error),
-				})
-			: toCacheStages({ doneStages: deployment?.doneStages ?? [], status }),
-		error: deployment?.error ?? null,
-		token_hash:
-			cacheDeployment.token_hash ??
-			atomTokenToHash({
-				token: cacheDeploymentToAtomToken({ cacheDeployment }),
-			}),
+		token_hash: atomTokenToHash({
+			token: cacheDeploymentToAtomToken({ cacheDeployment }),
+		}),
 	};
+	await cacheDeploymentRepo.update({ ctx, from: cacheDeployment, to: hashed });
+	return hashed;
 };
 
-/** Reads the Atom's state from its deployer and saves it when it moved; null once a delete has finished. */
+/** Reads the org's Atom from its deployer and saves it when it moved; null once a delete has finished. */
 export const refreshCacheDeployment = async ({
 	ctx,
 	cacheDeployment,
 }: {
 	ctx: AutumnContext;
 	cacheDeployment: ByocCacheDeployment;
-}): Promise<ByocCacheDeployment | null> => {
-	const deployment = await getAtomDeployer().find({
-		deploymentGroupId: cacheDeployment.deployment_group_id,
-		deploymentId: cacheDeployment.deployment_id,
-	});
-
-	const isRemovalDone = !deployment && isCacheBeingRemoved({ cacheDeployment });
-	if (isRemovalDone) {
-		await cacheDeploymentRepo.delete({ ctx, cacheDeployment });
-		return null;
-	}
-
-	const refreshed = deploymentToCacheDeployment({
-		cacheDeployment,
-		deployment,
-	});
-	if (!isDeepStrictEqual(refreshed, cacheDeployment))
-		await cacheDeploymentRepo.update({
+}): Promise<ByocCacheDeployment | null> =>
+	refreshAtomRecord({
+		ctx: cacheDeploymentAtomContext({
 			ctx,
-			from: cacheDeployment,
-			to: refreshed,
-		});
-	return refreshed;
-};
+			deploymentGroupId: cacheDeployment.deployment_group_id,
+		}),
+		record: await withTokenHash({ ctx, cacheDeployment }),
+	});

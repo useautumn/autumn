@@ -31,7 +31,7 @@ import {
 } from "../../utils/byocCacheUtils.js";
 import { toCacheStages } from "../../utils/cacheStageUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
-import { startCacheDeploymentWatch } from "./watchCacheDeployment/startCacheDeploymentWatch.js";
+import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 
 /** What a setup asks the org's cloud for. */
 type CacheSetupSettings = {

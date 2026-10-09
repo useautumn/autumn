@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { LabelTag } from "@/components/general/LabelTag";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
@@ -146,11 +147,7 @@ export const MainSidebar = ({
 									value="migrations"
 									icon={<ArrowsSplitIcon weight="bold" />}
 									title="Migrations"
-									badge={
-										<span className="ml-auto rounded border border-black/10 px-[5px] text-[10px] font-medium leading-[15px] tracking-[0.04em] text-[#8A8A8A] dark:border-[#262626] dark:text-[#6A6A6A]">
-											BETA
-										</span>
-									}
+									badge={<LabelTag label="BETA" className="ml-auto" />}
 									env={env}
 								/>
 							)}
