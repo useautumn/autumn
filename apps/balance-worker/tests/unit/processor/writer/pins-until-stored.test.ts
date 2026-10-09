@@ -106,31 +106,32 @@ const createWriter = ({
 	return { writer, applied, applyGate, track };
 };
 
-describe("while snapshots are written, a subject's rows stay resident until the store holds its record", () => {
-	test("appended but not yet stored, the subject survives a read that would otherwise evict it for space; once stored, it goes", async () => {
-		const { writer, applyGate, track } = createWriter();
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		const held = Promise.withResolvers<void>();
-		applyGate.held = held.promise;
+describe("a subject's rows stay resident until the store holds its record", () => {
+	for (const mode of ["write", "off"] as const)
+		test(`snapshots ${mode}: appended but not yet stored, the subject survives a read that would otherwise evict it for space; once stored, it goes`, async () => {
+			const { writer, applyGate, track } = createWriter({ mode });
+			writer.adopt({ state: createState({ identity, balance: 100 }) });
+			const held = Promise.withResolvers<void>();
+			applyGate.held = held.promise;
 
-		const tracked = track("t1");
-		await tracked.waitForCommit();
-		writer.adopt({ state: createState({ identity: other, balance: 1 }) });
-		expect(writer.readFreshestState({ identity })).not.toBeNull();
+			const tracked = track("t1");
+			await tracked.waitForCommit();
+			writer.adopt({ state: createState({ identity: other, balance: 1 }) });
+			expect(writer.readFreshestState({ identity })).not.toBeNull();
 
-		held.resolve();
-		await tracked.waitForStore();
-		writer.adopt({
-			state: createState({
-				identity: { ...identity, customerId: "cus_third" },
-				balance: 1,
-			}),
+			held.resolve();
+			await tracked.waitForStore();
+			writer.adopt({
+				state: createState({
+					identity: { ...identity, customerId: "cus_third" },
+					balance: 1,
+				}),
+			});
+			expect(writer.readFreshestState({ identity })).toBeNull();
 		});
-		expect(writer.readFreshestState({ identity })).toBeNull();
-	});
 
 	test("a command arriving while the record is unapplied decides on the resident rows, never on a read of rows Postgres lacks", async () => {
-		const { writer, applyGate, track } = createWriter();
+		const { writer, applyGate, track } = createWriter({ mode: "off" });
 		writer.adopt({ state: createState({ identity, balance: 100 }) });
 		const held = Promise.withResolvers<void>();
 		applyGate.held = held.promise;
@@ -148,47 +149,5 @@ describe("while snapshots are written, a subject's rows stay resident until the 
 		expect(
 			writer.readFreshestState({ identity })?.customerEntitlements[0]?.balance,
 		).toBe(98);
-	});
-});
-
-describe("off, pins are released when Kafka has the record, as without snapshots", () => {
-	test("appended but not yet stored, the subject is evictable for space", async () => {
-		const { writer, applyGate, track } = createWriter({ mode: "off" });
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		const held = Promise.withResolvers<void>();
-		applyGate.held = held.promise;
-		try {
-			const tracked = track("t1");
-			await tracked.waitForCommit();
-			writer.adopt({ state: createState({ identity: other, balance: 1 }) });
-			expect(writer.readFreshestState({ identity })).toBeNull();
-		} finally {
-			held.resolve();
-		}
-	});
-
-	test("a cold load of the dropped subject waits until the store holds what Kafka already has", async () => {
-		const { writer, applyGate, track } = createWriter({ mode: "off" });
-		writer.adopt({ state: createState({ identity, balance: 100 }) });
-		const held = Promise.withResolvers<void>();
-		applyGate.held = held.promise;
-		try {
-			expect(writer.waitForCommittedToStore()).toBeNull();
-			await track("t1").waitForCommit();
-			writer.adopt({ state: createState({ identity: other, balance: 1 }) });
-			expect(writer.readFreshestState({ identity })).toBeNull();
-
-			let landed = false;
-			const committed = writer.waitForCommittedToStore()?.then(() => {
-				landed = true;
-			});
-			await Promise.resolve();
-			expect(landed).toBe(false);
-			held.resolve();
-			await committed;
-			expect(landed).toBe(true);
-		} finally {
-			held.resolve();
-		}
 	});
 });

@@ -11,7 +11,7 @@ type Entry = {
 	customerKey: string | null;
 	bytes: number;
 	pins: number;
-	/** Evicted while a commit was in flight: the rows go as soon as the last pin is released. */
+	/** Evicted while a write was unapplied: the rows go as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
 };

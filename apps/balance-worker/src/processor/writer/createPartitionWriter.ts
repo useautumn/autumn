@@ -21,7 +21,6 @@ import { createSlowDecideReporter } from "./createSlowDecideReporter.js";
 import {
 	allStored,
 	awaitStored,
-	committedStored,
 	createPartitionWriterState,
 	rejectAllPending,
 	snapshotAllStored,
@@ -172,10 +171,6 @@ export function createPartitionWriter({
 		return snapshotAllStored({ state: scope.state });
 	}
 
-	function waitForCommittedToStore() {
-		return committedStored({ state: scope.state });
-	}
-
 	/** The append in flight and every batch handed to the store so far, applied or failed; never rejects. */
 	async function waitForApplies(): Promise<void> {
 		// A waiter on everything handed out keeps the apply from lingering while the partition drains.
@@ -189,7 +184,6 @@ export function createPartitionWriter({
 	return {
 		waitForStore,
 		snapshotStore,
-		waitForCommittedToStore,
 		waitForApplies,
 		decide,
 		decideHeld,

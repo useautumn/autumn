@@ -34,8 +34,6 @@ export type PartitionWriter = {
 	waitForStore(): Promise<void>;
 	/** `waitForStore`'s snapshot, taken now; it waits, and wakes a lingering apply, only once called. */
 	snapshotStore(): () => Promise<void>;
-	/** Snapshot: waits for every write Kafka already holds to reach the store; null when none is unapplied, so a caller need not yield. */
-	waitForCommittedToStore(): Promise<void> | null;
 	/** Resolves once every batch handed to the store so far has been applied or failed. */
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
@@ -191,9 +189,8 @@ export type PendingMutation = {
 	/** The partition's sequence number for this write, in decide order. */
 	seq: number;
 	customerKey: string;
-	/** The subjects this mutation projected; pinned in the map until it commits, or until it is stored while snapshots are written. */
+	/** The subjects this mutation projected; pinned in the map until the store has it. */
 	projectedSubjectKeys: string[];
-	pinsReleased?: boolean;
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied; null for a log-only record. */
 	nextState: SubjectState | null;

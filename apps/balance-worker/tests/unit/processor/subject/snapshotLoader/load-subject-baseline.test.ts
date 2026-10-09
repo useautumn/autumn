@@ -84,7 +84,6 @@ const createScope = ({
 				getEntitySubjectRows: async () => [],
 			},
 			writer: {
-				waitForCommittedToStore: () => null,
 				decide: () => {
 					throw new Error("not exercised");
 				},

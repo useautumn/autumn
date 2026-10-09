@@ -310,7 +310,7 @@ export function removePendingMutation({
 	}
 }
 
-/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. Once per mutation. */
+/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. */
 export function releasePins({
 	state,
 	pending,
@@ -318,8 +318,6 @@ export function releasePins({
 	state: PartitionWriterState;
 	pending: PendingMutation;
 }): void {
-	if (pending.pinsReleased) return;
-	pending.pinsReleased = true;
 	for (const subjectKey of pending.projectedSubjectKeys)
 		state.subjects.unpin({ subjectKey });
 }
@@ -398,16 +396,6 @@ export function snapshotAllStored({
 			storeCompletion,
 			awaitStored({ state, seq: lastRowSeq }),
 		]).then(nothing);
-}
-
-/** Snapshot: every write Kafka already holds is in the store; null when nothing is unapplied. */
-export function committedStored({
-	state,
-}: {
-	state: PartitionWriterState;
-}): Promise<void> | null {
-	const last = state.unapplied.at(-1)?.batch.at(-1);
-	return last ? awaitStored({ state, seq: last.seq }) : null;
 }
 
 function nothing(): void {}

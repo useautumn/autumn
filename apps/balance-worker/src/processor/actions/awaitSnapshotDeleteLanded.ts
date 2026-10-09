@@ -22,7 +22,7 @@ export const awaitSnapshotDeleteLanded = async ({
 	if (!snapshotQueues || !settings || !writesSubjectSnapshots(settings))
 		return [];
 	const customer = { ...identity, entityId: null };
-	// Still resident after the drop means a commit in flight pins it: the drop, and its DELETE, follow that commit's store.
+	// Still resident after the drop means an unapplied write pins it: the drop, and its DELETE, follow that write's store.
 	if (scope.ctx.writer.readFreshestState({ identity: customer }))
 		await scope.ctx.writer.waitForStore();
 	return snapshotQueues.deleteLanded({
