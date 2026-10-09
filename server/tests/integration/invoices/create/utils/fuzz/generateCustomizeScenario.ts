@@ -41,7 +41,6 @@ export type InvalidMutation =
 	| "zero_billing_units"
 	| "amount_and_tiers"
 	| "flat_amount_on_graduated"
-	| "volume_usage_based"
 	| "unsorted_tiers"
 	| "missing_inf_tier"
 	| "duplicate_item";
@@ -155,11 +154,7 @@ const genPriceShape = ({
 	interval: OracleInterval;
 }): PriceShape => {
 	const billingUnits = rng.pick([1, 1, 1, 10, 100]);
-	const styles =
-		behavior === BillingMethod.Prepaid
-			? (["flat", "flat", "graduated", "volume"] as const)
-			: (["flat", "flat", "graduated"] as const);
-	const style = rng.pick(styles);
+	const style = rng.pick(["flat", "flat", "graduated", "volume"] as const);
 	if (style === "flat") {
 		const amount = rng.pick([0.33, 0.5, 1, 2.5, 7.25, 10]);
 		return {
@@ -193,14 +188,17 @@ const toProductItem = ({ featureId, included, price }: CatalogItem) => {
 			includedUsage: included,
 		});
 	}
-	return constructArrearItem({
-		featureId,
-		price: price.amount,
-		tiers,
-		billingUnits: price.billingUnits,
-		includedUsage: included,
-		interval: ProductItemInterval.Month,
-	});
+	return {
+		...constructArrearItem({
+			featureId,
+			price: price.amount,
+			tiers,
+			billingUnits: price.billingUnits,
+			includedUsage: included,
+			interval: ProductItemInterval.Month,
+		}),
+		...(price.volume ? { tier_behavior: TierBehavior.VolumeBased } : {}),
+	};
 };
 
 export const catalogToProductItems = (catalog: FuzzCatalog): ProductItem[] => [
@@ -450,20 +448,6 @@ const applyInvalidMutation = ({
 				return false;
 			customizeItems.push({ ...customizeItems[customizeItems.length - 1] });
 			return true;
-		case "volume_usage_based":
-			return addOverridden({
-				price: {
-					billing_method: BillingMethod.UsageBased,
-					interval: BillingInterval.Month,
-					billing_units: 1,
-					tier_behavior: TierBehavior.VolumeBased,
-					tiers: [
-						{ to: 10, amount: 1 },
-						{ to: "inf", amount: 0.5 },
-					],
-				},
-				billingBehavior: BillingMethod.UsageBased,
-			});
 	}
 };
 
@@ -723,7 +707,6 @@ export const generateCustomizeScenario = ({
 		"zero_billing_units",
 		"amount_and_tiers",
 		"flat_amount_on_graduated",
-		"volume_usage_based",
 		"unsorted_tiers",
 		"missing_inf_tier",
 		"duplicate_item",
