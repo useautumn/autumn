@@ -15,7 +15,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 > = {
 	[CustomerExportKind.Customers]: {
 		menuIcon: UsersIcon,
-		menuLabel: "Export customers",
+		menuLabel: "Customers",
 		title: "Export customers",
 		description: "Download your customer list as a CSV file.",
 		runningLabel: "Exporting customers",
@@ -23,7 +23,7 @@ export const CUSTOMER_EXPORT_SHEET_COPY: Record<
 	},
 	[CustomerExportKind.BillingVerify]: {
 		menuIcon: WarningCircleIcon,
-		menuLabel: "Export billing issues",
+		menuLabel: "Billing issues",
 		title: "Export billing issues",
 		description:
 			"Check each Stripe-linked customer's billing against Autumn and download the mismatches as a CSV file. Customers without a Stripe customer are skipped. Large accounts can take up to an hour.",

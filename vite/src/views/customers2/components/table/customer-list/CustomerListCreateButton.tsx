@@ -100,12 +100,12 @@ export function CustomerListCreateButton() {
 					size="default"
 					className="gap-1.5 font-medium"
 				>
-					Create Customer
+					Create customer
 				</Button>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Create Customer</DialogTitle>
+					<DialogTitle>Create customer</DialogTitle>
 					<DialogDescription>
 						Add a new customer to your workspace.
 					</DialogDescription>
@@ -146,7 +146,7 @@ export function CustomerListCreateButton() {
 						disabled={!fields.id.trim() && !fields.email.trim()}
 						className="w-full"
 					>
-						Create Customer
+						Create customer
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
