@@ -24,6 +24,9 @@ const APP_PORT = 3000;
 const DEFAULT_TTL_MS = 3 * 24 * 60 * 60_000;
 const IDLE_MS = 5 * 60_000;
 const IDLE_CHECK_MS = 60_000;
+// 4 vCPU: the server and balance worker boot in parallel instead of contending for 2 (~$0.22/env vs ~$0.15).
+const RUN_INSTANCE = "standard-4";
+const TOMBSTONE_MS = 7 * 24 * 60 * 60_000;
 /** Tabs report ms since the user last interacted; past this their polling stops counting as activity. */
 const BACKGROUND_POLL_MS = 10 * 60_000;
 const READY_WAIT_MS = 90_000;
@@ -296,7 +299,6 @@ export class QaEnv extends DurableObject<Env> {
 			publicUrl,
 			createdAt: previous?.createdAt ?? now,
 			expiresAt: now + (input.ttlMs ?? DEFAULT_TTL_MS),
-			instance: input.instance ?? "standard-3",
 		};
 		const buildId = crypto.randomUUID().slice(0, 8);
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
@@ -316,6 +318,8 @@ export class QaEnv extends DurableObject<Env> {
 		});
 		if (!hasLiveBuild)
 			await this.ctx.storage.put("state", "building" satisfies EnvState);
+		// Only now has the env left the expired state, so the tombstone deadline can go.
+		await this.ctx.storage.delete("tombstoneUntil");
 		// The alarm reschedules itself: idle checks while awake, else the live expiry.
 		await this.ctx.storage.setAlarm(Date.now() + IDLE_CHECK_MS);
 		await this.builderStub(buildId, name).startBuilder({
@@ -429,7 +433,7 @@ export class QaEnv extends DurableObject<Env> {
 		this.ready = false;
 		this.container.start({
 			containerSnapshot: { id: snapshot.id },
-			instance: config.instance,
+			instance: RUN_INSTANCE,
 			enableInternet: true,
 			env: {
 				...sharedEnv({ env: this.env }),
@@ -665,7 +669,7 @@ export class QaEnv extends DurableObject<Env> {
 		this.container.start({
 			containerSnapshot: { id: snapshot.id },
 			entrypoint: ["sleep", "infinity"],
-			instance: config.instance,
+			instance: RUN_INSTANCE,
 			enableInternet: true,
 		});
 		const result = await this.exec({
@@ -716,7 +720,6 @@ export class QaEnv extends DurableObject<Env> {
 		this.ready = false;
 		if (config) {
 			await routerStub({ env: this.env }).setAccounts(config.name, []);
-			await deleteEnvHostname({ env: this.env, name: config.name });
 			if (config.neonBranchId)
 				await deleteNeonBranch({
 					env: this.env,
@@ -729,8 +732,24 @@ export class QaEnv extends DurableObject<Env> {
 			"pendingConfig",
 		]);
 		await this.ctx.storage.put("state", "expired" satisfies EnvState);
-		// Keep a tombstone so the URL answers 410; nothing else needs the instance.
-		await this.ctx.storage.deleteAlarm();
+		// The hostname stays for a week so old links answer 410 instead of a Cloudflare DNS error.
+		const tombstoneUntil = Date.now() + TOMBSTONE_MS;
+		await this.ctx.storage.put("tombstoneUntil", tombstoneUntil);
+		await this.ctx.storage.setAlarm(tombstoneUntil);
+	}
+
+	/** Blocks other calls so a re-create can't land between the hostname delete and the wipe. */
+	private removeTombstone(config: EnvConfig) {
+		return this.ctx.blockConcurrencyWhile(async () => {
+			if ((await this.envState()) !== "expired") return;
+			// Another alarm may fire early (e.g. an idle check rescheduled during destroy).
+			const tombstoneUntil =
+				(await this.ctx.storage.get<number>("tombstoneUntil")) ?? 0;
+			if (Date.now() < tombstoneUntil)
+				return this.ctx.storage.setAlarm(tombstoneUntil);
+			await deleteEnvHostname({ env: this.env, name: config.name });
+			await this.ctx.storage.deleteAll();
+		});
 	}
 
 	override async alarm() {
@@ -744,7 +763,9 @@ export class QaEnv extends DurableObject<Env> {
 		}
 
 		const config = await this.config();
-		if (!config || (await this.envState()) === "expired") return;
+		if (!config) return;
+		if ((await this.envState()) === "expired")
+			return this.removeTombstone(config);
 		if (Date.now() >= config.expiresAt) return this.destroyEnv();
 		if (!(await this.deliverWebhooks(config)))
 			return this.ctx.storage.setAlarm(Date.now() + 15_000);

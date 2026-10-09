@@ -19,7 +19,7 @@ const CAPY_SESSION = "capy";
 const CAPY_PREFIX =
 	process.env.CAPY_PREFIX ??
 	join(process.env.HOME ?? "/home/user", ".autumn-capy");
-const APP_MODE_PATH = join(CAPY_PREFIX, "app-mode");
+const APP_SERVICES_PATH = join(CAPY_PREFIX, "app-services");
 const SERVER_ONLY_FLAG = "--server-only";
 
 type CapyLogPaths = {
@@ -129,20 +129,20 @@ export function ensureCapyBashrc({
 }
 
 export function capyHandoffText({
-	serverOnly = false,
+	frontend = false,
 }: {
-	serverOnly?: boolean;
+	frontend?: boolean;
 } = {}): string {
 	return [
-		serverOnly
-			? "Capy server-only stack is ready (no dashboard)."
-			: "Capy is ready.",
+		frontend
+			? "Capy is ready with the dashboard."
+			: "Capy server stack is ready (no dashboard).",
 		`tmux session: ${CAPY_SESSION}`,
-		serverOnly
-			? "local ports: 8080 server | run `bun capy` for the dashboard"
-			: "local ports: 3000 dashboard, 8080 server (3001 checkout, 3099 leaf/chat when opted in)",
-		"opt-ins: ls ~/.autumn-capy/opt-ins | enable: bun capy restart --trigger|--eve|--checkout|--atom",
-		...(serverOnly
+		frontend
+			? "local ports: 3000 dashboard, 8080 server (3001 checkout, 3099 leaf/chat when opted in)"
+			: "local ports: 8080 server | dashboard: bun capy restart --frontend, then --no-frontend when done",
+		"opt-ins: ls ~/.autumn-capy/opt-ins | enable: bun capy restart --frontend|--trigger|--eve|--checkout|--atom | disable: --no-<name>",
+		...(!frontend
 			? []
 			: [
 					"browser API uses /__autumn_api via the Capy Vite proxy; expose only port 3000",
@@ -161,16 +161,16 @@ function http200(url: string): boolean {
 }
 
 async function waitForReady({
-	serverOnly,
+	frontend,
 }: {
-	serverOnly: boolean;
+	frontend: boolean;
 }): Promise<void> {
 	for (let i = 0; i < 120; i++) {
 		if (!tmuxSessionExists(CAPY_SESSION)) {
 			fatal(`capy tmux session ${CAPY_SESSION} exited before readiness`);
 		}
 		if (
-			(serverOnly || http200("http://localhost:3000/")) &&
+			(!frontend || http200("http://localhost:3000/")) &&
 			http200("http://localhost:8080/api/auth/get-session")
 		) {
 			return;
@@ -178,9 +178,9 @@ async function waitForReady({
 		await Bun.sleep(250);
 	}
 	fatal(
-		serverOnly
-			? "capy server did not become ready on :8080"
-			: "capy app did not become ready on :3000 and :8080",
+		frontend
+			? "capy app did not become ready on :3000 and :8080"
+			: "capy server did not become ready on :8080",
 	);
 }
 
@@ -201,25 +201,38 @@ export function capyUnsetCommand(keys: string[]): string {
 	return keys.length > 0 ? `unset ${keys.join(" ")}; ` : "";
 }
 
-/** A running server-only stack lacks the dashboard, so a full `bun capy` replaces it. */
-function runningStackSatisfies({ serverOnly }: { serverOnly: boolean }) {
-	if (!tmuxSessionExists(CAPY_SESSION)) return false;
-	if (serverOnly) return true;
-	return readLog(APP_MODE_PATH)?.trim() !== "server-only";
+/** True when every requested service is already in the running stack. */
+export function stackRunsServices({
+	running,
+	requested,
+}: {
+	running: string | undefined;
+	requested: string[];
+}): boolean {
+	const runningServices = running?.trim().split(",") ?? [];
+	return requested.every((name) => runningServices.includes(name));
 }
 
-function ensureAppProcess({ serverOnly }: { serverOnly: boolean }): void {
+function runningStackSatisfies({ services }: { services: string[] }) {
+	if (!tmuxSessionExists(CAPY_SESSION)) return false;
+	return stackRunsServices({
+		running: readLog(APP_SERVICES_PATH),
+		requested: services,
+	});
+}
+
+function ensureAppProcess({ services }: { services: string[] }): void {
 	ensureBunGlobalBin();
-	if (runningStackSatisfies({ serverOnly })) return;
+	if (runningStackSatisfies({ services })) return;
 	cmdCapyStop();
 	ensureStartup();
 	// Another `bun capy` may have launched the app while this one waited on the startup lock.
-	if (runningStackSatisfies({ serverOnly })) return;
+	if (runningStackSatisfies({ services })) return;
 	const env: Record<string, string> = {
 		...process.env,
 		CAPY_DEV: "1",
 		VITE_EMULATE_GOOGLE_PROXY: "1",
-		DEV_SERVICES: capyDevServices({ serverOnly }).join(","),
+		DEV_SERVICES: services.join(","),
 		WORKER_PROCESSES: "1",
 	} as Record<string, string>;
 	const withheld = withheldEnvKeys();
@@ -228,7 +241,7 @@ function ensureAppProcess({ serverOnly }: { serverOnly: boolean }): void {
 	mkdirSync(dirname(appLog), { recursive: true, mode: 0o700 });
 	writeFileSync(appLog, "", { mode: 0o600 });
 	chmodSync(appLog, 0o600);
-	writeFileSync(APP_MODE_PATH, serverOnly ? "server-only\n" : "full\n", {
+	writeFileSync(APP_SERVICES_PATH, `${services.join(",")}\n`, {
 		mode: 0o600,
 	});
 	spawnDevInTmux(
@@ -250,11 +263,15 @@ export async function cmdCapy({
 	args?: string[];
 } = {}): Promise<void> {
 	if (applyOptInFlags({ args })) cmdCapyStop();
-	const serverOnly = args.includes(SERVER_ONLY_FLAG);
+	// --server-only predates the frontend opt-in; it still skips every frontend for this run.
+	const services = capyDevServices({
+		serverOnly: args.includes(SERVER_ONLY_FLAG),
+	});
+	const frontend = services.includes("vite");
 	ensureCapyBashrc();
-	ensureAppProcess({ serverOnly });
-	await waitForReady({ serverOnly });
-	console.log(capyHandoffText({ serverOnly }));
+	ensureAppProcess({ services });
+	await waitForReady({ frontend });
+	console.log(capyHandoffText({ frontend }));
 }
 
 export function cmdCapyStatus(): void {
@@ -344,7 +361,7 @@ export function cmdCapyStop(): void {
 		alive = signalPids({ pids: alive, signal: 0 });
 	}
 	signalPids({ pids: alive, signal: "SIGKILL" });
-	rmSync(APP_MODE_PATH, { force: true });
+	rmSync(APP_SERVICES_PATH, { force: true });
 }
 
 export async function cmdCapyRestart({

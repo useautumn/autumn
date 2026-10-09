@@ -1,5 +1,4 @@
 import type { ApiEventsListItem } from "@autumn/shared";
-import { StatusChip } from "@autumn/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format } from "date-fns";
 import { useEffect, useRef } from "react";
@@ -53,28 +52,46 @@ const ColumnHeaders = () => (
 const LogRow = ({
 	event,
 	featureName,
+	color,
+	isSelected,
 	top,
-	onOpen,
+	onSelect,
 }: {
 	event: ApiEventsListItem;
 	featureName: string;
+	color: string;
+	isSelected: boolean;
 	top: number;
-	onOpen: () => void;
+	onSelect: () => void;
 }) => (
 	<button
 		type="button"
-		onClick={onOpen}
+		onClick={onSelect}
+		aria-pressed={isSelected}
 		style={{ ...ROW_GRID, top, height: ROW_HEIGHT }}
 		className={cn(
 			"absolute inset-x-0 px-4 text-left",
 			TABLE_TRAY_SURFACE_ROW_CLASS,
+			isSelected && "bg-table-row-hover",
 		)}
 	>
-		<span className={cn(CELL, "text-xs text-tertiary-foreground")}>
+		<span
+			className={cn(
+				CELL,
+				"text-xs",
+				isSelected ? "text-foreground" : "text-tertiary-foreground",
+			)}
+		>
 			{formatLogTime({ timestamp: event.timestamp })}
 		</span>
-		<span className="min-w-0">
-			<StatusChip title={event.feature_id}>{featureName}</StatusChip>
+		<span className="flex items-center gap-2 min-w-0" title={event.feature_id}>
+			<span
+				className="size-2 shrink-0 rounded-sm"
+				style={{ background: color }}
+			/>
+			<span className="min-w-0 truncate text-sm text-foreground">
+				{featureName}
+			</span>
 		</span>
 		<span
 			className="min-w-0 truncate text-tiny-id text-tertiary-foreground"
@@ -82,9 +99,7 @@ const LogRow = ({
 		>
 			{event.customer_id}
 		</span>
-		<span
-			className={cn(VALUE_CELL, "text-sm font-medium text-muted-foreground")}
-		>
+		<span className={cn(VALUE_CELL, "text-sm text-foreground")}>
 			{event.value.toLocaleString()}
 		</span>
 		<span className="min-w-0 truncate pl-4 text-tiny-id text-subtle">
@@ -99,16 +114,18 @@ export const LogsList = ({
 	hasNextPage,
 	isFetchingNextPage,
 	fetchNextPage,
-	onOpen,
+	selectedId,
+	onSelect,
 }: {
 	events: ApiEventsListItem[];
 	isLoading: boolean;
 	hasNextPage: boolean;
 	isFetchingNextPage: boolean;
 	fetchNextPage: () => void;
-	onOpen: (event: ApiEventsListItem) => void;
+	selectedId: string | null;
+	onSelect: (event: ApiEventsListItem) => void;
 }) => {
-	const { nameFor } = useLogFeatures();
+	const { colorFor, nameFor } = useLogFeatures();
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const virtualizer = useVirtualizer({
 		count: events.length,
@@ -172,8 +189,10 @@ export const LogsList = ({
 										key={event.id}
 										event={event}
 										featureName={nameFor(event.feature_id)}
+										color={colorFor(event.feature_id)}
+										isSelected={event.id === selectedId}
 										top={item.start}
-										onOpen={() => onOpen(event)}
+										onSelect={() => onSelect(event)}
 									/>
 								);
 							})}
