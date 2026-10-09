@@ -18,6 +18,7 @@ import {
 	useSheetPanelActivation,
 	useSheetPanelTarget,
 } from "./components/SheetPanelHost";
+import { applySheetItemEdit } from "./utils/applySheetItemEdit";
 
 export const ProductSheets = () => {
 	const { product, setProduct } = useProduct();
@@ -47,7 +48,6 @@ export const ProductSheets = () => {
 		enabled: hasDraftItemSessionSupport,
 		session: draftItemSession,
 		startItem: startItemDraft,
-		updateItem: updateItemDraft,
 		commitItem: commitItemDraft,
 		clearItemSession: clearItemDraftSession,
 	} = itemDraft;
@@ -124,41 +124,19 @@ export const ProductSheets = () => {
 		}
 	}, [hasDraftItemSessionSupport, sheetType, clearItemDraftSession]);
 
-	const setCurrentItem = (updatedItem: ProductItem) => {
-		if (
-			hasDraftItemSessionSupport &&
-			draftItemSession &&
-			draftItemSession.itemId === itemId
-		) {
-			// Edits to feature type or interval change the item's derived id, so
-			// resync it or the plan row stops matching and loses its selection.
-			const newItemId = getItemId({
-				item: updatedItem,
-				itemIndex: draftItemSession.itemIndex,
-			});
-			updateItemDraft({ item: updatedItem, itemId: newItemId });
-			if (newItemId !== itemId) {
+	const setCurrentItem = (nextItem: ProductItem) =>
+		applySheetItemEdit({
+			nextItem,
+			itemId,
+			itemDraft,
+			product,
+			itemIndex: resolvedItemIndex,
+			setProduct,
+			onItemIdChange: (newItemId) => {
 				updateItemId(newItemId);
 				lastItemIdRef.current = newItemId;
-			}
-			return;
-		}
-
-		if (!product || !product.items || resolvedItemIndex === -1) return;
-
-		const newItemId = getItemId({
-			item: updatedItem,
-			itemIndex: resolvedItemIndex,
+			},
 		});
-		if (newItemId !== itemId) {
-			updateItemId(newItemId);
-			lastItemIdRef.current = newItemId;
-		}
-
-		const updatedItems = [...product.items];
-		updatedItems[resolvedItemIndex] = updatedItem;
-		setProduct({ ...product, items: updatedItems });
-	};
 
 	const hasActiveDraftItemSession =
 		hasDraftItemSessionSupport &&
