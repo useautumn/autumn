@@ -51,7 +51,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const {
 		containerRef,
 		tooltipRef,
-		cursorBandRef,
 		pinned,
 		tooltipData,
 		hasTooltipAnchor,
@@ -137,6 +136,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 							dataKey={series.yKey}
 							stackId="a"
 							fill={series.fill}
+							// Read as currentColor by the hover dim, which mixes it toward the background.
+							color={series.fill}
 							// A background-colored stroke reads as a gap between stacked segments.
 							stroke="var(--background)"
 							strokeWidth={segmentGap}
@@ -168,17 +169,15 @@ export const EventsBarChart = memo(function EventsBarChart({
 	return (
 		<div
 			ref={containerRef}
-			className="h-full w-full relative"
+			className={cn(
+				"h-full w-full relative",
+				// Greyed with an opaque mix, not opacity, so the gridlines stay hidden behind the bars.
+				"[&[data-segment-hover]_.recharts-bar-rectangle:not(:hover)_path]:[fill:color-mix(in_oklab,currentColor_35%,var(--background))]",
+			)}
 			onMouseMove={handleMouseMove}
 			onMouseLeave={handleChartMouseLeave}
 			onClick={handleChartClick}
 		>
-			{/* Before the chart so it paints behind the bars, never across their seams. */}
-			<div
-				ref={cursorBandRef}
-				aria-hidden="true"
-				className="pointer-events-none absolute top-0 left-0 rounded-sm bg-muted opacity-0"
-			/>
 			{chart}
 			{/* Portaled: sticky table headers and animated card wrappers otherwise
 			    win the stacking-context fight regardless of z-index. */}
