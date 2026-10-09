@@ -15,10 +15,9 @@ import {
 import { formatCompactNumber } from "../utils/parseTimestamp";
 
 const CHART_STYLE = { cursor: "default" } as const;
-const X_TICK = { fontSize: 11, fill: "#666" } as const;
+const X_TICK = { fontSize: 11 } as const;
 const Y_TICK = {
 	fontSize: 11,
-	fill: "#666",
 	textAnchor: "middle" as const,
 	dx: -15,
 	dy: -3,
