@@ -19,7 +19,7 @@ export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 > = ({ ctx, snapshot, population, onPageProcessed }) => {
 	const baseProducts: BaseProductCache = new Map();
 	// Apply runs stay on the primary so compare-and-set judges current rows.
-	const readCtx = { ...ctx, db: dbReplica ?? ctx.db };
+	const rowsCtx = snapshot.apply ? ctx : { ...ctx, db: dbReplica ?? ctx.db };
 
 	const exportRows = async function* (): AsyncGenerator<CustomPlansExportRow> {
 		const pages = walkCustomerExportPages({ ctx, snapshot, population });
@@ -29,7 +29,7 @@ export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 			concurrency: CUSTOM_PLANS_EXPORT_CONCURRENCY,
 			run: (scalar: CustomerExportScalarRow) =>
 				customerToCustomPlansExportRows({
-					ctx: readCtx,
+					ctx: rowsCtx,
 					scalar,
 					snapshot,
 					baseProducts,
