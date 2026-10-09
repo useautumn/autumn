@@ -23,6 +23,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -222,9 +223,13 @@ test.skipIf(hostedAtom)(
 
 		await deleteAtomDeployment({ autumn });
 		const afterDelete = await autumn.post("/byoc.get_atom", {});
-		const checkAfterDelete = await checkOnAtom(anyCheck);
 		expect(afterDelete).toMatchObject({ cache: null });
-		expect(checkAfterDelete.status).toBe(401);
+		// Another Atom thread sees the removal on its next tenant re-read, about a second later.
+		await pollUntilAsserted({
+			fetch: () => checkOnAtom(anyCheck),
+			assert: ({ status }) => expect(status).toBe(401),
+			timeoutMs: 10_000,
+		});
 	},
 );
 
