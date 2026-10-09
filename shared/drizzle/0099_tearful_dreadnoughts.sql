@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_customer_licenses_customer_c" ON "customer_licenses" USING btree ("internal_customer_id" COLLATE "C");
