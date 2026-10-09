@@ -41,6 +41,7 @@ export const handleExternalAggregateEvents = createRoute({
 			max_groups,
 			group_ranking,
 			aggregate_on,
+			measure,
 			timezone,
 		} = c.req.valid("json");
 		const safeTimezone = sanitizeTimezone({ timezone });
@@ -154,6 +155,7 @@ export const handleExternalAggregateEvents = createRoute({
 					filter_by,
 					max_groups: planMaxGroups ?? max_groups,
 					group_ranking,
+					measure,
 					timezone: safeTimezone,
 				},
 			}),

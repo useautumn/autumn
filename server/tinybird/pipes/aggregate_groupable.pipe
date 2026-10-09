@@ -20,7 +20,8 @@ DESCRIPTION >
     top_event_names with top_customer_ids or top_property_values (server-set, parallel arrays from
     aggregate_groupable_top_groups) build per-period series only for those groups, with
     AUTUMN_RESERVED as org total minus them.
-    Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
+    rank_by='count' ranks groups by number of events instead of summed value.
+    Returns unpivoted data: (period, event_name, group_value, total_value, event_count, _truncated)
 
 TOKEN "aggregate_groupable_read" READ
 
@@ -610,12 +611,13 @@ NODE window_ranked
 DESCRIPTION >
     Rank each event's groups by their total over the WHOLE window. Only read when group_ranking = 'window'.
 SQL >
+    %
     SELECT
         event_name,
         group_value,
         row_number() OVER (
             PARTITION BY event_name
-            ORDER BY sum(total_value) DESC, group_value ASC
+            ORDER BY {% if String(rank_by, 'value') == 'count' %}sum(event_count){% else %}sum(total_value){% end %} DESC, group_value ASC
         ) as rn
     FROM base
     GROUP BY event_name, group_value
@@ -638,7 +640,7 @@ SQL >
     {% else %}
     SELECT
         *,
-        row_number() OVER (PARTITION BY period, event_name ORDER BY total_value DESC) as rn
+        row_number() OVER (PARTITION BY period, event_name ORDER BY {% if String(rank_by, 'value') == 'count' %}event_count{% else %}total_value{% end %} DESC) as rn
     FROM base
     {% end %}
 

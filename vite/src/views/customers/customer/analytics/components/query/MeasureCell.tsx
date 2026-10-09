@@ -6,13 +6,23 @@ import {
 } from "@autumn/ui";
 import { CheckIcon } from "@phosphor-icons/react";
 import { FilterTriggerButton } from "../FilterTriggerButton";
-import { DEDUCTIONS_MODE, USAGE_MODE, useBreakdown } from "./useBreakdown";
+import {
+	COUNT_MODE,
+	DEDUCTIONS_MODE,
+	USAGE_MODE,
+	useBreakdown,
+} from "./useBreakdown";
 
 const MEASURES = [
 	{
 		value: USAGE_MODE,
 		label: "Usage",
-		description: "What the customer tracked",
+		description: "Sum of tracked values",
+	},
+	{
+		value: COUNT_MODE,
+		label: "Count",
+		description: "Number of events tracked",
 	},
 	{
 		value: DEDUCTIONS_MODE,
@@ -22,8 +32,12 @@ const MEASURES = [
 ];
 
 export const MeasureCell = () => {
-	const { mode, changeMode } = useBreakdown();
-	const current = MEASURES.find((measure) => measure.value === mode);
+	const { mode, changeMode, customerId } = useBreakdown();
+	// Deductions are tracked per customer, so they need one picked.
+	const measures = customerId
+		? MEASURES
+		: MEASURES.filter((measure) => measure.value !== DEDUCTIONS_MODE);
+	const current = measures.find((measure) => measure.value === mode);
 
 	return (
 		<DropdownMenu>
@@ -31,7 +45,7 @@ export const MeasureCell = () => {
 				<FilterTriggerButton label="Measure" value={current?.label} />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-[220px]">
-				{MEASURES.map((measure) => (
+				{measures.map((measure) => (
 					<DropdownMenuItem
 						key={measure.value}
 						onClick={() => changeMode(measure.value)}

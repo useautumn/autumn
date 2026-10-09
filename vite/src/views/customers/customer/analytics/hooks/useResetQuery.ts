@@ -18,6 +18,7 @@ export const useResetQuery = () => {
 		setQueryStates({
 			interval: null,
 			aggregate_on: null,
+			measure: null,
 			bin_size: null,
 			start: null,
 			end: null,

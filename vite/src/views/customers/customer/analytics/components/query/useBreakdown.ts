@@ -5,6 +5,7 @@ import { SOURCE_FEATURE_GROUP } from "../../utils/displayLabels";
 
 export const DEDUCTIONS_MODE = "deductions";
 export const USAGE_MODE = "usage";
+export const COUNT_MODE = "count";
 
 /** Group-by and usage/deductions state, shared by every breakdown control. */
 export const useBreakdown = () => {
@@ -35,7 +36,10 @@ export const useBreakdown = () => {
 
 	const changeMode = (mode: string) => {
 		const toDeductions = mode === DEDUCTIONS_MODE;
-		setQueryStates({ aggregate_on: toDeductions ? "deducted" : null });
+		setQueryStates({
+			aggregate_on: toDeductions ? "deducted" : null,
+			measure: mode === COUNT_MODE ? "count" : null,
+		});
 		if (toDeductions && groupBy === "plan_id") updateGroupBy(null);
 	};
 
@@ -56,7 +60,11 @@ export const useBreakdown = () => {
 		effectiveGroupBy,
 		customerId,
 		isDeducted,
-		mode: isDeducted ? DEDUCTIONS_MODE : USAGE_MODE,
+		mode: isDeducted
+			? DEDUCTIONS_MODE
+			: queryStates.measure === "count"
+				? COUNT_MODE
+				: USAGE_MODE,
 		maxGroups: filterStates.max_groups,
 		setMaxGroups: (maxGroups: number) =>
 			setFilterStates({ max_groups: maxGroups }),

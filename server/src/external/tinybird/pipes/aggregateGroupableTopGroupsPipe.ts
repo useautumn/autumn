@@ -10,6 +10,7 @@ export const aggregateGroupableTopGroupsPipeParamsSchema = z.object({
 	max_groups: z.number().int().min(1).max(250).optional(),
 	group_column: z.enum(["customer_id", "property"]).optional(),
 	property_key: z.string().optional(),
+	rank_by: z.enum(["value", "count"]).optional(),
 });
 
 export const aggregateGroupableTopGroupsPipeResponseSchema = z.object({
