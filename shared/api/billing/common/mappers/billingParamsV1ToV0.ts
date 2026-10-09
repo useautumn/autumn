@@ -37,8 +37,6 @@ export const billingParamsV1ToV0 = ({
 	const unrepresentable = [
 		customize?.update_items !== undefined && "customize.update_items",
 		customize?.remove_licenses !== undefined && "customize.remove_licenses",
-		invoice_mode?.payment_method_types !== undefined &&
-			"invoice_mode.payment_method_types",
 	].filter((key): key is string => typeof key === "string");
 
 	const items =
@@ -76,6 +74,9 @@ export const billingParamsV1ToV0 = ({
 							: {}),
 						...(invoice_mode.net_terms_days !== undefined
 							? { net_terms_days: invoice_mode.net_terms_days }
+							: {}),
+						...(invoice_mode.payment_method_types !== undefined
+							? { payment_method_types: invoice_mode.payment_method_types }
 							: {}),
 					}
 				: {}),

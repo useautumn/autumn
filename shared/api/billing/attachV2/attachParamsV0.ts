@@ -1,6 +1,7 @@
 import { BillingDetailsBillingParamsSchema } from "@api/billing/common/billingDetailsBillingParams";
 import { TaxParamsSchema } from "@api/billing/common/taxParams";
 import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
@@ -22,6 +23,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	finalize_invoice: z.boolean().optional(),
 	invoice_template_id: z.string().optional(),
 	net_terms_days: z.number().int().positive().optional(),
+	payment_method_types: z.array(InvoicePaymentMethodSchema).min(1).optional(),
 
 	success_url: z.string().optional(),
 

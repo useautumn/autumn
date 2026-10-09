@@ -291,3 +291,51 @@ test.concurrent(
 		expect(invoice.payment_settings.payment_method_types).toEqual(["card"]);
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════
+// TEST 4: the dashboard's V0 attach body carries payment_method_types
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-mode payment methods: V0 payment_method_types overrides the org list")}`,
+	async () => {
+		const customerId = "invoice-payment-methods-request-v0";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, customer, autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.platform.create({
+					slug: `invoice-pm-v0-${Math.random().toString(36).slice(2, 8)}`,
+					configOverrides: {
+						allowed_payment_methods: ["card", "customer_balance"],
+					},
+					setupDefaultFeatures: true,
+				}),
+				s.customer({ testClock: false }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			invoice: true,
+			finalize_invoice: true,
+			enable_product_immediately: true,
+			payment_method_types: ["card"],
+		});
+
+		const subscriptions = await ctx.stripeCli.subscriptions.list({
+			customer: customer!.processor!.id!,
+			limit: 1,
+		});
+		expect(subscriptions.data[0]?.payment_settings?.payment_method_types).toEqual(
+			["card"],
+		);
+	},
+);
