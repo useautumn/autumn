@@ -43,7 +43,7 @@ export const buildOrgWithFeaturesCacheKey = ({
 }: {
 	orgId: string;
 	env: AppEnv;
-}) => `org_with_features:v2:${orgId}:${env}`;
+}) => `org_with_features:${orgId}:${env}`;
 
 export const getCachedOrgWithFeatures = async <T>({
 	ctx,
