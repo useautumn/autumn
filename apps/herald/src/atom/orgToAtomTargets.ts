@@ -4,7 +4,7 @@ import {
 	type ShadowAtomConfig,
 	shadowAtomIdOf,
 } from "@autumn/edge-config";
-import type { AppEnv, AtomRoute, Organization } from "@autumn/shared";
+import type { AppEnv, Organization } from "@autumn/shared";
 import { atomDeploymentToConnection } from "./atomDeploymentToConnection.js";
 import type { AtomConnection } from "./types/atomClient.js";
 
@@ -49,19 +49,16 @@ const shadowAtomConnection = ({
 export const orgToAtomTargets = ({
 	shadowAtomConfig,
 	org,
-	atomDeployments,
 	env,
 	customerId = null,
 }: {
 	shadowAtomConfig: ShadowAtomConfig;
 	org: Organization;
-	/** The org's own Atoms in this env, as its cached org holds them. */
-	atomDeployments: AtomRoute[];
 	env: AppEnv;
 	customerId?: string | null;
 }): AtomConnection[] =>
 	[
-		...atomDeployments.map((atomDeployment) =>
+		...(org.atomDeployments ?? []).map((atomDeployment) =>
 			atomDeploymentToConnection({ atomDeployment }),
 		),
 		shadowAtomConnection({ shadowAtomConfig, org, env, customerId }),

@@ -21,7 +21,6 @@ export const pushCatalogToCache = async ({
 	const atomConnections = orgToAtomTargets({
 		shadowAtomConfig: ctx.shadowAtomConfig.get(),
 		org: orgWithFeatures.org,
-		atomDeployments: orgWithFeatures.atomDeployments,
 		env,
 	});
 	if (atomConnections.length === 0) return;
