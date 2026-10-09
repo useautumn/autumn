@@ -1,15 +1,17 @@
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import pg from "pg";
-import { MIGRATIONS_DIR } from "../helpers/paths.ts";
-import { type Env, targetHost, wrapInInfisical } from "../helpers/env.ts";
 import { applyMigration } from "../helpers/applyMigrations.ts";
+import { type Env, targetHost, wrapInInfisical } from "../helpers/env.ts";
+import { MIGRATIONS_DIR } from "../helpers/paths.ts";
 import {
 	getPendingMigrations,
+	isLocalDatabase,
 	type PendingMigration,
 } from "../helpers/pendingMigrations.ts";
 import {
 	type BlockingStatement,
 	findBlockingIndexStatements,
+	findCreatedTables,
 } from "../helpers/safetyCheck.ts";
 
 export async function cmdMigrate(
@@ -29,7 +31,9 @@ export async function cmdMigrate(
 		opts.bootstrap ? "BOOTSTRAP" : null,
 	].filter(Boolean);
 	const tagStr = tags.length > 0 ? ` (${tags.join(" ")})` : "";
-	console.log(`[db:migrate${tagStr}] env=${env} host=${targetHost(databaseUrl)}`);
+	console.log(
+		`[db:migrate${tagStr}] env=${env} host=${targetHost(databaseUrl)}`,
+	);
 
 	if (opts.bootstrap) {
 		console.log(
@@ -44,7 +48,10 @@ export async function cmdMigrate(
 	await client.connect();
 	let pending: PendingMigration[];
 	try {
-		pending = await getPendingMigrations(client);
+		pending = selectMigrationsToApply({
+			unrecorded: await getPendingMigrations(client),
+			databaseUrl,
+		});
 	} catch (err) {
 		await client.end();
 		throw err;
@@ -130,15 +137,47 @@ async function applyPending(
 	console.log(`done — applied ${toApply.length} migration(s)`);
 }
 
+/**
+ * A shared DB that recorded a newer branch-only migration would skip older ones forever,
+ * so local DBs apply those gaps; remote DBs keep drizzle-kit's order and only warn.
+ */
+function selectMigrationsToApply({
+	unrecorded,
+	databaseUrl,
+}: {
+	unrecorded: PendingMigration[];
+	databaseUrl: string;
+}): PendingMigration[] {
+	const outOfOrder = unrecorded.filter((migration) => migration.outOfOrder);
+	if (outOfOrder.length === 0) return unrecorded;
+
+	const tags = outOfOrder.map((migration) => migration.tag).join(", ");
+	if (isLocalDatabase(databaseUrl)) {
+		console.log(`applying out-of-order migration(s) on a local DB: ${tags}`);
+		return unrecorded;
+	}
+
+	console.warn(
+		`WARNING: unrecorded migration(s) older than the newest applied one are skipped: ${tags}`,
+	);
+	return unrecorded.filter((migration) => !migration.outOfOrder);
+}
+
 type FlaggedBlocker = {
 	migration: PendingMigration;
 	blocker: BlockingStatement;
 };
 
 function collectBlockers(pending: PendingMigration[]): FlaggedBlocker[] {
+	const newTables = findCreatedTables(
+		pending.map((migration) => migration.sql),
+	);
 	const all: FlaggedBlocker[] = [];
 	for (const migration of pending) {
-		for (const blocker of findBlockingIndexStatements(migration.sql)) {
+		for (const blocker of findBlockingIndexStatements(
+			migration.sql,
+			newTables,
+		)) {
 			all.push({ migration, blocker });
 		}
 	}

@@ -7,7 +7,8 @@ export async function hasPendingMigrations(
 	const client = new pg.Client({ connectionString: databaseUrl });
 	await client.connect();
 	try {
-		return (await getPendingMigrations(client)).length > 0;
+		const pending = await getPendingMigrations(client);
+		return pending.some((migration) => !migration.outOfOrder);
 	} finally {
 		await client.end();
 	}
