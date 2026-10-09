@@ -1,4 +1,5 @@
-import { Skeleton } from "@autumn/ui";
+import { ScrollBar, Skeleton } from "@autumn/ui";
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import {
 	type ReactNode,
 	useCallback,
@@ -21,7 +22,11 @@ import { SeriesNameHoverCard } from "./SeriesNameHoverCard";
 const HEADER_ROW =
 	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
 const TOTAL_ROW = "flex items-center h-11";
-const HIDDEN_SCROLLBAR = { scrollbarWidth: "none" } as const;
+// Overlay bars framed to the body rows (past the h-7 header, above the h-11 Total, between the pinned columns), shown on hover or scroll.
+const OVERLAY_BAR =
+	"z-30 opacity-0 transition-opacity data-[hovering]:opacity-100 data-[scrolling]:opacity-100";
+const VERTICAL_BAR = cn(OVERLAY_BAR, "mt-7 mb-11 h-auto w-2");
+const HORIZONTAL_BAR = cn(OVERLAY_BAR, "mr-[112px] mb-11 ml-[220px] h-2");
 /** Each cell draws its piece of the raised surface; together the rows read as one. */
 const SURFACE_CELL = "flex h-full items-center bg-table-surface";
 const PERIOD_CELL = "w-[88px] shrink-0 px-3 text-right tabular-nums";
@@ -299,120 +304,121 @@ export const UsageBreakdownTable = ({
 			)}
 		>
 			{/* One scroller for both axes, so header, rows and Total move together sideways and only rows scroll down. */}
-			<div
-				ref={scrollRef}
-				onScroll={updateEdges}
-				// Bars would span the header, Total and tray padding; pinned shadows and clipped rows show the overflow.
-				// Inline because the global unlayered `* { scrollbar-width: thin }` outranks any utility.
-				className="min-h-0 overflow-auto scrollbar-hide"
-				style={HIDDEN_SCROLLBAR}
-			>
-				<div className="flex w-max min-w-full flex-col">
-					<div className={cn(HEADER_ROW, "sticky top-0 z-20 bg-table-tray")}>
-						<div className={cn(pinnedLeft, "flex h-full items-center pl-4")}>
-							{nameHeader}
-						</div>
-						<div className="flex flex-1 justify-end">
-							{model.periodLabels.map((label, index) => (
-								<span key={index} className={PERIOD_CELL}>
-									{label}
-								</span>
-							))}
-						</div>
-						<div
-							className={cn(
-								pinnedRight,
-								"flex h-full items-center justify-end pr-4",
-							)}
-						>
-							Total
-						</div>
-					</div>
-
-					{model.seriesRows.map((row, rowIndex) => {
-						const edge = surfaceEdge({
-							isFirst: rowIndex === 0,
-							isLast: rowIndex === lastRowIndex,
-						});
-						return (
-							<div key={row.key} className="flex h-11">
-								<div className={pinnedLeft}>
-									<div
-										className={cn(
-											SURFACE_CELL,
-											edge.border,
-											edge.left,
-											"gap-2.5 border-l border-r border-l-table-surface-border border-r-table-row-divider pl-4 pr-3",
-										)}
-									>
-										{row.name}
-									</div>
-								</div>
-								<div
-									className={cn(
-										SURFACE_CELL,
-										edge.border,
-										"flex-1 justify-end",
-									)}
-								>
-									{row.cells.map((cell, index) => (
-										<span
-											key={index}
-											className={cn(PERIOD_CELL, "text-muted-foreground")}
-											title={cell.title}
-										>
-											{cell.content}
-										</span>
-									))}
-								</div>
-								<div className={pinnedRight}>
-									<div
-										className={cn(
-											SURFACE_CELL,
-											edge.border,
-											edge.right,
-											"justify-end border-l border-r border-l-table-row-divider border-r-table-surface-border pr-4",
-											TOTAL_VALUE,
-										)}
-										title={row.total.title}
-									>
-										{row.total.content}
-									</div>
-								</div>
+			<ScrollAreaPrimitive.Root className="relative flex min-h-0 flex-col">
+				<ScrollAreaPrimitive.Viewport
+					ref={scrollRef}
+					onScroll={updateEdges}
+					className="min-h-0"
+				>
+					<div className="flex w-max min-w-full flex-col">
+						<div className={cn(HEADER_ROW, "sticky top-0 z-20 bg-table-tray")}>
+							<div className={cn(pinnedLeft, "flex h-full items-center pl-4")}>
+								{nameHeader}
 							</div>
-						);
-					})}
+							<div className="flex flex-1 justify-end">
+								{model.periodLabels.map((label, index) => (
+									<span key={index} className={PERIOD_CELL}>
+										{label}
+									</span>
+								))}
+							</div>
+							<div
+								className={cn(
+									pinnedRight,
+									"flex h-full items-center justify-end pr-4",
+								)}
+							>
+								Total
+							</div>
+						</div>
 
-					<div
-						className={cn(
-							TOTAL_ROW,
-							"sticky bottom-0 z-20 bg-table-tray text-tertiary-foreground",
-						)}
-					>
-						{/* Indented to line up with series names, past the colour swatch. */}
-						<div className={cn(pinnedLeft, "flex h-full items-center pl-9")}>
-							Total
-						</div>
-						<div className="flex flex-1 justify-end">
-							{model.totalRow.cells.map((cell, index) => (
-								<span key={index} className={PERIOD_CELL} title={cell.title}>
-									{cell.content}
-								</span>
-							))}
-						</div>
+						{model.seriesRows.map((row, rowIndex) => {
+							const edge = surfaceEdge({
+								isFirst: rowIndex === 0,
+								isLast: rowIndex === lastRowIndex,
+							});
+							return (
+								<div key={row.key} className="flex h-11">
+									<div className={pinnedLeft}>
+										<div
+											className={cn(
+												SURFACE_CELL,
+												edge.border,
+												edge.left,
+												"gap-2.5 border-l border-r border-l-table-surface-border border-r-table-row-divider pl-4 pr-3",
+											)}
+										>
+											{row.name}
+										</div>
+									</div>
+									<div
+										className={cn(
+											SURFACE_CELL,
+											edge.border,
+											"flex-1 justify-end",
+										)}
+									>
+										{row.cells.map((cell, index) => (
+											<span
+												key={index}
+												className={cn(PERIOD_CELL, "text-muted-foreground")}
+												title={cell.title}
+											>
+												{cell.content}
+											</span>
+										))}
+									</div>
+									<div className={pinnedRight}>
+										<div
+											className={cn(
+												SURFACE_CELL,
+												edge.border,
+												edge.right,
+												"justify-end border-l border-r border-l-table-row-divider border-r-table-surface-border pr-4",
+												TOTAL_VALUE,
+											)}
+											title={row.total.title}
+										>
+											{row.total.content}
+										</div>
+									</div>
+								</div>
+							);
+						})}
+
 						<div
 							className={cn(
-								pinnedRight,
-								"flex h-full items-center justify-end pr-4",
-								TOTAL_VALUE,
+								TOTAL_ROW,
+								"sticky bottom-0 z-20 bg-table-tray text-tertiary-foreground",
 							)}
-							title={model.totalRow.total.title}
 						>
-							{model.totalRow.total.content}
+							{/* Indented to line up with series names, past the colour swatch. */}
+							<div className={cn(pinnedLeft, "flex h-full items-center pl-9")}>
+								Total
+							</div>
+							<div className="flex flex-1 justify-end">
+								{model.totalRow.cells.map((cell, index) => (
+									<span key={index} className={PERIOD_CELL} title={cell.title}>
+										{cell.content}
+									</span>
+								))}
+							</div>
+							<div
+								className={cn(
+									pinnedRight,
+									"flex h-full items-center justify-end pr-4",
+									TOTAL_VALUE,
+								)}
+								title={model.totalRow.total.title}
+							>
+								{model.totalRow.total.content}
+							</div>
 						</div>
 					</div>
-				</div>
-			</div>
+				</ScrollAreaPrimitive.Viewport>
+				<ScrollBar className={VERTICAL_BAR} />
+				<ScrollBar orientation="horizontal" className={HORIZONTAL_BAR} />
+			</ScrollAreaPrimitive.Root>
 		</div>
 	);
 };
