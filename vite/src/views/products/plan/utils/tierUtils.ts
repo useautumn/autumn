@@ -93,7 +93,27 @@ export const removeTier = ({
 		newTiers[newTiers.length - 1].to = Infinite;
 	}
 
-	setItem({ ...item, tiers: newTiers });
+	const remaining = { ...item, tiers: newTiers };
+	setItem(
+		newTiers.length === 1
+			? collapseToSingleTierPrice({ item: remaining })
+			: remaining,
+	);
+};
+
+/** One tier saves as a plain `price.amount`, which carries no tier behaviour or
+ * flat fee, so the editor drops both rather than show volume pricing it won't save. */
+export const collapseToSingleTierPrice = ({
+	item,
+}: {
+	item: ProductItem;
+}): ProductItem => {
+	if (item.tiers?.length !== 1) return item;
+	return {
+		...item,
+		tier_behavior: undefined,
+		tiers: [tierToVolumePricingMode({ tier: item.tiers[0], mode: "per_unit" })],
+	};
 };
 
 /** Display `to` includes included usage; stored `to` does not. */
