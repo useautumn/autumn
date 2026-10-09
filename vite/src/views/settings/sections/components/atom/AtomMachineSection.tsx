@@ -1,18 +1,22 @@
 import type { ApiByocCache } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { CpuIcon } from "@phosphor-icons/react";
-import { ByocCacheMachineTable } from "./ByocCacheMachineTable";
-import { BYOC_CACHE_RESIZE_NOTE } from "./byocCacheMachineDisplay";
-import { ResizeByocCacheDialog } from "./ResizeByocCacheDialog";
-import type { useByocCacheActions } from "./useByocCacheActions";
-import { useByocCacheMachineForm } from "./useByocCacheMachineForm";
+import {
+	TABLE_TRAY_CLASS,
+	TABLE_TRAY_SURFACE_CLASS,
+} from "@/components/general/table";
+import { AtomMachineTable } from "./AtomMachineTable";
+import { ATOM_RESIZE_NOTE } from "./atomMachineDisplay";
+import { ResizeAtomDialog } from "./ResizeAtomDialog";
+import type { useAtomActions } from "./useAtomActions";
+import { useAtomMachineForm } from "./useAtomMachineForm";
 
-export const ByocCacheMachineSection = ({
+export const AtomMachineSection = ({
 	cache,
 	resize,
 }: {
 	cache: ApiByocCache;
-	resize: ReturnType<typeof useByocCacheActions>["resize"];
+	resize: ReturnType<typeof useAtomActions>["resize"];
 }) => {
 	const {
 		form,
@@ -23,7 +27,7 @@ export const ByocCacheMachineSection = ({
 		isConfirmOpen,
 		setConfirmOpen,
 		confirmResize,
-	} = useByocCacheMachineForm({ cache, resize });
+	} = useAtomMachineForm({ cache, resize });
 
 	return (
 		<>
@@ -38,15 +42,19 @@ export const ByocCacheMachineSection = ({
 					<CpuIcon className="size-4 text-subtle" />
 					Machine size
 				</div>
-				<ByocCacheMachineTable
-					selected={selected}
-					current={current}
-					onSelect={selectMachine}
-					disabled={resize.isPending}
-				/>
+				<div className={TABLE_TRAY_CLASS}>
+					<div className={TABLE_TRAY_SURFACE_CLASS}>
+						<AtomMachineTable
+							selected={selected}
+							current={current}
+							onSelect={selectMachine}
+							disabled={resize.isPending}
+						/>
+					</div>
+				</div>
 				<div className="flex items-center justify-between gap-4">
 					<p className="max-w-[420px] text-xs text-tertiary-foreground">
-						{BYOC_CACHE_RESIZE_NOTE}
+						{ATOM_RESIZE_NOTE}
 					</p>
 					<div className="flex shrink-0 gap-2">
 						<Button
@@ -63,7 +71,7 @@ export const ByocCacheMachineSection = ({
 					</div>
 				</div>
 			</form>
-			<ResizeByocCacheDialog
+			<ResizeAtomDialog
 				open={isConfirmOpen}
 				onOpenChange={setConfirmOpen}
 				current={current}

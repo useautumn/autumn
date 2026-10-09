@@ -9,19 +9,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
 import { getBackendErr } from "@/utils/genUtils";
-import {
-	byocCacheMachineLabel,
-	cacheToMachine,
-} from "./byocCacheMachineDisplay";
-import type { useByocCacheActions } from "./useByocCacheActions";
+import { atomMachineLabel, cacheToMachine } from "./atomMachineDisplay";
+import type { useAtomActions } from "./useAtomActions";
 
 /** The picked machine is a form value; submitting only opens the confirm, which does the resize. */
-export const useByocCacheMachineForm = ({
+export const useAtomMachineForm = ({
 	cache,
 	resize,
 }: {
 	cache: ApiByocCache;
-	resize: ReturnType<typeof useByocCacheActions>["resize"];
+	resize: ReturnType<typeof useAtomActions>["resize"];
 }) => {
 	const current = cacheToMachine(cache);
 	const [isConfirmOpen, setConfirmOpen] = useState(false);
@@ -51,10 +48,10 @@ export const useByocCacheMachineForm = ({
 			setConfirmOpen(false);
 			form.reset({ instanceType: selected.instanceType });
 			toast.success(
-				`Resizing to ${byocCacheMachineLabel(selected)}. Checks fall back to the Autumn API until it is back.`,
+				`Resizing to ${atomMachineLabel(selected)}. Checks fall back to the Autumn API until it is back.`,
 			);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to resize the cache"));
+			toast.error(getBackendErr(error, "Failed to resize Atom"));
 		}
 	};
 

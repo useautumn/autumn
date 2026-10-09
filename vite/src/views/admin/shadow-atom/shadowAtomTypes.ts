@@ -18,7 +18,7 @@ export type ShadowAtomDeployment = {
 	machine: ShadowAtomMachine | null;
 };
 
-/** What a create hands back once: the admin token's hash and, on hosted alien, the setup link. */
+/** What a create hands back once: the admin token's hash and, on hosted alien, the AWS quick-create link. */
 export type ShadowAtomCreated = {
 	adminTokenHash: string;
 	setupUrl: string | null;

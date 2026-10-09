@@ -88,7 +88,7 @@ export const ShadowAtomDeploymentCard = ({
 						rel="noreferrer"
 						className="text-xs text-primary underline underline-offset-2"
 					>
-						Open the alien setup link
+						Open the AWS quick-create link
 					</a>
 				)}
 			</div>
