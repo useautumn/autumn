@@ -174,6 +174,7 @@ export function useUpdateSubscriptionRequestBody({
 			finalizeInvoice,
 			invoiceTemplateId,
 			netTermsDays,
+			paymentMethodTypes,
 		}: BillingStageParams = {}): UpdateSubscriptionV0Params => {
 			const formValues = form.store.state.values;
 			const {
@@ -284,6 +285,7 @@ export function useUpdateSubscriptionRequestBody({
 							finalize_invoice: finalizeInvoice ?? false,
 							invoice_template_id: invoiceTemplateId,
 							net_terms_days: netTermsDays,
+							payment_method_types: paymentMethodTypes,
 							// Deferred activation can't be charged inline, so force checkout.
 							...(enableProductImmediately === false
 								? { force_checkout: true }

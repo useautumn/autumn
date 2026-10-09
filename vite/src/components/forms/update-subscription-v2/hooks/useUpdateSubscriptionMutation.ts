@@ -3,6 +3,7 @@ import type {
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
+import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
@@ -42,24 +43,8 @@ export function useUpdateSubscriptionMutation({
 		mutation.mutate({ useInvoice: false });
 	};
 
-	const handleInvoiceUpdate = async ({
-		enableProductImmediately,
-		finalizeInvoice,
-		invoiceTemplateId,
-		netTermsDays,
-	}: {
-		enableProductImmediately: boolean;
-		finalizeInvoice: boolean;
-		invoiceTemplateId?: string;
-		netTermsDays?: number;
-	}) => {
-		const result = await mutation.mutateAsync({
-			useInvoice: true,
-			enableProductImmediately,
-			finalizeInvoice,
-			invoiceTemplateId,
-			netTermsDays,
-		});
+	const handleInvoiceUpdate = async (params: SendInvoiceSubmitParams) => {
+		const result = await mutation.mutateAsync({ ...params, useInvoice: true });
 		return {
 			stripeId: result.data?.invoice?.stripe_id,
 			hostedInvoiceUrl: result.data?.invoice?.hosted_invoice_url,
