@@ -32,7 +32,6 @@ const toComparablePlanItem = (item: ApiPlanItemV1): CreatePlanItemParamsV1 => {
 
 type SameKeyItems = { catalog: ApiPlanItemV1[]; customer: ApiPlanItemV1[] };
 
-/** Within one identity, identical items cancel out and the rest pair up in order. */
 const pairSameKeyItems = ({
 	catalog,
 	customer,
@@ -61,7 +60,6 @@ const pairSameKeyItems = ({
 	);
 };
 
-/** Groups changed items by identity, so an edit reads as one change with both sides. */
 const pairCustomizedPlanItems = ({
 	catalog,
 	customer,
@@ -83,7 +81,6 @@ const pairCustomizedPlanItems = ({
 	return [...itemsByKey.values()].flatMap(pairSameKeyItems);
 };
 
-/** Pairs each changed license link with its catalog side, so additions and edits read apart. */
 const pairCustomizedPlanLicenses = ({
 	catalog,
 	customer,
@@ -105,10 +102,7 @@ const pairCustomizedPlanLicenses = ({
 			) ?? null,
 	}));
 
-/**
- * Diffs a customer product against the catalog version it points at, keeping
- * only what makes it custom. Free trials and product-level details never count.
- */
+/** Free trials and product-level details never count. */
 export const diffCustomerProductAgainstCatalog = ({
 	customerProduct,
 	baseProduct,

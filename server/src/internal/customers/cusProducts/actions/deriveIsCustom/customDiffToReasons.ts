@@ -15,7 +15,6 @@ const changeOf = ({
 	return "changed";
 };
 
-/** One reason per difference, in a stable order: base price, items, then licenses. */
 export const customDiffToReasons = ({
 	diff,
 }: {

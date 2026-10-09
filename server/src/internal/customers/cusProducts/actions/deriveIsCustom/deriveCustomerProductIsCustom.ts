@@ -6,7 +6,6 @@ import { customDiffToReasons } from "./customDiffToReasons";
 import { diffCustomerProductAgainstCatalog } from "./diffCustomerProductAgainstCatalog";
 import type { CustomerProductIsCustomResult } from "./types/customerProductIsCustomResult";
 
-/** Best-effort: a reporting failure must never change the derived flag. */
 const reportDerivationFailure = ({
 	ctx,
 	customerProduct,
@@ -32,8 +31,7 @@ const reportDerivationFailure = ({
 	} catch {}
 };
 
-/** Whether, and how, a customer product differs from its catalog version. Biased towards
- * custom: a false negative lets a migration overwrite real customizations. */
+/** Biased towards custom: a false negative lets a migration overwrite real customizations. */
 export const deriveCustomerProductIsCustom = ({
 	ctx,
 	customerProduct,
@@ -42,8 +40,6 @@ export const deriveCustomerProductIsCustom = ({
 }: {
 	ctx: Pick<AutumnContext, "logger">;
 	customerProduct: FullCusProduct;
-	/** The catalog version `customerProduct.internal_product_id` points at,
-	 * loaded with custom rows excluded. Nullish when it could not be resolved. */
 	baseProduct?: FullProduct | null;
 	features: Feature[];
 }): CustomerProductIsCustomResult => {

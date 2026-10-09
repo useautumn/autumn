@@ -1,6 +1,5 @@
 import type { CustomerProductCustomDiff } from "./customerProductCustomDiff";
 
-/** One thing that makes a customer product custom; a plan can have many. */
 export type CustomReason =
 	| { kind: "price_added" | "price_removed" | "price_changed" }
 	| {
@@ -12,7 +11,6 @@ export type CustomReason =
 			license_plan_id: string;
 	  };
 
-/** `outcome` is how the check concluded; `reasons` lists every difference behind `customized`. */
 export type CustomerProductIsCustomResult =
 	| { isCustom: false; outcome: "matches_catalog" | "revenuecat" }
 	| {
