@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveDatabaseUrl } from "../database.js";
 import { createKafkaAuthEnv } from "../kafkaAuth.js";
 import {
 	BALANCE_WORKER_CATALOG_MAX_BYTES,
@@ -107,8 +108,10 @@ export function createBalanceWorkerEnv(
 	const env = balanceWorkerEnvSchema.parse({
 		...runtimeEnv,
 		// Deployed workers still receive the URL under its old name.
-		DATABASE_URL:
-			runtimeEnv.DATABASE_URL ?? runtimeEnv.BALANCE_WORKER_DATABASE_URL,
+		DATABASE_URL: resolveDatabaseUrl({
+			url: runtimeEnv.DATABASE_URL ?? runtimeEnv.BALANCE_WORKER_DATABASE_URL,
+			runtimeEnv,
+		}),
 	});
 	const deployment = getBalanceWorkerDeployment({ runtimeEnv });
 	const kafkaNames = balanceWorkerDeploymentToKafkaNames({ deployment });
