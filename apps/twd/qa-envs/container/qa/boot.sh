@@ -4,11 +4,15 @@
 # Env (from the Durable Object): DATABASE_URL BETTER_AUTH_SECRET ENCRYPTION_IV ENCRYPTION_PASSWORD PUBLIC_URL
 set -uo pipefail
 log() { echo "[qa-boot] $(date -u +%H:%M:%S.%N | cut -c1-12) $*"; }
-mkdir -p /var/qa/logs /var/qa/kafka /var/qa/dragonfly
+mkdir -p /var/qa/logs /var/qa/kafka/mounted /var/qa/kafka/final /var/qa/dragonfly
+cp /opt/kafka/*log4j.properties /var/qa/kafka/
 L=/var/qa/logs
 exec > >(tee -a "$L/boot.log") 2>&1
 date +%s%N >/var/qa/boot-start
 log "boot"
+
+# Wakes the Neon compute while Kafka starts.
+psql "$DATABASE_URL" -qtAc "SELECT 1" >/dev/null 2>&1 &
 
 # Front proxy first so the Worker's readiness probe has something to talk to.
 bun /qa/proxy.ts >"$L/proxy.log" 2>&1 &
@@ -33,11 +37,12 @@ transaction.state.log.min.isr=1
 group.initial.rebalance.delay.ms=0
 auto.create.topics.enable=false
 EOF
+# kafka-native (GraalVM build of the same Kafka) starts in well under a second, against ~9 s for the JVM.
 (
-	/opt/kafka/bin/kafka-storage.sh format -t "$(/opt/kafka/bin/kafka-storage.sh random-uuid)" \
-		-c /var/qa/kafka/server.properties >/dev/null &&
-		KAFKA_HEAP_OPTS="-Xms128m -Xmx384m" LOG_DIR="$L/kafka" \
-			exec /opt/kafka/bin/kafka-server-start.sh /var/qa/kafka/server.properties
+	CLUSTER_ID=4L6g3nShT-eMCtK--X86sw /opt/kafka/kafka.Kafka setup --default-configs-dir /var/qa/kafka \
+		--mounted-configs-dir /var/qa/kafka/mounted --final-configs-dir /var/qa/kafka/final &&
+		exec /opt/kafka/kafka.Kafka start --config /var/qa/kafka/final/server.properties \
+			-Dkafka.logs.dir="$L/kafka" -Dlog4j.configuration=file:/var/qa/kafka/final/log4j.properties
 ) >"$L/kafka.log" 2>&1 &
 
 SQS="http://localhost:4566/123456789012"
@@ -84,8 +89,7 @@ supervise() { # name, dir, cmd...: restart on exit, like dev's restart loop
 	supervise balance-worker /app/apps/balance-worker bun --config=./bunfig.toml src/main.ts
 	log "balance worker started"
 	# Commands fail with NO_OWNER until each partition's preparing → ready → claimed records land.
-	until /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server 127.0.0.1:19092 --topic local-ownership 2>/dev/null |
-		awk -F: '$3 >= 3 { n++ } END { exit !(n >= 4) }'; do sleep 1; done
+	bun /qa/ownership-ready.ts
 	sleep 1
 	touch /var/qa/balance-owned
 	log "balance worker owns every partition"
