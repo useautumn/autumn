@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { logAutoSyncSkip } from "@/internal/billing/v2/actions/sync/utils/logAutoSyncSkip";
 import { isQuantityOnlySchedule } from "@/internal/billing/v2/actions/verify/evaluate/isQuantityOnlySchedule";
@@ -9,9 +10,7 @@ import { futurePhaseItemsChanged } from "../futurePhaseItemsChanged.js";
 import type { StripeScheduleUpdatedContext } from "../setupScheduleUpdatedContext.js";
 
 const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
-	typeof schedule.subscription === "string"
-		? schedule.subscription
-		: (schedule.subscription?.id ?? null);
+	stripeRefToId(schedule.subscription) ?? null;
 
 /**
  * A scheduled row carries the future phase as it was at import. Once the phase

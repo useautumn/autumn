@@ -6,13 +6,13 @@ import {
 	getCycleEnd,
 	getSmallestInterval,
 } from "@autumn/shared";
+import { replacedSubscriptionPeriodEndMs } from "@/internal/billing/v2/setup/carryReplacedSubscription/replacedSubscriptionPeriodEndMs";
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { billingCycleAnchorToApply } from "../utils/billingCycleAnchorToApply";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
 import { filterOnReplacedStripeSubscription } from "../utils/filterOnReplacedStripeSubscription";
 import { isBackdateRecreate } from "../utils/isBackdateRecreate";
 import { isTrialBackdateRecreate } from "../utils/isTrialBackdateRecreate";
-import { replacedSubscriptionPeriodEndMs } from "../utils/replacedSubscriptionPeriodEndMs";
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 
 type KeptSubscriptionCycle = Partial<

@@ -343,7 +343,7 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 		);
 	});
 
-	test("a canceled subscription lists the new subscription, its open invoice and dropped discount", () => {
+	test("a canceled subscription lists the new subscription and its open invoice, and its carried discount needs no warning", () => {
 		const warnings = stateWarnings({
 			billingContext: {
 				currentEpochMs: NOON_UTC,
@@ -358,7 +358,6 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 						} as Stripe.Discount,
 					],
 				}),
-				stripeDiscounts: [],
 			},
 			stripeBillingPlan: createsSubscription,
 			replacedOpenInvoices: [
@@ -384,12 +383,6 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				message:
 					"Invoice INV-0001 for $20 is still open on the cancelled subscription and is not collected by this change.",
 			},
-			{
-				type: "discount_not_carried",
-				severity: "warning",
-				message:
-					"Discount Launch 20% from the cancelled subscription is not carried over.",
-			},
 		]);
 	});
 
@@ -403,7 +396,6 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 					id: "sub_live",
 					status: "active",
 				}),
-				stripeDiscounts: [],
 			},
 			stripeBillingPlan: {
 				...createsSubscription,
@@ -457,7 +449,6 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 					start_date: Math.floor((NOON_UTC - 30 * DAY_MS) / 1000),
 					schedule,
 				}),
-				stripeDiscounts: [],
 			},
 			lineItems,
 		}).find(({ type }) => type === "subscription_recreated_backdated")?.message;
@@ -672,29 +663,6 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 				},
 			}),
 		).toEqual([]);
-	});
-
-	test("a discount the request carries over is not flagged", () => {
-		const warnings = stateWarnings({
-			billingContext: {
-				currentEpochMs: NOON_UTC,
-				billingCycleAnchorMs: "now",
-				replacedStripeSubscription: stripeSubscription({
-					status: "incomplete_expired",
-					discounts: [
-						{ source: { coupon: { id: "co_launch" } } } as Stripe.Discount,
-					],
-				}),
-				stripeDiscounts: [
-					{ source: { coupon: { id: "co_launch" } as Stripe.Coupon } },
-				],
-			},
-			stripeBillingPlan: createsSubscription,
-		});
-
-		expect(warnings.map((warning) => warning.type)).toEqual([
-			"new_stripe_subscription",
-		]);
 	});
 
 	test("free_trial null on a trialing subscription warns that it bills now", () => {

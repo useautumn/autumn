@@ -7,6 +7,7 @@ import type {
 import { ProductItemFeatureType } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
+import { buildDiscountParams } from "@/components/forms/shared/utils/discountUtils";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { resolveBillingCycleAnchor } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import {
@@ -16,7 +17,6 @@ import {
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import { billingCycleAnchorChanged } from "../utils/pendingBillingCycleAnchor";
-import { buildUpdateSubscriptionDiscounts } from "../utils/updateSubscriptionDiscounts";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
 
 type PrepaidItemInput = {
@@ -276,7 +276,7 @@ export function useUpdateSubscriptionRequestBody({
 					: undefined,
 				carry_over_usages: resetUsage ? { enabled: false } : undefined,
 				no_billing_changes: noBillingChanges || undefined,
-				...buildUpdateSubscriptionDiscounts({ discounts, removedRewardIds }),
+				...buildDiscountParams({ discounts, removedRewardIds }),
 				...(useInvoice
 					? {
 							invoice: true,

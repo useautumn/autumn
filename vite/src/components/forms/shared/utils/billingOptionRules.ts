@@ -105,7 +105,7 @@ function scheduleRules(state: BillingOptionState): BillingOptionRules {
 	return {
 		proration: show(true),
 		resetBillingCycle: show(true),
-		discounts: HIDDEN,
+		discounts: show(true),
 		planSchedule: HIDDEN,
 		resetUsage: HIDDEN,
 		skipBilling: HIDDEN,

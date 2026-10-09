@@ -1,4 +1,5 @@
 import type { AppEnv, FullCusProduct } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
@@ -53,7 +54,7 @@ const getStripeProductId = ({
 }): string | null => {
 	const product = stripeItem.price?.product;
 	if (!product) return null;
-	return typeof product === "string" ? product : (product.id ?? null);
+	return stripeRefToId(product) ?? null;
 };
 
 /**

@@ -3,10 +3,10 @@ import { useCallback, useMemo } from "react";
 import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { buildBillingPlan } from "@/components/forms/shared/utils/buildPlanCustomize";
+import { filterValidDiscounts } from "@/components/forms/shared/utils/discountUtils";
 import { freeTrialFormValuesToParams } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import type { AttachAdditionalPlan } from "../attachFormSchema";
-import { filterValidDiscounts } from "../utils/discountUtils";
 import { stripPricesFromItems } from "../utils/grantFreeUtils";
 import type { BuildAttachRequestBodyParams } from "./useAttachRequestBody";
 

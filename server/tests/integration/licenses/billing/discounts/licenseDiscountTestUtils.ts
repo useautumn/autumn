@@ -3,10 +3,11 @@ import {
 	BillingInterval,
 	type BillingPreviewResponse,
 	type PreviewLineItem,
+	stripeRefToId,
 } from "@autumn/shared";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
@@ -196,5 +197,5 @@ export const getStripeSubscriptionCouponIds = (
 		if (typeof discount === "string") return [];
 		const sourceCoupon = discount.source?.coupon;
 		if (!sourceCoupon) return [];
-		return [typeof sourceCoupon === "string" ? sourceCoupon : sourceCoupon.id];
+		return [stripeRefToId(sourceCoupon)];
 	});

@@ -16,6 +16,7 @@ import {
 	type CreateScheduleParamsV0Input,
 	ms,
 	type ScheduleMismatch,
+	stripeRefToId,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -44,10 +45,7 @@ const scheduleIdFor = async ({
 		ctx,
 		stripeCustomerId,
 	});
-	const scheduleId =
-		typeof subscription.schedule === "string"
-			? subscription.schedule
-			: subscription.schedule?.id;
+	const scheduleId = stripeRefToId(subscription.schedule);
 	if (!scheduleId) throw new Error("Expected a schedule on the subscription");
 	return scheduleId;
 };
@@ -71,7 +69,7 @@ const driftPhaseAnchor = async ({
 			proration_behavior: "none",
 			...(index === phaseIndex && { billing_cycle_anchor: "phase_start" }),
 			items: phase.items.map((item) => ({
-				price: typeof item.price === "string" ? item.price : item.price.id,
+				price: stripeRefToId(item.price),
 				...(item.quantity !== undefined && { quantity: item.quantity }),
 			})),
 		})),

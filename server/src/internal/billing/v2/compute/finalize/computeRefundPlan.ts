@@ -3,6 +3,7 @@ import type {
 	LineItem,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
@@ -38,10 +39,7 @@ export const computeRefundPlan = async ({
 		return { lineItems: filteredLineItems, refundPlan: undefined };
 	}
 
-	const latestInvoiceId =
-		typeof stripeSubscription.latest_invoice === "string"
-			? stripeSubscription.latest_invoice
-			: stripeSubscription.latest_invoice?.id;
+	const latestInvoiceId = stripeRefToId(stripeSubscription.latest_invoice);
 
 	if (!latestInvoiceId) {
 		return { lineItems: filteredLineItems, refundPlan: undefined };

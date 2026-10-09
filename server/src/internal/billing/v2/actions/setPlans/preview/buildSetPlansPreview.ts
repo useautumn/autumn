@@ -9,6 +9,7 @@ import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingP
 import type { SetPlansResult } from "../types/setPlansResult";
 import { isCustomerProductOnOtherSubscription } from "../utils/isCustomerProductOnOtherSubscription";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
+import { currentSubscriptionTerms } from "./currentSubscriptionTerms";
 import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
 import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
@@ -39,6 +40,7 @@ export const buildSetPlansPreview = async ({
 		stripePrices,
 		replacedSubscriptionInputs,
 		liveOpenInvoices,
+		subscriptionTerms,
 	] = await Promise.all([
 		billingPlanToAttachPreview({
 			ctx,
@@ -65,6 +67,7 @@ export const buildSetPlansPreview = async ({
 			billedLineItems: billingPlan.autumn.lineItems ?? [],
 		}),
 		fetchPastDueOpenInvoices({ ctx, billingContext }),
+		currentSubscriptionTerms({ ctx, billingContext }),
 	]);
 	const processorItemContext: ProcessorItemContext = {
 		priceIndex: buildAutumnStripePriceIndex({
@@ -96,6 +99,7 @@ export const buildSetPlansPreview = async ({
 
 	return {
 		...attachPreview,
+		...subscriptionTerms,
 		phases: previewPhases,
 		removed_phases: review.removedPhases,
 		processor_changes: processorChanges,

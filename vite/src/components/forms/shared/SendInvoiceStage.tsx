@@ -14,12 +14,12 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import {
-	DEFAULT_NET_TERMS_DAYS,
 	type InvoiceSettings,
 	InvoiceSettingsSection,
 } from "./InvoiceSettingsSection";
 import { PreviewSection, type PreviewSectionQuery } from "./PreviewSection";
 import { UrlSuccessView } from "./UrlSuccessView";
+import { resolveNetTermsDays } from "./utils/resolveNetTermsDays";
 
 export interface SendInvoiceSubmitParams {
 	enableProductImmediately: boolean;
@@ -124,6 +124,7 @@ export function SendInvoiceStage({
 	billingAddressSection,
 	submitBlocked = false,
 	onEmailSaved,
+	defaultNetTermsDays: subscriptionNetTermsDays,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -138,6 +139,8 @@ export function SendInvoiceStage({
 	billingAddressSection?: ReactNode;
 	submitBlocked?: boolean;
 	onEmailSaved?: () => void;
+	/** The current subscription's net terms, which win over the org default. */
+	defaultNetTermsDays?: number;
 }) {
 	const { customer, refetch } = useCusQuery();
 	const { org } = useOrg();
@@ -162,6 +165,10 @@ export function SendInvoiceStage({
 	);
 
 	const customerId = customer?.id ?? customer?.internal_id;
+	const defaultNetTermsDays =
+		subscriptionNetTermsDays ??
+		org?.config?.default_invoice_net_terms_days ??
+		undefined;
 
 	const handleSaveEmail = useCallback(async () => {
 		if (!emailValue.trim() || !customerId) return;
@@ -185,10 +192,10 @@ export function SendInvoiceStage({
 	const buildSubmitParams = (
 		finalizeInvoice: boolean,
 	): SendInvoiceSubmitParams => {
-		const resolvedNetTermsDays =
-			invoiceSettings.netTermsDays ??
-			org?.config?.default_invoice_net_terms_days ??
-			DEFAULT_NET_TERMS_DAYS;
+		const resolvedNetTermsDays = resolveNetTermsDays({
+			netTermsDays: invoiceSettings.netTermsDays,
+			defaultNetTermsDays,
+		});
 		return {
 			enableProductImmediately: enableImmediately,
 			finalizeInvoice,
@@ -324,7 +331,7 @@ export function SendInvoiceStage({
 				value={invoiceSettings}
 				onChange={setInvoiceSettings}
 				disabled={needsEmail}
-				defaultNetTermsDays={org?.config?.default_invoice_net_terms_days}
+				defaultNetTermsDays={defaultNetTermsDays}
 			/>
 
 			<PreviewSection previewQuery={previewQuery} />
@@ -367,6 +374,7 @@ export function SendInvoiceStageWithPreview({
 	billingAddressSection,
 	submitBlocked,
 	onEmailSaved,
+	defaultNetTermsDays,
 }: {
 	productName?: string;
 	previewQuery: PreviewSectionQuery;
@@ -382,6 +390,7 @@ export function SendInvoiceStageWithPreview({
 	billingAddressSection?: ReactNode;
 	submitBlocked?: boolean;
 	onEmailSaved?: () => void;
+	defaultNetTermsDays?: number;
 }) {
 	const effectiveScheduledStartDate = scheduledStartDate ?? null;
 
@@ -407,6 +416,7 @@ export function SendInvoiceStageWithPreview({
 			billingAddressSection={billingAddressSection}
 			submitBlocked={submitBlocked}
 			onEmailSaved={onEmailSaved}
+			defaultNetTermsDays={defaultNetTermsDays}
 		/>
 	);
 }

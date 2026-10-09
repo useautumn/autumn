@@ -1,28 +1,20 @@
-import type { ApiDiscount } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
+import type { AppliedDiscount } from "@/components/forms/shared/utils/appliedDiscountLabel";
 import {
 	addDiscount,
-	type FormDiscount,
+	EMPTY_DISCOUNTS_FORM_VALUES,
 	removeDiscount,
 	toggleRemovedRewardId,
 	updateDiscount,
-} from "@/components/forms/attach-v2/utils/discountUtils";
+} from "@/components/forms/shared/utils/discountUtils";
 import { withFieldGroup } from "@/hooks/form/form";
 import { AppliedDiscountRow } from "./AppliedDiscountRow";
 import { DiscountsConfigRow } from "./DiscountsConfigRow";
 
-const discountsDefaults: {
-	discounts: FormDiscount[];
-	removedRewardIds: string[];
-} = {
-	discounts: [],
-	removedRewardIds: [],
-};
-
 const discountsProps: {
 	description: string;
 	productId: string | undefined;
-	appliedDiscounts: ApiDiscount[];
+	appliedDiscounts: AppliedDiscount[];
 } = {
 	description: "",
 	productId: undefined,
@@ -31,7 +23,7 @@ const discountsProps: {
 
 /** New discounts plus remove toggles for the ones already on the subscription. */
 export const DiscountsFieldGroup = withFieldGroup({
-	defaultValues: discountsDefaults,
+	defaultValues: EMPTY_DISCOUNTS_FORM_VALUES,
 	props: discountsProps,
 	render: function DiscountsFieldGroupRender({
 		group,

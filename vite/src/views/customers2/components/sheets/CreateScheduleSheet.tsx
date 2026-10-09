@@ -41,6 +41,7 @@ import { getActiveCustomerPlans } from "@/components/forms/customer-state/getAct
 import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
+import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/discountUtils";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -188,6 +189,7 @@ export function buildInitialValues({
 			}),
 		}),
 		trialEdited: false,
+		...EMPTY_DISCOUNTS_FORM_VALUES,
 	};
 }
 
@@ -237,7 +239,7 @@ function customerProductsToSetPlansState({
 }
 
 function ScheduleSendInvoiceContent() {
-	const { isPending, handleInvoiceSubmit, previewQuery } =
+	const { isPending, handleInvoiceSubmit, previewQuery, preview } =
 		useCreateScheduleFormContext();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
@@ -251,6 +253,7 @@ function ScheduleSendInvoiceContent() {
 			stripeAccount={stripeAccount ?? undefined}
 			env={env}
 			onBack={() => setSheet({ type: "create-schedule-review" })}
+			defaultNetTermsDays={preview?.invoice_mode.net_terms_days}
 		/>
 	);
 }

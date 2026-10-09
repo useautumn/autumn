@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 /** Gets the current phase index of a Stripe subscription schedule based on nowMs. */
@@ -19,11 +20,7 @@ export const stripeSubscriptionScheduleToPhaseIndex = ({
 
 export const stripeSchedulePhaseItemToPriceId = (
 	item: Stripe.SubscriptionSchedule.Phase.Item,
-): string => (typeof item.price === "string" ? item.price : item.price.id);
-
-const stripeRefToId = (
-	ref: string | { id: string } | null | undefined,
-): string | undefined => (typeof ref === "string" ? ref : ref?.id);
+): string => stripeRefToId(item.price);
 
 const stripeScheduleDiscountToUpdateParam = (
 	discount: Stripe.SubscriptionSchedule.Phase.Discount,

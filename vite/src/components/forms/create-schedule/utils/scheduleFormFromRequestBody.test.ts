@@ -483,3 +483,29 @@ describe("scheduleFormFromRequestBody", () => {
 		).not.toHaveProperty("trialEnabled");
 	});
 });
+
+describe("scheduleFormFromRequestBody discounts", () => {
+	test("seeds added discounts and removals from a request", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: "now" }],
+			discounts: [{ reward_id: "loyalty_10" }],
+			remove_discounts: [{ reward_id: "launch_20" }],
+		});
+
+		expect(form?.discounts).toEqual([
+			{ _id: "seeded-discount-0", reward_id: "loyalty_10" },
+		]);
+		expect(form?.removedRewardIds).toEqual(["launch_20"]);
+	});
+
+	test("leaves the discount fields alone when the request has none", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: "now" }],
+		});
+
+		expect(form).not.toHaveProperty("discounts");
+		expect(form).not.toHaveProperty("removedRewardIds");
+	});
+});

@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
 export type NormalizedStripeSyncCandidate = {
@@ -13,7 +14,7 @@ const normalizeStripeProductId = ({
 	product: string | Stripe.Product | Stripe.DeletedProduct | null | undefined;
 }): string | null => {
 	if (!product) return null;
-	return typeof product === "string" ? product : (product.id ?? null);
+	return stripeRefToId(product) ?? null;
 };
 
 export const normalizeStripeSubscriptionItem = ({

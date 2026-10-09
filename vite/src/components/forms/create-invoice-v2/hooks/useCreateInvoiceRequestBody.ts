@@ -5,11 +5,11 @@ import type {
 	ProductItem,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import { convertToInvoiceFeatureQuantities } from "@/utils/billing/invoiceQuantityUtils";
 import {
 	type FormDiscount,
 	filterValidDiscounts,
-} from "../../attach-v2/utils/discountUtils";
+} from "@/components/forms/shared/utils/discountUtils";
+import { convertToInvoiceFeatureQuantities } from "@/utils/billing/invoiceQuantityUtils";
 import type {
 	CreateInvoiceForm,
 	FormInvoiceLicense,

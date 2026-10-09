@@ -2,8 +2,8 @@ import {
 	type BillingContext,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
+import { replacedSubscriptionPeriodEndMs } from "@/internal/billing/v2/setup/carryReplacedSubscription/replacedSubscriptionPeriodEndMs";
 import { isBackdateRecreate } from "./isBackdateRecreate";
-import { replacedSubscriptionPeriodEndMs } from "./replacedSubscriptionPeriodEndMs";
 
 /** A paid backdate recreate anchored on a date other than the period it paid ends, with both dates to settle between. */
 export const paidBackdateAnchorMove = ({

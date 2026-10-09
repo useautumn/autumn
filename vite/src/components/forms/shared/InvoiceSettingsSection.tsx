@@ -11,8 +11,8 @@ import {
 import { InfoIcon } from "lucide-react";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { cn } from "@/lib/utils";
+import { resolveNetTermsDays } from "./utils/resolveNetTermsDays";
 
-export const DEFAULT_NET_TERMS_DAYS = 30;
 const NO_TEMPLATE_VALUE = "none";
 
 export interface InvoiceSettings {
@@ -83,9 +83,10 @@ export function InvoiceSettingsSection({
 							type="number"
 							min={1}
 							value={String(
-								value.netTermsDays ??
-									defaultNetTermsDays ??
-									DEFAULT_NET_TERMS_DAYS,
+								resolveNetTermsDays({
+									netTermsDays: value.netTermsDays,
+									defaultNetTermsDays,
+								}),
 							)}
 							onChange={(e) => {
 								const parsed = Number.parseInt(e.target.value, 10);

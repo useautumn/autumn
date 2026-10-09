@@ -1,3 +1,4 @@
+import { stripeRefToId } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 
@@ -30,8 +31,7 @@ export const corruptStripeSubscription = async ({
 	const sub = await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 
 	if (mutations.releaseSchedule) {
-		const scheduleId =
-			typeof sub.schedule === "string" ? sub.schedule : sub.schedule?.id;
+		const scheduleId = stripeRefToId(sub.schedule);
 		if (scheduleId) {
 			await ctx.stripeCli.subscriptionSchedules.release(scheduleId);
 		}

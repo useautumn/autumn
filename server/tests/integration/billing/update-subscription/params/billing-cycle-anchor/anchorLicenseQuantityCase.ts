@@ -4,6 +4,7 @@ import type {
 	BillingPreviewResponse,
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
+import { stripeRefToId } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect.js";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect.js";
@@ -45,8 +46,7 @@ export const expectAnchorLicenseQuantity = async (
 	});
 	if (variant.catalog) {
 		const latestInvoice = scenario.subscription.latest_invoice;
-		const stripeInvoiceId =
-			typeof latestInvoice === "string" ? latestInvoice : latestInvoice?.id;
+		const stripeInvoiceId = stripeRefToId(latestInvoice);
 		if (!stripeInvoiceId) throw new Error("Expected attach invoice");
 		const rows = await waitForInvoiceLineItems({
 			stripeInvoiceId,

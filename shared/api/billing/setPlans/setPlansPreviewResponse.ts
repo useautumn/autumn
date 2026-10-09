@@ -4,7 +4,9 @@ import {
 	PreviewBalanceChangeSchema,
 	PreviewBalanceSchema,
 } from "@api/billing/components/billingChanges/previewBalanceChange";
+import { ApiDiscountSchema } from "@api/others/apiDiscount";
 import { z } from "zod/v4";
+import { InvoiceModeParamsSchema } from "../common/invoiceModeParams";
 import { SetPlansTextPartSchema } from "./setPlansTextParts";
 
 export const ProcessorChangeSchema = z.object({
@@ -126,7 +128,6 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"subscription_replaced",
 	"new_stripe_subscription",
 	"open_invoice_not_collected",
-	"discount_not_carried",
 	"trial_ended",
 	"scheduled_cancel_changed",
 	"interval_change_invoices_now",
@@ -149,6 +150,17 @@ export const SetPlansPreviewWarningSchema = z.object({
 	}),
 });
 
+export const SetPlansPreviewDiscountSchema = ApiDiscountSchema.extend({
+	months_left: z.number().int().nonnegative().nullish().meta({
+		description:
+			"For a repeating discount on the subscription: the months a recreated subscription carries, enough to cover the renewals the discount still has. Null otherwise.",
+	}),
+});
+
+export type SetPlansPreviewDiscount = z.infer<
+	typeof SetPlansPreviewDiscountSchema
+>;
+
 export const SetPlansPreviewChangesSchema = z.object({
 	phases: z.array(SetPlansPreviewPhaseSchema).meta({
 		description:
@@ -165,6 +177,17 @@ export const SetPlansPreviewChangesSchema = z.object({
 	warnings: z.array(SetPlansPreviewWarningSchema).meta({
 		description:
 			"Side effects of the request worth confirming before it is sent, such as a replaced schedule or a reset balance.",
+	}),
+	discounts: z.array(SetPlansPreviewDiscountSchema).meta({
+		description:
+			"The discounts on the customer's current subscription, before this request. A recreated subscription keeps them unless they are listed in remove_discounts.",
+	}),
+	invoice_mode: InvoiceModeParamsSchema.pick({
+		enabled: true,
+		net_terms_days: true,
+	}).meta({
+		description:
+			"How the customer's current subscription is collected: enabled when Stripe sends invoices (send_invoice), with its net terms. A recreated subscription keeps it unless invoice_mode is sent.",
 	}),
 });
 
