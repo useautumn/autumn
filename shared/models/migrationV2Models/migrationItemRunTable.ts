@@ -2,12 +2,14 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
+	jsonb,
 	numeric,
 	pgTable,
 	text,
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { MigrationItemChange } from "./migrationItemChange.js";
 
 export const MigrationItemRunStatus = {
 	Running: "running",
@@ -49,6 +51,9 @@ export const migrationItemRuns = pgTable(
 		item_id: text().notNull(),
 		status: text().$type<MigrationItemRunStatus>().notNull(),
 		skip_reason: text().$type<MigrationItemRunSkipReason>(),
+		/** Changes this migration committed for the item whose effects are not
+		 * yet published; cleared once a settled row publishes them. */
+		unpublished_changes: jsonb().$type<MigrationItemChange[]>(),
 		timestamp: timestamp({ withTimezone: true }).notNull().default(sql`now()`),
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),
@@ -82,6 +87,12 @@ export const migrationItemRuns = pgTable(
 				table.item_id,
 			)
 			.where(sql`${table.dry_run} = true`),
+		index("migration_item_runs_unpublished_idx")
+			.on(table.migration_internal_id)
+			.where(
+				sql`${table.unpublished_changes} IS NOT NULL AND ${table.dry_run} = false`,
+			)
+			.concurrently(),
 		index("migration_item_runs_customer_recent_idx")
 			.on(table.item_id, sql`${table.updated_at} DESC`)
 			.where(sql`${table.item_kind} = 'customer'`),

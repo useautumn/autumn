@@ -1,0 +1,2 @@
+ALTER TABLE "migration_item_runs" ADD COLUMN "unpublished_changes" jsonb;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "migration_item_runs_unpublished_idx" ON "migration_item_runs" USING btree ("migration_internal_id") WHERE "migration_item_runs"."unpublished_changes" IS NOT NULL AND "migration_item_runs"."dry_run" = false;

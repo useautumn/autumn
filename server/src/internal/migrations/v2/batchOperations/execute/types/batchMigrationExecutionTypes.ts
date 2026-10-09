@@ -1,7 +1,9 @@
 import type {
-	CusProductStatus,
 	EntitlementWithFeature,
 	FullProductWithoutLicenses,
+	MigrationCustomerProductRepointed,
+	MigrationEntitlementCreated,
+	MigrationEntitlementDeleted,
 	MigrationItemRunSkipReason,
 } from "@autumn/shared";
 
@@ -14,54 +16,28 @@ export type BatchMigrationPageCustomer = {
 	email: string | null;
 };
 
-/** One entitlement row this page actually inserted. Feeds the synthesized
- * per-customer response (Tinybird events and webhook payloads) without
- * re-reading customers: the candidate dedup guarantees the feature was absent
- * before, so this IS the customer's diff. */
-export type BatchMigrationInsertedItem = {
+/** One entitlement row this page inserted. The candidate dedup proves the
+ * feature was absent before, so the row IS the customer's diff. */
+export type BatchMigrationInsertedItem = Omit<
+	MigrationEntitlementCreated,
+	"kind"
+> & {
 	internalCustomerId: string;
-	/** A customer can hold several products on the migrated plan (entity
-	 * scoped, etc.); each carries its own cycle, so rows stay per product. */
-	customerProductId: string;
-	planId: string;
-	featureId: string;
-	granted: number | null;
-	/** After-write remaining; omit when remaining equals granted. */
-	remaining?: number | null;
-	unlimited: boolean;
-	nextResetAt: number | null;
-	/** Public id of the owning entity when the customer product is entity-level. */
-	entityId: string | null;
-	/** Customer-product lifecycle state at candidate-select time — the
-	 * webhook plan-change snapshot, captured in-transaction for free. */
-	status: CusProductStatus;
-	startsAt: number | null;
-	canceledAt: number | null;
-	endedAt: number | null;
-	trialEndsAt: number | null;
 };
 
 export type BatchMigrationRemovedItem = Omit<
-	BatchMigrationInsertedItem,
-	"granted" | "unlimited" | "nextResetAt" | "remaining"
+	MigrationEntitlementDeleted,
+	"kind" | "entitlementId"
 > & {
+	internalCustomerId: string;
 	entitlement: EntitlementWithFeature;
-	/** Before-state, set when the removal is the from-half of a replace. */
-	granted?: number | null;
-	remaining?: number | null;
-	unlimited?: boolean;
-	nextResetAt?: number | null;
 };
 
-export type BatchMigrationRepointedProduct = {
+export type BatchMigrationRepointedProduct = Omit<
+	MigrationCustomerProductRepointed,
+	"kind" | "fromInternalProductId" | "toInternalProductId"
+> & {
 	internalCustomerId: string;
-	customerProductId: string;
-	entityId: string | null;
-	status: CusProductStatus;
-	startsAt: number | null;
-	canceledAt: number | null;
-	endedAt: number | null;
-	trialEndsAt: number | null;
 	fromProduct: FullProductWithoutLicenses;
 	toProduct: FullProductWithoutLicenses;
 };
