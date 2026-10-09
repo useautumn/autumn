@@ -5,7 +5,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const REFETCH_INTERVAL_MS = 60_000;
 
-/** The env's Atom's CPU, memory and traffic over the range, refreshed every minute. */
+/** The env's Atom's CPU, memory and traffic per period over the range, and its latest 10s, refreshed every minute. */
 export const useAtomMetricsQuery = ({ range }: { range: AtomMetricsRange }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -23,8 +23,9 @@ export const useAtomMetricsQuery = ({ range }: { range: AtomMetricsRange }) => {
 	});
 
 	return {
-		bucketSeconds: data?.bucket_seconds ?? 0,
+		periodSeconds: data?.period_seconds ?? 0,
 		points: data?.points ?? [],
+		latest: data?.latest ?? null,
 		fetchedAt: dataUpdatedAt,
 		isLoading,
 	};
