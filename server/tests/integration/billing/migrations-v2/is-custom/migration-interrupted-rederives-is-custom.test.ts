@@ -1,9 +1,4 @@
-/**
- * A batch run that stops early still re-derives is_custom for the pages it committed.
- *
- * Contract: after a canceled run, and after a run whose chunk throws once its page
- * committed, a plan the migration customized away from its catalog is flagged custom.
- */
+/** A canceled run, or one whose chunk throws after its page committed, still re-derives is_custom. */
 
 import { expect, test } from "bun:test";
 import { CusProductStatus, customerProducts, customers } from "@autumn/shared";

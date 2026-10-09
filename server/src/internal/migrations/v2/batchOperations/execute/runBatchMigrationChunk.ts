@@ -555,8 +555,6 @@ const runNextBatchMigrationPage = async ({
 	// A retried customer may already be converged (skipped) yet carry a stale
 	// cache from the interrupted attempt, so retries invalidate skipped too.
 	const invalidateSkipped = (controls?.retryItemStatuses?.length ?? 0) > 0;
-	// Converged customers whose flag the is_custom re-derivation may have changed; their
-	// caches need dropping too, so a failed drop revokes their checkpoints as well.
 	let flippedSkipped: BatchMigrationPageCustomer[] = [];
 	const revokeCheckpoints = async (error: unknown) => {
 		const internalCustomerIds = [

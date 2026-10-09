@@ -23,7 +23,7 @@ const planInternalProductIds = ({
 	),
 ];
 
-/** Changed customers, plus converged ones: a retry reports a customer an interrupted attempt changed as converged. */
+/** A retry reports a customer an interrupted attempt changed as converged. */
 const customersToRederive = ({
 	pageResult,
 }: {
@@ -37,8 +37,7 @@ const customersToRederive = ({
 	),
 ];
 
-/** Batch ops bypass the billing-plan hook, so each page re-derives `is_custom` before its caches
- * drop and one invalidation covers both. Returns the customers whose flag may have changed; never throws. */
+/** Batch ops bypass the billing-plan hook; this runs before the page's cache drop so one drop covers both. */
 export const rederivePageIsCustom = async ({
 	ctx,
 	migrationRunId,
