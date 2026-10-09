@@ -1,6 +1,6 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { apiKeyRepo } from "@/internal/dev/repos/index.js";
-import { cacheDeploymentRepo } from "../../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 
 /** The key hashes that are not a live secret key of the Atom's own org and env; null when no Atom holds the token hash. */
 export const findInvalidAtomKeys = async ({

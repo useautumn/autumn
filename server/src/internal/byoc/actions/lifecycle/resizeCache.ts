@@ -3,7 +3,7 @@ import type { ApiByocCache, ResizeByocCacheParams } from "@autumn/shared";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
-import { cacheDeploymentRepo } from "../../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToApiCache,

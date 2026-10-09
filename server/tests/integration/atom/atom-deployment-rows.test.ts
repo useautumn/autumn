@@ -21,7 +21,7 @@ import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
-import { cacheDeploymentRepo } from "@/internal/byoc/repos/index.js";
+import { cacheDeploymentRepo } from "@/internal/byoc/repos/cacheDeploymentRepo.js";
 import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { generateId } from "@/utils/genUtils.js";

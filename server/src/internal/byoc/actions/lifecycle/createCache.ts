@@ -13,7 +13,7 @@ import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
-import { cacheDeploymentRepo } from "../../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
 	atomTokenToHash,
 	cacheDeploymentToAtomToken,

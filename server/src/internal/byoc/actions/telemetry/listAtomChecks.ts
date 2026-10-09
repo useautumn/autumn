@@ -1,6 +1,6 @@
 import type { ListAtomChecksResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { cacheDeploymentRepo } from "../../repos/index.js";
+import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import { queryRecentAtomChecks } from "./atomLogs/queryRecentAtomChecks.js";
 
 /** The env's Atom's latest checks, for setup to show the org's first ones arriving; the first seen marks setup done. */
