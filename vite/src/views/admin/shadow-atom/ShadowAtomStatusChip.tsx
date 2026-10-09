@@ -18,6 +18,16 @@ const STATUS_DISPLAY: Record<
 	},
 	[ByocCacheStatus.Ready]: { label: "Ready", tone: "green", glyph: "check" },
 	[ByocCacheStatus.Failed]: { label: "Failed", tone: "red", glyph: "x" },
+	[ByocCacheStatus.Removing]: {
+		label: "Removing",
+		tone: "neutral",
+		glyph: "spinner",
+	},
+	[ByocCacheStatus.TeardownRequired]: {
+		label: "Finish in AWS",
+		tone: "orange",
+		glyph: "alert",
+	},
 };
 
 export const ShadowAtomStatusChip = ({

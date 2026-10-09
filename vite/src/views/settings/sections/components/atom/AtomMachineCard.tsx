@@ -1,11 +1,8 @@
 import type { ByocCacheMachine } from "@autumn/shared";
 import { cn } from "@/lib/utils";
-import {
-	byocCacheMachineLabel,
-	byocCacheMachineSpecs,
-} from "./byocCacheMachineDisplay";
+import { atomMachineLabel, atomMachineSpecs } from "./atomMachineDisplay";
 
-export const ByocCacheMachineCard = ({
+export const AtomMachineCard = ({
 	caption,
 	machine,
 	isTarget = false,
@@ -29,10 +26,10 @@ export const ByocCacheMachineCard = ({
 			{caption}
 		</span>
 		<span className="text-[15px] font-semibold tracking-tight text-foreground">
-			{byocCacheMachineLabel(machine)}
+			{atomMachineLabel(machine)}
 		</span>
 		<span className="text-xs text-tertiary-foreground">
-			{byocCacheMachineSpecs(machine)}
+			{atomMachineSpecs(machine)}
 		</span>
 		<span className="font-mono text-[11px] text-subtle">
 			{machine.instanceType}
