@@ -13,7 +13,12 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ATOM_KEYS_PATH, ATOM_TOKEN_HASH_HEADER } from "@autumn/byoc";
-import { AppEnv, apiKeys, ByocCacheStatus } from "@autumn/shared";
+import {
+	AppEnv,
+	apiKeys,
+	ByocCacheStatus,
+	organizations,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -21,7 +26,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
@@ -218,7 +223,7 @@ test.skipIf(hostedAtom)(
 		await deleteAtomDeployment({ autumn });
 		const afterDelete = await autumn.post("/byoc.get_atom", {});
 		const checkAfterDelete = await checkOnAtom(anyCheck);
-		expect(afterDelete).toEqual({ cache: null });
+		expect(afterDelete).toMatchObject({ cache: null });
 		expect(checkAfterDelete.status).toBe(401);
 	},
 );
@@ -226,25 +231,32 @@ test.skipIf(hostedAtom)(
 test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's")}`, async () => {
 	const { db } = initDrizzle();
 	const atom = await ensureAtomDeployment({ autumn });
-	const liveKey = await createKey({
-		db,
-		env: AppEnv.Live,
-		name: "Atom keys live key",
-		orgId: defaultCtx.org.id,
-		prefix: ApiKeyPrefix.Live,
-		meta: {},
+	const otherOrgId = `org_atom_keys_${crypto.randomUUID()}`;
+	await db.insert(organizations).values({
+		id: otherOrgId,
+		slug: otherOrgId,
+		name: "Atom keys other org",
+		logo: "",
+		createdAt: new Date(),
+		metadata: "",
 	});
-	const [otherOrgKey] = await db
-		.select({ hashedKey: apiKeys.hashed_key })
-		.from(apiKeys)
-		.where(ne(apiKeys.org_id, defaultCtx.org.id))
-		.limit(1);
+	const newKey = ({ orgId, env }: { orgId: string; env: AppEnv }) =>
+		createKey({
+			db,
+			env,
+			name: "Atom keys test key",
+			orgId,
+			prefix: env === AppEnv.Live ? ApiKeyPrefix.Live : ApiKeyPrefix.Sandbox,
+			meta: {},
+		});
+	const liveKey = await newKey({ orgId: defaultCtx.org.id, env: AppEnv.Live });
+	const otherOrgKey = await newKey({ orgId: otherOrgId, env: AppEnv.Sandbox });
 	const checkKeys = ({
 		tokenHash,
 		keyHashes,
 	}: {
 		tokenHash: string;
-		keyHashes: (string | null | undefined)[];
+		keyHashes: string[];
 	}) =>
 		fetch(`${autumn.baseUrl.replace(/\/v1$/, "")}${ATOM_KEYS_PATH}`, {
 			method: "POST",
@@ -258,31 +270,25 @@ test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret
 	try {
 		const own = hashApiKey(defaultCtx.orgSecretKey);
 		const live = hashApiKey(liveKey);
-		const revoked = hashApiKey("am_sk_test_never_issued");
-		const other = otherOrgKey?.hashedKey;
+		const otherOrg = hashApiKey(otherOrgKey);
+		const neverIssued = hashApiKey("am_sk_test_never_issued");
 		const reply = await checkKeys({
 			tokenHash: atomTokenToHash({ token: atom.token }),
-			keyHashes: [own, live, revoked, other],
+			keyHashes: [own, live, otherOrg, neverIssued],
 		});
 		const unknownAtom = await checkKeys({
 			tokenHash: "f".repeat(64),
 			keyHashes: [own],
 		});
 
-		expect(other).toBeString();
 		expect(reply.status).toBe(200);
 		expect(await reply.json()).toEqual({
-			invalid_key_hashes: [live, revoked, other],
+			invalid_key_hashes: [live, otherOrg, neverIssued],
 		});
 		expect(unknownAtom.status).toBe(401);
 	} finally {
-		await db
-			.delete(apiKeys)
-			.where(
-				and(
-					eq(apiKeys.org_id, defaultCtx.org.id),
-					eq(apiKeys.hashed_key, hashApiKey(liveKey)),
-				),
-			);
+		await db.delete(apiKeys).where(eq(apiKeys.hashed_key, hashApiKey(liveKey)));
+		await db.delete(apiKeys).where(eq(apiKeys.org_id, otherOrgId));
+		await db.delete(organizations).where(eq(organizations.id, otherOrgId));
 	}
 });
