@@ -19,12 +19,15 @@ export const LogsSkeletonRow = ({ index }: { index: number }) => (
 		className={cn("px-4", TABLE_TRAY_SURFACE_ROW_CLASS)}
 	>
 		<Skeleton className="h-3 w-24 rounded-sm" />
-		<Skeleton
-			className={cn(
-				"h-[22px] rounded-md",
-				pickWidth(SKELETON_WIDTHS.event, index),
-			)}
-		/>
+		<span className="flex items-center gap-2">
+			<Skeleton className="size-2 shrink-0 rounded-sm" />
+			<Skeleton
+				className={cn(
+					"h-3 rounded-sm",
+					pickWidth(SKELETON_WIDTHS.event, index),
+				)}
+			/>
+		</span>
 		<Skeleton
 			className={cn(
 				"h-3 rounded-sm",
