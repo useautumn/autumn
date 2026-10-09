@@ -9,7 +9,6 @@ import {
 	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
-import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
@@ -23,10 +22,8 @@ import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
 import { SidebarSearchButton } from "./SidebarSearchButton";
-import {
-	SIDEBAR_ICON_STROKE as ICON_STROKE,
-	SIDEBAR_HEADER_ICON_BUTTON_CLASS,
-} from "./sidebarRowClass";
+import { SidebarToggleButton } from "./SidebarToggleButton";
+import { sidebarWidthClass } from "./sidebarRowClass";
 
 /** Exported so the command bar can offer the same tabs without a second list. */
 export const DEV_SUB_TABS = [
@@ -62,9 +59,13 @@ export const MainSidebar = ({
 	const isMobileSheet = !!onNavigate;
 	const expanded = isMobileSheet ? true : storedExpanded;
 
-	useHotkeys(["meta+b", "ctrl+b"], () => {
-		setExpanded((prev) => !prev);
-	});
+	useHotkeys(
+		["meta+b", "ctrl+b"],
+		() => {
+			setExpanded((prev) => !prev);
+		},
+		{ preventDefault: true },
+	);
 
 	return (
 		<SidebarContext.Provider value={{ expanded, setExpanded, onNavigate }}>
@@ -74,11 +75,7 @@ export const MainSidebar = ({
 					// Scrolls internally so a zoomed-in or crowded sidebar can't push
 					// its own content out of view.
 					`relative flex h-full flex-col justify-between overflow-x-hidden overflow-y-auto px-2.5 py-3.5 transition-all duration-150`,
-					isMobileSheet
-						? "min-w-[200px]"
-						: expanded
-							? "min-w-[220px] max-w-[220px]"
-							: "min-w-[52px] max-w-[52px]",
+					sidebarWidthClass({ expanded, isMobileSheet }),
 				)}
 			>
 				<div className="relative flex flex-col gap-3.5">
@@ -89,27 +86,9 @@ export const MainSidebar = ({
 						)}
 					>
 						<OrgDropdown />
-						<div
-							className={cn(
-								"flex shrink-0 items-center gap-1",
-								!expanded && "flex-col",
-							)}
-						>
-							<SidebarSearchButton />
-							{expanded && !isMobileSheet && (
-								<button
-									type="button"
-									aria-label="Collapse sidebar"
-									title="Collapse sidebar (⌘B)"
-									onClick={() => setExpanded((prev) => !prev)}
-									className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
-								>
-									<PanelLeft
-										className="size-[15px]"
-										strokeWidth={ICON_STROKE}
-									/>
-								</button>
-							)}
+						<div className="flex shrink-0 items-center gap-0.5">
+							{expanded && <SidebarSearchButton />}
+							{!isMobileSheet && <SidebarToggleButton />}
 						</div>
 					</div>
 					<EnvDropdown env={env} />

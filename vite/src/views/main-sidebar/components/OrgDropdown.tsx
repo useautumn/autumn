@@ -133,21 +133,19 @@ export const OrgDropdown = () => {
 									: "justify-center gap-0 px-0! hover:bg-transparent",
 							)}
 							variant="skeleton"
+							title={org.name}
 						>
 							<OrgLogo org={org} />
-							<span
-								className={cn(
-									"min-w-0 truncate text-[13px] font-[550] leading-4 tracking-[-0.005em] text-foreground dark:text-[#EDEDED]",
-									!expanded && "hidden",
-								)}
-							>
-								{org.name}
-							</span>
 							{expanded && (
-								<ChevronDown
-									className="size-3 shrink-0 text-[#8A8A8A] dark:text-[#5C5C5C]"
-									strokeWidth={2}
-								/>
+								<span className="flex min-w-0 items-center gap-1">
+									<span className="min-w-0 truncate text-[13px] font-[550] leading-4 tracking-[-0.005em] text-foreground dark:text-[#EDEDED]">
+										{org.name}
+									</span>
+									<ChevronDown
+										className="size-3 shrink-0 text-[#8A8A8A] dark:text-[#5C5C5C]"
+										strokeWidth={2}
+									/>
+								</span>
 							)}
 						</Button>
 					</DropdownMenuTrigger>
