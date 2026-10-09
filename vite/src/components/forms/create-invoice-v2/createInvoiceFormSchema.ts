@@ -1,4 +1,8 @@
-import type { InvoiceUsageEntry, ProductItem } from "@autumn/shared";
+import {
+	InvoicePaymentMethodSchema,
+	type InvoiceUsageEntry,
+	type ProductItem,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import type { FormDiscount } from "@/components/forms/shared/utils/discountUtils";
 import type { FormCustomLineItem } from "../attach-v2/attachFormSchema";
@@ -103,6 +107,8 @@ export const CreateInvoiceFormSchema = z.object({
 	discounts: z.custom<FormDiscount[]>(),
 	invoiceTemplateId: z.string().nullable(),
 	netTermsDays: z.number().int().positive().nullable(),
+	/** Null keeps the org's allowed payment methods. */
+	paymentMethodTypes: z.array(InvoicePaymentMethodSchema).nullable(),
 	taxRateId: z.string().nullable(),
 	periodStart: z.number().nullable(),
 	periodEnd: z.number().nullable(),

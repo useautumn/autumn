@@ -7,6 +7,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
+import { useOrgPaymentMethodTypes } from "@/components/forms/shared/hooks/useOrgPaymentMethodTypes";
+import {
+	ORG_PAYMENT_METHODS_HELPER,
+	PaymentMethodTypesSelect,
+} from "@/components/forms/shared/PaymentMethodTypesSelect";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import {
@@ -19,6 +24,7 @@ const NO_TEMPLATE = "none";
 export function CreateInvoiceSettingsFields() {
 	const { form, formValues } = useCreateInvoiceFormContext();
 	const { templates } = useInvoiceTemplatesQuery();
+	const orgPaymentMethodTypes = useOrgPaymentMethodTypes();
 
 	const templateOptions = [
 		{ label: "No template", value: NO_TEMPLATE },
@@ -91,6 +97,14 @@ export function CreateInvoiceSettingsFields() {
 					</span>
 				</div>
 			</div>
+
+			<PaymentMethodTypesSelect
+				value={formValues.paymentMethodTypes ?? orgPaymentMethodTypes}
+				onValueChange={(paymentMethodTypes) =>
+					form.setFieldValue("paymentMethodTypes", paymentMethodTypes)
+				}
+				description={ORG_PAYMENT_METHODS_HELPER}
+			/>
 
 			<CreateInvoiceServicePeriodField />
 
