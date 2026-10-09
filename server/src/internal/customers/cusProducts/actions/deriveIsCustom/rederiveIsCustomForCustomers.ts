@@ -98,7 +98,7 @@ const unknownRepresentatives = ({
 	return [...representatives.values()];
 };
 
-const idsFlippingTo = ({
+const flipsTo = ({
 	products,
 	flagsByFingerprint,
 	to,
@@ -106,14 +106,17 @@ const idsFlippingTo = ({
 	products: IsCustomFingerprintRow[];
 	flagsByFingerprint: IsCustomDerivationCache["flagsByFingerprint"];
 	to: boolean;
-}) =>
-	products
-		.filter(
-			(product) =>
-				product.isCustom !== to &&
-				flagsByFingerprint.get(product.fingerprint) === to,
-		)
-		.map(({ id }) => id);
+}) => {
+	const flipping = products.filter(
+		(product) =>
+			product.isCustom !== to &&
+			flagsByFingerprint.get(product.fingerprint) === to,
+	);
+	return {
+		customerProductIds: flipping.map(({ id }) => id),
+		fingerprints: [...new Set(flipping.map(({ fingerprint }) => fingerprint))],
+	};
+};
 
 export const rederiveIsCustomForCustomers = async ({
 	ctx,
@@ -144,21 +147,17 @@ export const rederiveIsCustomForCustomers = async ({
 		await deriveFingerprints({ ctx, representatives, cache });
 	}
 
-	const updated = (
-		await Promise.all(
-			[true, false].map((to) =>
-				customerProductRepo.flipIsCustom({
-					db: ctx.db,
-					customerProductIds: idsFlippingTo({
-						products,
-						flagsByFingerprint,
-						to,
-					}),
-					to,
-				}),
-			),
-		)
-	).flat();
+	// Sequential, so a failure never leaves the other write landing after the caller's cache drop.
+	const updated = [];
+	for (const to of [true, false]) {
+		updated.push(
+			...(await customerProductRepo.flipIsCustom({
+				db: ctx.db,
+				...flipsTo({ products, flagsByFingerprint, to }),
+				to,
+			})),
+		);
+	}
 
 	const changedCustomers = new Map(
 		updated.map(({ internalCustomerId, customerId }) => [

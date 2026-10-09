@@ -1,15 +1,18 @@
 import { customerProducts } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { isCustomFingerprintSql } from "./isCustomFingerprint.js";
 
-/** Compare-and-set: a row whose flag changed since it was read is left alone. */
+/** Compare-and-set on the flag and the fingerprint, so a row changed since it was read is left alone. */
 export const flipCustomerProductsIsCustom = async ({
 	db,
 	customerProductIds,
+	fingerprints,
 	to,
 }: {
 	db: DrizzleCli;
 	customerProductIds: string[];
+	fingerprints: string[];
 	to: boolean;
 }) => {
 	if (customerProductIds.length === 0) return [];
@@ -21,6 +24,7 @@ export const flipCustomerProductsIsCustom = async ({
 			and(
 				inArray(customerProducts.id, customerProductIds),
 				eq(customerProducts.is_custom, !to),
+				inArray(isCustomFingerprintSql, fingerprints),
 			),
 		)
 		.returning({
