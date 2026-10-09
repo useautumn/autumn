@@ -111,6 +111,17 @@ const toListRow = (
 	entity_id: row.entity_id,
 });
 
+/** Tenant columns are read from the owning customer row, so no writer can disagree with it. */
+const withCustomerTenant = <
+	T extends Pick<InsertInvoice, "internal_customer_id">,
+>(
+	row: T,
+) => ({
+	...row,
+	org_id: sql<string>`(SELECT ${customers.org_id} FROM ${customers} WHERE ${customers.internal_id} = ${row.internal_customer_id})`,
+	env: sql<string>`(SELECT ${customers.env} FROM ${customers} WHERE ${customers.internal_id} = ${row.internal_customer_id})`,
+});
+
 /** Every write ends here: the written rows name their customer's list, so no caller has to remember. */
 const invalidateWrittenRows = async ({
 	rows,
@@ -423,7 +434,7 @@ export class InvoiceService {
 		try {
 			const results = await db
 				.insert(invoices)
-				.values(invoice as any)
+				.values(withCustomerTenant(invoice) as any)
 				.returning();
 			if (results.length === 0) {
 				return null;
@@ -516,7 +527,7 @@ export class InvoiceService {
 	}) {
 		const result = await db
 			.insert(invoices)
-			.values(invoice)
+			.values(withCustomerTenant(invoice))
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
 				set: {
@@ -571,7 +582,7 @@ export class InvoiceService {
 
 		const upserted = await db
 			.insert(invoices)
-			.values(rows)
+			.values(rows.map(withCustomerTenant))
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
 				set: {
@@ -580,6 +591,8 @@ export class InvoiceService {
 					internal_product_ids: sql`excluded.internal_product_ids`,
 					internal_customer_id: sql`excluded.internal_customer_id`,
 					internal_entity_id: sql`excluded.internal_entity_id`,
+					org_id: sql`excluded.org_id`,
+					env: sql`excluded.env`,
 					processor_type: sql`excluded.processor_type`,
 					status: sql`excluded.status`,
 					hosted_invoice_url: sql`excluded.hosted_invoice_url`,
