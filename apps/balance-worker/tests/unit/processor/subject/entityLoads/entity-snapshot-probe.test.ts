@@ -98,6 +98,7 @@ const createScope = ({
 				},
 			},
 			writer: {
+				waitForEvicted: () => null,
 				decide: () => {
 					throw new Error("not exercised");
 				},

@@ -78,8 +78,10 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
-	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
+	/** Hides the customer's resident rows at once and drops them once Postgres holds the writes before it. */
 	evict(params: { customerKey: string }): Promise<void>;
+	/** Null unless an evict hid rows whose writes Postgres may still lack; then resolves once it holds them, so a load can read. */
+	waitForEvicted(params: { customerKey: string }): Promise<void> | null;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
 	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
 	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
