@@ -109,13 +109,25 @@ const UPDATE_FIELDS = [
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];
 
+/** Keys that target or shape the response but never change the subscription. */
+const COLLECTION_METHOD_SWITCH_KEYS = new Set([
+	"customer_id",
+	"entity_id",
+	"plan_id",
+	"subscription_id",
+	"customer_product_id",
+	"customer_data",
+	"entity_data",
+	"redirect_mode",
+	"invoice_mode",
+]);
+
 /** True when invoice_mode is the request's only change: switch how the subscription is collected. */
-export const isCollectionMethodSwitch = (
-	params: Partial<Record<(typeof UPDATE_FIELDS)[number], unknown>>,
-) =>
+export const isCollectionMethodSwitch = (params: Record<string, unknown>) =>
 	params.invoice_mode !== undefined &&
-	UPDATE_FIELDS.every(
-		(key) => key === "invoice_mode" || params[key] === undefined,
+	Object.entries(params).every(
+		([key, value]) =>
+			value === undefined || COLLECTION_METHOD_SWITCH_KEYS.has(key),
 	);
 
 export const UpdateSubscriptionV1ParamsSchema =
