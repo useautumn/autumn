@@ -301,7 +301,9 @@ export const UsageBreakdownTable = ({
 			<div
 				ref={scrollRef}
 				onScroll={updateEdges}
-				className="min-h-0 overflow-auto"
+				// Bars would span the header, Total and tray padding; pinned shadows and clipped rows show the overflow.
+				// Important: the global unlayered `* { scrollbar-width: thin }` otherwise beats the utility.
+				className="min-h-0 overflow-auto scrollbar-hide!"
 			>
 				<div className="flex w-max min-w-full flex-col">
 					<div className={cn(HEADER_ROW, "sticky top-0 z-20 bg-table-tray")}>
