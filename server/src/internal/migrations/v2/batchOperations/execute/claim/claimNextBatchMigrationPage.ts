@@ -12,6 +12,7 @@ import {
 	type BatchMigrationPagePhases,
 	timePhase,
 } from "../utils/pagePhaseTimings.js";
+import { buildBatchMigrationRetrySelect } from "./buildBatchMigrationRetrySelect.js";
 
 export type ClaimedBatchMigrationPage = {
 	/** Rows the filter select returned — drives the cursor and loop end. */
@@ -52,7 +53,7 @@ export const claimNextBatchMigrationPage = async ({
 			retryItemStatuses: controls?.retryItemStatuses,
 		}),
 	);
-	const select = buildCustomerSelect({
+	const liveSelect = buildCustomerSelect({
 		orgId: ctx.org.id,
 		env: ctx.env,
 		// Same narrowing the per-customer lane applies for `only`.
@@ -81,6 +82,25 @@ export const claimNextBatchMigrationPage = async ({
 		limit,
 		afterInternalId,
 	});
+	const retrySelect =
+		retryItemStatuses.size > 0
+			? buildBatchMigrationRetrySelect({
+					ctx,
+					migrationInternalId,
+					retryItemStatuses: [...retryItemStatuses],
+					only: controls?.only,
+					afterInternalId,
+					limit,
+				})
+			: undefined;
+	const select = retrySelect
+		? sql`
+			SELECT candidates.*
+			FROM ((${liveSelect}) UNION (${retrySelect})) AS candidates
+			ORDER BY candidates.internal_id COLLATE "C" DESC
+			LIMIT ${limit}
+		`
+		: liveSelect;
 	const now = Date.now();
 	const claimableStatuses = [
 		MigrationItemRunStatus.Running,

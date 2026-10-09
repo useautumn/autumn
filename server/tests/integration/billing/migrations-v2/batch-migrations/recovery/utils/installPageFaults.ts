@@ -1,6 +1,7 @@
 import { mock } from "bun:test";
 import { sql } from "drizzle-orm";
 import type { addCustomerEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+import type { removeCustomerEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
 import type { queueMigrationWebhooks } from "@/internal/migrations/v2/webhookDelivery/utils/queueMigrationWebhooks.js";
 
 /** Where a page dies, or loses its claims, while adding to one plan's customers. */
@@ -16,13 +17,17 @@ const queueModulePath =
 	"@/internal/migrations/v2/webhookDelivery/utils/queueMigrationWebhooks.js";
 const addModulePath =
 	"@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+const removeModulePath =
+	"@/internal/migrations/v2/batchOperations/actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
 
 /** Wraps the batch add op so a test can fail a page at a chosen point, keyed
  * by the migrated plan's id so concurrent tests in one file stay independent. */
 export const installPageFaults = async () => {
 	const realAdd = { ...(await import(addModulePath)) };
+	const realRemove = { ...(await import(removeModulePath)) };
 	const realQueue = { ...(await import(queueModulePath)) };
 	const pageFaults = new Map<string, PageFault>();
+	const removeFaults = new Set<string>();
 	const enqueueFaults = new Map<string, EnqueueFault[]>();
 	/** Customer id → webhook enqueues that actually reached Svix. */
 	const enqueueSends = new Map<string, number>();
@@ -44,6 +49,18 @@ export const installPageFaults = async () => {
 			const result = await realAdd.addCustomerEntitlementsForPage(args);
 			if (fault === "after_add")
 				throw new Error("injected: page died after this add committed");
+			return result;
+		},
+	}));
+
+	mock.module(removeModulePath, () => ({
+		...realRemove,
+		removeCustomerEntitlementsForPage: async (
+			args: Parameters<typeof removeCustomerEntitlementsForPage>[0],
+		) => {
+			const result = await realRemove.removeCustomerEntitlementsForPage(args);
+			if (removeFaults.has(args.fromProduct.id))
+				throw new Error("injected: page died after its remove committed");
 			return result;
 		},
 	}));
@@ -70,10 +87,12 @@ export const installPageFaults = async () => {
 
 	return {
 		pageFaults,
+		removeFaults,
 		enqueueFaults,
 		enqueueSends,
 		restore: () => {
 			mock.module(addModulePath, () => realAdd);
+			mock.module(removeModulePath, () => realRemove);
 			mock.module(queueModulePath, () => realQueue);
 		},
 	};
