@@ -14,12 +14,13 @@ export type JournalEntry = {
 export type PendingMigration = JournalEntry & {
 	sql: string;
 	sqlPath: string;
+	/** Unrecorded, but older than the newest recorded migration: drizzle-kit's filter skips it. */
+	outOfOrder: boolean;
 };
 
 /**
- * Returns migrations on disk that haven't been recorded in drizzle.__drizzle_migrations yet.
- * Mirrors drizzle-kit's filter: anything in _journal.json whose `when` is greater than the
- * largest `created_at` already in the tracking table.
+ * Returns journal migrations not recorded in drizzle.__drizzle_migrations. drizzle-kit only
+ * applies entries newer than the largest recorded `created_at`; older gaps are `outOfOrder`.
  */
 export async function getPendingMigrations(
 	client: pg.Client,
@@ -33,23 +34,58 @@ export async function getPendingMigrations(
 		)
 	`);
 
-	const result = await client.query<{ created_at: string | null }>(
-		`SELECT created_at FROM "drizzle"."__drizzle_migrations" ORDER BY created_at DESC LIMIT 1`,
+	const result = await client.query<{ created_at: string }>(
+		`SELECT created_at FROM "drizzle"."__drizzle_migrations" WHERE created_at IS NOT NULL`,
 	);
-	const lastApplied =
-		result.rowCount && result.rowCount > 0 && result.rows[0].created_at !== null
-			? Number(result.rows[0].created_at)
-			: null;
+	const recorded = new Set(result.rows.map((row) => Number(row.created_at)));
+	const lastApplied = recorded.size > 0 ? Math.max(...recorded) : null;
 
 	const journal = JSON.parse(readFileSync(JOURNAL_PATH, "utf8")) as {
 		entries: JournalEntry[];
 	};
 
 	return journal.entries
-		.filter((entry) => lastApplied === null || entry.when > lastApplied)
+		.filter((entry) => !recorded.has(entry.when))
 		.map((entry) => {
 			const sqlPath = join(MIGRATIONS_DIR, `${entry.tag}.sql`);
 			const sql = readFileSync(sqlPath, "utf8");
-			return { ...entry, sql, sqlPath };
+			const outOfOrder = lastApplied !== null && entry.when <= lastApplied;
+			return { ...entry, sql, sqlPath, outOfOrder };
 		});
+}
+
+/** Local DBs (twd workers, docker) are built from zero by this tool, so every applied migration has a row. */
+export function isLocalDatabase(databaseUrl: string): boolean {
+	try {
+		const { hostname } = new URL(databaseUrl);
+		return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * A shared DB that recorded a newer branch-only migration would skip older ones forever,
+ * so local DBs apply those gaps; remote DBs keep drizzle-kit's order and only warn.
+ */
+export function selectMigrationsToApply({
+	unrecorded,
+	databaseUrl,
+}: {
+	unrecorded: PendingMigration[];
+	databaseUrl: string;
+}): PendingMigration[] {
+	const outOfOrder = unrecorded.filter((migration) => migration.outOfOrder);
+	if (outOfOrder.length === 0) return unrecorded;
+
+	const tags = outOfOrder.map((migration) => migration.tag).join(", ");
+	if (isLocalDatabase(databaseUrl)) {
+		console.log(`applying out-of-order migration(s) on a local DB: ${tags}`);
+		return unrecorded;
+	}
+
+	console.warn(
+		`WARNING: unrecorded migration(s) older than the newest applied one are skipped: ${tags}`,
+	);
+	return unrecorded.filter((migration) => !migration.outOfOrder);
 }

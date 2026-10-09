@@ -1,15 +1,17 @@
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import pg from "pg";
-import { MIGRATIONS_DIR } from "../helpers/paths.ts";
-import { type Env, targetHost, wrapInInfisical } from "../helpers/env.ts";
 import { applyMigration } from "../helpers/applyMigrations.ts";
+import { type Env, targetHost, wrapInInfisical } from "../helpers/env.ts";
+import { MIGRATIONS_DIR } from "../helpers/paths.ts";
 import {
 	getPendingMigrations,
 	type PendingMigration,
+	selectMigrationsToApply,
 } from "../helpers/pendingMigrations.ts";
 import {
 	type BlockingStatement,
 	findBlockingIndexStatements,
+	findCreatedTables,
 } from "../helpers/safetyCheck.ts";
 
 export async function cmdMigrate(
@@ -29,7 +31,9 @@ export async function cmdMigrate(
 		opts.bootstrap ? "BOOTSTRAP" : null,
 	].filter(Boolean);
 	const tagStr = tags.length > 0 ? ` (${tags.join(" ")})` : "";
-	console.log(`[db:migrate${tagStr}] env=${env} host=${targetHost(databaseUrl)}`);
+	console.log(
+		`[db:migrate${tagStr}] env=${env} host=${targetHost(databaseUrl)}`,
+	);
 
 	if (opts.bootstrap) {
 		console.log(
@@ -44,7 +48,10 @@ export async function cmdMigrate(
 	await client.connect();
 	let pending: PendingMigration[];
 	try {
-		pending = await getPendingMigrations(client);
+		pending = selectMigrationsToApply({
+			unrecorded: await getPendingMigrations(client),
+			databaseUrl,
+		});
 	} catch (err) {
 		await client.end();
 		throw err;
@@ -136,9 +143,15 @@ type FlaggedBlocker = {
 };
 
 function collectBlockers(pending: PendingMigration[]): FlaggedBlocker[] {
+	const newTables = findCreatedTables(
+		pending.map((migration) => migration.sql),
+	);
 	const all: FlaggedBlocker[] = [];
 	for (const migration of pending) {
-		for (const blocker of findBlockingIndexStatements(migration.sql)) {
+		for (const blocker of findBlockingIndexStatements(
+			migration.sql,
+			newTables,
+		)) {
 			all.push({ migration, blocker });
 		}
 	}
