@@ -258,3 +258,48 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("collection method switch: preview is $0, and terms without a Stripe subscription → 400")}`,
+	async () => {
+		const customerId = "switch-collection-preview";
+		const pro = products.pro({
+			id: "pro-switch-preview",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const free = products.base({
+			id: "free-switch-preview",
+			isAddOn: true,
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({ productId: free.id }),
+			],
+		});
+
+		const preview = await autumnV2_3.billing.previewUpdate({
+			customer_id: customerId,
+			plan_id: pro.id,
+			invoice_mode: { enabled: true, net_terms_days: 15 },
+		});
+		expect(preview.total).toBe(0);
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_3.billing.update({
+					customer_id: customerId,
+					plan_id: free.id,
+					invoice_mode: { enabled: true, net_terms_days: 15 },
+				}),
+		});
+	},
+);

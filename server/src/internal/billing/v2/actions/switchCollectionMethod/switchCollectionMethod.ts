@@ -21,7 +21,7 @@ export const switchCollectionMethod = async ({
 		params,
 	});
 
-	handleSwitchCollectionMethodErrors({ switchContext });
+	handleSwitchCollectionMethodErrors({ ctx, switchContext });
 
 	await updateStripeCollectionMethod({ ctx, switchContext });
 	await persistCollectionMethod({ ctx, switchContext });

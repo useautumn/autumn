@@ -19,6 +19,7 @@ export type SwitchCollectionMethodContext = {
 	targetCollectionMethod: CollectionMethod;
 	invoiceMode?: InvoiceMode;
 	applyToAutoTopups: boolean;
+	requestedInvoiceTerms: boolean;
 	stripeCustomer?: Stripe.Customer;
 	paymentMethod?: Stripe.PaymentMethod;
 	stripeSubscription?: Stripe.Subscription;
@@ -69,6 +70,9 @@ export const setupSwitchCollectionMethodContext = async ({
 			allowApplyToAutoTopups: true,
 		}),
 		applyToAutoTopups: params.invoice_mode?.apply_to_auto_topups === true,
+		requestedInvoiceTerms:
+			params.invoice_mode?.net_terms_days !== undefined ||
+			params.invoice_mode?.payment_method_types !== undefined,
 		stripeCustomer,
 		paymentMethod,
 		stripeSubscription,
