@@ -12,6 +12,7 @@ export * from "./convertPrice/priceConfigToPriceProcessors.js";
 export * from "./convertPrice/priceToRequiredStripeSlots.js";
 export * from "./convertPrice/priceToStripeNickname.js";
 export * from "./convertPrice/priceToStripeTiersMode.js";
+export * from "./convertPrice/priceToStripeUnitTiers.js";
 export * from "./convertPriceUtils.js";
 export * from "./findPrice/findPrepaidQuantityTargetPrice.js";
 export * from "./findPrice/findPriceByFeatureId.js";
