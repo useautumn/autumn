@@ -289,6 +289,7 @@ test.concurrent(
 			customer_id: customerId,
 			plan_id: pro.id,
 			invoice_mode: { enabled: true, net_terms_days: 15 },
+			redirect_mode: "always",
 		});
 		expect(preview.total).toBe(0);
 
