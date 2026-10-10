@@ -22,6 +22,8 @@ export function parseBalanceWorkerRolloutOverride({
 }: {
 	runtimeEnv: Record<string, string | undefined>;
 }): boolean | undefined {
+	// Staging-only deploy branch: route exactly as prod does, from the rollout config.
+	if (isStagingEnv({ runtimeEnv })) return undefined;
 	const value = runtimeEnv.BALANCE_WORKER_ROLLOUT_ENABLED;
 	if (value === "true") return true;
 	if (value === "false") return false;
