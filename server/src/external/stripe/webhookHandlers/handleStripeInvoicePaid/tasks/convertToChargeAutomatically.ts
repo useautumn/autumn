@@ -42,9 +42,15 @@ export const convertToChargeAutomatically = async ({
 			customer: stripeInvoice.customer as string,
 		});
 
+		// Invoice-only payment method settings (e.g. customer_balance from the
+		// org's allowed_payment_methods) are rejected on charge_automatically subs.
 		await stripeCli.subscriptions.update(stripeSubscriptionId, {
 			collection_method: "charge_automatically",
 			default_payment_method: paymentMethod.id,
+			payment_settings: {
+				payment_method_types: "",
+				payment_method_options: { customer_balance: "" },
+			},
 		});
 
 		ctx.logger.info(
