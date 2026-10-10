@@ -21,6 +21,7 @@ import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUt
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { getCheckResponseV2 } from "./getCheckResponseV2.js";
+import { setCheckSpanAttributes } from "./setCheckSpanAttributes.js";
 
 export const runCheckWithTrackV2 = async ({
 	ctx,
@@ -111,6 +112,7 @@ export const runCheckWithTrackV2 = async ({
 	};
 
 	let allowed = true;
+	let denyReason: string | undefined;
 	let trackBalances: Record<string, ApiBalanceV1 | null> | undefined;
 
 	try {
@@ -132,6 +134,7 @@ export const runCheckWithTrackV2 = async ({
 			error instanceof UsageLimitExceededError
 		) {
 			allowed = false;
+			denyReason = error.code;
 		} else {
 			throw error;
 		}
@@ -162,6 +165,14 @@ export const runCheckWithTrackV2 = async ({
 			ctx.logger.error(`Failed to schedule lock expiration: ${error}`);
 		}
 	}
+
+	setCheckSpanAttributes({
+		featureId: body.feature_id,
+		allowed,
+		requiredBalance: responseRequiredBalance,
+		balance: checkData.apiBalance?.remaining,
+		denyReason,
+	});
 
 	return CheckResponseV3Schema.parse({
 		allowed,

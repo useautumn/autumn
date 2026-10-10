@@ -1,5 +1,5 @@
 import type { FullSubject, TrackParams, TrackResponseV3 } from "@autumn/shared";
-import { tryCatch } from "@autumn/shared";
+import { sumValues, tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import {
@@ -14,6 +14,7 @@ import {
 import { resolveInternalProductIdForEvent } from "../../events/resolveInternalProductIdForEvent.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handlePostgresTrackError } from "../utils/handlePostgresTrackError.js";
+import { setTrackSpanAttributes } from "../utils/setTrackSpanAttributes.js";
 
 export const runPostgresTrackV3 = async ({
 	ctx,
@@ -80,6 +81,18 @@ export const runPostgresTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		featureDeductions,
 		updates,
+	});
+
+	// Row balances, summed over every entitlement the event drew from.
+	setTrackSpanAttributes({
+		body,
+		balance: () => {
+			const rowUpdates = Object.values(updates);
+			if (rowUpdates.length === 0) return {};
+			const deducted = sumValues(rowUpdates.map((update) => update.deducted));
+			const after = sumValues(rowUpdates.map((update) => update.balance));
+			return { before: sumValues([after, deducted]), after, deducted };
+		},
 	});
 
 	return {

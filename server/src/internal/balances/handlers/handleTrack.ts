@@ -16,6 +16,7 @@ import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollo
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getValidatedTrackFeatureDeductions } from "@/internal/balances/track/utils/getValidatedTrackFeatureDeductions.js";
 import { isQueuedTrack } from "@/internal/balances/track/utils/isQueuedTrack.js";
+import { setTrackSpanAttributes } from "@/internal/balances/track/utils/setTrackSpanAttributes.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
 export const handleTrack = createRoute({
@@ -46,15 +47,18 @@ async function track(
 			body,
 			isAsync,
 		});
+		if (status === 202) setTrackSpanAttributes({ body, queued: true });
 		return c.json(result, status);
 	}
 
 	if (isAsync) {
 		await runAsyncTrack({ ctx, body });
+		setTrackSpanAttributes({ body, queued: true });
 		return c.json(getQueuedTrackResponse({ ctx, body }), 202);
 	}
 
 	const response = await runTrackWithRollout({ ctx, body, featureDeductions });
 	const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
+	if (status === 202) setTrackSpanAttributes({ body, queued: true });
 	return c.json(response, status);
 }

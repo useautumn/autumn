@@ -6,6 +6,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingPlanToAttachPreview } from "../utils/billingPlan/billingPlanToAttachPreview";
 
@@ -20,6 +21,7 @@ export const handlePreviewAttach = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
+		setRootSpanAttributes({ "billing.action": "preview_attach" });
 
 		const { billingContext, billingPlan } = await billingActions.attach({
 			ctx,

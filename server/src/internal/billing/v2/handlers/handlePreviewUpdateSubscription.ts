@@ -9,6 +9,7 @@ import {
 import { billingActions } from "@/internal/billing/v2/actions";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 
 export const handlePreviewUpdateSubscription = createRoute({
 	scopes: [Scopes.Billing.Read],
@@ -20,6 +21,7 @@ export const handlePreviewUpdateSubscription = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
+		setRootSpanAttributes({ "billing.action": "preview_update" });
 
 		const { billingContext, billingPlan } =
 			await billingActions.updateSubscription({

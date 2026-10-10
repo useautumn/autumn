@@ -1,6 +1,7 @@
 import type { CheckParams, ParsedCheckParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { describeBalanceWorkerFailure } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
+import { setCheckSpanAttributes } from "@/internal/balances/check/setCheckSpanAttributes.js";
 import { buildCheckFallbackResponse } from "./buildCheckFallbackResponse.js";
 
 export type CheckFailOpenReason =
@@ -31,6 +32,12 @@ export const getCheckFailOpenFallback = ({
 		error,
 		feature_id: body.feature_id,
 		required_balance: requiredBalance,
+	});
+	setCheckSpanAttributes({
+		featureId: body.feature_id,
+		allowed: true,
+		requiredBalance,
+		failOpen: true,
 	});
 
 	return buildCheckFallbackResponse({

@@ -2,6 +2,7 @@ import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
+import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 
 export const logUpdateSubscriptionContext = ({
 	ctx,
@@ -26,6 +27,21 @@ export const logUpdateSubscriptionContext = ({
 	} = billingContext;
 
 	const fullProduct = fullProducts[0];
+
+	// The preview runs this too, and keeps its own name.
+	setRootSpanAttributes(
+		{
+			"billing.action":
+				cancelAction && cancelAction !== "uncancel" ? "cancel" : "update",
+		},
+		{ overwrite: false },
+	);
+	setRootSpanAttributes({
+		"billing.plan_id": customerProduct.product.id,
+		"billing.plan_version": customerProduct.product.version,
+		"billing.checkout_mode": billingContext.checkoutMode ?? undefined,
+		"billing.no_billing_changes": billingContext.skipBillingChanges,
+	});
 
 	addToExtraLogs({
 		ctx,

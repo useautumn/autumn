@@ -1,21 +1,38 @@
 /**
  * Contract: billing, webhooks and state-changing calls reach Maple whole; reads
  * and the hot path only with scope `api`, sampled at the root but always kept
- * when the request failed or was slow.
+ * when the request failed, was denied or was slow. Worker jobs follow the same
+ * scopes, and a trace sent to Maple can stand in for its request log line.
  */
 
 import { describe, expect, test } from "bun:test";
-import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
+import {
+	type Attributes,
+	ROOT_CONTEXT,
+	type Span,
+	SpanKind,
+	SpanStatusCode,
+} from "@opentelemetry/api";
 import type {
 	ReadableSpan,
 	SpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
 import {
+	classifyMapleJob,
 	classifyMapleRequest,
+	getMapleTraceMark,
+	isLogReplacedByMapleTrace,
 	type MapleTraceMode,
 	type MapleTraceScope,
+	markTraceForMaple,
 } from "@/external/maple/mapleTraceScope.js";
+import { JobName } from "@/queue/JobName.js";
 import { MapleScopedSpanProcessor } from "@/utils/otel/MapleScopedSpanProcessor.js";
+import { getRootSpan, setRootSpan } from "@/utils/otel/rootSpan.js";
+import {
+	formatTraceparent,
+	parseTraceparent,
+} from "@/utils/otel/traceparent.js";
 
 const TRACE = "a".repeat(32);
 const ROOT = "0000000000000001";
@@ -24,15 +41,17 @@ const createSpan = ({
 	spanId,
 	durationMs = 5,
 	statusCode = 200,
+	attributes,
 }: {
 	spanId: string;
 	durationMs?: number;
 	statusCode?: number;
+	attributes?: Attributes;
 }): ReadableSpan =>
 	({
 		name: "span",
 		kind: SpanKind.SERVER,
-		attributes: { "http.response.status_code": statusCode },
+		attributes: { "http.response.status_code": statusCode, ...attributes },
 		resource: {} as ReadableSpan["resource"],
 		instrumentationScope: { name: "test" },
 		status: { code: SpanStatusCode.UNSET },
@@ -50,9 +69,11 @@ const createSpan = ({
 
 class CapturingSpanProcessor implements SpanProcessor {
 	readonly ended: string[] = [];
+	readonly spans: ReadableSpan[] = [];
 	onStart(): void {}
 	onEnd(span: ReadableSpan): void {
 		this.ended.push(span.spanContext().spanId);
+		this.spans.push(span);
 	}
 	forceFlush(): Promise<void> {
 		return Promise.resolve();
@@ -133,6 +154,158 @@ describe("classifyMapleRequest", () => {
 		expect(classify("POST", "/v1/attach", "billing")).toBe("keep");
 		expect(classify("POST", "/v1/customers.update", "billing")).toBeNull();
 	});
+
+	test("hot scope is billing plus the sampled hot path", () => {
+		expect(classify("POST", "/v1/billing.attach", "hot")).toBe("keep");
+		expect(classify("POST", "/webhooks/stripe/org_1/live", "hot")).toBe("keep");
+		expect(classify("POST", "/v1/balances.check", "hot")).toBe("sample");
+		expect(classify("POST", "/v1/track", "hot")).toBe("sample");
+		expect(classify("POST", "/v1/customers.update", "hot")).toBeNull();
+		expect(classify("POST", "/v1/customers.get", "hot")).toBeNull();
+	});
+});
+
+describe("classifyMapleJob", () => {
+	const classify = (jobName: string, scope: MapleTraceScope = "writes") =>
+		classifyMapleJob({ jobName, scope });
+
+	test("keeps billing jobs in every scope", () => {
+		for (const jobName of [
+			JobName.AutoTopUp,
+			JobName.StripeWebhookReplay,
+			JobName.StoreInvoiceLineItems,
+			JobName.StoreDeferredInvoiceLineItems,
+		]) {
+			for (const scope of ["billing", "hot", "writes", "api"] as const) {
+				expect(classify(jobName, scope)).toBe("keep");
+			}
+		}
+	});
+
+	test("samples hot jobs with scope hot or api and leaves them out otherwise", () => {
+		for (const jobName of [
+			JobName.Track,
+			JobName.InsertEventBatch,
+			JobName.SyncBalanceBatchV4,
+			JobName.SyncCustomerDirty,
+		]) {
+			expect(classify(jobName, "billing")).toBeNull();
+			expect(classify(jobName)).toBeNull();
+			expect(classify(jobName, "hot")).toBe("sample");
+			expect(classify(jobName, "api")).toBe("sample");
+		}
+	});
+
+	test("keeps every other job with scope writes or api", () => {
+		expect(classify(JobName.SendProductsUpdated)).toBe("keep");
+		expect(classify(JobName.SendProductsUpdated, "api")).toBe("keep");
+		expect(classify(JobName.SendProductsUpdated, "hot")).toBeNull();
+		expect(classify(JobName.SendProductsUpdated, "billing")).toBeNull();
+	});
+});
+
+describe("isLogReplacedByMapleTrace", () => {
+	const replaced = (traceId: string | undefined, failed = false) =>
+		isLogReplacedByMapleTrace({ traceId, failed, enabled: true });
+
+	test("replaces the summary line of a covered request that did not fail", () => {
+		const traceId = "b".repeat(32);
+		markTraceForMaple({
+			traceId,
+			rootSpanId: "r1",
+			mode: "sample",
+			replacesLogs: true,
+		});
+
+		expect(replaced(traceId)).toBe(true);
+		expect(replaced(traceId, true)).toBe(false);
+		expect(
+			isLogReplacedByMapleTrace({ traceId, failed: false, enabled: false }),
+		).toBe(false);
+	});
+
+	test("keeps the line of a traced request the trace does not cover", () => {
+		const traceId = "d".repeat(32);
+		markTraceForMaple({ traceId, rootSpanId: "r1", mode: "keep" });
+
+		expect(replaced(traceId)).toBe(false);
+		expect(replaced("f".repeat(32))).toBe(false);
+		expect(replaced(undefined)).toBe(false);
+	});
+
+	test("a second, uncovered request under the same trace id keeps both lines", () => {
+		const traceId = "9".repeat(32);
+		markTraceForMaple({
+			traceId,
+			rootSpanId: "r1",
+			mode: "sample",
+			replacesLogs: true,
+		});
+		markTraceForMaple({ traceId, rootSpanId: "r2", mode: "keep" });
+
+		expect(replaced(traceId)).toBe(false);
+	});
+});
+
+describe("markTraceForMaple", () => {
+	test("a kept request joining a sampled trace promotes it and is a root too", () => {
+		const traceId = "c".repeat(32);
+		markTraceForMaple({ traceId, rootSpanId: "a1", mode: "sample" });
+		markTraceForMaple({ traceId, rootSpanId: "b2", mode: "keep" });
+
+		const mark = getMapleTraceMark(traceId);
+		expect(mark?.mode).toBe("keep");
+		expect(mark?.rootSpanId).toBe("a1");
+		expect([...(mark?.rootSpanIds ?? [])]).toEqual(["a1", "b2"]);
+	});
+});
+
+describe("getRootSpan", () => {
+	const fakeSpan = (recording: boolean) =>
+		({ isRecording: () => recording }) as Span;
+
+	test("returns the bound span only while it is open, and never guesses", () => {
+		const bound = (span: Span) =>
+			getRootSpan(setRootSpan({ context: ROOT_CONTEXT, span }));
+
+		expect(getRootSpan(ROOT_CONTEXT)).toBeUndefined();
+		const open = fakeSpan(true);
+		expect(bound(open)).toBe(open);
+		expect(bound(fakeSpan(false))).toBeUndefined();
+	});
+});
+
+describe("traceparent", () => {
+	test("round-trips a span context as a remote parent", () => {
+		const traceparent = formatTraceparent({
+			spanContext: { traceId: TRACE, spanId: ROOT, traceFlags: 1 },
+		});
+		expect(traceparent).toBe(`00-${TRACE}-${ROOT}-01`);
+		expect(parseTraceparent({ traceparent })).toEqual({
+			traceId: TRACE,
+			spanId: ROOT,
+			traceFlags: 1,
+			isRemote: true,
+		});
+	});
+
+	test("ignores a value that is not a usable parent", () => {
+		for (const traceparent of [
+			42,
+			{ a: 1 },
+			`00-${"0".repeat(32)}-${"1".repeat(16)}-01`,
+			`00-${"a".repeat(32)}-${"0".repeat(16)}-01`,
+		]) {
+			expect(
+				parseTraceparent({ traceparent: traceparent as string }),
+			).toBeUndefined();
+		}
+	});
+
+	test("ignores a missing or malformed header", () => {
+		expect(parseTraceparent({})).toBeUndefined();
+		expect(parseTraceparent({ traceparent: "00-abc-def-01" })).toBeUndefined();
+	});
 });
 
 describe("MapleScopedSpanProcessor", () => {
@@ -175,6 +348,142 @@ describe("MapleScopedSpanProcessor", () => {
 				"0000000000000003",
 			]);
 		}
+	});
+
+	test("keeps a sampled trace whose root was a client error or a denial", () => {
+		for (const root of [
+			createSpan({ spanId: ROOT, statusCode: 404 }),
+			createSpan({ spanId: ROOT, attributes: { "maple.keep": true } }),
+		]) {
+			const { processor, delegate } = processorFor({
+				mode: "sample",
+				sampleRate: 0,
+			});
+			processor.onEnd(createSpan({ spanId: "0000000000000002" }));
+			processor.onEnd(root);
+			expect(delegate.ended).toEqual(["0000000000000002", ROOT]);
+		}
+	});
+
+	test("sends child spans without the tenant attrs the root carries", () => {
+		const tenant = { org_id: "org_1", customer_id: "cus_1" };
+		for (const mode of ["keep", "sample"] as const) {
+			const { processor, delegate } = processorFor({ mode, sampleRate: 1 });
+			processor.onEnd(
+				createSpan({
+					spanId: "0000000000000002",
+					attributes: { ...tenant, "db.system": "postgresql" },
+				}),
+			);
+			processor.onEnd(createSpan({ spanId: ROOT, attributes: tenant }));
+
+			const [child, root] = delegate.spans;
+			expect(child.attributes).toEqual({
+				"http.response.status_code": 200,
+				"db.system": "postgresql",
+			});
+			expect(root.attributes).toMatchObject(tenant);
+		}
+	});
+
+	test("a second request under the same trace id keeps its tenant attrs and promotes the trace", () => {
+		const SECOND = "0000000000000009";
+		const tenant = { org_id: "org_1" };
+		const marks = new Map([
+			[
+				TRACE,
+				{
+					mode: "sample" as MapleTraceMode,
+					rootSpanId: ROOT,
+					rootSpanIds: new Set([ROOT, SECOND]),
+				},
+			],
+		]);
+		const delegate = new CapturingSpanProcessor();
+		const processor = new MapleScopedSpanProcessor(delegate, {
+			sampleRate: 0,
+			slowMs: 1000,
+			marks: {
+				get: (traceId) => marks.get(traceId),
+				promote: () => {},
+				unmark: (traceId) => {
+					marks.delete(traceId);
+				},
+			},
+		});
+
+		// A child of the sampled first request waits for its verdict.
+		processor.onEnd(createSpan({ spanId: "0000000000000002" }));
+		expect(delegate.ended).toEqual([]);
+
+		// The second request is a state change: the mark becomes keep.
+		const mark = marks.get(TRACE);
+		if (mark) mark.mode = "keep";
+		processor.onEnd(createSpan({ spanId: SECOND, attributes: tenant }));
+
+		expect(delegate.ended).toEqual(["0000000000000002", SECOND]);
+		expect(delegate.spans[1].attributes).toMatchObject(tenant);
+	});
+
+	test("a request that must be kept is, whichever request of the trace ends first", () => {
+		const SECOND = "0000000000000009";
+		const setup = () => {
+			const marks = new Map([
+				[
+					TRACE,
+					{
+						mode: "sample" as MapleTraceMode,
+						rootSpanId: ROOT,
+						rootSpanIds: new Set([ROOT, SECOND]),
+					},
+				],
+			]);
+			const delegate = new CapturingSpanProcessor();
+			const processor = new MapleScopedSpanProcessor(delegate, {
+				sampleRate: 0,
+				slowMs: 1000,
+				marks: {
+					get: (traceId) => marks.get(traceId),
+					promote: (traceId) => {
+						const mark = marks.get(traceId);
+						if (mark) mark.mode = "keep";
+					},
+					unmark: (traceId) => {
+						marks.delete(traceId);
+					},
+				},
+			});
+			return { marks, delegate, processor };
+		};
+
+		// The healthy first request ends before the failed second one.
+		const first = setup();
+		first.processor.onEnd(createSpan({ spanId: ROOT }));
+		expect(first.delegate.ended).toEqual([]);
+		first.processor.onEnd(createSpan({ spanId: SECOND, statusCode: 404 }));
+		expect(first.delegate.ended).toEqual([ROOT, SECOND]);
+
+		// The failed second request ends first.
+		const second = setup();
+		second.processor.onEnd(createSpan({ spanId: SECOND, statusCode: 404 }));
+		second.processor.onEnd(createSpan({ spanId: ROOT }));
+		expect(second.delegate.ended).toEqual([SECOND, ROOT]);
+
+		// Both healthy and out of the rate: nothing is exported, nothing lingers.
+		const neither = setup();
+		neither.processor.onEnd(createSpan({ spanId: SECOND }));
+		neither.processor.onEnd(createSpan({ spanId: ROOT }));
+		expect(neither.delegate.ended).toEqual([]);
+		expect(neither.marks.has(TRACE)).toBe(false);
+	});
+
+	test("a rate-limited request is sampled like a healthy one", () => {
+		const { processor, delegate } = processorFor({
+			mode: "sample",
+			sampleRate: 0,
+		});
+		processor.onEnd(createSpan({ spanId: ROOT, statusCode: 429 }));
+		expect(delegate.ended).toEqual([]);
 	});
 
 	test("keeps a healthy sampled trace that falls in the rate", () => {

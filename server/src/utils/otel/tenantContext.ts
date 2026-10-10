@@ -18,6 +18,21 @@ export type TenantAttrs = {
 	balance_worker_rollout_enabled?: boolean;
 };
 
+/** Every key of TenantAttrs, for code that needs to tell them from a span's own attributes. */
+export const TENANT_ATTR_KEYS: ReadonlyArray<keyof TenantAttrs> = [
+	"req_id",
+	"org_id",
+	"org_slug",
+	"env",
+	"customer_id",
+	"entity_id",
+	"user_id",
+	"auth_type",
+	"api_version",
+	"region",
+	"balance_worker_rollout_enabled",
+];
+
 export const TENANT_CONTEXT_KEY = createContextKey("autumn.tenant");
 
 export const withTenantContext = <T>({

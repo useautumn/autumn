@@ -8,6 +8,7 @@ import {
 	type CheckResponseWithPreview,
 	getCheckPreview,
 } from "@/internal/api/check/getCheckPreview.js";
+import { setCheckSpanAttributes } from "../setCheckSpanAttributes.js";
 import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
 /** A worker's answer as the API's check response; the preview is the one part that reads Postgres, so it is added here. */
@@ -42,6 +43,16 @@ export async function checkAnswerToApiResponse({
 		result,
 		fullSubject,
 		isDeductingCheck,
+	});
+	setCheckSpanAttributes({
+		featureId: command.featureId,
+		allowed: result.allowed,
+		requiredBalance: result.requiredBalance,
+		balance: balance?.remaining,
+		denyReason:
+			result.reason === "feature_not_attached"
+				? "no_entitlement"
+				: result.limitType,
 	});
 	const preview = withPreview
 		? await getCheckPreview({

@@ -1,4 +1,5 @@
 import {
+	type AllowedResult,
 	apiBalanceToAllowed,
 	CheckResponseV3Schema,
 	FeatureType,
@@ -7,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
+import { setCheckSpanAttributes } from "./setCheckSpanAttributes.js";
 
 export const getCheckResponseV2 = async ({
 	ctx,
@@ -47,6 +49,13 @@ export const getCheckResponseV2 = async ({
 	}
 
 	if (!evaluationApiBalance && !evaluationApiFlag) {
+		setCheckSpanAttributes({
+			featureId: originalFeature.id,
+			allowed: false,
+			requiredBalance,
+			balance: apiBalance?.remaining,
+			denyReason: "no_entitlement",
+		});
 		return CheckResponseV3Schema.parse({
 			allowed: false,
 			customer_id: customerId || "",
@@ -57,8 +66,8 @@ export const getCheckResponseV2 = async ({
 		});
 	}
 
-	const allowed = evaluationApiFlag
-		? true
+	const { allowed, limitType }: AllowedResult = evaluationApiFlag
+		? { allowed: true }
 		: evaluationApiBalance
 			? apiBalanceToAllowed({
 					apiBalance: evaluationApiBalance,
@@ -67,8 +76,16 @@ export const getCheckResponseV2 = async ({
 					requiredBalance,
 					originalFeature,
 					properties,
-				}).allowed
-			: false;
+				})
+			: { allowed: false };
+
+	setCheckSpanAttributes({
+		featureId: originalFeature.id,
+		allowed,
+		requiredBalance,
+		balance: apiBalance?.remaining,
+		denyReason: limitType,
+	});
 
 	return CheckResponseV3Schema.parse({
 		allowed,

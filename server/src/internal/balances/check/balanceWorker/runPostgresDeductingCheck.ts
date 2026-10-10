@@ -20,8 +20,11 @@ import {
 } from "@/internal/api/check/getCheckPreview.js";
 import { getTrackFeatureDeductions } from "../../track/utils/getFeatureDeductions.js";
 import { runPostgresTrackV3 } from "../../track/v3/runPostgresTrackV3.js";
+import { setCheckSpanAttributes } from "../setCheckSpanAttributes.js";
 
-const isRefusedDeduction = (error: unknown): boolean =>
+const isRefusedDeduction = (
+	error: unknown,
+): error is InsufficientBalanceError | UsageLimitExceededError =>
 	error instanceof InsufficientBalanceError ||
 	error instanceof UsageLimitExceededError;
 
@@ -85,6 +88,7 @@ export async function runPostgresDeductingCheck({
 	}).map((deduction) => ({ ...deduction, enforceOverdueBlock: true }));
 
 	let allowed = true;
+	let denyReason: string | undefined;
 	let balance: ApiBalanceV1 | null;
 	try {
 		const response = await runPostgresTrackV3({
@@ -97,8 +101,16 @@ export async function runPostgresDeductingCheck({
 	} catch (error) {
 		if (!isRefusedDeduction(error)) throw error;
 		allowed = false;
+		denyReason = error.code;
 		balance = fullSubjectToApiBalance({ ctx, fullSubject, feature });
 	}
+	setCheckSpanAttributes({
+		featureId: feature.id,
+		allowed,
+		requiredBalance,
+		balance: balance?.remaining,
+		denyReason,
+	});
 
 	const response = applyResponseVersionChanges<CheckResponseV3>({
 		ctx,

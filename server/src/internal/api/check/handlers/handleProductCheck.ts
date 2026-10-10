@@ -5,9 +5,11 @@ import {
 	SuccessCode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { setCheckSpanAttributes } from "@/internal/balances/check/setCheckSpanAttributes.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { setRootSpanAttributes } from "@/utils/otel/rootSpan.js";
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
@@ -74,7 +76,15 @@ export const handleProductCheck = async ({
 			})
 		: undefined;
 
+	setRootSpanAttributes({ "check.product_id": product_id });
+
 	if (!cusProduct) {
+		setCheckSpanAttributes({
+			featureId: undefined,
+			allowed: false,
+			requiredBalance: 0,
+			denyReason: "product_not_attached",
+		});
 		return {
 			customer_id,
 			code: SuccessCode.ProductFound,
@@ -88,14 +98,23 @@ export const handleProductCheck = async ({
 		notNullish(cusProduct.trial_ends_at) &&
 		cusProduct.trial_ends_at! > Date.now();
 
+	const allowed =
+		cusProduct.status === CusProductStatus.Active ||
+		cusProduct.status === CusProductStatus.PastDue;
+
+	setCheckSpanAttributes({
+		featureId: undefined,
+		allowed,
+		requiredBalance: 0,
+		denyReason: "product_not_active",
+	});
+
 	return {
 		customer_id,
 		code: SuccessCode.ProductFound,
 		product_id,
 		entity_id,
-		allowed:
-			cusProduct.status === CusProductStatus.Active ||
-			cusProduct.status === CusProductStatus.PastDue,
+		allowed,
 		status: notNullish(cusProduct.canceled_at)
 			? "canceled"
 			: onTrial

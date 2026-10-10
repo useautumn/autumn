@@ -12,10 +12,12 @@ import {
 	applyResponseVersionChanges,
 	type Customer,
 	InsufficientBalanceError,
+	sumValues,
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { setTrackSpanAttributes } from "../utils/setTrackSpanAttributes.js";
 
 /** One worker track and the feature it was sent for; an event name yields one per feature it maps to. */
 export type FeatureTrackReply = {
@@ -144,6 +146,17 @@ export function trackOutcomesToApiResponse({
 		...postgres.fundingBalances,
 	];
 	const balances = { ...worker.balances, ...postgres.balances };
+	const deductions = [...worker.deductions, ...postgres.deductions];
+
+	// No `before`: `remaining` stops at zero, so overage can't be added back.
+	setTrackSpanAttributes({
+		body,
+		balance: () => ({
+			after:
+				fundingBalances.length === 1 ? fundingBalances[0].remaining : undefined,
+			deducted: sumValues(deductions.map((deduction) => deduction.value ?? 0)),
+		}),
+	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		ctx,
@@ -154,7 +167,7 @@ export function trackOutcomesToApiResponse({
 			value: body.value ?? 1,
 			balance: fundingBalances.length === 1 ? fundingBalances[0] : null,
 			balances: Object.keys(balances).length < 2 ? undefined : balances,
-			deductions: [...worker.deductions, ...postgres.deductions],
+			deductions,
 		},
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Track,

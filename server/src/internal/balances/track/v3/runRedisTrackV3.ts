@@ -4,7 +4,7 @@ import type {
 	TrackParams,
 	TrackResponseV3,
 } from "@autumn/shared";
-import { buildAiCreditCostProperty, tryCatch } from "@autumn/shared";
+import { buildAiCreditCostProperty, sumValues, tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import {
@@ -22,6 +22,7 @@ import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/m
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
+import { setTrackSpanAttributes } from "../utils/setTrackSpanAttributes.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
 
 const queueSyncItem = ({
@@ -201,6 +202,18 @@ export const runRedisTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		featureDeductions,
 		updates,
+	});
+
+	// Row balances, summed over every entitlement the event drew from.
+	setTrackSpanAttributes({
+		body,
+		balance: () => {
+			const rowUpdates = Object.values(updates);
+			if (rowUpdates.length === 0) return {};
+			const deducted = sumValues(rowUpdates.map((update) => update.deducted));
+			const after = sumValues(rowUpdates.map((update) => update.balance));
+			return { before: sumValues([after, deducted]), after, deducted };
+		},
 	});
 
 	return {

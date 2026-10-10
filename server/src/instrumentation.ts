@@ -8,6 +8,7 @@ import {
 } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPTraceExporter as OTLPProtoTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK, resources } from "@opentelemetry/sdk-node";
 import {
@@ -64,10 +65,10 @@ if (process.env.AXIOM_TOKEN || process.env.MAPLE_INGEST_KEY) {
 		);
 	}
 
-	// Maple gets the same scope as the log tap (billing requests + Stripe
-	// webhooks), so every trace id on a Maple log line resolves to its trace.
+	// Maple gets the traces mapleTraceScope marks. Protobuf rather than JSON:
+	// Maple meters the decoded payload, and the same spans are far smaller.
 	if (process.env.MAPLE_INGEST_KEY) {
-		const mapleExporter = new OTLPTraceExporter({
+		const mapleExporter = new OTLPProtoTraceExporter({
 			url: MAPLE_TRACES_URL,
 			headers: { Authorization: `Bearer ${process.env.MAPLE_INGEST_KEY}` },
 			compression: "gzip" as Compression,
