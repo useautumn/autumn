@@ -7,6 +7,7 @@ import {
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { executePrepared } from "@/db/executePrepared.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { planLicenseFullProductJson } from "../utils/planLicenseFullProductSql.js";
 
@@ -58,7 +59,11 @@ export const getFullCustomerLicenses = async ({
 			)})
 	`;
 
-	const rows = (await db.execute(query)) as unknown as FullCustomerLicenseRow[];
+	const rows = await executePrepared<FullCustomerLicenseRow>({
+		db,
+		query,
+		label: "getFullCustomerLicenses",
+	});
 	return rows.map((row) => ({
 		...row.pool,
 		planLicense: row.license
