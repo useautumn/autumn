@@ -77,7 +77,7 @@ export function CustomerExportSheet({
 														/>
 													) : (
 														<span className="text-tertiary-foreground">
-															Customer, subscription, issue and details
+															{copy.columnsSummary}
 														</span>
 													)
 												}

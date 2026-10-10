@@ -10,7 +10,7 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom";
-import { ProductService } from "@/internal/products/ProductService";
+import { loadBaseProduct } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct";
 
 /** A customer product to derive for, and where the result has to land. */
 type DerivationTarget = {
@@ -63,9 +63,7 @@ const collectDerivationTargets = ({
 ];
 
 /** Every distinct catalog version the plan touches, fetched in one pass so the
- * derivation itself runs with no further IO. An unresolved product resolves to
- * null, which the derivation reads as custom — the safe direction — rather than
- * failing the billing write. */
+ * derivation itself runs with no further IO. */
 const loadBaseProducts = async ({
 	ctx,
 	targets,
@@ -84,24 +82,13 @@ const loadBaseProducts = async ({
 	];
 
 	const loaded = await Promise.all(
-		internalProductIds.map(async (internalProductId) => {
-			try {
-				const product = await ProductService.getFull({
-					db: ctx.db,
-					idOrInternalId: internalProductId,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					allowNotFound: true,
-				});
-				return [internalProductId, product] as const;
-			} catch (error) {
-				ctx.logger.warn(
-					`[isCustom] could not load base product ${internalProductId}`,
-					{ error },
-				);
-				return [internalProductId, null] as const;
-			}
-		}),
+		internalProductIds.map(
+			async (internalProductId) =>
+				[
+					internalProductId,
+					await loadBaseProduct({ ctx, internalProductId }),
+				] as const,
+		),
 	);
 
 	return new Map(loaded);
