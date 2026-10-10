@@ -67,6 +67,9 @@ export const subjectPushOf = ({
 		org: subject.org,
 		log_offset: subject.logOffset.toString(),
 		read_at: subject.readAt,
+		...(subject.customerVersion > 0n && {
+			customer_version: subject.customerVersion.toString(),
+		}),
 	}),
 });
 
@@ -85,6 +88,7 @@ export const storedSubjectWith = ({
 		org: atomOrg,
 		logOffset: 1n,
 		readAt,
+		customerVersion: 0n,
 	};
 };
 
@@ -123,6 +127,7 @@ export const storedEntitySubjectWith = ({
 		org: atomOrg,
 		logOffset: 1n,
 		readAt,
+		customerVersion: 0n,
 	};
 };
 

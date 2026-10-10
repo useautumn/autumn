@@ -27,6 +27,9 @@ const readStoredParts = ({
 
 	const entity = ctx.sqliteStore.readSubject({ customerId, entityId });
 	if (!entity) throw new CannotAnswerError({ reason: "entity_not_stored" });
+	// Read from before the customer's latest evict, the entity may still hold rows that evict replaced.
+	const isEntityCurrent = entity.logOffset >= customer.customerVersion;
+	if (!isEntityCurrent) throw new CannotAnswerError({ reason: "entity_stale" });
 	return { customer, entity };
 };
 

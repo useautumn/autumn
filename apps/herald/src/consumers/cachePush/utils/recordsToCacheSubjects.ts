@@ -1,31 +1,23 @@
 import { meteringIdentityToSubjectKey } from "@autumn/balance-engine";
 import type { StreamRecord } from "../../../stream/types/streamConsumer.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
+import { mergeCacheSubjects } from "./mergeCacheSubjects.js";
+import { recordToCacheSubjects } from "./recordToCacheSubjects.js";
 
-/** Each subject once, at its latest offset; an entity's record moves its customer's balances too. */
+/** Each subject the batch moved once, merged across its records. */
 export const recordsToCacheSubjects = ({
 	records,
 }: {
 	records: StreamRecord[];
 }): CacheSubjectRef[] => {
-	const latestBySubjectKey = new Map<string, CacheSubjectRef>();
-	for (const { position, record } of records) {
-		const customerIdentity = { ...record.identity, entityId: null };
-		const identities = record.identity.entityId
-			? [record.identity, customerIdentity]
-			: [customerIdentity];
-		for (const identity of identities) {
-			const key = meteringIdentityToSubjectKey({ identity });
-			const held = latestBySubjectKey.get(key);
-			latestBySubjectKey.set(key, {
-				identity,
-				logOffset: position.offset,
-				oldestOccurredAt: Math.min(
-					held?.oldestOccurredAt ?? Number.POSITIVE_INFINITY,
-					record.command.occurredAt,
-				),
-			});
+	const bySubjectKey = new Map<string, CacheSubjectRef>();
+	for (const streamRecord of records)
+		for (const next of recordToCacheSubjects(streamRecord)) {
+			const key = meteringIdentityToSubjectKey({ identity: next.identity });
+			bySubjectKey.set(
+				key,
+				mergeCacheSubjects({ held: bySubjectKey.get(key), next }),
+			);
 		}
-	}
-	return [...latestBySubjectKey.values()];
+	return [...bySubjectKey.values()];
 };

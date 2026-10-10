@@ -12,6 +12,7 @@ const subjectOf = (customerId: string): StoredSubject => ({
 	org: atomOrg,
 	logOffset: 1n,
 	readAt: 1,
+	customerVersion: 0n,
 });
 
 const hold = (

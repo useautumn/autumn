@@ -11,6 +11,8 @@ export type AtomSubjectBody = {
 	log_offset: string;
 	/** When Autumn read the subject from its worker, in epoch ms. */
 	read_at: number;
+	/** On a customer push, the offset of its latest evict: the Atom forwards checks on entities read before it. */
+	customer_version?: string;
 };
 
 /** An Atom's `pushes` queue, by the alien deployment group that holds it; a multi-tenant Atom also needs the folder. */

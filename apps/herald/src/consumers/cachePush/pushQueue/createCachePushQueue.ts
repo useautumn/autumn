@@ -1,5 +1,6 @@
 import { meteringIdentityToSubjectKey } from "@autumn/balance-engine";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
+import { mergeCacheSubjects } from "../utils/mergeCacheSubjects.js";
 
 export type CachePushQueue = {
 	enqueue(params: { subjects: CacheSubjectRef[] }): void;
@@ -63,15 +64,10 @@ export function createCachePushQueue({
 	function enqueue({ subjects }: { subjects: CacheSubjectRef[] }): void {
 		for (const subject of subjects) {
 			const key = meteringIdentityToSubjectKey({ identity: subject.identity });
-			const held = pending.get(key);
-			if (held && held.logOffset >= subject.logOffset) continue;
-			pending.set(key, {
-				...subject,
-				oldestOccurredAt: Math.min(
-					held?.oldestOccurredAt ?? Number.POSITIVE_INFINITY,
-					subject.oldestOccurredAt,
-				),
-			});
+			pending.set(
+				key,
+				mergeCacheSubjects({ held: pending.get(key), next: subject }),
+			);
 		}
 		pump();
 	}
