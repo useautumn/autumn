@@ -16,6 +16,7 @@ import {
 } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import { copyLockReceiptToBackup } from "@/internal/balances/utils/lockV2/lockReceiptBackup.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
@@ -302,6 +303,14 @@ export const executeRedisDeductionV2 = async ({
 				message: `Redis deduction failed: ${resultJson.error}`,
 				code: resultJson.error as RedisDeductionErrorCode,
 				featureId: resultJson.feature_id,
+			});
+		}
+
+		if (preparedLock?.enabled) {
+			await copyLockReceiptToBackup({
+				ctx,
+				lockReceiptKey: preparedLock.redis_receipt_key,
+				redisInstance: targetRedis,
 			});
 		}
 

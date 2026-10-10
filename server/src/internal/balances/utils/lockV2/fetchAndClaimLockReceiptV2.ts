@@ -1,5 +1,10 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import {
+	isConnectionLevelRedisError,
+	isTransientRedisError,
+} from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
@@ -13,6 +18,14 @@ import { buildClaimMarkerKey } from "./buildClaimMarkerKey.js";
  * receipt lifetimes so orphans clean up without sticking around forever.
  */
 const CLAIM_MARKER_TTL_SECONDS = 3600;
+
+/** Deletes the claim marker only while it still holds the given token. */
+const RELEASE_OWN_CLAIM_SCRIPT = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0
+`;
 
 type FetchAndClaimResult =
 	| { found: false }
@@ -46,7 +59,7 @@ const normalizeLockReceiptItems = ({
 
 /**
  * V2 merged fetch-and-claim. Pipelines a plain `GET <receiptKey>` and a
- * `SET <receiptKey>:claim 1 NX EX` in a single round trip. The receipt
+ * `SET <receiptKey>:claim <token> NX EX` in a single round trip. The receipt
  * payload is never mutated — claim is encoded entirely by ownership of the
  * marker key.
  *
@@ -72,6 +85,8 @@ export const fetchAndClaimLockReceiptV2 = async ({
 		lockKey: hashedKey,
 	});
 	const claimMarkerKey = buildClaimMarkerKey(lockReceiptKey);
+	// Marks this attempt's claim, so it can be given back even when the SET's reply was lost.
+	const claimToken = crypto.randomUUID();
 
 	// Pipeline GET + SET NX EX as a single round trip. tryRedisWrite wraps the
 	// whole `.exec()` since any error (or unavailable redis) invalidates both
@@ -81,22 +96,73 @@ export const fetchAndClaimLockReceiptV2 = async ({
 			redisInstance
 				.pipeline()
 				.get(lockReceiptKey)
-				.set(claimMarkerKey, "1", "EX", CLAIM_MARKER_TTL_SECONDS, "NX")
+				.set(claimMarkerKey, claimToken, "EX", CLAIM_MARKER_TTL_SECONDS, "NX")
 				.exec(),
 		redisInstance,
 	);
 
-	if (!execResult) return { found: false };
+	// A Redis that could not answer has not said the lock is gone. Reporting "Lock not found" here
+	// tells the caller to stop retrying a lock that may still be open.
+	if (!execResult) {
+		throw new RedisUnavailableError({
+			source: "fetchAndClaimLockReceiptV2",
+			reason: "other",
+		});
+	}
 
 	const [getReply, setReply] = execResult;
+	const claimResult = setReply?.[1] as "OK" | null | undefined;
+
+	// A claim taken for a receipt this call will not hand back would block the next finalize,
+	// including the one that restores the receipt from its backup, so give it back first. When the
+	// SET's reply was lost it may or may not have applied; only a marker holding this attempt's
+	// token is ours to delete.
+	const claimMayBeOurs = claimResult === "OK" || Boolean(setReply?.[0]);
+	const releaseOwnClaim = async () => {
+		if (!claimMayBeOurs) return;
+		const released = await tryRedisWrite(
+			() =>
+				redisInstance.eval(
+					RELEASE_OWN_CLAIM_SCRIPT,
+					1,
+					claimMarkerKey,
+					claimToken,
+				),
+			redisInstance,
+		);
+		if (released === null) {
+			throw new RedisUnavailableError({
+				source: "fetchAndClaimLockReceiptV2:releaseClaimMarker",
+				reason: "other",
+			});
+		}
+	};
+
+	const replyError = [getReply?.[0], setReply?.[0]].find(
+		(error) =>
+			error &&
+			(isTransientRedisError({ error }) ||
+				isConnectionLevelRedisError({ error })),
+	);
+	if (replyError) {
+		await releaseOwnClaim();
+		throw new RedisUnavailableError({
+			source: "fetchAndClaimLockReceiptV2",
+			reason: "other",
+			cause: replyError,
+		});
+	}
+
 	const getErr = getReply?.[0];
 	const setErr = setReply?.[0];
 	if (getErr || setErr) return { found: false };
 
 	const raw = getReply?.[1] as string | null | undefined;
-	const claimResult = setReply?.[1] as "OK" | null | undefined;
 
-	if (!raw) return { found: false };
+	if (!raw) {
+		await releaseOwnClaim();
+		return { found: false };
+	}
 
 	const receipt = JSON.parse(raw) as LockReceipt;
 
