@@ -173,16 +173,8 @@ export const RateLimitOrgOverridesTable = ({
 					<div key={endpoint} className={cn(POLICY_ROW_LAYOUT, COLUMNS)}>
 						<RateLimitEndpointLabel
 							endpoint={endpoint}
-							className={POLICY_ROW_NAME}
+							className={cn("md:col-span-2", POLICY_ROW_NAME)}
 						/>
-						<span
-							className={cn(
-								"hidden text-tertiary-foreground md:inline",
-								POLICY_ROW_DETAIL,
-							)}
-						>
-							—
-						</span>
 						<span className={cn("text-sm tabular-nums", POLICY_ROW_DETAIL)}>
 							{formatEndpointLimit(override)}
 							<span className="ml-1.5 text-tertiary-foreground">

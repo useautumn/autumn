@@ -6,11 +6,18 @@ import {
 } from "@/views/admin/rate-limits/formatRateLimit";
 import { groupConditionalPolicies } from "@/views/admin/rate-limits/groupConditionalPolicies";
 import {
+	listEndpointPolicies,
+	toEndpointKey,
+} from "@/views/admin/rate-limits/rateLimitEndpoints";
+import {
+	withEndpointOverride,
 	withOverride,
+	withoutEndpointOverride,
 	withoutOverrides,
 } from "@/views/admin/rate-limits/rateLimitOverrideEdits";
 import type {
 	RateLimitLayerSummary,
+	RateLimitOverridesView,
 	RateLimitPolicySummary,
 } from "@/views/admin/rate-limits/rateLimitTypes";
 
@@ -101,5 +108,77 @@ describe("rate-limit policies page", () => {
 				layerNames: ["attach", "track_org"],
 			}),
 		).toEqual({});
+	});
+
+	test("endpoint overrides sit beside group limits and the org drops with the last of either", () => {
+		const blocked = { limit: 0, windowMs: 1000 };
+		const orgs = withEndpointOverride({
+			orgs: { org_a: { limits: { attach: 10 } } },
+			orgKey: "org_a",
+			endpoint: "POST /v1/entities.delete",
+			override: blocked,
+		});
+		expect(orgs).toEqual({
+			org_a: {
+				limits: { attach: 10 },
+				endpoints: { "POST /v1/entities.delete": blocked },
+			},
+		});
+		expect(
+			withoutOverrides({ orgs, orgKey: "org_a", layerNames: ["attach"] }),
+		).toEqual({
+			org_a: { limits: {}, endpoints: { "POST /v1/entities.delete": blocked } },
+		});
+		expect(
+			withoutEndpointOverride({
+				orgs,
+				orgKey: "org_a",
+				endpoint: "POST /v1/entities.delete",
+			}),
+		).toEqual({ org_a: { limits: { attach: 10 } } });
+		expect(
+			withoutEndpointOverride({
+				orgs: { org_a: { limits: {}, endpoints: { "GET /v1/x": blocked } } },
+				orgKey: "org_a",
+				endpoint: "GET /v1/x",
+			}),
+		).toEqual({});
+	});
+
+	test("normalises typed endpoints and groups overrides by endpoint", () => {
+		expect(toEndpointKey("post  /v1/entities.delete")).toBe(
+			"POST /v1/entities.delete",
+		);
+		expect(toEndpointKey("/v1/entities.delete")).toBeNull();
+		expect(toEndpointKey("POST /entities.delete")).toBeNull();
+
+		const view = {
+			orgs: {
+				org_a: {
+					limits: {},
+					endpoints: { "POST /v1/track": { limit: 5, windowMs: 1000 } },
+				},
+				org_b: {
+					limits: {},
+					endpoints: {
+						"POST /v1/track": { limit: 0, windowMs: 1000 },
+						"POST /v1/attach": { limit: 9, windowMs: 60_000 },
+					},
+				},
+			},
+		} as unknown as RateLimitOverridesView;
+		expect(listEndpointPolicies({ view })).toEqual([
+			{
+				endpoint: "POST /v1/attach",
+				overrides: [{ orgKey: "org_b", limit: 9, windowMs: 60_000 }],
+			},
+			{
+				endpoint: "POST /v1/track",
+				overrides: [
+					{ orgKey: "org_a", limit: 5, windowMs: 1000 },
+					{ orgKey: "org_b", limit: 0, windowMs: 1000 },
+				],
+			},
+		]);
 	});
 });

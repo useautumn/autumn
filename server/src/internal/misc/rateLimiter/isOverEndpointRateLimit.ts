@@ -49,9 +49,11 @@ export const isOverEndpointRateLimit = async ({
 	if (!ctx.org?.id) return false;
 	const match = findMatchingEndpoint({ ctx, method, path });
 	if (!match) return false;
-	if (!counter && !shouldUseRedis()) return false;
 
 	const [endpoint, { limit, windowMs }] = match;
+	if (limit === 0) return true;
+	if (!counter && !shouldUseRedis()) return false;
+
 	let hits: number;
 	try {
 		hits = await incrementFixedWindow({

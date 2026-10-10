@@ -1,8 +1,9 @@
 import { Badge } from "@autumn/ui";
 import { cn } from "@autumn/ui/lib/utils";
+import { Fragment } from "react";
 import { splitEndpoint } from "./rateLimitEndpoints";
 
-/** The method as a tag, then the path; long paths wrap on phones and truncate from `md`. */
+/** The method as a tag, then the path; on phones it wraps after `/` and `.`, from `md` it truncates. */
 export const RateLimitEndpointLabel = ({
 	endpoint,
 	className,
@@ -19,8 +20,13 @@ export const RateLimitEndpointLabel = ({
 			<Badge variant="muted" size="sm" className="shrink-0 font-mono">
 				{method}
 			</Badge>
-			<span className="min-w-0 break-all font-mono text-xs text-foreground md:truncate">
-				{path}
+			<span className="min-w-0 font-mono text-xs text-foreground md:truncate">
+				{path.split(/(?<=[/.])/).map((segment, index) => (
+					<Fragment key={index}>
+						{segment}
+						<wbr />
+					</Fragment>
+				))}
 			</span>
 		</span>
 	);

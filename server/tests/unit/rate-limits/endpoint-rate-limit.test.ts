@@ -71,7 +71,7 @@ describe("isOverEndpointRateLimit", () => {
 		expect(counter.counts.size).toBe(0);
 	});
 
-	test("a limit of 0 blocks the endpoint outright", async () => {
+	test("a limit of 0 blocks the endpoint without counting", async () => {
 		setOverrides({
 			acme: {
 				limits: {},
@@ -80,7 +80,9 @@ describe("isOverEndpointRateLimit", () => {
 				},
 			},
 		});
-		expect(await hit({ counter: createCounter() })).toBe(true);
+		const counter = createCounter();
+		expect(await hit({ counter })).toBe(true);
+		expect(counter.counts.size).toBe(0);
 	});
 
 	test("path params match like route groups and share one counter", async () => {
@@ -113,7 +115,7 @@ describe("isOverEndpointRateLimit", () => {
 		setOverrides({
 			org_acme: {
 				limits: {},
-				endpoints: { "POST /v1/entities.delete": { limit: 0, windowMs: 1000 } },
+				endpoints: { "POST /v1/entities.delete": { limit: 1, windowMs: 1000 } },
 			},
 		});
 		const failing = {
