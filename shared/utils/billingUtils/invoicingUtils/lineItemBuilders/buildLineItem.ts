@@ -39,6 +39,7 @@ export const buildLineItem = ({
 			now: context.now,
 			billingPeriod: context.billingPeriod,
 			billingTiming: context.billingTiming,
+			endsAt: context.endsAt,
 		});
 	}
 
@@ -58,6 +59,7 @@ export const buildLineItem = ({
 			now: context.now,
 			billingPeriod: context.billingPeriod,
 			amount,
+			endsAt: context.endsAt,
 		});
 		prorated = true;
 	}

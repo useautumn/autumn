@@ -13,12 +13,14 @@ import {
 	expectProductTrialing,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { calculateProrationFromPeriod } from "@tests/integration/billing/utils/proration/calculateProration";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addMonths } from "date-fns";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 
 /**
@@ -237,15 +239,16 @@ test.concurrent(`${chalk.yellowBright("uncancel + add trial")}`, async () => {
 });
 
 // ===============================================================================
-// TEST 3: Remove trial while canceling (cancel state preserved)
+// TEST 3: Remove trial while canceling (prorated to the cancel date)
 // ===============================================================================
 
 /**
  * User is on Pro (trialing AND canceling), removes trial but does NOT uncancel.
- * Verifies: cancel state is preserved, charged for ending trial.
+ * Verifies: cancel date is kept, and only now -> cancel date is charged (as Stripe does).
  */
-test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel preserved")}`, async () => {
+test.concurrent(`${chalk.yellowBright("remove trial while canceling: prorated")}`, async () => {
 	const customerId = "remove-trial-while-cancel";
+	const trialDays = 14;
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeMessagesItem = items.monthlyMessages({ includedUsage: 10 });
 
@@ -253,7 +256,7 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 	const pro = products.proWithTrial({
 		items: [messagesItem],
 		id: "pro-trial",
-		trialDays: 14,
+		trialDays,
 	});
 	const free = constructProduct({
 		id: "free",
@@ -262,7 +265,7 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 		isDefault: true,
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1, ctx, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -300,8 +303,14 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 		free_trial: null,
 	});
 
-	// Should charge for ending trial
-	expect(preview.total).toBeGreaterThan(0);
+	// $20 for the trial-end -> cancel-date days of a month starting now
+	const cycleEnd = addMonths(advancedTo, 1).getTime();
+	const expectedTotal = calculateProrationFromPeriod({
+		billingPeriod: { start: advancedTo, end: cycleEnd },
+		advancedTo: cycleEnd - ms.days(trialDays),
+		amount: 20,
+	});
+	expect(Math.abs(preview.total - expectedTotal)).toBeLessThanOrEqual(0.01);
 
 	// Execute remove trial
 	await autumnV1.subscriptions.update({
@@ -328,10 +337,11 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 		productId: free.id,
 	});
 
-	// Verify invoices (don't assert latestTotal - proration varies based on timing)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterUpdate,
 		count: 2,
+		latestTotal: preview.total,
+		latestStatus: "paid",
 	});
 
 	// Verify Stripe subscription (should still be set to cancel)
@@ -341,6 +351,79 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 		org: ctx.org,
 		env: ctx.env,
 		shouldBeCanceled: true,
+	});
+});
+
+// ===============================================================================
+// TEST 3b: Uncancel + remove trial (full cycle charged)
+// ===============================================================================
+
+/**
+ * User is on Pro (trialing AND canceling), uncancels AND removes the trial.
+ * Verifies: no cancel date cuts the new period, so the full $20 cycle is charged.
+ */
+test.concurrent(`${chalk.yellowBright("uncancel + remove trial: full cycle")}`, async () => {
+	const customerId = "uncancel-remove-trial";
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const freeMessagesItem = items.monthlyMessages({ includedUsage: 10 });
+
+	const pro = products.proWithTrial({
+		items: [messagesItem],
+		id: "pro-trial",
+		trialDays: 14,
+	});
+	const free = constructProduct({
+		id: "free",
+		items: [freeMessagesItem],
+		type: "free",
+		isDefault: true,
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [pro, free] }),
+		],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.updateSubscription({
+				productId: pro.id,
+				cancelAction: "cancel_end_of_cycle",
+			}),
+		],
+	});
+
+	const uncancelRemoveTrialParams = {
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel_action: "uncancel" as const,
+		free_trial: null,
+	};
+
+	const preview = await autumnV1.subscriptions.previewUpdate(
+		uncancelRemoveTrialParams,
+	);
+	expect(preview.total).toBe(20);
+
+	await autumnV1.subscriptions.update(uncancelRemoveTrialParams);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer, productId: pro.id });
+	await expectProductNotTrialing({ customer, productId: pro.id });
+	await expectProductNotPresent({ customer, productId: free.id });
+	expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 20,
+		latestStatus: "paid",
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
 
