@@ -62,6 +62,7 @@ import {
 } from "../hooks/useCreateScheduleRequestBody";
 import type { SetPlansSubscriptionTarget } from "../types/setPlansSubscriptionTarget";
 import { firstPhaseReplacesPlanNow } from "../utils/firstPhaseReplacesPlanNow";
+import { scheduleBillingCycleReset } from "../utils/scheduleBillingCycleReset";
 import {
 	type CurrentScheduleTrial,
 	canScheduleFreeTrial,
@@ -98,6 +99,8 @@ interface CreateScheduleFormContextValue {
 	defaultFirstPhaseProration: BillingBehavior;
 	/** Proration can't change what's billed here, so the row stays as shown and explains why. */
 	prorationOverride: ProrationBehaviorOverride | undefined;
+	/** A trial anchors the cycle, so the billing cycle anchor row is locked off. */
+	trialAnchorsBillingCycle: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
@@ -266,6 +269,18 @@ export function CreateScheduleFormProvider({
 		nowMs,
 		liveSubscriptionTrialing,
 	});
+	const {
+		trialAnchorsBillingCycle,
+		resetBillingCycle,
+		resetsCycleNow,
+		usesCustomAnchor,
+	} = scheduleBillingCycleReset({
+		formValues,
+		nowMs,
+		currentTrial,
+		catalogFreeTrial,
+		backdatesLiveSubscription,
+	});
 
 	const previousDefaultTrialFormValuesRef = useRef(defaultTrialFormValues);
 	useEffect(() => {
@@ -291,8 +306,8 @@ export function CreateScheduleFormProvider({
 	);
 
 	const getResetBillingCycle = useCallback(
-		() => form.store.state.values.resetBillingCycle ?? false,
-		[form.store],
+		() => resetBillingCycle,
+		[resetBillingCycle],
 	);
 
 	const getBillingCycleAnchor = useCallback(() => {
@@ -306,11 +321,6 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
-	const resetsCycleNow =
-		!firstPhaseStartsLater({ phases: formValues.phases, nowMs }) &&
-		formValues.resetBillingCycle &&
-		!backdatesLiveSubscription &&
-		formValues.billingCycleAnchorMode === "now";
 	const endsTrialNow = endsCurrentTrialNow({
 		phases: formValues.phases,
 		nowMs,
@@ -321,9 +331,6 @@ export function CreateScheduleFormProvider({
 	const [defaultFirstPhaseProration] = useState(() =>
 		defaultProrationBehavior({ noChargesAllowed: hasActiveSubscription }),
 	);
-	const usesCustomAnchor =
-		formValues.resetBillingCycle &&
-		formValues.billingCycleAnchorMode === "custom";
 	const prorationOverride = prorationBehaviorOverride({
 		endsTrialNow,
 		resetsCycleNow,
@@ -402,7 +409,7 @@ export function CreateScheduleFormProvider({
 		products,
 		features,
 		nowMs,
-		resetBillingCycle: formValues.resetBillingCycle,
+		resetBillingCycle,
 		billingCycleAnchorMode: formValues.billingCycleAnchorMode,
 		billingCycleAnchorDate: formValues.billingCycleAnchorDate,
 		endDate: formValues.endDate,
@@ -538,6 +545,7 @@ export function CreateScheduleFormProvider({
 			carriesUsageNow,
 			defaultFirstPhaseProration,
 			prorationOverride,
+			trialAnchorsBillingCycle,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,
@@ -568,6 +576,7 @@ export function CreateScheduleFormProvider({
 			carriesUsageNow,
 			defaultFirstPhaseProration,
 			prorationOverride,
+			trialAnchorsBillingCycle,
 			createsRecurringSubscription,
 			subscriptionTarget,
 			currentTrial,

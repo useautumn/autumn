@@ -1,17 +1,30 @@
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
+	type FreeTrial,
+	FreeTrialDuration,
 	type FullCusProduct,
 	type ProductItem,
 	type ProductV2,
+	TRIAL_ANCHORS_BILLING_CYCLE_REASON,
 } from "@autumn/shared";
 import { firstPhaseReplacesPlanNow } from "@/components/forms/create-schedule/utils/firstPhaseReplacesPlanNow";
+import { scheduleBillingCycleReset } from "@/components/forms/create-schedule/utils/scheduleBillingCycleReset";
+import {
+	type CurrentScheduleTrial,
+	defaultScheduleTrialFormValues,
+} from "@/components/forms/create-schedule/utils/scheduleFreeTrial";
+import { firstPhaseBackdatesLiveSubscription } from "@/components/forms/create-schedule/utils/schedulePhaseTiming";
 import {
 	type CustomerStatePhase,
 	type CustomerStatePlan,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
+import {
+	DISABLED_FREE_TRIAL_FORM_VALUES,
+	type FreeTrialFormValues,
+} from "@/components/forms/shared/utils/freeTrialFormValues";
 
 const scheduleResetRule = (
 	state: Parameters<typeof getBillingOptionRules>[0]["state"],
@@ -285,6 +298,160 @@ describe("schedule carry over usages rule", () => {
 				customerProducts: [liveCustomerProduct({ productId: "seats" })],
 			}).visible,
 		).toBe(false);
+	});
+});
+
+const TRIAL_FORM_VALUES = {
+	trialEnabled: true,
+	trialLength: 14,
+	trialDuration: FreeTrialDuration.Day,
+	trialCardRequired: true,
+};
+const EMPTY_TRIAL_FORM_VALUES = { ...TRIAL_FORM_VALUES, trialLength: null };
+const RUNNING_TRIAL = {
+	trialEndsAt: NOW_MS + 14 * DAY_MS,
+	formValues: TRIAL_FORM_VALUES,
+};
+const CATALOG_TRIAL = {
+	length: 7,
+	duration: FreeTrialDuration.Day,
+	card_required: true,
+} as FreeTrial;
+
+const trialReset = ({
+	trialFormValues,
+	currentTrial = null,
+	catalogFreeTrial = null,
+	startsAt = null,
+}: {
+	trialFormValues: FreeTrialFormValues;
+	currentTrial?: CurrentScheduleTrial | null;
+	catalogFreeTrial?: FreeTrial | null;
+	startsAt?: number | null;
+}) => {
+	const phases = firstPhase({ productId: "pro", startsAt });
+	const reset = scheduleBillingCycleReset({
+		formValues: {
+			...trialFormValues,
+			phases,
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "now",
+		},
+		nowMs: NOW_MS,
+		currentTrial,
+		catalogFreeTrial,
+		backdatesLiveSubscription: firstPhaseBackdatesLiveSubscription({
+			phases,
+			nowMs: NOW_MS,
+			isExistingSchedule: false,
+			hasActiveSubscription: true,
+		}),
+	});
+	return {
+		rule: scheduleResetRule({
+			trialAnchorsBillingCycle: reset.trialAnchorsBillingCycle,
+		}),
+		resetBillingCycle: reset.resetBillingCycle,
+	};
+};
+
+const LOCKED_BY_TRIAL = {
+	rule: {
+		visible: true,
+		disabled: true,
+		disabledReason: TRIAL_ANCHORS_BILLING_CYCLE_REASON,
+	},
+	resetBillingCycle: false,
+};
+const ENABLED = {
+	rule: { visible: true, disabled: false, disabledReason: null },
+	resetBillingCycle: true,
+};
+
+describe("schedule billing cycle reset rule with a trial", () => {
+	test("locks when the running trial is kept", () => {
+		expect(
+			trialReset({
+				trialFormValues: defaultScheduleTrialFormValues({
+					currentTrial: RUNNING_TRIAL,
+					catalogFreeTrial: null,
+				}),
+				currentTrial: RUNNING_TRIAL,
+			}),
+		).toEqual(LOCKED_BY_TRIAL);
+	});
+
+	test("locks when a plan's catalog trial would start", () => {
+		expect(
+			trialReset({
+				trialFormValues: defaultScheduleTrialFormValues({
+					currentTrial: null,
+					catalogFreeTrial: CATALOG_TRIAL,
+				}),
+				catalogFreeTrial: CATALOG_TRIAL,
+			}),
+		).toEqual(LOCKED_BY_TRIAL);
+	});
+
+	test("locks when a trial is switched on for a customer who isn't trialing", () => {
+		expect(trialReset({ trialFormValues: TRIAL_FORM_VALUES })).toEqual(
+			LOCKED_BY_TRIAL,
+		);
+	});
+
+	test("stays enabled and keeps the reset when the switched-on trial has no length, so none is sent", () => {
+		expect(trialReset({ trialFormValues: EMPTY_TRIAL_FORM_VALUES })).toEqual(
+			ENABLED,
+		);
+	});
+
+	test("locks when the running trial's length is cleared, since set_plans carries it on", () => {
+		expect(
+			trialReset({
+				trialFormValues: EMPTY_TRIAL_FORM_VALUES,
+				currentTrial: RUNNING_TRIAL,
+			}),
+		).toEqual(LOCKED_BY_TRIAL);
+	});
+
+	test("stays enabled with no trial", () => {
+		expect(
+			trialReset({
+				trialFormValues: defaultScheduleTrialFormValues({
+					currentTrial: null,
+					catalogFreeTrial: null,
+				}),
+			}),
+		).toEqual(ENABLED);
+	});
+
+	test("stays enabled when the running trial is turned off", () => {
+		expect(
+			trialReset({
+				trialFormValues: DISABLED_FREE_TRIAL_FORM_VALUES,
+				currentTrial: RUNNING_TRIAL,
+			}),
+		).toEqual(ENABLED);
+	});
+
+	test("stays enabled when a kept trial backdates the trialing subscription", () => {
+		expect(
+			trialReset({
+				trialFormValues: TRIAL_FORM_VALUES,
+				currentTrial: RUNNING_TRIAL,
+				startsAt: NOW_MS - 7 * DAY_MS,
+			}),
+		).toEqual(ENABLED);
+	});
+
+	test("stays enabled when the first phase starts later, where no trial is sent", () => {
+		expect(
+			trialReset({
+				trialFormValues: TRIAL_FORM_VALUES,
+				currentTrial: RUNNING_TRIAL,
+				startsAt: NOW_MS + 7 * DAY_MS,
+			}),
+		).toEqual(ENABLED);
 	});
 });
 

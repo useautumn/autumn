@@ -96,12 +96,16 @@ export const handleSetPlansErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
-	// A trial controls the cycle start, except on a backdated trialing recreate, which anchors after the kept trial.
-	if (isTrialBackdateRecreate({ billingContext })) {
+	const backdatesTrialingSubscription = isTrialBackdateRecreate({
+		billingContext,
+	});
+	if (backdatesTrialingSubscription) {
 		handleTrialBackdateAnchorErrors({ billingContext });
-	} else {
-		assertNoBillingCycleAnchorWithTrial({ billingContext });
 	}
+	assertNoBillingCycleAnchorWithTrial({
+		billingContext,
+		backdatesTrialingSubscription,
+	});
 	handleTrialingCycleResetErrors({ billingContext });
 	handleSetPlansBillingCycleAnchorErrors({
 		billingContext,

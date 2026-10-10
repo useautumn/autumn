@@ -1,3 +1,5 @@
+import { TRIAL_ANCHORS_BILLING_CYCLE_REASON } from "@autumn/shared";
+
 export type BillingFlow = "attach" | "update" | "schedule";
 
 export type BillingOptionId =
@@ -38,6 +40,7 @@ export type BillingOptionState = {
 	// schedule
 	hasPaidRecurringPlan?: boolean;
 	carriesUsageNow?: boolean;
+	trialAnchorsBillingCycle?: boolean;
 };
 
 const HIDDEN: BillingOptionRule = {
@@ -104,7 +107,12 @@ function updateRules(state: BillingOptionState): BillingOptionRules {
 function scheduleRules(state: BillingOptionState): BillingOptionRules {
 	return {
 		proration: show(true),
-		resetBillingCycle: show(true),
+		resetBillingCycle: show(
+			true,
+			state.trialAnchorsBillingCycle
+				? TRIAL_ANCHORS_BILLING_CYCLE_REASON
+				: null,
+		),
 		discounts: show(true),
 		planSchedule: HIDDEN,
 		resetUsage: HIDDEN,
