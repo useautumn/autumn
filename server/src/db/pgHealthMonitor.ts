@@ -2,6 +2,7 @@ import type { SQL } from "drizzle-orm";
 import type { Pool } from "pg";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isConnectionDropError } from "./dbUtils.js";
+import { executePrepared } from "./executePrepared.js";
 import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
 
 export enum PgHealth {
@@ -183,11 +184,14 @@ export const executeWithHealthTracking = async ({
 	db,
 	query,
 	useReplica,
+	preparedLabel,
 }: {
 	db: DrizzleCli;
 	query: SQL;
 	/** Force replica read (for testing replica connectivity in prod). */
 	useReplica?: boolean;
+	/** Runs the query as a named prepared statement; its text must not vary between calls. */
+	preparedLabel?: string;
 }): Promise<{
 	result: Record<string, unknown>[];
 	usedReplica: boolean;
@@ -204,7 +208,9 @@ export const executeWithHealthTracking = async ({
 
 	const queryStart = Date.now();
 	try {
-		const result = await effectiveDb.execute(query);
+		const result = preparedLabel
+			? await executePrepared({ db: effectiveDb, query, label: preparedLabel })
+			: await effectiveDb.execute(query);
 
 		if (shouldTrackHealth) {
 			const durationMs = Date.now() - queryStart;

@@ -190,6 +190,7 @@ export class CusService {
 					db,
 					query,
 					useReplica: ctx.testOptions?.useReplica,
+					preparedLabel: useFlatModel ? undefined : "getFullCusQuery",
 				});
 				const sqlMs = performance.now() - tSqlStart;
 
