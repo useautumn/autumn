@@ -1,10 +1,13 @@
 import type { Context, Env, Next } from "hono";
 import { shouldUseRedis } from "@/external/redis/initRedis";
+import { errorToResponse } from "@/honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isOverEndpointRateLimit } from "@/internal/misc/rateLimiter/isOverEndpointRateLimit";
 import {
 	getLimiterForType,
 	getOrgLimiterFor,
 	getRateLimitKey,
+	orgRateLimitExceededError,
 	setRateLimitKeyInContext,
 } from "@/internal/misc/rateLimiter/rateLimitFactory";
 import { runOrgThenCustomerInOneTrip } from "@/internal/misc/rateLimiter/runOrgThenCustomerInOneTrip";
@@ -22,6 +25,21 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
 	try {
+		// An org's endpoint override caps on top of the group limits below.
+		if (
+			await isOverEndpointRateLimit({
+				ctx,
+				method: c.req.method,
+				path: c.req.path,
+			})
+		) {
+			return errorToResponse({
+				c,
+				error: orgRateLimitExceededError(),
+				env: ctx.env,
+			});
+		}
+
 		// 1. Determine rate limit type based on endpoint
 		const { type: rateLimitType, overLimit } = getRateLimitRouteGroup(c);
 

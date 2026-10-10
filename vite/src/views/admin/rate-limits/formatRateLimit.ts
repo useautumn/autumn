@@ -1,4 +1,8 @@
-import type { RateLimitLayerSummary } from "./rateLimitTypes";
+import type {
+	RateLimitLayerSummary,
+	RateLimitPolicyOverride,
+	RateLimitPolicySummary,
+} from "./rateLimitTypes";
 
 const WINDOW_LABELS: Record<number, string> = { 1000: "s", 60000: "min" };
 
@@ -15,6 +19,30 @@ export const formatLimit = ({
 	limit: number;
 	windowMs: number;
 }) => `${formatCount(limit)}/${formatWindow(windowMs)}`;
+
+/** An org's override values on a row: per customer first, then per org. */
+export const formatOverrideValues = ({
+	policy,
+	override,
+}: {
+	policy: RateLimitPolicySummary;
+	override: RateLimitPolicyOverride;
+}) =>
+	(["perCustomer", "perOrg"] as const).flatMap((scope) => {
+		const layer = policy[scope];
+		const value = override[scope];
+		if (!layer || value === undefined) return [];
+		return [formatLimit({ limit: value, windowMs: layer.windowMs })];
+	});
+
+/** A 0 endpoint cap answers every request with a 429. */
+export const formatEndpointLimit = ({
+	limit,
+	windowMs,
+}: {
+	limit: number;
+	windowMs: number;
+}) => (limit === 0 ? "blocked" : formatLimit({ limit, windowMs }));
 
 export const formatVersion = (version: string) => version.replace(/\.0$/, "");
 

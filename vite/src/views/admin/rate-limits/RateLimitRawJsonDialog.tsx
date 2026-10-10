@@ -56,7 +56,8 @@ export const RateLimitRawJsonDialog = ({
 				</div>
 				{!parsed && (
 					<p role="alert" className="text-xs text-destructive">
-						Invalid JSON: expected {"{ orgs: { [org]: { limits } } }"}
+						Invalid JSON: expected{" "}
+						{"{ orgs: { [org]: { limits, endpoints? } } }"}
 					</p>
 				)}
 				<DialogFooter>

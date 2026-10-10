@@ -10,7 +10,7 @@ const countOrgOverrides = ({
 }) =>
 	view.policies.filter((policy) =>
 		policy.overrides.some((override) => override.orgKey === orgKey),
-	).length;
+	).length + Object.keys(view.orgs[orgKey]?.endpoints ?? {}).length;
 
 /** Orgs with overrides, most overridden first; unresolved keys show as themselves. */
 export const listOverrideOrgs = ({
