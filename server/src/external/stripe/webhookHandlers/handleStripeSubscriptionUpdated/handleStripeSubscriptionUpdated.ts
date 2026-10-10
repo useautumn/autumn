@@ -9,6 +9,7 @@ import { autoSyncUpdatedSubscription } from "./tasks/autoSyncUpdatedSubscription
 import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
 import { handleIgnorePastDue } from "./tasks/handleIgnorePastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
+import { handleStripeScheduleReleased } from "./tasks/handleStripeScheduleReleased/handleStripeScheduleReleased.js";
 import { handleStripeSubscriptionRenewed } from "./tasks/handleStripeSubscriptionRenewed/handleStripeSubscriptionRenewed.js";
 import { handleStripeSubscriptionTrialEnded } from "./tasks/handleStripeSubscriptionTrialEnded/handleStripeSubscriptionTrialEnded.js";
 import { syncCustomerProductStatus } from "./tasks/syncCustomerProductStatus/syncCustomerProductStatus.js";
@@ -37,6 +38,11 @@ export const handleStripeSubscriptionUpdated = async ({
 	await handleSchedulePhaseChanges({
 		ctx,
 		eventContext: subscriptionUpdatedContext,
+	});
+
+	await handleStripeScheduleReleased({
+		ctx,
+		subscriptionUpdatedContext,
 	});
 
 	// 2. Sync status from Stripe to customer products (sends webhook event too)
