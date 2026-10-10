@@ -144,6 +144,8 @@ export const classifyMapleJob = ({
 // marks are never cleared on root end; FIFO eviction bounds memory instead.
 // Sized so a mark outlives its trace at a few hundred kept traces a second.
 const MAX_MARKED_TRACES = 50_000;
+// A client can send every request it makes under one trace id.
+const MAX_ROOT_SPANS_PER_TRACE = 64;
 
 type MapleTraceMark = {
 	mode: MapleTraceMode;
@@ -151,28 +153,38 @@ type MapleTraceMark = {
 	rootSpanId: string;
 	/** Every request or job span of the trace: a client can send several requests under one trace id. */
 	rootSpanIds: Set<string>;
-	/** The request is one whose summary log line the trace can replace. */
-	replacesLogs: boolean;
 };
 const marks = new Map<string, MapleTraceMark>();
+
+const addRootSpanId = ({
+	mark,
+	spanId,
+}: {
+	mark: MapleTraceMark;
+	spanId: string;
+}) => {
+	if (mark.rootSpanIds.size < MAX_ROOT_SPANS_PER_TRACE) {
+		mark.rootSpanIds.add(spanId);
+		return;
+	}
+	// A root that is not tracked can not decide a sampled trace, so the trace
+	// is kept whole instead.
+	mark.mode = "keep";
+};
 
 export const markTraceForMaple = ({
 	traceId,
 	rootSpanId,
 	mode,
-	replacesLogs = false,
 }: {
 	traceId: string;
 	rootSpanId: string;
 	mode: MapleTraceMode;
-	replacesLogs?: boolean;
 }) => {
 	const existing = marks.get(traceId);
 	if (existing) {
-		existing.rootSpanIds.add(rootSpanId);
+		addRootSpanId({ mark: existing, spanId: rootSpanId });
 		if (mode === "keep") existing.mode = "keep";
-		// Several requests share the mark, so the line is only replaced when all of them allow it.
-		existing.replacesLogs &&= replacesLogs;
 		return;
 	}
 	if (marks.size >= MAX_MARKED_TRACES) {
@@ -183,7 +195,6 @@ export const markTraceForMaple = ({
 		mode,
 		rootSpanId,
 		rootSpanIds: new Set([rootSpanId]),
-		replacesLogs,
 	});
 };
 
@@ -212,12 +223,7 @@ export const mapleTraceScopeMiddleware: MiddlewareHandler = (c, next) => {
 	const mode = classifyMapleRequest({ method, path });
 	if (mode) {
 		const { traceId, spanId } = span.spanContext();
-		markTraceForMaple({
-			traceId,
-			rootSpanId: spanId,
-			mode,
-			replacesLogs: isLogReplaceableRequest({ method, path }),
-		});
+		markTraceForMaple({ traceId, rootSpanId: spanId, mode });
 	}
 	return withRootSpan({ span, fn: next });
 };
@@ -225,7 +231,8 @@ export const mapleTraceScopeMiddleware: MiddlewareHandler = (c, next) => {
 /** A further span that carries tenant attrs in a trace already going to Maple, e.g. the deferred half of an early-acked webhook. */
 export const addMapleTraceRoot = (span: Span) => {
 	const { traceId, spanId } = span.spanContext();
-	getMapleTraceMark(traceId)?.rootSpanIds.add(spanId);
+	const mark = getMapleTraceMark(traceId);
+	if (mark) addRootSpanId({ mark, spanId });
 };
 
 /** Marks the active worker span's trace. A job continuing a request's trace is kept, since only kept traces propagate. */
@@ -248,21 +255,31 @@ export const markJobTraceForMaple = ({
 const REPLACE_REQUEST_LOGS =
 	isMapleEnabled && process.env.MAPLE_REPLACE_REQUEST_LOGS === "true";
 
+const TOO_MANY_REQUESTS = 429;
+
 /**
- * True when the request's trace stands in for its summary log line: the trace
- * goes to Maple and the route is one whose decision the trace carries. A
- * failed request always logs.
+ * True when the request's trace stands in for its summary log line: the route
+ * is one whose decision the trace carries and the trace goes to Maple.
+ * Decided per request, since a trace id can be shared by requests the trace
+ * does not cover. A failed request always logs, and so does a rate-limited
+ * one: its trace is sampled like a healthy one.
  */
 export const isLogReplacedByMapleTrace = ({
 	traceId,
-	failed,
+	method,
+	path,
+	statusCode,
 	enabled = REPLACE_REQUEST_LOGS,
 }: {
 	traceId: string | undefined;
-	failed: boolean;
+	method: string;
+	path: string;
+	statusCode: number;
 	enabled?: boolean;
 }) =>
 	enabled &&
-	!failed &&
+	statusCode < 500 &&
+	statusCode !== TOO_MANY_REQUESTS &&
+	isLogReplaceableRequest({ method, path }) &&
 	traceId !== undefined &&
-	getMapleTraceMark(traceId)?.replacesLogs === true;
+	getMapleTraceMark(traceId) !== undefined;

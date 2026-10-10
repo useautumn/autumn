@@ -119,7 +119,9 @@ export const logRequestResult = async ({
 		// Read before the first await: a sampled trace still holds its mark here.
 		const isReplacedByTrace = isLogReplacedByMapleTrace({
 			traceId: trace.getActiveSpan()?.spanContext().traceId,
-			failed: statusCode >= 500,
+			method: c.req.method,
+			path: c.req.path,
+			statusCode,
 		});
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;

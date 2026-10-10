@@ -88,18 +88,23 @@ export class MapleScopedSpanProcessor implements SpanProcessor {
 		const mark = this.options.marks.get(traceId);
 		if (!mark) return;
 
-		// Every request or job span of the trace is a root: it keeps its tenant
-		// attrs, and any of them can decide a sampled trace.
-		const isRoot =
+		// Every request or job span the trace was marked for can decide a
+		// sampled trace.
+		const isVerdictRoot =
 			spanId === mark.rootSpanId || mark.rootSpanIds?.has(spanId) === true;
-		const exported = isRoot ? span : withoutTenantAttrs(span);
+		// A request the scope leaves out can share the trace id. Its span has no
+		// local parent either, so nothing above it carries its tenant attrs.
+		const parent = span.parentSpanContext;
+		const keepsTenantAttrs =
+			isVerdictRoot || !parent?.spanId || parent.isRemote === true;
+		const exported = keepsTenantAttrs ? span : withoutTenantAttrs(span);
 		if (mark.mode === "keep") {
 			// A trace promoted mid-flight still has spans waiting on a verdict.
 			this.flush(traceId);
 			this.delegate.onEnd(exported);
 			return;
 		}
-		if (!isRoot) {
+		if (!isVerdictRoot) {
 			this.buffer(traceId, exported);
 			return;
 		}

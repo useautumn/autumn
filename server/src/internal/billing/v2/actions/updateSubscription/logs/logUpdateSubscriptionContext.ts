@@ -36,12 +36,12 @@ export const logUpdateSubscriptionContext = ({
 		},
 		{ overwrite: false },
 	);
-	setRootSpanAttributes({
+	setRootSpanAttributes(() => ({
 		"billing.plan_id": customerProduct.product.id,
 		"billing.plan_version": customerProduct.product.version,
 		"billing.checkout_mode": billingContext.checkoutMode ?? undefined,
 		"billing.no_billing_changes": billingContext.skipBillingChanges,
-	});
+	}));
 
 	addToExtraLogs({
 		ctx,

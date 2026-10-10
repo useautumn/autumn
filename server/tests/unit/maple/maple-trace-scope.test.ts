@@ -10,6 +10,7 @@ import {
 	type Attributes,
 	ROOT_CONTEXT,
 	type Span,
+	type SpanContext,
 	SpanKind,
 	SpanStatusCode,
 } from "@opentelemetry/api";
@@ -18,6 +19,7 @@ import type {
 	SpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
 import {
+	addMapleTraceRoot,
 	classifyMapleJob,
 	classifyMapleRequest,
 	getMapleTraceMark,
@@ -42,14 +44,17 @@ const createSpan = ({
 	durationMs = 5,
 	statusCode = 200,
 	attributes,
+	parentSpanContext,
 }: {
 	spanId: string;
 	durationMs?: number;
 	statusCode?: number;
 	attributes?: Attributes;
+	parentSpanContext?: SpanContext;
 }): ReadableSpan =>
 	({
 		name: "span",
+		parentSpanContext,
 		kind: SpanKind.SERVER,
 		attributes: { "http.response.status_code": statusCode, ...attributes },
 		resource: {} as ReadableSpan["resource"],
@@ -205,45 +210,64 @@ describe("classifyMapleJob", () => {
 });
 
 describe("isLogReplacedByMapleTrace", () => {
-	const replaced = (traceId: string | undefined, failed = false) =>
-		isLogReplacedByMapleTrace({ traceId, failed, enabled: true });
+	const replaced = ({
+		traceId,
+		method = "POST",
+		path = "/v1/balances.check",
+		statusCode = 200,
+	}: {
+		traceId: string | undefined;
+		method?: string;
+		path?: string;
+		statusCode?: number;
+	}) =>
+		isLogReplacedByMapleTrace({
+			traceId,
+			method,
+			path,
+			statusCode,
+			enabled: true,
+		});
 
 	test("replaces the summary line of a covered request that did not fail", () => {
 		const traceId = "b".repeat(32);
-		markTraceForMaple({
-			traceId,
-			rootSpanId: "r1",
-			mode: "sample",
-			replacesLogs: true,
-		});
+		markTraceForMaple({ traceId, rootSpanId: "r1", mode: "sample" });
 
-		expect(replaced(traceId)).toBe(true);
-		expect(replaced(traceId, true)).toBe(false);
+		expect(replaced({ traceId })).toBe(true);
+		expect(replaced({ traceId, statusCode: 404 })).toBe(true);
+		expect(replaced({ traceId, statusCode: 500 })).toBe(false);
 		expect(
-			isLogReplacedByMapleTrace({ traceId, failed: false, enabled: false }),
+			isLogReplacedByMapleTrace({
+				traceId,
+				method: "POST",
+				path: "/v1/balances.check",
+				statusCode: 200,
+				enabled: false,
+			}),
 		).toBe(false);
 	});
 
-	test("keeps the line of a traced request the trace does not cover", () => {
-		const traceId = "d".repeat(32);
-		markTraceForMaple({ traceId, rootSpanId: "r1", mode: "keep" });
-
-		expect(replaced(traceId)).toBe(false);
-		expect(replaced("f".repeat(32))).toBe(false);
-		expect(replaced(undefined)).toBe(false);
+	test("keeps the line of a request whose trace does not go to Maple", () => {
+		expect(replaced({ traceId: "f".repeat(32) })).toBe(false);
+		expect(replaced({ traceId: undefined })).toBe(false);
 	});
 
-	test("a second, uncovered request under the same trace id keeps both lines", () => {
+	test("a request the trace does not cover keeps its line, even under a marked trace id", () => {
 		const traceId = "9".repeat(32);
-		markTraceForMaple({
-			traceId,
-			rootSpanId: "r1",
-			mode: "sample",
-			replacesLogs: true,
-		});
-		markTraceForMaple({ traceId, rootSpanId: "r2", mode: "keep" });
+		markTraceForMaple({ traceId, rootSpanId: "r1", mode: "sample" });
 
-		expect(replaced(traceId)).toBe(false);
+		// The covered request that marked the trace, then others sent with its trace id.
+		expect(replaced({ traceId })).toBe(true);
+		expect(replaced({ traceId, path: "/v1/customers.update" })).toBe(false);
+		expect(replaced({ traceId, path: "/v1/customers.get" })).toBe(false);
+		expect(replaced({ traceId, method: "GET" })).toBe(false);
+	});
+
+	test("a rate-limited request on a covered route keeps its line", () => {
+		const traceId = "8".repeat(32);
+		markTraceForMaple({ traceId, rootSpanId: "r1", mode: "sample" });
+
+		expect(replaced({ traceId, statusCode: 429 })).toBe(false);
 	});
 });
 
@@ -257,6 +281,27 @@ describe("markTraceForMaple", () => {
 		expect(mark?.mode).toBe("keep");
 		expect(mark?.rootSpanId).toBe("a1");
 		expect([...(mark?.rootSpanIds ?? [])]).toEqual(["a1", "b2"]);
+	});
+
+	test("stops adding roots to a trace at the cap, and keeps the trace whole from then on", () => {
+		const traceId = "e".repeat(32);
+		for (let i = 0; i < 100; i++) {
+			markTraceForMaple({ traceId, rootSpanId: `r${i}`, mode: "sample" });
+		}
+
+		const mark = getMapleTraceMark(traceId);
+		expect(mark?.rootSpanIds.size).toBe(64);
+		expect(mark?.rootSpanIds.has("r63")).toBe(true);
+		expect(mark?.rootSpanIds.has("r64")).toBe(false);
+		// An untracked root could not decide the trace, so it is no longer sampled.
+		expect(mark?.mode).toBe("keep");
+
+		addMapleTraceRoot({
+			spanContext: () => ({ traceId, spanId: "deferred", traceFlags: 1 }),
+		} as Span);
+		markTraceForMaple({ traceId, rootSpanId: "late", mode: "keep" });
+		expect(mark?.rootSpanIds.size).toBe(64);
+		expect(mark?.mode).toBe("keep");
 	});
 });
 
@@ -373,6 +418,7 @@ describe("MapleScopedSpanProcessor", () => {
 				createSpan({
 					spanId: "0000000000000002",
 					attributes: { ...tenant, "db.system": "postgresql" },
+					parentSpanContext: { traceId: TRACE, spanId: ROOT, traceFlags: 1 },
 				}),
 			);
 			processor.onEnd(createSpan({ spanId: ROOT, attributes: tenant }));
@@ -477,13 +523,67 @@ describe("MapleScopedSpanProcessor", () => {
 		expect(neither.marks.has(TRACE)).toBe(false);
 	});
 
-	test("a rate-limited request is sampled like a healthy one", () => {
+	test("a request of a marked trace that the scope left out keeps its tenant attrs, its children do not", () => {
+		const OTHER = "0000000000000009";
+		const tenant = { org_id: "org_2" };
+		const otherRoot = (statusCode?: number) =>
+			createSpan({
+				spanId: OTHER,
+				statusCode,
+				attributes: tenant,
+				// The caller's span: the request arrived with a traceparent.
+				parentSpanContext: {
+					traceId: TRACE,
+					spanId: "00000000000000aa",
+					traceFlags: 1,
+					isRemote: true,
+				},
+			});
+
+		const kept = processorFor({ mode: "keep", sampleRate: 0 });
+		kept.processor.onEnd(
+			createSpan({
+				spanId: "0000000000000002",
+				attributes: tenant,
+				parentSpanContext: { traceId: TRACE, spanId: OTHER, traceFlags: 1 },
+			}),
+		);
+		kept.processor.onEnd(otherRoot());
+		const [child, root] = kept.delegate.spans;
+		expect(child.attributes).toEqual({ "http.response.status_code": 200 });
+		expect(root.attributes).toMatchObject(tenant);
+
+		// It was never marked, so it does not decide a sampled trace.
+		const sampled = processorFor({ mode: "sample", sampleRate: 0 });
+		sampled.processor.onEnd(otherRoot(503));
+		expect(sampled.delegate.ended).toEqual([]);
+		sampled.processor.onEnd(createSpan({ spanId: ROOT, statusCode: 404 }));
+		expect(sampled.delegate.ended).toEqual([OTHER, ROOT]);
+		expect(sampled.delegate.spans[0].attributes).toMatchObject(tenant);
+	});
+
+	test("a rate-limited request is sampled like a healthy one, so it keeps its log line", () => {
 		const { processor, delegate } = processorFor({
 			mode: "sample",
 			sampleRate: 0,
 		});
 		processor.onEnd(createSpan({ spanId: ROOT, statusCode: 429 }));
 		expect(delegate.ended).toEqual([]);
+
+		const traceId = "6".repeat(32);
+		markTraceForMaple({ traceId, rootSpanId: ROOT, mode: "sample" });
+		const logSide = {
+			traceId,
+			method: "POST",
+			path: "/v1/track",
+			enabled: true,
+		};
+		expect(isLogReplacedByMapleTrace({ ...logSide, statusCode: 429 })).toBe(
+			false,
+		);
+		expect(isLogReplacedByMapleTrace({ ...logSide, statusCode: 200 })).toBe(
+			true,
+		);
 	});
 
 	test("keeps a healthy sampled trace that falls in the rate", () => {
