@@ -12,7 +12,7 @@ const requireEnv = (name: string): string => {
 	return value;
 };
 
-/** Meters Autumn's own usage for the hour that just closed. Sandbox key only until metering is live.
+/** Meters Autumn's own usage for the hour that just closed, into the live org.
  * Retries re-send the same hour; idempotency keys make that safe. */
 export const pushHourlyMetersTask = schedules.task({
 	id: "push-hourly-meters",
@@ -27,7 +27,10 @@ export const pushHourlyMetersTask = schedules.task({
 			config: { token: AXIOM_ADMIN_TOKEN, orgId: AXIOM_ORG_ID ?? undefined },
 		});
 		const autumn = createAutumnClient({
-			config: { secretKey: requireEnv("AUTUMN_METERING_SECRET_KEY") },
+			config: {
+				secretKey: requireEnv("AUTUMN_SECRET_KEY"),
+				allowLiveKey: true,
+			},
 		});
 		const fx = createFxClient({
 			config: { appId: requireEnv("OPEN_EXCHANGE_RATES_APP_ID") },
