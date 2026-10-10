@@ -31,7 +31,7 @@ diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
 
 let sdk: NodeSDK | null = null;
 
-const MAPLE_TRACES_URL = "https://ingest.maple.dev/v1/traces";
+const MAPLE_TRACES_URL = `${process.env.MAPLE_OTLP_ENDPOINT ?? "https://ingest.maple.dev"}/v1/traces`;
 
 type Compression = NonNullable<
 	ConstructorParameters<typeof OTLPTraceExporter>[0]
