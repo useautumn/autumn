@@ -2,6 +2,7 @@ import {
 	type BillingControlKey,
 	type CustomerBillingControls,
 	type DbUsageAlert,
+	type DbUsageLimit,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -9,6 +10,8 @@ import {
 	PurchaseLimitInterval,
 	ResetInterval,
 	type SpendLimitType,
+	usageAlertIdentity,
+	usageLimitIdentity,
 } from "@autumn/shared";
 import {
 	Button,
@@ -35,6 +38,7 @@ import {
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { OVERAGE_BILLING_OPTIONS } from "@/components/billing-controls/overageBillingOptions";
 import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorTooltip";
+import { UsageLimitConditionRows } from "@/components/billing-controls/UsageLimitConditionRows";
 import { USAGE_ALERT_BASIS_OPTIONS } from "@/components/billing-controls/usageAlertBasisOptions";
 import { USAGE_ALERT_THRESHOLD_TYPE_OPTIONS } from "@/components/billing-controls/usageAlertThresholdTypeOptions";
 import { FieldInfo } from "@/components/general/form/field-info";
@@ -112,6 +116,49 @@ function hasDuplicateFeature({
 		(control, index) => index !== editIndex && control.feature_id === featureId,
 	);
 }
+
+const findDuplicateControlMessage = ({
+	existingControls,
+	controlKey,
+	item,
+	editIndex,
+}: {
+	existingControls: CustomerBillingControls;
+	controlKey: BillingControlKey;
+	item: ControlItem;
+	editIndex?: number;
+}): string | undefined => {
+	const isOther = (_: unknown, index: number) => index !== editIndex;
+	if (controlKey === "usage_limits") {
+		const identity = usageLimitIdentity(item as DbUsageLimit);
+		const duplicate = (existingControls.usage_limits ?? [])
+			.filter(isOther)
+			.some((existing) => usageLimitIdentity(existing) === identity);
+		if (!duplicate) return undefined;
+		return (item as DbUsageLimit).filter
+			? "A usage limit with these conditions already exists for this feature"
+			: "This feature already has a usage limit without conditions";
+	}
+	if (controlKey === "usage_alerts") {
+		const identity = usageAlertIdentity(item as DbUsageAlert);
+		const duplicate = (existingControls.usage_alerts ?? [])
+			.filter(isOther)
+			.some((existing) => usageAlertIdentity(existing) === identity);
+		return duplicate ? "An identical usage alert already exists" : undefined;
+	}
+	if (
+		isUniqueFeatureKey(controlKey) &&
+		hasDuplicateFeature({
+			existingControls,
+			controlKey,
+			featureId: item.feature_id ?? "",
+			editIndex,
+		})
+	) {
+		return "Only one control is allowed per feature";
+	}
+	return undefined;
+};
 
 function FeatureField({
 	form,
@@ -430,7 +477,37 @@ function UsageLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 					</div>
 				)}
 			</form.Field>
+			<ConditionsField
+				form={form}
+				hint="Optional. Only events carrying these properties count toward this limit."
+			/>
 		</div>
+	);
+}
+
+function ConditionsField({
+	form,
+	hint,
+}: {
+	form: UsePlanBillingControlForm;
+	hint: string;
+}) {
+	return (
+		<form.Field name="conditions">
+			{(field) => (
+				<div>
+					<FormLabel className="mb-0.5 text-tertiary-foreground text-xs">
+						Conditions
+					</FormLabel>
+					<UsageLimitConditionRows
+						conditions={field.state.value}
+						onChange={field.handleChange}
+					/>
+					<p className="mt-1 text-tertiary-foreground text-xs">{hint}</p>
+					<FieldInfo field={field} />
+				</div>
+			)}
+		</form.Field>
 	);
 }
 
@@ -485,6 +562,16 @@ function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 				placeholder="Basis"
 				options={USAGE_ALERT_BASIS_OPTIONS}
 			/>
+			<form.Subscribe selector={(state) => state.values.alert_basis}>
+				{(basis) =>
+					basis === "usage_limit" ? (
+						<ConditionsField
+							form={form}
+							hint="Leave empty to measure this plan's usage limit without conditions. Add conditions only to target a limit that has the same ones."
+						/>
+					) : null
+				}
+			</form.Subscribe>
 		</div>
 	);
 }
@@ -523,20 +610,17 @@ function PlanBillingControlForm({
 	editIndex?: number;
 }) {
 	const handleValidSubmit = (values: PlanBillingControlFormValues) => {
-		const featureId = values.feature_id.trim();
-		if (
-			isUniqueFeatureKey(controlKey) &&
-			hasDuplicateFeature({
-				existingControls,
-				controlKey,
-				featureId,
-				editIndex,
-			})
-		) {
-			toast.error("Only one control is allowed per feature");
+		const item = buildControlItem(controlKey, values);
+		const duplicateMessage = findDuplicateControlMessage({
+			existingControls,
+			controlKey,
+			item,
+			editIndex,
+		});
+		if (duplicateMessage) {
+			toast.error(duplicateMessage);
 			return;
 		}
-		const item = buildControlItem(controlKey, values);
 		if (
 			controlKey === "usage_alerts" &&
 			filterUnresolvableUsageLimitAlerts({
@@ -544,7 +628,9 @@ function PlanBillingControlForm({
 				usageLimitLists: [existingControls.usage_limits],
 			}).length > 0
 		) {
-			toast.error("No usage limit on this plan matches this feature");
+			toast.error(
+				"No usage limit on this plan matches this feature and conditions",
+			);
 			return;
 		}
 		onSave(item);
