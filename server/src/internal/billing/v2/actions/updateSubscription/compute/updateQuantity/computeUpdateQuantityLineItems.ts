@@ -98,13 +98,17 @@ export const computeUpdateQuantityLineItems = ({
 		},
 	});
 
+	// A deferred quantity change defers its credit too, even off an invoiced stored charge.
 	const refundLineItems = getRefundLineItemsForPrice({
 		ctx,
 		customerProduct,
 		billingContext,
 		priceId: customerPrice.price.id,
 		catalogFallback: catalogRefundLineItem,
-	});
+	}).map((refundLineItem) => ({
+		...refundLineItem,
+		chargeImmediately: chargeImmediately && refundLineItem.chargeImmediately,
+	}));
 
 	const chargeLineItem = usagePriceToLineItem({
 		cusEnt: newCustomerEntitlement,
