@@ -23,6 +23,9 @@ export const invoices = pgTable(
 
 		internal_customer_id: text("internal_customer_id").notNull(),
 		internal_entity_id: text("internal_entity_id"),
+		// Copied from the customer so org-wide lists can be served by an invoices index.
+		org_id: text("org_id"),
+		env: text("env"),
 
 		stripe_id: text("stripe_id").notNull(),
 		processor_type: text("processor_type"),
