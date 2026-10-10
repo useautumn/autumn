@@ -68,7 +68,7 @@ export const orgRateLimitExceededError = () =>
 	});
 
 /** The limiter options for one bucket; every limiter for it, single or paired, is built from these. */
-export const createRateLimitOptions = ({
+const createRateLimitOptions = ({
 	type,
 	config,
 	overLimit,
