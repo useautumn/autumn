@@ -53,6 +53,8 @@ test.concurrent(
 		await ctx.db.insert(invoices).values({
 			id: `inv_seeded_${Date.now()}`,
 			internal_customer_id: customerRow!.internal_id,
+			org_id: ctx.org.id,
+			env: ctx.env,
 			stripe_id: seededStripeId,
 			status: "open",
 			total: 1,
