@@ -6,7 +6,13 @@
  *  2. the same for an entity: its check answers off the entity's own balance, and a second entity's is untouched;
  *  3. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
  *     creating again returns the same Atom; byoc.delete_atom forgets it and the token stops working;
- *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's.
+ *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's;
+ *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) until the entity's next
+ *     track, then answers it itself again;
+ *  6. an entity's own changes reach its check: the Atom answers off a balance update; new billing controls come with
+ *     an evict, so the Atom forwards the entity until its next track, then answers off them;
+ *  7. a track on the customer reaches the check of its entity, which the Atom keeps answering itself.
+ * From 5 on, every reply the Atom gives equals the API's answer to the same check.
  *
  * The scenarios use the test org's one Atom, so they run in order, in this one file.
  */
@@ -18,6 +24,7 @@ import {
 	apiKeys,
 	ByocCacheStatus,
 	organizations,
+	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
@@ -292,3 +299,198 @@ test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret
 		await db.delete(organizations).where(eq(organizations.id, otherOrgId));
 	}
 });
+
+/** A customer with one entity and 100 monthly messages on the entity or the customer, and that entity's check on the Atom. */
+const initEntityOnAtom = async ({
+	customerId,
+	plansOn,
+}: {
+	customerId: string;
+	plansOn: "entity" | "customer";
+}) => {
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const { entities, autumnV2_4 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: free.id,
+				entityIndex: plansOn === "entity" ? 0 : undefined,
+			}),
+		],
+	});
+	const atom = await ensureAtomDeployment({ autumn });
+	const entityId = entities[0].id;
+	return {
+		autumnV2_4,
+		entityId,
+		entityCheck: {
+			atom,
+			secretKey: defaultCtx.orgSecretKey,
+			customerId,
+			entityId,
+			featureId: TestFeature.Messages,
+			api: autumnV2_4,
+		},
+		trackEntity: (value: number) =>
+			autumnV2_4.track({
+				customer_id: customerId,
+				entity_id: entityId,
+				feature_id: TestFeature.Messages,
+				value,
+			}),
+	};
+};
+
+// An evict reaches the Atom only through the balance worker's log.
+test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
+	`${chalk.yellowBright("atom-deployment5: evicting a customer makes its entity's check stale on the Atom until the entity's next track")}`,
+	async () => {
+		const customerId = "atom-deployment5";
+		const { autumnV2_4, entityCheck, trackEntity } = await initEntityOnAtom({
+			customerId,
+			plansOn: "entity",
+		});
+
+		await trackEntity(40);
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 61,
+			allowed: false,
+		});
+
+		// A bare evict: an attach would also write the entity's state, which makes it current again.
+		await autumnV2_4.post("/customers/clear_cache", {
+			customer_id: customerId,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 61,
+			allowed: false,
+			forwarded: "entity_stale",
+		});
+
+		await trackEntity(10);
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 51,
+			allowed: false,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 50,
+			allowed: true,
+		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
+	`${chalk.yellowBright("atom-deployment6: an entity's balance update and new billing controls reach its check on the Atom")}`,
+	async () => {
+		const customerId = "atom-deployment6";
+		const { autumnV2_4, entityId, entityCheck, trackEntity } =
+			await initEntityOnAtom({ customerId, plansOn: "entity" });
+
+		await trackEntity(10);
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 91,
+			allowed: false,
+		});
+
+		// The worker writes the update and logs it, so herald pushes the entity and the Atom answers off it.
+		await autumnV2_4.balances.update({
+			customer_id: customerId,
+			entity_id: entityId,
+			feature_id: TestFeature.Messages,
+			remaining: 50,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 51,
+			allowed: false,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 50,
+			allowed: true,
+		});
+
+		// The worker reloads new controls through an evict, so the Atom forwards the entity until its next track.
+		// The balance allows 35 and the cap of 30 refuses it, whatever its window counted before.
+		await autumnV2_4.entities.update(customerId, entityId, {
+			billing_controls: {
+				usage_limits: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						limit: 30,
+						interval: ResetInterval.Month,
+					},
+				],
+			},
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 35,
+			allowed: false,
+			forwarded: "entity_stale",
+		});
+		await trackEntity(5);
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 35,
+			allowed: false,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 5,
+			allowed: true,
+		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
+	`${chalk.yellowBright("atom-deployment7: a track on the customer reaches its entity's check on the Atom")}`,
+	async () => {
+		const customerId = "atom-deployment7";
+		const { autumnV2_4, entityCheck, trackEntity } = await initEntityOnAtom({
+			customerId,
+			plansOn: "customer",
+		});
+
+		// The entity's own track is what first sends it to the Atom.
+		await trackEntity(10);
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 91,
+			allowed: false,
+		});
+
+		await autumnV2_4.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 40,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 51,
+			allowed: false,
+		});
+		await expectAtomCheckCorrect({
+			...entityCheck,
+			requiredBalance: 50,
+			allowed: true,
+		});
+	},
+	120_000,
+);

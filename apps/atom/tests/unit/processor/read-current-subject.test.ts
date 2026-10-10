@@ -10,7 +10,12 @@ import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSu
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
-import { atomOrg, forwardReasonOf, freshHeld } from "../utils/atomFixtures.js";
+import {
+	atomOrg,
+	forwardReasonOf,
+	freshHeld,
+	storedEntitySubjectWith,
+} from "../utils/atomFixtures.js";
 
 const state = createState({ balance: 10 });
 const customerCatalog = createCatalogFor({ state });
@@ -51,6 +56,7 @@ const createContext = ({
 			org: atomOrg,
 			logOffset: 1n,
 			readAt: 1000,
+			customerVersion: 0n,
 		},
 	});
 	if (shared) catalogStore.set({ rows: shared, readAt: 2000 });
@@ -144,9 +150,102 @@ describe("the subject a check runs on", () => {
 				org: atomOrg,
 				logOffset: 2n,
 				readAt: 1001,
+				customerVersion: 0n,
 			},
 		});
 
 		expect(read()).not.toBe(first);
+	});
+});
+
+describe("an entity read before its customer's latest evict", () => {
+	/** cus_1 stored at offset 1, with no version yet, and its entity ent_42 at `entityOffset`. */
+	const contextWithEntity = ({ entityOffset }: { entityOffset: bigint }) => {
+		const ctx = createContext({ shared: null });
+		pushEntity({ ctx, logOffset: entityOffset, readAt: 1100 });
+		return ctx;
+	};
+	const pushEntity = ({
+		ctx,
+		logOffset,
+		readAt,
+	}: {
+		ctx: SlotProcessorContext;
+		logOffset: bigint;
+		readAt: number;
+	}) =>
+		ctx.sqliteStore.setSubject({
+			subject: {
+				...storedEntitySubjectWith({
+					customerBalance: 10,
+					entityBalance: 5,
+					readAt,
+				}),
+				logOffset,
+			},
+		});
+	const pushCustomerEvictedAt = ({
+		ctx,
+		customerVersion,
+	}: {
+		ctx: SlotProcessorContext;
+		customerVersion: bigint;
+	}) =>
+		ctx.sqliteStore.setSubject({
+			subject: {
+				state,
+				catalog: customerCatalog,
+				org: atomOrg,
+				logOffset: customerVersion,
+				readAt: 1200,
+				customerVersion,
+			},
+		});
+	const readEntity = (ctx: SlotProcessorContext) => () =>
+		readCurrentSubject({ ctx, customerId: "cus_1", entityId: "ent_42" });
+
+	test("is answered as before while no evict has been heard of", () => {
+		const ctx = contextWithEntity({ entityOffset: 100n });
+
+		expect(readEntity(ctx)()).toBeDefined();
+	});
+
+	test("is left to the API as stale, while the customer itself is still answered", async () => {
+		const ctx = contextWithEntity({ entityOffset: 100n });
+
+		pushCustomerEvictedAt({ ctx, customerVersion: 140n });
+
+		expect(await forwardReasonOf(readEntity(ctx))).toBe("entity_stale");
+		expect(
+			readCurrentSubject({ ctx, customerId: "cus_1", entityId: null }),
+		).toBeDefined();
+	});
+
+	test("is answered again once a push read after the evict lands, and at the evict's own offset", () => {
+		const after = contextWithEntity({ entityOffset: 100n });
+		pushCustomerEvictedAt({ ctx: after, customerVersion: 140n });
+		pushEntity({ ctx: after, logOffset: 150n, readAt: 1300 });
+		const atEvict = contextWithEntity({ entityOffset: 140n });
+		pushCustomerEvictedAt({ ctx: atEvict, customerVersion: 140n });
+
+		expect(readEntity(after)()).toBeDefined();
+		expect(readEntity(atEvict)()).toBeDefined();
+	});
+
+	test("stays stale when a late push of it, still from before the evict, lands", async () => {
+		const ctx = contextWithEntity({ entityOffset: 100n });
+		pushCustomerEvictedAt({ ctx, customerVersion: 140n });
+
+		pushEntity({ ctx, logOffset: 120n, readAt: 1300 });
+
+		expect(await forwardReasonOf(readEntity(ctx))).toBe("entity_stale");
+	});
+
+	test("an entity read after the evict, then a late push of that evict, is still answered", () => {
+		const ctx = contextWithEntity({ entityOffset: 150n });
+
+		pushCustomerEvictedAt({ ctx, customerVersion: 140n });
+
+		expect(readEntity(ctx)()).toBeDefined();
 	});
 });
