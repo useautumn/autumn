@@ -5,13 +5,22 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RATE_LIMIT_CONFIGS, RateLimitType } from "./rateLimitConfigs.js";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore.js";
 
+type CreateCounter = {
+	incr: (key: string) => Promise<number>;
+	pexpire: (key: string, ms: number) => Promise<unknown>;
+};
+
 /** Caps customer creations per org per window; reads that find an existing customer never count. */
 export const assertCustomerCreateWithinOrgLimit = async ({
 	ctx,
+	counter,
 }: {
 	ctx: AutumnContext;
+	counter?: CreateCounter;
 }) => {
-	if (!ctx.org?.id || !shouldUseRedis()) return;
+	if (!ctx.org?.id) return;
+	if (!counter && !shouldUseRedis()) return;
+	const redis = counter ?? getMiscRedis();
 
 	const type = RateLimitType.CustomerCreateOrg;
 	const { windowMs, limit: defaultLimit } = RATE_LIMIT_CONFIGS[type];
@@ -26,8 +35,8 @@ export const assertCustomerCreateWithinOrgLimit = async ({
 
 	let hits: number;
 	try {
-		hits = await getMiscRedis().incr(key);
-		if (hits === 1) await getMiscRedis().pexpire(key, windowMs * 2);
+		hits = await redis.incr(key);
+		if (hits === 1) await redis.pexpire(key, windowMs * 2);
 	} catch (error) {
 		// Same as the router limiter: a Redis failure never blocks a creation.
 		logger.error(`[rate-limit] customer create counter failed: ${error}`);
