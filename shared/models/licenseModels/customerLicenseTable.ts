@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -65,6 +66,13 @@ export const customerLicenses = pgTable(
 			.concurrently(),
 		index("idx_customer_licenses_customer")
 			.on(table.internal_customer_id)
+			.concurrently(),
+		// customers.internal_id is COLLATE "C" but this column is the database
+		// default, so the customers join resolves to "C" and can't use the plain
+		// index above. Keep both: default-collation lookups (bind params,
+		// pooled_balances joins) can only use the plain one.
+		index("idx_customer_licenses_customer_c")
+			.on(sql`${table.internal_customer_id} COLLATE "C"`)
 			.concurrently(),
 		index("idx_customer_licenses_link").on(table.link_id).concurrently(),
 	],
