@@ -2,6 +2,10 @@ import { withTimeout } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	createIsCustomDerivationCache,
+	type IsCustomDerivationCache,
+} from "@/internal/customers/cusProducts/actions/deriveIsCustom/rederiveIsCustomForCustomers.js";
 import type {
 	MigrationRunControls,
 	MigrationWebhookControls,
@@ -11,6 +15,7 @@ import {
 	type MigrationRuntimeWithEventId,
 } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { invalidateBatchMigrationCaches } from "../finalize/invalidateBatchMigrationCaches.js";
+import { rederivePageIsCustom } from "../finalize/rederivePageIsCustom.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import {
 	claimNextBatchMigrationPage,
@@ -160,6 +165,8 @@ export const runBatchMigrationChunk = async ({
 		timeoutMs: deferredOperationTimeoutMs,
 	});
 
+	const isCustomCache = createIsCustomDerivationCache();
+
 	const progress: ChunkProgress = {
 		page: 0,
 		stage: null,
@@ -246,6 +253,7 @@ export const runBatchMigrationChunk = async ({
 						recoveryWriteMs,
 						eventsDefer: events.defer,
 						cachesDefer: caches.defer,
+						isCustomCache,
 						settle: () => Promise.all([caches.settle(), events.settle()]),
 					}),
 				onTimeout: () => {
@@ -484,6 +492,7 @@ const runNextBatchMigrationPage = async ({
 	recoveryWriteMs,
 	eventsDefer,
 	cachesDefer,
+	isCustomCache,
 	settle,
 }: {
 	ctx: AutumnContext;
@@ -500,6 +509,7 @@ const runNextBatchMigrationPage = async ({
 	recoveryWriteMs: number;
 	eventsDefer: (operation: DeferredOperation) => void;
 	cachesDefer: (operation: DeferredOperation) => void;
+	isCustomCache: IsCustomDerivationCache;
 	settle: () => Promise<unknown>;
 }): Promise<NextPageOutcome> => {
 	const pageCtx = { ...ctx, db: pageDb.db };
@@ -545,10 +555,11 @@ const runNextBatchMigrationPage = async ({
 	// A retried customer may already be converged (skipped) yet carry a stale
 	// cache from the interrupted attempt, so retries invalidate skipped too.
 	const invalidateSkipped = (controls?.retryItemStatuses?.length ?? 0) > 0;
+	let flippedSkipped: BatchMigrationPageCustomer[] = [];
 	const revokeCheckpoints = async (error: unknown) => {
 		const internalCustomerIds = [
 			...pageResult.succeeded,
-			...(invalidateSkipped ? pageResult.skipped : []),
+			...(invalidateSkipped ? pageResult.skipped : flippedSkipped),
 		].map((customer) => customer.internalId);
 		const logData = {
 			migrationRunId,
@@ -605,7 +616,23 @@ const runNextBatchMigrationPage = async ({
 				deferCaches: (invalidate) =>
 					cachesDefer({
 						label,
-						run: invalidate,
+						run: async () => {
+							const flipped = await rederivePageIsCustom({
+								ctx,
+								migrationRunId,
+								plan,
+								pageResult,
+								cache: isCustomCache,
+							});
+							flippedSkipped = invalidateSkipped
+								? []
+								: withoutSucceeded({ customers: flipped, pageResult });
+							await invalidate();
+							await invalidateCustomersCaches({
+								ctx,
+								customers: flippedSkipped,
+							});
+						},
 						onFailure: revokeCheckpoints,
 					}),
 			}),
@@ -619,4 +646,36 @@ const runNextBatchMigrationPage = async ({
 		pageResult,
 		pagePhases,
 	};
+};
+
+const withoutSucceeded = ({
+	customers,
+	pageResult,
+}: {
+	customers: BatchMigrationPageCustomer[];
+	pageResult: BatchMigrationPageResult;
+}) => {
+	const succeededIds = new Set(
+		pageResult.succeeded.map(({ internalId }) => internalId),
+	);
+	return customers.filter(({ internalId }) => !succeededIds.has(internalId));
+};
+
+const invalidateCustomersCaches = async ({
+	ctx,
+	customers,
+}: {
+	ctx: AutumnContext;
+	customers: BatchMigrationPageCustomer[];
+}) => {
+	if (customers.length === 0) return;
+	await invalidateBatchMigrationCaches({
+		ctx,
+		pageResult: {
+			succeeded: customers,
+			skipped: [],
+			insertedItems: [],
+			removedItems: [],
+		},
+	});
 };

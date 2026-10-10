@@ -81,6 +81,23 @@ const pairCustomizedPlanItems = ({
 	return [...itemsByKey.values()].flatMap(pairSameKeyItems);
 };
 
+/** Every customer on a version shares the catalog side, so it converts once per loaded product. */
+const catalogPlans = new WeakMap<FullProduct, ApiPlanV1>();
+
+const catalogPlanFor = ({
+	baseProduct,
+	features,
+}: {
+	baseProduct: FullProduct;
+	features: Feature[];
+}): ApiPlanV1 => {
+	const cached = catalogPlans.get(baseProduct);
+	if (cached) return cached;
+	const plan = fullProductToApiPlanV1Sync({ product: baseProduct, features });
+	catalogPlans.set(baseProduct, plan);
+	return plan;
+};
+
 const pairCustomizedPlanLicenses = ({
 	catalog,
 	customer,
@@ -112,10 +129,7 @@ export const diffCustomerProductAgainstCatalog = ({
 	baseProduct: FullProduct;
 	features: Feature[];
 }): CustomerProductCustomDiff | null => {
-	const catalog = fullProductToApiPlanV1Sync({
-		product: baseProduct,
-		features,
-	});
+	const catalog = catalogPlanFor({ baseProduct, features });
 	const customer = fullProductToApiPlanV1Sync({
 		product: cusProductToProduct({ cusProduct: customerProduct }),
 		features,

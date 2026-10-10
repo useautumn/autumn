@@ -1,4 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
+import type { IsCustomCorrection } from "@/internal/customers/cusProducts/actions/deriveIsCustom/fullCustomerWithDerivedIsCustom.js";
 import type { MigrationStripeCache } from "@/internal/migrations/v2/stripeCache/index.js";
 import type { MigrationRuntime } from "../../types/migrationDefinition.js";
 
@@ -8,4 +9,6 @@ export type MigrateCustomerContext = {
 	stripeCache: MigrationStripeCache;
 	/** Preview/dry-run — seeds placeholder Stripe ids instead of calling Stripe for real. */
 	preview: boolean;
+	/** Stored flags the derivation disagrees with; written if the migration itself writes nothing. */
+	isCustomCorrections: IsCustomCorrection[];
 };

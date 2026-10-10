@@ -137,16 +137,17 @@ export const applyDerivedCustomerProductIsCustom = async ({
 			continue;
 		}
 
-		if (isCustom === target.is_custom) continue;
-
 		const updateEntry = updateEntries.find(
 			(entry) => entry.customerProduct.id === target.id,
 		);
 
+		// Written even when it matches the in-memory row: migrations correct that flag in memory first.
 		if (updateEntry) {
 			updateEntry.updates.is_custom = isCustom;
 			continue;
 		}
+
+		if (isCustom === target.is_custom) continue;
 
 		// The patch plan always registers an update entry for the patched row, so
 		// this is a guard against a future caller that doesn't — without it the
