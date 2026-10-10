@@ -14,6 +14,7 @@ import { RateLimitPolicyTable } from "./RateLimitPolicyTable";
 import { RateLimitRawJsonDialog } from "./RateLimitRawJsonDialog";
 import { listOverrideOrgs } from "./rateLimitOrgs";
 import { withOverride, withoutOverrides } from "./rateLimitOverrideEdits";
+import { TOUCH_TARGET } from "./rateLimitTableStyles";
 import type {
 	RateLimitOrg,
 	RateLimitOverrideLimits,
@@ -137,42 +138,48 @@ export const RateLimitsSection = () => {
 
 	return (
 		<section className="flex flex-col gap-1">
-			<PageHeader
-				icon={<Gauge className="size-4 text-subtle" />}
-				title="Rate limits"
-				titleAccessory={<ConfigHealthChip healthy={view.configHealthy} />}
-			>
-				<RateLimitOrgCombobox
-					value={filterOrg}
-					overrideOrgs={overrideOrgs}
-					onChange={setFilterOrg}
-					placeholder="All orgs"
-					triggerClassName="w-56"
+			<div className="flex flex-col md:flex-row md:items-center md:justify-between md:gap-4">
+				<PageHeader
+					icon={<Gauge className="size-4 text-subtle" />}
+					title="Rate limits"
+					titleAccessory={<ConfigHealthChip healthy={view.configHealthy} />}
 				/>
-				{filterOrg && (
+				<div className="flex flex-wrap items-center gap-2 pb-4 md:h-10 md:flex-nowrap">
+					<RateLimitOrgCombobox
+						value={filterOrg}
+						overrideOrgs={overrideOrgs}
+						onChange={setFilterOrg}
+						placeholder="All orgs"
+						triggerClassName="h-11 w-full md:h-auto md:w-56"
+					/>
+					{filterOrg && (
+						<Button
+							variant="skeleton"
+							size="sm"
+							className={TOUCH_TARGET}
+							onClick={() => setFilterOrg(null)}
+						>
+							Clear
+						</Button>
+					)}
 					<Button
-						variant="skeleton"
+						variant="secondary"
 						size="sm"
-						onClick={() => setFilterOrg(null)}
+						className={TOUCH_TARGET}
+						onClick={() => setIsRawJsonOpen(true)}
 					>
-						Clear
+						Raw JSON
 					</Button>
-				)}
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => setIsRawJsonOpen(true)}
-				>
-					Raw JSON
-				</Button>
-				<Button
-					variant="primary"
-					size="sm"
-					onClick={() => openSheet({ policy: view.policies[0] })}
-				>
-					Add override
-				</Button>
-			</PageHeader>
+					<Button
+						variant="primary"
+						size="sm"
+						className={TOUCH_TARGET}
+						onClick={() => openSheet({ policy: view.policies[0] })}
+					>
+						Add override
+					</Button>
+				</div>
+			</div>
 
 			{filterOrg ? (
 				<RateLimitOrgOverridesTable
