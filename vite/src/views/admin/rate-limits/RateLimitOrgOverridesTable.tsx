@@ -7,6 +7,13 @@ import {
 	ROW_HEADER_LAYOUT,
 } from "../edge-config/rolloutRowStyles";
 import { formatCount, formatLimit, formatPolicyLabel } from "./formatRateLimit";
+import {
+	POLICY_ROW_ACTIONS,
+	POLICY_ROW_DETAIL,
+	POLICY_ROW_LAYOUT,
+	POLICY_ROW_NAME,
+	TOUCH_TARGET,
+} from "./rateLimitTableStyles";
 import type {
 	RateLimitLayerSummary,
 	RateLimitOrg,
@@ -25,17 +32,33 @@ const OverriddenLayerCell = ({
 	layer: RateLimitLayerSummary | null;
 	value: number | undefined;
 }) => {
-	if (!layer) return <span className="text-tertiary-foreground">—</span>;
+	if (!layer) {
+		return (
+			<span
+				className={cn(
+					"hidden text-tertiary-foreground md:inline",
+					POLICY_ROW_DETAIL,
+				)}
+			>
+				—
+			</span>
+		);
+	}
 	if (value === undefined) {
 		return (
-			<span className="text-sm tabular-nums">
+			<span className={cn("text-sm tabular-nums", POLICY_ROW_DETAIL)}>
 				{formatLimit(layer)}
 				<span className="ml-1.5 text-tertiary-foreground">default</span>
 			</span>
 		);
 	}
 	return (
-		<span className="flex items-center gap-1.5 text-sm tabular-nums">
+		<span
+			className={cn(
+				"flex items-center gap-1.5 text-sm tabular-nums",
+				POLICY_ROW_DETAIL,
+			)}
+		>
 			{formatCount(layer.limit)}
 			<ArrowRightIcon className="size-3 text-tertiary-foreground" />
 			{formatLimit({ limit: value, windowMs: layer.windowMs })}
@@ -77,14 +100,13 @@ export const RateLimitOrgOverridesTable = ({
 					<p className={LIST_EMPTY}>{org.name} is on every default.</p>
 				)}
 				{overridden.map(({ policy, override }) => (
-					<div
-						key={policy.id}
-						className={cn(
-							"grid grid-cols-1 items-center gap-x-4 gap-y-1 px-4 py-2 md:min-h-12",
-							COLUMNS,
-						)}
-					>
-						<span className="text-sm font-medium text-foreground">
+					<div key={policy.id} className={cn(POLICY_ROW_LAYOUT, COLUMNS)}>
+						<span
+							className={cn(
+								"text-sm font-medium text-foreground",
+								POLICY_ROW_NAME,
+							)}
+						>
 							{formatPolicyLabel(policy.id)}
 						</span>
 						<OverriddenLayerCell
@@ -95,11 +117,12 @@ export const RateLimitOrgOverridesTable = ({
 							layer={policy.perOrg}
 							value={override.perOrg}
 						/>
-						<span />
-						<div className="flex justify-end gap-1">
+						<span className="hidden md:block" />
+						<div className={cn("flex gap-1", POLICY_ROW_ACTIONS)}>
 							<Button
 								variant="skeleton"
 								size="sm"
+								className={TOUCH_TARGET}
 								onClick={() => onEdit(policy)}
 							>
 								Edit
@@ -107,6 +130,7 @@ export const RateLimitOrgOverridesTable = ({
 							<Button
 								variant="skeleton"
 								size="sm"
+								className={TOUCH_TARGET}
 								disabled={isSaving}
 								onClick={() => onRemove(policy)}
 							>
@@ -116,12 +140,17 @@ export const RateLimitOrgOverridesTable = ({
 					</div>
 				))}
 			</div>
-			<div className="flex items-center gap-3 text-xs text-tertiary-foreground">
+			<div className="flex flex-wrap items-center gap-x-3 text-xs text-tertiary-foreground">
 				<span className="tabular-nums">
 					{overridden.length} of {policies.length} limits overridden ·{" "}
 					{policies.length - overridden.length} on default
 				</span>
-				<Button variant="skeleton" size="sm" onClick={onShowAll}>
+				<Button
+					variant="skeleton"
+					size="sm"
+					className={TOUCH_TARGET}
+					onClick={onShowAll}
+				>
 					Show all
 				</Button>
 			</div>

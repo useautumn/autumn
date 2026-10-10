@@ -13,6 +13,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import {
@@ -22,6 +23,7 @@ import {
 	formatWindow,
 } from "./formatRateLimit";
 import { RateLimitOrgCombobox } from "./RateLimitOrgCombobox";
+import { TOUCH_TARGET, TOUCH_TARGET_INPUT } from "./rateLimitTableStyles";
 import type {
 	RateLimitOrg,
 	RateLimitPolicySummary,
@@ -93,10 +95,7 @@ export const RateLimitOverrideSheet = ({
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent
-				side="right"
-				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
-			>
+			<SheetContent side="right" className="md:!w-[28rem] md:!max-w-[28rem]">
 				<SheetHeader>
 					<SheetTitle>Add override</SheetTitle>
 					<SheetDescription>
@@ -112,13 +111,14 @@ export const RateLimitOverrideSheet = ({
 							overrideOrgs={overrideOrgs}
 							onChange={(org) => selectDraft({ ...draft, org })}
 							placeholder="Search orgs"
+							triggerClassName="h-11 md:h-auto"
 						/>
 					</div>
 
 					<div className="flex flex-col gap-1.5 text-sm">
 						Limit
 						<Select value={draft.policy.id} onValueChange={selectPolicy}>
-							<SelectTrigger className="h-9 w-full">
+							<SelectTrigger className="h-11 w-full md:h-9">
 								<SelectValue>
 									{(policyId: string) => formatPolicyLabel(policyId)}
 								</SelectValue>
@@ -144,6 +144,7 @@ export const RateLimitOverrideSheet = ({
 								value: scope,
 								label: SCOPE_LABELS[scope],
 							}))}
+							buttonClassName={TOUCH_TARGET}
 						/>
 					</div>
 
@@ -151,14 +152,14 @@ export const RateLimitOverrideSheet = ({
 						<div className="flex flex-col gap-1.5 text-sm">
 							<label htmlFor="rate-limit-override-value">Value</label>
 							<div className="flex items-center gap-3">
-								<div className="relative w-48">
+								<div className="relative flex-1 md:w-48 md:flex-none">
 									<Input
 										id="rate-limit-override-value"
 										type="number"
 										min={0}
 										value={valueText}
 										onChange={(event) => setValueText(event.target.value)}
-										className="pr-12 tabular-nums"
+										className={cn("pr-12 tabular-nums", TOUCH_TARGET_INPUT)}
 									/>
 									<span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-tertiary-foreground">
 										/ {formatWindow(layer.windowMs)}
@@ -185,11 +186,16 @@ export const RateLimitOverrideSheet = ({
 				</div>
 
 				<div className="flex justify-end gap-2 border-t px-4 py-3">
-					<Button variant="secondary" onClick={() => onOpenChange(false)}>
+					<Button
+						variant="secondary"
+						className={cn("flex-1 md:flex-none", TOUCH_TARGET_INPUT)}
+						onClick={() => onOpenChange(false)}
+					>
 						Cancel
 					</Button>
 					<Button
 						variant="primary"
+						className={cn("flex-1 md:flex-none", TOUCH_TARGET_INPUT)}
 						isLoading={isSaving}
 						disabled={!isValid}
 						onClick={() => onSave({ draft, value })}

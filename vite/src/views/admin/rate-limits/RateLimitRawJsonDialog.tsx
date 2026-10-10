@@ -8,6 +8,7 @@ import {
 } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useEffect, useState } from "react";
+import { TOUCH_TARGET_INPUT } from "./rateLimitTableStyles";
 import type { RateLimitOverrideLimits } from "./rateLimitTypes";
 
 /** The stored `orgs` config as JSON, for keys the table has no row for (e.g. auto_topup_attempts). */
@@ -59,11 +60,16 @@ export const RateLimitRawJsonDialog = ({
 					</p>
 				)}
 				<DialogFooter>
-					<Button variant="secondary" onClick={() => onOpenChange(false)}>
+					<Button
+						variant="secondary"
+						className={TOUCH_TARGET_INPUT}
+						onClick={() => onOpenChange(false)}
+					>
 						Cancel
 					</Button>
 					<Button
 						variant="primary"
+						className={TOUCH_TARGET_INPUT}
 						isLoading={isSaving}
 						disabled={!parsed}
 						onClick={() => parsed && onSave(parsed)}
