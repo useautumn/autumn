@@ -20,6 +20,7 @@ import {
 } from "./handleOneOffErrors.js";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors.js";
 import { handleUncancelErrors } from "./handleUncancelErrors.js";
+import { handleUnknownFeatureQuantityErrors } from "./handleUnknownFeatureQuantityErrors.js";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors.js";
 import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors.js";
 import { handleUpdateSubscriptionCustomLineItemsErrors } from "./handleUpdateSubscriptionCustomLineItemsErrors.js";
@@ -63,10 +64,8 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
 
-	// // 3. Feature quantity errors (recurring prepaid prices must have options)
-	// handleFeatureQuantityErrors({
-	// 	autumnBillingPlan,
-	// });
+	// 3. Feature quantity errors (quantities must target the plan's prepaid features)
+	handleUnknownFeatureQuantityErrors({ billingContext, params });
 
 	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
