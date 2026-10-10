@@ -3,6 +3,7 @@ import {
 	customerEntitlementToNextResetAt,
 	getResetBalancesUpdate,
 	getRolloverUpdates,
+	type ResetBalancesUpdate,
 } from "@autumn/shared";
 import type { RowChange } from "../../models/mutation/rowChange.js";
 import type { DueRow } from "../../utils/subjectUtils/fullSubjectToDueRows.js";
@@ -72,6 +73,23 @@ const promoteDuePool = ({
 	};
 };
 
+/** The row's current value of every balance column the refill sets. The attribution is cleared, not guarded: it is not a balance. */
+const replacedBalancesOf = ({
+	row,
+	balances,
+}: {
+	row: DueRow;
+	balances: ResetBalancesUpdate;
+}): Partial<DueRow> => {
+	const { usage_attribution: _attribution, ...replaced } = balances;
+	return Object.fromEntries(
+		Object.keys(replaced).map((column) => [
+			column,
+			row[column as keyof DueRow],
+		]),
+	);
+};
+
 /** The same refill the server computes, over the worker's row: the shared helpers own every rule. */
 export const customerEntitlementToResetChanges = ({
 	row: dueRow,
@@ -108,8 +126,12 @@ export const customerEntitlementToResetChanges = ({
 				table: "customerEntitlements",
 				op: "update",
 				id: row.id,
-				// The cycle that ended is the guard: a row already moved on refuses a second refill.
-				before: { next_reset_at: cycleEndedAt },
+				// The guard is what the refill replaces: the cycle that ended, and the balances it held. A row already moved on
+				// refuses a second refill; one a writer outside the worker changed since refuses a refill decided without it.
+				before: {
+					next_reset_at: cycleEndedAt,
+					...replacedBalancesOf({ row, balances }),
+				},
 				after: { ...balances, next_reset_at: nextResetAt },
 			},
 			...customerEntitlementToRolloverChanges({ row, cycleEndedAt }),

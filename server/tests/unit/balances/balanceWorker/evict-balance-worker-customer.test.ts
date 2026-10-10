@@ -142,23 +142,38 @@ describe("evictBalanceWorkerCustomer", () => {
 		expect(h.errors[0]?.[0]).toContain("worker rows may be stale");
 	});
 
-	test("an owner that answered is reported, not queued", async () => {
-		for (const workerCode of ["INVALID_REQUEST", "OVERLOADED"] as const) {
-			const h = createHarness({
-				directFailure: new BalanceWorkerClientError({
-					code: "WORKER_ERROR",
-					outcome: "not_submitted",
-					message: "worker verdict",
-					workerCode,
-				}),
-			});
+	test("an owner that answered with a failure is queued too: repeating an evict that applied is harmless", async () => {
+		for (const directFailure of [
+			...(["OVERLOADED", "INVALID_REQUEST"] as const).map(
+				(workerCode) =>
+					new BalanceWorkerClientError({
+						code: "WORKER_ERROR",
+						outcome: "not_submitted",
+						message: "worker verdict",
+						workerCode,
+					}),
+			),
+			new Error("unexpected"),
+		]) {
+			const h = createHarness({ directFailure });
 			await evictBalanceWorkerCustomer({
 				ctx: h.ctx,
 				customerId: "cus_1",
 				client: h.client,
 			});
-			expect(h.queued).toHaveLength(0);
-			expect(h.errors).toHaveLength(1);
+			expect(h.queued).toEqual(h.sent);
+			expect(h.errors).toHaveLength(0);
+			expect(h.warnings).toHaveLength(1);
+			const fields = h.warnings[0]?.[1] as { worker_failure: unknown };
+			expect(fields.worker_failure).toEqual(
+				directFailure instanceof BalanceWorkerClientError
+					? {
+							clientCode: "WORKER_ERROR",
+							workerCode: directFailure.workerCode,
+							outcome: "not_submitted",
+						}
+					: undefined,
+			);
 		}
 	});
 });
