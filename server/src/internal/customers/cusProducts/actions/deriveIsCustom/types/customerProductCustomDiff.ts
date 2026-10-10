@@ -24,3 +24,16 @@ export type CustomerProductCustomDiff = {
 	remove_licenses?: DiffedCustomizePlanV1["remove_licenses"];
 	licenses?: CustomizedPlanLicense[];
 };
+
+export type CustomDiffField = {
+	path: string;
+	catalog: string | null;
+	customer: string | null;
+};
+
+export type CustomDiffChange = {
+	target: "base_price" | "item" | "license";
+	id: string | null;
+	kind: "added" | "removed" | "changed";
+	fields: CustomDiffField[];
+};

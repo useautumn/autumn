@@ -234,15 +234,13 @@ describe("customPlansDiffToChanges", () => {
 		).toBe("base price: removed");
 	});
 
-	test("license changes carry the customer's terms", () => {
+	test("license changes list each moved term, catalog value first", () => {
 		expect(
 			changesOf({
 				catalog: { licenses: [planLicense({ included: 2 })] },
 				customer: { licenses: [planLicense({ included: 20 })] },
 			}),
-		).toBe(
-			'license seat_plan: included 20, prepaid_only true, version_slug "v1"',
-		);
+		).toBe("license seat_plan: included 2 → 20");
 	});
 });
 

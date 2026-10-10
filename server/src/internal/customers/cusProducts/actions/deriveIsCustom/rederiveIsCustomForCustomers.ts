@@ -1,12 +1,11 @@
-import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { isCustomFingerprintOf } from "@/internal/customers/cusProducts/repos/isCustomFingerprint.js";
 import type { IsCustomFingerprintRow } from "@/internal/customers/cusProducts/repos/listIsCustomFingerprints.js";
-import { listFullCustomerLicensesByParentIds } from "@/internal/licenses/repos/customerLicenseRepo/listFullCustomerLicensesByParentIds.js";
 import { deriveStoredCustomerProductIsCustom } from "./deriveStoredCustomerProductIsCustom.js";
 import { isDefinitiveIsCustomResult } from "./isDefinitiveIsCustomResult.js";
 import type { BaseProductCache } from "./loadBaseProduct.js";
+import { loadFullCustomerProductsWithLicenses } from "./loadFullCustomerProductsWithLicenses.js";
 
 export type IsCustomDerivationCache = {
 	// null: the derivation only guessed, so the flag is never written.
@@ -19,31 +18,6 @@ export const createIsCustomDerivationCache = (): IsCustomDerivationCache => ({
 	baseProducts: new Map(),
 });
 
-const loadFullWithLicenses = async ({
-	ctx,
-	customerProductIds,
-}: {
-	ctx: AutumnContext;
-	customerProductIds: string[];
-}): Promise<FullCusProduct[]> => {
-	const [customerProducts, customerLicenses] = await Promise.all([
-		customerProductRepo.listFullByIds({ db: ctx.db, customerProductIds }),
-		listFullCustomerLicensesByParentIds({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			parentCustomerProductIds: customerProductIds,
-		}),
-	]);
-	return customerProducts.map((customerProduct) => ({
-		...customerProduct,
-		customer_licenses: customerLicenses.filter(
-			(customerLicense) =>
-				customerLicense.parent_customer_product_id === customerProduct.id,
-		),
-	}));
-};
-
 /** A representative changed since it was fingerprinted is skipped, so its result cannot spread. */
 const deriveFingerprints = async ({
 	ctx,
@@ -54,7 +28,7 @@ const deriveFingerprints = async ({
 	representatives: { id: string; fingerprint: string }[];
 	cache: IsCustomDerivationCache;
 }) => {
-	const customerProducts = await loadFullWithLicenses({
+	const customerProducts = await loadFullCustomerProductsWithLicenses({
 		ctx,
 		customerProductIds: representatives.map(({ id }) => id),
 	});
