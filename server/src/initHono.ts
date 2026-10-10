@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { db } from "./db/initDrizzle.js";
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
+import { mapleTraceScopeMiddleware } from "./external/maple/mapleTraceScope.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
 import { vercelTestApiRouter } from "./external/vercel/vercelTestApiRouter.js";
@@ -141,6 +142,7 @@ export const createHonoApp = () => {
 			serviceVersion: "1.0.0",
 		}),
 	);
+	app.use("*", mapleTraceScopeMiddleware);
 	app.use("*", inFlightTrackingMiddleware);
 	app.use("*", baseMiddleware);
 	app.use("*", replicaDbMiddleware);
