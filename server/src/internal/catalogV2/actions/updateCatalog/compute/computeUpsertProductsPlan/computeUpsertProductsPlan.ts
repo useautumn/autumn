@@ -64,6 +64,7 @@ export const computeUpsertProductsPlan = ({
 			ctx,
 			intent,
 			productStatesContext: fold.projected,
+			originalProductStatesContext: productStatesContext,
 			claimedProductKeys,
 			declaredVariants,
 		});
