@@ -15,7 +15,7 @@ export function createStandbyPreparations({
 	config,
 }: {
 	ctx: { gate: Pick<SlotGate, "isActive" | "subscribe"> };
-	config: { concurrency: number };
+	config: { concurrency: number; settleMs: number };
 }): StandbyPreparations {
 	let running = 0;
 	const queue: QueuedPreparation[] = [];
@@ -49,7 +49,41 @@ export function createStandbyPreparations({
 		stopWatchingGate = null;
 	}
 
-	function acquire({ signal }: { signal: AbortSignal }): Promise<() => void> {
+	function settle({ signal }: { signal: AbortSignal }): Promise<void> {
+		if (config.settleMs <= 0 || ctx.gate.isActive()) return Promise.resolve();
+		return new Promise((resolve, reject) => {
+			const timer = setTimeout(settled, config.settleMs);
+			const unsubscribe = ctx.gate.subscribe(() => {
+				if (ctx.gate.isActive()) settled();
+			});
+			signal.addEventListener("abort", leave, { once: true });
+			function stop(): void {
+				clearTimeout(timer);
+				unsubscribe();
+				signal.removeEventListener("abort", leave);
+			}
+			function settled(): void {
+				stop();
+				resolve();
+			}
+			function leave(): void {
+				stop();
+				reject(signal.reason);
+			}
+		});
+	}
+
+	async function acquire({
+		signal,
+	}: {
+		signal: AbortSignal;
+	}): Promise<() => void> {
+		signal.throwIfAborted();
+		await settle({ signal });
+		return takeTurn({ signal });
+	}
+
+	function takeTurn({ signal }: { signal: AbortSignal }): Promise<() => void> {
 		if (signal.aborted) return Promise.reject(signal.reason);
 		if (ctx.gate.isActive()) return Promise.resolve(unlimited);
 		if (running < config.concurrency) return Promise.resolve(takeSlot());

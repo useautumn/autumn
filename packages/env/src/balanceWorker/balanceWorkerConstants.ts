@@ -48,6 +48,7 @@ export const BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY = 16;
  *  topic. It costs a slower start, roughly one wave per this many partitions. */
 export const BALANCE_WORKER_PARTITION_STARTUP_CONCURRENCY = 16;
 export const BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY = 1;
+export const BALANCE_WORKER_STANDBY_PREPARATION_SETTLE_MS = 30_000;
 
 /** How long routing may spend reading the ownership log before it gives up and
  *  starts over. The default of ten seconds was written when that log was short.
