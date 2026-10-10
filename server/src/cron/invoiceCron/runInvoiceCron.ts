@@ -107,7 +107,8 @@ export const handleVoidInvoiceCron = async ({
 		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug}) - status: ${invoice.status}`,
 	);
 
-	if (invoice.status === "open") {
+	// Stripe still accepts payment on an uncollectible invoice, so void it first
+	if (invoice.status === "open" || invoice.status === "uncollectible") {
 		try {
 			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
 			logger.info(
@@ -156,7 +157,7 @@ export const handleVoidInvoiceCron = async ({
 				return;
 			}
 		}
-	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
+	} else if (invoice.status === "void") {
 		await expirePendingRows();
 		await MetadataService.delete({
 			db,
