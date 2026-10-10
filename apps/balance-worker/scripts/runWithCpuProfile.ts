@@ -12,6 +12,8 @@ const PROFILE_DIR = "/tmp/balance-worker-cpu-profile";
 
 await initInfisical();
 const profiling = process.env.BALANCE_WORKER_CPU_PROFILE === "1";
+// The bundle image runs a compiled main instead of the source file.
+const mainEntry = process.env.BALANCE_WORKER_MAIN_ENTRY ?? "src/main.ts";
 
 const child = Bun.spawn(
 	[
@@ -20,7 +22,7 @@ const child = Bun.spawn(
 		...(profiling
 			? ["--cpu-prof", "--cpu-prof-md", `--cpu-prof-dir=${PROFILE_DIR}`]
 			: []),
-		"src/main.ts",
+		mainEntry,
 	],
 	{ stdio: ["inherit", "inherit", "inherit"], env: process.env },
 );
