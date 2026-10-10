@@ -117,10 +117,7 @@ const runRequests = async ({
 	middleware,
 	customers,
 }: {
-	middleware: (
-		c: Context<HonoEnv>,
-		next: Next,
-	) => Promise<Response | undefined | void>;
+	middleware: (c: Context<HonoEnv>, next: Next) => Promise<unknown>;
 	customers: string[];
 }) => {
 	const outcomes: { status: number; degraded: boolean }[] = [];
