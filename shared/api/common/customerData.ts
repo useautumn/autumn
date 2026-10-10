@@ -38,7 +38,8 @@ export const CustomerDataSchema = z
 			description: "Additional metadata for the customer",
 		}),
 		stripe_id: z.string().nullish().meta({
-			description: "Stripe customer ID if you already have one",
+			description:
+				"Stripe customer ID if you already have one. Linked when the customer is created, or when an existing customer has no Stripe customer yet; to change a linked Stripe customer, use customers.update.",
 		}),
 
 		create_in_stripe: z.boolean().optional().meta({

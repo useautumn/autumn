@@ -19,6 +19,7 @@ import { orgRateLimitExceededError } from "@/internal/misc/rateLimiter/rateLimit
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
+import { linkStripeIdFromCustomerData } from "./linkStripeIdFromCustomerData.js";
 
 export const getOrCreateApiCustomerByRollout = async ({
 	ctx,
@@ -69,7 +70,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	) {
 		const customerId = params.customer_id;
 		const entityId = params.entity_id;
-		const fullSubject = await shed503OnTransientError({
+		let fullSubject = await shed503OnTransientError({
 			ctx,
 			source: "get_or_create",
 			onTransientError: queueRecovery,
@@ -91,6 +92,18 @@ export const getOrCreateApiCustomerByRollout = async ({
 					},
 				}),
 		});
+		if (
+			await linkStripeIdFromCustomerData({
+				ctx,
+				customer: fullSubject.customer,
+				customerData: params.customer_data,
+			})
+		)
+			fullSubject = await readBalanceWorkerSubject({
+				ctx,
+				customerId,
+				entityId,
+			});
 		return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
 	}
 
@@ -103,7 +116,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 			source,
 		});
 
-	const fullSubject = await shed503OnTransientError({
+	let fullSubject = await shed503OnTransientError({
 		ctx,
 		source: "get_or_create",
 		run: () => lookup({ skipCache: false }),
@@ -112,6 +125,15 @@ export const getOrCreateApiCustomerByRollout = async ({
 			: undefined,
 		onTransientError: queueRecovery,
 	});
+
+	if (
+		await linkStripeIdFromCustomerData({
+			ctx,
+			customer: fullSubject.customer,
+			customerData: params.customer_data,
+		})
+	)
+		fullSubject = await lookup({ skipCache: true });
 
 	await ensureStripeCustomerFromCustomerData({
 		ctx,
