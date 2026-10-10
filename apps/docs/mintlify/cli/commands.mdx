@@ -148,7 +148,7 @@ atmn reset --yes
 
 ### `atmn api`
 
-Call any public API endpoint from the terminal. The command name matches the endpoint: `atmn api <group> <method>`.
+Call any public API endpoint from the terminal. The command name matches the endpoint: `atmn api <group> <method>`. Names are always snake_case, so `/v1/invoices.listTemplates` is `atmn api invoices list_templates`.
 
 ```bash
 atmn api customers get_or_create customer_id=user_123 name="Ada Lovelace"
