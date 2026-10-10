@@ -2,7 +2,6 @@ import {
 	AttachScenario,
 	cp,
 	type DeferredAutumnBillingPlanData,
-	MetadataType,
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/createStripeScheduleFromCheckout";
@@ -17,6 +16,7 @@ import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendB
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
+import { checkoutMetadataToActivation } from "@/internal/metadata/utils/checkoutMetadataToActivation";
 import { workflows } from "@/queue/workflows";
 
 /**
@@ -43,10 +43,7 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 	const { metadata, stripeCheckoutSession, stripeSubscription, stripeInvoice } =
 		checkoutContext;
 
-	if (
-		metadata?.type !== MetadataType.CheckoutSessionEnabledImmediately &&
-		metadata?.type !== MetadataType.LongLivedCheckoutEnabledImmediately
-	) {
+	if (!metadata || checkoutMetadataToActivation({ metadata }) !== "immediate") {
 		return;
 	}
 

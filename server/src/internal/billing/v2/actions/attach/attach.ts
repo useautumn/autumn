@@ -189,20 +189,6 @@ export async function attach({
 		);
 	}
 
-	if (shouldCreateLongLivedCheckout && !billingContext.enablePlanImmediately) {
-		// Creating a checkout changes no Autumn balance state. Keep any accepted
-		// Redis-only tracks for the later confirmation request to consume.
-		preserveSubjectCache({ ctx });
-		return createAutumnCheckout<AttachBillingContext>({
-			ctx,
-			action: CheckoutAction.Attach,
-			params,
-			billingContext,
-			billingPlan,
-			expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
-		});
-	}
-
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
@@ -217,7 +203,7 @@ export async function attach({
 		});
 	}
 
-	// enable_plan_immediately grants the plan now, so the link wraps a real attach.
+	// The link wraps a real attach so its active or pending row exists before the first click.
 	const longLivedCheckout = shouldCreateLongLivedCheckout
 		? (
 				await billingPlanToAutumnCheckout({
@@ -248,9 +234,11 @@ export async function attach({
 		ctx,
 		billingContext,
 		billingPlan,
-		checkoutLockParamsHash: !skipAutumnCheckout
-			? hashJson({ value: autumnCheckoutParams })
-			: undefined,
+		// Long-lived sessions are reached through their link, never reused by a plain attach.
+		checkoutLockParamsHash:
+			!skipAutumnCheckout && !longLivedCheckout
+				? hashJson({ value: autumnCheckoutParams })
+				: undefined,
 	});
 	if (billingResult.stripe.deferred) {
 		preserveSubjectCache({ ctx });

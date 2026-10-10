@@ -15,10 +15,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
-	type AttachParamsV1Input,
-	CusProductStatus,
 	customerProducts,
-	customers,
 	type DeferredAutumnBillingPlanData,
 	metadata,
 } from "@autumn/shared";
@@ -27,86 +24,27 @@ import {
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
 import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { runLongLivedCheckoutExpiry } from "@/cron/longLivedCheckoutCron/runLongLivedCheckoutExpiry";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import {
-	getLongLivedCheckoutId,
+	findCustomerProductRow,
 	getStripeSessionId,
 	requestLongLivedCheckoutStart,
+	setupLongLivedScenario,
 	startLongLivedCheckout,
 } from "./utils/longLivedCheckoutUtils";
-
-type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
-
-const setupLongLivedScenario = async ({
-	customerId,
-	withTrial = false,
-}: {
-	customerId: string;
-	withTrial?: boolean;
-}) => {
-	const productItems = [items.monthlyMessages({ includedUsage: 100 })];
-	const pro = withTrial
-		? products.proWithTrial({ id: `pro-${customerId}`, items: productItems })
-		: products.pro({ id: `pro-${customerId}`, items: productItems });
-
-	const scenario = await initScenario({
-		customerId,
-		setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
-		actions: [],
-	});
-
-	const dbCustomer = await scenario.ctx.db.query.customers.findFirst({
-		where: eq(customers.id, customerId),
-	});
-
-	const result = await scenario.autumnV2_2.billing.attach<AttachParamsV1Input>({
-		customer_id: customerId,
-		plan_id: pro.id,
-		long_lived_checkout: true,
-		enable_plan_immediately: true,
-	});
-
-	return {
-		...scenario,
-		pro,
-		internalCustomerId: dbCustomer!.internal_id,
-		checkoutId: getLongLivedCheckoutId(result.payment_url),
-	};
-};
-
-const getActiveProRow = async ({
-	ctx,
-	internalCustomerId,
-	productId,
-}: {
-	ctx: ScenarioCtx;
-	internalCustomerId: string;
-	productId: string;
-}) => {
-	const rows = await CusProductService.list({
-		db: ctx.db,
-		internalCustomerId,
-		inStatuses: [CusProductStatus.Active],
-	});
-	return rows.find((row) => row.product.id === productId);
-};
 
 test.concurrent(
 	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: grants plan at link creation and survives session expiry")}`,
 	async () => {
 		const customerId = "ll-eppi-expiry";
 		const { autumnV1, ctx, pro, internalCustomerId, checkoutId } =
-			await setupLongLivedScenario({ customerId });
+			await setupLongLivedScenario({ customerId, enablePlanImmediately: true });
 
 		// 1. Plan is active before the link is ever opened.
-		const rowAtCreation = await getActiveProRow({
+		const rowAtCreation = await findCustomerProductRow({
 			ctx,
 			internalCustomerId,
 			productId: pro.id,
@@ -132,7 +70,7 @@ test.concurrent(
 				types: ["checkout.session.expired"],
 				objectId: firstSessionId,
 				until: async () =>
-					!(await getActiveProRow({
+					!(await findCustomerProductRow({
 						ctx,
 						internalCustomerId,
 						productId: pro.id,
@@ -148,7 +86,7 @@ test.concurrent(
 		);
 		expect(secondSessionId).not.toBe(firstSessionId);
 
-		const rowAfterReopen = await getActiveProRow({
+		const rowAfterReopen = await findCustomerProductRow({
 			ctx,
 			internalCustomerId,
 			productId: pro.id,
@@ -163,9 +101,9 @@ test.concurrent(
 	async () => {
 		const customerId = "ll-eppi-paid";
 		const { ctx, pro, internalCustomerId, checkoutId } =
-			await setupLongLivedScenario({ customerId });
+			await setupLongLivedScenario({ customerId, enablePlanImmediately: true });
 
-		const rowAtCreation = await getActiveProRow({
+		const rowAtCreation = await findCustomerProductRow({
 			ctx,
 			internalCustomerId,
 			productId: pro.id,
@@ -180,7 +118,7 @@ test.concurrent(
 			types: ["checkout.session.completed"],
 			objectId: getStripeSessionId(stripeUrl),
 			until: async () => {
-				const row = await getActiveProRow({
+				const row = await findCustomerProductRow({
 					ctx,
 					internalCustomerId,
 					productId: pro.id,
@@ -189,7 +127,7 @@ test.concurrent(
 			},
 		});
 
-		const paidRow = await getActiveProRow({
+		const paidRow = await findCustomerProductRow({
 			ctx,
 			internalCustomerId,
 			productId: pro.id,
@@ -207,7 +145,7 @@ test.concurrent(
 	async () => {
 		const customerId = "ll-eppi-cron";
 		const { autumnV1, ctx, pro, internalCustomerId, checkoutId } =
-			await setupLongLivedScenario({ customerId });
+			await setupLongLivedScenario({ customerId, enablePlanImmediately: true });
 
 		const sessionId = getStripeSessionId(
 			await startLongLivedCheckout(checkoutId),
@@ -220,7 +158,11 @@ test.concurrent(
 		// 1. Before the link expires, the cron leaves the plan alone.
 		await runLongLivedCheckoutExpiry({ ctx });
 		expect(
-			await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }),
+			await findCustomerProductRow({
+				ctx,
+				internalCustomerId,
+				productId: pro.id,
+			}),
 		).toBeDefined();
 
 		// 2. Once expired, the cron removes the unpaid plan.
@@ -231,7 +173,11 @@ test.concurrent(
 		await runLongLivedCheckoutExpiry({ ctx });
 
 		expect(
-			await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }),
+			await findCustomerProductRow({
+				ctx,
+				internalCustomerId,
+				productId: pro.id,
+			}),
 		).toBeUndefined();
 		await expectProductNotPresent({
 			customerId,
@@ -246,7 +192,7 @@ test.concurrent(
 	async () => {
 		const customerId = "ll-eppi-paid-inflight";
 		const { ctx, pro, internalCustomerId, checkoutId } =
-			await setupLongLivedScenario({ customerId });
+			await setupLongLivedScenario({ customerId, enablePlanImmediately: true });
 
 		const stripeUrl = await startLongLivedCheckout(checkoutId);
 		const sessionId = getStripeSessionId(stripeUrl);
@@ -261,7 +207,7 @@ test.concurrent(
 			types: ["checkout.session.completed"],
 			objectId: sessionId,
 			until: async () => {
-				const row = await getActiveProRow({
+				const row = await findCustomerProductRow({
 					ctx,
 					internalCustomerId,
 					productId: pro.id,
@@ -271,7 +217,7 @@ test.concurrent(
 		});
 
 		// Rewind Autumn to "paid in Stripe, completion webhook not yet processed", past the deadline.
-		const paidRow = await getActiveProRow({
+		const paidRow = await findCustomerProductRow({
 			ctx,
 			internalCustomerId,
 			productId: pro.id,
@@ -287,8 +233,13 @@ test.concurrent(
 		// 1. The cron leaves the paid plan for the webhook and rechecks later.
 		await runLongLivedCheckoutExpiry({ ctx });
 		expect(
-			(await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }))
-				?.id,
+			(
+				await findCustomerProductRow({
+					ctx,
+					internalCustomerId,
+					productId: pro.id,
+				})
+			)?.id,
 		).toBe(paidRow!.id);
 		const postponedMetadata = await ctx.db.query.metadata.findFirst({
 			where: eq(metadata.id, pendingMetadata!.id),
@@ -308,6 +259,7 @@ test.concurrent(
 		const customerId = "ll-eppi-trial-elapsed";
 		const { ctx, checkoutId } = await setupLongLivedScenario({
 			customerId,
+			enablePlanImmediately: true,
 			withTrial: true,
 		});
 
