@@ -42,6 +42,38 @@ describe("getRateLimitRouteGroup", () => {
 		).toMatchObject({ type: RateLimitType.ListCustomers });
 	});
 
+	test("classifies entities.create into its own bucket, rejecting at a 1,500/min org cap", () => {
+		expect(
+			getRateLimitRouteGroup(
+				createContext({ method: "POST", path: "/v1/entities.create" }),
+			),
+		).toMatchObject({
+			type: RateLimitType.EntitiesCreate,
+			overLimit: "reject",
+		});
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesCreate].orgLimit).toBe(
+			RateLimitType.EntitiesCreateOrg,
+		);
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesCreateOrg]).toMatchObject({
+			limit: 1_500,
+			windowMs: 60_000,
+			scope: RateLimitScope.Org,
+			store: "redis",
+		});
+	});
+
+	test("keeps get_or_create reads in the check bucket; creations have their own org counter", () => {
+		expect(
+			getRateLimitRouteGroup(
+				createContext({ method: "POST", path: "/v1/customers.get_or_create" }),
+			),
+		).toMatchObject({ type: RateLimitType.CheckCustomerGet });
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.CustomerCreateOrg]).toMatchObject({
+			windowMs: 60_000,
+			scope: RateLimitScope.Org,
+		});
+	});
+
 	test("classifies entities.list into its dedicated bucket", () => {
 		expect(
 			getRateLimitRouteGroup(
