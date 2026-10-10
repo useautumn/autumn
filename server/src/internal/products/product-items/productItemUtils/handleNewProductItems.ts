@@ -165,8 +165,8 @@ export const handleNewProductItems = async ({
 		env: product.env as AppEnv,
 		multiCurrencyEnabled,
 		// A custom plan's items are round-tripped from a persisted plan, so they
-		// no longer answer for authoring-time rollover rules.
-		validateRollover: !isCustom,
+		// no longer answer for authoring-time rules.
+		validateAuthoringRules: !isCustom,
 	});
 
 	features = allFeatures;

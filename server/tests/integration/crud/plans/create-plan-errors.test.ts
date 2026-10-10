@@ -7,8 +7,12 @@ import {
 	BillingMethod,
 	type CreatePlanParamsInput,
 	type CreatePlanParamsV2Input,
+	type CreateProductV2ParamsInput,
+	type ProductItem,
+	ProductItemInterval,
 	TierBehavior,
 	TierInfinite,
+	UsageModel,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -18,6 +22,7 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
 const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
+const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
@@ -361,6 +366,133 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT volume-based with
 		errMessage: "volume-based pricing is only supported for prepaid",
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// V0 product items: volume-based only for prepaid, single tier included
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const VOLUME_PREPAID_ONLY =
+	"Volume-based pricing is only supported for prepaid items";
+
+type V0Item = NonNullable<CreateProductV2ParamsInput["items"]>[number];
+
+const volumeMessagesItem = ({
+	usageModel,
+	price,
+	tiers,
+}: {
+	usageModel: UsageModel;
+	price?: number;
+	tiers?: ProductItem["tiers"];
+}): V0Item => ({
+	feature_id: TestFeature.Messages,
+	included_usage: 100,
+	interval: ProductItemInterval.Month,
+	usage_model: usageModel,
+	tier_behavior: TierBehavior.VolumeBased,
+	...(tiers ? { tiers } : { price }),
+});
+
+const createV0Product = async ({
+	productId,
+	items,
+}: {
+	productId: string;
+	items: V0Item[];
+}) => {
+	try {
+		await autumnV2.products.delete(productId);
+	} catch (_e) {}
+
+	return autumnV1_2.products.create<ApiPlan, CreateProductV2ParamsInput>({
+		id: productId,
+		name: `Test ${productId}`,
+		items,
+	});
+};
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: REJECT single-tier volume on pay-per-use (price)")}`,
+	async () => {
+		await expectAutumnError({
+			errCode: "invalid_inputs",
+			errMessage: VOLUME_PREPAID_ONLY,
+			func: () =>
+				createV0Product({
+					productId: `err_v0_vol_price_${getSuffix()}`,
+					items: [
+						volumeMessagesItem({
+							usageModel: UsageModel.PayPerUse,
+							price: 0.5,
+						}),
+					],
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: REJECT single-tier volume on pay-per-use (tiers)")}`,
+	async () => {
+		await expectAutumnError({
+			errCode: "invalid_inputs",
+			errMessage: VOLUME_PREPAID_ONLY,
+			func: () =>
+				createV0Product({
+					productId: `err_v0_vol_tier_${getSuffix()}`,
+					items: [
+						volumeMessagesItem({
+							usageModel: UsageModel.PayPerUse,
+							tiers: [{ to: TierInfinite, amount: 0.5 }],
+						}),
+					],
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 update: REJECT single-tier volume on pay-per-use")}`,
+	async () => {
+		const productId = `err_v0_vol_update_${getSuffix()}`;
+		await createV0Product({
+			productId,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included_usage: 100,
+					interval: ProductItemInterval.Month,
+					usage_model: UsageModel.PayPerUse,
+					price: 0.5,
+				},
+			],
+		});
+
+		await expectAutumnError({
+			errCode: "invalid_inputs",
+			errMessage: VOLUME_PREPAID_ONLY,
+			func: () =>
+				autumnV1_2.products.update<ApiPlan>(productId, {
+					items: [
+						volumeMessagesItem({
+							usageModel: UsageModel.PayPerUse,
+							price: 0.5,
+						}),
+					],
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("tier-errors V0 create: ACCEPT single-tier volume on prepaid")}`,
+	async () => {
+		await createV0Product({
+			productId: `ok_v0_vol_prepaid_${getSuffix()}`,
+			items: [volumeMessagesItem({ usageModel: UsageModel.Prepaid, price: 5 })],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // tiers[0].to must be greater than included

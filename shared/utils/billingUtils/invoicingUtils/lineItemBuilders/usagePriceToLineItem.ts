@@ -9,6 +9,7 @@ import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEnt
 import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEntToStripeIds";
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage";
 import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceUsage";
+import { cusEntToVolumeInvoiceQuantity } from "../../../cusEntUtils/overageUtils/cusEntToVolumeInvoiceQuantity";
 import {
 	isConsumablePrice,
 	isPrepaidPrice,
@@ -50,21 +51,18 @@ export const usagePriceToLineItem = ({
 
 	// 1. Get overage
 	// don't use upcoming quantity for prepaid prices by default. THe price that users have paid currently is quantity.
-	let overage = 0;
-	if (isPrepaidPrice(cusPrice.price)) {
-		overage = cusEntToPrepaidInvoiceOverage({ cusEnt });
-	} else {
-		overage = cusEntToInvoiceOverage({ cusEnt });
-	}
+	// Volume prices bill on total usage, so their overage includes the allowance.
+	const isPrepaid = isPrepaidPrice(price);
+	const payPerUseOverage = isPrepaid ? 0 : cusEntToInvoiceOverage({ cusEnt });
+	const overage = isPrepaid
+		? cusEntToPrepaidInvoiceOverage({ cusEnt })
+		: cusEntToVolumeInvoiceQuantity({ cusEnt, paidQuantity: payPerUseOverage });
 
-	// Volume pricing: the total quantity (purchased + allowance) determines
-	// which tier applies, and the ENTIRE total is charged at that tier's rate.
-	// So we add allowance back to overage before pricing.
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 
 	// 2. Get usage
 	let usage = 0;
-	if (isPrepaidPrice(cusPrice.price)) {
+	if (isPrepaid) {
 		const prepaidQuantity = cusEntsToPrepaidQuantity({
 			cusEnts: [cusEnt],
 			sumAcrossEntities: false,
@@ -92,12 +90,17 @@ export const usagePriceToLineItem = ({
 	});
 
 	// 4. Get amount
-	const amount = priceToLineAmount({
-		price,
-		overage,
-		allowance: allowance,
-		currency: context.currency,
-	});
+	// Pay-per-use usage at or below the included amount bills nothing, so tier 1's
+	// flat_amount isn't charged on an item with no included usage and no usage.
+	const isWithinIncluded = !isPrepaid && payPerUseOverage === 0;
+	const amount = isWithinIncluded
+		? 0
+		: priceToLineAmount({
+				price,
+				overage,
+				allowance,
+				currency: context.currency,
+			});
 
 	// 5. Get stripe price / product IDs
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({
