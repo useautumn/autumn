@@ -7,5 +7,8 @@ export const SHADOW_ATOM_CONFIG_KEY = "admin/shadow-atom-config.json";
 export const BALANCE_WORKER_THREADS_CONFIG_KEY =
 	"admin/balance-worker-threads-config.json";
 /** What the balance worker does with `subject_snapshots`; read at every decision that touches the table. */
+/** Staging only: a load test's request that every balance worker drop its resident subjects. */
+export const BALANCE_WORKER_COLD_START_KEY =
+	"admin/balance-worker-cold-start.json";
 export const BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY =
 	"admin/balance-worker-subject-snapshots.json";
