@@ -155,6 +155,7 @@ async function commitOutcomes({
 				},
 			});
 			if (baseOffset === null || state.recoveryError) return;
+			state.appendedThrough = baseOffset + BigInt(batch.length - 1);
 			settleAppended({ scope, batch });
 			queueApply({ scope, batch, baseOffset });
 		}

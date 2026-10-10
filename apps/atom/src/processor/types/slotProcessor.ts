@@ -1,12 +1,14 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
+import type { FolderSubjectPulls } from "../../subjectPulls/types/subjectPulls.js";
 import type { CheckRequest } from "./check.js";
 
 export type SlotProcessorContext = {
 	sqliteStore: SqliteStore;
 	catalogStore: Pick<CatalogStore, "read">;
 	logger: AutumnLogger;
+	subjectPulls: FolderSubjectPulls;
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */

@@ -1,31 +1,12 @@
-import type { Catalog, CatalogRow, SubjectState } from "@autumn/balance-engine";
-import type { SharedContext } from "@autumn/shared";
+import type { CatalogRow } from "@autumn/balance-engine";
+import type { AtomConnection, AtomSubjectBody } from "@autumn/byoc/subjects";
 import type { RetryPolicy } from "../retryWithBackoff.js";
 
-/** `POST /v1/subjects.set`: one subject as its worker holds it, with the org settings a check reads. */
-export type AtomSubjectBody = {
-	state: SubjectState;
-	catalog: Catalog;
-	org: SharedContext["org"];
-	/** A string: log offsets are 64-bit. */
-	log_offset: string;
-	/** When Autumn read the subject from its worker, in epoch ms. */
-	read_at: number;
-	/** On a customer push, the offset of its latest evict: the Atom forwards checks on entities read before it. */
-	customer_version?: string;
-};
-
-/** An Atom's `pushes` queue, by the alien deployment group that holds it; a multi-tenant Atom also needs the folder. */
-export type AtomQueueAddress = { externalId: string; atomId: string | null };
-
-/** How one Atom is reached, its token still encrypted. `org` is the org's own Atom; `shadow` is ours, test-only. */
-export type AtomConnection = {
-	target: "org" | "shadow";
-	endpointUrl: string;
-	encryptedToken: string;
-	/** Set when pushes go through the Atom's queue; HTTP to `endpointUrl` stays the fallback. */
-	queue: AtomQueueAddress | null;
-};
+export type {
+	AtomConnection,
+	AtomQueueAddress,
+	AtomSubjectBody,
+} from "@autumn/byoc/subjects";
 
 /** How hard one kind of push is tried; `retry` null sends it once. */
 export type AtomDelivery = {

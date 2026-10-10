@@ -155,6 +155,10 @@ export function createPartitionWriter({
 		return readFreshestSubjectState({ scope, identity });
 	}
 
+	function readAppendedThrough(): bigint | null {
+		return scope.state.appendedThrough;
+	}
+
 	function evict({ customerKey }: Parameters<PartitionWriter["evict"]>[0]) {
 		return evictCustomer({ scope, customerKey });
 	}
@@ -204,6 +208,7 @@ export function createPartitionWriter({
 		waitForPendingCommits,
 		assertCommitsHealthy,
 		readFreshestState,
+		readAppendedThrough,
 		evict,
 		adopt,
 		dispose,

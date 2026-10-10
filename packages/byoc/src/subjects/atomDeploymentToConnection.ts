@@ -1,6 +1,6 @@
-import { isByocCacheReady } from "@autumn/byoc";
 import type { AtomRoute } from "@autumn/shared";
-import type { AtomConnection } from "./types/atomClient.js";
+import { isByocCacheReady } from "../cacheDeployments/classifyCacheDeployments.js";
+import type { AtomConnection } from "./types/atomConnection.js";
 
 /** How one of the org's own Atoms is reached; null unless it is ready and has an address. */
 export const atomDeploymentToConnection = ({

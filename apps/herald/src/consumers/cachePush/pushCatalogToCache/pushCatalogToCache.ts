@@ -1,7 +1,7 @@
+import { orgToAtomTargets } from "@autumn/byoc/subjects";
 import { catalogRowsEnvelopeToCatalogRows } from "@autumn/catalog-lru";
 import { getOrgWithFeatures, getSharedCatalogRows } from "@autumn/postgres";
 import type { AppEnv } from "@autumn/shared";
-import { orgToAtomTargets } from "../../../atom/orgToAtomTargets.js";
 import type { CatalogPushContext } from "../types/catalogPushContext.js";
 import { sendCatalogToAtom } from "./sendCatalogToAtom.js";
 
