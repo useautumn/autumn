@@ -343,7 +343,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		limit: 25,
 		windowMs: 1000,
 		scope: RateLimitScope.Customer,
-		store: "memory",
+		store: "redis",
 		orgLimit: RateLimitType.EntitiesCreateOrg,
 	},
 	// 1,500/min matches the general 25/s org limit entities.create had until now.

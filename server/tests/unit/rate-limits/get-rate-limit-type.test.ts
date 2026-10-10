@@ -51,9 +51,13 @@ describe("getRateLimitRouteGroup", () => {
 			type: RateLimitType.EntitiesCreate,
 			overLimit: "reject",
 		});
-		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesCreate].orgLimit).toBe(
-			RateLimitType.EntitiesCreateOrg,
-		);
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesCreate]).toMatchObject({
+			limit: 25,
+			windowMs: 1000,
+			scope: RateLimitScope.Customer,
+			store: "redis",
+			orgLimit: RateLimitType.EntitiesCreateOrg,
+		});
 		expect(RATE_LIMIT_CONFIGS[RateLimitType.EntitiesCreateOrg]).toMatchObject({
 			limit: 1_500,
 			windowMs: 60_000,
