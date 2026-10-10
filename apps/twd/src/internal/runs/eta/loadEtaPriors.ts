@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { fileBaselines } from "../../../db/schema/results.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import {
@@ -9,7 +9,7 @@ import {
 
 const RECENT_RUNS = 10;
 
-/** Every file baseline (folder and global medians need them all), plus recent boot and teardown p50. */
+/** Every swarm file baseline (folder and global medians need them all), plus recent boot and teardown p50. */
 export const loadEtaPriors = async ({
 	ctx,
 }: {
@@ -22,7 +22,8 @@ export const loadEtaPriors = async ({
 			p90Ms: fileBaselines.p90Ms,
 			passRate: fileBaselines.passRate,
 		})
-		.from(fileBaselines);
+		.from(fileBaselines)
+		.where(eq(fileBaselines.source, "swarm"));
 	const [timing] = await ctx.db.execute<{
 		boot_p50_ms: number | null;
 		teardown_p50_ms: number | null;
