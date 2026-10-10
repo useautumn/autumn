@@ -62,6 +62,25 @@ describe("dual-auth: subscription ownership gate", () => {
 		process.env.STRIPE_SANDBOX_CLIENT_ID = ORIGINAL_CLIENT_ID;
 	});
 
+	// A default_account_id is Autumn's own managed account — nothing foreign
+	// can exist there, so the gate must not reject Autumn's own subscriptions.
+	test("skipped (no throw) when the org only has the default managed account", () => {
+		process.env.STRIPE_SANDBOX_CLIENT_ID = "ca_autumn_platform";
+		const org = buildOrg({
+			test_stripe_connect: { default_account_id: "acct_default_only" },
+		});
+
+		expect(() =>
+			validateStripeSubscriptionActionOwnership({
+				ctx: buildCtx(org),
+				billingContext: buildBillingContext("ca_some_other_platform"),
+				stripeSubscriptionAction: updateAction,
+			}),
+		).not.toThrow();
+
+		process.env.STRIPE_SANDBOX_CLIENT_ID = ORIGINAL_CLIENT_ID;
+	});
+
 	test("active (throws) when only oauth account_id is present and application id mismatches", () => {
 		process.env.STRIPE_SANDBOX_CLIENT_ID = "ca_autumn_platform";
 		const org = buildOrg({
