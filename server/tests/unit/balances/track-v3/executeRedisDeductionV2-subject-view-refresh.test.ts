@@ -1,3 +1,10 @@
+/**
+ * A subject-view transition can interrupt a multi-feature Track after an earlier
+ * feature already mutated Redis.
+ *
+ * Red: SQS redelivery skipped the completed feature and lost its sync/event data.
+ * Green: replay restores the accumulated result before finishing later features.
+ */
 import { afterAll, expect, mock, test } from "bun:test";
 import {
 	ApiVersion,
@@ -271,6 +278,115 @@ test("refreshes once and retries only the unfinished feature", async () => {
 	expect(projectedDeductions.map((deduction) => deduction.balance_id)).toEqual([
 		"feature_a_source",
 		"feature_b_target",
+	]);
+});
+
+test("restores successful feature side effects on a later queue delivery", async () => {
+	const sourceSubject = buildFullSubject({
+		epoch: 1,
+		featureAEntitlementId: "feature_a_source",
+		featureBEntitlementId: "feature_b_source",
+	});
+	const refreshedSubject = buildFullSubject({
+		epoch: 2,
+		featureAEntitlementId: "feature_a_refreshed",
+		featureBEntitlementId: "feature_b_refreshed",
+	});
+	const replaySubject = buildFullSubject({
+		epoch: 3,
+		featureAEntitlementId: "feature_a_replay",
+		featureBEntitlementId: "feature_b_replay",
+	});
+	const replayState = new Map<string, string>();
+	const redisResults = [
+		buildSuccessResult({
+			customerEntitlementId: "feature_a_source",
+			featureId: "feature_a",
+			balance: 9,
+		}),
+		JSON.stringify({ error: "SUBJECT_VIEW_CHANGED", feature_id: "feature_b" }),
+		JSON.stringify({ error: "SUBJECT_VIEW_CHANGED", feature_id: "feature_b" }),
+		JSON.stringify({
+			error: "DUPLICATE_IDEMPOTENCY_KEY",
+			feature_id: "feature_a",
+		}),
+		buildSuccessResult({
+			customerEntitlementId: "feature_b_replay",
+			featureId: "feature_b",
+			balance: 9,
+		}),
+	];
+	const redis = {
+		status: "ready",
+		get: async (key: string) => replayState.get(key) ?? null,
+		set: async (key: string, value: string) => {
+			replayState.set(key, value);
+			return "OK";
+		},
+		deductFromSubjectBalances: async () => redisResults.shift(),
+	} as unknown as Redis;
+	const ctx = {
+		org: { id: "org_123", config: {} },
+		env: AppEnv.Sandbox,
+		features: [featureA, featureB],
+		logger: {
+			info: mock(() => {}),
+			warn: mock(() => {}),
+			error: mock(() => {}),
+			debug: mock(() => {}),
+		},
+		id: "request_replay_123",
+		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+		skipCache: false,
+		redisV2: redis,
+	} as unknown as AutumnContext;
+	const featureDeductions: FeatureDeduction[] = [
+		{ feature: featureA, deduction: 1 },
+		{ feature: featureB, deduction: 1 },
+	];
+
+	await expect(
+		executeRedisDeductionV2({
+			ctx,
+			fullSubject: sourceSubject,
+			deductions: featureDeductions,
+			idempotencyKey: "track:request_replay_123",
+			redisInstance: redis,
+			expectedSubjectViewEpoch: 1,
+			refreshFullSubject: async () => refreshedSubject,
+		}),
+	).rejects.toMatchObject({ code: "SUBJECT_VIEW_CHANGED" });
+
+	expect(replayState.size).toBe(1);
+
+	const result = await executeRedisDeductionV2({
+		ctx,
+		fullSubject: replaySubject,
+		deductions: featureDeductions,
+		idempotencyKey: "track:request_replay_123",
+		redisInstance: redis,
+		expectedSubjectViewEpoch: 3,
+		refreshFullSubject: async () => replaySubject,
+	});
+
+	expect(
+		result.mutationLogs.map(
+			(mutationLog: MutationLogItem) => mutationLog.customer_entitlement_id,
+		),
+	).toEqual(["feature_a_source", "feature_b_replay"]);
+	expect(result.modifiedCusEntIdsByFeatureId).toEqual({
+		feature_a: ["feature_a_replay"],
+		feature_b: ["feature_b_replay"],
+	});
+
+	const projectedDeductions = projectMutationLogsToTrackDeductionsV2({
+		fullSubject: result.fullSubject,
+		mutationLogs: result.mutationLogs,
+		customerEntitlements: result.mutationLogCustomerEntitlements,
+	});
+	expect(projectedDeductions.map((deduction) => deduction.balance_id)).toEqual([
+		"feature_a_source",
+		"feature_b_replay",
 	]);
 });
 
