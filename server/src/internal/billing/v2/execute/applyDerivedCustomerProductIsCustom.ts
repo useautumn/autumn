@@ -9,8 +9,8 @@ import {
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
+import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom";
 import { ProductService } from "@/internal/products/ProductService";
-import { deriveCustomerProductIsCustom } from "./deriveCustomerProductIsCustom";
 
 /** A customer product to derive for, and where the result has to land. */
 type DerivationTarget = {
@@ -136,7 +136,7 @@ export const applyDerivedCustomerProductIsCustom = async ({
 	const updateEntries = getUpdateCustomerProducts({ autumnBillingPlan });
 
 	for (const { customerProduct, target, via } of targets) {
-		const isCustom = deriveCustomerProductIsCustom({
+		const { isCustom } = deriveCustomerProductIsCustom({
 			ctx,
 			customerProduct,
 			baseProduct: customerProduct.internal_product_id
