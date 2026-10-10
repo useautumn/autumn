@@ -11,6 +11,7 @@ import {
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { CustomerExportActiveProgress } from "./CustomerExportActiveProgress";
+import { CustomerExportDryRunToggle } from "./CustomerExportDryRunToggle";
 import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
 import { CustomerExportJobList } from "./CustomerExportJobList";
@@ -114,6 +115,16 @@ export function CustomerExportSheet({
 														)}
 													</form.Field>
 												) : null}
+												{kind === CustomerExportKind.CustomPlans ? (
+													<form.Field name="dryRun">
+														{(dryRunField) => (
+															<CustomerExportDryRunToggle
+																dryRun={dryRunField.state.value}
+																onDryRunChange={dryRunField.handleChange}
+															/>
+														)}
+													</form.Field>
+												) : null}
 											</CustomerExportOverview>
 										)}
 									</form.Field>
@@ -126,6 +137,7 @@ export function CustomerExportSheet({
 								className="flex min-h-0 flex-col"
 							>
 								<CustomerExportJobList
+									kind={kind}
 									customerExports={customerExports}
 									isLoading={isExportsLoading}
 									isInitialError={isExportsInitialError}
@@ -146,8 +158,15 @@ export function CustomerExportSheet({
 								runningLabel={copy.runningLabel}
 							/>
 
-							<form.Subscribe selector={(state) => state.canSubmit}>
-								{(canSubmit) => (
+							<form.Subscribe
+								selector={(state) => ({
+									canSubmit: state.canSubmit,
+									isApplyRun:
+										kind === CustomerExportKind.CustomPlans &&
+										!state.values.dryRun,
+								})}
+							>
+								{({ canSubmit, isApplyRun }) => (
 									<ConditionalTooltip
 										enabled={Boolean(submitBlockedReason)}
 										content={submitBlockedReason}
@@ -167,7 +186,7 @@ export function CustomerExportSheet({
 												}
 												metaShortcut="enter"
 											>
-												{copy.submitLabel}
+												{isApplyRun ? copy.applySubmitLabel : copy.submitLabel}
 											</ShortcutButton>
 										</span>
 									</ConditionalTooltip>

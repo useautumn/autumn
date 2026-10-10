@@ -111,6 +111,7 @@ describe("customerProductToCustomPlansExportRow", () => {
 				customer: customerProduct,
 				catalog: catalogPlan(catalog),
 			}),
+			applied: null,
 		});
 	};
 
@@ -126,6 +127,7 @@ describe("customerProductToCustomPlansExportRow", () => {
 			plan_id: "pro",
 			plan_version: "3",
 			status: "active",
+			applied: null,
 			outcome: "matches_catalog",
 			reasons: null,
 			changes: null,
@@ -167,6 +169,7 @@ describe("customerProductToCustomPlansExportRow", () => {
 				customer: customerProduct,
 				catalog: catalogPlan({ items: [includedItem()] }),
 			}),
+			applied: null,
 		});
 
 		expect(row.entity_id).toBe("ent_42");

@@ -1,4 +1,7 @@
-import type { CustomerExportResponse } from "@autumn/shared";
+import {
+	CustomerExportKind,
+	type CustomerExportResponse,
+} from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
@@ -11,6 +14,7 @@ import { useDownloadCustomerExport } from "../../hooks/useCustomerExports";
 import { createCustomerExportColumns } from "./CustomerExportColumns";
 
 export function CustomerExportJobList({
+	kind,
 	customerExports,
 	isLoading,
 	isInitialError,
@@ -21,6 +25,7 @@ export function CustomerExportJobList({
 	totalExports,
 	onPageChange,
 }: {
+	kind: CustomerExportKind;
 	customerExports: CustomerExportResponse[];
 	isLoading: boolean;
 	isInitialError: boolean;
@@ -42,8 +47,9 @@ export function CustomerExportJobList({
 			createCustomerExportColumns({
 				downloadingExportId,
 				onDownload: (exportId) => downloadMutate({ exportId }),
+				showMode: kind === CustomerExportKind.CustomPlans,
 			}),
-		[downloadingExportId, downloadMutate],
+		[downloadingExportId, downloadMutate, kind],
 	);
 
 	const table = useReactTable({

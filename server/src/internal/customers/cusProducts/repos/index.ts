@@ -9,6 +9,7 @@ import {
 	getVersioningUsageForProduct,
 } from "./getVersioningUsage";
 import { mergeCustomerProductProcessor } from "./mergeCustomerProductProcessor";
+import { setCustomerProductIsCustom } from "./setCustomerProductIsCustom";
 
 export const customerProductRepo = {
 	batchUpdate: batchUpdateCustomerProducts,
@@ -19,5 +20,6 @@ export const customerProductRepo = {
 	getVersioningUsage,
 	getVersioningUsageForProduct,
 	mergeProcessor: mergeCustomerProductProcessor,
+	setIsCustom: setCustomerProductIsCustom,
 	fetchFreeTrials: fetchCustomerProductFreeTrials,
 };

@@ -1,18 +1,37 @@
-import type { CustomerExportResponse } from "@autumn/shared";
+import {
+	CustomerExportKind,
+	type CustomerExportResponse,
+} from "@autumn/shared";
 import { ConditionalTooltip, IconButton } from "@autumn/ui";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { CustomerExportModeBadge } from "./CustomerExportModeBadge";
 import { CustomerExportStatusBadge } from "./CustomerExportStatusBadge";
 
 const FAILED_FALLBACK_MESSAGE = "Export failed — you can start a new one.";
 
+const isApplyRun = (customerExport: CustomerExportResponse) =>
+	customerExport.kind === CustomerExportKind.CustomPlans &&
+	customerExport.snapshot.apply;
+
+const modeColumn: ColumnDef<CustomerExportResponse, unknown> = {
+	header: "Mode",
+	id: "mode",
+	size: 120,
+	cell: ({ row }: { row: Row<CustomerExportResponse> }) => (
+		<CustomerExportModeBadge apply={isApplyRun(row.original)} />
+	),
+};
+
 export const createCustomerExportColumns = ({
 	downloadingExportId,
 	onDownload,
+	showMode = false,
 }: {
 	downloadingExportId: string | undefined;
 	onDownload: (exportId: string) => void;
+	showMode?: boolean;
 }): ColumnDef<CustomerExportResponse, unknown>[] => [
 	{
 		header: "Status",
@@ -47,6 +66,7 @@ export const createCustomerExportColumns = ({
 			</span>
 		),
 	},
+	...(showMode ? [modeColumn] : []),
 	{
 		header: "Rows",
 		id: "row_count",

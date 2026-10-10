@@ -31,7 +31,11 @@ export const createParamsToCustomerExportSpec = ({
 		return { kind: params.kind, fields: params.fields, snapshot: scope };
 	}
 	if (params.kind === CustomerExportKind.CustomPlans) {
-		return { kind: params.kind, fields: [], snapshot: scope };
+		return {
+			kind: params.kind,
+			fields: [],
+			snapshot: { ...scope, apply: params.apply },
+		};
 	}
 	return {
 		kind: params.kind,

@@ -38,11 +38,13 @@ export const customerProductToCustomPlansExportRow = ({
 	fullCustomer,
 	customerProduct,
 	result,
+	applied,
 }: {
 	scalar: CustomerExportScalarRow;
 	fullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
 	result: CustomerProductIsCustomResult;
+	applied: boolean | null;
 }): CustomPlansExportRow => ({
 	customer_id: scalar.id,
 	name: scalar.name,
@@ -59,6 +61,7 @@ export const customerProductToCustomPlansExportRow = ({
 	plan_id: customerProduct.product.id,
 	plan_version: String(customerProduct.product.version),
 	status: customerProduct.status,
+	applied: applied === null ? null : String(applied),
 	outcome: result.outcome,
 	reasons:
 		result.outcome === "customized"
@@ -86,6 +89,7 @@ export const failedCustomerToCustomPlansExportRow = ({
 	plan_id: null,
 	plan_version: null,
 	status: null,
+	applied: null,
 	outcome: "export_failed",
 	reasons: null,
 	changes: error instanceof Error ? error.message : String(error),

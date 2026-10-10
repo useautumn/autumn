@@ -102,12 +102,42 @@ describe("createParamsToCustomerExportSpec", () => {
 					kind: CustomerExportKind.CustomPlans,
 					search: " pro ",
 					filters: { version: ["pro_yearly:3"] },
+					apply: false,
 				},
 			}),
 		).toEqual({
 			kind: CustomerExportKind.CustomPlans,
 			fields: [],
-			snapshot: { search: "pro", filters: { version: ["pro_yearly:3"] } },
+			snapshot: {
+				search: "pro",
+				filters: { version: ["pro_yearly:3"] },
+				apply: false,
+			},
 		});
+	});
+
+	it("carries an apply request onto the custom plans snapshot", () => {
+		expect(
+			createParamsToCustomerExportSpec({
+				params: {
+					kind: CustomerExportKind.CustomPlans,
+					search: "",
+					filters: {},
+					apply: true,
+				},
+			}).snapshot,
+		).toEqual({ search: "", filters: {}, apply: true });
+	});
+
+	it("defaults apply off for custom plans rows", () => {
+		expect(
+			customerExportToSpec({
+				customerExport: rowWith({
+					kind: CustomerExportKind.CustomPlans,
+					fields: [],
+					snapshot: { search: "", filters: {} } as DbCustomerExport["snapshot"],
+				}),
+			}).snapshot,
+		).toEqual({ search: "", filters: {}, apply: false });
 	});
 });

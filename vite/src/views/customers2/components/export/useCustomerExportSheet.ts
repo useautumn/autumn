@@ -33,6 +33,7 @@ const CustomerExportFormSchema = z.object({
 	fields: CustomerExportFieldsSchema,
 	restrictToCurrentFilters: z.boolean(),
 	includeUnlinkedStripeCustomers: z.boolean(),
+	dryRun: z.boolean(),
 });
 
 type CustomerExportFormValues = z.infer<typeof CustomerExportFormSchema>;
@@ -56,7 +57,7 @@ const toCreateCustomerExportParams = ({
 				include_unlinked_stripe_customers: value.includeUnlinkedStripeCustomers,
 			};
 		case CustomerExportKind.CustomPlans:
-			return { kind, ...scope };
+			return { kind, ...scope, apply: !value.dryRun };
 	}
 };
 
@@ -111,6 +112,7 @@ export function useCustomerExportSheet({
 			fields: [...CUSTOMER_EXPORT_FIELD_ORDER],
 			restrictToCurrentFilters: true,
 			includeUnlinkedStripeCustomers: false,
+			dryRun: false,
 		},
 		validators: {
 			onChange: CustomerExportFormSchema,
