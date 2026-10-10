@@ -1,7 +1,6 @@
 /**
- * Runs the one-round-trip Lua path against the real misc Redis: a sync track
- * counts the org and customer keys with their windows, and an over-cap org leaves
- * the customer key alone.
+ * Runs the org and customer limiters against the real misc Redis: a sync track
+ * counts both keys with their windows, and an over-cap org leaves the customer key alone.
  */
 
 import { afterEach, expect, test } from "bun:test";
@@ -13,7 +12,7 @@ import chalk from "chalk";
 import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getMiscRedis, waitForRedisReady } from "@/external/redis/initRedis.js";
 
-const testCase = "rate-limit-one-trip-redis";
+const testCase = "rate-limit-org-customer-redis";
 
 let restoreOverride: (() => Promise<void>) | undefined;
 
@@ -33,7 +32,7 @@ const setupSubOrg = async ({
 		customerId,
 		setup: [
 			s.platform.create({
-				name: "One trip limits",
+				name: "Org customer limits",
 				setupDefaultFeatures: true,
 			}),
 			s.customer({ testClock: false }),
