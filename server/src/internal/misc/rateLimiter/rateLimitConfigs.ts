@@ -21,7 +21,6 @@ export enum RateLimitType {
 	SyncBalanceWrite = "sync_balance_write",
 	SyncBalanceWriteOrg = "sync_balance_write_org",
 	CustomerCreateOrg = "customer_create_org",
-	EntitiesCreate = "entities_create",
 	EntitiesCreateOrg = "entities_create_org",
 }
 
@@ -129,8 +128,7 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 		],
 	},
 	{
-		type: RateLimitType.EntitiesCreate,
-		overLimit: "reject",
+		type: RateLimitType.EntitiesCreateOrg,
 		patterns: [route({ method: "POST", url: "/v1/entities.create" })],
 	},
 	// Reads have no DB-free answer, so they share check's counters but reject.
@@ -334,22 +332,14 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	},
 	// Counted only when a lookup misses and a customer is created (assertCustomerCreateWithinOrgLimit).
 	[RateLimitType.CustomerCreateOrg]: {
-		limit: 240_000,
-		windowMs: 60_000,
+		limit: 200,
+		windowMs: 1000,
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
-	[RateLimitType.EntitiesCreate]: {
-		limit: 25,
-		windowMs: 1000,
-		scope: RateLimitScope.Customer,
-		store: "redis",
-		orgLimit: RateLimitType.EntitiesCreateOrg,
-	},
-	// 1,500/min matches the general 25/s org limit entities.create had until now.
 	[RateLimitType.EntitiesCreateOrg]: {
-		limit: 1_500,
-		windowMs: 60_000,
+		limit: 200,
+		windowMs: 1000,
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},

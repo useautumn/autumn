@@ -5,22 +5,38 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RATE_LIMIT_CONFIGS, RateLimitType } from "./rateLimitConfigs.js";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore.js";
 
+const CUSTOMER_CREATE_RATE_LIMITED = "customer_create_rate_limited";
+
 type CreateCounter = {
-	incr: (key: string) => Promise<number>;
-	pexpire: (key: string, ms: number) => Promise<unknown>;
+	incrWithExpiry: (key: string, ttlMs: number) => Promise<number>;
 };
 
-/** Caps customer creations per org per window; reads that find an existing customer never count. */
+const redisCounter = (): CreateCounter => ({
+	incrWithExpiry: async (key, ttlMs) => {
+		const results = await getMiscRedis()
+			.multi()
+			.incr(key)
+			.pexpire(key, ttlMs)
+			.exec();
+		return Number(results?.[0]?.[1] ?? 0);
+	},
+});
+
+export const isCustomerCreateRateLimitError = (error: unknown) =>
+	error instanceof RecaseError && error.code === CUSTOMER_CREATE_RATE_LIMITED;
+
+/** Caps customer creations per org per fixed window; reads that find an existing customer never count. */
 export const assertCustomerCreateWithinOrgLimit = async ({
 	ctx,
 	counter,
+	now = Date.now(),
 }: {
 	ctx: AutumnContext;
 	counter?: CreateCounter;
+	now?: number;
 }) => {
 	if (!ctx.org?.id) return;
 	if (!counter && !shouldUseRedis()) return;
-	const redis = counter ?? getMiscRedis();
 
 	const type = RateLimitType.CustomerCreateOrg;
 	const { windowMs, limit: defaultLimit } = RATE_LIMIT_CONFIGS[type];
@@ -30,13 +46,12 @@ export const assertCustomerCreateWithinOrgLimit = async ({
 			orgSlug: ctx.org.slug,
 			type,
 		}) ?? defaultLimit;
-	const windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+	const windowStart = Math.floor(now / windowMs) * windowMs;
 	const key = `hrl:${type}:${ctx.org.id}:${ctx.env}:${windowStart}`;
 
 	let hits: number;
 	try {
-		hits = await redis.incr(key);
-		if (hits === 1) await redis.pexpire(key, windowMs * 2);
+		hits = await (counter ?? redisCounter()).incrWithExpiry(key, windowMs * 2);
 	} catch (error) {
 		// Same as the router limiter: a Redis failure never blocks a creation.
 		logger.error(`[rate-limit] customer create counter failed: ${error}`);
@@ -50,7 +65,7 @@ export const assertCustomerCreateWithinOrgLimit = async ({
 	);
 	throw new RecaseError({
 		message: "Rate limit exceeded.",
-		code: "rate_limit_exceeded",
+		code: CUSTOMER_CREATE_RATE_LIMITED,
 		statusCode: 429,
 	});
 };

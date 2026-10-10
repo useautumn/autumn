@@ -6,12 +6,11 @@ import { _setRateLimitOverridesConfigForTesting } from "@/internal/misc/rateLimi
 const createCounter = () => {
 	const counts = new Map<string, number>();
 	return {
-		incr: async (key: string) => {
+		incrWithExpiry: async (key: string) => {
 			const next = (counts.get(key) ?? 0) + 1;
 			counts.set(key, next);
 			return next;
 		},
-		pexpire: async () => 1,
 	};
 };
 
@@ -30,16 +29,19 @@ describe("assertCustomerCreateWithinOrgLimit", () => {
 			config: { orgs: { acme: { limits: { customer_create_org: 2 } } } },
 		});
 		const counter = createCounter();
-		await assertCustomerCreateWithinOrgLimit({ ctx, counter });
-		await assertCustomerCreateWithinOrgLimit({ ctx, counter });
+		await assertCustomerCreateWithinOrgLimit({ ctx, counter, now: 0 });
+		await assertCustomerCreateWithinOrgLimit({ ctx, counter, now: 0 });
 		await expect(
-			assertCustomerCreateWithinOrgLimit({ ctx, counter }),
-		).rejects.toMatchObject({ statusCode: 429, code: "rate_limit_exceeded" });
+			assertCustomerCreateWithinOrgLimit({ ctx, counter, now: 0 }),
+		).rejects.toMatchObject({
+			statusCode: 429,
+			code: "customer_create_rate_limited",
+		});
 	});
 
 	test("without an override the default cap leaves normal creation alone", async () => {
 		const counter = createCounter();
 		for (let i = 0; i < 50; i++)
-			await assertCustomerCreateWithinOrgLimit({ ctx, counter });
+			await assertCustomerCreateWithinOrgLimit({ ctx, counter, now: 0 });
 	});
 });

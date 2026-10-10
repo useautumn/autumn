@@ -36,7 +36,8 @@ export const createCustomerWithDefaults = async ({
 	customerId: string | null;
 	customerData?: CustomerData;
 }): Promise<FullCustomer> => {
-	await assertCustomerCreateWithinOrgLimit({ ctx });
+	// Email-only calls may resolve to an existing customer, so only id'd creations count.
+	if (customerId) await assertCustomerCreateWithinOrgLimit({ ctx });
 	setCustomerCreationRecoveryStage({ ctx, stage: "pre_commit" });
 
 	// ============ Phase 1: Create Autumn customer ============
