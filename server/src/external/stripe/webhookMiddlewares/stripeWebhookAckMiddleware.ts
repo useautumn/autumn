@@ -1,7 +1,7 @@
 import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import type { Context, Next } from "hono";
 import { enqueueStripeWebhookReplay } from "../webhookReplay/enqueueStripeWebhookReplay.js";
-import { stripeWebhookErrorWouldRedeliver } from "../webhookReplay/stripeWebhookErrorWouldRedeliver.js";
+import { stripeWebhookErrorShouldQueueReplay } from "../webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
 import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
 
@@ -33,11 +33,10 @@ export const stripeWebhookAckMiddleware = async (
 
 	if (ackMode === "sync") {
 		const queueSyncFailure = (error: unknown) => {
-			if (!stripeWebhookErrorWouldRedeliver({ error })) return;
+			if (!stripeWebhookErrorShouldQueueReplay({ error })) return;
 			return enqueueStripeWebhookReplay({
 				ctx,
-				failureReason:
-					error instanceof Error ? error.message : String(error),
+				failureReason: error instanceof Error ? error.message : String(error),
 			});
 		};
 
