@@ -96,7 +96,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	if (isResolving || willRedirectToSandbox) {
 		return (
 			<div className="flex text-xs text-muted-foreground">
-				<Skeleton className="h-8 w-full rounded-lg" />
+				<Skeleton className="h-7 w-full rounded-md" />
 			</div>
 		);
 	}

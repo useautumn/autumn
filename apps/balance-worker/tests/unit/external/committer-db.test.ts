@@ -127,6 +127,26 @@ describe("createCommitterDb", () => {
 		expect(fake.transactions).toEqual([]);
 	});
 
+	test("the database line counts each window's row changes and the rows they folded into", async () => {
+		const fake = createFakePostgres({ applied: [1, 1] });
+		const timings = createDatabaseTimings();
+		const committerDb = createCommitterDb({
+			ctx: { postgres: { db: fake.db as never }, timings },
+		});
+
+		await committerDb.flush({
+			changes: [
+				balanceIncrement,
+				balanceIncrement,
+				{ ...balanceIncrement, id: "ce_2" },
+			],
+			bookmarks: [bookmark],
+		});
+
+		expect(timings.drain().flushRows).toEqual({ changes: 3, folded: 2 });
+		expect(timings.drain().flushRows).toEqual({ changes: 0, folded: 0 });
+	});
+
 	test("a flush that writes snapshots counts what it upserted and deleted", async () => {
 		const fake = createFakePostgres();
 		const timings = createDatabaseTimings();

@@ -412,6 +412,77 @@ describe("committer subject snapshots", () => {
 		).toEqual(new Set(["cus_a", "cus_poison", "cus_b"]));
 	});
 
+	test("a stale record's flush goes once more without it: its call's customers are deleted, as landing piece by piece would, and other calls still upsert", async () => {
+		const staleId = "ce_stale";
+		const { db, requests } = createRecordingDb();
+		const flush = db.flush;
+		const gate = Promise.withResolvers<void>();
+		db.flush = async (request) => {
+			await gate.promise;
+			await flush(request);
+			return {
+				applied: request.changes.map(
+					(change: SubjectRowChange) =>
+						change.op !== "update" || change.id !== staleId,
+				),
+			};
+		};
+		const committer = committerFor({ db });
+		const stale = trackRecord({
+			customerId: "cus_x",
+			offset: 20n,
+			partition: 2,
+		});
+		stale.mutation.changes = stale.mutation.changes.map((change) => ({
+			...change,
+			id: staleId,
+		}));
+		// The lane is busy with a held flush while both calls queue, so they land in one flush together.
+		const held = committer.apply({
+			topic,
+			partition: 0,
+			expectedOffset: 0n,
+			records: [trackRecord({ customerId: "cus_0", offset: 0n, partition: 0 })],
+		});
+		const landing = Promise.all([
+			committer.apply({
+				topic,
+				partition: 1,
+				expectedOffset: 10n,
+				records: [
+					trackRecord({ customerId: "cus_a", offset: 10n, partition: 1 }),
+				],
+				snapshotIntent: writing(createState({ identity: identityOf("cus_a") })),
+			}),
+			committer.apply({
+				topic,
+				partition: 2,
+				expectedOffset: 20n,
+				records: [
+					stale,
+					trackRecord({ customerId: "cus_y", offset: 21n, partition: 2 }),
+				],
+				snapshotIntent: writing(
+					createState({ identity: identityOf("cus_x") }),
+					createState({ identity: identityOf("cus_y") }),
+				),
+			}),
+		]);
+		gate.resolve();
+		await held;
+		const [a, x] = await landing;
+
+		expect(a).toEqual({ nextOffset: 11n });
+		expect(x.nextOffset).toBe(22n);
+		expect(x.rejections?.map(({ record }) => record)).toEqual([stale]);
+		expect(requests).toHaveLength(3);
+		const retry = requests[2];
+		expect(retry?.bookmarks.map((b) => b.partition)).toEqual([1, 2]);
+		expect(retry?.changes).toHaveLength(2);
+		expect(upsertedKeys(retry)).toEqual(["cus_a:"]);
+		expect(deletedCustomers(retry)).toEqual(["cus_x", "cus_y"]);
+	});
+
 	test("snapshot rows count toward the flush's row cap only while snapshots are written", async () => {
 		const flushesOf = async (
 			subjectSnapshotsConfig: ReturnType<

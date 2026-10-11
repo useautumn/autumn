@@ -119,6 +119,7 @@ test.concurrent(
 					applies: 0,
 					applyFailed: 0,
 					applyMs: { totalMs: 0, maxMs: 0 },
+					unappliedMs: { totalMs: 0, maxMs: 0 },
 				},
 			]);
 			expect(summaries.drain()).toEqual([]);
@@ -159,6 +160,42 @@ test.concurrent(
 				lingerMs: { totalMs: 6, maxMs: 5 },
 				storeWaitMs: { totalMs: 3.5, maxMs: 3.5 },
 				queuedMsMax: 12.35,
+			});
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	},
+);
+
+test.concurrent(
+	"a window sums how long each apply's oldest batch sat committed before it",
+	async () => {
+		const fixture = createStoreFixture();
+		const summaries = createCommitSummaries();
+		try {
+			const { stateStore } = createPartitionCommitLogging({
+				ctx: {
+					stateStore: { ...fixture.store, applyDurableMutations: () => [] },
+					appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+					summaries,
+					monotonicNow: () => 0,
+				},
+				config,
+			});
+			const records = [
+				{
+					position: { topic, partition, offset: 0n },
+					mutation: createMutation({ state: createState() }),
+				},
+			];
+			for (const unappliedMs of [12.3456, 4])
+				await stateStore.applyDurableMutations({
+					records,
+					waits: { unappliedMs },
+				});
+			expect(summaries.drain()[0]).toMatchObject({
+				applies: 2,
+				unappliedMs: { totalMs: 16.35, maxMs: 12.35 },
 			});
 		} finally {
 			closeStoreFixture(fixture);

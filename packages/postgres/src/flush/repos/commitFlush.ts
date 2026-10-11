@@ -92,6 +92,8 @@ export const commitFlush = async ({
 		db: Pick<PostgresDb, "$client" | "execute">;
 		/** Times the synchronous parts (folding the changes, building the statement) so a stall can be attributed to them. */
 		timing?: <Value>(label: string, run: () => Value) => Value;
+		/** Hears how many row changes the flush carried and how many rows they folded into. */
+		recordFold?: (params: { changes: number; folded: number }) => void;
 	};
 	request: FlushRequest;
 	statementTimeoutMs: number;
@@ -101,6 +103,7 @@ export const commitFlush = async ({
 	const { folded, foldedIndexOf } = time("flush.fold", () =>
 		foldSubjectRowChanges({ changes: request.changes }),
 	);
+	ctx.recordFold?.({ changes: request.changes.length, folded: folded.length });
 	const snapshotWrites =
 		(request.snapshots?.upserts.length ?? 0) +
 		(request.snapshots?.deletes.length ?? 0);

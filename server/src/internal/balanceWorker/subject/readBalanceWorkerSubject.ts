@@ -20,7 +20,8 @@ import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 
 type SubjectClient = Pick<BalanceWorkerClient, "readSubjectState">;
 
-/** Postgres holds every routed customer's rows behind the worker's log by at most its unflushed batches; the Redis view is skipped for them. */
+/** Postgres holds every routed customer's rows behind the worker's log by at most its unflushed batches; the Redis view is skipped for them.
+ *  A read must not reset them in SQL: resets are the worker's to land. */
 const readSubjectFromPostgres = ({
 	ctx,
 	customerId,
@@ -36,6 +37,7 @@ const readSubjectFromPostgres = ({
 		entityId: entityId ?? undefined,
 		source: "balance_worker_read_fallback",
 		readFrom: "primary",
+		runLazyResets: false,
 	});
 
 /** Only an expanded customer response renders them; an entity view takes its invoices from its own expand. */
