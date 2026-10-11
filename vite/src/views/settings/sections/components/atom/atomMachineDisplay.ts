@@ -6,14 +6,14 @@ import {
 
 /** Names only the dashboard uses; the API speaks in `cpu` and `memory`. */
 const MACHINE_LABELS: Record<ByocCacheMachine["instanceType"], string> = {
-	"c7g.large": "Small",
-	"c7g.xlarge": "Medium",
-	"c7g.2xlarge": "Large",
+	"c8g.large": "Small",
+	"c8g.xlarge": "Medium",
+	"c8g.2xlarge": "Large",
 };
 
 /** The size most apps fit, picked when setup starts. */
 export const RECOMMENDED_ATOM_INSTANCE_TYPE: ByocCacheMachine["instanceType"] =
-	"c7g.xlarge";
+	"c8g.xlarge";
 
 export const atomMachineLabel = (machine: ByocCacheMachine) =>
 	MACHINE_LABELS[machine.instanceType];

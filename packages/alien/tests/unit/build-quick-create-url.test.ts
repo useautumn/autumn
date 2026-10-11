@@ -17,7 +17,7 @@ const quickCreate = (
 			stackName: "autumn-byoc-acme-live",
 			token: "tok_1",
 			managingRoleArn: "arn:aws:iam::111122223333:role/alien-management",
-			pools: { stateful: { machine: "c7g.xlarge", machines: 1 } },
+			pools: { stateful: { machine: "c8g.xlarge", machines: 1 } },
 			containers,
 			network,
 		}),
@@ -51,7 +51,7 @@ describe("CloudFormation quick-create link", () => {
 
 	test("each pool's machine type and count are the template's Compute<Pool> params", () => {
 		const { params } = quickCreate(null);
-		expect(params.get("param_ComputeStatefulMachine")).toBe("c7g.xlarge");
+		expect(params.get("param_ComputeStatefulMachine")).toBe("c8g.xlarge");
 		expect(params.get("param_ComputeStatefulMachines")).toBe("1");
 	});
 

@@ -30,7 +30,7 @@ const runningDeployment: AlienDeployment = {
 		},
 	},
 	stackSettings: {
-		compute: { pools: { stateful: { machine: "c7g.large" } } },
+		compute: { pools: { stateful: { machine: "c8g.large" } } },
 	},
 };
 
@@ -179,7 +179,7 @@ test("staff start the shadow Atom multi-tenant on the customer's alien stack, un
 	expect(started?.label).toMatch(SHADOW_STACK_NAME);
 	expect(body.stack_name).toBe(started?.label);
 	expect(started?.pools).toEqual({
-		stateful: { machine: "c7g.xlarge", machines: 1 },
+		stateful: { machine: "c8g.xlarge", machines: 1 },
 	});
 	expect(started?.containers).toEqual({ atom: { cpu: 3, memory: "6Gi" } });
 	const variables = Object.fromEntries(
@@ -285,7 +285,7 @@ test("resize moves the running Atom's pool; one still awaiting setup, or none, i
 
 	expect(response.status).toBe(200);
 	expect(calls.resized[0]?.pools).toEqual({
-		stateful: { machine: "c7g.2xlarge", machines: 1 },
+		stateful: { machine: "c8g.2xlarge", machines: 1 },
 	});
 });
 

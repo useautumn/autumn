@@ -1,26 +1,26 @@
-/** Atom's sizes: each pins one Graviton EC2 type (`cpu` vCPUs, `memory` GiB). Its container gets one vCPU less and at most
+/** Atom's sizes: each pins one Graviton4 (c8g) EC2 type (`cpu` vCPUs, `memory` GiB). Its container gets one vCPU less and at most
  * 75% of the memory, never more than GKE's node reserve allows, so the OS and Alien's agent keep room. */
 export const BYOC_CACHE_MACHINES = [
 	{
 		cpu: 2,
 		memory: 4,
-		instanceType: "c7g.large",
+		instanceType: "c8g.large",
 		container: { cpu: 1, memory: 2.75 },
-		estimatedMonthlyUsd: 63,
+		estimatedMonthlyUsd: 69,
 	},
 	{
 		cpu: 4,
 		memory: 8,
-		instanceType: "c7g.xlarge",
+		instanceType: "c8g.xlarge",
 		container: { cpu: 3, memory: 6 },
-		estimatedMonthlyUsd: 125,
+		estimatedMonthlyUsd: 138,
 	},
 	{
 		cpu: 8,
 		memory: 16,
-		instanceType: "c7g.2xlarge",
+		instanceType: "c8g.2xlarge",
 		container: { cpu: 7, memory: 12 },
-		estimatedMonthlyUsd: 251,
+		estimatedMonthlyUsd: 276,
 	},
 ] as const;
 
