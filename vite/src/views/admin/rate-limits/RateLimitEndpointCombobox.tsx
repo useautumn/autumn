@@ -1,7 +1,7 @@
 import { SearchableSelect } from "@autumn/ui";
 import { useState } from "react";
 import { RateLimitEndpointLabel } from "./RateLimitEndpointLabel";
-import { toEndpointKey } from "./rateLimitEndpoints";
+import { listEndpointMatches } from "./rateLimitEndpoints";
 
 /** The API's endpoints to pick from; a typed `METHOD /v1/path` the list lacks is offered as-is. */
 export const RateLimitEndpointCombobox = ({
@@ -17,13 +17,7 @@ export const RateLimitEndpointCombobox = ({
 }) => {
 	const [search, setSearch] = useState("");
 
-	const term = search.trim().toLowerCase();
-	const matching = endpoints.filter((endpoint) =>
-		endpoint.toLowerCase().includes(term),
-	);
-	const typed = toEndpointKey(search);
-	const options =
-		typed && !endpoints.includes(typed) ? [typed, ...matching] : matching;
+	const options = listEndpointMatches({ endpoints, search });
 	if (value && !options.includes(value)) options.unshift(value);
 
 	return (

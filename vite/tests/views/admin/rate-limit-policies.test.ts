@@ -6,10 +6,12 @@ import {
 } from "@/views/admin/rate-limits/formatRateLimit";
 import { groupConditionalPolicies } from "@/views/admin/rate-limits/groupConditionalPolicies";
 import {
+	listEndpointMatches,
 	listEndpointPolicies,
 	toEndpointKey,
 } from "@/views/admin/rate-limits/rateLimitEndpoints";
 import {
+	parseOverrideLimit,
 	withEndpointOverride,
 	withOverride,
 	withoutEndpointOverride,
@@ -180,5 +182,26 @@ describe("rate-limit policies page", () => {
 				],
 			},
 		]);
+	});
+
+	test("a known endpoint typed with odd spacing or case still shows up", () => {
+		const endpoints = ["POST /v1/entities.delete", "POST /v1/entities.create"];
+		expect(
+			listEndpointMatches({ endpoints, search: "post  /v1/entities.delete" }),
+		).toEqual(["POST /v1/entities.delete"]);
+		expect(listEndpointMatches({ endpoints, search: "entities" })).toEqual(
+			endpoints,
+		);
+		expect(
+			listEndpointMatches({ endpoints, search: "DELETE /v1/entities/:id" }),
+		).toEqual(["DELETE /v1/entities/:id"]);
+	});
+
+	test("only whole numbers ≥ 0 save as a limit", () => {
+		expect(parseOverrideLimit("0")).toBe(0);
+		expect(parseOverrideLimit("1e3")).toBe(1000);
+		for (const text of ["", " ", "0.5", "-1", "abc"]) {
+			expect(parseOverrideLimit(text)).toBeNull();
+		}
 	});
 });

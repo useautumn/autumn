@@ -13,6 +13,22 @@ export const toEndpointKey = (text: string) => {
 	return ENDPOINT_PATTERN.test(endpoint) ? endpoint : null;
 };
 
+/** Known endpoints matching the search; a typed `METHOD /v1/path` they lack is offered first. */
+export const listEndpointMatches = ({
+	endpoints,
+	search,
+}: {
+	endpoints: string[];
+	search: string;
+}) => {
+	const term = search.trim().toLowerCase();
+	const matching = endpoints.filter((endpoint) =>
+		endpoint.toLowerCase().includes(term),
+	);
+	const typed = toEndpointKey(search);
+	return typed && !matching.includes(typed) ? [typed, ...matching] : matching;
+};
+
 export const splitEndpoint = (endpoint: string) => {
 	const [method, path] = endpoint.split(" ");
 	return { method, path };

@@ -14,6 +14,7 @@ import { formatEndpointLimit, formatWindow } from "./formatRateLimit";
 import { RateLimitEndpointCombobox } from "./RateLimitEndpointCombobox";
 import { RateLimitEndpointLabel } from "./RateLimitEndpointLabel";
 import { RateLimitOrgCombobox } from "./RateLimitOrgCombobox";
+import { parseOverrideLimit } from "./rateLimitOverrideEdits";
 import { TOUCH_TARGET, TOUCH_TARGET_INPUT } from "./rateLimitTableStyles";
 import type {
 	RateLimitEndpointOverride,
@@ -88,8 +89,7 @@ export const RateLimitEndpointOverrideSheet = ({
 	}, [open, initialDraft]);
 
 	const isEditing = findStoredOverride({ orgs, draft }) !== undefined;
-	const limit = Number.parseInt(valueText, 10);
-	const isValid = Number.isInteger(limit) && limit >= 0;
+	const limit = parseOverrideLimit(valueText);
 	const { org, endpoint } = draft;
 
 	return (
@@ -153,7 +153,7 @@ export const RateLimitEndpointOverrideSheet = ({
 						</div>
 					</div>
 
-					{org && endpoint && isValid && (
+					{org && endpoint && limit !== null && (
 						<div className="flex flex-col gap-1.5 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-tertiary-foreground">
 							<RateLimitEndpointLabel endpoint={endpoint} />
 							<span>
@@ -179,10 +179,11 @@ export const RateLimitEndpointOverrideSheet = ({
 						variant="primary"
 						className={cn("flex-1 md:flex-none", TOUCH_TARGET_INPUT)}
 						isLoading={isSaving}
-						disabled={!org || !endpoint || !isValid}
+						disabled={!org || !endpoint || limit === null}
 						onClick={() =>
 							org &&
 							endpoint &&
+							limit !== null &&
 							onSave({ org, endpoint, override: { limit, windowMs } })
 						}
 					>

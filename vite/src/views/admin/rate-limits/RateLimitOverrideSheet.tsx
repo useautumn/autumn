@@ -23,6 +23,7 @@ import {
 	formatWindow,
 } from "./formatRateLimit";
 import { RateLimitOrgCombobox } from "./RateLimitOrgCombobox";
+import { parseOverrideLimit } from "./rateLimitOverrideEdits";
 import { TOUCH_TARGET, TOUCH_TARGET_INPUT } from "./rateLimitTableStyles";
 import type {
 	RateLimitOrg,
@@ -83,8 +84,8 @@ export const RateLimitOverrideSheet = ({
 	}, [open, initialDraft]);
 
 	const layer = draft.policy[draft.scope];
-	const value = Number.parseInt(valueText, 10);
-	const isValid = draft.org !== null && Number.isInteger(value) && value >= 0;
+	const value = parseOverrideLimit(valueText);
+	const isValid = draft.org !== null && value !== null;
 
 	const selectPolicy = (policyId: string) => {
 		const policy = policies.find(({ id }) => id === policyId);
@@ -198,7 +199,7 @@ export const RateLimitOverrideSheet = ({
 						className={cn("flex-1 md:flex-none", TOUCH_TARGET_INPUT)}
 						isLoading={isSaving}
 						disabled={!isValid}
-						onClick={() => onSave({ draft, value })}
+						onClick={() => value !== null && onSave({ draft, value })}
 					>
 						Save override
 					</Button>

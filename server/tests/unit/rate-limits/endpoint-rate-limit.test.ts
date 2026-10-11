@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isOverEndpointRateLimit } from "@/internal/misc/rateLimiter/isOverEndpointRateLimit.js";
 import type { RateLimitOverridesConfig } from "@/internal/misc/rateLimiter/rateLimitOverridesSchemas.js";
@@ -71,18 +72,58 @@ describe("isOverEndpointRateLimit", () => {
 		expect(counter.counts.size).toBe(0);
 	});
 
-	test("a limit of 0 blocks the endpoint without counting", async () => {
+	test("a limit of 0 blocks the endpoint without counting, and warns", async () => {
 		setOverrides({
 			acme: {
 				limits: {},
 				endpoints: {
-					"POST /v1/entities.delete": { limit: 0, windowMs: 60_000 },
+					"POST /v1/entities.update": { limit: 0, windowMs: 60_000 },
+				},
+			},
+		});
+		const warn = spyOn(logger, "warn");
+		const counter = createCounter();
+		expect(await hit({ counter, path: "/v1/entities.update" })).toBe(true);
+		expect(counter.counts.size).toBe(0);
+		expect(warn).toHaveBeenCalledWith(
+			expect.stringContaining("endpoint POST /v1/entities.update"),
+			expect.objectContaining({ type: "org_rate_cap_exceeded" }),
+		);
+		warn.mockRestore();
+	});
+
+	test("every matching override applies, so a block on a literal path beats a param pattern", async () => {
+		setOverrides({
+			org_acme: {
+				limits: {},
+				endpoints: {
+					"POST /v1/customers/:customer_id": { limit: 100, windowMs: 1000 },
+					"POST /v1/customers/clear_cache": { limit: 0, windowMs: 1000 },
 				},
 			},
 		});
 		const counter = createCounter();
-		expect(await hit({ counter })).toBe(true);
-		expect(counter.counts.size).toBe(0);
+		expect(await hit({ counter, path: "/v1/customers/clear_cache" })).toBe(
+			true,
+		);
+		expect(await hit({ counter, path: "/v1/customers/cus_1" })).toBe(false);
+	});
+
+	test("the tighter of two matching caps decides, and both count", async () => {
+		setOverrides({
+			org_acme: {
+				limits: {},
+				endpoints: {
+					"POST /v1/customers/:customer_id": { limit: 100, windowMs: 1000 },
+					"POST /v1/customers/clear_cache": { limit: 1, windowMs: 1000 },
+				},
+			},
+		});
+		const counter = createCounter();
+		const path = "/v1/customers/clear_cache";
+		expect(await hit({ counter, path })).toBe(false);
+		expect(await hit({ counter, path })).toBe(true);
+		expect([...counter.counts.values()]).toEqual([2, 2]);
 	});
 
 	test("path params match like route groups and share one counter", async () => {
