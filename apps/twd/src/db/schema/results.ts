@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	index,
 	integer,
@@ -13,6 +14,9 @@ export type FileResultStatus =
 	| "crashed"
 	| "timed_out"
 	| "skipped";
+
+/** swarm = a twd run; ci = uploaded by CI (POST /results/ingest), never priced or profiled. */
+export type ResultSource = "swarm" | "ci";
 
 /** Append-only: one row per file per run attempt. */
 export const testResults = pgTable(
@@ -32,6 +36,7 @@ export const testResults = pgTable(
 		failedTests: integer("failed_tests").notNull().default(0),
 		worker: text("worker"),
 		failureSummary: text("failure_summary"),
+		source: text("source").$type<ResultSource>().notNull().default("swarm"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -39,6 +44,9 @@ export const testResults = pgTable(
 	(t) => [
 		index("test_results_file_branch_idx").on(t.file, t.branch, t.createdAt),
 		index("test_results_run_idx").on(t.runId),
+		index("test_results_ci_idx")
+			.on(t.branch, t.createdAt)
+			.where(sql`${t.source} = 'ci'`),
 	],
 );
 
@@ -49,6 +57,8 @@ export const fileBaselines = pgTable("file_baselines", {
 	p90Ms: integer("p90_ms").notNull(),
 	passRate: real("pass_rate").notNull(),
 	samples: integer("samples").notNull(),
+	/** ci rows come from dev CI uploads for files no swarm baseline covers; their timings are not sandbox timings. */
+	source: text("source").$type<ResultSource>().notNull().default("swarm"),
 	updatedAt: timestamp("updated_at", { withTimezone: true })
 		.notNull()
 		.defaultNow(),

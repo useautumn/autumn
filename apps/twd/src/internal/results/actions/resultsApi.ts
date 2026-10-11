@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { RunFile } from "../../../api/contract.ts";
 import {
 	type FileResultStatus,
@@ -74,7 +74,12 @@ export const orderFilesLongestFirst = async ({
 	const baselines = await ctx.db
 		.select({ file: fileBaselines.file, p90Ms: fileBaselines.p90Ms })
 		.from(fileBaselines)
-		.where(inArray(fileBaselines.file, [...new Set(files.map(baseOf))]));
+		.where(
+			and(
+				eq(fileBaselines.source, "swarm"),
+				inArray(fileBaselines.file, [...new Set(files.map(baseOf))]),
+			),
+		);
 	const p90ByBase = new Map(baselines.map((b) => [b.file, b.p90Ms]));
 	const p90ByFile = new Map(
 		files.flatMap((f) => {
