@@ -68,11 +68,13 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 				),
 		}),
 		run: async ({ wait, ...body }) => {
+			const startedAt = Date.now();
 			const result = await createQaEnv({ ctx, body });
 			if (wait) {
 				const { env, warm } = await waitForWarmQaEnv({
 					ctx,
 					name: result.env.name,
+					startedAt,
 				});
 				return toolOk({
 					summary: describeWarmth({ env, warm }),
