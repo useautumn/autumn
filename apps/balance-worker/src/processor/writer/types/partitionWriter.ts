@@ -9,6 +9,7 @@ import type {
 	SubjectStateMutation,
 } from "@autumn/balance-engine";
 import type {
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -32,6 +33,8 @@ import type {
 export type PartitionWriter = {
 	/** Snapshot: waits for the current writes to reach the store, not writes enqueued later. */
 	waitForStore(): Promise<void>;
+	/** `waitForStore`'s snapshot, taken now; it waits, and wakes a lingering apply, only once called. */
+	snapshotStore(): () => Promise<void>;
 	/** Resolves once every batch handed to the store so far has been applied or failed. */
 	waitForApplies(): Promise<void>;
 	/** Decides and enqueues synchronously; the returned handle tracks durability. */
@@ -75,8 +78,10 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
-	/** Drops the customer's resident rows once Postgres holds its earlier writes, so the next command re-reads them whole. */
+	/** Hides the customer's resident rows at once and drops them once Postgres holds the writes before it. */
 	evict(params: { customerKey: string }): Promise<void>;
+	/** Null unless an evict hid rows whose writes Postgres may still lack; then resolves once it holds them, so a load can read. */
+	waitForEvicted(params: { customerKey: string }): Promise<void> | null;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
 	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
 	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
@@ -129,6 +134,8 @@ export type PartitionWriterContext = {
 	appender: CommittedOutcomeAppender;
 	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	/** Read before each apply: a set `applyLingerMs` overrides the boot value in `limits`. */
+	dbControl?: Pick<EdgeConfigStore<DbControlEdgeConfig>, "get">;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
 	/** Shared with the partition's log replay, which remembers records this writer never decided. */
@@ -158,6 +165,8 @@ export type PartitionWriterLimits = {
 	subjectMapBudget?: SubjectMapBudget;
 	/** On a busy partition, how long the writer waits for a batch to fill before committing it; unset or 0 commits at once. */
 	commitLingerMs?: number;
+	/** How long committed batches gather before a store flush, unless DB control overrides it; unset applies each batch at once. */
+	applyLingerMs?: number;
 	deferredCommitMs?: number;
 };
 
@@ -187,9 +196,8 @@ export type PendingMutation = {
 	/** The partition's sequence number for this write, in decide order. */
 	seq: number;
 	customerKey: string;
-	/** The subjects this mutation projected; pinned in the map until it commits, or until it is stored while snapshots are written. */
+	/** The subjects this mutation projected; pinned in the map until the store has it. */
 	projectedSubjectKeys: string[];
-	pinsReleased?: boolean;
 	mutation: MutationRecord;
 	/** The subject's rows once this mutation is applied; null for a log-only record. */
 	nextState: SubjectState | null;
@@ -233,6 +241,8 @@ export type PartitionWriterState = {
 	lastBatchSize: number;
 	/** Set while the loop lingers; enqueue calls it once the queue holds a full batch. */
 	lingerWake: (() => void) | null;
+	/** Set while the apply loop lingers; anything that must not wait for the store calls it. */
+	applyWake: (() => void) | null;
 	deferredQueued: number;
 	deferredCommitTimer: ReturnType<typeof setTimeout> | null;
 	deferredCommitDue: boolean;
@@ -260,6 +270,7 @@ export type StoreWaiter = {
 export type UnappliedBatch = {
 	batch: PendingMutation[];
 	baseOffset: bigint;
+	committedAt: number;
 };
 
 export type PartitionWriterScope = {

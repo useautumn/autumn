@@ -83,4 +83,8 @@ export {
 	useMenuShortcuts,
 } from "@autumn/ui/hooks/use-dropdown-shortcut";
 export { useIsMobile } from "@autumn/ui/hooks/use-is-mobile";
-export { cn, hasSubmitShortcutModifier } from "@autumn/ui/lib/utils";
+export {
+	cn,
+	getMetaKey,
+	hasSubmitShortcutModifier,
+} from "@autumn/ui/lib/utils";

@@ -9,9 +9,7 @@ import {
 	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
-import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { LabelTag } from "@/components/general/LabelTag";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
@@ -24,22 +22,20 @@ import SidebarBottom from "./SidebarBottom";
 import { SidebarContext } from "./SidebarContext";
 import { SidebarRail } from "./SidebarRail";
 import { SidebarSearchButton } from "./SidebarSearchButton";
-import {
-	SIDEBAR_ICON_STROKE as ICON_STROKE,
-	SIDEBAR_HEADER_ICON_BUTTON_CLASS,
-} from "./sidebarRowClass";
+import { SidebarToggleButton } from "./SidebarToggleButton";
+import { sidebarWidthClass } from "./sidebarRowClass";
 
 /** Exported so the command bar can offer the same tabs without a second list. */
 export const DEV_SUB_TABS = [
 	{
 		title: "API keys",
 		value: "api_keys",
-		icon: <KeyIcon weight="bold" />,
+		icon: <KeyIcon />,
 	},
 	{
 		title: "Webhooks",
 		value: "webhooks",
-		icon: <WebhooksLogoIcon weight="bold" />,
+		icon: <WebhooksLogoIcon />,
 	},
 ];
 
@@ -63,9 +59,13 @@ export const MainSidebar = ({
 	const isMobileSheet = !!onNavigate;
 	const expanded = isMobileSheet ? true : storedExpanded;
 
-	useHotkeys(["meta+b", "ctrl+b"], () => {
-		setExpanded((prev) => !prev);
-	});
+	useHotkeys(
+		["meta+b", "ctrl+b"],
+		() => {
+			setExpanded((prev) => !prev);
+		},
+		{ preventDefault: true },
+	);
 
 	return (
 		<SidebarContext.Provider value={{ expanded, setExpanded, onNavigate }}>
@@ -75,80 +75,61 @@ export const MainSidebar = ({
 					// Scrolls internally so a zoomed-in or crowded sidebar can't push
 					// its own content out of view.
 					`relative flex h-full flex-col justify-between overflow-x-hidden overflow-y-auto px-2.5 py-3.5 transition-all duration-150`,
-					isMobileSheet
-						? "min-w-[200px]"
-						: expanded
-							? "min-w-[200px] max-w-[200px]"
-							: "min-w-[52px] max-w-[52px]",
+					sidebarWidthClass({ expanded, isMobileSheet }),
 				)}
 			>
 				<div className="relative flex flex-col gap-3.5">
 					<div
 						className={cn(
 							"flex items-center gap-1",
-							expanded ? "justify-between" : "justify-center",
+							expanded ? "justify-between" : "flex-col",
 						)}
 					>
 						<OrgDropdown />
-						{expanded && !isMobileSheet && (
-							<button
-								type="button"
-								aria-label="Collapse sidebar"
-								title="Collapse sidebar (⌘B)"
-								onClick={() => setExpanded((prev) => !prev)}
-								className={SIDEBAR_HEADER_ICON_BUTTON_CLASS}
-							>
-								<PanelLeft className="size-[15px]" strokeWidth={ICON_STROKE} />
-							</button>
-						)}
+						<div className="flex shrink-0 items-center gap-0.5">
+							{expanded && <SidebarSearchButton />}
+							{!isMobileSheet && <SidebarToggleButton />}
+						</div>
 					</div>
 					<EnvDropdown env={env} />
-					<nav className="flex flex-col gap-[18px]">
-						<SidebarSearchButton />
+					<nav className="flex flex-col gap-4">
 						<NavSection title="Catalog">
 							<NavButton
 								value="products"
 								subValue="products"
 								isDefaultSubValue
-								icon={<PackageIcon weight="bold" />}
+								icon={<PackageIcon />}
 								title="Plans"
-								env={env}
 							/>
 							<NavButton
 								value="products"
 								subValue="features"
-								icon={<StackIcon weight="bold" />}
+								icon={<StackIcon />}
 								title="Features"
-								env={env}
 							/>
 							<NavButton
 								value="products"
 								subValue="rewards"
-								icon={<GiftIcon weight="bold" />}
+								icon={<GiftIcon />}
 								title="Rewards"
-								env={env}
 							/>
 						</NavSection>
 						<NavSection title="Customers">
 							<NavButton
 								value="customers"
-								icon={<UsersIcon weight="bold" />}
+								icon={<UsersIcon />}
 								title="Customers"
-								env={env}
 							/>
 							<NavButton
 								value="analytics"
-								icon={<ChartBarIcon weight="bold" />}
+								icon={<ChartBarIcon />}
 								title="Usage"
-								env={env}
 							/>
 							{canSeeMigrations && (
 								<NavButton
 									value="migrations"
-									icon={<ArrowsSplitIcon weight="bold" />}
+									icon={<ArrowsSplitIcon />}
 									title="Migrations"
-									badge={<LabelTag label="BETA" className="ml-auto" />}
-									env={env}
 								/>
 							)}
 						</NavSection>
@@ -162,7 +143,6 @@ export const MainSidebar = ({
 										isDefaultSubValue={devTab.value === "api_keys"}
 										icon={devTab.icon}
 										title={devTab.title}
-										env={env}
 									/>
 								))}
 							</NavSection>

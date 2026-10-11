@@ -59,8 +59,6 @@ function extend({
 	const { mutation } = pending;
 	// Rows inserted by this very statement are not rows the statement's snapshot can see.
 	if (insertsSubjectRows({ mutation })) return "delete";
-	// Unpinned at the append (written while off): the map may since hold a re-read that lacks this record.
-	if (pending.pinsReleased) return "delete";
 	const bySubject = new Map<string, SubjectState>();
 	let baselineAt = sofar?.baselineAt ?? Number.POSITIVE_INFINITY;
 	for (const projected of sofar?.states ?? [])

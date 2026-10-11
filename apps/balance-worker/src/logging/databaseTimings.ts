@@ -22,6 +22,8 @@ export type DatabaseTimingsSummary = {
 		Record<DatabaseQueryKind, Distribution & { errors: number }>
 	>;
 	subjectLoadWait: Distribution;
+	/** Row changes the window's flushes carried, and the rows they folded into. */
+	flushRows: { changes: number; folded: number };
 	errorCodes: Record<string, number>;
 	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
 	subjectSnapshots?: SubjectSnapshotCounts;
@@ -87,6 +89,7 @@ export function createDatabaseTimings() {
 		{ durations: SampledWindow; errors: number }
 	>();
 	let subjectLoadWait = emptySampled();
+	let flushRows = { changes: 0, folded: 0 };
 	let errorCodes: Record<string, number> = {};
 	let subjectSnapshots: SubjectSnapshotCounts | null = null;
 
@@ -119,6 +122,17 @@ export function createDatabaseTimings() {
 
 	function recordSubjectLoadWait({ waitMs }: { waitMs: number }): void {
 		addSample({ window: subjectLoadWait, value: waitMs });
+	}
+
+	function recordFlushRows({
+		changes,
+		folded,
+	}: {
+		changes: number;
+		folded: number;
+	}): void {
+		flushRows.changes += changes;
+		flushRows.folded += folded;
 	}
 
 	function recordSubjectSnapshots(
@@ -160,6 +174,7 @@ export function createDatabaseTimings() {
 				]),
 			),
 			subjectLoadWait: distributionOf({ window: subjectLoadWait }),
+			flushRows,
 			errorCodes,
 			...(subjectSnapshots ? { subjectSnapshots } : undefined),
 		};
@@ -167,6 +182,7 @@ export function createDatabaseTimings() {
 		inFlightMax = inFlight;
 		queries = new Map();
 		subjectLoadWait = emptySampled();
+		flushRows = { changes: 0, folded: 0 };
 		errorCodes = {};
 		return summary;
 	}
@@ -175,6 +191,7 @@ export function createDatabaseTimings() {
 		queryStarted,
 		queryFinished,
 		recordSubjectLoadWait,
+		recordFlushRows,
 		recordSubjectSnapshots,
 		recordSnapshotRefreshes,
 		drain,
