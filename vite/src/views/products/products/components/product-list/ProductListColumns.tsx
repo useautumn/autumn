@@ -50,7 +50,7 @@ export const createProductListColumns = ({
 					enableSorting: false,
 					cell: ({ row }: { row: Row<ProductV2> }) => {
 						return (
-							<div className="text-muted-foreground">
+							<div className="truncate text-muted-foreground">
 								{row.original.group || ""}
 							</div>
 						);
