@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { mountMultiTenantRoutes } from "../multiTenant/mountMultiTenantRoutes.js";
+import { PEER_SUBJECTS_SINCE_PATH } from "../peers/peerSync.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { receiveSubjectsSince } from "./handlers/receiveSubjectsSince.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import { peerPushMiddleware } from "./middlewares/peerPushMiddleware.js";
@@ -38,6 +40,9 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
+	// Only a peer asks this; a request without its signature is refused like a push without the token.
+	if (ctx.peerTokenHash)
+		app.post(PEER_SUBJECTS_SINCE_PATH, pushAuth, receiveSubjectsSince);
 	app.route("/v1", authorized);
 	return app;
 }

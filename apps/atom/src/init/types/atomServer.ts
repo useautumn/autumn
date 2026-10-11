@@ -2,6 +2,7 @@ import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
+import type { PeerRelay } from "../../peers/types/peerRelay.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 import type { AtomHealthSource } from "../atomHealth.js";
@@ -10,6 +11,8 @@ import type { AtomHealthSource } from "../atomHealth.js";
 export type AtomServer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	/** A thread's server on an org's own Atom passes pushes on to the other replicas. */
+	peerRelay?: PeerRelay;
 };
 
 export type AtomServerDependencies = {

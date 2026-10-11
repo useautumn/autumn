@@ -12,5 +12,12 @@ export type SqliteStore = {
 	/** All in one write, so a reader never sees one without the others. One answer per subject, in order. */
 	setSubjects(params: { subjects: StoredSubject[] }): boolean[];
 	countSubjects(): number;
+	/** Subjects Autumn read after `readAtAfter`, oldest first, at most `limit`. */
+	listSubjectsSince(params: {
+		readAtAfter: number;
+		limit: number;
+	}): StoredSubject[];
+	/** The newest read held, 0 when empty. */
+	maxReadAt(): number;
 	close(): void;
 };

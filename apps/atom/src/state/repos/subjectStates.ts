@@ -103,6 +103,45 @@ export const readSubject = ({
 	return row ? storedSubjectFromRow({ row }) : null;
 };
 
+/** Subjects read by Autumn after `readAtAfter`, oldest first, so a replica that fell behind can copy what it missed. */
+export const listSubjectsSince = ({
+	ctx,
+	readAtAfter,
+	limit,
+}: {
+	ctx: SlotContext;
+	readAtAfter: number;
+	limit: number;
+}): StoredSubject[] =>
+	ctx.sqliteDb
+		.query<SubjectStateRow, { readAtAfter: number; limit: number }>(`
+			SELECT
+				states.log_offset AS logOffset,
+				states.read_at AS readAt,
+				states.state_json AS stateJson,
+				states.slice_hash AS sliceHash,
+				slices.catalog_json AS catalogJson,
+				slices.org_json AS orgJson,
+				states.customer_version AS customerVersion
+			FROM subject_states AS states
+			JOIN subject_slices AS slices USING (customer_id, entity_id)
+			WHERE states.read_at > $readAtAfter
+			ORDER BY states.read_at ASC
+			LIMIT $limit
+		`)
+		.all({ readAtAfter, limit })
+		.map((row) => storedSubjectFromRow({ row }).subject);
+
+/** The newest read the file holds, or 0 when it is empty: where a copy from a peer starts. */
+export const maxReadAt = ({ ctx }: { ctx: SlotContext }): number => {
+	const row = ctx.sqliteDb
+		.query<{ readAt: bigint | null }, []>(
+			"SELECT max(read_at) AS readAt FROM subject_states",
+		)
+		.get();
+	return Number(row?.readAt ?? 0);
+};
+
 /** What one write left: the bytes of row text it stored (null when its rows were older), and the customer's version
  * when the write moved it (null when it stayed). */
 export type SubjectWriteResult = {

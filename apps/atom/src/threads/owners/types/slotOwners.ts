@@ -1,4 +1,5 @@
 import type { SlotProcessor } from "../../../processor/types/slotProcessor.js";
+import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CatalogUpdate } from "./ownerCall.js";
 
 /** A folder's catalog on another thread: stored by its owner, held by every other. */
@@ -16,4 +17,12 @@ export type SlotOwners = {
 	/** The slots `thread` owns in the folder `atomId` names, answered there. */
 	processorOn(params: { thread: number; atomId: string | null }): SlotProcessor;
 	catalogOn(params: { thread: number; atomId: string | null }): CatalogCalls;
+	/** A slot another thread owns, read after `readAtAfter`. */
+	listSinceOn(params: {
+		thread: number;
+		atomId: string | null;
+		slot: number;
+		readAtAfter: number;
+		limit: number;
+	}): Promise<StoredSubject[]>;
 };

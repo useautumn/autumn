@@ -27,6 +27,9 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 			PRIMARY KEY (customer_id, entity_id)
 		) WITHOUT ROWID
 	`);
+	database.run(
+		"CREATE INDEX IF NOT EXISTS subject_states_read_at ON subject_states (read_at)",
+	);
 	database.run(`
 		CREATE TABLE IF NOT EXISTS subject_slices (
 			customer_id TEXT NOT NULL,

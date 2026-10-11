@@ -12,9 +12,12 @@ import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
 import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
-import type { Slots } from "./types/slots.js";
+import type { Slots, SubjectSource } from "./types/slots.js";
 
 export const CATALOG_FILE = "catalog.sqlite";
+/** Subjects copied from a peer per request, and how far before its own newest read a replica asks from. */
+const CATCH_UP_PAGE = 500;
+const CATCH_UP_MARGIN_MS = 60_000;
 
 /** The filesystem the folder sits on, as Linux lists it: a volume shows as its device, the container's own disk as overlay. */
 const mountOf = ({ folder }: { folder: string }): string | null => {
@@ -140,10 +143,64 @@ export const openSlots = ({
 		return slots[customerIdToSlot({ customerId, slotCount })].processor;
 	}
 
+	async function listSince({
+		slot,
+		readAtAfter,
+		limit,
+	}: {
+		slot: number;
+		readAtAfter: number;
+		limit: number;
+	}) {
+		const store = slots[slot]?.sqliteStore;
+		if (store) return store.listSubjectsSince({ readAtAfter, limit });
+		const owner = owners.ownerOf({ slot });
+		return owners.listSinceOn({
+			thread: owner,
+			atomId,
+			slot,
+			readAtAfter,
+			limit,
+		});
+	}
+
+	/** Pages until a short one; a copy's own newest read is its next cursor, and newest-wins makes a repeat harmless. */
+	async function catchUp({ source }: { source: SubjectSource }) {
+		let written = 0;
+		let synced = 0;
+		for (const [slot, { sqliteStore }] of slots.entries()) {
+			if (!sqliteStore) continue;
+			// A little before the newest read held: reads at the same instant may have landed on the peer only.
+			let readAtAfter = Math.max(
+				0,
+				sqliteStore.maxReadAt() - CATCH_UP_MARGIN_MS,
+			);
+			for (;;) {
+				const page = await source({
+					slot,
+					slotCount,
+					readAtAfter,
+					limit: CATCH_UP_PAGE,
+				});
+				if (page.length === 0) break;
+				written += sqliteStore
+					.setSubjects({ subjects: page })
+					.filter(Boolean).length;
+				const last = page[page.length - 1]!.readAt;
+				if (page.length < CATCH_UP_PAGE || last <= readAtAfter) break;
+				readAtAfter = last;
+			}
+			synced += 1;
+		}
+		return { slots: synced, written };
+	}
+
 	return {
 		processorFor,
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
+		listSince,
+		catchUp,
 		close,
 	};
 };

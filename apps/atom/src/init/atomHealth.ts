@@ -16,20 +16,20 @@ export type AtomHealth = {
 /** What every thread's /health reports: the main thread's boot, how many threads it has replaced since, and every thread's counters. */
 export type AtomHealthSource = {
 	bootedAt: string;
-	/** Two Int32s the main thread writes: [0] threads replaced since boot, [1] 1 once the replica is ready to serve. */
+	/** One Int32 the main thread counts in. */
 	restarts: Int32Array;
+	/** One Int32 the main thread sets to 1 once every thread serves and has caught up; absent on a one-thread Atom. */
+	ready?: Int32Array;
 	threadStats: SharedArrayBuffer;
 };
-
-/** Index of the ready flag in the shared Int32 array beside the restart count. */
-export const READY_FLAG = 1;
 
 export const readAtomHealth = ({
 	bootedAt,
 	restarts,
+	ready,
 	threadStats,
 }: AtomHealthSource): AtomHealth => ({
-	status: Atomics.load(restarts, READY_FLAG) === 1 ? "alive" : "starting",
+	status: !ready || Atomics.load(ready, 0) === 1 ? "alive" : "starting",
 	bootedAt,
 	restarts: Atomics.load(restarts, 0),
 	container: readContainerStats(),

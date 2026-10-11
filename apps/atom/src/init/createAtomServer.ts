@@ -106,5 +106,5 @@ export const createAtomServer = ({
 		ctx.auth.close();
 	}
 
-	return { start, stop };
+	return { start, stop, peerRelay };
 };

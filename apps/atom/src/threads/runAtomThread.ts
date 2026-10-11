@@ -3,6 +3,8 @@ import { openAuth } from "../auth/openAuth.js";
 import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
+import { catchUpFromPeers } from "../peers/peerSync.js";
+import type { Slots } from "../slots/types/slots.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
@@ -14,9 +16,13 @@ import type {
 	ThreadStatus,
 } from "./types/threadMessages.js";
 
+/** After the first catch-up: waits before each further pass, while the other replicas learn this one's address. */
+const SETTLE_CATCH_UPS_MS = [10_000, 30_000, 60_000];
+
 /** One serving thread: its server, and its lines to the other threads, kept current as they come and go. */
 const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
+	let stopping = false;
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
 	const counters = openThreadCounters({ buffer: init.stats, index });
 	// Per thread, like secret keys: a subject's misses are all decided on its owner thread.
@@ -37,6 +43,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			health: {
 				bootedAt: init.bootedAt,
 				restarts: new Int32Array(init.restarts),
+				ready: new Int32Array(init.ready),
 				threadStats: init.stats,
 			},
 			counters,
@@ -63,11 +70,34 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 
 	/** Pulls stop first, so none lands in a folder as it closes. */
 	async function stop(): Promise<void> {
+		stopping = true;
 		subjectPulls.stop();
 		await server.stop();
 	}
 
-	return { start: server.start, stop, join, leave };
+	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
+	async function start(): Promise<void> {
+		await server.start();
+		if (!server.peerRelay || !("slots" in auth)) return;
+		const { slots } = auth as { slots: Slots };
+		const ctx = {
+			relay: server.peerRelay,
+			port: env.ATOM_PORT,
+			tokenHash: env.ATOM_TOKEN_HASH,
+			logger: getAtomLogger(),
+		};
+		await catchUpFromPeers({ ctx, slots });
+		// Peers learn this replica's address a little after it serves; a few more passes cover what they relayed elsewhere meanwhile.
+		void (async () => {
+			for (const delayMs of SETTLE_CATCH_UPS_MS) {
+				await Bun.sleep(delayMs);
+				if (stopping) return;
+				await catchUpFromPeers({ ctx, slots });
+			}
+		})();
+	}
+
+	return { start, stop, join, leave };
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */

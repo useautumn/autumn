@@ -3,6 +3,7 @@ import type { ApiVersion } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
+import type { StoredSubject } from "../../../state/types/storedSubject.js";
 
 /** A check as it crosses threads: plain data, with the API version by name. */
 export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
@@ -18,7 +19,18 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
+	/** The slot's subjects read after `readAtAfter`, for a replica copying what it missed. */
+	| { type: "listSince"; slot: number; readAtAfter: number; limit: number }
 );
+
+/** Subjects as they cross threads or replicas: the two bigints as decimal text. */
+export type StoredSubjectOnWire = Omit<
+	StoredSubject,
+	"logOffset" | "customerVersion"
+> & {
+	logOffset: string;
+	customerVersion: string;
+};
 
 /**
  * Numbered by the caller, which matches the reply to it. Crosses as JSON text, since a structured clone of parsed data costs
@@ -28,7 +40,11 @@ export type OwnerCall = OwnerCallBody & { id: number };
 
 /** The owner's answer (a check's is its JSON and verdict); one it cannot answer carries the reason, so the caller's thread forwards it. */
 export type OwnerReply =
-	| { id: number; ok: true; value: CheckAnswer | boolean }
+	| {
+			id: number;
+			ok: true;
+			value: CheckAnswer | boolean | StoredSubjectOnWire[];
+	  }
 	| {
 			id: number;
 			ok: false;

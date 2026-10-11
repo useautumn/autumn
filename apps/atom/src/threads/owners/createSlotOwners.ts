@@ -21,6 +21,7 @@ export const createSlotOwners = ({
 		ownerOf: ({ slot }) => slot % threads,
 		processorOn: ({ thread, atomId }) => links[thread].processorFor({ atomId }),
 		catalogOn: ({ thread, atomId }) => links[thread].catalogFor({ atomId }),
+		listSinceOn: ({ thread, ...params }) => links[thread].listSince(params),
 		connect: ({ thread, port }) => links[thread].connect({ port }),
 		disconnect: ({ thread }) => links[thread].disconnect(),
 	};
