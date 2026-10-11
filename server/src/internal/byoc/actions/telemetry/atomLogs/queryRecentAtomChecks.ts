@@ -15,13 +15,13 @@ export const queryRecentAtomChecks = async ({
 		deploymentId,
 		startTime: LOOKBACK,
 		pipeline: `
-			| where body contains '/v1/balances.check'
-			| extend line = parse_json(body)
-			| where toint(line.statusCode) != 401 and toint(line.statusCode) != 403
+			| where line contains '/v1/balances.check'
+			| extend check = parse_json(line)
+			| where toint(check.statusCode) != 401 and toint(check.statusCode) != 403
 			| project _time,
-				customer_id = tostring(line.req.customer_id),
-				feature_id = tostring(line.req.feature_id),
-				forwarded = tostring(line.forwarded)
+				customer_id = tostring(check.req.customer_id),
+				feature_id = tostring(check.req.feature_id),
+				forwarded = tostring(check.forwarded)
 			| sort by _time desc
 			| take ${LIMIT}`,
 	});
