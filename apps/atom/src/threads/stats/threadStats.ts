@@ -11,6 +11,10 @@ export const THREAD_STAT_FIELDS = [
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",
 	"subjectFills",
+	/** Pushes this thread passed on to other replicas: delivered, failed once, and given up on. */
+	"relayed",
+	"relayFailed",
+	"relayDropped",
 	"heldSubjects",
 	"heldBytes",
 	"heldLookups",

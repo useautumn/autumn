@@ -9,6 +9,7 @@ import {
 	InvalidPushError,
 	isUnreadableRequest,
 } from "../lib/contracts/invalidPushError.js";
+import type { PeerRelay } from "../peers/types/peerRelay.js";
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
@@ -26,6 +27,8 @@ type PushReceiverContext = {
 	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
 	counters?: Pick<ThreadCounters, "add">;
+	/** Passes each applied push on to the other replicas, which share the queue and so missed it. */
+	peerRelay?: PeerRelay;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
@@ -50,7 +53,12 @@ const applyPush = async ({
 		return;
 	}
 	if (push.type === AtomPushType.SetCatalog) {
-		await applyCatalogPush({ slots, body: JSON.parse(push.body) });
+		await applyCatalogPush({
+			slots,
+			body: JSON.parse(push.body),
+			text: push.body,
+			peers: ctx.peerRelay,
+		});
 		return;
 	}
 	if (push.customerId === null)
@@ -59,6 +67,7 @@ const applyPush = async ({
 		slots,
 		customerId: push.customerId,
 		body: push.body,
+		peers: ctx.peerRelay,
 	});
 };
 

@@ -1,0 +1,38 @@
+import type { Context, MiddlewareHandler, Next } from "hono";
+import {
+	PEER_RELAYED_HEADER,
+	PEER_SIGNATURE_HEADER,
+	peerSignatureMatches,
+} from "../../peers/peerSignature.js";
+import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
+
+/**
+ * A push another replica passed on: signed with the token hash every replica holds, so it opens the one data folder
+ * without the token itself. It is marked relayed, so this replica applies it and passes it no further.
+ */
+export function peerPushMiddleware({
+	ctx,
+	tokenHash,
+	orElse,
+}: {
+	ctx: AtomHttpContext;
+	tokenHash: string;
+	orElse: MiddlewareHandler<AtomHttpEnv>;
+}): MiddlewareHandler<AtomHttpEnv> {
+	async function authorizePeer(context: Context<AtomHttpEnv>, next: Next) {
+		const signature = context.req.header(PEER_SIGNATURE_HEADER);
+		if (!signature || context.req.header(PEER_RELAYED_HEADER) !== "1")
+			return orElse(context, next);
+		const slots = ctx.auth.slotsFor({ atomId: null });
+		const body = await context.req.text();
+		if (!slots || !peerSignatureMatches({ tokenHash, body, signature }))
+			return context.json(
+				{ message: "Peer signature rejected", code: "atom_peer_rejected" },
+				401,
+			);
+		context.set("slots", slots);
+		context.set("relayed", true);
+		await next();
+	}
+	return authorizePeer;
+}
