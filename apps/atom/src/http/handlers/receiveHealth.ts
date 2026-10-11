@@ -6,7 +6,9 @@ import type { AtomHttpContext } from "../types/atomHttp.js";
 export const receiveHealth = ({ ctx }: { ctx: AtomHttpContext }) =>
 	async function receive(context: Context) {
 		const health = readAtomHealth(ctx.health);
+		// Not ready is a 503: the load balancer and alien's rollout both wait on it.
+		const status = health.status === "alive" ? 200 : 503;
 		// Spike diagnostics: `?peers=1` adds this replica's addresses and what atom.svc resolves to.
-		if (context.req.query("peers") !== "1") return context.json(health);
-		return context.json({ ...health, replica: await probePeers() });
+		if (context.req.query("peers") !== "1") return context.json(health, status);
+		return context.json({ ...health, replica: await probePeers() }, status);
 	};

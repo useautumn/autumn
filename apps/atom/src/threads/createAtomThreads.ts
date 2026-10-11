@@ -1,5 +1,6 @@
 import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
+import { READY_FLAG } from "../init/atomHealth.js";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
 import { createThreadStatsBuffer } from "./stats/threadStats.js";
@@ -75,7 +76,7 @@ export const createAtomThreads = ({
 	const { env } = config;
 	const threads: (Worker | null)[] = Array(env.ATOM_THREADS).fill(null);
 	const bootedAt = new Date().toISOString();
-	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+	const restarts = new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT);
 	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
 	let stopping = false;
 	let healthLog: { stop(): void } | null = null;
@@ -163,6 +164,14 @@ export const createAtomThreads = ({
 		}
 		ctx.logger.info(
 			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT} on ${env.ATOM_THREADS} threads`,
+		);
+		// Spike: a deliberate not-ready window, to see how alien's rollout and load balancer treat a 503 /health.
+		const readyDelayMs = Number(process.env.ATOM_READY_DELAY_MS ?? 0);
+		if (readyDelayMs > 0) await Bun.sleep(readyDelayMs);
+		Atomics.store(new Int32Array(restarts), READY_FLAG, 1);
+		ctx.logger.info(
+			{ type: "atom_ready", data: { readyDelayMs } },
+			"Atom ready to serve",
 		);
 		healthLog ??= startHealthLog({
 			source: {
