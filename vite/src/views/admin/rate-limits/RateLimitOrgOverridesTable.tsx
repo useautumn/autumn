@@ -6,7 +6,13 @@ import {
 	LIST_FRAME,
 	ROW_HEADER_LAYOUT,
 } from "../edge-config/rolloutRowStyles";
-import { formatCount, formatLimit, formatPolicyLabel } from "./formatRateLimit";
+import {
+	formatCount,
+	formatEndpointLimit,
+	formatLimit,
+	formatPolicyLabel,
+} from "./formatRateLimit";
+import { RateLimitEndpointLabel } from "./RateLimitEndpointLabel";
 import {
 	POLICY_ROW_ACTIONS,
 	POLICY_ROW_DETAIL,
@@ -15,6 +21,7 @@ import {
 	TOUCH_TARGET,
 } from "./rateLimitTableStyles";
 import type {
+	RateLimitEndpointOverride,
 	RateLimitLayerSummary,
 	RateLimitOrg,
 	RateLimitPolicySummary,
@@ -66,27 +73,64 @@ const OverriddenLayerCell = ({
 	);
 };
 
-/** One org's overrides only: default → new per layer, with edit and remove. */
+/** Each write replaces the whole config, so a second one waits for the first to land. */
+const RowActions = ({
+	onEdit,
+	onRemove,
+	isSaving,
+}: {
+	onEdit: () => void;
+	onRemove: () => void;
+	isSaving: boolean;
+}) => (
+	<div className={cn("flex gap-1", POLICY_ROW_ACTIONS)}>
+		<Button
+			variant="skeleton"
+			size="sm"
+			className={TOUCH_TARGET}
+			onClick={onEdit}
+		>
+			Edit
+		</Button>
+		<Button
+			variant="skeleton"
+			size="sm"
+			className={TOUCH_TARGET}
+			disabled={isSaving}
+			onClick={onRemove}
+		>
+			Remove
+		</Button>
+	</div>
+);
+
+/** One org's overrides only: default → new per layer, then its endpoint caps, with edit and remove. */
 export const RateLimitOrgOverridesTable = ({
 	org,
 	policies,
+	endpoints,
 	onEdit,
 	onRemove,
+	onEditEndpoint,
+	onRemoveEndpoint,
 	onShowAll,
 	isSaving,
 }: {
 	org: RateLimitOrg;
 	policies: RateLimitPolicySummary[];
+	endpoints: Record<string, RateLimitEndpointOverride>;
 	onEdit: (policy: RateLimitPolicySummary) => void;
 	onRemove: (policy: RateLimitPolicySummary) => void;
+	onEditEndpoint: (endpoint: string) => void;
+	onRemoveEndpoint: (endpoint: string) => void;
 	onShowAll: () => void;
-	/** Each write replaces the whole config, so a second one waits for the first to land. */
 	isSaving: boolean;
 }) => {
 	const overridden = policies.flatMap((policy) => {
 		const override = policy.overrides.find(({ orgKey }) => orgKey === org.key);
 		return override ? [{ policy, override }] : [];
 	});
+	const endpointOverrides = Object.entries(endpoints);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -96,7 +140,7 @@ export const RateLimitOrgOverridesTable = ({
 						<span key={`${header}-${index}`}>{header}</span>
 					))}
 				</div>
-				{overridden.length === 0 && (
+				{overridden.length === 0 && endpointOverrides.length === 0 && (
 					<p className={LIST_EMPTY}>{org.name} is on every default.</p>
 				)}
 				{overridden.map(({ policy, override }) => (
@@ -118,25 +162,31 @@ export const RateLimitOrgOverridesTable = ({
 							value={override.perOrg}
 						/>
 						<span className="hidden md:block" />
-						<div className={cn("flex gap-1", POLICY_ROW_ACTIONS)}>
-							<Button
-								variant="skeleton"
-								size="sm"
-								className={TOUCH_TARGET}
-								onClick={() => onEdit(policy)}
-							>
-								Edit
-							</Button>
-							<Button
-								variant="skeleton"
-								size="sm"
-								className={TOUCH_TARGET}
-								disabled={isSaving}
-								onClick={() => onRemove(policy)}
-							>
-								Remove
-							</Button>
-						</div>
+						<RowActions
+							onEdit={() => onEdit(policy)}
+							onRemove={() => onRemove(policy)}
+							isSaving={isSaving}
+						/>
+					</div>
+				))}
+				{endpointOverrides.map(([endpoint, override]) => (
+					<div key={endpoint} className={cn(POLICY_ROW_LAYOUT, COLUMNS)}>
+						<RateLimitEndpointLabel
+							endpoint={endpoint}
+							className={cn("md:col-span-2", POLICY_ROW_NAME)}
+						/>
+						<span className={cn("text-sm tabular-nums", POLICY_ROW_DETAIL)}>
+							{formatEndpointLimit(override)}
+							<span className="ml-1.5 text-tertiary-foreground">
+								endpoint cap
+							</span>
+						</span>
+						<span className="hidden md:block" />
+						<RowActions
+							onEdit={() => onEditEndpoint(endpoint)}
+							onRemove={() => onRemoveEndpoint(endpoint)}
+							isSaving={isSaving}
+						/>
 					</div>
 				))}
 			</div>
@@ -144,6 +194,8 @@ export const RateLimitOrgOverridesTable = ({
 				<span className="tabular-nums">
 					{overridden.length} of {policies.length} limits overridden ·{" "}
 					{policies.length - overridden.length} on default
+					{endpointOverrides.length > 0 &&
+						` · ${endpointOverrides.length} endpoint ${endpointOverrides.length === 1 ? "cap" : "caps"}`}
 				</span>
 				<Button
 					variant="skeleton"

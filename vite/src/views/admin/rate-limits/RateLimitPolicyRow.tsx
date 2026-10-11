@@ -3,7 +3,11 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ROW_ACTIONS_REVEAL } from "../edge-config/rolloutRowStyles";
-import { formatPolicyLabel, formatVersionLimits } from "./formatRateLimit";
+import {
+	formatOverrideValues,
+	formatPolicyLabel,
+	formatVersionLimits,
+} from "./formatRateLimit";
 import { RateLimitLayerCell } from "./RateLimitLayerCell";
 import { RateLimitOverrideBadge } from "./RateLimitOverrideBadge";
 import { RateLimitPolicyDetails } from "./RateLimitPolicyDetails";
@@ -126,9 +130,8 @@ export const RateLimitPolicyRow = ({
 					{policy.overrides.map((override) => (
 						<RateLimitOverrideBadge
 							key={override.orgKey}
-							policy={policy}
-							override={override}
 							orgName={view.orgsByKey[override.orgKey]?.name ?? override.orgKey}
+							values={formatOverrideValues({ policy, override })}
 						/>
 					))}
 				</div>
