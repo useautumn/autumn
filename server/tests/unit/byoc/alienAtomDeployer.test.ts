@@ -78,7 +78,7 @@ describe("starting an Atom on alien", () => {
 		});
 
 		expect(started[0]?.pools).toEqual({
-			stateful: { machine: "c7g.xlarge", machines: 1 },
+			stateful: { machine: "c8g.xlarge", machines: 1 },
 		});
 	});
 
@@ -99,9 +99,9 @@ describe("starting an Atom on alien", () => {
 	});
 
 	test.each([
-		["c7g.large", { cpu: 1, memory: "2.75Gi" }],
-		["c7g.xlarge", { cpu: 3, memory: "6Gi" }],
-		["c7g.2xlarge", { cpu: 7, memory: "12Gi" }],
+		["c8g.large", { cpu: 1, memory: "2.75Gi" }],
+		["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
+		["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
 	])(
 		"a %s size pins its machine and sizes the Atom container to fit it",
 		async (instanceType, container) => {
