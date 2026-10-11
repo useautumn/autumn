@@ -3,7 +3,8 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getQaEnv } from "./listQaEnvs.ts";
 
 const POLL_MS = 5_000;
-const MAX_WAIT_MS = 9 * 60_000;
+// Executor cuts tool calls off at 60 s, so a wait returns well before that and the agent calls again.
+const MAX_WAIT_MS = 45_000;
 
 const isServing = async ({ url }: { url: string }) =>
 	fetch(`${url}/__qa_wake_status`, { signal: AbortSignal.timeout(10_000) })
@@ -11,7 +12,7 @@ const isServing = async ({ url }: { url: string }) =>
 		.then((r) => r.ready === true)
 		.catch(() => false);
 
-/** Waits until the latest build is live and the stack answers; returns early on failure or after ~9 min. */
+/** Waits until the latest build is live and the stack answers; returns early on failure or after 45 s. */
 export const waitForWarmQaEnv = async ({
 	ctx,
 	name,
