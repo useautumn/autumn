@@ -6,6 +6,7 @@ import {
 	isAlienRequestError,
 } from "@autumn/alien";
 import { ErrCode, RecaseError } from "@autumn/shared";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
 let alienClient: AlienClient | null | undefined;
 
@@ -51,7 +52,7 @@ const withByocErrors =
 const createServerAlienClient = (): AlienClient | null => {
 	const config = envToAlienConfig();
 	if (!config) return null;
-	const client = createAlienClient({ config });
+	const client = createAlienClient({ config, logger });
 	return {
 		startSetup: withByocErrors(client.startSetup),
 		findDeployment: withByocErrors(client.findDeployment),
