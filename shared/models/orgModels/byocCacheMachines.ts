@@ -22,6 +22,13 @@ export const BYOC_CACHE_MACHINES = [
 		container: { cpu: 7, memory: 12 },
 		estimatedMonthlyUsd: 276,
 	},
+	{
+		cpu: 16,
+		memory: 32,
+		instanceType: "c8g.4xlarge",
+		container: { cpu: 15, memory: 24 },
+		estimatedMonthlyUsd: 551,
+	},
 ] as const;
 
 export type ByocCacheMachine = (typeof BYOC_CACHE_MACHINES)[number];
