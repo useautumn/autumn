@@ -52,7 +52,7 @@ export function ParallelSessionPipeline() {
 								<div
 									key={stage}
 									style={{ gridColumn: start + stageIndex }}
-									className={`flex h-10 min-w-0 items-center justify-center rounded border text-center text-xs ${color}`}
+									className={`flex h-8 @[480px]:h-10 min-w-0 items-center justify-center rounded border text-center text-xs ${color}`}
 								>
 									<span className="hidden @[480px]:inline">{stage}</span>
 									<span className="@[480px]:hidden" aria-hidden="true">

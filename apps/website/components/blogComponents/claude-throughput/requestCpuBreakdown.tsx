@@ -32,7 +32,7 @@ export function RequestCpuBreakdown() {
 				<span>Done</span>
 			</div>
 			<div className="grid grid-cols-[557fr_349fr_313fr]">
-				<div className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-l-md border border-[#737373] bg-[#252525] px-1 py-5 text-center">
+				<div className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-l-md border border-[#737373] bg-[#252525] px-1 py-3 @[480px]:py-5 text-center">
 					<span className="text-xs text-[#d4d4d4] @[480px]:text-sm">
 						Plumbing
 					</span>
@@ -40,7 +40,7 @@ export function RequestCpuBreakdown() {
 						557 µs
 					</span>
 				</div>
-				<div className="flex min-w-0 flex-col items-center justify-center gap-1 border-y border-[#9564ff] bg-[#9564ff26] px-1 py-5 text-center">
+				<div className="flex min-w-0 flex-col items-center justify-center gap-1 border-y border-[#9564ff] bg-[#9564ff26] px-1 py-3 @[480px]:py-5 text-center">
 					<span className="text-xs text-[#e5d9ff] @[480px]:text-sm">
 						Deduction
 					</span>
@@ -48,7 +48,7 @@ export function RequestCpuBreakdown() {
 						349 µs
 					</span>
 				</div>
-				<div className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-r-md border border-[#737373] bg-[#303030] px-1 py-5 text-center">
+				<div className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-r-md border border-[#737373] bg-[#303030] px-1 py-3 @[480px]:py-5 text-center">
 					<span className="text-xs text-[#d4d4d4] @[480px]:text-sm">
 						Commit
 					</span>

@@ -75,12 +75,7 @@ export function LoadTestResultsTable() {
 				{results.map(({ idea, outcome }) => (
 					<div key={idea} className="px-3 py-2">
 						<dt className="font-medium text-[#e5e5e5]">{idea}</dt>
-						<dd className="mt-1.5 text-[#a3a3a3]">
-							<span className="mb-1 block text-xs text-[#b08aff]">
-								In load tests
-							</span>
-							{outcome}
-						</dd>
+						<dd className="mt-1.5 text-[#a3a3a3]">{outcome}</dd>
 					</div>
 				))}
 			</dl>

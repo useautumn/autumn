@@ -55,7 +55,7 @@ export function BalanceWorkerPartitions() {
 				viewBox="0 0 376 430"
 				role="img"
 				aria-label={description}
-				className="mx-auto block h-auto w-full max-w-[400px] font-sans @[560px]:hidden"
+				className="mx-auto block h-auto w-full max-w-[320px] font-sans @[560px]:hidden"
 			>
 				<title>Tracks are serialized on a balance worker</title>
 				<ServerNode x={118} y={4} />

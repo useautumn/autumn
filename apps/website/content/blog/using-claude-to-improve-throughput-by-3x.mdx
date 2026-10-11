@@ -4,7 +4,7 @@ description: "How we set Claude up to run load tests on its own, and what it fou
 date: "2026-10-10"
 author: "John"
 image: "/images/blog/claude-throughput/cover-transparent.png"
-slug: "everything-we-learned-after-running-100s-of-load-tests"
+slug: "using-claude-to-improve-throughput-by-3x"
 ---
 
 This past month we've been re-architecting autumn after hitting bottlenecks as our volume grew. To roll it out successfully, we conducted rounds upon rounds of load testing to not only ensure that our infra was stable, but to also push the limits of how much throughput we could handle. 
@@ -21,7 +21,7 @@ What this means is that the best approach to debugging infra issues is through e
 
 To demonstrate this with an example, let's say you saw a spike of 5xx errors occur today.
 
-- **Hypothesis:** After looking at our DB metrics, we noticed a spike in connections being opened on Postgres, which caused the stall.
+- **Hypothesis:** After looking at our DB metrics, we noticed a spike in connections being opened on Postgres and suspected this was causing the stall.
 
 - **Fix:** Set a minimum pool size so there are always warm connections ready to handle a burst.
 

@@ -19,7 +19,7 @@ export function BalanceWorkerCores() {
 						<span className="font-mono text-[#a3a3a3]">BEFORE</span>
 						<span className="text-[#737373]">1 core per worker</span>
 					</div>
-					<div className="flex min-h-[180px] flex-col justify-center rounded-lg border border-[#525252] bg-[#141414] p-4">
+					<div className="flex min-h-0 @[520px]:min-h-[180px] flex-col justify-center rounded-lg border border-[#525252] bg-[#141414] p-3 @[520px]:p-4">
 						<CoreLane
 							core="Core 1"
 							description="Sharing CPU time"
@@ -32,7 +32,7 @@ export function BalanceWorkerCores() {
 						<span className="font-mono text-[#b08aff]">AFTER</span>
 						<span className="text-[#737373]">2 cores per worker</span>
 					</div>
-					<div className="flex min-h-[180px] flex-col justify-center gap-5 rounded-lg border border-[#9564ff80] bg-[#141414] p-4">
+					<div className="flex min-h-0 @[520px]:min-h-[180px] flex-col justify-center gap-4 @[520px]:gap-5 rounded-lg border border-[#9564ff80] bg-[#141414] p-3 @[520px]:p-4">
 						<CoreLane
 							core="Core 1"
 							description="Deductions"
@@ -86,7 +86,7 @@ function CoreLane({
 				{work.map(({ id, deduction }) => (
 					<div
 						key={id}
-						className={`h-7 rounded-sm border ${deduction ? "border-[#a37aff] bg-[#9564ff70]" : "border-[#737373] bg-[#52525280]"}`}
+						className={`h-5 @[520px]:h-7 rounded-sm border ${deduction ? "border-[#a37aff] bg-[#9564ff70]" : "border-[#737373] bg-[#52525280]"}`}
 					/>
 				))}
 			</div>

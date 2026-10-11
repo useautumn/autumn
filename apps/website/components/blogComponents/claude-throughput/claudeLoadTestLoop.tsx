@@ -118,7 +118,7 @@ function ClaudeLoadTestMobileLoop() {
 			viewBox="0 0 360 400"
 			role="img"
 			aria-label="Claude uses MCP to deploy code, tune infrastructure and run load tests. Results, logs and metrics return from the load testing environment to guide the next experiment."
-			className="mx-auto block h-auto w-full max-w-[400px] font-sans @[560px]:hidden"
+			className="mx-auto block h-auto w-full max-w-[320px] font-sans @[560px]:hidden"
 		>
 			<title>Claude drives the load testing loop</title>
 			<g
