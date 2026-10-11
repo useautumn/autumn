@@ -1,9 +1,11 @@
 import { z } from "zod/v4";
 import { alienRequest } from "../common/alienRequest.js";
+import { isAlienRequestError } from "../common/alienRequestError.js";
 import { hostedQuery } from "../common/hostedQuery.js";
-import type { AlienApi } from "../types/alienApi.js";
+import type { AlienApi, AlienContext } from "../types/alienApi.js";
 
 const SETUP_LINK_ROLE = "deployment-group.deployer";
+const FORBIDDEN = 403;
 const API_KEYS_PAGE_SIZE = "100";
 
 const ApiKeyPageSchema = z.object({
@@ -56,22 +58,45 @@ const listSetupLinkKeyIds = async ({
 	return keyIds;
 };
 
-/** Every setup link is its own group-scoped key; revoking them leaves the group with no way in until the next one is minted. */
-export const revokeSetupLinks = async ({
-	ctx,
+/** A key our role may not revoke is left to expire (every link we mint does, within a week); any other failure still fails. */
+const revokeSetupLink = async ({
+	ctx: { api, logger },
+	keyId,
 	deploymentGroupId,
 }: {
-	ctx: { api: AlienApi };
+	ctx: AlienContext;
+	keyId: string;
 	deploymentGroupId: string;
 }): Promise<void> => {
-	const { api } = ctx;
-	if (api.config.kind === "local") return;
-	const keyIds = await listSetupLinkKeyIds({ api, deploymentGroupId });
-	for (const keyId of keyIds)
+	try {
 		await alienRequest({
 			api,
 			method: "DELETE",
 			path: `/v1/api-keys/${encodeURIComponent(keyId)}${hostedQuery({ api })}`,
 			schema: z.unknown(),
 		});
+	} catch (error) {
+		if (!isAlienRequestError(error) || error.status !== FORBIDDEN) throw error;
+		logger.warn(
+			"alien refused to revoke a setup link; it stays until it expires",
+			{
+				keyId,
+				deploymentGroupId,
+			},
+		);
+	}
+};
+
+/** Every setup link is its own group-scoped key; revoking them leaves the group with no way in until the next one is minted. */
+export const revokeSetupLinks = async ({
+	ctx,
+	deploymentGroupId,
+}: {
+	ctx: AlienContext;
+	deploymentGroupId: string;
+}): Promise<void> => {
+	if (ctx.api.config.kind === "local") return;
+	const keyIds = await listSetupLinkKeyIds({ api: ctx.api, deploymentGroupId });
+	for (const keyId of keyIds)
+		await revokeSetupLink({ ctx, keyId, deploymentGroupId });
 };

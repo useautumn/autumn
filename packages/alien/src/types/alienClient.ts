@@ -62,6 +62,11 @@ export type AlienSetup = {
 	setupUrl: string | null;
 };
 
+/** Where the client reports what it skipped instead of failing on. */
+export type AlienLogger = {
+	warn(message: string, data: Record<string, unknown>): void;
+};
+
 /** The local `alien dev` manager, or alien's hosted platform for real customer clouds. */
 export type AlienConfig =
 	| { kind: "local"; baseUrl: string }
