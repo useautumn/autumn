@@ -28,6 +28,7 @@ export type {
 	AlienDeployment,
 	AlienEnvironmentVariable,
 	AlienFixedPools,
+	AlienLogger,
 	AlienNetwork,
 	AlienResourceState,
 	AlienSetup,
