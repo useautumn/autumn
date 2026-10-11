@@ -17,7 +17,7 @@ import type {
 import { buildQuickCreateUrl } from "./buildQuickCreateUrl.js";
 import { toDeploymentGroupName } from "./deploymentGroupName.js";
 import { getManagingRoleArn } from "./managingRoleArn.js";
-import { revokeSetupLinks } from "./setupLinks.js";
+import { revokeSetupLinksOnceDeleted } from "./setupLinks.js";
 import { getAwsTemplateUrl } from "./templateUrls.js";
 
 /** The local manager has no setup links; deploying straight away stands in for the customer running the setup. */
@@ -57,7 +57,7 @@ const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** One Atom per group: a stale link can't start a second deployment beside it. Alien applies it to groups it creates. */
 const MAX_DEPLOYMENTS_PER_GROUP = 1;
 
-/** Same external id reuses the customer's deployment group. Older links are revoked first, so one is ever live. */
+/** Same external id reuses the customer's deployment group. Older links are revoked first unless a stack launched from one is still up. */
 const startHostedSetup = async ({
 	ctx,
 	config,
@@ -86,7 +86,7 @@ const startHostedSetup = async ({
 	});
 	if (existingGroup)
 		await Promise.all([
-			revokeSetupLinks({ ctx, deploymentGroupId: existingGroup.id }),
+			revokeSetupLinksOnceDeleted({ ctx, deploymentGroupId: existingGroup.id }),
 			existingGroup.name !== name &&
 				renameDeploymentGroup({
 					api,

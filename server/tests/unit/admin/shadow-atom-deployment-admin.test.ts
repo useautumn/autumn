@@ -67,7 +67,7 @@ const alienClient: AlienClient = {
 	deleteDeployment: async (params) => {
 		calls.deleted.push(params);
 	},
-	revokeSetupLinks: async () => {},
+	revokeSetupLinksOnceDeleted: async () => {},
 };
 
 const configWith = (patch: Partial<ShadowAtomConfig>): ShadowAtomConfig => ({

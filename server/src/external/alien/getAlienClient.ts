@@ -49,7 +49,9 @@ const createServerAlienClient = (): AlienClient | null => {
 		retryDeployment: withByocErrors(client.retryDeployment),
 		updateDeploymentCompute: withByocErrors(client.updateDeploymentCompute),
 		deleteDeployment: withByocErrors(client.deleteDeployment),
-		revokeSetupLinks: withByocErrors(client.revokeSetupLinks),
+		revokeSetupLinksOnceDeleted: withByocErrors(
+			client.revokeSetupLinksOnceDeleted,
+		),
 	};
 };
 

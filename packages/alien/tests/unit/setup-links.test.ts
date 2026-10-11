@@ -10,6 +10,8 @@ let requests: Recorded[] = [];
 let warnings: { message: string; data: Record<string, unknown> }[] = [];
 let revokeStatus = 204;
 let existingGroup = false;
+/** The group's deployments as alien lists them; a stack is still up until one reads `deleted`. */
+let groupDeploymentStatuses: string[] = [];
 const realFetch = globalThis.fetch;
 
 const json = (body: unknown, status = 200) =>
@@ -37,6 +39,13 @@ const answer = ({ method, path }: Recorded): Response => {
 				},
 			},
 		]);
+	if (method === "GET" && path.startsWith("/v1/deployments?"))
+		return json({
+			items: groupDeploymentStatuses.map((status, index) => ({
+				id: `dep_${index}`,
+				status,
+			})),
+		});
 	if (path.startsWith("/v1/deployment-groups/setup-links"))
 		return json({ token: "tok_1", deploymentGroup: { id: GROUP_ID } });
 	if (method === "GET" && path.startsWith("/v1/api-keys"))
@@ -85,6 +94,7 @@ beforeEach(() => {
 	warnings = [];
 	revokeStatus = 204;
 	existingGroup = false;
+	groupDeploymentStatuses = [];
 	globalThis.fetch = (async (input: string | URL, init?: RequestInit) => {
 		const url = new URL(String(input));
 		const recorded = {
@@ -151,8 +161,42 @@ describe("a setup link", () => {
 		revokeStatus = 500;
 
 		await expect(
-			client().revokeSetupLinks({ deploymentGroupId: GROUP_ID }),
+			client().revokeSetupLinksOnceDeleted({ deploymentGroupId: GROUP_ID }),
 		).rejects.toThrow("alien 500");
 		expect(warnings).toEqual([]);
+	});
+});
+
+const revokedOldLink = () =>
+	requests.some(
+		({ method, path }) =>
+			method === "DELETE" && path.startsWith("/v1/api-keys/key_old"),
+	);
+
+describe("a setup link a stack was launched from", () => {
+	test("stays while the stack is still up, so the stack's delete can still reach alien", async () => {
+		existingGroup = true;
+		groupDeploymentStatuses = ["teardown-required"];
+
+		await startSetup();
+
+		expect(revokedOldLink()).toBe(false);
+		expect(setupLinkBody()).toBeDefined();
+	});
+
+	test("is revoked once alien has deleted every deployment of its group", async () => {
+		groupDeploymentStatuses = ["deleted"];
+
+		await client().revokeSetupLinksOnceDeleted({ deploymentGroupId: GROUP_ID });
+
+		expect(revokedOldLink()).toBe(true);
+	});
+
+	test("one deployment still being deleted keeps every link", async () => {
+		groupDeploymentStatuses = ["deleted", "deleting"];
+
+		await client().revokeSetupLinksOnceDeleted({ deploymentGroupId: GROUP_ID });
+
+		expect(revokedOldLink()).toBe(false);
 	});
 });

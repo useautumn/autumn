@@ -6,7 +6,7 @@ import {
 	retryDeployment,
 	updateDeploymentCompute,
 } from "./deployments/deployments.js";
-import { revokeSetupLinks } from "./setup/setupLinks.js";
+import { revokeSetupLinksOnceDeleted } from "./setup/setupLinks.js";
 import { startSetup } from "./setup/startSetup.js";
 import type { AlienApi } from "./types/alienApi.js";
 import type {
@@ -38,6 +38,7 @@ export const createAlienClient = ({
 		updateDeploymentCompute: (params) =>
 			updateDeploymentCompute({ ctx, ...params }),
 		deleteDeployment: (params) => deleteDeployment({ ctx, ...params }),
-		revokeSetupLinks: (params) => revokeSetupLinks({ ctx, ...params }),
+		revokeSetupLinksOnceDeleted: (params) =>
+			revokeSetupLinksOnceDeleted({ ctx, ...params }),
 	};
 };

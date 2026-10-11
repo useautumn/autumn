@@ -54,6 +54,9 @@ export const refreshAtomRecord = async <T extends AtomRecord>({
 	const isRemovalDone =
 		!deployment && isCacheBeingRemoved({ cacheDeployment: record });
 	if (isRemovalDone) {
+		await ctx.deployer.closeSetup({
+			deploymentGroupId: record.deployment_group_id,
+		});
 		await ctx.storage.forget({ record });
 		return null;
 	}

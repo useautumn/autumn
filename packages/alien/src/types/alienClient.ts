@@ -100,5 +100,7 @@ export type AlienClient = {
 		pools: AlienFixedPools;
 	}): Promise<void>;
 	deleteDeployment(params: { deployment: AlienDeployment }): Promise<void>;
-	revokeSetupLinks(params: { deploymentGroupId: string }): Promise<void>;
+	revokeSetupLinksOnceDeleted(params: {
+		deploymentGroupId: string;
+	}): Promise<void>;
 };

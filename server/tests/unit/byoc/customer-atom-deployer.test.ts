@@ -36,7 +36,7 @@ const alienClient: AlienClient = {
 	retryDeployment: async () => {},
 	updateDeploymentCompute: async () => {},
 	deleteDeployment: async () => {},
-	revokeSetupLinks: async () => {},
+	revokeSetupLinksOnceDeleted: async () => {},
 };
 const ALIEN_CLIENT_MODULE = "@/external/alien/getAlienClient.js";
 // Kept so afterAll can hand the real module back: mock.module is process-wide.

@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { alienRequest } from "../common/alienRequest.js";
 import { isAlienRequestError } from "../common/alienRequestError.js";
 import { hostedQuery } from "../common/hostedQuery.js";
+import { hasUndeletedDeployment } from "../deployments/deployments.js";
 import type { AlienApi, AlienContext } from "../types/alienApi.js";
 
 const SETUP_LINK_ROLE = "deployment-group.deployer";
@@ -87,8 +88,9 @@ const revokeSetupLink = async ({
 	}
 };
 
-/** Every setup link is its own group-scoped key; revoking them leaves the group with no way in until the next one is minted. */
-export const revokeSetupLinks = async ({
+/** Every setup link is its own group-scoped key. A stack's delete calls alien with the link it was launched from,
+ *  so the links stay until alien has deleted every deployment of the group. */
+export const revokeSetupLinksOnceDeleted = async ({
 	ctx,
 	deploymentGroupId,
 }: {
@@ -96,6 +98,7 @@ export const revokeSetupLinks = async ({
 	deploymentGroupId: string;
 }): Promise<void> => {
 	if (ctx.api.config.kind === "local") return;
+	if (await hasUndeletedDeployment({ ctx, deploymentGroupId })) return;
 	const keyIds = await listSetupLinkKeyIds({ api: ctx.api, deploymentGroupId });
 	for (const keyId of keyIds)
 		await revokeSetupLink({ ctx, keyId, deploymentGroupId });

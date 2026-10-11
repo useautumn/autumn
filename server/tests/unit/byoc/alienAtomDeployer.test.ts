@@ -33,7 +33,7 @@ const recordingAlienClient = () => {
 		retryDeployment: async () => {},
 		updateDeploymentCompute: async () => {},
 		deleteDeployment: async () => {},
-		revokeSetupLinks: async () => {},
+		revokeSetupLinksOnceDeleted: async () => {},
 	};
 	return { alienClient, started };
 };
