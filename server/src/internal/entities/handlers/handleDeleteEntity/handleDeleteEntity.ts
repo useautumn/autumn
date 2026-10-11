@@ -6,7 +6,9 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { releaseEntityAllocations } from "@/internal/balances/allocate/actions/refreshAllocationScale.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -27,6 +29,9 @@ export const handleDeleteEntity = createRoute({
 
 		const { db, org, env, features, logger } = ctx;
 
+		// The entities map is rewritten whole from this read, so the worker's writes must be in Postgres first.
+		if (isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }))
+			await flushBalanceWorkerCustomer({ ctx, customerId: customer_id });
 		const fullCus = await CusService.getFull({
 			ctx,
 			idOrInternalId: customer_id,

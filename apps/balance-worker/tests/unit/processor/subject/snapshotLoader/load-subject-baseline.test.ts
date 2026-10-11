@@ -84,6 +84,7 @@ const createScope = ({
 				getEntitySubjectRows: async () => [],
 			},
 			writer: {
+				waitForEvicted: () => null,
 				decide: () => {
 					throw new Error("not exercised");
 				},

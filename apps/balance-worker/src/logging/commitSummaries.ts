@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { CommitWaits } from "../processor/writer/types/partitionWriter.js";
+import type { ApplyWaits } from "../state/types/stateStore.js";
 
 /** Each partition's commits and store applies this window, summed: a few additions per batch, never per request. */
 export type CommitSummaries = {
@@ -13,6 +14,7 @@ export type CommitSummaries = {
 	applied(params: {
 		partition: number;
 		durationMs: number;
+		waits?: ApplyWaits;
 		failed: boolean;
 	}): void;
 	/** The window's summaries, one row per partition so the line's field set stays fixed; starts the next window. */
@@ -36,6 +38,8 @@ type CommitSummary = {
 	applies: number;
 	applyFailed: number;
 	applyMs: Timing;
+	/** How long each apply's oldest batch sat committed before the apply took it: how far Postgres trailed the log. */
+	unappliedMs: Timing;
 };
 
 export function createCommitSummaries(): CommitSummaries {
@@ -73,12 +77,14 @@ export function createCommitSummaries(): CommitSummaries {
 	function applied({
 		partition,
 		durationMs,
+		waits,
 		failed,
 	}: Parameters<CommitSummaries["applied"]>[0]): void {
 		const summary = summaryOf(partition);
 		summary.applies += 1;
 		if (failed) summary.applyFailed += 1;
 		add({ timing: summary.applyMs, ms: durationMs });
+		if (waits) add({ timing: summary.unappliedMs, ms: waits.unappliedMs });
 	}
 
 	function drain(): CommitSummaryRow[] {
@@ -107,6 +113,7 @@ function emptySummary(): CommitSummary {
 		applies: 0,
 		applyFailed: 0,
 		applyMs: timing(),
+		unappliedMs: timing(),
 	};
 }
 
@@ -127,6 +134,7 @@ function rounded(summary: CommitSummary): CommitSummary {
 		storeWaitMs: round(summary.storeWaitMs),
 		queuedMsMax: Math.round(summary.queuedMsMax * 100) / 100,
 		applyMs: round(summary.applyMs),
+		unappliedMs: round(summary.unappliedMs),
 	};
 }
 

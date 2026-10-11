@@ -1,24 +1,54 @@
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@autumn/ui";
+import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
+import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { cn } from "@/lib/utils";
 import { useSidebarContext } from "./SidebarContext";
+import { SIDEBAR_SECTION_HEADER_CLASS } from "./sidebarRowClass";
 
 export const NavSection = ({
 	title,
 	children,
 }: {
-	title?: string;
+	title: string;
 	children: ReactNode;
 }) => {
 	const { expanded } = useSidebarContext();
+	const [storedOpen, setStoredOpen] = useLocalStorage<boolean>(
+		`sidebar.section.${title}`,
+		true,
+	);
+
+	// The collapsed rail has no headers to reopen a section from, so it always lists every row.
+	const isOpen = !expanded || storedOpen;
 
 	return (
-		<div className="flex flex-col gap-px">
-			{title && expanded && (
-				<span className="px-2.5 pb-[5px] text-[11.5px] font-[450] leading-4 text-[#8A8A8A] dark:text-[#5C5C5C]">
+		<Collapsible
+			open={isOpen}
+			onOpenChange={setStoredOpen}
+			className="flex flex-col gap-px"
+		>
+			{expanded ? (
+				<CollapsibleTrigger className={SIDEBAR_SECTION_HEADER_CLASS}>
 					{title}
-				</span>
+					<ChevronDown
+						className={cn(
+							"size-3 shrink-0 transition-transform duration-150 ease-out motion-reduce:transition-none",
+							!isOpen && "-rotate-90",
+						)}
+						strokeWidth={2}
+					/>
+				</CollapsibleTrigger>
+			) : (
+				<div className="mx-1.5 mb-1.5 h-px bg-border" />
 			)}
-			{title && !expanded && <div className="mx-1.5 mb-1.5 h-px bg-border" />}
-			{children}
-		</div>
+			<CollapsibleContent className="flex flex-col gap-px">
+				{children}
+			</CollapsibleContent>
+		</Collapsible>
 	);
 };

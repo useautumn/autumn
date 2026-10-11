@@ -416,14 +416,20 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 				id: "db-control",
 				title: "DB Control",
 				description:
-					"Balance committer concurrency per worker; more clients as they move to Postgres.",
+					"Balance committer concurrency and apply linger per worker; more clients as they move to Postgres.",
 				icon: Database,
 				endpoint: "/admin/db-control-config",
 				deriveStatus: (data) => {
 					const committer = asRecord(asRecord(data).balanceCommitter);
-					return typeof committer.concurrency === "number"
-						? { label: `${committer.concurrency} lanes`, tone: "active" }
-						: { label: "Pool size", tone: "neutral" };
+					const overrides = [
+						typeof committer.concurrency === "number" &&
+							`${committer.concurrency} lanes`,
+						typeof committer.applyLingerMs === "number" &&
+							`${committer.applyLingerMs}ms linger`,
+					].filter(Boolean);
+					return overrides.length === 0
+						? { label: "Boot values", tone: "neutral" }
+						: { label: overrides.join(" · "), tone: "active" };
 				},
 			},
 			{

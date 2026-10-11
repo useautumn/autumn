@@ -53,7 +53,10 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../../../../src/processor/writer/writerErrors.js";
 import { openStateStore } from "../../../../src/state/openStateStore.js";
-import type { SqliteStateStore } from "../../../../src/state/types/stateStore.js";
+import type {
+	ApplyWaits,
+	SqliteStateStore,
+} from "../../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
 	createTestCatalogCache,
@@ -1639,6 +1642,56 @@ describe("partition writer", () => {
 			).toMatchObject({
 				revision: 2,
 			});
+		} finally {
+			gate.resolve();
+			closeFixture(fixture);
+		}
+	});
+
+	test("each apply hears how long its oldest batch sat committed before it", async () => {
+		const fixture = createFixture({
+			identities: [firstIdentity, secondIdentity],
+		});
+		const gate = Promise.withResolvers<void>();
+		const waits: (ApplyWaits | undefined)[] = [];
+		let now = 0;
+		try {
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				limits: defaultLimits,
+				appender: new RecordingCommittedAppender(),
+				now: () => now,
+				stateStore: {
+					...fixture.store,
+					applyDurableMutations: async (params) => {
+						waits.push(params.waits);
+						if (waits.length === 1) await gate.promise;
+						return fixture.store.applyDurableMutations(params);
+					},
+				},
+			});
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+			await waitForBatch();
+			now = 10;
+			await writer.submitTrack({
+				command: createCommand({
+					commandId: "cmd_2",
+					identity: secondIdentity,
+				}),
+			});
+			await waitForBatch();
+			now = 25;
+			await writer.submitTrack({
+				command: createCommand({ commandId: "cmd_3" }),
+			});
+			now = 40;
+
+			gate.resolve();
+			await writer.waitForStore();
+			expect(waits).toEqual([{ unappliedMs: 0 }, { unappliedMs: 30 }]);
 		} finally {
 			gate.resolve();
 			closeFixture(fixture);

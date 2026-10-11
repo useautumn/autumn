@@ -29,6 +29,7 @@ import { useSlackInvite } from "@/views/onboarding/hooks/useSlackInvite";
 import { SlackChannelNamePopover } from "@/views/onboarding/panels/SlackChannelNamePopover";
 import { SlackLogo } from "@/views/onboarding/panels/SlackInviteCard";
 import { NavButton } from "./NavButton";
+import { SIDEBAR_ICON_STROKE } from "./sidebarRowClass";
 
 export function SidebarContact() {
 	const email = "hey@useautumn.com";
@@ -68,8 +69,7 @@ export function SidebarContact() {
 					nativeButton={false}
 				>
 					<NavButton
-						env={env}
-						icon={<CircleQuestionMark strokeWidth={1.5} />}
+						icon={<CircleQuestionMark strokeWidth={SIDEBAR_ICON_STROKE} />}
 						title="Contact us"
 						onClick={() => {}}
 						isGroup
