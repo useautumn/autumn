@@ -18,17 +18,18 @@ const checkSnippet = ({
 	endpointUrl,
 }: {
 	endpointUrl: string;
-}) => `const atom = new Autumn({
+}) => `const autumn = new Autumn({
   secretKey,
-  serverURL: "${endpointUrl}",
+  atomURL: "${endpointUrl}",
 });
 
-await atom.check({
+// Answered by Atom; asks Autumn instead whenever Atom is down
+await autumn.atom.check({
   customerId: "<customer_id>",
   featureId: "<feature_id>",
 });`;
 
-/** The snippet that points the SDK at Atom, and a quiet wait until its first check lands. */
+/** The snippet that gives the SDK its Atom, and a quiet wait until the first check lands. */
 const AtomCheckWaiting = ({ endpointUrl }: { endpointUrl: string }) => {
 	const snippet = checkSnippet({ endpointUrl });
 	return (
