@@ -1,6 +1,6 @@
 /**
- * Idempotently provisions an Axiom dataset and its map fields: creating one that exists, or a map field that is
- * already set, is a no-op. Needs a personal API token with dataset scope in AXIOM_ADMIN_TOKEN, not an `xaat-` ingest token.
+ * Idempotently provisions an Axiom dataset, its map fields and its virtual fields: creating one that exists, or a
+ * field that is already set, is a no-op, and a virtual field whose expression changed is updated in place. Needs a personal API token with dataset scope in AXIOM_ADMIN_TOKEN, not an `xaat-` ingest token.
  */
 
 const AXIOM_BASE = "https://api.axiom.co/v2";
@@ -10,7 +10,17 @@ type AxiomDatasetSpec = {
 	description: string;
 	/** Open-ended nested objects kept in one column each, so their keys never count toward the field limit. */
 	mapFields: string[];
+	/** Query-time columns: names to query by, computed from where the data actually lands. */
+	virtualFields?: AxiomVirtualField[];
 };
+
+export type AxiomVirtualField = {
+	name: string;
+	expression: string;
+	description: string;
+};
+
+type ExistingVirtualField = AxiomVirtualField & { id: string; dataset: string };
 
 const authHeaders = (token: string) => ({
 	Authorization: `Bearer ${token}`,
@@ -97,6 +107,71 @@ const setMapFields = async ({
 	}
 };
 
+const getVirtualFields = async ({
+	token,
+	spec,
+}: {
+	token: string;
+	spec: AxiomDatasetSpec;
+}) => {
+	const res = await fetch(
+		`${AXIOM_BASE}/vfields?dataset=${encodeURIComponent(spec.name)}`,
+		{ headers: authHeaders(token) },
+	);
+	const text = await res.text();
+	if (!res.ok)
+		throw new Error(`Failed to list virtual fields: ${res.status} ${text}`);
+	// Virtual fields are listed org-wide by id: keep only this dataset's, so another dataset's is never updated.
+	const existing = (JSON.parse(text) as ExistingVirtualField[]).filter(
+		(field) => field.dataset === spec.name,
+	);
+	return new Map(existing.map((field) => [field.name, field]));
+};
+
+const putVirtualField = async ({
+	token,
+	spec,
+	field,
+	id,
+}: {
+	token: string;
+	spec: AxiomDatasetSpec;
+	field: AxiomVirtualField;
+	id: string | null;
+}) => {
+	const res = await fetch(`${AXIOM_BASE}/vfields${id ? `/${id}` : ""}`, {
+		method: id ? "PUT" : "POST",
+		headers: authHeaders(token),
+		body: JSON.stringify({ dataset: spec.name, ...field }),
+	});
+	const text = await res.text();
+	if (!res.ok)
+		throw new Error(
+			`Failed to set virtual field "${field.name}": ${res.status} ${text}`,
+		);
+	console.log(`  ${id ? "~" : "+"} virtual field: ${field.name}`);
+};
+
+const setVirtualFields = async ({
+	token,
+	spec,
+}: {
+	token: string;
+	spec: AxiomDatasetSpec;
+}) => {
+	if (!spec.virtualFields?.length) return;
+	const existing = await getVirtualFields({ token, spec });
+	for (const field of spec.virtualFields) {
+		const current = existing.get(field.name);
+		const isUnchanged =
+			current?.expression === field.expression &&
+			current.description === field.description;
+		if (isUnchanged)
+			console.log(`  = virtual field: ${field.name} (already set)`);
+		else await putVirtualField({ token, spec, field, id: current?.id ?? null });
+	}
+};
+
 export const ensureAxiomDataset = async (spec: AxiomDatasetSpec) => {
 	const token = process.env.AXIOM_ADMIN_TOKEN;
 	if (!token)
@@ -107,5 +182,6 @@ export const ensureAxiomDataset = async (spec: AxiomDatasetSpec) => {
 	console.log(`Provisioning Axiom dataset \`${spec.name}\`...`);
 	await createDataset({ token, spec });
 	await setMapFields({ token, spec });
+	await setVirtualFields({ token, spec });
 	console.log("\nDone.");
 };
