@@ -66,7 +66,7 @@ const record = async (name: string, run: () => Promise<string>) => {
 	}
 };
 
-/** Every reply's status and `x-atom-forwarded`, in order: the SDK returns only the body. */
+/** Every reply's status and `x-atom-forwarded`. Needs `failOpen: false`: fail-open swaps the HTTP client. */
 const tracedClient = () => {
 	const replies: string[] = [];
 	const httpClient = new HTTPClient();
@@ -197,7 +197,7 @@ const runStagingWithoutSecrets = async () => {
 		reply: () => ({ status: 200, body: checkBody("from_local_autumn") }),
 	});
 
-	await record("(c) staging: shadow Atom 401 does not fall back", async () => {
+	await record("(c) staging: Atom 401 does not fall back", async () => {
 		const { httpClient, replies } = tracedClient();
 		await assert.rejects(
 			new Autumn({
@@ -268,7 +268,7 @@ const runStagingWithSecrets = async ({
 	const check = { customerId, featureId };
 	const headers = atomToken ? { "x-atom-token": atomToken } : undefined;
 
-	await record("(a) staging: answered by the shadow Atom", async () => {
+	await record("(a) staging: answered by the Atom", async () => {
 		const { httpClient, replies } = tracedClient();
 		const response = await new Autumn({
 			secretKey,
@@ -278,7 +278,7 @@ const runStagingWithSecrets = async ({
 			httpClient,
 		}).atom.check(check, { headers });
 		assert.equal(replies.length, 1);
-		assert.match(replies[0] ?? "", /^api\.0kryvu\.vpc\.direct 200$/);
+		assert.equal(replies[0], `${new URL(STAGING_ATOM_URL).host} 200`);
 		return `replies: ${replies.join(" | ")}; allowed=${response.allowed}`;
 	});
 
@@ -289,19 +289,26 @@ const runStagingWithSecrets = async ({
 				secretKey,
 				serverURL: STAGING_API_URL,
 				atomURL: STAGING_ATOM_URL,
+				failOpen: false,
 			}).atom.check(check, { headers });
 			const { httpClient, replies } = tracedClient();
 			const viaFallback = await new Autumn({
 				secretKey,
 				serverURL: STAGING_API_URL,
 				atomURL: await deadURL(),
+				failOpen: false,
 				httpClient,
 			}).atom.check(check);
 			assert.deepEqual(
 				Object.keys(viaFallback).sort(),
 				Object.keys(viaAtom).sort(),
 			);
-			return `replies: ${replies.join(" | ")}; keys match`;
+			assert.equal(viaFallback.customerId, customerId);
+			assert.deepEqual(
+				replies.map((reply) => reply.split(" ")[0]),
+				["api-staging.useautumn.com"],
+			);
+			return `replies: ${replies.join(" | ")}; keys match, customerId=${viaFallback.customerId}`;
 		},
 	);
 
@@ -312,6 +319,7 @@ const runStagingWithSecrets = async ({
 			await new Autumn({
 				secretKey,
 				serverURL: STAGING_API_URL,
+				failOpen: false,
 				httpClient,
 			}).atom.check(check);
 			assert.deepEqual(
