@@ -35,6 +35,7 @@ export {
 	SHADOW_ATOM_EXTERNAL_ID,
 	type ShadowAtomConfig,
 	ShadowAtomConfigSchema,
+	type ShadowAtomDeploymentEntry,
 	type ShadowAtomOrg,
 	type ShadowAtomSettings,
 	ShadowAtomSettingsSchema,

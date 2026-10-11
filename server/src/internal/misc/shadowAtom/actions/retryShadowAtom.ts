@@ -4,7 +4,7 @@ import { retryAtomRecord } from "@/internal/byoc/atomRecords/retryAtomRecord.js"
 import { cacheNotFailed } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { shadowAtomContext } from "../shadowAtomContext.js";
 import { shadowAtomRecordToApiCache } from "../shadowAtomRecordToApiCache.js";
-import { shadowAtomStorage } from "../shadowAtomStorage.js";
+import { findShadowAtomRecords } from "../shadowAtomStorage.js";
 import { startShadowAtomWatch } from "../startShadowAtomWatch.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 
@@ -16,10 +16,12 @@ export const retryShadowAtom = ({
 }): Promise<ApiByocCache> =>
 	withShadowAtomLock({
 		fn: async () => {
-			const existing = await shadowAtomStorage.find();
+			const { current: existing } = await findShadowAtomRecords();
 			if (!existing) throw cacheNotFailed();
 			const record = await retryAtomRecord({
-				ctx: shadowAtomContext(),
+				ctx: shadowAtomContext({
+					deploymentGroupId: existing.deployment_group_id,
+				}),
 				record: existing,
 			});
 			await startShadowAtomWatch({

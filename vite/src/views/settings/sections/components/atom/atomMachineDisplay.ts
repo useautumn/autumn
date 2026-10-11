@@ -6,22 +6,21 @@ import {
 
 /** Names only the dashboard uses; the API speaks in `cpu` and `memory`. */
 const MACHINE_LABELS: Record<ByocCacheMachine["instanceType"], string> = {
-	"t4g.micro": "Starter",
-	"t4g.medium": "Small",
-	"c7g.xlarge": "Medium",
-	"c7g.2xlarge": "Large",
-	"c7g.4xlarge": "XL",
+	"c8g.large": "Small",
+	"c8g.xlarge": "Medium",
+	"c8g.2xlarge": "Large",
 };
 
 /** The size most apps fit, picked when setup starts. */
 export const RECOMMENDED_ATOM_INSTANCE_TYPE: ByocCacheMachine["instanceType"] =
-	"c7g.xlarge";
+	"c8g.xlarge";
 
 export const atomMachineLabel = (machine: ByocCacheMachine) =>
 	MACHINE_LABELS[machine.instanceType];
 
-export const atomMachineSpecs = (machine: ByocCacheMachine) =>
-	`${machine.cpu} vCPU · ${machine.memory} GB`;
+/** What Atom itself gets: its container's share of the machine. */
+export const atomMachineSpecs = ({ container }: ByocCacheMachine) =>
+	`${container.cpu} vCPU · ${container.memory} GB`;
 
 export const ATOM_RESIZE_NOTE =
 	"Resizing takes up to a minute. During this time the SDK falls back to the Autumn API.";

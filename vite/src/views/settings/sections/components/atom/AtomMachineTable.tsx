@@ -14,7 +14,7 @@ import {
 } from "./atomMachineDisplay";
 
 const GRID_CLASS =
-	"grid grid-cols-[minmax(0,1fr)_64px_80px_96px] items-center gap-4 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
+	"grid grid-cols-[minmax(0,1fr)_64px_80px_96px_80px] items-center gap-4 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
 
 /** Atom's sizes as rows on a section's surface; the one it runs on now is marked Current. */
 export const AtomMachineTable = ({
@@ -54,6 +54,7 @@ export const AtomMachineTable = ({
 				<span>Size</span>
 				<span>vCPU</span>
 				<span>Memory</span>
+				<span>Machine</span>
 				<span>Per month</span>
 			</div>
 			{BYOC_CACHE_MACHINES.map((machine) => {
@@ -81,8 +82,9 @@ export const AtomMachineTable = ({
 							{isRecommended && <LabelTag label="RECOMMENDED" />}
 							{isCurrent && <LabelTag label="CURRENT" />}
 						</span>
-						<span>{machine.cpu}</span>
-						<span>{machine.memory} GB</span>
+						<span>{machine.container.cpu}</span>
+						<span>{machine.container.memory} GB</span>
+						<span className="font-mono text-xs">{machine.instanceType}</span>
 						<span className="text-foreground">
 							${machine.estimatedMonthlyUsd}
 						</span>

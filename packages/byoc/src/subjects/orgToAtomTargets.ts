@@ -35,7 +35,7 @@ const shadowAtomConnection = ({
 		queue:
 			config.pushTransport === "queue"
 				? {
-						externalId: SHADOW_ATOM_EXTERNAL_ID,
+						externalId: config.externalId ?? SHADOW_ATOM_EXTERNAL_ID,
 						atomId: shadowAtomIdOf({ orgId: org.id, env }),
 					}
 				: null,
