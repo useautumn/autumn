@@ -118,11 +118,13 @@ export const createNeonBranch = async ({
 	parentId,
 	name,
 	expiresAt,
+	signal,
 }: {
 	ctx: TwdContext;
 	parentId: string;
 	name: string;
 	expiresAt: Date;
+	signal?: AbortSignal;
 }) => {
 	const parent = await getNeonBranch({ ctx, branchId: parentId });
 	if (!parent.expires_at)
@@ -138,6 +140,7 @@ export const createNeonBranch = async ({
 		await copyNeonDatabase({
 			from: await neonConnectionUrl({ ctx, branchId: parentId, pooled: false }),
 			to: await neonConnectionUrl({ ctx, branchId, pooled: false }),
+			signal,
 		});
 	} catch (error) {
 		await deleteNeonBranch({ ctx, branchId }).catch(() => {});
