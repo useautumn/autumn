@@ -20,8 +20,8 @@
 				"cpu": { "min": "3", "desired": "3" },
 				"memory": { "min": "6Gi", "desired": "6Gi" },
 				"resourceChoices": {
-					"cpu": { "min": "1", "max": "7", "default": "3" },
-					"memory": { "min": "2.75Gi", "max": "12Gi", "default": "6Gi" }
+					"cpu": { "min": "1", "max": "15", "default": "3" },
+					"memory": { "min": "2.75Gi", "max": "24Gi", "default": "6Gi" }
 				},
 				"environment": {
 					"ATOM_HOSTNAME": "0.0.0.0",
@@ -37,7 +37,7 @@
 				"kubernetesSecretMounts": [],
 				"links": [{ "type": "queue", "id": "pushes" }],
 				"permissions": "atom",
-				"persistentStorage": { "mountPath": "/data", "size": "10Gi" },
+				"persistentStorage": { "mountPath": "/data", "size": "100Gi" },
 				"ports": [{ "port": 8080 }],
 				"publicEndpoints": [
 					{

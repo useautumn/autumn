@@ -5,6 +5,7 @@ import type {
 import {
 	ApiByocCacheSchema,
 	type ByocCacheMachine,
+	type ByocCacheNetwork,
 	ByocCacheStatus,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -34,6 +35,7 @@ const ShadowAtomDeploymentSchema = ApiByocCacheSchema.pick({
 	error: true,
 	created_at: true,
 }).extend({
+	network: ApiByocCacheSchema.shape.network.default(null),
 	atom_id: z.string().nullable().default(null),
 	stack_name: z.string().nullable().default(null),
 });
@@ -45,12 +47,14 @@ export const awaitingShadowAtomRecord = ({
 	stackName,
 	machine,
 	region,
+	network = null,
 }: {
 	deploymentGroupId: string;
 	atomId: string | null;
 	stackName: string | null;
 	machine: ByocCacheMachine | null;
 	region: string | null;
+	network?: ByocCacheNetwork | null;
 }): ShadowAtomRecord => {
 	const status = ByocCacheStatus.AwaitingSetup;
 	return {
@@ -63,6 +67,7 @@ export const awaitingShadowAtomRecord = ({
 		cpu: machine?.cpu ?? null,
 		memory: machine?.memory ?? null,
 		region,
+		network,
 		stages: toCacheStages({ doneStages: [], status }),
 		error: null,
 		created_at: Date.now(),

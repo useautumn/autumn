@@ -79,12 +79,20 @@ describe("atom env", () => {
 		expect(told.ATOM_SLOT_COUNT).toBe(2);
 	});
 
-	test("runs as many threads as both its CPUs and its memory allow, up to 8", () => {
+	test("runs as many threads as both its container's CPUs and memory allow", () => {
 		const GB = 1024 ** 3;
-		const threads = ({ cpus, memory }: { cpus: number; memory: number }) =>
+		const threads = ({
+			cpus,
+			memory,
+			isContainerLimited = true,
+		}: {
+			cpus: number;
+			memory: number;
+			isContainerLimited?: boolean;
+		}) =>
 			createAtomEnv(
 				{ ATOM_TOKEN_HASH: TOKEN_HASH },
-				{ availableCpus: cpus, memoryLimitBytes: memory },
+				{ availableCpus: cpus, memoryLimitBytes: memory, isContainerLimited },
 			).ATOM_THREADS;
 
 		// Half a CPU and 512 MB, as the stack is provisioned today.
@@ -92,14 +100,24 @@ describe("atom env", () => {
 		expect(threads({ cpus: 4, memory: 2 * GB })).toBe(4);
 		// Eight threads would not fit in 1 GB: memory decides.
 		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(2);
+		// Atom's sizes: Medium 3 / 6Gi, Large 7 / 12Gi, XL 15 / 24Gi use every CPU.
+		expect(threads({ cpus: 3, memory: 6 * GB })).toBe(3);
+		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(7);
+		expect(threads({ cpus: 15, memory: 24 * GB })).toBe(15);
 		// A container with no limits sees the whole host: the cap decides.
-		expect(threads({ cpus: 64, memory: 256 * GB })).toBe(8);
+		expect(
+			threads({ cpus: 64, memory: 256 * GB, isContainerLimited: false }),
+		).toBe(8);
 	});
 
 	test("is told how many threads to run when ATOM_THREADS is set", () => {
 		const told = createAtomEnv(
 			{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_THREADS: "12" },
-			{ availableCpus: 2, memoryLimitBytes: 1024 ** 3 },
+			{
+				availableCpus: 2,
+				memoryLimitBytes: 1024 ** 3,
+				isContainerLimited: true,
+			},
 		);
 
 		expect(told.ATOM_THREADS).toBe(12);
@@ -109,14 +127,16 @@ describe("atom env", () => {
 		const multiTenant = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 16,
 			memoryLimitBytes: 64 * 1024 ** 3,
+			isContainerLimited: true,
 		});
 		const small = createAtomEnv(MULTI_TENANT, {
 			availableCpus: 2,
 			memoryLimitBytes: 4 * 1024 ** 3,
+			isContainerLimited: true,
 		});
 		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_THREADS: "3" });
 
-		expect(multiTenant.ATOM_THREADS).toBe(8);
+		expect(multiTenant.ATOM_THREADS).toBe(16);
 		expect(small.ATOM_THREADS).toBe(2);
 		expect(told.ATOM_THREADS).toBe(3);
 	});
@@ -124,7 +144,11 @@ describe("atom env", () => {
 	test("a multi-tenant Atom reads the push queue like a customer's once it is linked", () => {
 		const env = createAtomEnv(
 			{ ...MULTI_TENANT, ALIEN_PUSHES_BINDING: PUSHES_BINDING },
-			{ availableCpus: 8, memoryLimitBytes: 16 * 1024 ** 3 },
+			{
+				availableCpus: 8,
+				memoryLimitBytes: 16 * 1024 ** 3,
+				isContainerLimited: true,
+			},
 		);
 
 		expect(env.ATOM_THREADS).toBe(8);
@@ -231,7 +255,11 @@ describe("atom env", () => {
 		const heldBytes = ({ cpus, memory }: { cpus: number; memory: number }) =>
 			createAtomEnv(
 				{ ATOM_TOKEN_HASH: TOKEN_HASH },
-				{ availableCpus: cpus, memoryLimitBytes: memory },
+				{
+					availableCpus: cpus,
+					memoryLimitBytes: memory,
+					isContainerLimited: true,
+				},
 			).ATOM_HELD_BYTES_PER_THREAD;
 
 		// 12 GiB on 7 threads: (9 GiB − 8 × 250 MiB) / 7 / 3.

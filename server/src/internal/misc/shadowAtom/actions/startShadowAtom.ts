@@ -1,5 +1,6 @@
 import {
 	type ByocCacheMachine,
+	type ByocCacheNetwork,
 	ByocCacheStatus,
 	type CreateByocCacheResponse,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
@@ -35,18 +36,24 @@ type StartShadowAtomResponse = Omit<CreateByocCacheResponse, "token">;
 export const startShadowAtom = ({
 	ctx,
 	machine,
+	network,
 }: {
 	ctx: AutumnContext;
 	machine: ByocCacheMachine;
+	network: ByocCacheNetwork | null;
 }): Promise<StartShadowAtomResponse> =>
-	withShadowAtomLock({ fn: () => startShadowAtomSetup({ ctx, machine }) });
+	withShadowAtomLock({
+		fn: () => startShadowAtomSetup({ ctx, machine, network }),
+	});
 
 const startShadowAtomSetup = async ({
 	ctx,
 	machine,
+	network: askedNetwork,
 }: {
 	ctx: AutumnContext;
 	machine: ByocCacheMachine;
+	network: ByocCacheNetwork | null;
 }): Promise<StartShadowAtomResponse> => {
 	const { current: existing, previous } = await findShadowAtomRecords();
 	const isAwaitingSetup = existing?.status === ByocCacheStatus.AwaitingSetup;
@@ -62,6 +69,8 @@ const startShadowAtomSetup = async ({
 		existing && adminEncryptedToken
 			? decryptData(adminEncryptedToken)
 			: generateAtomToken();
+	// As an org's setup: a named network wins, and a fresh link for a waiting setup keeps the one it asked for.
+	const network = askedNetwork ?? existing?.network ?? null;
 	const names = existing
 		? {
 				...shadowAtomRecordNames({ record: existing }),
@@ -76,6 +85,7 @@ const startShadowAtomSetup = async ({
 		},
 		machine,
 		region: DEFAULT_BYOC_CACHE_AWS_REGION,
+		network,
 	});
 	const started = existing
 		? {
@@ -83,6 +93,7 @@ const startShadowAtomSetup = async ({
 				deployment_group_id: setup.deploymentGroupId,
 				cpu: machine.cpu,
 				memory: machine.memory,
+				network,
 			}
 		: awaitingShadowAtomRecord({
 				deploymentGroupId: setup.deploymentGroupId,
@@ -90,6 +101,7 @@ const startShadowAtomSetup = async ({
 				stackName: names.label,
 				machine,
 				region: DEFAULT_BYOC_CACHE_AWS_REGION,
+				network,
 			});
 	await patchShadowAtomConfig({
 		patch: {

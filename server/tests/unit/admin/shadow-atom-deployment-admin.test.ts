@@ -220,6 +220,42 @@ test("starting again while the setup waits keeps the admin token; once past setu
 	expect(calls.started).toHaveLength(0);
 });
 
+test("a shadow Atom can run in an existing VPC, private to it, as an org's can", async () => {
+	const response = await call({
+		route: "create_atom",
+		body: {
+			cpu: 8,
+			memory: 16,
+			network: {
+				type: "existing_vpc",
+				vpc_id: "vpc-1",
+				subnet_ids: ["subnet-a", "subnet-b"],
+			},
+		},
+	});
+
+	expect(response.status).toBe(200);
+	expect(calls.started[0]?.network).toEqual({
+		type: "byo-vpc-aws",
+		vpc_id: "vpc-1",
+		private_subnet_ids: ["subnet-a", "subnet-b"],
+		public_subnet_ids: [],
+	});
+	expect((await getAtom()).cache).toMatchObject({
+		network: {
+			type: "existing_vpc",
+			vpc_id: "vpc-1",
+			subnet_ids: ["subnet-a", "subnet-b"],
+		},
+	});
+});
+
+test("without a network the shadow Atom gets a new VPC, as before", async () => {
+	await call({ route: "create_atom", body: { cpu: 4, memory: 8 } });
+
+	expect(calls.started[0]?.network).toBeNull();
+});
+
 test("a machine that is not offered is refused before alien is called", async () => {
 	const response = await call({
 		route: "create_atom",

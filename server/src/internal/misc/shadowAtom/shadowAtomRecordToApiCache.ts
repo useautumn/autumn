@@ -5,7 +5,7 @@ import {
 } from "./shadowAtomNames.js";
 import type { ShadowAtomRecord } from "./types/shadowAtomRecord.js";
 
-/** A shadow Atom as an org's Atom page reads it. It serves both envs, so it reports live; it has no network choice or first check. */
+/** A shadow Atom as an org's Atom page reads it. It serves both envs, so it reports live; it has no first check. */
 export const shadowAtomRecordToApiCache = ({
 	record,
 }: {
@@ -22,7 +22,7 @@ export const shadowAtomRecordToApiCache = ({
 	cpu: record.cpu,
 	memory: record.memory,
 	region: record.region,
-	network: null,
+	network: record.network,
 	stages: record.stages,
 	error: record.error,
 });

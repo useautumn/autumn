@@ -82,8 +82,8 @@ export const AtomMachineTable = ({
 							{isRecommended && <LabelTag label="RECOMMENDED" />}
 							{isCurrent && <LabelTag label="CURRENT" />}
 						</span>
-						<span>{machine.container.cpu}</span>
-						<span>{machine.container.memory} GB</span>
+						<span>{machine.cpu}</span>
+						<span>{machine.memory} GiB</span>
 						<span className="font-mono text-xs">{machine.instanceType}</span>
 						<span className="text-foreground">
 							${machine.estimatedMonthlyUsd}

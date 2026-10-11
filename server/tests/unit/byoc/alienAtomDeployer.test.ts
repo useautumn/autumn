@@ -103,6 +103,7 @@ describe("starting an Atom on alien", () => {
 		["c8g.large", { cpu: 1, memory: "2.75Gi" }],
 		["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
 		["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
+		["c8g.4xlarge", { cpu: 15, memory: "24Gi" }],
 	])(
 		"a %s size pins its machine and sizes the Atom container to fit it",
 		async (instanceType, container) => {
