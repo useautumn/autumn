@@ -5,7 +5,12 @@ import {
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
-import type { CheckRequestOnWire, OwnerReply } from "./types/ownerCall.js";
+import type { StoredSubject } from "../../state/types/storedSubject.js";
+import type {
+	CheckRequestOnWire,
+	OwnerReply,
+	StoredSubjectOnWire,
+} from "./types/ownerCall.js";
 
 /** One instance per version on the owner: building one sorts the version registry. */
 const apiVersions = new Map<ApiVersion, ApiVersionClass>();
@@ -64,3 +69,17 @@ export const replyToError = ({
 	if (invalid) return new InvalidPushError(message);
 	return new Error(message);
 };
+
+export const storedSubjectToWire = (
+	subject: StoredSubject,
+): StoredSubjectOnWire => ({
+	...subject,
+	logOffset: subject.logOffset.toString(),
+});
+
+export const wireToStoredSubject = (
+	wire: StoredSubjectOnWire,
+): StoredSubject => ({
+	...wire,
+	logOffset: BigInt(wire.logOffset),
+});

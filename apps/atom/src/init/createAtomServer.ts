@@ -27,6 +27,7 @@ export const createAtomServer = ({
 					auth: ctx.auth,
 					logger: ctx.logger,
 					counters: ctx.counters,
+					replication: ctx.replication,
 				},
 			})
 		: undefined;
@@ -54,6 +55,10 @@ export const createAtomServer = ({
 			counters: ctx.counters,
 			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 			secretKeys,
+			replication: ctx.replication,
+			...(ctx.replication && {
+				peer: { tokenHash: env.ATOM_TOKEN_HASH, port: env.ATOM_PORT },
+			}),
 		},
 	});
 	const statsTick = startThreadStatsTick({
@@ -82,6 +87,7 @@ export const createAtomServer = ({
 	/** In-flight requests and leased pushes finish before the files close. */
 	async function stop(): Promise<void> {
 		pushReceiver?.stop();
+		ctx.replication?.stop();
 		await Promise.all([listener?.stop(), receiving]);
 		statsTick.stop();
 		secretKeys?.stop();

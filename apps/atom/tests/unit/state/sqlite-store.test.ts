@@ -176,6 +176,41 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
+	test("lists the subjects read after a point, oldest first, and knows its newest read", () => {
+		const sqliteStore = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		expect(sqliteStore.maxReadAt()).toBe(0);
+		for (const [i, customerId] of ["cus_a", "cus_b", "cus_c"].entries())
+			sqliteStore.setSubject({
+				subject: {
+					...subjectAt({ logOffset: 1n, readAt: 1700 + i }),
+					state: createSubjectState({ identity: { ...identity, customerId } }),
+				},
+			});
+
+		const since = sqliteStore.listSubjectsSince({
+			readAtAfter: 1700,
+			limit: 10,
+		});
+
+		expect(sqliteStore.maxReadAt()).toBe(1702);
+		expect(
+			since.map((subject) => [
+				subject.state.identity.customerId,
+				subject.readAt,
+			]),
+		).toEqual([
+			["cus_b", 1701],
+			["cus_c", 1702],
+		]);
+		expect(
+			sqliteStore.listSubjectsSince({ readAtAfter: 0, limit: 1 }).length,
+		).toBe(1);
+		sqliteStore.close();
+	});
+
 	test("the file keeps its subjects across a restart", () => {
 		const databasePath = slotPath();
 		const first = openSqliteStore({ databasePath, held: freshHeld() });

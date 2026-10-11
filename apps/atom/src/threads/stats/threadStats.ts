@@ -6,6 +6,10 @@ export const THREAD_STAT_FIELDS = [
 	/** Of those requests, the ones the Autumn API answered instead of Atom. */
 	"forwarded",
 	"pushes",
+	/** Operations this thread passed on to other replicas: delivered, failed once, and given up on. */
+	"relayed",
+	"relayFailed",
+	"relayDropped",
 	"heldSubjects",
 	"heldBytes",
 	"heldLookups",

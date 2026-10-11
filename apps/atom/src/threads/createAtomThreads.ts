@@ -76,6 +76,7 @@ export const createAtomThreads = ({
 	const threads: (Worker | null)[] = Array(env.ATOM_THREADS).fill(null);
 	const bootedAt = new Date().toISOString();
 	const restarts = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+	const readyFlag = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
 	const stats = createThreadStatsBuffer({ threads: env.ATOM_THREADS });
 	let stopping = false;
 	let healthLog: { stop(): void } | null = null;
@@ -93,7 +94,15 @@ export const createAtomThreads = ({
 		const ready = readyOf({ worker });
 		send({
 			worker,
-			control: { type: "init", index, env, bootedAt, restarts, stats },
+			control: {
+				type: "init",
+				index,
+				env,
+				bootedAt,
+				restarts,
+				ready: readyFlag,
+				stats,
+			},
 		});
 		threads.forEach((peer, peerIndex) => {
 			if (!peer || peerIndex === index) return;
@@ -161,13 +170,16 @@ export const createAtomThreads = ({
 			await stop();
 			throw error;
 		}
+		Atomics.store(new Int32Array(readyFlag), 0, 1);
 		ctx.logger.info(
+			{ type: "atom_ready" },
 			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT} on ${env.ATOM_THREADS} threads`,
 		);
 		healthLog ??= startHealthLog({
 			source: {
 				bootedAt,
 				restarts: new Int32Array(restarts),
+				ready: new Int32Array(readyFlag),
 				threadStats: stats,
 			},
 			everyMs: env.ATOM_HEALTH_LOG_EVERY_MS,

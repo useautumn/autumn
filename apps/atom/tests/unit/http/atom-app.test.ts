@@ -34,6 +34,7 @@ const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
 const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
+	ready: new Int32Array([1]),
 	threadStats: THREAD_STATS,
 };
 const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });

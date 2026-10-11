@@ -170,6 +170,7 @@ export const allSlotsOwnedHere: SlotOwners = {
 	ownerOf: () => 0,
 	processorOn: noOtherThread,
 	catalogOn: noOtherThread,
+	listSinceOn: noOtherThread,
 };
 
 /** A thread's held subjects, roomy enough that a test never evicts by accident. */

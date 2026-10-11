@@ -2,6 +2,13 @@ import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
+import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
+import {
+	catchUpFromPeers,
+	SETTLE_CATCH_UPS_MS,
+} from "../replication/catchUp/catchUpFromPeers.js";
+import { createReplication } from "../replication/createReplication.js";
+import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
 import { openThreadCounters } from "./stats/threadStats.js";
@@ -15,21 +22,31 @@ import type {
 /** One serving thread: its server, and its lines to the other threads, kept current as they come and go. */
 const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
+	const logger = getAtomLogger();
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
 	const { auth, multiTenant, held } = openAuth({ env, owners });
 	const answerPorts = new Map<number, MessagePort>();
+	const counters = openThreadCounters({ buffer: init.stats, index });
+	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
+	const replication =
+		env.ATOM_MODE === "deployed"
+			? openReplication({ env, counters, logger })
+			: undefined;
+	let stopping = false;
 	const server = createAtomServer({
 		ctx: {
 			auth,
 			multiTenant,
-			logger: getAtomLogger(),
+			logger,
 			health: {
 				bootedAt: init.bootedAt,
 				restarts: new Int32Array(init.restarts),
+				ready: new Int32Array(init.ready),
 				threadStats: init.stats,
 			},
-			counters: openThreadCounters({ buffer: init.stats, index }),
+			counters,
 			held,
+			replication,
 		},
 		config: {
 			env,
@@ -50,7 +67,58 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	return { start: server.start, stop: server.stop, join, leave };
+	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
+	async function start(): Promise<void> {
+		await server.start();
+		const slots = auth.slotsFor({ atomId: null });
+		if (!replication || !slots) return;
+		const ctx = {
+			replication,
+			port: env.ATOM_PORT,
+			tokenHash: env.ATOM_TOKEN_HASH,
+			logger,
+		};
+		await catchUpFromPeers({ ctx, slots });
+		// Peers learn this replica's address a little after it serves; later passes cover what they relayed elsewhere meanwhile.
+		void (async () => {
+			for (const delayMs of SETTLE_CATCH_UPS_MS) {
+				await Bun.sleep(delayMs);
+				if (stopping) return;
+				await catchUpFromPeers({ ctx, slots });
+			}
+		})();
+	}
+
+	async function stop(): Promise<void> {
+		stopping = true;
+		await server.stop();
+	}
+
+	return { start, stop, join, leave };
+};
+
+/** The pushes this thread applies, on their way to every other replica. */
+const openReplication = ({
+	env,
+	counters,
+	logger,
+}: {
+	env: ThreadInit["env"];
+	counters: ReturnType<typeof openThreadCounters>;
+	logger: ReturnType<typeof getAtomLogger>;
+}) => {
+	const registry = createHandlerRegistry();
+	registry.register(SUBJECT_PUSH);
+	registry.register(CATALOG_PUSH);
+	return createReplication({
+		ctx: {
+			tokenHash: env.ATOM_TOKEN_HASH,
+			port: env.ATOM_PORT,
+			registry,
+			counters,
+			logger,
+		},
+	});
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */
