@@ -11,6 +11,8 @@ const HOLD_MS = 5 * 60_000;
 /** Copies waiting across all peers; past this the oldest is dropped, counted, so memory stays bounded under a long outage. */
 const MAX_WAITING = 20_000;
 const RETRY_DELAY_MS = 1_000;
+/** On stop: how long the copies still waiting get to reach their peers before they are dropped. */
+const STOP_FLUSH_MS = 5_000;
 
 export type PeerOutbox = {
 	/** Queues the operation for every peer known now. */
@@ -18,7 +20,8 @@ export type PeerOutbox = {
 		operation: ReplicatedOperation;
 		path: string;
 	}): Promise<void>;
-	stop(): void;
+	/** Takes nothing more; resolves once what was waiting is delivered or the flush window passes, dropping the rest. */
+	stop(): Promise<void>;
 };
 
 type OutboxContext = {
@@ -43,7 +46,9 @@ export const createPeerOutbox = ({
 	const queues = new Map<string, Map<string, Waiting>>();
 	const workers = new Map<string, number>();
 	let waiting = 0;
+	let inFlight = 0;
 	let stopped = false;
+	let onIdle: (() => void) | null = null;
 
 	function queueFor(peer: string): Map<string, Waiting> {
 		let queue = queues.get(peer);
@@ -52,6 +57,10 @@ export const createPeerOutbox = ({
 			queues.set(peer, queue);
 		}
 		return queue;
+	}
+
+	function settleIfIdle(): void {
+		if (waiting === 0 && inFlight === 0) onIdle?.();
 	}
 
 	function drop({ peer, reason }: { peer: string; reason: string }): void {
@@ -82,22 +91,27 @@ export const createPeerOutbox = ({
 
 	async function deliverUntilEmpty(peer: string): Promise<void> {
 		const queue = queueFor(peer);
-		while (!stopped) {
+		for (;;) {
 			const next = queue.entries().next();
 			if (next.done) break;
 			const [key, entry] = next.value;
 			queue.delete(key);
 			waiting -= 1;
-			if (
-				await ctx.send({ peer, path: entry.path, operation: entry.operation })
-			) {
+			inFlight += 1;
+			const delivered = await ctx.send({
+				peer,
+				path: entry.path,
+				operation: entry.operation,
+			});
+			inFlight -= 1;
+			if (delivered) {
 				ctx.counters.add("relayed");
 				continue;
 			}
 			ctx.counters.add("relayFailed");
 			ctx.resolver.forget();
-			if (now() - entry.since > HOLD_MS) {
-				drop({ peer, reason: "peer_unreachable" });
+			if (stopped || now() - entry.since > HOLD_MS) {
+				drop({ peer, reason: stopped ? "stopping" : "peer_unreachable" });
 				continue;
 			}
 			// Back at the front with its original age; a newer copy that arrived meanwhile wins over it.
@@ -113,6 +127,7 @@ export const createPeerOutbox = ({
 			}
 		}
 		workers.set(peer, (workers.get(peer) ?? 1) - 1);
+		settleIfIdle();
 	}
 
 	function queueOn({
@@ -148,10 +163,22 @@ export const createPeerOutbox = ({
 			queueOn({ peer, operation, path });
 	}
 
-	return {
-		enqueue,
-		stop: () => {
-			stopped = true;
-		},
-	};
+	/** What is still waiting gets one flush window; a peer that is down by then loses those copies to its own catch-up. */
+	async function stop(): Promise<void> {
+		stopped = true;
+		if (waiting === 0 && inFlight === 0) return;
+		await Promise.race([
+			new Promise<void>((resolve) => {
+				onIdle = resolve;
+			}),
+			sleep(STOP_FLUSH_MS),
+		]);
+		onIdle = null;
+		for (const [peer, queue] of queues)
+			for (let i = 0; i < queue.size; i++) drop({ peer, reason: "stopping" });
+		queues.clear();
+		waiting = 0;
+	}
+
+	return { enqueue, stop };
 };

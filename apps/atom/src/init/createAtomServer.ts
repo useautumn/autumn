@@ -87,8 +87,9 @@ export const createAtomServer = ({
 	/** In-flight requests and leased pushes finish before the files close. */
 	async function stop(): Promise<void> {
 		pushReceiver?.stop();
-		ctx.replication?.stop();
 		await Promise.all([listener?.stop(), receiving]);
+		// After the last push applied here: what it relays must still reach the peers before the files close.
+		await ctx.replication?.stop();
 		statsTick.stop();
 		secretKeys?.stop();
 		ctx.auth.close();

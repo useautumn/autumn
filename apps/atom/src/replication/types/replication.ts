@@ -6,5 +6,6 @@ export type Replication = {
 	replicate(operation: ReplicatedOperation): void;
 	/** The other replicas' addresses as the deployment's service name resolves them now. */
 	peers(): Promise<string[]>;
-	stop(): void;
+	/** Takes nothing more; resolves once what was waiting reached the peers, or the flush window passed. */
+	stop(): Promise<void>;
 };

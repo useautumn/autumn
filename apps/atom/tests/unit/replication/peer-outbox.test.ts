@@ -11,7 +11,8 @@ const outboxOf = ({
 	answers = {},
 }: {
 	peers: string[];
-	answers?: Record<string, boolean[]>;
+	/** Per peer: the answer to each delivery in turn, `true` once the list runs out; `false` alone is a peer that is down. */
+	answers?: Record<string, boolean[] | false>;
 }) => {
 	const delivered: Delivery[] = [];
 	const counts: Record<string, number> = {};
@@ -29,7 +30,9 @@ const outboxOf = ({
 			resolver,
 			send: async (delivery) => {
 				delivered.push(delivery);
-				return answers[delivery.peer]?.shift() ?? true;
+				const scripted = answers[delivery.peer];
+				if (scripted === false) return false;
+				return scripted?.shift() ?? true;
 			},
 			counters: {
 				add: (field, by = 1) => {
@@ -37,7 +40,11 @@ const outboxOf = ({
 				},
 			},
 			logger: { warn: () => {} },
-			sleep: async () => {},
+			// Retries wait nothing; the flush window on stop is kept, shortened, so a stop still waits for deliveries.
+			sleep: (ms) =>
+				ms >= 5_000
+					? new Promise((resolve) => setTimeout(resolve, 100))
+					: Promise.resolve(),
 			now: () => now,
 		},
 	});
@@ -184,9 +191,29 @@ describe("what a thread applied, on its way to the other replicas", () => {
 		expect(counts).toEqual({ relayFailed: 1 });
 	});
 
+	test("stop waits for what is already waiting to reach the peers, then drops what a down peer never took", async () => {
+		const { outbox, delivered, counts } = outboxOf({
+			peers: ["10.0.0.2", "10.0.0.3"],
+			answers: { "10.0.0.3": false },
+		});
+		for (let i = 0; i < 6; i++)
+			await outbox.enqueue({
+				operation: push({ key: `cus_${i}` }),
+				path: "/v1/subjects.set",
+			});
+
+		await outbox.stop();
+
+		expect(delivered.filter(({ peer }) => peer === "10.0.0.2").length).toBe(6);
+		expect(counts.relayed).toBe(6);
+		// Once stopping, a failed delivery is not retried: the down peer's six copies are dropped, and counted.
+		expect(counts.relayFailed).toBeGreaterThanOrEqual(6);
+		expect(counts.relayDropped).toBe(6);
+	});
+
 	test("after stop nothing more is queued or sent", async () => {
 		const { outbox, delivered } = outboxOf({ peers: ["10.0.0.2"] });
-		outbox.stop();
+		await outbox.stop();
 
 		await outbox.enqueue({
 			operation: push({ key: "cus_1" }),
