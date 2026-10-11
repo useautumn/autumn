@@ -8,6 +8,7 @@ import { AlienDeploymentSchema } from "../deployments/deploymentSchemas.js";
 import { fixedPoolsToCompute } from "../deployments/fixedPoolsToCompute.js";
 import type { AlienApi } from "../types/alienApi.js";
 import type {
+	AlienContainerResources,
 	AlienEnvironmentVariable,
 	AlienFixedPools,
 	AlienNetwork,
@@ -60,6 +61,7 @@ const startHostedSetup = async ({
 	region,
 	environmentVariables,
 	pools,
+	containers,
 	network,
 }: {
 	api: AlienApi;
@@ -69,6 +71,7 @@ const startHostedSetup = async ({
 	region: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
+	containers: AlienContainerResources;
 	network: AlienNetwork | null;
 }): Promise<AlienSetup> => {
 	const existingGroup = await findDeploymentGroupByExternalId({
@@ -103,7 +106,7 @@ const startHostedSetup = async ({
 						allowedSetupMethods: ["cloudformation"],
 						stackSettings: {
 							defaults: {
-								compute: fixedPoolsToCompute({ pools }),
+								compute: { ...fixedPoolsToCompute({ pools }), containers },
 								...(network && { network }),
 							},
 						},
@@ -128,12 +131,13 @@ const startHostedSetup = async ({
 			token: setup.token,
 			managingRoleArn,
 			pools,
+			containers,
 			network,
 		}),
 	};
 };
 
-/** The local manager runs no machines or networks, so only a hosted setup takes `region`, `pools` and `network`. */
+/** The local manager runs no machines or networks, so only a hosted setup takes `region`, `pools`, `containers` and `network`. */
 export const startSetup = ({
 	ctx,
 	externalId,
@@ -141,6 +145,7 @@ export const startSetup = ({
 	region,
 	environmentVariables,
 	pools,
+	containers,
 	network,
 }: {
 	ctx: { api: AlienApi };
@@ -149,6 +154,7 @@ export const startSetup = ({
 	region: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
+	containers: AlienContainerResources;
 	network: AlienNetwork | null;
 }): Promise<AlienSetup> => {
 	const { api } = ctx;
@@ -163,6 +169,7 @@ export const startSetup = ({
 		region,
 		environmentVariables,
 		pools,
+		containers,
 		network,
 	});
 };

@@ -25,7 +25,7 @@ const runningDeployment: AlienDeployment = {
 		},
 	},
 	stackSettings: {
-		compute: { pools: { stateful: { machine: "t4g.micro" } } },
+		compute: { pools: { stateful: { machine: "c7g.large" } } },
 	},
 };
 
@@ -164,6 +164,7 @@ test("staff start the shadow Atom multi-tenant on the customer's alien stack, un
 	expect(started?.pools).toEqual({
 		stateful: { machine: "c7g.xlarge", machines: 1 },
 	});
+	expect(started?.containers).toEqual({ atom: { cpu: 3, memory: "6Gi" } });
 	const variables = Object.fromEntries(
 		(started?.environmentVariables ?? []).map(({ name, value }) => [
 			name,
@@ -228,7 +229,7 @@ test("a running deployment reads as an org's ready Atom, and its endpoint lands 
 		deployment_id: "dep_1",
 		endpoint_url: ENDPOINT,
 		cpu: 2,
-		memory: 1,
+		memory: 4,
 		stages: { stack: "done", atom: "done", connected: "running" },
 	});
 	expect(stored.endpointUrl).toBe(ENDPOINT);
@@ -361,7 +362,7 @@ test("an org's own key cannot touch the shadow Atom", async () => {
 	];
 	const responses = await Promise.all(
 		routes.map((route) =>
-			call({ route, scopes, body: { cpu: 2, memory: 1, range: "1h" } }),
+			call({ route, scopes, body: { cpu: 2, memory: 4, range: "1h" } }),
 		),
 	);
 
@@ -375,7 +376,7 @@ test("a server with no alien manager answers 503", async () => {
 
 	const response = await call({
 		route: "create_atom",
-		body: { cpu: 2, memory: 1 },
+		body: { cpu: 2, memory: 4 },
 	});
 
 	expect(response.status).toBe(503);

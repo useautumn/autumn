@@ -8,6 +8,7 @@ import {
 	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	findByocCacheMachineByInstanceType,
 	type Organization,
 } from "@autumn/shared";
 import { createAlienAtomDeployer } from "@/internal/byoc/deployers/createAlienAtomDeployer.js";
@@ -77,9 +78,51 @@ describe("starting an Atom on alien", () => {
 		});
 
 		expect(started[0]?.pools).toEqual({
-			stateful: { machine: "t4g.micro", machines: 1 },
+			stateful: { machine: "c7g.xlarge", machines: 1 },
 		});
 	});
+
+	test("with no size named, the Atom container keeps the 3 vCPU / 6Gi it always had", async () => {
+		const { alienClient, started } = recordingAlienClient();
+		const deployer = createAlienAtomDeployer({ alienClient });
+
+		await deployer.start({
+			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			auth: { mode: "deployed", tokenHash: "hash_1" },
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+		});
+
+		expect(started[0]?.containers).toEqual({
+			atom: { cpu: 3, memory: "6Gi" },
+		});
+	});
+
+	test.each([
+		["c7g.large", { cpu: 1, memory: "2.75Gi" }],
+		["c7g.xlarge", { cpu: 3, memory: "6Gi" }],
+		["c7g.2xlarge", { cpu: 7, memory: "12Gi" }],
+	])(
+		"a %s size pins its machine and sizes the Atom container to fit it",
+		async (instanceType, container) => {
+			const { alienClient, started } = recordingAlienClient();
+			const deployer = createAlienAtomDeployer({ alienClient });
+			const machine = findByocCacheMachineByInstanceType({ instanceType });
+			if (!machine) throw new Error(`No size runs on ${instanceType}`);
+
+			await deployer.start({
+				names: cacheNames({ org, env: AppEnv.Sandbox }),
+				auth: { mode: "deployed", tokenHash: "hash_1" },
+				machine,
+				region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			});
+
+			expect(started[0]?.pools).toEqual({
+				stateful: { machine: instanceType, machines: 1 },
+			});
+			expect(started[0]?.containers).toEqual({ atom: container });
+		},
+	);
 
 	test("the setup opens in the chosen region", async () => {
 		const { alienClient, started } = recordingAlienClient();
