@@ -2,14 +2,10 @@ diff --git a/src/lib/config.ts b/src/lib/config.ts
 index 0cb4907ac7..5737ead9e5 100644
 --- a/src/lib/config.ts
 +++ b/src/lib/config.ts
-@@ -39,6 +39,10 @@ export type SDKOptions = {
-    * Allows overriding the default server URL used by the SDK
-    */
+@@ -41,2 +41,6 @@ export type SDKOptions = {
    serverURL?: string | undefined;
 +  /**
 +   * The Atom that `autumn.atom` calls ask first; unset, they go straight to the Autumn API
 +   */
 +  atomURL?: string | undefined;
    /**
-    * Allows overriding the default user agent used by the SDK
-    */

@@ -1,13 +1,10 @@
 diff --git a/src/sdk/sdk.ts b/src/sdk/sdk.ts
-index 06f34af5e2..32fa2771de 100644
+index 06f34af5e2..0a583d658f 100644
 --- a/src/sdk/sdk.ts
 +++ b/src/sdk/sdk.ts
-@@ -26,7 +26,17 @@ import { Rewards } from "./rewards.js";
- import { Sandboxes } from "./sandboxes.js";
- import { Webhooks } from "./webhooks.js";
+@@ -28,3 +28,12 @@ import { Webhooks } from "./webhooks.js";
  
 +import { Atom } from "../hooks/atom/atom.js";
-+
  export class Autumn extends ClientSDK {
 +  private _atom?: Atom;
 +  /**
@@ -18,5 +15,3 @@ index 06f34af5e2..32fa2771de 100644
 +  }
 +
    private _customers?: Customers;
-   get customers(): Customers {
-     return (this._customers ??= new Customers(this._options));

@@ -1,3 +1,4 @@
+import { assertTsSdkPatches } from "./assertTsSdkPatches.js";
 import { execAsyncQuiet } from "./exec.js";
 import { patchPySdkHooks } from "./patchPySdkHooks.js";
 import { patchPythonSdkGlobalDefaults } from "./patchPythonSdk.js";
@@ -19,6 +20,7 @@ async function generateTypeScriptSdkQuiet({
 	});
 
 	patchTsSdkHooks({ speakeasySdkDir });
+	assertTsSdkPatches({ speakeasySdkDir });
 
 	await execAsyncQuiet({
 		command: "bun",
