@@ -71,6 +71,7 @@ export function createPartitionProcessor({
 			stateStore: dependencies.stateStore,
 			appender: dependencies.appender,
 			subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
+			dbControl: dependencies.dbControl,
 			receiptPolicy: dependencies.receiptPolicy,
 			recentCommands: dependencies.recentCommands,
 			commitPositions: dependencies.commitPositions,

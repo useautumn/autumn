@@ -42,13 +42,9 @@ export const DbControlConfigForm = ({
 		},
 	});
 	const form = useAppForm({
-		defaultValues: {
-			concurrency: config.balanceCommitter.concurrency as number | null,
-		},
+		defaultValues: config.balanceCommitter,
 		onSubmit: async ({ value }) => {
-			await mutation.mutateAsync({
-				balanceCommitter: { concurrency: value.concurrency },
-			});
+			await mutation.mutateAsync({ balanceCommitter: value });
 		},
 	});
 	const isDirty = useStore(form.store, (state) => state.isDirty);
@@ -63,6 +59,17 @@ export const DbControlConfigForm = ({
 							description="Flushes in flight per balance worker. Leave blank to use the worker's pool size; a value above the pool size is clamped to it."
 							min={DB_CONTROL_LIMITS.concurrency.min}
 							max={DB_CONTROL_LIMITS.concurrency.max}
+							inputClassName="tabular-nums"
+						/>
+					)}
+				</form.AppField>
+				<form.AppField name="applyLingerMs">
+					{(field) => (
+						<field.NumberField
+							label="Apply linger (ms)"
+							description="How long committed batches gather before one Postgres flush. 0 flushes each batch at once; leave blank to use the worker's boot value."
+							min={DB_CONTROL_LIMITS.applyLingerMs.min}
+							max={DB_CONTROL_LIMITS.applyLingerMs.max}
 							inputClassName="tabular-nums"
 						/>
 					)}

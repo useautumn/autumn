@@ -1,5 +1,6 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type {
+	DbControlEdgeConfig,
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
@@ -75,6 +76,7 @@ export type PartitionRuntimeFactoryContext = {
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
 	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
 	partitionLoad?: PartitionLoad;
 	/** The task's commit positions; each partition's writer publishes to its own cell. */

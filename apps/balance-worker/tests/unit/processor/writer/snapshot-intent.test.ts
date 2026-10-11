@@ -200,7 +200,7 @@ describe("the writer's snapshot intent", () => {
 		expect(balanceOf(intents[1])).toEqual([98]);
 	});
 
-	test("a record appended while off and stored after the flip to write is deleted, not written: its subject was evictable in between", async () => {
+	test("a record appended while off and stored after the flip to write is written: its subject stayed pinned in between", async () => {
 		const { intents, applyGate, track, readWhole, setMode } = createWriter({
 			mode: "off",
 		});
@@ -215,7 +215,7 @@ describe("the writer's snapshot intent", () => {
 		held.resolve();
 		await tracked.waitForStore();
 
-		expect(intents.map(balanceOf)).toEqual([undefined, "delete"]);
+		expect(intents.map(balanceOf)).toEqual([undefined, [98]]);
 	});
 
 	test("a subject read whole: its record's flush may write the rows it leaves, aged by that read", async () => {
@@ -302,7 +302,7 @@ describe("the writer's snapshot intent", () => {
 		expect(entry.baselineAt).toBe(2_000);
 	});
 
-	test("an evict waits for the pins: a record decided on the rows meanwhile still writes them, the rows drop once it is stored, a new read whole writes again", async () => {
+	test("an evict hides the rows at once: the flush already under way still writes them, the DELETE follows, a new read whole writes again", async () => {
 		const { writer, intents, applyGate, track, readWhole } = createWriter();
 		readWhole();
 		const held = Promise.withResolvers<void>();
@@ -310,26 +310,21 @@ describe("the writer's snapshot intent", () => {
 		const before = track("t1");
 		await before.waitForCommit();
 		const evicted = writer.evict({ customerKey });
-		const meanwhile = track("t2");
-		await meanwhile.waitForCommit();
-		// Still resident: t2 read these rows, so they stay until its flush is stored.
-		expect(writer.readFreshestState({ identity })).not.toBeNull();
+		expect(writer.readFreshestState({ identity })).toBeNull();
 		held.resolve();
 		await before.waitForStore();
-		await meanwhile.waitForStore();
 		await evicted;
+		// t1's flush took its intent before the evict; the evict's DELETE follows it on the lane.
 		expect(balanceOf(intents[0])).toEqual([99]);
-		expect(balanceOf(intents[1])).toEqual([98]);
-		expect(writer.readFreshestState({ identity })).toBeNull();
 
 		readWhole({ balance: 50, baselineAt: 2 });
 		await track("t3").waitForStore();
-		const entry = intents[2]?.get(customerKey);
+		const entry = intents[1]?.get(customerKey);
 		if (!entry || entry === "delete") throw new Error("expected states");
 		expect(entry.baselineAt).toBe(2);
 	});
 
-	test("a record the store refused evicts the rows: a record decided on them meanwhile still writes, the drop follows its store, the next read whole writes", async () => {
+	test("a record the store refused evicts the rows: a record decided on them before the refusal deletes rather than writes, the next read whole writes", async () => {
 		const { writer, intents, applyGate, track, readWhole, rejectCommand } =
 			createWriter();
 		readWhole();
@@ -342,8 +337,8 @@ describe("the writer's snapshot intent", () => {
 		held.resolve();
 		await meanwhile.waitForStore();
 
-		// Written from memory the refusal invalidated; the evict's DELETE follows it on the lane.
-		expect(balanceOf(intents[1])).toEqual([98]);
+		// Memory the refusal invalidated is never written as a row.
+		expect(balanceOf(intents[1])).toBe("delete");
 		expect(writer.readFreshestState({ identity })).toBeNull();
 		readWhole({ balance: 100, baselineAt: 3 });
 		await track("t3").waitForStore();
