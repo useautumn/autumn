@@ -10,15 +10,19 @@ import {
 	atomTokenToHash,
 	generateAtomToken,
 } from "@/internal/byoc/utils/atomTokenUtils.js";
-import { shadowAtomCacheNames } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
+import { getShadowAtomDeployer } from "../getShadowAtomDeployer.js";
 import { shadowAtomConfigStore } from "../shadowAtomConfigStore.js";
 import { shadowAtomContext } from "../shadowAtomContext.js";
+import {
+	nextShadowAtomNames,
+	shadowAtomRecordNames,
+} from "../shadowAtomNames.js";
 import { shadowAtomRecordToApiCache } from "../shadowAtomRecordToApiCache.js";
 import {
 	awaitingShadowAtomRecord,
-	shadowAtomRecordToConfig,
-	shadowAtomStorage,
+	findShadowAtomRecords,
+	shadowAtomRecordToCurrentConfig,
 } from "../shadowAtomStorage.js";
 import { startShadowAtomWatch } from "../startShadowAtomWatch.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
@@ -27,7 +31,7 @@ import { patchShadowAtomConfig } from "./patchShadowAtomConfig.js";
 /** The admin token never leaves the server, so a start hands back only the setup link. */
 type StartShadowAtomResponse = Omit<CreateByocCacheResponse, "token">;
 
-/** Starts our shadow Atom multi-tenant under a new admin token, or hands back a fresh setup link while it still waits; one past setup is returned as is. */
+/** Starts a shadow Atom multi-tenant under a new admin token, or hands back a fresh setup link while it still waits; one past setup is returned as is. */
 export const startShadowAtom = ({
 	ctx,
 	machine,
@@ -44,7 +48,7 @@ const startShadowAtomSetup = async ({
 	ctx: AutumnContext;
 	machine: ByocCacheMachine;
 }): Promise<StartShadowAtomResponse> => {
-	const existing = await shadowAtomStorage.find();
+	const { current: existing, previous } = await findShadowAtomRecords();
 	const isAwaitingSetup = existing?.status === ByocCacheStatus.AwaitingSetup;
 	if (existing && !isAwaitingSetup)
 		return {
@@ -52,15 +56,20 @@ const startShadowAtomSetup = async ({
 			setup_url: null,
 		};
 
-	// A setup that is still waiting keeps its admin token, so a fresh link starts the same Atom.
+	// A setup that is still waiting keeps its admin token and names, so a fresh link starts the same Atom.
 	const { adminEncryptedToken } = await shadowAtomConfigStore.readFromSource();
 	const adminToken =
 		existing && adminEncryptedToken
 			? decryptData(adminEncryptedToken)
 			: generateAtomToken();
-	const atomCtx = shadowAtomContext();
-	const setup = await atomCtx.deployer.start({
-		names: shadowAtomCacheNames(),
+	const names = existing
+		? {
+				...shadowAtomRecordNames({ record: existing }),
+				atomId: existing.atom_id,
+			}
+		: nextShadowAtomNames({ previous });
+	const setup = await getShadowAtomDeployer().start({
+		names: { externalId: names.externalId, label: names.label },
 		auth: {
 			mode: "multi_tenant",
 			tokenHash: atomTokenToHash({ token: adminToken }),
@@ -77,18 +86,25 @@ const startShadowAtomSetup = async ({
 			}
 		: awaitingShadowAtomRecord({
 				deploymentGroupId: setup.deploymentGroupId,
+				atomId: names.atomId,
+				stackName: names.label,
 				machine,
 				region: DEFAULT_BYOC_CACHE_AWS_REGION,
 			});
 	await patchShadowAtomConfig({
 		patch: {
 			adminEncryptedToken: encryptData(adminToken),
-			...shadowAtomRecordToConfig({ record: started }),
+			...shadowAtomRecordToCurrentConfig({ record: started }),
 		},
 	});
 
 	const record =
-		(await refreshAtomRecord({ ctx: atomCtx, record: started })) ?? started;
+		(await refreshAtomRecord({
+			ctx: shadowAtomContext({
+				deploymentGroupId: started.deployment_group_id,
+			}),
+			record: started,
+		})) ?? started;
 	await startShadowAtomWatch({
 		ctx,
 		deploymentGroupId: record.deployment_group_id,

@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, expect, spyOn, test } from "bun:test";
 import type { AlienClient, AlienDeployment } from "@autumn/alien";
 import { type ShadowAtomConfig, shadowAtomConfig } from "@autumn/edge-config";
-import { RecaseError, Scopes } from "@autumn/shared";
+import { ByocCacheStatus, RecaseError, Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod/v4";
 import * as alienClientModule from "@/external/alien/getAlienClient.js";
@@ -9,9 +9,14 @@ import * as lockModule from "@/external/redis/utils/lockUtils/withLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import * as atomMetricsModule from "@/internal/byoc/actions/telemetry/atomLogs/queryAtomMetrics.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
+import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
 import { shadowAtomConfigStore } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { shadowAtomRpcRouter } from "@/internal/misc/shadowAtom/shadowAtomRouter.js";
 import { shadowAtomStorage } from "@/internal/misc/shadowAtom/shadowAtomStorage.js";
+
+const SHADOW_EXTERNAL_ID = /^autumn-internal-shadow-atom\.atom_[0-9a-f]{24}$/;
+const SHADOW_STACK_NAME = /^atom-shadow-[0-9a-f]{6}$/;
+
 import { decryptData } from "@/utils/encryptUtils.js";
 
 const ENDPOINT = "https://shadow-atom.example.com";
@@ -36,15 +41,23 @@ const calls = {
 	found: [] as Parameters<AlienClient["findDeployment"]>[0][],
 };
 let deployment: AlienDeployment | null = null;
+/** A group's own deployment where a test sets one; any other group finds `deployment`. */
+let deploymentsByGroup: Record<string, AlienDeployment | null> = {};
+let setupCount = 0;
 
 const alienClient: AlienClient = {
 	startSetup: async (params) => {
 		calls.started.push(params);
-		return { deploymentGroupId: "dg_1", setupUrl: "https://setup.example" };
+		return {
+			deploymentGroupId: `dg_${++setupCount}`,
+			setupUrl: "https://setup.example",
+		};
 	},
 	findDeployment: async (params) => {
 		calls.found.push(params);
-		return deployment;
+		return Object.hasOwn(deploymentsByGroup, params.deploymentGroupId)
+			? deploymentsByGroup[params.deploymentGroupId]
+			: deployment;
 	},
 	getDeployment: async () => deployment,
 	retryDeployment: async () => {},
@@ -89,6 +102,8 @@ const metrics = spyOn(atomMetricsModule, "queryAtomMetrics").mockResolvedValue({
 beforeEach(() => {
 	stored = shadowAtomConfig.defaultValue();
 	deployment = null;
+	deploymentsByGroup = {};
+	setupCount = 0;
 	getAlien.mockReturnValue(alienClient);
 	for (const list of Object.values(calls)) list.length = 0;
 	write.mockClear();
@@ -160,7 +175,9 @@ test("staff start the shadow Atom multi-tenant on the customer's alien stack, un
 	});
 	expect(body.token).toBeUndefined();
 	const [started] = calls.started;
-	expect(started?.externalId).toEndWith("autumn-internal-shadow-atom");
+	expect(started?.externalId).toMatch(SHADOW_EXTERNAL_ID);
+	expect(started?.label).toMatch(SHADOW_STACK_NAME);
+	expect(body.stack_name).toBe(started?.label);
 	expect(started?.pools).toEqual({
 		stateful: { machine: "c7g.xlarge", machines: 1 },
 	});
@@ -177,6 +194,7 @@ test("staff start the shadow Atom multi-tenant on the customer's alien stack, un
 		ATOM_TOKEN_HASH: atomTokenToHash({ token: adminToken }),
 	});
 	expect(stored.deploymentGroupId).toBe("dg_1");
+	expect(stored.externalId).toBe(started?.externalId ?? "");
 	expect(stored.deployment).toMatchObject({ status: "awaiting_setup" });
 });
 
@@ -308,24 +326,113 @@ test("delete forgets the registered orgs at once and keeps the Atom under removi
 	expect(stored).toMatchObject({
 		deploymentGroupId: null,
 		endpointUrl: null,
+		externalId: null,
 		deployment: null,
+		previous: [],
 	});
+});
+
+test("a new shadow Atom made while the deleted one comes down gets its own names and group, and the old one shows under removing", async () => {
+	await startedConfig();
+	deployment = runningDeployment;
+	await getAtom();
+	await call({ route: "delete_atom" });
+	const [first] = (await getAtom()).removing;
+
+	deploymentsByGroup.dg_2 = null;
+	const response = await call({
+		route: "create_atom",
+		body: { cpu: 8, memory: 16 },
+	});
+
+	expect(response.status).toBe(200);
+	const [started] = calls.started;
+	expect(started?.externalId).toMatch(SHADOW_EXTERNAL_ID);
+	expect(started?.label).toMatch(SHADOW_STACK_NAME);
+	expect(started?.label).not.toBe(first.stack_name);
+	expect(started?.containers).toEqual({ atom: { cpu: 7, memory: "12Gi" } });
+	expect(stored).toMatchObject({
+		deploymentGroupId: "dg_2",
+		externalId: started?.externalId,
+		endpointUrl: null,
+	});
+	const atom = await getAtom();
+	expect(atom.cache).toMatchObject({
+		status: "awaiting_setup",
+		stack_name: started?.label,
+	});
+	expect(atom.removing).toMatchObject([
+		{ id: first.id, stack_name: first.stack_name, status: "removing" },
+	]);
+	expect(atom.cache.id).not.toBe(first.id);
+});
+
+test("a shadow Atom from before Atom ids keeps its fixed names, steps aside on delete, and the next one is named apart", async () => {
+	stored = configWith({
+		deploymentGroupId: "dg_legacy",
+		endpointUrl: ENDPOINT,
+		deployment: {
+			deployment_id: "dep_1",
+			status: "ready",
+			cpu: 4,
+			memory: 8,
+			region: "us-east-1",
+			stages: toCacheStages({ doneStages: [], status: ByocCacheStatus.Ready }),
+			error: null,
+			created_at: 1,
+		},
+	});
+	deployment = runningDeployment;
+	expect((await getAtom()).cache).toMatchObject({
+		id: "autumn-internal-shadow-atom",
+		stack_name: "autumn-internal-shadow-atom",
+	});
+
+	await call({ route: "delete_atom" });
+	expect((await getAtom()).removing).toMatchObject([
+		{ id: "autumn-internal-shadow-atom", status: "removing" },
+	]);
+
+	await call({ route: "create_atom", body: { cpu: 4, memory: 8 } });
+	expect(calls.started[0]?.externalId).toMatch(SHADOW_EXTERNAL_ID);
+	expect(stored.previous).toMatchObject([{ deploymentGroupId: "dg_legacy" }]);
+});
+
+test("delete with an earlier Atom's id retries that Atom's removal and leaves the current one be", async () => {
+	await startedConfig();
+	deployment = runningDeployment;
+	await getAtom();
+	await call({ route: "delete_atom" });
+	const [first] = (await getAtom()).removing;
+	deploymentsByGroup.dg_2 = null;
+	await call({ route: "create_atom", body: { cpu: 4, memory: 8 } });
+	calls.deleted.length = 0;
+
+	await call({ route: "delete_atom", body: { atom_id: first.id } });
+
+	expect(calls.deleted).toHaveLength(1);
+	expect(stored.deploymentGroupId).toBe("dg_2");
+	expect((await getAtom()).cache).toMatchObject({ status: "awaiting_setup" });
 });
 
 test("a refresh that read the Atom before a delete never undoes the removal", async () => {
 	await startedConfig();
 	deployment = runningDeployment;
 	await getAtom();
-	const readBeforeDelete = await shadowAtomStorage.find();
+	const storage = shadowAtomStorage({ deploymentGroupId: "dg_1" });
+	const readBeforeDelete = await storage.find();
 	if (!readBeforeDelete) throw new Error("expected a record");
 
 	await call({ route: "delete_atom" });
-	await shadowAtomStorage.update({
+	await storage.update({
 		from: readBeforeDelete,
 		to: { ...readBeforeDelete, error: "stale" },
 	});
 
-	expect(stored.deployment).toMatchObject({ status: "removing", error: null });
+	expect(stored.previous[0]?.deployment).toMatchObject({
+		status: "removing",
+		error: null,
+	});
 });
 
 test("a setup nobody ran is forgotten as soon as it is deleted", async () => {
@@ -334,6 +441,7 @@ test("a setup nobody ran is forgotten as soon as it is deleted", async () => {
 	await call({ route: "delete_atom" });
 
 	expect(stored.deploymentGroupId).toBeNull();
+	expect(stored.previous).toEqual([]);
 });
 
 test("monitoring reads the same Atom metrics, by the shadow's deployment id", async () => {

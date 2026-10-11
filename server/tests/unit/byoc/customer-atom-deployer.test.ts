@@ -6,7 +6,7 @@ import {
 	DEFAULT_BYOC_CACHE_MACHINE,
 	type Organization,
 } from "@autumn/shared";
-import { cacheNames } from "@/internal/byoc/utils/byocCacheUtils.js";
+import { atomNames, cacheOwner } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 const previous = {
@@ -75,9 +75,11 @@ test("off a dev stack the customer path resolves alien, even beside a multi-tena
 	);
 
 	await getAtomDeployer().start({
-		names: cacheNames({
-			org: { id: "org_1", slug: "acme" } as Organization,
-			env: AppEnv.Sandbox,
+		names: atomNames({
+			owner: cacheOwner({
+				org: { id: "org_1", slug: "acme" } as Organization,
+				env: AppEnv.Sandbox,
+			}),
 		}),
 		auth: { mode: "deployed", tokenHash: "a".repeat(64) },
 		machine: DEFAULT_BYOC_CACHE_MACHINE,

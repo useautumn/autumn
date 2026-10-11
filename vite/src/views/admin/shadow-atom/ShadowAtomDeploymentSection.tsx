@@ -7,9 +7,8 @@ import { getBackendErr } from "@/utils/genUtils";
 import { ATOM_DELETE_PROMPTS } from "@/views/settings/sections/components/atom/AtomDeleteDialog";
 import { AtomDeploySection } from "@/views/settings/sections/components/atom/AtomDeploySection";
 import { AtomMachineSection } from "@/views/settings/sections/components/atom/AtomMachineSection";
-import { AtomRemoval } from "@/views/settings/sections/components/atom/AtomRemoval";
+import { AtomRemovalSheet } from "@/views/settings/sections/components/atom/AtomRemovalSheet";
 import { AtomSteadyState } from "@/views/settings/sections/components/atom/AtomSteadyState";
-import { ATOM_PAGE_CARD_HANG_CLASS } from "@/views/settings/sections/components/atom/atomCardLayout";
 import {
 	hasAtomStack,
 	isAtomConnected,
@@ -29,10 +28,9 @@ const SHADOW_ATOM_API = {
 const showError = (fallback: string) => (error: unknown) =>
 	toast.error(getBackendErr(error, fallback));
 
-/** The org's Atom components, each where an org's Atom page shows it: deploying, connected, or coming down. */
+/** The org's Atom components, each where an org's Atom page shows it: deploying or connected; earlier ones sit under Previous Atoms. */
 const ShadowAtomDeployment = () => {
-	const { cache, removing, stackName, isLoading, error, refetch } =
-		useAtomQuery();
+	const { cache, stackName, isLoading, error, refetch } = useAtomQuery();
 	const actions = useAtomActions();
 	const { askToDelete, deleteDialog } = useAtomDeleteDialog({
 		hasStack: hasAtomStack(cache),
@@ -41,7 +39,6 @@ const ShadowAtomDeployment = () => {
 		onNoStack: () =>
 			actions.remove.mutate({}, { onError: showError("Failed to cancel") }),
 	});
-	const [removingCache] = removing;
 
 	return (
 		// A failed read must not look like nothing deployed, which offers Create.
@@ -51,13 +48,7 @@ const ShadowAtomDeployment = () => {
 			what="the shadow Atom"
 			onRetry={() => void refetch()}
 		>
-			{removingCache && (
-				<AtomRemoval
-					cache={removingCache}
-					className={ATOM_PAGE_CARD_HANG_CLASS}
-				/>
-			)}
-			{!removingCache && !cache && <ShadowAtomCreate actions={actions} />}
+			{!cache && <ShadowAtomCreate actions={actions} />}
 			{cache && isAtomConnected(cache) && (
 				<div className="flex flex-col gap-10">
 					<AtomSteadyState
@@ -91,13 +82,19 @@ const ShadowAtomDeployment = () => {
 	);
 };
 
+const ShadowAtomRemovals = () => {
+	const { removing } = useAtomQuery();
+	return <AtomRemovalSheet removing={removing} />;
+};
+
 export const ShadowAtomDeploymentSection = () => (
-	<RolloutSection
-		title="Shadow Atom"
-		description="Our own Atom on alien, from the stack a customer's Atom uses, in multi-tenant mode for both envs."
-	>
-		<AtomApiProvider value={SHADOW_ATOM_API}>
+	<AtomApiProvider value={SHADOW_ATOM_API}>
+		<RolloutSection
+			title="Shadow Atom"
+			description="Our own Atom on alien, from the stack a customer's Atom uses, in multi-tenant mode for both envs."
+			actions={<ShadowAtomRemovals />}
+		>
 			<ShadowAtomDeployment />
-		</AtomApiProvider>
-	</RolloutSection>
+		</RolloutSection>
+	</AtomApiProvider>
 );
