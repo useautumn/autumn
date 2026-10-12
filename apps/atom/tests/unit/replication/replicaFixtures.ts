@@ -134,15 +134,18 @@ export type Replica = ReturnType<typeof createReplica>;
  * The deployment network plus, when given, the Autumn API: a request to a replica's address lands on its public
  * app or its peer app by port. Honours the caller's abort signal like a real fetch.
  */
+/** What the network needs of a replica: where it is and the apps that answer on each port. */
+export type Reachable = Pick<Replica, "address" | "app" | "peerApp">;
+
 export const connect = ({
 	replicas,
 	autumn,
 	replyFrom = async (_replica, reply) => reply,
 }: {
-	replicas: Replica[];
+	replicas: Reachable[];
 	autumn?: (request: Request) => Promise<Response>;
 	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
-	replyFrom?: (replica: Replica, reply: Response) => Promise<Response>;
+	replyFrom?: (replica: Reachable, reply: Response) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
 		replicas.map((replica) => [replica.address, replica]),
