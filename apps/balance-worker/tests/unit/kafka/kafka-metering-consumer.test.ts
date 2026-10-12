@@ -2421,3 +2421,68 @@ describe("owner fences", () => {
 		}
 	});
 });
+
+test("a record the writer produced but never applied lands through the next runtime's replay", async () => {
+	const fixture = createStoreFixture();
+	const port = createFakeKafkaConsumer();
+	const consumer = createKafkaMeteringConsumer({
+		consumer: port,
+		partitionOffsets: createFakeKafkaPartitionOffsets({ high: "1" }),
+		stateStore: fixture.store,
+		topic,
+	});
+	const createRuntimeReplays = () => {
+		const recentCommands = createRecentCommands({
+			windowMs: 600_000,
+			now: () => 0,
+		});
+		const producedOffsets = createProducedOffsets();
+		const follower = consumer.createReplay({
+			partition,
+			recentCommands,
+			producedOffsets,
+		});
+		consumer.createReplay({ partition, recentCommands, readOnly: true });
+		return { follower, producedOffsets };
+	};
+	const failed = createRuntimeReplays();
+	try {
+		const state = createState();
+		restoreSubjectStates({
+			store: fixture.store,
+			topic,
+			partition,
+			states: [state],
+		});
+		await consumer.start();
+		await failed.follower.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable: () => {},
+		});
+		const record = serializeMeteringRecord({
+			record: createMutation({ state }),
+		});
+		// The writer produced offset 0, then its apply failed: recovery disposes this runtime.
+		failed.producedOffsets.remember({ from: 0n, to: 0n });
+		await port.deliver({ offset: "0", ...record });
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+		await failed.follower.stop();
+
+		const successor = createRuntimeReplays();
+		await successor.follower.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable: () => {},
+		});
+		await port.deliver({ offset: "0", ...record });
+
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		await successor.follower.stop();
+	} finally {
+		await consumer.stop();
+		closeStoreFixture(fixture);
+	}
+});
