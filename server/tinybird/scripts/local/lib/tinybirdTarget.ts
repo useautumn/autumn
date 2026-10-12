@@ -53,7 +53,7 @@ export const fetchWithRetry = async ({
 		try {
 			const res = await fetch(url, init);
 			if (res.status < 500 && res.status !== 429) return res;
-			lastError = `${res.status} ${await res.text()}`;
+			lastError = `${res.status} ${(await res.text()).replace(/<[^>]*>|\s+/g, " ").trim()}`;
 		} catch (error) {
 			lastError = (error as Error).message;
 		}
