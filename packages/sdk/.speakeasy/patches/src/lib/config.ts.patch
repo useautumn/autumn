@@ -1,11 +1,15 @@
 diff --git a/src/lib/config.ts b/src/lib/config.ts
-index 0cb4907ac7..5737ead9e5 100644
+index 0cb4907ac7..dd19aa2c34 100644
 --- a/src/lib/config.ts
 +++ b/src/lib/config.ts
-@@ -41,2 +41,6 @@ export type SDKOptions = {
+@@ -41,2 +41,10 @@ export type SDKOptions = {
    serverURL?: string | undefined;
 +  /**
-+   * The Atom that `autumn.atom` calls ask first; unset, they go straight to the Autumn API
++   * The edge to ask first for the calls it serves; without one, every call goes to the Autumn API
 +   */
-+  atomURL?: string | undefined;
++  edgeURL?: string | undefined;
++  /**
++   * Send every call the edge serves (e.g. `check`) to `edgeURL` first, falling back to the Autumn API when the edge is down
++   */
++  useEdge?: boolean | undefined;
    /**

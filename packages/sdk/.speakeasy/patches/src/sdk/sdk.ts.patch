@@ -1,17 +1,15 @@
 diff --git a/src/sdk/sdk.ts b/src/sdk/sdk.ts
-index 06f34af5e2..0a583d658f 100644
+index 06f34af5e2..2b2015443d 100644
 --- a/src/sdk/sdk.ts
 +++ b/src/sdk/sdk.ts
-@@ -28,3 +28,12 @@ import { Webhooks } from "./webhooks.js";
- 
-+import { Atom } from "../hooks/atom/atom.js";
+@@ -29,2 +29,10 @@ import { Webhooks } from "./webhooks.js";
  export class Autumn extends ClientSDK {
-+  private _atom?: Atom;
++  private _edge?: Autumn;
 +  /**
-+   * The calls Atom serves, asked of the Atom at `atomURL` while it is up and of the Autumn API when it is down.
++   * This client with `useEdge` on: each call the edge serves is asked of the edge at `edgeURL` first, and of the Autumn API when the edge is down.
 +   */
-+  get atom(): Atom {
-+    return (this._atom ??= new Atom(this._options));
++  get edge(): Autumn {
++    return (this._edge ??= new Autumn({ ...this._options, useEdge: true }));
 +  }
 +
    private _customers?: Customers;

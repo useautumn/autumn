@@ -1,6 +1,5 @@
 import type { SDKOptions } from "../lib/config.js";
 import { HTTPClient } from "../lib/http.js";
-import { isAtomDownReply } from "./atom/atomDown.js";
 import type {
 	AfterErrorContext,
 	AfterErrorHook,
@@ -68,10 +67,6 @@ export class FailOpenHook implements SDKInitHook, AfterErrorHook {
 		}
 
 		if (!response || response.status < 500) {
-			return { response, error };
-		}
-
-		if (isAtomDownReply({ hookCtx, response })) {
 			return { response, error };
 		}
 
