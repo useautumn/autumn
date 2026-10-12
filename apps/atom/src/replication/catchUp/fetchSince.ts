@@ -94,22 +94,21 @@ export class PeerNotReadyError extends Error {
 	override readonly name = "PeerNotReadyError";
 }
 
-type PeerContext = {
+/** A peer asked about one folder: a tenant's on a multi-tenant Atom, null for the one folder of an org's own. */
+type PeerSourceContext = {
 	peer: string;
 	port: number;
 	secret: string;
+	atomId: string | null;
 	fetch?: typeof fetch;
 };
-
-/** A peer asked about one folder: a tenant's on a multi-tenant Atom, null for the one folder of an org's own. */
-type PeerSourceContext = PeerContext & { atomId: string | null };
 
 const postToPeer = async <Reply>({
 	ctx,
 	path,
 	body,
 }: {
-	ctx: PeerContext & { atomId?: string | null };
+	ctx: PeerSourceContext;
 	path: string;
 	body: string;
 }) => {
@@ -121,7 +120,7 @@ const postToPeer = async <Reply>({
 				secret: ctx.secret,
 				method: "POST",
 				path,
-				atomId: ctx.atomId ?? null,
+				atomId: ctx.atomId,
 				body,
 			}),
 			body,
@@ -139,10 +138,10 @@ const postToPeer = async <Reply>({
 export const listPeerAtoms = async ({
 	ctx,
 }: {
-	ctx: PeerContext;
+	ctx: Omit<PeerSourceContext, "atomId">;
 }): Promise<TenantAtom[]> => {
 	const { atoms } = await postToPeer<AtomsListResponse>({
-		ctx,
+		ctx: { ...ctx, atomId: null },
 		path: PEER_ATOMS_LIST_PATH,
 		body: "{}",
 	});
