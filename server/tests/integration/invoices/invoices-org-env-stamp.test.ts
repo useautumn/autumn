@@ -6,6 +6,7 @@
  *   invoices.insert (upsertMany)                     → row has org_id/env
  *   invoices.insert over a legacy unstamped row      → conflict update stamps it
  *   webhook upsert over a legacy unstamped row       → conflict update stamps it
+ *   upsert from a different customer over that row   → stays unstamped (owner fields never disagree)
  *   legacy attach (createInvoiceFromStripe)          → row has org_id/env
  *   RevenueCat (recordRevenueCatInvoice → upsert)    → row has org_id/env
  */
@@ -169,6 +170,57 @@ test.concurrent(
 		expect(await getOrgEnvByStripeId({ stripeId })).toEqual({
 			org_id: ctx.org.id,
 			env: ctx.env,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices org/env: upsert from another customer leaves a legacy row unstamped")}`,
+	async () => {
+		const customerId = "inv-org-env-upsert-owner";
+		const otherCustomerId = "inv-org-env-upsert-other";
+		await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.otherCustomers([{ id: otherCustomerId }]),
+			],
+			actions: [],
+		});
+		const internalCustomerId = await getInternalCustomerId({ customerId });
+		const otherInternalCustomerId = await getInternalCustomerId({
+			customerId: otherCustomerId,
+		});
+		const runTag = Date.now().toString();
+		const stripeId = `in_org_env_upsert_owner_${runTag}`;
+
+		await ctx.db.insert(invoices).values({
+			id: `inv_org_env_upsert_owner_${runTag}`,
+			internal_customer_id: internalCustomerId,
+			stripe_id: stripeId,
+			status: InvoiceStatus.Open,
+			total: 1,
+			currency: "usd",
+		});
+
+		// Same Stripe invoice reported for a customer in another org: the row keeps its owner and no foreign stamp.
+		await InvoiceService.upsert({
+			db: ctx.db,
+			invoice: {
+				id: `inv_org_env_upsert_other_${runTag}`,
+				internal_customer_id: otherInternalCustomerId,
+				org_id: "org_some_other_org",
+				env: ctx.env,
+				stripe_id: stripeId,
+				status: InvoiceStatus.Paid,
+				total: 1,
+				currency: "usd",
+			},
+		});
+
+		expect(await getOrgEnvByStripeId({ stripeId })).toEqual({
+			org_id: null,
+			env: null,
 		});
 	},
 );

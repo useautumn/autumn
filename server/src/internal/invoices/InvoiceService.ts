@@ -523,8 +523,9 @@ export class InvoiceService {
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
 				set: {
-					org_id: sql`COALESCE(${invoices.org_id}, excluded.org_id)`,
-					env: sql`COALESCE(${invoices.env}, excluded.env)`,
+					// Only the row's own customer may fill missing stamps; ownership never moves here.
+					org_id: sql`CASE WHEN ${invoices.internal_customer_id} = excluded.internal_customer_id THEN COALESCE(${invoices.org_id}, excluded.org_id) ELSE ${invoices.org_id} END`,
+					env: sql`CASE WHEN ${invoices.internal_customer_id} = excluded.internal_customer_id THEN COALESCE(${invoices.env}, excluded.env) ELSE ${invoices.env} END`,
 					status: invoice.status,
 					hosted_invoice_url: invoice.hosted_invoice_url,
 					discounts: invoice.discounts,
