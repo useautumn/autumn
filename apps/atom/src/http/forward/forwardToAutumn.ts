@@ -41,6 +41,16 @@ export const forwardToAutumn = async ({
 }): Promise<Response> => {
 	const { pathname, search } = new URL(context.req.url);
 	const target = `${ctx.autumnApiUrl}${pathname}${search}`;
+	// The API can only refuse a keyless request: the server's shadow checks send none, by design.
+	if (!context.req.header("authorization"))
+		return context.json(
+			{
+				message: "Atom forwards nothing without a secret key",
+				code: "atom_not_forwarded",
+			},
+			401,
+			{ [FORWARDED_HEADER]: reason },
+		);
 	try {
 		// The route already read the body; the request keeps it, so it is sent as it arrived.
 		const body = await context.req.text();

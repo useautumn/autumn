@@ -511,7 +511,7 @@ describe("a check Atom does not answer itself", () => {
 		const response = await app.request(
 			"/v1/balances.check",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: { ...withToken(ATOM_TOKEN), authorization: SECRET_KEY },
 				body: { feature_id: "messages" },
 			}),
 		);
@@ -532,6 +532,32 @@ describe("a check Atom does not answer itself", () => {
 		);
 
 		expect(deducting.headers.get("x-atom-forwarded")).toBe("send_event");
+	});
+
+	test("one without a secret key isn't forwarded: the API could only refuse it", async () => {
+		const { app } = createDeployedApp();
+		const fetchSpy = autumnAnswering({ status: 401, body: {} });
+
+		const { authorization: _, ...keyless } = new Headers(
+			checkMessages({ customer_id: "cus_2" }).headers,
+		).toJSON();
+		const response = await app.request(
+			"/v1/balances.check",
+			post({
+				headers: keyless,
+				body: { customer_id: "cus_2", feature_id: "messages" },
+			}),
+		);
+
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(response.status).toBe(401);
+		expect(await response.json()).toEqual({
+			message: "Atom forwards nothing without a secret key",
+			code: "atom_not_forwarded",
+		});
+		expect(response.headers.get("x-atom-forwarded")).toBe(
+			"customer_not_stored",
+		);
 	});
 
 	test("an API that cannot be reached is a 502 in the API's error shape", async () => {
