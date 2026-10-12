@@ -14,6 +14,7 @@ import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js"
 import { createCommandRecordHandler } from "../../kafka/commandConsumer/createCommandRecordHandler.js";
 import { createMeteringConsumer } from "../../kafka/meteringConsumer/createMeteringConsumer.js";
 import { createOwnerEpochCell } from "../../kafka/ownerEpochCell.js";
+import { commitSummaries } from "../../logging/commitSummaries.js";
 import { createPartitions } from "../../partitions/createPartitions.js";
 import type {
 	PartitionChangeListeners,
@@ -100,6 +101,7 @@ export function createWorkerPartitions({
 				commands: { topic: config.commandTopic, handler: commandHandler },
 			}),
 			logger: ctx.logger,
+			summaries: commitSummaries,
 		},
 		config: {
 			topic: config.topic,
