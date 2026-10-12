@@ -2,31 +2,24 @@ import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
-import type { SlotProcessor } from "../processor/types/slotProcessor.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
-import type {
-	AppliedSubject,
-	SubjectCursor,
-	SubjectDigest,
-} from "../state/repos/subjectStates.js";
-import type { SqliteStore } from "../state/types/sqliteStore.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
+import { catalogSince } from "./replica/catalogSince.js";
+import { catchUp } from "./replica/catchUp.js";
+import { digestSince } from "./replica/digestSince.js";
+import { fetchSubjects } from "./replica/fetchSubjects.js";
+import { listSince } from "./replica/listSince.js";
+import { maxAppliedAt } from "./replica/maxAppliedAt.js";
+import type { ReplicaSlotsContext } from "./replica/types/replicaSlotsContext.js";
 import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
-import type {
-	SinceRequest,
-	Slots,
-	SubjectKey,
-	SubjectSource,
-} from "./types/slots.js";
+import type { OpenedSlot } from "./types/openedSlot.js";
+import type { Slots } from "./types/slots.js";
 
 export const CATALOG_FILE = "catalog.sqlite";
-/** Digests or rows asked of a peer per request, and rows fetched per request once their digests say they are newer. */
-const CATCH_UP_PAGE = 500;
-const FETCH_BATCH = 100;
 
 /** The filesystem the folder sits on, as Linux lists it: a volume shows as its device, the container's own disk as overlay. */
 const mountOf = ({ folder }: { folder: string }): string | null => {
@@ -43,9 +36,6 @@ const mountOf = ({ folder }: { folder: string }): string | null => {
 		return null;
 	}
 };
-
-/** A slot this thread owns answers from its own file; any other is answered on the thread that owns it. */
-type OpenedSlot = { sqliteStore: SqliteStore | null; processor: SlotProcessor };
 
 /** Opens a data folder once: this thread's slot files and the one catalog they share stay open. */
 export const openSlots = ({
@@ -143,199 +133,25 @@ export const openSlots = ({
 		return true;
 	}
 
-	async function listSince(params: SinceRequest): Promise<AppliedSubject[]> {
-		const store = slots[params.slot]?.sqliteStore;
-		if (store) return store.listAppliedAfter(params);
-		const owner = owners.ownerOf({ slot: params.slot });
-		return owners.listSinceOn({ thread: owner, atomId, ...params });
-	}
-
-	function ownedStores(): SqliteStore[] {
-		return slots.flatMap(({ sqliteStore }) =>
-			sqliteStore ? [sqliteStore] : [],
-		);
-	}
-
-	async function digestSince(params: SinceRequest): Promise<SubjectDigest[]> {
-		const store = slots[params.slot]?.sqliteStore;
-		if (store) return store.listDigestsAfter(params);
-		const owner = owners.ownerOf({ slot: params.slot });
-		return owners.digestSinceOn({ thread: owner, atomId, ...params });
-	}
-
-	async function fetchSubjects({
-		slot,
-		keys,
-	}: {
-		slot: number;
-		keys: SubjectKey[];
-	}): Promise<AppliedSubject[]> {
-		const store = slots[slot]?.sqliteStore;
-		if (store) return store.readByKey({ keys });
-		const owner = owners.ownerOf({ slot });
-		return owners.fetchSubjectsOn({ thread: owner, atomId, slot, keys });
-	}
-
-	type Version = { readAt: number; logOffset: bigint };
-	const isNewer = (a: Version, b: Version) =>
-		a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
-
-	/** Only what is newer than the row held is written, so a pass over what is already held rewrites nothing. */
-	function writeNewer({
-		store,
-		page,
-	}: {
-		store: SqliteStore;
-		page: AppliedSubject[];
-	}): number {
-		const subjects = page
-			.map(({ subject }) => subject)
-			.filter((subject) => {
-				const { customerId, entityId } = subject.state.identity;
-				const held = store.readVersion({
-					customerId,
-					entityId: entityId ?? null,
-				});
-				return !held || isNewer(subject, held);
-			});
-		if (subjects.length === 0) return 0;
-		return store.setSubjects({ subjects }).filter(Boolean).length;
-	}
-
-	/** Pages until a short one, each page starting past the last row of the one before. */
-	/** Every row the source wrote since `window`, page by page: a fresh volume takes everything. */
-	async function copyRows({
-		store,
-		source,
-		slot,
-		window,
-	}: {
-		store: SqliteStore;
-		source: SubjectSource;
-		slot: number;
-		window: number | null;
-	}) {
-		let written = 0;
-		let after: number | null = null;
-		let cursor: SubjectCursor | null = null;
-		let first = true;
-		for (;;) {
-			const page = await source.since({
-				slot,
-				slotCount,
-				after: first ? null : after,
-				window: first ? window : null,
-				cursor,
-				limit: CATCH_UP_PAGE,
-			});
-			first = false;
-			after = page.after;
-			written += writeNewer({ store, page: page.subjects });
-			const last = page.subjects.at(-1);
-			if (!last || page.subjects.length < CATCH_UP_PAGE) break;
-			cursor = {
-				appliedAt: last.appliedAt,
-				customerId: last.subject.state.identity.customerId,
-				entityId: last.subject.state.identity.entityId ?? "",
-			};
-		}
-		return written;
-	}
-
-	/** The digests of what the source wrote since `window`, then only the rows whose version beats the one held. */
-	async function copyNewerRows({
-		store,
-		source,
-		slot,
-		window,
-	}: {
-		store: SqliteStore;
-		source: SubjectSource;
-		slot: number;
-		window: number;
-	}) {
-		let written = 0;
-		let after: number | null = null;
-		let cursor: SubjectCursor | null = null;
-		let first = true;
-		for (;;) {
-			const page = await source.digest({
-				slot,
-				slotCount,
-				after: first ? null : after,
-				window: first ? window : null,
-				cursor,
-				limit: CATCH_UP_PAGE,
-			});
-			first = false;
-			after = page.after;
-			const wanted = page.digests.filter((digest) => {
-				const held = store.readVersion({
-					customerId: digest.customerId,
-					entityId: digest.entityId || null,
-				});
-				return !held || isNewer(digest, held);
-			});
-			for (let i = 0; i < wanted.length; i += FETCH_BATCH) {
-				const keys = wanted
-					.slice(i, i + FETCH_BATCH)
-					.map(({ customerId, entityId }) => ({ customerId, entityId }));
-				written += writeNewer({
-					store,
-					page: await source.fetch({ slot, slotCount, keys }),
-				});
-			}
-			const last = page.digests.at(-1);
-			if (!last || page.digests.length < CATCH_UP_PAGE) break;
-			cursor = {
-				appliedAt: last.appliedAt,
-				customerId: last.customerId,
-				entityId: last.entityId,
-			};
-		}
-		return written;
-	}
-
-	async function catchUp({
-		source,
-		window,
-	}: {
-		source: SubjectSource;
-		window: number | null;
-	}) {
-		const catalog = await source.catalog({
-			readAtAfter: catalogStore.read()?.readAt ?? -1,
-		});
-		if (catalog) await setCatalog(catalog);
-		let written = 0;
-		let synced = 0;
-		for (const [slot, { sqliteStore: store }] of slots.entries()) {
-			if (!store) continue;
-			written +=
-				window === null
-					? await copyRows({ store, source, slot, window })
-					: await copyNewerRows({ store, source, slot, window });
-			synced += 1;
-		}
-		return { slots: synced, written };
-	}
-
+	const ctx: ReplicaSlotsContext = {
+		slots,
+		slotCount,
+		owners,
+		catalogStore,
+		atomId,
+	};
 	return {
 		slotCount,
 		processorFor: ({ customerId }) =>
 			slots[customerIdToSlot({ customerId, slotCount })].processor,
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
-		catalogSince: ({ readAtAfter }) => {
-			const held = catalogStore.rows();
-			return held && held.readAt > readAtAfter ? held : null;
-		},
-		listSince,
-		digestSince,
-		fetchSubjects,
-		maxAppliedAt: () =>
-			Math.max(0, ...ownedStores().map((store) => store.maxAppliedAt())),
-		catchUp,
+		catalogSince: (params) => catalogSince({ ctx, ...params }),
+		listSince: (params) => listSince({ ctx, ...params }),
+		digestSince: (params) => digestSince({ ctx, ...params }),
+		fetchSubjects: (params) => fetchSubjects({ ctx, ...params }),
+		maxAppliedAt: () => maxAppliedAt({ ctx }),
+		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};
 };
