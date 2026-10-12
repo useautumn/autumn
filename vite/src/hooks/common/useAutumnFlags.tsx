@@ -4,7 +4,9 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
-	const { data: customer } = useCustomer();
+	const { data: customer, error } = useCustomer();
+	// No AUTUMN_SECRET_KEY on the server (local, staging): /api/autumn isn't mounted and the server's billing gates let everything through.
+	const billingUnconfigured = error?.statusCode === 404;
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		stripe_key: false,
@@ -42,5 +44,9 @@ export const useAutumnFlags = () => {
 	}, [customer?.flags]);
 
 	// Webhooks have been released publicly — always on.
-	return { ...flags, webhooks: true as const };
+	return {
+		...flags,
+		atoms: flags.atoms || billingUnconfigured,
+		webhooks: true as const,
+	};
 };
