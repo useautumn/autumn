@@ -74,6 +74,11 @@ const createConnectionClient = ({
 }: {
 	connection: AtomConnection;
 }): AtomClient => {
+	const queueOnly = getHeraldEnv().HERALD_ATOM_PUSH_QUEUE_ONLY;
+	if (!connection.queue && queueOnly)
+		throw new Error(
+			"This Atom has no queue, and production pushes go over SQS only; it is never pushed to over HTTP",
+		);
 	decrypt ??= decryptOf();
 	const http = createAtomClient({
 		connection,
@@ -83,7 +88,7 @@ const createConnectionClient = ({
 	return createQueueAtomClient({
 		ctx: {
 			pushQueue: getAtomPushQueue({ externalId: connection.queue.externalId }),
-			http,
+			http: queueOnly ? null : http,
 			logger: getHeraldLogger(),
 		},
 		atomId: connection.queue.atomId,
@@ -92,11 +97,6 @@ const createConnectionClient = ({
 
 /** One client per org's Atom and transport, made on its first push. A re-created Atom has a new token, so a new client. */
 export const getAtomClient: GetAtomClient = ({ connection }) => {
-	// Deliberate: Atoms run on dev stacks and staging only for now, so production has no HTTP push path to keep.
-	if (!getHeraldEnv().HERALD_ATOM_HTTP_PUSH)
-		throw new Error(
-			"Atom pushes run on dev stacks and staging only; production has none yet",
-		);
 	const key = [
 		connection.endpointUrl,
 		connection.encryptedToken,
