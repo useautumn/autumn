@@ -74,16 +74,17 @@ const deleteAcks = async ({
 			}),
 		);
 		const failedById = new Map(Failed.map((entry) => [entry.Id, entry]));
-		acks.forEach((ack, index) => {
+		for (const [index, ack] of acks.entries()) {
 			const failed = failedById.get(String(index));
-			if (!failed) return ack.resolve();
-			ack.reject(
-				new PushAckError({
-					code: failed.Code ?? "unknown",
-					message: failed.Message,
-				}),
-			);
-		});
+			if (failed)
+				ack.reject(
+					new PushAckError({
+						code: failed.Code ?? "unknown",
+						message: failed.Message,
+					}),
+				);
+			else ack.resolve();
+		}
 	} catch (error) {
 		for (const ack of acks) ack.reject(error);
 	}
