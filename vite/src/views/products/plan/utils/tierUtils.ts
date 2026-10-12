@@ -218,6 +218,21 @@ export const tiersToVolumePricingMode = ({
 	return "per_unit";
 };
 
+/** Whether the tiers still hold the shape `mode` edits, so a stale toggle can't hide a price. */
+export const volumePricingModeFitsTiers = ({
+	mode,
+	tiers,
+}: {
+	mode: VolumePricingMode;
+	tiers: PriceTier[] | null | undefined;
+}): boolean => {
+	if (!tiers) return false;
+	if (mode === "flat") return tiers.every((tier) => tier.amount === 0);
+	if (mode === "per_unit")
+		return tiers.every((tier) => tier.flat_amount == null);
+	return tiers.every((tier) => tier.flat_amount != null);
+};
+
 /** Moves each tier's price into the fields `mode` edits; 0 and unset flat fees bill alike. */
 export const itemToVolumePricingMode = ({
 	item,

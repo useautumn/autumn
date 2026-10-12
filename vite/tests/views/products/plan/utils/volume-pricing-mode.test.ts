@@ -9,6 +9,7 @@ import { alignTierCurrencyShapes } from "@/views/products/plan/utils/currencyUti
 import {
 	itemToVolumePricingMode,
 	tiersToVolumePricingMode,
+	volumePricingModeFitsTiers,
 } from "@/views/products/plan/utils/tierUtils";
 
 const commitVolumeTiers = (item: ProductItem): ProductItem =>
@@ -157,5 +158,37 @@ describe("alignTierCurrencyShapes", () => {
 		expect(result.tiers?.[0].additional_currencies).toEqual([
 			{ currency: "eur", amount: 0.9, flat_amount: 4 },
 		]);
+	});
+});
+
+describe("volumePricingModeFitsTiers", () => {
+	test("a Flat toggle no longer fits once a discard restores unit rates", () => {
+		expect(
+			volumePricingModeFitsTiers({
+				mode: "flat",
+				tiers: [{ to: Infinite, amount: 1, flat_amount: 5 }],
+			}),
+		).toBe(false);
+	});
+
+	test("a fresh Unit + Flat pick fits while every amount is still 0", () => {
+		expect(
+			volumePricingModeFitsTiers({
+				mode: "per_unit_and_flat",
+				tiers: [
+					{ to: 100, amount: 0, flat_amount: 0 },
+					{ to: Infinite, amount: 0, flat_amount: 0 },
+				],
+			}),
+		).toBe(true);
+	});
+
+	test("Unit + Flat no longer fits after graduated pricing cleared the flat fees", () => {
+		expect(
+			volumePricingModeFitsTiers({
+				mode: "per_unit_and_flat",
+				tiers: [{ to: Infinite, amount: 1 }],
+			}),
+		).toBe(false);
 	});
 });

@@ -23,6 +23,7 @@ import {
 	itemToVolumePricingMode,
 	tiersToVolumePricingMode,
 	type VolumePricingMode,
+	volumePricingModeFitsTiers,
 } from "../../utils/tierUtils";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
@@ -49,8 +50,12 @@ export function EditPlanFeatureSheet({
 	// Tier data can't tell a fresh "Unit + Flat" pick from flat-only while every amount is 0.
 	const [chosenPricingMode, setChosenPricingMode] =
 		useState<VolumePricingMode>();
-	const volumePricingMode =
-		chosenPricingMode ?? tiersToVolumePricingMode({ tiers: item?.tiers });
+	const chosenModeFits =
+		chosenPricingMode !== undefined &&
+		volumePricingModeFitsTiers({ mode: chosenPricingMode, tiers: item?.tiers });
+	const volumePricingMode = chosenModeFits
+		? chosenPricingMode
+		: tiersToVolumePricingMode({ tiers: item?.tiers });
 
 	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
 	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
@@ -73,8 +78,6 @@ export function EditPlanFeatureSheet({
 			}
 		}
 
-		// The tier fields change with the behaviour, so read the mode from them again.
-		setChosenPricingMode(undefined);
 		setItem(newItem);
 	};
 
