@@ -47,7 +47,10 @@ export const createPeerOutbox = ({
 	const workers = new Map<string, number>();
 	let waitingBytes = 0;
 	let inFlight = 0;
+	/** Copies whose peers are still being resolved: queued on none yet, but owed to the flush on stop. */
+	let resolving = 0;
 	let stopped = false;
+	let flushed = false;
 	let onIdle: (() => void) | null = null;
 
 	function queueFor(peer: string): Map<string, Waiting> {
@@ -63,7 +66,7 @@ export const createPeerOutbox = ({
 		[...queues.values()].reduce((count, queue) => count + queue.size, 0);
 
 	function settleIfIdle(): void {
-		if (waiting() === 0 && inFlight === 0) onIdle?.();
+		if (resolving === 0 && waiting() === 0 && inFlight === 0) onIdle?.();
 	}
 
 	function take({
@@ -192,21 +195,29 @@ export const createPeerOutbox = ({
 		path: string;
 	}): Promise<void> {
 		if (stopped) return;
-		for (const peer of await ctx.resolver.peers())
-			queueOn({ peer, operation, path });
+		resolving += 1;
+		try {
+			const peers = await ctx.resolver.peers();
+			if (flushed) return;
+			for (const peer of peers) queueOn({ peer, operation, path });
+		} finally {
+			resolving -= 1;
+			settleIfIdle();
+		}
 	}
 
 	/** What is still waiting gets one flush window; a peer that is down by then loses those copies to its own catch-up. */
 	async function stop(): Promise<void> {
 		stopped = true;
-		if (waiting() === 0 && inFlight === 0) return;
-		await Promise.race([
-			new Promise<void>((resolve) => {
-				onIdle = resolve;
-			}),
-			sleep(STOP_FLUSH_MS),
-		]);
+		if (resolving > 0 || waiting() > 0 || inFlight > 0)
+			await Promise.race([
+				new Promise<void>((resolve) => {
+					onIdle = resolve;
+				}),
+				sleep(STOP_FLUSH_MS),
+			]);
 		onIdle = null;
+		flushed = true;
 		for (const [peer, queue] of queues)
 			for (let i = 0; i < queue.size; i++) drop({ peer, reason: "stopping" });
 		queues.clear();
