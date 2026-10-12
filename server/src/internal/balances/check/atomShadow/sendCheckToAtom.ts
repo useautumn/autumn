@@ -8,9 +8,6 @@ import type {
 const ATOM_SHADOW_TIMEOUT_MS = 300;
 /** A late reply still finishes so its keep-alive socket returns to the pool; this only bounds a stuck one. */
 const ATOM_SHADOW_ABANDON_MS = 5_000;
-/** Past this many open requests a check is shed as a timeout rather than dialled: bounds the Atom's queue below the timeout. */
-const ATOM_SHADOW_MAX_IN_FLIGHT = 16;
-
 /** Set when Atom had the API answer instead, so the body is not Atom's own. */
 const FORWARDED_HEADER = "x-atom-forwarded";
 
@@ -46,7 +43,8 @@ export const sendCheckToAtom = ({
 	search: string;
 	apiVersion: ApiVersionClass;
 }): Promise<AtomCheckReply> =>
-	requestsInFlight >= ATOM_SHADOW_MAX_IN_FLIGHT
+	// Past the target's cap a check is shed as a timeout rather than dialled: bounds the Atom's queue below the timeout.
+	requestsInFlight >= target.maxInFlight
 		? Promise.resolve({ kind: "timeout", shed: true })
 		: replyWithinTimeout(requestCheck({ target, params, search, apiVersion }));
 
