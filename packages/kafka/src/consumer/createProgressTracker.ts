@@ -1,4 +1,5 @@
 import type {
+	ConsumedPosition,
 	HighWatermarkPosition,
 	PartitionPosition,
 	PartitionProgress,
@@ -11,20 +12,29 @@ import type {
 export function createProgressTracker(): ProgressTracker {
 	const nextOffsets = new Map<string, bigint>();
 	const highWatermarks = new Map<string, bigint>();
+	const lastRecordTimestamps = new Map<string, number>();
 	const waiters = new Map<string, Set<PositionWaiter>>();
 
 	function reset(position: ProgressPosition): void {
 		validatePosition(position);
 		nextOffsets.delete(positionKeyOf(position));
+		lastRecordTimestamps.delete(positionKeyOf(position));
 		advance(position);
 	}
 
-	function advance({ topic, partition, nextOffset }: ProgressPosition): void {
+	function advance({
+		topic,
+		partition,
+		nextOffset,
+		lastRecordTimestampMs,
+	}: ConsumedPosition): void {
 		validatePosition({ topic, partition, nextOffset });
 		const key = positionKeyOf({ topic, partition });
 		const current = nextOffsets.get(key);
 		if (current !== undefined && current >= nextOffset) return;
 		nextOffsets.set(key, nextOffset);
+		if (lastRecordTimestampMs !== undefined)
+			lastRecordTimestamps.set(key, lastRecordTimestampMs);
 		const pending = waiters.get(key);
 		if (!pending) return;
 		for (const waiter of pending) {
@@ -60,6 +70,11 @@ export function createProgressTracker(): ProgressTracker {
 			consumedNextOffset: nextOffsets.get(key) ?? null,
 			highWatermark: highWatermarks.get(key) ?? null,
 		};
+	}
+
+	function readLastRecordTimestamp(position: PartitionPosition): number | null {
+		validatePosition({ ...position, nextOffset: 0n });
+		return lastRecordTimestamps.get(positionKeyOf(position)) ?? null;
 	}
 
 	function waitUntil({
@@ -98,6 +113,7 @@ export function createProgressTracker(): ProgressTracker {
 		read,
 		observeHighWatermark,
 		readProgress,
+		readLastRecordTimestamp,
 		waitUntil,
 	};
 }

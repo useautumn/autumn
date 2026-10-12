@@ -20,6 +20,7 @@ import type {
 	JobMembership,
 } from "../slot/types/heraldHeartbeat.js";
 import { landRecords } from "./landRecords/landRecords.js";
+import { readPartitionLagMs } from "./readPartitionLagMs.js";
 import { seedGroupPlaces } from "./seedGroupPlaces.js";
 import {
 	HeraldStoppedMidSliceError,
@@ -51,6 +52,7 @@ export function createStreamConsumer({
 		db?: PostgresExecutor;
 		/** The consumer died and kafkajs will not restart it: the process must end so the task is replaced. */
 		onCrashed: (params: { job: string; cause: unknown }) => void;
+		now?: () => number;
 	};
 	config: {
 		topic: string;
@@ -71,8 +73,10 @@ export function createStreamConsumer({
 	const stopping = new AbortController();
 	const job = streamConsumer.name;
 	const progress = createProgressTracker();
+	const now = ctx.now ?? Date.now;
 	let membership: JobMembership = "idle";
 	let assignedPartitions: number[] = [];
+	let joinedAtMs: number | null = null;
 
 	/** A record that cannot be read is dropped, loudly: one bad record must never hold its partition. */
 	function onRecordError({
@@ -166,6 +170,7 @@ export function createStreamConsumer({
 	function onGroupJoin(event: ConsumerGroupJoinEvent): void {
 		assignedPartitions = event.payload.memberAssignment[config.topic] ?? [];
 		membership = "joined";
+		joinedAtMs = now();
 		ctx.logger.info(
 			{
 				type: "herald_group_joined",
@@ -177,12 +182,20 @@ export function createStreamConsumer({
 
 	/** What the heartbeat reports: in the group or not, and how far behind the log this member is. */
 	function health(): JobHealth {
+		const nowMs = now();
 		let maxLagRecords: number | null = null;
+		let maxLagMs: number | null = null;
 		for (const partition of assignedPartitions) {
-			const { consumedNextOffset, highWatermark } = progress.readProgress({
-				topic: config.topic,
-				partition,
+			const position = { topic: config.topic, partition };
+			const lagMs = readPartitionLagMs({
+				progress,
+				position,
+				nowMs,
+				joinedAtMs,
 			});
+			if (lagMs !== null) maxLagMs = Math.max(maxLagMs ?? 0, lagMs);
+			const { consumedNextOffset, highWatermark } =
+				progress.readProgress(position);
 			if (consumedNextOffset === null || highWatermark === null) continue;
 			const lag = Number(highWatermark - consumedNextOffset);
 			maxLagRecords = Math.max(maxLagRecords ?? 0, lag);
@@ -192,6 +205,7 @@ export function createStreamConsumer({
 			membership,
 			partitions: assignedPartitions.length,
 			maxLagRecords,
+			maxLagMs,
 		};
 	}
 	function onRebalancing(): void {
