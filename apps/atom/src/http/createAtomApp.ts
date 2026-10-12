@@ -19,7 +19,11 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	app.onError(handleError);
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
-	if (ctx.multiTenant) mountMultiTenantRoutes({ app, ctx: ctx.multiTenant });
+	if (ctx.multiTenant)
+		mountMultiTenantRoutes({
+			app,
+			ctx: { ...ctx.multiTenant, replication: ctx.replication },
+		});
 
 	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
 	const pushAuth = atomTokenMiddleware({ ctx });

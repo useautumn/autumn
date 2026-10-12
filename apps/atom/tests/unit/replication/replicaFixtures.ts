@@ -9,6 +9,7 @@ import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
+import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import {
@@ -122,7 +123,11 @@ export const createReplica = ({
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),
 		/** As the thread boots: the point it fell behind at is fixed here, before any live relay lands. */
-		sync: () => createReplicaSync({ ctx: syncContext, slots: auth.slots }),
+		sync: () =>
+			createReplicaSync({
+				ctx: syncContext,
+				folders: createDeployedFolders({ slots: auth.slots }),
+			}),
 		/** Closes the files, as a process that stops or dies does; the folder stays for a restart on the same volume. */
 		close: () => auth.close(),
 	};
@@ -134,15 +139,18 @@ export type Replica = ReturnType<typeof createReplica>;
  * The deployment network plus, when given, the Autumn API: a request to a replica's address lands on its public
  * app or its peer app by port. Honours the caller's abort signal like a real fetch.
  */
+/** What the network needs of a replica: where it is and the apps that answer on each port. */
+export type Reachable = Pick<Replica, "address" | "app" | "peerApp">;
+
 export const connect = ({
 	replicas,
 	autumn,
 	replyFrom = async (_replica, reply) => reply,
 }: {
-	replicas: Replica[];
+	replicas: Reachable[];
 	autumn?: (request: Request) => Promise<Response>;
 	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
-	replyFrom?: (replica: Replica, reply: Response) => Promise<Response>;
+	replyFrom?: (replica: Reachable, reply: Response) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
 		replicas.map((replica) => [replica.address, replica]),

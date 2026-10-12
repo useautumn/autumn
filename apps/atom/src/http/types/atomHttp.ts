@@ -18,10 +18,10 @@ export type AtomHttpContext = {
 	multiTenant?: MultiTenantContext;
 	/** Present only on an org's own Atom, whose checks open with the org's secret keys. */
 	secretKeys?: SecretKeys;
-	/** Present only on an org's own Atom, which keeps its other replicas holding what it applies. */
-	replication?: Replication;
-	/** With `replication`: the port the other replicas answer checks on while this one starts. */
-	peer?: { port: number; fetch?: typeof fetch };
+	/** Keeps the other replicas holding what this thread applies. */
+	replication: Replication;
+	/** The port the other replicas answer checks on while this one starts; a test may send its own way. */
+	peer: { port: number; fetch?: typeof fetch };
 	/** This replica's clock; a test runs it. */
 	now?: () => number;
 };

@@ -22,6 +22,7 @@ import {
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
+import type { Replication } from "../../../src/replication/types/replication.js";
 import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import type {
@@ -190,6 +191,15 @@ export const freshHeld = () =>
 
 /** A folder whose misses are only forwarded, for tests not about pulls. */
 export const noFolderPulls: FolderSubjectPulls = { request() {} };
+
+/** A replica with no others: relays nowhere, knows no peer. */
+export const noReplication: Replication = {
+	replicate() {},
+	peers: async () => [],
+	stop: async () => {},
+};
+/** The peer port a lone replica would proxy to while starting; no peer answers there. */
+export const noPeer = { port: 0 };
 
 export const noSubjectPulls: SubjectPulls = {
 	forFolder: () => noFolderPulls,

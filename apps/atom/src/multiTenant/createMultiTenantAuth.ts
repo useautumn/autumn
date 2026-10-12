@@ -26,6 +26,8 @@ export type MultiTenantAuth = Auth & {
 	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
 	putAtom(params: TenantAtom): void;
 	hasAtom(params: { id: string }): boolean;
+	/** Every tenant this Atom holds, as the folders record them. */
+	listAtoms(): TenantAtom[];
 	/** Deletes the Atom's folder. Removing one that is not held is a no-op. */
 	removeAtom(params: { id: string }): void;
 };
@@ -172,6 +174,14 @@ export const createMultiTenantAuth = ({
 		return hasAtomFile({ dataDir, id });
 	}
 
+	function listAtoms(): TenantAtom[] {
+		if (clock() - scannedAt >= TENANTS_REVALIDATE_MS) rescan();
+		return [...heldById.values()].map(({ id, tokenHash }) => ({
+			id,
+			tokenHash,
+		}));
+	}
+
 	function removeAtom({ id }: { id: string }): void {
 		const held = heldById.get(id);
 		if (held) forget(held);
@@ -186,5 +196,13 @@ export const createMultiTenantAuth = ({
 
 	rescan();
 
-	return { authorize, slotsFor, putAtom, hasAtom, removeAtom, close };
+	return {
+		authorize,
+		slotsFor,
+		putAtom,
+		hasAtom,
+		listAtoms,
+		removeAtom,
+		close,
+	};
 };
