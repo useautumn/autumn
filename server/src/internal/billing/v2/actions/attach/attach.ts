@@ -19,6 +19,7 @@ import {
 	listPendingCustomerProducts,
 } from "@/internal/billing/v2/common/pendingInvoiceConflict/findPendingInvoiceConflict";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { discardReplacedPendingPlans } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardReplacedPendingPlans";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
@@ -166,6 +167,19 @@ export async function attach({
 			preserveSubjectCache({ ctx });
 			return cachedResult;
 		}
+	}
+
+	// Confirm flows complete the pending plan they were opened for, so only direct attaches replace it.
+	if (!skipAutumnCheckout) {
+		await discardReplacedPendingPlans({
+			ctx,
+			fullCustomer: billingContext.fullCustomer,
+			attachProduct: billingContext.attachProduct,
+			pendingCustomerProducts: await listPendingCustomerProducts({
+				ctx,
+				fullCustomer: billingContext.fullCustomer,
+			}),
+		});
 	}
 
 	const pendingInvoiceResult = await findPendingInvoiceConflict({

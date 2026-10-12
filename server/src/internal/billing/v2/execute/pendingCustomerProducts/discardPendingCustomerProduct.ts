@@ -7,7 +7,9 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { cancelCreatedStripeSubscription } from "@/internal/billing/v2/actions/expirePendingPlan/execute/cancelCreatedStripeSubscription";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 export const discardPendingCustomerProduct = async ({
@@ -55,7 +57,21 @@ export const discardPendingCustomerProduct = async ({
 				metadata.stripe_invoice_id,
 			);
 
-			await voidStripeInvoiceIfOpen({ ctx, stripeInvoice });
+			// Stripe can't delete a subscription's draft; canceling the sub leaves it uncollectable.
+			if (stripeInvoice.status === "draft") {
+				await cancelCreatedStripeSubscription({
+					ctx,
+					stripeCli,
+					metadata,
+					stripeInvoice,
+				});
+				await InvoiceService.deleteByStripeId({
+					db: ctx.db,
+					stripeId: stripeInvoice.id,
+				});
+			} else {
+				await voidStripeInvoiceIfOpen({ ctx, stripeInvoice });
+			}
 		}
 
 		await MetadataService.delete({ db: ctx.db, id: metadataId });
