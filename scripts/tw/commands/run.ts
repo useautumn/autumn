@@ -774,11 +774,19 @@ const isWarmLatestBranchHead = ({
 	sha: string;
 }): boolean => {
 	if (ref !== WARM_LATEST_BRANCH) return false;
-	const { stdout } = Bun.spawnSync(
-		["git", "ls-remote", "origin", `refs/heads/${WARM_LATEST_BRANCH}`],
+	// twd's deployed checkout has no .git, so ask the configured remote URL, not `origin`.
+	const { url } = resolveGitSource(WARM_LATEST_BRANCH);
+	const { stdout, stderr, exitCode } = Bun.spawnSync(
+		["git", "ls-remote", url, `refs/heads/${WARM_LATEST_BRANCH}`],
 		{ stdout: "pipe", stderr: "pipe" },
 	);
 	const head = new TextDecoder().decode(stdout).split(/\s+/)[0];
+	if (exitCode !== 0 || !/^[0-9a-f]{40}$/.test(head ?? "")) {
+		warn(
+			`warm-up: could not resolve ${WARM_LATEST_BRANCH}'s head (${new TextDecoder().decode(stderr).trim().slice(0, 160) || "empty ls-remote"}) — tw-warm:latest left unchanged`,
+		);
+		return false;
+	}
 	return head === sha;
 };
 
@@ -879,7 +887,7 @@ export const getOrBuildWarmParent = async ({
 	try {
 		await snapshotAndStop(warm, {
 			signal,
-			publishLatest: isWarmLatestBranchHead({ ref, sha }),
+			shouldPublishLatest: () => isWarmLatestBranchHead({ ref, sha }),
 		});
 	} catch (error) {
 		await failBuild(

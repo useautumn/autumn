@@ -239,14 +239,15 @@ const lookupPublishedWarmImage = async (
 const publishWarmImage = async ({
 	image,
 	sha12,
-	publishLatest,
+	shouldPublishLatest = () => false,
 }: {
 	image: Image;
 	sha12: string;
-	publishLatest: boolean;
+	shouldPublishLatest?: () => boolean;
 }): Promise<void> => {
 	try {
 		await image.publish(`${WARM_IMAGE_REPO}:${sha12}`);
+		const publishLatest = shouldPublishLatest();
 		if (publishLatest) {
 			await image.publish(`${WARM_IMAGE_REPO}:latest`);
 		}
@@ -628,11 +629,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					timeoutMs: SNAPSHOT_TIMEOUT_MS,
 					ttlMs: WARM_IMAGE_TTL_MS,
 				});
-				await publishWarmImage({
-					image,
-					sha12: targetSha12,
-					publishLatest: false,
-				});
+				await publishWarmImage({ image, sha12: targetSha12 });
 				// Keep warmName in staleWarmNames: forks in this run still hold the stale
 				// :latest image, so dropping it here would silently skip their fast-forward.
 			} catch (error) {
@@ -810,7 +807,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					await publishWarmImage({
 						image,
 						sha12,
-						publishLatest: opts?.publishLatest ?? false,
+						shouldPublishLatest: opts?.shouldPublishLatest,
 					});
 					staleWarmNames.delete(sandbox.name);
 				}

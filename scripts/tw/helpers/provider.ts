@@ -98,8 +98,8 @@ export type ListedSandbox = {
 
 export type SnapshotAndStopOptions = {
 	signal?: AbortSignal;
-	/** Also move the cross-run `:latest` warm image (WARM_LATEST_BRANCH builds only). */
-	publishLatest?: boolean;
+	/** Asked right before publishing, so a build overtaken mid-snapshot leaves `:latest` alone. */
+	shouldPublishLatest?: () => boolean;
 };
 
 /** The full surface a backend must implement. */
