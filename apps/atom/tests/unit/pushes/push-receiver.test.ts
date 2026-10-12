@@ -6,7 +6,10 @@ import { AtomPushType, atomPushMessageToPayload } from "@autumn/byoc";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
-import { createPushReceiver } from "../../../src/pushes/createPushReceiver.js";
+import {
+	createPushReceiver,
+	RECEIVE_LINGER_MS,
+} from "../../../src/pushes/createPushReceiver.js";
 import type { PulledPush } from "../../../src/pushQueue/types/pushQueue.js";
 import {
 	allSlotsOwnedHere,
@@ -398,5 +401,70 @@ describe("push receiver under a hung or stopped queue", () => {
 		// Each of the 4 loops may hold one batch past the cap before it waits.
 		expect(receives).toBeGreaterThanOrEqual(3);
 		expect(receives).toBeLessThanOrEqual(3 + 4);
+	});
+});
+
+describe("push receiver's receives", () => {
+	const openDeployed = () => {
+		const auth = createDeployedAuth({
+			dataDir: newDataDir(),
+			tokenHash: TOKEN_HASH,
+			slotCount: 2,
+			owners: allSlotsOwnedHere,
+			held: freshHeld(),
+			subjectPulls: noSubjectPulls,
+		});
+		opened.push(auth);
+		return auth;
+	};
+
+	/** Serves the batches in order, counting receives open at once; each receive waits a moment, as the network does. */
+	const runReceiver = async ({ batches }: { batches: PulledPush[][] }) => {
+		let open = 0;
+		let mostOpen = 0;
+		const lingers: number[] = [];
+		const receiver = createPushReceiver({
+			ctx: {
+				pushQueue: {
+					pull: async () => {
+						open += 1;
+						mostOpen = Math.max(mostOpen, open);
+						await Bun.sleep(2);
+						open -= 1;
+						const batch = batches.shift();
+						if (!batch) receiver.stop();
+						return batch ?? [];
+					},
+					ack: async () => {},
+				},
+				auth: openDeployed(),
+				replication: noReplication,
+				logger: { warn: () => {} },
+				sleep: async (ms) => {
+					lingers.push(ms);
+				},
+			},
+		});
+		await receiver.run();
+		return { mostOpen, lingers };
+	};
+
+	test("while batches come back short, one receive is open at a time and each lingers before the next", async () => {
+		const { mostOpen, lingers } = await runReceiver({
+			batches: Array.from({ length: 5 }, () => [subjectMessage({})]),
+		});
+
+		expect(mostOpen).toBe(1);
+		expect(lingers).toEqual(Array(5).fill(RECEIVE_LINGER_MS));
+	});
+
+	test("a full batch means a backlog: the other loops receive too, without lingering", async () => {
+		const full = () => Array.from({ length: 10 }, () => subjectMessage({}));
+		const { mostOpen, lingers } = await runReceiver({
+			batches: [full(), full(), full(), full()],
+		});
+
+		expect(mostOpen).toBeGreaterThan(1);
+		expect(lingers).toEqual([]);
 	});
 });
