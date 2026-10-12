@@ -46,6 +46,19 @@ const fieldsNamedBy = (rule: LintRule): string[] => {
 			return [rule.when, rule.field];
 		case "targetLacks":
 			return [rule.field];
+		case "refusedWhen":
+			return [
+				...Object.keys(rule.whenEquals),
+				...rule.whenStated,
+				...rule.whenUnstated,
+			];
+		case "targetForbids":
+			return [
+				rule.field,
+				...Object.keys(rule.whenEquals),
+				...rule.whenStated,
+				...rule.whenUnstated,
+			];
 	}
 };
 
@@ -79,7 +92,10 @@ export const validateRegistry = ({
 		/** A dotted field names a node under `path` — a union branch, say — so
 		 * the leaf is checked against the node it actually lives on. */
 		const namesField = (field: string): boolean => {
-			const segments = field.split(".");
+			// Registry paths elide array indices, so a numeric segment is skipped.
+			const segments = field
+				.split(".")
+				.filter((segment) => !/^\d+$/.test(segment));
 			const leaf = segments.pop() as string;
 			if (segments.length === 0) return fields.has(leaf);
 			const owner = fieldsAtPath({
@@ -152,6 +168,26 @@ export const validateRegistry = ({
 					if (!linkFields.has(field))
 						problems.push(
 							`"${path}": linkedOnce rule names "${linkPath}.${field}", which is not a field there.`,
+						);
+				}
+			}
+			if (rule.kind === "targetForbids") {
+				if (!topLevel.has(rule.in)) {
+					problems.push(
+						`"${path}": targetForbids rule points at "${rule.in}", which is not a top-level collection.`,
+					);
+					continue;
+				}
+				const targetFields = fieldsAtPath({
+					schema,
+					root,
+					path: rule.in,
+					overlay,
+				});
+				for (const field of [rule.matching, rule.target]) {
+					if (!targetFields?.has(field))
+						problems.push(
+							`"${path}": targetForbids rule names "${rule.in}.${field}", which is not a field there.`,
 						);
 				}
 			}
