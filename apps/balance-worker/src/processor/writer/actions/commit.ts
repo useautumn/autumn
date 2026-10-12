@@ -12,6 +12,7 @@ import {
 	advanceStored,
 	awaitStored,
 	maxBatchBytesOf,
+	maxBatchesPerFlushOf,
 	maxUnappliedBatchesOf,
 	rejectAllPending,
 	releasePins,
@@ -30,9 +31,6 @@ import {
 	PartitionWriterRecoveryRequiredError,
 } from "../writerErrors.js";
 import { decideSnapshotIntent } from "./decideSnapshotIntent.js";
-
-/** Bounds one store flush; the committer writes a flush as a single statement. */
-const MAX_BATCHES_PER_FLUSH = 16;
 
 export function scheduleCommit({
 	scope,
@@ -214,28 +212,26 @@ function queueApply({
 		baseOffset,
 		committedAt: writerNowOf({ scope }),
 	});
-	if (applyIsDue({ state })) state.applyWake?.();
+	if (applyIsDue({ scope })) state.applyWake?.();
 	if (state.applying) return;
 	state.applying = true;
 	state.applyTail = applyQueued({ scope });
 }
 
 /** The store is awaited now: a reader is waiting on it, a store-durable caller is, or a full flush is queued. */
-function applyIsDue({
-	state,
-}: {
-	state: PartitionWriterScope["state"];
-}): boolean {
+function applyIsDue({ scope }: { scope: PartitionWriterScope }): boolean {
+	const { state, ctx, config } = scope;
 	return (
 		state.storeWaiters.length > 0 ||
-		state.unapplied.length >= MAX_BATCHES_PER_FLUSH ||
+		state.unapplied.length >=
+			maxBatchesPerFlushOf({ ctx, limits: config.limits }) ||
 		state.unapplied.some(({ batch }) =>
 			batch.some((pending) => pending.durability === "store"),
 		)
 	);
 }
 
-/** A flush costs about the same for one batch as for sixteen, and repeated changes to a row fold into one,
+/** A flush costs about the same for one batch as for a full one, and repeated changes to a row fold into one,
  *  so batches gather until the apply is due or the linger ends; null applies now, without yielding. */
 function lingerForApply({
 	scope,
@@ -247,7 +243,7 @@ function lingerForApply({
 		ctx.dbControl?.get().balanceCommitter.applyLingerMs ??
 		config.limits.applyLingerMs ??
 		0;
-	if (lingerMs <= 0 || applyIsDue({ state })) return null;
+	if (lingerMs <= 0 || applyIsDue({ scope })) return null;
 	return new Promise<void>((resolve) => {
 		function wake(): void {
 			clearTimeout(timer);
@@ -265,13 +261,17 @@ async function applyQueued({
 }: {
 	scope: PartitionWriterScope;
 }): Promise<void> {
-	const { state } = scope;
+	const { state, ctx, config } = scope;
 	try {
 		while (state.unapplied.length > 0 && !state.recoveryError) {
 			const linger = lingerForApply({ scope });
 			if (linger) await linger;
 			if (state.recoveryError) return;
-			const taken = state.unapplied.slice(0, MAX_BATCHES_PER_FLUSH);
+			// Read once per flush: the splice below removes exactly what was taken, whatever DB control says meanwhile.
+			const taken = state.unapplied.slice(
+				0,
+				maxBatchesPerFlushOf({ ctx, limits: config.limits }),
+			);
 			const takenAt = writerNowOf({ scope });
 			const batch = taken.flatMap((entry) => entry.batch);
 			const records = timeSync({ label: "writer.apply.build" }, () =>

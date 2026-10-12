@@ -142,7 +142,7 @@ export type PartitionWriterContext = {
 	appender: CommittedOutcomeAppender;
 	/** Read as each batch is applied: a flush carries its customers' intent only while this says write. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
-	/** Read before each apply: a set `applyLingerMs` overrides the boot value in `limits`. */
+	/** Read before each apply: a set `applyLingerMs` or `maxBatchesPerFlush` overrides the boot value in `limits`. */
 	dbControl?: Pick<EdgeConfigStore<DbControlEdgeConfig>, "get">;
 	/** Dedup lives here: the writer fingerprints commands and stamps receipts, the engine never sees either. */
 	receiptPolicy: ReceiptPolicy;
@@ -176,6 +176,8 @@ export type PartitionWriterLimits = {
 	commitLingerMs?: number;
 	/** How long committed batches gather before a store flush, unless DB control overrides it; unset applies each batch at once. */
 	applyLingerMs?: number;
+	/** Committed batches one store flush takes, unless DB control overrides it; defaults to DEFAULT_MAX_BATCHES_PER_FLUSH. */
+	maxBatchesPerFlush?: number;
 	deferredCommitMs?: number;
 };
 
