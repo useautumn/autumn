@@ -41,8 +41,10 @@ const startAtom = async () => {
 	const port = freePort();
 	const env = createAtomEnv({
 		ATOM_TOKEN_HASH: hashToken({ token: ATOM_TOKEN }),
+		ATOM_PEER_SECRET: "peer-secret-".repeat(4),
 		ATOM_DATA_DIR: dataDir,
 		ATOM_PORT: String(port),
+		ATOM_PEER_PORT: String(freePort()),
 		ATOM_THREADS: String(THREADS),
 		ATOM_SLOT_COUNT: "16",
 		AUTUMN_API_URL: "http://127.0.0.1:9",

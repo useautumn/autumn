@@ -6,14 +6,14 @@ import {
 	PEER_SUBJECTS_SINCE_PATH,
 } from "../replication/catchUp/fetchSince.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
-import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
-import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import {
 	receiveCatalogSince,
 	receiveSubjectsDigest,
 	receiveSubjectsFetch,
 	receiveSubjectsSince,
-} from "./handlers/receiveSubjectsSince.js";
+} from "./handlers/receivePeerReads.js";
+import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
+import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { peerRequestMiddleware } from "./middlewares/peerRequestMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";

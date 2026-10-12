@@ -6,6 +6,7 @@ import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
 import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
+import type { Slots } from "../slots/types/slots.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
 import { openThreadCounters } from "./stats/threadStats.js";
@@ -24,31 +25,16 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const { auth, multiTenant, held } = openAuth({ env, owners });
 	const answerPorts = new Map<number, MessagePort>();
 	const counters = openThreadCounters({ buffer: init.stats, index });
-	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
-	const replication =
-		env.ATOM_MODE === "deployed" && env.ATOM_PEER_SECRET
-			? openReplication({ env, secret: env.ATOM_PEER_SECRET, counters, logger })
-			: undefined;
-	if (env.ATOM_MODE === "deployed" && !replication)
-		logger.warn(
-			{ type: "atom_replication_off" },
-			"ATOM_PEER_SECRET is not set: this replica neither relays to nor catches up from other replicas",
-		);
 	let stopping = false;
-	const slots = auth.slotsFor({ atomId: null });
-	// Built before the thread listens: the point it fell behind at must not move once live relays land.
-	const sync =
-		replication && slots && env.ATOM_PEER_SECRET
-			? createReplicaSync({
-					ctx: {
-						replication,
-						port: env.ATOM_PEER_PORT,
-						secret: env.ATOM_PEER_SECRET,
-						logger,
-						now: Date.now,
-						isStopping: () => stopping,
-					},
-					slots,
+	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
+	const replicas =
+		env.ATOM_MODE === "deployed"
+			? openReplicas({
+					env,
+					slots: auth.slotsFor({ atomId: null }),
+					counters,
+					logger,
+					isStopping: () => stopping,
 				})
 			: undefined;
 	const server = createAtomServer({
@@ -64,7 +50,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			},
 			counters,
 			held,
-			replication,
+			replication: replicas?.replication,
 		},
 		config: {
 			env,
@@ -88,9 +74,9 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	/** Listens first, so peers can relay to it, then copies what it missed before reporting ready. */
 	async function start(): Promise<void> {
 		await server.start();
-		if (!sync) return;
-		await sync.catchUp();
-		void sync.runPasses();
+		if (!replicas) return;
+		await replicas.sync.catchUp();
+		void replicas.sync.runPasses();
 	}
 
 	async function stop(): Promise<void> {
@@ -101,30 +87,47 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	return { start, stop, join, leave };
 };
 
-/** The pushes this thread applies, on their way to every other replica. */
-const openReplication = ({
+/** The pushes this thread applies, on their way to every other replica, and what this one copies back from them. */
+const openReplicas = ({
 	env,
-	secret,
+	slots,
 	counters,
 	logger,
+	isStopping,
 }: {
-	env: ThreadInit["env"];
-	secret: string;
+	env: Extract<ThreadInit["env"], { ATOM_MODE: "deployed" }>;
+	slots: Slots | null;
 	counters: ReturnType<typeof openThreadCounters>;
 	logger: ReturnType<typeof getAtomLogger>;
+	isStopping: () => boolean;
 }) => {
+	if (!slots)
+		throw new Error("An org's own Atom opens its one folder on every thread");
 	const registry = createHandlerRegistry();
 	registry.register(SUBJECT_PUSH);
 	registry.register(CATALOG_PUSH);
-	return createReplication({
+	const replication = createReplication({
 		ctx: {
-			secret,
+			secret: env.ATOM_PEER_SECRET,
 			port: env.ATOM_PEER_PORT,
 			registry,
 			counters,
 			logger,
 		},
 	});
+	// Built before the thread listens: the point it fell behind at must not move once live relays land.
+	const sync = createReplicaSync({
+		ctx: {
+			replication,
+			port: env.ATOM_PEER_PORT,
+			secret: env.ATOM_PEER_SECRET,
+			logger,
+			now: Date.now,
+			isStopping,
+		},
+		slots,
+	});
+	return { replication, sync };
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */

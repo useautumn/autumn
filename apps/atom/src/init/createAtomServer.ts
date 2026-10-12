@@ -59,9 +59,9 @@ export const createAtomServer = ({
 		...(ctx.replication && { peer: { port: env.ATOM_PORT } }),
 	};
 	const app = createAtomApp({ ctx: httpContext });
-	// Only an org's own Atom with its peer secret listens to other replicas, on the port the stack keeps off the public endpoint.
+	// Only an org's own Atom listens to other replicas, on the port the stack keeps off the public endpoint.
 	const peerApp =
-		ctx.replication && env.ATOM_PEER_SECRET
+		env.ATOM_MODE === "deployed"
 			? createPeerApp({ ctx: httpContext, secret: env.ATOM_PEER_SECRET })
 			: undefined;
 	const statsTick = startThreadStatsTick({

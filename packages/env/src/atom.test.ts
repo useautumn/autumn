@@ -7,6 +7,7 @@ const PUSHES_BINDING = JSON.stringify({
 	service: "sqs",
 	queueUrl: "https://sqs.us-east-1.amazonaws.com/1/pushes",
 });
+const PEER_SECRET = "s".repeat(64);
 const MULTI_TENANT = {
 	ATOM_MODE: "multi_tenant",
 	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
@@ -16,6 +17,7 @@ describe("atom env", () => {
 	test("a customer's Atom sets no ATOM_MODE: unset is single-tenant, given its token hash", () => {
 		const env = createAtomEnv({
 			ATOM_TOKEN_HASH: TOKEN_HASH,
+			ATOM_PEER_SECRET: PEER_SECRET,
 			ATOM_HOSTNAME: "0.0.0.0",
 		});
 
@@ -35,6 +37,23 @@ describe("atom env", () => {
 		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
 	});
 
+	test("an org's own Atom does not boot without ATOM_PEER_SECRET; a multi-tenant one has no peers to sign to", () => {
+		expect(() => createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH })).toThrow(
+			"Set ATOM_PEER_SECRET",
+		);
+		expect(() =>
+			createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: " " }),
+		).toThrow("Set ATOM_PEER_SECRET");
+		expect("ATOM_PEER_SECRET" in createAtomEnv(MULTI_TENANT)).toBe(false);
+		const deployed = createAtomEnv({
+			ATOM_TOKEN_HASH: TOKEN_HASH,
+			ATOM_PEER_SECRET: ` ${PEER_SECRET} `,
+		});
+		expect(
+			deployed.ATOM_MODE === "deployed" ? deployed.ATOM_PEER_SECRET : null,
+		).toBe(PEER_SECRET);
+	});
+
 	test("both modes need a SHA-256 ATOM_TOKEN_HASH", () => {
 		expect(() => createAtomEnv({})).toThrow("ATOM_TOKEN_HASH");
 		expect(() => createAtomEnv({ ATOM_MODE: "multi_tenant" })).toThrow(
@@ -51,15 +70,26 @@ describe("atom env", () => {
 	test("multi_tenant is the only ATOM_MODE value; anything else, deployed included, is refused", () => {
 		for (const mode of ["dev", "deployed", "shared", "multiTenant"])
 			expect(() =>
-				createAtomEnv({ ATOM_MODE: mode, ATOM_TOKEN_HASH: TOKEN_HASH }),
+				createAtomEnv({
+					ATOM_MODE: mode,
+					ATOM_TOKEN_HASH: TOKEN_HASH,
+					ATOM_PEER_SECRET: PEER_SECRET,
+				}),
 			).toThrow("ATOM_MODE is either unset or multi_tenant");
 		expect(
-			createAtomEnv({ ATOM_MODE: " ", ATOM_TOKEN_HASH: TOKEN_HASH }).ATOM_MODE,
+			createAtomEnv({
+				ATOM_MODE: " ",
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
+			}).ATOM_MODE,
 		).toBe("deployed");
 	});
 
 	test("forwards to the public Autumn API unless told where the API is", () => {
-		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
+		const deployed = createAtomEnv({
+			ATOM_TOKEN_HASH: TOKEN_HASH,
+			ATOM_PEER_SECRET: PEER_SECRET,
+		});
 		const local = createAtomEnv({
 			...MULTI_TENANT,
 			AUTUMN_API_URL: "http://localhost:8080",
@@ -70,7 +100,10 @@ describe("atom env", () => {
 	});
 
 	test("every Atom splits each org's customers over 128 slots unless told otherwise", () => {
-		const deployed = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
+		const deployed = createAtomEnv({
+			ATOM_TOKEN_HASH: TOKEN_HASH,
+			ATOM_PEER_SECRET: PEER_SECRET,
+		});
 		const multiTenant = createAtomEnv(MULTI_TENANT);
 		const told = createAtomEnv({ ...MULTI_TENANT, ATOM_SLOT_COUNT: "2" });
 
@@ -83,7 +116,7 @@ describe("atom env", () => {
 		const GB = 1024 ** 3;
 		const threads = ({ cpus, memory }: { cpus: number; memory: number }) =>
 			createAtomEnv(
-				{ ATOM_TOKEN_HASH: TOKEN_HASH },
+				{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: PEER_SECRET },
 				{ availableCpus: cpus, memoryLimitBytes: memory },
 			).ATOM_THREADS;
 
@@ -98,7 +131,11 @@ describe("atom env", () => {
 
 	test("is told how many threads to run when ATOM_THREADS is set", () => {
 		const told = createAtomEnv(
-			{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_THREADS: "12" },
+			{
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
+				ATOM_THREADS: "12",
+			},
 			{ availableCpus: 2, memoryLimitBytes: 1024 ** 3 },
 		);
 
@@ -135,6 +172,7 @@ describe("atom env", () => {
 		const receivers = ({ threads }: { threads: string }) =>
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
 				ATOM_THREADS: threads,
 				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
 			}).ATOM_PUSH_RECEIVERS;
@@ -149,6 +187,7 @@ describe("atom env", () => {
 	test("no thread receives pushes when no push queue is linked", () => {
 		const env = createAtomEnv({
 			ATOM_TOKEN_HASH: TOKEN_HASH,
+			ATOM_PEER_SECRET: PEER_SECRET,
 			ATOM_THREADS: "8",
 		});
 
@@ -159,6 +198,7 @@ describe("atom env", () => {
 		const receivers = ({ told }: { told: string }) =>
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
 				ATOM_THREADS: "7",
 				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
 				ATOM_PUSH_RECEIVERS: told,
@@ -184,6 +224,7 @@ describe("atom env", () => {
 		}) =>
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
 				ALIEN_PUSHES_BINDING: binding,
 				ATOM_PUSH_QUEUE_CLIENT: client,
 			}).ATOM_SDK_PUSH_QUEUE_URL;
@@ -200,7 +241,10 @@ describe("atom env", () => {
 		});
 
 		test("auto with no queue linked has no reader and no receivers", () => {
-			const env = createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH });
+			const env = createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
+			});
 
 			expect(env.ATOM_SDK_PUSH_QUEUE_URL).toBeNull();
 			expect(env.ATOM_PUSH_RECEIVERS).toBe(0);
@@ -230,7 +274,7 @@ describe("atom env", () => {
 		const MiB = 1024 ** 2;
 		const heldBytes = ({ cpus, memory }: { cpus: number; memory: number }) =>
 			createAtomEnv(
-				{ ATOM_TOKEN_HASH: TOKEN_HASH },
+				{ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: PEER_SECRET },
 				{ availableCpus: cpus, memoryLimitBytes: memory },
 			).ATOM_HELD_BYTES_PER_THREAD;
 
@@ -246,6 +290,7 @@ describe("atom env", () => {
 		const everyMs = (value?: string) =>
 			createAtomEnv({
 				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: PEER_SECRET,
 				ATOM_HEALTH_LOG_EVERY_MS: value,
 			}).ATOM_HEALTH_LOG_EVERY_MS;
 
