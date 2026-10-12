@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { assertTsSdkPatches } from "./assertTsSdkPatches.js";
+import { assertSdkPatches } from "./assertSdkPatches.js";
 
 const PATCH = `diff --git a/src/lib/config.ts b/src/lib/config.ts
 --- a/src/lib/config.ts
@@ -33,18 +33,18 @@ const sdkWith = ({ config }: { config: string }) => {
 };
 
 test("passes when every patched line was generated", () => {
-	const speakeasySdkDir = sdkWith({
+	const sdkDir = sdkWith({
 		config:
 			"  serverURL?: string | undefined;\n  atomURL?: string | undefined;\n",
 	});
-	expect(() => assertTsSdkPatches({ speakeasySdkDir })).not.toThrow();
+	expect(() => assertSdkPatches({ sdkDir, label: "TS" })).not.toThrow();
 });
 
 test("throws when Speakeasy dropped a patch", () => {
-	const speakeasySdkDir = sdkWith({
+	const sdkDir = sdkWith({
 		config: "  serverURL?: string | undefined;\n",
 	});
-	expect(() => assertTsSdkPatches({ speakeasySdkDir })).toThrow(
+	expect(() => assertSdkPatches({ sdkDir, label: "TS" })).toThrow(
 		"src/lib/config.ts: atomURL?: string | undefined;",
 	);
 });

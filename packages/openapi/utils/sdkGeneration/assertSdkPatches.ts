@@ -23,26 +23,28 @@ const addedLinesOf = ({ patch }: { patch: string }) => {
  * Throws unless every line a Speakeasy patch file adds is in the regenerated SDK.
  * Speakeasy only warns when a patch's target is no longer generated, so a dropped patch would otherwise ship.
  */
-export function assertTsSdkPatches({
-	speakeasySdkDir,
+export function assertSdkPatches({
+	sdkDir,
+	label,
 }: {
-	speakeasySdkDir: string;
+	sdkDir: string;
+	label: string;
 }): void {
 	const missing: string[] = [];
 	for (const file of listPatchFiles({
-		dir: path.join(speakeasySdkDir, PATCHES_DIR),
+		dir: path.join(sdkDir, PATCHES_DIR),
 	})) {
 		const { target, added } = addedLinesOf({
 			patch: readFileSync(file, "utf-8"),
 		});
-		if (!target) throw new Error(`[TS] ${file} names no target file`);
-		const generated = readFileSync(path.join(speakeasySdkDir, target), "utf-8");
+		if (!target) throw new Error(`[${label}] ${file} names no target file`);
+		const generated = readFileSync(path.join(sdkDir, target), "utf-8");
 		for (const line of added)
 			if (!generated.includes(line)) missing.push(`${target}: ${line.trim()}`);
 	}
 	if (missing.length > 0)
 		throw new Error(
-			`[TS] Speakeasy patches missing from the regenerated SDK:\n${missing.join("\n")}`,
+			`[${label}] Speakeasy patches missing from the regenerated SDK:\n${missing.join("\n")}`,
 		);
-	console.log("[TS] Speakeasy patches present in the regenerated SDK");
+	console.log(`[${label}] Speakeasy patches present in the regenerated SDK`);
 }

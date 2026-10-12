@@ -10,7 +10,7 @@ packages/openapi/openapi-internal.yml
 
 # TypeScript SDK (Speakeasy); src/hooks/* other than these three are hand-written
 # .speakeasy/patches/ is hand-written too: Speakeasy re-applies each patch on every generation, and
-# `bun api` fails if a patch is missing from the output (packages/openapi/utils/sdkGeneration/assertTsSdkPatches.ts)
+# `bun api` fails if a patch is missing from the output (packages/openapi/utils/sdkGeneration/assertSdkPatches.ts)
 packages/sdk/.devcontainer/
 packages/sdk/.gitattributes
 packages/sdk/.npmignore
@@ -40,6 +40,7 @@ packages/sdk/src/hooks/index.ts
 packages/sdk/src/hooks/types.ts
 
 # Python SDK (Speakeasy); src/autumn_sdk/_hooks/* other than these three are hand-written
+# .speakeasy/patches/ is hand-written too, and asserted the same way as the TypeScript SDK's
 others/python-sdk/.gitattributes
 others/python-sdk/.speakeasy/code-samples.overlay.yaml
 others/python-sdk/.speakeasy/gen.lock
