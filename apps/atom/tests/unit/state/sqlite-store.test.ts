@@ -207,11 +207,13 @@ describe("sqlite store", () => {
 		const last = firstPage.at(-1);
 		const nextPage = sqliteStore.listAppliedAfter({
 			after: null,
-			cursor: last && {
-				appliedAt: last.appliedAt,
-				customerId: last.subject.state.identity.customerId,
-				entityId: "",
-			},
+			cursor: last
+				? {
+						appliedAt: last.appliedAt,
+						customerId: last.subject.state.identity.customerId,
+						entityId: "",
+					}
+				: null,
 			limit: 2,
 		});
 
