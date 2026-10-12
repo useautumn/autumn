@@ -1,4 +1,6 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
+import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { CreditSchemaListProvider } from "../hooks/CreditSchemaListContext";
 import { diffCreditOverride } from "../utils/diffCreditOverride";
@@ -20,11 +22,12 @@ export function CreditOverrideRateCard({
 	const { features } = useFeaturesQuery();
 	const diff = diffCreditOverride({ schema, creditSystem });
 
-	const missingFeatureNames = diff.missingFeatureIds
-		.map((featureId) =>
-			featureDisplayName({ features, featureId, plural: true }),
-		)
-		.join(", ");
+	const restoreFeature = (featureId: string) => {
+		const catalogItem = creditSystem?.config?.schema?.find(
+			(item: CreditSchemaItem) => item.metered_feature_id === featureId,
+		);
+		if (catalogItem) onChange([...schema, catalogItem]);
+	};
 
 	return (
 		<CreditSchemaListProvider
@@ -46,10 +49,36 @@ export function CreditOverrideRateCard({
 					)}
 				/>
 
-				{missingFeatureNames && (
-					<span className="text-tertiary-foreground text-xs">
-						Not in this override: {missingFeatureNames}
-					</span>
+				{diff.excludedFeatureIds.length > 0 && (
+					<div className="flex flex-col gap-1">
+						<span className="text-tertiary-foreground text-xs">
+							Not covered on this plan
+						</span>
+						{diff.excludedFeatureIds.map((featureId) => (
+							<div
+								key={featureId}
+								className="flex items-center justify-between text-sm text-t3"
+							>
+								<span className="line-through">
+									{featureDisplayName({
+										features,
+										featureId,
+										plural: true,
+										capitalize: true,
+									})}
+								</span>
+								<IconButton
+									variant="skeleton"
+									iconOrientation="left"
+									icon={<ArrowCounterClockwiseIcon size={12} />}
+									onClick={() => restoreFeature(featureId)}
+									className="!text-subtle hover:!text-foreground text-xs"
+								>
+									Restore
+								</IconButton>
+							</div>
+						))}
+					</div>
 				)}
 			</div>
 		</CreditSchemaListProvider>

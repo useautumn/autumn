@@ -5,7 +5,7 @@ export type CreditOverrideRowStatus = "inherited" | "changed" | "added";
 
 export type CreditOverrideDiff = {
 	statusByIndex: CreditOverrideRowStatus[];
-	missingFeatureIds: string[];
+	excludedFeatureIds: string[];
 	changedCount: number;
 	totalCount: number;
 };
@@ -40,15 +40,15 @@ export const diffCreditOverride = ({
 	);
 	const overridden = new Set(toMeteredFeatureIds(schema));
 	const statusByIndex = schema.map((item) => classifyRow({ item, catalog }));
-	const missingFeatureIds = [...catalog.keys()].filter(
+	const excludedFeatureIds = [...catalog.keys()].filter(
 		(featureId) => !overridden.has(featureId),
 	);
 	const changedRows = statusByIndex.filter((status) => status !== "inherited");
 
 	return {
 		statusByIndex,
-		missingFeatureIds,
-		changedCount: changedRows.length + missingFeatureIds.length,
+		excludedFeatureIds,
+		changedCount: changedRows.length + excludedFeatureIds.length,
 		totalCount: new Set([...overridden, ...catalog.keys()]).size,
 	};
 };

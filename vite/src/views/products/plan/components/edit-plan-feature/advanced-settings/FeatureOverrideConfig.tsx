@@ -22,7 +22,7 @@ export function FeatureOverrideConfig() {
 	return (
 		<FeatureOverrideArea
 			title="Custom rate card"
-			description="Override this credit system's rate card for customers on this plan. Replaces the feature's rate card entirely."
+			description="Change rates, add features or remove them for customers on this plan. Anything you don't change keeps the credit system's rate."
 			enabled={hasOverride}
 			onSeed={seedSchema}
 			onClear={clear}

@@ -4,9 +4,13 @@ import type {
 	FeatureConfigOverride,
 	FeatureMarkupsOverride,
 } from "@autumn/shared";
-import { isAiCreditSystem, isExcludedCreditSchemaItem } from "@autumn/shared";
+import { isAiCreditSystem } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import {
+	effectiveSchemaToOverride,
+	overrideToEffectiveSchema,
+} from "../utils/creditOverrideSchema";
 
 export const useFeatureOverride = () => {
 	const { item, setItem } = useProductItemContext();
@@ -29,32 +33,28 @@ export const useFeatureOverride = () => {
 		setItem({ ...item, config });
 	};
 
-	const overrideRows = override?.schema ?? [];
-	const excludedRows = overrideRows.filter(isExcludedCreditSchemaItem);
-	const rateRows = overrideRows.filter(
-		(row): row is CreditSchemaItem => !isExcludedCreditSchemaItem(row),
-	);
-
 	return {
 		item,
 		creditSystem,
 		override,
 		isAi: isAiCreditSystem(creditSystem?.type),
 		hasOverride: override != null,
-		schema: rateRows,
+		schema: overrideToEffectiveSchema({
+			override: override?.schema ?? [],
+			creditSystem,
+		}),
 		markups: override?.markups,
 
 		setSchema: (schema: CreditSchemaItem[] | null) =>
 			setOverride(
-				schema === null ? null : { schema: [...schema, ...excludedRows] },
+				schema === null
+					? null
+					: { schema: effectiveSchemaToOverride({ schema, creditSystem }) },
 			),
 		setMarkups: (markups: FeatureMarkupsOverride | null) =>
 			setOverride(markups === null ? null : { markups }),
 
-		seedSchema: () =>
-			setOverride({
-				schema: structuredClone(creditSystem?.config?.schema ?? []),
-			}),
+		seedSchema: () => setOverride({ schema: [] }),
 		seedMarkups: () =>
 			setOverride({
 				markups: {
