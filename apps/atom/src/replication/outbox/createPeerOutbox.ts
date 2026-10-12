@@ -7,9 +7,9 @@ import type { ReplicatedOperation } from "../types/replicatedOperation.js";
 /** Deliveries in flight per peer; the rest wait, newest copy per key, so a slow peer never holds up a receive. */
 const DELIVERIES_PER_PEER = 4;
 /** A peer that is restarting is back within this; after it a waiting copy is dropped, and the peer's catch-up covers it. */
-const HOLD_MS = 5 * 60_000;
-/** Copies waiting across all peers; past this the oldest is dropped, counted, so memory stays bounded under a long outage. */
-const MAX_WAITING = 20_000;
+export const HOLD_MS = 5 * 60_000;
+/** Bytes of body waiting across all peers; past this the oldest is dropped, counted, so memory stays bounded under a long outage. */
+const MAX_WAITING_BYTES = 64 * 1024 * 1024;
 const RETRY_DELAY_MS = 1_000;
 /** On stop: how long the copies still waiting get to reach their peers before they are dropped. */
 const STOP_FLUSH_MS = 5_000;
@@ -45,7 +45,7 @@ export const createPeerOutbox = ({
 	const now = ctx.now ?? Date.now;
 	const queues = new Map<string, Map<string, Waiting>>();
 	const workers = new Map<string, number>();
-	let waiting = 0;
+	let waitingBytes = 0;
 	let inFlight = 0;
 	let stopped = false;
 	let onIdle: (() => void) | null = null;
@@ -59,8 +59,38 @@ export const createPeerOutbox = ({
 		return queue;
 	}
 
+	const waiting = (): number =>
+		[...queues.values()].reduce((count, queue) => count + queue.size, 0);
+
 	function settleIfIdle(): void {
-		if (waiting === 0 && inFlight === 0) onIdle?.();
+		if (waiting() === 0 && inFlight === 0) onIdle?.();
+	}
+
+	function take({
+		queue,
+		key,
+	}: {
+		queue: Map<string, Waiting>;
+		key: string;
+	}): Waiting | undefined {
+		const entry = queue.get(key);
+		if (!entry) return undefined;
+		queue.delete(key);
+		waitingBytes -= entry.operation.body.length;
+		return entry;
+	}
+
+	function put({
+		queue,
+		key,
+		entry,
+	}: {
+		queue: Map<string, Waiting>;
+		key: string;
+		entry: Waiting;
+	}): void {
+		queue.set(key, entry);
+		waitingBytes += entry.operation.body.length;
 	}
 
 	function drop({ peer, reason }: { peer: string; reason: string }): void {
@@ -75,37 +105,41 @@ export const createPeerOutbox = ({
 		for (const [peer, queue] of queues) {
 			const oldest = queue.keys().next();
 			if (oldest.done) continue;
-			queue.delete(oldest.value);
-			waiting -= 1;
+			take({ queue, key: oldest.value });
 			drop({ peer, reason: "too_many_waiting" });
 			return;
 		}
 	}
 
+	/** A peer that left the service name was replaced; its new address gets the rest through catch-up. Emptied in place, so a worker still on it finds nothing. */
 	function discardQueue(peer: string): void {
 		const queue = queues.get(peer);
 		if (!queue) return;
-		waiting -= queue.size;
+		for (const key of [...queue.keys()]) take({ queue, key });
 		queues.delete(peer);
 	}
 
 	async function deliverUntilEmpty(peer: string): Promise<void> {
-		const queue = queueFor(peer);
 		for (;;) {
-			const next = queue.entries().next();
-			if (next.done) break;
-			const [key, entry] = next.value;
-			queue.delete(key);
-			waiting -= 1;
+			const queue = queues.get(peer);
+			const next = queue?.keys().next();
+			if (!queue || !next || next.done) break;
+			const key = next.value;
+			const entry = take({ queue, key });
+			if (!entry) continue;
 			inFlight += 1;
-			const delivered = await ctx.send({
+			const delivery = await ctx.send({
 				peer,
 				path: entry.path,
 				operation: entry.operation,
 			});
 			inFlight -= 1;
-			if (delivered) {
+			if (delivery === "delivered") {
 				ctx.counters.add("relayed");
+				continue;
+			}
+			if (delivery === "rejected") {
+				drop({ peer, reason: "rejected" });
 				continue;
 			}
 			ctx.counters.add("relayFailed");
@@ -115,12 +149,9 @@ export const createPeerOutbox = ({
 				continue;
 			}
 			// Back at the front with its original age; a newer copy that arrived meanwhile wins over it.
-			if (!queue.has(key)) {
-				queue.set(key, entry);
-				waiting += 1;
-			}
+			const current = queues.get(peer);
+			if (current && !current.has(key)) put({ queue: current, key, entry });
 			await sleep(RETRY_DELAY_MS);
-			// A peer that left the service name was replaced; its new address gets the rest through catch-up.
 			if (!(await ctx.resolver.peers()).includes(peer)) {
 				discardQueue(peer);
 				break;
@@ -140,11 +171,13 @@ export const createPeerOutbox = ({
 		path: string;
 	}): void {
 		const queue = queueFor(peer);
-		const held = queue.get(operation.key);
-		if (held) queue.delete(operation.key);
-		else waiting += 1;
-		queue.set(operation.key, { operation, path, since: held?.since ?? now() });
-		while (waiting > MAX_WAITING) dropOldest();
+		const held = take({ queue, key: operation.key });
+		put({
+			queue,
+			key: operation.key,
+			entry: { operation, path, since: held?.since ?? now() },
+		});
+		while (waitingBytes > MAX_WAITING_BYTES) dropOldest();
 		const running = workers.get(peer) ?? 0;
 		if (running >= DELIVERIES_PER_PEER) return;
 		workers.set(peer, running + 1);
@@ -166,7 +199,7 @@ export const createPeerOutbox = ({
 	/** What is still waiting gets one flush window; a peer that is down by then loses those copies to its own catch-up. */
 	async function stop(): Promise<void> {
 		stopped = true;
-		if (waiting === 0 && inFlight === 0) return;
+		if (waiting() === 0 && inFlight === 0) return;
 		await Promise.race([
 			new Promise<void>((resolve) => {
 				onIdle = resolve;
@@ -177,7 +210,7 @@ export const createPeerOutbox = ({
 		for (const [peer, queue] of queues)
 			for (let i = 0; i < queue.size; i++) drop({ peer, reason: "stopping" });
 		queues.clear();
-		waiting = 0;
+		waitingBytes = 0;
 	}
 
 	return { enqueue, stop };
