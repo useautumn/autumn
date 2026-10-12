@@ -61,9 +61,19 @@ const boot = async (cluster: SimCluster, skews: number[] = []) => {
 	ADDRESSES.forEach((address, i) =>
 		cluster.start({ address, skewMs: skews[i] ?? 0 }),
 	);
-	await cluster.runFor({ ms: 10_000, pushesPerSecond: 0, checksPerSecond: 0 });
+	await cluster.runFor({
+		ms: 10_000,
+		pushesPerSecond: 0,
+		checksPerSecond: 0,
+		catalogPushesPerMinute: 0,
+	});
 	expect(cluster.ready().length).toBe(3);
-	await cluster.runFor({ ms: WARM_MS, pushesPerSecond: 0, checksPerSecond: 0 });
+	await cluster.runFor({
+		ms: WARM_MS,
+		pushesPerSecond: 0,
+		checksPerSecond: 0,
+		catalogPushesPerMinute: 0,
+	});
 	await cluster.seedCustomers();
 };
 
@@ -71,11 +81,17 @@ const boot = async (cluster: SimCluster, skews: number[] = []) => {
 const recover = async (cluster: SimCluster) => {
 	for (const address of cluster.addresses())
 		if (!cluster.replicas.get(address)?.alive()) cluster.start({ address });
-	await cluster.runFor({ ms: 5_000, pushesPerSecond: 0, checksPerSecond: 0 });
+	await cluster.runFor({
+		ms: 5_000,
+		pushesPerSecond: 0,
+		checksPerSecond: 0,
+		catalogPushesPerMinute: 0,
+	});
 	await cluster.runFor({
 		ms: QUIET_MS,
 		pushesPerSecond: 0,
 		checksPerSecond: 0,
+		catalogPushesPerMinute: 0,
 	});
 	expect(cluster.alive().every((replica) => replica.isReady())).toBe(true);
 };
