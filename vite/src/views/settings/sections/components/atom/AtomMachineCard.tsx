@@ -1,6 +1,11 @@
 import type { ByocCacheMachine } from "@autumn/shared";
 import { cn } from "@/lib/utils";
-import { atomMachineLabel, atomMachineSpecs } from "./atomMachineDisplay";
+import {
+	atomMachineLabel,
+	atomMachineSpecs,
+	atomMachinesLabel,
+	atomMonthlyEstimate,
+} from "./atomMachineDisplay";
 
 export const AtomMachineCard = ({
 	caption,
@@ -32,10 +37,10 @@ export const AtomMachineCard = ({
 			{atomMachineSpecs(machine)}
 		</span>
 		<span className="font-mono text-[11px] text-subtle">
-			{machine.instanceType}
+			{atomMachinesLabel(machine)}
 		</span>
 		<span className="pt-1.5 text-[13px] font-semibold text-foreground">
-			${machine.estimatedMonthlyUsd}
+			{atomMonthlyEstimate(machine)}
 			<span className="text-xs font-normal text-subtle"> /mo on AWS</span>
 		</span>
 	</div>

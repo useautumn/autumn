@@ -21,7 +21,7 @@
 				"memory": { "min": "6Gi", "desired": "6Gi" },
 				"resourceChoices": {
 					"cpu": { "min": "1", "max": "15", "default": "3" },
-					"memory": { "min": "2.75Gi", "max": "24Gi", "default": "6Gi" }
+					"memory": { "min": "0.625Gi", "max": "24Gi", "default": "6Gi" }
 				},
 				"environment": {
 					"ATOM_HOSTNAME": "0.0.0.0",
@@ -49,7 +49,7 @@
 					}
 				],
 				"stateful": true,
-				"replicas": 1
+				"replicas": 2
 			},
 			"lifecycle": "live",
 			"dependencies": []
