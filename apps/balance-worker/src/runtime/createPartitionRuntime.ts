@@ -2,6 +2,7 @@ import type { OwnedPartitionHealth } from "../health/ownedPartitionHealth.js";
 import { createPartitionProcessor } from "../processor/createPartitionProcessor.js";
 import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import { getRuntimeHealth } from "./getRuntimeHealth.js";
+import { enterRuntimeRecovery } from "./lifecycle/enterRuntimeRecovery.js";
 import { fenceRuntime } from "./lifecycle/fenceRuntime.js";
 import {
 	activateRuntime,
@@ -52,6 +53,7 @@ export function createPartitionRuntime({
 				receiptPolicy: dependencies.receiptPolicy,
 				recentCommands: dependencies.recentCommands,
 				commitPositions: dependencies.commitPositions,
+				onRecoveryRequired,
 				subjectSnapshotsConfig: dependencies.subjectSnapshotsConfig,
 				dbControl: dependencies.dbControl,
 				assertCanRead,
@@ -64,6 +66,12 @@ export function createPartitionRuntime({
 			},
 		}),
 	};
+
+	// The follower leaves this writer's records to it, so its failure must hand the partition on without waiting for a command.
+	function onRecoveryRequired({ cause }: { cause: unknown }): void {
+		if (state.status === "draining" || state.status === "stopped") return;
+		void enterRuntimeRecovery({ ctx, state, cause });
+	}
 
 	function assertCanRead(): void {
 		if (state.terminalError) throw state.terminalError;

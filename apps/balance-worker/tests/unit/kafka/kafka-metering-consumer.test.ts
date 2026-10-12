@@ -9,6 +9,7 @@ import {
 	createProgressTracker,
 	InvalidRecordError,
 	type KafkaConsumerClient,
+	OWNER_EPOCH_HEADER,
 	type ProgressTracker,
 	serializeMeteringRecord,
 	type TopicRecordResult,
@@ -76,12 +77,14 @@ type FakeKafkaConsumer = KafkaMeteringConsumerPort & {
 			offset: string;
 			key: Buffer | null;
 			value: Buffer | null;
+			headers?: KafkaMessage["headers"];
 		}>;
 	}) => Promise<void>;
 	deliver: (params: {
 		offset: string;
 		key: Buffer | null;
 		value: Buffer | null;
+		headers?: KafkaMessage["headers"];
 	}) => Promise<void>;
 	failNextCommit: (error: Error) => void;
 };
@@ -176,17 +179,19 @@ const createFakeKafkaConsumer = ({
 		offset,
 		key,
 		value,
+		headers = {},
 	}: {
 		offset: string;
 		key: Buffer | null;
 		value: Buffer | null;
+		headers?: KafkaMessage["headers"];
 	}): KafkaMessage => ({
 		offset,
 		key,
 		value,
 		timestamp: "0",
 		attributes: 0,
-		headers: {},
+		headers,
 	});
 
 	return {
@@ -309,8 +314,8 @@ const createFakeKafkaConsumer = ({
 				});
 			}
 		},
-		deliver: async function ({ offset, key, value }) {
-			await this.deliverBatch({ records: [{ offset, key, value }] });
+		deliver: async function ({ offset, key, value, headers }) {
+			await this.deliverBatch({ records: [{ offset, key, value, headers }] });
 		},
 		failNextCommit: (error) => {
 			nextCommitError = error;
@@ -1389,6 +1394,55 @@ test(
 	replayStopSettlesBatchesBeforeReplacement,
 );
 
+test("the follower passes its own writer's records unread after the partition's read-only preparation replay is created", async () => {
+	const fixture = createStoreFixture();
+	const port = createFakeKafkaConsumer();
+	const consumer = createKafkaMeteringConsumer({
+		consumer: port,
+		partitionOffsets: createFakeKafkaPartitionOffsets({ high: "0" }),
+		stateStore: fixture.store,
+		topic,
+	});
+	const recentCommands = createRecentCommands({
+		windowMs: 600_000,
+		now: () => 0,
+	});
+	const producedOffsets = createProducedOffsets();
+	const follower = consumer.createReplay({
+		partition,
+		recentCommands,
+		producedOffsets,
+	});
+	consumer.createReplay({ partition, recentCommands, readOnly: true });
+	try {
+		const state = createState();
+		restoreSubjectStates({
+			store: fixture.store,
+			topic,
+			partition,
+			states: [state],
+		});
+		await consumer.start();
+		await follower.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable: () => {},
+		});
+		producedOffsets.remember({ from: 0n, to: 0n });
+		await port.deliver({
+			offset: "0",
+			...serializeMeteringRecord({ record: createMutation({ state }) }),
+		});
+
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+	} finally {
+		await follower.stop();
+		await consumer.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
 describe("replay window", () => {
 	test.each([
 		{
@@ -2371,4 +2425,70 @@ describe("owner fences", () => {
 			closeStoreFixture(fixture);
 		}
 	});
+});
+
+test("a record the failed writer produced is skipped by its own follower and applied by the successor under a new epoch", async () => {
+	const fixture = createStoreFixture();
+	const port = createFakeKafkaConsumer();
+	const consumer = createKafkaMeteringConsumer({
+		consumer: port,
+		partitionOffsets: createFakeKafkaPartitionOffsets({ high: "1" }),
+		stateStore: fixture.store,
+		topic,
+	});
+	const createRuntimeReplays = ({ epoch }: { epoch: string }) => {
+		const recentCommands = createRecentCommands({
+			windowMs: 600_000,
+			now: () => 0,
+		});
+		const follower = consumer.createReplay({
+			partition,
+			recentCommands,
+			producedOffsets: createProducedOffsets(),
+			ownerEpoch: () => epoch,
+		});
+		consumer.createReplay({ partition, recentCommands, readOnly: true });
+		return follower;
+	};
+	const failed = createRuntimeReplays({ epoch: "7" });
+	try {
+		const state = createState();
+		restoreSubjectStates({
+			store: fixture.store,
+			topic,
+			partition,
+			states: [state],
+		});
+		await consumer.start();
+		await failed.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable: () => {},
+		});
+		// Written under the failed writer's epoch and never remembered: its apply failed and recovery disposes the runtime.
+		const record = {
+			offset: "0",
+			...serializeMeteringRecord({ record: createMutation({ state }) }),
+			headers: { [OWNER_EPOCH_HEADER]: "7" },
+		};
+		await port.deliver(record);
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+		await failed.stop();
+
+		const successor = createRuntimeReplays({ epoch: "8" });
+		await successor.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable: () => {},
+		});
+		await port.deliver(record);
+
+		expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		await successor.stop();
+	} finally {
+		await consumer.stop();
+		closeStoreFixture(fixture);
+	}
 });
