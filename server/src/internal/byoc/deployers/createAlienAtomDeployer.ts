@@ -228,6 +228,7 @@ const resizeAlienAtom = async ({
 	await ctx.alienClient.updateDeploymentCompute({
 		deployment,
 		pools: machineToAtomPools({ machine }),
+		containers: machineToAtomContainers({ machine }),
 	});
 };
 
