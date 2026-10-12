@@ -211,6 +211,19 @@ export function createMeteringRecordHandler({
 		return missed;
 	}
 
+	/** Written under the epoch this process's writer holds: only that writer produces records under it. */
+	function isOwnWriterRecord({
+		partition,
+		ownerEpoch,
+	}: {
+		partition: number;
+		ownerEpoch: bigint | undefined;
+	}): boolean {
+		if (ownerEpoch === undefined || !isWriting({ partition })) return false;
+		const own = ctx.ownerEpochByPartition?.get(partition)?.();
+		return own !== undefined && BigInt(own) === ownerEpoch;
+	}
+
 	/** This process holds the partition's writer: its follower should only ever see records that writer produced. */
 	function isWriting({ partition }: { partition: number }): boolean {
 		return (
@@ -233,6 +246,9 @@ export function createMeteringRecordHandler({
 			staleRecords.record({ ...position, ownerEpoch, fence });
 			return undefined;
 		}
+		// Read back before its writer remembered the offset: the writer applies it in its own batch.
+		if (isOwnWriterRecord({ partition: position.partition, ownerEpoch }))
+			return undefined;
 		if (ctx.readOnlyPartitions?.has(position.partition)) {
 			ctx.recentCommandsByPartition
 				.get(position.partition)
