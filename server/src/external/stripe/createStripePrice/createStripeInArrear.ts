@@ -2,6 +2,7 @@ import {
 	type EntitlementWithFeature,
 	ErrCode,
 	type Feature,
+	isVolumePrice,
 	type Organization,
 	type Price,
 	type Product,
@@ -243,7 +244,8 @@ export const createStripeInArrearPrice = async ({
 		entitlement: relatedEnt,
 		org,
 		currency,
-		withFlatAmounts: false,
+		// Metered quantity stays 0, so a volume flat fee would bill every cycle.
+		withFlatAmounts: !isVolumePrice(price),
 	});
 
 	let priceAmountData = {};

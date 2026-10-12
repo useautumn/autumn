@@ -3,6 +3,7 @@ import {
 	BillingType,
 	type EntitlementWithFeature,
 	ErrCode,
+	isVolumePrice,
 	type Organization,
 	type Price,
 	type Product,
@@ -80,7 +81,8 @@ export const createStripeMeteredPrice = async ({
 		entitlement: ent,
 		org,
 		currency,
-		withFlatAmounts: false,
+		// Metered quantity stays 0, so a volume flat fee would bill every cycle.
+		withFlatAmounts: !isVolumePrice(price),
 	});
 
 	let priceAmountData = {};

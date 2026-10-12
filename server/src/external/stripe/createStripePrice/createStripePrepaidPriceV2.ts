@@ -3,10 +3,10 @@ import {
 	type FullProduct,
 	getPriceCurrencyStripeId,
 	type Price,
-	type StripePriceNicknameSource,
 	priceToEnt,
 	priceUtils,
 	RecaseError,
+	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";

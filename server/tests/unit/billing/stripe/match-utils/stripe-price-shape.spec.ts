@@ -308,6 +308,37 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 		}
 	});
 
+	test("does not construct graduated consumable shapes with flat amounts, as on dev", () => {
+		expect(
+			autumnConsumablePriceToStripePriceShape({
+				price: consumablePrice({
+					tiers: [
+						{ to: 500, amount: 0.1, flat_amount: 1 },
+						{ to: Infinite, amount: 0.05 },
+					],
+				}),
+				entitlement: entitlement({ allowance: 100 }),
+				stripeProductId: "prod_messages",
+				currency: "usd",
+				org,
+			}),
+		).toBeNull();
+	});
+
+	test("does not construct a graduated consumable shape when flat_amount is 0, as on dev", () => {
+		expect(
+			autumnConsumablePriceToStripePriceShape({
+				price: consumablePrice({
+					tiers: [{ to: Infinite, amount: 0, flat_amount: 0 }],
+				}),
+				entitlement: entitlement(),
+				stripeProductId: "prod_messages",
+				currency: "usd",
+				org,
+			}),
+		).toBeNull();
+	});
+
 	test("constructs a volume consumable shape without flat fees, as the metered price is created", () => {
 		const shape = autumnConsumablePriceToStripePriceShape({
 			price: consumablePrice({
