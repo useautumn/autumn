@@ -1,11 +1,15 @@
 import {
 	type ApiByocCache,
+	BYOC_CACHE_REPLICAS,
 	type ByocCacheMachine,
+	byocCacheMachineMonthlyUsd,
 	findByocCacheMachine,
 } from "@autumn/shared";
 
 /** Names only the dashboard uses; the API speaks in `cpu` and `memory`. */
 const MACHINE_LABELS: Record<ByocCacheMachine["instanceType"], string> = {
+	"t4g.micro": "XXS",
+	"t4g.small": "XS",
 	"c8g.large": "Small",
 	"c8g.xlarge": "Medium",
 	"c8g.2xlarge": "Large",
@@ -22,6 +26,13 @@ export const atomMachineLabel = (machine: ByocCacheMachine) =>
 /** The machine the size runs on, as AWS sells it. */
 export const atomMachineSpecs = (machine: ByocCacheMachine) =>
 	`${machine.cpu} vCPU · ${machine.memory} GiB`;
+
+/** Every replica's machine, e.g. `2 × t4g.micro`. */
+export const atomMachinesLabel = (machine: ByocCacheMachine) =>
+	`${BYOC_CACHE_REPLICAS} × ${machine.instanceType}`;
+
+export const atomMonthlyEstimate = (machine: ByocCacheMachine) =>
+	`~$${byocCacheMachineMonthlyUsd(machine)}`;
 
 /** The Atom container's limits on that machine, which its utilization is measured against. */
 export const atomContainerSpecs = ({ container }: ByocCacheMachine) =>
