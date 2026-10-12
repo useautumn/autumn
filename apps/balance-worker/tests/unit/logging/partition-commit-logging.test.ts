@@ -120,6 +120,9 @@ test.concurrent(
 					applyFailed: 0,
 					applyMs: { totalMs: 0, maxMs: 0 },
 					unappliedMs: { totalMs: 0, maxMs: 0 },
+					followerMisses: 0,
+					followerApplies: 0,
+					followerLanded: 0,
 				},
 			]);
 			expect(summaries.drain()).toEqual([]);
@@ -364,6 +367,8 @@ test.concurrent(
 		const summaries: CommitSummaries = {
 			committed: failSummary,
 			applied: failSummary,
+			followerMissed: failSummary,
+			followerApplied: failSummary,
 			drain: failSummary,
 		};
 		try {

@@ -17,6 +17,10 @@ export type CommitSummaries = {
 		waits?: ApplyWaits;
 		failed: boolean;
 	}): void;
+	/** A record the follower could not match to this writer's produced offsets, on a partition it is writing. */
+	followerMissed(params: { partition: number }): void;
+	/** A record the follower sent to the store on a partition it is writing; `landed` when it reached Postgres before the writer's apply. */
+	followerApplied(params: { partition: number; landed: boolean }): void;
 	/** The window's summaries, one row per partition so the line's field set stays fixed; starts the next window. */
 	drain(): CommitSummaryRow[];
 };
@@ -40,6 +44,9 @@ type CommitSummary = {
 	applyMs: Timing;
 	/** How long each apply's oldest batch sat committed before the apply took it: how far Postgres trailed the log. */
 	unappliedMs: Timing;
+	followerMisses: number;
+	followerApplies: number;
+	followerLanded: number;
 };
 
 export function createCommitSummaries(): CommitSummaries {
@@ -87,6 +94,21 @@ export function createCommitSummaries(): CommitSummaries {
 		if (waits) add({ timing: summary.unappliedMs, ms: waits.unappliedMs });
 	}
 
+	function followerMissed({
+		partition,
+	}: Parameters<CommitSummaries["followerMissed"]>[0]): void {
+		summaryOf(partition).followerMisses += 1;
+	}
+
+	function followerApplied({
+		partition,
+		landed,
+	}: Parameters<CommitSummaries["followerApplied"]>[0]): void {
+		const summary = summaryOf(partition);
+		summary.followerApplies += 1;
+		if (landed) summary.followerLanded += 1;
+	}
+
 	function drain(): CommitSummaryRow[] {
 		const drained = window;
 		window = new Map();
@@ -96,7 +118,7 @@ export function createCommitSummaries(): CommitSummaries {
 		}));
 	}
 
-	return { committed, applied, drain };
+	return { committed, applied, followerMissed, followerApplied, drain };
 }
 
 function emptySummary(): CommitSummary {
@@ -114,6 +136,9 @@ function emptySummary(): CommitSummary {
 		applyFailed: 0,
 		applyMs: timing(),
 		unappliedMs: timing(),
+		followerMisses: 0,
+		followerApplies: 0,
+		followerLanded: 0,
 	};
 }
 
