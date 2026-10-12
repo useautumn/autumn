@@ -1,5 +1,5 @@
 import type { WebhookInitialPurchase } from "@puzzmo/revenue-cat-webhook-types";
-import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
+import { ErrCode, RecaseError } from "@shared/index";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -8,9 +8,9 @@ import {
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
+import { storeRevenueCatPurchaseId } from "@/external/revenueCat/utils/storeRevenueCatPurchaseId";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
 export const handleInitialPurchase = async ({
 	event,
@@ -48,19 +48,11 @@ export const handleInitialPurchase = async ({
 	// CustomerAlreadyHasProduct error rather than V2 attach's PlanAlreadyAttached.
 	if (curSameProduct) {
 		// A retry after a failed id write lands here, so repair the missing purchase id first.
-		if (
-			event.original_transaction_id &&
-			curSameProduct.processor?.type === ProcessorType.RevenueCat &&
-			!curSameProduct.processor.original_transaction_id
-		)
-			await customerProductRepo.mergeProcessor({
-				db: customerCtx.db,
-				cusProductId: curSameProduct.id,
-				processor: {
-					type: ProcessorType.RevenueCat,
-					original_transaction_id: event.original_transaction_id,
-				},
-			});
+		await storeRevenueCatPurchaseId({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			originalTransactionId: event.original_transaction_id,
+		});
 
 		throw new RecaseError({
 			message: `[handleInitialPurchase] Customer ${customer.id} already has product ${product.id}`,

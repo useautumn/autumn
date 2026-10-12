@@ -9,6 +9,7 @@ import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provis
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import { storeRevenueCatPeriod } from "@/external/revenueCat/utils/revenueCatPeriod";
+import { storeRevenueCatPurchaseId } from "@/external/revenueCat/utils/storeRevenueCatPurchaseId";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
@@ -57,6 +58,11 @@ export const handleRenewal = async ({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			event,
+		});
+		await storeRevenueCatPurchaseId({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			originalTransactionId: event.original_transaction_id,
 		});
 
 		await customerProductActions.renew({
