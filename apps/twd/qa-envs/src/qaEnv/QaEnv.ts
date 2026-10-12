@@ -309,12 +309,15 @@ export class QaEnv extends DurableObject<Env> {
 		};
 		const buildId = crypto.randomUUID().slice(0, 8);
 		await ensureEnvHostname({ env: this.env, name, script: WORKER_SCRIPT });
-		if (input.tinybird)
+		if (input.tinybird) {
 			await ensureEnvHostname({
 				env: this.env,
 				name: tinybirdHostLabel(name),
 				script: WORKER_SCRIPT,
 			});
+			// Even if this build never gets adopted, deletion must remove the hostname it created.
+			await this.ctx.storage.put("tinybirdHost", true);
+		}
 		// A live build keeps its config (database, secrets, expiry) until the new one is adopted.
 		const hasLiveBuild = Boolean(await this.ctx.storage.get("snapshot"));
 		const live = await this.config();
@@ -745,8 +748,11 @@ export class QaEnv extends DurableObject<Env> {
 		if (this.container.running) await this.container.destroy("expired");
 		this.ready = false;
 		if (config) {
-			// Also when only a failed or unadopted re-ship asked for Tinybird: its hostname exists.
-			await this.removeTinybird(config);
+			if (
+				config.tinybird ||
+				(await this.ctx.storage.get<boolean>("tinybirdHost"))
+			)
+				await this.removeTinybird(config);
 			await routerStub({ env: this.env }).setAccounts(config.name, []);
 			if (config.neonBranchId)
 				await deleteNeonBranch({
@@ -846,5 +852,6 @@ export class QaEnv extends DurableObject<Env> {
 			env: this.env,
 			name: tinybirdHostLabel(config.name),
 		});
+		await this.ctx.storage.delete("tinybirdHost");
 	}
 }
