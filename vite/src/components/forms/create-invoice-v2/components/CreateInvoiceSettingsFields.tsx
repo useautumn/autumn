@@ -103,7 +103,9 @@ export function CreateInvoiceSettingsFields() {
 				onValueChange={(paymentMethodTypes) =>
 					form.setFieldValue("paymentMethodTypes", paymentMethodTypes)
 				}
-				description={ORG_PAYMENT_METHODS_HELPER}
+				description={
+					orgPaymentMethodTypes ? ORG_PAYMENT_METHODS_HELPER : undefined
+				}
 			/>
 
 			<CreateInvoiceServicePeriodField />
