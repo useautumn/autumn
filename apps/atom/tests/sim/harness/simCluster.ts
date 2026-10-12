@@ -122,7 +122,8 @@ export const createSimCluster = ({
 	const lostVolumes = new Set<number>();
 	const generationsOn = new Map<Volume, number[]>();
 	const checks: CheckRecord[] = [];
-	let catalogReadAt = 0;
+	/** Each catalog read a replica said it stored, and which one: a discarded volume takes its catalog with it too. */
+	const catalogsStored: Array<{ readAt: number; on: number }> = [];
 	const background = new Set<Promise<unknown>>();
 
 	const outside: Endpoint = {
@@ -287,7 +288,7 @@ export const createSimCluster = ({
 		}
 	}
 
-	/** Autumn's next read of the shared catalog; counted as applied only when a replica said it stored it. */
+	/** Autumn's next read of the shared catalog; counted as stored only when a replica said so. */
 	async function pushCatalog() {
 		const readAt = clock.now();
 		const rows = createCatalogRowsFor({
@@ -314,7 +315,7 @@ export const createSimCluster = ({
 			);
 			const { stored } = (await reply.json()) as { stored: boolean };
 			if (reply.status === 200 && stored)
-				catalogReadAt = Math.max(catalogReadAt, readAt);
+				catalogsStored.push({ readAt, on: replicas.get(to)?.id ?? 0 });
 		} catch (error) {
 			say(`catalog push to ${to} failed: ${String(error).slice(0, 40)}`);
 		}
@@ -566,7 +567,13 @@ export const createSimCluster = ({
 		applied,
 		lostVolumes,
 		checks,
-		catalogReadAt: () => catalogReadAt,
+		catalogReadAt: () =>
+			Math.max(
+				0,
+				...catalogsStored
+					.filter(({ on }) => !lostVolumes.has(on))
+					.map(({ readAt }) => readAt),
+			),
 		newer,
 		/** Waits out whatever the replicas still have going, then releases every file. */
 		destroy: async () => {
