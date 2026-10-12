@@ -31,6 +31,7 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import {
 	findResetEligibleRow,
 	runBatchResetOnCustomerEntitlements,
@@ -42,6 +43,7 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getResetContextByIds } from "@/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds.js";
 import { expectPooledBalanceCorrect } from "./utils/expectPooledBalanceCorrect.js";
@@ -196,6 +198,9 @@ test.concurrent(
 				rollovers: [{ balance: 200 }],
 			});
 		}
+		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
+		if (isBalanceWorkerRoute())
+			await flushBalanceWorkerCustomer({ ctx, customerId });
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
