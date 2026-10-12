@@ -135,9 +135,12 @@ export type Replica = ReturnType<typeof createReplica>;
 export const connect = ({
 	replicas,
 	autumn,
+	replyFrom = async (_replica, reply) => reply,
 }: {
 	replicas: Replica[];
 	autumn?: (request: Request) => Promise<Response>;
+	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
+	replyFrom?: (replica: Replica, reply: Response) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
 		replicas.map((replica) => [replica.address, replica]),
@@ -149,12 +152,17 @@ export const connect = ({
 		if (url.origin === AUTUMN_API_URL && autumn)
 			return autumn(new Request(url, init));
 		const replica = byAddress.get(url.hostname);
-		if (!replica) throw new TypeError(`connect ECONNREFUSED ${url.hostname}`);
+		if (!replica)
+			throw Object.assign(
+				new TypeError(`connect ECONNREFUSED ${url.hostname}`),
+				{ code: "ECONNREFUSED" },
+			);
 		const app = Number(url.port) === PEER_PORT ? replica.peerApp : replica.app;
-		return app.request(`${url.pathname}${url.search}`, {
+		const reply = await app.request(`${url.pathname}${url.search}`, {
 			...init,
 			signal: undefined,
 		});
+		return replyFrom(replica, reply);
 	};
 	spyOn(globalThis, "fetch").mockImplementation(((
 		input: URL | RequestInfo,

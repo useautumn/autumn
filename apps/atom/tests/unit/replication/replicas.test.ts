@@ -388,8 +388,8 @@ describe("a replica not ready yet", () => {
 	});
 });
 
-describe("without a peer secret", () => {
-	test("a deployed Atom has no replication: its public app relays nothing and knows no peer route", async () => {
+describe("the public app", () => {
+	test("serves no peer route, and relays nothing where there is no replication (a multi-tenant Atom)", async () => {
 		const dataDir = mkdtempSync(join(tmpdir(), "atom-replica-"));
 		const threadStats = createThreadStatsBuffer({ threads: 1 });
 		const auth = createDeployedAuth({

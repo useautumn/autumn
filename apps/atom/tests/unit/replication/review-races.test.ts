@@ -152,6 +152,36 @@ describe("not-ready proxy (review of #4605)", () => {
 	}, 10_000);
 });
 
+describe("not-ready proxy: a reply lost on the way back", () => {
+	test("a check that sends an event reaches Autumn once when the ready peer's reply is lost after it answered", async () => {
+		let autumnCalls = 0;
+		const a = createReplica({ address: "10.0.0.1", peers: ["10.0.0.2"] });
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			ready: false,
+		});
+		connect({
+			replicas: [a, b],
+			autumn: async () => {
+				autumnCalls += 1;
+				return Response.json({ allowed: true });
+			},
+			replyFrom: async (replica, reply) => {
+				if (replica !== a) return reply;
+				throw Object.assign(new TypeError("read ECONNRESET"), {
+					code: "ECONNRESET",
+				});
+			},
+		});
+
+		const reply = await b.app.request("/v1/balances.check", sendEventCheck());
+
+		expect(reply.status).toBe(504);
+		expect(autumnCalls).toBe(1);
+	});
+});
+
 describe("outbox bookkeeping (review of #4605)", () => {
 	test("a peer that leaves while deliveries are in flight leaves nothing counted as waiting, so stop does not wait out the flush window", async () => {
 		let known = ["10.0.0.2"];
