@@ -2,17 +2,20 @@ import type {
 	CheckAnswer,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
-import type { StoredSubject } from "../../state/types/storedSubject.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+} from "../../state/repos/subjectStates.js";
 import {
 	checkRequestToWire,
 	replyToError,
-	wireToStoredSubject,
+	wireToAppliedSubject,
 } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type {
+	AppliedSubjectOnWire,
 	OwnerCallBody,
 	OwnerReply,
-	StoredSubjectOnWire,
 } from "./types/ownerCall.js";
 import type { CatalogCalls } from "./types/slotOwners.js";
 
@@ -30,13 +33,14 @@ type WaitingCall = ReturnType<typeof Promise.withResolvers<OwnerReply>> & {
 export type OwnerLink = {
 	processorFor(params: { atomId: string | null }): SlotProcessor;
 	catalogFor(params: { atomId: string | null }): CatalogCalls;
-	/** The subjects of a slot the other thread owns, read after `readAtAfter`. */
+	/** The subjects of a slot the other thread owns, written at or after `after`. */
 	listSince(params: {
 		atomId: string | null;
 		slot: number;
-		readAtAfter: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
 		limit: number;
-	}): Promise<StoredSubject[]>;
+	}): Promise<AppliedSubject[]>;
 	connect(params: { port: MessagePort }): void;
 	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
@@ -63,7 +67,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 
 	async function call(
 		body: OwnerCallBody,
-	): Promise<CheckAnswer | boolean | StoredSubjectOnWire[]> {
+	): Promise<CheckAnswer | boolean | AppliedSubjectOnWire[]> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
 			body.type !== "installCatalog" && waiting.size >= MAX_CALLS_IN_FLIGHT;
@@ -113,14 +117,15 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	async function listSince(params: {
 		atomId: string | null;
 		slot: number;
-		readAtAfter: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
 		limit: number;
-	}): Promise<StoredSubject[]> {
+	}): Promise<AppliedSubject[]> {
 		const wires = (await call({
 			type: "listSince",
 			...params,
-		})) as StoredSubjectOnWire[];
-		return wires.map(wireToStoredSubject);
+		})) as AppliedSubjectOnWire[];
+		return wires.map(wireToAppliedSubject);
 	}
 
 	function connect({ port: next }: { port: MessagePort }): void {

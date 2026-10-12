@@ -1,7 +1,7 @@
 import type { Auth } from "../../auth/types/auth.js";
 import {
+	appliedSubjectToWire,
 	errorToReply,
-	storedSubjectToWire,
 	wireToCheckRequest,
 } from "./ownerCallContract.js";
 import type { OwnerCall } from "./types/ownerCall.js";
@@ -25,7 +25,14 @@ const runOwnerCall = async ({
 			.processorFor({ customerId: call.customerId })
 			.setSubject({ customerId: call.customerId, body: call.body });
 	if (call.type === "listSince")
-		return (await slots.listSince(call)).map(storedSubjectToWire);
+		return (
+			await slots.listSince({
+				slot: call.slot,
+				after: call.after,
+				cursor: call.cursor,
+				limit: call.limit,
+			})
+		).map(appliedSubjectToWire);
 	const request = wireToCheckRequest({ request: call.request });
 	return slots
 		.processorFor({ customerId: request.params.customer_id })

@@ -77,6 +77,12 @@ export const openCatalogStore = ({
 		read: () => sharedCatalog,
 		set,
 		install,
+		rows: () => {
+			const readAt = readCatalogReadAt({ ctx });
+			return readAt === null
+				? null
+				: { rows: readCatalogRows({ ctx }), readAt };
+		},
 		close: () => ctx.sqliteDb.close(true),
 	};
 };

@@ -3,7 +3,10 @@ import type { ApiVersion } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
-import type { StoredSubject } from "../../../state/types/storedSubject.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+} from "../../../state/repos/subjectStates.js";
 
 /** A check as it crosses threads: plain data, with the API version by name. */
 export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
@@ -19,13 +22,20 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
-	/** The slot's subjects read after `readAtAfter`, for a replica copying what it missed. */
-	| { type: "listSince"; slot: number; readAtAfter: number; limit: number }
+	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */
+	| {
+			type: "listSince";
+			slot: number;
+			after: number | null;
+			cursor: SubjectCursor | null;
+			limit: number;
+	  }
 );
 
-/** A subject as it crosses threads or replicas: its one bigint as decimal text. */
-export type StoredSubjectOnWire = Omit<StoredSubject, "logOffset"> & {
-	logOffset: string;
+/** A written subject as it crosses threads or replicas: its one bigint as decimal text. */
+export type AppliedSubjectOnWire = {
+	subject: Omit<AppliedSubject["subject"], "logOffset"> & { logOffset: string };
+	appliedAt: number;
 };
 
 /**
@@ -39,7 +49,7 @@ export type OwnerReply =
 	| {
 			id: number;
 			ok: true;
-			value: CheckAnswer | boolean | StoredSubjectOnWire[];
+			value: CheckAnswer | boolean | AppliedSubjectOnWire[];
 	  }
 	| {
 			id: number;

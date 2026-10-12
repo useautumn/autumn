@@ -6,18 +6,21 @@ import type { SlotProcessor } from "../processor/types/slotProcessor.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+} from "../state/repos/subjectStates.js";
 import type { SqliteStore } from "../state/types/sqliteStore.js";
 import type { StoredSubject } from "../state/types/storedSubject.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
 import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
-import type { Slots, SubjectSource } from "./types/slots.js";
+import type { SinceRequest, Slots, SubjectSource } from "./types/slots.js";
 
 export const CATALOG_FILE = "catalog.sqlite";
-/** Subjects copied from a peer per request, and how far before its own newest read a replica asks from. */
+/** Subjects copied from a peer per request. */
 const CATCH_UP_PAGE = 500;
-const CATCH_UP_MARGIN_MS = 60_000;
 
 /** The filesystem the folder sits on, as Linux lists it: a volume shows as its device, the container's own disk as overlay. */
 const mountOf = ({ folder }: { folder: string }): string | null => {
@@ -45,6 +48,7 @@ export const openSlots = ({
 	atomId = null,
 	owners,
 	held,
+	now = Date.now,
 }: {
 	folder: string;
 	slotCount: number;
@@ -53,6 +57,8 @@ export const openSlots = ({
 	owners: SlotOwners;
 	/** This thread's parsed subjects, shared by every store it opens. */
 	held: HeldSubjects;
+	/** This replica's clock, stamped on every write. */
+	now?: () => number;
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -73,6 +79,7 @@ export const openSlots = ({
 		const sqliteStore = openSqliteStore({
 			databasePath: slotFilePath({ folder, slot, slotCount }),
 			held,
+			now,
 		});
 		return {
 			sqliteStore,
@@ -130,52 +137,97 @@ export const openSlots = ({
 		return true;
 	}
 
-	async function listSince({
-		slot,
-		readAtAfter,
-		limit,
-	}: {
-		slot: number;
-		readAtAfter: number;
-		limit: number;
-	}): Promise<StoredSubject[]> {
-		const store = slots[slot]?.sqliteStore;
-		if (store) return store.listSubjectsSince({ readAtAfter, limit });
-		const owner = owners.ownerOf({ slot });
-		return owners.listSinceOn({
-			thread: owner,
-			atomId,
-			slot,
-			readAtAfter,
-			limit,
-		});
+	async function listSince(params: SinceRequest): Promise<AppliedSubject[]> {
+		const store = slots[params.slot]?.sqliteStore;
+		if (store) return store.listAppliedAfter(params);
+		const owner = owners.ownerOf({ slot: params.slot });
+		return owners.listSinceOn({ thread: owner, atomId, ...params });
 	}
 
-	/** Pages until a short one; a page's newest read is the next cursor, and newest-wins makes a repeat harmless. */
-	async function catchUp({ source }: { source: SubjectSource }) {
+	function ownedStores(): SqliteStore[] {
+		return slots.flatMap(({ sqliteStore }) =>
+			sqliteStore ? [sqliteStore] : [],
+		);
+	}
+
+	function listOwnAppliedAfter({
+		after,
+		limit,
+	}: {
+		after: number;
+		limit: number;
+	}): AppliedSubject[] {
+		return ownedStores()
+			.flatMap((store) =>
+				store.listAppliedAfter({ after, cursor: null, limit }),
+			)
+			.sort((a, b) => a.appliedAt - b.appliedAt)
+			.slice(0, limit);
+	}
+
+	const isNewer = (a: StoredSubject, b: StoredSubject) =>
+		a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
+
+	/** Only what is newer than the row held is written, so a pass over what is already held rewrites nothing. */
+	function writeNewer({
+		store,
+		page,
+	}: {
+		store: SqliteStore;
+		page: AppliedSubject[];
+	}): number {
+		const subjects = page
+			.map(({ subject }) => subject)
+			.filter((subject) => {
+				const { customerId, entityId } = subject.state.identity;
+				const held = store.readSubject({
+					customerId,
+					entityId: entityId ?? null,
+				});
+				return !held || isNewer(subject, held);
+			});
+		if (subjects.length === 0) return 0;
+		return store.setSubjects({ subjects }).filter(Boolean).length;
+	}
+
+	/** Pages until a short one, each page starting past the last row of the one before. */
+	async function catchUp({
+		source,
+		window,
+	}: {
+		source: SubjectSource;
+		window: number | null;
+	}) {
+		const catalog = await source.catalog({
+			readAtAfter: catalogStore.read()?.readAt ?? -1,
+		});
+		if (catalog) await setCatalog(catalog);
 		let written = 0;
 		let synced = 0;
 		for (const [slot, { sqliteStore }] of slots.entries()) {
 			if (!sqliteStore) continue;
-			// A little before the newest read held: reads at the same instant may have landed on the peer only.
-			let readAtAfter = Math.max(
-				0,
-				sqliteStore.maxReadAt() - CATCH_UP_MARGIN_MS,
-			);
+			let after: number | null = null;
+			let cursor: SubjectCursor | null = null;
+			let first = true;
 			for (;;) {
-				const page = await source({
+				const page = await source.since({
 					slot,
 					slotCount,
-					readAtAfter,
+					after: first ? null : after,
+					window: first ? window : null,
+					cursor,
 					limit: CATCH_UP_PAGE,
 				});
-				if (page.length === 0) break;
-				written += sqliteStore
-					.setSubjects({ subjects: page })
-					.filter(Boolean).length;
-				const newest = page[page.length - 1]?.readAt ?? readAtAfter;
-				if (page.length < CATCH_UP_PAGE || newest <= readAtAfter) break;
-				readAtAfter = newest;
+				first = false;
+				after = page.after;
+				written += writeNewer({ store: sqliteStore, page: page.subjects });
+				const last = page.subjects.at(-1);
+				if (!last || page.subjects.length < CATCH_UP_PAGE) break;
+				cursor = {
+					appliedAt: last.appliedAt,
+					customerId: last.subject.state.identity.customerId,
+					entityId: last.subject.state.identity.entityId ?? "",
+				};
 			}
 			synced += 1;
 		}
@@ -188,7 +240,14 @@ export const openSlots = ({
 			slots[customerIdToSlot({ customerId, slotCount })].processor,
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
+		catalogSince: ({ readAtAfter }) => {
+			const held = catalogStore.rows();
+			return held && held.readAt > readAtAfter ? held : null;
+		},
 		listSince,
+		maxAppliedAt: () =>
+			Math.max(0, ...ownedStores().map((store) => store.maxAppliedAt())),
+		listOwnAppliedAfter,
 		catchUp,
 		close,
 	};

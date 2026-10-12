@@ -15,14 +15,16 @@ export const createDeployedAuth = ({
 	slotCount,
 	owners,
 	held,
+	now,
 }: {
 	dataDir: string;
 	tokenHash: string;
 	slotCount: number;
 	owners: SlotOwners;
 	held: HeldSubjects;
+	now?: () => number;
 }): DeployedAuth => {
-	const slots = openSlots({ folder: dataDir, slotCount, owners, held });
+	const slots = openSlots({ folder: dataDir, slotCount, owners, held, now });
 
 	function authorize({ token }: { token: string }) {
 		return tokenMatchesHash({ token, expectedHash: tokenHash }) ? slots : null;

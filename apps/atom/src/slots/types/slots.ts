@@ -1,14 +1,37 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
-import type { StoredSubject } from "../../state/types/storedSubject.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+} from "../../state/repos/subjectStates.js";
 
-/** Where a replica copies the subjects it missed from: a peer, asked one slot at a time. */
-export type SubjectSource = (params: {
+/** One page of a slot as its owner lists it: from `after` by the owner's clock (null: everything), past `cursor`. */
+export type SinceRequest = {
 	slot: number;
-	slotCount: number;
-	readAtAfter: number;
+	after: number | null;
+	cursor: SubjectCursor | null;
 	limit: number;
-}) => Promise<StoredSubject[]>;
+};
+
+/** The shared catalog as a file holds it. */
+export type CatalogRows = { rows: CatalogRow[]; readAt: number };
+
+/**
+ * Where a replica copies what it missed from: a peer, asked one slot at a time. `window` asks for what the peer wrote
+ * in its last `window` ms by its own clock (null: everything); the answer names the absolute `after` the pages continue from.
+ */
+export type SubjectSource = {
+	since(params: {
+		slot: number;
+		slotCount: number;
+		after: number | null;
+		window: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<{ after: number | null; subjects: AppliedSubject[] }>;
+	/** The peer's catalog when it was read after `readAtAfter`; null otherwise. */
+	catalog(params: { readAtAfter: number }): Promise<CatalogRows | null>;
+};
 
 /** One data folder: its customers, reached through the slot each lives in, and the one catalog they share. */
 export type Slots = {
@@ -16,18 +39,27 @@ export type Slots = {
 	slotCount: number;
 	processorFor(params: { customerId: string }): SlotProcessor;
 	/** Stored by the catalog's owner thread and held by every thread. False when it was read before the one held, and so ignored. */
-	setCatalog(params: { rows: CatalogRow[]; readAt: number }): Promise<boolean>;
+	setCatalog(params: CatalogRows): Promise<boolean>;
 	/** Holds what the catalog's owner thread stored, on this thread. */
-	installCatalog(params: { rows: CatalogRow[]; readAt: number }): boolean;
-	/** A slot's subjects read after `readAtAfter`, oldest first, answered by the slot's owner. */
-	listSince(params: {
-		slot: number;
-		readAtAfter: number;
+	installCatalog(params: CatalogRows): boolean;
+	/** The catalog's rows when they were read after `readAtAfter`, for a peer copying them; null otherwise. */
+	catalogSince(params: { readAtAfter: number }): CatalogRows | null;
+	/** A slot's subjects written at or after `after`, oldest write first, answered by the slot's owner. */
+	listSince(params: SinceRequest): Promise<AppliedSubject[]>;
+	/** The newest write in the slots this thread owns, by this replica's clock; 0 when they are empty. */
+	maxAppliedAt(): number;
+	/** The subjects this thread's slots wrote at or after `after`, oldest first; what a replica re-sends after a restart. */
+	listOwnAppliedAfter(params: {
+		after: number;
 		limit: number;
-	}): Promise<StoredSubject[]>;
-	/** Copies into the slots this thread owns what `source` holds newer than they do. */
+	}): AppliedSubject[];
+	/**
+	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included:
+	 * everything with `window` null, else what the source wrote in its last `window` ms.
+	 */
 	catchUp(params: {
 		source: SubjectSource;
+		window: number | null;
 	}): Promise<{ slots: number; written: number }>;
 	close(): void;
 };

@@ -25,8 +25,19 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 			PRIMARY KEY (customer_id, entity_id)
 		) WITHOUT ROWID
 	`);
+	// Added after the schema shipped: an older file keeps its rows, which read as applied at 0 and are copied only whole.
+	const columns = database
+		.query<{ name: string }, []>(
+			"SELECT name FROM pragma_table_info('subject_states')",
+		)
+		.all()
+		.map((column) => column.name);
+	if (!columns.includes("applied_at"))
+		database.run(
+			"ALTER TABLE subject_states ADD COLUMN applied_at INTEGER NOT NULL DEFAULT 0",
+		);
 	database.run(
-		"CREATE INDEX IF NOT EXISTS subject_states_read_at ON subject_states (read_at)",
+		"CREATE INDEX IF NOT EXISTS subject_states_applied_at ON subject_states (applied_at)",
 	);
 	database.run(`
 		CREATE TABLE IF NOT EXISTS subject_slices (

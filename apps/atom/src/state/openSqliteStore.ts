@@ -3,8 +3,8 @@ import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
-	listSubjectsSince,
-	maxReadAt,
+	listSubjectsAppliedAfter,
+	maxAppliedAt,
 	readSubject as readSubjectRow,
 	type SubjectWrite,
 	subjectToSlice,
@@ -37,9 +37,12 @@ const keyOf = ({ state }: StoredSubject): string =>
 export const openSqliteStore = ({
 	databasePath,
 	held,
+	now = Date.now,
 }: {
 	databasePath: string;
 	held: HeldSubjects;
+	/** This replica's clock, stamped on every write so a peer can ask for what was written since. */
+	now?: () => number;
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
 	const storePrefix = `${storesOpened++}\u0000`;
@@ -72,7 +75,7 @@ export const openSqliteStore = ({
 	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
 	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
 		const writes = subjects.map(writeOf);
-		const storedBytes = upsertSubjects({ ctx, writes });
+		const storedBytes = upsertSubjects({ ctx, writes, appliedAt: now() });
 		writes.forEach(({ subject, slice }, index) => {
 			const bytes = storedBytes[index];
 			if (bytes === null || bytes === undefined) return;
@@ -97,8 +100,8 @@ export const openSqliteStore = ({
 			setSubjects({ subjects: [subject] })[0] ?? false,
 		setSubjects,
 		countSubjects: () => countSubjects({ ctx }),
-		listSubjectsSince: (params) => listSubjectsSince({ ctx, ...params }),
-		maxReadAt: () => maxReadAt({ ctx }),
+		listAppliedAfter: (params) => listSubjectsAppliedAfter({ ctx, ...params }),
+		maxAppliedAt: () => maxAppliedAt({ ctx }),
 		close,
 	};
 };

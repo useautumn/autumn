@@ -100,54 +100,93 @@ export const readSubject = ({
 	return row ? storedSubjectFromRow({ row }) : null;
 };
 
-/** Subjects Autumn read after `readAtAfter`, oldest first, so a replica that fell behind can copy what it missed. */
-export const listSubjectsSince = ({
+/** Where a page of applied subjects ends, so the next page starts right after it whatever ties on `applied_at`. */
+export type SubjectCursor = {
+	appliedAt: number;
+	customerId: string;
+	entityId: string;
+};
+
+/** A stored subject with when this file wrote it, by this replica's clock: what a copy to a peer is ordered by. */
+export type AppliedSubject = { subject: StoredSubject; appliedAt: number };
+
+/**
+ * Subjects this file wrote at or after `after` (null: all of them), oldest write first, ties broken by key, after
+ * `cursor`; so a replica that fell behind copies what it missed, page by page, missing nothing that ties on a page's edge.
+ */
+export const listSubjectsAppliedAfter = ({
 	ctx,
-	readAtAfter,
+	after,
+	cursor,
 	limit,
 }: {
 	ctx: SlotContext;
-	readAtAfter: number;
+	after: number | null;
+	cursor: SubjectCursor | null;
 	limit: number;
-}): StoredSubject[] =>
+}): AppliedSubject[] =>
 	ctx.sqliteDb
-		.query<SubjectStateRow, { readAtAfter: number; limit: number }>(`
+		.query<
+			SubjectStateRow & { appliedAt: bigint },
+			{
+				after: number;
+				cursorAppliedAt: number | null;
+				cursorCustomerId: string;
+				cursorEntityId: string;
+				limit: number;
+			}
+		>(`
 			SELECT
 				states.log_offset AS logOffset,
 				states.read_at AS readAt,
+				states.applied_at AS appliedAt,
 				states.state_json AS stateJson,
 				states.slice_hash AS sliceHash,
 				slices.catalog_json AS catalogJson,
 				slices.org_json AS orgJson
 			FROM subject_states AS states
 			JOIN subject_slices AS slices USING (customer_id, entity_id)
-			WHERE states.read_at > $readAtAfter
-			ORDER BY states.read_at ASC
+			WHERE states.applied_at >= $after
+				AND ($cursorAppliedAt IS NULL
+					OR (states.applied_at, states.customer_id, states.entity_id)
+						> ($cursorAppliedAt, $cursorCustomerId, $cursorEntityId))
+			ORDER BY states.applied_at ASC, states.customer_id ASC, states.entity_id ASC
 			LIMIT $limit
 		`)
-		.all({ readAtAfter, limit })
-		.map((row) => storedSubjectFromRow({ row }).subject);
+		.all({
+			after: after ?? 0,
+			cursorAppliedAt: cursor?.appliedAt ?? null,
+			cursorCustomerId: cursor?.customerId ?? "",
+			cursorEntityId: cursor?.entityId ?? "",
+			limit,
+		})
+		.map((row) => ({
+			subject: storedSubjectFromRow({ row }).subject,
+			appliedAt: Number(row.appliedAt),
+		}));
 
-/** The newest read the file holds, or 0 when it is empty: where a copy from a peer starts. */
-export const maxReadAt = ({ ctx }: { ctx: SlotContext }): number => {
+/** The newest write the file holds by this replica's clock, or 0 when it is empty: how far back a copy from a peer reaches. */
+export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb
-		.query<{ readAt: bigint | null }, []>(
-			"SELECT max(read_at) AS readAt FROM subject_states",
+		.query<{ appliedAt: bigint | null }, []>(
+			"SELECT max(applied_at) AS appliedAt FROM subject_states",
 		)
 		.get();
-	return Number(row?.readAt ?? 0);
+	return Number(row?.appliedAt ?? 0);
 };
 
 /** Subjects that came from one read are written together. One answer each, as `upsertSubject` gives. */
 export const upsertSubjects = ({
 	ctx,
 	writes,
+	appliedAt,
 }: {
 	ctx: SlotContext;
 	writes: SubjectWrite[];
+	appliedAt: number;
 }): (number | null)[] =>
 	ctx.sqliteDb.transaction(() =>
-		writes.map((write) => upsertSubject({ ctx, write })),
+		writes.map((write) => upsertSubject({ ctx, write, appliedAt })),
 	)();
 
 /**
@@ -157,9 +196,11 @@ export const upsertSubjects = ({
 const upsertSubject = ({
 	ctx,
 	write: { subject, slice, sliceStored },
+	appliedAt,
 }: {
 	ctx: SlotContext;
 	write: SubjectWrite;
+	appliedAt: number;
 }): number | null => {
 	const { customerId, entityId } = subject.state.identity;
 	const key = { customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID };
@@ -167,12 +208,13 @@ const upsertSubject = ({
 	const { changes } = ctx.sqliteDb
 		.query(`
 			INSERT INTO subject_states
-				(customer_id, entity_id, log_offset, read_at, state_json, slice_hash)
+				(customer_id, entity_id, log_offset, read_at, applied_at, state_json, slice_hash)
 			VALUES
-				($customerId, $entityId, $logOffset, $readAt, $stateJson, $sliceHash)
+				($customerId, $entityId, $logOffset, $readAt, $appliedAt, $stateJson, $sliceHash)
 			ON CONFLICT (customer_id, entity_id) DO UPDATE SET
 				log_offset = excluded.log_offset,
 				read_at = excluded.read_at,
+				applied_at = excluded.applied_at,
 				state_json = excluded.state_json,
 				slice_hash = excluded.slice_hash
 			WHERE excluded.read_at > subject_states.read_at
@@ -183,6 +225,7 @@ const upsertSubject = ({
 			...key,
 			logOffset: subject.logOffset,
 			readAt: subject.readAt,
+			appliedAt,
 			stateJson,
 			sliceHash: slice.hash,
 		});

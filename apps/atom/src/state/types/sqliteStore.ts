@@ -1,3 +1,4 @@
+import type { AppliedSubject, SubjectCursor } from "../repos/subjectStates.js";
 import type { StoredSubject } from "./storedSubject.js";
 
 /** One slot's file behind named methods: everything above the state layer talks to this, never to SQLite. */
@@ -12,12 +13,13 @@ export type SqliteStore = {
 	/** All in one write, so a reader never sees one without the others. One answer per subject, in order. */
 	setSubjects(params: { subjects: StoredSubject[] }): boolean[];
 	countSubjects(): number;
-	/** Subjects Autumn read after `readAtAfter`, oldest first, at most `limit`. */
-	listSubjectsSince(params: {
-		readAtAfter: number;
+	/** Subjects this file wrote at or after `after` (null: all), oldest write first, from `cursor` on, at most `limit`. */
+	listAppliedAfter(params: {
+		after: number | null;
+		cursor: SubjectCursor | null;
 		limit: number;
-	}): StoredSubject[];
-	/** The newest read held, 0 when empty. */
-	maxReadAt(): number;
+	}): AppliedSubject[];
+	/** The newest write held by this replica's clock, 0 when empty. */
+	maxAppliedAt(): number;
 	close(): void;
 };
