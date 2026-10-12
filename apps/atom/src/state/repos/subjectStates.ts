@@ -64,6 +64,27 @@ const storedSubjectFromRow = ({
 	sliceHash: row.sliceHash,
 });
 
+/** The version a row holds, read without parsing it; null when the file has no such row. */
+export const readSubjectVersion = ({
+	ctx,
+	customerId,
+	entityId,
+}: {
+	ctx: SlotContext;
+	customerId: string;
+	entityId: string | null;
+}): { readAt: number; logOffset: bigint } | null => {
+	const row = ctx.sqliteDb
+		.query<
+			{ readAt: bigint; logOffset: bigint },
+			{ customerId: string; entityId: string }
+		>(
+			"SELECT read_at AS readAt, log_offset AS logOffset FROM subject_states WHERE customer_id = $customerId AND entity_id = $entityId",
+		)
+		.get({ customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID });
+	return row ? { readAt: Number(row.readAt), logOffset: row.logOffset } : null;
+};
+
 /** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb

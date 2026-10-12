@@ -1,10 +1,3 @@
-import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
-
-/** Marks a row a replica sends again after a restart, apart from the push it first relayed. */
-export const RESEND_HEADER = "x-atom-resend";
-
-import { storedSubjectToPushBody } from "../lib/contracts/subjectContract.js";
-import { SUBJECT_PUSH } from "../pushes/applyPushes.js";
 import type { Slots } from "../slots/types/slots.js";
 import {
 	type CatchUpContext,
@@ -22,9 +15,6 @@ export const ANTI_ENTROPY_EVERY_MS = 2 * 60_000;
 /** Reaches back past the hold and one period, so a copy dropped after the hold is found by the next pass. */
 export const ANTI_ENTROPY_WINDOW_MS =
 	HOLD_MS + ANTI_ENTROPY_EVERY_MS + CATCH_UP_MARGIN_MS;
-/** Rows this replica wrote shortly before it last stopped, sent again on boot in case their relay died with it. */
-const RESEND_WINDOW_MS = HOLD_MS + CATCH_UP_MARGIN_MS;
-const RESEND_LIMIT = 10_000;
 
 export type ReplicaSyncContext = CatchUpContext & {
 	replication: Replication;
@@ -34,7 +24,8 @@ export type ReplicaSyncContext = CatchUpContext & {
 
 /**
  * Keeps one thread's slots in step with the other replicas across a restart. Built before the thread listens, so the
- * point it fell behind at is fixed before any live relay lands and moves the files' newest write.
+ * point it fell behind at is fixed before any live relay lands and moves the files' newest write. What died with the
+ * process is pulled by the peers' own passes once this replica is ready; nothing stored is ever pushed back through the push path.
  */
 export const createReplicaSync = ({
 	ctx,
@@ -56,28 +47,6 @@ export const createReplicaSync = ({
 	const catchUp = () =>
 		catchUpBeforeServing({ ctx, slots, window: bootWindow });
 
-	/** What this thread wrote just before it last stopped goes to the peers again: its relay may have died with the process. */
-	function resendRecent(): number {
-		if (lastAppliedAt === 0) return 0;
-		const recent = slots.listOwnAppliedAfter({
-			after: lastAppliedAt - RESEND_WINDOW_MS,
-			limit: RESEND_LIMIT,
-		});
-		for (const { subject } of recent) {
-			const customerId = subject.state.identity.customerId;
-			ctx.replication.replicate({
-				kind: SUBJECT_PUSH.kind,
-				key: customerId,
-				body: storedSubjectToPushBody({ subject }),
-				headers: {
-					[ATOM_CUSTOMER_ID_HEADER]: customerId,
-					[RESEND_HEADER]: "1",
-				},
-			});
-		}
-		return recent.length;
-	}
-
 	/** One pass over every ready peer for what they wrote lately. */
 	const pass = () =>
 		catchUpFromEveryPeer({ ctx, slots, window: ANTI_ENTROPY_WINDOW_MS });
@@ -92,5 +61,5 @@ export const createReplicaSync = ({
 		}
 	}
 
-	return { catchUp, resendRecent, pass, runPasses };
+	return { catchUp, pass, runPasses };
 };

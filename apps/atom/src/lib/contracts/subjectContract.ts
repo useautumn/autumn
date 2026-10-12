@@ -60,17 +60,3 @@ export const subjectPushToStoredSubject = ({
 		readAt: parsed.read_at,
 	};
 };
-
-/** A stored subject as Autumn would push it, so a replica can send on what its own file holds. */
-export const storedSubjectToPushBody = ({
-	subject,
-}: {
-	subject: StoredSubject;
-}): string =>
-	JSON.stringify({
-		state: subject.state,
-		catalog: subject.catalog,
-		org: subject.org,
-		log_offset: subject.logOffset.toString(),
-		read_at: subject.readAt,
-	});

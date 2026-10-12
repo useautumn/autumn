@@ -6,6 +6,7 @@ import {
 	listSubjectsAppliedAfter,
 	maxAppliedAt,
 	readSubject as readSubjectRow,
+	readSubjectVersion,
 	type SubjectWrite,
 	subjectToSlice,
 	upsertSubjects,
@@ -62,6 +63,19 @@ export const openSqliteStore = ({
 		return subject;
 	}
 
+	function readVersion(params: {
+		customerId: string;
+		entityId: string | null;
+	}) {
+		const found = held.get(storePrefix + subjectKey(params));
+		if (found)
+			return {
+				readAt: found.subject.readAt,
+				logOffset: found.subject.logOffset,
+			};
+		return readSubjectVersion({ ctx, ...params });
+	}
+
 	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
 	function writeOf(subject: StoredSubject): SubjectWrite {
 		const slice = subjectToSlice({ subject });
@@ -96,6 +110,7 @@ export const openSqliteStore = ({
 
 	return {
 		readSubject,
+		readVersion,
 		setSubject: ({ subject }) =>
 			setSubjects({ subjects: [subject] })[0] ?? false,
 		setSubjects,

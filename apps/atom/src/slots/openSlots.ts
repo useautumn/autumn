@@ -11,7 +11,6 @@ import type {
 	SubjectCursor,
 } from "../state/repos/subjectStates.js";
 import type { SqliteStore } from "../state/types/sqliteStore.js";
-import type { StoredSubject } from "../state/types/storedSubject.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
@@ -165,7 +164,8 @@ export const openSlots = ({
 			.slice(0, limit);
 	}
 
-	const isNewer = (a: StoredSubject, b: StoredSubject) =>
+	type Version = { readAt: number; logOffset: bigint };
+	const isNewer = (a: Version, b: Version) =>
 		a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
 
 	/** Only what is newer than the row held is written, so a pass over what is already held rewrites nothing. */
@@ -180,7 +180,7 @@ export const openSlots = ({
 			.map(({ subject }) => subject)
 			.filter((subject) => {
 				const { customerId, entityId } = subject.state.identity;
-				const held = store.readSubject({
+				const held = store.readVersion({
 					customerId,
 					entityId: entityId ?? null,
 				});

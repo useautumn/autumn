@@ -90,12 +90,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		await server.start();
 		if (!sync) return;
 		await sync.catchUp();
-		const resent = sync.resendRecent();
-		if (resent > 0)
-			logger.info(
-				{ type: "atom_resend", data: { resent } },
-				`Sent ${resent} recently written subjects to the peers again`,
-			);
 		void sync.runPasses();
 	}
 
