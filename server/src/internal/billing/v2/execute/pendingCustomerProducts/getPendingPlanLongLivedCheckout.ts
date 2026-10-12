@@ -13,7 +13,7 @@ export const getPendingPlanLongLivedCheckout = async ({
 	ctx: AutumnContext;
 	deferredData: DeferredAutumnBillingPlanData;
 }) => {
-	const checkoutId = deferredData.billingContext.longLivedCheckout?.id;
+	const checkoutId = deferredData?.billingContext?.longLivedCheckout?.id;
 	if (!checkoutId) return;
 
 	const checkout = await checkoutRepo.get({ db: ctx.db, id: checkoutId });
