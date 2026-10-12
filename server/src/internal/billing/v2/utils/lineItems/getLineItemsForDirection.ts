@@ -10,6 +10,7 @@ export const getLineItemsForDirection = ({
 	direction,
 	priceFilters,
 	billingCycleAnchorMsOverride,
+	atRenewal,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -17,6 +18,7 @@ export const getLineItemsForDirection = ({
 	direction: "charge" | "refund";
 	priceFilters?: { excludeOneOffPrices?: boolean };
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
+	atRenewal?: boolean;
 }): LineItem[] => {
 	if (direction === "refund") {
 		return getRefundLineItems({
@@ -35,5 +37,6 @@ export const getLineItemsForDirection = ({
 		direction,
 		priceFilters,
 		billingCycleAnchorMsOverride,
+		atRenewal,
 	});
 };

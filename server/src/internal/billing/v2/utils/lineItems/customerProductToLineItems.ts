@@ -42,6 +42,7 @@ export const customerProductToLineItems = ({
 	priceFilters,
 	billingCycleAnchorMsOverride,
 	backdateGapRun,
+	atRenewal,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -52,6 +53,7 @@ export const customerProductToLineItems = ({
 	};
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
 	backdateGapRun?: BackdateGapRun;
+	atRenewal?: boolean;
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
 
@@ -169,6 +171,7 @@ export const customerProductToLineItems = ({
 			usagePriceToLineItem({
 				cusEnt: cusEntWithCusProduct,
 				context,
+				options: { atRenewal },
 			}),
 		);
 	}

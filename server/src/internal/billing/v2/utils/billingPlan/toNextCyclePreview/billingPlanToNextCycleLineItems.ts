@@ -62,6 +62,7 @@ const buildLineItemsForSpec = ({
 			direction: spec.direction,
 			priceFilters: spec.priceFilters,
 			billingCycleAnchorMsOverride: spec.billingCycleAnchorMs,
+			atRenewal: true,
 		}),
 	);
 

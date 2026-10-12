@@ -10,6 +10,7 @@ import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEn
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage";
 import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceUsage";
 import {
+	isAllocatedPrice,
 	isConsumablePrice,
 	isPrepaidPrice,
 } from "../../../productUtils/priceUtils/classifyPriceUtils";
@@ -29,6 +30,8 @@ export const usagePriceToLineItem = ({
 		chargeImmediatelyOverride?: boolean;
 		includePeriodDescription?: boolean;
 		discountable?: boolean;
+		/** Price the quantity Stripe renews, not the quantity held this cycle. */
+		atRenewal?: boolean;
 	};
 }) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
@@ -73,6 +76,12 @@ export const usagePriceToLineItem = ({
 		usage = new Decimal(allowance).add(prepaidQuantity).toNumber();
 	} else {
 		usage = cusEntToInvoiceUsage({ cusEnt });
+	}
+
+	// Seats freed mid-cycle stay held until renewal, then drop, as in allocatedToStripeItemSpec.
+	if (options.atRenewal && isAllocatedPrice(price)) {
+		usage = cusEntToInvoiceUsage({ cusEnt, subtractReplaceables: true });
+		overage = Decimal.max(0, new Decimal(usage).sub(allowance)).toNumber();
 	}
 
 	const lineItemContext: LineItemContext = {
