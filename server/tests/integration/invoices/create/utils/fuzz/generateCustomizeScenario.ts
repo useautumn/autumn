@@ -41,7 +41,7 @@ export type InvalidMutation =
 	| "zero_billing_units"
 	| "amount_and_tiers"
 	| "flat_amount_on_graduated"
-	| "volume_usage_based"
+	| "single_tier_volume_usage_based"
 	| "unsorted_tiers"
 	| "missing_inf_tier"
 	| "duplicate_item";
@@ -147,19 +147,17 @@ const genTiers = ({
 
 const genPriceShape = ({
 	rng,
+	featureId,
 	behavior,
 	interval,
 }: {
 	rng: Rng;
+	featureId: string;
 	behavior: BillingMethod;
 	interval: OracleInterval;
 }): PriceShape => {
 	const billingUnits = rng.pick([1, 1, 1, 10, 100]);
-	const styles =
-		behavior === BillingMethod.Prepaid
-			? (["flat", "flat", "graduated", "volume"] as const)
-			: (["flat", "flat", "graduated"] as const);
-	const style = rng.pick(styles);
+	const style = rng.pick(["flat", "flat", "graduated", "volume"] as const);
 	if (style === "flat") {
 		const amount = rng.pick([0.33, 0.5, 1, 2.5, 7.25, 10]);
 		return {
@@ -172,10 +170,19 @@ const genPriceShape = ({
 		};
 	}
 	const volume = style === "volume";
+	const tiers = genTiers({ rng, billingUnits, volume });
+	// Volume items carry no included usage, and allocated volume rejects a tier-1 flat fee without it.
+	const isAllocatedUsageBased =
+		behavior === BillingMethod.UsageBased &&
+		(CONTINUOUS_FEATURES as string[]).includes(featureId);
+	if (volume && isAllocatedUsageBased) {
+		const { flat_amount: _flatAmount, ...firstTier } = tiers[0];
+		tiers[0] = firstTier;
+	}
 	return {
 		behavior,
 		billingUnits,
-		tiers: genTiers({ rng, billingUnits, volume }),
+		tiers,
 		volume,
 		interval,
 	};
@@ -193,14 +200,17 @@ const toProductItem = ({ featureId, included, price }: CatalogItem) => {
 			includedUsage: included,
 		});
 	}
-	return constructArrearItem({
-		featureId,
-		price: price.amount,
-		tiers,
-		billingUnits: price.billingUnits,
-		includedUsage: included,
-		interval: ProductItemInterval.Month,
-	});
+	return {
+		...constructArrearItem({
+			featureId,
+			price: price.amount,
+			tiers,
+			billingUnits: price.billingUnits,
+			includedUsage: included,
+			interval: ProductItemInterval.Month,
+		}),
+		...(price.volume ? { tier_behavior: TierBehavior.VolumeBased } : {}),
+	};
 };
 
 export const catalogToProductItems = (catalog: FuzzCatalog): ProductItem[] => [
@@ -226,7 +236,12 @@ const genCatalog = (rng: Rng): FuzzCatalog => {
 		const behavior = CONTINUOUS_FEATURES.includes(featureId)
 			? BillingMethod.Prepaid
 			: rng.pick([BillingMethod.Prepaid, BillingMethod.UsageBased]);
-		const price = genPriceShape({ rng, behavior, interval: "month" });
+		const price = genPriceShape({
+			rng,
+			featureId,
+			behavior,
+			interval: "month",
+		});
 		// Volume tiers would need the allowance-shifted boundaries; keep them allowance-free.
 		const firstCeiling = price.tiers[0].to;
 		const included =
@@ -420,6 +435,17 @@ const applyInvalidMutation = ({
 				},
 				billingBehavior: behavior,
 			});
+		case "single_tier_volume_usage_based":
+			return addOverridden({
+				price: {
+					billing_method: BillingMethod.UsageBased,
+					interval: BillingInterval.Month,
+					billing_units: 1,
+					tier_behavior: TierBehavior.VolumeBased,
+					tiers: [{ to: "inf", amount: 0.5 }],
+				},
+				billingBehavior: BillingMethod.UsageBased,
+			});
 		case "unsorted_tiers":
 		case "missing_inf_tier":
 			return addOverridden({
@@ -450,20 +476,6 @@ const applyInvalidMutation = ({
 				return false;
 			customizeItems.push({ ...customizeItems[customizeItems.length - 1] });
 			return true;
-		case "volume_usage_based":
-			return addOverridden({
-				price: {
-					billing_method: BillingMethod.UsageBased,
-					interval: BillingInterval.Month,
-					billing_units: 1,
-					tier_behavior: TierBehavior.VolumeBased,
-					tiers: [
-						{ to: 10, amount: 1 },
-						{ to: "inf", amount: 0.5 },
-					],
-				},
-				billingBehavior: BillingMethod.UsageBased,
-			});
 	}
 };
 
@@ -659,6 +671,7 @@ export const generateCustomizeScenario = ({
 			item.featureId,
 			genPriceShape({
 				rng,
+				featureId: item.featureId,
 				behavior,
 				interval: rng.chance(0.2) ? "year" : "month",
 			}),
@@ -670,6 +683,7 @@ export const generateCustomizeScenario = ({
 			newFeature,
 			genPriceShape({
 				rng,
+				featureId: newFeature,
 				behavior: rng.pick([BillingMethod.Prepaid, BillingMethod.UsageBased]),
 				interval: rng.chance(0.2) ? "year" : "month",
 			}),
@@ -723,7 +737,7 @@ export const generateCustomizeScenario = ({
 		"zero_billing_units",
 		"amount_and_tiers",
 		"flat_amount_on_graduated",
-		"volume_usage_based",
+		"single_tier_volume_usage_based",
 		"unsorted_tiers",
 		"missing_inf_tier",
 		"duplicate_item",
