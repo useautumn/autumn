@@ -12,6 +12,7 @@ import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/action
 import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
 import { previewPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingPlanIfAny";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
+import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewUpdateSubscription = createRoute({
@@ -40,17 +41,20 @@ export const handlePreviewUpdateSubscription = createRoute({
 			...unchangedPlanParams
 		} = body;
 
-		const pendingPreview = isSwitch
-			? undefined
-			: await previewPendingPlanIfAny({ ctx, params: body });
+		if (!isSwitch) {
+			const pendingPreview = await previewPendingPlanIfAny({
+				ctx,
+				params: body,
+			});
+			if (pendingPreview) return c.json(pendingPreview, 200);
+		}
 
 		const { billingContext, billingPlan } =
-			pendingPreview ??
-			(await billingActions.updateSubscription({
+			await billingActions.updateSubscription({
 				ctx,
 				params: isSwitch ? unchangedPlanParams : body,
 				preview: true,
-			}));
+			});
 
 		if (!billingPlan) {
 			throw new InternalError({
@@ -63,6 +67,7 @@ export const handlePreviewUpdateSubscription = createRoute({
 			ctx,
 			billingContext,
 			billingPlan,
+			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
 
 		return c.json(previewResponse, 200);

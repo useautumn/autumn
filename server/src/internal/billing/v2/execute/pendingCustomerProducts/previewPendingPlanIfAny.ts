@@ -1,8 +1,12 @@
-import type { UpdateSubscriptionV1Params } from "@autumn/shared";
+import {
+	UpdateSubscriptionPreviewIntent,
+	type UpdateSubscriptionV1Params,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
+import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 
 /** Previews an edit that re-attaches a pending plan, mirroring updatePendingPlanIfAny. */
 export const previewPendingPlanIfAny = async ({
@@ -36,6 +40,14 @@ export const previewPendingPlanIfAny = async ({
 		customerProduct,
 		deferredData,
 	});
+	const { billingContext, billingPlan } = replacementPreview;
+	if (!rebills || !billingPlan) return;
 
-	return rebills ? replacementPreview : undefined;
+	// The edit re-attaches the plan, so it previews as a plan update at the full new price.
+	return billingPlanToUpdateSubscriptionPreview({
+		ctx,
+		billingContext,
+		billingPlan,
+		intent: UpdateSubscriptionPreviewIntent.UpdatePlan,
+	});
 };

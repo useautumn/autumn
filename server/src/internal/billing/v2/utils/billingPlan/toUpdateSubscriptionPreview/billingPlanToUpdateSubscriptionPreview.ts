@@ -1,23 +1,22 @@
-import {
-	type AttachBillingContext,
-	type BillingPlan,
-	type PreviewUpdateSubscriptionResponse,
-	type UpdateSubscriptionBillingContext,
+import type {
+	BillingContext,
+	BillingPlan,
+	PreviewUpdateSubscriptionResponse,
 	UpdateSubscriptionPreviewIntent,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToPreviewResponse } from "../../billingPlanToPreviewResponse";
-import { billingPlanToUpdateSubscriptionPreviewIntent } from "./billingPlanToUpdateSubscriptionPreviewIntent";
 
 export const billingPlanToUpdateSubscriptionPreview = async ({
 	ctx,
 	billingContext,
 	billingPlan,
+	intent,
 }: {
 	ctx: AutumnContext;
-	/** Attach when a pending plan is edited, since that edit re-attaches the plan. */
-	billingContext: UpdateSubscriptionBillingContext | AttachBillingContext;
+	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	intent: UpdateSubscriptionPreviewIntent;
 }): Promise<PreviewUpdateSubscriptionResponse> => {
 	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(
 		{
@@ -32,10 +31,7 @@ export const billingPlanToUpdateSubscriptionPreview = async ({
 	return {
 		...basePreview,
 		object: "update_subscription_preview",
-		intent:
-			"intent" in billingContext
-				? billingPlanToUpdateSubscriptionPreviewIntent({ billingContext })
-				: UpdateSubscriptionPreviewIntent.UpdatePlan,
+		intent,
 		tax: billingPlan.preview?.tax,
 		invoice_credits: invoiceCredits
 			? { ...invoiceCredits, applied: credit_applied }
