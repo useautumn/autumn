@@ -94,19 +94,29 @@ export const catchUpBeforeServing = async ({
 	);
 };
 
-/** After serving: copies from every ready peer what it wrote in its last `window` ms, so what one of them alone holds reaches here. */
+/**
+ * After serving: copies from every ready peer what it wrote in its last `windowFor(peer)` ms, so what one of them
+ * alone holds reaches here. Resolves to the peers caught up from; one not ready or unreachable is not among them.
+ */
 export const catchUpFromEveryPeer = async ({
 	ctx,
 	slots,
-	window,
+	windowFor,
 }: {
 	ctx: CatchUpContext;
 	slots: Slots;
-	window: number;
-}): Promise<void> => {
+	windowFor: (peer: string) => number;
+}): Promise<string[]> => {
+	const caughtUp: string[] = [];
 	for (const peer of await ctx.replication.peers()) {
 		try {
-			const result = await catchUpFrom({ ctx, slots, peer, window });
+			const result = await catchUpFrom({
+				ctx,
+				slots,
+				peer,
+				window: windowFor(peer),
+			});
+			caughtUp.push(peer);
 			if (result.written > 0)
 				ctx.logger.info(
 					{ type: "atom_catch_up", data: result },
@@ -120,4 +130,5 @@ export const catchUpFromEveryPeer = async ({
 			);
 		}
 	}
+	return caughtUp;
 };

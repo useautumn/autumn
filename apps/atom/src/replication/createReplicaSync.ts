@@ -47,9 +47,23 @@ export const createReplicaSync = ({
 	const catchUp = () =>
 		catchUpBeforeServing({ ctx, slots, window: bootWindow });
 
-	/** One pass over every ready peer for what they wrote lately. */
-	const pass = () =>
-		catchUpFromEveryPeer({ ctx, slots, window: ANTI_ENTROPY_WINDOW_MS });
+	/** When this replica last caught up from each peer; a peer cut off for longer than the window is asked back to then. */
+	const caughtUpAt = new Map<string, number>();
+	const windowFor = (peer: string) =>
+		Math.max(
+			ANTI_ENTROPY_WINDOW_MS,
+			ctx.now() -
+				(caughtUpAt.get(peer) ?? openedAt) +
+				HOLD_MS +
+				CATCH_UP_MARGIN_MS,
+		);
+
+	/** One pass over every ready peer for what they wrote since this replica last heard from them. */
+	async function pass(): Promise<void> {
+		const startedAt = ctx.now();
+		for (const peer of await catchUpFromEveryPeer({ ctx, slots, windowFor }))
+			caughtUpAt.set(peer, startedAt);
+	}
 
 	/** Once serving: a few passes while peers learn this address, then one every period for as long as the thread runs. */
 	async function runPasses(): Promise<void> {
