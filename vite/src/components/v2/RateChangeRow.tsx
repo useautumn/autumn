@@ -7,7 +7,7 @@ import {
 export function RateChangeRow({ change }: { change: RateChange }) {
 	const { from, to, unit } = rateChangeParts(change);
 	return (
-		<div className="flex items-center justify-between gap-3 min-w-0 px-2 py-0.5 text-xs">
+		<div className="flex items-center gap-2 min-w-0 px-2 py-0.5 text-xs">
 			<span className="truncate min-w-0 font-medium text-foreground">
 				{change.label}
 			</span>

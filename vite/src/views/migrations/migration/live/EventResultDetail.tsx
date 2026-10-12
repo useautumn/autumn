@@ -135,11 +135,9 @@ function getPlanStatus(change: PlanChange): string | undefined {
 }
 
 function ChangeRow({
-	action,
 	children,
 	className,
 }: {
-	action?: string;
 	children: React.ReactNode;
 	className?: string;
 }) {
@@ -285,7 +283,7 @@ function PlanChangeRows({
 
 	return (
 		<>
-			<ChangeRow action={action}>
+			<ChangeRow>
 				<StatusDot action={action} />
 				<span className="text-xs text-tertiary-foreground w-14 shrink-0">
 					{ACTION_LABELS[action] ?? action}

@@ -44,6 +44,7 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 
 	return (
 		<CellHoverCard
+			className="w-96"
 			trigger={
 				<div className="flex min-w-0 items-center gap-1.5">
 					<ViewChip chip={operations.head} />
