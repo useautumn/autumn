@@ -30,6 +30,8 @@ export const InvoiceSchema = z.object({
 	created_at: z.number(),
 	internal_customer_id: z.string(),
 	internal_entity_id: z.string().nullable(),
+	org_id: z.string().nullish(),
+	env: z.string().nullish(),
 	product_ids: z.array(z.string()),
 	internal_product_ids: z.array(z.string()),
 	/** Read-time only: current public plan ids from internal_product_ids. */
