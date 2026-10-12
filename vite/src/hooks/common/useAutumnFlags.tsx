@@ -4,12 +4,9 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
-	const { data: customer, error } = useCustomer();
-	// Staging and local run without AUTUMN_SECRET_KEY: /api/autumn isn't mounted (a plain-text 404 the client
-	// reports as status 0) and the server's billing gates let everything through.
-	const isProdBackend =
-		import.meta.env.VITE_BACKEND_URL?.includes("api.useautumn.com") ?? false;
-	const billingUnconfigured = !isProdBackend && !!error;
+	const { data: customer } = useCustomer();
+	// Only the prod app gates the Atom tab on billing; staging and local have no billing key and an open server gate.
+	const isProdApp = window.location.hostname === "app.useautumn.com";
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		stripe_key: false,
@@ -49,7 +46,7 @@ export const useAutumnFlags = () => {
 	// Webhooks have been released publicly — always on.
 	return {
 		...flags,
-		atoms: flags.atoms || billingUnconfigured,
+		atoms: flags.atoms || !isProdApp,
 		webhooks: true as const,
 	};
 };
