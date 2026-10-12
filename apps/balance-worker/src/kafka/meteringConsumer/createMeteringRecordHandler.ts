@@ -10,6 +10,7 @@ import {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
+import type { CommitSummaries } from "../../logging/commitSummaries.js";
 import type { ProducedOffsets } from "../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
 import {
@@ -47,6 +48,7 @@ export function createMeteringRecordHandler({
 		ownerEpochByPartition?: ReadonlyMap<number, () => string | undefined>;
 		logger?: Pick<AutumnLogger, "warn">;
 		now?: () => number;
+		summaries?: Pick<CommitSummaries, "followerMissed" | "followerApplied">;
 	};
 }): MeteringRecordHandler {
 	// The fence as read from the log so far, ahead of the store's bookmark; the store's copy seeds it.
@@ -203,7 +205,18 @@ export function createMeteringRecordHandler({
 		offset: bigint;
 	}): boolean {
 		const produced = ctx.producedOffsetsByPartition?.get(position.partition);
-		return !produced?.has({ offset: position.offset });
+		const missed = !produced?.has({ offset: position.offset });
+		if (missed && isWriting({ partition: position.partition }))
+			ctx.summaries?.followerMissed({ partition: position.partition });
+		return missed;
+	}
+
+	/** This process holds the partition's writer: its follower should only ever see records that writer produced. */
+	function isWriting({ partition }: { partition: number }): boolean {
+		return (
+			ctx.producedOffsetsByPartition?.has(partition) === true &&
+			ctx.ownerEpochByPartition?.get(partition)?.() !== undefined
+		);
 	}
 
 	/** Stays synchronous for a resident store: the writer-race offset must be visible before the next record. */
@@ -236,7 +249,13 @@ export function createMeteringRecordHandler({
 				],
 			]),
 		});
+		const writing = isWriting({ partition: position.partition });
 		const settle = (results: DurableMutationApplyResult[]) => {
+			if (writing)
+				ctx.summaries?.followerApplied({
+					partition: position.partition,
+					landed: results[0]?.kind === "applied",
+				});
 			if (landedOnStore(results))
 				ctx.recentCommandsByPartition
 					.get(position.partition)

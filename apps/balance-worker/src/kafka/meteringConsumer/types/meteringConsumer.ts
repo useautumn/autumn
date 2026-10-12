@@ -5,6 +5,7 @@ import type {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Admin } from "kafkajs";
+import type { CommitSummaries } from "../../../logging/commitSummaries.js";
 import type { ProducedOffsets } from "../../../processor/writer/producedOffsets/createProducedOffsets.js";
 import type { RecentCommands } from "../../../processor/writer/recentCommands/types/recentCommands.js";
 import type { StateStore } from "../../../state/types/stateStore.js";
@@ -41,4 +42,5 @@ export type MeteringConsumerContext = {
 	/** Consumed on the same group membership, so partition n's commands reach partition n's owner. */
 	commands?: { topic: string; handler: TopicRecordHandler };
 	logger?: Pick<AutumnLogger, "warn">;
+	summaries?: Pick<CommitSummaries, "followerMissed" | "followerApplied">;
 };
