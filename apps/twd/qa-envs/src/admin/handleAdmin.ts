@@ -1,5 +1,10 @@
 import { isHostnameFree } from "../cloudflare/envHostname";
-import { qaEnvStub, routerStub, tinybirdHostLabel } from "../qaEnv/stubs";
+import {
+	qaEnvStub,
+	routerStub,
+	tinybirdHostLabel,
+	tinybirdStub,
+} from "../qaEnv/stubs";
 import type { CreateEnvInput, Env } from "../types";
 
 // No `--`: that marks a Tinybird hostname (`<env>--tb`).
@@ -87,6 +92,17 @@ export async function handleAdmin({
 			if (!command) return json({ error: "command is required" }, 400);
 			return json(await stub.run({ command }));
 		}
+		case "POST tinybird-exec": {
+			const { command } = (await req.json()) as { command?: string };
+			if (!command) return json({ error: "command is required" }, 400);
+			return json(await tinybirdStub({ env, name }).run({ command }));
+		}
+		case "POST tinybird-sleep":
+			await tinybirdStub({ env, name }).sleepNow();
+			return json({ ok: true });
+		case "POST tinybird-reset":
+			await tinybirdStub({ env, name }).destroyAll();
+			return json({ ok: true });
 		case "POST patch": {
 			const { command } = (await req.json()) as { command?: string };
 			if (!command) return json({ error: "command is required" }, 400);

@@ -32,6 +32,7 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
 	USE_GATHERER=False \
 	OBJECT_STORAGE_ROOT_USER=admin \
 	OBJECT_STORAGE_ROOT_PASSWORD=password
+COPY start.sh /start.sh
 WORKDIR /app
 EXPOSE 7181 7182
-CMD ["/usr/bin/supervisord"]
+CMD ["/bin/sh", "/start.sh"]

@@ -180,6 +180,19 @@ export class QaTinybird extends DurableObject<Env> {
 		return res;
 	}
 
+	/** Admin debugging: one shell command in the running Tinybird container. */
+	async run({ command }: { command: string }) {
+		if (!this.container.running) return { exitCode: -1, output: "not running" };
+		const proc = await this.container.exec(["bash", "-c", command], {
+			stderr: "combined",
+		});
+		const out = await proc.output();
+		return {
+			exitCode: out.exitCode,
+			output: new TextDecoder().decode(out.stdout).slice(-20_000),
+		};
+	}
+
 	async status() {
 		return {
 			awake: this.container.running,
