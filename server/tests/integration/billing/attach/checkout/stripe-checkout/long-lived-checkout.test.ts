@@ -36,6 +36,9 @@ import {
 
 type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
+const DELIVERED_WITHOUT_EFFECT =
+	/replay: [1-9]\d*\/\d+ event\(s\) \[evt_\w+→200\b.*still no effect/;
+
 const setupDeferredLongLivedScenario = async ({
 	customerId,
 }: {
@@ -203,8 +206,8 @@ test.concurrent(
 		});
 		expect(pendingAtOpen).toBeDefined();
 
-		// 1. Expiring the Stripe session must not remove the pending plan. The replay
-		// forces delivery, so a timeout with "still no effect" proves it was a no-op.
+		// 1. Expiring the Stripe session must not remove the pending plan. Timing out after
+		// a successful replay of the expired event proves the handler ran and was a no-op.
 		await ctx.stripeCli.checkout.sessions.expire(firstSessionId);
 		await expect(
 			waitForStripeWebhook({
@@ -221,7 +224,7 @@ test.concurrent(
 				replayAfterMs: 5_000,
 				timeoutMs: 15_000,
 			}),
-		).rejects.toThrow("still no effect");
+		).rejects.toThrow(DELIVERED_WITHOUT_EFFECT);
 
 		// 2. Reopening renews the session for the same pending row.
 		const secondSessionId = getStripeSessionId(
