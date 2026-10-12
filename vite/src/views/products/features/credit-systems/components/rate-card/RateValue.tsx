@@ -21,7 +21,7 @@ export function RateValue({
 	return (
 		<span
 			className={cn(
-				"flex shrink-0 whitespace-nowrap text-sm",
+				"flex shrink-0 whitespace-nowrap",
 				layout === "stacked"
 					? "flex-col-reverse items-end leading-tight"
 					: "items-baseline gap-1.5",
@@ -36,6 +36,7 @@ export function RateValue({
 			{from && layout === "arrow" && <span className="text-subtle">→</span>}
 			<span
 				className={cn(
+					layout !== "arrow" && "text-sm",
 					muted ? "text-tertiary-foreground" : "font-medium text-foreground",
 				)}
 			>
