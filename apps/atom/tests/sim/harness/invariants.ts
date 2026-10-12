@@ -85,12 +85,13 @@ export const assertFreshness = ({
 			)
 				newest = entry;
 		if (!newest) continue;
-		// The answer must come from that write or a later one, whatever balance those carried.
-		const current = own.some(
-			(entry) =>
-				entry.balance === check.balance &&
-				!cluster.newer(newest.version, entry.version),
-		);
+		// The answer must come from that write or a later one, whatever balance those carried. A push whose reply timed
+		// out was stored unseen: a balance no entry carries counts when it is newer than the newest known (or a plan end's 0).
+		const known = own.filter((entry) => entry.balance === check.balance);
+		const current =
+			known.length > 0
+				? known.some((entry) => !cluster.newer(newest.version, entry.version))
+				: check.balance > newest.balance || check.balance === 0;
 		if (!current)
 			throw new Error(
 				`check of ${check.customerId} on ${check.to} at +${check.at - 1_700_000_000_000}ms answered balance ${check.balance}; ${newest.balance} was applied over ${boundMs}ms earlier${check.proxied ? " (proxied)" : ""}`,
