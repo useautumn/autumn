@@ -1,10 +1,14 @@
 import {
+	type CreditSchemaOverrideItem,
+	creditSystemContainsFeature,
 	ErrCode,
+	entitlementToCreditSystem,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
 	isAiCreditSystem,
 	isAnyCreditSystem,
+	isExcludedCreditSchemaItem,
 	type ProductItem,
 	RecaseError,
 } from "@autumn/shared";
@@ -13,6 +17,14 @@ import {
 	validateCreditSystem,
 	validateCreditSystemSchemaReferences,
 } from "./featureUtils.js";
+
+const findDuplicateFeatureId = (schema: CreditSchemaOverrideItem[]) => {
+	const seen = new Set<string>();
+	for (const row of schema) {
+		if (seen.has(row.metered_feature_id)) return row.metered_feature_id;
+		seen.add(row.metered_feature_id);
+	}
+};
 
 export const validateItemFeatureOverride = ({
 	item,
@@ -51,13 +63,6 @@ export const validateItemFeatureOverride = ({
 
 	if (!featureOverride.schema) return;
 
-	const config = {
-		schema: featureOverride.schema,
-		usage_type: FeatureUsageType.Single,
-	};
-	validateCreditSystem(config, feature.type);
-	validateCreditSystemSchemaReferences({ config, allFeatures: features });
-
 	for (const schemaItem of featureOverride.schema) {
 		const referenced = features.find(
 			(f) => f.id === schemaItem.metered_feature_id,
@@ -70,4 +75,34 @@ export const validateItemFeatureOverride = ({
 			});
 		}
 	}
+
+	const duplicateFeatureId = findDuplicateFeatureId(featureOverride.schema);
+	if (duplicateFeatureId) {
+		invalid(
+			`feature_override.credit_schema lists ${duplicateFeatureId} more than once`,
+		);
+	}
+
+	const excludedOutsideCreditSystem = featureOverride.schema.find(
+		(row) =>
+			isExcludedCreditSchemaItem(row) &&
+			!creditSystemContainsFeature({
+				creditSystem: feature,
+				meteredFeatureId: row.metered_feature_id,
+			}),
+	);
+	if (excludedOutsideCreditSystem) {
+		invalid(
+			`feature_override on ${feature.id} excludes ${excludedOutsideCreditSystem.metered_feature_id}, which is not in its credit_schema`,
+		);
+	}
+
+	const config = {
+		schema: entitlementToCreditSystem({
+			entitlement: { feature, feature_override: featureOverride },
+		}).config.schema,
+		usage_type: FeatureUsageType.Single,
+	};
+	validateCreditSystem(config, feature.type);
+	validateCreditSystemSchemaReferences({ config, allFeatures: features });
 };

@@ -34,6 +34,7 @@ import type {
 	CreditTier,
 	FeatureConfigOverride,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
+import { isExcludedCreditSchemaItem } from "../../models/featureModels/featureConfig/creditConfig.js";
 import type { SharedContext } from "../../types/sharedContext.js";
 import { mapRecordValues } from "../common/objectUtils.js";
 import { notNullish, nullish } from "../utils.js";
@@ -178,7 +179,11 @@ export const apiFeatureOverrideToDb = (
 	override: ApiFeatureOverride,
 ): FeatureConfigOverride => ({
 	...(override.credit_schema
-		? { schema: override.credit_schema.map(apiCreditSchemaItemToDb) }
+		? {
+				schema: override.credit_schema.map((row) =>
+					"excluded" in row ? row : apiCreditSchemaItemToDb(row),
+				),
+			}
 		: {}),
 	...(override.markups ? { markups: override.markups } : {}),
 });
@@ -187,7 +192,11 @@ export const dbFeatureOverrideToApi = (
 	override: FeatureConfigOverride,
 ): ApiFeatureOverride => ({
 	...(override.schema
-		? { credit_schema: override.schema.map(dbCreditSchemaItemToApi) }
+		? {
+				credit_schema: override.schema.map((row) =>
+					isExcludedCreditSchemaItem(row) ? row : dbCreditSchemaItemToApi(row),
+				),
+			}
 		: {}),
 	...(override.markups ? { markups: override.markups } : {}),
 });

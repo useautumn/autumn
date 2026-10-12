@@ -1,5 +1,13 @@
-import type { CreditSchemaItem, FullCustomerEntitlement } from "@autumn/shared";
-import { hasCreditDimensionRules, numberWithCommas } from "@autumn/shared";
+import type {
+	CreditSchemaItem,
+	CreditSchemaOverrideItem,
+	FullCustomerEntitlement,
+} from "@autumn/shared";
+import {
+	hasCreditDimensionRules,
+	isExcludedCreditSchemaItem,
+	numberWithCommas,
+} from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -21,6 +29,13 @@ const rateText = (item: CreditSchemaItem) => {
 	}
 
 	return `${numberWithCommas(item.credit_amount)} credits${perUnits}`;
+};
+
+const overrideRowText = (item: CreditSchemaOverrideItem) => {
+	if (isExcludedCreditSchemaItem(item)) return "Not covered";
+	return hasCreditDimensionRules(item)
+		? dimensionedRateText(item)
+		: rateText(item);
 };
 
 const dimensionedRateText = (item: CreditSchemaItem) => {
@@ -65,11 +80,7 @@ export function FeatureOverrideSection({
 								plural: true,
 								capitalize: true,
 							})}
-							value={
-								hasCreditDimensionRules(item)
-									? dimensionedRateText(item)
-									: rateText(item)
-							}
+							value={overrideRowText(item)}
 						/>
 					))}
 					{markups && (

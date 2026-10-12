@@ -13,7 +13,9 @@ const creditSchemaFingerprint = (
 		Object.fromEntries(
 			(rows ?? []).map((row) => [
 				row.metered_feature_id,
-				{ ...row, billing_units: row.billing_units ?? 1 },
+				"excluded" in row
+					? row
+					: { ...row, billing_units: row.billing_units ?? 1 },
 			]),
 		),
 	);

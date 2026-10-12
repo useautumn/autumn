@@ -1,4 +1,9 @@
-import type { ModelMarkups } from "../../../../models/featureModels/featureConfig/creditConfig.js";
+import {
+	type CreditSchemaItem,
+	type CreditSchemaOverrideItem,
+	isExcludedCreditSchemaItem,
+	type ModelMarkups,
+} from "../../../../models/featureModels/featureConfig/creditConfig.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import type { EntitlementWithFeature } from "../../../../models/productModels/entModels/entModels.js";
 import { isAnyCreditSystem } from "../../../featureUtils/classifyFeature/isAnyCreditSystem.js";
@@ -22,19 +27,31 @@ const mergeModelMarkups = ({
 	return merged;
 };
 
+// The override's rate rows replace the catalog schema; excluded rows add nothing.
+const overrideSchemaToCreditSchema = (
+	schema: CreditSchemaOverrideItem[],
+): CreditSchemaItem[] =>
+	schema.filter(
+		(row): row is CreditSchemaItem => !isExcludedCreditSchemaItem(row),
+	);
+
 /** The one place a plan item's feature_override is applied. */
 export const entitlementToCreditSystem = ({
 	entitlement,
 }: {
-	entitlement: EntitlementWithFeature;
+	entitlement: Pick<EntitlementWithFeature, "feature" | "feature_override">;
 }): Feature => {
 	const creditSystem = entitlement.feature;
 	const override = entitlement.feature_override;
 
 	if (!(override && isAnyCreditSystem(creditSystem.type))) return creditSystem;
 
-	const { markups, ...configKeys } = override;
-	const config = { ...creditSystem.config, ...configKeys };
+	const { markups, schema, ...configKeys } = override;
+	const config = {
+		...creditSystem.config,
+		...configKeys,
+		...(schema ? { schema: overrideSchemaToCreditSchema(schema) } : {}),
+	};
 
 	if (!markups) return { ...creditSystem, config };
 
