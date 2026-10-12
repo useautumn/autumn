@@ -1,3 +1,4 @@
+import { instanceIdOf } from "@autumn/blue-green";
 import type { AutumnLogger } from "@autumn/logging";
 import type { JobHealth } from "./types/heraldHeartbeat.js";
 
@@ -16,6 +17,7 @@ export function createJobLagReporter({
 		schedule?: Schedule;
 	};
 }): JobLagReporter {
+	const instanceId = instanceIdOf();
 	let cancel: (() => void) | undefined;
 
 	function report(): void {
@@ -25,6 +27,7 @@ export function createJobLagReporter({
 				{
 					type: "herald_job_lag",
 					data: {
+						instanceId,
 						job: job.name,
 						partitions: job.partitions,
 						maxLagRecords: job.maxLagRecords,
