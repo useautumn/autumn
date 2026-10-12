@@ -536,6 +536,67 @@ describe("invoice.created consumable idempotency", () => {
 				{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
 			]);
 		});
+		test("carries a stale band under the price's one carry id, so a later retry replaces it", async () => {
+			consumableLineItems = [usageBand(100), tierBand(30)];
+			liveStripeLineItemIds = [
+				usageBand(100).id,
+				tierBand(25).id,
+				...creditLineItems.map((lineItem) => lineItem.id),
+			];
+			liveStripeLineMinorAmounts = {
+				[usageBand(100).id]: 10_000,
+				[tierBand(25).id]: 2_500,
+			};
+
+			await processConsumablePricesForInvoiceCreated({
+				plan,
+				ctx,
+				eventContext: makeEventContext({ invoiceStatus: "paid" }),
+			});
+
+			expect(createInvoiceItemCalls).toEqual([
+				expect.objectContaining({
+					amount: 500,
+					metadata: {
+						autumn_line_item_id: `${usageBand(100).id}_carry`,
+						autumn_line_amount: "5",
+					},
+				}),
+			]);
+		});
+
+		test("treats a finalized invoice's pre-scoped usage line as the whole price when it now splits into bands", async () => {
+			const legacyLineId = "invoice_li_2abc_random";
+			consumableLineItems = [usageBand(80), tierBand(15)];
+			liveStripeLineItemIds = [
+				legacyLineId,
+				...creditLineItems.map((lineItem) => lineItem.id),
+			];
+			liveStripeLineMinorAmounts = { [legacyLineId]: 9_000 };
+			liveStripeLineCustomerPriceIds = {
+				[legacyLineId]: usageBand(80).context.customerPrice.id,
+			};
+
+			await processConsumablePricesForInvoiceCreated({
+				plan,
+				ctx,
+				eventContext: makeEventContext({ invoiceStatus: "paid" }),
+			});
+
+			// Billed $90 on one line, now worth $95 across two bands: carry +$5, no throw.
+			expect(createInvoiceItemCalls).toEqual([
+				expect.objectContaining({
+					amount: 500,
+					metadata: {
+						autumn_line_item_id: `${usageBand(80).id}_carry`,
+						autumn_line_amount: "5",
+					},
+				}),
+			]);
+			expect(plan.build().updateCustomerEntitlements).toMatchObject([
+				{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
+			]);
+		});
 	});
 
 	test("does not carry the same delta twice when the pending item already exists", async () => {

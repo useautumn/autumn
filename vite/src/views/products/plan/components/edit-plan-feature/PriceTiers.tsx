@@ -242,6 +242,7 @@ export function PriceTiers({
 					baseCurrency={currency}
 					item={item}
 					onItemChange={setItem}
+					withFlatFee={isUnitAndFlatMode}
 				/>
 			)}
 		</div>

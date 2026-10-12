@@ -26,7 +26,13 @@ export const handleAllocatedVolumeFlatFeeErrors = ({
 		featureUtils.isAllocated(feature);
 	if (!isAllocatedVolume) return;
 
-	const hasFirstTierFlatAmount = (item.tiers?.[0]?.flat_amount ?? 0) > 0;
+	const firstTier = item.tiers?.[0];
+	const hasFirstTierFlatAmount = [
+		firstTier?.flat_amount,
+		...(firstTier?.additional_currencies ?? []).map(
+			(entry) => entry.flat_amount,
+		),
+	].some((flatAmount) => (flatAmount ?? 0) > 0);
 	const hasIncludedUsage =
 		notNullish(item.included_usage) && item.included_usage !== 0;
 	if (!hasFirstTierFlatAmount || hasIncludedUsage) return;

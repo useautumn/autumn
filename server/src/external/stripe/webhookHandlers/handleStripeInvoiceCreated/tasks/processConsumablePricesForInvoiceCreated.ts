@@ -345,9 +345,23 @@ const reconcileChangedTierLineSets = async ({
 	const settledLineItemIds = new Set<string>();
 
 	for (const [setId, setLineItems] of lineItemsBySetId) {
-		const existingSet = [...existingLines.byLineItemId].filter(
+		const [firstLineItem] = setLineItems;
+		if (!firstLineItem) continue;
+
+		const isFinalized = stripeInvoice.status !== "draft";
+		const scopedBands = [...existingLines.byLineItemId].filter(
 			([lineItemId]) => arrearLineItemIdToSetId({ lineItemId }) === setId,
 		);
+		// A finalized invoice's pre-scoped usage line is the whole set (a draft updates it per band).
+		const legacyLine =
+			isFinalized && scopedBands.length === 0
+				? findExistingLine({ lineItem: firstLineItem, existingLines })
+				: undefined;
+		const existingSet: [string, ExistingAutumnLine][] = legacyLine
+			? [["legacy", legacyLine]]
+			: scopedBands;
+		if (existingSet.length === 0) continue;
+
 		const setLineItemIds = new Set(setLineItems.map((lineItem) => lineItem.id));
 		const droppedBands = existingSet.filter(
 			([lineItemId]) => !setLineItemIds.has(lineItemId),
@@ -356,9 +370,15 @@ const reconcileChangedTierLineSets = async ({
 			(lineItem) => !existingLines.byLineItemId.has(lineItem.id),
 		);
 		const bandsChanged = droppedBands.length > 0 || hasNewBands;
-		if (existingSet.length === 0 || !bandsChanged) continue;
+		// On a finalized invoice any stale band is carried at the set level, so a price has one carry.
+		const hasStaleBand = setLineItems.some((lineItem) => {
+			const existing = existingLines.byLineItemId.get(lineItem.id);
+			return existing && isExistingLineStale({ lineItem, existing });
+		});
+		const reconcilesAsSet = bandsChanged || (isFinalized && hasStaleBand);
+		if (!reconcilesAsSet) continue;
 
-		if (stripeInvoice.status === "draft") {
+		if (!isFinalized) {
 			if (droppedBands.length === 0) continue;
 			ctx.logger.info(
 				`[invoice.created] Removing ${droppedBands.length} tier lines of ${setId} no longer billed on ${stripeInvoice.id}`,
@@ -372,9 +392,8 @@ const reconcileChangedTierLineSets = async ({
 		}
 
 		const existingBands = existingSet.map(([, line]) => line);
-		const [firstLineItem] = setLineItems;
 		const [firstExistingBand] = existingBands;
-		if (!firstLineItem || !firstExistingBand) continue;
+		if (!firstExistingBand) continue;
 
 		const hasEveryBilledAmount = existingBands.every(
 			(line) => line.billedMinor !== undefined,

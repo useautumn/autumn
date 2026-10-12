@@ -73,6 +73,8 @@ export function EditPlanFeatureSheet({
 			}
 		}
 
+		// The tier fields change with the behaviour, so read the mode from them again.
+		setChosenPricingMode(undefined);
 		setItem(newItem);
 	};
 

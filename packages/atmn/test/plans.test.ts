@@ -197,7 +197,13 @@ test("a usage-based volume price needs at least two tiers", () => {
 	]);
 });
 
-const allocatedVolumeConfig = ({ included }: { included?: number }) =>
+const allocatedVolumeConfig = ({
+	included,
+	flatAmount = 5,
+}: {
+	included?: number;
+	flatAmount?: number;
+}) =>
 	atmn({
 		features: [
 			feature({
@@ -221,7 +227,7 @@ const allocatedVolumeConfig = ({ included }: { included?: number }) =>
 							billingMethod: "usage_based",
 							tierBehavior: "volume",
 							tiers: [
-								{ to: 10, amount: 10, flatAmount: 5 },
+								{ to: 10, amount: 10, flatAmount },
 								{ to: "inf", amount: 8 },
 							],
 							interval: "month",
@@ -240,6 +246,16 @@ test("an allocated volume item can't have a first-tier flatAmount without includ
 				'features "seats" has consumable false, so this is refused. A volume-tiered allocated item needs included usage before a first-tier flatAmount: Stripe would charge that fee at 0 seats. Add included usage or move the fee to a later tier.',
 		},
 	]);
+});
+
+test("an allocated volume item with included: 0 still can't have a first-tier flatAmount", () => {
+	expect(issuesOf(() => allocatedVolumeConfig({ included: 0 }))).toHaveLength(
+		1,
+	);
+});
+
+test("an allocated volume item can have a first-tier flatAmount of 0 without included usage", () => {
+	expect(issuesOf(() => allocatedVolumeConfig({ flatAmount: 0 }))).toEqual([]);
 });
 
 test("an allocated volume item with included usage can have a first-tier flatAmount", () => {

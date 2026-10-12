@@ -30,13 +30,19 @@ const getSuffix = () => Math.random().toString(36).slice(2, 9);
 const V0_ERROR = "threshold_billing can't be combined with tiered pricing";
 const V1_ERROR = "threshold_billing currently requires a flat usage price";
 
-const multiTierConsumable = () =>
-	items.tieredConsumableMessages({
+const multiTierConsumable = ({
+	tierBehavior,
+}: {
+	tierBehavior?: TierBehavior;
+} = {}): ProductItem => ({
+	...items.tieredConsumableMessages({
 		tiers: [
 			{ to: 100, amount: 0.5 },
 			{ to: "inf", amount: 0.25 },
 		],
-	});
+	}),
+	...(tierBehavior ? { tier_behavior: tierBehavior } : {}),
+});
 
 const withThreshold = (item: ProductItem): ProductItem => ({
 	...item,
@@ -65,43 +71,45 @@ const v1ThresholdTieredItem = ({
 // V0 product items (/products at v1.2)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(
-	`${chalk.yellowBright("threshold-tiers V0 create: REJECT threshold_billing with multi-tier price")}`,
-	async () => {
-		const id = `err_thr_tiers_v0_${getSuffix()}`;
-		await expectAutumnError({
-			errCode: ErrCode.InvalidInputs,
-			errMessage: V0_ERROR,
-			func: () =>
-				autumnV1_2.products.create({
-					id,
-					name: `Test ${id}`,
-					items: [withThreshold(multiTierConsumable())],
-				}),
-		});
-	},
-);
+for (const tierBehavior of [TierBehavior.Graduated, TierBehavior.VolumeBased]) {
+	test.concurrent(
+		`${chalk.yellowBright("threshold-tiers V0 create: REJECT threshold_billing with multi-tier ${tierBehavior} price")}`,
+		async () => {
+			const id = `err_thr_tiers_v0_${tierBehavior}_${getSuffix()}`;
+			await expectAutumnError({
+				errCode: ErrCode.InvalidInputs,
+				errMessage: V0_ERROR,
+				func: () =>
+					autumnV1_2.products.create({
+						id,
+						name: `Test ${id}`,
+						items: [withThreshold(multiTierConsumable({ tierBehavior }))],
+					}),
+			});
+		},
+	);
 
-test.concurrent(
-	`${chalk.yellowBright("threshold-tiers V0 update: REJECT adding threshold_billing to multi-tier price")}`,
-	async () => {
-		const id = `err_thr_tiers_v0_upd_${getSuffix()}`;
-		await autumnV1_2.products.create({
-			id,
-			name: `Test ${id}`,
-			items: [multiTierConsumable()],
-		});
+	test.concurrent(
+		`${chalk.yellowBright("threshold-tiers V0 update: REJECT adding threshold_billing to multi-tier ${tierBehavior} price")}`,
+		async () => {
+			const id = `err_thr_tiers_v0_upd_${tierBehavior}_${getSuffix()}`;
+			await autumnV1_2.products.create({
+				id,
+				name: `Test ${id}`,
+				items: [multiTierConsumable({ tierBehavior })],
+			});
 
-		await expectAutumnError({
-			errCode: ErrCode.InvalidInputs,
-			errMessage: V0_ERROR,
-			func: () =>
-				autumnV1_2.products.update(id, {
-					items: [withThreshold(multiTierConsumable())],
-				}),
-		});
-	},
-);
+			await expectAutumnError({
+				errCode: ErrCode.InvalidInputs,
+				errMessage: V0_ERROR,
+				func: () =>
+					autumnV1_2.products.update(id, {
+						items: [withThreshold(multiTierConsumable({ tierBehavior }))],
+					}),
+			});
+		},
+	);
+}
 
 test.concurrent(
 	`${chalk.yellowBright("threshold-tiers V0 create: ACCEPT threshold_billing with single-tier price")}`,

@@ -227,6 +227,24 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 			}),
 		).toBe(0);
 	});
+
+	test("entity feature: total equal to included stays $0 when billing units would round it up", () => {
+		// 100 + 50 used against 2 × 75 included, billed per 100 units.
+		const entities = {
+			ent_a: { id: "ent_a", balance: -25, adjustment: 0 },
+			ent_b: { id: "ent_b", balance: 25, adjustment: 0 },
+		} as Record<string, EntityBalance>;
+
+		expect(
+			priceVolumeLine({
+				tiers: [{ to: "inf", amount: 5 }] as UsageTier[],
+				allowance: 75,
+				balance: 0,
+				billingUnits: 100,
+				entities,
+			}),
+		).toBe(0);
+	});
 });
 
 describe("usagePriceToLineItem: allocated (v1) volume", () => {

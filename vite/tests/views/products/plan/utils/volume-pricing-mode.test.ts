@@ -141,4 +141,21 @@ describe("alignTierCurrencyShapes", () => {
 			[{ currency: "eur", amount: 0, flat_amount: 18 }],
 		]);
 	});
+
+	test("a flat-only base tier keeps another currency's per-unit rate", () => {
+		const item = volumeItem([
+			{
+				to: Infinite,
+				amount: 0,
+				flat_amount: 5,
+				additional_currencies: [
+					{ currency: "eur", amount: 0.9, flat_amount: 4 },
+				],
+			},
+		]);
+		const result = alignTierCurrencyShapes(item);
+		expect(result.tiers?.[0].additional_currencies).toEqual([
+			{ currency: "eur", amount: 0.9, flat_amount: 4 },
+		]);
+	});
 });

@@ -32,7 +32,7 @@ const validateVolumeItem = ({
 		features: [feature ?? messages],
 		orgId: "org_test",
 		env: AppEnv.Sandbox,
-		multiCurrencyEnabled: false,
+		multiCurrencyEnabled: true,
 		validateAuthoringRules,
 	});
 
@@ -71,8 +71,13 @@ describe("volume tier item errors", () => {
 		}) as Feature;
 		const allocatedItem = ({
 			includedUsage,
+			tiers = [
+				{ to: 10, amount: 10, flat_amount: 5 },
+				{ to: TierInfinite, amount: 8 },
+			],
 		}: {
 			includedUsage: number;
+			tiers?: ProductItem["tiers"];
 		}): ProductItem =>
 			({
 				feature_id: "users",
@@ -80,10 +85,7 @@ describe("volume tier item errors", () => {
 				interval: ProductItemInterval.Month,
 				usage_model: UsageModel.PayPerUse,
 				tier_behavior: TierBehavior.VolumeBased,
-				tiers: [
-					{ to: 10, amount: 10, flat_amount: 5 },
-					{ to: TierInfinite, amount: 8 },
-				],
+				tiers,
 			}) as ProductItem;
 
 		test("rejects it without included usage", () => {
@@ -91,6 +93,36 @@ describe("volume tier item errors", () => {
 				validateVolumeItem({
 					validateAuthoringRules: true,
 					item: allocatedItem({ includedUsage: 0 }),
+					feature: seats,
+				}),
+			).toThrow("can't have a flat_amount on the first tier");
+		});
+
+		test("rejects a tier-1 flat fee set only in another currency", () => {
+			expect(() =>
+				validateVolumeItem({
+					validateAuthoringRules: true,
+					item: {
+						...allocatedItem({
+							includedUsage: 0,
+							tiers: [
+								{
+									to: 10,
+									amount: 10,
+									flat_amount: 0,
+									additional_currencies: [
+										{ currency: "eur", amount: 9, flat_amount: 5 },
+									],
+								},
+								{
+									to: TierInfinite,
+									amount: 8,
+									additional_currencies: [{ currency: "eur", amount: 7 }],
+								},
+							],
+						}),
+						base_currency: "usd",
+					} as ProductItem,
 					feature: seats,
 				}),
 			).toThrow("can't have a flat_amount on the first tier");

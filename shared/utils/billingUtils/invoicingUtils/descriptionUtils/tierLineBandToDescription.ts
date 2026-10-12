@@ -63,7 +63,7 @@ const bandToChargeDescription = ({
 export const tierLineBandToDescription = ({
 	band,
 	context,
-	includePeriodDescription = false,
+	includePeriodDescription = true,
 }: {
 	band: TierLineBand;
 	context: LineItemContext;

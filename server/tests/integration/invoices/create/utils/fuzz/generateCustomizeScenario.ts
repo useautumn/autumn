@@ -147,10 +147,12 @@ const genTiers = ({
 
 const genPriceShape = ({
 	rng,
+	featureId,
 	behavior,
 	interval,
 }: {
 	rng: Rng;
+	featureId: string;
 	behavior: BillingMethod;
 	interval: OracleInterval;
 }): PriceShape => {
@@ -168,10 +170,19 @@ const genPriceShape = ({
 		};
 	}
 	const volume = style === "volume";
+	const tiers = genTiers({ rng, billingUnits, volume });
+	// Volume items carry no included usage, and allocated volume rejects a tier-1 flat fee without it.
+	const isAllocatedUsageBased =
+		behavior === BillingMethod.UsageBased &&
+		(CONTINUOUS_FEATURES as string[]).includes(featureId);
+	if (volume && isAllocatedUsageBased) {
+		const { flat_amount: _flatAmount, ...firstTier } = tiers[0];
+		tiers[0] = firstTier;
+	}
 	return {
 		behavior,
 		billingUnits,
-		tiers: genTiers({ rng, billingUnits, volume }),
+		tiers,
 		volume,
 		interval,
 	};
@@ -225,7 +236,12 @@ const genCatalog = (rng: Rng): FuzzCatalog => {
 		const behavior = CONTINUOUS_FEATURES.includes(featureId)
 			? BillingMethod.Prepaid
 			: rng.pick([BillingMethod.Prepaid, BillingMethod.UsageBased]);
-		const price = genPriceShape({ rng, behavior, interval: "month" });
+		const price = genPriceShape({
+			rng,
+			featureId,
+			behavior,
+			interval: "month",
+		});
 		// Volume tiers would need the allowance-shifted boundaries; keep them allowance-free.
 		const firstCeiling = price.tiers[0].to;
 		const included =
@@ -655,6 +671,7 @@ export const generateCustomizeScenario = ({
 			item.featureId,
 			genPriceShape({
 				rng,
+				featureId: item.featureId,
 				behavior,
 				interval: rng.chance(0.2) ? "year" : "month",
 			}),
@@ -666,6 +683,7 @@ export const generateCustomizeScenario = ({
 			newFeature,
 			genPriceShape({
 				rng,
+				featureId: newFeature,
 				behavior: rng.pick([BillingMethod.Prepaid, BillingMethod.UsageBased]),
 				interval: rng.chance(0.2) ? "year" : "month",
 			}),

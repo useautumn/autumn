@@ -5,6 +5,7 @@ import {
 	CustomerExpand,
 } from "@autumn/shared";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
@@ -66,10 +67,16 @@ export const expectNextInvoiceMatchesPreview = async ({
 		waitForSeconds: 15,
 	});
 
-	const after = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(after.invoices?.length).toBe(invoiceCountBefore + 1);
+	// Autumn stores the renewal from Stripe webhooks, which can lag the test clock.
+	const after = await pollUntilAsserted({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		assert: (customer) => {
+			expect(customer.invoices?.length).toBe(invoiceCountBefore + 1);
+			expect(customer.invoices![0].total).toBeCloseTo(preview.total, 2);
+		},
+		timeoutMs: 60_000,
+	});
 	const renewalInvoice = after.invoices![0];
-	expect(renewalInvoice.total).toBeCloseTo(preview.total, 2);
 
 	return { preview, renewalInvoice };
 };

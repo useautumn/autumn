@@ -84,7 +84,11 @@ const buildUsageLines = ({
 		...contextOverrides,
 	} as LineItemContext;
 
-	return usagePriceToLineItems({ cusEnt, context, options });
+	return usagePriceToLineItems({
+		cusEnt,
+		context,
+		options: { includePeriodDescription: false, ...options },
+	});
 };
 
 const linesSummary = (lines: ReturnType<typeof buildUsageLines>) =>
@@ -398,5 +402,25 @@ describe("usagePriceToLineItems: threshold settlement", () => {
 				unitPricing: { quantity: 50, unitAmount: 0.5 },
 			},
 		]);
+	});
+});
+
+describe("usagePriceToLineItems: period", () => {
+	test("band lines keep the usage period when the caller doesn't override it", () => {
+		const lines = buildUsageLines({
+			tiers: GRADUATED_TIERS,
+			balance: -150,
+			context: {
+				effectivePeriod: {
+					start: Date.UTC(2026, 0, 1),
+					end: Date.UTC(2026, 0, 31),
+				},
+			},
+			options: { includePeriodDescription: undefined },
+		});
+
+		expect(lines).toHaveLength(2);
+		for (const line of lines)
+			expect(line.description).toMatch(/\(from .+ to .+\)$/);
 	});
 });

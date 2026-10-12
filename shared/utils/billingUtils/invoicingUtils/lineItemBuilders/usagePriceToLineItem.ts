@@ -13,6 +13,7 @@ import { cusEntToVolumeInvoiceQuantity } from "../../../cusEntUtils/overageUtils
 import {
 	isConsumablePrice,
 	isPrepaidPrice,
+	isVolumePrice,
 } from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { usagePriceToLineDescription } from "../descriptionUtils/usagePriceToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
@@ -90,9 +91,11 @@ export const usagePriceToLineItem = ({
 	});
 
 	// 4. Get amount
-	// Pay-per-use usage at or below the included amount bills nothing, so tier 1's
-	// flat_amount isn't charged on an item with no included usage and no usage.
-	const isWithinIncluded = !isPrepaid && payPerUseOverage === 0;
+	// Pay-per-use at or below the included amount bills nothing, tier 1's flat fee included.
+	// Volume compares the customer's total, since entities can offset each other's allowance.
+	const isWithinIncluded =
+		!isPrepaid &&
+		(isVolumePrice(price) ? overage <= allowance : payPerUseOverage === 0);
 	const amount = isWithinIncluded
 		? 0
 		: priceToLineAmount({
