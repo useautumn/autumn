@@ -3,6 +3,7 @@ import {
 	type ApiCustomerV3,
 	type ApiCustomerV5,
 	CustomerExpand,
+	sumValues,
 } from "@autumn/shared";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
@@ -10,6 +11,30 @@ import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { addHours, addMonths } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+
+const waitForDraftUsageLines = ({
+	stripeCli,
+	stripeCustomerId,
+}: {
+	stripeCli: Stripe;
+	stripeCustomerId: string;
+}) =>
+	pollUntilAsserted({
+		fetch: () =>
+			stripeCli.invoices.list({
+				customer: stripeCustomerId,
+				status: "draft",
+				limit: 1,
+				expand: ["data.lines"],
+			}),
+		assert: ({ data: [draft] }) => {
+			const autumnLines = draft?.lines.data.filter(
+				(line) => line.metadata?.autumn_line_item_id,
+			);
+			expect(autumnLines?.length ?? 0).toBeGreaterThan(0);
+		},
+		timeoutMs: 60_000,
+	});
 
 /**
  * Reads the upcoming invoice preview, advances one cycle, and asserts the renewal
@@ -42,17 +67,21 @@ export const expectNextInvoiceMatchesPreview = async ({
 	const [preview] = invoice_previews!;
 
 	if (featureId && expectedFeatureAmount !== undefined) {
-		// Tiered prices preview one line per band, so the feature's amount is their sum.
-		const featureSubtotal = preview.line_items
-			.filter((lineItem) => lineItem.feature_id === featureId)
-			.reduce((sum, lineItem) => sum + lineItem.subtotal, 0);
+		const featureSubtotal = sumValues(
+			preview.line_items
+				.filter((lineItem) => lineItem.feature_id === featureId)
+				.map((lineItem) => lineItem.subtotal),
+		);
 		expect(featureSubtotal).toBeCloseTo(expectedFeatureAmount, 2);
 	}
+	const expectsUsageLines = preview.line_items.some(
+		(lineItem) => lineItem.feature_id !== null && lineItem.subtotal !== 0,
+	);
 
 	const before = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = before.invoices?.length ?? 0;
 
-	// Pause at the cycle boundary so invoice.created adds usage lines before finalization.
+	// Stop at the cycle boundary until invoice.created has added the usage lines.
 	const cycleEnd = addMonths(new Date(advancedTo), 1);
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -60,6 +89,12 @@ export const expectNextInvoiceMatchesPreview = async ({
 		advanceTo: cycleEnd.getTime(),
 		waitForSeconds: 15,
 	});
+	if (expectsUsageLines && before.stripe_id) {
+		await waitForDraftUsageLines({
+			stripeCli: ctx.stripeCli,
+			stripeCustomerId: before.stripe_id,
+		});
+	}
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId,
