@@ -16,6 +16,8 @@ import { featureDisplayName } from "./featureDisplayName";
 export type RateCardLine = {
 	key: string;
 	label: string;
+	/** The metered feature a credit rate applies to; markup lines have none. */
+	meteredFeatureId?: string;
 	value: string;
 	detail: string;
 };
@@ -172,6 +174,7 @@ export const featureOverrideRateCard = ({
 	return [
 		...(override.schema ?? []).map((item) => ({
 			key: `feature-${item.metered_feature_id}`,
+			meteredFeatureId: item.metered_feature_id,
 			label: featureDisplayName({
 				features,
 				featureId: item.metered_feature_id,

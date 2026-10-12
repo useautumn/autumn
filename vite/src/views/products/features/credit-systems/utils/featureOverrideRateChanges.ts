@@ -12,6 +12,7 @@ import {
 export type RateChange = {
 	key: string;
 	label: string;
+	meteredFeatureId?: string;
 	from: string | null;
 	to: string | null;
 };
@@ -59,6 +60,9 @@ const lineChange = ({
 	return {
 		key: line.key,
 		label: line.label,
+		...(line.meteredFeatureId
+			? { meteredFeatureId: line.meteredFeatureId }
+			: {}),
 		from: before?.detail ?? null,
 		to: after?.detail ?? null,
 	};

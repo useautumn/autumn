@@ -1,9 +1,10 @@
+import { Fragment } from "react";
 import {
 	AutumnMark,
 	StripeMark,
 } from "../../migration/shared/BillingScopeMarks";
 import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
-import type { ModificationView } from "../rowView/operationsView";
+import { ModificationRow } from "./ModificationRow";
 import {
 	CellHoverCard,
 	ChipList,
@@ -13,15 +14,6 @@ import {
 	PopoverSeparator,
 	ViewChip,
 } from "./ViewChip";
-
-const SIGNS: Record<
-	ModificationView["sign"],
-	{ mark: string; className: string }
-> = {
-	add: { mark: "+", className: "text-[#30A46C]" },
-	change: { mark: "~", className: "text-[#E5A21F]" },
-	remove: { mark: "−", className: "text-[#E5484D]" },
-};
 
 const BILLING = {
 	autumn: {
@@ -65,17 +57,16 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 			<PopoverSeparator />
 			<div className="flex flex-col gap-2.5">
 				{operations.modifications.map((modification, index) => (
-					<div
-						key={`${modification.chip.label}-${index}`}
-						className="flex items-center gap-1.5"
-					>
-						<span
-							className={`w-2.5 shrink-0 text-center font-semibold ${SIGNS[modification.sign].className}`}
-						>
-							{SIGNS[modification.sign].mark}
-						</span>
-						<ViewChip chip={modification.chip} />
-					</div>
+					<Fragment key={`${modification.chip.label}-${index}`}>
+						{modification.planLabel &&
+							modification.planLabel !==
+								operations.modifications[index - 1]?.planLabel && (
+								<span className="pt-0.5 text-[11px] font-medium text-tertiary-foreground">
+									{modification.planLabel}
+								</span>
+							)}
+						<ModificationRow modification={modification} />
+					</Fragment>
 				))}
 			</div>
 			<PopoverSeparator />

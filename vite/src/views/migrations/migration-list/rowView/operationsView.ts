@@ -11,10 +11,7 @@ import {
 	intervalSuffix,
 	isAbbreviatedInterval,
 } from "@/utils/formatUtils/intervalSuffix";
-import {
-	type RateChange,
-	rateChangeText,
-} from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
+import type { RateChange } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 import { planIdsFromFilter } from "../../migration/operations/UpdatePlanOpForm";
 import {
 	type CappedChips,
@@ -25,10 +22,20 @@ import {
 	withoutTile,
 } from "./chipView";
 
+/** A rate an item's feature override sets, nested under that item with its metered feature's tile. */
+export type RateChildView = {
+	key: string;
+	tile: NonNullable<ChipView["tile"]>;
+	change: RateChange;
+};
+
 export type ModificationView = {
 	sign: "add" | "change" | "remove";
 	chip: ChipView;
 	isVersion?: boolean;
+	children?: RateChildView[];
+	/** Set when the card covers several update ops, so the cell can group rows by plan. */
+	planLabel?: string;
 };
 
 export type OperationsView = {
@@ -140,14 +147,7 @@ const addItemDetail = ({
 	return parts.length > 0 ? parts.join(" · ") : "added";
 };
 
-const rateChangeSign = ({ from, to }: RateChange): ModificationView["sign"] => {
-	if (from === null) return "add";
-	if (to === null) return "remove";
-	return "change";
-};
-
-/** One row per rate an item's feature override sets or changes, under the item's tile. */
-const rateModifications = ({
+const rateChildren = ({
 	item,
 	changes,
 	catalog,
@@ -155,14 +155,11 @@ const rateModifications = ({
 	item: AddItem;
 	changes: RateChange[];
 	catalog: MigrationCatalog;
-}): ModificationView[] =>
+}): RateChildView[] =>
 	changes.map((change) => ({
-		sign: rateChangeSign(change),
-		chip: {
-			label: change.label,
-			tile: catalog.feature(item.feature_id).tile,
-			details: [rateChangeText(change)],
-		},
+		key: change.key,
+		tile: catalog.feature(change.meteredFeatureId ?? item.feature_id).tile,
+		change,
 	}));
 
 const priceModification = ({
@@ -252,24 +249,24 @@ const updatePlanModifications = ({
 				details: ["customized"],
 			},
 		})),
-		...rateRows.rows.flatMap((row) => {
+		...rateRows.rows.map((row) => {
 			const item = addItems[row.addIndex];
-			return [
-				row.updated
-					? { sign: "change" as const, chip: itemChip(item, "updated") }
-					: {
-							sign: "add" as const,
-							chip: itemChip(
-								item,
-								addItemDetail({
-									item,
-									isBoolean: isBooleanItem(item),
-									catalog,
-								}),
-							),
-						},
-				...rateModifications({ item, changes: row.changes, catalog }),
-			];
+			const children = rateChildren({ item, changes: row.changes, catalog });
+			const withChildren = children.length > 0 ? { children } : {};
+			if (row.updated)
+				return {
+					sign: "change" as const,
+					chip: itemChip(item, "updated"),
+					...withChildren,
+				};
+			return {
+				sign: "add" as const,
+				chip: itemChip(
+					item,
+					addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
+				),
+				...withChildren,
+			};
 		}),
 		...(customize?.update_items ?? []).map((item) => ({
 			sign: "change" as const,
@@ -299,14 +296,19 @@ export const deriveOperationsView = ({
 	const ops = operations?.customer ?? [];
 	if (ops.length === 0) return null;
 
-	const modifications = ops.flatMap((op) =>
-		op.type === "add_plan"
-			? [addPlanModification({ op, catalog })]
-			: updatePlanModifications({ op, catalog }),
-	);
 	const updateOps = ops.filter(
 		(op): op is UpdatePlanOp => op.type === "update_plan",
 	);
+	const groupByPlan = updateOps.length > 1;
+	const modifications = ops.flatMap((op) => {
+		if (op.type === "add_plan") return [addPlanModification({ op, catalog })];
+		const rows = updatePlanModifications({ op, catalog });
+		if (!groupByPlan) return rows;
+		const planLabel = planIdsFromFilter(op.plan_filter)
+			.map(catalog.planName)
+			.join(", ");
+		return rows.map((row) => ({ ...row, planLabel }));
+	});
 	const targetNames = updateOps.flatMap((op) =>
 		planIdsFromFilter(op.plan_filter).map(catalog.planName),
 	);

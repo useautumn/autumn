@@ -371,28 +371,49 @@ test("ten target plans become a count subtitle over a capped chip list", () => {
 	});
 });
 
-test("an override-only item change is one updated row with each changed rate under it", () => {
+const childLines = (modification: {
+	children?: {
+		change: { label: string; from: string | null; to: string | null };
+	}[];
+}) =>
+	(modification.children ?? []).map(
+		({ change }) => `${change.label}: ${change.from} → ${change.to}`,
+	);
+
+test("an override-only item change is one updated row with its rates nested under it", () => {
 	const fixture = fixtureMigrations.find(
 		(migration) => migration.id === "migration-scale-rate-card",
 	);
 	const result = view(fixture?.operations?.customer ?? [], true);
 	expect(
-		result?.modifications.map(({ sign, chip }) => ({
-			sign,
-			label: chip.label,
-			details: chip.details,
+		result?.modifications.map((modification) => ({
+			sign: modification.sign,
+			label: modification.chip.label,
+			details: modification.chip.details,
+			children: childLines(modification),
 		})),
 	).toEqual([
-		{ sign: "change", label: "Credits", details: ["updated"] },
 		{
 			sign: "change",
-			label: "Gateway spend (USD)",
-			details: ["2.857 → 3.571 credits"],
+			label: "Credits",
+			details: ["updated"],
+			children: ["Gateway spend (USD): 2.857 credits → 3.571 credits"],
 		},
 	]);
 });
 
-test("an added item with an override lists its full rate card", () => {
+test("a nested rate uses its own metered feature's tile, not the credit system's", () => {
+	const fixture = fixtureMigrations.find(
+		(migration) => migration.id === "migration-scale-rate-card",
+	);
+	const [updated] =
+		view(fixture?.operations?.customer ?? [], true)?.modifications ?? [];
+	const childTile = updated.children?.[0].tile;
+	expect(childTile).toEqual(catalog.feature("gateway_spend").tile);
+	expect(childTile).not.toEqual(catalog.feature("credits").tile);
+});
+
+test("an added item with an override nests its full rate card", () => {
 	const result = view([
 		{
 			type: "update_plan",
@@ -413,12 +434,26 @@ test("an added item with an override lists its full rate card", () => {
 			},
 		},
 	]);
-	expect(
-		result?.modifications
-			.slice(1)
-			.map(({ sign, chip }) => [sign, chip.label, chip.details]),
-	).toEqual([
-		["add", "Gateway spend (USD)", ["2 credits"]],
-		["add", "Default", ["25% markup"]],
+	expect(result?.modifications).toHaveLength(1);
+	expect(childLines(result?.modifications[0] ?? {})).toEqual([
+		"Gateway spend (USD): null → 2 credits",
+		"Default: null → 25% markup",
 	]);
+	expect(result?.modifications[0].children?.[1].tile).toEqual(
+		catalog.feature("credits").tile,
+	);
+});
+
+test("rows carry their plan label only when the card covers several update ops", () => {
+	const op = (planId: string) => ({
+		type: "update_plan",
+		plan_filter: { plan_id: planId },
+		version: 2,
+	});
+	expect(
+		view([op("pro"), op("starter")])?.modifications.map(
+			(modification) => modification.planLabel,
+		),
+	).toEqual(["Pro", "Starter"]);
+	expect(view([op("pro")])?.modifications[0].planLabel).toBeUndefined();
 });
