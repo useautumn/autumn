@@ -308,13 +308,13 @@ describe("atom env", () => {
 				},
 			).ATOM_HELD_BYTES_PER_THREAD;
 
-		// Large, 12 GiB on 7 threads: (12 GiB − 288 MiB − 7 × 192 MiB) × 0.75 / 7 / 4 ≈ 285 MiB.
+		// Large, 12 GiB on 7 threads: (12 GiB − 288 MiB − 7 × 192 MiB) × 0.5 / 7 / 5 ≈ 152 MiB, about 8k subjects of 18.6 KB.
 		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBe(
-			Math.floor(((12 * GiB - 288 * MiB - 7 * 192 * MiB) * 0.75) / 7 / 4),
+			Math.floor(((12 * GiB - 288 * MiB - 7 * 192 * MiB) * 0.5) / 7 / 5),
 		);
-		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(280 * MiB);
-		// XXS, a 640 MiB container on one thread: (640 − 288 − 192) × 0.75 / 4 = 30 MiB, about 1.6k subjects of 18.6 KB.
-		expect(heldBytes({ cpus: 1, memory: 640 * MiB })).toBe(30 * MiB);
+		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(150 * MiB);
+		// XXS, a 640 MiB container on one thread: (640 − 288 − 192) × 0.5 / 5 = 16 MiB, about 900 subjects.
+		expect(heldBytes({ cpus: 1, memory: 640 * MiB })).toBe(16 * MiB);
 		// Too small for the threads themselves: nothing is held, and every check reads its row.
 		expect(heldBytes({ cpus: 1, memory: 400 * MiB })).toBe(0);
 	});

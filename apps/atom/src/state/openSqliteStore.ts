@@ -1,8 +1,10 @@
+import { statSync } from "node:fs";
 import { deepFreeze } from "./deepFreeze.js";
 import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
+	deleteCustomersWrittenBefore,
 	listDigestsAppliedAfter,
 	listSubjectsAppliedAfter,
 	maxAppliedAt,
@@ -19,6 +21,14 @@ import type { StoredSubject } from "./types/storedSubject.js";
 
 /** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
+
+const sizeOf = (path: string): number => {
+	try {
+		return statSync(path).size;
+	} catch {
+		return 0;
+	}
+};
 
 const subjectKey = ({
 	customerId,
@@ -136,6 +146,21 @@ export const openSqliteStore = ({
 		return results.map(({ bytes }) => bytes !== null);
 	}
 
+	function dropCustomersWrittenBefore(params: {
+		before: number;
+		limit: number;
+	}) {
+		const dropped = deleteCustomersWrittenBefore({ ctx, ...params });
+		for (const row of dropped)
+			held.drop(
+				storePrefix + subjectKey({ ...row, entityId: row.entityId || null }),
+			);
+		return {
+			customers: new Set(dropped.map((row) => row.customerId)).size,
+			rows: dropped.length,
+		};
+	}
+
 	function close(): void {
 		held.dropPrefix(storePrefix);
 		ctx.sqliteDb.close(true);
@@ -152,6 +177,11 @@ export const openSqliteStore = ({
 		listDigestsAfter: (params) => listDigestsAppliedAfter({ ctx, ...params }),
 		readByKey: (params) => readSubjectsByKey({ ctx, ...params }),
 		maxAppliedAt: () => maxAppliedAt({ ctx }),
+		dropCustomersWrittenBefore,
+		fileBytes: () =>
+			sizeOf(databasePath) +
+			sizeOf(`${databasePath}-wal`) +
+			sizeOf(`${databasePath}-shm`),
 		close,
 	};
 };

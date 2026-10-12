@@ -19,6 +19,9 @@ export const THREAD_STAT_FIELDS = [
 	"heldBytes",
 	"heldLookups",
 	"heldMisses",
+	/** Held copies dropped for the budget, and for sitting idle. */
+	"heldEvicted",
+	"heldExpired",
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",

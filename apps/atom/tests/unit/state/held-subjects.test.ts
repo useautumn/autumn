@@ -84,7 +84,10 @@ describe("held subjects idle expiry", () => {
 			idleExpiryMs: 4 * HOUR,
 			now: () => at,
 		});
-		return { held, advance: (ms: number) => (at += ms) };
+		const advance = (ms: number) => {
+			at += ms;
+		};
+		return { held, advance };
 	};
 
 	test("a hold drops subjects nobody has read or written for longer than the idle expiry", () => {
