@@ -5,11 +5,15 @@ import {
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
-import type { AppliedSubject } from "../../state/repos/subjectStates.js";
+import type {
+	AppliedSubject,
+	SubjectDigest,
+} from "../../state/repos/subjectStates.js";
 import type {
 	AppliedSubjectOnWire,
 	CheckRequestOnWire,
 	OwnerReply,
+	SubjectDigestOnWire,
 } from "./types/ownerCall.js";
 
 /** One instance per version on the owner: building one sorts the version registry. */
@@ -84,4 +88,14 @@ export const wireToAppliedSubject = ({
 }: AppliedSubjectOnWire): AppliedSubject => ({
 	subject: { ...subject, logOffset: BigInt(subject.logOffset) },
 	appliedAt,
+});
+
+export const digestToWire = (digest: SubjectDigest): SubjectDigestOnWire => ({
+	...digest,
+	logOffset: digest.logOffset.toString(),
+});
+
+export const wireToDigest = (wire: SubjectDigestOnWire): SubjectDigest => ({
+	...wire,
+	logOffset: BigInt(wire.logOffset),
 });

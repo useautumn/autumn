@@ -1,4 +1,8 @@
-import type { AppliedSubject, SubjectCursor } from "../repos/subjectStates.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+	SubjectDigest,
+} from "../repos/subjectStates.js";
 import type { StoredSubject } from "./storedSubject.js";
 
 /** One slot's file behind named methods: everything above the state layer talks to this, never to SQLite. */
@@ -23,6 +27,16 @@ export type SqliteStore = {
 		after: number | null;
 		cursor: SubjectCursor | null;
 		limit: number;
+	}): AppliedSubject[];
+	/** The same pages as `listAppliedAfter`, as identities and versions only. */
+	listDigestsAfter(params: {
+		after: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): SubjectDigest[];
+	/** The rows named; a key not held is left out. */
+	readByKey(params: {
+		keys: { customerId: string; entityId: string }[];
 	}): AppliedSubject[];
 	/** The newest write held by this replica's clock, 0 when empty. */
 	maxAppliedAt(): number;

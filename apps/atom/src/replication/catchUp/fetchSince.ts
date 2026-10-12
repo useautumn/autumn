@@ -1,17 +1,29 @@
 import type { CatalogRow } from "@autumn/balance-engine";
-import type { CatalogRows, SubjectSource } from "../../slots/types/slots.js";
+import type {
+	CatalogRows,
+	SubjectKey,
+	SubjectSource,
+} from "../../slots/types/slots.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
+	SubjectDigest,
 } from "../../state/repos/subjectStates.js";
 import {
 	appliedSubjectToWire,
+	digestToWire,
 	wireToAppliedSubject,
+	wireToDigest,
 } from "../../threads/owners/ownerCallContract.js";
-import type { AppliedSubjectOnWire } from "../../threads/owners/types/ownerCall.js";
+import type {
+	AppliedSubjectOnWire,
+	SubjectDigestOnWire,
+} from "../../threads/owners/types/ownerCall.js";
 import { peerRequestHeaders } from "../transport/peerSignature.js";
 
 export const PEER_SUBJECTS_SINCE_PATH = "/v1/_peer/subjects.since";
+export const PEER_SUBJECTS_DIGEST_PATH = "/v1/_peer/subjects.digest";
+export const PEER_SUBJECTS_FETCH_PATH = "/v1/_peer/subjects.fetch";
 export const PEER_CATALOG_SINCE_PATH = "/v1/_peer/catalog.since";
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -23,6 +35,16 @@ export type SubjectsSinceRequest = {
 	cursor: SubjectCursor | null;
 	limit: number;
 };
+export type SubjectsDigestResponse = {
+	after: number | null;
+	digests: SubjectDigestOnWire[];
+};
+export type SubjectsFetchRequest = {
+	slot: number;
+	slotCount: number;
+	keys: SubjectKey[];
+};
+export type SubjectsFetchResponse = { subjects: AppliedSubjectOnWire[] };
 export type SubjectsSinceResponse = {
 	after: number | null;
 	subjects: AppliedSubjectOnWire[];
@@ -40,6 +62,20 @@ export const subjectsSinceResponse = ({
 	subjects: AppliedSubject[];
 }): SubjectsSinceResponse => ({
 	after,
+	subjects: subjects.map(appliedSubjectToWire),
+});
+
+export const subjectsDigestResponse = ({
+	after,
+	digests,
+}: {
+	after: number | null;
+	digests: SubjectDigest[];
+}): SubjectsDigestResponse => ({ after, digests: digests.map(digestToWire) });
+
+export const subjectsFetchResponse = (
+	subjects: AppliedSubject[],
+): SubjectsFetchResponse => ({
 	subjects: subjects.map(appliedSubjectToWire),
 });
 
@@ -107,6 +143,22 @@ export const createPeerSubjectSource = ({
 			after: reply.after,
 			subjects: reply.subjects.map(wireToAppliedSubject),
 		};
+	},
+	digest: async (params) => {
+		const reply = await postToPeer<SubjectsDigestResponse>({
+			ctx,
+			path: PEER_SUBJECTS_DIGEST_PATH,
+			body: JSON.stringify(params satisfies SubjectsSinceRequest),
+		});
+		return { after: reply.after, digests: reply.digests.map(wireToDigest) };
+	},
+	fetch: async (params) => {
+		const reply = await postToPeer<SubjectsFetchResponse>({
+			ctx,
+			path: PEER_SUBJECTS_FETCH_PATH,
+			body: JSON.stringify(params satisfies SubjectsFetchRequest),
+		});
+		return reply.subjects.map(wireToAppliedSubject);
 	},
 	catalog: async (params) => {
 		const { catalog } = await postToPeer<CatalogSinceResponse>({

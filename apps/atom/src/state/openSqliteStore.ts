@@ -3,9 +3,11 @@ import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
+	listDigestsAppliedAfter,
 	listSubjectsAppliedAfter,
 	maxAppliedAt,
 	readSubject as readSubjectRow,
+	readSubjectsByKey,
 	readSubjectVersion,
 	type SubjectWrite,
 	subjectToSlice,
@@ -116,6 +118,8 @@ export const openSqliteStore = ({
 		setSubjects,
 		countSubjects: () => countSubjects({ ctx }),
 		listAppliedAfter: (params) => listSubjectsAppliedAfter({ ctx, ...params }),
+		listDigestsAfter: (params) => listDigestsAppliedAfter({ ctx, ...params }),
+		readByKey: (params) => readSubjectsByKey({ ctx, ...params }),
 		maxAppliedAt: () => maxAppliedAt({ ctx }),
 		close,
 	};

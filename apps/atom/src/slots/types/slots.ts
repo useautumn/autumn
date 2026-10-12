@@ -3,7 +3,10 @@ import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
+	SubjectDigest,
 } from "../../state/repos/subjectStates.js";
+
+export type SubjectKey = { customerId: string; entityId: string };
 
 /** One page of a slot as its owner lists it: from `after` by the owner's clock (null: everything), past `cursor`. */
 export type SinceRequest = {
@@ -29,6 +32,21 @@ export type SubjectSource = {
 		cursor: SubjectCursor | null;
 		limit: number;
 	}): Promise<{ after: number | null; subjects: AppliedSubject[] }>;
+	/** The same pages as `since`, as identities and versions only: what to compare before asking for rows. */
+	digest(params: {
+		slot: number;
+		slotCount: number;
+		after: number | null;
+		window: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<{ after: number | null; digests: SubjectDigest[] }>;
+	/** The rows named, from one slot. */
+	fetch(params: {
+		slot: number;
+		slotCount: number;
+		keys: SubjectKey[];
+	}): Promise<AppliedSubject[]>;
 	/** The peer's catalog when it was read after `readAtAfter`; null otherwise. */
 	catalog(params: { readAtAfter: number }): Promise<CatalogRows | null>;
 };
@@ -46,16 +64,19 @@ export type Slots = {
 	catalogSince(params: { readAtAfter: number }): CatalogRows | null;
 	/** A slot's subjects written at or after `after`, oldest write first, answered by the slot's owner. */
 	listSince(params: SinceRequest): Promise<AppliedSubject[]>;
+	/** The same pages as identities and versions only. */
+	digestSince(params: SinceRequest): Promise<SubjectDigest[]>;
+	/** A slot's rows by key, answered by the slot's owner. */
+	fetchSubjects(params: {
+		slot: number;
+		keys: SubjectKey[];
+	}): Promise<AppliedSubject[]>;
 	/** The newest write in the slots this thread owns, by this replica's clock; 0 when they are empty. */
 	maxAppliedAt(): number;
-	/** The subjects this thread's slots wrote at or after `after`, oldest first; what a replica re-sends after a restart. */
-	listOwnAppliedAfter(params: {
-		after: number;
-		limit: number;
-	}): AppliedSubject[];
 	/**
-	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included:
-	 * everything with `window` null, else what the source wrote in its last `window` ms.
+	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
+	 * with `window` null (a fresh volume); else the digests of what the source wrote in its last `window` ms, and only
+	 * the rows whose version is newer than the one held.
 	 */
 	catchUp(params: {
 		source: SubjectSource;

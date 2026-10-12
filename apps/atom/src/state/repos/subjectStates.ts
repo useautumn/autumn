@@ -186,6 +186,101 @@ export const listSubjectsAppliedAfter = ({
 			appliedAt: Number(row.appliedAt),
 		}));
 
+/** A row's identity and version alone: what a replica compares before asking for the row itself. */
+export type SubjectDigest = SubjectCursor & {
+	readAt: number;
+	logOffset: bigint;
+};
+
+/** The digests of the subjects written at or after `after`, in the same order and pages as `listSubjectsAppliedAfter`. */
+export const listDigestsAppliedAfter = ({
+	ctx,
+	after,
+	cursor,
+	limit,
+}: {
+	ctx: SlotContext;
+	after: number | null;
+	cursor: SubjectCursor | null;
+	limit: number;
+}): SubjectDigest[] =>
+	ctx.sqliteDb
+		.query<
+			{
+				customerId: string;
+				entityId: string;
+				readAt: bigint;
+				logOffset: bigint;
+				appliedAt: bigint;
+			},
+			{
+				after: number;
+				cursorAppliedAt: number | null;
+				cursorCustomerId: string;
+				cursorEntityId: string;
+				limit: number;
+			}
+		>(`
+			SELECT customer_id AS customerId, entity_id AS entityId, read_at AS readAt, log_offset AS logOffset, applied_at AS appliedAt
+			FROM subject_states
+			WHERE applied_at >= $after
+				AND ($cursorAppliedAt IS NULL
+					OR (applied_at, customer_id, entity_id) > ($cursorAppliedAt, $cursorCustomerId, $cursorEntityId))
+			ORDER BY applied_at ASC, customer_id ASC, entity_id ASC
+			LIMIT $limit
+		`)
+		.all({
+			after: after ?? 0,
+			cursorAppliedAt: cursor?.appliedAt ?? null,
+			cursorCustomerId: cursor?.customerId ?? "",
+			cursorEntityId: cursor?.entityId ?? "",
+			limit,
+		})
+		.map((row) => ({
+			customerId: row.customerId,
+			entityId: row.entityId,
+			readAt: Number(row.readAt),
+			logOffset: row.logOffset,
+			appliedAt: Number(row.appliedAt),
+		}));
+
+/** The rows named, with when they were written; a key the file does not hold is left out. */
+export const readSubjectsByKey = ({
+	ctx,
+	keys,
+}: {
+	ctx: SlotContext;
+	keys: { customerId: string; entityId: string }[];
+}): AppliedSubject[] => {
+	const query = ctx.sqliteDb.query<
+		SubjectStateRow & { appliedAt: bigint },
+		{ customerId: string; entityId: string }
+	>(`
+		SELECT
+			states.log_offset AS logOffset,
+			states.read_at AS readAt,
+			states.applied_at AS appliedAt,
+			states.state_json AS stateJson,
+			states.slice_hash AS sliceHash,
+			slices.catalog_json AS catalogJson,
+			slices.org_json AS orgJson
+		FROM subject_states AS states
+		JOIN subject_slices AS slices USING (customer_id, entity_id)
+		WHERE states.customer_id = $customerId AND states.entity_id = $entityId
+	`);
+	return keys.flatMap((key) => {
+		const row = query.get(key);
+		return row
+			? [
+					{
+						subject: storedSubjectFromRow({ row }).subject,
+						appliedAt: Number(row.appliedAt),
+					},
+				]
+			: [];
+	});
+};
+
 /** The newest write the file holds by this replica's clock, or 0 when it is empty: how far back a copy from a peer reaches. */
 export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb

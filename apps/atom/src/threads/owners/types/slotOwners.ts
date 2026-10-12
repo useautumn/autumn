@@ -2,6 +2,7 @@ import type { SlotProcessor } from "../../../processor/types/slotProcessor.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
+	SubjectDigest,
 } from "../../../state/repos/subjectStates.js";
 import type { CatalogUpdate } from "./ownerCall.js";
 
@@ -28,5 +29,19 @@ export type SlotOwners = {
 		after: number | null;
 		cursor: SubjectCursor | null;
 		limit: number;
+	}): Promise<AppliedSubject[]>;
+	digestSinceOn(params: {
+		thread: number;
+		atomId: string | null;
+		slot: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<SubjectDigest[]>;
+	fetchSubjectsOn(params: {
+		thread: number;
+		atomId: string | null;
+		slot: number;
+		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
 };

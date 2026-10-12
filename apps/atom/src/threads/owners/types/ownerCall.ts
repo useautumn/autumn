@@ -6,6 +6,7 @@ import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
+	SubjectDigest,
 } from "../../../state/repos/subjectStates.js";
 
 /** A check as it crosses threads: plain data, with the API version by name. */
@@ -30,7 +31,24 @@ export type OwnerCallBody = { atomId: string | null } & (
 			cursor: SubjectCursor | null;
 			limit: number;
 	  }
+	| {
+			type: "digestSince";
+			slot: number;
+			after: number | null;
+			cursor: SubjectCursor | null;
+			limit: number;
+	  }
+	| {
+			type: "fetchSubjects";
+			slot: number;
+			keys: { customerId: string; entityId: string }[];
+	  }
 );
+
+/** A digest across threads or replicas: its one bigint as decimal text. */
+export type SubjectDigestOnWire = Omit<SubjectDigest, "logOffset"> & {
+	logOffset: string;
+};
 
 /** A written subject as it crosses threads or replicas: its one bigint as decimal text. */
 export type AppliedSubjectOnWire = {
@@ -49,7 +67,11 @@ export type OwnerReply =
 	| {
 			id: number;
 			ok: true;
-			value: CheckAnswer | boolean | AppliedSubjectOnWire[];
+			value:
+				| CheckAnswer
+				| boolean
+				| AppliedSubjectOnWire[]
+				| SubjectDigestOnWire[];
 	  }
 	| {
 			id: number;

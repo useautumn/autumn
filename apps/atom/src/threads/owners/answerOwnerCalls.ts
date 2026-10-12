@@ -1,6 +1,7 @@
 import type { Auth } from "../../auth/types/auth.js";
 import {
 	appliedSubjectToWire,
+	digestToWire,
 	errorToReply,
 	wireToCheckRequest,
 } from "./ownerCallContract.js";
@@ -32,6 +33,19 @@ const runOwnerCall = async ({
 				cursor: call.cursor,
 				limit: call.limit,
 			})
+		).map(appliedSubjectToWire);
+	if (call.type === "digestSince")
+		return (
+			await slots.digestSince({
+				slot: call.slot,
+				after: call.after,
+				cursor: call.cursor,
+				limit: call.limit,
+			})
+		).map(digestToWire);
+	if (call.type === "fetchSubjects")
+		return (
+			await slots.fetchSubjects({ slot: call.slot, keys: call.keys })
 		).map(appliedSubjectToWire);
 	const request = wireToCheckRequest({ request: call.request });
 	return slots

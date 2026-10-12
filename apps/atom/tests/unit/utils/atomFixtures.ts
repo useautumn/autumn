@@ -171,6 +171,8 @@ export const allSlotsOwnedHere: SlotOwners = {
 	processorOn: noOtherThread,
 	catalogOn: noOtherThread,
 	listSinceOn: noOtherThread,
+	digestSinceOn: noOtherThread,
+	fetchSubjectsOn: noOtherThread,
 };
 
 /** A thread's held subjects, roomy enough that a test never evicts by accident. */
