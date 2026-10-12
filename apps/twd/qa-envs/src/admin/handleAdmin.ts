@@ -1,8 +1,9 @@
 import { isHostnameFree } from "../cloudflare/envHostname";
-import { qaEnvStub, routerStub } from "../qaEnv/stubs";
+import { qaEnvStub, routerStub, tinybirdHostLabel } from "../qaEnv/stubs";
 import type { CreateEnvInput, Env } from "../types";
 
-const NAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
+// No `--`: that marks a Tinybird hostname (`<env>--tb`).
+const NAME_RE = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
 const RESERVED = new Set(["hooks", "www", "api", "app", "twd", "admin"]);
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -37,6 +38,17 @@ export async function handleAdmin({
 					409,
 				);
 			const input = (await req.json()) as CreateEnvInput;
+			const tinybirdLabel = tinybirdHostLabel(name);
+			if (
+				input.tinybird &&
+				!(await isHostnameFree({ env, name: tinybirdLabel }))
+			)
+				return json(
+					{
+						error: `${tinybirdLabel}.${env.QA_DOMAIN} is used by something else`,
+					},
+					409,
+				);
 			if (!input.sha || !input.runtimeEnv?.DATABASE_URL)
 				return json(
 					{ error: "sha and runtimeEnv.DATABASE_URL are required" },

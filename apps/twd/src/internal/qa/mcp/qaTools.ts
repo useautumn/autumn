@@ -20,7 +20,7 @@ const NAME = z
 	.describe("DNS label: lowercase letters, digits, hyphens.");
 
 const describeEnv = (env: QaEnv) =>
-	`${env.url} (${env.ref}@${env.sha.slice(0, 12)}) is ${env.state}${env.building ? `, building: ${env.building.phase}, ~${Math.ceil(env.building.remainingMs / 1000)}s left` : ""}${env.awake === null ? "" : env.awake ? ", awake" : ", asleep"}; expires ${env.expiresAt}.`;
+	`${env.url} (${env.ref}@${env.sha.slice(0, 12)}) is ${env.state}${env.building ? `, building: ${env.building.phase}, ~${Math.ceil(env.building.remainingMs / 1000)}s left` : ""}${env.awake === null ? "" : env.awake ? ", awake" : ", asleep"}; expires ${env.expiresAt}.${env.tinybirdUrl ? ` Tinybird: ${env.tinybirdUrl}` : ""}`;
 
 const describeWarmth = ({ env, warm }: { env: QaEnv; warm: boolean }) => {
 	if (warm)
@@ -60,6 +60,12 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 				"Another env of yours to delete once this one is created.",
 			),
 			freshDb: z.boolean().optional(),
+			tinybird: z
+				.boolean()
+				.optional()
+				.describe(
+					"Run a Tinybird Local beside the env, so the dashboard's Usage charts read its own data and tracks in the env land there. Empty until you seed it: `bun tb:local seed --url <tinybirdUrl>` from server/. Omitted on a re-ship keeps the env's setting.",
+				),
 			wait: z
 				.boolean()
 				.optional()

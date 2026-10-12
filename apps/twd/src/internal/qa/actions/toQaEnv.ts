@@ -4,6 +4,10 @@ import type { QaEnvRow } from "../repos/qaEnvsRepo.ts";
 import { qaWorker, type WorkerEnvStatus } from "../worker/qaWorkerClient.ts";
 
 /** Row state, with live awake/build progress from the Worker when it answers. */
+/** The Worker serves an env's Tinybird at `<name>--tb.<domain>`. */
+const tinybirdUrlOf = ({ url }: { url: string }) =>
+	url.replace(/^(https:\/\/[^.]+)\./, "$1--tb.");
+
 export const toQaEnv = async ({
 	ctx,
 	row,
@@ -38,6 +42,7 @@ export const toQaEnv = async ({
 				}
 			: null,
 		error: row.error,
+		tinybirdUrl: row.tinybird ? tinybirdUrlOf({ url: row.url }) : null,
 		createdBy: row.createdBy,
 		createdAt: row.createdAt.toISOString(),
 		expiresAt: row.expiresAt.toISOString(),
