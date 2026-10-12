@@ -1,8 +1,7 @@
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import {
-	PLAN_ITEM_FILTER_EMPTY_MESSAGE,
-	PlanItemFilterFieldsSchema,
-	planItemFilterHasField,
+	type PlanItemFilter,
+	PlanItemFilterSchema,
 } from "@api/products/items/filter/planItemFilter";
 import {
 	CustomizePlanLicenseSchema,
@@ -14,24 +13,24 @@ import { ApiFeatureOverrideSchema } from "../../../../features/apiFeatureOverrid
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
 
-export const MigrationRemoveItemSchema = PlanItemFilterFieldsSchema.extend({
+/** A remove filter plus display-only notes about the item it replaces; execution never reads them. */
+export const MigrationRemoveItemSchema = PlanItemFilterSchema.extend({
 	previous_feature_override: ApiFeatureOverrideSchema.optional().meta({
 		internal: true,
 		description:
-			"The matched item's feature_override before the plan update that created this migration; empty when it inherited the feature's rates. Display-only.",
+			"The matched item's feature_override before the update; empty when it inherited the feature's.",
 	}),
 	only_feature_override_changed: z.boolean().optional().meta({
 		internal: true,
 		description:
-			"True when the matched item and the paired add_items entry differ only by feature_override. Display-only.",
+			"True when the matched item and its replacement differ only by feature_override.",
 	}),
-})
-	.refine(planItemFilterHasField, { message: PLAN_ITEM_FILTER_EMPTY_MESSAGE })
-	.meta({
-		title: "MigrationRemoveItem",
-		description:
-			"Filter for matching plan items. All provided fields must match (AND).",
-	});
+}).refine(
+	(filter: PlanItemFilter) => PlanItemFilterSchema.safeParse(filter).success,
+	{
+		message: "PlanItemFilter must have at least one field set.",
+	},
+);
 
 export type MigrationRemoveItem = z.infer<typeof MigrationRemoveItemSchema>;
 

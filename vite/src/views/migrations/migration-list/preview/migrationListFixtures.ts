@@ -8,7 +8,6 @@ import {
 	type MigrationListSummary,
 	type MigrationStatus,
 	type Operations,
-	type ProductItem,
 } from "@autumn/shared";
 import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
 import {
@@ -43,25 +42,6 @@ const fixtureProducts = [
 	{ id: "hobby", name: "Hobby" },
 	{ id: "free", name: "Free" },
 	{ id: "team", name: "Team" },
-	{
-		id: "scale",
-		name: "Scale",
-		version: 1,
-		items: [
-			{
-				feature_id: "credits",
-				included_usage: 100_000,
-				interval: "month",
-				config: {
-					feature_override: {
-						schema: [
-							{ metered_feature_id: "gateway_spend", credit_amount: 2.857 },
-						],
-					},
-				},
-			} as ProductItem,
-		],
-	},
 	{ id: "business", name: "Business" },
 	{ id: "analytics_addon", name: "Analytics add-on" },
 	{ id: "seat_license", name: "Seat license" },
@@ -130,21 +110,10 @@ const fixtureFeatures: Feature[] = [
 	feature({ id: "sso", name: "SSO", type: FeatureType.Boolean }),
 	feature({ id: "narration", name: "Narration", type: FeatureType.Boolean }),
 	feature({
-		id: "gateway_spend",
-		name: "Gateway spend (USD)",
-		type: FeatureType.Metered,
-		usageType: FeatureUsageType.Single,
+		id: "credits",
+		name: "Credits",
+		type: FeatureType.CreditSystem,
 	}),
-	{
-		...feature({
-			id: "credits",
-			name: "Credits",
-			type: FeatureType.CreditSystem,
-		}),
-		config: {
-			schema: [{ metered_feature_id: "gateway_spend", credit_amount: 1 }],
-		},
-	} as Feature,
 ];
 
 const counts = (
@@ -638,112 +607,6 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 				at: on({ day: 20, hour: 18, minute: 2 }),
 			},
 		}),
-	}),
-	migration({
-		id: "migration-ai-markups",
-		status: "draft",
-		filter: { customer: { plan: { plan_id: "pro", version: 1 } } },
-		operations: {
-			customer: [
-				{
-					type: "update_plan",
-					plan_filter: { plan_id: "pro", version: 1, custom: false },
-					customize: {
-						remove_items: [
-							{
-								feature_id: "ai_credits",
-								interval: "month",
-								interval_count: 1,
-								included: 500,
-								previous_feature_override: {
-									markups: {
-										default_markup: 20,
-										model_markups: {
-											"openai/gpt-4o": { markup: 10 },
-											"openai/o3": { markup: 15 },
-											"anthropic/claude-sonnet-4": { markup: 12 },
-										},
-									},
-								},
-								only_feature_override_changed: true,
-							},
-						],
-						add_items: [
-							{
-								feature_id: "ai_credits",
-								included: 500,
-								unlimited: false,
-								reset: { interval: "month" },
-								feature_override: {
-									markups: {
-										default_markup: 25,
-										model_markups: {
-											"openai/gpt-4o": { markup: 20 },
-											"openai/o3": { markup: 25 },
-											"anthropic/claude-sonnet-4": { markup: 18 },
-											"google/gemini-2.5-pro": { markup: 30 },
-										},
-									},
-								},
-							},
-						],
-					},
-				},
-			],
-		} as Operations,
-		noBillingChanges: true,
-		runSummary: summary({ customer_count: 12 }),
-	}),
-	migration({
-		id: "migration-scale-rate-card",
-		status: "draft",
-		filter: {
-			customer: {
-				plan: { $or: [{ plan_id: "scale", version: 1 }], custom: false },
-			},
-		},
-		operations: {
-			customer: [
-				{
-					type: "update_plan",
-					plan_filter: { plan_id: "scale", version: 1, custom: false },
-					customize: {
-						remove_items: [
-							{
-								feature_id: "credits",
-								interval: "month",
-								interval_count: 1,
-								included: 100_000,
-								previous_feature_override: {
-									credit_schema: [
-										{ metered_feature_id: "gateway_spend", credit_cost: 2.857 },
-									],
-								},
-								only_feature_override_changed: true,
-							},
-						],
-						add_items: [
-							{
-								feature_id: "credits",
-								included: 100_000,
-								unlimited: false,
-								reset: { interval: "month" },
-								feature_override: {
-									credit_schema: [
-										{
-											metered_feature_id: "gateway_spend",
-											credit_cost: 3.571,
-										},
-									],
-								},
-							},
-						],
-					},
-				},
-			],
-		} as Operations,
-		noBillingChanges: true,
-		runSummary: summary({ customer_count: 42 }),
 	}),
 ];
 

@@ -3,8 +3,8 @@ import {
 	AutumnMark,
 	StripeMark,
 } from "../../migration/shared/BillingScopeMarks";
+import { ItemRateChangeRow } from "../../migration/shared/ItemRateChangeRow";
 import type { MigrationRowView } from "../rowView/deriveMigrationRowView";
-import { ModificationRow } from "./ModificationRow";
 import {
 	CellHoverCard,
 	ChipList,
@@ -65,7 +65,7 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 									{modification.planLabel}
 								</span>
 							)}
-						<ModificationRow modification={modification} />
+						<ItemRateChangeRow modification={modification} variant="chip" />
 					</Fragment>
 				))}
 			</div>

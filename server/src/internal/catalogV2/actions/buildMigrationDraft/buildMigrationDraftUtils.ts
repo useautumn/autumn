@@ -4,7 +4,6 @@ import {
 	type DiffedCustomizePlanV1,
 	featureOverrideToKey,
 	itemsEqualIgnoringFeatureOverride,
-	type MigrationRemoveItem,
 	type MigrationUpdatePlanCustomize,
 	type PlanFilter,
 	planItemMatchesFilter,
@@ -41,7 +40,9 @@ const previousPriceKey = ({
 }: {
 	previousPrice: MigrationTarget["previousPrice"];
 }) =>
-	previousPrice === null ? "null" : basePriceToKey({ price: previousPrice });
+	previousPrice === null
+		? "null"
+		: basePriceToKey({ price: previousPrice });
 
 /** Stamp previous_price only when every target shares one base price — one op can't carry mixed previous prices. */
 export const stampPreviousPrice = ({
@@ -66,66 +67,8 @@ export const stampPreviousPrice = ({
 	};
 };
 
-/** The add a remove filter is replaced by: the only one of its feature, else the one on its cadence. */
-const pairedAddItem = ({
-	filter,
-	customize,
-}: {
-	filter: MigrationRemoveItem;
-	customize: MigrationUpdatePlanCustomize;
-}) => {
-	const candidates = (customize.add_items ?? []).filter(
-		(item) => item.feature_id === filter.feature_id,
-	);
-	if (candidates.length === 1) return candidates[0];
-	return candidates.find(
-		(item) =>
-			String(item.price?.interval ?? item.reset?.interval) ===
-				String(filter.interval) &&
-			(item.price?.interval_count ?? item.reset?.interval_count ?? 1) ===
-				(filter.interval_count ?? 1),
-	);
-};
-
-/** Display stamps for one remove filter, set only when every target's matched item agrees. */
-const previousFeatureOverrideStamp = ({
-	filter,
-	customize,
-	previousItemSets,
-}: {
-	filter: MigrationRemoveItem;
-	customize: MigrationUpdatePlanCustomize;
-	previousItemSets: ApiPlanItemV1[][];
-}): Partial<MigrationRemoveItem> => {
-	const next = pairedAddItem({ filter, customize });
-	const previousItems = previousItemSets.map((items) =>
-		items.find((item) => planItemMatchesFilter({ item, filter })),
-	);
-	const [previous] = previousItems;
-	if (!next || !previous || previousItems.some((item) => !item)) return {};
-
-	const keys = new Set(
-		previousItems.map((item) => featureOverrideToKey(item?.feature_override)),
-	);
-	const override = previous.feature_override;
-	if (
-		keys.size !== 1 ||
-		featureOverrideToKey(next.feature_override) ===
-			featureOverrideToKey(override)
-	)
-		return {};
-
-	const onlyOverrideChanged = previousItems.every(
-		(item) => item && itemsEqualIgnoringFeatureOverride(item, next),
-	);
-	return {
-		// An empty override records that the old item inherited the credit system's rates.
-		previous_feature_override: override ?? {},
-		...(onlyOverrideChanged ? { only_feature_override_changed: true } : {}),
-	};
-};
-
-/** Stamp each remove filter with its previous override when every target shares it and the paired add changes it. */
+/** Display-only stamps on each remove filter, set only when every target's replaced item agrees and the override changes:
+ * the old override (empty when inherited) and whether nothing else changed. */
 export const stampPreviousFeatureOverrides = ({
 	customize,
 	previousItemSets,
@@ -135,16 +78,42 @@ export const stampPreviousFeatureOverrides = ({
 }): MigrationUpdatePlanCustomize => {
 	if (!customize.remove_items || previousItemSets.length === 0)
 		return customize;
-
-	return {
-		...customize,
-		remove_items: customize.remove_items.map((filter) => ({
+	const remove_items = customize.remove_items.map((filter) => {
+		const adds = (customize.add_items ?? []).filter(
+			(item) => item.feature_id === filter.feature_id,
+		);
+		const next =
+			adds.length === 1
+				? adds[0]
+				: adds.find(
+						(item) =>
+							String(item.price?.interval ?? item.reset?.interval) ===
+								String(filter.interval) &&
+							(item.price?.interval_count ??
+								item.reset?.interval_count ??
+								1) === (filter.interval_count ?? 1),
+					);
+		const previous = previousItemSets.map((items) =>
+			items.find((item) => planItemMatchesFilter({ item, filter })),
+		);
+		const keys = new Set(
+			previous.map((item) => featureOverrideToKey(item?.feature_override)),
+		);
+		if (
+			!next ||
+			previous.some((item) => !item) ||
+			keys.size !== 1 ||
+			keys.has(featureOverrideToKey(next.feature_override))
+		)
+			return filter;
+		const onlyOverrideChanged = previous.every(
+			(item) => item && itemsEqualIgnoringFeatureOverride(item, next),
+		);
+		return {
 			...filter,
-			...previousFeatureOverrideStamp({
-				filter,
-				customize,
-				previousItemSets,
-			}),
-		})),
-	};
+			previous_feature_override: previous[0]?.feature_override ?? {},
+			...(onlyOverrideChanged && { only_feature_override_changed: true }),
+		};
+	});
+	return { ...customize, remove_items };
 };

@@ -12,9 +12,7 @@ import {
 } from "@autumn/ui";
 import { PackageIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
-import { ItemChangeRow as SharedItemChangeRow } from "@/components/v2/ItemChangeRow";
 import { ChangeDot, type ItemStatusState } from "@/components/v2/ItemStatusDot";
-import { itemChangeRateRows } from "@/components/v2/itemChangeRateChanges";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -135,9 +133,11 @@ function getPlanStatus(change: PlanChange): string | undefined {
 }
 
 function ChangeRow({
+	action,
 	children,
 	className,
 }: {
+	action?: string;
 	children: React.ReactNode;
 	className?: string;
 }) {
@@ -273,13 +273,8 @@ function PlanChangeRows({
 	absorbedBalances?: BalanceChange[];
 	absorbedFlags?: FlagChange[];
 }) {
-	const { features } = useFeaturesQuery();
 	const action = change.action ?? "unknown";
 	const items = getItemChanges(change);
-	const rateRows = itemChangeRateRows({ itemChanges: items, features });
-	const mergedDeleted = new Set(
-		[...rateRows.mergedRemoveIndices].map((index) => rateRows.deleted[index]),
-	);
 	const planId = getPlanId(change);
 	const status = getPlanStatus(change);
 	const hasAbsorbed =
@@ -287,7 +282,7 @@ function PlanChangeRows({
 
 	return (
 		<>
-			<ChangeRow>
+			<ChangeRow action={action}>
 				<StatusDot action={action} />
 				<span className="text-xs text-tertiary-foreground w-14 shrink-0">
 					{ACTION_LABELS[action] ?? action}
@@ -306,27 +301,9 @@ function PlanChangeRows({
 					</span>
 				)}
 			</ChangeRow>
-			{rateRows.rows.map((row) => {
-				const item = rateRows.created[row.addIndex];
-				return row.updated || row.changes.length > 0 ? (
-					<SharedItemChangeRow
-						change={item as CustomerPlanItemChange}
-						className="ml-4"
-						key={`created-${item.feature_id ?? row.addIndex}`}
-						rateRow={row}
-					/>
-				) : (
-					<ItemChangeRow
-						item={item}
-						key={`created-${item.feature_id ?? row.addIndex}`}
-					/>
-				);
-			})}
-			{items
-				.filter((item) => item.action !== "created" && !mergedDeleted.has(item))
-				.map((item, i) => (
-					<ItemChangeRow key={item.feature_id ?? i} item={item} />
-				))}
+			{items.map((item, i) => (
+				<ItemChangeRow key={item.feature_id ?? i} item={item} />
+			))}
 			{items.length === 0 && hasAbsorbed && (
 				<>
 					{absorbedFlags?.map((fc, i) => (

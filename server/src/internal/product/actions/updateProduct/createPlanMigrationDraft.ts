@@ -93,26 +93,27 @@ const withPreviousPrice = <T extends { operations: Operations }>({
 
 const withPreviousFeatureOverrides = <T extends { operations: Operations }>({
 	draft,
-	previousItemsByPlanId,
+	itemsByPlanId,
 }: {
 	draft: T;
-	previousItemsByPlanId: Map<string, ApiPlanV1["items"]>;
+	itemsByPlanId: Map<string, ApiPlanV1["items"]>;
 }): T => ({
 	...draft,
 	operations: {
 		...draft.operations,
-		customer: draft.operations.customer?.map((op) => {
-			if (op.type !== "update_plan" || !op.customize) return op;
-			return {
-				...op,
-				customize: stampPreviousFeatureOverrides({
-					customize: op.customize,
-					previousItemSets: matchedPlanIds(op.plan_filter.plan_id).map(
-						(id) => previousItemsByPlanId.get(id) ?? [],
-					),
-				}),
-			};
-		}),
+		customer: draft.operations.customer?.map((op) =>
+			op.type === "update_plan" && op.customize
+				? {
+						...op,
+						customize: stampPreviousFeatureOverrides({
+							customize: op.customize,
+							previousItemSets: matchedPlanIds(op.plan_filter.plan_id).map(
+								(id) => itemsByPlanId.get(id) ?? [],
+							),
+						}),
+					}
+				: op,
+		),
 	},
 });
 
@@ -274,13 +275,10 @@ export const createPlanMigrationDraft = async ({
 							variantsBefore: selectedVariantsBefore,
 						}),
 					}),
-					previousItemsByPlanId: new Map([
+					itemsByPlanId: new Map([
 						[planId, fromPlan.items],
 						...selectedVariantsBefore.map(
-							(before): [string, ApiPlanV1["items"]] => [
-								before.product.id,
-								before.plan.items,
-							],
+							({ product, plan }) => [product.id, plan.items] as const,
 						),
 					]),
 				}),

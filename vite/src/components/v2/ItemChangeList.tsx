@@ -1,7 +1,5 @@
 import type { Feature, PlanItemChangeV0 } from "@autumn/shared";
 import { ItemChangeRow } from "@/components/v2/ItemChangeRow";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { itemChangeRateRows } from "./itemChangeRateChanges";
 
 export function ItemChangeList({
 	features,
@@ -10,35 +8,27 @@ export function ItemChangeList({
 	features?: Feature[];
 	itemChanges: PlanItemChangeV0[];
 }) {
-	const { features: orgFeatures = [] } = useFeaturesQuery();
 	if (itemChanges.length === 0) return null;
 
-	const { created, deleted, rows, mergedRemoveIndices } = itemChangeRateRows({
-		itemChanges,
-		features: features ?? orgFeatures,
-	});
+	const created = itemChanges.filter((change) => change.action === "created");
+	const deleted = itemChanges.filter((change) => change.action === "deleted");
 
 	return (
 		<div className="flex flex-col gap-0 text-sm">
-			{rows.map((row) => (
+			{created.map((change, index) => (
 				<ItemChangeRow
-					change={created[row.addIndex]}
+					change={change}
 					features={features}
-					key={`created-${created[row.addIndex].feature_id}-${row.addIndex}`}
-					className="my-1"
-					rateRow={row}
+					key={`created-${change.feature_id}-${index}`}
 				/>
 			))}
-			{deleted.map(
-				(change, index) =>
-					!mergedRemoveIndices.has(index) && (
-						<ItemChangeRow
-							change={change}
-							features={features}
-							key={`deleted-${change.feature_id}-${index}`}
-						/>
-					),
-			)}
+			{deleted.map((change, index) => (
+				<ItemChangeRow
+					change={change}
+					features={features}
+					key={`deleted-${change.feature_id}-${index}`}
+				/>
+			))}
 		</div>
 	);
 }

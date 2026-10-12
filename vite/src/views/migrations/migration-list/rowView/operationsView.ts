@@ -11,7 +11,7 @@ import {
 	intervalSuffix,
 	isAbbreviatedInterval,
 } from "@/utils/formatUtils/intervalSuffix";
-import type { RateChange } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
+import type { RateChange } from "@/utils/product/featureOverrideRates";
 import { planIdsFromFilter } from "../../migration/operations/UpdatePlanOpForm";
 import {
 	type CappedChips,

@@ -9,13 +9,13 @@ import { Separator } from "@autumn/ui";
 import { CurrencyCircleDollarIcon, GitBranchIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
-import { ItemRateChangeRow } from "@/components/v2/ItemRateChangeRow";
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { migrationOpRateRows } from "@/utils/product/featureOverrideRates";
 import {
 	AdditionalCurrenciesHint,
 	getCurrencyChangeStates,
@@ -26,7 +26,7 @@ import {
 	type ItemFilter,
 } from "../operations/operationItemUtils";
 import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
-import { migrationOpRateRows } from "./addItemRateChanges";
+import { ItemRateChangeRow } from "./ItemRateChangeRow";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 import { formatVersionTransition } from "./versionTransition";
 

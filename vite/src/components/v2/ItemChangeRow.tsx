@@ -2,19 +2,13 @@ import type { Feature, PlanItemChangeV0 } from "@autumn/shared";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
-import { ItemRateChangeRow } from "./ItemRateChangeRow";
-import type { ItemRateRow } from "./pairItemRateRows";
 
 export function ItemChangeRow({
 	change,
 	features: featureOverride,
-	rateRow,
-	className,
 }: {
 	change: PlanItemChangeV0;
 	features?: Feature[];
-	rateRow?: Pick<ItemRateRow, "changes" | "updated">;
-	className?: string;
 }) {
 	const { features: orgFeatures = [] } = useFeaturesQuery();
 	const productItem = planItemV1ToProductItem({
@@ -28,23 +22,5 @@ export function ItemChangeRow({
 		return <SubscriptionItemRow isDeleted item={productItem} />;
 	}
 
-	if (!rateRow?.updated && !rateRow?.changes.length) {
-		return <SubscriptionItemRow isCreated item={productItem} readOnly />;
-	}
-
-	return (
-		<ItemRateChangeRow
-			changes={rateRow.changes}
-			className={className}
-			updated={rateRow.updated}
-		>
-			<div className="flex-1 min-w-0">
-				<SubscriptionItemRow
-					isCreated={!rateRow.updated}
-					item={productItem}
-					readOnly
-				/>
-			</div>
-		</ItemRateChangeRow>
-	);
+	return <SubscriptionItemRow isCreated item={productItem} readOnly />;
 }

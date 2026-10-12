@@ -23,27 +23,25 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
-import type { ItemRateRow } from "@/components/v2/pairItemRateRows";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import {
+	type AddItem,
+	type ItemRateRow,
+	migrationOpRateRows,
+	type RemoveFilter,
+	withEditedAddItem,
+	withEditedRemoveFilter,
+} from "@/utils/product/featureOverrideRates";
+import {
 	parsePlanKey,
 	planFilterToPlanKeys,
 	planKeysToFilter,
 } from "../filters/filterRowTypes";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
-import {
-	type AddItem,
-	migrationOpRateRows,
-	type RemoveFilter,
-} from "../shared/addItemRateChanges";
-import {
-	withEditedAddItem,
-	withEditedRemoveFilter,
-} from "../shared/editMigrationItems";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,

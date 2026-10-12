@@ -2,7 +2,7 @@ import type { FullCustomerEntitlement } from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { featureOverrideRateCard } from "@/views/products/features/credit-systems/utils/featureOverrideRateCard";
+import { featureOverrideRateCard } from "@/utils/product/featureOverrideRates";
 import { OverrideRow } from "./OverrideRow";
 
 export function FeatureOverrideSection({

@@ -1,7 +1,7 @@
-import { ItemRateChangeRow } from "@/components/v2/ItemRateChangeRow";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import type { RateChange } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
+import type { RateChange } from "@/utils/product/featureOverrideRates";
+import { ItemRateChangeRow } from "../shared/ItemRateChangeRow";
 import { migrationItemToProductItem } from "../shared/migrationItemUtils";
 
 const NO_RATE_CHANGES: RateChange[] = [];
