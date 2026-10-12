@@ -5,6 +5,7 @@ import type { InsertPlanLicenseSpec } from "@models/billingModels/plan/customerL
 import type { StripeDiscountWithCoupon } from "@models/billingModels/stripe/stripeDiscountWithCoupon";
 import type { FullCustomer } from "@models/cusModels/fullCusModel";
 import type {
+	CusProduct,
 	FeatureOptions,
 	FullCusProduct,
 } from "@models/cusProductModels/cusProductModels";
@@ -84,6 +85,9 @@ export interface BillingContextOverride {
 	 * unset, which `cusProductToProcessorType` resolves to Stripe.
 	 */
 	processorTypeOverride?: ProcessorType;
+
+	/** Full `processor` for the new customer_product, written with it (e.g. a RevenueCat purchase id). Wins over `processorTypeOverride`. */
+	processorOverride?: NonNullable<CusProduct["processor"]>;
 }
 
 export interface UpdateSubscriptionBillingContextOverride

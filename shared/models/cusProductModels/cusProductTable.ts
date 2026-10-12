@@ -21,6 +21,8 @@ export type CustomerProductProcessor = {
 	// Store-owned billing period (ms); only set for RevenueCat plans.
 	current_period_start?: number | null;
 	current_period_end?: number | null;
+	// Store purchase this plan came from; only set for RevenueCat plans.
+	original_transaction_id?: string | null;
 };
 
 export const customerProducts = pgTable(
@@ -197,6 +199,12 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_revenuecat_processor")
 			.on(table.internal_customer_id)
 			.where(sql`(${table.processor} ->> 'type') = 'revenuecat'`),
+		index("idx_customer_products_revenuecat_original_transaction")
+			.on(sql`(${table.processor} ->> 'original_transaction_id')`)
+			.where(
+				sql`(${table.processor} ->> 'type') = 'revenuecat' AND (${table.processor} ->> 'original_transaction_id') IS NOT NULL`,
+			)
+			.concurrently(),
 		index("idx_customer_products_ended_at")
 			.on(table.ended_at)
 			.where(

@@ -9,6 +9,7 @@ import {
 	getVersioningUsage,
 	getVersioningUsageForProduct,
 } from "./getVersioningUsage";
+import { listActiveRevenueCatPlansByOriginalTransaction } from "./listActiveRevenueCatPlansByOriginalTransaction";
 import { listFullCustomerProductsByIds } from "./listFullCustomerProductsByIds";
 import { listIsCustomFingerprints } from "./listIsCustomFingerprints";
 import { mergeCustomerProductProcessor } from "./mergeCustomerProductProcessor";
@@ -23,6 +24,8 @@ export const customerProductRepo = {
 	getByStripeSubId,
 	getVersioningUsage,
 	getVersioningUsageForProduct,
+	listActiveRevenueCatByOriginalTransaction:
+		listActiveRevenueCatPlansByOriginalTransaction,
 	listFullByIds: listFullCustomerProductsByIds,
 	listIsCustomFingerprints,
 	mergeProcessor: mergeCustomerProductProcessor,

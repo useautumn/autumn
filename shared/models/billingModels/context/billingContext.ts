@@ -13,6 +13,7 @@ import type {
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
+import type { CusProduct } from "@models/cusProductModels/cusProductModels";
 import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type { ProrationBehaviorOverride } from "@utils/billingUtils/invoicingUtils/prorationUtils/prorationBehaviorOverride";
@@ -175,4 +176,7 @@ export interface BillingContext {
 
 	/** See `BillingContextOverride.processorTypeOverride`. */
 	processorTypeOverride?: ProcessorType;
+
+	/** See `BillingContextOverride.processorOverride`. */
+	processorOverride?: NonNullable<CusProduct["processor"]>;
 }
