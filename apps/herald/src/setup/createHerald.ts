@@ -28,6 +28,7 @@ import type { HeraldEdgeConfigs } from "../edgeConfig/createHeraldEdgeConfigs.js
 import { createSlotFollower } from "../slot/followSlot.js";
 import { createHeraldHeartbeat } from "../slot/heraldHeartbeat.js";
 import { createHeraldReadinessProbes } from "../slot/heraldReadinessProbes.js";
+import { createJobLagReporter } from "../slot/jobLagReporter.js";
 import type { JobHealth } from "../slot/types/heraldHeartbeat.js";
 import { createStreamConsumer } from "../stream/createStreamConsumer.js";
 import type { RunningStreamConsumer } from "../stream/types/streamConsumer.js";
@@ -190,6 +191,7 @@ export function createHerald({
 			membership: "idle" as const,
 			partitions: 0,
 			maxLagRecords: null,
+			maxLagMs: null,
 		}));
 	}
 
@@ -285,6 +287,11 @@ export function createHerald({
 			});
 			void heartbeat.start();
 			started.push(async () => heartbeat?.stop());
+			const jobLagReporter = createJobLagReporter({
+				ctx: { readJobs, logger: ctx.logger },
+			});
+			jobLagReporter.start();
+			started.push(async () => jobLagReporter.stop());
 
 			await awaitFirstRecord({ identity });
 			follower = createSlotFollower({

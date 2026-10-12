@@ -4,16 +4,20 @@ export type PartitionProgress = {
 	highWatermark: bigint | null;
 };
 export type ProgressPosition = PartitionPosition & { nextOffset: bigint };
+export type ConsumedPosition = ProgressPosition & {
+	lastRecordTimestampMs?: number;
+};
 export type HighWatermarkPosition = PartitionPosition & {
 	highWatermark: bigint;
 };
 export type ProgressWait = ProgressPosition & { signal?: AbortSignal };
 export type ProgressTracker = {
 	reset(position: ProgressPosition): void;
-	advance(position: ProgressPosition): void;
+	advance(position: ConsumedPosition): void;
 	observeHighWatermark(position: HighWatermarkPosition): void;
 	read(position: PartitionPosition): bigint | null;
 	readProgress(position: PartitionPosition): PartitionProgress;
+	readLastRecordTimestamp(position: PartitionPosition): number | null;
 	waitUntil(position: ProgressWait): Promise<void>;
 };
 export type PositionWaiter = {
