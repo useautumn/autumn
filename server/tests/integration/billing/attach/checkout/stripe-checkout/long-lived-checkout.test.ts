@@ -2,6 +2,7 @@
  * Long-lived checkout (deferred plan)
  *
  * Contract:
+ * - Creating the link leaves the plan pending straight away, before anyone opens it.
  * - The link is a reusable launcher that reuses an open Stripe session and opens
  *   a fresh one once it expires.
  * - The pending plan opened by the link survives each 24h Stripe session expiry,
@@ -186,6 +187,31 @@ test.concurrent(
 
 		expect(result.payment_url).toContain("checkout.stripe.com");
 		expect(result.payment_url).not.toContain("/co/");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout: creating the link leaves the plan pending before it is opened")}`,
+	async () => {
+		const customerId = "ll-deferred-pending-on-create";
+		const { ctx, pro, internalCustomerId, checkoutId } =
+			await setupDeferredLongLivedScenario({ customerId });
+
+		const pendingAtCreation = await getPendingProRow({
+			ctx,
+			internalCustomerId,
+			productId: pro.id,
+		});
+		expect(pendingAtCreation).toBeDefined();
+
+		// Opening the link sells that same pending row.
+		await startLongLivedCheckout(checkoutId);
+		const pendingAfterOpen = await getPendingProRow({
+			ctx,
+			internalCustomerId,
+			productId: pro.id,
+		});
+		expect(pendingAfterOpen?.id).toBe(pendingAtCreation!.id);
 	},
 );
 
