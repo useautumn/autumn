@@ -27,14 +27,14 @@ const LayerDetails = ({
 			<dt className="text-tertiary-foreground">Key</dt>
 			<dd className="flex min-w-0 flex-col font-mono">
 				{layer.versionLimits.map(({ upTo, key }) => (
-					<span key={upTo} className="truncate" title={key}>
+					<span key={upTo} className="break-all md:truncate" title={key}>
 						{key}
 						<span className="ml-1.5 font-sans text-tertiary-foreground">
 							≤ {formatVersion(upTo)}
 						</span>
 					</span>
 				))}
-				<span className="truncate" title={layer.key}>
+				<span className="break-all md:truncate" title={layer.key}>
 					{layer.key}
 					{layer.versionLimits.length > 0 && (
 						<span className="ml-1.5 font-sans text-tertiary-foreground">
@@ -61,7 +61,9 @@ const PolicyRoutes = ({
 	return (
 		<ul className="flex flex-col gap-0.5 font-mono text-xs">
 			{routes.map((route) => (
-				<li key={route}>{route}</li>
+				<li key={route} className="break-all">
+					{route}
+				</li>
 			))}
 		</ul>
 	);

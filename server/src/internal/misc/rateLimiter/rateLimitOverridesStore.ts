@@ -2,6 +2,7 @@ import { ADMIN_RATE_LIMIT_OVERRIDES_CONFIG_KEY } from "@/external/aws/s3/adminS3
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
+	type OrgRateLimitOverride,
 	type RateLimitOverridesConfig,
 	RateLimitOverridesConfigSchema,
 } from "./rateLimitOverridesSchemas.js";
@@ -19,10 +20,21 @@ export const getRuntimeRateLimitOverridesStatus = () => store.getStatus();
 export const getRateLimitOverridesFromSource = async () =>
 	store.readFromSource();
 
-/**
- * Returns the override limit for an org+type, or undefined if no override
- * is configured. Looked up first by orgId, then by orgSlug.
- */
+/** An org's overrides, looked up first by orgId, then by orgSlug. */
+const findOrgOverride = ({
+	orgId,
+	orgSlug,
+}: {
+	orgId?: string;
+	orgSlug?: string;
+}) => {
+	const orgs = store.get().orgs;
+	return (
+		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined)
+	);
+};
+
+/** The override limit for an org+type, or undefined if none is configured. */
 export const getOrgRateLimitOverride = ({
 	orgId,
 	orgSlug,
@@ -31,12 +43,16 @@ export const getOrgRateLimitOverride = ({
 	orgId?: string;
 	orgSlug?: string;
 	type: string;
-}): number | undefined => {
-	const orgs = store.get().orgs;
-	const orgConfig =
-		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
-	return orgConfig?.limits?.[type];
-};
+}): number | undefined => findOrgOverride({ orgId, orgSlug })?.limits?.[type];
+
+export const getOrgEndpointRateLimitOverrides = ({
+	orgId,
+	orgSlug,
+}: {
+	orgId?: string;
+	orgSlug?: string;
+}): OrgRateLimitOverride["endpoints"] =>
+	findOrgOverride({ orgId, orgSlug })?.endpoints;
 
 export const updateFullRateLimitOverridesConfig = async ({
 	config,
