@@ -8,12 +8,8 @@ import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
-import { catalogSince } from "./replica/catalogSince.js";
 import { catchUp } from "./replica/catchUp.js";
-import { digestSince } from "./replica/digestSince.js";
-import { fetchSubjects } from "./replica/fetchSubjects.js";
-import { listSince } from "./replica/listSince.js";
-import { maxAppliedAt } from "./replica/maxAppliedAt.js";
+import { serveReplicaReads } from "./replica/serveReplicaReads.js";
 import type { ReplicaSlotsContext } from "./replica/types/replicaSlotsContext.js";
 import { removeSlotFilesOfOtherCounts, slotFilePath } from "./slotFiles.js";
 import type { OpenedSlot } from "./types/openedSlot.js";
@@ -146,11 +142,7 @@ export const openSlots = ({
 			slots[customerIdToSlot({ customerId, slotCount })].processor,
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
-		catalogSince: (params) => catalogSince({ ctx, ...params }),
-		listSince: (params) => listSince({ ctx, ...params }),
-		digestSince: (params) => digestSince({ ctx, ...params }),
-		fetchSubjects: (params) => fetchSubjects({ ctx, ...params }),
-		maxAppliedAt: () => maxAppliedAt({ ctx }),
+		...serveReplicaReads({ ctx }),
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};
