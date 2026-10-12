@@ -10,7 +10,6 @@ import { hasPooledBalanceDependency } from "@/external/revenueCat/transfer/hasPo
 import { listDestinationRevenueCatProducts } from "@/external/revenueCat/transfer/listDestinationRevenueCatProducts";
 import { loadCustomerWithAllProducts } from "@/external/revenueCat/transfer/loadCustomerWithAllProducts";
 import { moveCusProductsToCustomer } from "@/external/revenueCat/transfer/moveCusProductsToCustomer";
-import { moveRevenueCatInvoicesToCustomer } from "@/external/revenueCat/transfer/moveRevenueCatInvoicesToCustomer";
 import { releaseTransferredLicenseSeats } from "@/external/revenueCat/transfer/releaseTransferredLicenseSeats";
 import { selectTransferredCusProducts } from "@/external/revenueCat/transfer/selectTransferredCusProducts";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
@@ -280,12 +279,6 @@ const transferProducts = async ({
 		db: ctx.db,
 		cusProductIds,
 		destination: { internalId: destination.internal_id, id: destination.id },
-	});
-	await moveRevenueCatInvoicesToCustomer({
-		db: ctx.db,
-		cusProducts: movable,
-		sourceInternalId: source.internal_id,
-		destinationInternalId: destination.internal_id,
 	});
 
 	logTransfer({

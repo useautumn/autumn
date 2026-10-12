@@ -1,48 +1,26 @@
 import type { WebhookProductChange } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	customerProductHasActiveStatus,
-	type FullCusProduct,
-	ProcessorType,
-} from "@shared/index";
+import type { FullCusProduct } from "@shared/index";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting";
-import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import { setRevenueCatLogContext } from "@/external/revenueCat/misc/revenueCatLogContext";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { InvoiceService } from "@/internal/invoices/InvoiceService";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
-// Absorbs clock skew and delivery jitter between RevenueCat ending the purchase and this webhook.
+// Absorbs clock skew between the store ending the purchase and RevenueCat stamping the event.
 const ENDED_TOLERANCE_MS = 10 * 60 * 1000;
 
-const comesFromPurchase = ({
+const renewedAfterEvent = ({
 	cusProduct,
-	originalTransactionId,
+	eventTimestampMs,
 }: {
 	cusProduct: FullCusProduct;
-	originalTransactionId: string;
-}) => {
-	const stored = cusProduct.processor?.original_transaction_id;
-	return stored ? stored === originalTransactionId : true;
-};
-
-const isReplacedRevenueCatPlan = ({
-	cusProduct,
-	autumnProductId,
-	originalTransactionId,
-}: {
-	cusProduct: FullCusProduct;
-	autumnProductId: string;
-	originalTransactionId: string;
-}) =>
-	cusProduct.processor?.type === ProcessorType.RevenueCat &&
-	cusProduct.product.id === autumnProductId &&
-	customerProductHasActiveStatus(cusProduct) &&
-	comesFromPurchase({ cusProduct, originalTransactionId });
+	eventTimestampMs: number;
+}) => (cusProduct.processor?.current_period_start ?? 0) > eventTimestampMs;
 
 /**
- * Expires the plan granted by the replaced subscription once it has ended. The holder is found through the
- * purchase's invoice, since the replacement may come from another app user (e.g. a Google Play account switch).
+ * Google Play only: an immediate replacement ends the old purchase without an EXPIRATION, and may be
+ * bought from another app user. Expires the plan that purchase created, found by its stored purchase id.
  */
 export const handleProductChange = async ({
 	event,
@@ -52,7 +30,8 @@ export const handleProductChange = async ({
 	ctx: RevenueCatWebhookContext;
 }) => {
 	const { db, org, env } = ctx;
-	const { product_id, original_transaction_id, expiration_at_ms } = event;
+	const { original_transaction_id, expiration_at_ms } = event;
+	const eventTimestampMs = event.event_timestamp_ms ?? Date.now();
 
 	const skip = (reason: string) => {
 		ctx.logger
@@ -65,44 +44,36 @@ export const handleProductChange = async ({
 		return { success: true };
 	};
 
-	// Deferred changes (e.g. App Store downgrades) end later and arrive as RENEWAL / EXPIRATION.
-	if (!expiration_at_ms || expiration_at_ms > Date.now() + ENDED_TOLERANCE_MS)
+	if (event.store !== "PLAY_STORE") return skip("not a Google Play change");
+	// Deferred changes end later and arrive as INITIAL_PURCHASE on the same app user.
+	if (
+		!expiration_at_ms ||
+		expiration_at_ms > eventTimestampMs + ENDED_TOLERANCE_MS
+	)
 		return skip("replaced subscription has not ended yet");
 	if (!original_transaction_id) return skip("no original_transaction_id");
 
-	const mapping = await RCMappingService.resolveMapping({
-		db,
-		orgId: org.id,
-		env,
-		revenuecatProductId: product_id,
-	});
-	if (!mapping?.autumnProductId) return skip("replaced product is not mapped");
-
-	const invoice = await InvoiceService.getByStripeId({
-		db,
-		stripeId: original_transaction_id,
-	});
-	if (invoice?.processor_type !== ProcessorType.RevenueCat)
-		return skip("no RevenueCat invoice for the replaced purchase");
+	const [match] =
+		await customerProductRepo.listActiveRevenueCatByOriginalTransaction({
+			db,
+			orgId: org.id,
+			env,
+			originalTransactionId: original_transaction_id,
+		});
+	if (!match) return skip("no active plan for the replaced purchase");
 
 	const holder = await CusService.getFull({
 		ctx,
-		idOrInternalId: invoice.internal_customer_id,
+		idOrInternalId: match.internal_customer_id,
 		withEntities: true,
 		withSubs: true,
-		allowNotFound: true,
 	});
-	if (!holder) return skip("purchase holder not found in this org/env");
-
-	const replacedCusProduct = holder.customer_products.find((cusProduct) =>
-		isReplacedRevenueCatPlan({
-			cusProduct,
-			autumnProductId: mapping.autumnProductId,
-			originalTransactionId: original_transaction_id,
-		}),
+	const replacedCusProduct = holder.customer_products.find(
+		(cusProduct) => cusProduct.id === match.id,
 	);
-	if (!replacedCusProduct)
-		return skip("holder has no active plan for the replaced product");
+	if (!replacedCusProduct) return skip("replaced plan not loaded");
+	if (renewedAfterEvent({ cusProduct: replacedCusProduct, eventTimestampMs }))
+		return skip("plan renewed after this event");
 
 	ctx.customerId = holder.id ?? "";
 	setRevenueCatLogContext({ ctx, customerId: ctx.customerId });
@@ -116,7 +87,7 @@ export const handleProductChange = async ({
 		customerProduct: replacedCusProduct,
 		fullCustomer: holder,
 		updates: {
-			ended_at: expiration_at_ms,
+			ended_at: Math.min(expiration_at_ms, Date.now()),
 			canceled: !!replacedCusProduct.canceled_at,
 		},
 		emitBillingUpdated: true,

@@ -405,6 +405,8 @@ export class RevenueCatWebhookClient {
 		originalAppUserId,
 		originalTransactionId,
 		expirationAtMs,
+		eventTimestampMs,
+		store = "PLAY_STORE",
 	}: {
 		productId: string;
 		newProductId: string;
@@ -412,6 +414,8 @@ export class RevenueCatWebhookClient {
 		originalAppUserId?: string;
 		originalTransactionId?: string;
 		expirationAtMs?: number;
+		eventTimestampMs?: number;
+		store?: string;
 	}) {
 		return this.sendEvent({
 			type: "PRODUCT_CHANGE",
@@ -424,7 +428,8 @@ export class RevenueCatWebhookClient {
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
 				expiration_at_ms: expirationAtMs,
-				event_timestamp_ms: Date.now(),
+				event_timestamp_ms: eventTimestampMs ?? Date.now(),
+				store,
 			},
 		});
 	}

@@ -39,6 +39,8 @@ const setupReplacement = async ({ customerA }: { customerA: string }) => {
 			productId: oldStoreId,
 			appUserId: customerA,
 			originalTransactionId,
+			purchasedAtMs: Date.now() - 60_000,
+			expirationAtMs: Date.now() + 1000 * 60 * 60 * 24 * 30,
 			mock: {
 				products: [
 					mockProduct({ internalId: `prod_${customerA}`, storeId: oldStoreId }),
@@ -202,5 +204,60 @@ test.concurrent(
 				autumnProductId: plan.id,
 			}),
 		).toBeUndefined();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rc product change: App Store changes are left to RENEWAL")}`,
+	async () => {
+		const customerA = "rc-pc-appstore";
+		const { oldPlan, oldStoreId, newStoreId, originalTransactionId } =
+			await setupReplacement({ customerA });
+
+		expectWebhookSuccess(
+			await newRcClient().productChange({
+				productId: oldStoreId,
+				newProductId: newStoreId,
+				appUserId: customerA,
+				originalTransactionId,
+				expirationAtMs: Date.now() - 1,
+				store: "APP_STORE",
+			}),
+		);
+
+		expect(
+			await findActiveCusProduct({
+				customerId: customerA,
+				autumnProductId: oldPlan.id,
+			}),
+		).toBeDefined();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rc product change: an event older than the plan's current period is ignored")}`,
+	async () => {
+		const customerA = "rc-pc-stale";
+		const { oldPlan, oldStoreId, newStoreId, originalTransactionId } =
+			await setupReplacement({ customerA });
+		const beforePurchase = Date.now() - 1000 * 60 * 60;
+
+		expectWebhookSuccess(
+			await newRcClient().productChange({
+				productId: oldStoreId,
+				newProductId: newStoreId,
+				appUserId: `${customerA}-b`,
+				originalTransactionId,
+				expirationAtMs: beforePurchase,
+				eventTimestampMs: beforePurchase,
+			}),
+		);
+
+		expect(
+			await findActiveCusProduct({
+				customerId: customerA,
+				autumnProductId: oldPlan.id,
+			}),
+		).toBeDefined();
 	},
 );
