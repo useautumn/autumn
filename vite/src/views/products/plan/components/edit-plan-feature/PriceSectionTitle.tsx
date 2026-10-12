@@ -16,6 +16,12 @@ import {
 import { cn } from "@/lib/utils";
 import type { VolumePricingMode } from "../../utils/tierUtils";
 
+const VOLUME_PRICING_MODES: { mode: VolumePricingMode; label: string }[] = [
+	{ mode: "per_unit", label: "Per Unit" },
+	{ mode: "flat", label: "Flat" },
+	{ mode: "per_unit_and_flat", label: "Unit + Flat" },
+];
+
 export function PriceSectionTitle({
 	tierBehavior,
 	volumePricingMode,
@@ -35,30 +41,31 @@ export function PriceSectionTitle({
 			<div className="flex items-center gap-2">
 				{showVolumePricingToggle && (
 					<div className="flex items-center">
-						<IconCheckbox
-							variant="secondary"
-							size="sm"
-							checked={volumePricingMode === "per_unit"}
-							onCheckedChange={() => onVolumePricingModeChange("per_unit")}
-							className={cn(
-								"rounded-r-none w-fit",
-								volumePricingMode !== "per_unit" && "border-r-0",
-							)}
-						>
-							Per Unit
-						</IconCheckbox>
-						<IconCheckbox
-							variant="secondary"
-							size="sm"
-							checked={volumePricingMode === "flat"}
-							onCheckedChange={() => onVolumePricingModeChange("flat")}
-							className={cn(
-								"rounded-l-none w-fit",
-								volumePricingMode !== "flat" && "border-l-0",
-							)}
-						>
-							Flat Amount
-						</IconCheckbox>
+						{VOLUME_PRICING_MODES.map(({ mode, label }, index) => {
+							const isChecked = volumePricingMode === mode;
+							const isFirst = index === 0;
+							const isLast = index === VOLUME_PRICING_MODES.length - 1;
+							const nextIsChecked =
+								VOLUME_PRICING_MODES[index + 1]?.mode === volumePricingMode;
+							return (
+								<IconCheckbox
+									key={mode}
+									variant="secondary"
+									size="sm"
+									checked={isChecked}
+									onCheckedChange={() => onVolumePricingModeChange(mode)}
+									className={cn(
+										"w-fit",
+										!isFirst && "rounded-l-none",
+										!isLast && "rounded-r-none",
+										!isChecked && !isFirst && "border-l-0",
+										!isChecked && nextIsChecked && "border-r-0",
+									)}
+								>
+									{label}
+								</IconCheckbox>
+							);
+						})}
 					</div>
 				)}
 				<Select

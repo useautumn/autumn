@@ -187,10 +187,13 @@ export const migrateTierCurrenciesForMode = ({
 	mode,
 }: {
 	entries: AdditionalCurrencyTier[] | null | undefined;
-	mode: "flat" | "per_unit";
+	mode: "flat" | "per_unit" | "per_unit_and_flat";
 }): AdditionalCurrencyTier[] | undefined =>
-	entries?.map((entry) =>
-		mode === "flat"
+	entries?.map((entry) => {
+		if (mode === "per_unit_and_flat") {
+			return { ...entry, flat_amount: entry.flat_amount ?? 0 };
+		}
+		return mode === "flat"
 			? {
 					...entry,
 					flat_amount: entry.flat_amount ?? entry.amount ?? 0,
@@ -200,11 +203,11 @@ export const migrateTierCurrenciesForMode = ({
 					...entry,
 					amount: entry.amount || entry.flat_amount || 0,
 					flat_amount: undefined,
-				},
-	);
+				};
+	});
 
-// The API rejects currency tiers whose flat_amount presence differs from the
-// base tier, so realign entries before building request payloads.
+// The API rejects currency tiers whose flat_amount presence differs from the base tier;
+// align presence only, so currency amounts the base tier zeroes are kept.
 export const alignTierCurrencyShapes = (item: ProductItem): ProductItem => {
 	if (!item.tiers) return item;
 	return {
@@ -213,7 +216,7 @@ export const alignTierCurrencyShapes = (item: ProductItem): ProductItem => {
 			...tier,
 			additional_currencies: migrateTierCurrenciesForMode({
 				entries: tier.additional_currencies,
-				mode: tier.flat_amount != null ? "flat" : "per_unit",
+				mode: tier.flat_amount != null ? "per_unit_and_flat" : "per_unit",
 			}),
 		})),
 	};

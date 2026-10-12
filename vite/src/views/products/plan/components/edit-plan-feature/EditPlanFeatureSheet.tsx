@@ -20,8 +20,10 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import {
-	cleanTiersForMode,
+	itemToVolumePricingMode,
+	tiersToVolumePricingMode,
 	type VolumePricingMode,
+	volumePricingModeFitsTiers,
 } from "../../utils/tierUtils";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
@@ -45,11 +47,15 @@ export function EditPlanFeatureSheet({
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
 
-	const volumePricingMode: VolumePricingMode = item?.tiers?.some(
-		(t) => t.flat_amount != null,
-	)
-		? "flat"
-		: "per_unit";
+	// Tier data can't tell a fresh "Unit + Flat" pick from flat-only while every amount is 0.
+	const [chosenPricingMode, setChosenPricingMode] =
+		useState<VolumePricingMode>();
+	const chosenModeFits =
+		chosenPricingMode !== undefined &&
+		volumePricingModeFitsTiers({ mode: chosenPricingMode, tiers: item?.tiers });
+	const volumePricingMode = chosenModeFits
+		? chosenPricingMode
+		: tiersToVolumePricingMode({ tiers: item?.tiers });
 
 	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
 	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
@@ -77,36 +83,19 @@ export function EditPlanFeatureSheet({
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
 		if (!item?.tiers) return;
-
-		const migratedTiers = item.tiers.map((tier) => {
-			const additionalCurrencies = migrateTierCurrenciesForMode({
-				entries: tier.additional_currencies,
-				mode,
-			});
-			if (mode === "flat") {
-				return {
-					...tier,
-					flat_amount: tier.flat_amount ?? tier.amount,
-					amount: 0,
-					additional_currencies: additionalCurrencies,
-				};
-			}
-			return {
-				...tier,
-				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
-				flat_amount: undefined,
-				additional_currencies: additionalCurrencies,
-			};
-		});
-
-		setItem({ ...item, tiers: migratedTiers });
+		setChosenPricingMode(mode);
+		setItem(itemToVolumePricingMode({ item, mode }));
 	};
 
 	const handleBeforeCommit = () => {
 		if (!isVolumeBased) return;
-		const mode = showVolumePricingToggle ? volumePricingMode : "per_unit";
-		const cleaned = cleanTiersForMode({ item, mode });
-		setItem(cleaned);
+		// Keyed off the tier data, never the toggle, so a save can't zero amounts the editor didn't show.
+		setItem(
+			itemToVolumePricingMode({
+				item,
+				mode: tiersToVolumePricingMode({ tiers: item.tiers }),
+			}),
+		);
 	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {

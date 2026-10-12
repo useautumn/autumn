@@ -42,11 +42,13 @@ export const TieredCurrenciesEditor = ({
 	onItemChange,
 	baseCurrency,
 	amountField,
+	withFlatFee = false,
 }: {
 	item: ProductItem;
 	onItemChange: (item: ProductItem) => void;
 	baseCurrency: string;
 	amountField: "amount" | "flat_amount";
+	withFlatFee?: boolean;
 }) => {
 	const [expandedCode, setExpandedCode] = useState<string | null>(null);
 	const { features } = useFeaturesQuery();
@@ -153,6 +155,34 @@ export const TieredCurrenciesEditor = ({
 													<span className="max-w-20 shrink-0 truncate text-tertiary-foreground text-xs">
 														{perUnitLabel}
 													</span>
+												)}
+												{withFlatFee && (
+													<>
+														<span className="shrink-0 text-tertiary-foreground text-xs">
+															+ flat
+														</span>
+														<CurrencyAmountInput
+															currencyCode={code}
+															displayValue={amountDisplayValue(
+																tierAmountFor({
+																	tier,
+																	code,
+																	amountField: "flat_amount",
+																}),
+															)}
+															onRawChange={(raw) =>
+																applyChange(
+																	updateTierCurrencyAmount({
+																		item,
+																		tierIndex: index,
+																		code,
+																		field: "flat_amount",
+																		value: raw,
+																	}),
+																)
+															}
+														/>
+													</>
 												)}
 											</div>
 										);
