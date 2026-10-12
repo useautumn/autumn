@@ -9,6 +9,7 @@ import {
 	createProgressTracker,
 	InvalidRecordError,
 	type KafkaConsumerClient,
+	OWNER_EPOCH_HEADER,
 	type ProgressTracker,
 	serializeMeteringRecord,
 	type TopicRecordResult,
@@ -76,12 +77,14 @@ type FakeKafkaConsumer = KafkaMeteringConsumerPort & {
 			offset: string;
 			key: Buffer | null;
 			value: Buffer | null;
+			headers?: KafkaMessage["headers"];
 		}>;
 	}) => Promise<void>;
 	deliver: (params: {
 		offset: string;
 		key: Buffer | null;
 		value: Buffer | null;
+		headers?: KafkaMessage["headers"];
 	}) => Promise<void>;
 	failNextCommit: (error: Error) => void;
 };
@@ -176,17 +179,19 @@ const createFakeKafkaConsumer = ({
 		offset,
 		key,
 		value,
+		headers = {},
 	}: {
 		offset: string;
 		key: Buffer | null;
 		value: Buffer | null;
+		headers?: KafkaMessage["headers"];
 	}): KafkaMessage => ({
 		offset,
 		key,
 		value,
 		timestamp: "0",
 		attributes: 0,
-		headers: {},
+		headers,
 	});
 
 	return {
@@ -309,8 +314,8 @@ const createFakeKafkaConsumer = ({
 				});
 			}
 		},
-		deliver: async function ({ offset, key, value }) {
-			await this.deliverBatch({ records: [{ offset, key, value }] });
+		deliver: async function ({ offset, key, value, headers }) {
+			await this.deliverBatch({ records: [{ offset, key, value, headers }] });
 		},
 		failNextCommit: (error) => {
 			nextCommitError = error;
@@ -2422,7 +2427,7 @@ describe("owner fences", () => {
 	});
 });
 
-test("a record the writer produced but never applied lands through the next runtime's replay", async () => {
+test("a record the failed writer produced is skipped by its own follower and applied by the successor under a new epoch", async () => {
 	const fixture = createStoreFixture();
 	const port = createFakeKafkaConsumer();
 	const consumer = createKafkaMeteringConsumer({
@@ -2431,21 +2436,21 @@ test("a record the writer produced but never applied lands through the next runt
 		stateStore: fixture.store,
 		topic,
 	});
-	const createRuntimeReplays = () => {
+	const createRuntimeReplays = ({ epoch }: { epoch: string }) => {
 		const recentCommands = createRecentCommands({
 			windowMs: 600_000,
 			now: () => 0,
 		});
-		const producedOffsets = createProducedOffsets();
 		const follower = consumer.createReplay({
 			partition,
 			recentCommands,
-			producedOffsets,
+			producedOffsets: createProducedOffsets(),
+			ownerEpoch: () => epoch,
 		});
 		consumer.createReplay({ partition, recentCommands, readOnly: true });
-		return { follower, producedOffsets };
+		return follower;
 	};
-	const failed = createRuntimeReplays();
+	const failed = createRuntimeReplays({ epoch: "7" });
 	try {
 		const state = createState();
 		restoreSubjectStates({
@@ -2455,32 +2460,33 @@ test("a record the writer produced but never applied lands through the next runt
 			states: [state],
 		});
 		await consumer.start();
-		await failed.follower.startAndCatchUp({
+		await failed.startAndCatchUp({
 			topic,
 			partition,
 			targetNextOffset: 0n,
 			onUnavailable: () => {},
 		});
-		const record = serializeMeteringRecord({
-			record: createMutation({ state }),
-		});
-		// The writer produced offset 0, then its apply failed: recovery disposes this runtime.
-		failed.producedOffsets.remember({ from: 0n, to: 0n });
-		await port.deliver({ offset: "0", ...record });
+		// Written under the failed writer's epoch and never remembered: its apply failed and recovery disposes the runtime.
+		const record = {
+			offset: "0",
+			...serializeMeteringRecord({ record: createMutation({ state }) }),
+			headers: { [OWNER_EPOCH_HEADER]: "7" },
+		};
+		await port.deliver(record);
 		expect(fixture.store.readState({ identity })?.revision).toBe(0);
-		await failed.follower.stop();
+		await failed.stop();
 
-		const successor = createRuntimeReplays();
-		await successor.follower.startAndCatchUp({
+		const successor = createRuntimeReplays({ epoch: "8" });
+		await successor.startAndCatchUp({
 			topic,
 			partition,
 			targetNextOffset: 0n,
 			onUnavailable: () => {},
 		});
-		await port.deliver({ offset: "0", ...record });
+		await port.deliver(record);
 
 		expect(fixture.store.readState({ identity })?.revision).toBe(1);
-		await successor.follower.stop();
+		await successor.stop();
 	} finally {
 		await consumer.stop();
 		closeStoreFixture(fixture);
