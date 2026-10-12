@@ -21,6 +21,9 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
  */
 export const SANDBOX_NAME_PREFIX = "tw";
 
+/** Only this branch's warm builds move `tw-warm:latest`, so branch-only schema never seeds other runs. */
+export const WARM_LATEST_BRANCH = "dev";
+
 /** Pool size `N` default (`--max`). Auto-capped to file count, so small runs stay small. */
 export const DEFAULT_WORKERS = 400;
 
