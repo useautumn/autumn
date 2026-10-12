@@ -22,6 +22,10 @@ const change = ({
 		feature_id: "credits",
 		item: {
 			feature_id: "credits",
+			included: 0,
+			unlimited: false,
+			reset: null,
+			price: null,
 			feature_override: {
 				credit_schema: [
 					{ metered_feature_id: "gateway", credit_cost: creditCost },
