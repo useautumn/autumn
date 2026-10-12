@@ -7,16 +7,20 @@ import { qaWorker, type WorkerEnvStatus } from "../worker/qaWorkerClient.ts";
 export const toQaEnv = async ({
 	ctx,
 	row,
+	statusTimeoutMs,
 }: {
 	ctx: TwdContext;
 	row: QaEnvRow;
+	statusTimeoutMs?: number;
 }): Promise<QaEnv> => {
 	const expired =
 		row.state !== "deleted" && row.expiresAt.getTime() < Date.now();
 	const live: WorkerEnvStatus | null =
 		row.state === "deleted" || expired
 			? null
-			: await qaWorker.status({ ctx, name: row.name }).catch(() => null);
+			: await qaWorker
+					.status({ ctx, name: row.name, timeoutMs: statusTimeoutMs })
+					.catch(() => null);
 	const progress = live?.pendingBuild?.progress;
 	return {
 		name: row.name,

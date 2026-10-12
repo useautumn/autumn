@@ -22,6 +22,14 @@ const NAME = z
 const describeEnv = (env: QaEnv) =>
 	`${env.url} (${env.ref}@${env.sha.slice(0, 12)}) is ${env.state}${env.building ? `, building: ${env.building.phase}, ~${Math.ceil(env.building.remainingMs / 1000)}s left` : ""}${env.awake === null ? "" : env.awake ? ", awake" : ", asleep"}; expires ${env.expiresAt}.`;
 
+const describeWarmth = ({ env, warm }: { env: QaEnv; warm: boolean }) => {
+	if (warm)
+		return `QA env is warm: ${describeEnv(env)} Give the human the URL; it opens instantly.`;
+	if (env.error || env.state === "failed" || env.state === "deleted")
+		return `QA env is not warm: ${describeEnv(env)}${env.error ? ` Error: ${env.error}` : ""}`;
+	return `QA env is not warm yet: ${describeEnv(env)} Call qa_status with wait: true again, or give the human the URL now; it shows progress until ready.`;
+};
+
 /** qa_create / qa_status / qa_list / qa_delete: per-branch QA envs on <name>.atmn.lol. */
 export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 	defineTool({
@@ -56,20 +64,20 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 				.boolean()
 				.optional()
 				.describe(
-					"Return only once the env is built and warm (~3-4 min, capped at 9). Use it when you'd rather hand over a link that opens instantly.",
+					"Wait up to 45 s for the env to be built and warm. A build takes ~3 min, so if it isn't warm yet, call qa_status with wait: true until it is.",
 				),
 		}),
 		run: async ({ wait, ...body }) => {
+			const startedAt = Date.now();
 			const result = await createQaEnv({ ctx, body });
 			if (wait) {
 				const { env, warm } = await waitForWarmQaEnv({
 					ctx,
 					name: result.env.name,
+					startedAt,
 				});
 				return toolOk({
-					summary: warm
-						? `QA env is warm: ${describeEnv(env)} Give the human the URL; it opens instantly.`
-						: `QA env is not warm yet: ${describeEnv(env)}${env.error ? ` Error: ${env.error}` : " Give the human the URL anyway; it shows progress until ready."}`,
+					summary: describeWarmth({ env, warm }),
 					data: { ...result, env, warm },
 				});
 			}
@@ -81,9 +89,17 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 	}),
 	defineTool({
 		name: "qa_status",
-		description: "One QA env's state, build progress, awake/asleep and expiry.",
-		input: z.object({ name: NAME }),
-		run: async ({ name }) => {
+		description:
+			"One QA env's state, build progress, awake/asleep and expiry. With wait: true, waits up to 45 s for it to be built and warm.",
+		input: z.object({ name: NAME, wait: z.boolean().optional() }),
+		run: async ({ name, wait }) => {
+			if (wait) {
+				const { env, warm } = await waitForWarmQaEnv({ ctx, name });
+				return toolOk({
+					summary: describeWarmth({ env, warm }),
+					data: { ...env, warm },
+				});
+			}
 			const env = await getQaEnv({ ctx, name });
 			return toolOk({ summary: describeEnv(env), data: env });
 		},

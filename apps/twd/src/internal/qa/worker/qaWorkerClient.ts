@@ -154,8 +154,15 @@ export const qaWorker = {
 			query: `?build=${buildId}`,
 			init: { method: "POST" },
 		}),
-	status: ({ ctx, name }: { ctx: TwdContext; name: string }) =>
-		call<WorkerEnvStatus>({ ctx, name, action: "status" }),
+	status: ({
+		ctx,
+		name,
+		timeoutMs,
+	}: {
+		ctx: TwdContext;
+		name: string;
+		timeoutMs?: number;
+	}) => call<WorkerEnvStatus>({ ctx, name, action: "status", timeoutMs }),
 	logs: ({
 		ctx,
 		name,
