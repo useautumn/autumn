@@ -1,5 +1,5 @@
 {
-  "id": "a989ec6c-d205-44c4-bd2f-4c1240dbc594",
+  "id": "4c76ac77-92f0-4628-b2fa-ad93c5fd137b",
   "prevId": "1cad5f84-095e-4b50-b763-3a0edc133aec",
   "version": "7",
   "dialect": "postgresql",
@@ -2877,6 +2877,21 @@
           "method": "btree",
           "with": {}
         },
+        "idx_customer_licenses_internal_customer_id_c": {
+          "name": "idx_customer_licenses_internal_customer_id_c",
+          "columns": [
+            {
+              "expression": "\"internal_customer_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
         "idx_customer_licenses_link": {
           "name": "idx_customer_licenses_link",
           "columns": [
@@ -3713,22 +3728,6 @@
           "isUnique": false,
           "where": "(\"customer_products\".\"processor\" ->> 'type') = 'revenuecat'",
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_products_revenuecat_original_transaction": {
-          "name": "idx_customer_products_revenuecat_original_transaction",
-          "columns": [
-            {
-              "expression": "(\"processor\" ->> 'original_transaction_id')",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "(\"customer_products\".\"processor\" ->> 'type') = 'revenuecat' AND (\"customer_products\".\"processor\" ->> 'original_transaction_id') IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         },

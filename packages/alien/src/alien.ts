@@ -24,9 +24,11 @@ export { toDeploymentGroupName } from "./setup/deploymentGroupName.js";
 export type {
 	AlienClient,
 	AlienConfig,
+	AlienContainerResources,
 	AlienDeployment,
 	AlienEnvironmentVariable,
 	AlienFixedPools,
+	AlienLogger,
 	AlienNetwork,
 	AlienResourceState,
 	AlienSetup,

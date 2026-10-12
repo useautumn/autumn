@@ -31,7 +31,6 @@ import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
 import { SettingsGroupContext } from "./SettingsSection";
 import { AccountSection } from "./sections/AccountSection";
@@ -210,13 +209,11 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 };
 
 /** Tabs that only render while their feature flag is on. */
-const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel">> = {
+const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel" | "atoms">> = {
 	sso: "sso",
 	vercel: "vercel",
+	atom: "atoms",
 };
-
-/** Tabs only Autumn admins see while the feature is internal. */
-const ADMIN_TABS: readonly SettingsTab[] = ["atom"];
 
 /** Integrations were previously behind the developer page's scope. */
 const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
@@ -228,12 +225,10 @@ const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
 export const useIsSettingsTabEnabled = () => {
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
-	const { isAdmin } = useAdmin();
 
 	return (tab: SettingsTab) => {
 		const flag = FLAGGED_TABS[tab];
 		if (flag && !flags[flag]) return false;
-		if (ADMIN_TABS.includes(tab)) return isAdmin;
 		if (API_KEY_SCOPED_TABS.includes(tab)) return has(Scopes.ApiKeys.Read);
 		return true;
 	};

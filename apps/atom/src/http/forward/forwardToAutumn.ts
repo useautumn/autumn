@@ -1,30 +1,14 @@
 import type { Context } from "hono";
 import type { ForwardReason } from "../../lib/forward/cannotAnswerError.js";
+import { ATOM_TOKEN_HEADER } from "../middlewares/atomTokenMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
+import { forwardRequest } from "./forwardRequest.js";
 
 /** Long enough for the API's own slowest check; past it the caller gets an error, not a hung request. */
 const FORWARD_TIMEOUT_MS = 30_000;
 
 /** Tells a caller, and a test, that the API answered and why. */
 const FORWARDED_HEADER = "x-atom-forwarded";
-
-/** Headers that belong to this hop, or to Atom alone, and never travel on. */
-const HELD_BACK_HEADERS = [
-	"host",
-	"connection",
-	"content-length",
-	"x-atom-token",
-];
-
-const headersToForward = ({
-	context,
-}: {
-	context: Context<AtomHttpEnv>;
-}): Headers => {
-	const headers = new Headers(context.req.raw.headers);
-	for (const name of HELD_BACK_HEADERS) headers.delete(name);
-	return headers;
-};
 
 /**
  * Sends the caller's request to the Autumn API as it arrived and hands back the API's reply unchanged:
@@ -41,19 +25,25 @@ export const forwardToAutumn = async ({
 }): Promise<Response> => {
 	const { pathname, search } = new URL(context.req.url);
 	const target = `${ctx.autumnApiUrl}${pathname}${search}`;
+	// The API can only refuse a keyless request: the server's shadow checks send none, by design.
+	if (!context.req.header("authorization"))
+		return context.json(
+			{
+				message: "Atom forwards nothing without a secret key",
+				code: "atom_not_forwarded",
+			},
+			401,
+			{ [FORWARDED_HEADER]: reason },
+		);
 	try {
-		// The route already read the body; the request keeps it, so it is sent as it arrived.
-		const body = await context.req.text();
-		const reply = await fetch(target, {
-			method: context.req.method,
-			headers: headersToForward({ context }),
-			body,
-			signal: AbortSignal.timeout(FORWARD_TIMEOUT_MS),
+		return await forwardRequest({
+			context,
+			target,
+			// The Atom token is Atom's alone and never travels on.
+			heldBack: [ATOM_TOKEN_HEADER],
+			replyHeaders: { [FORWARDED_HEADER]: reason },
+			timeoutMs: FORWARD_TIMEOUT_MS,
 		});
-		const headers = new Headers({ [FORWARDED_HEADER]: reason });
-		const contentType = reply.headers.get("content-type");
-		if (contentType) headers.set("content-type", contentType);
-		return new Response(reply.body, { status: reply.status, headers });
 	} catch (cause) {
 		const error = cause instanceof Error ? cause : new Error(String(cause));
 		const code = "atom_upstream_unreachable";

@@ -1,14 +1,16 @@
-import { Scopes } from "@autumn/shared";
-import { z } from "zod/v4";
+import { DeleteByocCacheParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { deleteShadowAtom } from "../actions/deleteShadowAtom.js";
 
-/** There is one shadow Atom, so a delete names none; retrying a stopped removal is the same call. */
+/** As an org's delete: none named is the current shadow Atom; `atom_id` retries an earlier one's stopped removal. */
 export const handleDeleteShadowAtom = createRoute({
 	scopes: [Scopes.Superuser],
-	body: z.object({}),
+	body: DeleteByocCacheParamsSchema,
 	handler: async (c) => {
-		await deleteShadowAtom({ ctx: c.get("ctx") });
+		await deleteShadowAtom({
+			ctx: c.get("ctx"),
+			atomId: c.req.valid("json").atom_id,
+		});
 		return c.json({ success: true });
 	},
 });

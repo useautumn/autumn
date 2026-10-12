@@ -3,6 +3,11 @@ import type { ApiVersion } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+	SubjectDigest,
+} from "../../../state/repos/subjectStates.js";
 
 /** A check as it crosses threads: plain data, with the API version by name. */
 export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
@@ -18,7 +23,41 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
+	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */
+	| {
+			type: "listSince";
+			slot: number;
+			after: number | null;
+			cursor: SubjectCursor | null;
+			limit: number;
+	  }
+	| {
+			type: "digestSince";
+			slot: number;
+			after: number | null;
+			cursor: SubjectCursor | null;
+			limit: number;
+	  }
+	| {
+			type: "fetchSubjects";
+			slot: number;
+			keys: { customerId: string; entityId: string }[];
+	  }
 );
+
+/** A digest across threads or replicas: its one bigint as decimal text. */
+export type SubjectDigestOnWire = Omit<SubjectDigest, "logOffset"> & {
+	logOffset: string;
+};
+
+/** A written subject as it crosses threads or replicas: its bigints as decimal text. */
+export type AppliedSubjectOnWire = {
+	subject: Omit<AppliedSubject["subject"], "logOffset" | "customerVersion"> & {
+		logOffset: string;
+		customerVersion: string;
+	};
+	appliedAt: number;
+};
 
 /**
  * Numbered by the caller, which matches the reply to it. Crosses as JSON text, since a structured clone of parsed data costs
@@ -28,7 +67,15 @@ export type OwnerCall = OwnerCallBody & { id: number };
 
 /** The owner's answer (a check's is its JSON and verdict); one it cannot answer carries the reason, so the caller's thread forwards it. */
 export type OwnerReply =
-	| { id: number; ok: true; value: CheckAnswer | boolean }
+	| {
+			id: number;
+			ok: true;
+			value:
+				| CheckAnswer
+				| boolean
+				| AppliedSubjectOnWire[]
+				| SubjectDigestOnWire[];
+	  }
 	| {
 			id: number;
 			ok: false;

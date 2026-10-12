@@ -1,11 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { catalogRowsToCatalog } from "@autumn/balance-engine";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
-import {
-	readCatalogReadAt,
-	readCatalogRows,
-	replaceCatalog,
-} from "./repos/catalogRows.js";
+import { readCatalogFile, replaceCatalog } from "./repos/catalogRows.js";
 import type { CatalogStore, SharedCatalog } from "./types/catalogStore.js";
 
 const CATALOG_SCHEMA_VERSION = 2;
@@ -49,10 +45,8 @@ export const openCatalogStore = ({
 	};
 
 	function readFromFile(): SharedCatalog | null {
-		const readAt = readCatalogReadAt({ ctx });
-		if (readAt === null) return null;
-		const rows = readCatalogRows({ ctx });
-		return { catalog: catalogRowsToCatalog({ rows }), readAt };
+		const held = readCatalogFile({ ctx });
+		return held && { catalog: catalogRowsToCatalog(held), readAt: held.readAt };
 	}
 
 	let sharedCatalog = readFromFile();
@@ -77,6 +71,7 @@ export const openCatalogStore = ({
 		read: () => sharedCatalog,
 		set,
 		install,
+		rows: () => readCatalogFile({ ctx }),
 		close: () => ctx.sqliteDb.close(true),
 	};
 };

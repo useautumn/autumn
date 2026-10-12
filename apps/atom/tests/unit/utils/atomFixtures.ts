@@ -24,6 +24,10 @@ import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
 import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
+import type {
+	FolderSubjectPulls,
+	SubjectPulls,
+} from "../../../src/subjectPulls/types/subjectPulls.js";
 import type { SlotOwners } from "../../../src/threads/owners/types/slotOwners.js";
 
 /** The org settings Autumn sends with every subject. */
@@ -67,6 +71,9 @@ export const subjectPushOf = ({
 		org: subject.org,
 		log_offset: subject.logOffset.toString(),
 		read_at: subject.readAt,
+		...(subject.customerVersion > 0n && {
+			customer_version: subject.customerVersion.toString(),
+		}),
 	}),
 });
 
@@ -85,6 +92,7 @@ export const storedSubjectWith = ({
 		org: atomOrg,
 		logOffset: 1n,
 		readAt,
+		customerVersion: 0n,
 	};
 };
 
@@ -123,6 +131,7 @@ export const storedEntitySubjectWith = ({
 		org: atomOrg,
 		logOffset: 1n,
 		readAt,
+		customerVersion: 0n,
 	};
 };
 
@@ -170,8 +179,19 @@ export const allSlotsOwnedHere: SlotOwners = {
 	ownerOf: () => 0,
 	processorOn: noOtherThread,
 	catalogOn: noOtherThread,
+	listSinceOn: noOtherThread,
+	digestSinceOn: noOtherThread,
+	fetchSubjectsOn: noOtherThread,
 };
 
 /** A thread's held subjects, roomy enough that a test never evicts by accident. */
 export const freshHeld = () =>
 	createHeldSubjects({ budgetBytes: 64 * 1024 * 1024 });
+
+/** A folder whose misses are only forwarded, for tests not about pulls. */
+export const noFolderPulls: FolderSubjectPulls = { request() {} };
+
+export const noSubjectPulls: SubjectPulls = {
+	forFolder: () => noFolderPulls,
+	stop() {},
+};

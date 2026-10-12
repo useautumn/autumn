@@ -4,8 +4,11 @@ import { buildQuickCreateUrl } from "../../src/setup/buildQuickCreateUrl.js";
 const TEMPLATE_URL =
 	"https://templates.example.com/autumn/atom/cloudformation.yaml?v=1";
 
+type QuickCreateParams = Parameters<typeof buildQuickCreateUrl>[0];
+
 const quickCreate = (
-	network: Parameters<typeof buildQuickCreateUrl>[0]["network"],
+	network: QuickCreateParams["network"],
+	containers: QuickCreateParams["containers"] = {},
 ) => {
 	const url = new URL(
 		buildQuickCreateUrl({
@@ -14,7 +17,8 @@ const quickCreate = (
 			stackName: "autumn-byoc-acme-live",
 			token: "tok_1",
 			managingRoleArn: "arn:aws:iam::111122223333:role/alien-management",
-			pools: { stateful: { machine: "c7g.xlarge", machines: 1 } },
+			pools: { stateful: { machine: "c8g.xlarge", machines: 1 } },
+			containers,
 			network,
 		}),
 	);
@@ -47,8 +51,32 @@ describe("CloudFormation quick-create link", () => {
 
 	test("each pool's machine type and count are the template's Compute<Pool> params", () => {
 		const { params } = quickCreate(null);
-		expect(params.get("param_ComputeStatefulMachine")).toBe("c7g.xlarge");
+		expect(params.get("param_ComputeStatefulMachine")).toBe("c8g.xlarge");
 		expect(params.get("param_ComputeStatefulMachines")).toBe("1");
+	});
+
+	test("each container's allocation is the template's Container<Id> params", () => {
+		const { params } = quickCreate(null, {
+			atom: { cpu: 7, memory: "12Gi" },
+		});
+		expect(params.get("param_ContainerAtomCpu")).toBe("7");
+		expect(params.get("param_ContainerAtomMemory")).toBe("12Gi");
+	});
+
+	test("a container id with separators is named as alien's template names it", () => {
+		const { params } = quickCreate(null, {
+			"push-reader": { cpu: 1, memory: "512Mi" },
+		});
+		expect(params.get("param_ContainerPushReaderCpu")).toBe("1");
+		expect(params.get("param_ContainerPushReaderMemory")).toBe("512Mi");
+	});
+
+	test("no containers leaves the release's default allocation", () => {
+		const { params } = quickCreate(null);
+		const containerParams = [...params.keys()].filter((name) =>
+			name.startsWith("param_Container"),
+		);
+		expect(containerParams).toEqual([]);
 	});
 
 	test("no network leaves the template's network defaults", () => {

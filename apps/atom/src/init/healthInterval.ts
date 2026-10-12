@@ -1,7 +1,13 @@
 import type { AtomHealth } from "./atomHealth.js";
 
 /** Counters a chart turns into rates; each health line reports how much they grew since the line before. */
-type IntervalCounter = "requests" | "forwarded" | "pushes";
+type IntervalCounter =
+	| "requests"
+	| "forwarded"
+	| "pushes"
+	| "subjectMisses"
+	| "subjectPulls"
+	| "subjectFills";
 
 /** Totals since boot at one read, summed over every thread. */
 export type HealthTotals = Record<IntervalCounter, number> & {
@@ -25,6 +31,9 @@ export const bootTotals = ({
 	requests: 0,
 	forwarded: 0,
 	pushes: 0,
+	subjectMisses: 0,
+	subjectPulls: 0,
+	subjectFills: 0,
 });
 
 export const healthTotalsOf = ({
@@ -42,6 +51,9 @@ export const healthTotalsOf = ({
 		requests: sumOf("requests"),
 		forwarded: sumOf("forwarded"),
 		pushes: sumOf("pushes"),
+		subjectMisses: sumOf("subjectMisses"),
+		subjectPulls: sumOf("subjectPulls"),
+		subjectFills: sumOf("subjectFills"),
 	};
 };
 
@@ -60,4 +72,7 @@ export const healthIntervalBetween = ({
 	requests: current.requests - previous.requests,
 	forwarded: current.forwarded - previous.forwarded,
 	pushes: current.pushes - previous.pushes,
+	subjectMisses: current.subjectMisses - previous.subjectMisses,
+	subjectPulls: current.subjectPulls - previous.subjectPulls,
+	subjectFills: current.subjectFills - previous.subjectFills,
 });

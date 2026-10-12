@@ -1,5 +1,7 @@
 import {
+	type BalanceWorkerColdStartEdgeConfig,
 	type BalanceWorkerThreadsEdgeConfig,
+	balanceWorkerColdStartEdgeConfig,
 	balanceWorkerThreadsEdgeConfig,
 	createBunS3EdgeConfigClient,
 	createEdgeConfigRegistry,
@@ -28,6 +30,8 @@ export type WorkerEdgeConfigs = {
 	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
 	subjectSnapshotsConfig: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
+	/** Staging only: a load test's request to drop every resident subject. */
+	coldStart: EdgeConfigStore<BalanceWorkerColdStartEdgeConfig> | null;
 	/** The same bucket and client the stores read, for objects the worker writes itself. */
 	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
@@ -39,7 +43,7 @@ export const createWorkerEdgeConfigs = ({
 	config,
 }: {
 	ctx: { logger?: EdgeConfigLogger; s3Client?: EdgeConfigS3Client };
-	config: { location: EdgeConfigLocation };
+	config: { location: EdgeConfigLocation; coldStart: boolean };
 }): WorkerEdgeConfigs => {
 	const s3Client =
 		ctx.s3Client ??
@@ -73,6 +77,17 @@ export const createWorkerEdgeConfigs = ({
 		retainOnError: true,
 	});
 	registry.register({ store: subjectSnapshotsConfig });
+	const coldStart = config.coldStart
+		? createEdgeConfigStore({
+				ctx: edgeConfigContext,
+				s3Key: balanceWorkerColdStartEdgeConfig.key,
+				schema: balanceWorkerColdStartEdgeConfig.schema,
+				defaultValue: balanceWorkerColdStartEdgeConfig.defaultValue,
+				// A read error must not look like a new request.
+				retainOnError: true,
+			})
+		: null;
+	if (coldStart) registry.register({ store: coldStart });
 	const activeSlot = createEdgeConfigStore({
 		ctx: edgeConfigContext,
 		s3Key: activeSlotEdgeConfig.key,
@@ -98,6 +113,7 @@ export const createWorkerEdgeConfigs = ({
 		balanceWorkerThreads,
 		activeSlot,
 		subjectSnapshotsConfig,
+		coldStart,
 		adminBucket: { s3Client, location: config.location },
 		start,
 		stop,

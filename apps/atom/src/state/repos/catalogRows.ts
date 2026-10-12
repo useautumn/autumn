@@ -31,6 +31,21 @@ export const readCatalogReadAt = ({
 	return row ? Number(row.readAt) : null;
 };
 
+/** The rows with the read they came from, taken in one read transaction so a replacement committing meanwhile cannot mix them. */
+export const readCatalogFile = ({
+	ctx,
+}: {
+	ctx: CatalogContext;
+}): { rows: CatalogRow[]; readAt: number } | null =>
+	ctx.sqliteDb.transaction(
+		(): { rows: CatalogRow[]; readAt: number } | null => {
+			const readAt = readCatalogReadAt({ ctx });
+			return readAt === null
+				? null
+				: { rows: readCatalogRows({ ctx }), readAt };
+		},
+	)();
+
 /**
  * The rows and their read time change together, so a reader never sees one without the other.
  * False when the file already holds a later read: the compare runs under the write lock, so two
