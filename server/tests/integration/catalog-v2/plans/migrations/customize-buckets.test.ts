@@ -10,17 +10,13 @@
  */
 
 import { test } from "bun:test";
-import {
-	BillingInterval,
-	FeatureType,
-	ResetInterval,
-} from "@autumn/shared";
+import { BillingInterval, FeatureType, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
-import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbFeatures } from "../../utils/expectCatalogFeatures.js";
+import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 import {
@@ -413,6 +409,130 @@ test.concurrent(
 			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
 			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds: [fromId, toId] });
+		}
+	},
+);
+
+/**
+ * Two plans whose items differ only by feature_override must not share an op:
+ * a shared op carries one plan's override to both plans' customers.
+ *
+ * Red (pre-fix):  one $or op carrying the first plan's override for both plans.
+ * Green (after):  one op per plan, each with its own override.
+ */
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 migration: items differing only by feature_override get separate ops")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const meteredFeatureId = uniqueTestId("cv2_mig_fo_metered");
+		const creditSystemId = uniqueTestId("cv2_mig_fo_credits");
+		const left = uniqueTestId("cv2_mig_fo_a");
+		const right = uniqueTestId("cv2_mig_fo_b");
+		const planIds = [left, right];
+		const featureIds = [meteredFeatureId, creditSystemId];
+
+		const override = ({ creditCost }: { creditCost: number }) => ({
+			credit_schema: [
+				{ metered_feature_id: meteredFeatureId, credit_cost: creditCost },
+			],
+		});
+		const overrideByPlanId = {
+			[left]: override({ creditCost: 3 }),
+			[right]: override({ creditCost: 2 }),
+		};
+		const creditItem = (featureOverride?: object) => ({
+			feature_id: creditSystemId,
+			included: 100,
+			reset: { interval: ResetInterval.Month },
+			...(featureOverride ? { feature_override: featureOverride } : {}),
+		});
+
+		await deleteDbPlans({ ctx, planIds });
+		await deleteDbFeatures({ ctx, featureIds });
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: meteredFeatureId,
+						name: meteredFeatureId,
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						credit_schema: [
+							{ metered_feature_id: meteredFeatureId, credit_cost: 1 },
+						],
+					},
+				],
+				plans: planIds.map((planId) => ({
+					plan_id: planId,
+					name: planId,
+					items: [creditItem()],
+				})),
+			});
+			for (const planId of planIds) {
+				await seedVersionableCustomer({ ctx, planId, version: 1 });
+			}
+
+			const response = await autumnV2_3.catalogV2.update({
+				plans: planIds.map((planId) => ({
+					plan_id: planId,
+					items: [creditItem(overrideByPlanId[planId])],
+					migration: { draft: true },
+				})),
+			});
+
+			const branches = [...planIds]
+				.sort((a, b) => a.localeCompare(b))
+				.map((planId) => ({ plan_id: planId, version: 1 }));
+
+			expectMigrationDraftsCorrect({
+				migrations: await migrationRepo.get({
+					ctx,
+					id: response.migrations![0]!.id,
+				}),
+				expected: [
+					{
+						planIds,
+						noBillingChanges: true,
+						filter: {
+							customer: { plan: { $or: branches, custom: false } },
+						},
+						operations: branches.map(({ plan_id }) => ({
+							type: "update_plan",
+							plan_filter: { plan_id, version: 1, custom: false },
+							customize: {
+								remove_items: [
+									{
+										feature_id: creditSystemId,
+										interval: ResetInterval.Month,
+										interval_count: 1,
+										included: 100,
+									},
+								],
+								add_items: [
+									{
+										feature_id: creditSystemId,
+										included: 100,
+										unlimited: false,
+										reset: { interval: ResetInterval.Month },
+										feature_override: overrideByPlanId[plan_id],
+									},
+								],
+							},
+						})),
+					},
+				],
+			});
+
+			await deleteMigrations({ ctx, ids: [response.migrations![0]!.id] });
+		} finally {
+			await cleanupPlanCustomerRefs({ ctx, planIds });
+			await deleteDbPlans({ ctx, planIds });
+			await deleteDbFeatures({ ctx, featureIds });
 		}
 	},
 );

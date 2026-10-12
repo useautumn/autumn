@@ -606,6 +606,46 @@ describe("createPlanItemToKey", () => {
 		});
 	});
 
+	describe("feature_override", () => {
+		const override = (creditCost: number) => ({
+			credit_schema: [{ metered_feature_id: "images", credit_cost: creditCost }],
+		});
+
+		test("both absent are same; one-sided differs", () => {
+			expectSame(item(), item({ feature_override: null }), true);
+			expectSame(item(), item({ feature_override: override(2) }), false);
+		});
+
+		test("equal overrides are same; different rates differ", () => {
+			expectSame(
+				item({ feature_override: override(2) }),
+				item({ feature_override: override(2) }),
+				true,
+			);
+			expectSame(
+				item({ feature_override: override(2) }),
+				item({ feature_override: override(2.5) }),
+				false,
+			);
+		});
+
+		test("key order inside the override does not matter", () => {
+			expectSame(
+				item({
+					feature_override: {
+						credit_schema: [{ metered_feature_id: "images", credit_cost: 2 }],
+					},
+				}),
+				item({
+					feature_override: {
+						credit_schema: [{ credit_cost: 2, metered_feature_id: "images" }],
+					},
+				}),
+				true,
+			);
+		});
+	});
+
 	describe("internal ids (ignored)", () => {
 		test("entitlement_id and price_id do not affect the key", () => {
 			expectSame(
