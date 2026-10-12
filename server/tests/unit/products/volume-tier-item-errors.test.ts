@@ -15,7 +15,7 @@ import { validateProductItems } from "@/internal/products/product-items/validate
 const messages = features.create({
 	id: "messages",
 	name: "Messages",
-	config: { usage_type: FeatureUsageType.SingleUse },
+	config: { usage_type: FeatureUsageType.Single },
 }) as Feature;
 
 const validateVolumeItem = ({

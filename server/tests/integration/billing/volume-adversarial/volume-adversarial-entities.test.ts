@@ -91,8 +91,8 @@ test.concurrent(
 	},
 );
 
-// DISABLED: invoice_previews keeps the deleted seat's delete_next_cycle replaceable (11 × $8 = $88)
-// but Stripe renews 10 seats (10 × $10 = $100); usagePriceToLineItem doesn't subtract replaceables.
+// DISABLED: the next-cycle preview prices 11 seats (incl. the deleted seat's replaceable) at $88, Stripe renews 10 at $100.
+// Fixed off dev in #4625 (prorated allocated path); unskip once it lands and the stack is rebased.
 test.skip(`${chalk.yellowBright("volume-entities 2: allocated volume seats, 11 → 10 seats mid-cycle moves back to the $10 band; renewal = preview")}`, async () => {
 	const customerId = "vol-adv-entity-seats-delete";
 	// Tiers 0-10 @ $10 / 11+ @ $8 per seat, nothing included.
