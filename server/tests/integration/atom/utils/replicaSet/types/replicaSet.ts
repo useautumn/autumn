@@ -30,7 +30,6 @@ export type PushLanding = {
 export type ReplicaSetContext = {
 	dir: string;
 	subnet: number;
-	token: string;
 	tokenHash: string;
 	peerSecret: string;
 	autumnApiUrl: string;
@@ -50,6 +49,7 @@ export type ReplicaSet = TestAtom & {
 	stop(index: number): Promise<void>;
 	/** SIGKILL: nothing in memory reaches the peers or the volume. */
 	kill(index: number): Promise<void>;
+	/** stop, then start on the kept volume. */
 	restart(index: number): Promise<void>;
 	/** Every replica stopped at once, then every replica started at once. */
 	restartAll(): Promise<void>;

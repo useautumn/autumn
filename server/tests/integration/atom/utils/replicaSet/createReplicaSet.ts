@@ -1,18 +1,19 @@
+import { randomBytes } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { timeout } from "@tests/utils/genUtils.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	atomTokenToHash,
 	generateAtomToken,
 } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { createReplicaBalancer } from "./createReplicaBalancer.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { cutKey, PEER_VIEW_REREAD_MS, writePeerViews } from "./peerViews.js";
 import {
-	cutKey,
-	PEER_VIEW_REREAD_MS,
-	writePeerViews,
-} from "./peerViews.js";
+	registerReplicaSet,
+	unregisterReplicaSet,
+} from "./registerReplicaSet.js";
 import {
 	replicaHealth,
 	replicaUrl,
@@ -20,10 +21,6 @@ import {
 	spawnReplica,
 	waitUntilReplicaReady,
 } from "./replicaProcesses.js";
-import {
-	registerReplicaSet,
-	unregisterReplicaSet,
-} from "./registerReplicaSet.js";
 import type {
 	Replica,
 	ReplicaSet,
@@ -91,6 +88,7 @@ const stopReplica = async ({
 	signal: "SIGTERM" | "SIGKILL";
 }): Promise<void> => {
 	const replica = replicaAt({ ctx, index });
+	// Marks the replica stopping before its first await, so the views written next already leave it out.
 	const stopping = signalReplica({ replica, signal });
 	writePeerViews({ ctx });
 	await stopping;
@@ -222,9 +220,8 @@ export const createReplicaSet = async ({
 	const ctx: ReplicaSetContext = {
 		dir: mkdtempSync(join(tmpdir(), "atom-replica-set-")),
 		subnet: 1 + Math.floor(Math.random() * 250),
-		token,
 		tokenHash: atomTokenToHash({ token }),
-		peerSecret: crypto.randomUUID(),
+		peerSecret: randomBytes(32).toString("hex"),
 		autumnApiUrl: autumn.baseUrl.replace(/\/v1$/, ""),
 		replicas: [],
 		cuts: new Set(),

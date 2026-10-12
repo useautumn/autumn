@@ -61,9 +61,7 @@ export const createPeerResolver = ({
 			const addresses = peersFile
 				? await readPeersFile(peersFile)
 				: await resolve(serviceName);
-			known = addresses.filter(
-				(address) => !mine.has(address),
-			);
+			known = addresses.filter((address) => !mine.has(address));
 		} catch {
 			known = [];
 		}

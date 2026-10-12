@@ -133,7 +133,9 @@ test.skipIf(!replicaSetRunsHere)(
 
 		// A push the balancer could hand to no replica never reached the Atom; Autumn's next change for that customer carries it.
 		const acknowledged = customerIds.filter(isAcknowledgedAfterTrack);
-		expect(acknowledged.filter((id) => whileBooting.includes(id))).not.toHaveLength(0);
+		expect(
+			acknowledged.filter((id) => whileBooting.includes(id)),
+		).not.toHaveLength(0);
 		for (const id of acknowledged)
 			for (const index of [0, 1])
 				await expectAtomBalance({

@@ -2,7 +2,7 @@
  * A replica of an org's Atom starting up: it serves nothing stale and runs no check twice while it catches up.
  *
  * Contract:
- *  1. a replica on a wiped volume copies every subject from a peer before it reports ready;
+ *  1. a replica killed and replaced on an empty volume copies every subject from a peer before it reports ready;
  *  2. a replica added by scaling up does the same;
  *  3. a check that sends an event, arriving while a replica boots, is answered exactly once: the balance moves once per allowed answer.
  */
@@ -51,12 +51,12 @@ const trackedCustomer = async ({ customerId }: { customerId: string }) => {
 };
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("atom-replica-boot1: a replica on a wiped volume bootstraps from a peer before serving")}`,
+	`${chalk.yellowBright("atom-replica-boot1: a replica on a fresh volume bootstraps from a peer before serving")}`,
 	async () => {
 		const customerId = "atom-replica-boot1";
 		await trackedCustomer({ customerId });
 
-		await replicaSet().stop(1);
+		await replicaSet().kill(1);
 		await replicaSet().wipeVolume(1);
 		await replicaSet().start(1);
 

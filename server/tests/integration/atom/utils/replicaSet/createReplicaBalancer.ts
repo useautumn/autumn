@@ -49,7 +49,8 @@ const forwardToReplica = async ({
 			{
 				method: request.method,
 				headers,
-				body: request.method === "GET" ? undefined : await request.arrayBuffer(),
+				body:
+					request.method === "GET" ? undefined : await request.arrayBuffer(),
 			},
 		);
 		// fetch already decoded the body, so its encoding and length no longer describe it.
@@ -88,11 +89,7 @@ const recordPush = ({
 };
 
 /** The one endpoint Autumn knows the set by, as the load balancer in front of a deployment's replicas. */
-export const createReplicaBalancer = ({
-	ctx,
-}: {
-	ctx: ReplicaSetContext;
-}) => {
+export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 	const state: BalancerState = { routedTo: null, turn: 0, pushes: [] };
 
 	async function receive(request: Request): Promise<Response> {
