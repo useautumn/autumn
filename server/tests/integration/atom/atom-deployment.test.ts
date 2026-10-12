@@ -37,13 +37,13 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import {
 	ApiKeyPrefix,
 	createKey,
 	hashApiKey,
 } from "@/internal/dev/apiKeys/apiKeyUtils.js";
+import { atomTestClient } from "./utils/atomTestClient.js";
 import {
 	atomIsHosted,
 	deleteAtomDeployment,
@@ -54,7 +54,7 @@ import {
 	expectAtomCheckCorrect,
 } from "./utils/expectAtomCheckCorrect.js";
 
-const autumn = new AutumnInt({ secretKey: defaultCtx.orgSecretKey });
+const autumn = atomTestClient();
 
 // Every scenario starts from and ends with no Atom, which only the dev stack's own Atom can afford.
 const hostedAtom = atomIsHosted();

@@ -10,7 +10,7 @@ export const ensureOrgCustomers = async ({
 	ctx,
 	orgs,
 }: {
-	ctx: { autumn: AutumnClient };
+	ctx: { autumn: Pick<AutumnClient, "getOrCreateCustomer"> };
 	orgs: OrgCustomer[];
 }): Promise<void> => {
 	const uniqueOrgs = [...new Map(orgs.map((org) => [org.id, org])).values()];

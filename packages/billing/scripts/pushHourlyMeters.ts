@@ -16,8 +16,8 @@ import { drizzle } from "drizzle-orm/bun-sql";
 import { pushHourlyMeters } from "../src/actions/pushHourlyMeters/pushHourlyMeters";
 import type { TrackItem } from "../src/actions/pushHourlyMeters/types/trackItem";
 import { createAutumnClient } from "../src/external/autumn/createAutumnClient";
-import type { AutumnClient } from "../src/types/autumnClient";
 import type { HourWindow } from "../src/types/hourWindow";
+import type { MeteringContext } from "../src/types/meteringContext";
 
 const argValue = (flag: string): string | undefined => {
 	const index = process.argv.indexOf(flag);
@@ -54,7 +54,7 @@ const fx = createFxClient({
 });
 
 /** Prints instead of sending; same shape as the real client so the run is otherwise identical. */
-const recordingAutumn = (): AutumnClient => ({
+const recordingAutumn = (): MeteringContext["autumn"] => ({
 	batchTrack: async ({ items }: { items: TrackItem[] }) => {
 		console.log(`\n[dry run] batch_track ${items.length} items:`);
 		for (const item of items) {
