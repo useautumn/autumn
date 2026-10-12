@@ -5,6 +5,7 @@ import {
 	createDeployedAuth,
 	type DeployedAuth,
 } from "../../../src/auth/createDeployedAuth.js";
+import { createDiskEvictor } from "../../../src/disk/createDiskEvictor.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import type { AtomHttpEnv } from "../../../src/http/types/atomHttp.js";
@@ -16,13 +17,16 @@ import { createDeployedFolders } from "../../../src/replication/folders/createRe
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import type { Replication } from "../../../src/replication/types/replication.js";
 import {
+	createHeldSubjects,
+	HELD_IDLE_EXPIRY_MS,
+} from "../../../src/state/heldSubjects/createHeldSubjects.js";
+import {
 	createThreadStatsBuffer,
 	openThreadCounters,
 	readThreadStats,
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
-	freshHeld,
 	noSubjectPulls,
 } from "../../unit/utils/atomFixtures.js";
 import type { Endpoint, SimNetwork } from "./simNetwork.js";
@@ -56,6 +60,9 @@ export type SimReplicaContext = {
 	volume: Volume;
 	/** This replica's clock runs this far ahead of the simulation's. */
 	skewMs?: number;
+	/** What the replica may hold parsed, and what its files may take of the volume; unbounded unless the scenario says. */
+	heldBudgetBytes?: number;
+	diskShareBytes?: number;
 	log?: (line: string) => void;
 };
 
@@ -77,14 +84,24 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
+	const held = createHeldSubjects({
+		budgetBytes: ctx.heldBudgetBytes ?? 64 * 1024 * 1024,
+		idleExpiryMs: HELD_IDLE_EXPIRY_MS,
+		now,
+	});
 	const auth: DeployedAuth = createDeployedAuth({
 		dataDir: ctx.volume.folder,
 		tokenHash: ctx.tokenHash,
 		slotCount: SIM_SLOT_COUNT,
 		owners: allSlotsOwnedHere,
-		held: freshHeld(),
+		held,
 		now,
 		subjectPulls: noSubjectPulls,
+	});
+	const folders = createDeployedFolders({ slots: auth.slots });
+	const diskEvictor = createDiskEvictor({
+		ctx: { folders, counters, logger: quiet, now, sleep: clock.sleep },
+		shareOf: () => ctx.diskShareBytes ?? Number.MAX_SAFE_INTEGER,
 	});
 	const endpoint: Endpoint = {
 		id,
@@ -151,10 +168,10 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 			now,
 			isStopping: () => state !== "ready",
 		},
-		folders: createDeployedFolders({ slots: auth.slots }),
+		folders,
 	});
 
-	/** As the thread boots: listens, catches up, reports ready, then keeps passing. */
+	/** As the thread boots: listens, catches up, reports ready, then keeps passing and keeps its files within their share. */
 	async function start(): Promise<void> {
 		state = "starting";
 		network.bind(endpoint);
@@ -164,6 +181,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		state = "ready";
 		ctx.log?.(`${ctx.address}#${id} ready`);
 		void sync.runPasses();
+		void diskEvictor.run();
 	}
 
 	/** As the process stops: the listener closes, the outbox flushes, the files close. */
@@ -171,6 +189,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		if (!alive()) return;
 		state = "stopping";
 		network.unbind(endpoint);
+		diskEvictor.stop();
 		await replication.stop();
 		state = "stopped";
 		auth.close();
@@ -181,6 +200,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 	function kill(): void {
 		if (!alive()) return;
 		network.unbind(endpoint);
+		diskEvictor.stop();
 		state = "killed";
 		auth.close();
 		ctx.log?.(`${ctx.address}#${id} killed`);
@@ -192,6 +212,12 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		app,
 		peerApp,
 		slots: auth.slots,
+		held,
+		/** What the replica's files hold now, as its evictor measures them. */
+		diskBytes: () =>
+			auth.slots
+				.ownedStores()
+				.reduce((sum, store) => sum + store.dataBytes(), 0),
 		state: () => state,
 		alive,
 		isReady: () => state === "ready",

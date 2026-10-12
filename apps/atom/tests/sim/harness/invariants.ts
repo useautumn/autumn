@@ -3,8 +3,18 @@ import { type SimCluster, subjectKey, type Version } from "./simCluster.js";
 
 const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 
-/** Every replica up at the end holds, for every customer, the newest version any of them holds, and the newest catalog. */
-export const assertConverged = async ({ cluster }: { cluster: SimCluster }) => {
+/**
+ * Every replica up at the end holds, for every customer, the newest version any of them holds, and the newest catalog.
+ * With `pushedWithinMs`, only customers pushed that recently must be held everywhere: the others may have been dropped
+ * for a replica's share, which is a cache miss, not a lost update. A replica holding an older version is never allowed.
+ */
+export const assertConverged = async ({
+	cluster,
+	pushedWithinMs,
+}: {
+	cluster: SimCluster;
+	pushedWithinMs?: number;
+}) => {
 	const replicas = cluster.alive();
 	expect(replicas.length).toBeGreaterThan(0);
 	const held = await Promise.all(
@@ -20,8 +30,18 @@ export const assertConverged = async ({ cluster }: { cluster: SimCluster }) => {
 			if (!known || cluster.newer(version, known))
 				truth.set(customerId, version);
 		}
+	const lastPushedAt = new Map<string, number>();
+	for (const entry of cluster.applied)
+		lastPushedAt.set(
+			subjectKey(entry),
+			Math.max(lastPushedAt.get(subjectKey(entry)) ?? 0, entry.at),
+		);
+	const mustBeHeld = (key: string) =>
+		pushedWithinMs === undefined ||
+		(lastPushedAt.get(key) ?? 0) >= cluster.clock.now() - pushedWithinMs;
 	for (const entry of cluster.applied) {
-		if (cluster.lostVolumes.has(entry.on)) continue;
+		if (cluster.lostVolumes.has(entry.on) || !mustBeHeld(subjectKey(entry)))
+			continue;
 		const known = truth.get(subjectKey(entry));
 		if (!known || cluster.newer(entry.version, known))
 			throw new Error(
@@ -31,6 +51,7 @@ export const assertConverged = async ({ cluster }: { cluster: SimCluster }) => {
 	for (const { replica, held: byCustomer } of held)
 		for (const [customerId, version] of truth) {
 			const mine = byCustomer.get(customerId);
+			if (!mine && !mustBeHeld(customerId)) continue;
 			if (!mine || cluster.newer(version, mine.version))
 				throw new Error(
 					`${replica.address}#${replica.id} holds ${customerId} at ${mine ? `${mine.version.readAt}/${mine.version.logOffset}` : "nothing"}, newest is ${version.readAt}/${version.logOffset}`,
