@@ -9,14 +9,14 @@ import { FilterTriggerButton } from "../FilterTriggerButton";
 import {
 	COUNT_MODE,
 	DEDUCTIONS_MODE,
-	USAGE_MODE,
+	SUM_MODE,
 	useBreakdown,
 } from "./useBreakdown";
 
 const MEASURES = [
 	{
-		value: USAGE_MODE,
-		label: "Usage",
+		value: SUM_MODE,
+		label: "Sum",
 		description: "Sum of tracked values",
 	},
 	{

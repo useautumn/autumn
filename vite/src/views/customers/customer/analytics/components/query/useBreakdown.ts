@@ -4,10 +4,10 @@ import { useAnalyticsQueryState } from "../../hooks/useAnalyticsQueryState";
 import { SOURCE_FEATURE_GROUP } from "../../utils/displayLabels";
 
 export const DEDUCTIONS_MODE = "deductions";
-export const USAGE_MODE = "usage";
+export const SUM_MODE = "sum";
 export const COUNT_MODE = "count";
 
-/** Group-by and usage/deductions state, shared by every breakdown control. */
+/** Group-by and measure (sum/count/deductions) state, shared by every breakdown control. */
 export const useBreakdown = () => {
 	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 	const { queryStates, setQueryStates } = useAnalyticsQueryState();
@@ -64,7 +64,7 @@ export const useBreakdown = () => {
 			? DEDUCTIONS_MODE
 			: queryStates.measure === "count"
 				? COUNT_MODE
-				: USAGE_MODE,
+				: SUM_MODE,
 		maxGroups: filterStates.max_groups,
 		setMaxGroups: (maxGroups: number) =>
 			setFilterStates({ max_groups: maxGroups }),
