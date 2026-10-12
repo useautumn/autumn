@@ -2,11 +2,11 @@ import { ErrCode, type ProductItem, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 /** Each threshold charge prices its units from zero, so tiers would be mis-priced across charges. */
-export const validateItemThresholdBilling = ({
+export const handleThresholdBillingTierErrors = ({
 	item,
 }: {
 	item: ProductItem;
-}): void => {
+}) => {
 	const hasThresholdBilling = Boolean(item.config?.threshold_billing);
 	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
 	if (!hasThresholdBilling || !hasMultipleTiers) return;

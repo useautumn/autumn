@@ -8,7 +8,7 @@ import {
 import {
 	itemToTierRows,
 	itemToVolumeTierRule,
-} from "@/components/v2/planItemTierUtils";
+} from "@/views/products/plan/utils/tierUtils";
 
 const tieredItem = ({
 	tierBehavior,

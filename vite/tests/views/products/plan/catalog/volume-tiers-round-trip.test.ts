@@ -15,7 +15,7 @@ import {
 } from "@autumn/shared";
 import { buildUpdateCatalogPlanParams } from "@/views/products/plan/catalog/buildUpdateCatalogPlanParams";
 import {
-	cleanVolumeTiersForCommit,
+	itemToVolumePricingMode,
 	tiersToVolumePricingMode,
 } from "@/views/products/plan/utils/tierUtils";
 
@@ -93,7 +93,10 @@ describe("API-created volume item saved from the dashboard", () => {
 	});
 
 	test("save keeps every tier amount and flat fee", () => {
-		const committed = cleanVolumeTiersForCommit({ item: dashboardItem });
+		const committed = itemToVolumePricingMode({
+			item: dashboardItem,
+			mode: tiersToVolumePricingMode({ tiers: dashboardItem.tiers }),
+		});
 		const params = buildUpdateCatalogPlanParams({
 			baseProduct: product([dashboardItem]),
 			editedProduct: product([committed]),

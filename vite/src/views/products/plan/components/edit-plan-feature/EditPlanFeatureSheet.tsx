@@ -20,8 +20,7 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import {
-	cleanVolumeTiersForCommit,
-	migrateTiersToVolumePricingMode,
+	itemToVolumePricingMode,
 	tiersToVolumePricingMode,
 	type VolumePricingMode,
 } from "../../utils/tierUtils";
@@ -80,12 +79,18 @@ export function EditPlanFeatureSheet({
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
 		if (!item?.tiers) return;
 		setChosenPricingMode(mode);
-		setItem(migrateTiersToVolumePricingMode({ item, mode }));
+		setItem(itemToVolumePricingMode({ item, mode }));
 	};
 
 	const handleBeforeCommit = () => {
 		if (!isVolumeBased) return;
-		setItem(cleanVolumeTiersForCommit({ item }));
+		// Keyed off the tier data, never the toggle, so a save can't zero amounts the editor didn't show.
+		setItem(
+			itemToVolumePricingMode({
+				item,
+				mode: tiersToVolumePricingMode({ tiers: item.tiers }),
+			}),
+		);
 	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {

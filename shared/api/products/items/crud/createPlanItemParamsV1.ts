@@ -20,7 +20,7 @@ import {
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
 import { withSpecDefault } from "@utils/common/withSpecDefault";
-import { volumeTiersToIssue } from "@utils/productV2Utils/productItemUtils/volumeTiersToIssue";
+import { isSingleTierUsageBasedVolume } from "@utils/productUtils/priceUtils/classifyPrice/isSingleTierUsageBasedVolume";
 import { z } from "zod/v4";
 
 export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
@@ -380,13 +380,18 @@ export const planItemParamsIssues = (
 			});
 		}
 
-		const volumeTiersIssue = volumeTiersToIssue({
-			tierBehavior: value.price.tier_behavior,
-			isPrepaid: value.price.billing_method === BillingMethod.Prepaid,
-			tierCount: value.price.tiers.length,
-		});
-		if (volumeTiersIssue) {
-			issues.push({ message: volumeTiersIssue, input: value.price });
+		if (
+			isSingleTierUsageBasedVolume({
+				tierBehavior: value.price.tier_behavior,
+				isPrepaid: value.price.billing_method === BillingMethod.Prepaid,
+				tierCount: value.price.tiers.length,
+			})
+		) {
+			issues.push({
+				message:
+					"Volume-based pricing on a usage-based item needs at least two tiers. Add a tier, or use graduated pricing for a single rate.",
+				input: value.price,
+			});
 		}
 
 		if (value.price?.tiers.length === 0) {

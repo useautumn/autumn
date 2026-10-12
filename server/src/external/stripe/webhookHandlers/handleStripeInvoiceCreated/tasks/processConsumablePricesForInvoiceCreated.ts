@@ -25,7 +25,7 @@ import {
 	ARREAR_TIER_LINE_ID_PREFIX,
 	ARREAR_USAGE_LINE_ID_PREFIX,
 	arrearLineItemIdToSetId,
-} from "@/internal/billing/v2/utils/lineItems/arrearUsageLineItemId";
+} from "@/internal/billing/v2/utils/lineItems/arrearLineItemIds";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -319,12 +319,8 @@ const reconcileStaleExistingLines = async ({
 const sumOf = (amounts: number[]) =>
 	amounts.reduce((sum, amount) => sum + amount, 0);
 
-/**
- * A retry can price usage into different tier bands than the attempt that wrote the
- * invoice, so a band can vanish or appear. Such a price is reconciled as a whole: a
- * draft drops the bands no longer billed, a finalized invoice carries the set's net
- * delta forward. Returns the line items still to reconcile one by one.
- */
+/** A retry can land usage in different bands, so reconcile that price as a whole set;
+ * returns the line items still to reconcile one by one. */
 const reconcileChangedTierLineSets = async ({
 	ctx,
 	eventContext,
@@ -339,7 +335,7 @@ const reconcileChangedTierLineSets = async ({
 	const { stripeInvoice } = eventContext;
 	const lineItemsBySetId = new Map<string, LineItem[]>();
 	for (const lineItem of lineItems) {
-		const setId = arrearLineItemIdToSetId(lineItem.id);
+		const setId = arrearLineItemIdToSetId({ lineItemId: lineItem.id });
 		if (!setId) continue;
 		lineItemsBySetId.set(setId, [
 			...(lineItemsBySetId.get(setId) ?? []),
@@ -350,7 +346,7 @@ const reconcileChangedTierLineSets = async ({
 
 	for (const [setId, setLineItems] of lineItemsBySetId) {
 		const existingSet = [...existingLines.byLineItemId].filter(
-			([lineItemId]) => arrearLineItemIdToSetId(lineItemId) === setId,
+			([lineItemId]) => arrearLineItemIdToSetId({ lineItemId }) === setId,
 		);
 		const setLineItemIds = new Set(setLineItems.map((lineItem) => lineItem.id));
 		const droppedBands = existingSet.filter(

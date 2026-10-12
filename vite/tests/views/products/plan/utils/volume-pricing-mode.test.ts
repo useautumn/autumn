@@ -7,10 +7,15 @@ import {
 } from "@autumn/shared";
 import { alignTierCurrencyShapes } from "@/views/products/plan/utils/currencyUtils";
 import {
-	cleanVolumeTiersForCommit,
-	migrateTiersToVolumePricingMode,
+	itemToVolumePricingMode,
 	tiersToVolumePricingMode,
 } from "@/views/products/plan/utils/tierUtils";
+
+const commitVolumeTiers = (item: ProductItem): ProductItem =>
+	itemToVolumePricingMode({
+		item,
+		mode: tiersToVolumePricingMode({ tiers: item.tiers }),
+	});
 
 const volumeItem = (tiers: PriceTier[]): ProductItem =>
 	({
@@ -65,9 +70,9 @@ describe("tiersToVolumePricingMode", () => {
 	});
 });
 
-describe("cleanVolumeTiersForCommit", () => {
+describe("committing volume tiers", () => {
 	test("saving mixed tiers keeps every per-unit and flat amount", () => {
-		const result = cleanVolumeTiersForCommit({ item: volumeItem(mixedTiers) });
+		const result = commitVolumeTiers(volumeItem(mixedTiers));
 		expect(result.tiers).toEqual(mixedTiers.map((tier) => ({ ...tier })));
 	});
 
@@ -76,14 +81,14 @@ describe("cleanVolumeTiersForCommit", () => {
 			{ to: 100, amount: 0, flat_amount: 5 },
 			{ to: Infinite, amount: 0, flat_amount: 20 },
 		];
-		const result = cleanVolumeTiersForCommit({ item: volumeItem(tiers) });
+		const result = commitVolumeTiers(volumeItem(tiers));
 		expect(result.tiers?.map((tier) => tier.flat_amount)).toEqual([5, 20]);
 	});
 });
 
-describe("migrateTiersToVolumePricingMode", () => {
+describe("itemToVolumePricingMode", () => {
 	test("switching per-unit tiers to Unit + Flat keeps the rates and adds fees", () => {
-		const result = migrateTiersToVolumePricingMode({
+		const result = itemToVolumePricingMode({
 			item: volumeItem([
 				{ to: 100, amount: 1 },
 				{ to: Infinite, amount: 0.5 },
@@ -102,7 +107,7 @@ describe("migrateTiersToVolumePricingMode", () => {
 	});
 
 	test("switching to flat moves rates into flat fees", () => {
-		const result = migrateTiersToVolumePricingMode({
+		const result = itemToVolumePricingMode({
 			item: volumeItem([{ to: Infinite, amount: 2 }]),
 			mode: "flat",
 		});

@@ -1,7 +1,7 @@
 import type { TierLineBand } from "@models/billingModels/lineItem/tierLineBand";
 import type { UsageTier } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
-import { Infinite } from "@models/productModels/productEnums";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
+import { isFinalTier } from "@utils/productUtils/priceUtils/classifyPriceUtils";
 import { addAllowanceToTiers } from "@utils/productV2Utils/productItemUtils/tierUtils";
 import { Decimal } from "decimal.js";
 
@@ -25,8 +25,8 @@ export const volumeTiersToLineBands = ({
 
 	let tierStart = 0;
 	for (const tier of tiersWithAllowance) {
-		const isFinalTier = tier.to === Infinite || tier.to === -1;
-		const tierEnd = isFinalTier ? null : (tier.to as number);
+		const isFinal = isFinalTier(tier);
+		const tierEnd = isFinal ? null : (tier.to as number);
 
 		if (tierEnd !== null && roundedUsage > tierEnd) {
 			tierStart = tierEnd;

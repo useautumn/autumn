@@ -9,25 +9,8 @@ import { atmnToStripeAmountDecimal } from "@utils/productUtils/priceUtils/conver
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 
-/**
- * Builds a usage price's Stripe tiers per single unit, for a Stripe quantity of
- * total usage (included units + overage).
- *
- * Stored tiers are net of the included units, so with an allowance a free $0
- * leading tier covers the included units and every paid boundary is shifted
- * up by the allowance.
- *
- * - **Graduated**: Stripe splits charges across bands, so only units above the
- *   allowance cost anything.
- * - **Volume**: once total usage passes the free tier, the ENTIRE quantity
- *   (included units too) is charged at the band total usage lands in, plus
- *   that band's flat_amount. At or below the allowance it lands in the free
- *   tier, which has no flat fee, so it costs $0.
- *
- * Pass `withFlatAmounts: false` for metered prices: Autumn invoices their
- * usage itself and they never receive meter events, so their quantity stays 0
- * and Stripe would bill tier 1's flat fee every cycle.
- */
+/** Per-unit Stripe tiers for a quantity of total usage; a free leading tier covers the allowance.
+ * `withFlatAmounts: false` for metered prices, whose quantity stays 0 so tier 1's fee would bill every cycle. */
 export const priceToStripeUnitTiers = ({
 	price,
 	entitlement,

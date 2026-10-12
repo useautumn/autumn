@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	AppEnv,
 	type Feature,
 	FeatureUsageType,
 	type ProductItem,
@@ -9,7 +10,31 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { features } from "@tests/utils/fixtures/db/features.js";
-import { validateItemTierBehavior } from "@/internal/products/product-items/validateItemTierBehavior.js";
+import { validateProductItems } from "@/internal/products/product-items/validateProductItems";
+
+const messages = features.create({
+	id: "messages",
+	name: "Messages",
+	config: { usage_type: FeatureUsageType.SingleUse },
+}) as Feature;
+
+const validateVolumeItem = ({
+	item,
+	feature,
+	validateAuthoringRules,
+}: {
+	item: ProductItem;
+	feature?: Feature;
+	validateAuthoringRules: boolean;
+}) =>
+	validateProductItems({
+		newItems: [item],
+		features: [feature ?? messages],
+		orgId: "org_test",
+		env: AppEnv.Sandbox,
+		multiCurrencyEnabled: false,
+		validateAuthoringRules,
+	});
 
 const payPerUseItem = ({
 	tierBehavior,
@@ -28,10 +53,10 @@ const payPerUseItem = ({
 		],
 	}) as ProductItem;
 
-describe("validateItemTierBehavior", () => {
+describe("volume tier item errors", () => {
 	test("accepts pay-per-use volume", () => {
 		expect(() =>
-			validateItemTierBehavior({
+			validateVolumeItem({
 				validateAuthoringRules: true,
 				item: payPerUseItem({ tierBehavior: TierBehavior.VolumeBased }),
 			}),
@@ -63,7 +88,7 @@ describe("validateItemTierBehavior", () => {
 
 		test("rejects it without included usage", () => {
 			expect(() =>
-				validateItemTierBehavior({
+				validateVolumeItem({
 					validateAuthoringRules: true,
 					item: allocatedItem({ includedUsage: 0 }),
 					feature: seats,
@@ -73,7 +98,7 @@ describe("validateItemTierBehavior", () => {
 
 		test("accepts it with included usage", () => {
 			expect(() =>
-				validateItemTierBehavior({
+				validateVolumeItem({
 					validateAuthoringRules: true,
 					item: allocatedItem({ includedUsage: 3 }),
 					feature: seats,
@@ -95,7 +120,7 @@ describe("validateItemTierBehavior", () => {
 
 		test("rejects it when authoring", () => {
 			expect(() =>
-				validateItemTierBehavior({
+				validateVolumeItem({
 					validateAuthoringRules: true,
 					item: singleTierItem({ usageModel: UsageModel.PayPerUse }),
 				}),
@@ -104,7 +129,7 @@ describe("validateItemTierBehavior", () => {
 
 		test("accepts persisted rows on billing paths", () => {
 			expect(() =>
-				validateItemTierBehavior({
+				validateVolumeItem({
 					validateAuthoringRules: false,
 					item: singleTierItem({ usageModel: UsageModel.PayPerUse }),
 				}),
@@ -113,7 +138,7 @@ describe("validateItemTierBehavior", () => {
 
 		test("accepts single-tier prepaid volume", () => {
 			expect(() =>
-				validateItemTierBehavior({
+				validateVolumeItem({
 					validateAuthoringRules: true,
 					item: singleTierItem({ usageModel: UsageModel.Prepaid }),
 				}),

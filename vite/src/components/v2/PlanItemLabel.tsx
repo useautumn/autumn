@@ -18,8 +18,11 @@ import { cn } from "@/lib/utils";
 import { intervalIsNone } from "@/utils/product/productItemUtils";
 import { AdditionalCurrenciesHint } from "@/views/products/plan/components/plan-card/AdditionalCurrenciesHint";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
+import {
+	itemToTierRows,
+	itemToVolumeTierRule,
+} from "@/views/products/plan/utils/tierUtils";
 import { getItemAdditionalCurrencies } from "./planItemCurrencyUtils";
-import { itemToTierRows, itemToVolumeTierRule } from "./planItemTierUtils";
 
 export const CustomDotIcon = () => (
 	<div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />

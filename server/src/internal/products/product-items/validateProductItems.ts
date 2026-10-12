@@ -25,14 +25,15 @@ import {
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
 import { validateItemFeatureOverride } from "@/internal/features/validateItemFeatureOverride.js";
+import { handleAllocatedVolumeFlatFeeErrors } from "./errors/handleAllocatedVolumeFlatFeeErrors";
+import { handleSingleTierVolumeErrors } from "./errors/handleSingleTierVolumeErrors";
+import { handleThresholdBillingTierErrors } from "./errors/handleThresholdBillingTierErrors";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productItemUtils/getItemType";
-import { validateItemThresholdBilling } from "./validateItemThresholdBilling";
-import { validateItemTierBehavior } from "./validateItemTierBehavior";
 
 const validateProductItem = ({
 	item,
@@ -204,7 +205,9 @@ const validateProductItem = ({
 		});
 	}
 
-	validateItemTierBehavior({ item, feature, validateAuthoringRules });
+	// Persisted single-tier volume rows predate that rule and must keep billing.
+	if (validateAuthoringRules) handleSingleTierVolumeErrors({ item });
+	handleAllocatedVolumeFlatFeeErrors({ item, feature });
 
 	if (isFeaturePriceItem(item) && item.tiers) {
 		if (item.included_usage === Infinite) {
@@ -255,7 +258,7 @@ const validateProductItem = ({
 		}
 	}
 
-	validateItemThresholdBilling({ item });
+	handleThresholdBillingTierErrors({ item });
 
 	if (
 		item.usage_model === UsageModel.Prepaid &&
