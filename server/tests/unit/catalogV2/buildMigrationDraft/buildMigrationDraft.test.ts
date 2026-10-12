@@ -415,7 +415,7 @@ const creditsTarget = ({
 	nextIncluded = 100,
 }: {
 	planId: string;
-	previousCost: number;
+	previousCost: number | null;
 	nextCost: number;
 	nextIncluded?: number;
 }) =>
@@ -442,7 +442,9 @@ const creditsTarget = ({
 				included: 100,
 				unlimited: false,
 				reset: { interval: ResetInterval.Month },
-				feature_override: creditsOverride(previousCost),
+				...(previousCost === null
+					? {}
+					: { feature_override: creditsOverride(previousCost) }),
 			} as NonNullable<MigrationTarget["previousItems"]>[number],
 		],
 	});
@@ -456,6 +458,7 @@ test("previous_feature_override is stamped only when the override changes; the o
 				nextCost: 3.571,
 			}),
 			creditsTarget({ planId: "unchanged", previousCost: 2, nextCost: 2 }),
+			creditsTarget({ planId: "inherited", previousCost: null, nextCost: 3 }),
 			creditsTarget({
 				planId: "regranted",
 				previousCost: 2,
@@ -466,6 +469,7 @@ test("previous_feature_override is stamped only when the override changes; the o
 		versionsWithCustomersByPlanId: {
 			changed: [1],
 			unchanged: [1],
+			inherited: [1],
 			regranted: [1],
 		},
 	});
@@ -483,6 +487,15 @@ test("previous_feature_override is stamped only when the override changes; the o
 				interval: ResetInterval.Month,
 				included: 100,
 				previous_feature_override: creditsOverride(2.857),
+				only_feature_override_changed: true,
+			},
+		],
+		inherited: [
+			{
+				feature_id: "credits",
+				interval: ResetInterval.Month,
+				included: 100,
+				previous_feature_override: {},
 				only_feature_override_changed: true,
 			},
 		],

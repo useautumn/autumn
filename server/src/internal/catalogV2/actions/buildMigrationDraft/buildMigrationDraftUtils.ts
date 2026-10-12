@@ -119,7 +119,8 @@ const previousFeatureOverrideStamp = ({
 		(item) => item && itemsEqualIgnoringFeatureOverride(item, next),
 	);
 	return {
-		...(override ? { previous_feature_override: override } : {}),
+		// An empty override records that the old item inherited the credit system's rates.
+		previous_feature_override: override ?? {},
 		...(onlyOverrideChanged ? { only_feature_override_changed: true } : {}),
 	};
 };

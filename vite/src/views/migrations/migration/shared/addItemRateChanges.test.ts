@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import { rateChangeText } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 import { addItemRateChanges, migrationOpRateRows } from "./addItemRateChanges";
+import { withEditedAddItem } from "./editMigrationItems";
 
 const features = [
 	{ id: "gateway", name: "Gateway spend (USD)", type: FeatureType.Metered },
@@ -352,6 +353,45 @@ describe("migrationOpRateRows", () => {
 				{
 					updated: false,
 					lines: ["Gateway spend (USD): 3.571 credits", "Searches: 5 credits"],
+				},
+			],
+			merged: [],
+		});
+	});
+
+	test("editing the grant of an item that inherited its old rates keeps the old rates visible", () => {
+		const op = updateOp({ item: creditsItem(flatOverride(3.571)) });
+		const stamped = {
+			...op,
+			customize: {
+				...op.customize,
+				remove_items: op.customize?.remove_items?.map((filter) => ({
+					...filter,
+					previous_feature_override: {},
+					only_feature_override_changed: true,
+				})),
+			},
+		} as UpdatePlanOp;
+		const edited = {
+			...stamped,
+			customize: withEditedAddItem({
+				customize: stamped.customize,
+				addIndex: 0,
+				item: creditsItem(flatOverride(3.571), 200),
+			}),
+		} as UpdatePlanOp;
+		expect(
+			rows(edited, {
+				schema: [
+					{ metered_feature_id: "gateway", credit_amount: 3.571 },
+					{ metered_feature_id: "searches", credit_amount: 5 },
+				],
+			}),
+		).toEqual({
+			rows: [
+				{
+					updated: false,
+					lines: ["Gateway spend (USD): 1 → 3.571 credits"],
 				},
 			],
 			merged: [],

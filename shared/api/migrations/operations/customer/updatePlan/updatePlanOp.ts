@@ -18,7 +18,7 @@ export const MigrationRemoveItemSchema = PlanItemFilterFieldsSchema.extend({
 	previous_feature_override: ApiFeatureOverrideSchema.optional().meta({
 		internal: true,
 		description:
-			"The matched item's feature_override before the plan update that created this migration. Display-only.",
+			"The matched item's feature_override before the plan update that created this migration; empty when it inherited the feature's rates. Display-only.",
 	}),
 	only_feature_override_changed: z.boolean().optional().meta({
 		internal: true,
