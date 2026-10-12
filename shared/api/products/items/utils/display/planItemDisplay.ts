@@ -1,6 +1,9 @@
 import type { CreatePlanItemParamsV1Input } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { formatAmount } from "@utils/common/formatUtils/formatAmount.js";
+import { formatVolumeTierRule } from "@utils/common/formatUtils/formatVolumeTierRule.js";
 import { numberWithCommas } from "@utils/displayUtils.js";
+import { isVolumeFlatFeeTiers } from "@utils/productUtils/priceUtils/classifyPrice/isVolumeFlatFeeTiers.js";
+import { tiersToVolumeTierPricing } from "@utils/productUtils/priceUtils/convertPrice/tiersToVolumeTierPricing.js";
 
 export type PlanItemDisplayFeature = {
 	id: string;
@@ -143,7 +146,12 @@ const formatTierDetails = ({
 	for (const tier of tiers) {
 		const from = previousTo + 1;
 		const amount = useFlatAmount ? (tier.flat_amount ?? 0) : (tier.amount ?? 0);
-		const price = formatPriceAmount({ amount, currency });
+		const flatFee = useFlatAmount ? 0 : (tier.flat_amount ?? 0);
+		const unitPrice = formatPriceAmount({ amount, currency });
+		const price =
+			flatFee > 0
+				? `${unitPrice} + ${formatPriceAmount({ amount: flatFee, currency })} flat`
+				: unitPrice;
 
 		if (tier.to === "inf") {
 			details.push(`${numberWithCommas(from)}+: ${price}`);
@@ -158,9 +166,20 @@ const formatTierDetails = ({
 	return details;
 };
 
-const hasVolumeFlatTiers = (item: CreatePlanItemParamsV1Input) =>
-	item.price?.tier_behavior === "volume" &&
-	Boolean(item.price.tiers?.some((tier) => (tier.flat_amount ?? 0) > 0));
+const formatVolumeRule = (item: CreatePlanItemParamsV1Input) => {
+	const tiers = item.price?.tiers;
+	const includedUsage = item.included ?? 0;
+	const isVolume = item.price?.tier_behavior === "volume";
+	const hasMultipleTiers = (tiers?.length ?? 0) > 1;
+	// A single tier still charges the included units once usage passes them.
+	const showsRule = isVolume && (hasMultipleTiers || includedUsage > 0);
+	if (!showsRule || !tiers?.length) return undefined;
+
+	return formatVolumeTierRule({
+		includedUsage,
+		pricing: tiersToVolumeTierPricing({ tiers }),
+	});
+};
 
 const buildPriceDisplay = ({
 	currency,
@@ -174,7 +193,10 @@ const buildPriceDisplay = ({
 	const price = item.price;
 	if (!price) return undefined;
 
-	const useFlatAmount = hasVolumeFlatTiers(item);
+	const useFlatAmount = isVolumeFlatFeeTiers({
+		tierBehavior: price.tier_behavior,
+		tiers: price.tiers,
+	});
 	const amount = price.tiers
 		? formatTierRange({ currency, item, useFlatAmount })
 		: typeof price.amount === "number"
@@ -192,8 +214,9 @@ const buildPriceDisplay = ({
 	return {
 		details: formatTierDetails({ currency, item, useFlatAmount }),
 		text: useFlatAmount
-			? `${amount} for ${featureName}`
+			? `${amount} for ${getDisplayFeatureName({ feature, units: 2 })}`
 			: `${amount} per ${perUnit}`,
+		volumeRule: formatVolumeRule(item),
 	};
 };
 
@@ -206,7 +229,9 @@ export const getPlanItemDisplay = ({
 	features: PlanItemDisplayFeature[];
 	item: CreatePlanItemParamsV1Input;
 }): PlanItemDisplay => {
-	const feature = features.find((candidate) => candidate.id === item.feature_id);
+	const feature = features.find(
+		(candidate) => candidate.id === item.feature_id,
+	);
 	const featureName = feature?.name || item.feature_id;
 
 	if (feature?.type === "boolean") {
@@ -221,26 +246,33 @@ export const getPlanItemDisplay = ({
 	if (item.unlimited) {
 		return {
 			featureId: item.feature_id,
-			primaryText: ["Unlimited", featureName, interval].filter(Boolean).join(" "),
+			primaryText: ["Unlimited", featureName, interval]
+				.filter(Boolean)
+				.join(" "),
 		};
 	}
 
 	const priceDisplay = buildPriceDisplay({ currency, feature, item });
+	const volumeRule = priceDisplay?.volumeRule
+		? `(${priceDisplay.volumeRule})`
+		: undefined;
 	const included = item.included ?? 0;
 	const hasIncluded = included > 0;
 
 	if (hasIncluded) {
-		const includedText = `${numberWithCommas(included)} ${getDisplayFeatureName({
-			feature,
-			units: included,
-		})}`;
+		const includedText = `${numberWithCommas(included)} ${getDisplayFeatureName(
+			{
+				feature,
+				units: included,
+			},
+		)}`;
 
 		if (priceDisplay) {
 			return {
 				details: priceDisplay.details,
 				featureId: item.feature_id,
 				primaryText: includedText,
-				secondaryText: ["then", priceDisplay.text, interval]
+				secondaryText: ["then", priceDisplay.text, interval, volumeRule]
 					.filter(Boolean)
 					.join(" "),
 			};
@@ -256,7 +288,9 @@ export const getPlanItemDisplay = ({
 		return {
 			details: priceDisplay.details,
 			featureId: item.feature_id,
-			primaryText: [priceDisplay.text, interval].filter(Boolean).join(" "),
+			primaryText: [priceDisplay.text, interval, volumeRule]
+				.filter(Boolean)
+				.join(" "),
 		};
 	}
 
