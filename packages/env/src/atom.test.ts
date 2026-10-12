@@ -131,8 +131,9 @@ describe("atom env", () => {
 		// Half a CPU and 512 MB, as the stack is provisioned today.
 		expect(threads({ cpus: 1, memory: 0.5 * GB })).toBe(1);
 		expect(threads({ cpus: 4, memory: 2 * GB })).toBe(4);
-		// Eight threads would not fit in 1 GB: memory decides, 288 MiB for the main thread then 192 MiB each.
-		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(3);
+		// Eight threads would not fit in 1 GB: memory decides, 288 MiB for the main thread then 384 MiB a thread with its held copies.
+		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(1);
+		expect(threads({ cpus: 8, memory: 2 * GB })).toBe(4);
 		// XXS: a 640 MiB container runs one thread.
 		expect(threads({ cpus: 1, memory: 640 * 1024 ** 2 })).toBe(1);
 		// Atom's sizes: Medium 3 / 6Gi, Large 7 / 12Gi, XL 15 / 24Gi use every CPU.

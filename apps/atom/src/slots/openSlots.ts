@@ -157,6 +157,8 @@ export const openSlots = ({
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
 		...serveReplicaReads({ ctx }),
+		ownedStores: () =>
+			slots.flatMap(({ sqliteStore }) => (sqliteStore ? [sqliteStore] : [])),
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};

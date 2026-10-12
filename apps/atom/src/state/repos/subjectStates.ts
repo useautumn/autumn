@@ -394,12 +394,23 @@ const upsertSubject = ({
 	};
 };
 
+/** The pages the file holds, dropped pages already given back: its size once its log is checkpointed. */
+export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
+	const pages = ctx.sqliteDb
+		.query<{ page_count: bigint }, []>("PRAGMA page_count")
+		.get();
+	const size = ctx.sqliteDb
+		.query<{ page_size: bigint }, []>("PRAGMA page_size")
+		.get();
+	return Number(pages?.page_count ?? 0n) * Number(size?.page_size ?? 0n);
+};
+
 /** The keys of the rows one drop removed, so the copies held of them go too. */
 export type DroppedRows = { customerId: string; entityId: string }[];
 
 /**
- * Deletes every row of the customers whose rows were written before `before`, picking from the `limit` oldest-written
- * rows so one call's cost is bounded. A customer goes whole, its entities with it, so no entity outlives the rows it is read beside.
+ * Deletes every row of up to `limit` customers none of whose rows was written at or after `before`, oldest first.
+ * A customer goes whole, its entities with it, so no entity outlives the rows it is read beside; one with any fresh row stays.
  */
 export const deleteCustomersWrittenBefore = ({
 	ctx,
@@ -412,9 +423,13 @@ export const deleteCustomersWrittenBefore = ({
 }): DroppedRows =>
 	ctx.sqliteDb.transaction((): DroppedRows => {
 		const customers = ctx.sqliteDb
-			.query<{ customerId: string }, { before: number; limit: number }>(
-				"SELECT DISTINCT customer_id AS customerId FROM subject_states WHERE applied_at < $before ORDER BY applied_at ASC LIMIT $limit",
-			)
+			.query<{ customerId: string }, { before: number; limit: number }>(`
+				SELECT DISTINCT old.customer_id AS customerId FROM subject_states AS old
+				WHERE old.applied_at < $before
+					AND NOT EXISTS (SELECT 1 FROM subject_states AS fresh
+						WHERE fresh.customer_id = old.customer_id AND fresh.applied_at >= $before)
+				ORDER BY old.applied_at ASC LIMIT $limit
+			`)
 			.all({ before, limit });
 		if (customers.length === 0) return [];
 		const ids = JSON.stringify(customers.map(({ customerId }) => customerId));

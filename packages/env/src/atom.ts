@@ -47,12 +47,13 @@ const readMachine = (): AtomMachine => {
 const MAIN_BYTES = MAIN_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
 const PER_THREAD_BYTES = SERVING_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
 
-/** How many serving threads fit in memory beside the main thread that starts them. */
+/** How many serving threads fit in memory beside the main thread, each with as much again to hold subjects in. */
 const threadsMemoryAllows = ({
 	memoryLimitBytes,
 }: {
 	memoryLimitBytes: number;
-}): number => Math.floor((memoryLimitBytes - MAIN_BYTES) / PER_THREAD_BYTES);
+}): number =>
+	Math.floor((memoryLimitBytes - MAIN_BYTES) / (2 * PER_THREAD_BYTES));
 
 /** Row text each thread may hold parsed: a share of what the threads leave, split between them and shrunk by the expansion. */
 const heldBytesPerThreadOf = ({

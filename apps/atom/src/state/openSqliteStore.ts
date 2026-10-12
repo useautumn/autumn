@@ -1,9 +1,9 @@
-import { statSync } from "node:fs";
 import { deepFreeze } from "./deepFreeze.js";
 import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
+	dataBytes,
 	deleteCustomersWrittenBefore,
 	listDigestsAppliedAfter,
 	listSubjectsAppliedAfter,
@@ -21,14 +21,6 @@ import type { StoredSubject } from "./types/storedSubject.js";
 
 /** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
-
-const sizeOf = (path: string): number => {
-	try {
-		return statSync(path).size;
-	} catch {
-		return 0;
-	}
-};
 
 const subjectKey = ({
 	customerId,
@@ -178,10 +170,7 @@ export const openSqliteStore = ({
 		readByKey: (params) => readSubjectsByKey({ ctx, ...params }),
 		maxAppliedAt: () => maxAppliedAt({ ctx }),
 		dropCustomersWrittenBefore,
-		fileBytes: () =>
-			sizeOf(databasePath) +
-			sizeOf(`${databasePath}-wal`) +
-			sizeOf(`${databasePath}-shm`),
+		dataBytes: () => dataBytes({ ctx }),
 		close,
 	};
 };

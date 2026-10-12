@@ -691,7 +691,31 @@ describe("a slot file's footprint", () => {
 		sqliteStore.close();
 	});
 
-	test("the limit bounds the rows looked at per call, so a call's cost is bounded whatever the file holds", () => {
+	test("a customer with any row written since the point stays whole: an old customer row under a fresh entity is not dropped", () => {
+		const databasePath = slotPath();
+		let at = 1000;
+		const sqliteStore = openSqliteStore({
+			databasePath,
+			held: freshHeld(),
+			now: () => at,
+		});
+		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		at = 2000;
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 2n, entityId: "ent_1" }),
+		});
+
+		expect(
+			sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
+		).toEqual({ customers: 0, rows: 0 });
+		expect(sqliteStore.countSubjects()).toBe(2);
+		expect(
+			sqliteStore.dropCustomersWrittenBefore({ before: 2500, limit: 10 }),
+		).toEqual({ customers: 1, rows: 2 });
+		sqliteStore.close();
+	});
+
+	test("the limit bounds the customers dropped per call, so a call's cost is bounded whatever the file holds", () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),

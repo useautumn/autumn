@@ -1,6 +1,11 @@
 import { fetchInvalidKeys } from "../auth/secretKeys/fetchInvalidKeys.js";
 import { startSecretKeys } from "../auth/secretKeys/startSecretKeys.js";
 import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
+import {
+	createDiskEvictor,
+	diskShareBytesOf,
+} from "../disk/createDiskEvictor.js";
+import { readVolumeBytes } from "../disk/readVolumeBytes.js";
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createPeerApp } from "../http/createPeerApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
@@ -69,6 +74,19 @@ export const createAtomServer = ({
 		counters: ctx.counters,
 		held: ctx.held,
 	});
+	// The share follows the mounted volume, so whatever disk the stack gives this replica, grown online included, counts.
+	const diskEvictor = createDiskEvictor({
+		ctx: {
+			folders: ctx.folders,
+			counters: ctx.counters,
+			logger: ctx.logger,
+		},
+		shareOf: () =>
+			diskShareBytesOf({
+				volumeBytes: readVolumeBytes({ path: env.ATOM_DATA_DIR }).totalBytes,
+				threads: env.ATOM_THREADS,
+			}),
+	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
 	let peerListener: ReturnType<typeof Bun.serve> | undefined;
 	let receiving: Promise<void> | undefined;
@@ -93,6 +111,7 @@ export const createAtomServer = ({
 	async function start(): Promise<void> {
 		listen();
 		receiving = pushReceiver?.run();
+		void diskEvictor.run();
 	}
 
 	/** In-flight requests and leased pushes finish before the files close. */
@@ -101,6 +120,7 @@ export const createAtomServer = ({
 		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
 		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication.stop();
+		diskEvictor.stop();
 		statsTick.stop();
 		secretKeys?.stop();
 		ctx.auth.close();

@@ -56,7 +56,13 @@ const openFolder = () => {
 		subjectPulls: noSubjectPulls,
 	});
 	const warnings: string[] = [];
-	const evictorOf = ({ shareBytes }: { shareBytes: number }) =>
+	const evictorOf = ({
+		shareBytes,
+		shareOf = () => shareBytes,
+	}: {
+		shareBytes: number;
+		shareOf?: () => number;
+	}) =>
 		createDiskEvictor({
 			ctx: {
 				folders: createDeployedFolders({ slots: auth.slots }),
@@ -69,7 +75,7 @@ const openFolder = () => {
 				now: () => at,
 				sleep: async () => {},
 			},
-			shareBytes,
+			shareOf,
 		});
 	const push = ({ ids }: { ids: string[] }) => {
 		for (const id of ids)
@@ -127,6 +133,10 @@ describe("the disk evictor", () => {
 		const volume = readVolumeBytes({ path: tmpdir() });
 		expect(volume.totalBytes).toBeGreaterThan(0);
 		expect(volume.availBytes).toBeLessThanOrEqual(volume.totalBytes);
+		expect(readVolumeBytes({ path: "/nowhere/at/all" })).toEqual({
+			totalBytes: 0,
+			availBytes: 0,
+		});
 		expect(diskShareBytesOf({ volumeBytes: 100_000_000_000, threads: 7 })).toBe(
 			Math.floor(80_000_000_000 / 7),
 		);
@@ -179,6 +189,39 @@ describe("the disk evictor", () => {
 		folder.close();
 	});
 
+	test("each pass starts where the last one stopped, so a share reached in one file's batch does not drain that file alone", async () => {
+		const folder = openFolder();
+		folder.push({ ids: ids("r", 400) });
+		folder.advance(HOUR);
+		await folder.evictorOf({ shareBytes: Number.MAX_SAFE_INTEGER }).tick();
+		const full = folder.stats().diskBytes;
+		const countIn = async (slot: number) =>
+			(
+				await folder.auth.slots.listSince({
+					slot,
+					after: null,
+					cursor: null,
+					limit: 10_000,
+				})
+			).length;
+		const before = [await countIn(0), await countIn(1)];
+		// One file's batch is enough to get back under the floor each tick.
+		const evictor = folder.evictorOf({ shareBytes: Math.floor(full * 0.97) });
+
+		await evictor.tick();
+		const afterFirst = [await countIn(0), await countIn(1)];
+		folder.push({ ids: ids("s", 30) });
+		folder.advance(HOUR);
+		await evictor.tick();
+		const afterSecond = [await countIn(0), await countIn(1)];
+
+		expect(afterFirst[0]).toBe((before[0] ?? 0) - DISK_EVICT_BATCH);
+		expect(afterFirst[1]).toBe(before[1]);
+		expect(afterSecond[0]).toBeGreaterThanOrEqual(afterFirst[0] ?? 0);
+		expect(afterSecond[1]).toBeLessThan((afterFirst[1] ?? 0) + 30);
+		folder.close();
+	});
+
 	test("a customer's held copy goes with its rows", async () => {
 		const folder = openFolder();
 		folder.push({ ids: ids("c", 10) });
@@ -191,20 +234,106 @@ describe("the disk evictor", () => {
 		folder.close();
 	});
 
-	test("over its share with nothing older than the relay window, it warns and drops the oldest anyway rather than fill the volume", async () => {
+	test("over its share with nothing older than the relay window, it warns once and drops the oldest anyway rather than fill the volume", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("young", 50) });
+		folder.push({ ids: ids("young", DISK_EVICT_BATCH * 3) });
 		folder.advance(DISK_MIN_AGE_MS / 2);
 		const evictor = folder.evictorOf({ shareBytes: ROW_BYTES * 10 });
 
 		await evictor.tick();
 		expect(folder.stats().diskEvicted).toBe(0);
 		await evictor.tick();
+		const afterFirstDrop = folder.stats().diskEvicted;
+		await evictor.tick();
 
-		expect(folder.stats().diskEvicted).toBeGreaterThan(0);
+		expect(afterFirstDrop).toBeGreaterThan(0);
+		// Every pass under the same pressure drops, and the warning is not repeated.
+		expect(folder.stats().diskEvicted).toBeGreaterThan(afterFirstDrop);
 		expect(folder.warnings).toEqual([
 			"Over its disk share with nothing older than the relay window: dropping recent customers",
 		]);
+		folder.close();
+	});
+
+	test("the share is read at every tick, so a volume grown online counts at once", async () => {
+		const folder = openFolder();
+		folder.push({ ids: ids("g", 60) });
+		folder.advance(HOUR);
+		let share = ROW_BYTES * 5;
+		const evictor = folder.evictorOf({ shareBytes: 0, shareOf: () => share });
+
+		await evictor.tick();
+		const droppedWhileSmall = folder.stats().diskEvicted;
+		share = Number.MAX_SAFE_INTEGER;
+		folder.push({ ids: ids("h", 60) });
+		folder.advance(HOUR);
+		await evictor.tick();
+
+		expect(droppedWhileSmall).toBeGreaterThan(0);
+		expect(folder.stats().diskEvicted).toBe(droppedWhileSmall);
+		folder.close();
+	});
+
+	test("a volume it cannot read keeps the last share known, and with none known drops nothing: a 0 share would drain every file", async () => {
+		const folder = openFolder();
+		folder.push({ ids: ids("u", 60) });
+		folder.advance(HOUR);
+		let share = 0;
+		const evictor = folder.evictorOf({ shareBytes: 0, shareOf: () => share });
+
+		await evictor.tick();
+		expect(folder.stats().diskEvicted).toBe(0);
+		expect(await folder.isStored("u_0")).toBe(true);
+		share = ROW_BYTES * 5;
+		await evictor.tick();
+		const droppedAtKnownShare = folder.stats().diskEvicted;
+		share = 0;
+		folder.push({ ids: ids("v", 60) });
+		folder.advance(HOUR);
+		await evictor.tick();
+
+		expect(droppedAtKnownShare).toBeGreaterThan(0);
+		expect(folder.stats().diskEvicted).toBeGreaterThan(droppedAtKnownShare);
+		expect(folder.warnings).toEqual([
+			"Cannot read the volume the data folder is on; keeping the last disk share known",
+			"Cannot read the volume the data folder is on; keeping the last disk share known",
+		]);
+		folder.close();
+	});
+
+	test("a tick that throws is logged and the next tick still runs, so a full volume never takes the thread down", async () => {
+		const folder = openFolder();
+		folder.push({ ids: ids("e", 5) });
+		folder.advance(DAY * 8);
+		let ticks = 0;
+		const sleeps: number[] = [];
+		const evictor = createDiskEvictor({
+			ctx: {
+				folders: {
+					all: () => {
+						if (++ticks === 1) throw new Error("disk full");
+						return [{ atomId: null, slots: folder.auth.slots }];
+					},
+				},
+				counters: { add() {}, set() {} },
+				logger: {
+					warn: (...args: unknown[]) => {
+						folder.warnings.push(String(args[1]));
+					},
+				},
+				now: () => 0,
+				sleep: async (ms) => {
+					sleeps.push(ms);
+					if (sleeps.length > 3) evictor.stop();
+				},
+			},
+			shareOf: () => Number.MAX_SAFE_INTEGER,
+		});
+
+		await evictor.run();
+
+		expect(ticks).toBe(2);
+		expect(folder.warnings).toEqual(["Could not run a disk eviction tick"]);
 		folder.close();
 	});
 
