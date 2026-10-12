@@ -23,7 +23,10 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	noSubjectPulls,
+	storedEntitySubjectWith,
 	subjectBody,
+	subjectPushOf,
 } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
@@ -79,6 +82,7 @@ const createDeployedApp = ({
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	const { logger, logged } = createLogger();
@@ -104,6 +108,7 @@ const createMultiTenantApp = () => {
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		heldSubjects: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	const { logger } = createLogger();
@@ -973,5 +978,59 @@ describe("our multi-tenant Atom", () => {
 
 		expect(badHash.status).toBe(400);
 		expect(badId.status).toBe(400);
+	});
+});
+
+describe("a customer's evict", () => {
+	const pushEntity = ({ logOffset }: { logOffset: bigint }) => {
+		const push = subjectPushOf({
+			subject: {
+				...storedEntitySubjectWith({ customerBalance: 10, entityBalance: 5 }),
+				logOffset,
+			},
+		});
+		return post({
+			headers: pushedFor({ customerId: push.customerId }),
+			body: JSON.parse(push.body),
+		});
+	};
+	const pushCustomer = ({ customerVersion }: { customerVersion: unknown }) =>
+		post({
+			headers: pushedFor({ customerId: "cus_1" }),
+			body: {
+				...subjectBody({ balance: 10 }),
+				log_offset: "140",
+				read_at: 1800,
+				customer_version: customerVersion,
+			},
+		});
+
+	test("leaves an entity read before it to the API as stale", async () => {
+		const { app } = createDeployedApp();
+		await app.request("/v1/subjects.set", pushEntity({ logOffset: 100n }));
+		await app.request(
+			"/v1/subjects.set",
+			pushCustomer({ customerVersion: "140" }),
+		);
+		autumnAnswering({ status: 200, body: { allowed: true } });
+
+		const check = await app.request(
+			"/v1/balances.check",
+			checkMessages({ entity_id: "ent_42" }),
+		);
+
+		expect(check.headers.get("x-atom-forwarded")).toBe("entity_stale");
+	});
+
+	test("with a version that is not a whole offset is refused", async () => {
+		const { app } = createDeployedApp();
+
+		const refused = await Promise.all(
+			["abc", "-1", 140].map((customerVersion) =>
+				app.request("/v1/subjects.set", pushCustomer({ customerVersion })),
+			),
+		);
+
+		expect(refused.map((response) => response.status)).toEqual([400, 400, 400]);
 	});
 });

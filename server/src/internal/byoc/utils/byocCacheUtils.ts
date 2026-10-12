@@ -30,34 +30,91 @@ export const toAlienExternalId = ({ parts }: { parts: string[] }): string => {
 	return externalId;
 };
 
-/** One Atom, as its deployer knows it: one deployment group each, so an Atom being removed never shares a group with its replacement. Records from before Atom ids keep `<org>.<env>`. */
-export const cacheExternalId = ({
+/** Whose Atoms these are: an org's env, or our shadow Atom. Its parts start every Atom's external id, and its base every default stack name. */
+export type AtomOwner = { idParts: string[]; stackNameBase: string };
+
+export const cacheOwner = ({
 	org,
 	env,
+}: {
+	org: Pick<Organization, "id" | "slug">;
+	env: AppEnv;
+}): AtomOwner => ({
+	idParts: [org.id, env],
+	stackNameBase: `atom-${org.slug}-${env}`,
+});
+
+/** An org's external id always holds `.<env>` after its id, so no org's Atom can take the shadow Atom's group. */
+export const SHADOW_ATOM_OWNER: AtomOwner = {
+	idParts: [SHADOW_ATOM_EXTERNAL_ID],
+	stackNameBase: "atom-shadow",
+};
+
+/** One Atom, as its deployer knows it: one deployment group each, so an Atom being removed never shares a group with its replacement. Records from before Atom ids keep the owner's bare id. */
+export const atomExternalId = ({
+	owner,
 	atomId,
 }: {
-	org: Pick<Organization, "id">;
-	env: AppEnv;
+	owner: AtomOwner;
 	atomId?: string;
 }) =>
 	toAlienExternalId({
-		parts: [org.id, env, atomId].filter((part) => part !== undefined),
+		parts: [...owner.idParts, atomId].filter((part) => part !== undefined),
 	});
 
-/** The id the env's next Atom takes, fixed by the Atoms it has, so the page can show its stack name before it exists. */
-export const nextCacheAtomId = ({
-	org,
-	env,
+/** The id the owner's next Atom takes, fixed by the Atoms it has, so the page can show its stack name before it exists. */
+export const nextAtomId = ({
+	owner,
 	existingAtomIds,
 }: {
-	org: Pick<Organization, "id">;
-	env: AppEnv;
+	owner: AtomOwner;
 	existingAtomIds: string[];
 }) =>
 	`atom_${createHash("sha256")
-		.update([org.id, env, ...[...existingAtomIds].sort()].join("."))
+		.update([...owner.idParts, ...[...existingAtomIds].sort()].join("."))
 		.digest("hex")
 		.slice(0, 24)}`;
+
+/** Six hex chars of the external id, so every Atom, and every dev stack, names its stack apart. */
+export const atomStackNameSuffix = ({
+	owner,
+	atomId,
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+}) =>
+	createHash("sha256")
+		.update(atomExternalId({ owner, atomId }))
+		.digest("hex")
+		.slice(0, 6);
+
+/** The stack's name in the owner's cloud, which is also its deployment group's: the chosen base, or the owner's, then the suffix. */
+export const atomStackName = ({
+	owner,
+	atomId,
+	base = owner.stackNameBase,
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+	base?: string;
+}) =>
+	toDeploymentGroupName({
+		label: [base, atomStackNameSuffix({ owner, atomId })].join("-"),
+	});
+
+/** An Atom's names, as its deployer starts it. */
+export const atomNames = ({
+	owner,
+	atomId,
+	stackName = atomStackName({ owner, atomId }),
+}: {
+	owner: AtomOwner;
+	atomId?: string;
+	stackName?: string;
+}) => ({
+	externalId: atomExternalId({ owner, atomId }),
+	label: stackName,
+});
 
 /** The label records made before stack names could be chosen were set up under. */
 export const cacheGroupLabel = ({
@@ -68,40 +125,6 @@ export const cacheGroupLabel = ({
 	env: AppEnv;
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
-
-/** Six hex chars of the external id, so every Atom, and every dev stack, names its stack apart. */
-export const cacheStackNameSuffix = ({
-	org,
-	env,
-	atomId,
-}: {
-	org: Pick<Organization, "id">;
-	env: AppEnv;
-	atomId?: string;
-}) =>
-	createHash("sha256")
-		.update(cacheExternalId({ org, env, atomId }))
-		.digest("hex")
-		.slice(0, 6);
-
-/** The stack's name in the org's cloud, which is also its deployment group's: the chosen base, or `atom-<slug>-<env>`, then the suffix. */
-export const cacheStackName = ({
-	org,
-	env,
-	atomId,
-	base,
-}: {
-	org: Pick<Organization, "id" | "slug">;
-	env: AppEnv;
-	atomId?: string;
-	base?: string;
-}) =>
-	toDeploymentGroupName({
-		label: [
-			base ?? `atom-${org.slug}-${env}`,
-			cacheStackNameSuffix({ org, env, atomId }),
-		].join("-"),
-	});
 
 /** A record from before stack names were stored keeps the name it was set up under. */
 export const cacheDeploymentStackName = ({
@@ -116,25 +139,9 @@ export const cacheDeploymentStackName = ({
 		label: cacheGroupLabel({ org, env: cacheDeployment.env }),
 	});
 
-/** An Atom's names, as `createCache` starts it. */
-export const cacheNames = ({
-	org,
-	env,
-	atomId,
-	stackName = cacheStackName({ org, env, atomId }),
-}: {
-	org: Organization;
-	env: AppEnv;
-	atomId?: string;
-	stackName?: string;
-}) => ({
-	externalId: cacheExternalId({ org, env, atomId }),
-	label: stackName,
-});
-
-/** Our one shadow Atom's names. An org's external id always holds `.<env>` and its label ends in a hash suffix, so neither can match. */
-export const shadowAtomCacheNames = () => ({
-	externalId: toAlienExternalId({ parts: [SHADOW_ATOM_EXTERNAL_ID] }),
+/** The names our shadow Atom was set up under before it took Atom ids like an org's. */
+export const legacyShadowAtomNames = () => ({
+	externalId: atomExternalId({ owner: SHADOW_ATOM_OWNER }),
 	label: [cacheNamePrefix(), SHADOW_ATOM_EXTERNAL_ID].filter(Boolean).join("-"),
 });
 

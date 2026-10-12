@@ -1,5 +1,6 @@
 import {
 	type AlienClient,
+	type AlienContainerResources,
 	type AlienDeployment,
 	type AlienFixedPools,
 	type AlienNetwork,
@@ -46,6 +47,18 @@ const machineToAtomPools = ({
 	machine: ByocCacheMachine;
 }): AlienFixedPools => ({
 	[ATOM_POOL]: { machine: machine.instanceType, machines: 1 },
+});
+
+/** The Atom container's share of its machine; the release's resource ranges must hold every size's. */
+const machineToAtomContainers = ({
+	machine,
+}: {
+	machine: ByocCacheMachine;
+}): AlienContainerResources => ({
+	[ATOM_RESOURCE_ID]: {
+		cpu: machine.container.cpu,
+		memory: `${machine.container.memory}Gi`,
+	},
 });
 
 const deploymentToAtomMachine = ({
@@ -122,6 +135,7 @@ const startAlienAtom = ({
 		...names,
 		region,
 		pools: machineToAtomPools({ machine }),
+		containers: machineToAtomContainers({ machine }),
 		network: cacheNetworkToAlienNetwork({ network }),
 		environmentVariables: [
 			...atomAuthToVariables({ auth }),

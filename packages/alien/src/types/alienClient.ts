@@ -20,6 +20,12 @@ export type AlienFixedPools = Record<
 	{ machine: string; machines: number }
 >;
 
+/** Each container's per-replica allocation by resource id, inside the ranges the release declares; memory in binary units, e.g. `6Gi`. */
+export type AlienContainerResources = Record<
+	string,
+	{ cpu: number; memory: string }
+>;
+
 /** Where a setup puts the deployment's network: alien's `stackSettings.defaults.network`. */
 export type AlienNetwork =
 	| { type: "create" }
@@ -56,6 +62,11 @@ export type AlienSetup = {
 	setupUrl: string | null;
 };
 
+/** Where the client reports what it skipped instead of failing on. */
+export type AlienLogger = {
+	warn(message: string, data: Record<string, unknown>): void;
+};
+
 /** The local `alien dev` manager, or alien's hosted platform for real customer clouds. */
 export type AlienConfig =
 	| { kind: "local"; baseUrl: string }
@@ -63,7 +74,7 @@ export type AlienConfig =
 
 /** Everything Autumn asks of alien. A deployment group is one customer, keyed by our external id. */
 export type AlienClient = {
-	/** `label` is shown in alien's dashboard; it is reduced to a valid group name, which also names the stack. `pools` and `network` are the setup's defaults. */
+	/** `label` is shown in alien's dashboard; it is reduced to a valid group name, which also names the stack. `pools`, `containers` and `network` are the setup's defaults. */
 	startSetup(params: {
 		externalId: string;
 		label: string;
@@ -71,6 +82,7 @@ export type AlienClient = {
 		region: string;
 		environmentVariables: AlienEnvironmentVariable[];
 		pools: AlienFixedPools;
+		containers: AlienContainerResources;
 		network: AlienNetwork | null;
 	}): Promise<AlienSetup>;
 	findDeployment(params: {

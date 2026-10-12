@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
+import { ATOM_CUSTOMER_ID_HEADER, ATOM_SUBJECT_READ_PATH } from "@autumn/byoc";
 import { createAtomEnv } from "@autumn/env/atom";
 import {
 	createCatalogRowsFor,
@@ -36,7 +36,11 @@ const freePort = () => {
 };
 
 /** The Atom as main.ts runs it, on its own port and folder: the workers are main.ts started again. */
-const startAtom = async () => {
+const startAtom = async ({
+	autumnApiUrl = "http://127.0.0.1:9",
+}: {
+	autumnApiUrl?: string;
+} = {}) => {
 	const dataDir = mkdtempSync(join(tmpdir(), "atom-threads-"));
 	const port = freePort();
 	const env = createAtomEnv({
@@ -45,7 +49,7 @@ const startAtom = async () => {
 		ATOM_PORT: String(port),
 		ATOM_THREADS: String(THREADS),
 		ATOM_SLOT_COUNT: "16",
-		AUTUMN_API_URL: "http://127.0.0.1:9",
+		AUTUMN_API_URL: autumnApiUrl,
 	});
 	const workers: Worker[] = [];
 	const atom = createAtomThreads({
@@ -284,5 +288,64 @@ describe("calls between threads when one goes", () => {
 		await Promise.all(hopping);
 
 		expect(Date.now() - startedAt).toBeLessThan(5_000);
+	}, 20_000);
+});
+
+/** Autumn as an Atom reaches it: a pull waits until the test answers it (the subject does not exist); a forward is allowed. */
+const startFakeAutumn = () => {
+	const pulls: unknown[] = [];
+	const firstPull = Promise.withResolvers<void>();
+	const answerPulls = Promise.withResolvers<void>();
+	const server = Bun.serve({
+		hostname: "127.0.0.1",
+		port: 0,
+		fetch: async (request) => {
+			if (new URL(request.url).pathname !== ATOM_SUBJECT_READ_PATH)
+				return Response.json({ allowed: true });
+			pulls.push(await request.json());
+			firstPull.resolve();
+			await answerPulls.promise;
+			return Response.json({ code: "subject_not_found" }, { status: 404 });
+		},
+	});
+	stops.push(async () => {
+		answerPulls.resolve();
+		server.stop(true);
+	});
+	return {
+		url: `http://127.0.0.1:${server.port}`,
+		pulls,
+		firstPull: firstPull.promise,
+	};
+};
+
+describe("pulls across threads", () => {
+	test("R10 a subject missed on every thread is pulled once, by its owner, while every check is still forwarded", async () => {
+		const autumn = startFakeAutumn();
+		const { url } = await startAtom({ autumnApiUrl: autumn.url });
+		const checks = THREADS * 4;
+		const forwarded: (string | null)[] = [];
+		for (let i = 0; i < checks; i++) {
+			const response = await checkCustomer({
+				url,
+				customerId: "cus_missing",
+				requiredBalance: 1,
+			});
+			forwarded.push(response.headers.get("x-atom-forwarded"));
+		}
+		await autumn.firstPull;
+
+		const health = await (await fetch(`${url}/health`)).json();
+		const sumOf = (field: string) =>
+			health.threads.reduce(
+				(sum: number, thread: Record<string, number>) => sum + thread[field],
+				0,
+			);
+		expect(new Set(forwarded)).toEqual(new Set(["customer_not_stored"]));
+		expect(sumOf("subjectMisses")).toBe(checks);
+		expect(sumOf("subjectPulls")).toBe(1);
+		expect(autumn.pulls).toEqual([
+			{ customer_id: "cus_missing", entity_id: null },
+		]);
 	}, 20_000);
 });

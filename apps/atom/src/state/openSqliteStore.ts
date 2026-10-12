@@ -5,6 +5,7 @@ import {
 	countSubjects,
 	readSubject as readSubjectRow,
 	type SubjectWrite,
+	type SubjectWriteResult,
 	subjectToSlice,
 	upsertSubjects,
 } from "./repos/subjectStates.js";
@@ -67,21 +68,51 @@ export const openSqliteStore = ({
 		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
 	}
 
-	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
-	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
-		const writes = subjects.map(writeOf);
-		const storedBytes = upsertSubjects({ ctx, writes });
-		writes.forEach(({ subject, slice }, index) => {
-			const bytes = storedBytes[index];
-			if (bytes === null || bytes === undefined) return;
+	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */
+	function holdWritten({
+		write: { subject, slice },
+		result: { bytes, customerVersion },
+	}: {
+		write: SubjectWrite;
+		result: SubjectWriteResult;
+	}): void {
+		const key = storePrefix + keyOf(subject);
+		if (bytes !== null) {
 			held.hold({
-				key: storePrefix + keyOf(subject),
-				subject: deepFreeze(subject),
+				key,
+				subject: deepFreeze({
+					...subject,
+					customerVersion: customerVersion ?? subject.customerVersion,
+				}),
 				bytes,
 				sliceHash: slice.hash,
 			});
+			return;
+		}
+		const heldCopy = held.get(key);
+		if (
+			customerVersion === null ||
+			!heldCopy ||
+			heldCopy.subject.customerVersion >= customerVersion
+		)
+			return;
+		held.hold({
+			key,
+			subject: deepFreeze({ ...heldCopy.subject, customerVersion }),
+			bytes: heldCopy.bytes,
+			sliceHash: heldCopy.sliceHash,
 		});
-		return storedBytes.map((bytes) => bytes !== null);
+	}
+
+	/** After the commit: only the store decides which part settles a customer's version, and rows still mean "stored". */
+	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
+		const writes = subjects.map(writeOf);
+		const results = upsertSubjects({ ctx, writes });
+		writes.forEach((write, index) => {
+			const result = results[index];
+			if (result) holdWritten({ write, result });
+		});
+		return results.map(({ bytes }) => bytes !== null);
 	}
 
 	function close(): void {

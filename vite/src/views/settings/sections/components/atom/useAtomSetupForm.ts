@@ -15,39 +15,21 @@ import {
 	cacheToMachine,
 	RECOMMENDED_ATOM_INSTANCE_TYPE,
 } from "./atomMachineDisplay";
+import {
+	AtomNetworkValuesSchema,
+	atomNetworkValuesToNetwork,
+	networkToAtomNetworkValues,
+	withAtomNetworkRules,
+} from "./atomNetworkForm";
 import type { AtomActions } from "./useAtomActions";
 
-/** Subnets are typed as one comma- or space-separated line. */
-const toSubnetIds = (subnets: string) =>
-	subnets.split(/[\s,]+/).filter(Boolean);
-
-const AtomSetupSchema = z
-	.object({
+const AtomSetupSchema = withAtomNetworkRules(
+	AtomNetworkValuesSchema.extend({
 		instanceType: z.string(),
 		region: z.enum(BYOC_CACHE_AWS_REGIONS),
-		vpc: z.enum(["existing_vpc", "new_vpc"]),
-		vpcId: z.string().trim(),
-		subnets: z.string(),
 		stackName: ByocStackNameSchema,
-	})
-	.refine(({ vpc, vpcId }) => vpc === "new_vpc" || vpcId.startsWith("vpc-"), {
-		message: "Enter a VPC ID like vpc-0a1b2c3d",
-		path: ["vpcId"],
-	})
-	.refine(
-		({ vpc, subnets }) => {
-			const subnetIds = toSubnetIds(subnets);
-			return (
-				vpc === "new_vpc" ||
-				(subnetIds.length > 0 &&
-					subnetIds.every((subnetId) => subnetId.startsWith("subnet-")))
-			);
-		},
-		{
-			message: "Add subnet IDs like subnet-0aa1, subnet-0bb2",
-			path: ["subnets"],
-		},
-	);
+	}),
+);
 
 export type AtomSetupValues = z.infer<typeof AtomSetupSchema>;
 
@@ -62,18 +44,13 @@ const cacheToSetupValues = ({
 	cache: ApiByocCache | null;
 	stackNameBase: string;
 }): AtomSetupValues => {
-	const network = cache?.network;
 	const region = cache?.region ?? null;
-	const isExistingVpc = network?.type === "existing_vpc";
 	return {
 		instanceType:
 			(cache && cacheToMachine(cache)?.instanceType) ??
 			RECOMMENDED_ATOM_INSTANCE_TYPE,
 		region: isAwsRegion(region) ? region : DEFAULT_BYOC_CACHE_AWS_REGION,
-		vpc: isExistingVpc ? "existing_vpc" : "new_vpc",
-		vpcId: network?.type === "existing_vpc" ? network.vpc_id : "",
-		subnets:
-			network?.type === "existing_vpc" ? network.subnet_ids.join(", ") : "",
+		...networkToAtomNetworkValues(cache?.network),
 		stackName: stackNameBase,
 	};
 };
@@ -89,14 +66,7 @@ const setupValuesToCreateParams = (
 		memory: machine?.memory,
 		region: values.region,
 		stack_name: values.stackName.trim(),
-		network:
-			values.vpc === "new_vpc"
-				? { type: "new_vpc" }
-				: {
-						type: "existing_vpc",
-						vpc_id: values.vpcId.trim(),
-						subnet_ids: toSubnetIds(values.subnets),
-					},
+		network: atomNetworkValuesToNetwork(values),
 	};
 };
 

@@ -2,11 +2,12 @@ import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
+	atomStackName,
+	atomStackNameSuffix,
 	cacheDeploymentStackName,
 	cacheDeploymentToApiCache,
-	cacheStackName,
-	cacheStackNameSuffix,
-	nextCacheAtomId,
+	cacheOwner,
+	nextAtomId,
 } from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
@@ -26,11 +27,11 @@ export const getCache = async ({
 			(row) => row && refreshCacheDeployment({ ctx, cacheDeployment: row }),
 		),
 	);
+	const owner = cacheOwner({ org, env });
 	const atomId =
 		existing?.id ??
-		nextCacheAtomId({
-			org,
-			env,
+		nextAtomId({
+			owner,
 			existingAtomIds: removingRows.map(({ id }) => id),
 		});
 	return {
@@ -42,7 +43,7 @@ export const getCache = async ({
 			.map((row) => cacheDeploymentToApiCache({ cacheDeployment: row, org })),
 		stack_name: existing
 			? cacheDeploymentStackName({ cacheDeployment: existing, org })
-			: cacheStackName({ org, env, atomId }),
-		stack_name_suffix: cacheStackNameSuffix({ org, env, atomId }),
+			: atomStackName({ owner, atomId }),
+		stack_name_suffix: atomStackNameSuffix({ owner, atomId }),
 	};
 };

@@ -6,8 +6,9 @@ import {
 } from "../deploymentGroups/deploymentGroups.js";
 import { AlienDeploymentSchema } from "../deployments/deploymentSchemas.js";
 import { fixedPoolsToCompute } from "../deployments/fixedPoolsToCompute.js";
-import type { AlienApi } from "../types/alienApi.js";
+import type { AlienApi, AlienContext } from "../types/alienApi.js";
 import type {
+	AlienContainerResources,
 	AlienEnvironmentVariable,
 	AlienFixedPools,
 	AlienNetwork,
@@ -51,33 +52,41 @@ const startLocalSetup = async ({
 	return { deploymentGroupId: group.id, setupUrl: null };
 };
 
+/** A link nobody runs stops working after this, so one we could not revoke never stays open. */
+const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** One Atom per group: a stale link can't start a second deployment beside it. Alien applies it to groups it creates. */
+const MAX_DEPLOYMENTS_PER_GROUP = 1;
+
 /** Same external id reuses the customer's deployment group. Older links are revoked first, so one is ever live. */
 const startHostedSetup = async ({
-	api,
+	ctx,
 	config,
 	externalId,
 	name,
 	region,
 	environmentVariables,
 	pools,
+	containers,
 	network,
 }: {
-	api: AlienApi;
+	ctx: AlienContext;
 	config: { project: string; workspace: string };
 	externalId: string;
 	name: string;
 	region: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
+	containers: AlienContainerResources;
 	network: AlienNetwork | null;
 }): Promise<AlienSetup> => {
+	const { api } = ctx;
 	const existingGroup = await findDeploymentGroupByExternalId({
 		api,
 		externalId,
 	});
 	if (existingGroup)
 		await Promise.all([
-			revokeSetupLinks({ ctx: { api }, deploymentGroupId: existingGroup.id }),
+			revokeSetupLinks({ ctx, deploymentGroupId: existingGroup.id }),
 			existingGroup.name !== name &&
 				renameDeploymentGroup({
 					api,
@@ -96,6 +105,8 @@ const startHostedSetup = async ({
 				project: config.project,
 				externalId,
 				name,
+				maxDeployments: MAX_DEPLOYMENTS_PER_GROUP,
+				expiresAt: new Date(Date.now() + SETUP_LINK_TTL_MS).toISOString(),
 				deploymentSetupConfig: {
 					metadata: {},
 					policy: {
@@ -103,7 +114,7 @@ const startHostedSetup = async ({
 						allowedSetupMethods: ["cloudformation"],
 						stackSettings: {
 							defaults: {
-								compute: fixedPoolsToCompute({ pools }),
+								compute: { ...fixedPoolsToCompute({ pools }), containers },
 								...(network && { network }),
 							},
 						},
@@ -128,12 +139,13 @@ const startHostedSetup = async ({
 			token: setup.token,
 			managingRoleArn,
 			pools,
+			containers,
 			network,
 		}),
 	};
 };
 
-/** The local manager runs no machines or networks, so only a hosted setup takes `region`, `pools` and `network`. */
+/** The local manager runs no machines or networks, so only a hosted setup takes `region`, `pools`, `containers` and `network`. */
 export const startSetup = ({
 	ctx,
 	externalId,
@@ -141,14 +153,16 @@ export const startSetup = ({
 	region,
 	environmentVariables,
 	pools,
+	containers,
 	network,
 }: {
-	ctx: { api: AlienApi };
+	ctx: AlienContext;
 	externalId: string;
 	label: string;
 	region: string;
 	environmentVariables: AlienEnvironmentVariable[];
 	pools: AlienFixedPools;
+	containers: AlienContainerResources;
 	network: AlienNetwork | null;
 }): Promise<AlienSetup> => {
 	const { api } = ctx;
@@ -156,13 +170,14 @@ export const startSetup = ({
 	if (api.config.kind === "local")
 		return startLocalSetup({ api, name, environmentVariables });
 	return startHostedSetup({
-		api,
+		ctx,
 		config: api.config,
 		externalId,
 		name,
 		region,
 		environmentVariables,
 		pools,
+		containers,
 		network,
 	});
 };

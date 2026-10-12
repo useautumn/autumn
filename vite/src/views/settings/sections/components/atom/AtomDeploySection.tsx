@@ -38,7 +38,8 @@ const deployCaption = ({
 	if (isFailed) return "Retry once the cause above is fixed.";
 	if (isStale)
 		return "No stack yet after a day. If it failed in AWS, cancel and start over.";
-	if (isAwaitingAws) return "Create the stack in AWS to start.";
+	if (isAwaitingAws)
+		return "Create the stack in AWS. Progress shows a few minutes after it's created, so don't cancel.";
 	return "You can leave this page.";
 };
 

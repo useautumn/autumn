@@ -5,8 +5,8 @@ const LOCAL_ATOM_PORT = 8790;
 const AUTUMN_API_URL = "https://api.useautumn.com";
 /** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** A container given no limits sees its whole host; past this many, more threads only cost memory. */
-const MAX_AUTOMATIC_THREADS = 8;
+/** Only for a container given no limits, which sees its whole host; past this many, more threads only cost memory. */
+const MAX_UNLIMITED_THREADS = 8;
 /** Measured on Linux with 128 slots: a serving thread, and the main thread, each hold a little under this. */
 const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
 /** The rest is left for the OS, the files' page cache and a busy moment. */
@@ -20,13 +20,21 @@ const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
 const RECEIVER_SHARE_OF_THREADS = 0.3;
 
 /** What the machine allows the Atom: the container's limits where it has them, not the host's totals. */
-type AtomMachine = { availableCpus: number; memoryLimitBytes: number };
+type AtomMachine = {
+	availableCpus: number;
+	memoryLimitBytes: number;
+	isContainerLimited: boolean;
+};
 
-const readMachine = (): AtomMachine => ({
-	availableCpus: availableParallelism(),
+const readMachine = (): AtomMachine => {
 	// Zero or absent means no limit was set, so the machine's own memory is the limit.
-	memoryLimitBytes: process.constrainedMemory?.() || totalmem(),
-});
+	const constrainedMemory = process.constrainedMemory?.() ?? 0;
+	return {
+		availableCpus: availableParallelism(),
+		memoryLimitBytes: constrainedMemory || totalmem(),
+		isContainerLimited: constrainedMemory > 0,
+	};
+};
 
 /** How many serving threads fit in memory, with one more counted for the main thread that starts them. */
 const threadsMemoryAllows = ({
@@ -106,7 +114,7 @@ const sdkPushQueueUrlOf = ({
 	);
 };
 
-/** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
+/** As many threads as both the container's CPUs and its memory allow, so a bigger size is used without a setting to keep in step.
  * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
 	runtimeEnv,
@@ -120,7 +128,9 @@ const threadsOf = ({
 	const allowed = Math.min(
 		machine.availableCpus,
 		threadsMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
-		MAX_AUTOMATIC_THREADS,
+		machine.isContainerLimited
+			? Number.POSITIVE_INFINITY
+			: MAX_UNLIMITED_THREADS,
 	);
 	return Math.max(1, allowed);
 };
