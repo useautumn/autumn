@@ -87,17 +87,12 @@ export class QaTinybird extends DurableObject<Env> {
 		return this.ready;
 	}
 
-	/** `/tokens` answers before the API can serve, so it also has to list workspaces. */
+	/** `/tokens` answers ~25 s before the query API does; until then the API is a 502. */
 	private async answersApi() {
-		const signal = AbortSignal.timeout(3_000);
-		const tokens = await this.api("/tokens", { signal });
-		if (tokens.status !== 200) return false;
-		const { admin_token } = (await tokens.json()) as LocalTokens;
-		const listed = await this.api("/v1/user/workspaces", {
-			headers: { authorization: `Bearer ${admin_token}` },
-			signal,
+		const res = await this.api("/v0/sql?q=SELECT+1", {
+			signal: AbortSignal.timeout(3_000),
 		});
-		return listed.status === 200;
+		return res.status < 500;
 	}
 
 	/** The `dev` workspace `bun tb:local build` creates; created here if a query arrives first. */
