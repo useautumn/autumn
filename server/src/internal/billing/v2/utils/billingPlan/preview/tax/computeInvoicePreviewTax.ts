@@ -1,6 +1,9 @@
 import type { PreviewTax } from "@autumn/shared";
 import { stripeToAtmnAmount } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
+
+const PREVIEW_LINE_DESCRIPTION = "autumn_tax_preview_net_subtotal";
 
 const STATUS_BY_STRIPE_STATUS: Record<
 	Stripe.Invoice.AutomaticTax.Status,
@@ -53,15 +56,26 @@ export const computeInvoicePreviewTax = async ({
 			{
 				amount: taxableMinorUnits,
 				currency,
-				description: "preview_net_subtotal",
+				description: PREVIEW_LINE_DESCRIPTION,
 				tax_behavior: "exclusive",
 			},
 		],
 	});
 
+	// A customer preview also carries their pending items and subscription lines, so read tax off our line only.
+	const lines = preview.lines.has_more
+		? await getStripeInvoiceLineItems({
+				stripeClient: stripeCli,
+				invoiceId: preview.id,
+			})
+		: preview.lines.data;
+	const previewLineTaxes =
+		lines.find((line) => line.description === PREVIEW_LINE_DESCRIPTION)
+			?.taxes ?? [];
+
 	const sumTaxes = (behavior: "inclusive" | "exclusive") =>
 		stripeToAtmnAmount({
-			amount: (preview.total_taxes ?? [])
+			amount: previewLineTaxes
 				.filter((tax) => tax.tax_behavior === behavior)
 				.reduce((sum, tax) => sum + tax.amount, 0),
 			currency,
