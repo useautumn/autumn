@@ -6,6 +6,8 @@ import type { ReplicatedOperation } from "../types/replicatedOperation.js";
 
 /** Deliveries in flight per peer; the rest wait, newest copy per key, so a slow peer never holds up a receive. */
 const DELIVERIES_PER_PEER = 4;
+/** How long a copy waits after its subject first queued, so the newer copies a hot customer pushes meanwhile replace it: one is sent, not each. */
+export const RELAY_LINGER_MS = 50;
 /** A peer that is restarting is back within this; after it a waiting copy is dropped, and the peer's catch-up covers it. */
 export const HOLD_MS = 5 * 60_000;
 /** Bytes of body waiting across all peers; past this the oldest is dropped, counted, so memory stays bounded under a long outage. */
@@ -31,6 +33,8 @@ type OutboxContext = {
 	logger: Pick<AutumnLogger, "warn">;
 	sleep?: (ms: number) => Promise<unknown>;
 	now?: () => number;
+	/** Test seam: RELAY_LINGER_MS unless a test sends at once. */
+	lingerMs?: number;
 };
 
 type Waiting = { operation: ReplicatedOperation; path: string; since: number };
@@ -43,6 +47,7 @@ export const createPeerOutbox = ({
 }): PeerOutbox => {
 	const sleep = ctx.sleep ?? Bun.sleep;
 	const now = ctx.now ?? Date.now;
+	const lingerMs = ctx.lingerMs ?? RELAY_LINGER_MS;
 	const queues = new Map<string, Map<string, Waiting>>();
 	const workers = new Map<string, number>();
 	let waitingBytes = 0;
@@ -128,6 +133,8 @@ export const createPeerOutbox = ({
 			const next = queue?.keys().next();
 			if (!queue || !next || next.done) break;
 			const key = next.value;
+			const waited = now() - (queue.get(key)?.since ?? now());
+			if (waited < lingerMs) await sleep(lingerMs - waited);
 			const entry = take({ queue, key });
 			if (!entry) continue;
 			inFlight += 1;

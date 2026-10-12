@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { PeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
-import { createPeerOutbox } from "../../../src/replication/outbox/createPeerOutbox.js";
+import {
+	createPeerOutbox,
+	RELAY_LINGER_MS,
+} from "../../../src/replication/outbox/createPeerOutbox.js";
 import type { Delivery as Outcome } from "../../../src/replication/transport/sendToPeer.js";
 import type { ReplicatedOperation } from "../../../src/replication/types/replicatedOperation.js";
 
@@ -11,8 +14,10 @@ const outboxOf = ({
 	peers,
 	answers = {},
 	onSend = () => {},
+	lingerMs = 0,
 }: {
 	peers: string[];
+	lingerMs?: number;
 	/** Per peer: the answer to each delivery in turn, delivered once the list runs out; `false` alone is a peer that is down. */
 	answers?: Record<string, Outcome[] | false>;
 	onSend?: () => void;
@@ -54,6 +59,7 @@ const outboxOf = ({
 					? new Promise((resolve) => setTimeout(resolve, 100))
 					: Promise.resolve(),
 			now: () => now,
+			lingerMs,
 		},
 	});
 	return {
@@ -174,6 +180,33 @@ describe("what a thread applied, on its way to the other replicas", () => {
 			.filter((_, i) => i > 0)
 			.map(({ operation }) => `${operation.key}:${operation.body}`);
 		expect(stored).toEqual(["cus_1:v2", "cus_2:v1"]);
+	});
+
+	test("a copy waits the linger after its subject first queued, so a hot subject's newer copies replace it and one is sent", async () => {
+		const delivered: string[] = [];
+		const outbox = createPeerOutbox({
+			ctx: {
+				resolver: { peers: async () => ["10.0.0.2"], forget: () => {} },
+				send: async ({ operation }) => {
+					delivered.push(`${operation.key}:${operation.body}`);
+					return "delivered";
+				},
+				counters: { add: () => {} },
+				logger: { warn: () => {} },
+			},
+		});
+
+		for (const body of ["v1", "v2", "v3"]) {
+			await outbox.enqueue({
+				operation: push({ key: "cus_1", body }),
+				path: "/v1/subjects.set",
+			});
+			await Bun.sleep(RELAY_LINGER_MS / 5);
+		}
+		await Bun.sleep(RELAY_LINGER_MS * 2);
+
+		expect(delivered).toEqual(["cus_1:v3"]);
+		await outbox.stop();
 	});
 
 	test("a copy a peer never took within the hold is dropped and counted; the peer's own catch-up covers it", async () => {
