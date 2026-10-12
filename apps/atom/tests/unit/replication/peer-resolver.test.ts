@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createPeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
 
 const resolverOf = ({
@@ -63,5 +66,19 @@ describe("the peers a replica relays to", () => {
 		advance(5_001);
 		await resolver.peers();
 		expect(resolutions()).toBe(3);
+	});
+
+	test("are read from the peers file where a replica set runs on one machine, as the harness last wrote it", async () => {
+		const peersFile = join(mkdtempSync(join(tmpdir(), "atom-peers-")), "peers");
+		let now = 0;
+		const resolver = createPeerResolver({
+			ctx: { peersFile, own: () => [], now: () => now },
+		});
+
+		expect(await resolver.peers()).toEqual([]);
+
+		writeFileSync(peersFile, "127.0.0.11\n127.0.0.12\n");
+		now += 5_001;
+		expect(await resolver.peers()).toEqual(["127.0.0.11", "127.0.0.12"]);
 	});
 });

@@ -22,6 +22,8 @@ export const ownAddresses = (): string[] =>
 		.map((iface) => (iface as { address: string }).address);
 
 type PeerResolverContext = {
+	/** Read in place of the service name where a replica set runs on one machine. */
+	peersFile?: string | null;
 	serviceName?: string;
 	resolve?: (name: string) => Promise<string[]>;
 	own?: () => string[];
@@ -31,6 +33,13 @@ type PeerResolverContext = {
 const resolveWithDns = async (name: string): Promise<string[]> =>
 	(await lookup(name, { all: true })).map((record) => record.address);
 
+/** One address per line, rewritten by the harness as replicas come and go, the way the service name's records change. */
+const readPeersFile = async (path: string): Promise<string[]> =>
+	(await Bun.file(path).text())
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+
 /** The other replicas' addresses, resolved on demand and kept for a while; none while the name does not resolve. */
 export const createPeerResolver = ({
 	ctx = {},
@@ -39,6 +48,7 @@ export const createPeerResolver = ({
 } = {}): PeerResolver => {
 	const serviceName = ctx.serviceName ?? PEER_SERVICE_NAME;
 	const resolve = ctx.resolve ?? resolveWithDns;
+	const { peersFile } = ctx;
 	const own = ctx.own ?? ownAddresses;
 	const now = ctx.now ?? Date.now;
 	let known: string[] = [];
@@ -48,9 +58,10 @@ export const createPeerResolver = ({
 	async function refresh(): Promise<string[]> {
 		const mine = new Set(own());
 		try {
-			known = (await resolve(serviceName)).filter(
-				(address) => !mine.has(address),
-			);
+			const addresses = peersFile
+				? await readPeersFile(peersFile)
+				: await resolve(serviceName);
+			known = addresses.filter((address) => !mine.has(address));
 		} catch {
 			known = [];
 		}
