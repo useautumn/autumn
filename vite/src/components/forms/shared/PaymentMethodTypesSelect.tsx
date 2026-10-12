@@ -86,6 +86,7 @@ export function PaymentMethodTypesSelect({
 					{options.map((option) => (
 						<DropdownMenuCheckboxItem
 							key={option.value}
+							className="cursor-pointer"
 							checked={selected.includes(option.value)}
 							onCheckedChange={(checked) =>
 								toggle({ type: option.value, checked })
