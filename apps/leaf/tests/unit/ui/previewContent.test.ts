@@ -224,8 +224,13 @@ describe("invoice approval cards", () => {
 		},
 	};
 
-	test("void, pay and finalize cards show the invoice's lines, total and status", () => {
-		for (const toolName of ["voidInvoice", "payInvoice", "finalizeInvoice"]) {
+	test("void, pay, finalize and update cards show the invoice's lines, total and status", () => {
+		for (const toolName of [
+			"voidInvoice",
+			"payInvoice",
+			"finalizeInvoice",
+			"updateInvoice",
+		]) {
 			const json = JSON.stringify(
 				approvalCard({
 					id: "approval_1",

@@ -20,6 +20,7 @@ const labels: Record<string, string> = {
 	updateAgentRules: "Update agent rules",
 	updateCatalog: "Update catalog",
 	updateCustomer: "Update customer",
+	updateInvoice: "Update invoice payment methods",
 	updatePlan: "Update plan",
 	updateSubscription: "Update subscription",
 	voidInvoice: "Void invoice",
@@ -98,6 +99,7 @@ const gerunds: Record<string, string> = {
 	finalizeInvoice: "Finalizing the invoice",
 	payInvoice: "Marking the invoice paid",
 	voidInvoice: "Voiding the invoice",
+	updateInvoice: "Updating the invoice payment methods",
 	load_skill: "Reading a playbook",
 };
 
