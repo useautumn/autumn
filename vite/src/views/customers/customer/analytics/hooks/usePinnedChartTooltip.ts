@@ -9,7 +9,6 @@ import {
 } from "react";
 import type { Row } from "../components/analytics-types";
 import type { TooltipEntry } from "../components/tooltipItemLink";
-import type { PlotInsets } from "../utils/chartGeometry";
 import type { ChartSeriesConfig } from "../utils/transformGroupedChartData";
 import { useSegmentHoverDim } from "./useSegmentHoverDim";
 
@@ -20,11 +19,9 @@ import { useSegmentHoverDim } from "./useSegmentHoverDim";
 export const usePinnedChartTooltip = ({
 	data,
 	chartConfig,
-	onGeometry,
 }: {
 	data: { data: Row[] };
 	chartConfig: ChartSeriesConfig[];
-	onGeometry?: (insets: PlotInsets) => void;
 }) => {
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 	// The period key, not the row: a refetch replaces every row object, and a
@@ -100,12 +97,6 @@ export const usePinnedChartTooltip = ({
 				return;
 			}
 			plotXRef.current = { left: g.left - c.left, width: g.width };
-			onGeometry?.({
-				left: Math.round(g.left - c.left),
-				right: Math.round(c.right - g.right),
-				top: Math.round(g.top - c.top),
-				bottom: Math.round(c.bottom - g.bottom),
-			});
 		};
 		measureRef.current = measure;
 		measure();
@@ -115,7 +106,7 @@ export const usePinnedChartTooltip = ({
 			observer.disconnect();
 			measureRef.current = null;
 		};
-	}, [onGeometry, data]);
+	}, [data]);
 
 	// Segment hover narrows the tooltip to that series; the active COLUMN is
 	// resolved from the cursor's x against the measured plot area, so hovering

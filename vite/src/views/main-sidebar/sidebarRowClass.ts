@@ -35,7 +35,27 @@ export const SIDEBAR_SECTION_HEADER_CLASS =
 	"flex h-6 cursor-pointer items-center gap-1 self-start rounded-md px-2.5 text-xs font-medium leading-4 text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:text-[#7A7A7A] dark:hover:text-[#B4B4B4]";
 
 export const SIDEBAR_HEADER_ICON_BUTTON_CLASS =
-	"flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-md text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:text-[#7A7A7A] dark:hover:text-[#EDEDED]";
+	"flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[#8A8A8A] outline-none transition-colors duration-150 ease-out hover:bg-black/[0.05] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:text-[#7A7A7A] dark:hover:bg-white/[0.06] dark:hover:text-[#EDEDED]";
+
+/** The expanded width is set once here; desktop and the mobile sheet both read the var. */
+const SIDEBAR_EXPANDED_WIDTH_VAR = "[--sidebar-expanded-width:216px]";
+
+export const sidebarWidthClass = ({
+	expanded,
+	isMobileSheet,
+}: {
+	expanded: boolean;
+	isMobileSheet: boolean;
+}) => {
+	if (isMobileSheet)
+		return cn(SIDEBAR_EXPANDED_WIDTH_VAR, "min-w-(--sidebar-expanded-width)");
+	if (expanded)
+		return cn(
+			SIDEBAR_EXPANDED_WIDTH_VAR,
+			"min-w-(--sidebar-expanded-width) max-w-(--sidebar-expanded-width)",
+		);
+	return "min-w-[52px] max-w-[52px]";
+};
 
 /** Label sits after the icon when expanded and takes no space when the rail is collapsed. */
 export const sidebarRowContentClass = ({

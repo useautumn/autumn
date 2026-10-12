@@ -196,6 +196,7 @@ const createScope = ({
 			catalogCache,
 			db,
 			writer: {
+				waitForEvicted: () => null,
 				adopt: () => {
 					throw new Error("not exercised");
 				},

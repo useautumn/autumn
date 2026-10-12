@@ -97,7 +97,8 @@ export const BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION = 2;
 export const BALANCE_WORKER_REQUEST_LOG_SAMPLE_RATE = 0.05;
 
 /** Off: the committer lands every update and increment unconditionally, so a record on the log is a row in Postgres.
- *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop. */
+ *  A guard only fails when a writer outside the worker changed the row, which is a product bug to fix, not a write to drop.
+ *  A reset's refill is guarded either way: a billing write that moved the row's cycle supersedes it, and it is skipped. */
 export const BALANCE_WORKER_COMMITTER_GUARDS_ENABLED = false;
 
 /** On: an evict appends an empty record so the log's readers (herald's cache) learn Postgres changed.

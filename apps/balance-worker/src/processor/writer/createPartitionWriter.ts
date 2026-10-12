@@ -159,6 +159,14 @@ export function createPartitionWriter({
 		return evictCustomer({ scope, customerKey });
 	}
 
+	function waitForEvicted({
+		customerKey,
+	}: Parameters<PartitionWriter["waitForEvicted"]>[0]) {
+		return scope.state.subjects.isEvicting({ customerKey })
+			? allStored({ state: scope.state })
+			: null;
+	}
+
 	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
 		return adoptState({ scope, ...params });
 	}
@@ -185,6 +193,7 @@ export function createPartitionWriter({
 		waitForStore,
 		snapshotStore,
 		waitForApplies,
+		waitForEvicted,
 		decide,
 		decideHeld,
 		decideHeldGroup,

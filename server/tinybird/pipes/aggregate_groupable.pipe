@@ -644,9 +644,12 @@ SQL >
 
 NODE period_totals
 DESCRIPTION >
-    Per-period totals for the server-ranked top groups (kind = 'top') and the whole org (kind = 'org').
+    Per-period totals for the server-ranked top groups (kind = 'top') plus either the whole org
+    (kind = 'org', customers) or everything outside the top groups (kind = 'rest', properties).
 SQL >
     %
+    {# use_daily_rollup is server-set only for UTC day-or-coarser bins, where UTC days align with periods. #}
+    {% set daily_series = defined(use_daily_rollup) and String(use_daily_rollup, '0') == '1' %}
     WITH
         toDateTime({{ String(start_date, '2024-01-01 00:00:00') }}) AS window_start,
         toDateTime({{ String(end_date, '2024-12-31 23:59:59') }}) AS window_end,
@@ -659,15 +662,53 @@ SQL >
         {% end %}
         if(end_is_live, addHours(toStartOfHour(window_end), 1), toStartOfHour(window_end)) AS full_hours_end,
         {% if String(group_column, 'property') == 'property' %}
+        if(full_hours_start = toStartOfDay(full_hours_start), toStartOfDay(full_hours_start), addDays(toStartOfDay(full_hours_start), 1)) AS full_days_start,
+        toStartOfDay(full_hours_end) AS full_days_end,
         arrayZip({{ Array(top_event_names, 'String', default='') }}, {{ Array(top_property_values, 'String', default='') }}) AS top_pairs
         {% else %}
         arrayZip({{ Array(top_event_names, 'String', default='') }}, {{ Array(top_customer_ids, 'String', default='') }}) AS top_pairs
         {% end %}
     {% if String(group_column, 'property') == 'property' %}
-    SELECT kind, period, event_name, group_value, sum(value) AS total_value, sum(count) AS event_count
+    {# One pass per source: top values keep their own group, everything else lands in ''.
+       The IN set check runs first so the pair lookup only sees candidate rows. #}
+    SELECT
+        if(group_value = '', 'rest', 'top') AS kind,
+        period,
+        event_name,
+        group_value,
+        sum(value) AS total_value,
+        sum(count) AS event_count
     FROM (
+        {% if daily_series %}
         SELECT
-            'top' AS kind,
+            {% if String(bin_size, 'day') == 'hour' %}
+            formatDateTime(day, '%F %T') AS period,
+            {% elif String(bin_size, 'day') == 'month' %}
+            formatDateTime(toStartOfMonth(day, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
+            {% elif String(bin_size, 'day') == 'week' %}
+            formatDateTime(toStartOfWeek(day, 1, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
+            {% else %}
+            formatDateTime(toStartOfDay(day, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
+            {% end %}
+            event_name,
+            if(property_value IN {{ Array(top_property_values, 'String', default='') }} AND has(top_pairs, (event_name, property_value)), property_value, '') AS group_value,
+            sumMerge(total_value) AS value,
+            sumMerge(event_count) AS count
+        FROM events_org_property_daily_mv
+        WHERE
+            org_id = {{ String(org_id, '') }}
+            AND env = {{ String(env, 'test') }}
+            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+            AND property_key = {{ String(property_key, '') }}
+            AND property_value != ''
+            AND day >= full_days_start
+            AND day < full_days_end
+        GROUP BY period, event_name, group_value
+
+        UNION ALL
+
+        {% end %}
+        SELECT
             {% if String(bin_size, 'day') == 'hour' %}
             formatDateTime(hour, '%F %T') AS period,
             {% elif String(bin_size, 'day') == 'month' %}
@@ -678,7 +719,7 @@ SQL >
             formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
             {% end %}
             event_name,
-            property_value AS group_value,
+            if(property_value IN {{ Array(top_property_values, 'String', default='') }} AND has(top_pairs, (event_name, property_value)), property_value, '') AS group_value,
             sumMerge(total_value) AS value,
             sumMerge(event_count) AS count
         FROM events_org_property_hourly_mv
@@ -690,42 +731,14 @@ SQL >
             AND property_value != ''
             AND hour >= full_hours_start
             AND hour < full_hours_end
-            AND property_value IN {{ Array(top_property_values, 'String', default='') }}
-            AND has(top_pairs, (event_name, property_value))
-        GROUP BY kind, period, event_name, group_value
-
-        UNION ALL
-
-        SELECT
-            'org' AS kind,
-            {% if String(bin_size, 'day') == 'hour' %}
-            formatDateTime(hour, '%F %T') AS period,
-            {% elif String(bin_size, 'day') == 'month' %}
-            formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
-            {% elif String(bin_size, 'day') == 'week' %}
-            formatDateTime(toStartOfWeek(hour, 1, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
-            {% else %}
-            formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
+            {% if daily_series %}
+            AND NOT (hour >= full_days_start AND hour < full_days_end)
             {% end %}
-            event_name,
-            '' AS group_value,
-            sumMerge(total_value) AS value,
-            sumMerge(event_count) AS count
-        FROM events_org_property_hourly_mv
-        WHERE
-            org_id = {{ String(org_id, '') }}
-            AND env = {{ String(env, 'test') }}
-            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND property_key = {{ String(property_key, '') }}
-            AND property_value != ''
-            AND hour >= full_hours_start
-            AND hour < full_hours_end
-        GROUP BY kind, period, event_name, group_value
+        GROUP BY period, event_name, group_value
 
         UNION ALL
 
         SELECT
-            'top' AS kind,
             {% if String(bin_size, 'day') == 'hour' %}
             formatDateTime(toStartOfHour(timestamp), '%F %T') AS period,
             {% elif String(bin_size, 'day') == 'month' %}
@@ -736,9 +749,9 @@ SQL >
             formatDateTime(toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
             {% end %}
             event_name,
-            {{ column('properties.' + String(property_key, '')) }}::String AS group_value,
-            toFloat64(coalesce(value, 1)) AS value,
-            toUInt64(1) AS count
+            if({{ column('properties.' + String(property_key, '')) }}::String IN {{ Array(top_property_values, 'String', default='') }} AND has(top_pairs, (event_name, {{ column('properties.' + String(property_key, '')) }}::String)), {{ column('properties.' + String(property_key, '')) }}::String, '') AS group_value,
+            sum(toFloat64(coalesce(value, 1))) AS value,
+            count() AS count
         FROM events
         WHERE
             org_id = {{ String(org_id, '') }}
@@ -748,42 +761,11 @@ SQL >
             AND timestamp <= window_end
             AND (
                 (window_start < full_hours_start AND timestamp < full_hours_start)
-                OR (NOT end_is_live AND timestamp >= full_hours_end)
+                OR timestamp >= full_hours_end
             )
             AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
             AND {{ column('properties.' + String(property_key, '')) }}::String != ''
-            AND has(top_pairs, (event_name, {{ column('properties.' + String(property_key, '')) }}::String))
-
-        UNION ALL
-
-        SELECT
-            'org' AS kind,
-            {% if String(bin_size, 'day') == 'hour' %}
-            formatDateTime(toStartOfHour(timestamp), '%F %T') AS period,
-            {% elif String(bin_size, 'day') == 'month' %}
-            formatDateTime(toStartOfMonth(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
-            {% elif String(bin_size, 'day') == 'week' %}
-            formatDateTime(toStartOfWeek(timestamp, 1, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
-            {% else %}
-            formatDateTime(toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') AS period,
-            {% end %}
-            event_name,
-            '' AS group_value,
-            toFloat64(coalesce(value, 1)) AS value,
-            toUInt64(1) AS count
-        FROM events
-        WHERE
-            org_id = {{ String(org_id, '') }}
-            AND env = {{ String(env, 'test') }}
-            AND event_name IN {{ Array(event_names, 'String', default='[]') }}
-            AND timestamp >= window_start
-            AND timestamp <= window_end
-            AND (
-                (window_start < full_hours_start AND timestamp < full_hours_start)
-                OR (NOT end_is_live AND timestamp >= full_hours_end)
-            )
-            AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
-            AND {{ column('properties.' + String(property_key, '')) }}::String != ''
+        GROUP BY period, event_name, group_value
     )
     GROUP BY kind, period, event_name, group_value
     {% else %}
@@ -904,7 +886,7 @@ SQL >
 
 NODE rank_first_rows
 DESCRIPTION >
-    Top groups as-is; AUTUMN_RESERVED is org minus top per period, kept only when non-empty.
+    Top groups as-is; AUTUMN_RESERVED is org minus top (or the rest as-is) per period, kept only when non-empty.
 SQL >
     %
     SELECT period, event_name, group_value, total_value, event_count, _truncated
@@ -914,9 +896,9 @@ SQL >
             event_name,
             kind,
             if(kind = 'top', group_value, 'AUTUMN_RESERVED') AS group_value,
-            if(kind = 'top', total_value, total_value - top_value) AS total_value,
-            if(kind = 'top', toInt64(event_count), toInt64(event_count) - top_count) AS event_count,
-            kind = 'org' AS _truncated
+            multiIf(kind = 'org', total_value - top_value, total_value) AS total_value,
+            multiIf(kind = 'org', toInt64(event_count) - top_count, toInt64(event_count)) AS event_count,
+            kind != 'top' AS _truncated
         FROM (
             SELECT
                 *,

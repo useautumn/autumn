@@ -3,6 +3,7 @@ import {
 	applyMutation,
 	computeTrack,
 	type MeteringIdentity,
+	meteringIdentityToPartitionKey,
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import type { SubjectSnapshotMode } from "@autumn/edge-config";
@@ -28,6 +29,7 @@ const identity: MeteringIdentity = {
 	entityId: null,
 };
 const other: MeteringIdentity = { ...identity, customerId: "cus_other" };
+const customerKey = meteringIdentityToPartitionKey({ identity });
 
 const decideTrack = ({
 	state,
@@ -149,5 +151,60 @@ describe("a subject's rows stay resident until the store holds its record", () =
 		expect(
 			writer.readFreshestState({ identity })?.customerEntitlements[0]?.balance,
 		).toBe(98);
+	});
+});
+
+describe("an evict while the customer's write is unapplied", () => {
+	test("the evicted rows are unreadable at once, so the next command cannot decide on them", async () => {
+		const { writer, applyGate, track } = createWriter();
+		writer.adopt({ state: createState({ identity, balance: 100 }) });
+		const held = Promise.withResolvers<void>();
+		applyGate.held = held.promise;
+		await track("t1").waitForCommit();
+
+		const evicted = writer.evict({ customerKey });
+
+		expect(writer.readFreshestState({ identity })).toBeNull();
+		// The next command finds no rows to decide on; the processor would load them afresh.
+		expect(() => track("t2")).toThrow("Expected resident state");
+		held.resolve();
+		await evicted;
+	});
+
+	test("the customer's next load waits until the dropped write is stored, and the rows it reads stay resident", async () => {
+		const { writer, applyGate, track } = createWriter();
+		writer.adopt({ state: createState({ identity, balance: 100 }) });
+		const held = Promise.withResolvers<void>();
+		applyGate.held = held.promise;
+		await track("t1").waitForCommit();
+		void writer.evict({ customerKey });
+
+		let stored = false;
+		const eviction = writer.waitForEvicted({ customerKey })?.then(() => {
+			stored = true;
+		});
+		await Promise.resolve();
+		expect(eviction).toBeDefined();
+		expect(stored).toBe(false);
+
+		held.resolve();
+		await eviction;
+		expect(writer.waitForEvicted({ customerKey })).toBeNull();
+		// What a cold load reads now: Postgres holding t1 and whatever the evicting writer changed.
+		writer.adopt({ state: createState({ identity, balance: 50 }) });
+		expect(
+			writer.readFreshestState({ identity })?.customerEntitlements[0]?.balance,
+		).toBe(50);
+	});
+
+	test("a pinned customer that was never evicted loads without waiting", async () => {
+		const { writer, applyGate, track } = createWriter();
+		writer.adopt({ state: createState({ identity, balance: 100 }) });
+		const held = Promise.withResolvers<void>();
+		applyGate.held = held.promise;
+		await track("t1").waitForCommit();
+
+		expect(writer.waitForEvicted({ customerKey })).toBeNull();
+		held.resolve();
 	});
 });
