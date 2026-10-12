@@ -1,6 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
 import { isPrepaidPrice } from "../../productUtils/priceUtils/classifyPriceUtils";
+import { sumValues } from "../../utils";
 import { cusEntsToAllowance } from "../balanceUtils/grantedBalanceUtils/cusEntsToAllowance";
 import {
 	isEntityScopedCusEnt,
@@ -14,12 +15,11 @@ const cusEntToUnusedEntityAllowance = ({
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 }) =>
-	Object.values(cusEnt.entities ?? {})
-		.reduce(
-			(unused, entity) => unused.add(Decimal.max(0, entity.balance)),
-			new Decimal(0),
-		)
-		.toNumber();
+	sumValues(
+		Object.values(cusEnt.entities ?? {}).map((entity) =>
+			Math.max(0, entity.balance),
+		),
+	);
 
 /** The quantity a cus ent's price is billed on. Volume tiers price total usage
  * (paid + included), as Stripe does; other prices take the paid quantity as is. */

@@ -1,7 +1,7 @@
 /**
- * Tiered usage is billed as one Stripe invoice line per band (quantity × rate), with a
- * volume tier's flat fee on its own line, and the upcoming-invoice preview lists the
- * same lines. Every case advances one cycle and compares the renewal invoice to the preview.
+ * Tiered usage is billed as one Stripe invoice line per price. A volume line names the tier
+ * total usage lands in and bills quantity × rate when exact; graduated lines are as on dev.
+ * Every case advances one cycle and compares the renewal invoice to the preview.
  */
 
 import { expect, test } from "bun:test";
@@ -82,7 +82,7 @@ test.concurrent(
 			tracks: [{ featureId: TestFeature.Messages, value: 150 }],
 			expectedLines: (productName) => [
 				{
-					description: `${productName} · Messages — 150 @ $0.50 (volume tier 141+)`,
+					description: `${productName} - Messages: 150 @ $0.50 (volume tier 141+)`,
 					amount: 75,
 					quantity: 150,
 					unitAmountDecimal: "50",
@@ -93,7 +93,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("tier-lines 2: graduated, used 800 → 500 × $0.10 + 300 × $0.05")}`,
+	`${chalk.yellowBright("tier-lines 2: graduated, used 800 → one line, 1 × $65 as on dev")}`,
 	async () => {
 		await runRenewal({
 			customerId: "tier-lines-graduated",
@@ -101,16 +101,10 @@ test.concurrent(
 			tracks: [{ featureId: TestFeature.Messages, value: 800 }],
 			expectedLines: (productName) => [
 				{
-					description: `${productName} · Messages — 500 @ $0.10 (tier 1–500)`,
-					amount: 50,
-					quantity: 500,
-					unitAmountDecimal: "10",
-				},
-				{
-					description: `${productName} · Messages — 300 @ $0.05 (tier 501+)`,
-					amount: 15,
-					quantity: 300,
-					unitAmountDecimal: "5",
+					description: `${productName} - 800 Messages`,
+					amount: 65,
+					quantity: 1,
+					previewQuantity: 800,
 				},
 			],
 		});
@@ -118,7 +112,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("tier-lines 3: volume flat_amount, used 800 → 800 × $0.05 + a $25 tier fee line")}`,
+	`${chalk.yellowBright("tier-lines 3: volume flat_amount, used 800 → one 1 × $65 line naming the rate and fee")}`,
 	async () => {
 		await runRenewal({
 			customerId: "tier-lines-volume-flat",
@@ -131,16 +125,10 @@ test.concurrent(
 			tracks: [{ featureId: TestFeature.Messages, value: 800 }],
 			expectedLines: (productName) => [
 				{
-					description: `${productName} · Messages — 800 @ $0.05 (volume tier 501+)`,
-					amount: 40,
-					quantity: 800,
-					unitAmountDecimal: "5",
-				},
-				{
-					description: `${productName} · Messages — volume tier 501+ flat fee`,
-					amount: 25,
+					description: `${productName} - Messages: 800 @ $0.05 + $25.00 flat (volume tier 501+)`,
+					amount: 65,
 					quantity: 1,
-					unitAmountDecimal: "2500",
+					previewQuantity: 800,
 				},
 			],
 		});
@@ -148,7 +136,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("tier-lines 4: graduated credit system, 500 action1 = 100 credits → 50 × $0.10 + 50 × $0.05")}`,
+	`${chalk.yellowBright("tier-lines 4: graduated credit system, 500 action1 = 100 credits → one $7.50 line as on dev")}`,
 	async () => {
 		await runRenewal({
 			customerId: "tier-lines-credits",
@@ -164,16 +152,10 @@ test.concurrent(
 			tracks: [{ featureId: TestFeature.Action1, value: 500 }],
 			expectedLines: (productName) => [
 				{
-					description: `${productName} · Credits — 50 @ $0.10 (tier 1–50)`,
-					amount: 5,
-					quantity: 50,
-					unitAmountDecimal: "10",
-				},
-				{
-					description: `${productName} · Credits — 50 @ $0.05 (tier 51+)`,
-					amount: 2.5,
-					quantity: 50,
-					unitAmountDecimal: "5",
+					description: `${productName} - 100 Credits`,
+					amount: 7.5,
+					quantity: 1,
+					previewQuantity: 100,
 				},
 			],
 		});
@@ -214,83 +196,8 @@ test.concurrent(
 	},
 );
 
-const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_3 });
-
 test.concurrent(
-	`${chalk.yellowBright("tier-lines 6: threshold settlement describes the 50 units charged, not starting balance + 50")}`,
-	async () => {
-		const planId = `tier_lines_threshold_${Math.random().toString(36).slice(2, 9)}`;
-		const planName = "Threshold lines";
-		await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
-			plan_id: planId,
-			name: planName,
-			items: [
-				{
-					feature_id: TestFeature.Messages,
-					included: 100,
-					price: {
-						amount: 0.5,
-						interval: BillingInterval.Month,
-						billing_method: BillingMethod.UsageBased,
-					},
-					threshold_billing: { threshold: 50 },
-				},
-			],
-		});
-
-		const { customerId, autumnV2_3, ctx } = await initScenario({
-			customerId: `tier-lines-threshold-${Math.random().toString(36).slice(2, 8)}`,
-			setup: [s.customer({ paymentMethod: "success" })],
-			actions: [],
-		});
-		await autumnV2_3.billing.attach({
-			customer_id: customerId,
-			plan_id: planId,
-		});
-		await autumnV2_3.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 160,
-		});
-
-		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		const invoices = await pollUntil({
-			fetch: () =>
-				ctx.stripeCli.invoices.list({
-					customer: customer.stripe_id as string,
-				}),
-			// The invoice exists before its lines are added, so wait for its total.
-			until: ({ data }) =>
-				data.some(
-					(invoice) =>
-						invoice.metadata?.autumn_action_source === "threshold_billing" &&
-						invoice.total > 0,
-				),
-			timeoutMs: 60_000,
-		});
-		const settlementInvoice = invoices.data.find(
-			(invoice) =>
-				invoice.metadata?.autumn_action_source === "threshold_billing",
-		);
-		expect(settlementInvoice?.total).toBe(2500);
-
-		expectStripeUsageLines({
-			stripeLines: settlementInvoice!.lines.data,
-			expectedLines: [
-				{
-					description: `${planName} · Messages — 50 @ $0.50`,
-					amount: 25,
-					quantity: 50,
-					unitAmountDecimal: "50",
-				},
-			],
-		});
-	},
-	{ timeout: 120_000 },
-);
-
-test.concurrent(
-	`${chalk.yellowBright("tier-lines 7: bands that split a billing-units pack bill 1 × the exact total, rate in the description")}`,
+	`${chalk.yellowBright("tier-lines 7: graduated billing units, 250 used → one line as on dev")}`,
 	async () => {
 		// 250 used rounds to 3 packs; the 150-unit tier boundary leaves 1.5 packs per band.
 		await runRenewal({
@@ -305,18 +212,10 @@ test.concurrent(
 			tracks: [{ featureId: TestFeature.Messages, value: 250 }],
 			expectedLines: (productName) => [
 				{
-					description: `${productName} · Messages — 150 @ $5.00 per 100 (tier 1–150)`,
-					amount: 7.5,
+					description: `${productName} - `,
+					amount: 12,
 					quantity: 1,
-					unitAmountDecimal: "750",
-					previewQuantity: 150,
-				},
-				{
-					description: `${productName} · Messages — 150 @ $3.00 per 100 (tier 151+)`,
-					amount: 4.5,
-					quantity: 1,
-					unitAmountDecimal: "450",
-					previewQuantity: 150,
+					previewQuantity: 250,
 				},
 			],
 		});

@@ -49,7 +49,7 @@ const createPrice = ({
 	} as Price;
 };
 
-const priceVolumeLine = ({
+const buildVolumeLine = ({
 	kind = "consumable",
 	tiers,
 	allowance,
@@ -112,8 +112,15 @@ const priceVolumeLine = ({
 		billingTiming: "in_arrear",
 	} as LineItemContext;
 
-	return usagePriceToLineItem({ cusEnt, context }).amount;
+	return usagePriceToLineItem({
+		cusEnt,
+		context,
+		options: { includePeriodDescription: false },
+	});
 };
+
+const priceVolumeLine = (params: Parameters<typeof buildVolumeLine>[0]) =>
+	buildVolumeLine(params).amount;
 
 const SINGLE_TIER = [{ to: "inf", amount: 0.5 }] as UsageTier[];
 
@@ -284,5 +291,52 @@ describe("usagePriceToLineItem: prepaid volume is unchanged", () => {
 				prepaidQuantity: 2,
 			}),
 		).toBe(30);
+	});
+});
+
+describe("usagePriceToLineItem: one volume line", () => {
+	test("names the tier total usage lands in and prices it per unit", () => {
+		const line = buildVolumeLine({
+			tiers: [
+				{ to: 100, amount: 1 },
+				{ to: "inf", amount: 0.5 },
+			] as UsageTier[],
+			allowance: 100,
+			balance: -50,
+		});
+
+		// Stored tiers sit above the 100 included, so 150 lands in 101–200 at $1.
+		expect(line.amount).toBe(150);
+		expect(line.description).toBe(
+			"Pro - Messages: 150 @ $1.00 (volume tier 101–200)",
+		);
+		expect(line.unitPricing).toEqual({ quantity: 150, unitAmount: 1 });
+	});
+
+	test("adds the tier's flat fee to the description, still one line", () => {
+		const line = buildVolumeLine({
+			tiers: [
+				{ to: 100, amount: 0.4, flat_amount: 5 },
+				{ to: "inf", amount: 0.25, flat_amount: 20 },
+			] as UsageTier[],
+			allowance: 0,
+			balance: -300,
+		});
+
+		expect(line.amount).toBe(95);
+		expect(line.description).toBe(
+			"Pro - Messages: 300 @ $0.25 + $20.00 flat (volume tier 101+)",
+		);
+	});
+
+	test("within the included amount keeps the plain usage description and no unit pricing", () => {
+		const line = buildVolumeLine({
+			tiers: SINGLE_TIER,
+			allowance: 100,
+			balance: 20,
+		});
+
+		expect(line.amount).toBe(0);
+		expect(line.unitPricing).toBeUndefined();
 	});
 });

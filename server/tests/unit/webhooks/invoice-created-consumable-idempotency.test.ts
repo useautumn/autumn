@@ -63,8 +63,6 @@ const addLinesCalls: Array<{
 	lines: Array<{ metadata?: { autumn_line_item_id?: string } }>;
 }> = [];
 const landedLineItemIds: string[] = [];
-const removeLinesCalls: Array<{ invoiceId: string; lineItemIds: string[] }> =
-	[];
 const updateLineCalls: Array<{
 	lineItemId: string;
 	params: { amount?: number; metadata?: Record<string, string> };
@@ -234,16 +232,6 @@ await mockModuleWithRestore(
 			});
 			return { id: args.invoiceItemId };
 		},
-		removeStripeInvoiceLines: async (args: {
-			invoiceId: string;
-			lineItemIds: string[];
-		}) => {
-			removeLinesCalls.push({
-				invoiceId: args.invoiceId,
-				lineItemIds: args.lineItemIds,
-			});
-			return { id: args.invoiceId };
-		},
 		updateStripeInvoiceLine: async (args: {
 			lineItemId: string;
 			params: { amount?: number; metadata?: Record<string, string> };
@@ -358,7 +346,6 @@ describe("invoice.created consumable idempotency", () => {
 		pendingCarryItems = [];
 		updateInvoiceItemCalls.length = 0;
 		updateLineCalls.length = 0;
-		removeLinesCalls.length = 0;
 		errorLogs.length = 0;
 		addLinesShouldDropLastLine = false;
 	});
@@ -447,156 +434,6 @@ describe("invoice.created consumable idempotency", () => {
 		expect(plan.build().updateCustomerEntitlements).toMatchObject([
 			{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
 		]);
-	});
-
-	describe("a retry that prices usage into different tier bands", () => {
-		const usageBand = (amount: number) =>
-			makeLineItem("invoice_li_usage_invoice_retry_tiered", amount);
-		const tierBand = (amount: number) =>
-			makeLineItem("invoice_li_tier_invoice_retry_tiered_1", amount);
-
-		test("removes a band no longer billed from a draft invoice", async () => {
-			consumableLineItems = [usageBand(75)];
-			liveStripeLineItemIds = [usageBand(80).id, tierBand(10).id];
-			liveStripeLineMinorAmounts = {
-				[usageBand(80).id]: 8_000,
-				[tierBand(10).id]: 1_000,
-			};
-
-			await processConsumablePricesForInvoiceCreated({
-				plan,
-				ctx,
-				eventContext: makeEventContext(),
-			});
-
-			expect(removeLinesCalls).toEqual([
-				{ invoiceId: "invoice_retry", lineItemIds: [`il_${tierBand(10).id}`] },
-			]);
-			expect(updateLineCalls.map((call) => call.params.amount)).toEqual([75]);
-		});
-
-		test("carries the net delta of the whole price on a finalized invoice when a band vanished", async () => {
-			consumableLineItems = [usageBand(75)];
-			liveStripeLineItemIds = [
-				usageBand(80).id,
-				tierBand(10).id,
-				...creditLineItems.map((lineItem) => lineItem.id),
-			];
-			liveStripeLineMinorAmounts = {
-				[usageBand(80).id]: 8_000,
-				[tierBand(10).id]: 1_000,
-			};
-
-			await processConsumablePricesForInvoiceCreated({
-				plan,
-				ctx,
-				eventContext: makeEventContext({ invoiceStatus: "paid" }),
-			});
-
-			// Billed $90 across two bands, now worth $75: carry -$15, not -$5.
-			expect(createInvoiceItemCalls).toEqual([
-				expect.objectContaining({
-					amount: -1_500,
-					metadata: {
-						autumn_line_item_id: `${usageBand(75).id}_carry`,
-						autumn_line_amount: "-15",
-					},
-				}),
-			]);
-			expect(plan.build().updateCustomerEntitlements).toMatchObject([
-				{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
-			]);
-		});
-
-		test("carries a newly reached band on a finalized invoice instead of refusing the reset", async () => {
-			consumableLineItems = [usageBand(100), tierBand(25)];
-			liveStripeLineItemIds = [
-				usageBand(100).id,
-				...creditLineItems.map((lineItem) => lineItem.id),
-			];
-			liveStripeLineMinorAmounts = { [usageBand(100).id]: 10_000 };
-
-			await processConsumablePricesForInvoiceCreated({
-				plan,
-				ctx,
-				eventContext: makeEventContext({ invoiceStatus: "open" }),
-			});
-
-			expect(addLinesCalls).toEqual([]);
-			expect(createInvoiceItemCalls).toEqual([
-				expect.objectContaining({
-					amount: 2_500,
-					metadata: {
-						autumn_line_item_id: `${usageBand(100).id}_carry`,
-						autumn_line_amount: "25",
-					},
-				}),
-			]);
-			expect(plan.build().updateCustomerEntitlements).toMatchObject([
-				{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
-			]);
-		});
-		test("carries a stale band under the price's one carry id, so a later retry replaces it", async () => {
-			consumableLineItems = [usageBand(100), tierBand(30)];
-			liveStripeLineItemIds = [
-				usageBand(100).id,
-				tierBand(25).id,
-				...creditLineItems.map((lineItem) => lineItem.id),
-			];
-			liveStripeLineMinorAmounts = {
-				[usageBand(100).id]: 10_000,
-				[tierBand(25).id]: 2_500,
-			};
-
-			await processConsumablePricesForInvoiceCreated({
-				plan,
-				ctx,
-				eventContext: makeEventContext({ invoiceStatus: "paid" }),
-			});
-
-			expect(createInvoiceItemCalls).toEqual([
-				expect.objectContaining({
-					amount: 500,
-					metadata: {
-						autumn_line_item_id: `${usageBand(100).id}_carry`,
-						autumn_line_amount: "5",
-					},
-				}),
-			]);
-		});
-
-		test("treats a finalized invoice's pre-scoped usage line as the whole price when it now splits into bands", async () => {
-			const legacyLineId = "invoice_li_2abc_random";
-			consumableLineItems = [usageBand(80), tierBand(15)];
-			liveStripeLineItemIds = [
-				legacyLineId,
-				...creditLineItems.map((lineItem) => lineItem.id),
-			];
-			liveStripeLineMinorAmounts = { [legacyLineId]: 9_000 };
-			liveStripeLineCustomerPriceIds = {
-				[legacyLineId]: usageBand(80).context.customerPrice.id,
-			};
-
-			await processConsumablePricesForInvoiceCreated({
-				plan,
-				ctx,
-				eventContext: makeEventContext({ invoiceStatus: "paid" }),
-			});
-
-			// Billed $90 on one line, now worth $95 across two bands: carry +$5, no throw.
-			expect(createInvoiceItemCalls).toEqual([
-				expect.objectContaining({
-					amount: 500,
-					metadata: {
-						autumn_line_item_id: `${usageBand(80).id}_carry`,
-						autumn_line_amount: "5",
-					},
-				}),
-			]);
-			expect(plan.build().updateCustomerEntitlements).toMatchObject([
-				{ customerEntitlement: { balance: 5 }, updates: { balance: 10 } },
-			]);
-		});
 	});
 
 	test("does not carry the same delta twice when the pending item already exists", async () => {

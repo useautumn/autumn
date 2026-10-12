@@ -176,12 +176,12 @@ describe("lineItemsToInvoiceAddLinesParams", () => {
 		expect(params.description).toBe("Pro · Tokens — 7 @ $0.0015");
 	});
 
-	test("a line without unit pricing bills 1 × its total", () => {
+	test("a line without unit pricing is unchanged", () => {
 		const [params] = lineItemsToInvoiceAddLinesParams({
 			lineItems: [usageLine({ amount: 20.5 })],
 		});
 
-		expect(params.quantity).toBe(1);
+		expect(params.quantity).toBeUndefined();
 		expect(params.price_data).toEqual({
 			unit_amount: 2050,
 			currency: "usd",

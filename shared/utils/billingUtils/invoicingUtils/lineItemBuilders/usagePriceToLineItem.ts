@@ -16,7 +16,9 @@ import {
 	isVolumePrice,
 } from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { usagePriceToLineDescription } from "../descriptionUtils/usagePriceToLineDescription";
+import { volumeUsageToLineDescription } from "../descriptionUtils/volumeUsageToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
+import { volumeUsageToTier } from "../lineItemUtils/volumeUsageToTier";
 import { buildLineItem } from "./buildLineItem";
 
 export const usagePriceToLineItem = ({
@@ -83,14 +85,7 @@ export const usagePriceToLineItem = ({
 		customerEntitlement: cusEnt,
 	};
 
-	// 3. Generate description
-	const description = usagePriceToLineDescription({
-		usage,
-		context: lineItemContext,
-		includePeriodDescription: options.includePeriodDescription,
-	});
-
-	// 4. Get amount
+	// 3. Get amount
 	// Pay-per-use at or below the included amount bills nothing, tier 1's flat fee included.
 	// Volume compares the customer's total, since entities can offset each other's allowance.
 	const isWithinIncluded =
@@ -105,6 +100,28 @@ export const usagePriceToLineItem = ({
 				currency: context.currency,
 			});
 
+	// 4. Generate description: billed volume usage names the one tier it lands in
+	const volumeCharge =
+		isVolumePrice(price) && !isPrepaid && !isWithinIncluded
+			? volumeUsageToTier({
+					price,
+					quantity: overage,
+					allowance,
+					currency: context.currency,
+				})
+			: undefined;
+	const description = volumeCharge
+		? volumeUsageToLineDescription({
+				...volumeCharge,
+				context: lineItemContext,
+				includePeriodDescription: options.includePeriodDescription,
+			})
+		: usagePriceToLineDescription({
+				usage,
+				context: lineItemContext,
+				includePeriodDescription: options.includePeriodDescription,
+			});
+
 	// 5. Get stripe price / product IDs
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({
 		cusEnt,
@@ -115,7 +132,7 @@ export const usagePriceToLineItem = ({
 	const shouldProrate =
 		options.shouldProrateOverride ?? !isConsumablePrice(price);
 
-	return buildLineItem({
+	const lineItem = buildLineItem({
 		context: lineItemContext,
 		amount,
 		description,
@@ -129,4 +146,16 @@ export const usagePriceToLineItem = ({
 		usage,
 		overage,
 	});
+	if (!volumeCharge) return lineItem;
+
+	// Stripe shows quantity × rate when that is exactly the amount, else 1 × total.
+	return {
+		...lineItem,
+		unitPricing: {
+			quantity: new Decimal(volumeCharge.quantity)
+				.div(price.config.billing_units ?? 1)
+				.toNumber(),
+			unitAmount: volumeCharge.tier.amount,
+		},
+	};
 };

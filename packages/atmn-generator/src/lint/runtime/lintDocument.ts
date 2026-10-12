@@ -198,6 +198,8 @@ export type LintRule =
 			readonly equals: string | boolean;
 			readonly whenEquals: Readonly<Record<string, string>>;
 			readonly whenStated: readonly string[];
+			/** At least one of these is stated; a `*` segment matches any list element. */
+			readonly whenAnyStated?: readonly string[];
 			readonly whenUnstated: readonly string[];
 			readonly because: string;
 	  }
@@ -489,8 +491,7 @@ const COMPARE = {
 	">=": { holds: (a: number, b: number) => a >= b, words: "at least" },
 } as const;
 
-/** Whether an entry matches a rule's `whenEquals`, `whenStated` and `whenUnstated`
- * paths; zero, false and null count as unstated. */
+/** Whether an entry matches a rule's `when*` paths; zero, false and null count as unstated. */
 const entryMatchesWhen = ({
 	entry,
 	rule,
@@ -498,17 +499,27 @@ const entryMatchesWhen = ({
 	entry: Entry;
 	rule: Extract<LintRule, { kind: "refusedWhen" | "targetForbids" }>;
 }): boolean => {
-	const isStated = (path: string) => {
-		const value = valueAtPath({ entry, path });
+	const isStatedValue = (value: unknown) =>
+		value !== undefined && value !== null && value !== 0 && value !== false;
+	const isStated = (path: string): boolean => {
+		const [head, tail] = path.split(".*.");
+		if (tail === undefined) return isStatedValue(valueAtPath({ entry, path }));
+		const list = valueAtPath({ entry, path: head as string });
 		return (
-			value !== undefined && value !== null && value !== 0 && value !== false
+			Array.isArray(list) &&
+			list.some((element) => isEntry(element) && isStatedValue(element[tail]))
 		);
 	};
+	const anyStated =
+		"whenAnyStated" in rule && rule.whenAnyStated
+			? rule.whenAnyStated.some(isStated)
+			: true;
 	return (
 		Object.entries(rule.whenEquals).every(
 			([path, value]) => valueAtPath({ entry, path }) === value,
 		) &&
 		rule.whenStated.every(isStated) &&
+		anyStated &&
 		!rule.whenUnstated.some(isStated)
 	);
 };

@@ -16,16 +16,10 @@ import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/provider
 import {
 	addStripeInvoiceLines,
 	createStripeInvoiceItems,
-	removeStripeInvoiceLines,
 	updateStripeInvoiceItem,
 	updateStripeInvoiceLine,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
-import {
-	ARREAR_TIER_LINE_ID_PREFIX,
-	ARREAR_USAGE_LINE_ID_PREFIX,
-	arrearLineItemIdToSetId,
-} from "@/internal/billing/v2/utils/lineItems/arrearLineItemIds";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -82,6 +76,7 @@ type ExistingAutumnLines = {
 	legacyByCustomerPriceId: Map<string, ExistingAutumnLine[]>;
 };
 
+const USAGE_LINE_ID_PREFIX = "invoice_li_usage_";
 const CREDIT_LINE_ID_PREFIX = "invoice_li_credit_";
 
 const getExistingAutumnLines = async ({
@@ -112,8 +107,7 @@ const getExistingAutumnLines = async ({
 
 		const customerPriceId = stripeLineItem.metadata?.autumn_customer_price_id;
 		const isScoped =
-			autumnLineItemId.startsWith(ARREAR_USAGE_LINE_ID_PREFIX) ||
-			autumnLineItemId.startsWith(ARREAR_TIER_LINE_ID_PREFIX) ||
+			autumnLineItemId.startsWith(USAGE_LINE_ID_PREFIX) ||
 			autumnLineItemId.startsWith(CREDIT_LINE_ID_PREFIX);
 		if (customerPriceId && !isScoped) {
 			legacyByCustomerPriceId.set(customerPriceId, [
@@ -134,7 +128,7 @@ const findExistingLine = ({
 }): ExistingAutumnLine | undefined => {
 	const byId = existingLines.byLineItemId.get(lineItem.id);
 	if (byId) return byId;
-	if (!lineItem.id.startsWith(ARREAR_USAGE_LINE_ID_PREFIX)) return undefined;
+	if (!lineItem.id.startsWith(USAGE_LINE_ID_PREFIX)) return undefined;
 	const customerPriceId = lineItem.context.customerPrice?.id;
 	const legacyLines = customerPriceId
 		? (existingLines.legacyByCustomerPriceId.get(customerPriceId) ?? [])
@@ -316,113 +310,6 @@ const reconcileStaleExistingLines = async ({
 	}
 };
 
-const sumOf = (amounts: number[]) =>
-	amounts.reduce((sum, amount) => sum + amount, 0);
-
-/** A retry can land usage in different bands, so reconcile that price as a whole set;
- * returns the line items still to reconcile one by one. */
-const reconcileChangedTierLineSets = async ({
-	ctx,
-	eventContext,
-	lineItems,
-	existingLines,
-}: {
-	ctx: StripeWebhookContext;
-	eventContext: InvoiceCreatedContext;
-	lineItems: LineItem[];
-	existingLines: ExistingAutumnLines;
-}): Promise<LineItem[]> => {
-	const { stripeInvoice } = eventContext;
-	const lineItemsBySetId = new Map<string, LineItem[]>();
-	for (const lineItem of lineItems) {
-		const setId = arrearLineItemIdToSetId({ lineItemId: lineItem.id });
-		if (!setId) continue;
-		lineItemsBySetId.set(setId, [
-			...(lineItemsBySetId.get(setId) ?? []),
-			lineItem,
-		]);
-	}
-	const settledLineItemIds = new Set<string>();
-
-	for (const [setId, setLineItems] of lineItemsBySetId) {
-		const [firstLineItem] = setLineItems;
-		if (!firstLineItem) continue;
-
-		const isFinalized = stripeInvoice.status !== "draft";
-		const scopedBands = [...existingLines.byLineItemId].filter(
-			([lineItemId]) => arrearLineItemIdToSetId({ lineItemId }) === setId,
-		);
-		// A finalized invoice's pre-scoped usage line is the whole set (a draft updates it per band).
-		const legacyLine =
-			isFinalized && scopedBands.length === 0
-				? findExistingLine({ lineItem: firstLineItem, existingLines })
-				: undefined;
-		const existingSet: [string, ExistingAutumnLine][] = legacyLine
-			? [["legacy", legacyLine]]
-			: scopedBands;
-		if (existingSet.length === 0) continue;
-
-		const setLineItemIds = new Set(setLineItems.map((lineItem) => lineItem.id));
-		const droppedBands = existingSet.filter(
-			([lineItemId]) => !setLineItemIds.has(lineItemId),
-		);
-		const hasNewBands = setLineItems.some(
-			(lineItem) => !existingLines.byLineItemId.has(lineItem.id),
-		);
-		const bandsChanged = droppedBands.length > 0 || hasNewBands;
-		// On a finalized invoice any stale band is carried at the set level, so a price has one carry.
-		const hasStaleBand = setLineItems.some((lineItem) => {
-			const existing = existingLines.byLineItemId.get(lineItem.id);
-			return existing && isExistingLineStale({ lineItem, existing });
-		});
-		const reconcilesAsSet = bandsChanged || (isFinalized && hasStaleBand);
-		if (!reconcilesAsSet) continue;
-
-		if (!isFinalized) {
-			if (droppedBands.length === 0) continue;
-			ctx.logger.info(
-				`[invoice.created] Removing ${droppedBands.length} tier lines of ${setId} no longer billed on ${stripeInvoice.id}`,
-			);
-			await removeStripeInvoiceLines({
-				stripeCli: ctx.stripeCli,
-				invoiceId: stripeInvoice.id,
-				lineItemIds: droppedBands.map(([, line]) => line.stripeLineItemId),
-			});
-			continue;
-		}
-
-		const existingBands = existingSet.map(([, line]) => line);
-		const [firstExistingBand] = existingBands;
-		if (!firstExistingBand) continue;
-
-		const hasEveryBilledAmount = existingBands.every(
-			(line) => line.billedMinor !== undefined,
-		);
-		await carryUnbilledDeltaForward({
-			ctx,
-			eventContext,
-			lineItem: {
-				...firstLineItem,
-				id: setId,
-				amount: sumOf(setLineItems.map((lineItem) => lineItem.amount)),
-				amountAfterDiscounts: sumOf(
-					setLineItems.map((lineItem) => lineItem.amountAfterDiscounts ?? 0),
-				),
-			},
-			existing: {
-				stripeLineItemId: firstExistingBand.stripeLineItemId,
-				billedMinor: hasEveryBilledAmount
-					? sumOf(existingBands.map((line) => line.billedMinor ?? 0))
-					: undefined,
-				percentOffFactor: firstExistingBand.percentOffFactor,
-			},
-		});
-		for (const lineItem of setLineItems) settledLineItemIds.add(lineItem.id);
-	}
-
-	return lineItems.filter((lineItem) => !settledLineItemIds.has(lineItem.id));
-};
-
 const addPendingLineItemsToInvoice = async ({
 	ctx,
 	eventContext,
@@ -439,19 +326,13 @@ const addPendingLineItemsToInvoice = async ({
 		ctx,
 		invoiceId: stripeInvoice.id,
 	});
-	const unsettledLineItems = await reconcileChangedTierLineSets({
+	await reconcileStaleExistingLines({
 		ctx,
 		eventContext,
 		lineItems,
 		existingLines,
 	});
-	await reconcileStaleExistingLines({
-		ctx,
-		eventContext,
-		lineItems: unsettledLineItems,
-		existingLines,
-	});
-	const pendingLineItems = unsettledLineItems.filter(
+	const pendingLineItems = lineItems.filter(
 		(lineItem) => !findExistingLine({ lineItem, existingLines }),
 	);
 

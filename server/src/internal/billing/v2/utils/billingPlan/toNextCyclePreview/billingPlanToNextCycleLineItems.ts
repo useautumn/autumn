@@ -142,14 +142,7 @@ export const billingPlanToNextCycleLineItems = ({
 		(result) => result.invoiceCreditLineItems,
 	);
 
-	// A tiered price bills one line per band but is one usage item.
-	const usageLineItemPerPrice = new Map(
-		arrearLineItems.map((lineItem) => [
-			lineItem.context.customerPrice?.id ?? lineItem.id,
-			lineItem,
-		]),
-	);
-	const previewUsageLineItems = [...usageLineItemPerPrice.values()].map(
+	const previewUsageLineItems = arrearLineItems.map(
 		lineItemToPreviewUsageLineItem,
 	);
 

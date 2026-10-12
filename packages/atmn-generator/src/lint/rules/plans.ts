@@ -49,7 +49,11 @@ export const planItemRules: LintRule[] = [
 			"price.tierBehavior": "volume",
 			"price.billingMethod": "usage_based",
 		},
-		whenStated: ["price.tiers.0.flatAmount"],
+		whenStated: [],
+		whenAnyStated: [
+			"price.tiers.0.flatAmount",
+			"price.tiers.0.additionalCurrencies.*.flatAmount",
+		],
 		whenUnstated: ["included"],
 		because:
 			"A volume-tiered allocated item needs included usage before a first-tier flatAmount: Stripe would charge that fee at 0 seats. Add included usage or move the fee to a later tier.",

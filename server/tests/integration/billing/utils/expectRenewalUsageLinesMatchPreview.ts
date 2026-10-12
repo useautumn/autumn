@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export type ExpectedUsageInvoiceLine = {
+	/** Matched as a prefix, since usage lines end with their billing period. */
 	description: string;
 	/** Major units, e.g. 75 for $75.00. */
 	amount: number;
@@ -40,6 +41,17 @@ const byDescription = <T extends { description: string | null }>(lines: T[]) =>
 		(a.description ?? "").localeCompare(b.description ?? ""),
 	);
 
+const toExpectedPrefix = ({
+	description,
+	expected,
+}: {
+	description: string | null;
+	expected?: string;
+}) =>
+	expected !== undefined && description?.startsWith(expected)
+		? expected
+		: description;
+
 /** Asserts the lines Autumn added to a Stripe invoice; Stripe doesn't keep add-lines order. */
 export const expectStripeUsageLines = ({
 	stripeLines,
@@ -57,7 +69,10 @@ export const expectStripeUsageLines = ({
 
 	expect(
 		byDescription(autumnLines).map((line, index) => ({
-			description: line.description,
+			description: toExpectedPrefix({
+				description: line.description,
+				expected: expected[index]?.description,
+			}),
 			amount: stripeToAtmnAmount({
 				amount: line.amount,
 				currency: line.currency,
@@ -111,6 +126,13 @@ export const expectRenewalUsageLinesMatchPreview = async ({
 	const previewLines = preview.line_items.filter(
 		(line: PreviewLineItem) => line.feature_id !== null,
 	);
+	const expectedPreviewLines = byDescription(
+		expectedLines.map(({ description, amount, quantity, previewQuantity }) => ({
+			description,
+			amount,
+			quantity: previewQuantity ?? quantity,
+		})),
+	);
 	expect(
 		byDescription(
 			previewLines.map((line: PreviewLineItem) => ({
@@ -118,16 +140,12 @@ export const expectRenewalUsageLinesMatchPreview = async ({
 				amount: line.subtotal,
 				quantity: line.quantity,
 			})),
-		),
-	).toEqual(
-		byDescription(
-			expectedLines.map(
-				({ description, amount, quantity, previewQuantity }) => ({
-					description,
-					amount,
-					quantity: previewQuantity ?? quantity,
-				}),
-			),
-		),
-	);
+		).map((line, index) => ({
+			...line,
+			description: toExpectedPrefix({
+				description: line.description,
+				expected: expectedPreviewLines[index]?.description,
+			}),
+		})),
+	).toEqual(expectedPreviewLines);
 };

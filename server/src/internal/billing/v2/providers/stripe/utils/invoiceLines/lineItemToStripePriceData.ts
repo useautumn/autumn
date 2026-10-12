@@ -16,7 +16,8 @@ export const lineItemToStripePriceData = ({
 
 	if (!unitPricing) {
 		return {
-			quantity: 1,
+			// Only a line that may have been split is sent quantity 1, so a retry resets it.
+			quantity: lineItem.unitPricing ? 1 : undefined,
 			price_data: {
 				unit_amount: atmnToStripeAmount({ amount: lineAmount, currency }),
 				currency,

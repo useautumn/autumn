@@ -200,9 +200,11 @@ test("a usage-based volume price needs at least two tiers", () => {
 const allocatedVolumeConfig = ({
 	included,
 	flatAmount = 5,
+	currencyFlatAmount,
 }: {
 	included?: number;
 	flatAmount?: number;
+	currencyFlatAmount?: number;
 }) =>
 	atmn({
 		features: [
@@ -227,7 +229,22 @@ const allocatedVolumeConfig = ({
 							billingMethod: "usage_based",
 							tierBehavior: "volume",
 							tiers: [
-								{ to: 10, amount: 10, flatAmount },
+								{
+									to: 10,
+									amount: 10,
+									flatAmount,
+									...(currencyFlatAmount === undefined
+										? {}
+										: {
+												additionalCurrencies: [
+													{
+														currency: "eur",
+														amount: 9,
+														flatAmount: currencyFlatAmount,
+													},
+												],
+											}),
+								},
 								{ to: "inf", amount: 8 },
 							],
 							interval: "month",
@@ -252,6 +269,14 @@ test("an allocated volume item with included: 0 still can't have a first-tier fl
 	expect(issuesOf(() => allocatedVolumeConfig({ included: 0 }))).toHaveLength(
 		1,
 	);
+});
+
+test("an allocated volume item can't have a first-tier flatAmount in another currency without included usage", () => {
+	expect(
+		issuesOf(() =>
+			allocatedVolumeConfig({ flatAmount: 0, currencyFlatAmount: 5 }),
+		),
+	).toHaveLength(1);
 });
 
 test("an allocated volume item can have a first-tier flatAmount of 0 without included usage", () => {

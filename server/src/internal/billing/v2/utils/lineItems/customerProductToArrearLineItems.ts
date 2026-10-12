@@ -17,14 +17,10 @@ import {
 	type LineItem,
 	type LineItemContext,
 	secondsToMs,
-	usagePriceToLineItems,
+	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
-import {
-	ARREAR_TIER_LINE_ID_PREFIX,
-	ARREAR_USAGE_LINE_ID_PREFIX,
-} from "./arrearLineItemIds";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 export const customerProductToArrearLineItems = ({
@@ -167,7 +163,7 @@ export const customerProductToArrearLineItems = ({
 				);
 			}
 		} else {
-			const generatedLineItems = usagePriceToLineItems({
+			const generatedLineItem = usagePriceToLineItem({
 				cusEnt: customerEntitlement,
 				context,
 				options: {
@@ -175,20 +171,14 @@ export const customerProductToArrearLineItems = ({
 					discountable: options.discountable,
 				},
 			});
-			const { idempotencyScope } = options;
-			for (const [index, generatedLineItem] of generatedLineItems.entries()) {
-				// Stable per-invoice ids let a retried invoice.created find its lines; band 0
-				// keeps the single-line id, so lines written before per-band billing still match.
-				const scopedId =
-					index === 0
-						? `${ARREAR_USAGE_LINE_ID_PREFIX}${idempotencyScope}_${customerPrice.id}`
-						: `${ARREAR_TIER_LINE_ID_PREFIX}${idempotencyScope}_${customerPrice.id}_${index}`;
-				const lineItem = idempotencyScope
-					? { ...generatedLineItem, id: scopedId }
-					: generatedLineItem;
-				if (options.includeZeroAmounts || lineItem.amount !== 0) {
-					lineItems.push(lineItem);
-				}
+			const lineItem = options.idempotencyScope
+				? {
+						...generatedLineItem,
+						id: `invoice_li_usage_${options.idempotencyScope}_${customerPrice.id}`,
+					}
+				: generatedLineItem;
+			if (options.includeZeroAmounts || lineItem.amount !== 0) {
+				lineItems.push(lineItem);
 			}
 		}
 

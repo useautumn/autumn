@@ -4,7 +4,8 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, ms } from "@autumn/shared";
+import { ms } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
 import { TestFeature } from "@tests/setup/v2Features";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants";
@@ -40,7 +41,7 @@ const setupVolumeTrial = async ({ customerId }: { customerId: string }) => {
 
 // Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of 100 included → total bands 0-600 / 601+.
 // DISABLED: in-trial preview bills trial usage ($35) but the trial-end invoice skips it ($20); not
-// volume-specific. Re-enable once autumn#4569 is in dev and this branch is rebased onto it.
+// volume-specific. autumn#4569 fixes it and is still open; re-enable once it is in dev.
 test.skip(`${chalk.yellowBright("trial-consumable-volume 1: in-trial preview matches the trial-end invoice (base only)")}`, async () => {
 	const customerId = "trial-cons-vol-end";
 	const { ctx, autumnV1, autumnV2_2, testClockId, advancedTo } =
@@ -78,10 +79,12 @@ test.concurrent(
 			waitForSeconds: 15,
 		});
 
-		const afterTrial = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		expect(afterTrial.invoices).toHaveLength(2);
 		// $20 base only; the 150 trial messages are not charged at trial end
-		expect(afterTrial.invoices![0].total).toBeCloseTo(20, 2);
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: 20,
+		});
 
 		await autumnV1.track({
 			customer_id: customerId,
