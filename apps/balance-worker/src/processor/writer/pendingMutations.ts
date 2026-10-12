@@ -179,6 +179,24 @@ export const maxUnappliedBatchesOf = ({
 	limits: PartitionWriterScope["config"]["limits"];
 }): number => limits.maxUnappliedBatches ?? DEFAULT_MAX_UNAPPLIED_BATCHES;
 
+/** Bounds one store flush; the committer writes a flush as a single statement. */
+export const DEFAULT_MAX_BATCHES_PER_FLUSH = 32;
+
+/** Read live so DB control can retune it; clamped to [1, maxUnappliedBatches] so a full queue always counts as due. */
+export const maxBatchesPerFlushOf = ({
+	ctx,
+	limits,
+}: {
+	ctx: Pick<PartitionWriterScope["ctx"], "dbControl">;
+	limits: PartitionWriterScope["config"]["limits"];
+}): number => {
+	const configured =
+		ctx.dbControl?.get().balanceCommitter.maxBatchesPerFlush ??
+		limits.maxBatchesPerFlush ??
+		DEFAULT_MAX_BATCHES_PER_FLUSH;
+	return Math.min(Math.max(configured, 1), maxUnappliedBatchesOf({ limits }));
+};
+
 export const maxBatchBytesOf = ({
 	limits,
 }: {
