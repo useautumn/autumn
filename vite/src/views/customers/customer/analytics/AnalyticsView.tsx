@@ -517,6 +517,13 @@ export const AnalyticsView = () => {
 									nameHeader={chartGroupBy ? "Series" : "Event"}
 									isLoading={isShowingStubs}
 									placeholder={tablePlaceholder}
+									unit={
+										displayedChart
+											? displayedChart.unit
+											: measure === "count"
+												? "events"
+												: undefined
+									}
 								/>
 							</motion.div>
 						</div>
