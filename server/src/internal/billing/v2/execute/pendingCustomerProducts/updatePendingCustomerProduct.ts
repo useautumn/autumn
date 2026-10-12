@@ -1,5 +1,4 @@
 import type {
-	AttachParamsV1,
 	BillingResult,
 	FullCusProduct,
 	UpdateSubscriptionBillingContext,
@@ -9,7 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
-import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
@@ -39,12 +37,13 @@ export const updatePendingCustomerProduct = async ({
 		return {};
 	}
 
-	const { reattachParams, rebills } = await previewPendingReattach({
-		ctx,
-		params,
-		customerProduct,
-		deferredData,
-	});
+	const { attachParams, longLivedCheckout, rebills } =
+		await previewPendingReattach({
+			ctx,
+			params,
+			customerProduct,
+			deferredData,
+		});
 
 	if (!rebills) {
 		const updated = await billingActions.updateSubscription({
@@ -61,19 +60,6 @@ export const updatePendingCustomerProduct = async ({
 
 		return updated as PendingUpdateResult;
 	}
-
-	// A plan opened from a long-lived link is re-attached onto that link, keeping its URL.
-	const longLivedCheckout = await getPendingPlanLongLivedCheckout({
-		ctx,
-		deferredData,
-	});
-	const attachParams: AttachParamsV1 = longLivedCheckout
-		? {
-				...(longLivedCheckout.params as AttachParamsV1),
-				...reattachParams,
-				long_lived_checkout: false,
-			}
-		: reattachParams;
 
 	await discardPendingCustomerProduct({ ctx, customerProduct });
 

@@ -1,4 +1,5 @@
 import type {
+	AttachParamsV1,
 	DeferredAutumnBillingPlanData,
 	FullCusProduct,
 	UpdateSubscriptionV1Params,
@@ -6,6 +7,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
+import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
 
 /** Previews the pending plan re-attached with the edit, and whether that needs a new payment. */
@@ -26,9 +28,22 @@ export const previewPendingReattach = async ({
 		customerProduct,
 	});
 
+	// A plan opened from a long-lived link keeps the link's params (discounts, redirects) under the edit.
+	const longLivedCheckout = await getPendingPlanLongLivedCheckout({
+		ctx,
+		deferredData,
+	});
+	const attachParams: AttachParamsV1 = longLivedCheckout
+		? {
+				...(longLivedCheckout.params as AttachParamsV1),
+				...reattachParams,
+				long_lived_checkout: false,
+			}
+		: reattachParams;
+
 	const replacementPreview = await billingActions.attach({
 		ctx,
-		params: reattachParams,
+		params: attachParams,
 		preview: true,
 	});
 
@@ -40,5 +55,5 @@ export const previewPendingReattach = async ({
 			replacementPreview.billingContext?.featureQuantities ?? [],
 	});
 
-	return { reattachParams, replacementPreview, rebills };
+	return { attachParams, longLivedCheckout, replacementPreview, rebills };
 };

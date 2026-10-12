@@ -1,20 +1,23 @@
 /**
  * Editing a pending plan opened from a long-lived checkout link.
  *
- * Red (before): the edit re-attached the plan with a plain 24h Stripe checkout, so
- * billing.update returned a new Stripe URL and the original link reported the
- * checkout as completed.
- * Green (after): billing.update returns the same link, and opening it sells the
- * edited plan to the same customer with exactly one pending plan.
+ * Contract:
+ * - A billing edit returns the same link, which then sells the edited plan, with
+ *   exactly one pending plan left.
+ * - The preview and the charge both keep the link's discounts.
+ * - An edit that needs no payment attaches directly and closes the link.
+ * - An expired link is not reused; the edit falls back to a fresh checkout.
  */
 
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
 	CusProductStatus,
+	checkouts,
 	customers,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
+import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -25,34 +28,85 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import {
 	getLongLivedCheckoutId,
 	getStripeSessionId,
+	requestLongLivedCheckoutStart,
 	startLongLivedCheckout,
 } from "./utils/longLivedCheckoutUtils";
+
+/** Sends a $1,200 long-lived link and opens it, leaving one pending plan. */
+const setupOpenedLongLivedLink = async ({
+	name,
+	discountPercentOff,
+}: {
+	name: string;
+	discountPercentOff?: number;
+}) => {
+	const customerId = `${name}-${Date.now()}`;
+	const pro = products.pro({
+		id: `pro-${name}`,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const scenario = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
+		actions: [],
+	});
+	const { autumnV2_2, ctx } = scenario;
+
+	const coupon = discountPercentOff
+		? await createPercentCoupon({
+				stripeCli: ctx.stripeCli,
+				percentOff: discountPercentOff,
+			})
+		: undefined;
+
+	const attachResult = await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		long_lived_checkout: true,
+		customize: { price: itemsV2.monthlyPrice({ amount: 1200 }) },
+		discounts: coupon ? [{ reward_id: coupon.id }] : undefined,
+	});
+	const checkoutId = getLongLivedCheckoutId(attachResult.payment_url);
+	const firstSessionId = getStripeSessionId(
+		await startLongLivedCheckout(checkoutId),
+	);
+
+	const listCustomerProducts = async (status: CusProductStatus) => {
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		return CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: dbCustomer!.internal_id,
+			inStatuses: [status],
+		});
+	};
+
+	return {
+		...scenario,
+		customerId,
+		pro,
+		linkUrl: attachResult.payment_url,
+		checkoutId,
+		firstSessionId,
+		listCustomerProducts,
+	};
+};
 
 test.concurrent(
 	`${chalk.yellowBright("long-lived checkout pending update: editing the price keeps the link and sells the edited plan")}`,
 	async () => {
-		const customerId = `ll-pending-update-price-${Date.now()}`;
-		const pro = products.pro({
-			id: "pro-ll-pending-update-price",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-
-		const { autumnV2_2, ctx } = await initScenario({
+		const {
+			autumnV2_2,
+			ctx,
 			customerId,
-			setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
-			actions: [],
-		});
-
-		const attachResult = await autumnV2_2.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: pro.id,
-			long_lived_checkout: true,
-			customize: { price: itemsV2.monthlyPrice({ amount: 1200 }) },
-		});
-		const checkoutId = getLongLivedCheckoutId(attachResult.payment_url);
-		const firstSessionId = getStripeSessionId(
-			await startLongLivedCheckout(checkoutId),
-		);
+			pro,
+			linkUrl,
+			checkoutId,
+			firstSessionId,
+			listCustomerProducts,
+		} = await setupOpenedLongLivedLink({ name: "ll-pending-update-price" });
 
 		// 1. The edit returns the same link instead of a new Stripe URL.
 		const updateResult =
@@ -61,7 +115,7 @@ test.concurrent(
 				plan_id: pro.id,
 				customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
 			});
-		expect(updateResult.payment_url).toBe(attachResult.payment_url);
+		expect(updateResult.payment_url).toBe(linkUrl);
 
 		// 2. Opening the link sells the edited plan in a new Stripe session.
 		const editedSessionId = getStripeSessionId(
@@ -73,14 +127,83 @@ test.concurrent(
 		expect(editedSession.amount_total).toBe(100_000);
 
 		// 3. The customer still has exactly one pending plan.
-		const dbCustomer = await ctx.db.query.customers.findFirst({
-			where: eq(customers.id, customerId),
-		});
-		const pendingRows = await CusProductService.list({
-			db: ctx.db,
-			internalCustomerId: dbCustomer!.internal_id,
-			inStatuses: [CusProductStatus.Pending],
-		});
-		expect(pendingRows).toHaveLength(1);
+		expect(await listCustomerProducts(CusProductStatus.Pending)).toHaveLength(
+			1,
+		);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout pending update: the preview and the charge keep the link's discount")}`,
+	async () => {
+		const { autumnV2_2, ctx, customerId, pro, checkoutId } =
+			await setupOpenedLongLivedLink({
+				name: "ll-pending-update-discount",
+				discountPercentOff: 50,
+			});
+
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
+		};
+
+		const preview =
+			await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		expect(preview.total).toBe(500);
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
+		const editedSession = await ctx.stripeCli.checkout.sessions.retrieve(
+			getStripeSessionId(await startLongLivedCheckout(checkoutId)),
+		);
+		expect(editedSession.amount_total).toBe(50_000);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout pending update: an edit that needs no payment attaches directly and closes the link")}`,
+	async () => {
+		const { autumnV2_2, customerId, pro, checkoutId, listCustomerProducts } =
+			await setupOpenedLongLivedLink({ name: "ll-pending-update-free" });
+
+		const updateResult =
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				customize: { price: null },
+			});
+		expect(updateResult.payment_url).toBeNull();
+
+		const activeRows = await listCustomerProducts(CusProductStatus.Active);
+		expect(activeRows.some((row) => row.product.id === pro.id)).toBe(true);
+
+		const reopen = await requestLongLivedCheckoutStart(checkoutId);
+		expect(reopen.status).toBe(409);
+		expect((await reopen.json()).code).toBe("checkout_completed");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout pending update: an expired link is not reused")}`,
+	async () => {
+		const { autumnV2_2, ctx, customerId, pro, checkoutId } =
+			await setupOpenedLongLivedLink({ name: "ll-pending-update-expired" });
+
+		await ctx.db
+			.update(checkouts)
+			.set({ expires_at: Date.now() - 1000 })
+			.where(eq(checkouts.id, checkoutId));
+
+		const updateResult =
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
+			});
+		expect(updateResult.payment_url).toContain("checkout.stripe.com");
 	},
 );

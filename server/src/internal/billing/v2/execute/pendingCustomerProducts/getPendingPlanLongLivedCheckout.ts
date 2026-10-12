@@ -5,7 +5,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 
-/** The still-open long-lived link that opened this pending plan, if any. */
+/** The long-lived link that opened this pending plan, while it can still be paid. */
 export const getPendingPlanLongLivedCheckout = async ({
 	ctx,
 	deferredData,
@@ -17,5 +17,8 @@ export const getPendingPlanLongLivedCheckout = async ({
 	if (!checkoutId) return;
 
 	const checkout = await checkoutRepo.get({ db: ctx.db, id: checkoutId });
-	return checkout?.status === CheckoutStatus.Pending ? checkout : undefined;
+	const isOpen =
+		checkout?.status === CheckoutStatus.Pending &&
+		checkout.expires_at > Date.now();
+	return isOpen ? checkout : undefined;
 };
