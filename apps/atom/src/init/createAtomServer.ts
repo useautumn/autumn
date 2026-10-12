@@ -1,6 +1,7 @@
 import { fetchInvalidKeys } from "../auth/secretKeys/fetchInvalidKeys.js";
 import { startSecretKeys } from "../auth/secretKeys/startSecretKeys.js";
 import { createAtomApp } from "../http/createAtomApp.js";
+import { createPeerApp } from "../http/createPeerApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
@@ -46,26 +47,29 @@ export const createAtomServer = ({
 						}),
 				})
 			: undefined;
-	const app = createAtomApp({
-		ctx: {
-			auth: ctx.auth,
-			multiTenant: ctx.multiTenant,
-			logger: ctx.logger,
-			health: ctx.health,
-			counters: ctx.counters,
-			autumnApiUrl: env.ATOM_AUTUMN_API_URL,
-			secretKeys,
-			replication: ctx.replication,
-			...(ctx.replication && {
-				peer: { tokenHash: env.ATOM_TOKEN_HASH, port: env.ATOM_PORT },
-			}),
-		},
-	});
+	const httpContext = {
+		auth: ctx.auth,
+		multiTenant: ctx.multiTenant,
+		logger: ctx.logger,
+		health: ctx.health,
+		counters: ctx.counters,
+		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
+		secretKeys,
+		replication: ctx.replication,
+		...(ctx.replication && { peer: { port: env.ATOM_PORT } }),
+	};
+	const app = createAtomApp({ ctx: httpContext });
+	// Only an org's own Atom with its peer secret listens to other replicas, on the port the stack keeps off the public endpoint.
+	const peerApp =
+		ctx.replication && env.ATOM_PEER_SECRET
+			? createPeerApp({ ctx: httpContext, secret: env.ATOM_PEER_SECRET })
+			: undefined;
 	const statsTick = startThreadStatsTick({
 		counters: ctx.counters,
 		held: ctx.held,
 	});
 	let listener: ReturnType<typeof Bun.serve> | undefined;
+	let peerListener: ReturnType<typeof Bun.serve> | undefined;
 	let receiving: Promise<void> | undefined;
 
 	function listen(): void {
@@ -76,6 +80,13 @@ export const createAtomServer = ({
 			reusePort: true,
 			fetch: app.fetch,
 		});
+		if (peerApp)
+			peerListener = Bun.serve({
+				hostname: env.ATOM_HOSTNAME,
+				port: env.ATOM_PEER_PORT,
+				reusePort: true,
+				fetch: peerApp.fetch,
+			});
 	}
 
 	/** Receiving is async I/O beside serving, so a thread that receives pushes still answers checks. */
@@ -87,7 +98,7 @@ export const createAtomServer = ({
 	/** In-flight requests and leased pushes finish before the files close. */
 	async function stop(): Promise<void> {
 		pushReceiver?.stop();
-		await Promise.all([listener?.stop(), receiving]);
+		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
 		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication?.stop();
 		statsTick.stop();

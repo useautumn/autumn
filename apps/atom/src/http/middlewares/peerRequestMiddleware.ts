@@ -1,31 +1,37 @@
+import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import {
-	PEER_RELAYED_HEADER,
 	PEER_SIGNATURE_HEADER,
 	peerSignatureMatches,
 } from "../../replication/transport/peerSignature.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
 /**
- * A request another replica signed with the token hash every replica holds opens the one data folder without the
- * token itself. It is marked relayed, so what it carries is applied here and passed no further. Anything else goes to `orElse`.
+ * Every request on the peer port is from another replica, signed with the deployment's own secret over its method,
+ * path, routed customer and body. It opens the one data folder and is marked relayed, so what it carries is applied
+ * here and passed no further.
  */
 export function peerRequestMiddleware({
 	ctx,
-	tokenHash,
-	orElse,
+	secret,
 }: {
-	ctx: AtomHttpContext;
-	tokenHash: string;
-	orElse: MiddlewareHandler<AtomHttpEnv>;
+	ctx: Pick<AtomHttpContext, "auth">;
+	secret: string;
 }): MiddlewareHandler<AtomHttpEnv> {
 	async function authorizePeer(context: Context<AtomHttpEnv>, next: Next) {
-		const signature = context.req.header(PEER_SIGNATURE_HEADER);
-		if (!signature || context.req.header(PEER_RELAYED_HEADER) !== "1")
-			return orElse(context, next);
+		const signature = context.req.header(PEER_SIGNATURE_HEADER) ?? "";
 		const slots = ctx.auth.slotsFor({ atomId: null });
-		const body = await context.req.text();
-		if (!slots || !peerSignatureMatches({ tokenHash, body, signature }))
+		const verified =
+			slots !== null &&
+			peerSignatureMatches({
+				secret,
+				signature,
+				method: context.req.method,
+				path: context.req.path,
+				customerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
+				body: await context.req.text(),
+			});
+		if (!verified)
 			return context.json(
 				{ message: "Peer signature rejected", code: "atom_peer_rejected" },
 				401,

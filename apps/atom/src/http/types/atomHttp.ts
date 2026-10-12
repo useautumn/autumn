@@ -20,8 +20,10 @@ export type AtomHttpContext = {
 	secretKeys?: SecretKeys;
 	/** Present only on an org's own Atom, which keeps its other replicas holding what it applies. */
 	replication?: Replication;
-	/** With `replication`: what a request from another replica is checked against, and the port its replicas share. */
-	peer?: { tokenHash: string; port: number };
+	/** With `replication`: the port the other replicas answer checks on while this one starts. */
+	peer?: { port: number; fetch?: typeof fetch };
+	/** This replica's clock; a test runs it. */
+	now?: () => number;
 };
 
 /** How a request failed, as its error response said; the request line carries it. */
