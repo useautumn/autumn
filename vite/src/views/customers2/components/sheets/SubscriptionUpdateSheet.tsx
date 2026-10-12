@@ -4,7 +4,7 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, LONG_LIVED_CHECKOUT_PATH } from "@autumn/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
@@ -45,6 +45,9 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { usePendingPaymentLink } from "./usePendingPaymentLink";
+
+const isLongLivedCheckoutUrl = (url: string) =>
+	new URL(url).pathname.split("/")[1] === LONG_LIVED_CHECKOUT_PATH;
 
 function SendInvoiceContent() {
 	const { formContext, isPending, handleInvoiceUpdate, previewQuery } =
@@ -188,11 +191,6 @@ export function SubscriptionUpdateSheet() {
 	const { setIsInlineEditorOpen } = useCustomerContext();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
-	const { data: pendingPaymentLink } = usePendingPaymentLink({
-		customerId: customer?.id ?? customer?.internal_id,
-		customerProductId: cusProduct?.id,
-		enabled: cusProduct?.status === CusProductStatus.Pending,
-	});
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
 	const { features, isLoading: featuresLoading } = useFeaturesQuery();
 	const { licenseProducts, isLoading: licenseProductsLoading } =
@@ -315,8 +313,8 @@ export function SubscriptionUpdateSheet() {
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onCheckoutRedirect={(checkoutUrl) => {
-				// The edit kept the customer's long-lived link, so there is no new checkout to open.
-				if (pendingPaymentLink?.longLived) {
+				// A long-lived link means the edit kept the customer's link; read it off the response so a slow lookup can't misroute.
+				if (isLongLivedCheckoutUrl(checkoutUrl)) {
 					toast.success("Checkout link updated");
 					return;
 				}
