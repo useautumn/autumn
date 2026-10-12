@@ -911,7 +911,8 @@ const allocatedV2Workflows = ({
  * Default tiers: 0-10 seats at $10/seat, 11+ at $8/seat.
  * @param allocatedBillingBehavior - Arrear for allocated v2, omitted for v1 prorated
  */
-const volumeAllocatedUsers = ({
+const volumeAllocated = ({
+	featureId,
 	includedUsage = 0,
 	tiers = [
 		{ to: 10, amount: 10 },
@@ -920,14 +921,15 @@ const volumeAllocatedUsers = ({
 	allocatedBillingBehavior,
 	entityFeatureId,
 }: {
+	featureId: string;
 	includedUsage?: number;
 	tiers?: VolumeTier[];
 	allocatedBillingBehavior?: AllocatedBillingBehavior;
 	entityFeatureId?: string;
-} = {}): LimitedItem =>
+}): LimitedItem =>
 	({
 		...constructArrearProratedItem({
-			featureId: TestFeature.Users,
+			featureId,
 			includedUsage,
 			...(allocatedBillingBehavior
 				? { config: { allocated_billing_behavior: allocatedBillingBehavior } }
@@ -938,6 +940,10 @@ const volumeAllocatedUsers = ({
 		tier_behavior: TierBehavior.VolumeBased,
 		entity_feature_id: entityFeatureId,
 	}) as LimitedItem;
+
+const volumeAllocatedUsers = (
+	params: Omit<Parameters<typeof volumeAllocated>[0], "featureId"> = {},
+): LimitedItem => volumeAllocated({ featureId: TestFeature.Users, ...params });
 
 // ═══════════════════════════════════════════════════════════════════
 // BASE PRICES
@@ -1019,6 +1025,7 @@ export const items = {
 	tieredConsumableMessages,
 	volumeConsumable,
 	volumeConsumableMessages,
+	volumeAllocated,
 	volumeAllocatedUsers,
 
 	// Allocated

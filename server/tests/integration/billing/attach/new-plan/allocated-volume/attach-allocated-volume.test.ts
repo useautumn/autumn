@@ -9,9 +9,6 @@
  * Allocated seats are Stripe-priced: the subscription item quantity is total
  * seats against a volume price with a free first tier [0..included] @ $0.
  *
- * Volume on allocated items is still gated, so the fixture creates a graduated
- * allocated item and flips its price row to volume before anything is minted.
- *
  * Seats (3 included). Stored tiers are net of included; in total seats:
  *   0–3   free
  *   4–8   @ $10/seat + $5 flat
@@ -19,32 +16,21 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	type ProductItem,
-	TierBehavior,
-	type UsagePriceConfig,
-	type UsageTier,
-} from "@autumn/shared";
+import type { ApiCustomerV3, UsagePriceConfig } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { getUsersPrice } from "@tests/integration/crud/plans/utils/allocatedV1Utils";
 import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
 type TestCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
 const BASE_PRICE = 20;
 const INCLUDED = 3;
-const NET_VOLUME_TIERS: UsageTier[] = [
-	{ to: 5, amount: 10, flat_amount: 5 },
-	{ to: -1, amount: 6, flat_amount: 2 },
-];
 
 const seatsCost = (seats: number) => {
 	if (seats <= INCLUDED) return 0;
@@ -52,39 +38,14 @@ const seatsCost = (seats: number) => {
 	return seats * 6 + 2;
 };
 
-const allocatedSeatsItem = (): ProductItem => ({
-	...constructArrearProratedItem({
-		featureId: TestFeature.Users,
+const allocatedSeatsItem = () =>
+	items.volumeAllocatedUsers({
 		includedUsage: INCLUDED,
-	}),
-	price: null,
-	tiers: [
-		{ to: 5, amount: 10 },
-		{ to: "inf", amount: 6 },
-	],
-});
-
-/** Flips the plan's seat price to volume (with tier flat fees) while it has no Stripe price yet. */
-const setVolumeSeatTiers = async ({
-	ctx,
-	planId,
-}: {
-	ctx: TestCtx;
-	planId: string;
-}) => {
-	const price = await getUsersPrice({ ctx, planId });
-	await PriceService.update({
-		db: ctx.db,
-		id: price.id,
-		update: {
-			tier_behavior: TierBehavior.VolumeBased,
-			config: {
-				...(price.config as UsagePriceConfig),
-				usage_tiers: NET_VOLUME_TIERS,
-			},
-		},
+		tiers: [
+			{ to: 5, amount: 10, flat_amount: 5 },
+			{ to: "inf", amount: 6, flat_amount: 2 },
+		],
 	});
-};
 
 const expectVolumeSeatStripePrice = async ({
 	ctx,
@@ -127,15 +88,13 @@ const setupVolumeSeats = async ({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
-			s.products({ list: [pro], createInStripe: false }),
+			s.products({ list: [pro] }),
 			...(seats > 0
 				? [s.entities({ count: seats, featureId: TestFeature.Users })]
 				: []),
 		],
 		actions: [],
 	});
-
-	await setVolumeSeatTiers({ ctx: scenario.ctx, planId: pro.id });
 
 	return { ...scenario, pro };
 };

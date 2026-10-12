@@ -4,34 +4,22 @@
  */
 
 import { test } from "bun:test";
-import {
-	AllocatedBillingBehavior,
-	type LimitedItem,
-	TierBehavior,
-} from "@autumn/shared";
+import { AllocatedBillingBehavior } from "@autumn/shared";
 import { expectInvoiceLineItemsCorrect } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
 import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
 // Net tiers 0-10 @ $10, 11+ @ $8 with 2 included: total bands 0-12 / 13+.
-const volumeAllocatedWorkflows = (): LimitedItem =>
-	({
-		...constructArrearProratedItem({
-			featureId: TestFeature.Workflows,
-			includedUsage: 2,
-			config: { allocated_billing_behavior: AllocatedBillingBehavior.Arrear },
-		}),
-		price: undefined,
-		tiers: [
-			{ to: 10, amount: 10 },
-			{ to: "inf", amount: 8 },
-		],
-		tier_behavior: TierBehavior.VolumeBased,
-	}) as LimitedItem;
+const volumeAllocatedWorkflows = () =>
+	items.volumeAllocated({
+		featureId: TestFeature.Workflows,
+		includedUsage: 2,
+		allocatedBillingBehavior: AllocatedBillingBehavior.Arrear,
+	});
 
 const runWorkflowsRenewal = async ({
 	customerId,
