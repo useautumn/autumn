@@ -134,6 +134,10 @@ export const isAtomStageDone = ({
 export const isAtomConnected = (cache: ApiByocCache) =>
 	isAtomStageDone({ cache, stage: "connected" });
 
+/** The org finished setup, so its page shows the Atom rather than the setup steps. */
+export const isAtomSetUp = (cache: ApiByocCache | null) =>
+	Boolean(cache?.first_check_at);
+
 /** The stack is in the org's cloud, so cloud, size and network can no longer change. */
 export const hasAtomStack = (cache: ApiByocCache | null) =>
 	cache !== null && cache.status !== ByocCacheStatus.AwaitingSetup;

@@ -491,7 +491,11 @@ test("monitoring reads the same Atom metrics, by the shadow's deployment id", as
 	});
 
 	expect(response.status).toBe(200);
-	expect(metrics).toHaveBeenCalledWith({ deploymentId: "dep_1", range: "1h" });
+	expect(metrics).toHaveBeenCalledWith({
+		deploymentId: "dep_1",
+		range: "1h",
+		createdAt: expect.any(Number),
+	});
 });
 
 test("an org's own key cannot touch the shadow Atom", async () => {

@@ -16,9 +16,13 @@ mock.module(queryAtomLogsModulePath, () => ({
 	},
 }));
 
-const { queryAtomMetrics } = await import(
+const { atomMetricsPeriodSeconds, queryAtomMetrics } = await import(
 	"@/internal/byoc/actions/telemetry/atomLogs/queryAtomMetrics"
 );
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+const createdDaysAgo = (days: number) => Date.now() - days * DAY_MS;
 
 afterAll(() => {
 	mock.module(queryAtomLogsModulePath, () => realQueryAtomLogs);
@@ -50,15 +54,17 @@ describe("an Atom's metrics", () => {
 		latestRows = [
 			{
 				_time: "2026-10-09T14:31:10Z",
-				requestsPerSecond: 0.7,
-				forwardedPerSecond: 0,
-				pushesPerSecond: 0.7,
+				requests: 42,
+				forwarded: 6,
+				pushes: 12,
+				seconds: 60,
 			},
 		];
 
 		const metrics = await queryAtomMetrics({
 			deploymentId: "dep_123",
 			range: "24h",
+			createdAt: createdDaysAgo(30),
 		});
 
 		expect(queries.map((query) => query.startTime)).toEqual([
@@ -66,10 +72,10 @@ describe("an Atom's metrics", () => {
 			"now-1m",
 		]);
 		expect(queries[0].pipeline).toMatch(
-			/arg_max\(.*\)\s+by bin\(_time, 300s\)/,
+			/arg_max\(.*\)\s+by bin\(_time, 900s\)/,
 		);
 		expect(metrics).toEqual({
-			period_seconds: 300,
+			period_seconds: 900,
 			points: [
 				{
 					at: Date.parse("2026-10-09T14:30:00Z"),
@@ -82,41 +88,84 @@ describe("an Atom's metrics", () => {
 			latest: {
 				at: Date.parse("2026-10-09T14:31:10Z"),
 				requests: 0.7,
-				forwarded: 0,
-				pushes: 0.7,
+				forwarded: 0.1,
+				pushes: 0.2,
 			},
 		});
 	});
 
-	test("plot the last hour at the raw 10s resolution", async () => {
+	test("plot a young Atom's few minutes at the raw 10s resolution", async () => {
 		const metrics = await queryAtomMetrics({
 			deploymentId: "dep_123",
-			range: "1h",
+			range: "24h",
+			createdAt: Date.now() - 10 * 60 * 1000,
 		});
 
 		expect(queries[0].pipeline).toMatch(/arg_max\(.*\)\s+by bin\(_time, 10s\)/);
 		expect(metrics.period_seconds).toBe(10);
 	});
 
+	test("rate the latest reading over the whole last minute, not its newest window", async () => {
+		await queryAtomMetrics({
+			deploymentId: "dep_123",
+			range: "1h",
+			createdAt: createdDaysAgo(1),
+		});
+
+		expect(queries[1].startTime).toBe("now-1m");
+		expect(queries[1].pipeline).toMatch(
+			/summarize _time = max\(_time\),[\s\S]*seconds = sum\(seconds\)$/,
+		);
+	});
+
 	test("have no latest reading when the Atom logged nothing in the last minute", async () => {
-		latestRows = [{ requestsPerSecond: 0 }];
+		latestRows = [{ requests: 0, seconds: 0 }];
 
 		const metrics = await queryAtomMetrics({
 			deploymentId: "dep_123",
 			range: "7d",
+			createdAt: createdDaysAgo(30),
 		});
 
-		expect(metrics.period_seconds).toBe(3600);
+		expect(metrics.period_seconds).toBe(7200);
 		expect(metrics.latest).toBeNull();
 	});
 
 	test("reads health lines from each log line's JSON, not the body alien now cuts to the message", async () => {
-		await queryAtomMetrics({ deploymentId: "dep_123", range: "1h" });
+		await queryAtomMetrics({
+			deploymentId: "dep_123",
+			range: "1h",
+			createdAt: createdDaysAgo(1),
+		});
 
 		for (const { pipeline } of queries) {
 			expect(pipeline).toContain(`where line contains '"atom_health"'`);
 			expect(pipeline).toContain("parse_json(line)");
 			expect(pipeline).not.toContain("body");
 		}
+	});
+});
+
+describe("an Atom's metrics period", () => {
+	const now = Date.parse("2026-10-12T15:00:00Z");
+	const periodFor = ({
+		range,
+		ageMs,
+	}: {
+		range: "1h" | "24h" | "7d";
+		ageMs: number;
+	}) => atomMetricsPeriodSeconds({ range, createdAt: now - ageMs, now });
+
+	test("plots each full range in 60 to 120 points", () => {
+		const old = 30 * DAY_MS;
+		expect(periodFor({ range: "1h", ageMs: old })).toBe(30);
+		expect(periodFor({ range: "24h", ageMs: old })).toBe(15 * 60);
+		expect(periodFor({ range: "7d", ageMs: old })).toBe(2 * 60 * 60);
+	});
+
+	test("follows a young Atom's life rather than the range it sits in", () => {
+		expect(periodFor({ range: "24h", ageMs: 5 * 60 * 1000 })).toBe(10);
+		expect(periodFor({ range: "7d", ageMs: 2 * HOUR_MS })).toBe(60);
+		expect(periodFor({ range: "7d", ageMs: DAY_MS })).toBe(15 * 60);
 	});
 });

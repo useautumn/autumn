@@ -27,8 +27,11 @@ const STATISTIC_OPTIONS = ATOM_METRICS_STATISTICS.map((statistic) => ({
 /** How hard Atom's machine works and how much traffic it answers, over a chosen range and statistic. */
 export const AtomMonitoring = ({
 	machine,
+	isPending = false,
 }: {
 	machine: ByocCacheMachine | null;
+	/** Holds the loading layout without fetching, while the Atom itself still loads. */
+	isPending?: boolean;
 }) => {
 	const [range, setRange] = useQueryState(
 		"atomRange",
@@ -42,13 +45,13 @@ export const AtomMonitoring = ({
 			...ATOM_METRICS_STATISTICS,
 		]).withDefault("maximum"),
 	);
-	const { points, latest, periodSeconds, fetchedAt, isLoading } =
-		useAtomMetricsQuery({ range });
+	const metrics = useAtomMetricsQuery({ range, enabled: !isPending });
+	const { points, latest, periodSeconds, fetchedAt, isLoading } = metrics;
 	const chartData = toAtomMetricsChartData({
 		points,
 		latest,
 		periodSeconds,
-		range,
+		range: metrics.range,
 		statistic,
 		fetchedAt,
 	});

@@ -3,7 +3,7 @@ import { SandboxBanner, SandboxBannerAction } from "@autumn/ui";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxFavicon } from "@/components/general/SandboxFavicon";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
@@ -33,6 +33,7 @@ import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { MobileSidebar } from "@/views/main-sidebar/MobileSidebar";
 import { MobileTopBar } from "@/views/main-sidebar/MobileTopBar";
+import { SettingsViewSkeleton } from "@/views/settings/SettingsView";
 import { AppContext } from "./AppContext";
 
 export function MainLayout() {
@@ -108,6 +109,13 @@ const DashboardShell = ({
 			<LeafPanel />
 		</>
 	);
+};
+
+/** Settings draws its own layout while the org loads, so a reload settles in place instead of flashing a spinner. */
+const ContentLoading = () => {
+	const { pathname } = useLocation();
+	if (pathname.endsWith("/settings")) return <SettingsViewSkeleton />;
+	return <LoadingScreen />;
 };
 
 const MainContent = ({
@@ -195,7 +203,7 @@ const MainContent = ({
 						    clipped inside a fixed-height child. */}
 						<div className="w-full min-h-full justify-center">
 							{showLoading ? (
-								<LoadingScreen />
+								<ContentLoading />
 							) : (
 								<Suspense fallback={<LoadingScreen />}>
 									<Outlet />

@@ -61,8 +61,9 @@ export const AtomSetupFlow = ({
 	stackNameSuffix: string;
 }) => {
 	const actions = useAtomActions();
-	const { setOpenStep, isSetUp, finishSetup, hasStack, states, openStep } =
-		useAtomSetupFlow({ cache });
+	const { setOpenStep, isSetUp, hasStack, states, openStep } = useAtomSetupFlow(
+		{ cache },
+	);
 	const form = useAtomSetupForm({
 		cache,
 		stackNameBase: stackName.replace(new RegExp(`-${stackNameSuffix}$`), ""),
@@ -89,6 +90,10 @@ export const AtomSetupFlow = ({
 
 	const retry = () =>
 		actions.retry.mutate(undefined, { onError: showError("Failed to retry") });
+	const finishSetup = () =>
+		actions.finish.mutate(undefined, {
+			onError: showError("Failed to finish setup"),
+		});
 
 	const steps = {
 		cloud: {
@@ -172,6 +177,7 @@ export const AtomSetupFlow = ({
 						cache={cache}
 						onDelete={() => askToDelete(ATOM_DELETE_PROMPTS.delete)}
 						onFinish={finishSetup}
+						isFinishing={actions.finish.isPending}
 					/>
 				)}
 			</div>
