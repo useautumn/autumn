@@ -216,3 +216,52 @@ describe("addTier", () => {
 		).toBe(true);
 	});
 });
+
+describe("currency flat fees", () => {
+	test("a €4 EUR flat fee survives the save when the base flat fee is 0", () => {
+		const item = volumeItem([
+			{
+				to: 100,
+				amount: 1,
+				flat_amount: 0,
+				additional_currencies: [
+					{ currency: "eur", amount: 0.9, flat_amount: 4 },
+				],
+			},
+			{
+				to: Infinite,
+				amount: 0.5,
+				flat_amount: 0,
+				additional_currencies: [
+					{ currency: "eur", amount: 0.45, flat_amount: 0 },
+				],
+			},
+		]);
+
+		expect(tiersToVolumePricingMode({ tiers: item.tiers })).toBe(
+			"per_unit_and_flat",
+		);
+		const saved = itemToVolumePricingMode({
+			item,
+			mode: tiersToVolumePricingMode({ tiers: item.tiers }),
+		});
+		expect(saved.tiers?.[0]?.additional_currencies?.[0]?.flat_amount).toBe(4);
+	});
+
+	test("Per unit no longer fits once another currency has a flat fee", () => {
+		expect(
+			volumePricingModeFitsTiers({
+				mode: "per_unit",
+				tiers: [
+					{
+						to: Infinite,
+						amount: 1,
+						additional_currencies: [
+							{ currency: "eur", amount: 0.9, flat_amount: 4 },
+						],
+					},
+				],
+			}),
+		).toBe(false);
+	});
+});

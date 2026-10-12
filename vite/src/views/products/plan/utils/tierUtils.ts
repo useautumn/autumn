@@ -208,16 +208,23 @@ export const updateTier = ({
 export type VolumePricingMode = "flat" | "per_unit" | "per_unit_and_flat";
 
 /** Reads the mode from tier data, so mixed tiers from the API keep both amounts. */
+/** The base price and every additional-currency price a tier carries. */
+const tierToPriceEntries = (
+	tier: PriceTier,
+): { amount?: number | null; flat_amount?: number | null }[] => [
+	tier,
+	...(tier.additional_currencies ?? []),
+];
+
 export const tiersToVolumePricingMode = ({
 	tiers,
 }: {
 	tiers: PriceTier[] | null | undefined;
 }): VolumePricingMode => {
-	const hasUnitAmounts = tiers?.some((tier) => tier.amount !== 0) ?? false;
-	const hasFlatAmounts =
-		tiers?.some((tier) => tier.flat_amount != null) ?? false;
-	const hasFlatFee =
-		tiers?.some((tier) => (tier.flat_amount ?? 0) > 0) ?? false;
+	const entries = (tiers ?? []).flatMap(tierToPriceEntries);
+	const hasUnitAmounts = entries.some((entry) => (entry.amount ?? 0) !== 0);
+	const hasFlatAmounts = entries.some((entry) => entry.flat_amount != null);
+	const hasFlatFee = entries.some((entry) => (entry.flat_amount ?? 0) > 0);
 
 	if (hasUnitAmounts && hasFlatFee) return "per_unit_and_flat";
 	if (hasFlatAmounts && !hasUnitAmounts) return "flat";
@@ -233,9 +240,14 @@ export const volumePricingModeFitsTiers = ({
 	tiers: PriceTier[] | null | undefined;
 }): boolean => {
 	if (!tiers) return false;
-	if (mode === "flat") return tiers.every((tier) => tier.amount === 0);
-	if (mode === "per_unit")
-		return tiers.every((tier) => tier.flat_amount == null);
+	const entries = tiers.flatMap(tierToPriceEntries);
+	if (mode === "flat") {
+		return entries.every((entry) => (entry.amount ?? 0) === 0);
+	}
+	if (mode === "per_unit") {
+		return entries.every((entry) => entry.flat_amount == null);
+	}
+	// Currency flat fees are aligned to the base tier on save, so the base decides.
 	return tiers.every((tier) => tier.flat_amount != null);
 };
 
