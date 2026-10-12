@@ -19,6 +19,8 @@ export const previewPendingPlanIfAny = async ({
 		customerId: params.customer_id,
 		productId: params.plan_id,
 		entityId: params.entity_id,
+		customerProductId: params.customer_product_id,
+		subscriptionId: params.subscription_id,
 	});
 	if (!customerProduct) return;
 
