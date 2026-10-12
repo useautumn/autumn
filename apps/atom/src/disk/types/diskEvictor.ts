@@ -11,9 +11,9 @@ export type DiskEvictorContext = {
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
-/** Keeps one thread's slot files within its share of the volume, and rid of customers Autumn stopped pushing. */
+/** Keeps the volume under its share by dropping this thread's oldest-pushed customers, and rid of customers Autumn stopped pushing. */
 export type DiskEvictor = {
-	/** One pass over the files: reads the share, measures them, then drops one batch per file of what is idle or, over the share, oldest. */
+	/** One pass over the files: reads the volume, then drops one batch per file of what is idle or, over the share, oldest until this thread's part of the deficit is freed. */
 	tick(): Promise<void>;
 	/** Ticks every period until stopped. */
 	run(): Promise<void>;

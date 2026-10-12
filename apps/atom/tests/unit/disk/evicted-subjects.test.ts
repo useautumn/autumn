@@ -18,6 +18,7 @@ import { LATEST_VERSION } from "@autumn/shared";
 import {
 	createDiskEvictor,
 	DISK_IDLE_EXPIRY_MS,
+	DISK_SHARE,
 } from "../../../src/disk/createDiskEvictor.js";
 import type { DiskEvictor } from "../../../src/disk/types/diskEvictor.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
@@ -101,6 +102,7 @@ const threadCounters = () => {
 	};
 };
 
+/** The evictor over a volume whose 80% share is `shareBytes`, the folders' files standing in for what the volume sees. */
 const evictorOver = ({
 	folders: replicaFolders,
 	counters,
@@ -120,7 +122,18 @@ const evictorOver = ({
 			now,
 			sleep: async () => {},
 		},
-		shareOf: () => shareBytes,
+		volumeOf: () => {
+			const totalBytes =
+				shareBytes === Number.MAX_SAFE_INTEGER
+					? Number.MAX_SAFE_INTEGER
+					: shareBytes / DISK_SHARE;
+			const used = replicaFolders
+				.all()
+				.flatMap(({ slots }) => slots.ownedStores())
+				.reduce((sum, store) => sum + store.dataBytes(), 0);
+			return { totalBytes, availBytes: Math.max(0, totalBytes - used) };
+		},
+		threads: 1,
 	});
 
 /** One folder on one thread whose misses pull through an Autumn the test answers, with a held budget the test sets. */

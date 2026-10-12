@@ -593,7 +593,7 @@ describe("a slot file's footprint", () => {
 		return value[name];
 	};
 
-	test("a connection keeps 256 KiB of its file in memory, its log is cut back to 4 MiB after a checkpoint, and freed pages can be given back", () => {
+	test("a connection keeps 256 KiB of its file in memory, its log is cut back to 1 MiB after a checkpoint, and freed pages can be given back", () => {
 		const databasePath = slotPath();
 		const database = openSlotDatabase({ databasePath });
 
@@ -601,7 +601,7 @@ describe("a slot file's footprint", () => {
 			cache_size: -256n,
 		});
 		expect(database.query("PRAGMA journal_size_limit").get()).toEqual({
-			journal_size_limit: BigInt(4 * 1024 * 1024),
+			journal_size_limit: BigInt(1024 * 1024),
 		});
 		expect(pragma(databasePath, "auto_vacuum")).toBe(2);
 		database.close();
@@ -769,8 +769,8 @@ describe("a slot file's footprint", () => {
 
 		expect(sqliteStore.countSubjects()).toBe(1);
 		expect(sqliteStore.dataBytes()).toBeLessThan(100_000);
-		// What is left on the volume is the log, cut back to its 4 MiB limit, and a near-empty file.
-		expect(onVolume()).toBeLessThan(4.5 * 1024 * 1024);
+		// What is left on the volume is a near-empty file and a log cut back to its 1 MiB limit at most.
+		expect(onVolume()).toBeLessThan(1.5 * 1024 * 1024);
 		checkpointer.stop();
 		sqliteStore.close();
 	});

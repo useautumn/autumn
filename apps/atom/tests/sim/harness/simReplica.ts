@@ -5,7 +5,10 @@ import {
 	createDeployedAuth,
 	type DeployedAuth,
 } from "../../../src/auth/createDeployedAuth.js";
-import { createDiskEvictor } from "../../../src/disk/createDiskEvictor.js";
+import {
+	createDiskEvictor,
+	DISK_SHARE,
+} from "../../../src/disk/createDiskEvictor.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import type { AtomHttpEnv } from "../../../src/http/types/atomHttp.js";
@@ -50,6 +53,21 @@ export const destroyVolume = (volume: Volume) =>
 	rmSync(volume.folder, { recursive: true, force: true });
 
 let generation = 0;
+
+/** A volume whose 80% share is `shareBytes`, `used` bytes of it taken by the files. */
+export const simVolumeOf = ({
+	shareBytes,
+	used,
+}: {
+	shareBytes: number | undefined;
+	used: number;
+}) => {
+	const totalBytes =
+		shareBytes === undefined
+			? Number.MAX_SAFE_INTEGER
+			: shareBytes / DISK_SHARE;
+	return { totalBytes, availBytes: Math.max(0, totalBytes - used) };
+};
 
 export type SimReplicaContext = {
 	clock: VirtualClock;
@@ -99,9 +117,15 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		subjectPulls: noSubjectPulls,
 	});
 	const folders = createDeployedFolders({ slots: auth.slots });
+	/** What the replica's files hold now. */
+	const diskBytes = () =>
+		auth.slots.ownedStores().reduce((sum, store) => sum + store.dataBytes(), 0);
+	// The sim has no volume of its own: what the files hold stands in for what the volume sees.
 	const diskEvictor = createDiskEvictor({
 		ctx: { folders, counters, logger: quiet, now, sleep: clock.sleep },
-		shareOf: () => ctx.diskShareBytes ?? Number.MAX_SAFE_INTEGER,
+		volumeOf: () =>
+			simVolumeOf({ shareBytes: ctx.diskShareBytes, used: diskBytes() }),
+		threads: 1,
 	});
 	const endpoint: Endpoint = {
 		id,
@@ -213,11 +237,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		peerApp,
 		slots: auth.slots,
 		held,
-		/** What the replica's files hold now, as its evictor measures them. */
-		diskBytes: () =>
-			auth.slots
-				.ownedStores()
-				.reduce((sum, store) => sum + store.dataBytes(), 0),
+		diskBytes,
 		state: () => state,
 		alive,
 		isReady: () => state === "ready",

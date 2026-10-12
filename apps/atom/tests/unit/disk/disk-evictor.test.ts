@@ -8,7 +8,8 @@ import {
 	DISK_EVICT_BATCH,
 	DISK_IDLE_EXPIRY_MS,
 	DISK_MIN_AGE_MS,
-	diskShareBytesOf,
+	DISK_SHARE,
+	type VolumeBytes,
 } from "../../../src/disk/createDiskEvictor.js";
 import { readVolumeBytes } from "../../../src/disk/readVolumeBytes.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -56,12 +57,22 @@ const openFolder = () => {
 		subjectPulls: noSubjectPulls,
 	});
 	const warnings: string[] = [];
+	const dataBytes = () =>
+		auth.slots.ownedStores().reduce((sum, store) => sum + store.dataBytes(), 0);
+	/** A volume whose 80% share is `shareBytes`, with the folder's files on it: what the files hold stands in for what the volume sees. */
+	const volumeWithShare = (shareBytes: number): VolumeBytes => {
+		const totalBytes =
+			shareBytes === Number.MAX_SAFE_INTEGER
+				? Number.MAX_SAFE_INTEGER
+				: shareBytes / DISK_SHARE;
+		return { totalBytes, availBytes: Math.max(0, totalBytes - dataBytes()) };
+	};
 	const evictorOf = ({
 		shareBytes,
-		shareOf = () => shareBytes,
+		volumeOf = () => volumeWithShare(shareBytes),
 	}: {
 		shareBytes: number;
-		shareOf?: () => number;
+		volumeOf?: () => VolumeBytes;
 	}) =>
 		createDiskEvictor({
 			ctx: {
@@ -75,7 +86,8 @@ const openFolder = () => {
 				now: () => at,
 				sleep: async () => {},
 			},
-			shareOf,
+			volumeOf,
+			threads: 1,
 		});
 	const push = ({ ids }: { ids: string[] }) => {
 		for (const id of ids)
@@ -101,6 +113,7 @@ const openFolder = () => {
 		held,
 		warnings,
 		evictorOf,
+		volumeWithShare,
 		push,
 		advance: (ms: number) => {
 			at += ms;
@@ -129,7 +142,7 @@ const ids = (prefix: string, count: number) =>
 	Array.from({ length: count }, (_, i) => `${prefix}_${i}`);
 
 describe("the disk evictor", () => {
-	test("each thread's share is its part of 80% of the volume, read from the mount, never a setting", () => {
+	test("the volume is read from the mount, never a setting; one that cannot be read is zeros", () => {
 		const volume = readVolumeBytes({ path: tmpdir() });
 		expect(volume.totalBytes).toBeGreaterThan(0);
 		expect(volume.availBytes).toBeLessThanOrEqual(volume.totalBytes);
@@ -137,9 +150,6 @@ describe("the disk evictor", () => {
 			totalBytes: 0,
 			availBytes: 0,
 		});
-		expect(diskShareBytesOf({ volumeBytes: 100_000_000_000, threads: 7 })).toBe(
-			Math.floor(80_000_000_000 / 7),
-		);
 	});
 
 	test("under its share it only drops customers not pushed for 7 days, and reports the bytes its files take", async () => {
@@ -205,12 +215,13 @@ describe("the disk evictor", () => {
 				})
 			).length;
 		const before = [await countIn(0), await countIn(1)];
-		// One file's batch is enough to get back under the floor each tick.
-		const evictor = folder.evictorOf({ shareBytes: Math.floor(full * 0.99) });
+		// One file's batch frees more than the deficit each tick.
+		const evictor = folder.evictorOf({ shareBytes: Math.floor(full * 0.999) });
 
 		await evictor.tick();
 		const afterFirst = [await countIn(0), await countIn(1)];
-		folder.push({ ids: ids("s", 30) });
+		// A few more pushes put the volume over again by less than one batch: the next pass takes it from the other file.
+		folder.push({ ids: ids("s", 6) });
 		folder.advance(HOUR);
 		await evictor.tick();
 		const afterSecond = [await countIn(0), await countIn(1)];
@@ -218,7 +229,7 @@ describe("the disk evictor", () => {
 		expect(afterFirst[0]).toBe((before[0] ?? 0) - DISK_EVICT_BATCH);
 		expect(afterFirst[1]).toBe(before[1]);
 		expect(afterSecond[0]).toBeGreaterThanOrEqual(afterFirst[0] ?? 0);
-		expect(afterSecond[1]).toBeLessThan((afterFirst[1] ?? 0) + 30);
+		expect(afterSecond[1]).toBeLessThan(afterFirst[1] ?? 0);
 		folder.close();
 	});
 
@@ -250,17 +261,20 @@ describe("the disk evictor", () => {
 		// Every pass under the same pressure drops, and the warning is not repeated.
 		expect(folder.stats().diskEvicted).toBeGreaterThan(afterFirstDrop);
 		expect(folder.warnings).toEqual([
-			"Over its disk share with nothing older than the relay window: dropping recent customers",
+			"Over the disk share with nothing older than the relay window: dropping recent customers",
 		]);
 		folder.close();
 	});
 
-	test("the share is read at every tick, so a volume grown online counts at once", async () => {
+	test("the volume is read at every tick, so one grown online counts at once", async () => {
 		const folder = openFolder();
 		folder.push({ ids: ids("g", 60) });
 		folder.advance(HOUR);
 		let share = ROW_BYTES * 5;
-		const evictor = folder.evictorOf({ shareBytes: 0, shareOf: () => share });
+		const evictor = folder.evictorOf({
+			shareBytes: 0,
+			volumeOf: () => folder.volumeWithShare(share),
+		});
 
 		await evictor.tick();
 		const droppedWhileSmall = folder.stats().diskEvicted;
@@ -274,29 +288,28 @@ describe("the disk evictor", () => {
 		folder.close();
 	});
 
-	test("a volume it cannot read keeps the last share known, and with none known drops nothing: a 0 share would drain every file", async () => {
+	test("a volume it cannot read drops nothing that tick and warns: a 0-byte volume would read as full and drain every file", async () => {
 		const folder = openFolder();
 		folder.push({ ids: ids("u", 60) });
-		folder.advance(HOUR);
-		let share = 0;
-		const evictor = folder.evictorOf({ shareBytes: 0, shareOf: () => share });
+		folder.advance(DISK_IDLE_EXPIRY_MS + HOUR);
+		let readable = false;
+		const evictor = folder.evictorOf({
+			shareBytes: ROW_BYTES * 5,
+			volumeOf: () =>
+				readable
+					? folder.volumeWithShare(ROW_BYTES * 5)
+					: { totalBytes: 0, availBytes: 0 },
+		});
 
 		await evictor.tick();
-		expect(folder.stats().diskEvicted).toBe(0);
+		expect(folder.stats().diskEvicted + folder.stats().diskExpired).toBe(0);
 		expect(await folder.isStored("u_0")).toBe(true);
-		share = ROW_BYTES * 5;
-		await evictor.tick();
-		const droppedAtKnownShare = folder.stats().diskEvicted;
-		share = 0;
-		folder.push({ ids: ids("v", 60) });
-		folder.advance(HOUR);
+		readable = true;
 		await evictor.tick();
 
-		expect(droppedAtKnownShare).toBeGreaterThan(0);
-		expect(folder.stats().diskEvicted).toBeGreaterThan(droppedAtKnownShare);
+		expect(folder.stats().diskEvicted).toBeGreaterThan(0);
 		expect(folder.warnings).toEqual([
-			"Cannot read the volume the data folder is on; keeping the last disk share known",
-			"Cannot read the volume the data folder is on; keeping the last disk share known",
+			"Cannot read the volume the data folder is on; dropping nothing this tick",
 		]);
 		folder.close();
 	});
@@ -327,7 +340,11 @@ describe("the disk evictor", () => {
 					if (sleeps.length > 3) evictor.stop();
 				},
 			},
-			shareOf: () => Number.MAX_SAFE_INTEGER,
+			volumeOf: () => ({
+				totalBytes: Number.MAX_SAFE_INTEGER,
+				availBytes: Number.MAX_SAFE_INTEGER,
+			}),
+			threads: 1,
 		});
 
 		await evictor.run();
