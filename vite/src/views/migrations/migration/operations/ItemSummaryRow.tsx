@@ -4,10 +4,12 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { RateChange } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 import { migrationItemToProductItem } from "../shared/migrationItemUtils";
 
+const NO_RATE_CHANGES: RateChange[] = [];
+
 export function ItemSummaryRow({
 	item,
 	onClick,
-	changes = [],
+	changes = NO_RATE_CHANGES,
 	updated = false,
 }: {
 	item: Record<string, unknown>;
