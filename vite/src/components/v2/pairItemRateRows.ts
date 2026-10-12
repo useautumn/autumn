@@ -36,6 +36,27 @@ const pairedRemoveIndex = <A extends FeatureKeyed, R extends FeatureKeyed>({
 	);
 };
 
+/** The remove index each add replaces, by position; a remove pairs with at most one add. */
+export const pairRemoveIndices = <
+	A extends FeatureKeyed,
+	R extends FeatureKeyed,
+>({
+	adds,
+	removes,
+	sameCadence,
+}: {
+	adds: A[];
+	removes: R[];
+	sameCadence: (pair: { add: A; remove: R }) => boolean;
+}): (number | undefined)[] => {
+	const taken = new Set<number>();
+	return adds.map((add) => {
+		const removeIndex = pairedRemoveIndex({ add, removes, taken, sameCadence });
+		if (removeIndex !== undefined) taken.add(removeIndex);
+		return removeIndex;
+	});
+};
+
 /** Pairs each add with the remove it replaces; a pair that differs only in its rate card becomes one updated row. */
 export const pairItemRateRows = <
 	A extends FeatureKeyed,
@@ -54,10 +75,9 @@ export const pairItemRateRows = <
 		onlyRateCardChanged: boolean;
 	};
 }): ItemRateRows => {
-	const taken = new Set<number>();
+	const removeIndices = pairRemoveIndices({ adds, removes, sameCadence });
 	const rows = adds.map((add, addIndex) => {
-		const removeIndex = pairedRemoveIndex({ add, removes, taken, sameCadence });
-		if (removeIndex !== undefined) taken.add(removeIndex);
+		const removeIndex = removeIndices[addIndex];
 		const remove = removeIndex === undefined ? undefined : removes[removeIndex];
 		const { changes, onlyRateCardChanged } = compare({ add, remove });
 		return {

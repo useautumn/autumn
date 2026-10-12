@@ -35,7 +35,15 @@ import {
 	planKeysToFilter,
 } from "../filters/filterRowTypes";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
-import { migrationOpRateRows } from "../shared/addItemRateChanges";
+import {
+	type AddItem,
+	migrationOpRateRows,
+	type RemoveFilter,
+} from "../shared/addItemRateChanges";
+import {
+	withEditedAddItem,
+	withEditedRemoveFilter,
+} from "../shared/editMigrationItems";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
@@ -158,13 +166,22 @@ export function UpdatePlanOpForm({
 
 			if (newItems.length === 0) return;
 
-			const items = [...addItems];
 			if (editingItemIndex !== null) {
-				items[editingItemIndex] = newItems[0];
-			} else {
-				items.push(...newItems);
+				update({
+					customize: withEditedAddItem({
+						customize,
+						addIndex: editingItemIndex,
+						item: newItems[0] as AddItem,
+					}),
+				});
+				return;
 			}
-			update({ customize: { ...customize, add_items: items } });
+			update({
+				customize: {
+					...customize,
+					add_items: [...addItems, ...(newItems as AddItem[])],
+				},
+			});
 		}
 	};
 
@@ -332,7 +349,10 @@ export function UpdatePlanOpForm({
 							item={item}
 							onChange={(updated) => {
 								const items = [...(customize?.remove_items ?? [])];
-								items[index] = updated;
+								items[index] = withEditedRemoveFilter({
+									previous: item,
+									next: updated as RemoveFilter,
+								});
 								update({ customize: { ...customize, remove_items: items } });
 							}}
 							onRemove={() => {

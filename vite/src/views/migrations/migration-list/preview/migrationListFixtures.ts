@@ -640,6 +640,61 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 		}),
 	}),
 	migration({
+		id: "migration-ai-markups",
+		status: "draft",
+		filter: { customer: { plan: { plan_id: "pro", version: 1 } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: "pro", version: 1, custom: false },
+					customize: {
+						remove_items: [
+							{
+								feature_id: "ai_credits",
+								interval: "month",
+								interval_count: 1,
+								included: 500,
+								previous_feature_override: {
+									markups: {
+										default_markup: 20,
+										model_markups: {
+											"openai/gpt-4o": { markup: 10 },
+											"openai/o3": { markup: 15 },
+											"anthropic/claude-sonnet-4": { markup: 12 },
+										},
+									},
+								},
+								only_feature_override_changed: true,
+							},
+						],
+						add_items: [
+							{
+								feature_id: "ai_credits",
+								included: 500,
+								unlimited: false,
+								reset: { interval: "month" },
+								feature_override: {
+									markups: {
+										default_markup: 25,
+										model_markups: {
+											"openai/gpt-4o": { markup: 20 },
+											"openai/o3": { markup: 25 },
+											"anthropic/claude-sonnet-4": { markup: 18 },
+											"google/gemini-2.5-pro": { markup: 30 },
+										},
+									},
+								},
+							},
+						],
+					},
+				},
+			],
+		} as Operations,
+		noBillingChanges: true,
+		runSummary: summary({ customer_count: 12 }),
+	}),
+	migration({
 		id: "migration-scale-rate-card",
 		status: "draft",
 		filter: {

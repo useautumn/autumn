@@ -27,11 +27,11 @@ export type CatalogPlan = {
 	items?: ProductItem[];
 };
 
-type AddItem = NonNullable<
+export type AddItem = NonNullable<
 	NonNullable<UpdatePlanOp["customize"]>["add_items"]
 >[number];
 
-type RemoveFilter = NonNullable<
+export type RemoveFilter = NonNullable<
 	NonNullable<UpdatePlanOp["customize"]>["remove_items"]
 >[number];
 
@@ -111,6 +111,19 @@ export const addItemRateChanges = ({
 		: [];
 };
 
+/** A remove filter matches an added item's cadence: same interval and interval count. */
+export const migrationItemSameCadence = ({
+	add,
+	remove,
+}: {
+	add: AddItem;
+	remove: RemoveFilter;
+}) =>
+	String(add.price?.interval ?? add.reset?.interval) ===
+		String(remove.interval) &&
+	(add.price?.interval_count ?? add.reset?.interval_count ?? 1) ===
+		(remove.interval_count ?? 1);
+
 /** An op's added items as rate rows; a pair the draft stamped as override-only becomes one updated row. */
 export const migrationOpRateRows = ({
 	op,
@@ -124,11 +137,7 @@ export const migrationOpRateRows = ({
 	pairItemRateRows({
 		adds: op.customize?.add_items ?? [],
 		removes: op.customize?.remove_items ?? [],
-		sameCadence: ({ add, remove }) =>
-			String(add.price?.interval ?? add.reset?.interval) ===
-				String(remove.interval) &&
-			(add.price?.interval_count ?? add.reset?.interval_count ?? 1) ===
-				(remove.interval_count ?? 1),
+		sameCadence: migrationItemSameCadence,
 		compare: ({ add, remove }) => ({
 			changes: addItemRateChanges({
 				item: add,
