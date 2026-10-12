@@ -5,6 +5,7 @@ import type {
 	SubjectCursor,
 	SubjectDigest,
 } from "../../state/repos/subjectStates.js";
+import type { SqliteStore } from "../../state/types/sqliteStore.js";
 
 export type SubjectKey = { customerId: string; entityId: string };
 
@@ -75,6 +76,8 @@ export type Slots = {
 	}): Promise<AppliedSubject[]>;
 	/** The newest write in the slots this thread owns, by this replica's clock; 0 when they are empty. */
 	maxAppliedAt(): number;
+	/** The slot files this thread owns in the folder: what it alone may drop rows from. */
+	ownedStores(): SqliteStore[];
 	/**
 	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
 	 * with `window` null (a fresh volume); else the digests of what the source wrote in its last `window` ms, and only

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
 import { readAtomHealth } from "../../../src/init/atomHealth.js";
 import {
 	createThreadStatsBuffer,
@@ -16,6 +17,7 @@ describe("Atom health", () => {
 			restarts,
 			ready,
 			threadStats,
+			dataDir: tmpdir(),
 		};
 		const thread1 = openThreadCounters({ buffer: threadStats, index: 1 });
 		thread1.add("checks");

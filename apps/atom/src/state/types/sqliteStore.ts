@@ -40,5 +40,12 @@ export type SqliteStore = {
 	}): AppliedSubject[];
 	/** The newest write held by this replica's clock, 0 when empty. */
 	maxAppliedAt(): number;
+	/** Drops up to `limit` customers none of whose rows was written since `before`, oldest first, whole, held copies included. */
+	dropCustomersWrittenBefore(params: { before: number; limit: number }): {
+		customers: number;
+		rows: number;
+	};
+	/** The pages the file holds: what it takes on the volume once the main thread has checkpointed its log. */
+	dataBytes(): number;
 	close(): void;
 };

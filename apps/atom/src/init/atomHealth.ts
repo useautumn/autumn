@@ -1,3 +1,4 @@
+import { readVolumeBytes } from "../disk/readVolumeBytes.js";
 import {
 	readThreadStats,
 	type ThreadStats,
@@ -10,6 +11,8 @@ export type AtomHealth = {
 	bootedAt: string;
 	restarts: number;
 	container: ContainerStats;
+	/** The volume the data folder is on: what the disk share is a part of, and how much of it is still free. */
+	disk: { totalBytes: number; availBytes: number };
 	threads: ThreadStats[];
 };
 
@@ -21,6 +24,7 @@ export type AtomHealthSource = {
 	/** One Int32 the main thread sets to 1 once the Atom may serve. */
 	ready: Int32Array;
 	threadStats: SharedArrayBuffer;
+	dataDir: string;
 };
 
 export const isAtomReady = ({
@@ -32,10 +36,12 @@ export const readAtomHealth = ({
 	restarts,
 	ready,
 	threadStats,
+	dataDir,
 }: AtomHealthSource): AtomHealth => ({
 	status: isAtomReady({ ready }) ? "alive" : "starting",
 	bootedAt,
 	restarts: Atomics.load(restarts, 0),
 	container: readContainerStats(),
+	disk: readVolumeBytes({ path: dataDir }),
 	threads: readThreadStats({ buffer: threadStats }),
 });

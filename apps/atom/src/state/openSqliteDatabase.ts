@@ -1,7 +1,10 @@
 import { Database } from "bun:sqlite";
+import { SQLITE_PAGE_CACHE_BYTES } from "@autumn/env/atom";
 
 /** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
+/** A completed checkpoint cuts the log back to this, so 128 logs never sit at their high-water mark. */
+export const JOURNAL_SIZE_LIMIT_BYTES = 1024 * 1024;
 
 /** Threads opening a new file together each try to switch it to WAL; this many tries, this far apart, outlast the others. */
 const WAL_SWITCH_ATTEMPTS = 50;
@@ -26,11 +29,17 @@ const switchToWal = ({ database }: { database: Database }) => {
 const configureDatabase = ({ database }: { database: Database }) => {
 	// First, before anything touches the file: another thread may be recovering its log right now.
 	database.run(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
+	// Pages a dropped customer frees can be handed back to the volume. Before the WAL switch writes the header; a file
+	// that already has one keeps its mode until the VACUUM that follows an emptied schema.
+	database.run("PRAGMA auto_vacuum = INCREMENTAL");
 	switchToWal({ database });
 	// Autumn holds the truth and can send everything again, so a commit does not wait on the disk.
 	database.run("PRAGMA synchronous = NORMAL");
 	// The main thread checkpoints every file (startWalCheckpointer), so a commit never copies the log back itself.
 	database.run("PRAGMA wal_autocheckpoint = 0");
+	database.run(`PRAGMA journal_size_limit = ${JOURNAL_SIZE_LIMIT_BYTES}`);
+	// Bounded per connection, since a thread opens one per slot; reads still hit the kernel's page cache.
+	database.run(`PRAGMA cache_size = -${SQLITE_PAGE_CACHE_BYTES / 1024}`);
 };
 
 const initializeSchema = ({
@@ -53,14 +62,17 @@ const initializeSchema = ({
 	if (version === undefined) {
 		throw new Error("Unable to read SQLite schema version");
 	}
+	const isOtherVersion = version !== BigInt(schemaVersion);
 	const migrate = database.transaction(() => {
 		// Any other version is a copy of what Autumn holds: it is emptied and sent again, never migrated, so a rollback keeps accepting pushes.
-		if (version !== BigInt(schemaVersion)) dropSchema({ database });
+		if (isOtherVersion) dropSchema({ database });
 		createSchema({ database });
 		database.run(`PRAGMA user_version = ${schemaVersion}`);
 	});
 
 	migrate.exclusive();
+	// Emptied, the file is rebuilt so the auto_vacuum mode set above takes.
+	if (isOtherVersion) database.run("VACUUM");
 };
 
 /** Opens one of Atom's SQLite files with its schema in place; a file of any other version is emptied. */

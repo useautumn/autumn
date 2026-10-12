@@ -414,6 +414,7 @@ describe("the public app", () => {
 					restarts: new Int32Array(1),
 					ready: new Int32Array([1]),
 					threadStats,
+					dataDir: tmpdir(),
 				},
 				counters: openThreadCounters({ buffer: threadStats, index: 0 }),
 				replication: noReplication,

@@ -131,8 +131,11 @@ describe("atom env", () => {
 		// Half a CPU and 512 MB, as the stack is provisioned today.
 		expect(threads({ cpus: 1, memory: 0.5 * GB })).toBe(1);
 		expect(threads({ cpus: 4, memory: 2 * GB })).toBe(4);
-		// Eight threads would not fit in 1 GB: memory decides.
-		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(2);
+		// Eight threads would not fit in 1 GB: memory decides, 288 MiB for the main thread then 384 MiB a thread with its held copies.
+		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(1);
+		expect(threads({ cpus: 8, memory: 2 * GB })).toBe(4);
+		// XXS: a 640 MiB container runs one thread.
+		expect(threads({ cpus: 1, memory: 640 * 1024 ** 2 })).toBe(1);
 		// Atom's sizes: Medium 3 / 6Gi, Large 7 / 12Gi, XL 15 / 24Gi use every CPU.
 		expect(threads({ cpus: 3, memory: 6 * GB })).toBe(3);
 		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(7);
@@ -306,12 +309,15 @@ describe("atom env", () => {
 				},
 			).ATOM_HELD_BYTES_PER_THREAD;
 
-		// 12 GiB on 7 threads: (9 GiB − 8 × 250 MiB) / 7 / 3.
+		// Large, 12 GiB on 7 threads: (12 GiB − 288 MiB − 7 × 192 MiB) × 0.5 / 7 / 5 ≈ 152 MiB, about 8k subjects of 18.6 KB.
 		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBe(
-			Math.floor((9 * GiB - 8 * 250 * MiB) / 7 / 3),
+			Math.floor(((12 * GiB - 288 * MiB - 7 * 192 * MiB) * 0.5) / 7 / 5),
 		);
-		// Too small for more than the threads themselves: nothing is held, and every check reads its row.
-		expect(heldBytes({ cpus: 2, memory: 0.5 * GiB })).toBe(0);
+		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(150 * MiB);
+		// XXS, a 640 MiB container on one thread: (640 − 288 − 192) × 0.5 / 5 = 16 MiB, about 900 subjects.
+		expect(heldBytes({ cpus: 1, memory: 640 * MiB })).toBe(16 * MiB);
+		// Too small for the threads themselves: nothing is held, and every check reads its row.
+		expect(heldBytes({ cpus: 1, memory: 400 * MiB })).toBe(0);
 	});
 
 	test("the main thread logs its health every 10s unless told otherwise; an interval that would spin or overflow a timer is refused", () => {

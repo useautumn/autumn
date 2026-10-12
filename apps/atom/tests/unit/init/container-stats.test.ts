@@ -18,6 +18,10 @@ const fakeCgroup = ({
 	);
 	writeFileSync(join(cgroupDir, "cpu.max"), `${cpuMax}\n`);
 	writeFileSync(join(cgroupDir, "memory.current"), "1073741824\n");
+	writeFileSync(
+		join(cgroupDir, "memory.stat"),
+		"anon 734003200\nfile 339738624\nkernel 0\n",
+	);
 	writeFileSync(join(cgroupDir, "memory.max"), `${memoryMax}\n`);
 	return cgroupDir;
 };
@@ -33,6 +37,7 @@ describe("container stats", () => {
 			cpuUsageSeconds: 2.5,
 			cpuLimitCores: 7,
 			memoryBytes: 1073741824,
+			memoryAnonBytes: 734003200,
 			memoryLimitBytes: 12884901888,
 		});
 	});
@@ -48,6 +53,7 @@ describe("container stats", () => {
 			cpuUsageSeconds: null,
 			cpuLimitCores: null,
 			memoryBytes: null,
+			memoryAnonBytes: null,
 			memoryLimitBytes: null,
 		});
 	});

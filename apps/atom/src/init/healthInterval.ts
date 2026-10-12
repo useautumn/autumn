@@ -7,7 +7,11 @@ type IntervalCounter =
 	| "pushes"
 	| "subjectMisses"
 	| "subjectPulls"
-	| "subjectFills";
+	| "subjectFills"
+	| "heldEvicted"
+	| "heldExpired"
+	| "diskEvicted"
+	| "diskExpired";
 
 /** Totals since boot at one read, summed over every thread. */
 export type HealthTotals = Record<IntervalCounter, number> & {
@@ -34,6 +38,10 @@ export const bootTotals = ({
 	subjectMisses: 0,
 	subjectPulls: 0,
 	subjectFills: 0,
+	heldEvicted: 0,
+	heldExpired: 0,
+	diskEvicted: 0,
+	diskExpired: 0,
 });
 
 export const healthTotalsOf = ({
@@ -54,6 +62,10 @@ export const healthTotalsOf = ({
 		subjectMisses: sumOf("subjectMisses"),
 		subjectPulls: sumOf("subjectPulls"),
 		subjectFills: sumOf("subjectFills"),
+		heldEvicted: sumOf("heldEvicted"),
+		heldExpired: sumOf("heldExpired"),
+		diskEvicted: sumOf("diskEvicted"),
+		diskExpired: sumOf("diskExpired"),
 	};
 };
 
@@ -75,4 +87,8 @@ export const healthIntervalBetween = ({
 	subjectMisses: current.subjectMisses - previous.subjectMisses,
 	subjectPulls: current.subjectPulls - previous.subjectPulls,
 	subjectFills: current.subjectFills - previous.subjectFills,
+	heldEvicted: current.heldEvicted - previous.heldEvicted,
+	heldExpired: current.heldExpired - previous.heldExpired,
+	diskEvicted: current.diskEvicted - previous.diskEvicted,
+	diskExpired: current.diskExpired - previous.diskExpired,
 });
