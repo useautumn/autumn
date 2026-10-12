@@ -23,7 +23,10 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	noSubjectPulls,
+	storedEntitySubjectWith,
 	subjectBody,
+	subjectPushOf,
 } from "../utils/atomFixtures.js";
 
 const ATOM_TOKEN = "atom_token_1";
@@ -34,6 +37,7 @@ const THREAD_STATS = createThreadStatsBuffer({ threads: 1 });
 const HEALTH = {
 	bootedAt: "2026-10-06T00:00:00.000Z",
 	restarts: new Int32Array(1),
+	ready: new Int32Array([1]),
 	threadStats: THREAD_STATS,
 };
 const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
@@ -79,6 +83,7 @@ const createDeployedApp = ({
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	const { logger, logged } = createLogger();
@@ -104,6 +109,7 @@ const createMultiTenantApp = () => {
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
 		heldSubjects: freshHeld(),
+		subjectPulls: noSubjectPulls,
 	});
 	opened.push(auth);
 	const { logger } = createLogger();
@@ -511,7 +517,7 @@ describe("a check Atom does not answer itself", () => {
 		const response = await app.request(
 			"/v1/balances.check",
 			post({
-				headers: withToken(ATOM_TOKEN),
+				headers: { ...withToken(ATOM_TOKEN), authorization: SECRET_KEY },
 				body: { feature_id: "messages" },
 			}),
 		);
@@ -532,6 +538,32 @@ describe("a check Atom does not answer itself", () => {
 		);
 
 		expect(deducting.headers.get("x-atom-forwarded")).toBe("send_event");
+	});
+
+	test("one without a secret key isn't forwarded: the API could only refuse it", async () => {
+		const { app } = createDeployedApp();
+		const fetchSpy = autumnAnswering({ status: 401, body: {} });
+
+		const { authorization: _, ...keyless } = new Headers(
+			checkMessages({ customer_id: "cus_2" }).headers,
+		).toJSON();
+		const response = await app.request(
+			"/v1/balances.check",
+			post({
+				headers: keyless,
+				body: { customer_id: "cus_2", feature_id: "messages" },
+			}),
+		);
+
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(response.status).toBe(401);
+		expect(await response.json()).toEqual({
+			message: "Atom forwards nothing without a secret key",
+			code: "atom_not_forwarded",
+		});
+		expect(response.headers.get("x-atom-forwarded")).toBe(
+			"customer_not_stored",
+		);
 	});
 
 	test("an API that cannot be reached is a 502 in the API's error shape", async () => {
@@ -947,5 +979,59 @@ describe("our multi-tenant Atom", () => {
 
 		expect(badHash.status).toBe(400);
 		expect(badId.status).toBe(400);
+	});
+});
+
+describe("a customer's evict", () => {
+	const pushEntity = ({ logOffset }: { logOffset: bigint }) => {
+		const push = subjectPushOf({
+			subject: {
+				...storedEntitySubjectWith({ customerBalance: 10, entityBalance: 5 }),
+				logOffset,
+			},
+		});
+		return post({
+			headers: pushedFor({ customerId: push.customerId }),
+			body: JSON.parse(push.body),
+		});
+	};
+	const pushCustomer = ({ customerVersion }: { customerVersion: unknown }) =>
+		post({
+			headers: pushedFor({ customerId: "cus_1" }),
+			body: {
+				...subjectBody({ balance: 10 }),
+				log_offset: "140",
+				read_at: 1800,
+				customer_version: customerVersion,
+			},
+		});
+
+	test("leaves an entity read before it to the API as stale", async () => {
+		const { app } = createDeployedApp();
+		await app.request("/v1/subjects.set", pushEntity({ logOffset: 100n }));
+		await app.request(
+			"/v1/subjects.set",
+			pushCustomer({ customerVersion: "140" }),
+		);
+		autumnAnswering({ status: 200, body: { allowed: true } });
+
+		const check = await app.request(
+			"/v1/balances.check",
+			checkMessages({ entity_id: "ent_42" }),
+		);
+
+		expect(check.headers.get("x-atom-forwarded")).toBe("entity_stale");
+	});
+
+	test("with a version that is not a whole offset is refused", async () => {
+		const { app } = createDeployedApp();
+
+		const refused = await Promise.all(
+			["abc", "-1", 140].map((customerVersion) =>
+				app.request("/v1/subjects.set", pushCustomer({ customerVersion })),
+			),
+		);
+
+		expect(refused.map((response) => response.status)).toEqual([400, 400, 400]);
 	});
 });

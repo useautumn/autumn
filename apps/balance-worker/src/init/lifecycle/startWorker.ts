@@ -23,6 +23,7 @@ async function completeWorkerStartup({
 		state.listener = await ctx.listen();
 		ctx.healthReporter?.start();
 		await ctx.partitions.start();
+		ctx.coldStart?.start();
 		state.status = "running";
 	} catch (cause) {
 		try {

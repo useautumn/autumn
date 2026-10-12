@@ -9,9 +9,12 @@ describe("Atom health", () => {
 	test("every thread reports the main thread's boot, how many threads it has replaced, and each thread's counters", () => {
 		const restarts = new Int32Array(new SharedArrayBuffer(4));
 		const threadStats = createThreadStatsBuffer({ threads: 2 });
+		const ready = new Int32Array(new SharedArrayBuffer(4));
+		Atomics.store(ready, 0, 1);
 		const health = {
 			bootedAt: "2026-10-05T21:00:00.000Z",
 			restarts,
+			ready,
 			threadStats,
 		};
 		const thread1 = openThreadCounters({ buffer: threadStats, index: 1 });

@@ -1,5 +1,6 @@
 import {
 	type AlienClient,
+	type AlienContainerResources,
 	type AlienDeployment,
 	type AlienFixedPools,
 	type AlienNetwork,
@@ -46,6 +47,18 @@ const machineToAtomPools = ({
 	machine: ByocCacheMachine;
 }): AlienFixedPools => ({
 	[ATOM_POOL]: { machine: machine.instanceType, machines: 1 },
+});
+
+/** The Atom container's share of its machine; the release's resource ranges must hold every size's. */
+const machineToAtomContainers = ({
+	machine,
+}: {
+	machine: ByocCacheMachine;
+}): AlienContainerResources => ({
+	[ATOM_RESOURCE_ID]: {
+		cpu: machine.container.cpu,
+		memory: `${machine.container.memory}Gi`,
+	},
 });
 
 const deploymentToAtomMachine = ({
@@ -122,6 +135,7 @@ const startAlienAtom = ({
 		...names,
 		region,
 		pools: machineToAtomPools({ machine }),
+		containers: machineToAtomContainers({ machine }),
 		network: cacheNetworkToAlienNetwork({ network }),
 		environmentVariables: [
 			...atomAuthToVariables({ auth }),
@@ -229,7 +243,7 @@ const retryAlienAtom = async ({
 	if (deployment) await ctx.alienClient.retryDeployment({ deployment });
 };
 
-/** Tears down the deployment and the setup links that could start another. */
+/** Tears down the deployment; its setup links stay, because deleting the customer's stack calls alien with them. */
 const deleteAlienAtom = async ({
 	ctx,
 	deploymentGroupId,
@@ -241,7 +255,6 @@ const deleteAlienAtom = async ({
 		deploymentGroupId,
 	});
 	if (deployment) await ctx.alienClient.deleteDeployment({ deployment });
-	await ctx.alienClient.revokeSetupLinks({ deploymentGroupId });
 };
 
 /** alien deploys the Atom image into the org's own cloud. */
@@ -257,5 +270,6 @@ export const createAlienAtomDeployer = ({
 		resize: (params) => resizeAlienAtom({ ctx, ...params }),
 		retry: (params) => retryAlienAtom({ ctx, ...params }),
 		delete: (params) => deleteAlienAtom({ ctx, ...params }),
+		closeSetup: (params) => ctx.alienClient.revokeSetupLinksOnceDeleted(params),
 	};
 };

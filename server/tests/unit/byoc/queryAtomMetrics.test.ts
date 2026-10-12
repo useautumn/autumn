@@ -109,4 +109,14 @@ describe("an Atom's metrics", () => {
 		expect(metrics.period_seconds).toBe(3600);
 		expect(metrics.latest).toBeNull();
 	});
+
+	test("reads health lines from each log line's JSON, not the body alien now cuts to the message", async () => {
+		await queryAtomMetrics({ deploymentId: "dep_123", range: "1h" });
+
+		for (const { pipeline } of queries) {
+			expect(pipeline).toContain(`where line contains '"atom_health"'`);
+			expect(pipeline).toContain("parse_json(line)");
+			expect(pipeline).not.toContain("body");
+		}
+	});
 });

@@ -20,13 +20,14 @@ import {
 	generateAtomToken,
 } from "../../utils/atomTokenUtils.js";
 import {
+	atomNames,
+	atomStackName,
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToCreateResponse,
 	cacheDeploymentToMachine,
 	cacheLockKey,
-	cacheNames,
-	cacheStackName,
-	nextCacheAtomId,
+	cacheOwner,
+	nextAtomId,
 	resourcesToMachine,
 } from "../../utils/byocCacheUtils.js";
 import { toCacheStages } from "../../utils/cacheStageUtils.js";
@@ -64,8 +65,13 @@ const setupSettings = ({
 		region: region ?? existing?.region ?? DEFAULT_BYOC_CACHE_AWS_REGION,
 		network: network ?? existing?.network ?? null,
 		stackName: stack_name
-			? cacheStackName({ org, env, atomId, base: stack_name })
-			: (existing?.stack_name ?? cacheStackName({ org, env, atomId })),
+			? atomStackName({
+					owner: cacheOwner({ org, env }),
+					atomId,
+					base: stack_name,
+				})
+			: (existing?.stack_name ??
+				atomStackName({ owner: cacheOwner({ org, env }), atomId })),
 	};
 };
 
@@ -181,9 +187,8 @@ const startCacheSetup = async ({
 	// Atoms still being removed keep their own groups and stacks; a new one is named apart from them.
 	const atomId =
 		existing?.id ??
-		nextCacheAtomId({
-			org,
-			env,
+		nextAtomId({
+			owner: cacheOwner({ org, env }),
 			existingAtomIds: (await cacheDeploymentRepo.findRemoving({ ctx })).map(
 				({ id }) => id,
 			),
@@ -195,7 +200,11 @@ const startCacheSetup = async ({
 		: generateAtomToken();
 	const settings = setupSettings({ ctx, params, existing, atomId });
 	const setup = await getAtomDeployer().start({
-		names: cacheNames({ org, env, atomId, stackName: settings.stackName }),
+		names: atomNames({
+			owner: cacheOwner({ org, env }),
+			atomId,
+			stackName: settings.stackName,
+		}),
 		auth: { mode: "deployed", tokenHash: atomTokenToHash({ token }) },
 		machine: settings.machine,
 		region: settings.region,

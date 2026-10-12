@@ -1,12 +1,4 @@
-import {
-	afterAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	setSystemTime,
-	test,
-} from "bun:test";
+import { beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import {
 	AppEnv,
 	type ByocCacheDeployment,
@@ -21,10 +13,9 @@ import {
 	toCacheStages,
 	toRemovalStages,
 } from "@/internal/byoc/utils/cacheStageUtils.js";
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const REFRESH_MODULE = "@/internal/byoc/atomRecords/refreshAtomRecord.js";
-// Kept so afterAll can hand the real module back: mock.module is process-wide.
-const realRefreshModule: Record<string, unknown> = await import(REFRESH_MODULE);
 
 const cacheDeploymentIn = ({
 	status,
@@ -67,7 +58,7 @@ const removingWith = ({
 let reports: (ByocCacheDeployment | null | Error)[] = [];
 let stored: ByocCacheDeployment | null = null;
 
-mock.module(REFRESH_MODULE, () => ({
+await mockModuleWithRestore(REFRESH_MODULE, () => ({
 	refreshAtomRecord: async () => {
 		const report = reports.shift();
 		if (report instanceof Error) throw report;
@@ -75,10 +66,6 @@ mock.module(REFRESH_MODULE, () => ({
 		return stored;
 	},
 }));
-
-afterAll(() => {
-	mock.module(REFRESH_MODULE, () => realRefreshModule);
-});
 
 const { watchAtomRecord } = await import(
 	"@/internal/byoc/atomRecords/watchAtomRecord/watchAtomRecord.js"

@@ -18,8 +18,8 @@ const PERIOD_SECONDS: Record<AtomMetricsRange, number> = {
 
 /** Every replica's health line summed into the 10s window it landed in, the raw resolution. */
 const WINDOWS_PIPELINE = `
-	| where body contains '"atom_health"'
-	| extend data = parse_json(body).data
+	| where line contains '"atom_health"'
+	| extend data = parse_json(line).data
 	| where todouble(data.interval.seconds) > 0
 	| extend lineSeconds = todouble(data.interval.seconds)
 	| summarize requests = sum(todouble(data.interval.requests)),

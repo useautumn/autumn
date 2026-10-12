@@ -7,10 +7,12 @@ import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
+import { notReadyCheckMiddleware } from "./middlewares/notReadyCheckMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
+/** What the public endpoint serves. Nothing here trusts another replica: peers talk on their own port (createPeerApp). */
 export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
@@ -24,11 +26,12 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const authorized = new Hono<AtomHttpEnv>();
 	authorized.post(
 		"/balances.check",
+		notReadyCheckMiddleware({ ctx }),
 		clientAuthMiddleware({ ctx }),
 		receiveCheck,
 	);
-	authorized.post("/subjects.set", pushAuth, receiveSetSubject);
-	authorized.post("/catalog.set", pushAuth, receiveSetCatalog);
+	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
+	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
 	app.route("/v1", authorized);
 	return app;
 }

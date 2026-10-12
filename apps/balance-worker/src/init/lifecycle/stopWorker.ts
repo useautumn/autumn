@@ -27,6 +27,7 @@ export async function completeWorkerShutdown({
 	state,
 }: WorkerLifecycleScope): Promise<void> {
 	state.status = "stopping";
+	ctx.coldStart?.stop();
 	ctx.healthReporter?.stop();
 	const errors: unknown[] = [];
 	try {

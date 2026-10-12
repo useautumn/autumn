@@ -14,4 +14,6 @@ export type BalanceWorkerReadSubjectStateRequest = {
 export type ReadSubjectStateReply = {
 	state: SubjectState;
 	catalog: Catalog;
+	/** Every record of the partition at or below it is in `state`; later decisions may be too. Decimal; absent from an older worker. */
+	logOffset?: string;
 };
