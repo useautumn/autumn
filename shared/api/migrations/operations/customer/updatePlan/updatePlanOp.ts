@@ -14,23 +14,26 @@ import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/cr
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
 
 /** A remove filter plus display-only notes about the item it replaces; execution never reads them. */
-export const MigrationRemoveItemSchema = PlanItemFilterSchema.extend({
-	previous_feature_override: ApiFeatureOverrideSchema.optional().meta({
-		internal: true,
-		description:
-			"The matched item's feature_override before the update; empty when it inherited the feature's.",
-	}),
-	only_feature_override_changed: z.boolean().optional().meta({
-		internal: true,
-		description:
-			"True when the matched item and its replacement differ only by feature_override.",
-	}),
-}).refine(
-	(filter: PlanItemFilter) => PlanItemFilterSchema.safeParse(filter).success,
-	{
-		message: "PlanItemFilter must have at least one field set.",
-	},
-);
+export const MigrationRemoveItemSchema = z
+	.object({
+		...PlanItemFilterSchema.shape,
+		previous_feature_override: ApiFeatureOverrideSchema.optional().meta({
+			internal: true,
+			description:
+				"The matched item's feature_override before the update; empty when it inherited the feature's.",
+		}),
+		only_feature_override_changed: z.boolean().optional().meta({
+			internal: true,
+			description:
+				"True when the matched item and its replacement differ only by feature_override.",
+		}),
+	})
+	.refine(
+		(filter: PlanItemFilter) => PlanItemFilterSchema.safeParse(filter).success,
+		{
+			message: "PlanItemFilter must have at least one field set.",
+		},
+	);
 
 export type MigrationRemoveItem = z.infer<typeof MigrationRemoveItemSchema>;
 
