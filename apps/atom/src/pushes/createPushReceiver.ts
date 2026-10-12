@@ -9,6 +9,7 @@ import {
 	InvalidPushError,
 	isUnreadableRequest,
 } from "../lib/contracts/invalidPushError.js";
+import { MAX_PUSHES_PER_PULL } from "../pushQueue/sqsLimits.js";
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
 import type { Replication } from "../replication/types/replication.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
@@ -19,6 +20,8 @@ import type { PushReceiver } from "./types/pushReceiver.js";
 const RECEIVE_LOOPS = 4;
 /** After a failed receive, so an unreachable queue is not polled in a tight loop. */
 const RECEIVE_RETRY_MS = 1_000;
+/** After a receive that came back short, so the next one finds a fuller batch: each receive costs an SDK call's CPU. */
+export const RECEIVE_LINGER_MS = 25;
 /** Pushes received and not yet acked; past this, receiving waits for one to finish. */
 const MAX_PUSHES_IN_FLIGHT = 400;
 
@@ -154,10 +157,22 @@ export const createPushReceiver = ({
 		}
 	}
 
+	/** One push per turn of the event loop: a batch applied in one go holds the thread's checks behind all of it. */
+	async function settleBatch(messages: PulledPush[]): Promise<void> {
+		for (const message of messages) {
+			settle(message);
+			await new Promise((resolve) => setImmediate(resolve));
+		}
+	}
+
 	async function receiveUntilStopped(): Promise<void> {
 		while (!stopped.signal.aborted) {
 			while (inFlight.size >= maxPushesInFlight) await Promise.race(inFlight);
-			for (const message of await receiveBatch()) settle(message);
+			const messages = await receiveBatch();
+			await settleBatch(messages);
+			const isShort =
+				messages.length > 0 && messages.length < MAX_PUSHES_PER_PULL;
+			if (isShort && !stopped.signal.aborted) await sleep(RECEIVE_LINGER_MS);
 		}
 	}
 
