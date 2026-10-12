@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 import { useMemo } from "react";
+import { toast } from "sonner";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
@@ -187,6 +188,11 @@ export function SubscriptionUpdateSheet() {
 	const { setIsInlineEditorOpen } = useCustomerContext();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const { data: pendingPaymentLink } = usePendingPaymentLink({
+		customerId: customer?.id ?? customer?.internal_id,
+		customerProductId: cusProduct?.id,
+		enabled: cusProduct?.status === CusProductStatus.Pending,
+	});
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
 	const { features, isLoading: featuresLoading } = useFeaturesQuery();
 	const { licenseProducts, isLoading: licenseProductsLoading } =
@@ -309,6 +315,11 @@ export function SubscriptionUpdateSheet() {
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onCheckoutRedirect={(checkoutUrl) => {
+				// The edit kept the customer's long-lived link, so there is no new checkout to open.
+				if (pendingPaymentLink?.longLived) {
+					toast.success("Checkout link updated");
+					return;
+				}
 				window.location.href = checkoutUrl;
 			}}
 			onApplied={onApplied}
