@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -727,8 +727,14 @@ describe("a slot file's footprint", () => {
 		sqliteStore.setSubjects({ subjects: manyAt({ count: 400, readAt: 2 }) });
 		checkpointEveryFile();
 		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
-		const full = sqliteStore.fileBytes();
-		expect(full).toBeGreaterThan(2_000_000);
+		const onVolume = () =>
+			[databasePath, `${databasePath}-wal`].reduce(
+				(sum, path) => sum + statSync(path).size,
+				0,
+			);
+		const full = onVolume();
+		expect(full).toBeGreaterThan(10_000_000);
+		expect(sqliteStore.dataBytes()).toBeGreaterThan(10_000_000);
 
 		while (
 			sqliteStore.dropCustomersWrittenBefore({ before: 2000, limit: 100 })
@@ -738,8 +744,9 @@ describe("a slot file's footprint", () => {
 		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
 
 		expect(sqliteStore.countSubjects()).toBe(1);
-		// What is left is the log, cut back to its 4 MiB limit, and a near-empty file.
-		expect(sqliteStore.fileBytes()).toBeLessThan(4.5 * 1024 * 1024);
+		expect(sqliteStore.dataBytes()).toBeLessThan(100_000);
+		// What is left on the volume is the log, cut back to its 4 MiB limit, and a near-empty file.
+		expect(onVolume()).toBeLessThan(4.5 * 1024 * 1024);
 		checkpointer.stop();
 		sqliteStore.close();
 	});

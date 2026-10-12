@@ -127,6 +127,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 			restarts: new Int32Array(1),
 			ready,
 			threadStats,
+			dataDir: ctx.volume.folder,
 		},
 		counters,
 		replication,

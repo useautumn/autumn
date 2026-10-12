@@ -97,6 +97,7 @@ export const createMultiTenantReplica = ({
 			restarts: new Int32Array(1),
 			ready: new Int32Array([ready ? 1 : 0]),
 			threadStats,
+			dataDir: dataDir,
 		},
 		counters,
 		replication,

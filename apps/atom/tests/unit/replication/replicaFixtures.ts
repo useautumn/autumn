@@ -91,6 +91,7 @@ export const createReplica = ({
 			restarts: new Int32Array(1),
 			ready: readyFlag,
 			threadStats,
+			dataDir: dataDir,
 		},
 		counters,
 		replication,
