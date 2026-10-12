@@ -13,6 +13,7 @@ import {
 	type AttachParamsV1Input,
 	CusProductStatus,
 	customers,
+	EntitlementDuration,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -128,5 +129,57 @@ test.concurrent(
 					(customerPrice.price.config as { amount?: number }).amount,
 			),
 		).toEqual([1200]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending custom plan edit: a price-only edit keeps expiring one-off credits")}`,
+	async () => {
+		const customerId = `pending-custom-expiry-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-custom-expiry",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 1200 }),
+				items: [
+					{
+						...itemsV2.oneOffPrepaidMessages(),
+						expiry: { duration: EntitlementDuration.Month, length: 1 },
+					},
+				],
+			},
+		});
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
+		});
+
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		const [pendingRow] = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: dbCustomer!.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+		const [messages] = pendingRow.customer_entitlements.map(
+			(customerEntitlement) => customerEntitlement.entitlement,
+		);
+		expect(messages.expiry_duration).toBe(EntitlementDuration.Month);
+		expect(messages.expiry_length).toBe(1);
 	},
 );
