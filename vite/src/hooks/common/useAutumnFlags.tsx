@@ -5,8 +5,11 @@ import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
 	const { data: customer, error } = useCustomer();
-	// No AUTUMN_SECRET_KEY on the server (local, staging): /api/autumn isn't mounted and the server's billing gates let everything through.
-	const billingUnconfigured = error?.statusCode === 404;
+	// Staging and local run without AUTUMN_SECRET_KEY: /api/autumn isn't mounted (a plain-text 404 the client
+	// reports as status 0) and the server's billing gates let everything through.
+	const isProdBackend =
+		import.meta.env.VITE_BACKEND_URL?.includes("api.useautumn.com") ?? false;
+	const billingUnconfigured = !isProdBackend && !!error;
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		stripe_key: false,
