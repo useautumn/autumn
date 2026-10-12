@@ -171,7 +171,7 @@ export function loggedRecordOf({
 
 /** Bounds how far the store may trail the log: each unapplied batch keeps its
  *  store-durability callers waiting and its milestones in memory. */
-export const DEFAULT_MAX_UNAPPLIED_BATCHES = 16;
+export const DEFAULT_MAX_UNAPPLIED_BATCHES = 64;
 
 export const maxUnappliedBatchesOf = ({
 	limits,
