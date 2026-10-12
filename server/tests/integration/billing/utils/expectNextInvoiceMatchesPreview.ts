@@ -49,6 +49,7 @@ export const expectNextInvoiceMatchesPreview = async ({
 	advancedTo,
 	featureId,
 	expectedFeatureAmount,
+	waitForUsageLines = false,
 }: {
 	ctx: { stripeCli: Stripe };
 	autumnV1: AutumnInt;
@@ -58,6 +59,8 @@ export const expectNextInvoiceMatchesPreview = async ({
 	advancedTo: number;
 	featureId?: string;
 	expectedFeatureAmount?: number;
+	/** Arrear usage lines are added by invoice.created; seat and prepaid lines come from Stripe items. */
+	waitForUsageLines?: boolean;
 }) => {
 	const { invoice_previews } = await autumnV2_2.customers.get<ApiCustomerV5>(
 		customerId,
@@ -74,9 +77,6 @@ export const expectNextInvoiceMatchesPreview = async ({
 		);
 		expect(featureSubtotal).toBeCloseTo(expectedFeatureAmount, 2);
 	}
-	const expectsUsageLines = preview.line_items.some(
-		(lineItem) => lineItem.feature_id !== null && lineItem.subtotal !== 0,
-	);
 
 	const before = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = before.invoices?.length ?? 0;
@@ -89,7 +89,7 @@ export const expectNextInvoiceMatchesPreview = async ({
 		advanceTo: cycleEnd.getTime(),
 		waitForSeconds: 15,
 	});
-	if (expectsUsageLines && before.stripe_id) {
+	if (waitForUsageLines && before.stripe_id) {
 		await waitForDraftUsageLines({
 			stripeCli: ctx.stripeCli,
 			stripeCustomerId: before.stripe_id,

@@ -109,6 +109,7 @@ export const expectRenewalUsageLinesMatchPreview = async ({
 		customerId,
 		testClockId,
 		advancedTo,
+		waitForUsageLines: expectedLines.length > 0,
 	});
 
 	const stripeLines = await listStripeInvoiceLines({
