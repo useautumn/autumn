@@ -187,7 +187,7 @@ export const handlePrepaidVolumeErrors = ({
 		if (price.tier_behavior === TierBehavior.VolumeBased) {
 			throw new RecaseError({
 				message:
-					"Volume pricing is not supported on attach V1. Please upgrade to V2 of the Autumn API to use prepaid volume tiers",
+					"Volume pricing is not supported on attach V1. Use billing.attach on API V2 to attach plans with volume tiers.",
 				statusCode: 400,
 			});
 		}
