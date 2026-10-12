@@ -24,6 +24,14 @@ const baseProductsForMigration = ({
 	return baseProducts;
 };
 
+// The custom guard is already injected by now, so this checks the version alone.
+const bumpsVersion = ({ migration }: { migration: MigrationRuntime }) =>
+	Boolean(
+		migration.operations?.customer?.some(
+			(op) => op.type === "update_plan" && op.version !== undefined,
+		),
+	);
+
 /** Loads customer state and creates the lazy Stripe cache for migration ops. */
 export const setupMigrateCustomerContext = async ({
 	ctx,
@@ -36,15 +44,29 @@ export const setupMigrateCustomerContext = async ({
 	customerId: string;
 	preview: boolean;
 }): Promise<MigrateCustomerContext> => {
-	// Ops branch on is_custom, so they read the derived flag; the billing-plan hook persists it.
-	const { fullCustomer, corrections } = await fullCustomerWithDerivedIsCustom({
+	const storedFullCustomer = await setupFullCustomerContext({
 		ctx,
-		fullCustomer: await setupFullCustomerContext({
-			ctx,
-			params: { customer_id: customerId },
-		}),
-		baseProducts: baseProductsForMigration({ migration }),
+		params: { customer_id: customerId },
 	});
+	const { fullCustomer: derivedFullCustomer, corrections } =
+		await fullCustomerWithDerivedIsCustom({
+			ctx,
+			fullCustomer: storedFullCustomer,
+			baseProducts: baseProductsForMigration({ migration }),
+		});
+	// A version bump spares every derived-custom plan. Without one, drift onto a row stored as
+	// not custom is likely the catalog edit this migration applies; the billing-plan hook re-derives after.
+	const fullCustomer = bumpsVersion({ migration })
+		? derivedFullCustomer
+		: {
+				...derivedFullCustomer,
+				customer_products: derivedFullCustomer.customer_products.map(
+					(customerProduct, index) =>
+						storedFullCustomer.customer_products[index].is_custom
+							? customerProduct
+							: { ...customerProduct, is_custom: false },
+				),
+			};
 
 	return {
 		migration,
