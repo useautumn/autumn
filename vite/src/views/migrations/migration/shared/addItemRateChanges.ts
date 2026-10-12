@@ -62,18 +62,17 @@ const catalogItemOverride = ({
 /** Rate rows an added item sets: old → new when its paired remove filter's previous override is known, else its rate card. */
 export const addItemRateChanges = ({
 	item,
+	removeFilter,
 	op,
 	products,
 	features,
 }: {
 	item: AddItem;
+	removeFilter: RemoveFilter | undefined;
 	op: UpdatePlanOp;
 	products: CatalogPlan[];
 	features: Feature[];
 }): RateChange[] => {
-	const removeFilter = op.customize?.remove_items?.find(
-		(filter) => filter.feature_id === item.feature_id,
-	);
 	const next = item.feature_override
 		? apiFeatureOverrideToDb(item.feature_override)
 		: null;
@@ -125,8 +124,19 @@ export const migrationOpRateRows = ({
 	pairItemRateRows({
 		adds: op.customize?.add_items ?? [],
 		removes: op.customize?.remove_items ?? [],
+		sameCadence: ({ add, remove }) =>
+			String(add.price?.interval ?? add.reset?.interval) ===
+				String(remove.interval) &&
+			(add.price?.interval_count ?? add.reset?.interval_count ?? 1) ===
+				(remove.interval_count ?? 1),
 		compare: ({ add, remove }) => ({
-			changes: addItemRateChanges({ item: add, op, products, features }),
+			changes: addItemRateChanges({
+				item: add,
+				removeFilter: remove,
+				op,
+				products,
+				features,
+			}),
 			onlyRateCardChanged: remove?.only_feature_override_changed === true,
 		}),
 	});

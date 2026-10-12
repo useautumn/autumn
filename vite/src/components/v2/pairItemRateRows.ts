@@ -15,27 +15,49 @@ export type ItemRateRows = {
 
 type FeatureKeyed = { feature_id?: string | null };
 
-/** Pairs each add with the remove of the same feature; a pair that differs only in its rate card becomes one updated row. */
+/** The remove an add replaces: the only one of its feature, else the one on the same cadence. */
+const pairedRemoveIndex = <A extends FeatureKeyed, R extends FeatureKeyed>({
+	add,
+	removes,
+	taken,
+	sameCadence,
+}: {
+	add: A;
+	removes: R[];
+	taken: Set<number>;
+	sameCadence: (pair: { add: A; remove: R }) => boolean;
+}): number | undefined => {
+	const candidates = removes.flatMap((remove, index) =>
+		remove.feature_id === add.feature_id && !taken.has(index) ? [index] : [],
+	);
+	if (candidates.length === 1) return candidates[0];
+	return candidates.find((index) =>
+		sameCadence({ add, remove: removes[index] }),
+	);
+};
+
+/** Pairs each add with the remove it replaces; a pair that differs only in its rate card becomes one updated row. */
 export const pairItemRateRows = <
 	A extends FeatureKeyed,
 	R extends FeatureKeyed,
 >({
 	adds,
 	removes,
+	sameCadence,
 	compare,
 }: {
 	adds: A[];
 	removes: R[];
+	sameCadence: (pair: { add: A; remove: R }) => boolean;
 	compare: (pair: { add: A; remove: R | undefined }) => {
 		changes: RateChange[];
 		onlyRateCardChanged: boolean;
 	};
 }): ItemRateRows => {
+	const taken = new Set<number>();
 	const rows = adds.map((add, addIndex) => {
-		const found = removes.findIndex(
-			(remove) => remove.feature_id === add.feature_id,
-		);
-		const removeIndex = found === -1 ? undefined : found;
+		const removeIndex = pairedRemoveIndex({ add, removes, taken, sameCadence });
+		if (removeIndex !== undefined) taken.add(removeIndex);
 		const remove = removeIndex === undefined ? undefined : removes[removeIndex];
 		const { changes, onlyRateCardChanged } = compare({ add, remove });
 		return {

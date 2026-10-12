@@ -80,7 +80,7 @@ const matchText = (match: Record<string, string>) =>
 const dimensionRulesText = (item: CreditSchemaItem) => [
 	...Object.entries(item.dimensions ?? {}).map(
 		([name, dimension]) =>
-			`${name} ${matchText(dimension.match)} ${baseRateText({ rate: dimension, detailed: true })}`,
+			`${name} ${matchText(dimension.match)}${dimension.priority === undefined ? "" : ` priority ${dimension.priority}`} ${baseRateText({ rate: dimension, detailed: true })}`,
 	),
 	...Object.entries(item.multipliers ?? {}).map(([name, multiplier]) =>
 		[

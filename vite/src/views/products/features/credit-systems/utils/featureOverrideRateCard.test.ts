@@ -65,3 +65,23 @@ test("markups list the default, each provider and a per-model count", () => {
 		"Per-model: 2 models",
 	]);
 });
+
+test("a dimension's priority is part of its detailed rate", () => {
+	const [line] = featureOverrideRateCard({
+		override: {
+			schema: [
+				{
+					metered_feature_id: "gateway",
+					credit_amount: 1,
+					dimensions: {
+						fast: { match: { speed: "fast" }, credit_amount: 2, priority: 3 },
+					},
+				},
+			],
+		},
+		features,
+	});
+	expect(line.detail).toBe(
+		"1 credits · fast (speed=fast) priority 3 2 credits",
+	);
+});

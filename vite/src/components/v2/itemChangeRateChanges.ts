@@ -14,6 +14,12 @@ const itemOverride = (change: ItemChange) =>
 		? apiFeatureOverrideToDb(change.item.feature_override)
 		: null;
 
+const itemCadence = ({ item }: ItemChange) => {
+	const interval = item?.price?.interval ?? item?.reset?.interval;
+	const count = item?.price?.interval_count ?? item?.reset?.interval_count;
+	return `${interval ?? ""}|${count ?? 1}`;
+};
+
 /** Created items as rate rows: each diffed against the deleted item of the same feature. */
 export const itemChangeRateRows = <T extends ItemChange>({
 	itemChanges,
@@ -30,6 +36,8 @@ export const itemChangeRateRows = <T extends ItemChange>({
 		...pairItemRateRows({
 			adds: created,
 			removes: deleted,
+			sameCadence: ({ add, remove }) =>
+				itemCadence(add) === itemCadence(remove),
 			compare: ({ add, remove }) => ({
 				changes: replacementRateChanges({
 					replaced: remove && { override: itemOverride(remove) },

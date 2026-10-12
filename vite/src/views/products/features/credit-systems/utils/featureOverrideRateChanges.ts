@@ -20,11 +20,17 @@ const creditSystemMarkups = (
 	creditSystem: Feature | undefined,
 ): FeatureMarkupsOverride | undefined => {
 	const config = creditSystem?.config;
-	if (config?.default_markup === undefined && !config?.provider_markups)
+	const modelMarkups = creditSystem?.model_markups;
+	if (
+		config?.default_markup === undefined &&
+		!config?.provider_markups &&
+		!modelMarkups
+	)
 		return undefined;
 	return {
-		default_markup: config.default_markup,
-		provider_markups: config.provider_markups,
+		default_markup: config?.default_markup,
+		provider_markups: config?.provider_markups,
+		model_markups: modelMarkups,
 	};
 };
 
@@ -49,16 +55,12 @@ const lineChange = ({
 }): RateChange | null => {
 	const line = after ?? before;
 	if (!line || before?.detail === after?.detail) return null;
-	const useDetail = before?.value === after?.value;
-	const text = (side: RateCardLine | undefined) => {
-		if (!side) return null;
-		return useDetail ? side.detail : side.value;
-	};
+	// Detailed text on both sides, so a count summary never hides which rule changed.
 	return {
 		key: line.key,
 		label: line.label,
-		from: text(before),
-		to: text(after),
+		from: before?.detail ?? null,
+		to: after?.detail ?? null,
 	};
 };
 

@@ -107,6 +107,8 @@ const lines = ({
 }) =>
 	addItemRateChanges({
 		item,
+		removeFilter: updateOp({ item, paired, stamped }).customize
+			?.remove_items?.[0],
 		op: updateOp({ item, paired, stamped }),
 		products: [catalogPlan(previous)],
 		features,
@@ -243,6 +245,7 @@ describe("addItemRateChanges", () => {
 		expect(
 			addItemRateChanges({
 				item,
+				removeFilter: op.customize?.remove_items?.[0],
 				op: { ...op, plan_filter: { plan_id: "pro" } },
 				products: [catalogPlan()],
 				features,

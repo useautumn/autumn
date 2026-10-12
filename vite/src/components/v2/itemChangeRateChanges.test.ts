@@ -92,3 +92,26 @@ test("an item whose included amount also changed keeps the add/remove pair", () 
 		merged: [],
 	});
 });
+
+test("two items of one feature pair by cadence, not by order", () => {
+	const daily = (gateway: number, action: PlanItemChangeV0["action"]) => {
+		const base = change({ action, gateway });
+		return {
+			...base,
+			item: { ...base.item, reset: { interval: "day" } },
+		} as PlanItemChangeV0;
+	};
+	const { rows } = itemChangeRateRows({
+		itemChanges: [
+			daily(9, "created"),
+			change({ action: "created", gateway: 3 }),
+			change({ action: "deleted", gateway: 2 }),
+			daily(8, "deleted"),
+		],
+		features,
+	});
+	expect(rows.map((row) => [row.removeIndex, row.changes[0]?.from])).toEqual([
+		[1, "8 credits"],
+		[0, "2 credits"],
+	]);
+});
