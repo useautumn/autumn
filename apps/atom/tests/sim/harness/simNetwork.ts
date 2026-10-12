@@ -118,7 +118,9 @@ export const createSimNetwork = ({
 		const target = bindings.get(to);
 		if (!target || !target.alive()) {
 			record.outcome = "refused";
-			throw Object.assign(new TypeError(`connect ECONNREFUSED ${to}`), { code: "ECONNREFUSED" });
+			throw Object.assign(new TypeError(`connect ECONNREFUSED ${to}`), {
+				code: "ECONNREFUSED",
+			});
 		}
 		record.toId = target.id;
 		record.targetReady = target.ready();
@@ -161,7 +163,10 @@ export const createSimNetwork = ({
 			if (partitioned || rng.chance(current.dropRate)) {
 				await clock.sleep(rng.int(current.delayMs[0], current.delayMs[1]));
 				if (!from.alive()) return never;
-				throw Object.assign(new TypeError(`connect ETIMEDOUT ${url.hostname}`), { code: "ETIMEDOUT" });
+				throw Object.assign(
+					new TypeError(`connect ETIMEDOUT ${url.hostname}`),
+					{ code: "ETIMEDOUT" },
+				);
 			}
 			if (rng.chance(current.dupRate))
 				void deliver({

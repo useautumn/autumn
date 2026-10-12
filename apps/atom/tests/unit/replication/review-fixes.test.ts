@@ -4,6 +4,7 @@ import {
 	createCatalogRowsFor,
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { ANTI_ENTROPY_WINDOW_MS } from "../../../src/replication/createReplicaSync.js";
 import { createPeerOutbox } from "../../../src/replication/outbox/createPeerOutbox.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import { createPeerSender } from "../../../src/replication/transport/sendToPeer.js";
@@ -116,6 +117,38 @@ describe("F2: a write held by one replica alone is repaired", () => {
 		expect(await heldEverywhere(a)).toEqual(
 			expect.arrayContaining(["cus_1", "cus_2"]),
 		);
+	});
+});
+
+describe("a replica cut off from a peer longer than the repair window", () => {
+	test("its next pass reaches back to its last successful one, so a write the peer alone held is still repaired", async () => {
+		let now = 5_000;
+		const a = createReplica({
+			address: "10.0.0.1",
+			peers: ["10.0.0.2"],
+			now: () => now,
+		});
+		const b = createReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			now: () => now,
+		});
+		const sync = b.sync();
+		// b sees only itself: a is cut off from it.
+		connect({ replicas: [b] });
+		now = 10_000;
+		await storeOnly({ replica: a, customerId: "cus_1", readAt: 10_000 });
+		now = 125_000;
+		await sync.pass();
+		expect(await heldEverywhere(b)).toEqual([]);
+
+		// Back after longer than the repair window: a's write is older than any fixed window now.
+		now = 10_000 + ANTI_ENTROPY_WINDOW_MS + 5 * 60_000;
+		disconnect();
+		connect({ replicas: [a, b] });
+		await sync.pass();
+
+		expect(await heldEverywhere(b)).toEqual(["cus_1"]);
 	});
 });
 

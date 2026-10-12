@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
-import { ANTI_ENTROPY_EVERY_MS } from "../../src/replication/createReplicaSync.js";
+import {
+	ANTI_ENTROPY_EVERY_MS,
+	ANTI_ENTROPY_WINDOW_MS,
+} from "../../src/replication/createReplicaSync.js";
 import { HOLD_MS } from "../../src/replication/outbox/createPeerOutbox.js";
 import {
 	assertConverged,
@@ -249,6 +252,17 @@ const scenarios: Scenario[] = [
 			cluster.network.partition({ address: cutOff });
 			return {
 				ms: HOLD_MS + 60_000,
+				after: () => cluster.network.heal(),
+			};
+		},
+	},
+	{
+		name: "a replica cut off longer than the repair window, then back: what it missed is still repaired",
+		chaos: (cluster) => {
+			const cutOff = cluster.rng.pick(ADDRESSES);
+			cluster.network.partition({ address: cutOff });
+			return {
+				ms: ANTI_ENTROPY_WINDOW_MS + 5 * 60_000,
 				after: () => cluster.network.heal(),
 			};
 		},
