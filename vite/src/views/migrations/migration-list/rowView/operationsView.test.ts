@@ -371,7 +371,7 @@ test("ten target plans become a count subtitle over a capped chip list", () => {
 	});
 });
 
-test("an override-only item change lists each changed rate under the item", () => {
+test("an override-only item change is one updated row with each changed rate under it", () => {
 	const fixture = fixtureMigrations.find(
 		(migration) => migration.id === "migration-scale-rate-card",
 	);
@@ -383,13 +383,12 @@ test("an override-only item change lists each changed rate under the item", () =
 			details: chip.details,
 		})),
 	).toEqual([
-		{ sign: "add", label: "Credits", details: ["+ 100,000/mo"] },
+		{ sign: "change", label: "Credits", details: ["updated"] },
 		{
 			sign: "change",
 			label: "Gateway spend (USD)",
 			details: ["2.857 → 3.571 credits"],
 		},
-		{ sign: "remove", label: "Credits", details: ["removed"] },
 	]);
 });
 

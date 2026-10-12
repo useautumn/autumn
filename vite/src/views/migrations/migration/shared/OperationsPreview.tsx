@@ -9,10 +9,10 @@ import { Separator } from "@autumn/ui";
 import { CurrencyCircleDollarIcon, GitBranchIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
+import { ItemRateChangeRow } from "@/components/v2/ItemRateChangeRow";
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
-import { RateChangeList } from "@/components/v2/RateChangeList";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -26,7 +26,7 @@ import {
 	type ItemFilter,
 } from "../operations/operationItemUtils";
 import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
-import { addItemRateChanges } from "./addItemRateChanges";
+import { migrationOpRateRows } from "./addItemRateChanges";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 import { formatVersionTransition } from "./versionTransition";
 
@@ -74,20 +74,6 @@ function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	);
 }
 
-/** SubscriptionItemRow draws its own bare row, so the card lives here to match
- * the edited and removed rows beside it. */
-function AddedItemRow({
-	item,
-}: {
-	item: Parameters<typeof SubscriptionItemRow>[0]["item"];
-}) {
-	return (
-		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2 [&>div]:flex-1 [&>div]:min-w-0">
-			<SubscriptionItemRow item={item} isCreated />
-		</div>
-	);
-}
-
 export function OperationsPreview({ operations }: { operations: Operations }) {
 	const { products } = useProductsQuery({ allVersions: true });
 	const { features } = useFeaturesQuery();
@@ -124,6 +110,11 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
 					const removeItems = customize?.remove_items ?? [];
+					const rateRows = migrationOpRateRows({
+						op: updateOp,
+						products,
+						features,
+					});
 					const upsertLicenses = customize?.upsert_licenses ?? [];
 
 					const priceCurrencies = customize?.price?.additional_currencies ?? [];
@@ -215,20 +206,20 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 								/>
 							)}
 
-							{addItems.map((item, idx) => (
-								<div className="flex flex-col gap-1 min-w-0" key={`add-${idx}`}>
-									<AddedItemRow
-										item={migrationItemToProductItem(item, features)}
-									/>
-									<RateChangeList
-										changes={addItemRateChanges({
-											item,
-											op: updateOp,
-											products,
+							{rateRows.rows.map((row) => (
+								<ItemRateChangeRow
+									changes={row.changes}
+									key={`add-${row.addIndex}`}
+									updated={row.updated}
+								>
+									<SubscriptionItemRow
+										isCreated={!row.updated}
+										item={migrationItemToProductItem(
+											addItems[row.addIndex],
 											features,
-										})}
+										)}
 									/>
-								</div>
+								</ItemRateChangeRow>
 							))}
 
 							{upsertLicenses.map((license) => (
@@ -267,10 +258,15 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 											/>
 										)}
 										{(license.customize?.add_items ?? []).map((item, idx) => (
-											<AddedItemRow
+											<ItemRateChangeRow
+												changes={[]}
 												key={`license-add-${idx}`}
-												item={migrationItemToProductItem(item, features)}
-											/>
+											>
+												<SubscriptionItemRow
+													isCreated
+													item={migrationItemToProductItem(item, features)}
+												/>
+											</ItemRateChangeRow>
 										))}
 										{(license.customize?.remove_items ?? []).map(
 											(item, idx) => (
@@ -284,12 +280,15 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 								</div>
 							))}
 
-							{removeItems.map((item, idx) => (
-								<RemovedFilterRow
-									key={`remove-${idx}`}
-									filter={item as ItemFilter}
-								/>
-							))}
+							{removeItems.map(
+								(item, idx) =>
+									!rateRows.mergedRemoveIndices.has(idx) && (
+										<RemovedFilterRow
+											key={`remove-${idx}`}
+											filter={item as ItemFilter}
+										/>
+									),
+							)}
 						</div>
 					);
 				})}

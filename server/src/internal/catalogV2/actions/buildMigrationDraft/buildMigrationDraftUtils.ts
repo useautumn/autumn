@@ -3,6 +3,7 @@ import {
 	basePriceToKey,
 	type DiffedCustomizePlanV1,
 	featureOverrideToKey,
+	itemsEqualIgnoringFeatureOverride,
 	type MigrationRemoveItem,
 	type MigrationUpdatePlanCustomize,
 	type PlanFilter,
@@ -65,7 +66,8 @@ export const stampPreviousPrice = ({
 	};
 };
 
-const previousFeatureOverride = ({
+/** Display stamps for one remove filter, set only when every target's matched item agrees. */
+const previousFeatureOverrideStamp = ({
 	filter,
 	customize,
 	previousItemSets,
@@ -73,27 +75,37 @@ const previousFeatureOverride = ({
 	filter: MigrationRemoveItem;
 	customize: MigrationUpdatePlanCustomize;
 	previousItemSets: ApiPlanItemV1[][];
-}) => {
-	const previous = previousItemSets.map(
-		(items) =>
-			items.find((item) => planItemMatchesFilter({ item, filter }))
-				?.feature_override,
-	);
-	const keys = new Set(
-		previous.map((override) => featureOverrideToKey(override)),
-	);
-	const [override] = previous;
-	if (!override || keys.size !== 1) return undefined;
-
+}): Partial<MigrationRemoveItem> => {
 	const next = customize.add_items?.find(
 		(item) => item.feature_id === filter.feature_id,
-	)?.feature_override;
-	return featureOverrideToKey(next) === featureOverrideToKey(override)
-		? undefined
-		: override;
+	);
+	const previousItems = previousItemSets.map((items) =>
+		items.find((item) => planItemMatchesFilter({ item, filter })),
+	);
+	const [previous] = previousItems;
+	if (!next || !previous || previousItems.some((item) => !item)) return {};
+
+	const keys = new Set(
+		previousItems.map((item) => featureOverrideToKey(item?.feature_override)),
+	);
+	const override = previous.feature_override;
+	if (
+		keys.size !== 1 ||
+		featureOverrideToKey(next.feature_override) ===
+			featureOverrideToKey(override)
+	)
+		return {};
+
+	const onlyOverrideChanged = previousItems.every(
+		(item) => item && itemsEqualIgnoringFeatureOverride(item, next),
+	);
+	return {
+		...(override ? { previous_feature_override: override } : {}),
+		...(onlyOverrideChanged ? { only_feature_override_changed: true } : {}),
+	};
 };
 
-/** Stamp each remove filter's previous_feature_override when every target shares it and the paired add changes it. */
+/** Stamp each remove filter with its previous override when every target shares it and the paired add changes it. */
 export const stampPreviousFeatureOverrides = ({
 	customize,
 	previousItemSets,
@@ -106,15 +118,13 @@ export const stampPreviousFeatureOverrides = ({
 
 	return {
 		...customize,
-		remove_items: customize.remove_items.map((filter) => {
-			const override = previousFeatureOverride({
+		remove_items: customize.remove_items.map((filter) => ({
+			...filter,
+			...previousFeatureOverrideStamp({
 				filter,
 				customize,
 				previousItemSets,
-			});
-			return override
-				? { ...filter, previous_feature_override: override }
-				: filter;
-		}),
+			}),
+		})),
 	};
 };

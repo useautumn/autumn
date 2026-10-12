@@ -1,6 +1,6 @@
 import { type Feature, formatAmount, type ProductItem } from "@autumn/shared";
 import type { MigrationWithRunInfo } from "@/hooks/queries/useMigrationsQuery";
-import { addItemRateChanges } from "@/views/migrations/migration/shared/addItemRateChanges";
+import { migrationOpRateRows } from "@/views/migrations/migration/shared/addItemRateChanges";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import type { MigrationCatalog } from "./chipView";
 import { deriveFilterView, type FilterView } from "./filterView";
@@ -58,8 +58,7 @@ export const createMigrationCatalog = ({
 				amount,
 				amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 			}),
-		rateChanges: ({ item, op }) =>
-			addItemRateChanges({ item, op, products, features }),
+		rateRows: (op) => migrationOpRateRows({ op, products, features }),
 	};
 };
 

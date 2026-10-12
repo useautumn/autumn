@@ -412,10 +412,12 @@ const creditsTarget = ({
 	planId,
 	previousCost,
 	nextCost,
+	nextIncluded = 100,
 }: {
 	planId: string;
 	previousCost: number;
 	nextCost: number;
+	nextIncluded?: number;
 }) =>
 	target({
 		planId,
@@ -427,7 +429,7 @@ const creditsTarget = ({
 			add_items: [
 				{
 					feature_id: "credits",
-					included: 100,
+					included: nextIncluded,
 					unlimited: false,
 					reset: { interval: ResetInterval.Month },
 					feature_override: creditsOverride(nextCost),
@@ -445,7 +447,7 @@ const creditsTarget = ({
 		],
 	});
 
-test("previous_feature_override is stamped on the remove filter only when the override changes", () => {
+test("previous_feature_override is stamped only when the override changes; the only-override flag only when nothing else does", () => {
 	const draft = buildMigrationDraft({
 		targets: [
 			creditsTarget({
@@ -454,8 +456,18 @@ test("previous_feature_override is stamped on the remove filter only when the ov
 				nextCost: 3.571,
 			}),
 			creditsTarget({ planId: "unchanged", previousCost: 2, nextCost: 2 }),
+			creditsTarget({
+				planId: "regranted",
+				previousCost: 2,
+				nextCost: 4,
+				nextIncluded: 200,
+			}),
 		],
-		versionsWithCustomersByPlanId: { changed: [1], unchanged: [1] },
+		versionsWithCustomersByPlanId: {
+			changed: [1],
+			unchanged: [1],
+			regranted: [1],
+		},
 	});
 	const removeItemsByPlan = Object.fromEntries(
 		updatePlanOps(draft).map((operation) => [
@@ -471,6 +483,15 @@ test("previous_feature_override is stamped on the remove filter only when the ov
 				interval: ResetInterval.Month,
 				included: 100,
 				previous_feature_override: creditsOverride(2.857),
+				only_feature_override_changed: true,
+			},
+		],
+		regranted: [
+			{
+				feature_id: "credits",
+				interval: ResetInterval.Month,
+				included: 100,
+				previous_feature_override: creditsOverride(2),
 			},
 		],
 		unchanged: [

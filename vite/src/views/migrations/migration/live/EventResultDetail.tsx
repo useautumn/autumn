@@ -12,9 +12,9 @@ import {
 } from "@autumn/ui";
 import { PackageIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
+import { ItemChangeRow as SharedItemChangeRow } from "@/components/v2/ItemChangeRow";
 import { ChangeDot, type ItemStatusState } from "@/components/v2/ItemStatusDot";
-import { itemChangeRateChanges } from "@/components/v2/itemChangeRateChanges";
-import { RateChangeList } from "@/components/v2/RateChangeList";
+import { itemChangeRateRows } from "@/components/v2/itemChangeRateChanges";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -276,6 +276,10 @@ function PlanChangeRows({
 	const { features } = useFeaturesQuery();
 	const action = change.action ?? "unknown";
 	const items = getItemChanges(change);
+	const rateRows = itemChangeRateRows({ itemChanges: items, features });
+	const mergedDeleted = new Set(
+		[...rateRows.mergedRemoveIndices].map((index) => rateRows.deleted[index]),
+	);
 	const planId = getPlanId(change);
 	const status = getPlanStatus(change);
 	const hasAbsorbed =
@@ -302,19 +306,27 @@ function PlanChangeRows({
 					</span>
 				)}
 			</ChangeRow>
-			{items.map((item, i) => (
-				<div className="flex flex-col gap-1" key={item.feature_id ?? i}>
-					<ItemChangeRow item={item} />
-					<RateChangeList
-						className="ml-6"
-						changes={itemChangeRateChanges({
-							change: item,
-							itemChanges: items,
-							features,
-						})}
+			{rateRows.rows.map((row) => {
+				const item = rateRows.created[row.addIndex];
+				return row.updated || row.changes.length > 0 ? (
+					<SharedItemChangeRow
+						change={item as CustomerPlanItemChange}
+						className="ml-4"
+						key={`created-${item.feature_id ?? row.addIndex}`}
+						rateRow={row}
 					/>
-				</div>
-			))}
+				) : (
+					<ItemChangeRow
+						item={item}
+						key={`created-${item.feature_id ?? row.addIndex}`}
+					/>
+				);
+			})}
+			{items
+				.filter((item) => item.action !== "created" && !mergedDeleted.has(item))
+				.map((item, i) => (
+					<ItemChangeRow key={item.feature_id ?? i} item={item} />
+				))}
 			{items.length === 0 && hasAbsorbed && (
 				<>
 					{absorbedFlags?.map((fc, i) => (

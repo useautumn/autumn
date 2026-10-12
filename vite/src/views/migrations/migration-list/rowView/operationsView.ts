@@ -146,17 +146,17 @@ const rateChangeSign = ({ from, to }: RateChange): ModificationView["sign"] => {
 	return "change";
 };
 
-/** One row per rate the item's feature override sets or changes, under the item's tile. */
+/** One row per rate an item's feature override sets or changes, under the item's tile. */
 const rateModifications = ({
 	item,
-	op,
+	changes,
 	catalog,
 }: {
 	item: AddItem;
-	op: UpdatePlanOp;
+	changes: RateChange[];
 	catalog: MigrationCatalog;
 }): ModificationView[] =>
-	catalog.rateChanges({ item, op }).map((change) => ({
+	changes.map((change) => ({
 		sign: rateChangeSign(change),
 		chip: {
 			label: change.label,
@@ -215,6 +215,8 @@ const updatePlanModifications = ({
 	catalog: MigrationCatalog;
 }): ModificationView[] => {
 	const customize = op.customize;
+	const addItems = customize?.add_items ?? [];
+	const rateRows = catalog.rateRows(op);
 	const isBooleanItem = (filter: ItemFilter) =>
 		catalog.feature(filter.feature_id ?? "").type === FeatureType.Boolean;
 	const itemChip = (filter: ItemFilter, detail: string | null): ChipView => {
@@ -250,16 +252,25 @@ const updatePlanModifications = ({
 				details: ["customized"],
 			},
 		})),
-		...(customize?.add_items ?? []).flatMap((item) => [
-			{
-				sign: "add" as const,
-				chip: itemChip(
-					item,
-					addItemDetail({ item, isBoolean: isBooleanItem(item), catalog }),
-				),
-			},
-			...rateModifications({ item, op, catalog }),
-		]),
+		...rateRows.rows.flatMap((row) => {
+			const item = addItems[row.addIndex];
+			return [
+				row.updated
+					? { sign: "change" as const, chip: itemChip(item, "updated") }
+					: {
+							sign: "add" as const,
+							chip: itemChip(
+								item,
+								addItemDetail({
+									item,
+									isBoolean: isBooleanItem(item),
+									catalog,
+								}),
+							),
+						},
+				...rateModifications({ item, changes: row.changes, catalog }),
+			];
+		}),
 		...(customize?.update_items ?? []).map((item) => ({
 			sign: "change" as const,
 			chip: itemChip(
@@ -267,10 +278,12 @@ const updatePlanModifications = ({
 				updateItemDetail({ item, isBoolean: isBooleanItem(item.filter) }),
 			),
 		})),
-		...(customize?.remove_items ?? []).map((item) => ({
-			sign: "remove" as const,
-			chip: itemChip(item, "removed"),
-		})),
+		...(customize?.remove_items ?? [])
+			.filter((_, index) => !rateRows.mergedRemoveIndices.has(index))
+			.map((item) => ({
+				sign: "remove" as const,
+				chip: itemChip(item, "removed"),
+			})),
 	];
 };
 

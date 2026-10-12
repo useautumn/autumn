@@ -659,6 +659,12 @@ export const fixtureMigrations: MigrationWithRunInfo[] = [
 								interval: "month",
 								interval_count: 1,
 								included: 100_000,
+								previous_feature_override: {
+									credit_schema: [
+										{ metered_feature_id: "gateway_spend", credit_cost: 2.857 },
+									],
+								},
+								only_feature_override_changed: true,
 							},
 						],
 						add_items: [

@@ -1,9 +1,11 @@
 import type { Feature, PlanItemChangeV0 } from "@autumn/shared";
-import { apiFeatureOverrideToDb, findFeatureById } from "@autumn/shared";
 import {
-	type RateChange,
-	replacementRateChanges,
-} from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
+	apiFeatureOverrideToDb,
+	findFeatureById,
+	itemsEqualIgnoringFeatureOverride,
+} from "@autumn/shared";
+import { replacementRateChanges } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
+import { type ItemRateRows, pairItemRateRows } from "./pairItemRateRows";
 
 type ItemChange = Partial<PlanItemChangeV0>;
 
@@ -12,30 +14,38 @@ const itemOverride = (change: ItemChange) =>
 		? apiFeatureOverrideToDb(change.item.feature_override)
 		: null;
 
-/** A created item's rate rows, diffed against the deleted item of the same feature. */
-export const itemChangeRateChanges = ({
-	change,
+/** Created items as rate rows: each diffed against the deleted item of the same feature. */
+export const itemChangeRateRows = <T extends ItemChange>({
 	itemChanges,
 	features,
 }: {
-	change: ItemChange;
-	itemChanges: ItemChange[];
+	itemChanges: T[];
 	features: Feature[];
-}): RateChange[] => {
-	if (change.action !== "created" || !change.feature_id) return [];
-	const replaced = itemChanges.find(
-		(candidate) =>
-			candidate.action === "deleted" &&
-			candidate.feature_id === change.feature_id,
-	);
-	return replacementRateChanges({
-		replaced: replaced && { override: itemOverride(replaced) },
-		next: itemOverride(change),
-		creditSystem: findFeatureById({
-			features,
-			featureId: change.feature_id,
-			errorOnNotFound: false,
+}): ItemRateRows & { created: T[]; deleted: T[] } => {
+	const created = itemChanges.filter((change) => change.action === "created");
+	const deleted = itemChanges.filter((change) => change.action === "deleted");
+	return {
+		created,
+		deleted,
+		...pairItemRateRows({
+			adds: created,
+			removes: deleted,
+			compare: ({ add, remove }) => ({
+				changes: replacementRateChanges({
+					replaced: remove && { override: itemOverride(remove) },
+					next: itemOverride(add),
+					creditSystem: findFeatureById({
+						features,
+						featureId: add.feature_id ?? "",
+						errorOnNotFound: false,
+					}),
+					features,
+				}),
+				onlyRateCardChanged:
+					!!add.item &&
+					!!remove?.item &&
+					itemsEqualIgnoringFeatureOverride(add.item, remove.item),
+			}),
 		}),
-		features,
-	});
+	};
 };

@@ -20,6 +20,11 @@ export const MigrationRemoveItemSchema = PlanItemFilterFieldsSchema.extend({
 		description:
 			"The matched item's feature_override before the plan update that created this migration. Display-only.",
 	}),
+	only_feature_override_changed: z.boolean().optional().meta({
+		internal: true,
+		description:
+			"True when the matched item and the paired add_items entry differ only by feature_override. Display-only.",
+	}),
 })
 	.refine(planItemFilterHasField, { message: PLAN_ITEM_FILTER_EMPTY_MESSAGE })
 	.meta({

@@ -11,13 +11,21 @@ import {
 	planItemMatchesFilter,
 } from "@autumn/shared";
 import {
+	type ItemRateRows,
+	pairItemRateRows,
+} from "@/components/v2/pairItemRateRows";
+import {
 	diffFeatureOverrideRates,
 	featureOverrideRateCardChanges,
 	type RateChange,
 } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
 
-type CatalogPlan = { id: string; version?: number; items?: ProductItem[] };
+export type CatalogPlan = {
+	id: string;
+	version?: number;
+	items?: ProductItem[];
+};
 
 type AddItem = NonNullable<
 	NonNullable<UpdatePlanOp["customize"]>["add_items"]
@@ -69,25 +77,29 @@ export const addItemRateChanges = ({
 	const next = item.feature_override
 		? apiFeatureOverrideToDb(item.feature_override)
 		: null;
+	const creditSystem = findFeatureById({
+		features,
+		featureId: item.feature_id,
+		errorOnNotFound: false,
+	});
 	const rateCard = () =>
-		next ? featureOverrideRateCardChanges({ override: next, features }) : [];
+		next
+			? featureOverrideRateCardChanges({
+					override: next,
+					features,
+					creditSystem,
+				})
+			: [];
 	const diffFrom = (previous: FeatureConfigOverride | null) =>
-		diffFeatureOverrideRates({
-			previous,
-			next,
-			creditSystem: findFeatureById({
-				features,
-				featureId: item.feature_id,
-				errorOnNotFound: false,
-			}),
-			features,
-		});
+		diffFeatureOverrideRates({ previous, next, creditSystem, features });
 
 	if (!removeFilter) return rateCard();
 	if (removeFilter.previous_feature_override)
 		return diffFrom(
 			apiFeatureOverrideToDb(removeFilter.previous_feature_override),
 		);
+	// Stamped with no previous override: the old item used the credit system's own rates.
+	if (removeFilter.only_feature_override_changed) return diffFrom(null);
 
 	const catalogOverride = catalogItemOverride({ removeFilter, op, products });
 	if (catalogOverride === undefined) return rateCard();
@@ -99,3 +111,22 @@ export const addItemRateChanges = ({
 		? rateCard()
 		: [];
 };
+
+/** An op's added items as rate rows; a pair the draft stamped as override-only becomes one updated row. */
+export const migrationOpRateRows = ({
+	op,
+	products,
+	features,
+}: {
+	op: UpdatePlanOp;
+	products: CatalogPlan[];
+	features: Feature[];
+}): ItemRateRows =>
+	pairItemRateRows({
+		adds: op.customize?.add_items ?? [],
+		removes: op.customize?.remove_items ?? [],
+		compare: ({ add, remove }) => ({
+			changes: addItemRateChanges({ item: add, op, products, features }),
+			onlyRateCardChanged: remove?.only_feature_override_changed === true,
+		}),
+	});

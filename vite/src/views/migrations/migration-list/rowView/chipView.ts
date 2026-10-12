@@ -1,10 +1,6 @@
 import type { FeatureType, UpdatePlanOp } from "@autumn/shared";
 import type { StatusGlyph, StatusTone } from "@autumn/ui";
-import type { RateChange } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
-
-type AddItem = NonNullable<
-	NonNullable<UpdatePlanOp["customize"]>["add_items"]
->[number];
+import type { ItemRateRows } from "@/components/v2/pairItemRateRows";
 
 /** One StatusChip: an optional coloured tile, a label and muted text around it. */
 export type ChipView = {
@@ -26,7 +22,7 @@ export type MigrationCatalog = {
 		tile: NonNullable<ChipView["tile"]>;
 	};
 	formatAmount: (amount: number) => string;
-	rateChanges: (params: { item: AddItem; op: UpdatePlanOp }) => RateChange[];
+	rateRows: (op: UpdatePlanOp) => ItemRateRows;
 };
 
 /** A chip list capped for a hover card; `moreCount` feeds a trailing "+N more" chip. */

@@ -79,6 +79,7 @@ export const diffFeatureOverrideRates = ({
 			override: effectiveOverride({ override, creditSystem }),
 			features,
 			capitalize: false,
+			creditSystem,
 		});
 	const before = new Map(rateCard(previous).map((line) => [line.key, line]));
 	const after = rateCard(next);
@@ -98,13 +99,18 @@ export const diffFeatureOverrideRates = ({
 export const featureOverrideRateCardChanges = ({
 	override,
 	features,
+	creditSystem,
 }: {
 	override: FeatureConfigOverride;
 	features: Feature[];
+	creditSystem?: Feature;
 }): RateChange[] =>
-	featureOverrideRateCard({ override, features, capitalize: false }).map(
-		({ key, label, value }) => ({ key, label, from: null, to: value }),
-	);
+	featureOverrideRateCard({
+		override,
+		features,
+		capitalize: false,
+		creditSystem,
+	}).map(({ key, label, value }) => ({ key, label, from: null, to: value }));
 
 /** An added item's rate rows: a diff against the item it replaces when known, else its own rate card. */
 export const replacementRateChanges = ({
@@ -126,7 +132,11 @@ export const replacementRateChanges = ({
 			features,
 		});
 	if (!next) return [];
-	return featureOverrideRateCardChanges({ override: next, features });
+	return featureOverrideRateCardChanges({
+		override: next,
+		features,
+		creditSystem,
+	});
 };
 
 const splitLeadingAmount = (text: string) => {

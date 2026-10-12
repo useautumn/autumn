@@ -23,18 +23,19 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
-import { RateChangeList } from "@/components/v2/RateChangeList";
+import type { ItemRateRow } from "@/components/v2/pairItemRateRows";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { cn } from "@/lib/utils";
 import {
 	parsePlanKey,
 	planFilterToPlanKeys,
 	planKeysToFilter,
 } from "../filters/filterRowTypes";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
-import { addItemRateChanges } from "../shared/addItemRateChanges";
+import { migrationOpRateRows } from "../shared/addItemRateChanges";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
@@ -100,6 +101,7 @@ export function UpdatePlanOpForm({
 
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
+	const rateRows = migrationOpRateRows({ op: value, products, features });
 	const planVersionActionLabel = getPlanVersionActionLabel(value);
 
 	const customizedLicenseIds = new Set(
@@ -166,12 +168,17 @@ export function UpdatePlanOpForm({
 		}
 	};
 
-	const handleRemoveItem = (index: number) => {
-		const items = addItems.filter((_, i) => i !== index);
+	// A merged row is one item, so removing it drops the paired remove filter too.
+	const handleRemoveItem = (row: ItemRateRow) => {
+		const items = addItems.filter((_, i) => i !== row.addIndex);
+		const removeItems = (customize?.remove_items ?? []).filter(
+			(_, i) => !(row.updated && i === row.removeIndex),
+		);
 		update({
 			customize: {
 				...customize,
 				add_items: items.length > 0 ? items : undefined,
+				remove_items: removeItems.length > 0 ? removeItems : undefined,
 			},
 		});
 	};
@@ -270,27 +277,26 @@ export function UpdatePlanOpForm({
 				</div>
 			)}
 
-			{addItems.map((item, index) => (
-				<div key={`add-${index}`} className="flex flex-col gap-1">
-					<div className="flex items-center gap-2 group/row">
-						<span className="text-xs text-green-500/60 w-14 shrink-0 select-none">
-							Add
-						</span>
-						<ItemSummaryRow
-							item={item}
-							onClick={() => openSheet("edit-feature", index)}
-						/>
-						<RemoveButton onClick={() => handleRemoveItem(index)} />
-					</div>
-					<RateChangeList
-						className="ml-17.5"
-						changes={addItemRateChanges({
-							item,
-							op: value,
-							products,
-							features,
-						})}
+			{rateRows.rows.map((row) => (
+				<div
+					key={`add-${row.addIndex}`}
+					className="flex items-start gap-2 group/row"
+				>
+					<span
+						className={cn(
+							"flex items-center h-8 text-xs w-14 shrink-0 select-none",
+							row.updated ? "text-amber-500/80" : "text-green-500/60",
+						)}
+					>
+						{row.updated ? "Update" : "Add"}
+					</span>
+					<ItemSummaryRow
+						changes={row.changes}
+						item={addItems[row.addIndex]}
+						onClick={() => openSheet("edit-feature", row.addIndex)}
+						updated={row.updated}
 					/>
+					<RemoveButton onClick={() => handleRemoveItem(row)} />
 				</div>
 			))}
 
@@ -318,28 +324,31 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			{(customize?.remove_items ?? []).map((item, index) => (
-				<RemoveItemRows
-					key={`remove-${index}`}
-					item={item}
-					onChange={(updated) => {
-						const items = [...(customize?.remove_items ?? [])];
-						items[index] = updated;
-						update({ customize: { ...customize, remove_items: items } });
-					}}
-					onRemove={() => {
-						const items = (customize?.remove_items ?? []).filter(
-							(_, i) => i !== index,
-						);
-						update({
-							customize: {
-								...customize,
-								remove_items: items.length > 0 ? items : undefined,
-							},
-						});
-					}}
-				/>
-			))}
+			{(customize?.remove_items ?? []).map(
+				(item, index) =>
+					!rateRows.mergedRemoveIndices.has(index) && (
+						<RemoveItemRows
+							key={`remove-${index}`}
+							item={item}
+							onChange={(updated) => {
+								const items = [...(customize?.remove_items ?? [])];
+								items[index] = updated;
+								update({ customize: { ...customize, remove_items: items } });
+							}}
+							onRemove={() => {
+								const items = (customize?.remove_items ?? []).filter(
+									(_, i) => i !== index,
+								);
+								update({
+									customize: {
+										...customize,
+										remove_items: items.length > 0 ? items : undefined,
+									},
+								});
+							}}
+						/>
+					),
+			)}
 
 			<DropdownMenu>
 				<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>

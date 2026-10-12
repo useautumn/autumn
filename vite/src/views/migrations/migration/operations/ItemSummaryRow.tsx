@@ -1,36 +1,31 @@
+import { ItemRateChangeRow } from "@/components/v2/ItemRateChangeRow";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { cn } from "@/lib/utils";
+import type { RateChange } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
 import { migrationItemToProductItem } from "../shared/migrationItemUtils";
 
 export function ItemSummaryRow({
 	item,
 	onClick,
+	changes = [],
+	updated = false,
 }: {
 	item: Record<string, unknown>;
 	onClick?: () => void;
+	changes?: RateChange[];
+	updated?: boolean;
 }) {
 	const { features } = useFeaturesQuery();
 	const productItem = migrationItemToProductItem(item, features);
 
-	const content = (
-		<PlanItemLabel item={productItem} unnamedText="Unconfigured" />
-	);
-
-	const baseClass =
-		"flex items-center gap-2 h-8 px-3 w-full select-none rounded-xl text-left input-base";
-
-	if (!onClick) {
-		return <div className={baseClass}>{content}</div>;
-	}
-
 	return (
-		<button
-			type="button"
+		<ItemRateChangeRow
+			changes={changes}
+			compact
 			onClick={onClick}
-			className={cn(baseClass, "cursor-pointer input-state-open-tiny")}
+			updated={updated}
 		>
-			{content}
-		</button>
+			<PlanItemLabel item={productItem} unnamedText="Unconfigured" />
+		</ItemRateChangeRow>
 	);
 }

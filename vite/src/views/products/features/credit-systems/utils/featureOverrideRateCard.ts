@@ -5,7 +5,11 @@ import type {
 	FeatureConfigOverride,
 	FeatureMarkupsOverride,
 } from "@autumn/shared";
-import { hasCreditDimensionRules, numberWithCommas } from "@autumn/shared";
+import {
+	FeatureType,
+	hasCreditDimensionRules,
+	numberWithCommas,
+} from "@autumn/shared";
 import { featureDisplayName } from "./featureDisplayName";
 
 /** `value` is the rate card text; `detail` spells out every rule so two different rates never read the same. */
@@ -23,10 +27,18 @@ type CreditRate =
 export const countLabel = (count: number, noun: string) =>
 	`${count} ${noun}${count === 1 ? "" : "s"}`;
 
-const perUnitsText = (item: CreditSchemaItem) =>
-	(item.feature_amount ?? 1) !== 1
-		? ` per ${numberWithCommas(item.feature_amount ?? 1)}`
-		: "";
+/** AI credit children are metered in dollars, so their rate reads per $. */
+const perUnitsText = ({
+	item,
+	perDollar,
+}: {
+	item: CreditSchemaItem;
+	perDollar: boolean;
+}) => {
+	const units = item.feature_amount ?? 1;
+	if (perDollar) return ` / $${units === 1 ? "" : numberWithCommas(units)}`;
+	return units !== 1 ? ` per ${numberWithCommas(units)}` : "";
+};
 
 const tierListText = (tiers: CreditTier[]) =>
 	tiers
@@ -83,15 +95,27 @@ const dimensionRulesText = (item: CreditSchemaItem) => [
 ];
 
 /** The rate card's one-line rate: flat, tiered range, or a dimension count. */
-export const creditRateText = (item: CreditSchemaItem) =>
+export const creditRateText = ({
+	item,
+	perDollar = false,
+}: {
+	item: CreditSchemaItem;
+	perDollar?: boolean;
+}) =>
 	hasCreditDimensionRules(item)
 		? dimensionedRateText(item)
-		: `${baseRateText({ rate: item, detailed: false })}${perUnitsText(item)}`;
+		: `${baseRateText({ rate: item, detailed: false })}${perUnitsText({ item, perDollar })}`;
 
 /** Every tier, dimension and multiplier spelled out. */
-export const creditRateDetailText = (item: CreditSchemaItem) =>
+export const creditRateDetailText = ({
+	item,
+	perDollar = false,
+}: {
+	item: CreditSchemaItem;
+	perDollar?: boolean;
+}) =>
 	[
-		`${baseRateText({ rate: item, detailed: true })}${perUnitsText(item)}`,
+		`${baseRateText({ rate: item, detailed: true })}${perUnitsText({ item, perDollar })}`,
 		...dimensionRulesText(item),
 	].join(" · ");
 
@@ -137,21 +161,26 @@ export const featureOverrideRateCard = ({
 	override,
 	features,
 	capitalize = true,
+	creditSystem,
 }: {
 	override: FeatureConfigOverride;
 	features: Feature[];
 	capitalize?: boolean;
-}): RateCardLine[] => [
-	...(override.schema ?? []).map((item) => ({
-		key: `feature-${item.metered_feature_id}`,
-		label: featureDisplayName({
-			features,
-			featureId: item.metered_feature_id,
-			plural: true,
-			capitalize,
-		}),
-		value: creditRateText(item),
-		detail: creditRateDetailText(item),
-	})),
-	...(override.markups ? markupLines(override.markups) : []),
-];
+	creditSystem?: Feature;
+}): RateCardLine[] => {
+	const perDollar = creditSystem?.type === FeatureType.AiCreditSystem;
+	return [
+		...(override.schema ?? []).map((item) => ({
+			key: `feature-${item.metered_feature_id}`,
+			label: featureDisplayName({
+				features,
+				featureId: item.metered_feature_id,
+				plural: true,
+				capitalize,
+			}),
+			value: creditRateText({ item, perDollar }),
+			detail: creditRateDetailText({ item, perDollar }),
+		})),
+		...(override.markups ? markupLines(override.markups) : []),
+	];
+};

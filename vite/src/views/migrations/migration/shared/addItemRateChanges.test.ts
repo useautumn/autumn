@@ -6,7 +6,7 @@ import {
 	type UpdatePlanOp,
 } from "@autumn/shared";
 import { rateChangeText } from "@/views/products/features/credit-systems/utils/featureOverrideRateChanges";
-import { addItemRateChanges } from "./addItemRateChanges";
+import { addItemRateChanges, migrationOpRateRows } from "./addItemRateChanges";
 
 const features = [
 	{ id: "gateway", name: "Gateway spend (USD)", type: FeatureType.Metered },
@@ -63,10 +63,12 @@ const updateOp = ({
 	item,
 	paired = true,
 	stamped,
+	onlyOverride = false,
 }: {
 	item: AddItem;
 	paired?: boolean;
 	stamped?: Override;
+	onlyOverride?: boolean;
 }): UpdatePlanOp =>
 	({
 		type: "update_plan",
@@ -82,6 +84,9 @@ const updateOp = ({
 								interval_count: 1,
 								included: 100,
 								...(stamped ? { previous_feature_override: stamped } : {}),
+								...(onlyOverride
+									? { only_feature_override_changed: true }
+									: {}),
 							},
 						],
 					}
@@ -243,5 +248,110 @@ describe("addItemRateChanges", () => {
 				features,
 			}).map((change) => change.from),
 		).toEqual([null, null]);
+	});
+});
+
+describe("migrationOpRateRows", () => {
+	const rows = (op: UpdatePlanOp, catalogOverride?: CatalogOverride) => {
+		const { rows: rateRows, mergedRemoveIndices } = migrationOpRateRows({
+			op,
+			products: [catalogPlan(catalogOverride)],
+			features,
+		});
+		return {
+			rows: rateRows.map(({ updated, changes }) => ({
+				updated,
+				lines: changes.map(
+					(change) => `${change.label}: ${rateChangeText(change)}`,
+				),
+			})),
+			merged: [...mergedRemoveIndices],
+		};
+	};
+	const twoRates: Override = {
+		credit_schema: [
+			{ metered_feature_id: "gateway", credit_cost: 3.571 },
+			{ metered_feature_id: "searches", credit_cost: 6 },
+		],
+	};
+
+	test("a stamped override-only pair merges into one updated row", () => {
+		expect(
+			rows(
+				updateOp({
+					item: creditsItem(flatOverride(3.571)),
+					stamped: flatOverride(2.857),
+					onlyOverride: true,
+				}),
+			),
+		).toEqual({
+			rows: [
+				{
+					updated: true,
+					lines: ["Gateway spend (USD): 2.857 → 3.571 credits"],
+				},
+			],
+			merged: [0],
+		});
+	});
+
+	test("two changed rates give two subrows", () => {
+		expect(
+			rows(
+				updateOp({
+					item: creditsItem(twoRates),
+					stamped: flatOverride(2.857),
+					onlyOverride: true,
+				}),
+			).rows[0].lines,
+		).toEqual([
+			"Gateway spend (USD): 2.857 → 3.571 credits",
+			"Searches: 5 → 6 credits",
+		]);
+	});
+
+	test("a pair whose included amount or price also changed stays an add/remove pair", () => {
+		expect(
+			rows(
+				updateOp({
+					item: {
+						...creditsItem(flatOverride(3.571), 200),
+						price: { amount: 10, interval: "month" },
+					} as AddItem,
+					stamped: flatOverride(2.857),
+				}),
+			),
+		).toEqual({
+			rows: [
+				{
+					updated: false,
+					lines: ["Gateway spend (USD): 2.857 → 3.571 credits"],
+				},
+			],
+			merged: [],
+		});
+	});
+
+	test("an old draft without the stamps keeps the pair and the rate card fallback", () => {
+		const updatedInPlace = {
+			schema: [
+				{ metered_feature_id: "gateway", credit_amount: 3.571 },
+				{ metered_feature_id: "searches", credit_amount: 5 },
+			],
+		};
+		expect(
+			rows(
+				updateOp({ item: creditsItem(flatOverride(3.571)) }),
+				updatedInPlace,
+			),
+		).toEqual({
+			rows: [
+				{
+					updated: false,
+					lines: ["Gateway spend (USD): 3.571 credits", "Searches: 5 credits"],
+				},
+			],
+			merged: [],
+		});
 	});
 });

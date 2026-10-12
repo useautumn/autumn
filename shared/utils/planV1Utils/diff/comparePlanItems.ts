@@ -162,6 +162,16 @@ export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	);
 };
 
+/** Two items that differ at most in their rate-card override. */
+export const itemsEqualIgnoringFeatureOverride = (
+	a: PlanItemInput,
+	b: PlanItemInput,
+): boolean =>
+	itemsEqual(
+		{ ...a, feature_override: undefined },
+		{ ...b, feature_override: undefined },
+	);
+
 export const planItemFiltersEqual = (
 	a: PlanItemFilter,
 	b: PlanItemFilter,
