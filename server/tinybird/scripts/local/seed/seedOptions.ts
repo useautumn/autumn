@@ -159,6 +159,10 @@ export const parseSeedOptions = ({
 		allowOtherRuns: Boolean(values["allow-other-runs"]),
 		verify: !values["no-verify"],
 	};
+	for (const key of ["batchSize", "smallBatchSize", "concurrency"] as const) {
+		if (!Number.isInteger(options[key]) || options[key] < 1)
+			throw new Error(`${key} must be a positive integer`);
+	}
 	if (options.features.length === 0)
 		throw new Error("--features needs at least one feature id");
 	if (options.whales > 0 && options.whaleShare <= 0) options.whaleShare = 0.5;

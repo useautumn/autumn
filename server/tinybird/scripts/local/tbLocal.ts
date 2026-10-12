@@ -36,6 +36,12 @@ const main = async () => {
 		return;
 	}
 
+	const seedOptions = parseSeedOptions({ values });
+	if (command === "seed" && seedOptions.dryRun) {
+		await runSeed({ target: null, options: seedOptions });
+		return;
+	}
+
 	const target = await resolveTarget({
 		url: values.url,
 		token: values.token,

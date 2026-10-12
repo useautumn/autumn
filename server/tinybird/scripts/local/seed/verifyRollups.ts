@@ -211,6 +211,7 @@ const collectChecks = async ({
 	const propertyRollups: [string, Map<string, number>, string][] = [
 		["events_property_mv", gated, "sum(event_count)"],
 		["events_property_daily_mv", gated, "sumMerge(event_count)"],
+		["events_property_monthly_mv", gated, "sumMerge(event_count)"],
 		["events_org_property_hourly_mv", gated, "sumMerge(event_count)"],
 		["events_org_property_daily_mv", gated, "sumMerge(event_count)"],
 		["events_org_property_monthly_mv", gated, "sumMerge(event_count)"],

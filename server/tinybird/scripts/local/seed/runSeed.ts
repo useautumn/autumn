@@ -127,7 +127,7 @@ export const runSeed = async ({
 	target,
 	options,
 }: {
-	target: TinybirdTarget;
+	target: TinybirdTarget | null;
 	options: SeedOptions;
 }) => {
 	const runKey = generationKey({ options });
@@ -160,6 +160,8 @@ export const runSeed = async ({
 		return true;
 	}
 
+	if (!target)
+		throw new Error("A Tinybird target is required unless --dry-run is set");
 	if (await otherRunsBlockInsert({ target, options, runKey })) return false;
 	const pending = new Map(
 		(await findPendingBatches({ target, options, runKey, ranges })).map(
