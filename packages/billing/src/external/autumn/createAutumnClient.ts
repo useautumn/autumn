@@ -10,8 +10,6 @@ export type AutumnClientConfig = {
 	serverUrl?: string;
 	/** Off by default: a live key is refused so metering can't reach the real org by accident. */
 	allowLiveKey?: boolean;
-	/** Sends `check` to this Atom first; the SDK falls back to the Autumn API when it's down. */
-	edgeUrl?: string;
 };
 
 const trackItemToBatchTrackItem = (item: TrackItem) => ({
@@ -40,8 +38,8 @@ export const createAutumnClient = ({
 	const sdk = new Autumn({
 		secretKey: config.secretKey,
 		serverURL: config.serverUrl,
-		edgeURL: config.edgeUrl,
-		useEdge: Boolean(config.edgeUrl),
+		// `edge.check` asks this Atom first and falls back to the Autumn API when it's down.
+		edgeURL: process.env.AUTUMN_EDGE_URL || undefined,
 	});
 
 	const batchTrack = async ({ items }: { items: TrackItem[] }) => {
@@ -59,16 +57,23 @@ export const createAutumnClient = ({
 		await sdk.customers.getOrCreate({ customerId: id, name });
 	};
 
-	const check = async ({
-		customerId,
-		featureId,
-	}: {
-		customerId: string;
-		featureId: string;
-	}) => {
-		const { allowed } = await sdk.check({ customerId, featureId });
-		return { allowed };
-	};
+	const checkOn =
+		(client: Autumn) =>
+		async ({
+			customerId,
+			featureId,
+		}: {
+			customerId: string;
+			featureId: string;
+		}) => {
+			const { allowed } = await client.check({ customerId, featureId });
+			return { allowed };
+		};
 
-	return { batchTrack, getOrCreateCustomer, check };
+	return {
+		batchTrack,
+		getOrCreateCustomer,
+		check: checkOn(sdk),
+		edge: { check: checkOn(sdk.edge) },
+	};
 };
