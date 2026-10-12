@@ -308,31 +308,27 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 		}
 	});
 
-	test("does not construct unsupported flat-amount or volume consumable shapes", () => {
-		expect(
-			autumnConsumablePriceToStripePriceShape({
-				price: consumablePrice({
-					tiers: [
-						{ to: 500, amount: 0.1, flat_amount: 1 },
-						{ to: Infinite, amount: 0.05 },
-					],
-				}),
-				entitlement: entitlement({ allowance: 100 }),
-				stripeProductId: "prod_messages",
-				currency: "usd",
-				org,
+	test("constructs a volume consumable shape without flat fees, as the metered price is created", () => {
+		const shape = autumnConsumablePriceToStripePriceShape({
+			price: consumablePrice({
+				tierBehavior: TierBehavior.VolumeBased,
+				tiers: [
+					{ to: 500, amount: 0.1, flat_amount: 1 },
+					{ to: Infinite, amount: 0.05 },
+				],
 			}),
-		).toBeNull();
+			entitlement: entitlement({ allowance: 100 }),
+			stripeProductId: "prod_messages",
+			currency: "usd",
+			org,
+		});
 
-		expect(
-			autumnConsumablePriceToStripePriceShape({
-				price: consumablePrice({ tierBehavior: TierBehavior.VolumeBased }),
-				entitlement: entitlement(),
-				stripeProductId: "prod_messages",
-				currency: "usd",
-				org,
-			}),
-		).toBeNull();
+		expect(shape?.tiersMode).toBe("volume");
+		expect(shape?.tiers).toEqual([
+			{ upTo: 100, unitAmountDecimal: "0" },
+			{ upTo: 600, unitAmountDecimal: "10" },
+			{ upTo: "inf", unitAmountDecimal: "5" },
+		]);
 	});
 });
 
