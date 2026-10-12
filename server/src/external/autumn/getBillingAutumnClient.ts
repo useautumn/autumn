@@ -1,14 +1,28 @@
 import { type AutumnClient, createAutumnClient } from "@autumn/billing";
+import { getAutumnEnv } from "@autumn/env";
+import { onAwsEcs } from "@/external/aws/ecs/onAwsEcs.js";
+import { billingEdgeUrl } from "./billingEdgeUrl.js";
 
-let client: AutumnClient | undefined;
+type BillingCheckPath = "edge" | "api";
 
-/** Autumn's own org, billing Autumn's customers. */
-export const getBillingAutumnClient = (): AutumnClient => {
-	client ??= createAutumnClient({
-		config: {
-			secretKey: process.env.AUTUMN_SECRET_KEY ?? "",
-			allowLiveKey: true,
-		},
+let billing: { autumn: AutumnClient; path: BillingCheckPath } | undefined;
+
+/** Autumn's own org, billing Autumn's customers, and whether its checks go edge-first. */
+export const getBillingAutumnClient = () => {
+	if (billing) return billing;
+	const edgeUrl = billingEdgeUrl({
+		onEcs: onAwsEcs(),
+		edgeUrl: getAutumnEnv().AUTUMN_EDGE_URL,
 	});
-	return client;
+	billing = {
+		autumn: createAutumnClient({
+			config: {
+				secretKey: process.env.AUTUMN_SECRET_KEY ?? "",
+				allowLiveKey: true,
+				edgeUrl,
+			},
+		}),
+		path: edgeUrl ? "edge" : "api",
+	};
+	return billing;
 };

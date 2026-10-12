@@ -10,6 +10,8 @@ export type AutumnClientConfig = {
 	serverUrl?: string;
 	/** Off by default: a live key is refused so metering can't reach the real org by accident. */
 	allowLiveKey?: boolean;
+	/** Sends `check` to this Atom first; the SDK falls back to the Autumn API when it's down. */
+	edgeUrl?: string;
 };
 
 const trackItemToBatchTrackItem = (item: TrackItem) => ({
@@ -38,6 +40,8 @@ export const createAutumnClient = ({
 	const sdk = new Autumn({
 		secretKey: config.secretKey,
 		serverURL: config.serverUrl,
+		edgeURL: config.edgeUrl,
+		useEdge: Boolean(config.edgeUrl),
 	});
 
 	const batchTrack = async ({ items }: { items: TrackItem[] }) => {
