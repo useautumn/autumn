@@ -1,4 +1,5 @@
 import type {
+	AttachParamsV1,
 	BillingResult,
 	FullCusProduct,
 	UpdateSubscriptionBillingContext,
@@ -8,9 +9,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
+import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
+import { checkoutActions } from "@/internal/checkouts/actions";
 
 export type PendingUpdateResult = {
 	billingContext?: UpdateSubscriptionBillingContext;
@@ -59,11 +62,28 @@ export const updatePendingCustomerProduct = async ({
 		return updated as PendingUpdateResult;
 	}
 
+	// A plan opened from a long-lived link is re-attached onto that link, keeping its URL.
+	const longLivedCheckout = await getPendingPlanLongLivedCheckout({
+		ctx,
+		deferredData,
+	});
+	const attachParams: AttachParamsV1 = longLivedCheckout
+		? {
+				...(longLivedCheckout.params as AttachParamsV1),
+				...reattachParams,
+				long_lived_checkout: false,
+			}
+		: reattachParams;
+
 	await discardPendingCustomerProduct({ ctx, customerProduct });
 
 	const { billingContext, billingResult } = await billingActions.attach({
 		ctx,
-		params: reattachParams,
+		params: attachParams,
+		longLivedCheckout: longLivedCheckout && {
+			id: longLivedCheckout.id,
+			expiresAt: longLivedCheckout.expires_at,
+		},
 	});
 
 	if (!billingResult) return {};
@@ -74,9 +94,21 @@ export const updatePendingCustomerProduct = async ({
 		createdAt: customerProduct.created_at,
 	});
 
+	const retargetedCheckout =
+		longLivedCheckout &&
+		(await checkoutActions.retargetLongLived({
+			ctx,
+			checkout: longLivedCheckout,
+			params: attachParams,
+			billingContext,
+			billingResult,
+		}));
+
 	return {
 		billingContext:
 			billingContext as unknown as UpdateSubscriptionBillingContext,
-		billingResult,
+		billingResult: retargetedCheckout
+			? { ...billingResult, autumn: { checkout: retargetedCheckout } }
+			: billingResult,
 	};
 };
