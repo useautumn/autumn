@@ -21,7 +21,6 @@ import {
 	type RevenueCatPeriodEvent,
 	storeRevenueCatPeriod,
 } from "@/external/revenueCat/utils/revenueCatPeriod";
-import { storeRevenueCatPurchaseId } from "@/external/revenueCat/utils/storeRevenueCatPurchaseId";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
@@ -213,6 +212,14 @@ export const provisionRevenueCatCusProduct = async ({
 		skipBillingFetching: true,
 		skipExternalPSPGuard: true,
 		processorTypeOverride: ProcessorType.RevenueCat,
+		...(originalTransactionId
+			? {
+					processorOverride: {
+						type: ProcessorType.RevenueCat,
+						original_transaction_id: originalTransactionId,
+					},
+				}
+			: {}),
 	};
 
 	await attach({
@@ -256,12 +263,6 @@ export const provisionRevenueCatCusProduct = async ({
 			statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
 		});
 	}
-
-	await storeRevenueCatPurchaseId({
-		ctx,
-		customerProduct: cusProduct,
-		originalTransactionId,
-	});
 
 	if (periodEvent) {
 		await storeRevenueCatPeriod({

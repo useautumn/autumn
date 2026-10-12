@@ -4,10 +4,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { customerProducts } from "@autumn/shared";
-import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
-import { eq, sql } from "drizzle-orm";
 import {
 	findActiveCusProduct,
 	mapProduct,
@@ -262,89 +259,5 @@ test.concurrent(
 				autumnProductId: oldPlan.id,
 			}),
 		).toBeDefined();
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("rc product change: a retried INITIAL_PURCHASE restores a missing purchase id")}`,
-	async () => {
-		const customerA = "rc-pc-retry";
-		const { oldPlan, oldStoreId, newStoreId, originalTransactionId } =
-			await setupReplacement({ customerA });
-		const plan = await findActiveCusProduct({
-			customerId: customerA,
-			autumnProductId: oldPlan.id,
-		});
-		await ctx.db
-			.update(customerProducts)
-			.set({
-				processor: sql`${customerProducts.processor} - 'original_transaction_id'`,
-			})
-			.where(eq(customerProducts.id, plan?.id ?? ""));
-
-		await newRcClient().initialPurchase({
-			productId: oldStoreId,
-			appUserId: customerA,
-			originalTransactionId,
-		});
-		expectWebhookSuccess(
-			await newRcClient().productChange({
-				productId: oldStoreId,
-				newProductId: newStoreId,
-				appUserId: `${customerA}-b`,
-				originalTransactionId,
-				expirationAtMs: Date.now() - 1,
-			}),
-		);
-
-		expect(
-			await findActiveCusProduct({
-				customerId: customerA,
-				autumnProductId: oldPlan.id,
-			}),
-		).toBeUndefined();
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("rc product change: a RENEWAL restores a missing purchase id")}`,
-	async () => {
-		const customerA = "rc-pc-renewal-repair";
-		const { oldPlan, oldStoreId, newStoreId, originalTransactionId } =
-			await setupReplacement({ customerA });
-		const plan = await findActiveCusProduct({
-			customerId: customerA,
-			autumnProductId: oldPlan.id,
-		});
-		await ctx.db
-			.update(customerProducts)
-			.set({
-				processor: sql`${customerProducts.processor} - 'original_transaction_id'`,
-			})
-			.where(eq(customerProducts.id, plan?.id ?? ""));
-
-		expectWebhookSuccess(
-			await newRcClient().renewal({
-				productId: oldStoreId,
-				appUserId: customerA,
-				originalTransactionId,
-			}),
-		);
-		expectWebhookSuccess(
-			await newRcClient().productChange({
-				productId: oldStoreId,
-				newProductId: newStoreId,
-				appUserId: `${customerA}-b`,
-				originalTransactionId,
-				expirationAtMs: Date.now() - 1,
-			}),
-		);
-
-		expect(
-			await findActiveCusProduct({
-				customerId: customerA,
-				autumnProductId: oldPlan.id,
-			}),
-		).toBeUndefined();
 	},
 );

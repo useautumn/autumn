@@ -8,7 +8,6 @@ import {
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
-import { storeRevenueCatPurchaseId } from "@/external/revenueCat/utils/storeRevenueCatPurchaseId";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
@@ -47,13 +46,6 @@ export const handleInitialPurchase = async ({
 	// Guard the same-product attach explicitly so RC consumers get the canonical
 	// CustomerAlreadyHasProduct error rather than V2 attach's PlanAlreadyAttached.
 	if (curSameProduct) {
-		// A retry after a failed id write lands here, so repair the missing purchase id first.
-		await storeRevenueCatPurchaseId({
-			ctx: customerCtx,
-			customerProduct: curSameProduct,
-			originalTransactionId: event.original_transaction_id,
-		});
-
 		throw new RecaseError({
 			message: `[handleInitialPurchase] Customer ${customer.id} already has product ${product.id}`,
 			code: ErrCode.CustomerAlreadyHasProduct,
