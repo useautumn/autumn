@@ -765,6 +765,23 @@ const resolveRefSha = (ref: string): string => {
 	return /^[0-9a-f]{40}$/.test(local) ? local : ref;
 };
 
+/** A pinned or historical dev sha must not roll `:latest` back, so only origin's current dev head moves it. */
+const isWarmLatestBranchHead = ({
+	ref,
+	sha,
+}: {
+	ref: string;
+	sha: string;
+}): boolean => {
+	if (ref !== WARM_LATEST_BRANCH) return false;
+	const { stdout } = Bun.spawnSync(
+		["git", "ls-remote", "origin", `refs/heads/${WARM_LATEST_BRANCH}`],
+		{ stdout: "pipe", stderr: "pipe" },
+	);
+	const head = new TextDecoder().decode(stdout).split(/\s+/)[0];
+	return head === sha;
+};
+
 /**
  * Get the CACHED warm parent for this ref-sha, or build it. The warm parent is
  * named deterministically (`tw-warm-<sha>`), so a prior run — or a teammate on
@@ -862,7 +879,7 @@ export const getOrBuildWarmParent = async ({
 	try {
 		await snapshotAndStop(warm, {
 			signal,
-			publishLatest: ref === WARM_LATEST_BRANCH,
+			publishLatest: isWarmLatestBranchHead({ ref, sha }),
 		});
 	} catch (error) {
 		await failBuild(
