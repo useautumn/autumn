@@ -8,9 +8,8 @@ import { addDays } from "date-fns";
 import { and, asc, eq, lt } from "drizzle-orm";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { expireCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
+import { expireAbandonedCheckoutCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expireAbandonedCheckoutCustomerProducts";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { generateId } from "@/utils/genUtils";
 import { createWorkerAutumnContext } from "@/utils/workerUtils/createAutumnContext";
@@ -32,7 +31,7 @@ const getExpiredLongLivedCheckoutMetadata = ({
 			.from(metadata)
 			.where(
 				and(
-					eq(metadata.type, MetadataType.LongLivedCheckoutEnabledImmediately),
+					eq(metadata.type, MetadataType.LongLivedCheckout),
 					lt(metadata.expires_at, now),
 				),
 			)
@@ -60,7 +59,9 @@ const expireLongLivedCheckout = async ({
 	cronContext: CronContext;
 	pendingMetadata: Metadata;
 }) => {
-	const { orgId, env } = pendingMetadata.data as DeferredAutumnBillingPlanData;
+	const { orgId, env, billingContext } =
+		pendingMetadata.data as DeferredAutumnBillingPlanData;
+	const { fullCustomer } = billingContext;
 	const sessionId = pendingMetadata.stripe_checkout_session_id;
 	const ctx = await createWorkerAutumnContext({
 		db: cronContext.db,
@@ -70,46 +71,33 @@ const expireLongLivedCheckout = async ({
 		workerId: generateId("long-lived-checkout-cron"),
 	});
 
-	if (sessionId) {
-		const stripeCli = createStripeCli({ org: ctx.org, env });
-		const session = await stripeCli.checkout.sessions.retrieve(sessionId);
-		// Paid but not yet linked: leave it for the completion webhook and recheck later.
-		if (session.status === "complete") {
-			await postponeExpiry({ cronContext, pendingMetadata });
-			return;
-		}
-		if (session.status === "open") {
-			await stripeCli.checkout.sessions.expire(sessionId);
-		}
-
-		const grantedCustomerProducts =
-			await CusProductService.getByStripeCheckoutSessionId({
-				db: ctx.db,
-				stripeCheckoutSessionId: sessionId,
-				orgId,
-				env,
-			});
-		const unpaidCustomerProducts = grantedCustomerProducts.filter(
-			(customerProduct) =>
-				(customerProduct.subscription_ids ?? []).length === 0,
-		);
-
-		await expireCustomerProducts({
-			ctx,
-			customerProducts: unpaidCustomerProducts,
-		});
-
-		for (const customerProduct of unpaidCustomerProducts) {
-			await invalidateCachedFullSubject({
-				ctx,
-				customerId:
-					customerProduct.customer_id ?? customerProduct.customer?.id ?? "",
-				source: "longLivedCheckoutCron",
-			});
-		}
+	// Session creation failed after the metadata insert, so nothing was granted.
+	if (!sessionId) {
+		await MetadataService.delete({ db: ctx.db, id: pendingMetadata.id });
+		return;
 	}
 
-	await MetadataService.delete({ db: ctx.db, id: pendingMetadata.id });
+	const stripeCli = createStripeCli({ org: ctx.org, env });
+	const session = await stripeCli.checkout.sessions.retrieve(sessionId);
+	// Paid but not yet linked: leave it for the completion webhook and recheck later.
+	if (session.status === "complete") {
+		await postponeExpiry({ cronContext, pendingMetadata });
+		return;
+	}
+	if (session.status === "open") {
+		await stripeCli.checkout.sessions.expire(sessionId);
+	}
+
+	await expireAbandonedCheckoutCustomerProducts({
+		ctx,
+		stripeCheckoutSessionId: sessionId,
+		metadataId: pendingMetadata.id,
+	});
+	await invalidateCachedFullSubject({
+		ctx,
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
+		source: "longLivedCheckoutCron",
+	});
 };
 
 export const runLongLivedCheckoutExpiry = async ({

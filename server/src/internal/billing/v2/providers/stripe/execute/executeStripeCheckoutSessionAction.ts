@@ -69,7 +69,7 @@ const getCheckoutMetadataType = ({
 	billingContext: BillingContext;
 }) => {
 	if (billingContext.longLivedCheckout) {
-		return MetadataType.LongLivedCheckoutEnabledImmediately;
+		return MetadataType.LongLivedCheckout;
 	}
 	if (billingContext.enablePlanImmediately === true) {
 		return MetadataType.CheckoutSessionEnabledImmediately;

@@ -1,8 +1,4 @@
-import {
-	type DeferredAutumnBillingPlanData,
-	MetadataType,
-	notNullish,
-} from "@autumn/shared";
+import { type DeferredAutumnBillingPlanData, notNullish } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/createStripeScheduleFromCheckout";
 import { matchOptionalInvoiceItemsToProducts } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/matchOptionalInvoiceItemsToProducts";
@@ -26,6 +22,7 @@ import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumn
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { MetadataService } from "@/internal/metadata/MetadataService";
+import { checkoutMetadataToActivation } from "@/internal/metadata/utils/checkoutMetadataToActivation";
 import { workflows } from "@/queue/workflows";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
@@ -38,7 +35,9 @@ export const handleCheckoutSessionMetadataV2 = async ({
 }): Promise<void> => {
 	const { metadata } = checkoutContext;
 
-	if (metadata?.type !== MetadataType.CheckoutSessionV2) return;
+	if (!metadata || checkoutMetadataToActivation({ metadata }) !== "deferred") {
+		return;
+	}
 
 	ctx.logger.info(
 		`[checkout.completed] Handling checkout session metadata V2: ${metadata.id}`,
