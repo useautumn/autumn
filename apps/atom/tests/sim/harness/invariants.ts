@@ -109,8 +109,8 @@ export const assertNoLoops = ({ cluster }: { cluster: SimCluster }) => {
 			record.toId === undefined
 		)
 			continue;
-		let bodies = fromAutumn.get(record.toId);
-		if (!bodies) fromAutumn.set(record.toId, (bodies = new Set()));
+		const bodies = fromAutumn.get(record.toId) ?? new Set<string>();
+		fromAutumn.set(record.toId, bodies);
 		bodies.add(record.body);
 	}
 	for (const record of cluster.network.observed) {
@@ -145,8 +145,9 @@ export const assertNoErrors = ({
 				check.status >= 500 &&
 				!(allowPeerTimeouts && check.status === 504)),
 	);
-	if (failed.length > 0)
+	const first = failed[0];
+	if (first)
 		throw new Error(
-			`${failed.length} checks failed, first at +${failed[0]!.at - 1_700_000_000_000}ms to ${failed[0]!.to}: ${failed[0]!.status}`,
+			`${failed.length} checks failed, first at +${first.at - 1_700_000_000_000}ms to ${first.to}: ${first.status}`,
 		);
 };

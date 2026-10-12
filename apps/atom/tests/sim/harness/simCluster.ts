@@ -120,6 +120,7 @@ export const createSimCluster = ({
 	const applied: Applied[] = [];
 	/** Generations whose volume was thrown away: what only they stored is gone for good, as it would be in the cloud. */
 	const lostVolumes = new Set<number>();
+	const generationsOn = new Map<Volume, number[]>();
 	const checks: CheckRecord[] = [];
 	let catalogReadAt = 0;
 	const background = new Set<Promise<unknown>>();
@@ -394,10 +395,8 @@ export const createSimCluster = ({
 	}): SimReplica {
 		if (skewMs !== undefined) skews.set(address, skewMs);
 		let volume = volumes.get(address);
-		if (volume && fresh) {
-			const previous = replicas.get(address);
-			if (previous) lostVolumes.add(previous.id);
-		}
+		if (volume && fresh)
+			for (const id of generationsOn.get(volume) ?? []) lostVolumes.add(id);
 		if (!volume || fresh) {
 			volume = createVolume();
 			volumes.set(address, volume);
@@ -415,6 +414,10 @@ export const createSimCluster = ({
 				log: say,
 			},
 		});
+		generationsOn.set(volume, [
+			...(generationsOn.get(volume) ?? []),
+			replica.id,
+		]);
 		replicas.set(address, replica);
 		opened.push(replica);
 		return replica;

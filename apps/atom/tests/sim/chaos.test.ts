@@ -61,9 +61,8 @@ type Scenario = {
 };
 
 const boot = async (cluster: SimCluster, skews: number[] = []) => {
-	ADDRESSES.forEach((address, i) =>
-		cluster.start({ address, skewMs: skews[i] ?? 0 }),
-	);
+	for (const [i, address] of ADDRESSES.entries())
+		cluster.start({ address, skewMs: skews[i] ?? 0 });
 	await cluster.runFor({
 		ms: 10_000,
 		pushesPerSecond: 0,

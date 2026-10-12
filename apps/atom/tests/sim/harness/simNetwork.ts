@@ -102,14 +102,12 @@ export const createSimNetwork = ({
 	};
 
 	const deliver = async ({
-		from,
 		to,
 		port,
 		path,
 		init,
 		record,
 	}: {
-		from: Endpoint;
 		to: string;
 		port: number;
 		path: string;
@@ -167,7 +165,6 @@ export const createSimNetwork = ({
 			}
 			if (rng.chance(current.dupRate))
 				void deliver({
-					from,
 					to: url.hostname,
 					port: Number(url.port),
 					path,
@@ -177,7 +174,6 @@ export const createSimNetwork = ({
 			let response: Response;
 			try {
 				response = await deliver({
-					from,
 					to: url.hostname,
 					port: Number(url.port),
 					path,
