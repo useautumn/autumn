@@ -25,6 +25,7 @@ export function ItemSummaryRow({
 			changes={changes}
 			compact
 			onClick={onClick}
+			showUpdatedTag={false}
 			updated={updated}
 		>
 			<PlanItemLabel item={productItem} unnamedText="Unconfigured" />

@@ -41,7 +41,7 @@ function EditedRow({
 	hint?: ReactNode;
 }) {
 	return (
-		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+		<div className="flex items-center w-full shrink-0 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				{icon}
 				<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
@@ -60,7 +60,7 @@ function EditedRow({
 function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	const { features } = useFeaturesQuery();
 	return (
-		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+		<div className="flex items-center w-full shrink-0 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden opacity-50">
 				<FeatureIconCluster item={filterToProductItem(filter)} />
 				<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
