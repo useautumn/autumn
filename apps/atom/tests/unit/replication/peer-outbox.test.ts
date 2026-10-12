@@ -10,18 +10,24 @@ type Delivery = { peer: string; path: string; operation: ReplicatedOperation };
 const outboxOf = ({
 	peers,
 	answers = {},
+	onSend = () => {},
 }: {
 	peers: string[];
 	/** Per peer: the answer to each delivery in turn, delivered once the list runs out; `false` alone is a peer that is down. */
 	answers?: Record<string, Outcome[] | false>;
+	onSend?: () => void;
 }) => {
 	const delivered: Delivery[] = [];
 	const counts: Record<string, number> = {};
 	let known = peers;
 	let forgotten = 0;
 	let now = 0;
+	let resolving: Promise<void> = Promise.resolve();
 	const resolver: PeerResolver = {
-		peers: async () => known,
+		peers: async () => {
+			await resolving;
+			return known;
+		},
 		forget: () => {
 			forgotten++;
 		},
@@ -30,6 +36,7 @@ const outboxOf = ({
 		ctx: {
 			resolver,
 			send: async (delivery) => {
+				onSend();
 				delivered.push(delivery);
 				const scripted = answers[delivery.peer];
 				if (scripted === false) return "failed" as const;
@@ -59,6 +66,14 @@ const outboxOf = ({
 		},
 		advance: (ms: number) => {
 			now += ms;
+		},
+		/** The next peer lookups take this long, as a DNS answer does. */
+		holdResolving: () => {
+			let release = () => {};
+			resolving = new Promise((resolve) => {
+				release = resolve;
+			});
+			return release;
 		},
 	};
 };
@@ -212,6 +227,32 @@ describe("what a thread applied, on its way to the other replicas", () => {
 		// Once stopping, a failed delivery is not retried: the down peer's six copies are dropped, and counted.
 		expect(counts.relayFailed).toBeGreaterThanOrEqual(6);
 		expect(counts.relayDropped).toBe(6);
+	});
+
+	test("stop waits for a copy whose peers are still being resolved, so a push stored just before stopping is relayed", async () => {
+		let stopDone = false;
+		let sentAfterStop = false;
+		const { outbox, delivered, holdResolving } = outboxOf({
+			peers: ["10.0.0.2"],
+			onSend: () => {
+				sentAfterStop ||= stopDone;
+			},
+		});
+		const release = holdResolving();
+		const queued = outbox.enqueue({
+			operation: push({ key: "cus_1" }),
+			path: "/v1/subjects.set",
+		});
+		const stopping = outbox.stop().then(() => {
+			stopDone = true;
+		});
+		await settle();
+		release();
+		await Promise.all([queued, stopping]);
+		await settle();
+
+		expect(delivered.map(({ operation }) => operation.key)).toEqual(["cus_1"]);
+		expect(sentAfterStop).toBe(false);
 	});
 
 	test("after stop nothing more is queued or sent", async () => {
