@@ -6,12 +6,12 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
-import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
+import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
+import { checkoutActions } from "@/internal/checkouts/actions";
 
 export type PendingUpdateResult = {
 	billingContext?: UpdateSubscriptionBillingContext;
@@ -37,25 +37,13 @@ export const updatePendingCustomerProduct = async ({
 		return {};
 	}
 
-	const reattachParams = buildPendingReattachParams({
-		params,
-		billingContext: deferredData.billingContext,
-		customerProduct,
-	});
-
-	const replacementPreview = await billingActions.attach({
-		ctx,
-		params: reattachParams,
-		preview: true,
-	});
-
-	const rebills = pendingPlanRebills({
-		ctx,
-		customerProduct,
-		replacementProduct: replacementPreview.billingContext?.fullProducts?.[0],
-		replacementQuantities:
-			replacementPreview.billingContext?.featureQuantities ?? [],
-	});
+	const { attachParams, longLivedCheckout, rebills } =
+		await previewPendingReattach({
+			ctx,
+			params,
+			customerProduct,
+			deferredData,
+		});
 
 	if (!rebills) {
 		const updated = await billingActions.updateSubscription({
@@ -77,7 +65,11 @@ export const updatePendingCustomerProduct = async ({
 
 	const { billingContext, billingResult } = await billingActions.attach({
 		ctx,
-		params: reattachParams,
+		params: attachParams,
+		longLivedCheckout: longLivedCheckout && {
+			id: longLivedCheckout.id,
+			expiresAt: longLivedCheckout.expires_at,
+		},
 	});
 
 	if (!billingResult) return {};
@@ -88,9 +80,21 @@ export const updatePendingCustomerProduct = async ({
 		createdAt: customerProduct.created_at,
 	});
 
+	const retargetedCheckout =
+		longLivedCheckout &&
+		(await checkoutActions.retargetLongLived({
+			ctx,
+			checkout: longLivedCheckout,
+			params: attachParams,
+			billingContext,
+			billingResult,
+		}));
+
 	return {
 		billingContext:
 			billingContext as unknown as UpdateSubscriptionBillingContext,
-		billingResult,
+		billingResult: retargetedCheckout
+			? { ...billingResult, autumn: { checkout: retargetedCheckout } }
+			: billingResult,
 	};
 };

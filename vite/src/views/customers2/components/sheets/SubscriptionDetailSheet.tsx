@@ -88,7 +88,7 @@ export function SubscriptionDetailSheet() {
 			stripeSubscriptionId: cusProduct?.subscription_ids?.[0],
 		});
 	const { defaultConfiguration } = useStripePaymentMethodTypesQuery();
-	const { data: pendingPaymentUrl } = usePendingPaymentLink({
+	const { data: pendingPaymentLink } = usePendingPaymentLink({
 		customerId: customer?.id ?? customer?.internal_id,
 		customerProductId: cusProduct?.id,
 		enabled: cusProduct?.status === CusProductStatus.Pending,
@@ -356,13 +356,13 @@ export function SubscriptionDetailSheet() {
 						/>
 					)}
 
-					{isPending && pendingPaymentUrl && (
+					{isPending && pendingPaymentLink?.url && (
 						<InfoRow
 							icon={<CreditCardIcon size={16} />}
 							label="Payment"
 							value={
 								<a
-									href={pendingPaymentUrl}
+									href={pendingPaymentLink.url}
 									target="_blank"
 									rel="noopener noreferrer"
 									className="text-sm underline underline-offset-2"
