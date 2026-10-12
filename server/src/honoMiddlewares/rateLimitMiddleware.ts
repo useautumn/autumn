@@ -1,16 +1,16 @@
 import type { Context, Env, Next } from "hono";
-import { shouldUseRedis } from "@/external/redis/initRedis";
+import { errorToResponse } from "@/honoMiddlewares/errorMiddleware/errorMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isOverEndpointRateLimit } from "@/internal/misc/rateLimiter/isOverEndpointRateLimit";
 import {
 	getLimiterForType,
 	getOrgLimiterFor,
 	getRateLimitKey,
+	orgRateLimitExceededError,
 	setRateLimitKeyInContext,
 } from "@/internal/misc/rateLimiter/rateLimitFactory";
-import { runOrgThenCustomerInOneTrip } from "@/internal/misc/rateLimiter/runOrgThenCustomerInOneTrip";
 import {
 	getRateLimitRouteGroup,
-	RATE_LIMIT_CONFIGS,
 	RateLimitType,
 } from "../internal/misc/rateLimiter/rateLimitConfigs";
 
@@ -22,6 +22,21 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
 	try {
+		// An org's endpoint override caps on top of the group limits below.
+		if (
+			await isOverEndpointRateLimit({
+				ctx,
+				method: c.req.method,
+				path: c.req.path,
+			})
+		) {
+			return errorToResponse({
+				c,
+				error: orgRateLimitExceededError(),
+				env: ctx.env,
+			});
+		}
+
 		// 1. Determine rate limit type based on endpoint
 		const { type: rateLimitType, overLimit } = getRateLimitRouteGroup(c);
 
@@ -57,23 +72,6 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		);
 		const skipPrimaryLimiter =
 			rateLimitType === RateLimitType.EntitiesList && !ctx.customerId;
-
-		if (
-			!skipPrimaryLimiter &&
-			shouldUseRedis() &&
-			RATE_LIMIT_CONFIGS[rateLimitType].store === "redis" &&
-			RATE_LIMIT_CONFIGS[orgLimit.type].store === "redis"
-		) {
-			return await runOrgThenCustomerInOneTrip({
-				c,
-				next,
-				type: rateLimitType,
-				orgType: orgLimit.type,
-				overLimit,
-				key: rateLimitKey,
-				orgKey: getRateLimitKey({ c, rateLimitType: orgLimit.type }),
-			});
-		}
 
 		let innerResponse: Response | undefined;
 		const aggregateResponse = await orgLimit.limiter(

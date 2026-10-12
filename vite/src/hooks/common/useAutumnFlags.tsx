@@ -24,7 +24,8 @@ export const useAutumnFlags = () => {
 			vercel: notNullish(customer.flags.vercel),
 			revenuecat: notNullish(customer.flags.revenuecat),
 			sso: notNullish(customer.flags.sso),
-			atoms: notNullish(customer.flags.atoms),
+			// `atoms` is metered (a count of Atoms), so it arrives as a balance, not a flag.
+			atoms: (customer.balances?.atoms?.remaining ?? 0) > 0,
 		};
 
 		// Only update storage/state when values actually change

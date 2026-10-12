@@ -3,6 +3,17 @@ import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { CreditBucketsTable } from "./blogComponents/ai-billing-infrastructure/CreditBucketsTable";
 import { CreditsTable } from "./blogComponents/ai-billing-infrastructure/CreditsTable";
 import { LockAndReleaseDiagram } from "./blogComponents/ai-billing-infrastructure/LockAndReleaseDiagram";
+import { ClaudeLoadTestLoop } from "./blogComponents/claude-throughput/claudeLoadTestLoop";
+import { BalanceWorkerPartitions } from "./blogComponents/claude-throughput/balanceWorkerPartitions";
+import { ExperimentationLoop } from "./blogComponents/claude-throughput/experimentationLoop";
+import { LoadTestArchitecture } from "./blogComponents/claude-throughput/loadTestArchitecture";
+import { LoadTestComparison } from "./blogComponents/claude-throughput/loadTestComparison";
+import { LoadTestResultsTable } from "./blogComponents/claude-throughput/loadTestResultsTable";
+import { ParallelSessionPipeline } from "./blogComponents/claude-throughput/parallelSessionPipeline";
+import { CpuTimeByChip } from "./blogComponents/claude-throughput/cpuTimeByChip";
+import { RequestCpuBreakdown } from "./blogComponents/claude-throughput/requestCpuBreakdown";
+import { BalanceWorkerCores } from "./blogComponents/claude-throughput/balanceWorkerCores";
+import { ExperimentResultsTable } from "./blogComponents/claude-throughput/experimentResultsTable";
 import { AxiomLogLeakAnimation } from "./blogComponents/eliminating-memory-leaks/AxiomLogLeakAnimation";
 import { CreditDrawdownDiagram } from "./blogComponents/how-firecrawl-runs-pricing-experiments-every-week/CreditDrawdownDiagram";
 import { HierarchyDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/HierarchyDiagram";
@@ -149,6 +160,17 @@ export const mdxComponents = {
 		</td>
 	),
 	AxiomLogLeakAnimation,
+	ExperimentationLoop,
+	ClaudeLoadTestLoop,
+	BalanceWorkerPartitions,
+	LoadTestComparison,
+	LoadTestArchitecture,
+	LoadTestResultsTable,
+	ParallelSessionPipeline,
+	CpuTimeByChip,
+	RequestCpuBreakdown,
+	BalanceWorkerCores,
+	ExperimentResultsTable,
 	AgentEnvironmentDiagram,
 	BillingPathsAnimation,
 	Expand,

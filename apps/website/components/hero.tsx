@@ -147,22 +147,18 @@ export default function Hero() {
 						</Link>
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-4%] md:leading-14 font-sans">
+								<span className="text-white">Usage-based billing</span>{" "}
 								<span className="text-[#FFFFFF99] font-normal">
-									The managed
-								</span>{" "}
-								<span className="text-white">billing service</span>{" "}
-								<span className="text-[#FFFFFF99] font-normal">
-									for scaling companies
+									for frontier startups
 								</span>
 							</h1>
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
-								One layer for billing, ledgering, entitlements and controls.
-								Autumn moves pricing{" "}
+								The flexible pricing layer with billing, real-time ledgering,
+								entitlements and spend controls out-the-box. Autumn lets you{" "}
 								<span className="text-white font-light">
-									from code into config
+									iterate on pricing and sell custom contracts 10x faster
 								</span>
-								, so you can iterate on pricing and sell enterprise contracts
-								10x faster. Built for high-growth AI and usage-based companies.
+								, without moving off Stripe.
 							</p>
 						</div>
 					</div>

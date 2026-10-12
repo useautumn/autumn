@@ -20,6 +20,8 @@ export enum RateLimitType {
 	Logs = "logs",
 	SyncBalanceWrite = "sync_balance_write",
 	SyncBalanceWriteOrg = "sync_balance_write_org",
+	CustomerCreateOrg = "customer_create_org",
+	EntitiesCreateOrg = "entities_create_org",
 }
 
 type RoutePattern = {
@@ -124,6 +126,10 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/customers" }),
 			route({ method: "POST", url: "/v1/customers.get_or_create" }),
 		],
+	},
+	{
+		type: RateLimitType.EntitiesCreateOrg,
+		patterns: [route({ method: "POST", url: "/v1/entities.create" })],
 	},
 	// Reads have no DB-free answer, so they share check's counters but reject.
 	{
@@ -321,6 +327,19 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	[RateLimitType.CustomerEntitiesGetOrg]: {
 		limit: 90_000,
 		windowMs: 60_000,
+		scope: RateLimitScope.Org,
+		store: "redis",
+	},
+	// Counted only when a lookup misses and a customer is created (assertCustomerCreateWithinOrgLimit).
+	[RateLimitType.CustomerCreateOrg]: {
+		limit: 200,
+		windowMs: 1000,
+		scope: RateLimitScope.Org,
+		store: "redis",
+	},
+	[RateLimitType.EntitiesCreateOrg]: {
+		limit: 200,
+		windowMs: 1000,
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
