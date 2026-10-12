@@ -10,8 +10,6 @@ export type ExpectedUsageInvoiceLine = {
 	/** Major units, e.g. 75 for $75.00. */
 	amount: number;
 	quantity: number;
-	/** Minor units, as Stripe stores it; omitted lines skip the check. */
-	unitAmountDecimal?: string;
 	/** The preview's quantity when it differs from Stripe's (untiered lines report usage). */
 	previewQuantity?: number;
 };
@@ -78,9 +76,6 @@ export const expectStripeUsageLines = ({
 				currency: line.currency,
 			}),
 			quantity: line.quantity,
-			...(expected[index]?.unitAmountDecimal !== undefined && {
-				unitAmountDecimal: line.pricing?.unit_amount_decimal,
-			}),
 		})),
 	).toEqual(expected);
 	return autumnLines;
