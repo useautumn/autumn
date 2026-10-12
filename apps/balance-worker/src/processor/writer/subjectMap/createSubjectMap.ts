@@ -5,6 +5,8 @@ import type { OnSubjectEvicted, SubjectMap } from "./types/subjectMap.js";
 /** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
 
+export const SUBJECT_MAP_IDLE_SCAN_PER_WRITE = 32;
+
 type Entry = {
 	state: SubjectState;
 	/** Set once the entry holds state; a pin-only placeholder has none. */
@@ -14,6 +16,7 @@ type Entry = {
 	/** Evicted while a write was unapplied: unreadable at once, the entry goes as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
+	touchedAt: number;
 };
 
 const weigh = ({ value }: { value: unknown }): number =>
@@ -78,9 +81,13 @@ export const reweighSubjectState = ({
 export const createSubjectMap = ({
 	maxBytes = SUBJECT_MAP_MAX_BYTES,
 	onEvicted,
+	idleExpiryMs,
+	now = () => performance.now(),
 }: {
 	maxBytes?: number | (() => number);
 	onEvicted?: OnSubjectEvicted;
+	idleExpiryMs?: number;
+	now?: () => number;
 } = {}): SubjectMap => {
 	if (typeof maxBytes === "number" && !(maxBytes > 0))
 		throw new RangeError("maxBytes must be positive");
@@ -99,6 +106,7 @@ export const createSubjectMap = ({
 		subjectKey: string;
 		entry: Entry;
 	}) => {
+		entry.touchedAt = now();
 		entries.delete(subjectKey);
 		entries.set(subjectKey, entry);
 	};
@@ -113,6 +121,7 @@ export const createSubjectMap = ({
 			pins: 0,
 			evictOnUnpin: false,
 			baselineAt: null,
+			touchedAt: now(),
 		};
 		entries.set(subjectKey, created);
 		return created;
@@ -125,6 +134,19 @@ export const createSubjectMap = ({
 			if (totalBytes <= bound) return;
 			if (entry.pins > 0 || subjectKey === except) continue;
 			dropState({ subjectKey, entry });
+		}
+	};
+
+	const dropIdle = () => {
+		if (idleExpiryMs === undefined) return;
+		const idleBefore = now() - idleExpiryMs;
+		let scanned = 0;
+		for (const [subjectKey, entry] of entries) {
+			const isIdle = entry.touchedAt < idleBefore;
+			if (!isIdle || scanned === SUBJECT_MAP_IDLE_SCAN_PER_WRITE) return;
+			scanned += 1;
+			if (entry.pins > 0) touch({ subjectKey, entry });
+			else dropState({ subjectKey, entry });
 		}
 	};
 
@@ -189,6 +211,7 @@ export const createSubjectMap = ({
 		entry.state = state;
 		totalBytes += entry.bytes;
 		touch({ subjectKey, entry });
+		dropIdle();
 		evictUntilWithinBound({ except: subjectKey });
 	};
 

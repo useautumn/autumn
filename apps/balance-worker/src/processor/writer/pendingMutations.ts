@@ -26,13 +26,22 @@ import {
 
 export function createPartitionWriterState({
 	subjectMapMaxBytes,
+	subjectIdleExpiryMs,
 	onEvicted,
+	now,
 }: {
 	subjectMapMaxBytes?: number | (() => number);
+	subjectIdleExpiryMs?: number;
 	onEvicted?: OnSubjectEvicted;
+	now?: () => number;
 } = {}): PartitionWriterState {
 	return {
-		subjects: createSubjectMap({ maxBytes: subjectMapMaxBytes, onEvicted }),
+		subjects: createSubjectMap({
+			maxBytes: subjectMapMaxBytes,
+			idleExpiryMs: subjectIdleExpiryMs,
+			onEvicted,
+			now,
+		}),
 		pendingByKey: new Map(),
 		pendingByCustomerKey: new Map(),
 		queue: [],

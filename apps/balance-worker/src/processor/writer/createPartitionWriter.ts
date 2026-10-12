@@ -58,7 +58,9 @@ export function createPartitionWriter({
 			subjectMapMaxBytes: budgetShare
 				? () => budgetShare.maxBytes()
 				: undefined,
+			subjectIdleExpiryMs: config.limits.subjectIdleExpiryMs,
 			onEvicted: evictDeleteOf({ ctx, config }),
+			now: ctx.now,
 		}),
 	};
 
