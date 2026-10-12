@@ -1,6 +1,7 @@
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
+import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { tokenMatchesHash } from "./tokenMatchesHash.js";
 import type { Auth } from "./types/auth.js";
@@ -16,6 +17,7 @@ export const createDeployedAuth = ({
 	owners,
 	held,
 	now,
+	subjectPulls,
 }: {
 	dataDir: string;
 	tokenHash: string;
@@ -23,8 +25,16 @@ export const createDeployedAuth = ({
 	owners: SlotOwners;
 	held: HeldSubjects;
 	now?: () => number;
+	subjectPulls: SubjectPulls;
 }): DeployedAuth => {
-	const slots = openSlots({ folder: dataDir, slotCount, owners, held, now });
+	const slots = openSlots({
+		folder: dataDir,
+		slotCount,
+		owners,
+		held,
+		now,
+		pulls: { subjectPulls, tokenHash: () => tokenHash },
+	});
 
 	function authorize({ token }: { token: string }) {
 		return tokenMatchesHash({ token, expectedHash: tokenHash }) ? slots : null;

@@ -14,6 +14,7 @@ type SubjectStateRow = {
 	sliceHash: string;
 	catalogJson: string;
 	orgJson: string;
+	customerVersion: bigint;
 };
 
 /** A subject's catalog slice and org as stored beside its state, and the hash that tells a push whether they changed. */
@@ -59,6 +60,7 @@ const storedSubjectFromRow = ({
 		org: JSON.parse(row.orgJson),
 		logOffset: row.logOffset,
 		readAt: Number(row.readAt),
+		customerVersion: row.customerVersion,
 	},
 	bytes: textBytes([row.stateJson, row.catalogJson, row.orgJson]),
 	sliceHash: row.sliceHash,
@@ -112,7 +114,8 @@ export const readSubject = ({
 				states.state_json AS stateJson,
 				states.slice_hash AS sliceHash,
 				slices.catalog_json AS catalogJson,
-				slices.org_json AS orgJson
+				slices.org_json AS orgJson,
+				states.customer_version AS customerVersion
 			FROM subject_states AS states
 			JOIN subject_slices AS slices USING (customer_id, entity_id)
 			WHERE states.customer_id = $customerId AND states.entity_id = $entityId
@@ -163,6 +166,7 @@ export const listSubjectsAppliedAfter = ({
 				states.applied_at AS appliedAt,
 				states.state_json AS stateJson,
 				states.slice_hash AS sliceHash,
+				states.customer_version AS customerVersion,
 				slices.catalog_json AS catalogJson,
 				slices.org_json AS orgJson
 			FROM subject_states AS states
@@ -262,6 +266,7 @@ export const readSubjectsByKey = ({
 			states.applied_at AS appliedAt,
 			states.state_json AS stateJson,
 			states.slice_hash AS sliceHash,
+			states.customer_version AS customerVersion,
 			slices.catalog_json AS catalogJson,
 			slices.org_json AS orgJson
 		FROM subject_states AS states
@@ -291,7 +296,14 @@ export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
 	return Number(row?.appliedAt ?? 0);
 };
 
-/** Subjects that came from one read are written together. One answer each, as `upsertSubject` gives. */
+/** What one write left: the bytes of row text it stored (null when its rows were older), and the customer's version
+ * when the write moved it (null when it stayed). */
+export type SubjectWriteResult = {
+	bytes: number | null;
+	customerVersion: bigint | null;
+};
+
+/** Subjects that came from one read are written together. */
 export const upsertSubjects = ({
 	ctx,
 	writes,
@@ -300,14 +312,18 @@ export const upsertSubjects = ({
 	ctx: SlotContext;
 	writes: SubjectWrite[];
 	appliedAt: number;
-}): (number | null)[] =>
+}): SubjectWriteResult[] =>
 	ctx.sqliteDb.transaction(() =>
 		writes.map((write) => upsertSubject({ ctx, write, appliedAt })),
 	)();
 
+/** The push is read later than the row held, or at the same instant for a later change. */
+const IS_NEWER = `(excluded.read_at > subject_states.read_at
+	OR (excluded.read_at = subject_states.read_at AND excluded.log_offset >= subject_states.log_offset))`;
+
 /**
- * The bytes of row text the subject now holds; null when it was read before the one stored, or at the same instant
- * for an earlier change: a late push never undoes a newer one. The slice row is rewritten only when it changed.
+ * One statement per subject. Its rows replace the held ones only when newer, so a late push never undoes a newer one;
+ * its customer version is kept as the higher of the two either way, since evicts arrive out of order too.
  */
 const upsertSubject = ({
 	ctx,
@@ -317,35 +333,44 @@ const upsertSubject = ({
 	ctx: SlotContext;
 	write: SubjectWrite;
 	appliedAt: number;
-}): number | null => {
+}): SubjectWriteResult => {
 	const { customerId, entityId } = subject.state.identity;
 	const key = { customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID };
 	const stateJson = JSON.stringify(subject.state);
-	const { changes } = ctx.sqliteDb
-		.query(`
+	const written = ctx.sqliteDb
+		.query<
+			{ readAt: bigint; logOffset: bigint; customerVersion: bigint },
+			Record<string, string | bigint | number>
+		>(`
 			INSERT INTO subject_states
-				(customer_id, entity_id, log_offset, read_at, applied_at, state_json, slice_hash)
+				(customer_id, entity_id, log_offset, read_at, applied_at, state_json, slice_hash, customer_version)
 			VALUES
-				($customerId, $entityId, $logOffset, $readAt, $appliedAt, $stateJson, $sliceHash)
+				($customerId, $entityId, $logOffset, $readAt, $appliedAt, $stateJson, $sliceHash, $customerVersion)
 			ON CONFLICT (customer_id, entity_id) DO UPDATE SET
-				log_offset = excluded.log_offset,
-				read_at = excluded.read_at,
-				applied_at = excluded.applied_at,
-				state_json = excluded.state_json,
-				slice_hash = excluded.slice_hash
-			WHERE excluded.read_at > subject_states.read_at
-				OR (excluded.read_at = subject_states.read_at
-					AND excluded.log_offset >= subject_states.log_offset)
+				log_offset = CASE WHEN ${IS_NEWER} THEN excluded.log_offset ELSE subject_states.log_offset END,
+				read_at = CASE WHEN ${IS_NEWER} THEN excluded.read_at ELSE subject_states.read_at END,
+				applied_at = CASE WHEN ${IS_NEWER} THEN excluded.applied_at ELSE subject_states.applied_at END,
+				state_json = CASE WHEN ${IS_NEWER} THEN excluded.state_json ELSE subject_states.state_json END,
+				slice_hash = CASE WHEN ${IS_NEWER} THEN excluded.slice_hash ELSE subject_states.slice_hash END,
+				customer_version = max(subject_states.customer_version, excluded.customer_version)
+			WHERE ${IS_NEWER} OR excluded.customer_version > subject_states.customer_version
+			RETURNING read_at AS readAt, log_offset AS logOffset, customer_version AS customerVersion
 		`)
-		.run({
+		.get({
 			...key,
 			logOffset: subject.logOffset,
 			readAt: subject.readAt,
 			appliedAt,
 			stateJson,
 			sliceHash: slice.hash,
+			customerVersion: subject.customerVersion,
 		});
-	if (changes === 0) return null;
+	if (!written) return { bytes: null, customerVersion: null };
+	const isStored =
+		written.readAt === BigInt(subject.readAt) &&
+		written.logOffset === subject.logOffset;
+	if (!isStored)
+		return { bytes: null, customerVersion: written.customerVersion };
 	if (!sliceStored)
 		ctx.sqliteDb
 			.query(`
@@ -363,5 +388,8 @@ const upsertSubject = ({
 				catalogJson: slice.catalogJson,
 				orgJson: slice.orgJson,
 			});
-	return textBytes([stateJson, slice.catalogJson, slice.orgJson]);
+	return {
+		bytes: textBytes([stateJson, slice.catalogJson, slice.orgJson]),
+		customerVersion: written.customerVersion,
+	};
 };

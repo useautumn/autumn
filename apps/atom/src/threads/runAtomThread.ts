@@ -1,5 +1,6 @@
 import { parentPort } from "node:worker_threads";
 import { openAuth } from "../auth/openAuth.js";
+import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
@@ -7,6 +8,7 @@ import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
 import type { Slots } from "../slots/types/slots.js";
+import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
 import { answerOwnerCalls } from "./owners/answerOwnerCalls.js";
 import { createSlotOwners } from "./owners/createSlotOwners.js";
 import { openThreadCounters } from "./stats/threadStats.js";
@@ -22,9 +24,17 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
 	const logger = getAtomLogger();
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
-	const { auth, multiTenant, held } = openAuth({ env, owners });
-	const answerPorts = new Map<number, MessagePort>();
 	const counters = openThreadCounters({ buffer: init.stats, index });
+	// Per thread, like secret keys: a subject's misses are all decided on its owner thread.
+	const subjectPulls = createSubjectPulls({
+		ctx: {
+			autumnClient: getAutumnClient({ env }),
+			counters,
+			logger,
+		},
+	});
+	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
+	const answerPorts = new Map<number, MessagePort>();
 	let stopping = false;
 	// Only an org's own Atom has replicas to keep in step; a multi-tenant one holds every folder itself.
 	const replicas =
@@ -79,8 +89,10 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		void replicas.sync.runPasses();
 	}
 
+	/** Pulls stop first, so none lands in a folder as it closes. */
 	async function stop(): Promise<void> {
 		stopping = true;
+		subjectPulls.stop();
 		await server.stop();
 	}
 

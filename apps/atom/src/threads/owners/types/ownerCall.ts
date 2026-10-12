@@ -50,9 +50,12 @@ export type SubjectDigestOnWire = Omit<SubjectDigest, "logOffset"> & {
 	logOffset: string;
 };
 
-/** A written subject as it crosses threads or replicas: its one bigint as decimal text. */
+/** A written subject as it crosses threads or replicas: its bigints as decimal text. */
 export type AppliedSubjectOnWire = {
-	subject: Omit<AppliedSubject["subject"], "logOffset"> & { logOffset: string };
+	subject: Omit<AppliedSubject["subject"], "logOffset" | "customerVersion"> & {
+		logOffset: string;
+		customerVersion: string;
+	};
 	appliedAt: number;
 };
 

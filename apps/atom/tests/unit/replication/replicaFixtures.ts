@@ -19,6 +19,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
 
@@ -65,6 +66,7 @@ export const createReplica = ({
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
 		now,
+		subjectPulls: noSubjectPulls,
 	});
 	const replication = createReplication({
 		ctx: {

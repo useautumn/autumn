@@ -59,4 +59,6 @@ export type AtomDeployer = {
 	retry(params: { deploymentGroupId: string }): Promise<void>;
 	/** Deleting one that is already gone is a no-op. */
 	delete(params: { deploymentGroupId: string }): Promise<void>;
+	/** Once the deployment is gone, nothing can start another in the group. Until then the stack's delete needs its setup link. */
+	closeSetup(params: { deploymentGroupId: string }): Promise<void>;
 };

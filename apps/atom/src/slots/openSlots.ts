@@ -5,6 +5,7 @@ import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
+import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
@@ -41,6 +42,7 @@ export const openSlots = ({
 	owners,
 	held,
 	now = Date.now,
+	pulls,
 }: {
 	folder: string;
 	slotCount: number;
@@ -51,6 +53,8 @@ export const openSlots = ({
 	held: HeldSubjects;
 	/** This replica's clock, stamped on every write. */
 	now?: () => number;
+	/** This thread's pulls, and the token hash the folder proves itself with. */
+	pulls: { subjectPulls: SubjectPulls; tokenHash: () => string };
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -61,6 +65,12 @@ export const openSlots = ({
 		databasePath: join(folder, CATALOG_FILE),
 	});
 	const logger = getAtomLogger();
+	// A miss is decided on the slot's owner thread, so the pulled body is stored there too.
+	const subjectPulls = pulls.subjectPulls.forFolder({
+		tokenHash: pulls.tokenHash,
+		applyPulled: ({ customerId, body }) =>
+			processorFor({ customerId }).setSubject({ customerId, body }),
+	});
 	const slots = Array.from({ length: slotCount }, (_, slot): OpenedSlot => {
 		const owner = owners.ownerOf({ slot });
 		if (owner !== owners.index)
@@ -76,7 +86,7 @@ export const openSlots = ({
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
-				ctx: { sqliteStore, catalogStore, logger },
+				ctx: { sqliteStore, catalogStore, logger, subjectPulls },
 			}),
 		};
 	});
@@ -129,6 +139,10 @@ export const openSlots = ({
 		return true;
 	}
 
+	function processorFor({ customerId }: { customerId: string }) {
+		return slots[customerIdToSlot({ customerId, slotCount })].processor;
+	}
+
 	const ctx: ReplicaSlotsContext = {
 		slots,
 		slotCount,
@@ -138,8 +152,7 @@ export const openSlots = ({
 	};
 	return {
 		slotCount,
-		processorFor: ({ customerId }) =>
-			slots[customerIdToSlot({ customerId, slotCount })].processor,
+		processorFor,
 		setCatalog,
 		installCatalog: (params) => catalogStore.install(params),
 		...serveReplicaReads({ ctx }),

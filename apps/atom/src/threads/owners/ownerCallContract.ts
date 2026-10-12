@@ -78,7 +78,11 @@ export const appliedSubjectToWire = ({
 	subject,
 	appliedAt,
 }: AppliedSubject): AppliedSubjectOnWire => ({
-	subject: { ...subject, logOffset: subject.logOffset.toString() },
+	subject: {
+		...subject,
+		logOffset: subject.logOffset.toString(),
+		customerVersion: subject.customerVersion.toString(),
+	},
 	appliedAt,
 });
 
@@ -86,7 +90,11 @@ export const wireToAppliedSubject = ({
 	subject,
 	appliedAt,
 }: AppliedSubjectOnWire): AppliedSubject => ({
-	subject: { ...subject, logOffset: BigInt(subject.logOffset) },
+	subject: {
+		...subject,
+		logOffset: BigInt(subject.logOffset),
+		customerVersion: BigInt(subject.customerVersion),
+	},
 	appliedAt,
 });
 

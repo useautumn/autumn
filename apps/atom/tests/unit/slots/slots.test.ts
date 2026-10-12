@@ -11,6 +11,7 @@ import {
 	checkRequestFor,
 	checkResponseOf,
 	freshHeld,
+	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -28,6 +29,7 @@ const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
 		slotCount,
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
+		pulls: { subjectPulls: noSubjectPulls, tokenHash: () => "hash_folder" },
 	});
 	opened.push(slots);
 	return slots;
@@ -269,15 +271,14 @@ describe("a replica catching up from a peer", () => {
 			owners: allSlotsOwnedHere,
 			held: freshHeld(),
 			now: () => now,
+			pulls: { subjectPulls: noSubjectPulls, tokenHash: () => "hash_folder" },
 		});
 		opened.push(slots);
-		await slots
-			.processorFor({ customerId: "cus_1" })
-			.setSubject(
-				subjectPushOf({
-					subject: storedSubjectWith({ balance: 10, readAt: 1 }),
-				}),
-			);
+		await slots.processorFor({ customerId: "cus_1" }).setSubject(
+			subjectPushOf({
+				subject: storedSubjectWith({ balance: 10, readAt: 1 }),
+			}),
+		);
 		const slot = customerIdToSlot({ customerId: "cus_1", slotCount: 2 });
 
 		const since = await slots.listSince({

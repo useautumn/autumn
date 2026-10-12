@@ -7,6 +7,7 @@ import {
 	checkRequestFor,
 	checkResponseOf,
 	freshHeld,
+	noFolderPulls,
 	storedEntitySubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -24,7 +25,12 @@ const createProcessor = () => {
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
 	stores.push(sqliteStore, catalogStore);
 	return createSlotProcessor({
-		ctx: { sqliteStore, catalogStore, logger: getAtomLogger() },
+		ctx: {
+			sqliteStore,
+			catalogStore,
+			logger: getAtomLogger(),
+			subjectPulls: noFolderPulls,
+		},
 	});
 };
 

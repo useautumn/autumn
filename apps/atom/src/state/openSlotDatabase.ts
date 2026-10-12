@@ -23,6 +23,8 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 			applied_at INTEGER NOT NULL,
 			state_json TEXT NOT NULL,
 			slice_hash TEXT NOT NULL,
+			-- On the customer's own row: the log offset of its latest evict. It only rises, even past rows older than held.
+			customer_version INTEGER NOT NULL DEFAULT 0 CHECK (customer_version >= 0),
 			PRIMARY KEY (customer_id, entity_id)
 		) WITHOUT ROWID
 	`);

@@ -1,5 +1,6 @@
 import { fetchInvalidKeys } from "../auth/secretKeys/fetchInvalidKeys.js";
 import { startSecretKeys } from "../auth/secretKeys/startSecretKeys.js";
+import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomApp } from "../http/createAtomApp.js";
 import { createPeerApp } from "../http/createPeerApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
@@ -39,7 +40,7 @@ export const createAtomServer = ({
 					findInvalid: ({ keyHashes }) =>
 						fetchInvalidKeys({
 							ctx: {
-								autumnApiUrl: env.ATOM_AUTUMN_API_URL,
+								autumnClient: getAutumnClient({ env }),
 								tokenHash: env.ATOM_TOKEN_HASH,
 								logger: ctx.logger,
 							},

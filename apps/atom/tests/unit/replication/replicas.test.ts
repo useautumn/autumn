@@ -20,6 +20,7 @@ import {
 import {
 	allSlotsOwnedHere,
 	freshHeld,
+	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
 import {
@@ -398,6 +399,7 @@ describe("the public app", () => {
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
 			held: freshHeld(),
+			subjectPulls: noSubjectPulls,
 		});
 		const app = createAtomApp({
 			ctx: {

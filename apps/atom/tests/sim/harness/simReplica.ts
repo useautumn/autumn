@@ -19,7 +19,11 @@ import {
 	openThreadCounters,
 	readThreadStats,
 } from "../../../src/threads/stats/threadStats.js";
-import { allSlotsOwnedHere, freshHeld } from "../../unit/utils/atomFixtures.js";
+import {
+	allSlotsOwnedHere,
+	freshHeld,
+	noSubjectPulls,
+} from "../../unit/utils/atomFixtures.js";
 import type { Endpoint, SimNetwork } from "./simNetwork.js";
 import type { VirtualClock } from "./virtualClock.js";
 
@@ -79,6 +83,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		owners: allSlotsOwnedHere,
 		held: freshHeld(),
 		now,
+		subjectPulls: noSubjectPulls,
 	});
 	const endpoint: Endpoint = {
 		id,
