@@ -9,6 +9,7 @@ import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
+import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import {
@@ -122,7 +123,11 @@ export const createReplica = ({
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),
 		/** As the thread boots: the point it fell behind at is fixed here, before any live relay lands. */
-		sync: () => createReplicaSync({ ctx: syncContext, slots: auth.slots }),
+		sync: () =>
+			createReplicaSync({
+				ctx: syncContext,
+				folders: createDeployedFolders({ slots: auth.slots }),
+			}),
 		/** Closes the files, as a process that stops or dies does; the folder stays for a restart on the same volume. */
 		close: () => auth.close(),
 	};

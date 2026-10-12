@@ -44,6 +44,7 @@ import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
 import {
+	ATOM_PEER_PORT,
 	ATOM_PORT,
 	ATOM_URL,
 	BALANCE_WORKER_PORT,
@@ -260,6 +261,8 @@ export const startAtom = (repoRoot: string): Subprocess => {
 				.digest("hex"),
 			ATOM_SLOT_COUNT: "2",
 			ATOM_PORT: String(ATOM_PORT),
+			ATOM_PEER_PORT: String(ATOM_PEER_PORT),
+			ATOM_PEER_SECRET: randomBytes(32).toString("hex"),
 			ATOM_DATA_DIR: join(repoRoot, ".data", "atom"),
 		} as Record<string, string>,
 	});

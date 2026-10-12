@@ -57,14 +57,14 @@ export const createAtomServer = ({
 		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		secretKeys,
 		replication: ctx.replication,
-		...(ctx.replication && { peer: { port: env.ATOM_PORT } }),
+		peer: { port: env.ATOM_PORT },
 	};
 	const app = createAtomApp({ ctx: httpContext });
-	// Only an org's own Atom listens to other replicas, on the port the stack keeps off the public endpoint.
-	const peerApp =
-		env.ATOM_MODE === "deployed"
-			? createPeerApp({ ctx: httpContext, secret: env.ATOM_PEER_SECRET })
-			: undefined;
+	// The other replicas are listened to on the port the stack keeps off the public endpoint.
+	const peerApp = createPeerApp({
+		ctx: httpContext,
+		secret: env.ATOM_PEER_SECRET,
+	});
 	const statsTick = startThreadStatsTick({
 		counters: ctx.counters,
 		held: ctx.held,
@@ -81,13 +81,12 @@ export const createAtomServer = ({
 			reusePort: true,
 			fetch: app.fetch,
 		});
-		if (peerApp)
-			peerListener = Bun.serve({
-				hostname: env.ATOM_HOSTNAME,
-				port: env.ATOM_PEER_PORT,
-				reusePort: true,
-				fetch: peerApp.fetch,
-			});
+		peerListener = Bun.serve({
+			hostname: env.ATOM_HOSTNAME,
+			port: env.ATOM_PEER_PORT,
+			reusePort: true,
+			fetch: peerApp.fetch,
+		});
 	}
 
 	/** Receiving is async I/O beside serving, so a thread that receives pushes still answers checks. */
@@ -101,7 +100,7 @@ export const createAtomServer = ({
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
 		// After the last push applied here: what it relays must still reach the peers before the files close.
-		await ctx.replication?.stop();
+		await ctx.replication.stop();
 		statsTick.stop();
 		secretKeys?.stop();
 		ctx.auth.close();

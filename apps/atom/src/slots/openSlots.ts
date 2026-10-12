@@ -151,6 +151,7 @@ export const openSlots = ({
 		atomId,
 	};
 	return {
+		atomId,
 		slotCount,
 		processorFor,
 		setCatalog,

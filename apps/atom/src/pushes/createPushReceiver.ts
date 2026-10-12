@@ -27,8 +27,8 @@ type PushReceiverContext = {
 	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
 	counters?: Pick<ThreadCounters, "add">;
-	/** Present only on an org's own Atom: a push one replica reads from the queue reaches the others through it. */
-	replication?: Replication;
+	/** A push one replica reads from the queue reaches the others through it. */
+	replication: Replication;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 

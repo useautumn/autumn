@@ -31,6 +31,7 @@ export const createPeerSender = ({
 					method: "POST",
 					path,
 					customerId: operation.headers?.[ATOM_CUSTOMER_ID_HEADER],
+					atomId: operation.atomId,
 					body: operation.body,
 					headers: operation.headers,
 				}),

@@ -96,4 +96,60 @@ describe("a multi-tenant Atom with two replicas", () => {
 
 		expect(a.auth.hasAtom({ id: "org_a" })).toBe(false);
 	});
+
+	test("a fresh replica learns every tenant and its rows from a ready peer before it serves", async () => {
+		const a = createMultiTenantReplica({
+			address: "10.0.0.1",
+			peers: ["10.0.0.2"],
+		});
+		const b = createMultiTenantReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			ready: false,
+		});
+		connect({ replicas: [a] });
+		await putTenant({ replica: a, id: "org_a" });
+		await putTenant({ replica: a, id: "org_b" });
+		await pushTo({ replica: a, tenant: "org_a", customerId: "cus_1" });
+		await pushTo({ replica: a, tenant: "org_b", customerId: "cus_2" });
+		await settle();
+
+		connect({ replicas: [a, b] });
+		await b.sync().catchUp();
+
+		expect(
+			b.auth
+				.listAtoms()
+				.map(({ id }) => id)
+				.sort(),
+		).toEqual(["org_a", "org_b"]);
+		expect(await heldFor({ replica: b, id: "org_a" })).toEqual(["cus_1"]);
+		expect(await heldFor({ replica: b, id: "org_b" })).toEqual(["cus_2"]);
+	});
+
+	test("a tenant registered while a replica was down reaches it through its next pass, rows included", async () => {
+		let now = 1_000_000;
+		const a = createMultiTenantReplica({
+			address: "10.0.0.1",
+			peers: ["10.0.0.2"],
+			now: () => now,
+		});
+		const b = createMultiTenantReplica({
+			address: "10.0.0.2",
+			peers: ["10.0.0.1"],
+			now: () => now,
+		});
+		const sync = b.sync();
+		connect({ replicas: [a] });
+		await putTenant({ replica: a, id: "org_b" });
+		await pushTo({ replica: a, tenant: "org_b", customerId: "cus_2" });
+		await settle();
+
+		now += 60_000;
+		connect({ replicas: [a, b] });
+		await sync.pass();
+
+		expect(b.auth.hasAtom({ id: "org_b" })).toBe(true);
+		expect(await heldFor({ replica: b, id: "org_b" })).toEqual(["cus_2"]);
+	});
 });

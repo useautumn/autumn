@@ -34,12 +34,7 @@ export function notReadyCheckMiddleware({
 }): MiddlewareHandler<AtomHttpEnv> {
 	const { replication, peer } = ctx;
 	async function proxyWhileStarting(context: Context<AtomHttpEnv>, next: Next) {
-		if (
-			!replication ||
-			!peer ||
-			isAtomReady(ctx.health) ||
-			context.req.header(PROXIED_HEADER)
-		)
+		if (isAtomReady(ctx.health) || context.req.header(PROXIED_HEADER))
 			return next();
 		const [address] = await replication.peers();
 		if (!address) return next();

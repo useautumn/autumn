@@ -5,8 +5,14 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
+import {
+	ATOM_DELETE,
+	ATOM_PUT,
+} from "../../../src/multiTenant/replicateAtoms.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
+import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
+import { createMultiTenantFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import {
 	createThreadStatsBuffer,
@@ -37,6 +43,8 @@ export const TENANT_TOKENS: Record<string, string> = {
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
 registry.register(CATALOG_PUSH);
+registry.register(ATOM_PUT);
+registry.register(ATOM_DELETE);
 
 const cleanups: (() => void)[] = [];
 export const cleanUpMultiTenantReplicas = () => {
@@ -101,7 +109,29 @@ export const createMultiTenantReplica = ({
 		void replication.stop();
 		auth.close();
 	});
-	return { address, app, peerApp, auth, replication, dataDir };
+	return {
+		address,
+		app,
+		peerApp,
+		auth,
+		replication,
+		dataDir,
+		/** As the thread boots: every tenant's folder, and the ones a peer holds that this replica does not yet. */
+		sync: () =>
+			createReplicaSync({
+				ctx: {
+					replication,
+					port: PEER_PORT,
+					secret: PEER_SECRET,
+					logger: quiet,
+					sleep: async () => {},
+					now,
+					isStopping: () => false,
+				},
+				folders: createMultiTenantFolders({ auth }),
+			}),
+		close: () => auth.close(),
+	};
 };
 
 export type MultiTenantReplica = ReturnType<typeof createMultiTenantReplica>;

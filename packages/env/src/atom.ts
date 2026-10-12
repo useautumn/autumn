@@ -70,16 +70,14 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
 
 /**
  * One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`.
- * Only an org's own Atom has other replicas, signed to with the deployment's own secret; a multi-tenant one holds every folder itself.
+ * Either way its replicas sign what they send each other with the deployment's own secret.
  */
-type AtomModeEnv =
-	| {
-			ATOM_MODE: "deployed";
-			ATOM_TOKEN_HASH: string;
-			ATOM_PEER_SECRET: string;
-			ATOM_PEERS_FILE: string | null;
-	  }
-	| { ATOM_MODE: "multi_tenant"; ATOM_TOKEN_HASH: string };
+type AtomModeEnv = {
+	ATOM_MODE: "deployed" | "multi_tenant";
+	ATOM_TOKEN_HASH: string;
+	ATOM_PEER_SECRET: string;
+	ATOM_PEERS_FILE: string | null;
+};
 
 const isLoopback = (hostname: string): boolean =>
 	hostname.startsWith("127.") || hostname === "localhost" || hostname === "::1";
@@ -119,14 +117,13 @@ const modeEnvOf = ({
 		name: "ATOM_TOKEN_HASH",
 		value: tokenHash,
 	});
-	if (mode === "multi_tenant") return { ATOM_MODE: mode, ATOM_TOKEN_HASH };
 	const peerSecret = runtimeEnv.ATOM_PEER_SECRET?.trim();
 	if (!peerSecret)
 		throw new Error(
-			"Set ATOM_PEER_SECRET: an org's own Atom signs what it sends its other replicas with it, and the stack generates one per deployment",
+			"Set ATOM_PEER_SECRET: an Atom's replicas sign what they send each other with it, and the stack generates one per deployment",
 		);
 	return {
-		ATOM_MODE: "deployed",
+		ATOM_MODE: mode ?? "deployed",
 		ATOM_TOKEN_HASH,
 		ATOM_PEER_SECRET: peerSecret,
 		ATOM_PEERS_FILE: peersFileOf({ runtimeEnv, hostname }),

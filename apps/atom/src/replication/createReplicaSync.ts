@@ -1,4 +1,3 @@
-import type { Slots } from "../slots/types/slots.js";
 import {
 	type CatchUpContext,
 	catchUpBeforeServing,
@@ -6,6 +5,7 @@ import {
 	SETTLE_CATCH_UPS_MS,
 } from "./catchUp/catchUpFromPeers.js";
 import { HOLD_MS } from "./outbox/createPeerOutbox.js";
+import type { ReplicaFolder, ReplicaFolders } from "./types/replicaFolders.js";
 import type { Replication } from "./types/replication.js";
 
 /** Past the relay hold: what a peer gave up delivering here is at most this old when this replica asks again. */
@@ -23,29 +23,33 @@ export type ReplicaSyncContext = CatchUpContext & {
 };
 
 /**
- * Keeps one thread's slots in step with the other replicas across a restart. Built before the thread listens, so the
- * point it fell behind at is fixed before any live relay lands and moves the files' newest write. What died with the
+ * Keeps one thread's folders in step with the other replicas across a restart. Built before the thread listens, so the
+ * point each folder fell behind at is fixed before any live relay lands and moves its files' newest write. What died with the
  * process is pulled by the peers' own passes once this replica is ready; nothing stored is ever pushed back through the push path.
  */
 export const createReplicaSync = ({
 	ctx,
-	slots,
+	folders,
 }: {
 	ctx: ReplicaSyncContext;
-	slots: Slots;
+	folders: ReplicaFolders;
 }) => {
 	const sleep = ctx.sleep ?? Bun.sleep;
-	const lastAppliedAt = slots.maxAppliedAt();
 	const openedAt = ctx.now();
-	/** Everything, on a fresh volume; else what the peer wrote while this replica was away, and a margin past the relay hold. */
-	const bootWindow =
-		lastAppliedAt === 0
+	/** Per folder held at boot: what the peer wrote while this replica was away, and a margin past the relay hold; everything for one that is empty or learned since. */
+	const lastAppliedAt = new Map(
+		folders.all().map(({ atomId, slots }) => [atomId, slots.maxAppliedAt()]),
+	);
+	const bootWindowOf = ({ atomId }: ReplicaFolder): number | null => {
+		const appliedAt = lastAppliedAt.get(atomId) ?? 0;
+		return appliedAt === 0
 			? null
-			: openedAt - lastAppliedAt + HOLD_MS + CATCH_UP_MARGIN_MS;
+			: openedAt - appliedAt + HOLD_MS + CATCH_UP_MARGIN_MS;
+	};
 
 	/** Before serving: from the first ready peer. */
 	const catchUp = () =>
-		catchUpBeforeServing({ ctx, slots, window: bootWindow });
+		catchUpBeforeServing({ ctx, folders, windowOf: bootWindowOf });
 
 	/** When this replica last caught up from each peer; a peer cut off for longer than the window is asked back to then. */
 	const caughtUpAt = new Map<string, number>();
@@ -61,7 +65,7 @@ export const createReplicaSync = ({
 	/** One pass over every ready peer for what they wrote since this replica last heard from them. */
 	async function pass(): Promise<void> {
 		const startedAt = ctx.now();
-		for (const peer of await catchUpFromEveryPeer({ ctx, slots, windowFor }))
+		for (const peer of await catchUpFromEveryPeer({ ctx, folders, windowFor }))
 			caughtUpAt.set(peer, startedAt);
 	}
 

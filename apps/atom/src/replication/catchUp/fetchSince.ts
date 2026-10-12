@@ -1,4 +1,5 @@
 import type { CatalogRow } from "@autumn/balance-engine";
+import type { TenantAtom } from "../../multiTenant/atomFolders.js";
 import type {
 	CatalogRows,
 	SubjectKey,
@@ -25,6 +26,8 @@ export const PEER_SUBJECTS_SINCE_PATH = "/v1/_peer/subjects.since";
 export const PEER_SUBJECTS_DIGEST_PATH = "/v1/_peer/subjects.digest";
 export const PEER_SUBJECTS_FETCH_PATH = "/v1/_peer/subjects.fetch";
 export const PEER_CATALOG_SINCE_PATH = "/v1/_peer/catalog.since";
+/** The tenants a multi-tenant peer holds, so a replica learns them before it serves. */
+export const PEER_ATOMS_LIST_PATH = "/v1/_peer/atoms.list";
 const FETCH_TIMEOUT_MS = 10_000;
 
 export type SubjectsSinceRequest = {
@@ -50,6 +53,7 @@ export type SubjectsSinceResponse = {
 	subjects: AppliedSubjectOnWire[];
 };
 export type CatalogSinceRequest = { readAtAfter: number };
+export type AtomsListResponse = { atoms: { id: string; token_hash: string }[] };
 export type CatalogSinceResponse = {
 	catalog: { rows: CatalogRow[]; read_at: number } | null;
 };
@@ -90,19 +94,22 @@ export class PeerNotReadyError extends Error {
 	override readonly name = "PeerNotReadyError";
 }
 
-type PeerSourceContext = {
+type PeerContext = {
 	peer: string;
 	port: number;
 	secret: string;
 	fetch?: typeof fetch;
 };
 
+/** A peer asked about one folder: a tenant's on a multi-tenant Atom, null for the one folder of an org's own. */
+type PeerSourceContext = PeerContext & { atomId: string | null };
+
 const postToPeer = async <Reply>({
 	ctx,
 	path,
 	body,
 }: {
-	ctx: PeerSourceContext;
+	ctx: PeerContext & { atomId?: string | null };
 	path: string;
 	body: string;
 }) => {
@@ -114,6 +121,7 @@ const postToPeer = async <Reply>({
 				secret: ctx.secret,
 				method: "POST",
 				path,
+				atomId: ctx.atomId ?? null,
 				body,
 			}),
 			body,
@@ -127,7 +135,21 @@ const postToPeer = async <Reply>({
 	return (await response.json()) as Reply;
 };
 
-/** One peer as a subject source: each request signed like any peer request, the answers read back into subjects. */
+/** The tenants a multi-tenant peer holds; an org's own Atom's peer answers none. */
+export const listPeerAtoms = async ({
+	ctx,
+}: {
+	ctx: PeerContext;
+}): Promise<TenantAtom[]> => {
+	const { atoms } = await postToPeer<AtomsListResponse>({
+		ctx,
+		path: PEER_ATOMS_LIST_PATH,
+		body: "{}",
+	});
+	return atoms.map(({ id, token_hash }) => ({ id, tokenHash: token_hash }));
+};
+
+/** One peer as a subject source for one folder: each request signed like any peer request, the answers read back into subjects. */
 export const createPeerSubjectSource = ({
 	ctx,
 }: {

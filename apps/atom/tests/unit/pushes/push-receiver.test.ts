@@ -14,6 +14,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	noReplication,
 	noSubjectPulls,
 	subjectBody,
 } from "../utils/atomFixtures.js";
@@ -91,6 +92,7 @@ const drain = async ({
 		ctx: {
 			pushQueue: fake.queue,
 			auth,
+			replication: noReplication,
 			logger: {
 				warn: (fields) =>
 					warnings.push(String((fields as { type: string }).type)),
@@ -252,6 +254,7 @@ describe("push receiver", () => {
 					ack: async () => {},
 				},
 				auth,
+				replication: noReplication,
 				logger: {
 					warn: (fields) =>
 						warnings.push(String((fields as { type: string }).type)),
@@ -312,6 +315,7 @@ describe("push receiver under a hung or stopped queue", () => {
 					},
 				},
 				auth: openDeployed(),
+				replication: noReplication,
 				logger: { warn: () => {} },
 				sleep: async () => {},
 			},
@@ -350,6 +354,7 @@ describe("push receiver under a hung or stopped queue", () => {
 					},
 				},
 				auth: openDeployed(),
+				replication: noReplication,
 				logger: {
 					warn: (fields) =>
 						warnings.push(String((fields as { type: string }).type)),
@@ -379,6 +384,7 @@ describe("push receiver under a hung or stopped queue", () => {
 					ack: () => never(),
 				},
 				auth: openDeployed(),
+				replication: noReplication,
 				logger: { warn: () => {} },
 				sleep: async () => {},
 			},
