@@ -86,6 +86,12 @@ export const updateStripeSub2 = async ({
 			days_until_due:
 				attachParams.org.config.default_invoice_net_terms_days ?? 30,
 		}),
+		...(invoiceOnly &&
+			attachParams.org.config.allowed_payment_methods?.length && {
+				payment_settings: {
+					payment_method_types: attachParams.org.config.allowed_payment_methods,
+				},
+			}),
 		payment_behavior: "error_if_incomplete",
 
 		expand: ["latest_invoice"],

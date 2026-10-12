@@ -1,4 +1,4 @@
-import type { InvoiceTemplate } from "@autumn/shared";
+import type { InvoicePaymentMethod, InvoiceTemplate } from "@autumn/shared";
 import {
 	Input,
 	SearchableSelect,
@@ -11,6 +11,10 @@ import {
 import { InfoIcon } from "lucide-react";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { cn } from "@/lib/utils";
+import {
+	ORG_PAYMENT_METHODS_HELPER,
+	PaymentMethodTypesSelect,
+} from "./PaymentMethodTypesSelect";
 import { resolveNetTermsDays } from "./utils/resolveNetTermsDays";
 
 const NO_TEMPLATE_VALUE = "none";
@@ -18,6 +22,8 @@ const NO_TEMPLATE_VALUE = "none";
 export interface InvoiceSettings {
 	templateId: string | null;
 	netTermsDays: number | null;
+	/** Null keeps the org's allowed payment methods. */
+	paymentMethodTypes: InvoicePaymentMethod[] | null;
 }
 
 export function InvoiceSettingsSection({
@@ -25,11 +31,13 @@ export function InvoiceSettingsSection({
 	onChange,
 	disabled,
 	defaultNetTermsDays,
+	defaultPaymentMethodTypes,
 }: {
 	value: InvoiceSettings;
 	onChange: (value: InvoiceSettings) => void;
 	disabled?: boolean;
 	defaultNetTermsDays?: number;
+	defaultPaymentMethodTypes: InvoicePaymentMethod[] | null;
 }) {
 	const { templates } = useInvoiceTemplatesQuery();
 	const hasTemplates = templates.length > 0;
@@ -54,6 +62,7 @@ export function InvoiceSettingsSection({
 									const templateId = next === NO_TEMPLATE_VALUE ? null : next;
 									const template = templates.find((t) => t.id === templateId);
 									onChange({
+										...value,
 										templateId,
 										netTermsDays:
 											template?.net_terms_days ?? value.netTermsDays,
@@ -97,6 +106,13 @@ export function InvoiceSettingsSection({
 							}}
 						/>
 					</div>
+					<PaymentMethodTypesSelect
+						value={value.paymentMethodTypes ?? defaultPaymentMethodTypes}
+						onValueChange={(paymentMethodTypes) =>
+							onChange({ ...value, paymentMethodTypes })
+						}
+						description={ORG_PAYMENT_METHODS_HELPER}
+					/>
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

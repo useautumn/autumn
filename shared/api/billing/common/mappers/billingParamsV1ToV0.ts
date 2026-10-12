@@ -75,6 +75,9 @@ export const billingParamsV1ToV0 = ({
 						...(invoice_mode.net_terms_days !== undefined
 							? { net_terms_days: invoice_mode.net_terms_days }
 							: {}),
+						...(invoice_mode.payment_method_types !== undefined
+							? { payment_method_types: invoice_mode.payment_method_types }
+							: {}),
 					}
 				: {}),
 			...(invoice_mode?.enable_plan_immediately || enable_plan_immediately

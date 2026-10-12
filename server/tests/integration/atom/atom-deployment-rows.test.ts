@@ -48,8 +48,8 @@ const atomRow = ({
 	deployment_id: null,
 	status,
 	endpoint_url: null,
-	cpu: 2,
-	memory: 1,
+	cpu: 4,
+	memory: 8,
 	encrypted_token: "encrypted",
 	token_hash: crypto.randomUUID(),
 	region: "us-east-1",
@@ -176,7 +176,11 @@ test(`${chalk.yellowBright("atom-rows4: a token hash names its Atom's org and en
 			db: ctx.db,
 			tokenHash: atom.token_hash ?? "",
 		}),
-	).toEqual({ orgId, env: AppEnv.Sandbox });
+	).toEqual({
+		orgId,
+		env: AppEnv.Sandbox,
+		encryptedToken: atom.encrypted_token,
+	});
 	expect(
 		await cacheDeploymentRepo.findByTokenHash({
 			db: ctx.db,

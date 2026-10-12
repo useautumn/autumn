@@ -10,6 +10,7 @@ import {
 	isUnreadableRequest,
 } from "../lib/contracts/invalidPushError.js";
 import type { PulledPush, PushQueue } from "../pushQueue/types/pushQueue.js";
+import type { Replication } from "../replication/types/replication.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import { applyCatalogPush, applySubjectPush } from "./applyPushes.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
@@ -26,6 +27,8 @@ type PushReceiverContext = {
 	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
 	counters?: Pick<ThreadCounters, "add">;
+	/** Present only on an org's own Atom: a push one replica reads from the queue reaches the others through it. */
+	replication?: Replication;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
@@ -50,7 +53,11 @@ const applyPush = async ({
 		return;
 	}
 	if (push.type === AtomPushType.SetCatalog) {
-		await applyCatalogPush({ slots, body: JSON.parse(push.body) });
+		await applyCatalogPush({
+			slots,
+			body: push.body,
+			replication: ctx.replication,
+		});
 		return;
 	}
 	if (push.customerId === null)
@@ -59,6 +66,7 @@ const applyPush = async ({
 		slots,
 		customerId: push.customerId,
 		body: push.body,
+		replication: ctx.replication,
 	});
 };
 

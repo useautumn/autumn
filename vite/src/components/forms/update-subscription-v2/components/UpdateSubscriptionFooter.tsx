@@ -5,12 +5,36 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionFooter() {
-	const { isPending, hasChanges, previewQuery, handleConfirm } =
-		useUpdateSubscriptionFormContext();
+	const {
+		isPending,
+		hasChanges,
+		previewQuery,
+		handleConfirm,
+		collectionMethodSwitch,
+	} = useUpdateSubscriptionFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const isReady = hasChanges && !previewQuery.isLoading && !previewQuery.error;
+	const previewReady = !previewQuery.isLoading && !previewQuery.error;
+
+	if (collectionMethodSwitch.isActive) {
+		return (
+			<BillingFooter layout="single" isReady={previewReady} reveal>
+				<Button
+					variant="primary"
+					className="w-full"
+					onClick={collectionMethodSwitch.submit}
+					isLoading={collectionMethodSwitch.isPending}
+					disabled={
+						collectionMethodSwitch.missingCard ||
+						!collectionMethodSwitch.requestBody
+					}
+				>
+					Update Subscription
+				</Button>
+			</BillingFooter>
+		);
+	}
 
 	const previewData = previewQuery.data;
 	const isZeroAmount = previewData && previewData.total <= 0;
@@ -19,7 +43,7 @@ export function UpdateSubscriptionFooter() {
 		: null;
 
 	return (
-		<BillingFooter layout="stacked" isReady={isReady} reveal>
+		<BillingFooter layout="stacked" isReady={hasChanges && previewReady} reveal>
 			<DisabledTooltipButton
 				variant="secondary"
 				className="w-full"

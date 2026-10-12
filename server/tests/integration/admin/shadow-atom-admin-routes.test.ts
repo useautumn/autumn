@@ -15,7 +15,7 @@ const ROUTES = [
 	{
 		method: "POST",
 		path: "/admin/shadow-atom-config/deployment",
-		body: { admin_token_hash: "a".repeat(64), cpu: 2, memory: 1 },
+		body: { admin_token_hash: "a".repeat(64), cpu: 4, memory: 8 },
 	},
 	{
 		method: "PATCH",

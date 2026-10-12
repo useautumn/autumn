@@ -9,6 +9,7 @@ import { parseReplayOperatorArgs } from "./parseReplayOperatorArgs.js";
 import {
 	buildReplayStagingTargetInput,
 	readReplayDatabaseUrl,
+	readReplayKafkaSasl,
 	readReplayOperatorJsonFile,
 } from "./readReplayOperatorInputs.js";
 
@@ -27,6 +28,8 @@ Environment:
   BALANCE_REPLAY_DATABASE_URL  Dedicated read-only staging connection string.
                                DATABASE_URL is never used as a fallback, and the
                                URL is never printed.
+  KAFKA_SASL_USERNAME_SERVER   Staging server SCRAM user for the pinned cluster.
+  KAFKA_SASL_PASSWORD_SERVER   Never printed.
 
 Manifest file shape (JSON):
 {
@@ -66,8 +69,9 @@ Target policy file shape (JSON):
 Limitations:
   - Dry run by default: counts, limits and the pinned target only. It opens no
     database, Kafka or Redis client and loads no runtime module.
-  - The Kafka target is pinned to tf-balance-staging-v2-64 (64 partitions,
-    us-east-1, four known brokers) and cannot be redirected from the CLI.
+  - The Kafka target is pinned to tf-balance-staging-rp-64 on staging Redpanda
+    (64 partitions, us-east-1, SCRAM-SHA-256) and cannot be redirected from
+    the CLI.
   - The database guard only proves the supplied URL matches the trusted policy
     file. Verify that policy against the staging inventory before executing.
   - Provisional caps: 1000 selected requests, 10 requests/second, 4 customer
@@ -150,6 +154,7 @@ async function main(): Promise<number> {
 		return 0;
 	}
 	const databaseUrl = readReplayDatabaseUrl({ runtimeEnv: process.env });
+	const kafkaSasl = readReplayKafkaSasl({ runtimeEnv: process.env });
 	const manifestInput = await readReplayOperatorJsonFile({
 		path: command.manifestPath,
 		label: "manifest",
@@ -173,7 +178,10 @@ async function main(): Promise<number> {
 				maxRequests: command.maxRequests,
 				requestsPerSecond: command.requestsPerSecond,
 			},
-			openResources: createReplayOperatorResourceFactory({ databaseUrl }),
+			openResources: createReplayOperatorResourceFactory({
+				databaseUrl,
+				kafkaSasl,
+			}),
 			signal: lifetime.signal,
 		});
 		reportReplayOperatorResult({ result });

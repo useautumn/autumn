@@ -1,4 +1,5 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig.js";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
@@ -27,6 +28,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		finalize_invoice: z.boolean().optional(),
 		invoice_template_id: z.string().optional(),
 		net_terms_days: z.number().int().positive().optional(),
+		payment_method_types: z.array(InvoicePaymentMethodSchema).min(1).optional(),
 
 		// New
 

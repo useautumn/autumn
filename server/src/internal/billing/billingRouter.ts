@@ -12,6 +12,7 @@ import { handleLegacyApiCheckout } from "./checkout/handleLegacyApiCheckout.js";
 import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
 import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
 import { handleCreateSchedule } from "./v2/handlers/handleCreateSchedule.js";
+import { handleGetStripeSubscription } from "./v2/handlers/handleGetStripeSubscription.js";
 import { handleLegacyAdvanceTestClock } from "./v2/handlers/handleLegacyAdvanceTestClock.js";
 import { handleMultiAttach } from "./v2/handlers/handleMultiAttach.js";
 import { handleMultiUpdate } from "./v2/handlers/handleMultiUpdate.js";
@@ -38,6 +39,10 @@ billingRouter.post("/attach/preview", ...handleAttachPreview);
 billingRouter.post("/cancel", ...handleCancelV2);
 
 billingRouter.post("/setup_payment", ...handleSetupPayment);
+billingRouter.get(
+	"/stripe_subscriptions/:stripe_subscription_id",
+	...handleGetStripeSubscription,
+);
 billingRouter.post("/checkout", ...handleLegacyApiCheckout);
 billingRouter.post("/attach", ...handleAttach);
 

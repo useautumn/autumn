@@ -1,4 +1,4 @@
-import type { AppEnv } from "@autumn/shared";
+import type { AppEnv, InvoicePaymentMethod } from "@autumn/shared";
 import { Button, Input, PanelButton } from "@autumn/ui";
 import { ArrowLeft, HourglassIcon, LightningIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
@@ -13,6 +13,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useOrgPaymentMethodTypes } from "./hooks/useOrgPaymentMethodTypes";
 import {
 	type InvoiceSettings,
 	InvoiceSettingsSection,
@@ -26,6 +27,7 @@ export interface SendInvoiceSubmitParams {
 	finalizeInvoice: boolean;
 	invoiceTemplateId?: string;
 	netTermsDays?: number;
+	paymentMethodTypes?: InvoicePaymentMethod[];
 }
 
 const IMMEDIATE_ACTIVATION_DESCRIPTION =
@@ -153,6 +155,7 @@ export function SendInvoiceStage({
 	const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
 		templateId: null,
 		netTermsDays: null,
+		paymentMethodTypes: null,
 	});
 	const [completedInvoiceUrl, setCompletedInvoiceUrl] = useState<string | null>(
 		null,
@@ -164,6 +167,7 @@ export function SendInvoiceStage({
 		null,
 	);
 
+	const orgPaymentMethodTypes = useOrgPaymentMethodTypes();
 	const customerId = customer?.id ?? customer?.internal_id;
 	const defaultNetTermsDays =
 		subscriptionNetTermsDays ??
@@ -201,6 +205,10 @@ export function SendInvoiceStage({
 			finalizeInvoice,
 			invoiceTemplateId: invoiceSettings.templateId ?? undefined,
 			netTermsDays: resolvedNetTermsDays > 0 ? resolvedNetTermsDays : undefined,
+			paymentMethodTypes:
+				invoiceSettings.paymentMethodTypes ??
+				orgPaymentMethodTypes ??
+				undefined,
 		};
 	};
 
@@ -332,6 +340,7 @@ export function SendInvoiceStage({
 				onChange={setInvoiceSettings}
 				disabled={needsEmail}
 				defaultNetTermsDays={defaultNetTermsDays}
+				defaultPaymentMethodTypes={orgPaymentMethodTypes}
 			/>
 
 			<PreviewSection previewQuery={previewQuery} />

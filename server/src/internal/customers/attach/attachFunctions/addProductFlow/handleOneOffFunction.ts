@@ -154,6 +154,12 @@ export const handleOneOffFunction = async ({
 		days_until_due: attachParams.invoiceOnly
 			? (org.config.default_invoice_net_terms_days ?? 30)
 			: undefined,
+		...(attachParams.invoiceOnly &&
+			org.config.allowed_payment_methods?.length && {
+				payment_settings: {
+					payment_method_types: org.config.allowed_payment_methods,
+				},
+			}),
 		...(shouldMemo ? { description: invoiceMemo } : {}),
 		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 	});

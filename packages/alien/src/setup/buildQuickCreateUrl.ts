@@ -1,4 +1,8 @@
-import type { AlienFixedPools, AlienNetwork } from "../types/alienClient.js";
+import type {
+	AlienContainerResources,
+	AlienFixedPools,
+	AlienNetwork,
+} from "../types/alienClient.js";
 
 /** The template's network parameters; a new VPC serves its endpoints over the internet, an existing one keeps them private to it. */
 const networkToStackParams = ({
@@ -18,6 +22,13 @@ const networkToStackParams = ({
 	};
 };
 
+/** A resource id as alien's template generator names its parameters: alphanumeric runs, each capitalised. */
+const toTemplateIdentifier = (id: string) =>
+	id
+		.split(/[^a-zA-Z0-9]+/)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join("");
+
 /** Each pool's machine type and count, as the template names them: `Compute<Pool>Machine(s)`. */
 const poolsToStackParams = ({
 	pools,
@@ -25,11 +36,27 @@ const poolsToStackParams = ({
 	pools: AlienFixedPools;
 }): Record<string, string> =>
 	Object.fromEntries(
-		Object.entries(pools).flatMap(([name, { machine, machines }]) => {
-			const pool = `Compute${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+		Object.entries(pools).flatMap(([id, { machine, machines }]) => {
+			const pool = `Compute${toTemplateIdentifier(id)}`;
 			return [
 				[`${pool}Machine`, machine],
 				[`${pool}Machines`, String(machines)],
+			];
+		}),
+	);
+
+/** Each container's allocation, as a release with resource ranges names it: `Container<Id>Cpu` and `Container<Id>Memory`. */
+const containersToStackParams = ({
+	containers,
+}: {
+	containers: AlienContainerResources;
+}): Record<string, string> =>
+	Object.fromEntries(
+		Object.entries(containers).flatMap(([id, { cpu, memory }]) => {
+			const container = `Container${toTemplateIdentifier(id)}`;
+			return [
+				[`${container}Cpu`, String(cpu)],
+				[`${container}Memory`, memory],
 			];
 		}),
 	);
@@ -42,6 +69,7 @@ export const buildQuickCreateUrl = ({
 	token,
 	managingRoleArn,
 	pools,
+	containers,
 	network,
 }: {
 	templateUrl: string;
@@ -50,12 +78,14 @@ export const buildQuickCreateUrl = ({
 	token: string;
 	managingRoleArn: string;
 	pools: AlienFixedPools;
+	containers: AlienContainerResources;
 	network: AlienNetwork | null;
 }): string => {
 	const stackParams = {
 		Token: token,
 		ManagingRoleArn: managingRoleArn,
 		...poolsToStackParams({ pools }),
+		...containersToStackParams({ containers }),
 		...networkToStackParams({ network }),
 	};
 	const query = new URLSearchParams({ templateURL: templateUrl, stackName });

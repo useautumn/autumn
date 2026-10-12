@@ -1,0 +1,9 @@
+diff --git a/src/autumn_sdk/sdkconfiguration.py b/src/autumn_sdk/sdkconfiguration.py
+index b76dee0b6f..6212bd7d17 100644
+--- a/src/autumn_sdk/sdkconfiguration.py
++++ b/src/autumn_sdk/sdkconfiguration.py
+@@ -43,2 +43,4 @@ class SDKConfiguration:
+     timeout_ms: Optional[int] = None
++    edge_url: Optional[str] = None
++    use_edge: bool = False
+ 

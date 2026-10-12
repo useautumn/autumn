@@ -3,7 +3,7 @@ import type {
 	GetAtomMetricsResponse,
 } from "@autumn/shared";
 import { queryAtomMetrics } from "@/internal/byoc/actions/telemetry/atomLogs/queryAtomMetrics.js";
-import { shadowAtomStorage } from "../shadowAtomStorage.js";
+import { findShadowAtomRecords } from "../shadowAtomStorage.js";
 
 /** Our shadow Atom's CPU, memory and traffic over the range, from the same health lines an org's Atom logs. */
 export const getShadowAtomMetrics = async ({
@@ -11,7 +11,7 @@ export const getShadowAtomMetrics = async ({
 }: {
 	params: GetAtomMetricsParams;
 }): Promise<GetAtomMetricsResponse> => {
-	const deploymentId = (await shadowAtomStorage.find())?.deployment_id;
+	const deploymentId = (await findShadowAtomRecords()).current?.deployment_id;
 	if (!deploymentId) return { period_seconds: 0, points: [], latest: null };
 	return queryAtomMetrics({ deploymentId, range: params.range });
 };

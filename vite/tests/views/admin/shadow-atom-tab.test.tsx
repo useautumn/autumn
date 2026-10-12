@@ -42,7 +42,8 @@ describe("shadow Atom with nothing deployed", () => {
 		const html = renderToStaticMarkup(<ShadowAtomCreate actions={actions} />);
 
 		expect(html).toContain("Medium");
-		expect(html).toContain("RECOMMENDED");
+		expect(html).toContain('checked="" value="c8g.xlarge"');
+		expect(html).not.toContain("RECOMMENDED");
 		expect(html).toContain("Create shadow Atom");
 	});
 });

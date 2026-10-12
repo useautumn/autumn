@@ -1,3 +1,4 @@
+import { assertSdkPatches } from "./assertSdkPatches.js";
 import { execAsyncQuiet } from "./exec.js";
 import { patchPySdkHooks } from "./patchPySdkHooks.js";
 import { patchPythonSdkGlobalDefaults } from "./patchPythonSdk.js";
@@ -19,6 +20,7 @@ async function generateTypeScriptSdkQuiet({
 	});
 
 	patchTsSdkHooks({ speakeasySdkDir });
+	assertSdkPatches({ sdkDir: speakeasySdkDir, label: "TS" });
 
 	await execAsyncQuiet({
 		command: "bun",
@@ -47,6 +49,7 @@ async function generatePythonSdkQuiet({
 
 	patchPythonSdkGlobalDefaults({ pythonSdkDir });
 	patchPySdkHooks({ pythonSdkDir });
+	assertSdkPatches({ sdkDir: pythonSdkDir, label: "PY" });
 }
 
 /**

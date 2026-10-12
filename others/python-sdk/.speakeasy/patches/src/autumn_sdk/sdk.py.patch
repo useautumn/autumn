@@ -1,0 +1,31 @@
+diff --git a/src/autumn_sdk/sdk.py b/src/autumn_sdk/sdk.py
+index 4c508b1b1d..1307bdde97 100644
+--- a/src/autumn_sdk/sdk.py
++++ b/src/autumn_sdk/sdk.py
+@@ -9,2 +9,3 @@ from autumn_sdk import errors, models, utils
+ from autumn_sdk._hooks import HookContext, SDKHooks
++from autumn_sdk._hooks.edge_hook import edge_client_of
+ from autumn_sdk.models import internal
+@@ -96,2 +97,4 @@ class Autumn(BaseSDK):
+         debug_logger: Optional[Logger] = None,
++        edge_url: Optional[str] = None,
++        use_edge: Optional[bool] = None,
+     ) -> None:
+@@ -109,2 +112,4 @@ class Autumn(BaseSDK):
+         :param timeout_ms: Optional request timeout applied to each operation in milliseconds
++        :param edge_url: The edge to ask first for the calls it serves; without one, every call goes to the Autumn API
++        :param use_edge: Send every call the edge serves (e.g. `check`) to `edge_url` first, falling back to the Autumn API when the edge is down
+         """
+@@ -165,2 +170,4 @@ class Autumn(BaseSDK):
+                 debug_logger=debug_logger,
++                edge_url=edge_url,
++                use_edge=use_edge is True,
+             ),
+@@ -186,2 +193,7 @@ class Autumn(BaseSDK):
+ 
++    @property
++    def edge(self) -> "Autumn":
++        r"""This client with `use_edge` on: each call the edge serves goes to `edge_url` first, and to the Autumn API when the edge is down."""
++        return edge_client_of(self)
++
+     def dynamic_import(self, modname, retries=3):

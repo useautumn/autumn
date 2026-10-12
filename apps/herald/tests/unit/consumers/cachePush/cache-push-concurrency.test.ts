@@ -113,6 +113,7 @@ test("a subject still waiting when it changes again is pushed once, at its newes
 		identity: identityOf("cus_hot"),
 		logOffset: BigInt(offset),
 		oldestOccurredAt: offset,
+		customerVersion: null,
 	});
 	queue.enqueue({ subjects: [subject(1)] });
 	queue.enqueue({ subjects: [subject(3)] });
@@ -139,6 +140,7 @@ test("a full queue holds the slice until pushes make room", async () => {
 			identity: identityOf(id),
 			logOffset: BigInt(offset),
 			oldestOccurredAt: offset,
+			customerVersion: null,
 		})),
 	});
 	let roomed = false;
