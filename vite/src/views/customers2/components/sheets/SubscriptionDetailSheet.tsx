@@ -26,6 +26,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
+import { DefaultMethodsCount } from "@/components/forms/shared/PaymentMethodTypesSelect";
 import { getPendingBillingCycleAnchor } from "@/components/forms/update-subscription-v2/utils/pendingBillingCycleAnchor";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -33,10 +34,13 @@ import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
+import { useStripePaymentMethodTypesQuery } from "@/hooks/queries/useStripePaymentMethodTypesQuery";
+import { useStripeSubscriptionQuery } from "@/hooks/queries/useStripeSubscriptionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
+import { paymentMethodLabel } from "@/utils/invoicePaymentMethodOptions";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
@@ -79,6 +83,10 @@ export function SubscriptionDetailSheet() {
 		() => productV2?.items && itemsForDisplay(productV2.items),
 		[productV2?.items, itemsForDisplay],
 	);
+	const { data: stripeSubscription } = useStripeSubscriptionQuery({
+		stripeSubscriptionId: cusProduct?.subscription_ids?.[0],
+	});
+	const { defaultConfiguration } = useStripePaymentMethodTypesQuery();
 	const { data: pendingPaymentUrl } = usePendingPaymentLink({
 		customerId: customer?.id ?? customer?.internal_id,
 		customerProductId: cusProduct?.id,
@@ -311,6 +319,37 @@ export function SubscriptionDetailSheet() {
 							/>
 						}
 					/>
+
+					{stripeSubscription && (
+						<InfoRow
+							icon={<CreditCardIcon size={16} />}
+							label="Collection"
+							value={
+								stripeSubscription.collection_method === "send_invoice" ? (
+									<span className="flex items-center gap-1.5 text-sm">
+										Send invoice · Net {stripeSubscription.days_until_due} ·{" "}
+										{stripeSubscription.payment_settings?.payment_method_types
+											?.length ? (
+											stripeSubscription.payment_settings.payment_method_types
+												.map(paymentMethodLabel)
+												.join(", ")
+										) : (
+											<>
+												Default methods
+												{defaultConfiguration && (
+													<DefaultMethodsCount
+														configuration={defaultConfiguration}
+													/>
+												)}
+											</>
+										)}
+									</span>
+								) : (
+									"Charge automatically"
+								)
+							}
+						/>
+					)}
 
 					{isPending && pendingPaymentUrl && (
 						<InfoRow

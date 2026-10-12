@@ -104,7 +104,7 @@ export function PaymentMethodTypesSelect({
 }
 
 /** Shows which methods Stripe offers when none are set, with a link to change them in Stripe. */
-function DefaultMethodsCount({
+export function DefaultMethodsCount({
 	configuration,
 }: {
 	configuration: { id: string; payment_method_types: string[] };

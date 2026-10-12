@@ -33,4 +33,4 @@ export const paymentMethodLabel = (type: string) =>
 	INVOICE_PAYMENT_METHOD_OPTIONS.find((option) => option.value === type)
 		?.label ??
 	OTHER_PAYMENT_METHOD_LABELS[type] ??
-	type.replaceAll("_", " ");
+	type.replace(/_/g, " ");
