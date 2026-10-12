@@ -9,7 +9,7 @@ const PATCH = `diff --git a/src/lib/config.ts b/src/lib/config.ts
 +++ b/src/lib/config.ts
 @@ -1,2 +1,3 @@
    serverURL?: string | undefined;
-+  atomURL?: string | undefined;
++  edgeURL?: string | undefined;
    /**
 `;
 
@@ -35,7 +35,7 @@ const sdkWith = ({ config }: { config: string }) => {
 test("passes when every patched line was generated", () => {
 	const sdkDir = sdkWith({
 		config:
-			"  serverURL?: string | undefined;\n  atomURL?: string | undefined;\n",
+			"  serverURL?: string | undefined;\n  edgeURL?: string | undefined;\n",
 	});
 	expect(() => assertSdkPatches({ sdkDir, label: "TS" })).not.toThrow();
 });
@@ -45,6 +45,6 @@ test("throws when Speakeasy dropped a patch", () => {
 		config: "  serverURL?: string | undefined;\n",
 	});
 	expect(() => assertSdkPatches({ sdkDir, label: "TS" })).toThrow(
-		"src/lib/config.ts: atomURL?: string | undefined;",
+		"src/lib/config.ts: edgeURL?: string | undefined;",
 	);
 });
