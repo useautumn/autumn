@@ -3,7 +3,7 @@ import { and, isNull } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isReadRow } from "./utils/cacheDeploymentWhere.js";
 
-/** Records the Atom's first check from the org's app, once. */
+/** Records that the org finished setup on its first checks, once. */
 export const setCacheFirstCheckAt = async ({
 	ctx,
 	cacheDeployment,

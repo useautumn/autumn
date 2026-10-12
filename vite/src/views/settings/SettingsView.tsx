@@ -237,8 +237,12 @@ export const useIsSettingsTabEnabled = () => {
 export const SettingsView = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const isTabEnabled = useIsSettingsTabEnabled();
+	const { isLoading: isLoadingFlags } = useAutumnFlags();
 	const requestedTab = (searchParams.get("tab") as SettingsTab) || "account";
-	const activeTab = isTabEnabled(requestedTab) ? requestedTab : "account";
+	// A flagged tab opened by URL waits for billing instead of flashing Account first.
+	const isAwaitingFlag = isLoadingFlags && requestedTab in FLAGGED_TABS;
+	const activeTab =
+		isTabEnabled(requestedTab) || isAwaitingFlag ? requestedTab : "account";
 	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
 
 	const handleTabChange = (tab: SettingsTab) => {

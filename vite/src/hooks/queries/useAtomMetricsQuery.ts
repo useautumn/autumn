@@ -5,8 +5,14 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const REFETCH_INTERVAL_MS = 60_000;
 
-/** The env's Atom's CPU, memory and traffic per period over the range, and its latest 10s, refreshed every minute. */
-export const useAtomMetricsQuery = ({ range }: { range: AtomMetricsRange }) => {
+/** The env's Atom's CPU, memory and traffic per period over the range, and its last minute, refreshed every minute. */
+export const useAtomMetricsQuery = ({
+	range,
+	enabled = true,
+}: {
+	range: AtomMetricsRange;
+	enabled?: boolean;
+}) => {
 	const axiosInstance = useAxiosInstance();
 	const { basePath, queryKey } = useAtomApi();
 
@@ -19,6 +25,7 @@ export const useAtomMetricsQuery = ({ range }: { range: AtomMetricsRange }) => {
 			);
 			return data;
 		},
+		enabled,
 		refetchInterval: REFETCH_INTERVAL_MS,
 	});
 
@@ -27,6 +34,6 @@ export const useAtomMetricsQuery = ({ range }: { range: AtomMetricsRange }) => {
 		points: data?.points ?? [],
 		latest: data?.latest ?? null,
 		fetchedAt: dataUpdatedAt,
-		isLoading,
+		isLoading: isLoading || !enabled,
 	};
 };

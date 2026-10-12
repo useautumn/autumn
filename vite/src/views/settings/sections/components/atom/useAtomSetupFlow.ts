@@ -41,10 +41,6 @@ const verifyState = (cache: ApiByocCache | null): AtomSectionState =>
 /** Which step is open and where every step stands; a page without an Atom always starts at cloud and size. */
 export const useAtomSetupFlow = ({ cache }: { cache: ApiByocCache | null }) => {
 	const [chosenStep, setOpenStep] = useState<AtomEditableStep | null>(null);
-	// An Atom that had its first check before the page opened is set up; one verified here once the org finishes setup.
-	const [setUpAtomId, setSetUpAtomId] = useState(
-		cache?.first_check_at ? cache.id : null,
-	);
 	const openStep = chosenStep ?? (cache ? null : "cloud");
 	const hasStack = hasAtomStack(cache);
 	const isAccountReached = cache !== null || openStep === "account";
@@ -53,8 +49,8 @@ export const useAtomSetupFlow = ({ cache }: { cache: ApiByocCache | null }) => {
 
 	return {
 		setOpenStep,
-		isSetUp: cache !== null && cache.id === setUpAtomId,
-		finishSetup: () => setSetUpAtomId(cache?.id ?? null),
+		/** Set only by Finish, so the flow stays on verify through checks arriving, polls and reloads. */
+		isSetUp: Boolean(cache?.first_check_at),
 		hasStack,
 		/** The one step whose body shows; a ready Atom shows verify even while it connects. */
 		openStep: openStep ?? (verify === "active" ? "verify" : "deploy"),

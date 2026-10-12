@@ -1,21 +1,16 @@
-import { Button, Skeleton } from "@autumn/ui";
+import { Button } from "@autumn/ui";
 import { useAtomQuery } from "@/hooks/queries/useAtomQuery";
 import { getBackendErr } from "@/utils/genUtils";
 import { SettingsSection } from "../SettingsSection";
 import { AtomRemovalSheet } from "./components/atom/AtomRemovalSheet";
 import { AtomSetupFlow } from "./components/atom/AtomSetupFlow";
+import { AtomSteadyStateSkeleton } from "./components/atom/AtomSteadyState";
 
 const AtomContent = () => {
 	const { cache, stackName, stackNameSuffix, isLoading, error, refetch } =
 		useAtomQuery();
 
-	if (isLoading)
-		return (
-			<div className="flex flex-col gap-3" aria-busy="true">
-				<Skeleton className="h-10 w-full" aria-label="Loading" />
-				<Skeleton className="h-10 w-full" aria-label="Loading" />
-			</div>
-		);
+	if (isLoading) return <AtomSteadyStateSkeleton />;
 
 	if (error)
 		return (

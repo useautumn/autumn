@@ -42,7 +42,7 @@ export const atomDeployments = pgTable(
 		/** The stack's full name in the org's cloud; null on rows made before it could be chosen. */
 		stack_name: text("stack_name"),
 		stages: jsonb("stages").$type<ByocCacheStages>().notNull(),
-		/** When Atom's logs first showed a check from the org's app; setup is done from then on. */
+		/** When the org finished setup on its first checks; setup is done from then on. */
 		first_check_at: bigint("first_check_at", { mode: "number" }),
 		/** Why the deploy or teardown stopped, in alien's words. */
 		error: text("error"),

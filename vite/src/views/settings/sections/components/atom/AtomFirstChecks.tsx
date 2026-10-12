@@ -1,5 +1,5 @@
 import type { AtomCheck } from "@autumn/shared";
-import { StatusChipIcon } from "@autumn/ui";
+import { Skeleton, StatusChipIcon } from "@autumn/ui";
 import { format } from "date-fns";
 import { useState } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
@@ -57,8 +57,12 @@ autumn.edge.check(customer_id="<customer_id>", feature_id="<feature_id>")`,
 	},
 ];
 
-/** The snippets that send the SDK's checks to this Atom, and a quiet wait until the first one lands. */
-const AtomCheckWaiting = ({ endpointUrl }: { endpointUrl: string }) => {
+/** Checks shown as they first came in; the list keeps room for this many so it never grows as they land. */
+const SHOWN_CHECKS = 3;
+const CHECKS_HEIGHT_CLASS = "h-[110px]";
+
+/** The SDK setup that points at this Atom, per language; the copy button copies the open tab. */
+const AtomCheckSnippets = ({ endpointUrl }: { endpointUrl: string }) => {
 	const snippets = checkSnippets({ endpointUrl });
 	const [open, setOpen] = useState(snippets[0].value);
 	const copyOpenSnippet = () =>
@@ -66,36 +70,26 @@ const AtomCheckWaiting = ({ endpointUrl }: { endpointUrl: string }) => {
 			snippets.find(({ value }) => value === open)?.code ?? "",
 		);
 	return (
-		<>
-			<span className="font-medium text-foreground">Send your first check</span>
-			<CodeGroup value={open} onValueChange={(value) => setOpen(String(value))}>
-				<CodeGroupList>
-					{snippets.map(({ value, label }) => (
-						<CodeGroupTab key={value} value={value}>
-							{label}
-						</CodeGroupTab>
-					))}
-					<CodeGroupCopyButton className="h-full" onCopy={copyOpenSnippet} />
-				</CodeGroupList>
-				{snippets.map(({ value, language, code }) => (
-					<CodeGroupContent key={value} value={value} copyText={code}>
-						<CodeGroupCode language={language}>{code}</CodeGroupCode>
-					</CodeGroupContent>
+		<CodeGroup value={open} onValueChange={(value) => setOpen(String(value))}>
+			<CodeGroupList>
+				{snippets.map(({ value, label }) => (
+					<CodeGroupTab key={value} value={value}>
+						{label}
+					</CodeGroupTab>
 				))}
-			</CodeGroup>
-			<div className="flex items-center gap-3 rounded-md border border-dashed px-3 py-2.5">
-				<span className="size-2 animate-pulse rounded-full bg-primary" />
-				<span className="text-foreground">Waiting for a check…</span>
-				<span className="text-tertiary-foreground">
-					Run the snippet from your app
-				</span>
-			</div>
-		</>
+				<CodeGroupCopyButton className="h-full" onCopy={copyOpenSnippet} />
+			</CodeGroupList>
+			{snippets.map(({ value, language, code }) => (
+				<CodeGroupContent key={value} value={value} copyText={code}>
+					<CodeGroupCode language={language}>{code}</CodeGroupCode>
+				</CodeGroupContent>
+			))}
+		</CodeGroup>
 	);
 };
 
 const AtomCheckRow = ({ check }: { check: AtomCheck }) => (
-	<div className="flex items-center gap-4 px-3 py-2 font-mono text-xs">
+	<div className="flex h-9 shrink-0 items-center gap-4 px-3 font-mono text-xs">
 		<span className="text-tertiary-foreground">
 			{format(check.at, "HH:mm:ss")}
 		</span>
@@ -106,27 +100,57 @@ const AtomCheckRow = ({ check }: { check: AtomCheck }) => (
 	</div>
 );
 
-/** The first checks to reach Atom, as they first came in. */
-const AtomCheckList = ({ checks }: { checks: AtomCheck[] }) => (
-	<>
-		<span className="flex items-center gap-2 font-medium text-foreground">
-			<StatusChipIcon tone="green" glyph="check" />
-			First check received
-		</span>
-		<div className="flex flex-col divide-y rounded-md border">
-			{checks.map((check) => (
+/** Where the first checks land: a quiet wait until one does, in the same box the checks then fill. */
+const AtomCheckList = ({
+	isConnected,
+	checks,
+}: {
+	isConnected: boolean;
+	checks: AtomCheck[];
+}) => {
+	if (checks.length === 0)
+		return (
+			<div
+				className={cn(
+					CHECKS_HEIGHT_CLASS,
+					"flex items-center justify-center gap-3 rounded-md border border-dashed px-3",
+				)}
+			>
+				<span className="size-2 animate-pulse rounded-full bg-primary" />
+				<span className="text-foreground">
+					{isConnected
+						? "Waiting for a check…"
+						: "Waiting for Atom to connect…"}
+				</span>
+				<span className="text-tertiary-foreground">
+					{isConnected
+						? "Run the snippet from your app"
+						: "Checks show here once it does"}
+				</span>
+			</div>
+		);
+	return (
+		<div
+			className={cn(
+				CHECKS_HEIGHT_CLASS,
+				"flex flex-col divide-y overflow-hidden rounded-md border",
+			)}
+		>
+			{checks.slice(0, SHOWN_CHECKS).map((check) => (
 				<AtomCheckRow key={`${check.at}-${check.customer_id}`} check={check} />
 			))}
 		</div>
-	</>
-);
+	);
+};
 
-/** Verify's last part: the org's first checks reaching Atom, or how to send one. */
+/** Verify's last part: how to send checks to this Atom, and the first ones as they reach it. */
 export const AtomFirstChecks = ({
 	endpointUrl,
+	isConnected,
 	checks,
 }: {
-	endpointUrl: string;
+	endpointUrl: string | null;
+	isConnected: boolean;
 	checks: AtomCheck[];
 }) => (
 	<div
@@ -135,10 +159,21 @@ export const AtomFirstChecks = ({
 			"flex flex-col gap-3 px-4 py-4 text-sm",
 		)}
 	>
-		{checks.length === 0 ? (
-			<AtomCheckWaiting endpointUrl={endpointUrl} />
+		<span className="flex h-5 items-center gap-2 font-medium text-foreground">
+			{checks.length > 0 ? (
+				<>
+					<StatusChipIcon tone="green" glyph="check" />
+					First check received
+				</>
+			) : (
+				"Send your first check"
+			)}
+		</span>
+		{endpointUrl ? (
+			<AtomCheckSnippets endpointUrl={endpointUrl} />
 		) : (
-			<AtomCheckList checks={checks} />
+			<Skeleton className="h-[330px] w-full" />
 		)}
+		<AtomCheckList isConnected={isConnected} checks={checks} />
 	</div>
 );

@@ -7,6 +7,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	IconButton,
+	Skeleton,
 } from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
@@ -119,6 +120,48 @@ const AtomDetailsMenu = ({
 			</DropdownMenuItem>
 		</DropdownMenuContent>
 	</DropdownMenu>
+);
+
+/** The details card's exact layout while the Atom loads: its labels in place, each value a skeleton. */
+export const AtomDetailsSkeleton = () => (
+	<div className={ATOM_PAGE_CARD_CLASS}>
+		<div
+			className={cn(
+				"flex h-11 items-center justify-between gap-4",
+				ATOM_PAGE_CARD_TRAY_ROW_CLASS,
+			)}
+		>
+			<Skeleton className="h-5 w-40" />
+			<Skeleton className="h-6 w-32" />
+		</div>
+		<div
+			className={cn(TABLE_TRAY_SURFACE_CLASS, "grid grid-cols-[3fr_3fr_2fr]")}
+		>
+			<DetailCell label="URL" className="border-b border-table-row-divider">
+				<Skeleton className="h-4 w-44" />
+			</DetailCell>
+			<DetailCell
+				label="Stack name"
+				hasDivider
+				className="border-b border-table-row-divider"
+			>
+				<Skeleton className="h-4 w-36" />
+			</DetailCell>
+			<DetailCell
+				label="Region"
+				hasDivider
+				className="border-b border-table-row-divider"
+			>
+				<Skeleton className="h-4 w-24" />
+			</DetailCell>
+			<DetailCell label="Machine">
+				<Skeleton className="h-4 w-24" />
+			</DetailCell>
+			<DetailCell label="Network" hasDivider className="col-span-2">
+				<Skeleton className="h-4 w-16" />
+			</DetailCell>
+		</div>
+	</div>
 );
 
 /** The connected Atom: its status and actions on the tray, where it runs and how to reach it beneath. */
