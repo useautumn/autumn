@@ -1389,6 +1389,55 @@ test(
 	replayStopSettlesBatchesBeforeReplacement,
 );
 
+test("the follower passes its own writer's records unread after the partition's read-only preparation replay is created", async () => {
+	const fixture = createStoreFixture();
+	const port = createFakeKafkaConsumer();
+	const consumer = createKafkaMeteringConsumer({
+		consumer: port,
+		partitionOffsets: createFakeKafkaPartitionOffsets({ high: "0" }),
+		stateStore: fixture.store,
+		topic,
+	});
+	const recentCommands = createRecentCommands({
+		windowMs: 600_000,
+		now: () => 0,
+	});
+	const producedOffsets = createProducedOffsets();
+	const follower = consumer.createReplay({
+		partition,
+		recentCommands,
+		producedOffsets,
+	});
+	consumer.createReplay({ partition, recentCommands, readOnly: true });
+	try {
+		const state = createState();
+		restoreSubjectStates({
+			store: fixture.store,
+			topic,
+			partition,
+			states: [state],
+		});
+		await consumer.start();
+		await follower.startAndCatchUp({
+			topic,
+			partition,
+			targetNextOffset: 0n,
+			onUnavailable: () => {},
+		});
+		producedOffsets.remember({ from: 0n, to: 0n });
+		await port.deliver({
+			offset: "0",
+			...serializeMeteringRecord({ record: createMutation({ state }) }),
+		});
+
+		expect(fixture.store.readState({ identity })?.revision).toBe(0);
+	} finally {
+		await follower.stop();
+		await consumer.stop();
+		closeStoreFixture(fixture);
+	}
+});
+
 describe("replay window", () => {
 	test.each([
 		{
