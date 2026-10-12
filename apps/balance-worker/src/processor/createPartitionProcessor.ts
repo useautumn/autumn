@@ -173,6 +173,15 @@ function createProcessor({
 		});
 	}
 
+	function evictResident({
+		coldStart,
+	}: Parameters<PartitionProcessor["evictResident"]>[0]) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: scope.ctx.writer.evictResident({ coldStart }),
+		});
+	}
+
 	function flush({ command }: { command: FlushCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -325,6 +334,7 @@ function createProcessor({
 		readSubjectState,
 		initialize,
 		evict,
+		evictResident,
 		flush,
 		finalize,
 		decideFinalize,

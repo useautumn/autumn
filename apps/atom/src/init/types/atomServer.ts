@@ -2,6 +2,7 @@ import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
 import type { Auth } from "../../auth/types/auth.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
+import type { Replication } from "../../replication/types/replication.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 import type { AtomHealthSource } from "../atomHealth.js";
@@ -19,6 +20,8 @@ export type AtomServerDependencies = {
 	health: AtomHealthSource;
 	counters: ThreadCounters;
 	held: HeldSubjects;
+	/** Present only on an org's own Atom. */
+	replication?: Replication;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };

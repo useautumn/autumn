@@ -125,5 +125,7 @@ export const createStackAtomDeployer = ({
 		// Nothing deploys on a dev stack, so nothing can fail to.
 		retry: () => Promise.resolve(),
 		delete: (params) => deleteStackAtom({ ctx, ...params }),
+		// A dev stack's Atoms start without setup links.
+		closeSetup: () => Promise.resolve(),
 	};
 };

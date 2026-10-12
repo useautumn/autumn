@@ -28,15 +28,20 @@ const emptyCatalog: StoredSubject["catalog"] = {
 const subjectAt = ({
 	logOffset,
 	readAt = 1700,
+	customerVersion = 0n,
+	entityId = null,
 }: {
 	logOffset: bigint;
 	readAt?: number;
+	customerVersion?: bigint;
+	entityId?: string | null;
 }): StoredSubject => ({
-	state: createSubjectState({ identity }),
+	state: createSubjectState({ identity: { ...identity, entityId } }),
 	catalog: emptyCatalog,
 	org: atomOrg,
 	logOffset,
 	readAt,
+	customerVersion,
 });
 
 const directories: string[] = [];
@@ -173,6 +178,67 @@ describe("sqlite store", () => {
 		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 
 		expect(sqliteStore.countSubjects()).toBe(1);
+		sqliteStore.close();
+	});
+
+	test("lists the subjects written at or after a point, oldest write first and keyed within a write, and knows its newest write", () => {
+		let now = 1_700;
+		const sqliteStore = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+			now: () => now,
+		});
+		expect(sqliteStore.maxAppliedAt()).toBe(0);
+		for (const [i, customerId] of ["cus_a", "cus_b", "cus_c"].entries()) {
+			now = 1_700 + Math.min(i, 1);
+			sqliteStore.setSubject({
+				subject: {
+					...subjectAt({ logOffset: 1n }),
+					state: createSubjectState({ identity: { ...identity, customerId } }),
+				},
+			});
+		}
+
+		const since = sqliteStore.listAppliedAfter({
+			after: 1_701,
+			cursor: null,
+			limit: 10,
+		});
+		const firstPage = sqliteStore.listAppliedAfter({
+			after: null,
+			cursor: null,
+			limit: 2,
+		});
+		const last = firstPage.at(-1);
+		const nextPage = sqliteStore.listAppliedAfter({
+			after: null,
+			cursor: last
+				? {
+						appliedAt: last.appliedAt,
+						customerId: last.subject.state.identity.customerId,
+						entityId: "",
+					}
+				: null,
+			limit: 2,
+		});
+
+		expect(sqliteStore.maxAppliedAt()).toBe(1_701);
+		expect(
+			since.map(({ subject, appliedAt }) => [
+				subject.state.identity.customerId,
+				appliedAt,
+			]),
+		).toEqual([
+			["cus_b", 1_701],
+			["cus_c", 1_701],
+		]);
+		// Two rows written in the same ms straddle the page edge; the cursor's key carries the second one over.
+		expect(
+			firstPage.map(({ subject }) => subject.state.identity.customerId),
+		).toEqual(["cus_a", "cus_b"]);
+		expect(
+			nextPage.map(({ subject }) => subject.state.identity.customerId),
+		).toEqual(["cus_c"]);
 		sqliteStore.close();
 	});
 
@@ -414,12 +480,97 @@ describe("sqlite store", () => {
 		older.run(
 			"INSERT INTO subject_states VALUES ('cus_1', '', '{}', '{}', '{}')",
 		);
-		older.run("PRAGMA user_version = 4");
+		older.run("PRAGMA user_version = 5");
 		older.close();
 
 		const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
 
 		expect(sqliteStore.countSubjects()).toBe(0);
 		sqliteStore.close();
+	});
+});
+
+describe("a customer's version", () => {
+	const customerVersionOf = (sqliteStore: ReturnType<typeof openSqliteStore>) =>
+		sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
+			?.customerVersion;
+
+	test("a push older than the rows held is ignored, but still raises the version, and the held copy carries it", () => {
+		const sqliteStore = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 150n, readAt: 30 }),
+		});
+
+		const stored = sqliteStore.setSubject({
+			subject: subjectAt({
+				logOffset: 140n,
+				readAt: 20,
+				customerVersion: 140n,
+			}),
+		});
+
+		expect(stored).toBe(false);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toMatchObject({ logOffset: 150n, customerVersion: 140n });
+		sqliteStore.close();
+	});
+
+	test("never falls: an older evict's version, or a push with none, leaves it where it is", () => {
+		const sqliteStore = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		sqliteStore.setSubject({
+			subject: subjectAt({
+				logOffset: 140n,
+				readAt: 20,
+				customerVersion: 140n,
+			}),
+		});
+
+		sqliteStore.setSubject({
+			subject: subjectAt({
+				logOffset: 120n,
+				readAt: 21,
+				customerVersion: 120n,
+			}),
+		});
+		const afterOlderEvict = customerVersionOf(sqliteStore);
+		sqliteStore.setSubject({
+			subject: subjectAt({ logOffset: 160n, readAt: 22 }),
+		});
+
+		expect(afterOlderEvict).toBe(140n);
+		expect(
+			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
+		).toMatchObject({
+			logOffset: 160n,
+			customerVersion: 140n,
+		});
+		sqliteStore.close();
+	});
+
+	test("survives a restart beside the rows, and an entity's part carries none", () => {
+		const databasePath = slotPath();
+		const writer = openSqliteStore({ databasePath, held: freshHeld() });
+		writer.setSubjects({
+			subjects: [
+				subjectAt({ logOffset: 140n, readAt: 20, customerVersion: 140n }),
+				subjectAt({ logOffset: 100n, readAt: 10, entityId: "ent_1" }),
+			],
+		});
+		writer.close();
+
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+
+		expect(customerVersionOf(reopened)).toBe(140n);
+		expect(
+			reopened.readSubject({ customerId: "cus_1", entityId: "ent_1" }),
+		).toMatchObject({ logOffset: 100n, customerVersion: 0n });
+		reopened.close();
 	});
 });

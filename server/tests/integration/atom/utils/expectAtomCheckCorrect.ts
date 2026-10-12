@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { TestAtom } from "./ensureAtomDeployment.js";
 
 /** Set on a reply the Autumn API gave because the Atom did not answer the check itself. */
@@ -46,7 +47,8 @@ export const checkOnAtom = async ({
 	};
 };
 
-/** Polls until the Atom answers the check itself with `allowed`: a change reaches it through the worker's log and herald, a moment after the API answers. */
+/** Polls until the Atom answers the check itself (or forwards it for `forwarded`) with `allowed`: a change reaches it through the worker's log and herald, a moment after the API answers.
+ * With `api`, the reply must also equal that client's own answer to the same check. */
 export const expectAtomCheckCorrect = async ({
 	atom,
 	secretKey,
@@ -55,6 +57,8 @@ export const expectAtomCheckCorrect = async ({
 	featureId,
 	requiredBalance,
 	allowed,
+	forwarded = null,
+	api,
 }: {
 	atom: TestAtom;
 	secretKey: string;
@@ -63,21 +67,34 @@ export const expectAtomCheckCorrect = async ({
 	featureId: string;
 	requiredBalance: number;
 	allowed: boolean;
+	forwarded?: string | null;
+	api?: AutumnInt;
 }): Promise<unknown> => {
-	const { body } = await pollUntilAsserted({
-		fetch: () =>
-			checkOnAtom({
-				atom,
-				secretKey,
-				customerId,
-				entityId,
-				featureId,
-				requiredBalance,
-			}),
-		assert: ({ forwarded, body }) => {
-			expect(forwarded).toBeNull();
-			expect(body).toMatchObject({ allowed });
+	const { atomReply } = await pollUntilAsserted({
+		fetch: async () => {
+			const [atomReply, apiBody] = await Promise.all([
+				checkOnAtom({
+					atom,
+					secretKey,
+					customerId,
+					entityId,
+					featureId,
+					requiredBalance,
+				}),
+				api?.post("/balances.check", {
+					customer_id: customerId,
+					entity_id: entityId,
+					feature_id: featureId,
+					required_balance: requiredBalance,
+				}),
+			]);
+			return { atomReply, apiBody };
+		},
+		assert: ({ atomReply, apiBody }) => {
+			expect(atomReply.forwarded).toBe(forwarded);
+			expect(atomReply.body).toMatchObject({ allowed });
+			if (api) expect(atomReply.body).toEqual(apiBody);
 		},
 	});
-	return body;
+	return atomReply.body;
 };

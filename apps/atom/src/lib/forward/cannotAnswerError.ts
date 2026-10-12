@@ -11,6 +11,8 @@ export type ForwardReason =
 	| "skip_cache"
 	| "customer_not_stored"
 	| "entity_not_stored"
+	/** The entity was read before its customer's latest evict, which may have replaced its rows. */
+	| "entity_stale"
 	| "feature_not_stored"
 	/** A secret key this thread does not hold yet: the API answers, and its verdict decides whether to hold it. */
 	| "secret_key_not_known";

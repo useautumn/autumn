@@ -3,7 +3,7 @@ import { SHADOW_ATOM_CONFIG_KEY } from "../../keys.js";
 
 const PercentSchema = z.number().int().min(0).max(100);
 
-/** The alien deployment group our shadow Atom runs in: what its remote queue is addressed by. */
+/** Starts every shadow Atom's alien external id; on its own it is the one set up before shadow Atoms took Atom ids. */
 export const SHADOW_ATOM_EXTERNAL_ID = "autumn-internal-shadow-atom";
 
 /** One folder per org per env, so an Atom serving both envs never mixes them. */
@@ -29,6 +29,13 @@ const ShadowAtomOrgSchema = z.object({
 	changedAt: z.number().default(0),
 });
 
+/** One shadow Atom's group and endpoint, and the rest of its record as the server last read it; the server owns that shape. */
+const ShadowAtomDeploymentEntrySchema = z.object({
+	deploymentGroupId: z.string(),
+	endpointUrl: z.url().nullable().default(null),
+	deployment: z.record(z.string(), z.unknown()),
+});
+
 /** What an admin save sets: where the shadow Atom answers. */
 export const ShadowAtomSettingsSchema = z.object({
 	endpointUrl: z.url().nullable().default(null),
@@ -44,11 +51,18 @@ export const ShadowAtomConfigSchema = ShadowAtomSettingsSchema.extend({
 	orgs: z.record(z.string(), ShadowAtomOrgSchema).default({}),
 	/** The alien deployment group our shadow Atom runs in; only the admin deployment routes set it. */
 	deploymentGroupId: z.string().nullable().default(null),
+	/** That group's alien external id, which herald addresses its `pushes` queue by; null in a file from before it was kept. */
+	externalId: z.string().nullable().default(null),
 	/** The rest of that deployment's record as the server last read it; the server owns its shape. */
 	deployment: z.record(z.string(), z.unknown()).nullable().default(null),
+	/** Earlier shadow Atoms still being removed, oldest first; each leaves once alien has nothing left of it. */
+	previous: z.array(ShadowAtomDeploymentEntrySchema).default([]),
 });
 
 export type ShadowAtomOrg = z.infer<typeof ShadowAtomOrgSchema>;
+export type ShadowAtomDeploymentEntry = z.infer<
+	typeof ShadowAtomDeploymentEntrySchema
+>;
 export type ShadowAtomConfig = z.infer<typeof ShadowAtomConfigSchema>;
 export type ShadowAtomSettings = z.infer<typeof ShadowAtomSettingsSchema>;
 

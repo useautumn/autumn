@@ -8,12 +8,14 @@ import {
 	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	findByocCacheMachineByInstanceType,
 	type Organization,
 } from "@autumn/shared";
 import { createAlienAtomDeployer } from "@/internal/byoc/deployers/createAlienAtomDeployer.js";
 import {
-	cacheNames,
-	shadowAtomCacheNames,
+	atomNames,
+	cacheOwner,
+	legacyShadowAtomNames,
 } from "@/internal/byoc/utils/byocCacheUtils.js";
 
 const org = { id: "org_1", slug: "acme" } as Organization;
@@ -31,7 +33,7 @@ const recordingAlienClient = () => {
 		retryDeployment: async () => {},
 		updateDeploymentCompute: async () => {},
 		deleteDeployment: async () => {},
-		revokeSetupLinks: async () => {},
+		revokeSetupLinksOnceDeleted: async () => {},
 	};
 	return { alienClient, started };
 };
@@ -42,7 +44,7 @@ describe("starting an Atom on alien", () => {
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
@@ -70,23 +72,66 @@ describe("starting an Atom on alien", () => {
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
 		});
 
 		expect(started[0]?.pools).toEqual({
-			stateful: { machine: "t4g.micro", machines: 1 },
+			stateful: { machine: "c8g.xlarge", machines: 1 },
 		});
 	});
+
+	test("with no size named, the Atom container keeps the 3 vCPU / 6Gi it always had", async () => {
+		const { alienClient, started } = recordingAlienClient();
+		const deployer = createAlienAtomDeployer({ alienClient });
+
+		await deployer.start({
+			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
+			auth: { mode: "deployed", tokenHash: "hash_1" },
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+		});
+
+		expect(started[0]?.containers).toEqual({
+			atom: { cpu: 3, memory: "6Gi" },
+		});
+	});
+
+	test.each([
+		["c8g.large", { cpu: 1, memory: "2.75Gi" }],
+		["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
+		["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
+		["c8g.4xlarge", { cpu: 15, memory: "24Gi" }],
+	])(
+		"a %s size pins its machine and sizes the Atom container to fit it",
+		async (instanceType, container) => {
+			const { alienClient, started } = recordingAlienClient();
+			const deployer = createAlienAtomDeployer({ alienClient });
+			const machine = findByocCacheMachineByInstanceType({ instanceType });
+			if (!machine) throw new Error(`No size runs on ${instanceType}`);
+
+			await deployer.start({
+				names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
+				auth: { mode: "deployed", tokenHash: "hash_1" },
+				machine,
+				region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			});
+
+			expect(started[0]?.pools).toEqual({
+				stateful: { machine: instanceType, machines: 1 },
+			});
+			expect(started[0]?.containers).toEqual({ atom: container });
+		},
+	);
 
 	test("the setup opens in the chosen region", async () => {
 		const { alienClient, started } = recordingAlienClient();
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: "eu-west-2",
@@ -100,7 +145,7 @@ describe("starting an Atom on alien", () => {
 		const deployer = createAlienAtomDeployer({ alienClient });
 
 		await deployer.start({
-			names: shadowAtomCacheNames(),
+			names: legacyShadowAtomNames(),
 			auth: { mode: "multi_tenant", tokenHash: "admin_hash" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
@@ -133,7 +178,7 @@ describe("an Atom's network on alien", () => {
 	const start = async (network: ByocCacheNetwork | null) => {
 		const { alienClient, started } = recordingAlienClient();
 		await createAlienAtomDeployer({ alienClient }).start({
-			names: cacheNames({ org, env: AppEnv.Sandbox }),
+			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,

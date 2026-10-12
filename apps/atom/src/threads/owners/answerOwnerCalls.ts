@@ -1,5 +1,10 @@
 import type { Auth } from "../../auth/types/auth.js";
-import { errorToReply, wireToCheckRequest } from "./ownerCallContract.js";
+import {
+	appliedSubjectToWire,
+	digestToWire,
+	errorToReply,
+	wireToCheckRequest,
+} from "./ownerCallContract.js";
 import type { OwnerCall } from "./types/ownerCall.js";
 
 type OwnerContext = { auth: Pick<Auth, "slotsFor"> };
@@ -20,6 +25,28 @@ const runOwnerCall = async ({
 		return slots
 			.processorFor({ customerId: call.customerId })
 			.setSubject({ customerId: call.customerId, body: call.body });
+	if (call.type === "listSince")
+		return (
+			await slots.listSince({
+				slot: call.slot,
+				after: call.after,
+				cursor: call.cursor,
+				limit: call.limit,
+			})
+		).map(appliedSubjectToWire);
+	if (call.type === "digestSince")
+		return (
+			await slots.digestSince({
+				slot: call.slot,
+				after: call.after,
+				cursor: call.cursor,
+				limit: call.limit,
+			})
+		).map(digestToWire);
+	if (call.type === "fetchSubjects")
+		return (
+			await slots.fetchSubjects({ slot: call.slot, keys: call.keys })
+		).map(appliedSubjectToWire);
 	const request = wireToCheckRequest({ request: call.request });
 	return slots
 		.processorFor({ customerId: request.params.customer_id })

@@ -6,10 +6,14 @@ import {
 	retryDeployment,
 	updateDeploymentCompute,
 } from "./deployments/deployments.js";
-import { revokeSetupLinks } from "./setup/setupLinks.js";
+import { revokeSetupLinksOnceDeleted } from "./setup/setupLinks.js";
 import { startSetup } from "./setup/startSetup.js";
 import type { AlienApi } from "./types/alienApi.js";
-import type { AlienClient, AlienConfig } from "./types/alienClient.js";
+import type {
+	AlienClient,
+	AlienConfig,
+	AlienLogger,
+} from "./types/alienClient.js";
 
 const configToApi = ({ config }: { config: AlienConfig }): AlienApi => {
 	if (config.kind === "local")
@@ -20,10 +24,12 @@ const configToApi = ({ config }: { config: AlienConfig }): AlienApi => {
 /** One manager behind named methods; which manager, and its key, are the caller's to read. */
 export const createAlienClient = ({
 	config,
+	logger,
 }: {
 	config: AlienConfig;
+	logger: AlienLogger;
 }): AlienClient => {
-	const ctx = { api: configToApi({ config }) };
+	const ctx = { api: configToApi({ config }), logger };
 	return {
 		startSetup: (params) => startSetup({ ctx, ...params }),
 		findDeployment: (params) => findDeployment({ ctx, ...params }),
@@ -32,6 +38,7 @@ export const createAlienClient = ({
 		updateDeploymentCompute: (params) =>
 			updateDeploymentCompute({ ctx, ...params }),
 		deleteDeployment: (params) => deleteDeployment({ ctx, ...params }),
-		revokeSetupLinks: (params) => revokeSetupLinks({ ctx, ...params }),
+		revokeSetupLinksOnceDeleted: (params) =>
+			revokeSetupLinksOnceDeleted({ ctx, ...params }),
 	};
 };

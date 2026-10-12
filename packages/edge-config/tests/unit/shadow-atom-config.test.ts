@@ -56,7 +56,9 @@ describe("shadowAtomConfig", () => {
 			"deployment",
 			"deploymentGroupId",
 			"endpointUrl",
+			"externalId",
 			"orgs",
+			"previous",
 			"pushTransport",
 		]);
 	});

@@ -60,6 +60,8 @@ export type WorkerLifecycleContext = {
 	healthReporter?: { start(): void; stop(): void };
 	/** Drops an org's cached catalog rows when the server says they changed. */
 	catalogInvalidations?: Pick<CatalogInvalidationConsumer, "start" | "stop">;
+	/** Staging only: started once partitions are, so a request already pending is handled against them. */
+	coldStart?: { start(): void; stop(): void };
 	listen(): Promise<WorkerListener>;
 	settleResources(): Promise<void>;
 	closeStore(): void;

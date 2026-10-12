@@ -2,11 +2,13 @@ import { availableParallelism, totalmem } from "node:os";
 import { positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
+/** Where the replicas of an org's Atom listen to each other; the stack lists it as a container port but never a public endpoint. */
+const LOCAL_ATOM_PEER_PORT = 8791;
 const AUTUMN_API_URL = "https://api.useautumn.com";
 /** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** A container given no limits sees its whole host; past this many, more threads only cost memory. */
-const MAX_AUTOMATIC_THREADS = 8;
+/** Only for a container given no limits, which sees its whole host; past this many, more threads only cost memory. */
+const MAX_UNLIMITED_THREADS = 8;
 /** Measured on Linux with 128 slots: a serving thread, and the main thread, each hold a little under this. */
 const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
 /** The rest is left for the OS, the files' page cache and a busy moment. */
@@ -20,13 +22,21 @@ const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
 const RECEIVER_SHARE_OF_THREADS = 0.3;
 
 /** What the machine allows the Atom: the container's limits where it has them, not the host's totals. */
-type AtomMachine = { availableCpus: number; memoryLimitBytes: number };
+type AtomMachine = {
+	availableCpus: number;
+	memoryLimitBytes: number;
+	isContainerLimited: boolean;
+};
 
-const readMachine = (): AtomMachine => ({
-	availableCpus: availableParallelism(),
+const readMachine = (): AtomMachine => {
 	// Zero or absent means no limit was set, so the machine's own memory is the limit.
-	memoryLimitBytes: process.constrainedMemory?.() || totalmem(),
-});
+	const constrainedMemory = process.constrainedMemory?.() ?? 0;
+	return {
+		availableCpus: availableParallelism(),
+		memoryLimitBytes: constrainedMemory || totalmem(),
+		isContainerLimited: constrainedMemory > 0,
+	};
+};
 
 /** How many serving threads fit in memory, with one more counted for the main thread that starts them. */
 const threadsMemoryAllows = ({
@@ -58,11 +68,13 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
 	return value;
 };
 
-/** One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`. */
-type AtomModeEnv = {
-	ATOM_MODE: "deployed" | "multi_tenant";
-	ATOM_TOKEN_HASH: string;
-};
+/**
+ * One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`.
+ * Only an org's own Atom has other replicas, signed to with the deployment's own secret; a multi-tenant one holds every folder itself.
+ */
+type AtomModeEnv =
+	| { ATOM_MODE: "deployed"; ATOM_TOKEN_HASH: string; ATOM_PEER_SECRET: string }
+	| { ATOM_MODE: "multi_tenant"; ATOM_TOKEN_HASH: string };
 
 /** Unset is the customer's single-tenant Atom; only our shadow Atom sets ATOM_MODE, to multi_tenant. */
 const modeEnvOf = ({
@@ -75,9 +87,20 @@ const modeEnvOf = ({
 		throw new Error("ATOM_MODE is either unset or multi_tenant");
 	const tokenHash = runtimeEnv.ATOM_TOKEN_HASH?.trim();
 	if (!tokenHash) throw new Error("Set ATOM_TOKEN_HASH");
+	const ATOM_TOKEN_HASH = sha256Hex({
+		name: "ATOM_TOKEN_HASH",
+		value: tokenHash,
+	});
+	if (mode === "multi_tenant") return { ATOM_MODE: mode, ATOM_TOKEN_HASH };
+	const peerSecret = runtimeEnv.ATOM_PEER_SECRET?.trim();
+	if (!peerSecret)
+		throw new Error(
+			"Set ATOM_PEER_SECRET: an org's own Atom signs what it sends its other replicas with it, and the stack generates one per deployment",
+		);
 	return {
-		ATOM_MODE: mode ?? "deployed",
-		ATOM_TOKEN_HASH: sha256Hex({ name: "ATOM_TOKEN_HASH", value: tokenHash }),
+		ATOM_MODE: "deployed",
+		ATOM_TOKEN_HASH,
+		ATOM_PEER_SECRET: peerSecret,
 	};
 };
 
@@ -106,7 +129,7 @@ const sdkPushQueueUrlOf = ({
 	);
 };
 
-/** As many threads as both the CPUs and the memory allow, so a bigger machine is used without a setting to keep in step.
+/** As many threads as both the container's CPUs and its memory allow, so a bigger size is used without a setting to keep in step.
  * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
 	runtimeEnv,
@@ -120,7 +143,9 @@ const threadsOf = ({
 	const allowed = Math.min(
 		machine.availableCpus,
 		threadsMemoryAllows({ memoryLimitBytes: machine.memoryLimitBytes }),
-		MAX_AUTOMATIC_THREADS,
+		machine.isContainerLimited
+			? Number.POSITIVE_INFINITY
+			: MAX_UNLIMITED_THREADS,
 	);
 	return Math.max(1, allowed);
 };
@@ -156,6 +181,9 @@ export function createAtomEnv(
 	return {
 		ATOM_HOSTNAME: hostname,
 		ATOM_PORT: positiveInteger.parse(runtimeEnv.ATOM_PORT ?? LOCAL_ATOM_PORT),
+		ATOM_PEER_PORT: positiveInteger.parse(
+			runtimeEnv.ATOM_PEER_PORT ?? LOCAL_ATOM_PEER_PORT,
+		),
 		ATOM_DATA_DIR: runtimeEnv.ATOM_DATA_DIR?.trim() || ".data/atom",
 		/** Where a request Atom does not answer itself is sent. */
 		ATOM_AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL?.trim() || AUTUMN_API_URL,

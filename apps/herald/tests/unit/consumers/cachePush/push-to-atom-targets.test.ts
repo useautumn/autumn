@@ -85,6 +85,7 @@ const createPushContext = ({
 }) => {
 	const atomDeployments = atomDeploymentsIn({ status: atomStatus });
 	const reached: string[] = [];
+	const bodies: unknown[] = [];
 	const tokens: Record<string, string> = {};
 	const queues: Record<string, AtomConnection["queue"]> = {};
 	const logged: { level: "warn" | "error"; target: unknown }[] = [];
@@ -96,10 +97,12 @@ const createPushContext = ({
 		get: async () =>
 			JSON.stringify({ org: { ...org, atomDeployments }, features: [] }),
 	};
-	const atomAt = (endpointUrl: string) => async () => {
-		if (failing.includes(endpointUrl)) throw new Error("Atom down");
-		reached.push(endpointUrl);
-	};
+	const atomAt =
+		(endpointUrl: string) => async (params?: { body?: unknown }) => {
+			if (failing.includes(endpointUrl)) throw new Error("Atom down");
+			reached.push(endpointUrl);
+			if (params?.body) bodies.push(params.body);
+		};
 	const ctx = {
 		miscCache: { resolve: () => redis, forEachTarget: async () => [] },
 		logger: {
@@ -147,10 +150,16 @@ const createPushContext = ({
 			};
 		},
 	} as unknown as CachePushContext;
-	return { ctx, reached, logged, tokens, queues };
+	return { ctx, reached, bodies, logged, tokens, queues };
 };
 
-const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
+const pushSubject = ({
+	ctx,
+	customerVersion = null,
+}: {
+	ctx: CachePushContext;
+	customerVersion?: bigint | null;
+}) =>
 	pushSubjectToCache({
 		ctx,
 		cacheSubject: {
@@ -162,6 +171,7 @@ const pushSubject = ({ ctx }: { ctx: CachePushContext }) =>
 			},
 			logOffset: 1n,
 			oldestOccurredAt: 1,
+			customerVersion,
 		},
 	});
 
@@ -296,4 +306,23 @@ test("a shadow Atom set to the queue transport is pushed through its queue into 
 			atomId: "org_1.sandbox",
 		},
 	});
+});
+
+test("a customer push after an evict carries its version to every Atom; one without an evict carries none", async () => {
+	const evicted = createPushContext({
+		atomStatus: ByocCacheStatus.Ready,
+		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
+	});
+	const tracked = createPushContext({
+		atomStatus: ByocCacheStatus.Ready,
+		shadowAtom: shadowWith({ endpointUrl: null }),
+	});
+
+	await pushSubject({ ctx: evicted.ctx, customerVersion: 140n });
+	await pushSubject({ ctx: tracked.ctx });
+
+	expect(evicted.bodies).toHaveLength(2);
+	for (const body of evicted.bodies)
+		expect(body).toMatchObject({ customer_version: "140" });
+	expect(tracked.bodies[0]).not.toHaveProperty("customer_version");
 });

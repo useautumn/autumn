@@ -6,7 +6,7 @@ import {
 } from "@autumn/edge-config";
 import type { AppEnv, Organization } from "@autumn/shared";
 import { atomDeploymentToConnection } from "./atomDeploymentToConnection.js";
-import type { AtomConnection } from "./types/atomClient.js";
+import type { AtomConnection } from "./types/atomConnection.js";
 
 /** Our shadow Atom's folder for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
 const shadowAtomConnection = ({
@@ -35,7 +35,7 @@ const shadowAtomConnection = ({
 		queue:
 			config.pushTransport === "queue"
 				? {
-						externalId: SHADOW_ATOM_EXTERNAL_ID,
+						externalId: config.externalId ?? SHADOW_ATOM_EXTERNAL_ID,
 						atomId: shadowAtomIdOf({ orgId: org.id, env }),
 					}
 				: null,

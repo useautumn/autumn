@@ -1,6 +1,6 @@
 import type { AnyFieldApi } from "@tanstack/react-form";
 
-export function FieldInfo({ field }: { field: AnyFieldApi }) {
+export function FieldInfo({ field }: { field: Pick<AnyFieldApi, "state"> }) {
 	return (
 		<>
 			{field.state.meta.isTouched && !field.state.meta.isValid ? (

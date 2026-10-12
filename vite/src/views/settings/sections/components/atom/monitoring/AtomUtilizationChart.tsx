@@ -1,6 +1,6 @@
 import type { ByocCacheMachine } from "@autumn/shared";
 import { Line, ReferenceDot } from "recharts";
-import { atomMachineSpecs } from "../atomMachineDisplay";
+import { atomContainerSpecs } from "../atomMachineDisplay";
 import type {
 	AtomMetricsChartData,
 	AtomMetricsSeries,
@@ -33,7 +33,7 @@ export const AtomUtilizationChart = ({
 			title="Utilization"
 			description={[
 				"CPU and memory",
-				machine && `% of ${atomMachineSpecs(machine)}`,
+				machine && `% of ${atomContainerSpecs(machine)}`,
 			]
 				.filter(Boolean)
 				.join(", ")}
