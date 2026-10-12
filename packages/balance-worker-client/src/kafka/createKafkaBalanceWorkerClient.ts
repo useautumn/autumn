@@ -38,26 +38,22 @@ export function createKafkaBalanceWorkerClient({
 		config: { topic: config.catalogInvalidationTopic },
 	});
 
-	/** Best effort: a producer that fails to connect now connects on its first append instead. */
-	async function connectProducers(): Promise<void> {
-		for (const [name, producer] of [
-			["command log", commandLog],
-			["catalog invalidations", catalogInvalidations],
-		] as const) {
-			try {
-				await producer.connect();
-			} catch (cause) {
-				ctx.logger?.warn(
-					{ error: cause },
-					`[balance-worker-client] ${name} producer did not connect at start; the first append will retry`,
-				);
-			}
+	/** Best effort: a producer that fails to connect now connects on its first append instead.
+	 *  Catalog invalidations stay lazy: each connected producer holds a broker producer ID, and few processes edit a catalog. */
+	async function connectCommandLog(): Promise<void> {
+		try {
+			await commandLog.connect();
+		} catch (cause) {
+			ctx.logger?.warn(
+				{ error: cause },
+				"[balance-worker-client] command log producer did not connect at start; the first append will retry",
+			);
 		}
 	}
 
 	async function start(): Promise<void> {
 		await owners.start();
-		if (config.connectProducersOnStart) await connectProducers();
+		if (config.connectProducersOnStart) await connectCommandLog();
 	}
 
 	async function stop(): Promise<void> {

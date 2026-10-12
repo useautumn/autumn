@@ -266,18 +266,24 @@ test("a connection is built without connecting, with MSK IAM or SCRAM transport 
 	expect(typeof scram.producer).toBe("function");
 });
 
-test("a process that appends connects both producers at start, and a failed connect is left to the first append", async () => {
+test("a process that appends connects only the command log producer at start; catalog invalidations connect on first use", async () => {
 	const fixture = createFakeKafka({ connectProducersOnStart: true });
+	const connects = () =>
+		fixture.events.filter((event) => event === "producer:connect");
 	try {
 		await fixture.client.start();
-		expect(
-			fixture.events.filter((event) => event === "producer:connect"),
-		).toHaveLength(2);
+		expect(connects()).toHaveLength(1);
 		await fixture.client.queue.track({ commands: [command] });
-		expect(
-			fixture.events.filter((event) => event === "producer:connect"),
-		).toHaveLength(2);
+		expect(connects()).toHaveLength(1);
+		await fixture.client.catalog.invalidateOrgCatalog({
+			orgId: "org",
+			env: "sandbox",
+		});
+		expect(connects()).toHaveLength(2);
 		await fixture.client.stop();
+		expect(
+			fixture.events.filter((event) => event === "producer:disconnect"),
+		).toHaveLength(2);
 	} finally {
 		fixture.createConsumer.mockRestore();
 	}

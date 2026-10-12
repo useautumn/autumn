@@ -59,6 +59,6 @@ export type KafkaBalanceWorkerClientConfig = {
 	maxTrackBatchSize?: number;
 	catchUpTimeoutMs?: number;
 	startRetryDelaysMs?: readonly number[];
-	/** A process that queues or publishes connects its producers at start, so no first call pays the connect. Off for one that never appends. */
+	/** A process that queues connects its command log producer at start, so no first track pays the connect. Off for one that never appends. */
 	connectProducersOnStart?: boolean;
 };
