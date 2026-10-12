@@ -20,8 +20,8 @@ export type AtomServerDependencies = {
 	health: AtomHealthSource;
 	counters: ThreadCounters;
 	held: HeldSubjects;
-	/** Present only on an org's own Atom. */
-	replication?: Replication;
+	/** Keeps the other replicas holding what this thread applies. */
+	replication: Replication;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };

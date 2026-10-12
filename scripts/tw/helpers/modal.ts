@@ -18,7 +18,7 @@
  *     "infinity"]})` then `git clone @ ref` into /repo (Modal's create does NOT
  *     clone a git source the way Vercel's SDK does).
  *   - **snapshotAndStop** — `sb.snapshotFilesystem()` → an `Image`, PUBLISHED as
- *     `tw-warm:<sha12>` + `tw-warm:latest` (account-wide cross-run/teammate warm
+ *     `tw-warm:<sha12>`, plus `tw-warm:latest` for dev builds (account-wide warm
  *     cache). Exact-sha lookups skip the whole warm build; a stale `:latest` hit
  *     serves immediately (workers fast-forward checkout at fork) while a detached
  *     refresh converges the cache. The warm parent is terminated after snapshot.
@@ -67,6 +67,7 @@ import type {
 	RunDetachedOptions,
 	RunStreamingOptions,
 	RunStreamingResult,
+	SnapshotAndStopOptions,
 } from "./provider.ts";
 
 /** Where the repo is cloned inside every Modal sandbox (cf. /vercel/sandbox). */
@@ -206,7 +207,7 @@ const getIngressImage = (): Promise<Image> => {
 const warmImageByName = new Map<string, Image>();
 /**
  * Published-image repo for the CROSS-RUN warm cache. snapshotAndStop publishes
- * the warm filesystem image as `tw-warm:<sha12>` + `tw-warm:latest`; lookups by
+ * the warm filesystem image as `tw-warm:<sha12>` (+ `:latest` for dev); lookups by
  * warm name resolve via `images.fromName` — the Modal analogue of freestyle's
  * account-wide named snapshots (cross-process AND cross-teammate).
  */
@@ -234,14 +235,25 @@ const lookupPublishedWarmImage = async (
 	}
 };
 
-/** Publish the warm image under its sha tag AND as the rolling `:latest`. */
-const publishWarmImage = async (image: Image, sha12: string): Promise<void> => {
+/** Publish the warm image under its sha tag, and as the rolling `:latest` only when asked. */
+const publishWarmImage = async ({
+	image,
+	sha12,
+	shouldPublishLatest = () => false,
+}: {
+	image: Image;
+	sha12: string;
+	shouldPublishLatest?: () => boolean;
+}): Promise<void> => {
 	try {
 		await image.publish(`${WARM_IMAGE_REPO}:${sha12}`);
-		await image.publish(`${WARM_IMAGE_REPO}:latest`);
+		const publishLatest = shouldPublishLatest();
+		if (publishLatest) {
+			await image.publish(`${WARM_IMAGE_REPO}:latest`);
+		}
 		narrate(
 			chalk.magenta(
-				`[modal] published warm image ${WARM_IMAGE_REPO}:${sha12} (+ :latest) — next runs skip the warm build`,
+				`[modal] published warm image ${WARM_IMAGE_REPO}:${sha12}${publishLatest ? " (+ :latest)" : ""} — next runs skip the warm build`,
 			),
 		);
 	} catch (error) {
@@ -617,7 +629,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					timeoutMs: SNAPSHOT_TIMEOUT_MS,
 					ttlMs: WARM_IMAGE_TTL_MS,
 				});
-				await publishWarmImage(image, targetSha12);
+				await publishWarmImage({ image, sha12: targetSha12 });
 				// Keep warmName in staleWarmNames: forks in this run still hold the stale
 				// :latest image, so dropping it here would silently skip their fast-forward.
 			} catch (error) {
@@ -774,7 +786,10 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			return wrap(opts.name, sandbox);
 		},
 
-		async snapshotAndStop(sandbox: ProviderSandbox): Promise<string> {
+		async snapshotAndStop(
+			sandbox: ProviderSandbox,
+			opts?: SnapshotAndStopOptions,
+		): Promise<string> {
 			const sb = unwrap(sandbox);
 			// Services were clean-stopped by warmup.sh; capture the filesystem (/repo
 			// source + migrated PGDATA + any node_modules delta — the bulk of
@@ -787,10 +802,13 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					ttlMs: WARM_IMAGE_TTL_MS,
 				});
 				warmImageByName.set(sandbox.name, image);
-				// Cross-run warm cache: publish under the sha tag + rolling `:latest`.
 				const sha12 = warmShaFromName(sandbox.name);
 				if (sha12) {
-					await publishWarmImage(image, sha12);
+					await publishWarmImage({
+						image,
+						sha12,
+						shouldPublishLatest: opts?.shouldPublishLatest,
+					});
 					staleWarmNames.delete(sandbox.name);
 				}
 				// The warm parent is no longer needed (forks use the Image) — free it.

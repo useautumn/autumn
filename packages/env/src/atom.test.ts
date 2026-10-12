@@ -11,6 +11,7 @@ const PEER_SECRET = "s".repeat(64);
 const MULTI_TENANT = {
 	ATOM_MODE: "multi_tenant",
 	ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
+	ATOM_PEER_SECRET: PEER_SECRET,
 };
 
 describe("atom env", () => {
@@ -26,32 +27,31 @@ describe("atom env", () => {
 	});
 
 	test("a multi-tenant Atom's ATOM_TOKEN_HASH is the admin token that registers its orgs", () => {
-		const env = createAtomEnv({
-			ATOM_MODE: "multi_tenant",
-			ATOM_TOKEN_HASH: ADMIN_TOKEN_HASH,
-			ATOM_HOSTNAME: "0.0.0.0",
-		});
+		const env = createAtomEnv({ ...MULTI_TENANT, ATOM_HOSTNAME: "0.0.0.0" });
 
 		expect(env.ATOM_MODE).toBe("multi_tenant");
 		expect(env.ATOM_TOKEN_HASH).toBe(ADMIN_TOKEN_HASH);
 		expect(env.ATOM_HOSTNAME).toBe("0.0.0.0");
 	});
 
-	test("an org's own Atom does not boot without ATOM_PEER_SECRET; a multi-tenant one has no peers to sign to", () => {
+	test("neither mode boots without ATOM_PEER_SECRET: every Atom's replicas sign to each other with it", () => {
 		expect(() => createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH })).toThrow(
 			"Set ATOM_PEER_SECRET",
 		);
 		expect(() =>
 			createAtomEnv({ ATOM_TOKEN_HASH: TOKEN_HASH, ATOM_PEER_SECRET: " " }),
 		).toThrow("Set ATOM_PEER_SECRET");
-		expect("ATOM_PEER_SECRET" in createAtomEnv(MULTI_TENANT)).toBe(false);
-		const deployed = createAtomEnv({
-			ATOM_TOKEN_HASH: TOKEN_HASH,
-			ATOM_PEER_SECRET: ` ${PEER_SECRET} `,
-		});
-		expect(
-			deployed.ATOM_MODE === "deployed" ? deployed.ATOM_PEER_SECRET : null,
-		).toBe(PEER_SECRET);
+		expect(() =>
+			createAtomEnv({ ATOM_MODE: "multi_tenant", ATOM_TOKEN_HASH: TOKEN_HASH }),
+		).toThrow("Set ATOM_PEER_SECRET");
+		for (const env of [
+			createAtomEnv({
+				ATOM_TOKEN_HASH: TOKEN_HASH,
+				ATOM_PEER_SECRET: ` ${PEER_SECRET} `,
+			}),
+			createAtomEnv({ ...MULTI_TENANT, ATOM_PEER_SECRET: ` ${PEER_SECRET} ` }),
+		])
+			expect(env.ATOM_PEER_SECRET).toBe(PEER_SECRET);
 	});
 
 	test("both modes need a SHA-256 ATOM_TOKEN_HASH", () => {
@@ -335,7 +335,7 @@ describe("atom env", () => {
 				ATOM_PEER_SECRET: PEER_SECRET,
 				...env,
 			});
-			return atom.ATOM_MODE === "deployed" ? atom.ATOM_PEERS_FILE : undefined;
+			return atom.ATOM_PEERS_FILE;
 		};
 
 		expect(peersOf({ ATOM_HOSTNAME: "0.0.0.0" })).toBeNull();

@@ -21,6 +21,9 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
  */
 export const SANDBOX_NAME_PREFIX = "tw";
 
+/** Only this branch's warm builds move `tw-warm:latest`, so branch-only schema never seeds other runs. */
+export const WARM_LATEST_BRANCH = "dev";
+
 /** Pool size `N` default (`--max`). Auto-capped to file count, so small runs stay small. */
 export const DEFAULT_WORKERS = 400;
 
@@ -155,6 +158,8 @@ export const KAFKA_BROKERS = `127.0.0.1:${KAFKA_PORT}`;
 export const BALANCE_WORKER_PORT = 8082;
 /** The µVM's one Atom process (dev mode); same port as dw's base worktree. */
 export const ATOM_PORT = 8086;
+/** Where the Atom's replicas would reach each other; one replica here, but the Atom listens there all the same. */
+export const ATOM_PEER_PORT = 8087;
 export const ATOM_URL = `http://127.0.0.1:${ATOM_PORT}`;
 
 /**

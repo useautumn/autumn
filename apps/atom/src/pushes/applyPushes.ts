@@ -30,8 +30,8 @@ const subjectKeyOf = ({
 /** The one catalog per folder: a newer copy replaces an older one still on its way. */
 const CATALOG_KEY = "catalog";
 
-/** How a push reaches the other replicas: not at all when it was already relayed here, or when there are none. */
-export type PushReplication = { replication?: Replication; relayed?: boolean };
+/** How a push reaches the other replicas: not again when it was relayed here. */
+export type PushReplication = { replication: Replication; relayed?: boolean };
 
 /**
  * A subject as Autumn pushes it, over HTTP or the queue: routed by the customer id sent beside it and handed on as text,
@@ -51,11 +51,12 @@ export const applySubjectPush = async ({
 	const stored = await slots
 		.processorFor({ customerId })
 		.setSubject({ customerId, body });
-	if (stored && replication && !relayed)
+	if (stored && !relayed)
 		replication.replicate({
 			kind: SUBJECT_PUSH.kind,
 			key: subjectKeyOf({ customerId, body }),
 			body,
+			atomId: slots.atomId,
 			headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },
 		});
 	return stored;
@@ -74,7 +75,12 @@ export const applyCatalogPush = async ({
 	const stored = await slots.setCatalog(
 		catalogBodyToSharedRows({ body: JSON.parse(body) }),
 	);
-	if (stored && replication && !relayed)
-		replication.replicate({ kind: CATALOG_PUSH.kind, key: CATALOG_KEY, body });
+	if (stored && !relayed)
+		replication.replicate({
+			kind: CATALOG_PUSH.kind,
+			key: CATALOG_KEY,
+			body,
+			atomId: slots.atomId,
+		});
 	return stored;
 };

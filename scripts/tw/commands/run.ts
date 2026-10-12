@@ -54,6 +54,7 @@ import {
 	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
+	WARM_LATEST_BRANCH,
 	WARM_SANDBOX_PREFIX,
 	WORKER_VCPUS,
 } from "../constants.ts";
@@ -764,6 +765,31 @@ const resolveRefSha = (ref: string): string => {
 	return /^[0-9a-f]{40}$/.test(local) ? local : ref;
 };
 
+/** A pinned or historical dev sha must not roll `:latest` back, so only origin's current dev head moves it. */
+const isWarmLatestBranchHead = ({
+	ref,
+	sha,
+}: {
+	ref: string;
+	sha: string;
+}): boolean => {
+	if (ref !== WARM_LATEST_BRANCH) return false;
+	// twd's deployed checkout has no .git, so ask the configured remote URL, not `origin`.
+	const { url } = resolveGitSource(WARM_LATEST_BRANCH);
+	const { stdout, stderr, exitCode } = Bun.spawnSync(
+		["git", "ls-remote", url, `refs/heads/${WARM_LATEST_BRANCH}`],
+		{ stdout: "pipe", stderr: "pipe" },
+	);
+	const head = new TextDecoder().decode(stdout).split(/\s+/)[0];
+	if (exitCode !== 0 || !/^[0-9a-f]{40}$/.test(head ?? "")) {
+		warn(
+			`warm-up: could not resolve ${WARM_LATEST_BRANCH}'s head (${new TextDecoder().decode(stderr).trim().slice(0, 160) || "empty ls-remote"}) — tw-warm:latest left unchanged`,
+		);
+		return false;
+	}
+	return head === sha;
+};
+
 /**
  * Get the CACHED warm parent for this ref-sha, or build it. The warm parent is
  * named deterministically (`tw-warm-<sha>`), so a prior run — or a teammate on
@@ -859,7 +885,10 @@ export const getOrBuildWarmParent = async ({
 
 	milestone("warm-up: snapshotting warm parent (cached for this ref)");
 	try {
-		await snapshotAndStop(warm, { signal });
+		await snapshotAndStop(warm, {
+			signal,
+			shouldPublishLatest: () => isWarmLatestBranchHead({ ref, sha }),
+		});
 	} catch (error) {
 		await failBuild(
 			`warm-up failed (snapshot: ${(error as Error).message}) — aborting, no workers forked`,

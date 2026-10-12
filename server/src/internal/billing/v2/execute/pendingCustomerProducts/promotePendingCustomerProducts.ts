@@ -4,6 +4,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { withoutCustomCatalogRows } from "@/internal/billing/v2/utils/billingPlan/withoutCustomCatalogRows";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -75,10 +76,7 @@ export const promotePendingCustomerProducts = async ({
 	}
 
 	return {
-		...autumnBillingPlan,
-		customPrices: undefined,
-		customEntitlements: undefined,
-		customFreeTrial: undefined,
+		...withoutCustomCatalogRows(autumnBillingPlan),
 		insertCustomerProducts:
 			autumnBillingPlan.insertCustomerProducts?.filter(
 				(planned) => !promotedIds.has(planned.id),

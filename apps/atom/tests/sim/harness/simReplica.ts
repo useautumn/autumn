@@ -12,6 +12,7 @@ import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createPeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
+import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import type { Replication } from "../../../src/replication/types/replication.js";
 import {
@@ -149,7 +150,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 			now,
 			isStopping: () => state !== "ready",
 		},
-		slots: auth.slots,
+		folders: createDeployedFolders({ slots: auth.slots }),
 	});
 
 	/** As the thread boots: listens, catches up, reports ready, then keeps passing. */
