@@ -105,6 +105,25 @@ export const addStripeInvoiceLines = async ({
 };
 
 // ============================================
+// Remove Invoice Lines
+// ============================================
+
+export const removeStripeInvoiceLines = async ({
+	stripeCli,
+	invoiceId,
+	lineItemIds,
+}: {
+	stripeCli: Stripe;
+	invoiceId: string;
+	lineItemIds: string[];
+}): Promise<Stripe.Invoice> =>
+	stripeCli.invoices.removeLines(
+		invoiceId,
+		{ lines: lineItemIds.map((id) => ({ id, behavior: "delete" })) },
+		autumnStripeRequestOptions({ source: "invoice.removeLines" }),
+	);
+
+// ============================================
 // Update Invoice Line
 // ============================================
 

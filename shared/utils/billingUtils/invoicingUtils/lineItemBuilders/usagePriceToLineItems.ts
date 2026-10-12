@@ -106,6 +106,9 @@ export const usagePriceToLineItems = ({
 		total: lineItem.amount,
 		currency,
 	});
+	// Rounding drift can push the last band below zero; a charge never becomes a credit line.
+	const hasNegativeBand = billedAmounts.some((amount) => amount < 0);
+	if (hasNegativeBand) return [lineItem];
 	const billingUnits = price.config.billing_units ?? 1;
 	const hasOneUsageBand =
 		bands.filter((band) => band.kind === "usage").length === 1;

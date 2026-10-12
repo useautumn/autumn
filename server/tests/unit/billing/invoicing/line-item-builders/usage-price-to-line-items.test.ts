@@ -280,6 +280,22 @@ describe("usagePriceToLineItems: graduated", () => {
 		expect(lines.map((line) => line.amount)).toEqual([0.32, 0.31]);
 		expect(sumValues(lines.map((line) => line.amount))).toBe(0.63);
 	});
+
+	test("drift that would turn the last band into a credit keeps the single line", () => {
+		// Bands round to $0.01, $0.01, $0.01, $0.00 but the $0.019 total bills $0.02.
+		const lines = buildUsageLines({
+			tiers: [
+				{ to: 1, amount: 0.006 },
+				{ to: 2, amount: 0.006 },
+				{ to: 3, amount: 0.006 },
+				{ to: Infinite, amount: 0.001 },
+			] as UsageTier[],
+			balance: -4,
+		});
+
+		expect(lines).toHaveLength(1);
+		expect(lines[0]?.amount).toBeCloseTo(0.019, 10);
+	});
 });
 
 describe("usagePriceToLineItems: reported quantities", () => {

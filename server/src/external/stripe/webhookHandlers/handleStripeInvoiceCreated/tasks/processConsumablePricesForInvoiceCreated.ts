@@ -16,6 +16,7 @@ import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/provider
 import {
 	addStripeInvoiceLines,
 	createStripeInvoiceItems,
+	removeStripeInvoiceLines,
 	updateStripeInvoiceItem,
 	updateStripeInvoiceLine,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
@@ -23,6 +24,7 @@ import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billi
 import {
 	ARREAR_TIER_LINE_ID_PREFIX,
 	ARREAR_USAGE_LINE_ID_PREFIX,
+	arrearLineItemIdToSetId,
 } from "@/internal/billing/v2/utils/lineItems/arrearUsageLineItemId";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
@@ -314,6 +316,98 @@ const reconcileStaleExistingLines = async ({
 	}
 };
 
+const sumOf = (amounts: number[]) =>
+	amounts.reduce((sum, amount) => sum + amount, 0);
+
+/**
+ * A retry can price usage into different tier bands than the attempt that wrote the
+ * invoice, so a band can vanish or appear. Such a price is reconciled as a whole: a
+ * draft drops the bands no longer billed, a finalized invoice carries the set's net
+ * delta forward. Returns the line items still to reconcile one by one.
+ */
+const reconcileChangedTierLineSets = async ({
+	ctx,
+	eventContext,
+	lineItems,
+	existingLines,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: InvoiceCreatedContext;
+	lineItems: LineItem[];
+	existingLines: ExistingAutumnLines;
+}): Promise<LineItem[]> => {
+	const { stripeInvoice } = eventContext;
+	const lineItemsBySetId = new Map<string, LineItem[]>();
+	for (const lineItem of lineItems) {
+		const setId = arrearLineItemIdToSetId(lineItem.id);
+		if (!setId) continue;
+		lineItemsBySetId.set(setId, [
+			...(lineItemsBySetId.get(setId) ?? []),
+			lineItem,
+		]);
+	}
+	const settledLineItemIds = new Set<string>();
+
+	for (const [setId, setLineItems] of lineItemsBySetId) {
+		const existingSet = [...existingLines.byLineItemId].filter(
+			([lineItemId]) => arrearLineItemIdToSetId(lineItemId) === setId,
+		);
+		const setLineItemIds = new Set(setLineItems.map((lineItem) => lineItem.id));
+		const droppedBands = existingSet.filter(
+			([lineItemId]) => !setLineItemIds.has(lineItemId),
+		);
+		const hasNewBands = setLineItems.some(
+			(lineItem) => !existingLines.byLineItemId.has(lineItem.id),
+		);
+		const bandsChanged = droppedBands.length > 0 || hasNewBands;
+		if (existingSet.length === 0 || !bandsChanged) continue;
+
+		if (stripeInvoice.status === "draft") {
+			if (droppedBands.length === 0) continue;
+			ctx.logger.info(
+				`[invoice.created] Removing ${droppedBands.length} tier lines of ${setId} no longer billed on ${stripeInvoice.id}`,
+			);
+			await removeStripeInvoiceLines({
+				stripeCli: ctx.stripeCli,
+				invoiceId: stripeInvoice.id,
+				lineItemIds: droppedBands.map(([, line]) => line.stripeLineItemId),
+			});
+			continue;
+		}
+
+		const existingBands = existingSet.map(([, line]) => line);
+		const [firstLineItem] = setLineItems;
+		const [firstExistingBand] = existingBands;
+		if (!firstLineItem || !firstExistingBand) continue;
+
+		const hasEveryBilledAmount = existingBands.every(
+			(line) => line.billedMinor !== undefined,
+		);
+		await carryUnbilledDeltaForward({
+			ctx,
+			eventContext,
+			lineItem: {
+				...firstLineItem,
+				id: setId,
+				amount: sumOf(setLineItems.map((lineItem) => lineItem.amount)),
+				amountAfterDiscounts: sumOf(
+					setLineItems.map((lineItem) => lineItem.amountAfterDiscounts ?? 0),
+				),
+			},
+			existing: {
+				stripeLineItemId: firstExistingBand.stripeLineItemId,
+				billedMinor: hasEveryBilledAmount
+					? sumOf(existingBands.map((line) => line.billedMinor ?? 0))
+					: undefined,
+				percentOffFactor: firstExistingBand.percentOffFactor,
+			},
+		});
+		for (const lineItem of setLineItems) settledLineItemIds.add(lineItem.id);
+	}
+
+	return lineItems.filter((lineItem) => !settledLineItemIds.has(lineItem.id));
+};
+
 const addPendingLineItemsToInvoice = async ({
 	ctx,
 	eventContext,
@@ -330,13 +424,19 @@ const addPendingLineItemsToInvoice = async ({
 		ctx,
 		invoiceId: stripeInvoice.id,
 	});
-	await reconcileStaleExistingLines({
+	const unsettledLineItems = await reconcileChangedTierLineSets({
 		ctx,
 		eventContext,
 		lineItems,
 		existingLines,
 	});
-	const pendingLineItems = lineItems.filter(
+	await reconcileStaleExistingLines({
+		ctx,
+		eventContext,
+		lineItems: unsettledLineItems,
+		existingLines,
+	});
+	const pendingLineItems = unsettledLineItems.filter(
 		(lineItem) => !findExistingLine({ lineItem, existingLines }),
 	);
 
