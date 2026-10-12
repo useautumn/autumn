@@ -28,6 +28,8 @@ const subjectBodySchema = z.object({
 	log_offset: z.string().regex(/^\d+$/),
 	/** Epoch ms. */
 	read_at: z.number().int().nonnegative(),
+	/** On a customer push, the log offset of its latest evict; a string, as offsets are 64-bit. */
+	customer_version: z.string().regex(/^\d+$/).optional(),
 });
 
 const parsePush = <T>(read: () => T): T => {
@@ -58,5 +60,6 @@ export const subjectPushToStoredSubject = ({
 		org: parsed.org,
 		logOffset: BigInt(parsed.log_offset),
 		readAt: parsed.read_at,
+		customerVersion: BigInt(parsed.customer_version ?? 0),
 	};
 };

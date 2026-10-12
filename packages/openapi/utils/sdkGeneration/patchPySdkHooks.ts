@@ -21,7 +21,8 @@ export function patchPySdkHooks({
 	);
 	let content = readFileSync(hooksPath, "utf-8");
 
-	if (content.includes("init_hooks")) {
+	// Not "init_hooks" alone: the generated `self.sdk_init_hooks` contains it, which skipped this patch every time.
+	if (content.includes("from .registration import init_hooks")) {
 		console.log("[PY] sdkhooks.py already patched, skipping");
 		return;
 	}
@@ -37,6 +38,11 @@ export function patchPySdkHooks({
 		"self.after_error_hooks: List[AfterErrorHook] = []",
 		"self.after_error_hooks: List[AfterErrorHook] = []\n        init_hooks(self)",
 	);
+
+	if (!content.includes("init_hooks(self)"))
+		throw new Error(
+			"[PY] sdkhooks.py patch anchors not found; update patchPySdkHooks.ts.",
+		);
 
 	writeFileSync(hooksPath, content);
 	console.log("[PY] Python SDK hooks patched successfully");

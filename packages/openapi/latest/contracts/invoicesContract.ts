@@ -28,6 +28,10 @@ import {
 	ReissueInvoiceResponseSchema,
 } from "@api/others/apiInvoice/reissueInvoiceParams.js";
 import {
+	UpdateInvoiceParamsSchema,
+	UpdateInvoiceResponseSchema,
+} from "@api/others/apiInvoice/updateInvoiceParams.js";
+import {
 	VoidInvoiceParamsSchema,
 	VoidInvoiceResponseSchema,
 } from "@api/others/apiInvoice/voidInvoiceParams.js";
@@ -248,6 +252,36 @@ export const voidInvoiceContract = oc
 	.output(
 		VoidInvoiceResponseSchema.meta({
 			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "void" } }],
+		}),
+	);
+
+export const updateInvoiceContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/invoices.update",
+		operationId: "updateInvoice",
+		tags: ["invoices"],
+		description:
+			"Changes which payment methods a draft or open Stripe invoice accepts. The customer sees the change on the hosted invoice page straight away.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "update",
+		}),
+	})
+	.input(
+		UpdateInvoiceParamsSchema.meta({
+			title: "UpdateInvoiceParams",
+			examples: [
+				{
+					invoice_id: "inv_2b3c4d5e6f7g8h",
+					payment_method_types: ["card", "us_bank_account"],
+				},
+			],
+		}),
+	)
+	.output(
+		UpdateInvoiceResponseSchema.meta({
+			examples: [{ invoice: { ...LIST_INVOICE_EXAMPLE, status: "open" } }],
 		}),
 	);
 

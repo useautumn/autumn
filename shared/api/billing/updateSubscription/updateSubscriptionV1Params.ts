@@ -104,9 +104,31 @@ const UPDATE_FIELDS = [
 	"discounts",
 	"remove_discounts",
 	"custom_line_items",
+	"invoice_mode",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];
+
+/** Keys that target or shape the response but never change the subscription. */
+const COLLECTION_METHOD_SWITCH_KEYS = new Set([
+	"customer_id",
+	"entity_id",
+	"plan_id",
+	"subscription_id",
+	"customer_product_id",
+	"customer_data",
+	"entity_data",
+	"redirect_mode",
+	"invoice_mode",
+]);
+
+/** True when invoice_mode is the request's only change: switch how the subscription is collected. */
+export const isCollectionMethodSwitch = (params: Record<string, unknown>) =>
+	params.invoice_mode !== undefined &&
+	Object.entries(params).every(
+		([key, value]) =>
+			value === undefined || COLLECTION_METHOD_SWITCH_KEYS.has(key),
+	);
 
 export const UpdateSubscriptionV1ParamsSchema =
 	ExtUpdateSubscriptionV1ParamsSchema.extend({
@@ -117,7 +139,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 	})
 		.refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 			message:
-				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, discounts, remove_discounts, or custom_line_items)",
+				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, discounts, remove_discounts, custom_line_items, or invoice_mode)",
 		})
 		.refine((data) => !addsAndRemovesSameReward(data), {
 			message: ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,

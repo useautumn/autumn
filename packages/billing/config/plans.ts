@@ -186,18 +186,43 @@ const otherPlans = [
 		},
 		items: [
 			{
-				featureId: "products",
-				included: 0,
-				unlimited: true,
-			},
-			{
-				featureId: "revenue",
-				included: 250000,
+				featureId: "api_requests",
+				included: 20000000,
 				reset: {
 					interval: "month",
 				},
 			},
+			{
+				featureId: "customers_and_entities",
+				included: 0,
+				unlimited: true,
+			},
+			{
+				featureId: "revenuecat",
+			},
+			{
+				featureId: "usd_volume",
+				included: 800000,
+				reset: {
+					interval: "month",
+				},
+			},
+			{
+				featureId: "vercel",
+			},
 		],
+		billingControls: {
+			overageAllowed: [
+				{
+					featureId: "usd_volume",
+					enabled: true,
+				},
+				{
+					featureId: "api_requests",
+					enabled: true,
+				},
+			],
+		},
 		versionSlug: "v2",
 	}),
 	plan({

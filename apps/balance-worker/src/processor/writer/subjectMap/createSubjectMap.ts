@@ -1,6 +1,10 @@
 import type { SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
-import type { OnSubjectEvicted, SubjectMap } from "./types/subjectMap.js";
+import type {
+	OnSubjectEvicted,
+	ResidentDrop,
+	SubjectMap,
+} from "./types/subjectMap.js";
 
 /** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
@@ -16,6 +20,7 @@ type Entry = {
 	/** Evicted while a write was unapplied: unreadable at once, the entry goes as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
+	/** Last read or write, on the map's clock. */
 	touchedAt: number;
 };
 
@@ -290,6 +295,28 @@ export const createSubjectMap = ({
 			(subjectKey) => entries.get(subjectKey)?.bytes === 0,
 		);
 
+	/** As a restart would: each resident subject `drops` picks goes unless a pin holds an unapplied write; hidden ones stay with their writes. */
+	const dropResident: SubjectMap["dropResident"] = ({ drops }) => {
+		const result: ResidentDrop = { evicted: 0, kept: 0, resident: 0 };
+		const nowMs = now();
+		for (const [subjectKey, entry] of [...entries]) {
+			if (entry.bytes === 0 || entry.customerKey === null) continue;
+			if (
+				!drops({
+					customerKey: entry.customerKey,
+					idleMs: nowMs - entry.touchedAt,
+				})
+			)
+				result.kept += 1;
+			else if (entry.pins > 0) result.resident += 1;
+			else {
+				dropState({ subjectKey, entry });
+				result.evicted += 1;
+			}
+		}
+		return result;
+	};
+
 	const clear = () => {
 		entries.clear();
 		subjectKeysByCustomer.clear();
@@ -306,6 +333,7 @@ export const createSubjectMap = ({
 		evictCustomer,
 		hideCustomer,
 		isEvicting,
+		dropResident,
 		clear,
 		sizeBytes: () => totalBytes,
 		bytesOf: ({ subjectKey }: { subjectKey: string }) =>

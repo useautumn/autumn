@@ -34,3 +34,8 @@ export type {
 	ByocCacheWriteResult,
 	ByocCacheWriter,
 } from "./cacheWriters/types/byocCacheWriter.js";
+export {
+	ATOM_SUBJECT_READ_PATH,
+	AtomSubjectReadErrorCode,
+	AtomSubjectReadRequestSchema,
+} from "./subjects/atomSubjectReadContract.js";

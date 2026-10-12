@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -65,6 +66,11 @@ export const customerLicenses = pgTable(
 			.concurrently(),
 		index("idx_customer_licenses_customer")
 			.on(table.internal_customer_id)
+			.concurrently(),
+		// customers.internal_id is COLLATE "C", so joins on it can't use the
+		// default-collation index above and seq-scanned this table per getFull.
+		index("idx_customer_licenses_internal_customer_id_c")
+			.on(sql`${table.internal_customer_id} COLLATE "C"`)
 			.concurrently(),
 		index("idx_customer_licenses_link").on(table.link_id).concurrently(),
 	],

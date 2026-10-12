@@ -5,6 +5,9 @@ export { countApiCalls } from "./apiRequests/actions/countApiCalls/countApiCalls
 export { apiRequestCatalog } from "./apiRequests/apiRequestCatalog";
 export type { AutumnClientConfig } from "./external/autumn/createAutumnClient";
 export { createAutumnClient } from "./external/autumn/createAutumnClient";
+export { orgHasFeature } from "./featureAccess/actions/orgHasFeature";
+export { BillingFeatureId } from "./featureAccess/billingFeatureIds";
+export type { FeatureAccessContext } from "./featureAccess/types/featureAccessContext";
 export type { PaymentVolumeReport } from "./paymentVolume/actions/pushPaymentVolume/pushPaymentVolume";
 export { pushPaymentVolume } from "./paymentVolume/actions/pushPaymentVolume/pushPaymentVolume";
 export { listPaidInvoices } from "./paymentVolume/repos/listPaidInvoices";

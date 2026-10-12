@@ -18,7 +18,7 @@ export const watchShadowAtomTask = task({
 	run: async (raw: WatchShadowAtomPayload) => {
 		const { deploymentGroupId } = WatchShadowAtomPayloadSchema.parse(raw);
 		const outcome = await watchAtomRecord({
-			ctx: shadowAtomContext(),
+			ctx: shadowAtomContext({ deploymentGroupId }),
 			waitFor: wait.for,
 		});
 		// A finished watch frees its group's key, so the next start, retry or delete starts a new one.

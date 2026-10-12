@@ -44,6 +44,7 @@ export { ListInvoicesParamsSchema } from "./others/apiInvoice/listInvoicesParams
 export { ListInvoiceTemplatesParamsSchema } from "./others/apiInvoice/listInvoiceTemplatesParams.js";
 export { PayInvoiceParamsSchema } from "./others/apiInvoice/payInvoiceParams.js";
 export { ReissueInvoiceParamsSchema } from "./others/apiInvoice/reissueInvoiceParams.js";
+export { UpdateInvoiceParamsSchema } from "./others/apiInvoice/updateInvoiceParams.js";
 export { VoidInvoiceParamsSchema } from "./others/apiInvoice/voidInvoiceParams.js";
 export { CreatePlanParamsV2Schema } from "./products/crud/createPlanParamsV1.js";
 export { GetPlanParamsV0Schema } from "./products/crud/getPlanParamsV0.js";

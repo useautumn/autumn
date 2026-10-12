@@ -3,7 +3,7 @@ import { resizeAtomRecord } from "@/internal/byoc/atomRecords/resizeAtomRecord.j
 import { cacheNotRunning } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { shadowAtomContext } from "../shadowAtomContext.js";
 import { shadowAtomRecordToApiCache } from "../shadowAtomRecordToApiCache.js";
-import { shadowAtomStorage } from "../shadowAtomStorage.js";
+import { findShadowAtomRecords } from "../shadowAtomStorage.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 
 /** Moves our running shadow Atom to another machine; its folders stay on the volume. */
@@ -14,10 +14,12 @@ export const resizeShadowAtom = ({
 }): Promise<ApiByocCache> =>
 	withShadowAtomLock({
 		fn: async () => {
-			const existing = await shadowAtomStorage.find();
+			const { current: existing } = await findShadowAtomRecords();
 			if (!existing) throw cacheNotRunning();
 			const record = await resizeAtomRecord({
-				ctx: shadowAtomContext(),
+				ctx: shadowAtomContext({
+					deploymentGroupId: existing.deployment_group_id,
+				}),
 				record: existing,
 				machine,
 			});

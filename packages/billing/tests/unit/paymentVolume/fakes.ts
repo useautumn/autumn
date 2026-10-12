@@ -2,7 +2,7 @@ import type { AxiomClient } from "@autumn/axiom";
 import { createFxClient, type FxClient } from "@autumn/fx";
 import type { SQL } from "drizzle-orm";
 import type { TrackItem } from "../../../src/actions/pushHourlyMeters/types/trackItem";
-import type { AutumnClient } from "../../../src/types/autumnClient";
+import type { MeteringContext } from "../../../src/types/meteringContext";
 import type { PostgresDb } from "../../../src/types/postgresDb";
 
 export const silentLogger = { info: () => {}, warn: () => {}, error: () => {} };
@@ -62,7 +62,7 @@ export const fakeAutumn = ({
 }: {
 	batches: TrackItem[][];
 	created: { id: string; name: string }[];
-}): AutumnClient => ({
+}): MeteringContext["autumn"] => ({
 	batchTrack: async ({ items }) => {
 		batches.push(items);
 		return { accepted: items.length };

@@ -15,6 +15,7 @@ import {
 	checkResponseOf,
 	forwardReasonOf,
 	freshHeld,
+	noFolderPulls,
 	oldestApiVersion,
 	storedEntitySubjectWith,
 	storedSubjectWith,
@@ -30,7 +31,12 @@ const createProcessor = () => {
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
 	stores.push(sqliteStore, catalogStore);
 	const processor = createSlotProcessor({
-		ctx: { sqliteStore, catalogStore, logger: getAtomLogger() },
+		ctx: {
+			sqliteStore,
+			catalogStore,
+			logger: getAtomLogger(),
+			subjectPulls: noFolderPulls,
+		},
 	});
 	return {
 		setSubject: processor.setSubject,

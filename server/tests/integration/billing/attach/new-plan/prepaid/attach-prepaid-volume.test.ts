@@ -198,16 +198,15 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 800 units, tier 2 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * 300 total units, 100 free (1 pack included).
- * Purchased above free: 200 units = 2 packs, both in tier 1.
- * Volume: 2 × $10 = $20.
+ * 300 total units, 100 free (1 pack included), so the total lands in tier 1.
+ * Volume charges every pack once past the free one: 3 × $10 = $30.
  * Balance: 300.
  */
-test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 300 units, 100 included, tier 1 → $20")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 300 units, 100 included, tier 1 → $30")}`, async () => {
 	const customerId = "attach-prepaid-volume-included-tier1";
 	const quantity = 300;
 	const includedUsage = 100;
-	// After free pack: 200 units = 2 packs in tier 1 → 2 × $10 = $20
+	// 300 units = 3 packs in tier 1 → 3 × $10 = $30
 	const expectedPrepaidCost = (quantity / BILLING_UNITS) * 10;
 
 	const volumeItem = items.volumePrepaidMessages({
@@ -340,11 +339,10 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: quantity 0 → no 
  *   Tier 4:  1001+ units    @ $5/pack
  *
  * With 100 included (free) and 900 total quantity:
- *   Paid packs: (900 - 100) / 100 = 8 packs
- *   Volume: all 8 packs at tier 3 rate ($7) = $56
- *   Total: $20 base + $56 = $76
+ *   900 total lands in tier 3, and every pack is charged: 9 × $7 = $63
+ *   Total: $20 base + $63 = $83
  */
-test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 4 tiers, 100 included, 900 total → $76")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 4 tiers, 100 included, 900 total → $83")}`, async () => {
 	const customerId = "attach-prepaid-volume-4tier-incl";
 	const quantity = 900;
 	const includedUsage = 100;
@@ -357,7 +355,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume: 4 tiers, 100 inclu
 		{ to: "inf" as const, amount: 5 },
 	];
 
-	// Paid packs after free: (900 - 100) / 100 = 8 packs
+	// 900 total = 9 packs, all at the tier 3 rate
 	const expectedPrepaidCost = (quantity / BILLING_UNITS) * 7;
 
 	const volumeItem = items.volumePrepaidMessages({

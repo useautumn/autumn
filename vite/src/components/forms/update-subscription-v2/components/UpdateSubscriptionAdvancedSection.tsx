@@ -5,6 +5,7 @@ import { BillingOptionSections } from "@/components/forms/shared/billing-option-
 import {
 	anchorSummary,
 	changedTo,
+	collectionMethodSummary,
 	discountsSummary,
 	prorationSummary,
 	renewsSummary,
@@ -23,14 +24,21 @@ import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationB
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
+import { CollectionMethodConfigRow } from "./CollectionMethodConfigRow";
 import { UpdateSubscriptionFreeTrialRow } from "./UpdateSubscriptionFreeTrialRow";
 
 // The form stores the default as null, so any non-null billingBehavior is a change.
 const DEFAULT_PRORATION: BillingBehavior = "prorate_immediately";
 
 export function UpdateSubscriptionAdvancedSection() {
-	const { form, formValues, formContext, trialState, previewQuery } =
-		useUpdateSubscriptionFormContext();
+	const {
+		form,
+		formValues,
+		formContext,
+		trialState,
+		previewQuery,
+		collectionMethodSwitch,
+	} = useUpdateSubscriptionFormContext();
 	const {
 		billingBehavior,
 		resetBillingCycle,
@@ -206,12 +214,25 @@ export function UpdateSubscriptionAdvancedSection() {
 				],
 				stripe: [
 					{
+						id: "collectionMethod",
+						visible: Boolean(collectionMethodSwitch.current),
+						locked: collectionMethodSwitch.locked,
+						summary: collectionMethodSummary({
+							switchesMethod: collectionMethodSwitch.switchesMethod,
+							isActive: collectionMethodSwitch.isActive,
+							sendsInvoice: collectionMethodSwitch.sendsInvoice,
+						}),
+						row: <CollectionMethodConfigRow />,
+					},
+					{
 						id: "skipBilling",
 						visible: rules.skipBilling.visible,
 						summary: switchSummary({
 							enabled: noBillingChanges,
 							changedText: "No billing changes",
-							defaultText: "Updates subscription",
+							defaultText: collectionMethodSwitch.isActive
+								? undefined
+								: "Updates subscription",
 						}),
 						row: (
 							<ConfigRow

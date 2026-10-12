@@ -55,5 +55,16 @@ export const createAutumnClient = ({
 		await sdk.customers.getOrCreate({ customerId: id, name });
 	};
 
-	return { batchTrack, getOrCreateCustomer };
+	const check = async ({
+		customerId,
+		featureId,
+	}: {
+		customerId: string;
+		featureId: string;
+	}) => {
+		const { allowed } = await sdk.check({ customerId, featureId });
+		return { allowed };
+	};
+
+	return { batchTrack, getOrCreateCustomer, check };
 };

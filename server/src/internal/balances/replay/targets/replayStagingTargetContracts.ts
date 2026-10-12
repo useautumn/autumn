@@ -1,20 +1,19 @@
 import { z } from "zod/v4";
 
 export const REPLAY_STAGING_BROKERS: readonly string[] = Object.freeze([
-	"b-1.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
-	"b-2.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
-	"b-3.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
-	"b-4.tfmeteringstaging.jfuutw.c3.kafka.us-east-1.amazonaws.com:9098",
+	"db1oj6movvaen4fam8pg.any.us-east-1.aw.priv.prd.cloud.redpanda.com:9092",
 ]);
 
-export const REPLAY_STAGING_DEPLOYMENT = "tf-balance-staging-v2-64";
+export const REPLAY_STAGING_DEPLOYMENT = "tf-balance-staging-rp-64";
 
 export const REPLAY_STAGING_OWNERSHIP_TOPIC =
-	"tf-balance-staging-v2-64-ownership";
+	"tf-balance-staging-rp-64-ownership";
 
 export const REPLAY_STAGING_PARTITION_COUNT = 64;
 
 export const REPLAY_STAGING_REGION = "us-east-1";
+
+export const REPLAY_STAGING_SASL_MECHANISM = "scram-sha-256" as const;
 
 export const REPLAY_STAGING_DEFAULT_DATABASE_PORT = 5432;
 

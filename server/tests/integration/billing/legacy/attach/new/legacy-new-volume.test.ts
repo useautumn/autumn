@@ -54,6 +54,8 @@ const VOLUME_TIERS = [
 // Invoice total: $20 (base) + $30 (prepaid) = $50
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
+// volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 1: purchased=300, no allowance, tier 1 → $50")}`, async () => {
 	const customerId = "legacy-new-volume-t1";
 	const purchasedQuantity = 300;
@@ -122,6 +124,8 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 1: purchased=300, no allowanc
 // Invoice total: $20 (base) + $40 (prepaid) = $60
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
+// volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 2: purchased=800, no allowance, tier 2 → $60 (graduated would be $65)")}`, async () => {
 	const customerId = "legacy-new-volume-t2";
 	const purchasedQuantity = 800;
@@ -191,6 +195,8 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 2: purchased=800, no allowanc
 // Invoice total: $20 (base) + $20 (prepaid) = $40
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
+// volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 3: purchased=200, allowance=100, tier 1 → $20 (balance=300)")}`, async () => {
 	const customerId = "legacy-new-volume-t3";
 	const purchasedQuantity = 200;
@@ -264,6 +270,8 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 3: purchased=200, allowance=1
 // Invoice total: $20 (base) + $35 (prepaid) = $55
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
+// volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 4: purchased=700, allowance=100, tier 2 → $40 (balance=800)")}`, async () => {
 	const customerId = "legacy-new-volume-t4";
 	const purchasedQuantity = 700;
@@ -334,6 +342,8 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 4: purchased=700, allowance=1
 // Invoice total: $20 (base only)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
+// volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 5: purchased=0, allowance=100 → $20 base only (balance=100)")}`, async () => {
 	const customerId = "legacy-new-volume-t5";
 	const purchasedQuantity = 0;

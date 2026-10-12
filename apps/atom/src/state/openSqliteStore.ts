@@ -3,8 +3,14 @@ import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
+	listDigestsAppliedAfter,
+	listSubjectsAppliedAfter,
+	maxAppliedAt,
 	readSubject as readSubjectRow,
+	readSubjectsByKey,
+	readSubjectVersion,
 	type SubjectWrite,
+	type SubjectWriteResult,
 	subjectToSlice,
 	upsertSubjects,
 } from "./repos/subjectStates.js";
@@ -35,9 +41,12 @@ const keyOf = ({ state }: StoredSubject): string =>
 export const openSqliteStore = ({
 	databasePath,
 	held,
+	now = Date.now,
 }: {
 	databasePath: string;
 	held: HeldSubjects;
+	/** This replica's clock, stamped on every write so a peer can ask for what was written since. */
+	now?: () => number;
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
 	const storePrefix = `${storesOpened++}\u0000`;
@@ -57,6 +66,19 @@ export const openSqliteStore = ({
 		return subject;
 	}
 
+	function readVersion(params: {
+		customerId: string;
+		entityId: string | null;
+	}) {
+		const found = held.get(storePrefix + subjectKey(params));
+		if (found)
+			return {
+				readAt: found.subject.readAt,
+				logOffset: found.subject.logOffset,
+			};
+		return readSubjectVersion({ ctx, ...params });
+	}
+
 	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
 	function writeOf(subject: StoredSubject): SubjectWrite {
 		const slice = subjectToSlice({ subject });
@@ -67,21 +89,51 @@ export const openSqliteStore = ({
 		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
 	}
 
-	/** After the commit, and only the subjects it stored: one it ignored as older leaves the newer copy held. */
-	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
-		const writes = subjects.map(writeOf);
-		const storedBytes = upsertSubjects({ ctx, writes });
-		writes.forEach(({ subject, slice }, index) => {
-			const bytes = storedBytes[index];
-			if (bytes === null || bytes === undefined) return;
+	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */
+	function holdWritten({
+		write: { subject, slice },
+		result: { bytes, customerVersion },
+	}: {
+		write: SubjectWrite;
+		result: SubjectWriteResult;
+	}): void {
+		const key = storePrefix + keyOf(subject);
+		if (bytes !== null) {
 			held.hold({
-				key: storePrefix + keyOf(subject),
-				subject: deepFreeze(subject),
+				key,
+				subject: deepFreeze({
+					...subject,
+					customerVersion: customerVersion ?? subject.customerVersion,
+				}),
 				bytes,
 				sliceHash: slice.hash,
 			});
+			return;
+		}
+		const heldCopy = held.get(key);
+		if (
+			customerVersion === null ||
+			!heldCopy ||
+			heldCopy.subject.customerVersion >= customerVersion
+		)
+			return;
+		held.hold({
+			key,
+			subject: deepFreeze({ ...heldCopy.subject, customerVersion }),
+			bytes: heldCopy.bytes,
+			sliceHash: heldCopy.sliceHash,
 		});
-		return storedBytes.map((bytes) => bytes !== null);
+	}
+
+	/** After the commit: only the store decides which part settles a customer's version, and rows still mean "stored". */
+	function setSubjects({ subjects }: { subjects: StoredSubject[] }): boolean[] {
+		const writes = subjects.map(writeOf);
+		const results = upsertSubjects({ ctx, writes, appliedAt: now() });
+		writes.forEach((write, index) => {
+			const result = results[index];
+			if (result) holdWritten({ write, result });
+		});
+		return results.map(({ bytes }) => bytes !== null);
 	}
 
 	function close(): void {
@@ -91,10 +143,15 @@ export const openSqliteStore = ({
 
 	return {
 		readSubject,
+		readVersion,
 		setSubject: ({ subject }) =>
 			setSubjects({ subjects: [subject] })[0] ?? false,
 		setSubjects,
 		countSubjects: () => countSubjects({ ctx }),
+		listAppliedAfter: (params) => listSubjectsAppliedAfter({ ctx, ...params }),
+		listDigestsAfter: (params) => listDigestsAppliedAfter({ ctx, ...params }),
+		readByKey: (params) => readSubjectsByKey({ ctx, ...params }),
+		maxAppliedAt: () => maxAppliedAt({ ctx }),
 		close,
 	};
 };

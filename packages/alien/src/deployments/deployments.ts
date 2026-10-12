@@ -7,6 +7,7 @@ import type { AlienDeployment, AlienFixedPools } from "../types/alienClient.js";
 import {
 	isDeploymentAwaitingSetup,
 	isDeploymentBeingDeleted,
+	isDeploymentDeleted,
 } from "./classifyDeployments.js";
 import {
 	AlienDeploymentListSchema,
@@ -31,6 +32,23 @@ const deploymentsQuery = ({
 	});
 };
 
+const listGroupDeployments = async ({
+	ctx,
+	deploymentGroupId,
+}: {
+	ctx: { api: AlienApi };
+	deploymentGroupId: string;
+}): Promise<AlienDeployment[]> => {
+	const query = deploymentsQuery({ api: ctx.api, deploymentGroupId });
+	const { items } = await alienRequest({
+		api: ctx.api,
+		method: "GET",
+		path: `/v1/deployments?${query}`,
+		schema: AlienDeploymentListSchema,
+	});
+	return items;
+};
+
 /** The group's live deployment: the one its setup created. One being deleted is already gone for every caller. */
 export const findDeployment = async ({
 	ctx,
@@ -39,17 +57,23 @@ export const findDeployment = async ({
 	ctx: { api: AlienApi };
 	deploymentGroupId: string;
 }): Promise<AlienDeployment | null> => {
-	const query = deploymentsQuery({ api: ctx.api, deploymentGroupId });
-	const { items } = await alienRequest({
-		api: ctx.api,
-		method: "GET",
-		path: `/v1/deployments?${query}`,
-		schema: AlienDeploymentListSchema,
-	});
+	const items = await listGroupDeployments({ ctx, deploymentGroupId });
 	const live = items.find(
 		(deployment) => !isDeploymentBeingDeleted({ deployment }),
 	);
 	return live ? readDeployment({ ctx, deployment: live }) : null;
+};
+
+/** Until alien has deleted every deployment of the group, a stack may still need the setup link it was launched with. */
+export const hasUndeletedDeployment = async ({
+	ctx,
+	deploymentGroupId,
+}: {
+	ctx: { api: AlienApi };
+	deploymentGroupId: string;
+}): Promise<boolean> => {
+	const items = await listGroupDeployments({ ctx, deploymentGroupId });
+	return items.some((deployment) => !isDeploymentDeleted({ deployment }));
 };
 
 const NOT_FOUND = 404;

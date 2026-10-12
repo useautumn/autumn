@@ -4,6 +4,7 @@ import type {
 	MultiAttachParamsV0,
 } from "@autumn/shared";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
+import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 
 export function useAttachMutation({
@@ -45,12 +46,7 @@ export function useAttachMutation({
 		mutation.mutate({ enableProductImmediately });
 	};
 
-	const handleInvoiceAttach = async (
-		params: BillingStageParams & {
-			enableProductImmediately: boolean;
-			finalizeInvoice?: boolean;
-		},
-	) => {
+	const handleInvoiceAttach = async (params: SendInvoiceSubmitParams) => {
 		const result = await mutation.mutateAsync({ ...params, useInvoice: true });
 		return {
 			stripeId: result.data?.invoice?.stripe_id,

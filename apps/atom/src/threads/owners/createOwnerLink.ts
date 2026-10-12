@@ -2,9 +2,24 @@ import type {
 	CheckAnswer,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
-import { checkRequestToWire, replyToError } from "./ownerCallContract.js";
+import type {
+	AppliedSubject,
+	SubjectCursor,
+	SubjectDigest,
+} from "../../state/repos/subjectStates.js";
+import {
+	checkRequestToWire,
+	replyToError,
+	wireToAppliedSubject,
+	wireToDigest,
+} from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
-import type { OwnerCallBody, OwnerReply } from "./types/ownerCall.js";
+import type {
+	AppliedSubjectOnWire,
+	OwnerCallBody,
+	OwnerReply,
+	SubjectDigestOnWire,
+} from "./types/ownerCall.js";
 import type { CatalogCalls } from "./types/slotOwners.js";
 
 /** Calls waiting on one owner, per calling thread: above the push receiver's in-flight cap, so a burst of pushes queues here, never 503s. */
@@ -21,6 +36,26 @@ type WaitingCall = ReturnType<typeof Promise.withResolvers<OwnerReply>> & {
 export type OwnerLink = {
 	processorFor(params: { atomId: string | null }): SlotProcessor;
 	catalogFor(params: { atomId: string | null }): CatalogCalls;
+	/** The subjects of a slot the other thread owns, written at or after `after`. */
+	listSince(params: {
+		atomId: string | null;
+		slot: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<AppliedSubject[]>;
+	digestSince(params: {
+		atomId: string | null;
+		slot: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<SubjectDigest[]>;
+	fetchSubjects(params: {
+		atomId: string | null;
+		slot: number;
+		keys: { customerId: string; entityId: string }[];
+	}): Promise<AppliedSubject[]>;
 	connect(params: { port: MessagePort }): void;
 	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
@@ -45,7 +80,11 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 			}
 	}
 
-	async function call(body: OwnerCallBody): Promise<CheckAnswer | boolean> {
+	async function call(
+		body: OwnerCallBody,
+	): Promise<
+		CheckAnswer | boolean | AppliedSubjectOnWire[] | SubjectDigestOnWire[]
+	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
 			body.type !== "installCatalog" && waiting.size >= MAX_CALLS_IN_FLIGHT;
@@ -92,6 +131,46 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		};
 	}
 
+	async function listSince(params: {
+		atomId: string | null;
+		slot: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<AppliedSubject[]> {
+		const wires = (await call({
+			type: "listSince",
+			...params,
+		})) as AppliedSubjectOnWire[];
+		return wires.map(wireToAppliedSubject);
+	}
+
+	async function digestSince(params: {
+		atomId: string | null;
+		slot: number;
+		after: number | null;
+		cursor: SubjectCursor | null;
+		limit: number;
+	}): Promise<SubjectDigest[]> {
+		const wires = (await call({
+			type: "digestSince",
+			...params,
+		})) as SubjectDigestOnWire[];
+		return wires.map(wireToDigest);
+	}
+
+	async function fetchSubjects(params: {
+		atomId: string | null;
+		slot: number;
+		keys: { customerId: string; entityId: string }[];
+	}): Promise<AppliedSubject[]> {
+		const wires = (await call({
+			type: "fetchSubjects",
+			...params,
+		})) as AppliedSubjectOnWire[];
+		return wires.map(wireToAppliedSubject);
+	}
+
 	function connect({ port: next }: { port: MessagePort }): void {
 		port = next;
 		port.onmessage = receiveReply;
@@ -109,5 +188,13 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	);
 	sweep.unref();
 
-	return { processorFor, catalogFor, connect, disconnect };
+	return {
+		processorFor,
+		catalogFor,
+		listSince,
+		digestSince,
+		fetchSubjects,
+		connect,
+		disconnect,
+	};
 };

@@ -112,6 +112,8 @@ export type RequestContext = {
 		balanceWorkerOutage?: boolean;
 		/** Caps customers walked per list page (non-prod only). */
 		listScanCap?: number;
+		/** Stands in for Autumn's own billing checks per feature (non-prod only); a missing feature runs the real check. */
+		billingFeatures?: Partial<Record<string, boolean>>;
 		revenueCat?: {
 			subscriptions?: unknown[];
 			purchases?: unknown[];

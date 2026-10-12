@@ -190,3 +190,21 @@ export const carryOverSummary = ({
 			: countLabel({ count: featureIds.length, noun: "feature" });
 	return changedTo(`Carries ${noun} (${scope})`);
 };
+
+export const collectionMethodSummary = ({
+	switchesMethod,
+	isActive,
+	sendsInvoice,
+}: {
+	switchesMethod: boolean;
+	isActive: boolean;
+	sendsInvoice: boolean;
+}): BillingOptionSummary => {
+	if (!isActive) return null;
+	if (!switchesMethod) return changedTo("Updates invoice settings");
+	return changedTo(
+		sendsInvoice
+			? "Switches to invoicing"
+			: "Switches to charging automatically",
+	);
+};

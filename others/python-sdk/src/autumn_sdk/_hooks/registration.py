@@ -1,3 +1,4 @@
+from .edge_hook import EdgeHook
 from .fail_open_hook import FailOpenHook
 from .timeout_hook import TimeoutHook
 from .types import Hooks
@@ -16,5 +17,9 @@ def init_hooks(hooks: Hooks):
     timeout_hook = TimeoutHook()
 
     hooks.register_sdk_init_hook(fail_open_hook)
+    # After fail-open, which wraps the HTTP clients the edge ones wrap in turn.
+    edge_hook = EdgeHook()
+    hooks.register_sdk_init_hook(edge_hook)
+    hooks.register_before_request_hook(edge_hook)
     hooks.register_before_request_hook(timeout_hook)
     hooks.register_after_error_hook(fail_open_hook)

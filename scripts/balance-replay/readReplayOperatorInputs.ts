@@ -5,10 +5,14 @@ import {
 	REPLAY_STAGING_OWNERSHIP_TOPIC,
 	REPLAY_STAGING_PARTITION_COUNT,
 	REPLAY_STAGING_REGION,
+	REPLAY_STAGING_SASL_MECHANISM,
 } from "@server/internal/balances/replay/targets/replayStagingTargetContracts.js";
 
 export const REPLAY_OPERATOR_DATABASE_URL_VARIABLE =
 	"BALANCE_REPLAY_DATABASE_URL";
+
+const REPLAY_KAFKA_USERNAME_VARIABLE = "KAFKA_SASL_USERNAME_SERVER";
+const REPLAY_KAFKA_PASSWORD_VARIABLE = "KAFKA_SASL_PASSWORD_SERVER";
 
 /** An operator manifest capped at 1000 requests never approaches this; the
  *  limit only stops the process from reading an unbounded file. */
@@ -27,6 +31,40 @@ export function readReplayDatabaseUrl({
 		});
 	}
 	return databaseUrl;
+}
+
+function readRequiredKafkaVariable({
+	runtimeEnv,
+	variable,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+	variable: string;
+}): string {
+	const value = runtimeEnv[variable];
+	if (!value?.trim()) {
+		throw new ReplayOperatorError({
+			message: `${variable} is required to authenticate to the pinned staging Kafka cluster`,
+		});
+	}
+	return value;
+}
+
+export function readReplayKafkaSasl({
+	runtimeEnv,
+}: {
+	runtimeEnv: Record<string, string | undefined>;
+}) {
+	return {
+		mechanism: REPLAY_STAGING_SASL_MECHANISM,
+		username: readRequiredKafkaVariable({
+			runtimeEnv,
+			variable: REPLAY_KAFKA_USERNAME_VARIABLE,
+		}).trim(),
+		password: readRequiredKafkaVariable({
+			runtimeEnv,
+			variable: REPLAY_KAFKA_PASSWORD_VARIABLE,
+		}),
+	};
 }
 
 /** The deployment, topic, partition count and region are pinned constants: the

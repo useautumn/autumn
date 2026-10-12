@@ -5,6 +5,7 @@ import type { Auth } from "../auth/types/auth.js";
 import { CATALOG_FILE, openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
+import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import {
 	atomFolderPath,
@@ -40,12 +41,15 @@ export const createMultiTenantAuth = ({
 	slotCount,
 	owners,
 	heldSubjects,
+	subjectPulls,
 	clock = () => performance.now(),
 }: {
 	dataDir: string;
 	slotCount: number;
 	owners: SlotOwners;
 	heldSubjects: HeldSubjects;
+	/** Each folder pulls with its own token hash, read at each pull since a put may re-token it. */
+	subjectPulls: SubjectPulls;
 	clock?: () => number;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
@@ -126,6 +130,10 @@ export const createMultiTenantAuth = ({
 			atomId: held.id,
 			owners,
 			held: heldSubjects,
+			pulls: {
+				subjectPulls,
+				tokenHash: () => held.tokenHash,
+			},
 		});
 		held.catalogInode = catalogInodeOf({ id: held.id });
 		return held.slots;
