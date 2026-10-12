@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import { alignTierCurrencyShapes } from "@/views/products/plan/utils/currencyUtils";
 import {
+	addTier,
 	itemToVolumePricingMode,
 	tiersToVolumePricingMode,
 	volumePricingModeFitsTiers,
@@ -190,5 +191,28 @@ describe("volumePricingModeFitsTiers", () => {
 				tiers: [{ to: Infinite, amount: 1 }],
 			}),
 		).toBe(false);
+	});
+});
+
+describe("addTier", () => {
+	test("a tier added in Unit + Flat mode keeps the flat-fee field, so the mode still fits", () => {
+		let next: ProductItem | undefined;
+		addTier({
+			item: volumeItem([
+				{ to: 100, amount: 1, flat_amount: 0 },
+				{ to: Infinite, amount: 0.5, flat_amount: 0 },
+			]),
+			setItem: (item) => {
+				next = item;
+			},
+		});
+
+		expect(next?.tiers?.[2]?.flat_amount).toBe(0);
+		expect(
+			volumePricingModeFitsTiers({
+				mode: "per_unit_and_flat",
+				tiers: next?.tiers,
+			}),
+		).toBe(true);
 	});
 });

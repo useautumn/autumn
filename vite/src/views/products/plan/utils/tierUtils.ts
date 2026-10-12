@@ -35,6 +35,10 @@ const zeroedCurrencyEntries = (tier: PriceTier | undefined) =>
 			}))
 		: undefined;
 
+// A new tier keeps the flat-fee field its neighbour has, so Unit + Flat stays selected.
+const zeroedFlatAmount = (tier: PriceTier | undefined) =>
+	tier?.flat_amount != null ? { flat_amount: 0 } : {};
+
 export const addTier = ({
 	item,
 	setItem,
@@ -57,6 +61,7 @@ export const addTier = ({
 				{
 					to: Infinite,
 					amount: 0,
+					...zeroedFlatAmount(firstTier),
 					additional_currencies: zeroedCurrencyEntries(firstTier),
 				}, // Second tier is infinite
 			],
@@ -76,6 +81,7 @@ export const addTier = ({
 		newTiers.push({
 			to: Infinite,
 			amount: 0,
+			...zeroedFlatAmount(lastTier),
 			additional_currencies: zeroedCurrencyEntries(lastTier),
 		});
 		setItem({ ...item, tiers: newTiers });
