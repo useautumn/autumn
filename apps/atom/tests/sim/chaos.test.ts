@@ -42,6 +42,8 @@ afterAll(() => spyOn(globalThis, "fetch").mockRestore());
 type Scenario = {
 	name: string;
 	profile?: Partial<NetworkProfile>;
+	/** Entities per customer, pushed as views beside the customer's own. */
+	entities?: number;
 	skews?: number[];
 	/** The chaos, run with traffic for `ms`; `onStep` fires every 100 ms of simulated time. */
 	chaos: (cluster: SimCluster) => {
@@ -106,6 +108,7 @@ const runScenario = async ({
 	const cluster = createSimCluster({
 		seed,
 		profile: scenario.profile,
+		entities: scenario.entities,
 		log: LOG,
 	});
 	try {
@@ -248,6 +251,18 @@ const scenarios: Scenario[] = [
 				after: () => cluster.network.heal(),
 			};
 		},
+	},
+	{
+		name: "customers with entities: a view of an entity never wipes the customer's rows, and both converge",
+		entities: 2,
+		profile: { delayMs: [1, 200], dropRate: 0.05 },
+		chaos: (cluster) => ({
+			ms: 90_000,
+			onStep: () => {
+				if (cluster.rng.chance(0.004)) restartOne({ cluster, fresh: false });
+			},
+		}),
+		freshnessBoundMs: 15_000,
 	},
 	{
 		name: "the ready gate under churn: checks proxied while replicas start, never twice, never in a loop",

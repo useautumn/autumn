@@ -8,6 +8,12 @@ import { createPeerOutbox } from "../../../src/replication/outbox/createPeerOutb
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import { createPeerSender } from "../../../src/replication/transport/sendToPeer.js";
 import {
+	storedEntitySubjectWith,
+	storedSubjectWith,
+	subjectPushOf,
+} from "../utils/atomFixtures.js";
+import {
+	ATOM_TOKEN,
 	bodyFor,
 	cleanUpReplicas,
 	connect,
@@ -58,7 +64,7 @@ const sinceBody = JSON.stringify({
 });
 
 describe("F2: a write held by one replica alone is repaired", () => {
-	test("after a restart, what a replica stored just before it died reaches the peers again", async () => {
+	test("after a restart, what a replica stored just before it died reaches the peers through their next pass", async () => {
 		let now = 5_000;
 		const a = createReplica({
 			address: "10.0.0.1",
@@ -74,11 +80,10 @@ describe("F2: a write held by one replica alone is repaired", () => {
 		// Stored on a with its relay never sent (the process died before the outbox ran).
 		await storeOnly({ replica: a, customerId: "cus_1", readAt: 5_000 });
 
-		// a restarts on its volume a minute later: its boot sends the recent row on.
+		// a restarts on its volume a minute later; b's next pass pulls the row a alone holds.
 		now = 65_000;
-		const sync = a.sync();
-		await sync.catchUp();
-		expect(sync.resendRecent()).toBe(1);
+		await a.sync().catchUp();
+		await b.sync().pass();
 		await settle();
 
 		expect(await heldEverywhere(b)).toContain("cus_1");
@@ -319,5 +324,35 @@ describe("catch-up window edge", () => {
 		await sync.catchUp();
 
 		expect(await heldIds({ replica: b, slot: 0 })).toContain(edge);
+	});
+});
+
+describe("N2: a customer's view and its entities' are distinct in the outbox", () => {
+	test("a push for one entity does not replace a waiting push for another of the same customer", async () => {
+		const sent: string[] = [];
+		const a = createReplica({ address: "10.0.0.1", peers: ["10.0.0.2"] });
+		a.replication.replicate = (operation) => void sent.push(operation.key);
+		const customerView = subjectPushOf({
+			subject: storedSubjectWith({ balance: 10 }),
+		});
+		const entityView = subjectPushOf({
+			subject: storedEntitySubjectWith({
+				customerBalance: 10,
+				entityBalance: 5,
+			}),
+		});
+
+		for (const push of [customerView, entityView])
+			await a.app.request("/v1/subjects.set", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-atom-token": ATOM_TOKEN,
+					[ATOM_CUSTOMER_ID_HEADER]: push.customerId,
+				},
+				body: push.body,
+			});
+
+		expect(sent).toEqual(["cus_1\u0000", "cus_1\u0000ent_42"]);
 	});
 });

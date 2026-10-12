@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { SimCluster, Version } from "./simCluster.js";
+import { type SimCluster, subjectKey, type Version } from "./simCluster.js";
 
 const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 
@@ -21,8 +21,12 @@ export const assertConverged = async ({ cluster }: { cluster: SimCluster }) => {
 				truth.set(customerId, version);
 		}
 	for (const entry of cluster.applied) {
-		const known = truth.get(entry.customerId);
-		expect(known && !cluster.newer(entry.version, known)).toBe(true);
+		if (cluster.lostVolumes.has(entry.on)) continue;
+		const known = truth.get(subjectKey(entry));
+		if (!known || cluster.newer(entry.version, known))
+			throw new Error(
+				`${subjectKey(entry)}@${entry.balance} applied at +${entry.at - 1_700_000_000_000}ms on #${entry.on} is held by no replica now: a lost update`,
+			);
 	}
 	for (const { replica, held: byCustomer } of held)
 		for (const [customerId, version] of truth) {
@@ -32,6 +36,19 @@ export const assertConverged = async ({ cluster }: { cluster: SimCluster }) => {
 					`${replica.address}#${replica.id} holds ${customerId} at ${mine ? `${mine.version.readAt}/${mine.version.logOffset}` : "nothing"}, newest is ${version.readAt}/${version.logOffset}`,
 				);
 		}
+	// The same version means the same rows: a part written empty at a version it already held would pass the version check alone.
+	for (const [key, version] of truth) {
+		const balances = new Set(
+			held
+				.map(({ held: byCustomer }) => byCustomer.get(key))
+				.filter((mine) => mine && !cluster.newer(version, mine.version))
+				.map((mine) => mine?.balance),
+		);
+		if (balances.size !== 1 || balances.has(Number.NaN))
+			throw new Error(
+				`${key} at ${version.readAt}/${version.logOffset} holds different rows across replicas: balances ${[...balances].join(", ")}`,
+			);
+	}
 	const catalogReadAt = cluster.catalogReadAt();
 	if (catalogReadAt > 0)
 		// False only when a catalog read at or after this one is held.
@@ -60,6 +77,7 @@ export const assertFreshness = ({
 		for (const entry of cluster.applied)
 			if (
 				entry.customerId === check.customerId &&
+				entry.entityId === null &&
 				entry.at <= check.at - boundMs &&
 				entry.balance > newest
 			)

@@ -74,9 +74,10 @@ describe("boot resend (review round 2 of #4605)", () => {
 		await settle();
 		const before = await customerMessagesOn(b);
 
-		// a restarts on its volume a minute later and resends what it wrote just before it stopped.
+		// a restarts on its volume a minute later; what it wrote reaches the peers only through their passes, never through the push path.
 		now += 60_000;
-		a.sync().resendRecent();
+		await a.sync().catchUp();
+		await b.sync().pass();
 		await settle();
 		const after = await customerMessagesOn(b);
 

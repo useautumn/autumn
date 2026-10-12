@@ -147,7 +147,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		slots: auth.slots,
 	});
 
-	/** As the thread boots: listens, catches up, reports ready, sends its recent rows again, then keeps passing. */
+	/** As the thread boots: listens, catches up, reports ready, then keeps passing. */
 	async function start(): Promise<void> {
 		state = "starting";
 		network.bind(endpoint);
@@ -156,7 +156,6 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		Atomics.store(ready, 0, 1);
 		state = "ready";
 		ctx.log?.(`${ctx.address}#${id} ready`);
-		sync.resendRecent();
 		void sync.runPasses();
 	}
 

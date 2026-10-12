@@ -6,6 +6,7 @@ import {
 	createCatalogRowsFor,
 	createCustomerEntitlement,
 	createCustomerProduct,
+	entity as entityFixture,
 	identity,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
@@ -40,11 +41,23 @@ export type Version = { readAt: number; logOffset: bigint };
 const newer = (a: Version, b: Version) =>
 	a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
 
+/** A subject key as the store keys it: the customer's own view, or one of its entities'. */
+export const subjectKey = ({
+	customerId,
+	entityId,
+}: {
+	customerId: string;
+	entityId: string | null;
+}) => `${customerId}\u0000${entityId ?? ""}`;
+
 export type Applied = {
 	customerId: string;
+	entityId: string | null;
 	version: Version;
 	balance: number;
 	at: number;
+	/** The replica generation that stored it. */
+	on: number;
 };
 export type CheckRecord = {
 	at: number;
@@ -60,6 +73,8 @@ export type ClusterOptions = {
 	seed: number;
 	profile?: Partial<NetworkProfile>;
 	customers?: number;
+	/** Entities per customer; Autumn pushes an entity's view as often as the customer's own. */
+	entities?: number;
 	log?: boolean;
 };
 
@@ -71,6 +86,7 @@ export const createSimCluster = ({
 	seed,
 	profile = {},
 	customers = 8,
+	entities = 0,
 	log = false,
 }: ClusterOptions) => {
 	const rng = createSeededRandom(seed);
@@ -99,6 +115,8 @@ export const createSimCluster = ({
 	let logOffset = 0n;
 	const versions = new Map<string, number>();
 	const applied: Applied[] = [];
+	/** Generations whose volume was thrown away: what only they stored is gone for good, as it would be in the cloud. */
+	const lostVolumes = new Set<number>();
 	const checks: CheckRecord[] = [];
 	let catalogReadAt = 0;
 	const background = new Set<Promise<unknown>>();
@@ -117,19 +135,47 @@ export const createSimCluster = ({
 		task.finally(() => background.delete(task)).catch(() => {});
 	};
 
+	/** A customer's view, or an entity's: the customer's rows with the entity's own beside them. */
 	const subjectBody = ({
 		customerId,
+		entityId,
 		balance,
 		readAt,
 	}: {
 		customerId: string;
+		entityId: string | null;
 		balance: number;
 		readAt: number;
 	}) => {
+		const entity = entityId
+			? {
+					...entityFixture,
+					id: entityId,
+					internal_id: `${customerId}_${entityId}_internal`,
+				}
+			: null;
+		const customerBalance = entityId
+			? (versions.get(subjectKey({ customerId, entityId: null })) ?? 0)
+			: balance;
 		const state = createSubjectState({
-			identity: { ...identity, customerId },
+			identity: { ...identity, customerId, entityId },
 			customerProducts: [createCustomerProduct()],
-			customerEntitlements: [createCustomerEntitlement({ balance })],
+			customerEntitlements: [
+				createCustomerEntitlement({ balance: customerBalance }),
+				...(entity
+					? [
+							{
+								...createCustomerEntitlement({
+									id: `messages_${entity.id}`,
+									balance,
+								}),
+								customer_product_id: null,
+								internal_entity_id: entity.internal_id,
+							},
+						]
+					: []),
+			],
+			...(entity && { entity }),
 		});
 		logOffset += 1n;
 		return {
@@ -152,14 +198,24 @@ export const createSimCluster = ({
 	/** Autumn's next read of a customer: a newer version, pushed to whichever replica the balancer picks. */
 	async function push({
 		customerId = rng.pick(customerIds),
+		entityId = entities > 0 && rng.chance(0.5)
+			? `ent_${rng.int(1, entities)}`
+			: null,
 		readAt = clock.now(),
 	}: {
 		customerId?: string;
+		entityId?: string | null;
 		readAt?: number;
 	} = {}) {
-		const balance = (versions.get(customerId) ?? 0) + 1;
-		versions.set(customerId, balance);
-		const { version, text } = subjectBody({ customerId, balance, readAt });
+		const key = subjectKey({ customerId, entityId });
+		const balance = (versions.get(key) ?? 0) + 1;
+		versions.set(key, balance);
+		const { version, text } = subjectBody({
+			customerId,
+			entityId,
+			balance,
+			readAt,
+		});
 		const to = boundAddress();
 		if (!to) {
 			say(`push ${customerId}@${balance} lost: nothing listening`);
@@ -182,7 +238,14 @@ export const createSimCluster = ({
 			);
 			const { stored } = (await reply.json()) as { stored: boolean };
 			if (reply.status === 200 && stored)
-				applied.push({ customerId, version, balance, at: clock.now() });
+				applied.push({
+					customerId,
+					entityId,
+					version,
+					balance,
+					at: clock.now(),
+					on: replicas.get(to)?.id ?? 0,
+				});
 			else
 				say(
 					`push ${customerId}@${balance} to ${to}: ${reply.status} stored=${stored}`,
@@ -302,6 +365,10 @@ export const createSimCluster = ({
 	}): SimReplica {
 		if (skewMs !== undefined) skews.set(address, skewMs);
 		let volume = volumes.get(address);
+		if (volume && fresh) {
+			const previous = replicas.get(address);
+			if (previous) lostVolumes.add(previous.id);
+		}
 		if (!volume || fresh) {
 			volume = createVolume();
 			volumes.set(address, volume);
@@ -420,11 +487,17 @@ export const createSimCluster = ({
 				limit: 100_000,
 			});
 			for (const { subject } of subjects) {
-				const balance =
-					subject.state.customerEntitlements[0]?.balance ?? Number.NaN;
-				byCustomer.set(subject.state.identity.customerId, {
+				const { customerId, entityId } = subject.state.identity;
+				// An entity's part holds its own rows only; the customer's view holds the customer's.
+				const ownerId = entityId
+					? (subject.state.entity?.internal_id ?? null)
+					: null;
+				const own = subject.state.customerEntitlements.find(
+					(row) => (row.internal_entity_id ?? null) === ownerId,
+				);
+				byCustomer.set(subjectKey({ customerId, entityId: entityId ?? null }), {
 					version: { readAt: subject.readAt, logOffset: subject.logOffset },
-					balance,
+					balance: own?.balance ?? Number.NaN,
 				});
 			}
 		}
@@ -458,6 +531,7 @@ export const createSimCluster = ({
 		settle: () => clock.run(0),
 		held,
 		applied,
+		lostVolumes,
 		checks,
 		catalogReadAt: () => catalogReadAt,
 		newer,
