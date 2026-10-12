@@ -1,6 +1,7 @@
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { additionalCurrenciesToKey } from "@utils/planV1Utils/convertPlanItem/additionalCurrenciesToKey";
+import { featureOverrideToKey } from "@utils/planV1Utils/diff/compareFeatureOverrides";
 
 type PlanItemPrice = NonNullable<CreatePlanItemParamsV1["price"]>;
 
@@ -61,4 +62,5 @@ export const createPlanItemToKey = ({
 		`rollover.max_percentage:${item.rollover?.max_percentage ?? ""}`,
 		`rollover.expiry_duration_type:${item.rollover?.expiry_duration_type ?? ""}`,
 		`rollover.expiry_duration_length:${item.rollover?.expiry_duration_length ?? ""}`,
+		`feature_override:${featureOverrideToKey(item.feature_override)}`,
 	].join(",");
