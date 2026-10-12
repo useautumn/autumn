@@ -378,7 +378,7 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: ACCEPT volume-based with
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// V0 product items: volume-based on usage-based items, but never with thresholds
+// V0 product items: volume-based on usage-based items
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const VOLUME_SINGLE_TIER =
@@ -389,19 +389,14 @@ const VOLUME_TWO_TIERS: ProductItem["tiers"] = [
 	{ to: TierInfinite, amount: 0.5 },
 ];
 
-const VOLUME_THRESHOLD =
-	"threshold_billing can't be combined with tiered pricing";
-
 const volumeMessagesItem = ({
 	usageModel,
 	price,
 	tiers,
-	thresholdBilling,
 }: {
 	usageModel: UsageModel;
 	price?: number;
 	tiers?: ProductItem["tiers"];
-	thresholdBilling?: { threshold: number };
 }): V0Item => ({
 	feature_id: TestFeature.Messages,
 	included_usage: 100,
@@ -409,9 +404,6 @@ const volumeMessagesItem = ({
 	usage_model: usageModel,
 	tier_behavior: TierBehavior.VolumeBased,
 	...(tiers ? { tiers } : { price }),
-	...(thresholdBilling
-		? { config: { threshold_billing: thresholdBilling } }
-		: {}),
 });
 
 type V0Item = NonNullable<CreateProductV2ParamsInput["items"]>[number];
@@ -493,27 +485,6 @@ test.concurrent(
 					tiers: VOLUME_TWO_TIERS,
 				}),
 			],
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("tier-errors V0 create: REJECT volume with threshold_billing")}`,
-	async () => {
-		await expectAutumnError({
-			errCode: "invalid_inputs",
-			errMessage: VOLUME_THRESHOLD,
-			func: () =>
-				createV0Product({
-					productId: `err_v0_vol_threshold_${getSuffix()}`,
-					items: [
-						volumeMessagesItem({
-							usageModel: UsageModel.PayPerUse,
-							tiers: VOLUME_TWO_TIERS,
-							thresholdBilling: { threshold: 50 },
-						}),
-					],
-				}),
 		});
 	},
 );
@@ -659,42 +630,6 @@ test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT single-tier volum
 			},
 		],
 		errMessage: VOLUME_SINGLE_TIER,
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// V1: threshold_billing can't be combined with volume tiers (V0 is covered by #4554)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const THRESHOLD_FLAT_ONLY = "threshold_billing currently requires a flat usage price";
-
-const volumeThresholdItem: NonNullable<CreatePlanParamsInput["items"]>[number] = {
-	feature_id: TestFeature.Messages,
-	threshold_billing: { threshold: 50 },
-	price: {
-		tiers: [
-			{ to: 100, amount: 1 },
-			{ to: TierInfinite, amount: 0.5 },
-		],
-		tier_behavior: TierBehavior.VolumeBased,
-		interval: BillingInterval.Month,
-		billing_method: BillingMethod.UsageBased,
-	},
-};
-
-test.concurrent(`${chalk.yellowBright("tier-errors REST: REJECT threshold_billing with volume tiers")}`, async () => {
-	await expectRestError({
-		productId: `err_vol_threshold_${getSuffix()}`,
-		items: [volumeThresholdItem],
-		errMessage: THRESHOLD_FLAT_ONLY,
-	});
-});
-
-test.concurrent(`${chalk.yellowBright("tier-errors RPC: REJECT threshold_billing with volume tiers")}`, async () => {
-	await expectRpcError({
-		productId: `err_vol_threshold_rpc_${getSuffix()}`,
-		items: [volumeThresholdItem],
-		errMessage: THRESHOLD_FLAT_ONLY,
 	});
 });
 

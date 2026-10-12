@@ -40,14 +40,6 @@ export const validateItemTierBehavior = ({
 		: null;
 	if (singleTierIssue) throwInvalidVolumeItem({ message: singleTierIssue });
 
-	// Each threshold charge prices its chunk on its own, but a volume band (and its
-	// charge on included units) depends on the whole period's usage.
-	if (notNullish(item.config?.threshold_billing)) {
-		throwInvalidVolumeItem({
-			message: `threshold_billing can't be combined with tiered pricing (feature: ${item.feature_id}): a volume band depends on the whole period's usage, so each threshold charge would be mis-priced. Use a single price, or remove threshold_billing.`,
-		});
-	}
-
 	// Stripe prices allocated seats and bills tier 1's flat fee even at 0 seats;
 	// included usage puts a free tier first, so the fee only applies past it.
 	const isAllocatedItem =

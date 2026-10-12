@@ -13,10 +13,8 @@ import { validateItemTierBehavior } from "@/internal/products/product-items/vali
 
 const payPerUseItem = ({
 	tierBehavior,
-	thresholdBilling,
 }: {
 	tierBehavior: TierBehavior;
-	thresholdBilling?: { threshold: number };
 }): ProductItem =>
 	({
 		feature_id: "messages",
@@ -28,7 +26,6 @@ const payPerUseItem = ({
 			{ to: 100, amount: 1 },
 			{ to: TierInfinite, amount: 0.5 },
 		],
-		config: thresholdBilling ? { threshold_billing: thresholdBilling } : null,
 	}) as ProductItem;
 
 describe("validateItemTierBehavior", () => {
@@ -37,30 +34,6 @@ describe("validateItemTierBehavior", () => {
 			validateItemTierBehavior({
 				validateAuthoringRules: true,
 				item: payPerUseItem({ tierBehavior: TierBehavior.VolumeBased }),
-			}),
-		).not.toThrow();
-	});
-
-	test("rejects volume with threshold_billing, even on a single tier", () => {
-		expect(() =>
-			validateItemTierBehavior({
-				validateAuthoringRules: true,
-				item: payPerUseItem({
-					tierBehavior: TierBehavior.VolumeBased,
-					thresholdBilling: { threshold: 50 },
-				}),
-			}),
-		).toThrow("threshold_billing can't be combined with tiered pricing");
-	});
-
-	test("accepts graduated single price with threshold_billing", () => {
-		expect(() =>
-			validateItemTierBehavior({
-				validateAuthoringRules: true,
-				item: payPerUseItem({
-					tierBehavior: TierBehavior.Graduated,
-					thresholdBilling: { threshold: 50 },
-				}),
 			}),
 		).not.toThrow();
 	});

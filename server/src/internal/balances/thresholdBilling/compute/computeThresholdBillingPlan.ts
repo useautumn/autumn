@@ -4,8 +4,7 @@ import {
 	InternalError,
 	type LineItemContext,
 	type StripeBillingPlan,
-	sumValues,
-	usagePriceToLineItems,
+	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeRebalancedAutoTopUp } from "@/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.js";
@@ -39,19 +38,15 @@ export const computeThresholdBillingPlan = ({
 		billingTiming: "in_advance",
 	} satisfies LineItemContext;
 
-	// Pricing a balance of -chargeUnits bills exactly the units settled now, which the lines describe.
-	const lineItems = usagePriceToLineItems({
+	const lineItem = usagePriceToLineItem({
 		cusEnt: { ...customerEntitlement, balance: -chargeUnits },
 		context: lineItemContext,
 		options: { shouldProrateOverride: false, chargeImmediatelyOverride: true },
 	});
 
-	const settlementAmount = sumValues(
-		lineItems.map((lineItem) => lineItem.amount),
-	);
-	if (settlementAmount <= 0) {
+	if (lineItem.amount <= 0) {
 		throw new InternalError({
-			message: `[computeThresholdBillingPlan] Settlement amount for feature ${feature.id} was ${settlementAmount}`,
+			message: `[computeThresholdBillingPlan] Settlement amount for feature ${feature.id} was ${lineItem.amount}`,
 		});
 	}
 
@@ -68,7 +63,7 @@ export const computeThresholdBillingPlan = ({
 		autumnBillingPlan: {
 			customerId: billingContext.fullCustomer?.id ?? "",
 			insertCustomerProducts: [],
-			lineItems,
+			lineItems: [lineItem],
 			updateCustomerEntitlements: [],
 			autoTopupRebalance: {
 				deltas,
@@ -81,7 +76,7 @@ export const computeThresholdBillingPlan = ({
 		stripeBillingPlan: {
 			invoiceAction: {
 				addLineParams: {
-					lines: lineItemsToInvoiceAddLinesParams({ lineItems }),
+					lines: lineItemsToInvoiceAddLinesParams({ lineItems: [lineItem] }),
 				},
 			},
 		},
