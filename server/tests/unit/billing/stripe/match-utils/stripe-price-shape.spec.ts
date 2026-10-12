@@ -308,7 +308,7 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 		}
 	});
 
-	test("does not construct unsupported flat-amount or volume consumable shapes", () => {
+	test("does not construct graduated consumable shapes with flat amounts, as on dev", () => {
 		expect(
 			autumnConsumablePriceToStripePriceShape({
 				price: consumablePrice({
@@ -323,16 +323,73 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 				org,
 			}),
 		).toBeNull();
+	});
 
+	test("does not construct a graduated consumable shape when flat_amount is 0, as on dev", () => {
 		expect(
 			autumnConsumablePriceToStripePriceShape({
-				price: consumablePrice({ tierBehavior: TierBehavior.VolumeBased }),
+				price: consumablePrice({
+					tiers: [{ to: Infinite, amount: 0, flat_amount: 0 }],
+				}),
 				entitlement: entitlement(),
 				stripeProductId: "prod_messages",
 				currency: "usd",
 				org,
 			}),
 		).toBeNull();
+	});
+
+	test("keeps another currency's flat fee on a graduated consumable shape, as the metered price is created", () => {
+		const price = consumablePrice({
+			tiers: [
+				{ to: 500, amount: 0.1 },
+				{ to: Infinite, amount: 0.05 },
+			],
+		});
+		Object.assign(price.config, {
+			base_currency: "usd",
+			currencies: {
+				eur: {
+					usage_tiers: [
+						{ to: 500, amount: 0.09, flat_amount: 5 },
+						{ to: Infinite, amount: 0.04 },
+					],
+				},
+			},
+		});
+
+		const shape = autumnConsumablePriceToStripePriceShape({
+			price,
+			entitlement: entitlement(),
+			stripeProductId: "prod_messages",
+			currency: "eur",
+			org,
+		});
+
+		expect(shape?.tiers?.[0]?.flatAmountDecimal).toBe("500");
+	});
+
+	test("constructs a volume consumable shape without flat fees, as the metered price is created", () => {
+		const shape = autumnConsumablePriceToStripePriceShape({
+			price: consumablePrice({
+				tierBehavior: TierBehavior.VolumeBased,
+				tiers: [
+					{ to: 500, amount: 0.1, flat_amount: 1 },
+					{ to: Infinite, amount: 0.05 },
+				],
+			}),
+			entitlement: entitlement({ allowance: 100 }),
+			stripeProductId: "prod_messages",
+			currency: "usd",
+			org,
+		});
+
+		expect(shape?.tiersMode).toBe("volume");
+		expect(shape?.tiers).toEqual([
+			{ upTo: 100, unitAmountDecimal: "0" },
+			{ upTo: 600, unitAmountDecimal: "10" },
+			{ upTo: "inf", unitAmountDecimal: "5" },
+		]);
 	});
 });
 
