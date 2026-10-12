@@ -27,13 +27,22 @@ const mergeModelMarkups = ({
 	return merged;
 };
 
-// The override's rate rows replace the catalog schema; excluded rows add nothing.
-const overrideSchemaToCreditSchema = (
-	schema: CreditSchemaOverrideItem[],
-): CreditSchemaItem[] =>
-	schema.filter(
-		(row): row is CreditSchemaItem => !isExcludedCreditSchemaItem(row),
-	);
+/** Override rows patch the catalog schema by feature: a rate row replaces or
+ * adds that feature, an excluded row removes it, unlisted features inherit. */
+const mergeCreditSchema = ({
+	catalog,
+	override,
+}: {
+	catalog: CreditSchemaItem[];
+	override: CreditSchemaOverrideItem[];
+}): CreditSchemaItem[] => {
+	const merged = new Map(catalog.map((row) => [row.metered_feature_id, row]));
+	for (const row of override) {
+		if (isExcludedCreditSchemaItem(row)) merged.delete(row.metered_feature_id);
+		else merged.set(row.metered_feature_id, row);
+	}
+	return [...merged.values()];
+};
 
 /** The one place a plan item's feature_override is applied. */
 export const entitlementToCreditSystem = ({
@@ -50,7 +59,14 @@ export const entitlementToCreditSystem = ({
 	const config = {
 		...creditSystem.config,
 		...configKeys,
-		...(schema ? { schema: overrideSchemaToCreditSchema(schema) } : {}),
+		...(schema
+			? {
+					schema: mergeCreditSchema({
+						catalog: creditSystem.config?.schema ?? [],
+						override: schema,
+					}),
+				}
+			: {}),
 	};
 
 	if (!markups) return { ...creditSystem, config };

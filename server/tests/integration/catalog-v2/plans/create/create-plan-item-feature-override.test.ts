@@ -1,7 +1,7 @@
 /**
  * catalogV2.update — plan-item feature_override: round-trips through
  * create/update/clear, persists on the entitlement row, and rejects invalid
- * shapes. Each present key fully replaces the feature's config value at
+ * shapes. credit_schema rows merge into the credit system's schema at
  * runtime (runtime behavior covered by track tests).
  */
 
