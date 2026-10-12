@@ -10,6 +10,7 @@ import { invoicesListTemplates } from "../funcs/invoices-list-templates.js";
 import { invoicesList } from "../funcs/invoices-list.js";
 import { invoicesPay } from "../funcs/invoices-pay.js";
 import { invoicesReissue } from "../funcs/invoices-reissue.js";
+import { invoicesUpdate } from "../funcs/invoices-update.js";
 import { invoicesVoid } from "../funcs/invoices-void.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -122,6 +123,20 @@ export class Invoices extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.ReissueInvoiceResponse> {
     return unwrapAsync(invoicesReissue(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Changes which payment methods a draft or open Stripe invoice accepts. The customer sees the change on the hosted invoice page straight away.
+   */
+  async update(
+    request: models.UpdateInvoiceParams,
+    options?: RequestOptions,
+  ): Promise<models.UpdateInvoiceResponse> {
+    return unwrapAsync(invoicesUpdate(
       this,
       request,
       options,

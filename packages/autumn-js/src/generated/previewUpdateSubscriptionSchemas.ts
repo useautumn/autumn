@@ -93,14 +93,6 @@ export const previewUpdateRemoveLicenseSchema = z.object({
 	licensePlanId: z.string(),
 });
 
-export const previewUpdateInvoiceModeSchema = z.object({
-	enabled: z.boolean(),
-	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalize: z.union([z.boolean(), z.undefined()]).optional(),
-	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
-	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
-});
-
 export const previewUpdateAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
@@ -475,6 +467,9 @@ export const previewUpdateInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
+	payment_method_types: z
+		.union([z.array(z.string()), z.undefined()])
+		.optional(),
 });
 
 export const previewUpdateAttachDiscountOutboundSchema = z.object({
@@ -828,6 +823,19 @@ export const previewUpdateCustomizeSchema = z.object({
 		.optional(),
 	removeLicenses: z
 		.union([z.array(previewUpdateRemoveLicenseSchema), z.undefined()])
+		.optional(),
+});
+
+export const previewUpdatePaymentMethodTypeSchema = closedEnumSchema;
+
+export const previewUpdateInvoiceModeSchema = z.object({
+	enabled: z.boolean(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
+	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
+	paymentMethodTypes: z
+		.union([z.array(previewUpdatePaymentMethodTypeSchema), z.undefined()])
 		.optional(),
 });
 

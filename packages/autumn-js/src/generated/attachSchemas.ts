@@ -93,14 +93,6 @@ export const attachRemoveLicenseSchema = z.object({
 	licensePlanId: z.string(),
 });
 
-export const attachInvoiceModeSchema = z.object({
-	enabled: z.boolean(),
-	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalize: z.union([z.boolean(), z.undefined()]).optional(),
-	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
-	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
-});
-
 export const attachAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
@@ -404,6 +396,9 @@ export const attachInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
+	payment_method_types: z
+		.union([z.array(z.string()), z.undefined()])
+		.optional(),
 });
 
 export const attachAttachDiscountOutboundSchema = z.object({
@@ -770,6 +765,19 @@ export const attachCustomizeSchema = z.object({
 		.optional(),
 	removeLicenses: z
 		.union([z.array(attachRemoveLicenseSchema), z.undefined()])
+		.optional(),
+});
+
+export const attachPaymentMethodTypeSchema = closedEnumSchema;
+
+export const attachInvoiceModeSchema = z.object({
+	enabled: z.boolean(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
+	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
+	paymentMethodTypes: z
+		.union([z.array(attachPaymentMethodTypeSchema), z.undefined()])
 		.optional(),
 });
 
