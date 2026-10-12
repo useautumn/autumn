@@ -94,54 +94,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # No --branch/--event/--status: those API filters return stale runs; deploy-gate.ts filters.
-          BUILD_RUNS=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --limit 100 \
-            --json headSha,conclusion,event,headBranch,createdAt)
-          BUILD_RUNS="$BUILD_RUNS" bun deploy-gate.ts
-
-  # Cuts an Alien release of the Atom for prod's `autumn` project and never promotes it:
-  # the infra dashboard's Atom releases tab rolls it out. Only pushes to main, and only
-  # when the Atom's build inputs changed since the last release on main.
-  atom-release:
-    name: Atom release (no promote)
-    needs: checks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
-    # One release at a time per project. A run cancelled mid-build writes nothing: Alien creates
-    # the release in one call at the end, and the next run diffs from the last release that exists.
-    concurrency:
-      group: atom-release-autumn
-      cancel-in-progress: false
-
-    permissions:
-      contents: read
-      pull-requests: read
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Install the Alien CLI
-        run: |
-          curl -fsSL https://alien.dev/install | sh -s -- --version 3.3.32
-          alien --version
-
-      - name: Cut the Atom release
-        working-directory: .github/scripts
-        env:
-          ALIEN_API_KEY: ${{ secrets.ALIEN_PROD_API_KEY }}
-          GH_TOKEN: ${{ github.token }}
-        run: bun atom-release.ts --project=autumn
+          # Filter conclusions client-side; the API's status filter returns stale runs.
+          BASE_SHA=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main \
+            --event push --limit 50 --json headSha,conclusion \
+            --jq 'map(select(.conclusion == "success"))[0].headSha // ""')
+          BASE_SHA="$BASE_SHA" bun deploy-gate.ts
 
   build-and-push:
     name: Build and Push Docker Image
