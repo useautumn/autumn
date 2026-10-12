@@ -1,4 +1,5 @@
 import { BufferLoggedResponseHook } from "./bufferLoggedResponseHook.js";
+import { EdgeHook } from "./edge/edgeHook.js";
 import { FailOpenHook } from "./failOpenHook.js";
 import { RedactDebugLogHook } from "./redactDebugLogHook.js";
 import { TimeoutFixHook } from "./timeoutFixHook.js";
@@ -15,6 +16,10 @@ export function initHooks(hooks: Hooks) {
 	const timeoutFixHook = new TimeoutFixHook();
 	hooks.registerSDKInitHook(failOpenHook);
 	hooks.registerSDKInitHook(new RedactDebugLogHook());
+	// After fail-open, which replaces the HTTP client the edge one wraps.
+	const edgeHook = new EdgeHook();
+	hooks.registerSDKInitHook(edgeHook);
+	hooks.registerBeforeCreateRequestHook(edgeHook);
 	hooks.registerBeforeCreateRequestHook(timeoutFixHook);
 	hooks.registerAfterSuccessHook(new BufferLoggedResponseHook());
 	hooks.registerAfterErrorHook(failOpenHook);
