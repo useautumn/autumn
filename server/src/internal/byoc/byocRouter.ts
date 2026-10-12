@@ -1,4 +1,6 @@
+import { BillingFeatureId } from "@autumn/billing";
 import { Hono } from "hono";
+import { billingFeatureMiddleware } from "@/honoMiddlewares/billingFeatureMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCreateCache } from "./handlers/handleCreateCache.js";
 import { handleDeleteCache } from "./handlers/handleDeleteCache.js";
@@ -7,12 +9,17 @@ import { handleGetCache } from "./handlers/handleGetCache.js";
 import { handleListAtomChecks } from "./handlers/handleListAtomChecks.js";
 import { handleResizeCache } from "./handlers/handleResizeCache.js";
 import { handleRetryCache } from "./handlers/handleRetryCache.js";
-import { atomsFeatureMiddleware } from "./middlewares/atomsFeatureMiddleware.js";
 
 export const byocRpcRouter = new Hono<HonoEnv>();
 
 // Scoped to byoc.* paths: this router mounts at "", so "*" would also gate every rpc route mounted after it.
-byocRpcRouter.use("/:rpc{byoc\\..+}", atomsFeatureMiddleware);
+byocRpcRouter.use(
+	"/:rpc{byoc\\..+}",
+	billingFeatureMiddleware({
+		featureId: BillingFeatureId.Atoms,
+		featureName: "Atom",
+	}),
+);
 
 byocRpcRouter.post("/byoc.create_atom", ...handleCreateCache);
 byocRpcRouter.post("/byoc.get_atom", ...handleGetCache);

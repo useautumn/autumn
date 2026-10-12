@@ -21,15 +21,22 @@ await mockModuleWithRestore("autumn-js", () => ({
 }));
 
 const { byocRpcRouter } = await import("@/internal/byoc/byocRouter.js");
-const { atomsFeatureMiddleware } = await import(
-	"@/internal/byoc/middlewares/atomsFeatureMiddleware.js"
+const { billingFeatureMiddleware } = await import(
+	"@/honoMiddlewares/billingFeatureMiddleware.js"
 );
+const { BillingFeatureId } = await import("@autumn/billing");
+const atomsGate = billingFeatureMiddleware({
+	featureId: BillingFeatureId.Atoms,
+	featureName: "Atom",
+});
 
-const testCtx = ({ atomsAccess }: { atomsAccess?: boolean } = {}) =>
+const testCtx = ({ atoms }: { atoms?: boolean } = {}) =>
 	({
 		org: { id: "org_1" },
 		logger: { warn: () => {}, info: () => {}, error: () => {} },
-		testOptions: { atomsAccess },
+		testOptions: {
+			billingFeatures: atoms === undefined ? undefined : { atoms },
+		},
 	}) as unknown as AutumnContext;
 
 /** The rpc router's shape: byoc mounted at "", another rpc route after it. */
@@ -39,7 +46,7 @@ const rpcApp = ({ ctx }: { ctx: AutumnContext }) => {
 		c.set("ctx", ctx);
 		await next();
 	});
-	app.post("/byoc.ping", atomsFeatureMiddleware, (c) => c.json({ ok: true }));
+	app.post("/byoc.ping", atomsGate, (c) => c.json({ ok: true }));
 	app.route("", byocRpcRouter);
 	app.post("/stripe.read", (c) => c.json({ ok: true }));
 	app.onError((error, c) =>
@@ -63,7 +70,7 @@ beforeEach(() => {
 	process.env.AUTUMN_SECRET_KEY = "am_sk_test_key";
 });
 
-describe("atomsFeatureMiddleware (atoms gate on byoc.* routes)", () => {
+describe("billingFeatureMiddleware (atoms gate on byoc.* routes)", () => {
 	test("refuses a byoc call with feature_limit_reached when the org lacks atoms", async () => {
 		state.allowed = false;
 
@@ -92,14 +99,14 @@ describe("atomsFeatureMiddleware (atoms gate on byoc.* routes)", () => {
 		expect(state.checks).toEqual([]);
 	});
 
-	test("the x-atoms-access override stands in for Autumn's check", async () => {
+	test("the x-billing-features override stands in for Autumn's check", async () => {
 		const denied = await post({
-			ctx: testCtx({ atomsAccess: false }),
+			ctx: testCtx({ atoms: false }),
 			path: "/byoc.delete_atom",
 		});
 		state.allowed = false;
 		const allowed = await post({
-			ctx: testCtx({ atomsAccess: true }),
+			ctx: testCtx({ atoms: true }),
 			path: "/byoc.ping",
 		});
 
@@ -108,7 +115,7 @@ describe("atomsFeatureMiddleware (atoms gate on byoc.* routes)", () => {
 		expect(state.checks).toEqual([]);
 	});
 
-	test("fails open when AUTUMN_SECRET_KEY is unset, without calling Autumn", async () => {
+	test("lets the call through without AUTUMN_SECRET_KEY, without calling Autumn", async () => {
 		process.env.AUTUMN_SECRET_KEY = "";
 		state.allowed = false;
 

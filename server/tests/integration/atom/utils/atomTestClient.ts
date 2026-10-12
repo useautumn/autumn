@@ -5,5 +5,5 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 export const atomTestClient = ({ atoms = true }: { atoms?: boolean } = {}) =>
 	new AutumnInt({
 		secretKey: defaultCtx.orgSecretKey,
-		headers: { "x-atoms-access": String(atoms) },
+		headers: { "x-billing-features": `atoms=${atoms}` },
 	});

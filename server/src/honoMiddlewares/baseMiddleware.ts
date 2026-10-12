@@ -14,6 +14,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import { buildRequestLogContexts } from "@/utils/logging/requestLogContext.js";
+import { parseBillingFeaturesHeader } from "./utils/parseBillingFeaturesHeader.js";
 import { resolveCustomerId } from "./utils/resolveCustomerId.js";
 import { resolveEntityId } from "./utils/resolveEntityId.js";
 import { resolveRouteTemplate } from "./utils/resolveRouteTemplate.js";
@@ -185,9 +186,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 				process.env.NODE_ENV !== "production" && c.req.header("x-list-scan-cap")
 					? Number(c.req.header("x-list-scan-cap"))
 					: undefined,
-			atomsAccess:
-				process.env.NODE_ENV !== "production" && c.req.header("x-atoms-access")
-					? c.req.header("x-atoms-access") === "true"
+			billingFeatures:
+				process.env.NODE_ENV !== "production"
+					? parseBillingFeaturesHeader(c.req.header("x-billing-features"))
 					: undefined,
 			revenueCat:
 				process.env.NODE_ENV !== "production"
