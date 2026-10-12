@@ -7,8 +7,9 @@ import {
 } from "../qaEnv/stubs";
 import type { CreateEnvInput, Env } from "../types";
 
-// No `--`: that marks a Tinybird hostname (`<env>--tb`).
-const NAME_RE = /^(?!.*--)[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
+const NAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
+/** New envs can't use `--`: it marks a Tinybird hostname (`<env>--tb`). */
+const isNewEnvName = (name: string) => !name.includes("--");
 const RESERVED = new Set(["hooks", "www", "api", "app", "twd", "admin"]);
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -37,6 +38,8 @@ export async function handleAdmin({
 		case "GET status":
 			return json(await stub.status());
 		case "POST begin": {
+			if (!isNewEnvName(name))
+				return json({ error: "env names can't contain --" }, 400);
 			if (!(await isHostnameFree({ env, name })))
 				return json(
 					{ error: `${name}.${env.QA_DOMAIN} is used by something else` },

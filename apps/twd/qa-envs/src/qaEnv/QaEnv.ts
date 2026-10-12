@@ -745,7 +745,8 @@ export class QaEnv extends DurableObject<Env> {
 		if (this.container.running) await this.container.destroy("expired");
 		this.ready = false;
 		if (config) {
-			if (config.tinybird) await this.removeTinybird(config);
+			// Also when only a failed or unadopted re-ship asked for Tinybird: its hostname exists.
+			await this.removeTinybird(config);
 			await routerStub({ env: this.env }).setAccounts(config.name, []);
 			if (config.neonBranchId)
 				await deleteNeonBranch({

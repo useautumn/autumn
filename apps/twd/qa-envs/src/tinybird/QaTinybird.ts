@@ -214,12 +214,12 @@ export class QaTinybird extends DurableObject<Env> {
 			stderr: "combined",
 		});
 		const { exitCode } = await stop.output();
-		if (exitCode === 0) {
-			const snapshot = await this.container.snapshotContainer({
-				name: `qa-tb-${envName}`,
-			});
-			await this.ctx.storage.put("snapshot", snapshot);
-		}
+		// Without a snapshot the disk is the only copy of the data; the next idle check retries.
+		if (exitCode !== 0) return;
+		const snapshot = await this.container.snapshotContainer({
+			name: `qa-tb-${envName}`,
+		});
+		await this.ctx.storage.put("snapshot", snapshot);
 		await this.container.destroy("idle");
 		this.ready = false;
 		this.token = null;
@@ -239,10 +239,8 @@ export class QaTinybird extends DurableObject<Env> {
 		if (!this.container.running) return this.ctx.storage.setAlarm(expiresAt);
 		const lastActiveAt =
 			(await this.ctx.storage.get<number>("lastActiveAt")) ?? 0;
-		if (Date.now() - lastActiveAt >= IDLE_MS) {
-			await this.sleepNow();
-			return this.ctx.storage.setAlarm(expiresAt);
-		}
+		if (Date.now() - lastActiveAt >= IDLE_MS) await this.sleepNow();
+		if (!this.container.running) return this.ctx.storage.setAlarm(expiresAt);
 		await this.ctx.storage.setAlarm(
 			Math.min(expiresAt, Date.now() + IDLE_CHECK_MS),
 		);

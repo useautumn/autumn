@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import type { QaEnv } from "../../../api/contract.ts";
+import { type QaEnv, QA_ENV_NAME } from "../../../api/contract.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { toolOk } from "../../mcp/actions/toolResult.ts";
 import { defineTool } from "../../mcp/actions/toolServer.ts";
@@ -16,8 +16,8 @@ import { waitForWarmQaEnv } from "../actions/waitForWarmQaEnv.ts";
 
 const NAME = z
 	.string()
-	.regex(/^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/)
-	.describe("DNS label: lowercase letters, digits, hyphens.");
+	.regex(QA_ENV_NAME)
+	.describe("DNS label: lowercase letters, digits, single hyphens.");
 
 const describeEnv = (env: QaEnv) =>
 	`${env.url} (${env.ref}@${env.sha.slice(0, 12)}) is ${env.state}${env.building ? `, building: ${env.building.phase}, ~${Math.ceil(env.building.remainingMs / 1000)}s left` : ""}${env.awake === null ? "" : env.awake ? ", awake" : ", asleep"}; expires ${env.expiresAt}.${env.tinybirdUrl ? ` Tinybird: ${env.tinybirdUrl}` : ""}`;
