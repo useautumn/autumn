@@ -164,21 +164,13 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: graduated
 
 /**
  * Volume prepaid with includedUsage = 200 (must be multiple of billingUnits=100).
+ * Once the total passes the included amount, every pack (included ones too) is
+ * charged at the tier the total lands in.
  *
- * Entity 1: quantity 800 → 200 included free, 600 purchased
- *   Purchased packs = 600/100 = 6 packs → falls in tier 2 (>5 packs)
- *   Volume: ALL 6 packs at tier-2 rate = 6×$5 = $30
- *   Invoice = $20 base + $30 = $50
- *
- * Entity 2: quantity 400 → 200 included free, 200 purchased
- *   Purchased packs = 200/100 = 2 packs → falls in tier 1 (≤5 packs)
- *   Volume: ALL 2 packs at tier-1 rate = 2×$10 = $20
- *   Invoice = $20 base + $20 = $40
- *
- * Confirms includedUsage is subtracted before volume pricing is applied,
- * and that volume pricing charges ALL purchased units at the single tier rate.
+ * Entity 1: quantity 800 = 8 packs → tier 2 (>5 packs): 8×$5 = $40
+ * Entity 2: quantity 400 = 4 packs → tier 1 (≤5 packs): 4×$10 = $40
  */
-test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: volume with includedUsage (200 free, tier pricing on rest)")}`, async () => {
+test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: volume with includedUsage (200 free, every pack at the total's tier)")}`, async () => {
 	const customerId = "vol-ent-included-200";
 	const includedUsage = 200;
 	const quantity1 = 800;
@@ -210,7 +202,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: volume wi
 		actions: [],
 	});
 
-	// ── Preview entity 1: $20 base + $30 volume = $50 ──
+	// ── Preview entity 1: $20 base + $40 volume = $60 ──
 	const preview1 = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: volPro.id,
@@ -219,7 +211,7 @@ test.concurrent(`${chalk.yellowBright("attach-prepaid-volume-entities: volume wi
 	});
 	expect(preview1.total).toBe(BASE_PRICE + volExpected1);
 
-	// ── Preview entity 2: $20 base + $20 volume = $40 ──
+	// ── Preview entity 2: $20 base + $40 volume = $60 ──
 	const preview2 = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: volPro.id,
