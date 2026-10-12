@@ -16,7 +16,7 @@ jobs:
     steps:
       # Generated code is produced on main by publish.yml; sync PRs from main and the bot are exempt.
       - name: Checkout generated-paths list
-        if: github.base_ref == 'dev' && github.head_ref != 'main' && !(startsWith(github.head_ref, 'sync/') && github.event.pull_request.head.repo.full_name == github.repository) && github.event.pull_request.user.login != 'autumn-codegen[bot]'
+        if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
@@ -27,13 +27,13 @@ jobs:
             apps/docs/mintlify/api-reference
 
       - name: Set up Bun
-        if: github.base_ref == 'dev' && github.head_ref != 'main' && !(startsWith(github.head_ref, 'sync/') && github.event.pull_request.head.repo.full_name == github.repository) && github.event.pull_request.user.login != 'autumn-codegen[bot]'
+        if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
 
       - name: Block edits to generated paths
-        if: github.base_ref == 'dev' && github.head_ref != 'main' && !(startsWith(github.head_ref, 'sync/') && github.event.pull_request.head.repo.full_name == github.repository) && github.event.pull_request.user.login != 'autumn-codegen[bot]'
+        if: github.base_ref == 'dev' && github.head_ref != 'main' && github.event.pull_request.user.login != 'autumn-codegen[bot]'
         working-directory: .github/scripts
         env:
           GH_TOKEN: ${{ github.token }}

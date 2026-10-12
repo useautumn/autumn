@@ -94,10 +94,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # No --branch/--event/--status: those API filters return stale runs; deploy-gate.ts filters.
-          BUILD_RUNS=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --limit 100 \
-            --json headSha,conclusion,event,headBranch,createdAt)
-          BUILD_RUNS="$BUILD_RUNS" bun deploy-gate.ts
+          # Filter conclusions client-side; the API's status filter returns stale runs.
+          BASE_SHA=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --branch main \
+            --event push --limit 50 --json headSha,conclusion \
+            --jq 'map(select(.conclusion == "success"))[0].headSha // ""')
+          BASE_SHA="$BASE_SHA" bun deploy-gate.ts
 
   build-and-push:
     name: Build and Push Docker Image
