@@ -13,7 +13,7 @@ import { useAppForm } from "@/hooks/form/form";
 import { getBackendErr } from "@/utils/genUtils";
 import {
 	cacheToMachine,
-	RECOMMENDED_ATOM_INSTANCE_TYPE,
+	DEFAULT_ATOM_INSTANCE_TYPE,
 } from "./atomMachineDisplay";
 import {
 	AtomNetworkValuesSchema,
@@ -48,7 +48,7 @@ const cacheToSetupValues = ({
 	return {
 		instanceType:
 			(cache && cacheToMachine(cache)?.instanceType) ??
-			RECOMMENDED_ATOM_INSTANCE_TYPE,
+			DEFAULT_ATOM_INSTANCE_TYPE,
 		region: isAwsRegion(region) ? region : DEFAULT_BYOC_CACHE_AWS_REGION,
 		...networkToAtomNetworkValues(cache?.network),
 		stackName: stackNameBase,

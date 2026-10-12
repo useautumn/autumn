@@ -12,8 +12,8 @@ const MACHINE_LABELS: Record<ByocCacheMachine["instanceType"], string> = {
 	"c8g.4xlarge": "XL",
 };
 
-/** The size most apps fit, picked when setup starts. */
-export const RECOMMENDED_ATOM_INSTANCE_TYPE: ByocCacheMachine["instanceType"] =
+/** The size selected when setup starts. */
+export const DEFAULT_ATOM_INSTANCE_TYPE: ByocCacheMachine["instanceType"] =
 	"c8g.xlarge";
 
 export const atomMachineLabel = (machine: ByocCacheMachine) =>
