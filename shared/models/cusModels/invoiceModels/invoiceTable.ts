@@ -56,6 +56,15 @@ export const invoices = pgTable(
 			sql`${table.created_at} DESC`,
 			sql`${table.id} DESC`,
 		),
+		// Org-wide invoices.list: one range scan per page instead of sorting every org's rows.
+		index("idx_invoices_org_env_created")
+			.on(
+				table.org_id,
+				table.env,
+				sql`${table.created_at} DESC`,
+				sql`${table.id} DESC`,
+			)
+			.concurrently(),
 		// Paid rows only: collected-volume metering scans an hour of paid_at.
 		index("idx_invoices_paid_at")
 			.on(table.paid_at)
