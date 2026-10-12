@@ -1,0 +1,39 @@
+import type { UpdateSubscriptionV1Params } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
+import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
+import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
+
+/** Previews an edit that re-attaches a pending plan, mirroring updatePendingPlanIfAny. */
+export const previewPendingPlanIfAny = async ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: UpdateSubscriptionV1Params;
+}) => {
+	if (params.cancel_action) return;
+
+	const customerProduct = await findPendingCustomerProduct({
+		ctx,
+		customerId: params.customer_id,
+		productId: params.plan_id,
+		entityId: params.entity_id,
+	});
+	if (!customerProduct) return;
+
+	const deferredData = await getDeferredBillingPlanData({
+		ctx,
+		customerProduct,
+	});
+	if (!deferredData) return;
+
+	const { replacementPreview, rebills } = await previewPendingReattach({
+		ctx,
+		params,
+		customerProduct,
+		deferredData,
+	});
+
+	return rebills ? replacementPreview : undefined;
+};

@@ -6,11 +6,10 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
-import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
+import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
 
 export type PendingUpdateResult = {
@@ -37,24 +36,11 @@ export const updatePendingCustomerProduct = async ({
 		return {};
 	}
 
-	const reattachParams = buildPendingReattachParams({
+	const { reattachParams, rebills } = await previewPendingReattach({
+		ctx,
 		params,
-		billingContext: deferredData.billingContext,
 		customerProduct,
-	});
-
-	const replacementPreview = await billingActions.attach({
-		ctx,
-		params: reattachParams,
-		preview: true,
-	});
-
-	const rebills = pendingPlanRebills({
-		ctx,
-		customerProduct,
-		replacementProduct: replacementPreview.billingContext?.fullProducts?.[0],
-		replacementQuantities:
-			replacementPreview.billingContext?.featureQuantities ?? [],
+		deferredData,
 	});
 
 	if (!rebills) {
