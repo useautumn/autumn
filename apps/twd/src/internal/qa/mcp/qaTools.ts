@@ -12,6 +12,7 @@ import {
 } from "../actions/debugQaEnv.ts";
 import { deleteQaEnv } from "../actions/deleteQaEnv.ts";
 import { getQaEnv, listQaEnvs } from "../actions/listQaEnvs.ts";
+import { waitForWarmQaEnv } from "../actions/waitForWarmQaEnv.ts";
 
 const NAME = z
 	.string()
@@ -21,12 +22,20 @@ const NAME = z
 const describeEnv = (env: QaEnv) =>
 	`${env.url} (${env.ref}@${env.sha.slice(0, 12)}) is ${env.state}${env.building ? `, building: ${env.building.phase}, ~${Math.ceil(env.building.remainingMs / 1000)}s left` : ""}${env.awake === null ? "" : env.awake ? ", awake" : ", asleep"}; expires ${env.expiresAt}.`;
 
+const describeWarmth = ({ env, warm }: { env: QaEnv; warm: boolean }) => {
+	if (warm)
+		return `QA env is warm: ${describeEnv(env)} Give the human the URL; it opens instantly.`;
+	if (env.error || env.state === "failed" || env.state === "deleted")
+		return `QA env is not warm: ${describeEnv(env)}${env.error ? ` Error: ${env.error}` : ""}`;
+	return `QA env is not warm yet: ${describeEnv(env)} Call qa_status with wait: true again, or give the human the URL now; it shows progress until ready.`;
+};
+
 /** qa_create / qa_status / qa_list / qa_delete: per-branch QA envs on <name>.atmn.lol. */
 export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 	defineTool({
 		name: "qa_create",
 		description:
-			"Hand a pushed branch to a human for QA: deploys it as https://<name>.atmn.lol with the full Autumn stack (dashboard, server, workers, Stripe sandbox webhooks), logged in as Capy Admin, on a 3-day Neon branch of your Capy branch. Returns the URL immediately; the build takes ~2-3 min and the URL shows live progress until then. It sleeps after 5 min idle and opening the URL wakes it (~25 s). Re-using a name re-ships that env at the new commit and keeps its QA data (freshDb: true re-branches the DB). Pass supersedes to delete your previous env in the same call. parentBranch is `branchName` and secrets are the `secrets` object from ~/.autumn-capy/state.json.",
+			"Hand a pushed branch to a human for QA: deploys it as https://<name>.atmn.lol with the full Autumn stack (dashboard, server, workers, Stripe sandbox webhooks), logged in as Capy Admin, on a 3-day Neon branch of your Capy branch. Returns the URL immediately; the build takes ~2-3 min (the URL shows live progress) and the env boots itself as soon as it finishes, so the link is warm when opened. It sleeps after 5 min idle and opening the URL wakes it (~25 s). Re-using a name re-ships that env at the new commit and keeps its QA data (freshDb: true re-branches the DB). Pass supersedes to delete your previous env in the same call. parentBranch is `branchName` and secrets are the `secrets` object from ~/.autumn-capy/state.json.",
 		input: z.object({
 			ref: z.string().min(1).describe("Pushed branch (or full sha)."),
 			name: NAME.optional().describe(
@@ -51,9 +60,27 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 				"Another env of yours to delete once this one is created.",
 			),
 			freshDb: z.boolean().optional(),
+			wait: z
+				.boolean()
+				.optional()
+				.describe(
+					"Wait up to 45 s for the env to be built and warm. A build takes ~3 min, so if it isn't warm yet, call qa_status with wait: true until it is.",
+				),
 		}),
-		run: async (body) => {
+		run: async ({ wait, ...body }) => {
+			const startedAt = Date.now();
 			const result = await createQaEnv({ ctx, body });
+			if (wait) {
+				const { env, warm } = await waitForWarmQaEnv({
+					ctx,
+					name: result.env.name,
+					startedAt,
+				});
+				return toolOk({
+					summary: describeWarmth({ env, warm }),
+					data: { ...result, env, warm },
+				});
+			}
 			return toolOk({
 				summary: `QA env ${result.deduped ? "re-ship already in progress" : "build started"}: ${describeEnv(result.env)} Give the human the URL now; it shows build progress until ready.`,
 				data: result,
@@ -62,9 +89,17 @@ export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 	}),
 	defineTool({
 		name: "qa_status",
-		description: "One QA env's state, build progress, awake/asleep and expiry.",
-		input: z.object({ name: NAME }),
-		run: async ({ name }) => {
+		description:
+			"One QA env's state, build progress, awake/asleep and expiry. With wait: true, waits up to 45 s for it to be built and warm.",
+		input: z.object({ name: NAME, wait: z.boolean().optional() }),
+		run: async ({ name, wait }) => {
+			if (wait) {
+				const { env, warm } = await waitForWarmQaEnv({ ctx, name });
+				return toolOk({
+					summary: describeWarmth({ env, warm }),
+					data: { ...env, warm },
+				});
+			}
 			const env = await getQaEnv({ ctx, name });
 			return toolOk({ summary: describeEnv(env), data: env });
 		},

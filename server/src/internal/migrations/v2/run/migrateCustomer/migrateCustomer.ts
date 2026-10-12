@@ -1,6 +1,7 @@
 import type { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withMigrationCustomerLock } from "@/external/redis/actions/migrationCustomerLock/withMigrationCustomerLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { persistIsCustomCorrections } from "@/internal/customers/cusProducts/actions/deriveIsCustom/persistIsCustomCorrections.js";
 import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
 import type { MigrationHooks } from "../../hooks/index.js";
 import type { MigrationRuntime } from "../../types/migrationDefinition.js";
@@ -125,6 +126,15 @@ export const migrateCustomer = async ({
 				matchedCustomerProducts,
 				unchangedCustomerProducts,
 			});
+			// A skipped customer reaches no billing write, so the flags the ops read are saved here.
+			if (!preview && skipReason) {
+				await persistIsCustomCorrections({
+					ctx: migrationCtx,
+					customerId:
+						context.fullCustomer.id ?? context.fullCustomer.internal_id,
+					corrections: context.isCustomCorrections,
+				});
+			}
 
 			return {
 				itemPreview: {

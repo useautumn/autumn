@@ -371,9 +371,11 @@ export class QaEnv extends DurableObject<Env> {
 		await this.ctx.storage.put("sha", result.sha);
 		await this.ctx.storage.put("state", "ready" satisfies EnvState);
 		if (accounts) await this.registerAccounts(accounts);
-		// The next request wakes on the new build.
 		if (this.container.running) await this.container.destroy("re-shipped");
 		this.ready = false;
+		// Boot the new build now, so the link the agent already shared is warm by the time it's opened.
+		const config = await this.config();
+		if (config) await this.wake(config);
 	}
 
 	private async registerAccounts(accounts: string[]) {

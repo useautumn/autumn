@@ -147,7 +147,7 @@ describe("an evict's snapshot DELETE", () => {
 		).toBeNull();
 	});
 
-	test("a record decided on the rows meanwhile re-pins them: the drop and its DELETE wait for that record's store", async () => {
+	test("a pinned customer is hidden at once: the drop and its DELETE wait for the earlier record's store", async () => {
 		const { writer, events, applyGate, track, adopt } = createWriter();
 		adopt("cus_1");
 		const held = Promise.withResolvers<void>();
@@ -155,16 +155,16 @@ describe("an evict's snapshot DELETE", () => {
 		const before = track({ customerId: "cus_1", commandId: "t1" });
 		await before.waitForCommit();
 		const evicted = writer.evict({ customerKey: keyOf("cus_1") });
-		const meanwhile = track({ customerId: "cus_1", commandId: "t2" });
-		await meanwhile.waitForCommit();
+		expect(
+			writer.readFreshestState({ identity: identityOf("cus_1") }),
+		).toBeNull();
 		expect(events).toEqual([]);
 
 		held.resolve();
 		await before.waitForStore();
-		await meanwhile.waitForStore();
 		await evicted;
-		// One DELETE, enqueued only once t2's apply was stored: lane order lands it after t2's rows.
-		expect(events).toEqual(["apply", "apply", `enqueue ${keyOf("cus_1")}`]);
+		// One DELETE, enqueued only once t1's apply was stored: lane order lands it after t1's rows.
+		expect(events).toEqual(["apply", `enqueue ${keyOf("cus_1")}`]);
 		expect(
 			writer.readFreshestState({ identity: identityOf("cus_1") }),
 		).toBeNull();

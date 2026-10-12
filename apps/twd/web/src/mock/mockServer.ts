@@ -1548,6 +1548,7 @@ export const handle = ({
 				failedTests: failed ? 1 : 0,
 				worker: null,
 				failureSummary: null,
+				source: "swarm" as const,
 				createdAt: iso(Date.now() - (40 - i) * 3 * 3_600_000),
 			};
 		}).reverse();
@@ -1574,6 +1575,7 @@ export const handle = ({
 				p90Ms: base * 1.2,
 				passRate: 0.97,
 				samples: 20,
+				source: "swarm" as const,
 				updatedAt: iso(Date.now()),
 			},
 			results,

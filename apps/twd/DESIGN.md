@@ -81,6 +81,14 @@ set per-file p50/p90 + pass-rate; each finished run records `new_failures`
 duration > 1.5× dev p90. Scheduling is longest-first by dev p90; unseen files
 first.
 
+**CI results** — `POST /results/ingest` (API key) stores per-file results a CI
+job ran outside twd as `test_results` rows with `source = ci` and run id
+`ci_<ciRunId>` (re-posting replaces them). Dev pushes upload Server Unit Tests
+this way, since twd never runs unit tests. They feed `file_baselines` (as
+`source = ci`, only for files no baseline run covers), `get_file_history` and
+`dev_status`; they never touch costs, `file_profiles`, Auto sizing, scheduling
+order, ETA priors or the slow-drift check.
+
 **Repeat (flake checks)** — `repeat: N` (1–50, files × N ≤ 200) plans each
 file as N work items `<file>#1…#N`, so every repetition gets its own worker when
 accounts allow, its own result row (`test_results.repetition`) and its own logs.
@@ -126,6 +134,8 @@ actions the REST routes call — no MCP-only behaviour.
 | `get_run`        | status, workers X/Y, queue position, failures, drift |
 | `wait_for_run`   | blocks up to N s, returns the same shape         |
 | `list_catalog`   | groups + files for selection                     |
+| `dev_status`     | per file: passed/failing/flaky/no_data on dev (swarm + CI) |
+| `get_file_history` | one file's results by commit, with source      |
 
 Every error is `{ error: { code, message, next, escalate } }`: `next` tells an
 agent what to do now; `escalate` is non-null when only a human can fix it

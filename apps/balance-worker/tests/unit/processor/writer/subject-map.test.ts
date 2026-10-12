@@ -67,19 +67,30 @@ describe("createSubjectMap", () => {
 		expect(map.bytesOf({ subjectKey: "absent" })).toBeNull();
 	});
 
-	test("a pinned subject stays until its last pin is released, then goes", () => {
+	test("an evicted pinned subject is unreadable at once, and evicting until its last pin is released", () => {
 		const map = createSubjectMap();
 		const state = createState();
 		map.setState({ subjectKey: customerKey, customerKey, state });
 		map.pin({ subjectKey: customerKey });
 		map.pin({ subjectKey: customerKey });
 		map.evictCustomer({ customerKey });
-		expect(map.readState({ subjectKey: customerKey })).toEqual(state);
-		map.unpin({ subjectKey: customerKey });
-		expect(map.readState({ subjectKey: customerKey })).toEqual(state);
-		map.unpin({ subjectKey: customerKey });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.sizeBytes()).toBe(0);
+		map.unpin({ subjectKey: customerKey });
+		expect(map.isEvicting({ customerKey })).toBe(true);
+		map.unpin({ subjectKey: customerKey });
+		expect(map.isEvicting({ customerKey })).toBe(false);
+	});
+
+	test("a pinned subject that was never evicted is not evicting", () => {
+		const map = createSubjectMap();
+		map.setState({
+			subjectKey: customerKey,
+			customerKey,
+			state: createState(),
+		});
+		map.pin({ subjectKey: customerKey });
+		expect(map.isEvicting({ customerKey })).toBe(false);
 	});
 
 	test("a replaced row is weighed by itself, never by serialising the whole state again", () => {
@@ -325,11 +336,11 @@ describe("createSubjectMap onEvicted", () => {
 
 		map.evictCustomer({ customerKey });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
-		expect(map.readState({ subjectKey: entityKey })).toEqual(state);
+		expect(map.readState({ subjectKey: entityKey })).toBeNull();
 		expect(evicted).toEqual([]);
 
 		map.unpin({ subjectKey: entityKey });
-		expect(map.readState({ subjectKey: entityKey })).toBeNull();
+		expect(map.isEvicting({ customerKey })).toBe(false);
 		expect(evicted).toEqual([customerKey]);
 	});
 

@@ -69,6 +69,7 @@ export const handleQaJob: JobHandler = async ({ ctx, job, signal }) => {
 					parentId,
 					name: `qa-${name}-${Date.now()}`,
 					expiresAt: row.expiresAt,
+					signal,
 				});
 				if (replacedBranchId) {
 					unadoptedBranchId = branchId;

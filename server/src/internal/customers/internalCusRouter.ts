@@ -12,6 +12,7 @@ import { handleCreateCustomerExport } from "./internalHandlers/handleCreateCusto
 import { handleDownloadCustomerExport } from "./internalHandlers/handleDownloadCustomerExport.js";
 import { handleGetCusReferrals } from "./internalHandlers/handleGetCusReferrals.js";
 import { handleGetCustomerProduct } from "./internalHandlers/handleGetCustomerProduct.js";
+import { handleGetCustomerProductCustomDiff } from "./internalHandlers/handleGetCustomerProductCustomDiff.js";
 import { handleGetCustomerSchedule } from "./internalHandlers/handleGetCustomerSchedule.js";
 import { handleGetFullCustomers } from "./internalHandlers/handleGetFullCustomers.js";
 import { handleGetInvoiceLineItems } from "./internalHandlers/handleGetInvoiceLineItems.js";
@@ -46,6 +47,10 @@ internalCusRouter.get(
 internalCusRouter.get(
 	"/:customer_id/products/:customer_product_id/payment_link",
 	...handleGetPendingPaymentLink,
+);
+internalCusRouter.get(
+	"/:customer_id/products/:customer_product_id/custom_diff",
+	...handleGetCustomerProductCustomDiff,
 );
 internalCusRouter.get("/:customer_id", ...handleGetCustomer);
 internalCusRouter.get(
