@@ -153,6 +153,18 @@ describe("splitRateCardItemChanges", () => {
 			],
 		},
 	};
+	const tiered = (secondTierCost: number) => ({
+		credit_schema: [
+			{
+				metered_feature_id: "gateway",
+				tier_behavior: "graduated" as const,
+				tiers: [
+					{ to: 100, credit_cost: 1 },
+					{ to: "inf" as const, credit_cost: secondTierCost },
+				],
+			},
+		],
+	});
 	const proposedRates = [
 		"Gateway spend: 3 credits → 2.857 credits",
 		"Image generation: 1 credit → null",
@@ -204,6 +216,12 @@ describe("splitRateCardItemChanges", () => {
 			name: "a changed included amount stays an added and removed pair",
 			created: item({ ...proposed, included: 2000 }),
 			deleted: item(),
+			expected: { rates: [], others: 2 },
+		},
+		{
+			name: "a tier change the one-line label can't show stays a pair",
+			created: item({ feature_override: tiered(2) }),
+			deleted: item({ feature_override: tiered(1) }),
 			expected: { rates: [], others: 2 },
 		},
 		{

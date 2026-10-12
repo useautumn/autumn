@@ -173,7 +173,7 @@ export const previousRateText = ({
 	return unit.join(" ") === to.split(" ").slice(1).join(" ") ? amount : from;
 };
 
-const rateLabelsByFeature = ({
+const ratesByFeature = ({
 	item,
 	features,
 }: {
@@ -194,14 +194,13 @@ const rateLabelsByFeature = ({
 	return new Map(
 		rows.map((row) => [
 			row.featureId,
-			row.state === "excluded"
-				? null
-				: creditRateLabel({ rate: row.rate, features }),
+			row.state === "excluded" ? null : row.rate,
 		]),
 	);
 };
 
-/** Effective rates that differ between two items of one credit system, in rate card order. */
+/** Effective rates that differ between two items, in rate card order; `null` when a
+ * changed rate's one-line label can't show the difference (tiers, dimensions). */
 export const diffItemRates = ({
 	previous,
 	next,
@@ -210,18 +209,31 @@ export const diffItemRates = ({
 	previous: ApiPlanItemV1;
 	next: ApiPlanItemV1;
 	features: Feature[];
-}): FeatureRateChange[] => {
-	const before = rateLabelsByFeature({ item: previous, features });
-	const after = rateLabelsByFeature({ item: next, features });
-	return [...new Set([...after.keys(), ...before.keys()])].flatMap(
-		(featureId) => {
-			const from = before.get(featureId) ?? null;
-			const to = after.get(featureId) ?? null;
-			if (from === to) return [];
-			const label = featureDisplayName({ features, featureId });
-			return [{ featureId, label, from, to }];
-		},
-	);
+}): FeatureRateChange[] | null => {
+	const before = ratesByFeature({ item: previous, features });
+	const after = ratesByFeature({ item: next, features });
+	const label = (rate: CreditSchemaItem | null | undefined) =>
+		rate ? creditRateLabel({ rate, features }) : null;
+	const changes: FeatureRateChange[] = [];
+	for (const featureId of new Set([...after.keys(), ...before.keys()])) {
+		const [old, current] = [before.get(featureId), after.get(featureId)];
+		if (
+			old &&
+			current &&
+			creditSchemaItemsAreSame({ left: old, right: current })
+		)
+			continue;
+		if (!old && !current) continue;
+		const [from, to] = [label(old), label(current)];
+		if (from === to) return null;
+		changes.push({
+			featureId,
+			label: featureDisplayName({ features, featureId }),
+			from,
+			to,
+		});
+	}
+	return changes;
 };
 
 const withoutOverride = (item: ApiPlanItemV1) => ({
@@ -256,7 +268,7 @@ export const splitRateCardItemChanges = ({
 				next: change.item,
 				features,
 			});
-			if (rates.length === 0) return [];
+			if (!rates?.length) return [];
 			paired.add(change).add(deleted);
 			return [{ change, rates }];
 		},
