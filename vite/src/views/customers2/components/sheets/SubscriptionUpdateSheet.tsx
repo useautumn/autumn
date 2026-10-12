@@ -138,8 +138,7 @@ function EditContent() {
 					<div className="px-4 pt-4">
 						{pendingPaymentLink?.longLived ? (
 							<InfoBox variant="note" classNames={{ infoBox: "w-full" }}>
-								The checkout link stays the same and will offer the updated
-								plan.
+								Reuses the existing checkout link.
 							</InfoBox>
 						) : (
 							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
