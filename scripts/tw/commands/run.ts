@@ -54,6 +54,7 @@ import {
 	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
+	WARM_LATEST_BRANCH,
 	WARM_SANDBOX_PREFIX,
 	WORKER_VCPUS,
 } from "../constants.ts";
@@ -859,7 +860,10 @@ export const getOrBuildWarmParent = async ({
 
 	milestone("warm-up: snapshotting warm parent (cached for this ref)");
 	try {
-		await snapshotAndStop(warm, { signal });
+		await snapshotAndStop(warm, {
+			signal,
+			publishLatest: ref === WARM_LATEST_BRANCH,
+		});
 	} catch (error) {
 		await failBuild(
 			`warm-up failed (snapshot: ${(error as Error).message}) — aborting, no workers forked`,

@@ -96,6 +96,12 @@ export type ListedSandbox = {
 	tags?: Record<string, string>;
 };
 
+export type SnapshotAndStopOptions = {
+	signal?: AbortSignal;
+	/** Also move the cross-run `:latest` warm image (WARM_LATEST_BRANCH builds only). */
+	publishLatest?: boolean;
+};
+
 /** The full surface a backend must implement. */
 export type ProviderImpl = {
 	createWarmSandbox(opts: CreateSandboxOptions): Promise<ProviderSandbox>;
@@ -103,7 +109,7 @@ export type ProviderImpl = {
 	forkWorker(opts: ForkWorkerOptions): Promise<ProviderSandbox>;
 	snapshotAndStop(
 		sandbox: ProviderSandbox,
-		opts?: { signal?: AbortSignal },
+		opts?: SnapshotAndStopOptions,
 	): Promise<string>;
 	getPublicUrl(sandbox: ProviderSandbox, port: number): Promise<string>;
 	getSandboxByName(name: string): Promise<ProviderSandbox | undefined>;
@@ -182,7 +188,7 @@ export const createIngressSandbox = (o: CreateSandboxOptions) =>
 export const forkWorker = (o: ForkWorkerOptions) => get().forkWorker(o);
 export const snapshotAndStop = (
 	s: ProviderSandbox,
-	o?: { signal?: AbortSignal },
+	o?: SnapshotAndStopOptions,
 ) => get().snapshotAndStop(s, o);
 export const getPublicUrl = (s: ProviderSandbox, port: number) =>
 	get().getPublicUrl(s, port);
