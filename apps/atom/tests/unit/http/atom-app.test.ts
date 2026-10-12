@@ -41,6 +41,7 @@ const HEALTH = {
 	restarts: new Int32Array(1),
 	ready: new Int32Array([1]),
 	threadStats: THREAD_STATS,
+	dataDir: tmpdir(),
 };
 const counters = openThreadCounters({ buffer: THREAD_STATS, index: 0 });
 

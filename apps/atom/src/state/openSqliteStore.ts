@@ -3,6 +3,8 @@ import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
 import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
+	dataBytes,
+	deleteCustomersWrittenBefore,
 	listDigestsAppliedAfter,
 	listSubjectsAppliedAfter,
 	maxAppliedAt,
@@ -136,6 +138,21 @@ export const openSqliteStore = ({
 		return results.map(({ bytes }) => bytes !== null);
 	}
 
+	function dropCustomersWrittenBefore(params: {
+		before: number;
+		limit: number;
+	}) {
+		const dropped = deleteCustomersWrittenBefore({ ctx, ...params });
+		for (const row of dropped)
+			held.drop(
+				storePrefix + subjectKey({ ...row, entityId: row.entityId || null }),
+			);
+		return {
+			customers: new Set(dropped.map((row) => row.customerId)).size,
+			rows: dropped.length,
+		};
+	}
+
 	function close(): void {
 		held.dropPrefix(storePrefix);
 		ctx.sqliteDb.close(true);
@@ -152,6 +169,8 @@ export const openSqliteStore = ({
 		listDigestsAfter: (params) => listDigestsAppliedAfter({ ctx, ...params }),
 		readByKey: (params) => readSubjectsByKey({ ctx, ...params }),
 		maxAppliedAt: () => maxAppliedAt({ ctx }),
+		dropCustomersWrittenBefore,
+		dataBytes: () => dataBytes({ ctx }),
 		close,
 	};
 };

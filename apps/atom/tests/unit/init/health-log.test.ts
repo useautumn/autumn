@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
 import {
 	type AtomHealthSource,
 	readAtomHealth,
@@ -17,6 +18,7 @@ const source: AtomHealthSource = {
 	restarts: new Int32Array(new SharedArrayBuffer(4)),
 	ready: new Int32Array(new SharedArrayBuffer(4)),
 	threadStats: createThreadStatsBuffer({ threads: 2 }),
+	dataDir: tmpdir(),
 };
 /** `Atomics.load` on a plain object throws, so reading this one's health fails. */
 const unreadable = {

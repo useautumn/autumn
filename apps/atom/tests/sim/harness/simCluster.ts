@@ -77,6 +77,9 @@ export type ClusterOptions = {
 	entities?: number;
 	/** How often an entity's view announces the end of the customer's own plan. */
 	planEndRate?: number;
+	/** Each replica's held budget and disk share; unbounded unless the scenario is about eviction. */
+	heldBudgetBytes?: number;
+	diskShareBytes?: number;
 	log?: boolean;
 };
 
@@ -90,6 +93,8 @@ export const createSimCluster = ({
 	customers = 8,
 	entities = 0,
 	planEndRate = 0,
+	heldBudgetBytes,
+	diskShareBytes,
 	log = false,
 }: ClusterOptions) => {
 	const rng = createSeededRandom(seed);
@@ -412,6 +417,8 @@ export const createSimCluster = ({
 				address,
 				volume,
 				skewMs: skews.get(address) ?? 0,
+				heldBudgetBytes,
+				diskShareBytes,
 				log: say,
 			},
 		});
@@ -483,22 +490,33 @@ export const createSimCluster = ({
 	}
 
 	/** Advances the clock in steps, with Autumn pushing and the app checking at the given rates, and `onStep` between. */
+	let newCustomers = 0;
+
 	async function runFor({
 		ms,
 		pushesPerSecond = 5,
 		checksPerSecond = 10,
 		catalogPushesPerMinute = 1,
+		newCustomersPerSecond = 0,
 		onStep,
 	}: {
 		ms: number;
 		pushesPerSecond?: number;
 		checksPerSecond?: number;
 		catalogPushesPerMinute?: number;
+		/** Customers Autumn pushes for the first time, never checked again: what fills an Atom's disk. */
+		newCustomersPerSecond?: number;
 		onStep?: (step: { at: number }) => void;
 	}) {
 		const STEP_MS = 100;
 		for (let elapsed = 0; elapsed < ms; elapsed += STEP_MS) {
 			if (rng.chance((pushesPerSecond * STEP_MS) / 1000)) track(push());
+			// Drawn only when churning, so the older scenarios replay their seeds unchanged.
+			if (
+				newCustomersPerSecond > 0 &&
+				rng.chance((newCustomersPerSecond * STEP_MS) / 1000)
+			)
+				track(push({ customerId: `new_${++newCustomers}`, entityId: null }));
 			if (rng.chance((checksPerSecond * STEP_MS) / 1000)) track(check());
 			if (rng.chance((catalogPushesPerMinute * STEP_MS) / 60_000))
 				track(pushCatalog());

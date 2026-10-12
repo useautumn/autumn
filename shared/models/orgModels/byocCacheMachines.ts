@@ -50,9 +50,14 @@ export type ByocCacheMachine = (typeof BYOC_CACHE_MACHINES)[number];
 /** Every Atom runs this many replicas, one per machine; `packages/alien/stacks/byoc/alien.json` declares the same. */
 export const BYOC_CACHE_REPLICAS = 2;
 
-/** AWS list price in us-east-1: (EC2 hourly × 730 h + 100 GB gp3 data disk × $0.08/GB-month) × replicas. */
+/** Each replica's data volume, as `packages/alien/stacks/byoc/alien.json` sizes it; the Atom keeps its files within 80% of it. */
+export const BYOC_CACHE_DISK_GB = 20;
+
+/** AWS list price in us-east-1: (EC2 hourly × 730 h + the gp3 data disk × $0.08/GB-month) × replicas. */
 export const byocCacheMachineMonthlyUsd = (machine: ByocCacheMachine) =>
-	Math.round((machine.hourlyUsd * 730 + 100 * 0.08) * BYOC_CACHE_REPLICAS);
+	Math.round(
+		(machine.hourlyUsd * 730 + BYOC_CACHE_DISK_GB * 0.08) * BYOC_CACHE_REPLICAS,
+	);
 
 /** The container size every Atom ran before sizes existed, so a setup that names none is unchanged. */
 export const DEFAULT_BYOC_CACHE_MACHINE: ByocCacheMachine =

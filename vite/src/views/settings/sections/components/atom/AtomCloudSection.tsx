@@ -1,5 +1,6 @@
 import {
 	BYOC_CACHE_AWS_REGIONS,
+	BYOC_CACHE_DISK_GB,
 	BYOC_CACHE_REPLICAS,
 	type ByocCacheAwsRegion,
 	findByocCacheMachineByInstanceType,
@@ -47,7 +48,8 @@ export const AtomCloudSection = ({
 				</p>
 				<p>
 					Created in your AWS account: {BYOC_CACHE_REPLICAS} × EC2 instance ·{" "}
-					{BYOC_CACHE_REPLICAS} × EBS volume (100 GB gp3) · 1 × SQS queue
+					{BYOC_CACHE_REPLICAS} × EBS volume ({BYOC_CACHE_DISK_GB} GB gp3) · 1 ×
+					SQS queue
 				</p>
 			</>
 		}

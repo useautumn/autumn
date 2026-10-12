@@ -9,12 +9,17 @@ const AUTUMN_API_URL = "https://api.useautumn.com";
 const SLOT_COUNT = 128;
 /** Only for a container given no limits, which sees its whole host; past this many, more threads only cost memory. */
 const MAX_UNLIMITED_THREADS = 8;
-/** Measured on Linux with 128 slots: a serving thread, and the main thread, each hold a little under this. */
-const MEMORY_PER_THREAD_BYTES = 250 * 1024 * 1024;
-/** The rest is left for the OS, the files' page cache and a busy moment. */
-const MEMORY_SHARE_FOR_THREADS = 0.75;
-/** A held subject's parsed, frozen objects take about this many times the bytes of its row text; conservative until measured on a live Atom. */
-const HELD_EXPANSION = 3;
+const MiB = 1024 * 1024;
+/** Measured idle on Linux with 128 slot files open per thread: the main thread, then each serving thread on top. */
+const MAIN_THREAD_BYTES = 256 * MiB;
+const SERVING_THREAD_BYTES = 160 * MiB;
+/** Each SQLite connection keeps this much of its file in memory; every thread opens one per slot. */
+export const SQLITE_PAGE_CACHE_BYTES = 256 * 1024;
+const PAGE_CACHE_PER_THREAD_BYTES = SLOT_COUNT * SQLITE_PAGE_CACHE_BYTES;
+/** Of what the threads leave, this much may hold parsed subjects; the rest is headroom for pushes in flight and the collector's lag. */
+const HELD_SHARE = 0.5;
+/** Measured: a held subject's parsed, frozen objects take 4 to 6 times the bytes of its row text in RSS. */
+const HELD_EXPANSION = 5;
 const HEALTH_LOG_EVERY_MS = 10_000;
 /** A timer past a signed 32-bit delay fires every millisecond instead; a second is the shortest worth a line. */
 const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
@@ -38,16 +43,19 @@ const readMachine = (): AtomMachine => {
 	};
 };
 
-/** How many serving threads fit in memory, with one more counted for the main thread that starts them. */
+/** What the main thread and its page caches take, and what each serving thread with its own takes on top. */
+const MAIN_BYTES = MAIN_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
+const PER_THREAD_BYTES = SERVING_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
+
+/** How many serving threads fit in memory beside the main thread, each with as much again to hold subjects in. */
 const threadsMemoryAllows = ({
 	memoryLimitBytes,
 }: {
 	memoryLimitBytes: number;
-}): number => {
-	const budget = memoryLimitBytes * MEMORY_SHARE_FOR_THREADS;
-	return Math.floor(budget / MEMORY_PER_THREAD_BYTES) - 1;
-};
-/** Row text each thread may hold parsed: the threads' memory share, less each thread's own, split between them and shrunk by the expansion. */
+}): number =>
+	Math.floor((memoryLimitBytes - MAIN_BYTES) / (2 * PER_THREAD_BYTES));
+
+/** Row text each thread may hold parsed: a share of what the threads leave, split between them and shrunk by the expansion. */
 const heldBytesPerThreadOf = ({
 	threads,
 	memoryLimitBytes,
@@ -55,10 +63,11 @@ const heldBytesPerThreadOf = ({
 	threads: number;
 	memoryLimitBytes: number;
 }): number => {
-	const forHeld =
-		memoryLimitBytes * MEMORY_SHARE_FOR_THREADS -
-		(threads + 1) * MEMORY_PER_THREAD_BYTES;
-	return Math.max(0, Math.floor(forHeld / threads / HELD_EXPANSION));
+	const left = memoryLimitBytes - MAIN_BYTES - threads * PER_THREAD_BYTES;
+	return Math.max(
+		0,
+		Math.floor((left * HELD_SHARE) / threads / HELD_EXPANSION),
+	);
 };
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 

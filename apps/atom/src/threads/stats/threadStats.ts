@@ -19,6 +19,13 @@ export const THREAD_STAT_FIELDS = [
 	"heldBytes",
 	"heldLookups",
 	"heldMisses",
+	/** Held copies dropped for the budget, and for sitting idle. */
+	"heldEvicted",
+	"heldExpired",
+	/** What this thread's slot files take on the volume; the customers it dropped for its share, and for 7 idle days. */
+	"diskBytes",
+	"diskEvicted",
+	"diskExpired",
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
