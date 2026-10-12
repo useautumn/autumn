@@ -221,43 +221,6 @@ describe("slot processor check on an entity", () => {
 		expect(customerAt11.allowed).toBe(false);
 	});
 
-	test("an entity's view with none of the customer's rows, at the version held, leaves the customer's rows alone", async () => {
-		const processor = createProcessor();
-		const whole = storedEntitySubjectWith({
-			customerBalance: 10,
-			entityBalance: 5,
-			readAt: 1000,
-		});
-		await processor.setSubject(subjectPushOf({ subject: whole }));
-		// The entity's stored part sent back as a view: the same version, the entity's rows only.
-		const entityOnly = {
-			...whole,
-			state: {
-				...whole.state,
-				customerProducts: whole.state.customerProducts.filter(
-					(row) => row.internal_entity_id !== null,
-				),
-				customerEntitlements: whole.state.customerEntitlements.filter(
-					(row) => row.internal_entity_id !== null,
-				),
-			},
-		};
-
-		await processor.setSubject(subjectPushOf({ subject: entityOnly }));
-
-		expect(
-			(
-				await processor.check({
-					request: checkRequestFor({ params: { required_balance: 10 } }),
-				})
-			).allowed,
-		).toBe(true);
-		expect(
-			(await processor.check({ request: checkEntity({ requiredBalance: 15 }) }))
-				.allowed,
-		).toBe(true);
-	});
-
 	test("a later push of the customer alone changes what its entity is answered", async () => {
 		const processor = createProcessor();
 		await processor.setSubject(

@@ -14,23 +14,7 @@ export const setSubject = ({
 	subject: StoredSubject;
 }): boolean => {
 	const { customer, entity } = splitSubjectState({ state: subject.state });
-	// A view of an entity carries the customer's rows beside it; one with none would, at the same version, wipe the
-	// customer's rows the file holds, so that part is left out and only the entity's is written.
-	const customerPartEmpty =
-		customer.customerEntitlements.length === 0 &&
-		customer.customerProducts.length === 0;
-	const customerHeld =
-		entity !== null &&
-		customerPartEmpty &&
-		ctx.sqliteStore.readVersion({
-			customerId: customer.identity.customerId,
-			entityId: null,
-		}) !== null;
-	const parts = entity
-		? customerHeld
-			? [entity]
-			: [customer, entity]
-		: [customer];
+	const parts = entity ? [customer, entity] : [customer];
 	const stored = ctx.sqliteStore.setSubjects({
 		subjects: parts.map((state) => ({ ...subject, state })),
 	});
