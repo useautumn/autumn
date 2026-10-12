@@ -4,18 +4,41 @@ import { Decimal } from "decimal.js";
 import { InternalError } from "../../../../api/errors/base/InternalError";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
 import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { Price } from "../../../../models/productModels/priceModels/priceModels";
 import { cusEntsToPrepaidQuantity } from "../../../cusEntUtils/balanceUtils/cusEntsToPrepaidQuantity";
 import { cusEntToCusPrice } from "../../../cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { cusEntToStripeIds } from "../../../cusEntUtils/convertCusEntUtils/cusEntToStripeIds";
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage";
 import { cusEntToInvoiceUsage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceUsage";
+import { cusEntToVolumeInvoiceQuantity } from "../../../cusEntUtils/overageUtils/cusEntToVolumeInvoiceQuantity";
 import {
 	isConsumablePrice,
 	isPrepaidPrice,
+	isVolumePrice,
 } from "../../../productUtils/priceUtils/classifyPriceUtils";
 import { usagePriceToLineDescription } from "../descriptionUtils/usagePriceToLineDescription";
+import { volumeUsageToLineDescription } from "../descriptionUtils/volumeUsageToLineDescription";
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
+import { volumeUsageToTier } from "../lineItemUtils/volumeUsageToTier";
 import { buildLineItem } from "./buildLineItem";
+
+/** Pay-per-use at or below the included amount bills nothing, tier 1's flat fee included. */
+const payPerUseIsWithinIncluded = ({
+	price,
+	overage,
+	paidOverage,
+	allowance,
+}: {
+	price: Price;
+	overage: number;
+	paidOverage: number;
+	allowance: number;
+}) => {
+	if (isPrepaidPrice(price)) return false;
+	// Volume compares the customer's total, since entities can offset each other's allowance.
+	if (isVolumePrice(price)) return overage <= allowance;
+	return paidOverage === 0;
+};
 
 export const usagePriceToLineItem = ({
 	cusEnt,
@@ -50,21 +73,25 @@ export const usagePriceToLineItem = ({
 
 	// 1. Get overage
 	// don't use upcoming quantity for prepaid prices by default. THe price that users have paid currently is quantity.
+	const isPrepaid = isPrepaidPrice(price);
+	let paidOverage = 0;
 	let overage = 0;
-	if (isPrepaidPrice(cusPrice.price)) {
+	if (isPrepaid) {
 		overage = cusEntToPrepaidInvoiceOverage({ cusEnt });
 	} else {
-		overage = cusEntToInvoiceOverage({ cusEnt });
+		paidOverage = cusEntToInvoiceOverage({ cusEnt });
+		// Volume prices bill on total usage, so their overage includes the allowance.
+		overage = cusEntToVolumeInvoiceQuantity({
+			cusEnt,
+			paidQuantity: paidOverage,
+		});
 	}
 
-	// Volume pricing: the total quantity (purchased + allowance) determines
-	// which tier applies, and the ENTIRE total is charged at that tier's rate.
-	// So we add allowance back to overage before pricing.
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 
 	// 2. Get usage
 	let usage = 0;
-	if (isPrepaidPrice(cusPrice.price)) {
+	if (isPrepaid) {
 		const prepaidQuantity = cusEntsToPrepaidQuantity({
 			cusEnts: [cusEnt],
 			sumAcrossEntities: false,
@@ -84,20 +111,45 @@ export const usagePriceToLineItem = ({
 		customerEntitlement: cusEnt,
 	};
 
+	const isWithinIncluded = payPerUseIsWithinIncluded({
+		price,
+		overage,
+		paidOverage,
+		allowance,
+	});
+
 	// 3. Generate description
-	const description = usagePriceToLineDescription({
+	let description = usagePriceToLineDescription({
 		usage,
 		context: lineItemContext,
 		includePeriodDescription: options.includePeriodDescription,
 	});
+	if (isVolumePrice(price) && !isPrepaid && !isWithinIncluded) {
+		const billedTier = volumeUsageToTier({
+			price,
+			totalUsage: overage,
+			allowance,
+			currency: context.currency,
+		});
+		if (billedTier) {
+			description = volumeUsageToLineDescription({
+				...billedTier,
+				context: lineItemContext,
+				includePeriodDescription: options.includePeriodDescription,
+			});
+		}
+	}
 
 	// 4. Get amount
-	const amount = priceToLineAmount({
-		price,
-		overage,
-		allowance: allowance,
-		currency: context.currency,
-	});
+	let amount = 0;
+	if (!isWithinIncluded) {
+		amount = priceToLineAmount({
+			price,
+			overage,
+			allowance,
+			currency: context.currency,
+		});
+	}
 
 	// 5. Get stripe price / product IDs
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({
