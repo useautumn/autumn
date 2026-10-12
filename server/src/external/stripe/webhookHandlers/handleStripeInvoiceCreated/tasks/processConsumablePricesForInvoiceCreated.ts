@@ -20,6 +20,10 @@ import {
 	updateStripeInvoiceLine,
 } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
+import {
+	ARREAR_TIER_LINE_ID_PREFIX,
+	ARREAR_USAGE_LINE_ID_PREFIX,
+} from "@/internal/billing/v2/utils/lineItems/arrearUsageLineItemId";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -76,7 +80,6 @@ type ExistingAutumnLines = {
 	legacyByCustomerPriceId: Map<string, ExistingAutumnLine[]>;
 };
 
-const USAGE_LINE_ID_PREFIX = "invoice_li_usage_";
 const CREDIT_LINE_ID_PREFIX = "invoice_li_credit_";
 
 const getExistingAutumnLines = async ({
@@ -107,7 +110,8 @@ const getExistingAutumnLines = async ({
 
 		const customerPriceId = stripeLineItem.metadata?.autumn_customer_price_id;
 		const isScoped =
-			autumnLineItemId.startsWith(USAGE_LINE_ID_PREFIX) ||
+			autumnLineItemId.startsWith(ARREAR_USAGE_LINE_ID_PREFIX) ||
+			autumnLineItemId.startsWith(ARREAR_TIER_LINE_ID_PREFIX) ||
 			autumnLineItemId.startsWith(CREDIT_LINE_ID_PREFIX);
 		if (customerPriceId && !isScoped) {
 			legacyByCustomerPriceId.set(customerPriceId, [
@@ -128,7 +132,7 @@ const findExistingLine = ({
 }): ExistingAutumnLine | undefined => {
 	const byId = existingLines.byLineItemId.get(lineItem.id);
 	if (byId) return byId;
-	if (!lineItem.id.startsWith(USAGE_LINE_ID_PREFIX)) return undefined;
+	if (!lineItem.id.startsWith(ARREAR_USAGE_LINE_ID_PREFIX)) return undefined;
 	const customerPriceId = lineItem.context.customerPrice?.id;
 	const legacyLines = customerPriceId
 		? (existingLines.legacyByCustomerPriceId.get(customerPriceId) ?? [])

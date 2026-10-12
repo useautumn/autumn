@@ -41,9 +41,10 @@ export const expectNextInvoiceMatchesPreview = async ({
 	const [preview] = invoice_previews!;
 
 	if (featureId && expectedFeatureAmount !== undefined) {
-		const featureSubtotal =
-			preview.line_items.find((lineItem) => lineItem.feature_id === featureId)
-				?.subtotal ?? 0;
+		// Tiered prices preview one line per band, so the feature's amount is their sum.
+		const featureSubtotal = preview.line_items
+			.filter((lineItem) => lineItem.feature_id === featureId)
+			.reduce((sum, lineItem) => sum + lineItem.subtotal, 0);
 		expect(featureSubtotal).toBeCloseTo(expectedFeatureAmount, 2);
 	}
 
