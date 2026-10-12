@@ -93,14 +93,6 @@ export const billingUpdateRemoveLicenseSchema = z.object({
 	licensePlanId: z.string(),
 });
 
-export const billingUpdateInvoiceModeSchema = z.object({
-	enabled: z.boolean(),
-	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalize: z.union([z.boolean(), z.undefined()]).optional(),
-	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
-	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
-});
-
 export const billingUpdateAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
@@ -389,6 +381,9 @@ export const billingUpdateInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
+	payment_method_types: z
+		.union([z.array(z.string()), z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateAttachDiscountOutboundSchema = z.object({
@@ -740,6 +735,19 @@ export const billingUpdateCustomizeSchema = z.object({
 		.optional(),
 	removeLicenses: z
 		.union([z.array(billingUpdateRemoveLicenseSchema), z.undefined()])
+		.optional(),
+});
+
+export const billingUpdatePaymentMethodTypeSchema = closedEnumSchema;
+
+export const billingUpdateInvoiceModeSchema = z.object({
+	enabled: z.boolean(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
+	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
+	paymentMethodTypes: z
+		.union([z.array(billingUpdatePaymentMethodTypeSchema), z.undefined()])
 		.optional(),
 });
 

@@ -1273,6 +1273,32 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.5.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.update({
+                invoiceId: "inv_2b3c4d5e6f7g8h",
+                paymentMethodTypes: [
+                  "card",
+                  "us_bank_account",
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/invoices.void"]["post"]
     update:
       x-codeSamples:

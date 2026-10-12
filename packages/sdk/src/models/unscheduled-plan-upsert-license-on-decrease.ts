@@ -60,6 +60,19 @@ export type CreateScheduleFreeTrialParams = {
   onEnd?: CreateScheduleOnEnd | undefined;
 };
 
+export const CreateSchedulePaymentMethodType = {
+  Card: "card",
+  CustomerBalance: "customer_balance",
+  UsBankAccount: "us_bank_account",
+  SepaDebit: "sepa_debit",
+  BacsDebit: "bacs_debit",
+  AcssDebit: "acss_debit",
+  Link: "link",
+} as const;
+export type CreateSchedulePaymentMethodType = ClosedEnum<
+  typeof CreateSchedulePaymentMethodType
+>;
+
 /**
  * Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
  */
@@ -84,6 +97,10 @@ export type CreateScheduleInvoiceMode = {
    * Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).
    */
   netTermsDays?: number | undefined;
+  /**
+   * Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Overrides the org's allowed payment methods.
+   */
+  paymentMethodTypes?: Array<CreateSchedulePaymentMethodType> | undefined;
 };
 
 /**
@@ -2004,20 +2021,6 @@ export type UnscheduledPlanUpsertLicenseOnDecrease = ClosedEnum<
   typeof UnscheduledPlanUpsertLicenseOnDecrease
 >;
 
-/**
- * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
- */
-export type UnscheduledPlanUpsertLicenseProration = {
-  /**
-   * Billing behavior when quantity increases mid-cycle.
-   */
-  onIncrease: UnscheduledPlanUpsertLicenseOnIncrease;
-  /**
-   * Credit behavior when quantity decreases mid-cycle.
-   */
-  onDecrease: UnscheduledPlanUpsertLicenseOnDecrease;
-};
-
 /** @internal */
 export const CreateScheduleFreeTrialDurationType$outboundSchema: z.ZodMiniEnum<
   typeof CreateScheduleFreeTrialDurationType
@@ -2071,12 +2074,18 @@ export function createScheduleFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const CreateSchedulePaymentMethodType$outboundSchema: z.ZodMiniEnum<
+  typeof CreateSchedulePaymentMethodType
+> = z.enum(CreateSchedulePaymentMethodType);
+
+/** @internal */
 export type CreateScheduleInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
   finalize: boolean;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
+  payment_method_types?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -2090,12 +2099,16 @@ export const CreateScheduleInvoiceMode$outboundSchema: z.ZodMiniType<
     finalize: z._default(z.boolean(), true),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
+    paymentMethodTypes: z.optional(
+      z.array(CreateSchedulePaymentMethodType$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
+      paymentMethodTypes: "payment_method_types",
     });
   }),
 );
@@ -5771,37 +5784,3 @@ export const UnscheduledPlanUpsertLicenseOnDecrease$outboundSchema:
   z.ZodMiniEnum<typeof UnscheduledPlanUpsertLicenseOnDecrease> = z.enum(
     UnscheduledPlanUpsertLicenseOnDecrease,
   );
-
-/** @internal */
-export type UnscheduledPlanUpsertLicenseProration$Outbound = {
-  on_increase: string;
-  on_decrease: string;
-};
-
-/** @internal */
-export const UnscheduledPlanUpsertLicenseProration$outboundSchema:
-  z.ZodMiniType<
-    UnscheduledPlanUpsertLicenseProration$Outbound,
-    UnscheduledPlanUpsertLicenseProration
-  > = z.pipe(
-    z.object({
-      onIncrease: UnscheduledPlanUpsertLicenseOnIncrease$outboundSchema,
-      onDecrease: UnscheduledPlanUpsertLicenseOnDecrease$outboundSchema,
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        onIncrease: "on_increase",
-        onDecrease: "on_decrease",
-      });
-    }),
-  );
-
-export function unscheduledPlanUpsertLicenseProrationToJSON(
-  unscheduledPlanUpsertLicenseProration: UnscheduledPlanUpsertLicenseProration,
-): string {
-  return JSON.stringify(
-    UnscheduledPlanUpsertLicenseProration$outboundSchema.parse(
-      unscheduledPlanUpsertLicenseProration,
-    ),
-  );
-}

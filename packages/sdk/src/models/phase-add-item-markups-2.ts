@@ -31,19 +31,34 @@ import {
   UnscheduledPlanUpsertLicenseBasePrice,
   UnscheduledPlanUpsertLicenseBasePrice$Outbound,
   UnscheduledPlanUpsertLicenseBasePrice$outboundSchema,
+  UnscheduledPlanUpsertLicenseOnDecrease,
+  UnscheduledPlanUpsertLicenseOnDecrease$outboundSchema,
+  UnscheduledPlanUpsertLicenseOnIncrease,
+  UnscheduledPlanUpsertLicenseOnIncrease$outboundSchema,
   UnscheduledPlanUpsertLicensePrice,
   UnscheduledPlanUpsertLicensePrice$Outbound,
   UnscheduledPlanUpsertLicensePrice$outboundSchema,
-  UnscheduledPlanUpsertLicenseProration,
-  UnscheduledPlanUpsertLicenseProration$Outbound,
-  UnscheduledPlanUpsertLicenseProration$outboundSchema,
   UnscheduledPlanUpsertLicenseReset,
   UnscheduledPlanUpsertLicenseReset$Outbound,
   UnscheduledPlanUpsertLicenseReset$outboundSchema,
   UnscheduledPlanUpsertLicenseThresholdBilling,
   UnscheduledPlanUpsertLicenseThresholdBilling$Outbound,
   UnscheduledPlanUpsertLicenseThresholdBilling$outboundSchema,
-} from "./unscheduled-plan-upsert-license-proration.js";
+} from "./unscheduled-plan-upsert-license-on-decrease.js";
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type UnscheduledPlanUpsertLicenseProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: UnscheduledPlanUpsertLicenseOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: UnscheduledPlanUpsertLicenseOnDecrease;
+};
 
 /**
  * When rolled over units expire.
@@ -1822,21 +1837,39 @@ export type PhaseAddItemMarkups2 = {
   modelMarkups?: { [k: string]: PhaseAddItemModelMarkups2 } | null | undefined;
 };
 
-/**
- * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
- */
-export type PhaseAddItemFeatureOverride2 = {
-  /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
-   */
-  creditSchema?:
-    | Array<PhaseCreditSchemaAddItem1 | PhaseCreditSchemaAddItem2>
-    | undefined;
-  /**
-   * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
-   */
-  markups?: PhaseAddItemMarkups2 | undefined;
+/** @internal */
+export type UnscheduledPlanUpsertLicenseProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
 };
+
+/** @internal */
+export const UnscheduledPlanUpsertLicenseProration$outboundSchema:
+  z.ZodMiniType<
+    UnscheduledPlanUpsertLicenseProration$Outbound,
+    UnscheduledPlanUpsertLicenseProration
+  > = z.pipe(
+    z.object({
+      onIncrease: UnscheduledPlanUpsertLicenseOnIncrease$outboundSchema,
+      onDecrease: UnscheduledPlanUpsertLicenseOnDecrease$outboundSchema,
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        onIncrease: "on_increase",
+        onDecrease: "on_decrease",
+      });
+    }),
+  );
+
+export function unscheduledPlanUpsertLicenseProrationToJSON(
+  unscheduledPlanUpsertLicenseProration: UnscheduledPlanUpsertLicenseProration,
+): string {
+  return JSON.stringify(
+    UnscheduledPlanUpsertLicenseProration$outboundSchema.parse(
+      unscheduledPlanUpsertLicenseProration,
+    ),
+  );
+}
 
 /** @internal */
 export const UnscheduledPlanUpsertLicenseExpiryDurationType$outboundSchema:
@@ -2882,7 +2915,9 @@ export const UnscheduledPlanUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     pooled: z._default(z.boolean(), false),
     reset: z.optional(UnscheduledPlanUpsertLicenseReset$outboundSchema),
     price: z.optional(UnscheduledPlanUpsertLicensePrice$outboundSchema),
-    proration: z.optional(UnscheduledPlanUpsertLicenseProration$outboundSchema),
+    proration: z.optional(
+      z.lazy(() => UnscheduledPlanUpsertLicenseProration$outboundSchema),
+    ),
     rollover: z.optional(
       z.lazy(() => UnscheduledPlanUpsertLicenseRollover$outboundSchema),
     ),
@@ -5680,48 +5715,5 @@ export function phaseAddItemMarkups2ToJSON(
 ): string {
   return JSON.stringify(
     PhaseAddItemMarkups2$outboundSchema.parse(phaseAddItemMarkups2),
-  );
-}
-
-/** @internal */
-export type PhaseAddItemFeatureOverride2$Outbound = {
-  credit_schema?:
-    | Array<
-      PhaseCreditSchemaAddItem1$Outbound | PhaseCreditSchemaAddItem2$Outbound
-    >
-    | undefined;
-  markups?: PhaseAddItemMarkups2$Outbound | undefined;
-};
-
-/** @internal */
-export const PhaseAddItemFeatureOverride2$outboundSchema: z.ZodMiniType<
-  PhaseAddItemFeatureOverride2$Outbound,
-  PhaseAddItemFeatureOverride2
-> = z.pipe(
-  z.object({
-    creditSchema: z.optional(z.array(smartUnion([
-      z.lazy(() => PhaseCreditSchemaAddItem1$outboundSchema),
-      z.lazy(() =>
-        PhaseCreditSchemaAddItem2$outboundSchema
-      ),
-    ]))),
-    markups: z.optional(z.lazy(() =>
-      PhaseAddItemMarkups2$outboundSchema
-    )),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditSchema: "credit_schema",
-    });
-  }),
-);
-
-export function phaseAddItemFeatureOverride2ToJSON(
-  phaseAddItemFeatureOverride2: PhaseAddItemFeatureOverride2,
-): string {
-  return JSON.stringify(
-    PhaseAddItemFeatureOverride2$outboundSchema.parse(
-      phaseAddItemFeatureOverride2,
-    ),
   );
 }

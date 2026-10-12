@@ -36,6 +36,9 @@ class Invoices(BaseSDK):
         issue_date: Optional[int] = None,
         due_date: Optional[int] = None,
         tax_rate_id: Optional[str] = None,
+        payment_method_types: Optional[
+            List[models.CreateInvoicePaymentMethodType]
+        ] = None,
         period_start: Optional[int] = None,
         period_end: Optional[int] = None,
         preview: Optional[bool] = None,
@@ -57,6 +60,7 @@ class Invoices(BaseSDK):
         :param issue_date: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
         :param due_date: When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days.
         :param tax_rate_id: Stripe tax rate ID (txr_...) applied to every line.
+        :param payment_method_types: Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.
         :param period_start: Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
         :param period_end: End of the period being invoiced, in milliseconds. Given together with period_start.
         :param preview: If true, returns the calculated lines and totals without creating an invoice.
@@ -93,6 +97,7 @@ class Invoices(BaseSDK):
             issue_date=issue_date,
             due_date=due_date,
             tax_rate_id=tax_rate_id,
+            payment_method_types=payment_method_types,
             period_start=period_start,
             period_end=period_end,
             preview=preview,
@@ -185,6 +190,9 @@ class Invoices(BaseSDK):
         issue_date: Optional[int] = None,
         due_date: Optional[int] = None,
         tax_rate_id: Optional[str] = None,
+        payment_method_types: Optional[
+            List[models.CreateInvoicePaymentMethodType]
+        ] = None,
         period_start: Optional[int] = None,
         period_end: Optional[int] = None,
         preview: Optional[bool] = None,
@@ -206,6 +214,7 @@ class Invoices(BaseSDK):
         :param issue_date: Date of issue printed on the invoice, in milliseconds. Defaults to now; cannot be in the future.
         :param due_date: When payment is due, in milliseconds. Must be in the future. Cannot be combined with net_terms_days.
         :param tax_rate_id: Stripe tax rate ID (txr_...) applied to every line.
+        :param payment_method_types: Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.
         :param period_start: Start of the period being invoiced, in milliseconds. Plan, feature and license lines without their own period use this one, and every line period must fall inside it. If omitted, lines without their own period carry none and are not prorated.
         :param period_end: End of the period being invoiced, in milliseconds. Given together with period_start.
         :param preview: If true, returns the calculated lines and totals without creating an invoice.
@@ -242,6 +251,7 @@ class Invoices(BaseSDK):
             issue_date=issue_date,
             due_date=due_date,
             tax_rate_id=tax_rate_id,
+            payment_method_types=payment_method_types,
             period_start=period_start,
             period_end=period_end,
             preview=preview,
@@ -1736,6 +1746,192 @@ class Invoices(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.ReissueInvoiceResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def update(
+        self,
+        *,
+        invoice_id: str,
+        payment_method_types: List[models.UpdateInvoicePaymentMethodType],
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.UpdateInvoiceResponse:
+        r"""Changes which payment methods a draft or open Stripe invoice accepts. The customer sees the change on the hosted invoice page straight away.
+
+        :param invoice_id: The Autumn invoice ID to update.
+        :param payment_method_types: Payment method types the customer can pay the invoice with. Only draft and open Stripe invoices can be updated.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.UpdateInvoiceParams(
+            invoice_id=invoice_id,
+            payment_method_types=payment_method_types,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/invoices.update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.UpdateInvoiceGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.UpdateInvoiceParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="updateInvoice",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.UpdateInvoiceResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def update_async(
+        self,
+        *,
+        invoice_id: str,
+        payment_method_types: List[models.UpdateInvoicePaymentMethodType],
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.UpdateInvoiceResponse:
+        r"""Changes which payment methods a draft or open Stripe invoice accepts. The customer sees the change on the hosted invoice page straight away.
+
+        :param invoice_id: The Autumn invoice ID to update.
+        :param payment_method_types: Payment method types the customer can pay the invoice with. Only draft and open Stripe invoices can be updated.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.UpdateInvoiceParams(
+            invoice_id=invoice_id,
+            payment_method_types=payment_method_types,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/invoices.update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.UpdateInvoiceGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.UpdateInvoiceParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="updateInvoice",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.UpdateInvoiceResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

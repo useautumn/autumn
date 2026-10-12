@@ -7,6 +7,7 @@ from .utils.logger import Logger, get_default_logger
 from .utils.retries import RetryConfig
 from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext, SDKHooks
+from autumn_sdk._hooks.edge_hook import edge_client_of
 from autumn_sdk.models import internal
 from autumn_sdk.types import BaseModel, OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
@@ -94,6 +95,8 @@ class Autumn(BaseSDK):
         retry_config: OptionalNullable[RetryConfig] = UNSET,
         timeout_ms: Optional[int] = None,
         debug_logger: Optional[Logger] = None,
+        edge_url: Optional[str] = None,
+        use_edge: Optional[bool] = None,
     ) -> None:
         r"""Instantiates the SDK configuring it with the provided parameters.
 
@@ -107,6 +110,8 @@ class Autumn(BaseSDK):
         :param async_client: The Async HTTP client to use for all asynchronous methods
         :param retry_config: The retry configuration to use for all supported methods
         :param timeout_ms: Optional request timeout applied to each operation in milliseconds
+        :param edge_url: The edge to ask first for the calls it serves; without one, every call goes to the Autumn API
+        :param use_edge: Send every call the edge serves (e.g. `check`) to `edge_url` first, falling back to the Autumn API when the edge is down
         """
         client_supplied = True
         if client is None:
@@ -163,6 +168,8 @@ class Autumn(BaseSDK):
                 retry_config=retry_config,
                 timeout_ms=timeout_ms,
                 debug_logger=debug_logger,
+                edge_url=edge_url,
+                use_edge=use_edge is True,
             ),
             parent_ref=self,
         )
@@ -183,6 +190,11 @@ class Autumn(BaseSDK):
             self.sdk_configuration.async_client,
             self.sdk_configuration.async_client_supplied,
         )
+
+    @property
+    def edge(self) -> "Autumn":
+        r"""This client with `use_edge` on: each call the edge serves goes to `edge_url` first, and to the Autumn API when the edge is down."""
+        return edge_client_of(self)
 
     def dynamic_import(self, modname, retries=3):
         for attempt in range(retries):
