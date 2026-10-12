@@ -4,7 +4,7 @@ import { SQLITE_PAGE_CACHE_BYTES } from "@autumn/env/atom";
 /** Every thread shares each file. A writer waits this long for another's write before giving up. */
 const BUSY_TIMEOUT_MS = 5000;
 /** A completed checkpoint cuts the log back to this, so 128 logs never sit at their high-water mark. */
-const JOURNAL_SIZE_LIMIT_BYTES = 4 * 1024 * 1024;
+export const JOURNAL_SIZE_LIMIT_BYTES = 4 * 1024 * 1024;
 
 /** Threads opening a new file together each try to switch it to WAL; this many tries, this far apart, outlast the others. */
 const WAL_SWITCH_ATTEMPTS = 50;

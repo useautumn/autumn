@@ -206,7 +206,7 @@ describe("the disk evictor", () => {
 			).length;
 		const before = [await countIn(0), await countIn(1)];
 		// One file's batch is enough to get back under the floor each tick.
-		const evictor = folder.evictorOf({ shareBytes: Math.floor(full * 0.97) });
+		const evictor = folder.evictorOf({ shareBytes: Math.floor(full * 0.99) });
 
 		await evictor.tick();
 		const afterFirst = [await countIn(0), await countIn(1)];

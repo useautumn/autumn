@@ -409,8 +409,9 @@ export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
 export type DroppedRows = { customerId: string; entityId: string }[];
 
 /**
- * Deletes every row of up to `limit` customers none of whose rows was written at or after `before`, oldest first.
- * A customer goes whole, its entities with it, so no entity outlives the rows it is read beside; one with any fresh row stays.
+ * Deletes every row of up to `limit` customers whose own row, rewritten by every push of the customer or an entity, was
+ * written before `before`, oldest first. A customer goes whole, its entities with it, so no entity outlives the rows it is
+ * read beside; one with any row copied since (a peer's catch-up writes a part alone) stays.
  */
 export const deleteCustomersWrittenBefore = ({
 	ctx,
@@ -424,11 +425,11 @@ export const deleteCustomersWrittenBefore = ({
 	ctx.sqliteDb.transaction((): DroppedRows => {
 		const customers = ctx.sqliteDb
 			.query<{ customerId: string }, { before: number; limit: number }>(`
-				SELECT DISTINCT old.customer_id AS customerId FROM subject_states AS old
-				WHERE old.applied_at < $before
+				SELECT own.customer_id AS customerId FROM subject_states AS own
+				WHERE own.entity_id = '' AND own.applied_at < $before
 					AND NOT EXISTS (SELECT 1 FROM subject_states AS fresh
-						WHERE fresh.customer_id = old.customer_id AND fresh.applied_at >= $before)
-				ORDER BY old.applied_at ASC LIMIT $limit
+						WHERE fresh.customer_id = own.customer_id AND fresh.applied_at >= $before)
+				ORDER BY own.applied_at ASC LIMIT $limit
 			`)
 			.all({ before, limit });
 		if (customers.length === 0) return [];

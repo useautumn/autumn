@@ -4,9 +4,9 @@ import { type SimCluster, subjectKey, type Version } from "./simCluster.js";
 const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 
 /**
- * Every replica up at the end holds, for every customer, the newest version any of them holds, and the newest catalog.
+ * Every replica up at the end holds, for every customer, the newest version applied anywhere, and the newest catalog.
  * With `pushedWithinMs`, only customers pushed that recently must be held everywhere: the others may have been dropped
- * for a replica's share, which is a cache miss, not a lost update. A replica holding an older version is never allowed.
+ * for a replica's share, which is a cache miss, not a lost update. A copy older than the newest applied is never allowed.
  */
 export const assertConverged = async ({
 	cluster,
@@ -23,13 +23,23 @@ export const assertConverged = async ({
 			held: await cluster.held(replica),
 		})),
 	);
-	const truth = new Map<string, Version>();
+	const newest = (
+		into: Map<string, Version>,
+		key: string,
+		version: Version,
+	) => {
+		const known = into.get(key);
+		if (!known || cluster.newer(version, known)) into.set(key, version);
+	};
+	// The newest copy any replica holds, and the newest version anywhere: that, or applied on a volume that still exists.
+	const heldNewest = new Map<string, Version>();
 	for (const { held: byCustomer } of held)
-		for (const [customerId, { version }] of byCustomer) {
-			const known = truth.get(customerId);
-			if (!known || cluster.newer(version, known))
-				truth.set(customerId, version);
-		}
+		for (const [customerId, { version }] of byCustomer)
+			newest(heldNewest, customerId, version);
+	const truth = new Map(heldNewest);
+	for (const entry of cluster.applied)
+		if (!cluster.lostVolumes.has(entry.on))
+			newest(truth, subjectKey(entry), entry.version);
 	const lastPushedAt = new Map<string, number>();
 	for (const entry of cluster.applied)
 		lastPushedAt.set(
@@ -42,7 +52,7 @@ export const assertConverged = async ({
 	for (const entry of cluster.applied) {
 		if (cluster.lostVolumes.has(entry.on) || !mustBeHeld(subjectKey(entry)))
 			continue;
-		const known = truth.get(subjectKey(entry));
+		const known = heldNewest.get(subjectKey(entry));
 		if (!known || cluster.newer(entry.version, known))
 			throw new Error(
 				`${subjectKey(entry)}@${entry.balance} applied at +${entry.at - 1_700_000_000_000}ms on #${entry.on} is held by no replica now: a lost update`,
@@ -65,6 +75,8 @@ export const assertConverged = async ({
 				.filter((mine) => mine && !cluster.newer(version, mine.version))
 				.map((mine) => mine?.balance),
 		);
+		// A customer dropped everywhere for the shares has no copy to compare; one that must be held was checked above.
+		if (balances.size === 0) continue;
 		if (balances.size !== 1 || balances.has(Number.NaN))
 			throw new Error(
 				`${key} at ${version.readAt}/${version.logOffset} holds different rows across replicas: balances ${[...balances].join(", ")}`,
