@@ -18,7 +18,7 @@ export const AtomSetupSection = ({
 	<>
 		{children && <div className={TABLE_TRAY_SURFACE_CLASS}>{children}</div>}
 		{note && (
-			<div className="flex flex-col gap-1 px-3 pt-3 pb-1 text-xs text-tertiary-foreground">
+			<div className="flex flex-col gap-1 px-3 pt-3 pb-1 text-pretty text-xs text-tertiary-foreground">
 				{note}
 			</div>
 		)}
