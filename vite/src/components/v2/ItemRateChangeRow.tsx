@@ -21,9 +21,7 @@ export function ItemRateChangeRow({
 }) {
 	const header = (
 		<>
-			<div className="flex flex-1 items-center gap-2 min-w-0 [&>div]:flex-1 [&>div]:min-w-0">
-				{children}
-			</div>
+			<div className="flex flex-1 items-center gap-2 min-w-0">{children}</div>
 			{updated && (
 				<span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] leading-3.5 font-medium text-amber-700 dark:text-amber-400">
 					Updated

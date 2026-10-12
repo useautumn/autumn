@@ -212,13 +212,15 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 									key={`add-${row.addIndex}`}
 									updated={row.updated}
 								>
-									<SubscriptionItemRow
-										isCreated={!row.updated}
-										item={migrationItemToProductItem(
-											addItems[row.addIndex],
-											features,
-										)}
-									/>
+									<div className="flex-1 min-w-0">
+										<SubscriptionItemRow
+											isCreated={!row.updated}
+											item={migrationItemToProductItem(
+												addItems[row.addIndex],
+												features,
+											)}
+										/>
+									</div>
 								</ItemRateChangeRow>
 							))}
 
@@ -262,10 +264,12 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 												changes={[]}
 												key={`license-add-${idx}`}
 											>
-												<SubscriptionItemRow
-													isCreated
-													item={migrationItemToProductItem(item, features)}
-												/>
+												<div className="flex-1 min-w-0">
+													<SubscriptionItemRow
+														isCreated
+														item={migrationItemToProductItem(item, features)}
+													/>
+												</div>
 											</ItemRateChangeRow>
 										))}
 										{(license.customize?.remove_items ?? []).map(

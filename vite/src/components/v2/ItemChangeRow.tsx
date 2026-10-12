@@ -38,11 +38,13 @@ export function ItemChangeRow({
 			className={className}
 			updated={rateRow.updated}
 		>
-			<SubscriptionItemRow
-				isCreated={!rateRow.updated}
-				item={productItem}
-				readOnly
-			/>
+			<div className="flex-1 min-w-0">
+				<SubscriptionItemRow
+					isCreated={!rateRow.updated}
+					item={productItem}
+					readOnly
+				/>
+			</div>
 		</ItemRateChangeRow>
 	);
 }
