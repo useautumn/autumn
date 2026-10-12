@@ -11,6 +11,7 @@ import {
 	mockProduct,
 	mockSubscription,
 	newRcClient,
+	purchaseOnA,
 	rcPlan,
 	setupCustomers,
 } from "./utils/revenue-cat-transfer-test-utils";
@@ -125,5 +126,81 @@ test.concurrent(
 				autumnProductId: oldPlan.id,
 			}),
 		).toBeDefined();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rc product change: webhook a few minutes before the end still expires the plan")}`,
+	async () => {
+		const customerA = "rc-pc-early";
+		const { oldPlan, oldStoreId, newStoreId, originalTransactionId } =
+			await setupReplacement({ customerA });
+
+		expectWebhookSuccess(
+			await newRcClient().productChange({
+				productId: oldStoreId,
+				newProductId: newStoreId,
+				appUserId: `${customerA}-b`,
+				originalTransactionId,
+				expirationAtMs: Date.now() + 1000 * 60 * 2,
+			}),
+		);
+
+		expect(
+			await findActiveCusProduct({
+				customerId: customerA,
+				autumnProductId: oldPlan.id,
+			}),
+		).toBeUndefined();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rc product change: follows a purchase transferred to another customer")}`,
+	async () => {
+		const customerA = "rc-pc-xfer";
+		const customerB = `${customerA}-b`;
+		const plan = rcPlan({ id: `${customerA}-pro` });
+		await setupCustomers({ customerId: customerA, plans: [plan] });
+		const subId = `sub_${customerA}`;
+		const rcStoreId = `com.app.${customerA}`;
+		const { mock } = await purchaseOnA({
+			plan,
+			rcStoreId,
+			rcInternalId: `prod_${customerA}`,
+			subId,
+			customerId: customerA,
+		});
+
+		expectWebhookSuccess(
+			await newRcClient().transfer({
+				transferredFrom: [customerA],
+				transferredTo: [customerB],
+				mock,
+			}),
+		);
+		expect(
+			await findActiveCusProduct({
+				customerId: customerB,
+				autumnProductId: plan.id,
+			}),
+		).toBeDefined();
+
+		expectWebhookSuccess(
+			await newRcClient().productChange({
+				productId: rcStoreId,
+				newProductId: `${rcStoreId}.max`,
+				appUserId: `${customerA}-c`,
+				originalTransactionId: `tx_${subId}`,
+				expirationAtMs: Date.now() - 1,
+			}),
+		);
+
+		expect(
+			await findActiveCusProduct({
+				customerId: customerB,
+				autumnProductId: plan.id,
+			}),
+		).toBeUndefined();
 	},
 );

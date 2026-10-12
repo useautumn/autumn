@@ -1,6 +1,6 @@
 import type { WebhookProductChange } from "@puzzmo/revenue-cat-webhook-types";
 import {
-	customerProductHasRelevantStatus,
+	customerProductHasActiveStatus,
 	type FullCusProduct,
 	ProcessorType,
 } from "@shared/index";
@@ -12,16 +12,33 @@ import { CusService } from "@/internal/customers/CusService";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 
+// Absorbs clock skew and delivery jitter between RevenueCat ending the purchase and this webhook.
+const ENDED_TOLERANCE_MS = 10 * 60 * 1000;
+
+const comesFromPurchase = ({
+	cusProduct,
+	originalTransactionId,
+}: {
+	cusProduct: FullCusProduct;
+	originalTransactionId: string;
+}) => {
+	const stored = cusProduct.processor?.original_transaction_id;
+	return stored ? stored === originalTransactionId : true;
+};
+
 const isReplacedRevenueCatPlan = ({
 	cusProduct,
 	autumnProductId,
+	originalTransactionId,
 }: {
 	cusProduct: FullCusProduct;
 	autumnProductId: string;
+	originalTransactionId: string;
 }) =>
 	cusProduct.processor?.type === ProcessorType.RevenueCat &&
 	cusProduct.product.id === autumnProductId &&
-	customerProductHasRelevantStatus(cusProduct);
+	customerProductHasActiveStatus(cusProduct) &&
+	comesFromPurchase({ cusProduct, originalTransactionId });
 
 /**
  * Expires the plan granted by the replaced subscription once it has ended. The holder is found through the
@@ -49,7 +66,7 @@ export const handleProductChange = async ({
 	};
 
 	// Deferred changes (e.g. App Store downgrades) end later and arrive as RENEWAL / EXPIRATION.
-	if (!expiration_at_ms || expiration_at_ms > Date.now())
+	if (!expiration_at_ms || expiration_at_ms > Date.now() + ENDED_TOLERANCE_MS)
 		return skip("replaced subscription has not ended yet");
 	if (!original_transaction_id) return skip("no original_transaction_id");
 
@@ -81,6 +98,7 @@ export const handleProductChange = async ({
 		isReplacedRevenueCatPlan({
 			cusProduct,
 			autumnProductId: mapping.autumnProductId,
+			originalTransactionId: original_transaction_id,
 		}),
 	);
 	if (!replacedCusProduct)

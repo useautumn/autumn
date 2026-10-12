@@ -190,6 +190,7 @@ export const provisionRevenueCatCusProduct = async ({
 	featureQuantities,
 	appUserId,
 	periodEvent,
+	originalTransactionId,
 }: {
 	ctx: AutumnContext;
 	customer: FullCustomer;
@@ -198,6 +199,7 @@ export const provisionRevenueCatCusProduct = async ({
 	featureQuantities?: Array<{ feature_id: string; quantity?: number }>;
 	appUserId?: string;
 	periodEvent?: RevenueCatPeriodEvent;
+	originalTransactionId?: string | null;
 }): Promise<{ cusProduct: FullCusProduct; product: FullProduct }> => {
 	const { db, org, env } = ctx;
 
@@ -251,6 +253,17 @@ export const provisionRevenueCatCusProduct = async ({
 				"Failed to find newly-provisioned RevenueCat customer product after attach",
 			code: ErrCode.CusProductNotFound,
 			statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+		});
+	}
+
+	if (originalTransactionId) {
+		await customerProductRepo.mergeProcessor({
+			db,
+			cusProductId: cusProduct.id,
+			processor: {
+				type: ProcessorType.RevenueCat,
+				original_transaction_id: originalTransactionId,
+			},
 		});
 	}
 

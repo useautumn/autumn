@@ -21,6 +21,8 @@ export type CustomerProductProcessor = {
 	// Store-owned billing period (ms); only set for RevenueCat plans.
 	current_period_start?: number | null;
 	current_period_end?: number | null;
+	// Store purchase this plan came from; only set for RevenueCat plans.
+	original_transaction_id?: string | null;
 };
 
 export const customerProducts = pgTable(
