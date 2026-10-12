@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
-import { readdirSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { JOURNAL_SIZE_LIMIT_BYTES } from "./openSqliteDatabase.js";
 
 const TICK_MS = 1000;
 /**
@@ -43,6 +44,9 @@ export const startWalCheckpointer = ({
 			}
 			// Passive never waits on a reader or writer: what it cannot copy now it copies next time.
 			database.run("PRAGMA wal_checkpoint(PASSIVE)");
+			// A log past its limit is cut by the next write; a file nobody writes to any more is cut here instead.
+			if (statSync(`${path}${WAL_SUFFIX}`).size > JOURNAL_SIZE_LIMIT_BYTES)
+				database.run("PRAGMA wal_checkpoint(TRUNCATE)");
 			failing.delete(path);
 		} catch (error) {
 			open.get(path)?.close();

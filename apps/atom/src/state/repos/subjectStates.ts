@@ -393,3 +393,57 @@ const upsertSubject = ({
 		customerVersion: written.customerVersion,
 	};
 };
+
+/** The pages the file holds, dropped pages already given back: its size once its log is checkpointed. */
+export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
+	const pages = ctx.sqliteDb
+		.query<{ page_count: bigint }, []>("PRAGMA page_count")
+		.get();
+	const size = ctx.sqliteDb
+		.query<{ page_size: bigint }, []>("PRAGMA page_size")
+		.get();
+	return Number(pages?.page_count ?? 0n) * Number(size?.page_size ?? 0n);
+};
+
+/** The keys of the rows one drop removed, so the copies held of them go too. */
+export type DroppedRows = { customerId: string; entityId: string }[];
+
+/**
+ * Deletes every row of up to `limit` customers whose own row, rewritten by every push of the customer or an entity, was
+ * written before `before`, oldest first. A customer goes whole, its entities with it, so no entity outlives the rows it is
+ * read beside; one with any row copied since (a peer's catch-up writes a part alone) stays.
+ */
+export const deleteCustomersWrittenBefore = ({
+	ctx,
+	before,
+	limit,
+}: {
+	ctx: SlotContext;
+	before: number;
+	limit: number;
+}): DroppedRows =>
+	ctx.sqliteDb.transaction((): DroppedRows => {
+		const customers = ctx.sqliteDb
+			.query<{ customerId: string }, { before: number; limit: number }>(`
+				SELECT own.customer_id AS customerId FROM subject_states AS own
+				WHERE own.entity_id = '' AND own.applied_at < $before
+					AND NOT EXISTS (SELECT 1 FROM subject_states AS fresh
+						WHERE fresh.customer_id = own.customer_id AND fresh.applied_at >= $before)
+				ORDER BY own.applied_at ASC LIMIT $limit
+			`)
+			.all({ before, limit });
+		if (customers.length === 0) return [];
+		const ids = JSON.stringify(customers.map(({ customerId }) => customerId));
+		const inCustomers = "customer_id IN (SELECT value FROM json_each($ids))";
+		const dropped = ctx.sqliteDb
+			.query<{ customerId: string; entityId: string }, { ids: string }>(
+				`DELETE FROM subject_states WHERE ${inCustomers} RETURNING customer_id AS customerId, entity_id AS entityId`,
+			)
+			.all({ ids });
+		ctx.sqliteDb
+			.query(`DELETE FROM subject_slices WHERE ${inCustomers}`)
+			.run({ ids });
+		// Freed pages go back to the volume once the main thread checkpoints the file.
+		ctx.sqliteDb.run("PRAGMA incremental_vacuum");
+		return dropped;
+	})();

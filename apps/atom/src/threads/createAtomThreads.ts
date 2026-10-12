@@ -184,6 +184,7 @@ export const createAtomThreads = ({
 				restarts: new Int32Array(restarts),
 				ready: new Int32Array(readyFlag),
 				threadStats: stats,
+				dataDir: env.ATOM_DATA_DIR,
 			},
 			everyMs: env.ATOM_HEALTH_LOG_EVERY_MS,
 			logger: ctx.logger,

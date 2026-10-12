@@ -43,12 +43,13 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
 	const answerPorts = new Map<number, MessagePort>();
 	let stopping = false;
+	const folders = multiTenant
+		? createMultiTenantFolders({ auth: multiTenant.auth })
+		: createDeployedFolders({ slots: ownFolder({ auth }) });
 	// Every Atom keeps its replicas in step: an org's own over its one folder, a multi-tenant one over every tenant's.
 	const replicas = openReplicas({
 		env,
-		folders: multiTenant
-			? createMultiTenantFolders({ auth: multiTenant.auth })
-			: createDeployedFolders({ slots: ownFolder({ auth }) }),
+		folders,
 		counters,
 		logger,
 		isStopping: () => stopping,
@@ -63,9 +64,11 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 				restarts: new Int32Array(init.restarts),
 				ready: new Int32Array(init.ready),
 				threadStats: init.stats,
+				dataDir: env.ATOM_DATA_DIR,
 			},
 			counters,
 			held,
+			folders,
 			replication: replicas.replication,
 		},
 		config: {
