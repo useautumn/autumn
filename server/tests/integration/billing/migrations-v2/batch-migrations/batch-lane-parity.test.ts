@@ -6,11 +6,8 @@
  * (computeCustomPlan) inserts a replacement customer product and expires the
  * old one, while the batch lane patches the existing row in place. This test
  * pins what must nevertheless match: the active plan, its items, and
- * crucially `is_custom` on the batch lane (a lane must never leave a customer
- * looking customized, or later `custom: false` migrations would silently skip
- * them). The per-customer lane inserts a replacement row and now derives
- * `is_custom` via `diffPlanV1`, so add_items mark the row custom — a known
- * structural divergence documented in .plans/batch-migrations/webhooks-and-events.md.
+ * `is_custom`. Both lanes derive the flag against the catalog version, so
+ * add_items the catalog lacks leave the row custom on either lane.
  *
  * Divergences it surfaces are recorded in
  * .plans/batch-migrations/webhooks-and-events.md.
@@ -175,9 +172,6 @@ test.concurrent(
 			status: MigrationItemRunStatus.Succeeded,
 		});
 
-		// ── The invariant that matters downstream: neither lane may leave the
-		// customer product flagged custom, or later `custom: false` migrations
-		// would silently skip these customers. ────────────────────────────
 		const batchRows = await getActiveCustomerProducts({
 			ctx,
 			customerId: batchCustomerId,
@@ -191,7 +185,7 @@ test.concurrent(
 
 		expect(batchRows).toHaveLength(1);
 		expect(perCustomerRows).toHaveLength(1);
-		expect(batchRows[0].is_custom).toBe(false);
+		expect(batchRows[0].is_custom).toBe(true);
 		expect(perCustomerRows[0].is_custom).toBe(true);
 	},
 );

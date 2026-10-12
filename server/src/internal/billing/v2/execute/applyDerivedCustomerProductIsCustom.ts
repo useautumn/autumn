@@ -9,8 +9,8 @@ import {
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
-import { ProductService } from "@/internal/products/ProductService";
-import { deriveCustomerProductIsCustom } from "./deriveCustomerProductIsCustom";
+import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom";
+import { loadBaseProduct } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct";
 
 /** A customer product to derive for, and where the result has to land. */
 type DerivationTarget = {
@@ -63,9 +63,7 @@ const collectDerivationTargets = ({
 ];
 
 /** Every distinct catalog version the plan touches, fetched in one pass so the
- * derivation itself runs with no further IO. An unresolved product resolves to
- * null, which the derivation reads as custom — the safe direction — rather than
- * failing the billing write. */
+ * derivation itself runs with no further IO. */
 const loadBaseProducts = async ({
 	ctx,
 	targets,
@@ -84,24 +82,13 @@ const loadBaseProducts = async ({
 	];
 
 	const loaded = await Promise.all(
-		internalProductIds.map(async (internalProductId) => {
-			try {
-				const product = await ProductService.getFull({
-					db: ctx.db,
-					idOrInternalId: internalProductId,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					allowNotFound: true,
-				});
-				return [internalProductId, product] as const;
-			} catch (error) {
-				ctx.logger.warn(
-					`[isCustom] could not load base product ${internalProductId}`,
-					{ error },
-				);
-				return [internalProductId, null] as const;
-			}
-		}),
+		internalProductIds.map(
+			async (internalProductId) =>
+				[
+					internalProductId,
+					await loadBaseProduct({ ctx, internalProductId }),
+				] as const,
+		),
 	);
 
 	return new Map(loaded);
@@ -136,7 +123,7 @@ export const applyDerivedCustomerProductIsCustom = async ({
 	const updateEntries = getUpdateCustomerProducts({ autumnBillingPlan });
 
 	for (const { customerProduct, target, via } of targets) {
-		const isCustom = deriveCustomerProductIsCustom({
+		const { isCustom } = deriveCustomerProductIsCustom({
 			ctx,
 			customerProduct,
 			baseProduct: customerProduct.internal_product_id
@@ -150,16 +137,17 @@ export const applyDerivedCustomerProductIsCustom = async ({
 			continue;
 		}
 
-		if (isCustom === target.is_custom) continue;
-
 		const updateEntry = updateEntries.find(
 			(entry) => entry.customerProduct.id === target.id,
 		);
 
+		// Written even when it matches the in-memory row: migrations correct that flag in memory first.
 		if (updateEntry) {
 			updateEntry.updates.is_custom = isCustom;
 			continue;
 		}
+
+		if (isCustom === target.is_custom) continue;
 
 		// The patch plan always registers an update entry for the patched row, so
 		// this is a guard against a future caller that doesn't — without it the
